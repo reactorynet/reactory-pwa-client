@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import gql from 'graphql-tag';
 import { graphql } from 'react-apollo';
 import {
@@ -26,7 +27,7 @@ class OrganizationList extends Component {
 
   render(){
     const that = this;
-    const { loading, error, allUsers } = this.props.data;
+    const { loading, error, allOrganizations } = this.props.data;
 
     if (loading === true) {
       return <p>Loading ...</p>;
@@ -50,13 +51,13 @@ class OrganizationList extends Component {
       <Table onRowSelection={handleRowSelection}>
         <TableHeader>
           <TableRow>
-            <TableHeaderColumn>Email</TableHeaderColumn>
-            <TableHeaderColumn>Firstname</TableHeaderColumn>
-            <TableHeaderColumn>Lastname</TableHeaderColumn>
+            <TableHeaderColumn>Code</TableHeaderColumn>
+            <TableHeaderColumn>Name</TableHeaderColumn>
+            <TableHeaderColumn>Logo</TableHeaderColumn>
           </TableRow>
         </TableHeader>
         <TableBody>
-        {allUsers.map( (user, index) => {    
+        {allOrganizations.map( (user, index) => {    
           return (
             <TableRow selected={isSelected(index)}>
             <TableRowColumn>{user.email}</TableRowColumn>
@@ -68,18 +69,25 @@ class OrganizationList extends Component {
   }  
 };
 
+OrganizationList.propTypes = {
+  organizations: PropTypes.object
+};
 
-const userListQuery = gql`
-query UserListQuery {
-    allUsers {
+OrganizationList.defaultProps = {
+
+};
+
+const organizationQuery = gql`
+query OrganizationQuery {
+    allOrganizations {
       id
-      username
-      email
-      firstName
-      lastName
+      code
+      name
       legacyId
+      createdAt
+      updatedAt
     }
 }
 `;
 
-export const UserListWithData = graphql(userListQuery)(UserList);
+export default graphql(organizationQuery)(OrganizationList);

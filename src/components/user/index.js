@@ -53,6 +53,7 @@ class UserList extends Component {
             <TableHeaderColumn>Email</TableHeaderColumn>
             <TableHeaderColumn>Firstname</TableHeaderColumn>
             <TableHeaderColumn>Lastname</TableHeaderColumn>
+            <TableHeaderColumn>ID</TableHeaderColumn>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -62,6 +63,7 @@ class UserList extends Component {
             <TableRowColumn>{user.email}</TableRowColumn>
             <TableRowColumn>{user.firstName}</TableRowColumn>
             <TableRowColumn>{user.lastName}</TableRowColumn>
+            <TableRowColumn>{user.providerId}</TableRowColumn>
           </TableRow>)}) }        
         </TableBody>
       </Table>);
@@ -77,7 +79,7 @@ query UserListQuery {
       email
       firstName
       lastName
-      legacyId
+      providerId      
     }
 }
 `;

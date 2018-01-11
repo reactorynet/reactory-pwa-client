@@ -14,7 +14,7 @@ import { createHttpLink } from 'apollo-link-http';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import getMuiTheme from 'material-ui/styles/getMuiTheme';
 import AssessorHeaderBar from './components/header';
-import { UserList, Home } from './components';
+import { UserList, Home, OrganizationTable } from './components';
 
 
 const link = createHttpLink({
@@ -55,7 +55,7 @@ class App extends Component {
               <AssessorHeaderBar />             
               <Route exact path="/" component={Home}/>
               <Route exact path="/users" component={UserList} />
-              <Route exact path="/organizations" component={Home} />             
+              <Route exact path="/organizations" component={OrganizationTable} />             
             </div>
           </MuiThemeProvider>
         </ApolloProvider>
