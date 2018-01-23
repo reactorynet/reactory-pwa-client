@@ -3,21 +3,21 @@ import RaisedButton from 'material-ui/RaisedButton';
 import Dialog from 'material-ui/Dialog';
 import { deepOrange500 } from 'material-ui/styles/colors';
 import FlatButton from 'material-ui/FlatButton';
+import Paper from 'material-ui/Paper';
+import {GridList, GridTile} from 'material-ui/GridList';
 import getMuiTheme from 'material-ui/styles/getMuiTheme';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
+import { BasicContainer, CenteredContainer, textStyle, paperStyles } from '../util'; 
+import {PieChart} from 'react-easy-chart';
 
-const styles = {
-    container: {
-        textAlign: 'center',
-        paddingTop: 200,
-    },
-};
 
 const muiTheme = getMuiTheme({
     palette: {
         accent1Color: deepOrange500,
     },
 });
+
+
 
 class Main extends Component {
     constructor(props, context) {
@@ -45,9 +45,31 @@ class Main extends Component {
 
     render() {
         return (
-            <div>
-
-            </div>
+            <CenteredContainer>
+                <BasicContainer>
+                <Paper styles={{...paperStyles, maxWidth:'350px'}}>
+                    <PieChart
+                        size={200}
+                        innerHoleSize={170}
+                        data={[
+                        { key: 'A', value: 100, color: '#aaac84' },
+                        { key: 'B', value: 200, color: '#dce7c5' },
+                        { key: 'C', value: 50, color: '#e3a51a' }
+                        ]}/>                    
+                </Paper>
+                
+                <Paper styles={{...paperStyles, maxWidth:'350px'}}>
+                    <PieChart
+                        size={200}
+                        innerHoleSize={170}
+                        data={[
+                        { key: 'A', value: 154, color: '#aaac84' },
+                        { key: 'B', value: 654, color: '#dce7c5' },
+                        { key: 'C', value: 320, color: '#e3a51a' }
+                        ]}/> 
+                </Paper>
+                </BasicContainer>
+            </CenteredContainer>
         )
     }
 }

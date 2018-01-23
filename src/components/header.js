@@ -7,7 +7,7 @@ import AppBar from 'material-ui/AppBar';
 import IconButton from 'material-ui/IconButton';
 import IconMenu from 'material-ui/IconMenu';
 import FlatButton from 'material-ui/FlatButton';
-import Toggle from 'material-ui/Toggle';
+//import Toggle from 'material-ui/Toggle';
 import MoreVertIcon from 'material-ui/svg-icons/navigation/more-vert';
 import NavigationMenu from 'material-ui/svg-icons/navigation/menu';
 import NavigationArrowBack from 'material-ui/svg-icons/navigation/arrow-back';
@@ -70,7 +70,7 @@ class AssessorHeaderBar extends Component {
     }
 
     render() {
-        const { match } = this.props;
+        //const { match } = this.props;
         return (
             <div>
             <AppBar
@@ -81,6 +81,11 @@ class AssessorHeaderBar extends Component {
              <Drawer open={this.state.drawerOpen}>
                 <IconButton><NavigationArrowBack onClick={this.toggleDrawer}/></IconButton>
                 <hr/>
+                <Link to={'/login'} >
+                    <MenuItem onClick={this.toggleDrawer}>
+                        Login                                            
+                    </MenuItem>
+                </Link>
                 <Link to={'/'} onClick={this.toggleDrawer}>
                     <MenuItem>
                         Home                                            
@@ -103,7 +108,7 @@ class AssessorHeaderBar extends Component {
 }
 
 AssessorHeaderBar.propTypes = {
-    title: PropTypes.String
+    title: PropTypes.string
 }
 
 AssessorHeaderBar.defaultProps = {
