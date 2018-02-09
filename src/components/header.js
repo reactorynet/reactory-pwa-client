@@ -46,7 +46,8 @@ class Login extends Component {
 const Logged = (props) => (
     <Menu
         open={props.open}
-        id='menu-appbar'        
+        id='menu-appbar'
+        anchorEl={props.anchorEl}        
         anchorOrigin={{
             vertical: 'top',
             horizontal: 'right',
@@ -79,7 +80,8 @@ class AssessorHeaderBar extends Component {
         this.state = {
             logged: true,
             drawerOpen: false, 
-            menuOpen: false
+            menuOpen: false,
+            menuAnchor: null
         };
 
         this.navigateTo = this.navigateTo.bind(this);
@@ -115,7 +117,7 @@ class AssessorHeaderBar extends Component {
     }
 
     handleMenu = ( evt ) => {
-        this.setState({ menuOpen: !this.state.menuOpen })
+        this.setState({ menuOpen: !this.state.menuOpen, menuAnchor: evt.currentTarget })
     }
 
     loginClicked = ( evt ) => {
@@ -146,6 +148,7 @@ class AssessorHeaderBar extends Component {
 
     render() {
         //const { match } = this.props;
+        const self = this;
         const { toggleDrawer } = this;
         const { theme } = this.props;
         const { menuOpen } = this.state;
@@ -167,7 +170,7 @@ class AssessorHeaderBar extends Component {
                   color="inherit"                  
                 >
                   <PowerSettingIcon />
-                  <Logged open={menuOpen === true} id={'menu-appbar'}/>
+                  <Logged open={menuOpen === true} id={'menu-appbar'} anchorEl={self.state.menuAnchor}/>
                 </IconButton>
             </Toolbar>
             </AppBar>

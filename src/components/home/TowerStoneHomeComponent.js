@@ -71,6 +71,9 @@ const styles = (theme) => {
         statsCardAlt: {
             backgroundColor: primaryColorLight,
             minHeight: '150px'
+        },
+        logo: {
+            maxWidth:'400px'
         }
     };
 };
@@ -185,6 +188,9 @@ class TowerStoneHomeComponent extends Component {
             <div style={{ marginRight: '5px', marginLeft: '5px' }}>
                 <div>
                     <Grid container spacing={24}>
+                        <Grid item xs={12} sm={12} style={{textAlign:'center'}}>
+                            <img src={theme.assets.login.logo} className={classes.logo} alt={theme}/>
+                        </Grid>
                         <Grid item xs={6} sm={3}>
                             <h4 className={classes.statsCardLabel}>Personal - Quarter</h4>
                             <PieChart

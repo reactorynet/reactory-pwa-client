@@ -1,6 +1,6 @@
 import stairs from './images/stairs.jpg';
 import logo from './images/logo.png';
-import UserDashboard from '../../components/home/PlcHomeComponent';
+import UserDashboard from '../../components/home/TowerStoneHomeComponent';
 
 export default {
     muiTheme: {
@@ -17,7 +17,11 @@ export default {
                 main: '#3c6598',
                 dark: '#003b6a',
                 contrastText: '#fff',
-              }         
+              },
+              report: {
+                empty: '#6d92c9',
+                fill: '#3C6598'
+            }         
         },
         assets: {
             login: {
