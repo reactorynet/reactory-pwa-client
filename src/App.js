@@ -12,7 +12,8 @@ import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
 import { ApolloProvider } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
-import getMuiTheme from 'material-ui/styles/getMuiTheme';
+import Reboot from 'material-ui/Reboot';
+import { createMuiTheme } from 'material-ui/styles';
 import AssessorHeaderBar from './components/header';
 import {
   Login,
@@ -50,16 +51,19 @@ class App extends Component {
   render() {
     const { appTitle, appTheme } = this.props;
     const { drawerOpen } = this.state;
-    const muiTheme = getMuiTheme( appTheme.muiTheme );
+    const muiTheme = createMuiTheme( appTheme.muiTheme );
+    console.log('Created theme', muiTheme);
     
     return (
       <Router>
         <ApolloProvider client={client}>
-          <MuiThemeProvider muiTheme={muiTheme}>
-            <div>              
+          <MuiThemeProvider theme={muiTheme}>
+            <div style={{marginTop:'80px'}}>
+              <Reboot />              
               <AssessorHeaderBar title={muiTheme.content.appTitle}/>             
               <Route exact path="/" component={Home}/>
               <Route exact path="/login" component={Login} />
+              <Route exact path="/inbox" component={UserList} />
               <Route exact path="/users" component={UserList} />
               <Route exact path="/organizations" component={OrganizationTable} />             
             </div>

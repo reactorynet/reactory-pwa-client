@@ -1,84 +1,85 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import {Card, CardActions, CardHeader, CardMedia, CardTitle, CardText} from 'material-ui/Card';
-import Paper  from 'material-ui/Paper';
+import { Card, CardActions, CardHeader, CardMedia, CardTitle, CardText } from 'material-ui/Card';
+import Paper from 'material-ui/Paper';
 import TextField from 'material-ui/TextField';
-import FlatButton from 'material-ui/FlatButton';
-import RaisedButton from 'material-ui/RaisedButton';
+import Button from 'material-ui/Button';
 import Divider from 'material-ui/Divider';
-import FontIcon from 'material-ui/FontIcon';
-
-import muiThemeable from 'material-ui/styles/muiThemeable';
+import Icon from 'material-ui/Icon';
+import { withTheme } from 'material-ui/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
-import { BasicContainer, CenteredContainer, textStyle } from '../util'; 
+import { BasicContainer, CenteredContainer, textStyle } from '../util';
 
 
 class LoginCard extends Component {
 
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context);
 
     this.doLogin = this.doLogin.bind(this);
   }
 
-  doLogin = (evt) => {        
+  doLogin = (evt) => {
     const { router } = this.context;
     router.history.push('/');
   }
 
 
-  render(){    
+  render() {
     const that = this;
-    const { doLogin, props } = that;
-    const { muiTheme } = props;
-    
+    const { doLogin, props, context } = that;
+    const { theme } = that.props;
+    console.log('LoginCard', { props, context })
     return (
-      <CenteredContainer>        
-        <BasicContainer>          
-          <CardMedia overlay={<CardTitle title={muiTheme.content.appTitle} subtitle={muiTheme.content.login.message} />} style={{float:'left'}}>
-            <img src={muiTheme.assets.login.featureImage} style={{maxWidth:400}}/>
+      <CenteredContainer>
+        <BasicContainer>
+          <CardMedia overlay={<CardTitle title={ theme.content.appTitle} subtitle={ theme.content.login.message} />} style={{ float: 'left' }}>
+            <img src={theme.assets.login.featureImage} style={{ maxWidth: 400 }} />
           </CardMedia>
-          <BasicContainer style={{maxWidth:'400px',float:'right'}}>
+          <BasicContainer style={{ maxWidth: '400px', float: 'right' }}>
 
-          <CardMedia>
-            <img src={muiTheme.assets.login.logo} style={{width:'300px !important', minWidth:'unset'}}/>
-          </CardMedia>
+            <CardMedia>
+              <img src={theme.assets.login.logo} style={{ width: '300px !important', maxWidth: '400px' }} />
+            </CardMedia>
 
-            <TextField        
-                floatingLabelText="Email"
-                style={textStyle} />
+            <TextField
+              label="Email"
+              style={textStyle} />
 
-                <TextField
-                floatingLabelText='Password'
-                type='password'
-                style={textStyle}
-                />
-              
-              <RaisedButton
-                id="doLoginButton"
-                label="Login"          
-                icon={<FontIcon className="fas fa-sign-in-alt" />}
-                onClick={doLogin} />                                    
-              
-              <h2>OR</h2>
-              <p>Login using your social login of choice</p>        
-              <FlatButton
-                href="/facebook_login"
-                label="Login with Facebook"          
-                icon={<FontIcon className="fab fa-facebook" />}/>
+            <TextField
+              label='Password'
+              type='password'
+              style={textStyle}
+            />
 
-              <FlatButton
-                href="/linkedin_login"
-                label="Login with LinkedIn"          
-                icon={<FontIcon className="fab fa-linkedin" />}/>
-            </BasicContainer>
+            
+            <Button
+              id="doLoginButton"                          
+              onClick={doLogin} color="primary" raised>
+              <Icon className="fas fa-sign-in-alt"  />
+              Login
+            </Button>
+
+            <h2>OR</h2>
+            <p>Login using your social login of choice</p>
+            <Button>              
+                <Icon className="fab fa-facebook"/>
+                Login with Facebook
+              </Button>
+
+            <Button>              
+              <Icon className="fab fa-linkedin" />
+              Login with Linkedin
+            </Button>
+          </BasicContainer>
         </BasicContainer>
       </CenteredContainer>)
   }
 
   static contextTypes = {
-    router: PropTypes.object
+    router: PropTypes.object,
+    theme: PropTypes.object
   }
 };
 
-export default muiThemeable()(LoginCard);
+export default withTheme()(LoginCard);

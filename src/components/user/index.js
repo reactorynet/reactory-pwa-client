@@ -1,14 +1,15 @@
 import React, { Component } from 'react';
 import gql from 'graphql-tag';
 import { graphql } from 'react-apollo';
-import {
-  Table,
+import Table, {
+  
   TableBody,
   TableHeader,
   TableHeaderColumn,
   TableRow,
   TableRowColumn,
 } from 'material-ui/Table';
+import { withTheme } from 'material-ui/styles';
 
 /**
  * List component for user entries
@@ -84,7 +85,8 @@ query UserListQuery {
 }
 `;
 
-export const UserListWithData = graphql(userListQuery)(UserList);
+const ThemedUserList = withTheme()(UserList);
+export const UserListWithData = graphql(userListQuery)(ThemedUserList);
 
 
 
