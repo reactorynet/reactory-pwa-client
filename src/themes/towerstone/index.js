@@ -1,6 +1,7 @@
 import pebbles from './images/pebbles.jpg';
-import logo from './images/logo.jpg';
+import logo from './images/logo.png';
 import UserDashboard from '../../components/home/TowerStoneHomeComponent';
+import DefaultAssessmentView from '../../components/assess/DefaultView';
 export default {
     muiTheme: {
         palette: {
@@ -18,7 +19,7 @@ export default {
                 contrastText: '#fff',
             },
             report: {
-                empty: '#e04d43',
+                empty: '#F7BFBA',
                 fill: '#990033'
             }
         },
@@ -33,7 +34,8 @@ export default {
             login: {
                 message: 'Empowering Leaders To Discover Fulfillment In Their Workplace. That is our Prupose.'
             },
-            dashboardComponent: UserDashboard
+            dashboardComponent: UserDashboard,
+            assessmentComponent: DefaultAssessmentView    
         }
     }
 };

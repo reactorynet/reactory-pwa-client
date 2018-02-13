@@ -73,7 +73,7 @@ const styles = (theme) => {
             minHeight: '150px'
         },
         logo: {
-            maxWidth:'400px'
+            maxWidth:'370px'
         }
     };
 };
@@ -98,24 +98,31 @@ const mockActions = [
     { text: 'Provide feedback to at least 3 of your peers and leaders using the assessment platform', complete: false, due: moment('2018/04/01') },
 ];
 
+const companyMockScores =[
+    { x: '1-Jan-17', y: 70 },
+    { x: '1-May-17', y: 73 },
+    { x: '1-Sep-17', y: 68 },
+    { x: '1-Jan-18', y: 71 },
+];
+
+const personalMockScores = [
+    { x: '1-Jan-17', y: 68 },
+    { x: '1-May-17', y: 70 },
+    { x: '1-Sep-17', y: 73 },
+    { x: '1-Jan-18', y: 76 },
+];
+
+const peersMockScores = [
+    { x: '1-Jan-17', y: 72 },
+    { x: '1-May-17', y: 71 },
+    { x: '1-Sep-17', y: 74 },
+    { x: '1-Jan-18', y: 73 },
+];
+
 const mockOverallData = [
-    [
-        { x: '1-Jan-17', y: 70 },
-        { x: '1-May-17', y: 73 },
-        { x: '1-Sep-17', y: 68 },
-        { x: '1-Jan-18', y: 71 },
-    ], [
-        { x: '1-Jan-17', y: 68 },
-        { x: '1-May-17', y: 70 },
-        { x: '1-Sep-17', y: 73 },
-        { x: '1-Jan-18', y: 76 },
-    ],
-    [
-        { x: '1-Jan-17', y: 72 },
-        { x: '1-May-17', y: 71 },
-        { x: '1-Sep-17', y: 74 },
-        { x: '1-Jan-18', y: 73 },
-    ]
+    companyMockScores, 
+    personalMockScores,
+    peersMockScores
 ];
 
 class TowerStoneHomeComponent extends Component {
@@ -126,12 +133,18 @@ class TowerStoneHomeComponent extends Component {
         this.state = {
             value: 1,
             lineChart: {
-                width: initialWidth
+                width: initialWidth,
+                displayPersonalAvg: true,
+                displayCompanyAvg: true, 
+                displayPeerAvg: true
             }
         };
 
         this.handleChange = this.handleChange.bind(this);
         this.handleWindowResize = this.handleWindowResize.bind(this);
+        this.toggleDisplayBusinessUnitAvg = this.toggleDisplayBusinessUnitAvg.bind(this);
+        this.toggleDisplayCompanyAvg = this.toggleDisplayCompanyAvg.bind(this);
+        this.toggleDisplayPersonalAvg = this.toggleDisplayCompanyAvg.bind(this);
     }
 
     handleWindowResize() {
@@ -150,6 +163,22 @@ class TowerStoneHomeComponent extends Component {
     handleChange(valueChange) {
         this.setState({ value: valueChange * 1 })
     }
+
+    toggleDisplayBusinessUnitAvg(){
+        this.setState({ lineChart: { ...this.state.lineChart,  displayPeerAvg: !this.state.lineChart.displayPeerAvg } });
+    }
+
+    toggleDisplayPersonalAvg(){
+        this.setState({ lineChart: { ...this.state.lineChart,  displayPersonalAvg: !this.state.lineChart.displayPersonalAvg } });
+    }
+
+    toggleDisplayCompanyAvg(){
+        this.setState({ lineChart: { ...this.state.lineChart,  displayCompanyAvg: !this.state.lineChart.displayCompanyAvg } });
+    }
+
+
+
+
 
     render() {
         const self = this;
@@ -184,6 +213,15 @@ class TowerStoneHomeComponent extends Component {
                 <ListItemText primary={action.text} secondary={`Due: ${action.due.format('DD-MM-YYYY')}`} />
             </ListItem>
         )));
+
+        const filteredMockData = ( ) => { 
+            let data = [];
+            if(self.state.lineChart.displayCompanyAvg) data.push(companyMockScores);
+            if(self.state.lineChart.displayPersonalAvg) data.push(personalMockScores);
+            if(self.state.lineChart.displayPeerAvg) data.push(peersMockScores);
+
+            return data;
+        };
         return (
             <div style={{ marginRight: '5px', marginLeft: '5px' }}>
                 <div>
@@ -250,25 +288,25 @@ class TowerStoneHomeComponent extends Component {
                                     width={Math.floor(self.state.lineChart.width)}
                                     tickTimeDisplayFormat={'%m %Y'}
                                     height={self.state.lineChart.width > 780 ? Math.floor(self.state.lineChart.width / 4) : 250}
-                                    data={mockOverallData}
+                                    data={filteredMockData()}
                                 />
                                 <List>
                                     <ListItem key={0} dense button className={classes.listItem}>                                        
                                         <ListItemText primary={'Personal Avg'} />
                                         <ListItemSecondaryAction>
-                                            <Checkbox />
+                                            <Checkbox checked={self.state.lineChart.displayPersonalAvg} onChange={self.toggleDisplayPersonalAvg}/>
                                         </ListItemSecondaryAction>
                                     </ListItem>
                                     <ListItem key={0} dense button className={classes.listItem}>                                        
                                         <ListItemText primary={'Business Unit Avg'} />
                                         <ListItemSecondaryAction>
-                                            <Checkbox />
+                                            <Checkbox checked={self.state.lineChart.displayPeerAvg} onChange={self.toggleDisplayBusinessUnitAvg}/>
                                         </ListItemSecondaryAction>
                                     </ListItem>
                                     <ListItem key={0} dense button className={classes.listItem}>                                        
                                         <ListItemText primary={'Company Avg'} />
                                         <ListItemSecondaryAction>
-                                            <Checkbox />
+                                            <Checkbox checked={self.state.lineChart.displayCompanyAvg} onChange={self.toggleDisplayCompanyAvg}/>
                                         </ListItemSecondaryAction>
                                     </ListItem>
                                 </List>
@@ -300,7 +338,6 @@ class TowerStoneHomeComponent extends Component {
                                 </List>
                             </Paper>
                         </Grid>
-
                     </Grid>
                 </div>
             </div>

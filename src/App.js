@@ -16,6 +16,7 @@ import Reboot from 'material-ui/Reboot';
 import { createMuiTheme } from 'material-ui/styles';
 import AssessorHeaderBar from './components/header';
 import {
+  Assessment,
   Login,
   UserList,
   Home, 
@@ -63,6 +64,7 @@ class App extends Component {
               <AssessorHeaderBar title={muiTheme.content.appTitle}/>             
               <Route exact path="/" component={Home}/>
               <Route exact path="/login" component={Login} />
+              <Route path="/assess" component={Assessment} />
               <Route exact path="/inbox" component={UserList} />
               <Route exact path="/users" component={UserList} />
               <Route exact path="/organizations" component={OrganizationTable} />             

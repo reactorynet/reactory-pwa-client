@@ -1,6 +1,7 @@
 import stairs from './images/stairs.jpg';
 import logo from './images/logo.png';
 import UserDashboard from '../../components/home/TowerStoneHomeComponent';
+import DefaultAssessmentView from '../../components/assess/DefaultView';
 
 export default {
     muiTheme: {
@@ -34,7 +35,8 @@ export default {
             login: {
                 message: 'Each one of us has only one precious life'
             },
-            dashboardComponent: UserDashboard,            
+            dashboardComponent: UserDashboard,
+            assessmentComponent: DefaultAssessmentView            
         }
     },    
 };
