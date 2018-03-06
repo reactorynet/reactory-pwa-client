@@ -1,5 +1,8 @@
 import React, { Component } from 'react';
 import moment from 'moment';
+import PropTypes from 'prop-types';
+import { withRouter } from 'react-router';
+import { compose } from 'redux';
 import Paper from 'material-ui/Paper';
 import Button from 'material-ui/Button';
 //import muiThemeable from 'material-ui/styles/muiThemeable';
@@ -126,6 +129,9 @@ const mockOverallData = [
 ];
 
 class TowerStoneHomeComponent extends Component {
+    static propTypes = {
+        history: PropTypes.object
+    };
 
     constructor(props, context) {
         super(props, context);
@@ -145,6 +151,7 @@ class TowerStoneHomeComponent extends Component {
         this.toggleDisplayBusinessUnitAvg = this.toggleDisplayBusinessUnitAvg.bind(this);
         this.toggleDisplayCompanyAvg = this.toggleDisplayCompanyAvg.bind(this);
         this.toggleDisplayPersonalAvg = this.toggleDisplayCompanyAvg.bind(this);
+        this.startAssessment = this.startAssessment.bind(this);
     }
 
     handleWindowResize() {
@@ -176,6 +183,10 @@ class TowerStoneHomeComponent extends Component {
         this.setState({ lineChart: { ...this.state.lineChart,  displayCompanyAvg: !this.state.lineChart.displayCompanyAvg } });
     }
 
+    startAssessment(){
+        const { history } = this.props;
+        history.push('/assess');
+    }
 
 
 
@@ -201,7 +212,7 @@ class TowerStoneHomeComponent extends Component {
 
         let assessmentItems = [];
         mockAssessments.map((assessment, idx) => assessmentItems.push((
-            <ListItem key={idx} dense button className={classes.listItem}>
+            <ListItem key={idx} dense button className={classes.listItem} onClick={this.startAssessment}>
                 <Avatar alt="Remy Sharp" src={assessment.avatar} />
                 <ListItemText primary={assessment.text} />
             </ListItem>
@@ -345,4 +356,9 @@ class TowerStoneHomeComponent extends Component {
     }
 }
 
-export default withStyles(styles)(withTheme()(TowerStoneHomeComponent));
+const HomeComponent = compose(
+  withRouter,
+  withStyles(styles),
+  withTheme()
+)(TowerStoneHomeComponent);
+export default HomeComponent;
