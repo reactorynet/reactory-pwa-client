@@ -58,11 +58,11 @@ const Logged = (props) => (
           }}>        
         <MenuItem onClick={ props.surveysClicked }>
             <ListItemIcon><AccountCircle /></ListItemIcon>
-            <ListItemText inset primary="My Profile" />
+            <ListItemText inset primary="My Profile" onClick={props.onMyProfileClicked}/>
         </MenuItem>
         <MenuItem>
             <ListItemIcon><LockIcon /></ListItemIcon>
-            <ListItemText inset primary="Sign Out" />        
+            <ListItemText inset primary="Sign Out" onClick={props.onSignOutClicked}/>        
         </MenuItem>
 
     </Menu>
@@ -144,6 +144,14 @@ class AssessorHeaderBar extends Component {
         this.navigateTo('/actions', true)
     }
 
+    signOutClicked = ( evt ) => {
+        console.log('TODO: implement signout logic');;
+    }
+
+    profileClicked = ( evt ) => {
+        this.navigateTo('/profile')
+    }
+
     
 
     render() {
@@ -170,7 +178,12 @@ class AssessorHeaderBar extends Component {
                   color="inherit"                  
                 >
                   <PowerSettingIcon />
-                  <Logged open={menuOpen === true} id={'menu-appbar'} anchorEl={self.state.menuAnchor}/>
+                  <Logged open={menuOpen === true} 
+                    id={'menu-appbar'} 
+                    anchorEl={self.state.menuAnchor}
+                    onMyProfileClicked={self.profileClicked}
+                    onSignOutClicked={self.signOutClicked}
+                    />
                 </IconButton>
             </Toolbar>
             </AppBar>

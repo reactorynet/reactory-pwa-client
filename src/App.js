@@ -5,21 +5,23 @@ import {
   Route,
   Link
 } from 'react-router-dom';
-import logo from './logo.svg';
-import './App.css';
-
 import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
 import { ApolloProvider } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import Reboot from 'material-ui/Reboot';
 import { createMuiTheme } from 'material-ui/styles';
+import logo from './logo.svg';
+import './App.css';
+
 import AssessorHeaderBar from './components/header';
 import {
   Assessment,
   Login,
   UserList,
-  Home, 
+  Home,
+  Profile,
+  UserSurvey, 
   OrganizationTable 
 } from './components';
 
@@ -67,6 +69,8 @@ class App extends Component {
               <Route path="/assess" component={Assessment} />
               <Route exact path="/inbox" component={UserList} />
               <Route exact path="/users" component={UserList} />
+              <Route path="/profile" component={Profile}/>
+              <Route path="/survey" component={UserSurvey} />
               <Route exact path="/organizations" component={OrganizationTable} />             
             </div>
           </MuiThemeProvider>

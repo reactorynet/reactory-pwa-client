@@ -24,7 +24,8 @@ export class Behaviour {
     this._ordinal = instanceData.ordinal;
     this._rating = instanceData.rating;
     this._comment = instanceData.comment;
-    this._id = instanceData.id;
+    this._id = instanceData.id || uuid();
+    this._custom = instanceData.custom || false;
   }
 
 
@@ -91,6 +92,14 @@ export class Behaviour {
 
   set comment(value) {
     this._comment = value;
+  }
+
+  get custom() {
+    return this._custom;
+  }
+
+  set custom(value) {
+    this._custom = value;
   }
 }
 
