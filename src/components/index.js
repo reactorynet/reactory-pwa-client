@@ -5,7 +5,8 @@ import Main from './home/index';
 import AssessmentView from './assess/index';
 import ProfileComponent from './user/Profile';
 import UserSurveyComponent from './survey/UserSurvey';
-
+import ReportComponent from './report/index';
+import  { TaskListComponent, TaskDashboardComponent } from './tasks/Taskboard';
 export default UserComponents.UserListWithData;
 export const UserList = UserComponents.UserListWithData;
 export const Home = Main;
@@ -14,3 +15,6 @@ export const OrganizationTable = OrganizationComponents.OrganizationTable;
 export const Login = LoginPage; 
 export const Profile = ProfileComponent;
 export const UserSurvey = UserSurveyComponent;
+export const Report = ReportComponent;
+export const TaskList = TaskListComponent;
+export const TaskDashboard = TaskDashboardComponent;

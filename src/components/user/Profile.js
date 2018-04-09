@@ -147,18 +147,9 @@ class Profile extends Component {
                             { TextField({...defaultFieldProps, label: 'Name', value: firstName, helperText: 'Please use your given name'}) }
                             { TextField({...defaultFieldProps, label: 'Surname', value: lastName, helperText: 'Please use your given name'} )} 
                             { TextField({...defaultFieldProps, type:'email', label: 'Email', value: email, helperText: 'Please use your work email address, unless you are an outside provider'})}                                   
-                            { TextField({...defaultFieldProps, label: 'Business Unit', helperText: 'Your business unit'}) }
+                            { TextField({...defaultFieldProps, label: 'Business Unit / Division', helperText: 'Your business unit'}) }
                         </form>
-                        <Typography variant='headline'> Your team memberships.</Typography>
-                        <div className={classes.avatarContainer} >
-                            
-                            { teams.map( (team, ti ) => {
-                                return (
-                                    <Chip key={ti}
-                                        label={team.title} />
-                                )
-                            })}
-                        </div>
+
                         <div className={classes.avatarContainer} style={{justifyContent:'flex-end', marginTop: '5px'}}>
                             <Button variant='raised' color='primary'><SaveIcon />&nbsp;SAVE</Button>
                         </div>

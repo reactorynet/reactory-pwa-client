@@ -31,7 +31,7 @@ import StaffImages from '../../assets/images/staff';
 
 const styles = (theme) => {
     const primaryColor = theme.palette.primary.main;
-    const primaryColorLight = theme.palette.primary.light;
+    const primaryColorLight = theme.palette.primary.dark;
     return {
         card: {
             maxWidth: 365,

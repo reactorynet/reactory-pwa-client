@@ -1,5 +1,6 @@
 import plc from './plc';
 import towerstone from './towerstone';
+import woosparks from './woosparks';
 
 export const StyleHelper = {
     debug: () => ({ outline:'1px solid red' }),
@@ -8,3 +9,4 @@ export const StyleHelper = {
 };
 export const plcTheme = plc;
 export const towerstoneTheme = towerstone;
+export const woosparksTheme = woosparks;

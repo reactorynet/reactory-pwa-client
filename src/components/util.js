@@ -1,5 +1,14 @@
 import React from 'react';
 
+export const nil = ( input ) => { return input === null || input === undefined };
+export const nilStr = ( input ) => { 
+  if(nil(input)) return true;
+  if(input instanceof String && nil(input.trim) === false){
+    return input.trim() === '';
+  } else {
+    return false;
+  }
+};
 
 export const paperStyles = {  
     maxWidth: 900,
@@ -48,3 +57,4 @@ export  const CenteredContainer = ( props ) => {
     )
   
   };
+

@@ -22,7 +22,9 @@ import {
   Home,
   Profile,
   UserSurvey, 
-  OrganizationTable 
+  OrganizationTable,
+  Report,
+  TaskDashboard
 } from './components';
 
 import * as themes from './themes';
@@ -64,13 +66,15 @@ class App extends Component {
             <div style={{marginTop:'80px'}}>
               <Reboot />              
               <AssessorHeaderBar title={muiTheme.content.appTitle}/>             
-              <Route exact path="/" component={Home}/>
+              <Route exact path="/" component={Home}/>              
               <Route exact path="/login" component={Login} />
               <Route path="/assess" component={Assessment} />
               <Route exact path="/inbox" component={UserList} />
               <Route exact path="/users" component={UserList} />
               <Route path="/profile" component={Profile}/>
               <Route path="/survey" component={UserSurvey} />
+              <Route path="/reports" component={Report} />
+              <Route path="/actions" component={TaskDashboard} />
               <Route exact path="/organizations" component={OrganizationTable} />             
             </div>
           </MuiThemeProvider>
