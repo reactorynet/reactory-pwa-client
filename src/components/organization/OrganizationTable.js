@@ -15,16 +15,15 @@ import {
  * List component for user entries
  * @param {*} param0 
  */
-class OrganizationList extends Component {
+class OrganizationTable extends Component {
 
   constructor(props, context){
     super(props, context);
     this.state = {
-      selected: []  
+      selected: [],      
     }
   }
-
-
+ 
   render(){
     const that = this;
     const { loading, error, allOrganizations } = this.props.data;
@@ -57,24 +56,16 @@ class OrganizationList extends Component {
           </TableRow>
         </TableHeader>
         <TableBody>
-        {allOrganizations.map( (user, index) => {    
+        {allOrganizations.map( (organization, index) => {    
           return (
             <TableRow selected={isSelected(index)}>
-            <TableRowColumn>{user.email}</TableRowColumn>
-            <TableRowColumn>{user.firstName}</TableRowColumn>
-            <TableRowColumn>{user.lastName}</TableRowColumn>
+            <TableRowColumn>{organization.code}</TableRowColumn>
+            <TableRowColumn>{organization.name}</TableRowColumn>
+            <TableRowColumn>{organization.logo}</TableRowColumn>
           </TableRow>)}) }        
         </TableBody>
       </Table>);
   }  
-};
-
-OrganizationList.propTypes = {
-  organizations: PropTypes.object
-};
-
-OrganizationList.defaultProps = {
-
 };
 
 const organizationQuery = gql`
@@ -90,4 +81,4 @@ query OrganizationQuery {
 }
 `;
 
-export default graphql(organizationQuery)(OrganizationList);
+export default graphql(organizationQuery)(OrganizationTable);

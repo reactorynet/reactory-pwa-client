@@ -8,6 +8,7 @@ import {
 import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
 import { ApolloProvider } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
+import { setContext } from 'apollo-link-context';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import Reboot from 'material-ui/Reboot';
 import { createMuiTheme } from 'material-ui/styles';
@@ -24,21 +25,33 @@ import {
   UserSurvey, 
   OrganizationTable,
   Report,
-  TaskDashboard
+  TaskDashboard,
+  AdminDashboard
 } from './components';
 
 import * as themes from './themes';
 
 
-const link = createHttpLink({
-  uri: 'http://localhost:4000/api',
-  credentials: 'same-origin'
+const authLink = setContext((_, { headers }) => {
+  // get the authentication token from local storage if it exists
+  const token = localStorage.getItem('auth_token');
+  // return the headers to the context so httpLink can read them
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : "",
+    }
+  }
+});
+
+const httpLink = createHttpLink({
+  uri: 'http://localhost:4000/api',  
 });
 
 const cache = new InMemoryCache();
 
 const client = new ApolloClient({
-  link  ,
+  link: authLink.concat(httpLink)  ,
   cache
 });
 
@@ -56,8 +69,7 @@ class App extends Component {
   render() {
     const { appTitle, appTheme } = this.props;
     const { drawerOpen } = this.state;
-    const muiTheme = createMuiTheme( appTheme.muiTheme );
-    console.log('Created theme', muiTheme);
+    const muiTheme = createMuiTheme( appTheme.muiTheme );    
     
     return (
       <Router>
@@ -66,7 +78,8 @@ class App extends Component {
             <div style={{marginTop:'80px'}}>
               <Reboot />              
               <AssessorHeaderBar title={muiTheme.content.appTitle}/>             
-              <Route exact path="/" component={Home}/>              
+              <Route exact path="/" component={Home}/>
+              <Route path="/admin" component={ AdminDashboard } />              
               <Route exact path="/login" component={Login} />
               <Route path="/assess" component={Assessment} />
               <Route exact path="/inbox" component={UserList} />

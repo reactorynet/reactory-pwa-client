@@ -12,6 +12,7 @@ import Typography from 'material-ui/Typography';
 import TextField from 'material-ui/TextField';
 import Checkbox from 'material-ui/Checkbox';
 import { FormGroup, FormControlLabel } from 'material-ui/Form';
+import { LinearProgress, CircularProgress } from 'material-ui/Progress';
 import Input, { InputLabel, InputAdornment } from 'material-ui/Input';
 import { MenuItem } from 'material-ui/Menu';
 import { FormControl, FormHelperText } from 'material-ui/Form';
@@ -30,8 +31,11 @@ import Button from 'material-ui/Button';
 import IconButton from 'material-ui/IconButton';
 import SendIcon from 'material-ui-icons/Send';
 import ChatIcon from 'material-ui-icons/Chat';
+import CloseIcon from 'material-ui-icons/Close';
+import ArrowBackIcon from 'material-ui-icons/ArrowBack';
 import CommentIcon from 'material-ui-icons/Comment';
 import GroupAddIcon from 'material-ui-icons/GroupAdd';
+import ModeEditIcon from 'material-ui-icons/ModeEdit';
 import PersonAddIcon from 'material-ui-icons/PersonAdd';
 import WhatsHotIcon from 'material-ui-icons/Whatshot'
 import AddCircleIcon from 'material-ui-icons/AddCircle';
@@ -44,6 +48,8 @@ import MoreVertIcon from 'material-ui-icons/MoreVert';
 import List, { ListItem, ListItemSecondaryAction, ListItemText } from 'material-ui/List';
 import taskService from './Tasks';
 import moment from 'moment';
+import IconButtonDropDown from '../shared/IconButtonDropDown';
+import Comments from '../shared/Comments';
 import * as mocks from '../../models/mock';
 
 
@@ -287,9 +293,11 @@ class TaskListItem extends Component {
               />
               <ListItemText primary={this.props.task.title} />
               <ListItemSecondaryAction>
-                <IconButton aria-label="Comments">
-                  <CommentIcon />
-                </IconButton>
+              <CircularProgress                
+                variant="determinate"
+                size={30}
+                value={this.props.task.completePercentage}
+                />
               </ListItemSecondaryAction>
             </ListItem>
         )
@@ -399,7 +407,31 @@ export const TaskListComponent = compose(
 class TaskDetail extends Component {
     static styles = (theme) => { 
         return { 
-        
+            taskDetailContainer: {
+                padding: '15px'
+            },
+            closeButton: {
+                float: 'right'
+            },
+            taskHeader: {
+                marginBottom: theme.spacing.unit * 1.5,
+                display: 'flex',
+                flex: 1,
+                justifyContent: 'space-between'
+            },
+            taskFooter: {
+                display: 'flex',
+                flex: 1,
+                justifyContent: 'space-between',
+                marginTop: theme.spacing.unit,
+            },
+            taskDetail: {
+                paddingTop: theme.spacing.unit,
+                paddingBottom: theme.spacing.unit,
+            },
+            createdBy: {
+                extend: 'taskDetail',                
+            }
         }
     };
 
@@ -407,13 +439,53 @@ class TaskDetail extends Component {
         task: PropTypes.object
     };
 
+    toggleExpand(){
+        this.setState({expanded:!this.state.expanded})
+    }
+
     render(){
+        const { classes, task } = this.props;
+        const { expanded } = this.state;
+        let dueLabelText = 'NOT SET';
+        if(task.due){
+            const dueMoment = moment(task.due)
+            if(moment.isMoment(dueMoment)){
+                dueLabelText = dueMoment.format('DD MMM YY')
+            }
+        }
+
         return(
-            <Paper>
-                <Typography variant="title">{this.props.task.title}</Typography>
-                <Typography variant="p">{this.props.task.description}</Typography>
+            <Paper className={classes.taskDetailContainer}>
+                <div className={classes.taskHeader}>                                    
+                    <Typography variant="title" gutterBottom>{this.props.task.title}</Typography>
+                    <Typography variant="caption" gutterBottom >Due - {dueLabelText}</Typography>                                                       
+                </div>
+                <Typography variant="body1" gutterBottom>{this.props.task.description}</Typography>
+                <Typography variant="caption" gutterBottom >Admin - 13 Oct 2017</Typography>
+
+                <ExpansionPanel expanded={expanded} onChange={this.toggleExpand}>
+                    <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography className={classes.heading}>Comments</Typography>                        
+                    </ExpansionPanelSummary>
+                    <ExpansionPanelDetails>                        
+                        <Comments comments={task.comments} />
+                    </ExpansionPanelDetails>
+                </ExpansionPanel>          
+                <LinearProgress variant="determinate" value={this.state.completed} />
+                <div className={classes.taskFooter}>                                                            
+                    <IconButtonDropDown />                
+                </div>                
             </Paper>
         )
+    }
+
+    constructor(props, context){
+        super(props, context);
+        this.state = {
+            expanded: false,
+            completed: 50
+        }
+        this.toggleExpand = this.toggleExpand.bind(this)
     }
 }
 
@@ -433,7 +505,9 @@ class TaskDashboard extends Component {
                 marginLeft: 'auto',
                 marginRight: 'auto',                    
             },
-            
+            toolbar : {
+                justifyContent: 'space-between'
+            }
         }
     }
 
@@ -452,9 +526,9 @@ class TaskDashboard extends Component {
             {id: 4, title: '180 Assessment', subTitle:'TowerStone Leadership Team October 2017'},
         ],
         tasks:  [
-            { id: uuid(), title: 'Read Good to Great', description: 'Give oral feedback to team on Good to Great', due: moment('12 Oct 2017'), done: false, groupId: 1 },
-            { id: uuid(), title: 'Achieve Toastmasters Level 1', description: 'Sign up for toastmasters and complete the first grading', due: moment('12 Oct 2017'), done: false, groupId: 1 },
-            { id: uuid(), title: 'Achieve Toastmasters Level 2', description: 'Sign up for toastmasters and complete the second grading', due: moment('13 May 2018'), done: false, groupId: 2 },
+            { id: uuid(), title: 'Read Good to Great', description: 'Give oral feedback to team on Good to Great', due: moment('18 Jan 2018'), completePercentage: 25, done: false, groupId: 1, comments: mocks.comments },
+            { id: uuid(), title: 'Achieve Toastmasters Level 1', description: 'Sign up for toastmasters and complete the first grading', due: moment('12 Oct 2017'), completePercentage: 50, done: false, groupId: 1, comments: mocks.comments },
+            { id: uuid(), title: 'Achieve Toastmasters Level 2', description: 'Sign up for toastmasters and complete the second grading', due: moment('13 May 2018'), completePercentage: 75, done: false, groupId: 2, comments: mocks.comments },
         ],
         user: null,
         toolbarTitle: 'Todos'
@@ -473,21 +547,33 @@ class TaskDashboard extends Component {
     }
 
     render(){
-        const { toolbarTitle, tasks, classes, groups } = this.props;
+        const { toolbarTitle, tasks, classes, groups, history } = this.props;
         
         let viewTask = null;
         
+        const backButtonComponent = ({history}) => {
+            return (
+                <IconButton onClick={history.goBack}>
+                    <CloseIcon />
+                </IconButton>
+            )
+        }
 
+        
 
         const ListComponent = () => <TaskListComponent tasks={tasks} groups={groups} onTaskSelected={this.taskSelected}/>
         const DetailComponent = () => <TaskDetailComponent task={tasks[0]} />
+
         return (
             <Grid container spacing={16} className={classes.centeredMain}>
                 <Grid item xs={12}>
                     <AppBar position="static" color="default">
-                        <Toolbar>
-                            <Typography variant="title" color="inherit" >{toolbarTitle}</Typography>                                                                                      
-                        </Toolbar>
+                        <Toolbar className={classes.toolbar}>
+                            <Typography variant="title" color="inherit" >{toolbarTitle}</Typography>                            
+                            <Switch>                                
+                                <Route path={'/actions/:id'} component={ backButtonComponent } />
+                            </Switch>
+                        </Toolbar>                        
                     </AppBar>
                 </Grid>
                 <Grid item xs={12}>

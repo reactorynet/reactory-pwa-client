@@ -30,6 +30,7 @@ import MoreVertIcon from 'material-ui-icons/MoreVert';
 import ScheduleIcon from 'material-ui-icons/Schedule';
 import PageviewIcon from 'material-ui-icons/Pageview';
 import ShowChartIcon from 'material-ui-icons/ShowChart';
+import DateRangeIcon from 'material-ui-icons/DateRange';
 import PersonIcon from 'material-ui-icons/Person';
 import EmailIcon from 'material-ui-icons/Email';
 import PlaylistAddCheck from 'material-ui-icons/PlaylistAddCheck';
@@ -166,10 +167,13 @@ class ReportCard extends Component {
                 </Collapse>
                 <CardActions className={classes.actions} disableActionSpacing>
                     <IconButton aria-label="View Report Details" onClick={this.handleViewDetailClick}>
-                    <PageviewIcon />
+                        <PageviewIcon />
                     </IconButton>
                     <IconButton aria-label="Print">
-                    <PrintIcon />
+                        <PrintIcon />
+                    </IconButton>
+                    <IconButton aria-label="Print">
+                        <DateRangeIcon />
                     </IconButton>
                     <IconButton
                     className={classNames(classes.expand, {

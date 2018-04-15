@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { withRouter } from 'react-router';
+import { compose } from 'redux';
 import { Card, CardActions, CardHeader, CardMedia, CardTitle, CardText } from 'material-ui/Card';
 import Paper from 'material-ui/Paper';
 import TextField from 'material-ui/TextField';
@@ -15,16 +17,34 @@ class LoginCard extends Component {
 
   constructor(props, context) {
     super(props, context);
-
+    this.state = {
+      username: '',
+      password: ''
+    };
     this.doLogin = this.doLogin.bind(this);
+    this.updateUsername = this.updateUsername.bind(this);
+    this.updatePassword = this.updatePassword.bind(this);
   }
 
   doLogin = (evt) => {
-    const { router } = this.context;
-    router.history.push('/');
+    const { history } = this.props;
+    const token = btoa(`${this.state.username}:${this.state.password}`)
+    fetch('http://localhost:4000/login', {
+      method: 'post', 
+      headers: {
+        'Authorization': `Basic ${token}`
+      }
+    })
+    .then((response) => response.json())
+    .then((response)=>{
+      console.log('user logged in', response);
+      localStorage.setItem('auth_token', response.user.token);
+      history.push('/admin')
+    })
   }
 
-
+  updateUsername = (evt) => this.setState({username: evt.target.value})
+  updatePassword = (evt) => this.setState({password: evt.target.value})
   render() {
     const that = this;
     const { doLogin, props, context } = that;
@@ -44,12 +64,17 @@ class LoginCard extends Component {
 
             <TextField
               label="Email"
-              style={textStyle} />
+              style={textStyle}
+              value={this.state.username}
+              onChange={this.updateUsername}
+               />
 
             <TextField
               label='Password'
               type='password'
               style={textStyle}
+              value={this.state.password}
+              onChange={this.updatePassword}
             />
 
             
@@ -82,4 +107,4 @@ class LoginCard extends Component {
   }
 };
 
-export default withTheme()(LoginCard);
+export default compose(withTheme(), withRouter)(LoginCard);
