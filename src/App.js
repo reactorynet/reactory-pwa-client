@@ -5,6 +5,8 @@ import {
   Route,
   Link
 } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import configureStore from './models/redux';
 import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
 import { ApolloProvider } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
@@ -14,7 +16,6 @@ import Reboot from 'material-ui/Reboot';
 import { createMuiTheme } from 'material-ui/styles';
 import logo from './logo.svg';
 import './App.css';
-
 import AssessorHeaderBar from './components/header';
 import {
   Assessment,
@@ -55,6 +56,8 @@ const client = new ApolloClient({
   cache
 });
 
+const store = configureStore();
+
 const defaultTheme = themes.towerstoneTheme;
 
 class App extends Component {
@@ -69,29 +72,33 @@ class App extends Component {
   render() {
     const { appTitle, appTheme } = this.props;
     const { drawerOpen } = this.state;
-    const muiTheme = createMuiTheme( appTheme.muiTheme );    
-    
+    const muiTheme = createMuiTheme( appTheme.muiTheme );
+    if(muiTheme.type === 'bootstrap'){
+      console.log('App is bootstrap')  
+    }
     return (
       <Router>
-        <ApolloProvider client={client}>
-          <MuiThemeProvider theme={muiTheme}>
-            <div style={{marginTop:'80px'}}>
-              <Reboot />              
-              <AssessorHeaderBar title={muiTheme.content.appTitle}/>             
-              <Route exact path="/" component={Home}/>
-              <Route path="/admin" component={ AdminDashboard } />              
-              <Route exact path="/login" component={Login} />
-              <Route path="/assess" component={Assessment} />
-              <Route exact path="/inbox" component={UserList} />
-              <Route exact path="/users" component={UserList} />
-              <Route path="/profile" component={Profile}/>
-              <Route path="/survey" component={UserSurvey} />
-              <Route path="/reports" component={Report} />
-              <Route path="/actions" component={TaskDashboard} />
-              <Route exact path="/organizations" component={OrganizationTable} />             
-            </div>
-          </MuiThemeProvider>
-        </ApolloProvider>
+        <Provider store={store}>
+          <ApolloProvider client={client}>
+            <MuiThemeProvider theme={muiTheme}>
+              <div style={{marginTop:'80px'}}>
+                <Reboot />              
+                <AssessorHeaderBar title={muiTheme.content.appTitle}/>             
+                <Route exact path="/" component={Home}/>
+                <Route path="/admin" component={ AdminDashboard } />              
+                <Route exact path="/login" component={Login} />
+                <Route path="/assess" component={Assessment} />
+                <Route exact path="/inbox" component={UserList} />
+                <Route exact path="/users" component={UserList} />
+                <Route path="/profile" component={Profile}/>
+                <Route path="/survey" component={UserSurvey} />
+                <Route path="/reports" component={Report} />
+                <Route path="/actions" component={TaskDashboard} />
+                <Route exact path="/organizations" component={OrganizationTable} />             
+              </div>
+            </MuiThemeProvider>
+          </ApolloProvider>
+        </Provider>
       </Router>
     );
   }

@@ -5,6 +5,7 @@ import DefaultAssessmentView from '../../components/assess/DefaultView';
 
 export default {
     muiTheme: {
+        type: 'material',
         palette: {
             primary1Color: '#3C6598',
             primary: {

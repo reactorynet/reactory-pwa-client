@@ -1,15 +1,19 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { withRouter, Route, Switch } from 'react-router'
+import { Link } from "react-router-dom";
 import { compose } from 'redux'
-import {withStyles, withTheme} from 'material-ui/styles'
+import { withStyles, withTheme } from 'material-ui/styles'
 import Typography from 'material-ui/Typography'
 import TextField from 'material-ui/TextField'
 import Toolbar from 'material-ui/Toolbar'
 import Grid from 'material-ui/Grid' 
+import Form from 'react-jsonschema-form';
 import List, { ListItem, ListItemSecondaryAction, ListItemText } from 'material-ui/List'
 import Avatar from 'material-ui/Avatar'
-import { OrganizationList } from '../organization';
+import { OrganizationList, Forms } from '../organization';
+import schemas, { FieldTemplate } from './schemas';
+import Dashboards from '../dashboards';
 
 
 class AdminDashboard extends Component {
@@ -30,18 +34,33 @@ class AdminDashboard extends Component {
 
   render(){
     const { classes } = this.props;
+
+    const log = (type) => console.log.bind(console, type);    
+
     return(
       <Grid container spacing={16}>
         <Grid item xs={12}>
           <Toolbar>
-            <Typography variant="title">Admin</Typography>            
+            <Link to="/admin">
+              <Typography variant="title">Admin</Typography>
+            </Link>
           </Toolbar>
         </Grid>
-        <Grid item md={3} xs={12}>
-          <OrganizationList onOrganizationClick={this.handleOrganizationSelect}/>
+        <Grid item md={3} xs={12}>          
+          <OrganizationList admin={true} newOrganizationLink={true} />                    
         </Grid>
-        <Grid item md={6} xs={12}>
-          
+        <Grid item md={9} xs={12}>
+          <Switch>
+            <Route exact path='/admin'>
+              <Dashboards.DefaultAdminDashboard />
+            </Route>
+            <Route exact path='/admin/org/new'>
+              <Forms.Default mode={'new'} orgId={null} />
+            </Route>
+            <Route path='/admin/org/:orgId' render={ props =>
+              <Forms.Default orgId={props.match.params.orgId} mode={'edit'} {...props} />
+            } />                        
+          </Switch> 
         </Grid>        
       </Grid>
     )

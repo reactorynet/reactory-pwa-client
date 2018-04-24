@@ -48,8 +48,7 @@ class LoginCard extends Component {
   render() {
     const that = this;
     const { doLogin, props, context } = that;
-    const { theme } = that.props;
-    console.log('LoginCard', { props, context })
+    const { theme } = that.props;    
     return (
       <CenteredContainer>
         <BasicContainer>

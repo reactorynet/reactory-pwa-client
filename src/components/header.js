@@ -24,8 +24,6 @@ import AccountCircle from 'material-ui-icons/AccountCircle';
 import LockIcon from 'material-ui-icons/Lock';
 import { ListItemIcon, ListItemText } from 'material-ui/List';
 import { withTheme } from 'material-ui/styles';
-
-
 import DefaultProfileImage from '../assets/images/profile/wernerw.png';
 
 class Login extends Component {
@@ -93,6 +91,7 @@ class AssessorHeaderBar extends Component {
         this.surveysClicked = this.surveysClicked.bind(this);
         this.reportsClicked = this.reportsClicked.bind(this);
         this.actionsClicked = this.actionsClicked.bind(this);
+
     }
 
     navigateTo( where = '/', toggleDrawer = true){
@@ -151,9 +150,7 @@ class AssessorHeaderBar extends Component {
     profileClicked = ( evt ) => {
         this.navigateTo('/profile')
     }
-
-    
-
+            
     render() {
         //const { match } = this.props;
         const self = this;
@@ -222,7 +219,7 @@ class AssessorHeaderBar extends Component {
               </Drawer>
             </div>
         );
-    }
+    }    
 }
 
 AssessorHeaderBar.propTypes = {

@@ -1,15 +1,10 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { withRouter } from 'react-router'
 import gql from 'graphql-tag';
+import { compose } from 'redux';
 import { graphql } from 'react-apollo';
-import {
-  Table,
-  TableBody,
-  TableHeader,
-  TableHeaderColumn,
-  TableRow,
-  TableRowColumn,
-} from 'material-ui/Table';
+import Paper from 'material-ui/Paper';
 import { List, ListItem, ListItemText } from 'material-ui';
 
 /**
@@ -29,6 +24,7 @@ class OrganizationList extends Component {
   
   handleOrganizationSelect(organization){
     if(this.props.onOrganizationClick) this.props.onOrganizationClick(organization);
+    if(this.props.admin===true) this.props.history.push(`/admin/org/${organization.id}`);
   }
  
   render(){
@@ -53,8 +49,18 @@ class OrganizationList extends Component {
       });
     }
 
-    return (
+    let newOrganizationLink = null;
+    if(this.props.newOrganizationLink === true){
+      const selectNewLinkClick = () => { that.handleOrganizationSelect({id: 'new', name: 'NEW'}) };
+      newOrganizationLink = (
+        <ListItem key={-1} dense button onClick={selectNewLinkClick}>              
+            <ListItemText primary={'NEW ORGANIZATION'} secondary='Click here to create a new organization' />
+        </ListItem>)
+    }
+
+    const list = (
       <List>
+        {newOrganizationLink}
         {allOrganizations.map( (organization, index) => {    
           const selectOrganization = () => {
             that.handleOrganizationSelect(organization);
@@ -64,6 +70,15 @@ class OrganizationList extends Component {
               <ListItemText primary={organization.name} />
             </ListItem>)}) }              
       </List>);
+
+    let component = null;
+    if(this.props.wrapper === true) {
+      component = (<Paper>
+        {list}
+      </Paper>)
+    } else component = list;
+
+    return component;
   }  
 };
 
@@ -89,4 +104,6 @@ const organizationQuery = gql`
   }
 `;
 
-export default graphql(organizationQuery)(OrganizationList);
+export default compose(
+  withRouter,
+  graphql(organizationQuery))(OrganizationList);

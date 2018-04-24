@@ -8,7 +8,11 @@ const schema = {
         id: {
             type: SchemaType.String,
             title: "Organization Id"
-        },        
+        },
+        code: {
+            type: SchemaType.String,
+            title: "Short Code"
+        },
         name: {
             type: SchemaType.String,
             title: "Organization Name",

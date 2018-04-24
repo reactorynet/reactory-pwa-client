@@ -1,9 +1,11 @@
 import phoenix from './images/phoenix.png';
 import logo from './images/logo.png';
+import ThreeDeeMockup from './images/3Dmockup.jpg'
 import UserDashboard from '../../components/home/WooSparks';
 import DefaultAssessmentView from '../../components/assess/DefaultView';
 export default {
     muiTheme: {
+        type: 'bootstrap',
         palette: {
             primary1Color: '#488A99',
             primary: {
@@ -25,7 +27,7 @@ export default {
         },
         assets: {
             login: {
-                featureImage: phoenix,
+                featureImage: ThreeDeeMockup,
                 logo
             }
         },

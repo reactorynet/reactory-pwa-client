@@ -4,6 +4,7 @@ import UserDashboard from '../../components/home/TowerStoneHomeComponent';
 import DefaultAssessmentView from '../../components/assess/DefaultView';
 export default {
     muiTheme: {
+        type: 'material',
         palette: {
             primary1Color: '#990033',
             primary: {
