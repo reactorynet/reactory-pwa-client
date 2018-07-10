@@ -11,7 +11,7 @@ import Icon from 'material-ui/Icon';
 import { withTheme } from 'material-ui/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
 import { BasicContainer, CenteredContainer, textStyle } from '../util';
-
+import { login } from '../../api';
 
 class LoginCard extends Component {
 
@@ -29,13 +29,7 @@ class LoginCard extends Component {
   doLogin = (evt) => {
     const { history } = this.props;
     const token = btoa(`${this.state.username}:${this.state.password}`)
-    fetch('http://localhost:4000/login', {
-      method: 'post', 
-      headers: {
-        'Authorization': `Basic ${token}`
-      }
-    })
-    .then((response) => response.json())
+    login(this.state.username, this.state.password)
     .then((response)=>{
       console.log('user logged in', response);
       localStorage.setItem('auth_token', response.user.token);

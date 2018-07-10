@@ -20,6 +20,7 @@ import AssessorHeaderBar from './components/header';
 import {
   Assessment,
   Login,
+  Register,
   UserList,
   Home,
   Profile,
@@ -29,7 +30,7 @@ import {
   TaskDashboard,
   AdminDashboard
 } from './components';
-
+import ApiProvider, { ReactoryApi } from './api/ApiProvider'
 import * as themes from './themes';
 
 
@@ -41,6 +42,8 @@ const authLink = setContext((_, { headers }) => {
     headers: {
       ...headers,
       authorization: token ? `Bearer ${token}` : "",
+      'x-client-key': 'towerstone',
+      'x-client-pwd': 'sonicwasadog'
     }
   }
 });
@@ -55,6 +58,8 @@ const client = new ApolloClient({
   link: authLink.concat(httpLink)  ,
   cache
 });
+
+const api = new ReactoryApi(client);
 
 const store = configureStore();
 
@@ -73,30 +78,31 @@ class App extends Component {
     const { appTitle, appTheme } = this.props;
     const { drawerOpen } = this.state;
     const muiTheme = createMuiTheme( appTheme.muiTheme );
-    if(muiTheme.type === 'bootstrap'){
-      console.log('App is bootstrap')  
-    }
+    
     return (
       <Router>
         <Provider store={store}>
           <ApolloProvider client={client}>
-            <MuiThemeProvider theme={muiTheme}>
-              <div style={{marginTop:'80px'}}>
-                <Reboot />              
-                <AssessorHeaderBar title={muiTheme.content.appTitle}/>             
-                <Route exact path="/" component={Home}/>
-                <Route path="/admin" component={ AdminDashboard } />              
-                <Route exact path="/login" component={Login} />
-                <Route path="/assess" component={Assessment} />
-                <Route exact path="/inbox" component={UserList} />
-                <Route exact path="/users" component={UserList} />
-                <Route path="/profile" component={Profile}/>
-                <Route path="/survey" component={UserSurvey} />
-                <Route path="/reports" component={Report} />
-                <Route path="/actions" component={TaskDashboard} />
-                <Route exact path="/organizations" component={OrganizationTable} />             
-              </div>
-            </MuiThemeProvider>
+            <ApiProvider api={api}>
+              <MuiThemeProvider theme={muiTheme}>
+                <div style={{marginTop:'80px'}}>
+                  <Reboot />              
+                  <AssessorHeaderBar title={muiTheme.content.appTitle}/>             
+                  <Route exact path="/" component={Home}/>
+                  <Route path="/admin" component={ AdminDashboard } />              
+                  <Route exact path="/login" component={Login} />
+                  <Route exact path="/register" component={Register } />
+                  <Route path="/assess" component={Assessment} />
+                  <Route exact path="/inbox" component={UserList} />
+                  <Route exact path="/users" component={UserList} />
+                  <Route path="/profile" component={Profile}/>
+                  <Route path="/survey" component={UserSurvey} />
+                  <Route path="/reports" component={Report} />
+                  <Route path="/actions" component={TaskDashboard} />
+                  <Route exact path="/organizations" component={OrganizationTable} />             
+                </div>
+              </MuiThemeProvider>
+            </ApiProvider>
           </ApolloProvider>
         </Provider>
       </Router>

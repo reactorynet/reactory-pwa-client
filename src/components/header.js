@@ -21,6 +21,7 @@ import AlarmIcon from 'material-ui-icons/Alarm';
 import AssessmentIcon from 'material-ui-icons/Assessment';
 import PowerSettingIcon from 'material-ui-icons/PowerSettingsNew';
 import AccountCircle from 'material-ui-icons/AccountCircle';
+import BuildIcon from 'material-ui-icons/Build';
 import LockIcon from 'material-ui-icons/Lock';
 import { ListItemIcon, ListItemText } from 'material-ui/List';
 import { withTheme } from 'material-ui/styles';
@@ -91,6 +92,7 @@ class AssessorHeaderBar extends Component {
         this.surveysClicked = this.surveysClicked.bind(this);
         this.reportsClicked = this.reportsClicked.bind(this);
         this.actionsClicked = this.actionsClicked.bind(this);
+        this.adminClicked = this.adminClicked.bind(this);
 
     }
 
@@ -150,6 +152,8 @@ class AssessorHeaderBar extends Component {
     profileClicked = ( evt ) => {
         this.navigateTo('/profile')
     }
+
+    adminClicked = evt => this.navigateTo('/admin')
             
     render() {
         //const { match } = this.props;
@@ -214,6 +218,11 @@ class AssessorHeaderBar extends Component {
                 <MenuItem onClick={ this.actionsClicked } leftIcon={<Icon>alarm</Icon>}>
                     <ListItemIcon><AlarmIcon /></ListItemIcon>
                     <ListItemText inset primary="Actions" />
+                </MenuItem>
+
+                <MenuItem onClick={ this.adminClicked } leftIcon={<Icon>build</Icon>}>
+                    <ListItemIcon><BuildIcon /></ListItemIcon>
+                    <ListItemText inset primary="Admin" />
                 </MenuItem>
                                         
               </Drawer>

@@ -1,10 +1,18 @@
 import React, {Component} from 'react';
 import LoginCard from './LoginCard';
+import RegisterCard from './RegisterCard';
 
-class LoginPage extends Component {
+export class LoginPage extends Component {
 
     render(){
         return <LoginCard />
+    }
+}
+
+export class RegisterPage extends Component {
+
+    render(){
+        return <RegisterCard />
     }
 }
 

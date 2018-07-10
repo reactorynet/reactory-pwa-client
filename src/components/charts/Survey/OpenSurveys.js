@@ -1,9 +1,9 @@
 import React from 'react'
 import { compose } from 'redux'
 import { PieChart } from 'react-easy-chart'
-import { withStyles, withTheme } from 'material-ui'
+import { withStyles, withTheme, Paper, Typography } from 'material-ui'
+import { ChartStyles } from '../styles'
 
-const ChartStyles = (theme) => ({})
 
 const OpenSurveyChart = (props, context) => {
 
@@ -11,18 +11,21 @@ const OpenSurveyChart = (props, context) => {
 
   const surveysOverallClosed = [
     { key: '-', value: 68, color: theme.palette.report.fill },
-    { key: '-', value: 32, color: theme.palette.report.empty },
+    { key: '-', value: 32, color: theme.palette.background.default },
   ];
   
 
   return (
-    <PieChart
-        id={'personal-quarter'}
-        styles={{ display: 'flex', justifyContent: 'center' }}
-        data={surveysOverallClosed}
-        size={120}
-        innerHoleSize={100}
-    />
+    <Paper className={props.classes.chartContainer}>
+      <PieChart
+          id={'open-surveys'}
+          styles={{ display: 'flex', justifyContent: 'center' }}
+          data={surveysOverallClosed}
+          size={200}
+          innerHoleSize={170}
+      />
+      <Typography variant={'caption'} className={props.classes.chartCaption}>Open Surveys</Typography>
+    </Paper>
   )
 }
 

@@ -11,9 +11,13 @@ import Grid from 'material-ui/Grid'
 import Form from 'react-jsonschema-form';
 import List, { ListItem, ListItemSecondaryAction, ListItemText } from 'material-ui/List'
 import Avatar from 'material-ui/Avatar'
+import SwipeableViews from 'react-swipeable-views';
+import AppBar from 'material-ui/AppBar';
+import Tabs, { Tab } from 'material-ui/Tabs';
 import { OrganizationList, Forms } from '../organization';
 import schemas, { FieldTemplate } from './schemas';
 import Dashboards from '../dashboards';
+
 
 
 class AdminDashboard extends Component {
@@ -29,7 +33,7 @@ class AdminDashboard extends Component {
   }
 
   handleOrganizationSelect = (organization) => {
-    this.props.history.push(`/admin/org/${organization.id}`)  
+    this.props.history.push(`/admin/org/${organization.id}/general`)  
   } 
 
   render(){
@@ -42,14 +46,15 @@ class AdminDashboard extends Component {
         <Grid item xs={12}>
           <Toolbar>
             <Link to="/admin">
-              <Typography variant="title">Admin</Typography>
+              <Typography variant="title">Dashboard</Typography>
             </Link>
+            
           </Toolbar>
         </Grid>
         <Grid item md={3} xs={12}>          
           <OrganizationList admin={true} newOrganizationLink={true} />                    
         </Grid>
-        <Grid item md={9} xs={12}>
+        <Grid item md={9} xs={12}>        
           <Switch>
             <Route exact path='/admin'>
               <Dashboards.DefaultAdminDashboard />
@@ -57,8 +62,8 @@ class AdminDashboard extends Component {
             <Route exact path='/admin/org/new'>
               <Forms.Default mode={'new'} orgId={null} />
             </Route>
-            <Route path='/admin/org/:orgId' render={ props =>
-              <Forms.Default orgId={props.match.params.orgId} mode={'edit'} {...props} />
+            <Route path='/admin/org/:orgId/:tab' render={ props =>
+              <Forms.Default orgId={props.match.params.orgId} tab={props.match.params.tab} mode={'edit'} {...props} />              
             } />                        
           </Switch> 
         </Grid>        

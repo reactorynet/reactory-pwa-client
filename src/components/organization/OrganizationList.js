@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router'
-import gql from 'graphql-tag';
 import { compose } from 'redux';
+import gql from 'graphql-tag';
 import { graphql } from 'react-apollo';
 import Paper from 'material-ui/Paper';
 import { List, ListItem, ListItemText } from 'material-ui';
@@ -24,7 +24,7 @@ class OrganizationList extends Component {
   
   handleOrganizationSelect(organization){
     if(this.props.onOrganizationClick) this.props.onOrganizationClick(organization);
-    if(this.props.admin===true) this.props.history.push(`/admin/org/${organization.id}`);
+    if(this.props.admin===true) this.props.history.push(`/admin/org/${organization.id}/general`);
   }
  
   render(){

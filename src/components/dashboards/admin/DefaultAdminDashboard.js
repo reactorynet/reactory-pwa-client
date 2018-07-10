@@ -10,7 +10,7 @@ import { compose } from 'redux';
 import { connect } from 'react-redux';
 import { Grid, Typography, Paper, Checkbox, Avatar } from 'material-ui';
 import Charts from '../../charts'
-
+import AdminCalendar from '../../admin/widget/AdminCalendar';
 
 class DefaultAdminDashboard extends Component {
 
@@ -21,14 +21,26 @@ class DefaultAdminDashboard extends Component {
         <Grid item xs={12} md={12}>
           <Typography variant="title">Dashboard</Typography>
         </Grid>
-        <Grid item xs={12} md={12}>
-          <Charts.OpenSurveysChart />
+        <Grid item xs={12} md={4} lg={3}>          
+          <Charts.OpenSurveysChart />            
+        </Grid>
+        <Grid item xs={12} md={4} lg={3}>
+          <Charts.PendingPeerConfirmations />
+        </Grid>
+        <Grid item xs={12} md={4} lg={3}>
+          <Charts.EmailSent />
+        </Grid>        
+        <Grid item xs={12} md={12} lg={12}>
+          <Typography variant="caption">Calendar</Typography>
+          <AdminCalendar />
         </Grid>
       </Grid>
     )
   }
 
-  static styles = (theme) => ({})
+  static styles = (theme) => ({
+    
+  })
 
   static mapStateToProps = (state, props) => ({
 
