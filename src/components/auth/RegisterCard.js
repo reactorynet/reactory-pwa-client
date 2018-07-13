@@ -1,6 +1,5 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
-import queryString from 'query-string';
+import React, { Component } from 'react';import PropTypes from 'prop-types';
+
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
 import { Card, CardActions, CardHeader, CardMedia, CardTitle, CardText } from 'material-ui/Card';
@@ -12,6 +11,7 @@ import Icon from 'material-ui/Icon';
 import { withTheme } from 'material-ui/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
 import { BasicContainer, CenteredContainer, textStyle, nilStr, isEmail, isValidPassword } from '../util';
+import queryString from '../../query-string';
 import { login, register, companyWithId } from '../../api';
 
 

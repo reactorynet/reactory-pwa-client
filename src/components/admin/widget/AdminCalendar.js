@@ -461,11 +461,7 @@ class AdminCalendar extends Component {
     const { surveys } = this.props;
     return (
         <Paper className={this.props.classes.Container}>
-            <BigCalendar
-              events={surveys}
-              startAccessor='startDate'
-              endAccessor='endDate'
-            /> 
+            
             <div style={{display:'flex', justifyContent: 'flex-end'}}>
               <Button variant='fab' color='primary' onClick={this.props.onNewCaledarEntry || nilf} style={{marginTop: '25px', marginBottom: '25px'}}><AddIcon /></Button>
             </div>

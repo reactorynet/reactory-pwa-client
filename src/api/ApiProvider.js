@@ -16,17 +16,18 @@ export class ReactoryApi {
       this.client = client;
       this.queries = queries;
       this.mutations = mutations;
+      this.login = restApi.login
+      this.companyWithId = restApi.companyWithId
+      this.register = restApi.register
+      this.reset = restApi.reset
+      this.forgot = restApi.forgot
     }
 
     static propTypes = {
       client: PropTypes.instanceOf(ApolloClient).isRequired
     }
 
-    login = restApi.login
-    companyWithId = restApi.companyWithId
-    register = restApi.register
-    reset = restApi.reset
-    forgot = restApi.forgot               
+                   
 }
 
 class ApiProvider extends Component {

@@ -11,7 +11,7 @@ import Icon from 'material-ui/Icon';
 import { withTheme } from 'material-ui/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
 import { BasicContainer, CenteredContainer, textStyle } from '../util';
-import { login } from '../../api';
+import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
 class LoginCard extends Component {
 
@@ -27,9 +27,9 @@ class LoginCard extends Component {
   }
 
   doLogin = (evt) => {
-    const { history } = this.props;
+    const { history, api } = this.props;
     const token = btoa(`${this.state.username}:${this.state.password}`)
-    login(this.state.username, this.state.password)
+    api.login(this.state.username, this.state.password)
     .then((response)=>{
       console.log('user logged in', response);
       localStorage.setItem('auth_token', response.user.token);
@@ -98,6 +98,10 @@ class LoginCard extends Component {
     router: PropTypes.object,
     theme: PropTypes.object
   }
+
+  static propTypes = {
+    api: PropTypes.instanceOf(ReactoryApi)
+  }
 };
 
-export default compose(withTheme(), withRouter)(LoginCard);
+export default compose(withApi, withTheme(), withRouter)(LoginCard);

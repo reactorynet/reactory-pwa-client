@@ -29,13 +29,14 @@ var dotenvFiles = [
 // if this file is missing. dotenv will never modify any environment variables
 // that have already been set.
 // https://github.com/motdotla/dotenv
-dotenvFiles.forEach(dotenvFile => {
+dotenvFiles.forEach(dotenvFile => {  
   if (fs.existsSync(dotenvFile)) {
     require('dotenv').config({
       path: dotenvFile,
     });
   }
 });
+
 
 // We support resolving modules according to `NODE_PATH`.
 // This lets you use absolute paths in imports inside large monorepos:
@@ -73,7 +74,7 @@ function getClientEnvironment(publicUrl) {
         // For example, <img src={process.env.PUBLIC_URL + '/img/logo.png'} />.
         // This should only be used as an escape hatch. Normally you would put
         // images into the `src` and `import` them in code to get their paths.
-        PUBLIC_URL: publicUrl,
+        PUBLIC_URL: publicUrl,                 
       }
     );
   // Stringify all values so we can feed into Webpack DefinePlugin

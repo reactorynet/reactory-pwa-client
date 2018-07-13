@@ -49,7 +49,7 @@ const authLink = setContext((_, { headers }) => {
 });
 
 const httpLink = createHttpLink({
-  uri: 'http://localhost:4000/api',  
+  uri: `${process.env.REACT_APP_API_ENDPOINT}api`,  
 });
 
 const cache = new InMemoryCache();
@@ -70,13 +70,26 @@ class App extends Component {
   constructor(props, context){
     super(props, context);
     this.state = {
-      drawerOpen: false
+      drawerOpen: false,
+      authenticated: localStorage.getItem('auth_token') === null,
+      auth_valid: false 
+    }
+  }
+
+  componentWillMount(){
+    if(this.state.authenticated){
+      api.validateToken(localStorage.getItem('auth_token')).then((valid) => {
+        this.setState({ auth_valid: valid === true })
+      }).catch((validationError) => {
+        this.setState({ auth_valid: false, authenticated: false })
+      })
     }
   }
 
   render() {
     const { appTitle, appTheme } = this.props;
-    const { drawerOpen } = this.state;
+    const { drawerOpen, auth_valid, authenticated } = this.state;
+    
     const muiTheme = createMuiTheme( appTheme.muiTheme );
     
     return (
@@ -87,8 +100,9 @@ class App extends Component {
               <MuiThemeProvider theme={muiTheme}>
                 <div style={{marginTop:'80px'}}>
                   <Reboot />              
-                  <AssessorHeaderBar title={muiTheme.content.appTitle}/>             
-                  <Route exact path="/" component={Home}/>
+                  <AssessorHeaderBar title={muiTheme.content.appTitle}/>
+                  {auth_valid ? <Route exact path="/" component={Home}/> :  <Route exact path="/" component={Login} /> }
+                  
                   <Route path="/admin" component={ AdminDashboard } />              
                   <Route exact path="/login" component={Login} />
                   <Route exact path="/register" component={Register } />

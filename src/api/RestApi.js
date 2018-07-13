@@ -1,4 +1,4 @@
-const api_root = 'http://localhost:4000/';
+const api_root = process.env.REACT_APP_API_ENDPOINT;
 const api_client_id = 'towerstone';
 const api_client_password = 'sonicwasadog';
 
@@ -23,6 +23,10 @@ export const login = (email, password) => {
       }
     })
     .then((response) => response.json())
+    .catch((loginError) => {
+      console.warn('login error', loginError)
+      throw loginError
+    })
 }
 
 export const companyWithId = ( id ) => {
