@@ -7,3 +7,9 @@ pipelines:
         script:
           - yarn
           - yarn build
+     - step:
+        name: Deploy to QA
+        deployment: production   # can be test, staging or production
+        trigger: manual  # uncomment to make manual deployment
+        script:
+          - rsync clvrz -e dist/ $PRODUCTION_DEPLOY_URL
