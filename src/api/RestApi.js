@@ -11,7 +11,7 @@ const api_headers = {
 
 export const login = (email, password) => {
   const token = btoa(`${email}:${password}`)
-  return fetch(`${api_root}login`, {
+  return fetch(`${api_root}/login`, {
       method: 'POST',
       mode: 'cors',       
       headers: {
@@ -30,7 +30,7 @@ export const login = (email, password) => {
 }
 
 export const companyWithId = ( id ) => {
-  return fetch(`${api_root}search?types=org,id=${id}`,{
+  return fetch(`${api_root}/search?types=org,id=${id}`,{
     method: 'get',
     headers: {
       ...api_headers
@@ -39,7 +39,7 @@ export const companyWithId = ( id ) => {
 }
 
 export const register = ( registerPayload ) => {
-  return fetch(`${api_root}register`,{
+  return fetch(`${api_root}/register`,{
       method: 'post', 
       body: JSON.stringify(registerPayload),
       headers: api_headers
@@ -47,7 +47,7 @@ export const register = ( registerPayload ) => {
 }
 
 export const forgot = ( forgotPayload ) => {
-  return fetch(`${api_root}forgot`,{
+  return fetch(`${api_root}/forgot`,{
     method: 'post', 
     body: JSON.stringify(forgotPayload),
     headers: api_headers
@@ -55,9 +55,16 @@ export const forgot = ( forgotPayload ) => {
 }
 
 export const reset = ( resetPayload ) => {
-  return fetch(`${api_root}reset`,{
+  return fetch(`${api_root}/reset`,{
     method: 'post', 
     body: JSON.stringify(resetPayload),
+    headers: api_headers
+  }).then((response) => response.json())
+}
+
+export const forms = ( ) => {
+  return fetch(`${api_root}/reactory/schema`, {
+    method: 'get',
     headers: api_headers
   }).then((response) => response.json())
 }

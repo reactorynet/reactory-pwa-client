@@ -21,13 +21,12 @@ export class ReactoryApi {
       this.register = restApi.register
       this.reset = restApi.reset
       this.forgot = restApi.forgot
+      this.forms = restApi.forms
     }
 
     static propTypes = {
       client: PropTypes.instanceOf(ApolloClient).isRequired
-    }
-
-                   
+    }                   
 }
 
 class ApiProvider extends Component {

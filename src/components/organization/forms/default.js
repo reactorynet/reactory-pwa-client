@@ -87,7 +87,7 @@ const FormStyles = ( theme ) => {
 class OrganizationForm extends Component {
   constructor(props, context){
     super(props, context)
-    //console.log('OrganizationForm', props, context)
+    console.log('OrganizationForm', props, context)
     this.state = {
       organization: props.initialValues,
       pristine: true,
@@ -163,6 +163,7 @@ class OrganizationForm extends Component {
     const { classes } = this.props;
     const { organization, pristine, submitting } = this.state;
 
+    if(isNil(organization)) return <p>Loading...</p>
     return (
     <Paper className={classes.formContainer}>
       <form>

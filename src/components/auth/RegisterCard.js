@@ -12,7 +12,7 @@ import { withTheme } from 'material-ui/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
 import { BasicContainer, CenteredContainer, textStyle, nilStr, isEmail, isValidPassword } from '../util';
 import queryString from '../../query-string';
-import { login, register, companyWithId } from '../../api';
+import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
 
 class RegisterCard extends Component {
@@ -43,7 +43,7 @@ class RegisterCard extends Component {
   componentDidMount(){
     const that = this;
     if(!nilStr(this.state.organizationId)){
-      companyWithId(this.state.organizationId).then((searchResult) => {
+      this.props.api.companyWithId(this.state.organizationId).then((searchResult) => {
         if(!nilStr(searchResult.name)) that.setState({ organizationName: searchResult.name })
       }).catch((error) => {
         console.error('Could not lookup company', error);
@@ -54,10 +54,9 @@ class RegisterCard extends Component {
   doLogin = (evt) => {
     const { history } = this.props;
     const { email, password } = this.state;
-    login(email, password)
+    this.props.api.login(email, password)
     .then((response) => response.json())
     .then((response)=>{
-      console.log('user logged in', response);
       localStorage.setItem('auth_token', response.user.token);
       history.push('/admin')
     }).catch((error) => {
@@ -81,7 +80,7 @@ class RegisterCard extends Component {
       }
     };
     
-    register(payload).then(( registerResult) => {
+    this.props.api.register(payload).then(( registerResult) => {
       console.log('Register Complete', registerResult)
       that.doLogin();
     }).catch((registerError) => {
@@ -217,22 +216,15 @@ class RegisterCard extends Component {
             
             <Button
               id="doRegisterButton"                          
-              onClick={doRegister} color="primary" raised="raised" disabled={ formValid() }>
+              onClick={doRegister} color="primary" raised="raised" disabled={ formValid().valid === false }>
               <Icon className="fas fa-sign-in-alt"  />
               Register
             </Button>
 
             <h2>OR</h2>
-            <p>Register using your social login of choice</p>
-            <Button>              
-                <Icon className="fab fa-facebook"/>
-                Register with Facebook
-              </Button>
-
-            <Button>              
-              <Icon className="fab fa-linkedin" />
-              Register with Linkedin
-            </Button>
+            <Button onClick={ evt => this.props.history.push('/login')} color='secondary' raised>                              
+                Login
+            </Button>            
           </BasicContainer>
         </BasicContainer>
       </CenteredContainer>)
@@ -242,6 +234,10 @@ class RegisterCard extends Component {
     router: PropTypes.object,
     theme: PropTypes.object
   }
+
+  static propTypes = {
+    api: PropTypes.instanceOf(ReactoryApi)
+  }
 };
 
-export default compose(withTheme(), withRouter)(RegisterCard);
+export default compose(withApi, withTheme(), withRouter)(RegisterCard);

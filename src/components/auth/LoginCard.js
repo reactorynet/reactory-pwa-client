@@ -22,6 +22,7 @@ class LoginCard extends Component {
       password: ''
     };
     this.doLogin = this.doLogin.bind(this);
+    this.doRegister = this.doRegister.bind(this);
     this.updateUsername = this.updateUsername.bind(this);
     this.updatePassword = this.updatePassword.bind(this);
   }
@@ -36,6 +37,8 @@ class LoginCard extends Component {
       history.push('/admin')
     })
   }
+
+  doRegister = evt => this.props.history.push('/register')
 
   updateUsername = (evt) => this.setState({username: evt.target.value})
   updatePassword = (evt) => this.setState({password: evt.target.value})
@@ -79,16 +82,11 @@ class LoginCard extends Component {
             </Button>
 
             <h2>OR</h2>
-            <p>Login using your social login of choice</p>
-            <Button>              
-                <Icon className="fab fa-facebook"/>
-                Login with Facebook
-              </Button>
-
-            <Button>              
-              <Icon className="fab fa-linkedin" />
-              Login with Linkedin
+            <Button onClick={this.doRegister} color='secondary'>                              
+                Register
             </Button>
+
+            
           </BasicContainer>
         </BasicContainer>
       </CenteredContainer>)

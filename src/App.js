@@ -28,7 +28,8 @@ import {
   OrganizationTable,
   Report,
   TaskDashboard,
-  AdminDashboard
+  AdminDashboard,
+  Reactory
 } from './components';
 import ApiProvider, { ReactoryApi } from './api/ApiProvider'
 import * as themes from './themes';
@@ -49,7 +50,7 @@ const authLink = setContext((_, { headers }) => {
 });
 
 const httpLink = createHttpLink({
-  uri: `${process.env.REACT_APP_API_ENDPOINT}api`,  
+  uri: `${process.env.REACT_APP_API_ENDPOINT}/api`,  
 });
 
 const cache = new InMemoryCache();
@@ -78,11 +79,11 @@ class App extends Component {
 
   componentWillMount(){
     if(this.state.authenticated){
-      api.validateToken(localStorage.getItem('auth_token')).then((valid) => {
-        this.setState({ auth_valid: valid === true })
-      }).catch((validationError) => {
-        this.setState({ auth_valid: false, authenticated: false })
-      })
+      //api.validateToken(localStorage.getItem('auth_token')).then((valid) => {
+      //  this.setState({ auth_valid: valid === true })
+      //}).catch((validationError) => {
+      //  this.setState({ auth_valid: false, authenticated: false })
+      //})
     }
   }
 
@@ -101,8 +102,7 @@ class App extends Component {
                 <div style={{marginTop:'80px'}}>
                   <Reboot />              
                   <AssessorHeaderBar title={muiTheme.content.appTitle}/>
-                  {auth_valid ? <Route exact path="/" component={Home}/> :  <Route exact path="/" component={Login} /> }
-                  
+                  <Route exact path="/" component={Home}/>                  
                   <Route path="/admin" component={ AdminDashboard } />              
                   <Route exact path="/login" component={Login} />
                   <Route exact path="/register" component={Register } />
@@ -113,6 +113,7 @@ class App extends Component {
                   <Route path="/survey" component={UserSurvey} />
                   <Route path="/reports" component={Report} />
                   <Route path="/actions" component={TaskDashboard} />
+                  <Route path="/reactory" component={Reactory} />
                   <Route exact path="/organizations" component={OrganizationTable} />             
                 </div>
               </MuiThemeProvider>

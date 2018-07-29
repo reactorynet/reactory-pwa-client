@@ -6,6 +6,7 @@ import AssessmentView from './assess/index';
 import ProfileComponent from './user/Profile';
 import UserSurveyComponent from './survey/UserSurvey';
 import ReportComponent from './report/index';
+import ReactoryComponent from './reactory'
 import  { TaskListComponent, TaskDashboardComponent } from './tasks/Taskboard';
 import AdminDashboardComponent from './admin/dashboard'
 export default UserComponents.UserListWithData;
@@ -23,3 +24,4 @@ export const TaskList = TaskListComponent;
 export const TaskDashboard = TaskDashboardComponent;
 export const AdminDashboard = AdminDashboardComponent;
 export const Register = RegisterPage;
+export const Reactory = ReactoryComponent;
