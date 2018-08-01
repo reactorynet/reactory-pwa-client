@@ -1,11 +1,12 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import Form from 'react-jsonschema-form'
-import { withStyles, withTheme } from 'material-ui/styles';
-import { compose } from 'redux';
-import { find } from 'lodash'
-import { Query, Mutation } from 'react-apollo'
 import { withRouter, Route, Switch } from 'react-router'
+import { withStyles, withTheme } from 'material-ui/styles';
+import { find } from 'lodash';
+import { compose } from 'redux';
+import { Query, Mutation } from 'react-apollo'
+import { nil } from '../util'
 import queryString from '../../query-string';
 import { withApi } from '../../api/ApiProvider'
 import {
@@ -17,12 +18,16 @@ import {
   Input,
 } from 'material-ui'
 
-import MaterialFields from './fields'
+import Fields from './fields'
 //import { } from './widgets'
 import MaterialTemplates from './templates'
 import uiSchemas from './schema/uiSchema'
 
-const { MaterialStringField, MaterialGridField } = MaterialFields
+const { 
+  MaterialStringField,
+  MaterialGridField, 
+  BootstrapGridField, 
+} = Fields
 const { 
   MaterialObjectTemplate,
   MaterialFieldTemplate,
@@ -44,7 +49,7 @@ const simpleUiSchema = {
   "message": {
     "ui:autofocus": true,
     "ui:emptyValue": "No form found with that id",
-    "ui:widget": "textarea"
+    "ui:widget": "label"
   },  
 }
 
@@ -84,25 +89,34 @@ class ReactoryComponent extends Component {
 
   static propTypes = {
     formId: PropTypes.string,
-    uiSchemaId: PropTypes.string
+    uiSchemaId: PropTypes.string,
+    uiFramework: PropTypes.oneOf(['schema', 'material', 'bootstrap3'])
   }
 
   static defaultProps = {
     formId: 'default',
-    uiSchemaId: 'default'
+    uiSchemaId: 'default',
+    uiFramework: 'schema'
   }
 
   constructor(props, context){
     super(props, context)
-    this.state = {
+    let _state = {
       loading: true,
       forms: [],
+      uiFramework: props.uiFramework,      
       uiSchemas: uiSchemas,      
       data: {},
       query: queryString.parse(props.location.search)
     }
+
+    if(_state.query.uiFramework){
+      _state.uiFramework = _state.query.uiFramework
+    }
+    
     this.onSubmit = this.onSubmit.bind(this)
     this.form = this.form.bind(this)
+    this.state = _state;
   }
 
   componentWillMount(){
@@ -113,15 +127,156 @@ class ReactoryComponent extends Component {
     })
   }
 
-  form(){    
-    let schema = (find(this.state.forms, {id: this.props.formId})) || simpleForm
+  
+  /**
+   * Returns the entire form definition
+   */
+  form(){
+    const { uiFramework, forms, data } = this.state;
+    let schema = (find(forms, {id: this.props.formId})) || simpleForm
     const { uiSchemaId } = this.state.query
+    
+    if(uiFramework !== 'schema'){
+      //we are not using the schema define ui framework we are assigning a different one
+      schema.uiFramework = uiFramework
+    }
+
+    // set noHtml5Validation if not set by schema
+    if( nil(schema.noHtml5Validate)) schema.noHtml5Validate = true
+
     if(uiSchemaId){
       if(uiSchemaId === 'default') return schema
 
       const customSchema = find(this.state.uiSchemas, {id: uiSchemaId})
       if(customSchema) schema.uiSchema = customSchema.schema
+    }  
+
+    // #region setup functions
+    const setFields = () => {
+      switch(schema.uiFramework){
+        case 'material': {
+          schema.fields = {
+            //ArrayField: MaterialArrayField,
+            //BooleanField: MaterialBooleanField, 
+            //DescriptionField: MaterialDescriptionField,
+            //NumberField: MaterialNumberField,
+            //ObjectField: MaterialObjectField,
+            //SchemaField: MaterialSchemaField,
+            StringField: MaterialStringField.default,
+            //TitleField: MaterialTitleField,
+            //UnsupportedFiled: UnsupportedMaterialField
+            layout: MaterialGridField
+          };
+          break;
+        }
+        default: {
+          schema.fields = {
+            layout: BootstrapGridField          
+          }
+          break;
+        }
+      }
+    };
+  
+    const setWidgets = () => {
+      const widgets = {
+        //AltDateTimeWidget
+        //AltDateWidget
+        //BaseInput
+        //CheckboxWidget
+        //CheckboxesWidget
+        //ColorWidget
+        //DateTimeWidget
+        //DateWidget
+        //EmailWidget
+        //FileWidget
+        //HiddenWidget
+        //PasswordWidget
+        //RadioWidget
+        //RangeWidget
+        //SelectWidget
+        //TextWidget
+        //TextareaWidget
+        //URLWidget
+        //UpDownWidget
+      }
+  
+      return widgets;
     }
+  
+    const setFieldTemplate = () => {
+      switch(schema.uiFramework){
+        case 'material': {
+          schema.FieldTemplate = MaterialFieldTemplate.default
+          break;
+        }
+        default: { 
+          if(schema.FieldTemplate)
+          delete schema.FieldTemplate
+          break
+        }
+      }
+    }
+  
+    const setObjectTemplate = () => {
+      switch(schema.uiFramework){
+        case 'material': {
+          schema.ObjectFieldTemplate = MaterialObjectTemplate.default
+          break;
+        }      
+        default: {
+          if (schema.ObjectFieldTemplate) delete schema.ObjectFieldTemplate;
+          break;
+        } 
+      }
+    }
+
+    const injectResources = () => {      
+      if(document) {
+        if(schema.uiResources && schema.uiResources.length) {          
+          schema.uiResources.forEach((resource) => {
+            const resourceId =`${schema.id}_res_${resource.type}_${resource.name}`            
+            if(nil(document.getElementById(resourceId))){
+              switch(resource.type){
+                case 'style': {
+                  let styleLink = document.createElement('link')
+                  styleLink.id = resourceId
+                  styleLink.href = resource.uri
+                  styleLink.rel = 'stylesheet'
+                  document.head.append(styleLink)
+                  break;
+                }
+                case 'script': {
+                  let scriptLink = document.createElement('script')
+                  scriptLink.id = resourceId
+                  scriptLink.src = resource.uri
+                  scriptLink.type = 'text/javascript'
+                  document.body.append(scriptLink)
+                  break;
+                }
+                default: {
+                  console.warn(`Resource Type ${resource.type}, not supported.`);
+                  break;
+                }
+              }
+            }
+          })
+          
+        }
+        
+      }
+    }
+    // #endregion      
+    
+
+      
+
+    setFields()
+    setWidgets()
+    setObjectTemplate()
+    setFieldTemplate()
+    injectResources()
+    debugger
     return schema
   }
 
@@ -141,58 +296,9 @@ class ReactoryComponent extends Component {
     const { loading, forms, data }  = this.state;
     const { uiSchema } = this.props
     if(loading) return (<p>loading form schema</p>)
-    if(forms.length === 0) return (<p>no forms defined</p>)
-    debugger;
-
-    let formSchema = this.form();
-    const fields = {
-        //ArrayField: MaterialArrayField,
-        //BooleanField: MaterialBooleanField, 
-        //DescriptionField: MaterialDescriptionField,
-        //NumberField: MaterialNumberField,
-        //ObjectField: MaterialObjectField,
-        //SchemaField: MaterialSchemaField,
-        StringField: MaterialStringField.default,
-        //TitleField: MaterialTitleField,
-        //UnsupportedFiled: UnsupportedMaterialField
-        layout: MaterialGridField.default
-    };
-
-    const widgets = {
-      //AltDateTimeWidget
-      //AltDateWidget
-      //BaseInput
-      //CheckboxWidget
-      //CheckboxesWidget
-      //ColorWidget
-      //DateTimeWidget
-      //DateWidget
-      //EmailWidget
-      //FileWidget
-      //HiddenWidget
-      //PasswordWidget
-      //RadioWidget
-      //RangeWidget
-      //SelectWidget
-      //TextWidget
-      //TextareaWidget
-      //URLWidget
-      //UpDownWidget
-    }
-
-    let options = {
-      formData: { ...data },
-      schema:{ ...formSchema.schema },
-      uiSchema: { ...formSchema.uiSchema },
-      fields,
-      widgets,                
-      onSubmit:this.onSubmit,
-      FieldTemplate: MaterialFieldTemplate.default,
-      ObjectFieldTemplate: MaterialObjectTemplate.default, 
-      noHtml5Validate: true,
-    };
+    if(forms.length === 0) return (<p>no forms defined</p>)        
     return (
-      <Form {...options} />
+      <Form {...this.form()} />
     )
   }
 }

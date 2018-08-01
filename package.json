@@ -47,6 +47,7 @@
     "react": "^16.2.0",
     "react-apollo": "^2.1.0",
     "react-big-calendar": "^0.19.1",
+    "react-bootstrap": "^0.32.1",
     "react-dev-utils": "^4.2.1",
     "react-dom": "^16.2.0",
     "react-draft-wysiwyg": "^1.12.13",

@@ -1,4 +1,6 @@
+const GridFields = require('./GridField');
 export default {
   MaterialStringField: require('./MaterialStringField'),
-  MaterialGridField: require('./MaterialGridField')
+  MaterialGridField: GridFields.MaterialGridField,
+  BootstrapGridField: GridFields.BootstrapGridField
 }
