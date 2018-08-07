@@ -38,6 +38,10 @@ export default {
             },
             dashboardComponent: UserDashboard,
             assessmentComponent: DefaultAssessmentView    
+        },
+        navigation: {
+            sidebarLeft: false,
+            sidebarLeftComponent: null             
         }
     }
 };

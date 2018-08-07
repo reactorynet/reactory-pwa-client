@@ -261,22 +261,15 @@ class ReactoryComponent extends Component {
               }
             }
           })
-          
-        }
-        
+        }        
       }
     }
-    // #endregion      
-    
-
-      
-
+    // #endregion
     setFields()
     setWidgets()
     setObjectTemplate()
     setFieldTemplate()
-    injectResources()
-    debugger
+    injectResources()    
     return schema
   }
 
@@ -298,7 +291,9 @@ class ReactoryComponent extends Component {
     if(loading) return (<p>loading form schema</p>)
     if(forms.length === 0) return (<p>no forms defined</p>)        
     return (
-      <Form {...this.form()} />
+      <div style={{padding: '15px' }}>
+        <Form {...this.form()} onSubmit={this.onSubmit} />
+      </div>
     )
   }
 }

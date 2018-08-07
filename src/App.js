@@ -15,6 +15,7 @@ import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import Reboot from 'material-ui/Reboot';
 import { createMuiTheme } from 'material-ui/styles';
 import logo from './logo.svg';
+import queryString from './query-string';
 import './App.css';
 import AssessorHeaderBar from './components/header';
 import {
@@ -38,6 +39,7 @@ import * as themes from './themes';
 const authLink = setContext((_, { headers }) => {
   // get the authentication token from local storage if it exists
   const token = localStorage.getItem('auth_token');
+  
   // return the headers to the context so httpLink can read them
   return {
     headers: {
@@ -60,20 +62,30 @@ const client = new ApolloClient({
   cache
 });
 
-const api = new ReactoryApi(client);
+const setTheme = (theme) => {
+  localStorage.setItem('theme', theme)
+};
 
+const getTheme = () => {
+  return localStorage.getItem('theme')
+}
+
+const api = new ReactoryApi(client);
 const store = configureStore();
 
-const defaultTheme = themes.towerstoneTheme;
+const defaultTheme = themes.woosparksTheme;
 
 class App extends Component {
 
   constructor(props, context){
     super(props, context);
+
+    //const query = queryString.parse(props.location.search)
     this.state = {
       drawerOpen: false,
       authenticated: localStorage.getItem('auth_token') === null,
-      auth_valid: false 
+      auth_valid: false,
+      theme: props.appTheme,
     }
   }
 
@@ -103,7 +115,7 @@ class App extends Component {
                   <Reboot />              
                   <AssessorHeaderBar title={muiTheme.content.appTitle}/>
                   <Route exact path="/" component={Home}/>                  
-                  <Route path="/admin" component={ AdminDashboard } />              
+                  <Route path="/admin" component={AdminDashboard} />              
                   <Route exact path="/login" component={Login} />
                   <Route exact path="/register" component={Register } />
                   <Route path="/assess" component={Assessment} />
