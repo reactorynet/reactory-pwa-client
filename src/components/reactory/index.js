@@ -106,7 +106,7 @@ class ReactoryComponent extends Component {
       forms: [],
       uiFramework: props.uiFramework,      
       uiSchemas: uiSchemas,      
-      data: {},
+      data: props.data || { },
       query: queryString.parse(props.location.search)
     }
 
@@ -120,10 +120,11 @@ class ReactoryComponent extends Component {
   }
 
   componentWillMount(){
-    this.props.api.forms().then((forms) => {
-      this.setState({forms, loading: false})
+    const that = this;
+    this.props.api.forms().then((forms) => {      
+      that.setState({forms: forms, loading: false})
     }).catch((loadError) => {
-      this.setState({forms: [], formError: { message: loadError.message }})
+      that.setState({forms: [], formError: { message: loadError.message }})
     })
   }
 
@@ -275,14 +276,19 @@ class ReactoryComponent extends Component {
 
   onSubmit( data ){
     console.log('form-submit', data);
+    if(this.props.onSubmit) this.props.onSubmit(data);
   }
 
   onChange( data ){
-    console.log('form-submit', data);
+    console.log('form-onChange', data);
+    
+    this.setState({ data }, ()=>{
+      if(this.props.onChange) this.props.onChange(data);
+    })
   }
 
   onError( errors ){
-    console.log('form-errors', errors);
+    if(this.props.onError) this.props.onError(errors);
   }
 
   render(){
@@ -298,7 +304,7 @@ class ReactoryComponent extends Component {
   }
 }
 
-ReactoryComponent = compose(
+export const ReactoryFormComponent = compose(
   withApi,
   withRouter
 )(ReactoryComponent)
@@ -307,13 +313,13 @@ export default compose(withRouter)((props) => {
   return (
     <Switch>
       <Route exact path="/reactory" >
-        <ReactoryComponent formId='default' mode='view' />
+        <ReactoryFormComponent formId='default' mode='view' />
       </Route>
       <Route path="/reactory/:formId" render={(props) => {
-          return (<ReactoryComponent formId={props.match.params.formId || 'default'} mode='view' />)
+          return (<ReactoryFormComponent formId={props.match.params.formId || 'default'} mode='view' />)
         }} />
       <Route path="/reactory/:formId/:mode" render={(props) => {
-          return (<ReactoryComponent formId={props.match.params.formId || 'default'} mode={props.match.params.mode} />)
+          return (<ReactoryFormComponent formId={props.match.params.formId || 'default'} mode={props.match.params.mode} />)
         }} />  
     </Switch>
   )

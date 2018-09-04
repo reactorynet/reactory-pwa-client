@@ -26,8 +26,9 @@ import Avatar from 'material-ui/Avatar';
 import TextField from 'material-ui/TextField';
 import Paper from 'material-ui/Paper';
 
-import staffImages from '../../assets/images/staff';
-import DefaultAvatar from '../../assets/images/profile/default.png'
+import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import DefaultAvatar from '../../assets/images/profile/default.png';
+import { CDNProfileResource, getAvatar } from '../util';
 
 const defaultProfile = {    
     title: '',
@@ -77,6 +78,7 @@ class Profile extends Component {
 
     static propTypes = {
         profile:  PropTypes.object.isRequired,
+        api: PropTypes.instanceOf(ReactoryApi),
         loading: PropTypes.bool,
         mode: PropTypes.string,
         isNew: PropTypes.bool,
@@ -92,7 +94,6 @@ class Profile extends Component {
         onCancel: nilf,
         onSave: nilf
     };
-
 
     onAvatarMouseOver(){
         this.setState({ avatarMouseHover: true });
@@ -199,8 +200,9 @@ class Profile extends Component {
 
     renderGeneral(){
         const that = this
-        const { firstName, lastName, businessUnit, email, avatar, peers, surveys, teams, __isnew } = this.state.profile;
-        const { mode, classes } = this.props;
+        const { profile, avatarUpdated } = this.state;
+        const { firstName, lastName, businessUnit, email, avatar, peers, surveys, teams, __isnew, id } = profile;        
+        const { mode, classes, history } = this.props;
         const defaultFieldProps = {
             margin: "normal",
             fullWidth: true,
@@ -223,6 +225,25 @@ class Profile extends Component {
             that.props.onSave(profile)
         };
 
+        const back = () => { 
+            history.goBack(); 
+        }
+
+        const onFileClick = () => {
+            const that = this;
+            let preview = null;
+            let file    = that.userProfileImageFile.files[0];
+            let reader  = new FileReader();
+            reader.addEventListener("load", function () {
+                preview = reader.result;                
+                that.setState({profile: {...that.state.profile, avatar: preview }, avatarUpdated: true });
+            }, false);
+    
+            if (file) {
+                reader.readAsDataURL(file);
+            }
+        }
+
         const updateFirstname = (evt) => {
             that.setState({profile: {...that.state.profile, firstName: evt.target.value}})
         };
@@ -239,24 +260,30 @@ class Profile extends Component {
             that.setState({profile: {...that.state.profile, businessUnit: evt.target.value}})
         };
 
+        let avatarComponent = null;
+        if(isNil(id) === false){
+           avatarComponent = (
+                <div className={classes.avatarContainer}>
+                    <Avatar 
+                        src={getAvatar(profile)} alt={`${firstName} ${lastName}`} 
+                        className={classNames(classes.avatar, classes.bigAvatar, avatarMouseOver === true ? classes.avatarHover : '' )} 
+                        onMouseOver={this.onAvatarMouseOver}
+                        onMouseOut={this.onAvatarMouseOut}/> 
+                        <input accept="image/*" className={classes.hiddenInput} onChange={onFileClick} id="icon-button-file" type="file" ref={(n) => that.userProfileImageFile = n} />
+                        <label htmlFor="icon-button-file">
+                            <IconButton color="primary" className={classes.button} component="span">
+                                <PhotoCamera />
+                            </IconButton>
+                        </label>           
+                </div>);
+        }
+
         return (
             <Grid item sm={12} xs={12} offset={4}>
                 <Paper className={classes.general}>
                     <form>        
                     <Typography variant='headline'>Profile</Typography>
-                        <div className={classes.avatarContainer}>
-                            <Avatar 
-                                src={avatar || DefaultAvatar} alt={`${firstName} ${lastName}`} 
-                                className={classNames(classes.avatar, classes.bigAvatar, avatarMouseOver === true ? classes.avatarHover : '' )} 
-                                onMouseOver={this.onAvatarMouseOver}
-                                onMouseOut={this.onAvatarMouseOut}/> 
-                                <input accept="image/*" className={classes.hiddenInput} id="icon-button-file" type="file" />
-                                <label htmlFor="icon-button-file">
-                                    <IconButton color="primary" className={classes.button} component="span">
-                                        <PhotoCamera />
-                                    </IconButton>
-                                </label>           
-                        </div>
+                        { avatarComponent }
                         { TextField({...defaultFieldProps, label: 'Name', value: firstName, helperText: 'Please use your given name', onChange: updateFirstname }) }
                         { TextField({...defaultFieldProps, label: 'Surname', value: lastName, helperText: 'Please use your given name', onChange: updateLastname } )} 
                         { TextField({...defaultFieldProps, type:'email', label: 'Email', value: email, helperText: 'Please use your work email address, unless you are an outside provider', onChange: updateEmail })}                                   
@@ -264,7 +291,7 @@ class Profile extends Component {
                     </form>
 
                     <div className={classes.avatarContainer} style={{justifyContent:'flex-end', marginTop: '5px'}}>
-                        <Button variant='raised' onClick={this.props.onCancel || nilf}><CloseIcon />&nbsp;CANCEL</Button>
+                        <Button variant='raised' onClick={back}><CloseIcon />&nbsp;BACK</Button>
                         <Button variant='raised' color='primary' onClick={doSave}><SaveIcon />&nbsp;SAVE</Button>
                     </div>
                 </Paper>
@@ -290,21 +317,22 @@ class Profile extends Component {
         super(props, context);
         this.onAvatarMouseOver = this.onAvatarMouseOver.bind(this);
         this.onAvatarMouseOut = this.onAvatarMouseOut.bind(this);
-        this.windowResize = this.windowResize.bind(this);
+        this.windowResize = this.windowResize.bind(this);        
         this.renderGeneral = this.renderGeneral.bind(this);
         this.renderPeers = this.renderPeers.bind(this);
         this.renderSurveys = this.renderSurveys.bind(this);
         this.state = {
             avatarMouseOver: false,
             profile: { ...props.profile, peers: [], surveys: [], teams: [] },
-        }
-        
+            avatarUpdated: false,
+        }        
         window.addEventListener('resize', this.windowResize);
     }
 }
 
 const ProfileViewComponent = compose(
     withRouter,
+    withApi,
     withStyles(Profile.styles),
     withTheme()
   )(Profile);

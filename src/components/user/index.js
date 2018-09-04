@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { withRouter } from 'react-router';
 import gql from 'graphql-tag';
 import { compose } from 'redux';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
@@ -32,11 +33,12 @@ import AddCircleIcon from 'material-ui-icons/AddCircle'
 import DetailIcon from 'material-ui-icons/Details'
 import { withTheme, withStyles } from 'material-ui/styles';
 import { isArray } from 'lodash'
+import { ReactoryFormComponent } from '../reactory';
 import { TableFooter } from 'material-ui/Table';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 import DefaultAvatar from '../../assets/images/profile/default.png';
 import Profile from './Profile'
-import { omitDeep } from '../util';
+import { omitDeep, getAvatar } from '../util';
 
 const UserSearchInputStyles = theme => {
   return {
@@ -218,7 +220,7 @@ export const CreateProfile = compose(
 
 export const EditProfile = compose(
   withApi
-)((props) => {
+)((props) => {  
   const { api, organizationId, profile, onCancel } = props  
   return (
     <Mutation mutation={api.mutations.Users.updateUser} >
@@ -233,16 +235,42 @@ export const EditProfile = compose(
           onSave: (profileData) => {
             console.log('User being saved', profileData)
             updateUser({
-              variables: { 
-                input: omitDeep(profileData),
+              variables: {
+                id: profile.id, 
+                profileData: omitDeep(profileData),
               }
             });
           }
         }
+
+        if(loading) return (<p>Updating... please wait</p>)
+        if(error) return (<p>{error.message}</p>)
+
         return <Profile {...props} />
       }}
     </Mutation>
   )
+})
+
+export const UserProfile = compose(
+  withApi,
+  withRouter,
+)((props) => {
+    const { api, location, profileId, organizationId, match } = props    
+    return (
+    <Query query={api.queries.Users.userProfile} variables={{profileId: match.params.profileId}}>
+      {(props, context)=>{
+        const { loading, error, data } = props;
+        if(loading) return <p>Loading User Profile, please wait...</p>
+        if(error) return <p>{error.message}</p>
+
+        if(data.userWithId) {          
+          return <EditProfile organizationId={organizationId} profile={data.userWithId} />
+        } else {
+          return <p>No user data available</p>
+        }
+      }}
+    </Query>)
 })
 
 
@@ -251,7 +279,7 @@ const UserListItem = (props) => {
   const displayText = `${user.firstName} ${user.lastName}`
   return (
     <ListItem onClick={onClick} key={key}>
-      <Avatar alt={displayText} src={user.avatar || DefaultAvatar} />
+      <Avatar alt={displayText} src={getAvatar(user)} />
       <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>
     </ListItem>
   )
@@ -286,7 +314,7 @@ const UserList = ({organizationId, api, onUserSelect}) => {
               const displayText = `${user.firstName} ${user.lastName}`
               return (
                 <ListItem onClick={raiseUserSelected} dense button key={uid}>
-                  <Avatar alt={displayText} src={user.avatar || DefaultAvatar} />
+                  <Avatar alt={displayText} src={getAvatar(user)} />
                   <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>
                 </ListItem>
               )
@@ -321,6 +349,34 @@ export const UserListWithData = compose(
   withTheme(),
   withApi
 )(UserList);
+
+class Forgot extends Component {
+
+  constructor(props, context){
+    super(props,context)
+    this.state = {
+      formData: { email: '' }
+    }
+
+    this.onSubmit = this.onSubmit.bind(this);
+  }
+  
+  onSubmit(form){
+    this.props.api.forgot(form.formData).then((forgotResult) => {
+      //redirect
+    })
+  }
+    
+  render(){          
+  return (<ReactoryFormComponent formId="forgot-password" onSubmit={this.onSubmit} data={this.state.formData} />)          
+  }
+}
+
+Forgot.propTypes = {
+  api: PropTypes.instanceOf(ReactoryApi)
+}
+
+export const ForgotForm = compose(withTheme(), withApi, withRouter)(Forgot);
 
 
 

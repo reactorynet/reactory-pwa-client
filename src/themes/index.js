@@ -10,3 +10,17 @@ export const StyleHelper = {
 export const plcTheme = plc;
 export const towerstoneTheme = towerstone;
 export const woosparksTheme = woosparks;
+export const getTheme = (themeName) => {
+    switch(themeName){
+        case 'woosparks': {
+            return woosparks
+        }        
+        case 'plc': {
+            return plc
+        }
+        case 'towerstone':
+        default: {
+            return towerstone
+        }
+    }
+};

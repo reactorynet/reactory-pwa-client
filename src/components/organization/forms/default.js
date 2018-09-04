@@ -2,8 +2,8 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { withRouter, Route, Switch } from 'react-router'
-import { connect } from 'react-redux';
-import { Field, reduxForm } from 'redux-form';
+//import { connect } from 'react-redux';
+//import { Field, reduxForm } from 'redux-form';
 import { graphql, withApollo } from 'react-apollo';
 import gql from 'graphql-tag';
 
@@ -14,19 +14,21 @@ import {
 
 import SaveIcon from 'material-ui-icons/Save'
 
-import SwipeableViews from 'react-swipeable-views';
+//import SwipeableViews from 'react-swipeable-views';
 import { withStyles, withTheme } from 'material-ui/styles';
 import Dropzone from 'react-dropzone';
 import { isNil, isEmpty } from 'lodash';
 
-import { UserListWithData, EditProfile, CreateProfile } from '../../user/index'
+import { UserListWithData, EditProfile, CreateProfile, UserProfile } from '../../user/index'
 import { BrandListWithData, EditBrand, newBrand, CreateBrand } from '../../brands'
 import Templates from '../../template'
-import AdminCalendar, { SurveyCalendarForOrganization } from '../../admin/widget/AdminCalendar'
+import AdminCalendar, { SurveyCalendarForOrganization, EditSurveyEntryForOrganization } from '../../admin/widget/AdminCalendar'
 import Settings from './settings'
-import { runInThisContext } from 'vm';
+import { CDNOrganizationResource } from '../../util';
 
 const { EmailTemplateEditorComponent, TemplateListComponent } = Templates;
+
+/**
 const RenderField = ( { input, label, classes, type, meta: { touched, error}, fullWidth, help, disabled } ) => {
   let controlProps = {}
   if(fullWidth) controlProps.fullWidth = true;
@@ -59,6 +61,7 @@ const DropZoneRender = ( props  ) => {
     </div>
   )
 }
+*/
 
 const FormStyles = ( theme ) => {
   return {
@@ -87,9 +90,8 @@ const FormStyles = ( theme ) => {
 class OrganizationForm extends Component {
   constructor(props, context){
     super(props, context)
-    console.log('OrganizationForm', props, context)
     this.state = {
-      organization: props.initialValues,
+      organization: this.props.organization.organizationWithId || null,
       pristine: true,
       submitting: false
     }
@@ -101,18 +103,26 @@ class OrganizationForm extends Component {
     this.updateOrganization = this.updateOrganization.bind(this)
   }
 
+  componentWillReceiveProps(props){
+
+    if(!this.state.organization && props.organization.organizationWithId){
+      this.setState({ organization: props.organization.organizationWithId });
+      return;
+    }
+
+    if(this.state.organization && props.organization.organizationWithId && this.state.organization.id !== props.organization.organizationWithId.id) {
+      this.setState({ organization: props.organization.organizationWithId });
+      return;
+    }
+  }
+
   static propTypes = {
-    initialValues: PropTypes.object,
+    organization: PropTypes.object,
+    match: PropTypes.object,
     client: PropTypes.object
   }
 
-  componentWillReceiveProps(props){
-    console.log('new props', {s: this.state, props})
-    if(this.state.organization.id !== props.initialValues.id){
-      this.setState({organization: {...props.initialValues}})
-    }
-  }
-  
+    
   dropped = (acceptedFiles) => {
     const that = this;
     let preview = null;
@@ -162,15 +172,16 @@ class OrganizationForm extends Component {
   render(){
     const { classes } = this.props;
     const { organization, pristine, submitting } = this.state;
+    
+    if(this.props.organization.loading) return <p>Loading...</p>
 
-    if(isNil(organization)) return <p>Loading...</p>
     return (
     <Paper className={classes.formContainer}>
       <form>
-        <Grid container>
+        <Grid container spacing={0}>
           <Grid item xs={12}>
             <Paper className={classes.logoContainer}>
-              { isEmpty(organization.logo) === true ? <p style={{textAlign: 'center', paddingTop: '30px'}}>Upload Logo</p> : <img src={organization.logo} className={classes.logo} alt={organization.name} />}
+              { isEmpty(organization.logo) === true ? <p style={{textAlign: 'center', paddingTop: '30px'}}>Upload Logo</p> : <img src={CDNOrganizationResource(organization.id, organization.logo)} className={classes.logo} alt={organization.name} />}
             </Paper>
           </Grid>
           <Grid item xs={12} md={9}>
@@ -278,16 +289,21 @@ class DefaultFormContainer extends Component {
     this.setState({ value: index });
   };
 
-  onNewBrand = ( brand ) => {
-    this.setState({ leadershipBrand: {...newBrand}, leadershipBrandMode: 'new' })
+  onNewBrand = ( ) => {
+    this.setState({ leadershipBrand: {...newBrand}, leadershipBrandMode: 'new' }, () => {
+      this.props.history.push(`/admin/org/${this.props.orgId}/brands/new`);  
+    });
   }
 
   onBrandSelected = ( brand ) => {    
-    this.setState({ leadershipBrand: brand, leadershipBrandMode: 'edit' })
+    this.setState({ leadershipBrand: brand, leadershipBrandMode: 'edit' }, () => {
+      this.props.history.push(`/admin/org/${this.props.orgId}/brands/${brand.id}`);    
+    });    
   }
 
   onEmployeeSelected = ( user ) => {
-    this.setState({ employee: user, employeeMode: user.__isnew ? 'new' : 'edit' })
+    if(user.__isnew) this.props.history.push(`/admin/org/${this.props.orgId}/employees/new`)
+    else this.props.history.push(`/admin/org/${this.props.orgId}/employees/${user.id}`)    
   }
 
   onClearEmployeeSelection = () => {
@@ -302,7 +318,8 @@ class DefaultFormContainer extends Component {
     this.setState({ survey: null, surveyMode: 'calendar' })
   }
 
-  onCancelBrandEdit = () => {
+  onCancelBrandEdit = () => {    
+    this.props.history.push(`/admin/org/${this.props.orgId}/brands/`);
     this.setState({ leadershipBrand: null })
   }
 
@@ -318,75 +335,7 @@ class DefaultFormContainer extends Component {
       surveyMode, 
     } = this.state;
 
-    let LeadershipBrandComponent = null;
-    let EmployeeComponent = null;
-    let SurveyComponent = null;
-
-    if(!isNil(this.props.organization) && !this.props.organization.loading) initialValues = { ...this.props.organization.organizationWithId }
-    
-    if(leadershipBrand){
-      switch(leadershipBrandMode){        
-        case 'edit': {
-          LeadershipBrandComponent = <EditBrand organizationId={initialValues.id} leadershipBrand={leadershipBrand} onCancel={this.onCancelBrandEdit} />
-          break;
-        }
-        case 'new': 
-        default: {
-          LeadershipBrandComponent = <CreateBrand organizationId={initialValues.id} leadershipBrand={leadershipBrand} onCancel={this.onCancelBrandEdit}/>          
-        }        
-      }
-    }
-
-    
-    switch(employeeMode){
-      case 'edit': {
-        EmployeeComponent = <EditProfile onCancel={this.onClearEmployeeSelection} profile={employee} organizationId={initialValues.id} />
-        break
-      }
-      case 'new': {
-        EmployeeComponent = <CreateProfile onCancel={this.onClearEmployeeSelection} profile={employee} organizationId={initialValues.id} />
-        break
-      }
-      case 'list':
-      default: {
-        EmployeeComponent = <UserListWithData onUserSelect={this.onEmployeeSelected} organizationId={initialValues.id} />
-        break
-      }
-    }
-
-    /**
-     * 
-     *  { tab === 'employees' ? <TabContainer dir={theme.direction}>
-          {EmployeeComponent}
-        </TabContainer>  : null }
-        
-        { tab === 'brands' ? <TabContainer dir={theme.direction}>
-          <Grid container>
-            <Grid item xs={12}>
-              {leadershipBrand ? 
-              LeadershipBrandComponent :
-              <BrandListWithData organizationId={initialValues.id} onNewSelected={this.onNewBrand} onSelect={this.onBrandSelected} /> }
-            </Grid>            
-          </Grid>
-        </TabContainer> : null }
-                                
-        { tab === 'surveys' ? 
-        <TabContainer dir={theme.direction}>
-          <SurveyCalendarForOrganization organization={initialValues} onNewCalendarEntry={this.onNewCalendarEntry} onSelect={this.onCalendarEntrySelect} />
-        </TabContainer> : null }
-
-        { tab === 'templates' ? 
-        <TabContainer>
-          <TemplateListComponent />
-        </TabContainer> : null }
-
-        { tab === 'configuration' ? 
-        <TabContainer dir={theme.direction}>
-          <Settings />
-        </TabContainer> : null }       
-     * 
-     */
-    console.log('Location', {l: match.location});
+            
     return (
       <div className={classes.root}>        
         <AppBar position="static" color="default">
@@ -405,14 +354,50 @@ class DefaultFormContainer extends Component {
             <Tab label="Configuration" value={'configuration'} />
           </Tabs>
         </AppBar>
-        <TabContainer>
-          <p>{match.location}</p>
+        <TabContainer>          
           <Switch>
             <Route exact path={'/admin/org/:organizationId'} component={DefaultFormComponent} />
-            <Route path={'/admin/org/:organizationId/general'} component={DefaultFormComponent} />
-            <Route path={'/admin/org/:organizationId/employees'} component={EmployeeComponent} />
-            <Route path={'/admin/org/:organizationId/brands'} component={LeadershipBrandComponent} />
-            <Route path={'/admin/org/:organizationId/surveys'} component={SurveyCalendarForOrganization} />
+            <Route path={'/admin/org/:organizationId/general'} >
+              <DefaultFormComponent organization={this.props.organization} />
+            </Route>
+            <Route path={'/admin/org/:organizationId/employees'}>
+              <Switch>
+                <Route exact path={'/admin/org/:organizationId/employees'}>
+                  <UserListWithData onUserSelect={this.onEmployeeSelected} organizationId={this.props.orgId} />
+                </Route>
+                <Route exact path={'/admin/org/:organizationId/employees/new'}>
+                  <CreateProfile onCancel={this.onClearEmployeeSelection} organizationId={this.props.orgId} />
+                </Route>
+                <Route exact path={'/admin/org/:organizationId/employees/:profileId'}>
+                  <UserProfile organizationId={this.props.orgId} />
+                </Route>
+              </Switch>              
+            </Route>
+            <Route path={'/admin/org/:organizationId/brands'} >
+              <Switch>
+                <Route exact path={'/admin/org/:organizationId/brands'}>
+                  <BrandListWithData organizationId={this.props.orgId} onSelect={this.onBrandSelected} onNewSelected={this.onNewBrand}/>
+                </Route>
+                <Route exact path={'/admin/org/:organizationId/brands/new'}>
+                  <CreateBrand organizationId={this.props.orgId} onCancel={this.onCancelBrandEdit} leadershipBrand={this.state.leadershipBrand} />          
+                </Route>
+                <Route exact path={'/admin/org/:organizationId/brands/:brandId'}>
+                  <EditBrand organizationId={this.props.orgId} leadershipBrand={this.state.leadershipBrand} onCancel={this.onCancelBrandEdit} />          
+                </Route>
+              </Switch>
+              
+            </Route>
+            <Route path={'/admin/org/:organizationId/surveys'}>
+              <Switch>
+                <Route exact path={'/admin/org/:organizationId/surveys'}>
+                  <SurveyCalendarForOrganization {...this.props} organizationId={this.props.orgId} />  
+                </Route>
+                <Route path={'/admin/org/:organizationId/surveys/:surveyId'}>
+                  <EditSurveyEntryForOrganization {...this.props} organizationId={this.props.orgId}  />
+                </Route>
+              </Switch>              
+            </Route>
+            
             <Route path={'/admin/org/:organizationId/templates'} component={TemplateListComponent} />
             <Route path={'/admin/org/:organizationId/configuration'} component={Settings} />
           </Switch>

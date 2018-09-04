@@ -14,6 +14,7 @@ import { setContext } from 'apollo-link-context';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import Reboot from 'material-ui/Reboot';
 import { createMuiTheme } from 'material-ui/styles';
+import { forgot } from './api'
 import logo from './logo.svg';
 import queryString from './query-string';
 import './App.css';
@@ -30,7 +31,8 @@ import {
   Report,
   TaskDashboard,
   AdminDashboard,
-  Reactory
+  ReactoryRouter,  
+  ForgotForm,
 } from './components';
 import ApiProvider, { ReactoryApi } from './api/ApiProvider'
 import * as themes from './themes';
@@ -117,6 +119,7 @@ class App extends Component {
                   <Route exact path="/" component={Home}/>                  
                   <Route path="/admin" component={AdminDashboard} />              
                   <Route exact path="/login" component={Login} />
+                  <Route exact path="/forgot" component={ForgotForm}/>                  
                   <Route exact path="/register" component={Register } />
                   <Route path="/assess" component={Assessment} />
                   <Route exact path="/inbox" component={UserList} />
@@ -125,7 +128,9 @@ class App extends Component {
                   <Route path="/survey" component={UserSurvey} />
                   <Route path="/reports" component={Report} />
                   <Route path="/actions" component={TaskDashboard} />
-                  <Route path="/reactory" component={Reactory} />
+                  <Route path="/reactory">
+                    <ReactoryRouter />
+                  </Route>
                   <Route exact path="/organizations" component={OrganizationTable} />             
                 </div>
               </MuiThemeProvider>

@@ -461,7 +461,15 @@ class AdminCalendar extends Component {
     const { surveys } = this.props;
     return (
         <Paper className={this.props.classes.Container}>
-            
+            <BigCalendar
+              popup
+              onSelectEvent={this.props.onSelectEvent || nilf}
+              onDoubleClickEvent={this.props.onDoubleClickEvent || nilf}              
+              events={surveys || []}
+              startAccessor='startDate'
+              endAccessor='endDate'
+              defaultDate={new Date()}
+            />
             <div style={{display:'flex', justifyContent: 'flex-end'}}>
               <Button variant='fab' color='primary' onClick={this.props.onNewCaledarEntry || nilf} style={{marginTop: '25px', marginBottom: '25px'}}><AddIcon /></Button>
             </div>
@@ -483,25 +491,33 @@ const nilf = () => (0)
 export const EditSurveyEntryForOrganization = compose(withApi)(({
   organization,
   api,
-  survey,
+  surveyId,
   onCancel,
   onSaved
 })=>{
 
   return (
-    <Mutation mutation={api.mutation.Surveys.updateSurvey}>
-      {(updateSurvey, {loading, data, error})=>{
+    <Query query={api.queries.Surveys.surveyDetail} variables={{surveyId}}>
+    {({loading, error, data}) => {
+      if(loading) return <p>Loading Survey Details, please wait.</p>
+      if(error) return <p>{error.message}</p>
+      const survey = omitDeep(data.surveyDetail)
+      return (
+      <Mutation mutation={api.mutation.Surveys.updateSurvey}>
+        {(updateSurvey, {loading, data, error})=>{
           let surveyAdminProps = {
-            survey: { ...newSurvey },
-            onSave: (survey) => {
-              updateSurvey(omitDeep({variables: { input: {...survey}, organizationId: organization.id }}))
+            survey: { survey },
+            onSave: (updated) => {
+              updateSurvey(omitDeep({variables: { input: {...updated}, organizationId: organization.id }}))
             },
             onCancel
           };
 
           return <SurveyAdmin {...surveyAdminProps} />
       }}
-    </Mutation>
+    </Mutation>);
+    }}
+    </Query>    
   )
 });
 

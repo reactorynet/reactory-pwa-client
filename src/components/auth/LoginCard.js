@@ -23,6 +23,7 @@ class LoginCard extends Component {
     };
     this.doLogin = this.doLogin.bind(this);
     this.doRegister = this.doRegister.bind(this);
+    this.doForgot = this.doForgot.bind(this);
     this.updateUsername = this.updateUsername.bind(this);
     this.updatePassword = this.updatePassword.bind(this);
   }
@@ -39,7 +40,7 @@ class LoginCard extends Component {
   }
 
   doRegister = evt => this.props.history.push('/register')
-
+  doForgot = evt => this.props.history.push('/forgot')
   updateUsername = (evt) => this.setState({username: evt.target.value})
   updatePassword = (evt) => this.setState({password: evt.target.value})
   render() {
@@ -55,7 +56,7 @@ class LoginCard extends Component {
           <BasicContainer style={{ maxWidth: '400px', float: 'right' }}>
 
             <CardMedia>
-              <img src={theme.assets.login.logo} style={{ width: '300px !important', maxWidth: '400px' }} />
+              <img src={theme.assets.login.logo} alt={theme.content.appTitle} style={{ width: '300px !important', maxWidth: '400px' }} />
             </CardMedia>
 
             <TextField
@@ -84,6 +85,10 @@ class LoginCard extends Component {
             <h2>OR</h2>
             <Button onClick={this.doRegister} color='secondary'>                              
                 Register
+            </Button>
+
+            <Button onClick={this.doForgot} color='secondary'>                              
+                Forgot Password
             </Button>
 
             

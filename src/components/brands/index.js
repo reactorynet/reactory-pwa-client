@@ -46,8 +46,6 @@ import { withTheme, withStyles } from 'material-ui/styles';
 import { isArray, pullAt, isNil } from 'lodash'
 import { TableFooter } from 'material-ui/Table';
 import { select } from 'async';
-
-import scales from './scales.json'
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 import { omitDeep } from '../util';
 const nilf = () => ({})
@@ -68,7 +66,7 @@ const newQuality = {
 export const newBrand = {
   id: null,
   title: null,
-  scale: { ...scales[0] },
+  scale: null,
   description: null,
   qualities: [{ ...newQuality }]
 }
@@ -159,11 +157,8 @@ class QualityCard extends Component {
     const self = this;
     const { classes } = this.props;
     const { quality, behaviourIndex } = this.state;
-    const { behaviours } = quality;
-
-    
-
-    const avatar = (<Avatar className={classes.avatar} onClick={self.toggleQualityDetail}>{quality.ordinal.toString()}</Avatar>)
+    const { behaviours } = quality;  
+    const avatar = (<Avatar className={classes.avatar} onClick={self.toggleQualityDetail}>{quality.ordinal+1}</Avatar>)
     const action = (<IconButton><MoreVertIcon /></IconButton>)
     const title = (<Typography variant='subheading'>{quality.title}</Typography>)
     return (
@@ -287,6 +282,28 @@ const QualityCardComponent = compose(
   withStyles(QualityCard.styles),
 )(QualityCard)
 
+const ScaleSelector = compose(withApi) (( props, context ) => {
+  const { api, onChange, selectedKey } = props;
+  return (
+    <Query query={api.queries.Surveys.allScales}>
+    {({ loading, error, data }) => {
+      if (loading) return "Loading...";
+      if (error) return `Error! ${error.message}`;
+
+      return (
+        <Select name="Scale" onChange={onChange} value={selectedKey}>
+          {data.allScales.map(scale => (
+            <option key={scale.key} value={scale.key}>
+              {scale.title}
+            </option>
+          ))}
+        </Select>
+      );
+    }}
+  </Query>
+  )  
+});
+
 export class BrandEdit extends Component {
 
   constructor(props, context) {
@@ -313,15 +330,8 @@ export class BrandEdit extends Component {
   onDescriptionChanged = (evt) => this.setState({ editBrand: { ...this.state.editBrand, description: evt.target.value } });
   onNewQuality = (evt) => this.setState({ editBrand: { ...this.state.editBrand, qualities: [...this.state.editBrand.qualities, { ...newQuality, ordinal: this.state.editBrand.qualities.length + 1 }] } })
   onSurveyTypeChanged = (evt, child) => { 
-    debugger;   
-    let scale = {
-      key: '',
-      title: '',
-      entries: []
-    }
-
-    scales.forEach((_scale) => { if(_scale.key === evt.target.value) scale = {..._scale}; });
-    this.setState({editBrand: { ...this.state.editBrand, scale }});
+    console.log('survey type change', evt)
+    // this.setState({editBrand: { ...this.state.editBrand, scale }});
   }
 
   onCancel = (evt) => {
@@ -347,7 +357,7 @@ export class BrandEdit extends Component {
   render() {
     const self = this;
     const { id, title, description, qualities, scale } = this.state.editBrand;
-    const { classes, mode } = this.props;
+    const { classes, mode, scales } = this.props;
     const isNew = mode === 'new'
 
     return (
@@ -372,13 +382,7 @@ export class BrandEdit extends Component {
 
               <FormControl fullWidth className={classes.formControl}>
                 <InputLabel htmlFor="assessmentScale">Assessment Scale</InputLabel>
-                <Select
-                  value={ scale ? scale.key : '' }
-                  onChange={this.onSurveyTypeChanged}>
-                  {scales.map((_scale, idx) => {
-                    return (<option value={_scale.key} key={_scale.key}>{_scale.title}</option>)
-                  })}                
-                </Select>
+                <ScaleSelector onChange={this.onSurveyTypeChanged} selectedKey={scale ? scale.key : null }/>                
               </FormControl>   
             </Grid>            
             <Grid item xs={12}>
@@ -438,7 +442,8 @@ export class BrandEdit extends Component {
 
 BrandEdit.propTypes = {
   leadershipBrand: PropTypes.object,
-  mode: PropTypes.string
+  mode: PropTypes.string,
+  scales: PropTypes.array
 };
 
 BrandEdit.defaultProps = {
@@ -448,7 +453,7 @@ BrandEdit.defaultProps = {
     title: '',
     description: '',
     qualities: []
-  }
+  }  
 };
 
 

@@ -34,9 +34,22 @@ export default {
             appTitle: 'TowerStone Leadership Centre',
             login: {
                 message: 'Empowering Leaders To Discover Fulfillment In Their Workplace. That is our Prupose.'
-            },
+            },            
             dashboardComponent: UserDashboard,
-            assessmentComponent: DefaultAssessmentView    
+            assessmentComponent: DefaultAssessmentView,
+            navigation: [
+                { 
+                    id: 'main_nav', 
+                    entries: [    
+                        { id: '1', title: 'Inbox', link: '/inbox', icon: 'email', roles: ['PRODUCT_MANAGER', 'USER'] },
+                        { id: '2', title: 'Surveys', link: '/surveys', icon: 'check_circle', roles: ['PRODUCT_MANAGER', 'USER'] },
+                        { id: '3', title: 'Reports', link: '/reports', icon: 'bug_report', roles: ['PRODUCT_MANAGER', 'USER'],  },
+                        { id: '4', title: 'Actions', link: '/actions', icon: 'autorenew', roles: ['PRODUCT_MANAGER', 'USER'] },
+                        { id: '5', title: 'Profile', link: '/profile', icon: 'change_history', roles: ['PRODUCT_MANAGER', 'USER'] },
+                        { id: '6', title: 'Admin', link: '/admin', icon: 'description', roles: ['PRODUCT_MANAGER'] },                        
+                    ] 
+                }
+            ]
         }
     }
 };

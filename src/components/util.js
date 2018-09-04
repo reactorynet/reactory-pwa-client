@@ -2,6 +2,8 @@ import React from 'react';
 import moment from 'moment';
 import { map } from 'lodash';
 
+import DefaultAvatar from '../assets/images/profile/default.png';
+
 export const nil = ( input ) => { return input === null || input === undefined };
 export const nilStr = ( input ) => { 
   if(nil(input)) return true;
@@ -71,7 +73,8 @@ export  const CenteredContainer = ( props ) => {
   };
 
   export const omitDeep = (obj, key = '__typename') => {
-    if (Array.isArray(obj)) return omitDeepArrayWalk(obj, key)
+    if(nil(obj)) return null;
+    if (Array.isArray(obj)) return omitDeepArrayWalk(obj, key)    
     const keys = Object.keys(obj)
     const newObj = {}
     keys.forEach((i) => {
@@ -93,6 +96,26 @@ export  const CenteredContainer = ( props ) => {
     })
   }
 
+  export const CDNOrganizationResource = (organizationId, file) => {
+    return CDNResource(`organization/${organizationId}/${file}`);
+  };
+
+  export const CDNProfileResource = (profileId, file) => {
+    return CDNResource(`profiles/${profileId}/${file}`);
+  };
+
+  export const CDNResource = ( path ) => {
+    return `${process.env.REACT_APP_CDN}/${path}`;
+  };
+
+  export const getAvatar = (profile) => {
+    if(nil(profile)) return DefaultAvatar;
+    if(nil(profile.avatar)) return DefaultAvatar;
+    
+    if(profile.avatar.endsWith('.jpeg')) return CDNProfileResource(profile.id, profile.avatar);
+    
+    return profile.avatar
+  };
 
   export const DateHelpers = {
     today: moment().startOf('day'),

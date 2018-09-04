@@ -1,5 +1,17 @@
 import gql from 'graphql-tag';
 
+const allScales = gql`
+  query ScalesQuery {
+    allScales {
+      title
+      key 
+      entries {
+        description
+        rating
+      }
+    }
+  }
+`
 const allOrganizations = gql`
   query OrganizationQuery {
       allOrganizations {
@@ -117,16 +129,20 @@ const createUserMutation = gql`
 `;
 
 const updateUserMutation = gql`
-  mutation UpdateUserMutation($input: UpdateUserInput!){
-    updateUser(input: $input){
+  mutation UpdateUserMutation($id: String!, $profileData: UpdateUserInput!){
+    updateUser(id: $id, profileData: $profileData){
       id
+      firstName
+      lastName
+      email
+      avatar
     } 
   }
 `;
 
-const surveysForOrganization = gql`
-  query SurveysForOrganization($organizationId: String!){
-    surveysForOrganization(organizationId: $organizationId){
+const surveyDetail = gql`
+  query SurveyDetail($surveyId: String!){
+    surveysDetail(surveyId: $surveyId){
       id      
       leadershipBrand {
         title
@@ -177,6 +193,36 @@ const surveysForOrganization = gql`
   }
 `
 
+const surveysForOrganization = gql`
+  query SurveysForOrganization($organizationId: String!){
+    surveysForOrganization(organizationId: $organizationId){
+      id      
+      leadershipBrand {
+        title
+        description                
+      }      
+      title
+      startDate
+      endDate
+      mode            
+    }
+  }
+`
+
+const userProfile = gql`
+  query userProfile($profileId: String!){
+    userWithId(id: $profileId){
+      id      
+      email
+      firstName
+      lastName
+      avatar
+      businessUnit
+      lastLogin
+    }
+  }
+`
+
 export default {
   queries: {
     Organization: {
@@ -185,7 +231,7 @@ export default {
     },
     Users: {
       usersForOrganization,
-      userDetails: null,
+      userProfile,
       userLogs: null,
       userPeers: null,
     },
@@ -194,7 +240,9 @@ export default {
       defaultTemplates: null
     },
     Surveys: {
+      allScales,
       surveysForOrganization,
+      surveyDetail,
       calendarForSurvey: null      
     },
     Assessments: {
