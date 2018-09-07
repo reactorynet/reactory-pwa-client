@@ -3,8 +3,10 @@ import PropTypes from 'prop-types';
 import {
   BrowserRouter as Router,
   Route,
-  Link
+  Link,
+  Redirect,
 } from 'react-router-dom';
+import { isNil } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
 import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
@@ -24,6 +26,7 @@ import {
   Login,
   Register,
   UserList,
+  UserInbox,
   Home,
   Profile,
   UserSurvey, 
@@ -33,6 +36,7 @@ import {
   AdminDashboard,
   ReactoryRouter,  
   ForgotForm,
+  ResetPasswordForm
 } from './components';
 import ApiProvider, { ReactoryApi } from './api/ApiProvider'
 import * as themes from './themes';
@@ -82,31 +86,62 @@ class App extends Component {
   constructor(props, context){
     super(props, context);
 
-    //const query = queryString.parse(props.location.search)
+    const query = queryString.parse(window.location.search)
+    if(query.auth_token) localStorage.setItem('auth_token', query.auth_token)            
+
     this.state = {
       drawerOpen: false,
-      authenticated: localStorage.getItem('auth_token') === null,
+      has_token: localStorage.getItem('auth_token') !== null,
       auth_valid: false,
+      auth_validated: isNil(localStorage.getItem('auth_token')) === false ? false : true,
       theme: props.appTheme,
     }
   }
 
-  componentWillMount(){
-    if(this.state.authenticated){
-      //api.validateToken(localStorage.getItem('auth_token')).then((valid) => {
-      //  this.setState({ auth_valid: valid === true })
-      //}).catch((validationError) => {
-      //  this.setState({ auth_valid: false, authenticated: false })
-      //})
+  componentDidMount(){    
+    const that = this;
+    if(this.state.has_token === true && this.state.auth_validated === false){
+      const auth_token = localStorage.getItem('auth_token');
+      try {
+        api.validateToken(auth_token).then((valid) => {
+          that.setState({ auth_valid: valid === true, authenticated: true, auth_validated: true })
+        }).catch((validationError) => {
+          that.setState({ auth_valid: false, authenticated: false, auth_validated: true })
+        });
+      } catch ( vErr) {
+        console.error('vErr',vErr);
+      }
+      
     }
   }
 
   render() {
     const { appTitle, appTheme } = this.props;
-    const { drawerOpen, auth_valid, authenticated } = this.state;
+    const { drawerOpen, auth_valid, has_token, auth_validated } = this.state;
     
-    const muiTheme = createMuiTheme( appTheme.muiTheme );
+    const muiTheme = createMuiTheme( appTheme.muiTheme );  
     
+    if(auth_validated === false && has_token === true) {
+      return <p>Checking login...</p>
+    }
+    
+    const PrivateRoute = ({ component: Component, ...rest }) => (
+      <Route
+        {...rest}
+        render={(props) => {          
+          if (has_token === true && auth_valid === true) {
+            return <Component {...props} />
+          } else {
+            return <Redirect
+              to={{
+                pathname: "/login",
+                state: { from: props.location }
+              }}
+            />
+          }       
+        }}
+      />);
+
     return (
       <Router>
         <Provider store={store}>
@@ -115,23 +150,24 @@ class App extends Component {
               <MuiThemeProvider theme={muiTheme}>
                 <div style={{marginTop:'80px'}}>
                   <Reboot />              
-                  <AssessorHeaderBar title={muiTheme.content.appTitle}/>
-                  <Route exact path="/" component={Home}/>                  
-                  <Route path="/admin" component={AdminDashboard} />              
+                  <AssessorHeaderBar title={muiTheme.content.appTitle} />
+                  <PrivateRoute exact path="/" component={Home}/>                  
+                  <PrivateRoute path="/admin" component={AdminDashboard} />              
                   <Route exact path="/login" component={Login} />
-                  <Route exact path="/forgot" component={ForgotForm}/>                  
+                  <Route exact path="/forgot" component={ForgotForm}/>
+                  <Route exact path="/reset-password" component={ResetPasswordForm}/>    
                   <Route exact path="/register" component={Register } />
-                  <Route path="/assess" component={Assessment} />
-                  <Route exact path="/inbox" component={UserList} />
-                  <Route exact path="/users" component={UserList} />
-                  <Route path="/profile" component={Profile}/>
-                  <Route path="/survey" component={UserSurvey} />
-                  <Route path="/reports" component={Report} />
-                  <Route path="/actions" component={TaskDashboard} />
+                  <PrivateRoute path="/assess" component={Assessment} />
+                  <PrivateRoute exact path="/inbox" component={UserInbox} />
+                  <PrivateRoute exact path="/users" component={UserList} />
+                  <PrivateRoute path="/profile" component={Profile}/>
+                  <PrivateRoute path="/surveys" component={UserSurvey} />
+                  <PrivateRoute path="/reports" component={Report} />
+                  <PrivateRoute path="/actions" component={TaskDashboard} />
                   <Route path="/reactory">
                     <ReactoryRouter />
                   </Route>
-                  <Route exact path="/organizations" component={OrganizationTable} />             
+                  <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
                 </div>
               </MuiThemeProvider>
             </ApiProvider>

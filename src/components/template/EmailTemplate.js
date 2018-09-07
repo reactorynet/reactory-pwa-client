@@ -108,6 +108,10 @@ class TemplateList extends Component {
     }
   }
 
+  static propTypes = {
+    templates: PropTypes.array
+  }
+
   handleTemplateSelect(template){
     console.log('Template item selected', template);
     this.setState({ selected:  template });

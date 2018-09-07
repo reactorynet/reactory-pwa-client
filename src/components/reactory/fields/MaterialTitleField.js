@@ -31,13 +31,5 @@ export default (props) => {
     uiScehma 
   } = props;
   
-  const inputProps = {
-    value: '',
-    name,
-    required,
-    disabled,
-    autofocus
-  }
-
-  return(<Input value={props.value} onChange={(evt) => { evt.persist(); onChange(evt.target.value); }} />) 
+  return(<Typography value={props.value} variant="title" align="center" />) 
 };

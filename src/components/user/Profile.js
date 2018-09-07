@@ -220,13 +220,14 @@ class Profile extends Component {
             if(profile.peers) delete profile.peers
             if(profile.surveys) delete profile.surveys
             if(profile.teams) delete profile.teams
+            if(profile.notifications) delete profile.notifications
             profile.authProvider = 'LOCAL'
             profile.providerId = 'reactory-system'            
             that.props.onSave(profile)
         };
 
         const back = () => { 
-            history.goBack(); 
+            history.goBack();
         }
 
         const onFileClick = () => {
@@ -260,23 +261,22 @@ class Profile extends Component {
             that.setState({profile: {...that.state.profile, businessUnit: evt.target.value}})
         };
 
-        let avatarComponent = null;
-        if(isNil(id) === false){
-           avatarComponent = (
-                <div className={classes.avatarContainer}>
-                    <Avatar 
-                        src={getAvatar(profile)} alt={`${firstName} ${lastName}`} 
-                        className={classNames(classes.avatar, classes.bigAvatar, avatarMouseOver === true ? classes.avatarHover : '' )} 
-                        onMouseOver={this.onAvatarMouseOver}
-                        onMouseOut={this.onAvatarMouseOut}/> 
-                        <input accept="image/*" className={classes.hiddenInput} onChange={onFileClick} id="icon-button-file" type="file" ref={(n) => that.userProfileImageFile = n} />
-                        <label htmlFor="icon-button-file">
-                            <IconButton color="primary" className={classes.button} component="span">
-                                <PhotoCamera />
-                            </IconButton>
-                        </label>           
-                </div>);
-        }
+        let avatarComponent = null;        
+        avatarComponent = (
+            <div className={classes.avatarContainer}>
+                <Avatar 
+                    src={getAvatar(profile)} alt={`${firstName} ${lastName}`} 
+                    className={classNames(classes.avatar, classes.bigAvatar, avatarMouseOver === true ? classes.avatarHover : '' )} 
+                    onMouseOver={this.onAvatarMouseOver}
+                    onMouseOut={this.onAvatarMouseOut}/> 
+                    <input accept="image/*" className={classes.hiddenInput} onChange={onFileClick} id="icon-button-file" type="file" ref={(n) => that.userProfileImageFile = n} />
+                    <label htmlFor="icon-button-file">
+                        <IconButton color="primary" className={classes.button} component="span">
+                            <PhotoCamera />
+                        </IconButton>
+                    </label>           
+            </div>);
+        
 
         return (
             <Grid item sm={12} xs={12} offset={4}>

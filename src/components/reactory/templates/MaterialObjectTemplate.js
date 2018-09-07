@@ -31,7 +31,7 @@ class ObjectTemplate extends Component {
     const { title, description, properties } = this.props
     return (
       <Card>
-        <Typography gutterBottom variant="headline" component="h2">{title}</Typography>
+        <Typography gutterBottom variant="headline" component="h2" align="center">{title}</Typography>
         <Typography gutterBottom component="p">{description}</Typography>        
         <CardContent>
           {properties.map(element => element.content)}

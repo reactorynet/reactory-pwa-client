@@ -1,6 +1,7 @@
 import plc from './plc';
 import towerstone from './towerstone';
 import woosparks from './woosparks';
+import aot from './aot';
 
 export const StyleHelper = {
     debug: () => ({ outline:'1px solid red' }),
@@ -12,13 +13,16 @@ export const towerstoneTheme = towerstone;
 export const woosparksTheme = woosparks;
 export const getTheme = (themeName) => {
     switch(themeName){
+        case 'aot': {
+            return aot
+        }
         case 'woosparks': {
             return woosparks
         }        
         case 'plc': {
             return plc
         }
-        case 'towerstone':
+        case 'towerstone':        
         default: {
             return towerstone
         }

@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { Link, withRouter } from 'react-router-dom';
+import { compose } from 'redux';
 import Paper from 'material-ui/Paper';
+import { withStyles, withTheme } from 'material-ui/styles';
 import { Card, CardActions, CardHeader, CardMedia, CardTitle, CardText } from 'material-ui/Card';
 import Drawer from 'material-ui/Drawer';
 import Avatar from 'material-ui/Avatar';
@@ -24,8 +26,9 @@ import AccountCircle from 'material-ui-icons/AccountCircle';
 import BuildIcon from 'material-ui-icons/Build';
 import LockIcon from 'material-ui-icons/Lock';
 import { ListItemIcon, ListItemText } from 'material-ui/List';
-import { withTheme } from 'material-ui/styles';
 import DefaultProfileImage from '../assets/images/profile/default.png';
+import { getAvatar } from './util';
+import { withApi, ReactoryApi } from '../api/ApiProvider';
 
 class Login extends Component {
     
@@ -183,45 +186,44 @@ class AssessorHeaderBar extends Component {
                         
         return (
             <div>
-            <AppBar position="fixed" style={{backgroundColor:theme.palette.primary1Color}}>
-            <Toolbar >
-                <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
-                    <MenuIcon />
-                </IconButton>
-                <Typography type="title" color="inherit" style={{flex:1}}>
-                    {theme.content.appTitle}
-                </Typography>
+                <AppBar position="fixed" style={{backgroundColor:theme.palette.primary1Color}}>
+                    <Toolbar >
+                        <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
+                            <MenuIcon />
+                        </IconButton>
+                        <Typography type="title" color="inherit" style={{flex:1}}>
+                            {theme.content.appTitle}
+                        </Typography>
 
-                <IconButton
-                  aria-owns={menuOpen ? 'menu-appbar' : null}
-                  aria-haspopup="true"
-                  onClick={this.handleMenu}
-                  color="inherit"                  
-                >
-                  <PowerSettingIcon />
-                  <Logged open={menuOpen === true} 
-                    id={'menu-appbar'} 
-                    anchorEl={self.state.menuAnchor}
-                    onMyProfileClicked={self.profileClicked}
-                    onSignOutClicked={self.signOutClicked}
-                    />
-                </IconButton>
-            </Toolbar>
-            </AppBar>
-             <Drawer open={this.state.drawerOpen} style={{minWidht: '250px'}}>     
-                <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
-                    <BackIcon />    
-                </IconButton>
-                <Avatar src={DefaultProfileImage} style={{ height:120, width:120, margin:20, marginLeft:'auto', marginRight:'auto' }} />                
-                {menuItems}
-              </Drawer>
+                        <IconButton
+                            aria-owns={menuOpen ? 'menu-appbar' : null}
+                            aria-haspopup="true"
+                            onClick={this.handleMenu}
+                            color="inherit">
+                        <PowerSettingIcon />
+                        <Logged open={menuOpen === true} 
+                            id={'menu-appbar'} 
+                            anchorEl={self.state.menuAnchor}
+                            onMyProfileClicked={self.profileClicked}
+                            onSignOutClicked={self.signOutClicked} />
+                        </IconButton>
+                    </Toolbar>
+                </AppBar>
+                <Drawer open={this.state.drawerOpen} style={{minWidht: '250px'}}>     
+                    <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
+                        <BackIcon />    
+                    </IconButton>
+                    <Avatar src={getAvatar(this.props.api.getUser())} style={{ height:120, width:120, margin:20, marginLeft:'auto', marginRight:'auto' }} />                
+                    {menuItems}
+                </Drawer>
             </div>
         );
     }    
 }
 
 AssessorHeaderBar.propTypes = {
-    title: PropTypes.string
+    title: PropTypes.string,
+    api: PropTypes.instanceOf(ReactoryApi)
 }
 
 AssessorHeaderBar.defaultProps = {
@@ -232,4 +234,11 @@ AssessorHeaderBar.contextTypes = {
     router: PropTypes.object,    
 }
 
-export default withRouter(withTheme()(AssessorHeaderBar));
+const AssessorHeaderBarComponent = compose(
+    withRouter,
+    withApi,
+    withStyles(AssessorHeaderBar.styles),
+    withTheme()
+  )(AssessorHeaderBar);
+
+export default AssessorHeaderBarComponent;

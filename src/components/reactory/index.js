@@ -25,13 +25,15 @@ import uiSchemas from './schema/uiSchema'
 
 const { 
   MaterialStringField,
+  MaterialTitleField,
   MaterialGridField, 
   BootstrapGridField, 
-} = Fields
+} = Fields;
+
 const { 
   MaterialObjectTemplate,
   MaterialFieldTemplate,
- } = MaterialTemplates
+} = MaterialTemplates;
 
 const simpleSchema = {
   "title": "No form found",
@@ -43,7 +45,7 @@ const simpleSchema = {
       "title": "Message"
     },    
   }
-}
+};
 
 const simpleUiSchema = {
   "message": {
@@ -51,14 +53,14 @@ const simpleUiSchema = {
     "ui:emptyValue": "No form found with that id",
     "ui:widget": "label"
   },  
-}
+};
 
 const simpleForm = {
     schema: simpleSchema,
     uiSchema: simpleUiSchema,
     widgets: {},
     fields: {}
-}
+};
 
 const FormWithQuery = (props) => {  
   
@@ -164,7 +166,7 @@ class ReactoryComponent extends Component {
             //ObjectField: MaterialObjectField,
             //SchemaField: MaterialSchemaField,
             StringField: MaterialStringField.default,
-            //TitleField: MaterialTitleField,
+            TitleField: MaterialTitleField.default,
             //UnsupportedFiled: UnsupportedMaterialField
             layout: MaterialGridField
           };
@@ -279,14 +281,6 @@ class ReactoryComponent extends Component {
     if(this.props.onSubmit) this.props.onSubmit(data);
   }
 
-  onChange( data ){
-    console.log('form-onChange', data);
-    
-    this.setState({ data }, ()=>{
-      if(this.props.onChange) this.props.onChange(data);
-    })
-  }
-
   onError( errors ){
     if(this.props.onError) this.props.onError(errors);
   }
@@ -298,7 +292,9 @@ class ReactoryComponent extends Component {
     if(forms.length === 0) return (<p>no forms defined</p>)        
     return (
       <div style={{padding: '15px' }}>
-        <Form {...this.form()} onSubmit={this.onSubmit} />
+        <Form {...this.form()} onSubmit={this.onSubmit}>
+          {this.props.children}
+        </Form>
       </div>
     )
   }

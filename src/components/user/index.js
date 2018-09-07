@@ -6,6 +6,7 @@ import { compose } from 'redux';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import {
   Avatar,
+  Chip,
   Button,
   FormControl,
   List,
@@ -13,14 +14,18 @@ import {
   ListItemText,
   InputLabel,
   Input,
+  Icon,
   InputAdornment,
   IconButton,
+  Grid,
+  Paper,
   TextField,
   Table,
   TableBody,
   TableHead,  
   TableRow,
   TableCell,
+  Typography,
 } from 'material-ui';
 
 import {
@@ -32,13 +37,14 @@ import classNames from 'classnames';
 import AddCircleIcon from 'material-ui-icons/AddCircle'
 import DetailIcon from 'material-ui-icons/Details'
 import { withTheme, withStyles } from 'material-ui/styles';
-import { isArray } from 'lodash'
+import { isArray, isNil } from 'lodash'
 import { ReactoryFormComponent } from '../reactory';
 import { TableFooter } from 'material-ui/Table';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 import DefaultAvatar from '../../assets/images/profile/default.png';
 import Profile from './Profile'
 import { omitDeep, getAvatar } from '../util';
+import { FormControlLabel } from 'material-ui';
 
 const UserSearchInputStyles = theme => {
   return {
@@ -256,9 +262,14 @@ export const UserProfile = compose(
   withApi,
   withRouter,
 )((props) => {
-    const { api, location, profileId, organizationId, match } = props    
+    const { api, location, profileId, organizationId, match } = props
+    let pid = null;
+    pid = isNil(profileId) === false ? pid : match.params.profileId;
+    if (isNil(pid) === true) pid = api.getUser() ? api.getUser().id : null;
+    if (isNil(pid) === true) return <Typography variant="title" value="No profile id" />
+
     return (
-    <Query query={api.queries.Users.userProfile} variables={{profileId: match.params.profileId}}>
+    <Query query={api.queries.Users.userProfile} variables={{profileId: pid}}>
       {(props, context)=>{
         const { loading, error, data } = props;
         if(loading) return <p>Loading User Profile, please wait...</p>
@@ -284,6 +295,102 @@ const UserListItem = (props) => {
     </ListItem>
   )
 }
+
+class Inbox extends Component {
+
+  constructor(props, context){
+    super(props, context)
+    this.state = {
+      selected: null
+    };
+    this.onItemSelect = this.onItemSelect.bind(this);
+  }
+
+  static styles = (theme) => {
+    return {
+      PreviewPane: {
+        margin: `${theme.spacing.unit}px`,
+        padding: `${theme.spacing.unit}px`,
+      },
+      PreviewBody: {
+        outline: '1px solid black',
+        display: 'block'
+      }      
+    }
+  }
+
+  onItemSelect(index){
+    this.setState({selected: index});
+  }
+
+  render(){
+    const that = this;
+    const { selected } = this.state;
+    const { classes } = this.props;
+
+    const listProps = {
+      item: true,
+      xs: 12,
+      md: 3,
+      lg: 3
+    };
+
+    const viewProps = {
+      item: true,
+      xs: 12,
+      md: 9,
+      lg: 9    
+    };
+
+    let viewPane = null;
+    if(selected) {
+      const message = this.props.messages[selected];
+      viewPane = (
+      <Grid {...viewProps}>
+        <Paper className={classes.PreviewPane}>                                                 
+          <Typography variant="title">{message.subject}</Typography><br/>
+          <Typography className={classes.PreviewBody} variant="p" dangerouslySetInnerHTML={{__html: message.message}}></Typography>        
+        </Paper>
+      </Grid>);
+    } else {
+      viewPane = (<Grid {...viewProps}>
+        <Typography variant="title">Select a message to view</Typography>        
+      </Grid>);
+    }
+
+    return (
+      <Paper>
+        <Typography variant="title">Inbox</Typography>
+        <Grid container>          
+          <Grid {...listProps}>
+            <List>
+              {this.props.messages.map((message, index) => (
+              <ListItem onClick={() => (this.onItemSelect(index))} dense button key={index}>
+                <Avatar>{message.from.substring(0,1).toUpperCase()}</Avatar>
+                <ListItemText primary={message.subject} secondary={ message.sent }/>
+              </ListItem>))}
+            </List>
+          </Grid>
+          {viewPane}
+        </Grid> 
+      </Paper>
+    );
+  }
+}
+
+export const ThemedInbox = compose(withTheme(), withStyles(Inbox.styles))(Inbox);
+
+export const UserInbox = compose(withApi)(({ api }) => (
+  <Query query={api.queries.Users.userInbox} variables={{ order: 'asc' }}>
+   {(props, context) => {
+      const { loading, error, data } = props;
+      if(loading === true) return <p>Loading emails</p>
+      if(error) return <p>{error.message}</p>
+      return (
+        <ThemedInbox {...props} messages={data.userInbox} />
+      )}}
+  </Query>));
+
 
 const UserList = ({organizationId, api, onUserSelect}) => {  
   return (
@@ -355,20 +462,45 @@ class Forgot extends Component {
   constructor(props, context){
     super(props,context)
     this.state = {
-      formData: { email: '' }
+      formData: { email: '' },
+      mailSent: false,
+      message: '',
+      hasError: false,
     }
 
     this.onSubmit = this.onSubmit.bind(this);
   }
   
   onSubmit(form){
+    const that = this;
     this.props.api.forgot(form.formData).then((forgotResult) => {
-      //redirect
+      console.log('Forgot password has been triggered', forgotResult);
+      that.setState({ mailSent: true })
+    }).catch((error)=>{
+      console.error('Error sending forgot password email to user', error);
+      that.setState({ hasError: true,  message: 'Could not send an email. If this problem persists please contact our helpdesk.'})
     })
   }
+
+  onChange(formData){
+    console.log('formData changed', formData)
+    this.setState({formData});
+  }
     
-  render(){          
-  return (<ReactoryFormComponent formId="forgot-password" onSubmit={this.onSubmit} data={this.state.formData} />)          
+  render(){
+
+    if(this.state.mailSent) {
+      return (<div><Typography variant="body1" value="An email has been sent with instructions to reset your password. Please allow a few minutes for delivery" /></div>)
+    } 
+    if(this.state.hasError) {      
+      return (<div><Typography variant="body2" value={this.state.message} /></div>);
+    }
+
+    return (
+      <ReactoryFormComponent formId="forgot-password" uiFramework="material" onSubmit={this.onSubmit}>
+        <Button type="submit" variant="raised" color="primary"><Icon>email</Icon> RESET</Button>      
+      </ReactoryFormComponent>
+    )          
   }
 }
 
@@ -378,8 +510,57 @@ Forgot.propTypes = {
 
 export const ForgotForm = compose(withTheme(), withApi, withRouter)(Forgot);
 
+class ResetPassword extends Component {
 
+  constructor(props, context){
+    super(props,context)
+    this.state = {
+      formData: { email: '', password: '', passwordConfirm: '', authToken: localStorage.getItem('auth_token') },
+      message: '',
+      hasError: false,
+    }
 
+    this.onSubmit = this.onSubmit.bind(this);
+  }
+  
+  onSubmit(form){
+    const that = this;
+    this.props.api.resetPassword(form.formData).then((forgotResult) => {
+      console.log('Forgot password has been triggered', forgotResult);
+      that.setState({ mailSent: true })
+    }).catch((error)=>{
+      console.error('Error sending forgot password email to user', error);
+      that.setState({ hasError: true,  message: 'Could not send an email. If this problem persists please contact our helpdesk.'})
+    })
+  }
+
+  onChange(formData){
+    console.log('formData changed', formData)
+    this.setState({formData});
+  }
+    
+  render(){
+
+    if(this.state.mailSent) {
+      return (<div><Typography variant="body1" value="An email has been sent with instructions to reset your password. Please allow a few minutes for delivery" /></div>)
+    } 
+    if(this.state.hasError) {      
+      return (<div><Typography variant="body2" value={this.state.message} /></div>);
+    }
+
+    return (
+      <ReactoryFormComponent formId="password-reset" uiFramework="material" onSubmit={this.onSubmit}>
+        <Button type="submit" variant="raised" color="primary"><Icon>save</Icon>&nbsp;UPDATE PASSWORD</Button>      
+      </ReactoryFormComponent>
+    )          
+  }
+}
+
+ResetPassword.propTypes = {
+  api: PropTypes.instanceOf(ReactoryApi)
+}
+
+export const ResetPasswordForm = compose(withTheme(), withApi, withRouter)(ResetPassword);
 
 
 

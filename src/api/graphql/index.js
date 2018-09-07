@@ -140,6 +140,18 @@ const updateUserMutation = gql`
   }
 `;
 
+const setPassword = gql`
+  mutation SetPasswordMutation($input: UpdatePasswordInput!){
+    setPassword(input: $input) {
+      id
+      firstName
+      lastName
+      email
+      avatar
+    }
+  }
+`;
+
 const surveyDetail = gql`
   query SurveyDetail($surveyId: String!){
     surveysDetail(surveyId: $surveyId){
@@ -207,7 +219,7 @@ const surveysForOrganization = gql`
       mode            
     }
   }
-`
+`;
 
 const userProfile = gql`
   query userProfile($profileId: String!){
@@ -221,7 +233,53 @@ const userProfile = gql`
       lastLogin
     }
   }
-`
+`;
+
+const apiStatus = gql`
+query status {
+  apiStatus {
+		when
+		status
+    firstName
+    lastName
+    email
+    id
+    avatar
+	}
+}
+`;
+
+const userInbox = gql`
+  query UserInboxQuery($id: String, $sort: String){
+    userInbox(id: $id, sort: $sort){
+      id
+      sendAfter
+      sentAt
+      sent
+      error
+      failures
+      from
+      message
+      subject
+      to
+      archived
+      createdAt
+      format
+      user {
+        id
+        firstName
+        lastName
+        email
+      }      
+      survey {
+        id
+        title
+        startDate
+        endDate
+      }
+    }
+  }
+`;
 
 export default {
   queries: {
@@ -232,6 +290,7 @@ export default {
     Users: {
       usersForOrganization,
       userProfile,
+      userInbox,      
       userLogs: null,
       userPeers: null,
     },
@@ -254,6 +313,9 @@ export default {
     },
     Tasks: {
       tasksForUser: null
+    },
+    System: {
+      apiStatus
     }
   },
   mutations: {
@@ -264,6 +326,7 @@ export default {
     Users: {
       createUser: createUserMutation,
       updateUser: updateUserMutation,
+      setPassword,
       createMembership: null,
       removeMembership: null,
       invitePeer: null,
