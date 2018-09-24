@@ -1,32 +1,20 @@
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
-import {withStyles, withTheme} from 'material-ui/styles';
+import {withStyles, withTheme} from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
-import {isNil} from 'lodash';
 import classNames from 'classnames';
-import Grid from 'material-ui/Grid';
-import Typography from 'material-ui/Typography';
-import Chip from 'material-ui/Chip';
-import Input, { InputLabel, InputAdornment } from 'material-ui/Input';
-import { FormControl, FormHelperText } from 'material-ui/Form';
-import List, { ListItem, ListItemSecondaryAction, ListItemText } from 'material-ui/List';
-import Card, { CardHeader, CardMedia, CardContent, CardActions } from 'material-ui/Card';
-import Collapse from 'material-ui/transitions/Collapse';
-import Button from 'material-ui/Button';
-import IconButton from 'material-ui/IconButton';
-import SendIcon from 'material-ui-icons/Send';
-import Avatar from 'material-ui/Avatar';
-import TextField from 'material-ui/TextField';
-import Paper from 'material-ui/Paper';
-
-import FavoriteIcon from 'material-ui-icons/Favorite';
-import ShareIcon from 'material-ui-icons/Share';
-import ExpandMoreIcon from 'material-ui-icons/ExpandMore';
-import MoreVertIcon from 'material-ui-icons/MoreVert';
+import Grid from '@material-ui/core/Grid';
+import Input, { InputAdornment } from '@material-ui/core/Input';
+import { FormControl, List, Card, CardHeader, CardContent, CardActions } from '@material-ui/core';
+import Collapse from '@material-ui/core/Collapse';
+import IconButton from '@material-ui/core/IconButton';
+import SendIcon from '@material-ui/icons/Send';
+import Avatar from '@material-ui/core/Avatar';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import MoreVertIcon from '@material-ui/icons/MoreVert';
 import Draggable from 'react-draggable';
-import { Resizable, ResizableBox } from 'react-resizable';
 
 import ChatBubble from './ChatBubble';
 

@@ -10,12 +10,12 @@ import gql from 'graphql-tag';
 import {
   AppBar, Tabs, Tab, 
   Button, Grid, Paper, 
-  FormControl, FormHelperText, Input, InputLabel, TextField, Typography } from 'material-ui';
+  FormControl, FormHelperText, Input, InputLabel, TextField, Typography } from '@material-ui/core';
 
-import SaveIcon from 'material-ui-icons/Save'
+import SaveIcon from '@material-ui/icons/Save'
 
 //import SwipeableViews from 'react-swipeable-views';
-import { withStyles, withTheme } from 'material-ui/styles';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 import Dropzone from 'react-dropzone';
 import { isNil, isEmpty } from 'lodash';
 

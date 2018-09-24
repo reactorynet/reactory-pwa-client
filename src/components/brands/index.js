@@ -27,24 +27,24 @@ import {
   TableRow,
   TableCell,
   Typography,
-} from 'material-ui';
-import AddCircleIcon from 'material-ui-icons/AddCircle'
-import DeleteIcon from 'material-ui-icons/DeleteSweep'
-import DetailIcon from 'material-ui-icons/Details'
-import SaveIcon from 'material-ui-icons/Save'
-import CopyIcon from 'material-ui-icons/ContentCopy'
-import MoreVertIcon from 'material-ui-icons/MoreVert'
-import CloseIcon from 'material-ui-icons/Close'
-import KeyboardArrowDown from 'material-ui-icons/KeyboardArrowDown'
-import KeyboardArrowUp from 'material-ui-icons/KeyboardArrowUp'
+} from '@material-ui/core';
+import AddCircleIcon from '@material-ui/icons/AddCircle'
+import DeleteIcon from '@material-ui/icons/DeleteSweep'
+import DetailIcon from '@material-ui/icons/Details'
+import SaveIcon from '@material-ui/icons/Save'
+import CopyIcon from '@material-ui/icons/ControlPoint'
+import MoreVertIcon from '@material-ui/icons/MoreVert'
+import CloseIcon from '@material-ui/icons/Close'
+import KeyboardArrowDown from '@material-ui/icons/KeyboardArrowDown'
+import KeyboardArrowUp from '@material-ui/icons/KeyboardArrowUp'
 
 import {
   CheckCircle
-} from 'material-ui-icons'
+} from '@material-ui/icons'
 
-import { withTheme, withStyles } from 'material-ui/styles';
+import { withTheme, withStyles } from '@material-ui/core/styles';
 import { isArray, pullAt, isNil } from 'lodash'
-import { TableFooter } from 'material-ui/Table';
+import { TableFooter } from '@material-ui/core/Table';
 import { select } from 'async';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 import { omitDeep } from '../util';

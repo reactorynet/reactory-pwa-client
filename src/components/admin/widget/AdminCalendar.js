@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
 import uuid from 'uuid';
-import { withTheme, withStyles } from 'material-ui/styles';
+import { withTheme, withStyles } from '@material-ui/core/styles';
 import BigCalendar from 'react-big-calendar';
 import moment from 'moment';
 import {  
@@ -41,7 +41,7 @@ import {
   TableHead,
   TableRow,
   TableCell,
-} from 'material-ui'
+} from '@material-ui/core'
 import {
   ExpandMore,
   PlaylistAdd,
@@ -53,7 +53,7 @@ import {
   Search as SearchIcon,
   Print as PrintIcon,
   Add as AddIcon,  
-} from 'material-ui-icons'
+} from '@material-ui/icons'
 import { DateHelpers } from '../../util';
 
 import 'react-big-calendar/lib/css/react-big-calendar.css'

@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
-import { withStyles, withTheme } from 'material-ui/styles';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 
 import {
   Typography,
@@ -10,12 +10,15 @@ import {
   FormControl,
   InputLabel,
   Input,
-} from 'material-ui'
+  Paper,
+} from '@material-ui/core'
 
 class ObjectTemplate extends Component {
 
   static styles = (theme) => ({
-
+    root: {
+      padding: theme.spacing.unit
+    }
   })
 
   constructor(props, context){
@@ -27,23 +30,24 @@ class ObjectTemplate extends Component {
 
 
   render(){
-    console.log("%cRendering Field Template", "color: green;", this.props)
-    const { title, description, properties } = this.props
+    const { title, description, properties, classes } = this.props
     return (
-      <Card>
-        <Typography gutterBottom variant="headline" component="h2" align="center">{title}</Typography>
+      <Paper className={classes.root}>
+        <Typography gutterBottom variant="headline" component="h2" align="left">{title}</Typography>
         <Typography gutterBottom component="p">{description}</Typography>        
         <CardContent>
           {properties.map(element => element.content)}
         </CardContent>
-      </Card>
+      </Paper>
     );
   }
 }
 
-const MaterialObjectTemplate = compose(withTheme())(ObjectTemplate)
-const MaterialObjectTemplateFunction = (props) => {
+const MaterialObjectTemplate = compose(
+  withStyles(ObjectTemplate.styles), 
+  withTheme())(ObjectTemplate)
 
+const MaterialObjectTemplateFunction = (props) => {
   return (<MaterialObjectTemplate {...props} />)
 }
 export default MaterialObjectTemplateFunction

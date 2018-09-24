@@ -6,6 +6,7 @@ import './index.css';
 import App from './App';
 import registerServiceWorker from './registerServiceWorker';
 
+
 let themeName = process.env.REACT_APP_THEME || 'towerstone';
 const parsed = qs.parseUrl(document.location.href);
 if(parsed.query.theme) themeName = parsed.query.theme;

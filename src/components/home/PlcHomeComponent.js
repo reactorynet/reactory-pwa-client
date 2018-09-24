@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
-import Paper from 'material-ui/Paper';
-//import muiThemeable from 'material-ui/styles/muiThemeable';
-import Menu, { MenuItem } from 'material-ui/Menu';
-import Button from 'material-ui/Button';
-import { Toolbar, ToolbarGroup, ToolbarSeparator, ToolbarTitle } from 'material-ui/Toolbar';
+import Paper from '@material-ui/core/Paper';
+//import muiThemeable from '@material-ui/core/styles/muiThemeable';
+import Menu, { MenuItem } from '@material-ui/core/Menu';
+import Button from '@material-ui/core/Button';
+import { Toolbar, ToolbarGroup, ToolbarSeparator, ToolbarTitle } from '@material-ui/core/Toolbar';
 import PlcLogo from '../../themes/plc/images/logo.png';
 
 class PlcHomeComponent extends Component {

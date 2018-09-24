@@ -8,7 +8,7 @@ import {
   FormControl,
   InputLabel,
   Input,
-} from 'material-ui'
+} from '@material-ui/core'
 
 export default (props) => {   
   const { 
@@ -28,8 +28,9 @@ export default (props) => {
     registry,
     required,
     schema, 
-    uiScehma 
+    uiScehma,
+    align 
   } = props;
   
-  return(<Typography value={props.value} variant="title" align="center" />) 
+  return(<Typography value={props.value} variant="title" align={align || 'left'}/>) 
 };

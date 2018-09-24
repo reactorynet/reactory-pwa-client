@@ -1,6 +1,6 @@
 const api_root = process.env.REACT_APP_API_ENDPOINT;
-const api_client_id = 'towerstone';
-const api_client_password = 'sonicwasadog';
+const api_client_id = process.env.REACT_APP_CLIENT_KEY;
+const api_client_password = process.env.REACT_APP_CLIENT_PASSWORD;
 
 const api_headers = {
   'Accept': 'application/json',

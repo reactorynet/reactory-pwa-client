@@ -1,14 +1,14 @@
 import React,  { Component } from 'react';
-import AnnounceMentIcon from 'material-ui-icons/Announcement';
+import AnnounceMentIcon from '@material-ui/icons/Announcement';
 
 
-import { withStyles, withTheme } from 'material-ui/styles';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 import moment from 'moment';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
-import { Grid, Typography, Paper, Checkbox, Avatar } from 'material-ui';
+import { Grid, Typography, Paper, Checkbox, Avatar } from '@material-ui/core';
 import Charts from '../../charts'
 import AdminCalendar from '../../admin/widget/AdminCalendar';
 

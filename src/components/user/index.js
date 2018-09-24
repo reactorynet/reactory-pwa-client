@@ -26,25 +26,25 @@ import {
   TableRow,
   TableCell,
   Typography,
-} from 'material-ui';
+} from '@material-ui/core';
 
 import {
   Visibility, 
   VisibilityOff,
   Search as SearchIcon
-} from 'material-ui-icons'
+} from '@material-ui/icons'
 import classNames from 'classnames';
-import AddCircleIcon from 'material-ui-icons/AddCircle'
-import DetailIcon from 'material-ui-icons/Details'
-import { withTheme, withStyles } from 'material-ui/styles';
+import AddCircleIcon from '@material-ui/icons/AddCircle'
+import DetailIcon from '@material-ui/icons/Details'
+import { withTheme, withStyles } from '@material-ui/core/styles';
 import { isArray, isNil } from 'lodash'
 import { ReactoryFormComponent } from '../reactory';
-import { TableFooter } from 'material-ui/Table';
+import { TableFooter } from '@material-ui/core/Table';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 import DefaultAvatar from '../../assets/images/profile/default.png';
-import Profile from './Profile'
-import { omitDeep, getAvatar } from '../util';
-import { FormControlLabel } from 'material-ui';
+import Profile from './Profile';
+import Message from '../message'
+import { omitDeep, getAvatar, CenteredContainer } from '../util';
 
 const UserSearchInputStyles = theme => {
   return {
@@ -469,6 +469,7 @@ class Forgot extends Component {
     }
 
     this.onSubmit = this.onSubmit.bind(this);
+    this.goBack = this.goBack.bind(this);
   }
   
   onSubmit(form){
@@ -486,29 +487,55 @@ class Forgot extends Component {
     console.log('formData changed', formData)
     this.setState({formData});
   }
+
+  goBack(){
+    this.props.history.goBack();
+  }
     
   render(){
 
     if(this.state.mailSent) {
-      return (<div><Typography variant="body1" value="An email has been sent with instructions to reset your password. Please allow a few minutes for delivery" /></div>)
-    } 
-    if(this.state.hasError) {      
-      return (<div><Typography variant="body2" value={this.state.message} /></div>);
+      const messageData = {
+        title: 'Mail sent',
+        mesage: this.state.message
+      };
+
+      return (<Message className={this.props.classes.root} formData={messageData} />);
+    }
+
+    if(this.state.hasError) {
+      const messageData = {
+        title: 'Mail sent',
+        mesage: this.state.message
+      };
+      return (<Message className={this.props.classes.root} formData={messageData} />);
     }
 
     return (
-      <ReactoryFormComponent formId="forgot-password" uiFramework="material" onSubmit={this.onSubmit}>
-        <Button type="submit" variant="raised" color="primary"><Icon>email</Icon> RESET</Button>      
-      </ReactoryFormComponent>
+      <CenteredContainer>
+        <ReactoryFormComponent className={this.props.classes.root} formId="forgot-password" uiFramework="material" onSubmit={this.onSubmit}>
+          <Button type="button" onClick={this.goBack} variant="flat"><Icon>keyboard_arrow_left</Icon>&nbsp;BACK</Button>
+          <Button type="submit" variant="raised" color="primary"><Icon>email</Icon>&nbsp;RESET</Button>      
+        </ReactoryFormComponent>
+      </CenteredContainer>
     )          
   }
 }
 
 Forgot.propTypes = {
-  api: PropTypes.instanceOf(ReactoryApi)
+  api: PropTypes.instanceOf(ReactoryApi)  
 }
 
-export const ForgotForm = compose(withTheme(), withApi, withRouter)(Forgot);
+Forgot.styles = theme => ({
+    root: {
+      padding: theme.spacing.unit,
+      maxWidth: '600px',
+      minWidth: '320px',
+      textAlign: 'center',
+    }
+});
+
+export const ForgotForm = compose(withStyles(Forgot.styles), withTheme(), withApi, withRouter)(Forgot);
 
 class ResetPassword extends Component {
 
@@ -521,8 +548,8 @@ class ResetPassword extends Component {
     }
 
     this.onSubmit = this.onSubmit.bind(this);
-  }
-  
+  }  
+
   onSubmit(form){
     const that = this;
     this.props.api.resetPassword(form.formData).then((forgotResult) => {
@@ -548,10 +575,17 @@ class ResetPassword extends Component {
       return (<div><Typography variant="body2" value={this.state.message} /></div>);
     }
 
+    const formData = {
+      email: this.props.api.getUser().email,
+      authToken: this.props.api.queryObject.auth_token
+    };
+
     return (
-      <ReactoryFormComponent formId="password-reset" uiFramework="material" onSubmit={this.onSubmit}>
-        <Button type="submit" variant="raised" color="primary"><Icon>save</Icon>&nbsp;UPDATE PASSWORD</Button>      
-      </ReactoryFormComponent>
+      <CenteredContainer>                        
+        <ReactoryFormComponent formId="password-reset" uiFramework="material" onSubmit={this.onSubmit} formData={formData}>          
+          <Button type="submit" variant="raised" color="primary"><Icon>save</Icon>&nbsp;UPDATE PASSWORD</Button>      
+        </ReactoryFormComponent>
+      </CenteredContainer>
     )          
   }
 }
@@ -559,6 +593,15 @@ class ResetPassword extends Component {
 ResetPassword.propTypes = {
   api: PropTypes.instanceOf(ReactoryApi)
 }
+
+ResetPassword.styles = theme => ({
+  root: {
+    padding: theme.spacing.unit,
+    maxWidth: '600px',
+    minWidth: '320px',
+    textAlign: 'center',
+  }
+});
 
 export const ResetPasswordForm = compose(withTheme(), withApi, withRouter)(ResetPassword);
 

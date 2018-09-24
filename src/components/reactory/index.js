@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import Form from 'react-jsonschema-form'
 import { withRouter, Route, Switch } from 'react-router'
-import { withStyles, withTheme } from 'material-ui/styles';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 import { find } from 'lodash';
 import { compose } from 'redux';
 import { Query, Mutation } from 'react-apollo'
@@ -16,7 +16,7 @@ import {
   FormControl,
   InputLabel,
   Input,
-} from 'material-ui'
+} from '@material-ui/core'
 
 import Fields from './fields'
 //import { } from './widgets'
@@ -289,13 +289,16 @@ class ReactoryComponent extends Component {
     const { loading, forms, data }  = this.state;
     const { uiSchema } = this.props
     if(loading) return (<p>loading form schema</p>)
-    if(forms.length === 0) return (<p>no forms defined</p>)        
-    return (
-      <div style={{padding: '15px' }}>
-        <Form {...this.form()} onSubmit={this.onSubmit}>
-          {this.props.children}
-        </Form>
-      </div>
+    if(forms.length === 0) return (<p>no forms defined</p>) 
+    const formProps = {
+      ...this.props,
+      ...this.form(),
+      onSubmit: this.onSubmit,
+    }       
+    return (      
+      <Form {...formProps}>
+        {this.props.children}
+      </Form>
     )
   }
 }

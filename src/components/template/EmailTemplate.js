@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { graphql, withApollo } from 'react-apollo';
 import gql from 'graphql-tag';
-import { withStyles, withTheme } from 'material-ui/styles';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 
 import { EditorState, convertToRaw, ContentState } from 'draft-js';
 import { Editor } from 'react-draft-wysiwyg';
@@ -18,10 +18,10 @@ import {
   FormControl, FormHelperText,
   Input, InputLabel, TextField, 
   Typography, List, ListItem, Toolbar,
-  ListItemText} from 'material-ui';
+  ListItemText} from '@material-ui/core';
 
-import SaveIcon from 'material-ui-icons/Save';
-import CloseIcon from 'material-ui-icons/Close';
+import SaveIcon from '@material-ui/icons/Save';
+import CloseIcon from '@material-ui/icons/Close';
 
 
 const EmailTemplateItems = [

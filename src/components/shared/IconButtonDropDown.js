@@ -1,7 +1,7 @@
 import React from 'react';
-import IconButton from 'material-ui/IconButton';
-import Menu, { MenuItem } from 'material-ui/Menu';
-import MoreVertIcon from 'material-ui-icons/MoreVert';
+import IconButton from '@material-ui/core/IconButton';
+import Menu, { MenuItem } from '@material-ui/core/Menu';
+import MoreVertIcon from '@material-ui/icons/MoreVert';
 
 const options = [
   { value: 0, title: 'Not Started' },

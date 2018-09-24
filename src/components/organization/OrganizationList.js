@@ -4,8 +4,8 @@ import { withRouter } from 'react-router'
 import { compose } from 'redux';
 import gql from 'graphql-tag';
 import { graphql } from 'react-apollo';
-import Paper from 'material-ui/Paper';
-import { List, ListItem, ListItemText } from 'material-ui';
+import Paper from '@material-ui/core/Paper';
+import { List, ListItem, ListItemText } from '@material-ui/core';
 
 /**
  * List component for user entries

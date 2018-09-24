@@ -8,7 +8,7 @@ import {
   FormControl,
   InputLabel,
   Input,
-} from 'material-ui'
+} from '@material-ui/core'
 
 export default (props) => {   
   const { 
@@ -39,5 +39,5 @@ export default (props) => {
     autofocus
   }
 
-  return(<Input value={props.value} onChange={(evt) => { evt.persist(); onChange(evt.target.value); }} />) 
+  return(<Input readOnly={schema.readOnly} value={formData} onChange={(evt) => { evt.persist(); onChange(evt.target.value); }} />) 
 };

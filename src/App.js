@@ -13,14 +13,14 @@ import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
 import { ApolloProvider } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
 import { setContext } from 'apollo-link-context';
-import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
-import Reboot from 'material-ui/Reboot';
-import { createMuiTheme } from 'material-ui/styles';
+import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import { createMuiTheme } from '@material-ui/core/styles';
 import { forgot } from './api'
 import logo from './logo.svg';
 import queryString from './query-string';
 import './App.css';
-import AssessorHeaderBar from './components/header';
+import AssessorHeaderBar from './components/shared/header';
 import {
   Assessment,
   Login,
@@ -51,8 +51,8 @@ const authLink = setContext((_, { headers }) => {
     headers: {
       ...headers,
       authorization: token ? `Bearer ${token}` : "",
-      'x-client-key': 'towerstone',
-      'x-client-pwd': 'sonicwasadog'
+      'x-client-key': `${process.env.REACT_APP_CLIENT_KEY}`,
+      'x-client-pwd': `${process.env.REACT_APP_CLIENT_PASSWORD}`
     }
   }
 });
@@ -88,7 +88,7 @@ class App extends Component {
 
     const query = queryString.parse(window.location.search)
     if(query.auth_token) localStorage.setItem('auth_token', query.auth_token)            
-
+    api.queryObject = query;
     this.state = {
       drawerOpen: false,
       has_token: localStorage.getItem('auth_token') !== null,
@@ -122,7 +122,7 @@ class App extends Component {
     const muiTheme = createMuiTheme( appTheme.muiTheme );  
     
     if(auth_validated === false && has_token === true) {
-      return <p>Checking login...</p>
+      return <p>Starting application, please wait a moment...</p>
     }
     
     const PrivateRoute = ({ component: Component, ...rest }) => (
@@ -143,37 +143,39 @@ class App extends Component {
       />);
 
     return (
-      <Router>
-        <Provider store={store}>
-          <ApolloProvider client={client}>
-            <ApiProvider api={api}>
-              <MuiThemeProvider theme={muiTheme}>
-                <div style={{marginTop:'80px'}}>
-                  <Reboot />              
-                  <AssessorHeaderBar title={muiTheme.content.appTitle} />
-                  <PrivateRoute exact path="/" component={Home}/>                  
-                  <PrivateRoute path="/admin" component={AdminDashboard} />              
-                  <Route exact path="/login" component={Login} />
-                  <Route exact path="/forgot" component={ForgotForm}/>
-                  <Route exact path="/reset-password" component={ResetPasswordForm}/>    
-                  <Route exact path="/register" component={Register } />
-                  <PrivateRoute path="/assess" component={Assessment} />
-                  <PrivateRoute exact path="/inbox" component={UserInbox} />
-                  <PrivateRoute exact path="/users" component={UserList} />
-                  <PrivateRoute path="/profile" component={Profile}/>
-                  <PrivateRoute path="/surveys" component={UserSurvey} />
-                  <PrivateRoute path="/reports" component={Report} />
-                  <PrivateRoute path="/actions" component={TaskDashboard} />
-                  <Route path="/reactory">
-                    <ReactoryRouter />
-                  </Route>
-                  <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
-                </div>
-              </MuiThemeProvider>
-            </ApiProvider>
-          </ApolloProvider>
-        </Provider>
-      </Router>
+      <React.Fragment>
+        <CssBaseline />
+        <Router>
+          <Provider store={store}>
+            <ApolloProvider client={client}>
+              <ApiProvider api={api}>
+                <MuiThemeProvider theme={muiTheme}>
+                  <div style={{marginTop:'80px'}}>                    
+                    <AssessorHeaderBar title={muiTheme.content.appTitle} />
+                    <PrivateRoute exact path="/" component={Home}/>                  
+                    <PrivateRoute path="/admin" component={AdminDashboard} />              
+                    <Route exact path="/login" component={Login} />
+                    <Route exact path="/forgot" component={ForgotForm}/>
+                    <Route exact path="/reset-password" component={ResetPasswordForm}/>    
+                    <Route exact path="/register" component={Register } />
+                    <PrivateRoute path="/assess" component={Assessment} />
+                    <PrivateRoute exact path="/inbox" component={UserInbox} />
+                    <PrivateRoute exact path="/users" component={UserList} />
+                    <PrivateRoute path="/profile" component={Profile}/>
+                    <PrivateRoute path="/surveys" component={UserSurvey} />
+                    <PrivateRoute path="/reports" component={Report} />
+                    <PrivateRoute path="/actions" component={TaskDashboard} />
+                    <Route path="/reactory">
+                      <ReactoryRouter />
+                    </Route>
+                    <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
+                  </div>
+                </MuiThemeProvider>
+              </ApiProvider>
+            </ApolloProvider>
+          </Provider>
+        </Router>
+      </React.Fragment>
     );
   }
 }

@@ -2,15 +2,18 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
-import { Card, CardActions, CardHeader, CardMedia, CardTitle, CardText } from 'material-ui/Card';
-import Paper from 'material-ui/Paper';
-import TextField from 'material-ui/TextField';
-import Button from 'material-ui/Button';
-import Divider from 'material-ui/Divider';
-import Icon from 'material-ui/Icon';
-import { withTheme } from 'material-ui/styles';
+import { CardMedia, CardTitle } from '@material-ui/core/Card';
+import Paper from '@material-ui/core/Paper';
+import TextField from '@material-ui/core/TextField';
+import Button from '@material-ui/core/Button';
+import Divider from '@material-ui/core/Divider';
+import {
+  Grid
+} from '@material-ui/core';
+import Icon from '@material-ui/core/Icon';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
-import { BasicContainer, CenteredContainer, textStyle } from '../util';
+import { BasicContainer, CenteredContainer, textStyle, isEmail, isValidPassword } from '../util';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
 class LoginCard extends Component {
@@ -19,7 +22,10 @@ class LoginCard extends Component {
     super(props, context);
     this.state = {
       username: '',
-      password: ''
+      password: '',
+      loginError: null,      
+      busy: false,
+      redirectOnLogin: '/'
     };
     this.doLogin = this.doLogin.bind(this);
     this.doRegister = this.doRegister.bind(this);
@@ -30,13 +36,16 @@ class LoginCard extends Component {
 
   doLogin = (evt) => {
     const { history, api } = this.props;
-    const token = btoa(`${this.state.username}:${this.state.password}`)
-    api.login(this.state.username, this.state.password)
+    const that = this;    
+    api.login(this.state.username, this.state.password)    
     .then((response)=>{
-      console.log('user logged in', response);
       localStorage.setItem('auth_token', response.user.token);
-      history.push('/admin')
-    })
+      that.setState({ loginError: null, busy: false }, ()=>{
+        history.push(that.state.redirectOnLogin);
+      })      
+    }).catch((error) => {
+      that.setState({ loginError: error, busy: false })
+    });
   }
 
   doRegister = evt => this.props.history.push('/register')
@@ -46,55 +55,51 @@ class LoginCard extends Component {
   render() {
     const that = this;
     const { doLogin, props, context } = that;
-    const { theme } = that.props;    
-    return (
+    const { theme, classes } = that.props; 
+    const { busy, loginError, message } = this.state;
+
+    const enableLogin = isEmail(this.state.username) && isValidPassword(this.state.password) && !busy;   
+    return (      
       <CenteredContainer>
-        <BasicContainer>
-          <CardMedia overlay={<CardTitle title={ theme.content.appTitle} subtitle={ theme.content.login.message} />} style={{ float: 'left' }}>
-            <img src={theme.assets.login.featureImage} style={{ maxWidth: 400 }} />
-          </CardMedia>
-          <BasicContainer style={{ maxWidth: '400px', float: 'right' }}>
+        <Paper className={classes.root}>
+          <div className={classes.logo}>            
+          </div>
 
-            <CardMedia>
-              <img src={theme.assets.login.logo} alt={theme.content.appTitle} style={{ width: '300px !important', maxWidth: '400px' }} />
-            </CardMedia>
-
-            <TextField
-              label="Email"
-              style={textStyle}
-              value={this.state.username}
-              onChange={this.updateUsername}
-               />
-
-            <TextField
-              label='Password'
-              type='password'
-              style={textStyle}
-              value={this.state.password}
-              onChange={this.updatePassword}
+          <TextField
+            label="Email"
+            style={textStyle}
+            value={this.state.username}
+            onChange={this.updateUsername}
+            disabled={busy}
             />
 
-            
-            <Button
-              id="doLoginButton"                          
-              onClick={doLogin} color="primary" raised>
-              <Icon className="fas fa-sign-in-alt"  />
-              Login
-            </Button>
+          <TextField
+            label='Password'
+            type='password'
+            style={textStyle}
+            value={this.state.password}
+            onChange={this.updatePassword}
+            disabled={busy}
+            />
+          
+          <Button
+            id="doLoginButton"                          
+            onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false}>
+            <Icon className="fas fa-sign-in-alt"  />&nbsp;
+            Login
+          </Button>
 
-            <h2>OR</h2>
-            <Button onClick={this.doRegister} color='secondary'>                              
-                Register
-            </Button>
+          <h2>OR</h2>
+          <Button onClick={this.doRegister} color='secondary' disabled={busy}>                              
+              Register
+          </Button>
 
-            <Button onClick={this.doForgot} color='secondary'>                              
-                Forgot Password
-            </Button>
-
-            
-          </BasicContainer>
-        </BasicContainer>
-      </CenteredContainer>)
+          <Button onClick={this.doForgot} color='secondary' disabled={busy}>                              
+              Forgot Password
+          </Button>
+        </Paper>        
+      </CenteredContainer>
+          )
   }
 
   static contextTypes = {
@@ -105,6 +110,26 @@ class LoginCard extends Component {
   static propTypes = {
     api: PropTypes.instanceOf(ReactoryApi)
   }
+
+  static styles = theme => ({
+    root: {
+      maxWidth: '600px',
+      minWidth: '320px',
+      padding: theme.spacing.unit,
+      textAlign: 'center',
+    },
+    logo: {
+      display: 'block',
+      height: '200px',
+      margin: 0,
+      padding: 0,
+      background: `url(${theme.assets.login.logo || '//placehold.it/200x200'})`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'contain',
+      marginRight: '0px',
+      width: 'auto',
+    }
+  })
 };
 
-export default compose(withApi, withTheme(), withRouter)(LoginCard);
+export default compose(withApi, withStyles(LoginCard.styles), withTheme(), withRouter)(LoginCard);

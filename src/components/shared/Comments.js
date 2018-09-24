@@ -1,10 +1,10 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import {withStyles, withTheme} from 'material-ui/styles'
-import Typography from 'material-ui/Typography'
-import TextField from 'material-ui/TextField'
-import List, { ListItem, ListItemSecondaryAction, ListItemText } from 'material-ui/List'
-import Avatar from 'material-ui/Avatar';
+import {withStyles, withTheme} from '@material-ui/core/styles'
+import Typography from '@material-ui/core/Typography'
+import TextField from '@material-ui/core/TextField'
+import List, { ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core/List'
+import Avatar from '@material-ui/core/Avatar';
 import { compose } from 'redux'
 
 class Comment extends Component {

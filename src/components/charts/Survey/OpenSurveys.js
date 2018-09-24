@@ -1,7 +1,7 @@
 import React from 'react'
 import { compose } from 'redux'
 import { PieChart } from 'react-easy-chart'
-import { withStyles, withTheme, Paper, Typography } from 'material-ui'
+import { withStyles, withTheme, Paper, Typography } from '@material-ui/core'
 import { ChartStyles } from '../styles'
 
 

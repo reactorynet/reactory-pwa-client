@@ -1,18 +1,18 @@
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
-import {withStyles, withTheme} from 'material-ui/styles';
+import {withStyles, withTheme} from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
 import {isNil} from 'lodash';
 import classNames from 'classnames';
-import Grid from 'material-ui/Grid';
-import Typography from 'material-ui/Typography';
-import Paper from 'material-ui/Paper';
-import Avatar from 'material-ui/Avatar';
-import IconButton from 'material-ui/IconButton';
-import PlayIcon from 'material-ui-icons/PlayCircleFilled';
-import List, { ListItem, ListItemSecondaryAction, ListItemText } from 'material-ui/List';
+import Grid from '@material-ui/core/Grid';
+import Typography from '@material-ui/core/Typography';
+import Paper from '@material-ui/core/Paper';
+import Avatar from '@material-ui/core/Avatar';
+import IconButton from '@material-ui/core/IconButton';
+import PlayIcon from '@material-ui/icons/PlayCircleFilled';
+import List, { ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core/List';
 import * as mocks from '../../models/mock';
 
 class UserSurvey extends Component {

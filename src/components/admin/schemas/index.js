@@ -5,7 +5,7 @@ import {
   FormHelperText, 
   InputAdornment, 
   InputLabel,  
-} from 'material-ui';
+} from '@material-ui/core';
 
 const RegistrationSchema = {
   "title": "A registration form",

@@ -2,13 +2,13 @@ import React, { Component } from 'react';import PropTypes from 'prop-types';
 
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
-import { Card, CardActions, CardHeader, CardMedia, CardTitle, CardText } from 'material-ui/Card';
-import Paper from 'material-ui/Paper';
-import TextField from 'material-ui/TextField';
-import Button from 'material-ui/Button';
-import Divider from 'material-ui/Divider';
-import Icon from 'material-ui/Icon';
-import { withTheme } from 'material-ui/styles';
+import { Card, CardActions, CardHeader, CardMedia, CardTitle, CardText } from '@material-ui/core/Card';
+import Paper from '@material-ui/core/Paper';
+import TextField from '@material-ui/core/TextField';
+import Button from '@material-ui/core/Button';
+import Divider from '@material-ui/core/Divider';
+import Icon from '@material-ui/core/Icon';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
 import { BasicContainer, CenteredContainer, textStyle, nilStr, isEmail, isValidPassword } from '../util';
 import queryString from '../../query-string';
@@ -39,6 +39,26 @@ class RegisterCard extends Component {
     this.updateOrganizationName = this.updateOrganizationName.bind(this);
     this.formValid = this.formValid.bind(this);
   }
+
+  static styles = theme => ({
+    root: {
+      maxWidth: '600px',
+      minWidth: '320px',
+      padding: theme.spacing.unit,
+      textAlign: 'center',
+    },
+    logo: {
+      display: 'block',
+      height: '200px',
+      margin: 0,
+      padding: 0,
+      background: `url(${theme.assets.login.logo || '//placehold.it/200x200'})`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'contain',
+      marginRight: '0px',
+      width: 'auto',
+    }
+  });
 
   componentDidMount(){
     const that = this;
@@ -156,26 +176,20 @@ class RegisterCard extends Component {
     const { theme } = that.props;
 
     const validationResult = formValid()
+    const { classes } = that.props
 
     return (
       <CenteredContainer>
-        <BasicContainer>
-          <CardMedia overlay={<CardTitle title={ theme.content.appTitle} subtitle={ theme.content.login.message} />} style={{ float: 'left' }}>
-            <img src={theme.assets.login.featureImage} style={{ maxWidth: 400 }} />
-          </CardMedia>
-          <BasicContainer style={{ maxWidth: '400px', float: 'right' }}>
-
-            <CardMedia>
-              <img src={theme.assets.login.logo} style={{ width: '300px !important', maxWidth: '400px' }} />
-            </CardMedia>
-
-             <TextField
+           <Paper className={classes.root}>
+            <div className={classes.logo}>            
+            </div>
+            <TextField
               label="Organization"
               style={textStyle}
               value={this.state.organizationName}
               onChange={this.updateOrganizationName}
               placeholder='Your company name'
-               />
+              />
 
              <TextField
               label="Firstname"
@@ -206,14 +220,14 @@ class RegisterCard extends Component {
               onChange={this.updatePassword}
             />
 
-          <TextField
-              label='Password Confirm'
-              type='password'
-              style={textStyle}
-              value={this.state.passwordConfirm}
-              onChange={this.updatePasswordConfirm}
-            />
-            
+            <TextField
+                label='Password Confirm'
+                type='password'
+                style={textStyle}
+                value={this.state.passwordConfirm}
+                onChange={this.updatePasswordConfirm}
+              />
+              
             <Button
               id="doRegisterButton"                          
               onClick={doRegister} color="primary" raised="raised" disabled={ formValid().valid === false }>
@@ -225,8 +239,7 @@ class RegisterCard extends Component {
             <Button onClick={ evt => this.props.history.push('/login')} color='secondary' raised>                              
                 Login
             </Button>            
-          </BasicContainer>
-        </BasicContainer>
+          </Paper>
       </CenteredContainer>)
   }
 
@@ -240,4 +253,4 @@ class RegisterCard extends Component {
   }
 };
 
-export default compose(withApi, withTheme(), withRouter)(RegisterCard);
+export default compose(withApi, withStyles(RegisterCard.styles), withTheme(), withRouter)(RegisterCard);

@@ -1,7 +1,7 @@
 import React from 'react'
 import ObjectField from 'react-jsonschema-form/lib/components/fields/ObjectField'
 import { retrieveSchema } from 'react-jsonschema-form/lib/utils'
-import { Grid, GridList } from 'material-ui'
+import { Grid, GridList } from '@material-ui/core'
 import { Col } from 'react-bootstrap'
 
 function DefaultObjectFieldTemplate(props) {

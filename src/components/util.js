@@ -1,6 +1,9 @@
 import React from 'react';
 import moment from 'moment';
 import { map } from 'lodash';
+import {
+  Paper
+} from '@material-ui/core';
 
 import DefaultAvatar from '../assets/images/profile/default.png';
 
@@ -40,7 +43,8 @@ export const textStyle = {
 export const centered = {
     width:'100%',
     height:'auto',
-    textAlign: 'center'
+    display: 'flex',
+    justifyContent: 'center'
   };
   
   
@@ -65,9 +69,9 @@ export  const CenteredContainer = ( props ) => {
     attrs['children'] = undefined;
   
     return (
-      <div {...attrs}>
+      <Paper {...attrs}>
         {props.children}
-      </div>
+      </Paper>
     )
   
   };
@@ -111,7 +115,7 @@ export  const CenteredContainer = ( props ) => {
   export const getAvatar = (profile) => {
     if(nil(profile)) return DefaultAvatar;
     if(nil(profile.avatar)) return DefaultAvatar;
-    
+    if(profile.anon === true) return DefaultAvatar;
     if(profile.avatar.endsWith('.jpeg')) return CDNProfileResource(profile.id, profile.avatar);
     
     return profile.avatar

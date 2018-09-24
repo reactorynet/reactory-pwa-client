@@ -49,10 +49,10 @@ export default {
                         { id: '6', title: 'Feasibility Map', link: '/reactory/feasibility-map', icon: 'description', roles: ['PRODUCT_MANAGER'] },
                         { id: '7', title: 'Product Plan', link: '/reactory/product-plan', icon: 'donut_small', roles: ['PRODUCT_MANAGER'] },
                         { id: '8', title: 'Team Dynamics', link: '/reactory/team-dynamics', icon: 'supervisor_account', roles: ['PRODUCT_MANAGER'] },
-                        { id: '8', title: 'MS Teams Setup', link: '/reactory/ms-teams-config-tab', icon: 'supervisor_account', roles: ['PRODUCT_MANAGER'] },                
-                        { id: '9', title: 'My Profile', link: '/profile', icon: 'dashboard', roles: ['PRODUCT_MANAGER'] },
-                        { id: '10', title: 'Administration', link: '/reactory/administration', icon: 'build', roles: ['PRODUCT_MANAGER'] },
-                        { id: '11', title: 'Sparky Bot', link: '/reactory/spark-bot', icon: 'sentiment_satisfied_alt', roles: ['PRODUCT_MANAGER'] },
+                        { id: '9', title: 'MS Teams Setup', link: '/reactory/ms-teams-config-tab', icon: 'supervisor_account', roles: ['PRODUCT_MANAGER'] },                
+                        { id: '10', title: 'My Profile', link: '/profile', icon: 'dashboard', roles: ['PRODUCT_MANAGER'] },
+                        { id: '11', title: 'Administration', link: '/reactory/administration', icon: 'build', roles: ['PRODUCT_MANAGER'] },
+                        { id: '12', title: 'Sparky Bot', link: '/reactory/spark-bot', icon: 'sentiment_satisfied_alt', roles: ['PRODUCT_MANAGER'] },
                     ] 
                 }
             ]    
