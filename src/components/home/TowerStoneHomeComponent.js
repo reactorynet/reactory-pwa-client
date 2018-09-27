@@ -2,7 +2,11 @@ import AnnounceMentIcon from '@material-ui/icons/Announcement';
 import Avatar from '@material-ui/core/Avatar';
 import Checkbox from '@material-ui/core/Checkbox';
 import Grid from '@material-ui/core/Grid';
-import List, { ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core/List';
+import { 
+    List, 
+    ListItem, 
+    ListItemSecondaryAction, 
+    ListItemText } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 //import muiThemeable from '@material-ui/core/styles/muiThemeable';
 import { withStyles, withTheme } from '@material-ui/core/styles';
@@ -62,7 +66,7 @@ const styles = (theme) => {
             minHeight: '150px'
         },
         logo: {
-            maxWidth:'370px'
+            maxWidth: '370px'
         }
     };
 };
@@ -87,7 +91,7 @@ const mockActions = [
     { text: 'Provide feedback to at least 3 of your peers and leaders using the assessment platform', complete: false, due: moment('2018/04/01') },
 ];
 
-const companyMockScores =[
+const companyMockScores = [
     { x: '1-Jan-17', y: 70 },
     { x: '1-May-17', y: 73 },
     { x: '1-Sep-17', y: 68 },
@@ -109,7 +113,7 @@ const peersMockScores = [
 ];
 
 const mockOverallData = [
-    companyMockScores, 
+    companyMockScores,
     personalMockScores,
     peersMockScores
 ];
@@ -127,7 +131,7 @@ class TowerStoneHomeComponent extends Component {
             lineChart: {
                 width: initialWidth,
                 displayPersonalAvg: true,
-                displayCompanyAvg: true, 
+                displayCompanyAvg: true,
                 displayPeerAvg: true
             }
         };
@@ -157,19 +161,19 @@ class TowerStoneHomeComponent extends Component {
         this.setState({ value: valueChange * 1 })
     }
 
-    toggleDisplayBusinessUnitAvg(){
-        this.setState({ lineChart: { ...this.state.lineChart,  displayPeerAvg: !this.state.lineChart.displayPeerAvg } });
+    toggleDisplayBusinessUnitAvg() {
+        this.setState({ lineChart: { ...this.state.lineChart, displayPeerAvg: !this.state.lineChart.displayPeerAvg } });
     }
 
-    toggleDisplayPersonalAvg(){
-        this.setState({ lineChart: { ...this.state.lineChart,  displayPersonalAvg: !this.state.lineChart.displayPersonalAvg } });
+    toggleDisplayPersonalAvg() {
+        this.setState({ lineChart: { ...this.state.lineChart, displayPersonalAvg: !this.state.lineChart.displayPersonalAvg } });
     }
 
-    toggleDisplayCompanyAvg(){
-        this.setState({ lineChart: { ...this.state.lineChart,  displayCompanyAvg: !this.state.lineChart.displayCompanyAvg } });
+    toggleDisplayCompanyAvg() {
+        this.setState({ lineChart: { ...this.state.lineChart, displayCompanyAvg: !this.state.lineChart.displayCompanyAvg } });
     }
 
-    startAssessment(){
+    startAssessment() {
         const { history } = this.props;
         history.push('/assess');
     }
@@ -211,11 +215,11 @@ class TowerStoneHomeComponent extends Component {
             </ListItem>
         )));
 
-        const filteredMockData = ( ) => { 
+        const filteredMockData = () => {
             let data = [];
-            if(self.state.lineChart.displayCompanyAvg) data.push(companyMockScores);
-            if(self.state.lineChart.displayPersonalAvg) data.push(personalMockScores);
-            if(self.state.lineChart.displayPeerAvg) data.push(peersMockScores);
+            if (self.state.lineChart.displayCompanyAvg) data.push(companyMockScores);
+            if (self.state.lineChart.displayPersonalAvg) data.push(personalMockScores);
+            if (self.state.lineChart.displayPeerAvg) data.push(peersMockScores);
 
             return data;
         };
@@ -223,8 +227,8 @@ class TowerStoneHomeComponent extends Component {
             <div style={{ marginRight: '5px', marginLeft: '5px' }}>
                 <div>
                     <Grid container spacing={24}>
-                        <Grid item xs={12} sm={12} style={{textAlign:'center'}}>
-                            <img src={theme.assets.login.logo} className={classes.logo} alt={theme}/>
+                        <Grid item xs={12} sm={12} style={{ textAlign: 'center' }}>
+                            <img src={theme.assets.login.logo} className={classes.logo} alt={theme} />
                         </Grid>
                         <Grid item xs={6} sm={3}>
                             <h4 className={classes.statsCardLabel}>Personal - Quarter</h4>
@@ -288,22 +292,22 @@ class TowerStoneHomeComponent extends Component {
                                     data={filteredMockData()}
                                 />
                                 <List>
-                                    <ListItem key={0} dense button className={classes.listItem}>                                        
+                                    <ListItem key={0} dense button className={classes.listItem}>
                                         <ListItemText primary={'Personal Avg'} />
                                         <ListItemSecondaryAction>
-                                            <Checkbox checked={self.state.lineChart.displayPersonalAvg} onChange={self.toggleDisplayPersonalAvg}/>
+                                            <Checkbox checked={self.state.lineChart.displayPersonalAvg} onChange={self.toggleDisplayPersonalAvg} />
                                         </ListItemSecondaryAction>
                                     </ListItem>
-                                    <ListItem key={0} dense button className={classes.listItem}>                                        
+                                    <ListItem key={0} dense button className={classes.listItem}>
                                         <ListItemText primary={'Business Unit Avg'} />
                                         <ListItemSecondaryAction>
-                                            <Checkbox checked={self.state.lineChart.displayPeerAvg} onChange={self.toggleDisplayBusinessUnitAvg}/>
+                                            <Checkbox checked={self.state.lineChart.displayPeerAvg} onChange={self.toggleDisplayBusinessUnitAvg} />
                                         </ListItemSecondaryAction>
                                     </ListItem>
-                                    <ListItem key={0} dense button className={classes.listItem}>                                        
+                                    <ListItem key={0} dense button className={classes.listItem}>
                                         <ListItemText primary={'Company Avg'} />
                                         <ListItemSecondaryAction>
-                                            <Checkbox checked={self.state.lineChart.displayCompanyAvg} onChange={self.toggleDisplayCompanyAvg}/>
+                                            <Checkbox checked={self.state.lineChart.displayCompanyAvg} onChange={self.toggleDisplayCompanyAvg} />
                                         </ListItemSecondaryAction>
                                     </ListItem>
                                 </List>
@@ -343,8 +347,8 @@ class TowerStoneHomeComponent extends Component {
 }
 
 const HomeComponent = compose(
-  withRouter,
-  withStyles(styles),
-  withTheme()
+    withRouter,
+    withStyles(styles),
+    withTheme()
 )(TowerStoneHomeComponent);
 export default HomeComponent;

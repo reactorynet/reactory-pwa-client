@@ -249,6 +249,10 @@ query status {
 }
 `;
 
+const surveysForUser = gql`
+  
+`
+
 const userInbox = gql`
   query UserInboxQuery($id: String, $sort: String){
     userInbox(id: $id, sort: $sort){
@@ -302,6 +306,7 @@ export default {
       allScales,
       surveysForOrganization,
       surveyDetail,
+      surveysForUser,
       calendarForSurvey: null      
     },
     Assessments: {

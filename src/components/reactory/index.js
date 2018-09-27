@@ -295,10 +295,13 @@ class ReactoryComponent extends Component {
       ...this.form(),
       onSubmit: this.onSubmit,
     }       
-    return (      
-      <Form {...formProps}>
-        {this.props.children}
-      </Form>
+    return (
+      <div>
+        {this.props.before}      
+        <Form {...formProps}>
+          {this.props.children}
+        </Form>
+      </div>
     )
   }
 }

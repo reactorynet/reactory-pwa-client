@@ -41,15 +41,13 @@ export default {
                 { 
                     id: 'main_nav', 
                     entries: [    
-                        { id: '1', title: 'Product Ideas', link: '/reactory/product-ideas', icon: 'announcement', roles: ['PRODUCT_MANAGER'] },
+                        { id: '0', title: 'Dashboard', link: '/', icon: 'dashboard', roles: ['USER'] },
+                        { id: '1', title: 'Tasks', link: '/reactory/product-ideas', icon: 'announcement', roles: ['PRODUCT_MANAGER'] },
                         { id: '2', title: 'Feature Ideas', link: '/reactory/feature-ideas', icon: 'check_circle', roles: ['PRODUCT_MANAGER'] },
                         { id: '3', title: 'Validations', link: '/reactory/validations', icon: 'bug_report', roles: ['PRODUCT_MANAGER'] },
                         { id: '4', title: 'Estimations', link: '/reactory/estimations', icon: 'autorenew', roles: ['PRODUCT_MANAGER'] },
                         { id: '5', title: 'My Priorities', link: '/reactory/priorities', icon: 'change_history', roles: ['PRODUCT_MANAGER'] },
                         { id: '6', title: 'Feasibility Map', link: '/reactory/feasibility-map', icon: 'description', roles: ['PRODUCT_MANAGER'] },
-                        { id: '7', title: 'Product Plan', link: '/reactory/product-plan', icon: 'donut_small', roles: ['PRODUCT_MANAGER'] },
-                        { id: '8', title: 'Team Dynamics', link: '/reactory/team-dynamics', icon: 'supervisor_account', roles: ['PRODUCT_MANAGER'] },
-                        { id: '9', title: 'MS Teams Setup', link: '/reactory/ms-teams-config-tab', icon: 'supervisor_account', roles: ['PRODUCT_MANAGER'] },                
                         { id: '10', title: 'My Profile', link: '/profile', icon: 'dashboard', roles: ['PRODUCT_MANAGER'] },
                         { id: '11', title: 'Administration', link: '/reactory/administration', icon: 'build', roles: ['PRODUCT_MANAGER'] },
                         { id: '12', title: 'Sparky Bot', link: '/reactory/spark-bot', icon: 'sentiment_satisfied_alt', roles: ['PRODUCT_MANAGER'] },

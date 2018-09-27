@@ -5,28 +5,25 @@ import {withStyles, withTheme} from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
 import {isNil, find} from 'lodash';
-import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import TextField from '@material-ui/core/TextField';
-import Input, { InputLabel, InputAdornment } from '@material-ui/core/Input';
-import { MenuItem } from '@material-ui/core/Menu';
-import { FormControl, FormHelperText } from '@material-ui/core';
+import { 
+    MenuItem,
+    FormControl,
+    IconButton,
+    InputLabel, 
+    List, 
+    ListItem, 
+    ListItemSecondaryAction, 
+    ListItemText 
+} from '@material-ui/core';
+
 import Select from '@material-ui/core/Select';
-import Paper from '@material-ui/core/Paper';
 import Avatar from '@material-ui/core/Avatar';
 import Button from '@material-ui/core/Button';
-import IconButton from '@material-ui/core/IconButton';
-import SendIcon from '@material-ui/icons/Send';
 import ChatIcon from '@material-ui/icons/Chat';
 import GroupAddIcon from '@material-ui/icons/GroupAdd';
-import PersonAddIcon from '@material-ui/icons/PersonAdd';
-import WhatsHotIcon from '@material-ui/icons/Whatshot'
-import AddCircleIcon from '@material-ui/icons/AddCircle';
 import PlayIcon from '@material-ui/icons/PlayCircleFilled';
-import List, { ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core/List';
-
-import Taskboard from '../../tasks/Taskboard';
 import ChatCard from '../../chat/ChatCard';
 import { TrelloProvider } from '../../tasks/Tasks';
 import * as mocks from '../../../models/mock';

@@ -1,6 +1,12 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import withMobileDialog from '@material-ui/core/withMobileDialog';
 import {
   Avatar,
   Chip,
@@ -30,7 +36,7 @@ import {
   Typography,
 } from '@material-ui/core';
 
-
+import { CenteredContainer } from '../util';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { ReactoryFormComponent } from '../reactory';
 
@@ -64,34 +70,45 @@ class Message extends Component {
   render(){
     const { classes } = this.props;
     return (
-      <Card className={classes.card}>  
-      {this.props.image ? (
-        <CardMedia
-        className={classes.media}
-        image={this.props.image}
-        title={this.props.title}
-      />
-      ) : ( <CardMedia><Typography variant="title"><Icon>message</Icon></Typography></CardMedia> ) }
-      
-      <CardContent>
-        <Typography gutterBottom variant="headline" component="h2">
-          {this.props.title}
-        </Typography>
-        <Typography component="p">
-          {this.props.message}
-        </Typography>
-      </CardContent>      
-      <CardActions>
-        <Button size="small" color="primary">
-          Cancel
-        </Button>
-        <Button size="small" color="primary">
-          Ok
-        </Button>
-      </CardActions>
-    </Card>
+      <CenteredContainer>
+        <Card className={classes.card}>  
+        {
+          this.props.image ? (
+          <CardMedia
+            className={classes.media}
+            image={this.props.image}
+            title={this.props.title}/>
+        ) : ( 
+          <CardMedia>
+            <Typography variant="title">
+              <Icon>message</Icon>
+            </Typography>
+          </CardMedia>)
+        }        
+        <CardContent>
+          <Typography gutterBottom variant="headline" component="h2">
+            {this.props.title}
+          </Typography>
+          <Typography variant="body1">
+            {this.props.message}
+          </Typography>
+        </CardContent>      
+        <CardActions>
+          { this.props.cancelButton ? <Button size="small" color="primary">
+            Cancel
+          </Button> : null }
+          { this.props.okButton ? <Button size="small" color="primary">
+            Ok
+          </Button> : null }
+          
+        </CardActions>
+      </Card>
+    </CenteredContainer>
     );
   }
 }
 
-export default compose(withStyles(Message.styles), withTheme())(Message);
+export default compose(
+  withMobileDialog, 
+  withStyles(Message.styles), 
+  withTheme())(Message);

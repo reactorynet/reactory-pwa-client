@@ -13,11 +13,11 @@ import Checkbox from '@material-ui/core/Checkbox';
 import { LinearProgress, CircularProgress } from '@material-ui/core';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
-import Card, { CardHeader, CardMedia, CardContent, CardActions } from '@material-ui/core/Card';
-import ExpansionPanel, {
-    ExpansionPanelDetails,
-    ExpansionPanelSummary,
-  } from '@material-ui/core/ExpansionPanel';
+import {
+    Card, CardHeader, CardMedia, CardContent, CardActions,
+    ExpansionPanel, ExpansionPanelDetails, ExpansionPanelSummary,
+    List, ListItem, ListItemSecondaryAction, ListItemText
+  } from '@material-ui/core';
 import Collapse from '@material-ui/core/Collapse';
 import Paper from '@material-ui/core/Paper';
 import Avatar from '@material-ui/core/Avatar';
@@ -28,7 +28,6 @@ import FavoriteIcon from '@material-ui/icons/Favorite';
 import ShareIcon from '@material-ui/icons/Share';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
-import List, { ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core/List';
 import moment from 'moment';
 import IconButtonDropDown from '../shared/IconButtonDropDown';
 import Comments from '../shared/Comments';

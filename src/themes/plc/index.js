@@ -41,7 +41,8 @@ export default {
             navigation: [
                 { 
                     id: 'main_nav', 
-                    entries: [    
+                    entries: [ 
+                        { id: '0', title: 'Dashboard', link: '/', icon: 'dashboard', roles: ['USER'] },   
                         { id: '1', title: 'Inbox', link: '/inbox', icon: 'email', roles: ['PRODUCT_MANAGER', 'USER'] },
                         { id: '2', title: 'Surveys', link: '/surveys', icon: 'check_circle', roles: ['PRODUCT_MANAGER', 'USER'] },
                         { id: '2', title: 'Ideas', link: '/reactory/product-ideas', icon: 'announcement', roles: ['PRODUCT_MANAGER', 'USER'] },

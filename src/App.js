@@ -38,7 +38,7 @@ import {
   ForgotForm,
   ResetPasswordForm
 } from './components';
-import ApiProvider, { ReactoryApi } from './api/ApiProvider'
+import ApiProvider, { ReactoryApi, ReactoryApiEventNames } from './api/ApiProvider'
 import * as themes from './themes';
 
 
@@ -96,6 +96,14 @@ class App extends Component {
       auth_validated: isNil(localStorage.getItem('auth_token')) === false ? false : true,
       theme: props.appTheme,
     }
+
+    this.onLogout = this.onLogout.bind(this);
+    
+    api.on(ReactoryApiEventNames.onLogout, this.onLogout)
+  }
+
+  onLogout(){
+    this.forceUpdate();
   }
 
   componentDidMount(){    

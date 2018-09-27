@@ -12,8 +12,8 @@ import Paper from '@material-ui/core/Paper';
 import Avatar from '@material-ui/core/Avatar';
 import IconButton from '@material-ui/core/IconButton';
 import PlayIcon from '@material-ui/icons/PlayCircleFilled';
-import List, { ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core/List';
-import * as mocks from '../../models/mock';
+import {List, ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core';
+import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
 class UserSurvey extends Component {
     static styles = (theme) => {
@@ -31,21 +31,21 @@ class UserSurvey extends Component {
     }
 
     static propTypes = {
-        user: PropTypes.object.isRequired,
-        surveyDashboard: PropTypes.object.isRequired
+        api: PropTypes.instanceOf(ReactoryApi).isRequired,
+        surveys: PropTypes.object
     }
 
-    static defaultProps = {
-        user: mocks.loggedInUser,
-        surveyDashboard: {
-            title: 'Current Surveys',
-            surveys: mocks.loggedInUserSurveys,            
-        }
+    static defaultProps = {        
+        surveys: {
+            overdue: [],
+            current: [],
+            complete: []
+        }                    
     }
 
 
     render(){
-        const { classes, user, surveyDashboard, history } = this.props;
+        const { classes, surveys, history } = this.props;
     
         return (
             <Grid container spacing={16} className={classes.mainContainer}>
@@ -57,7 +57,7 @@ class UserSurvey extends Component {
                             If you are unable to perform the assessment please click the trash icon and provide a reason why the survey cannot be completed.                    
                         </Typography>
                         <List>
-                        {surveyDashboard.surveys.overdue.map((survey, sid) => {
+                        {surveys.overdue.map((survey, sid) => {
 
                             const launch = () => {
                                 history.push(`/assess/${survey.id}`)
@@ -86,7 +86,7 @@ class UserSurvey extends Component {
                             The surveys listed below are surveys which are currently awaiting your feedback.  These are sorted by order of their closing date.
                         </Typography>
                         <List>
-                        {surveyDashboard.surveys.overdue.map((survey, sid) => {
+                        {surveys.overdue.map((survey, sid) => {
                             return (
                                 <ListItem key={sid} dense button className={classes.listItem}>
                                     <Avatar alt={`${survey.title}`}>{survey.overall}</Avatar>
@@ -112,7 +112,7 @@ class UserSurvey extends Component {
                             the results have been released and shared by our facilitators with you.
                         </Typography>
                         <List>
-                        {surveyDashboard.surveys.overdue.map((survey, sid) => {
+                        {surveys.complete.map((survey, sid) => {
                             return (
                                 <ListItem key={sid} dense button className={classes.listItem}>
                                     <Avatar alt={`${survey.title}`}>{survey.overall}</Avatar>
@@ -134,7 +134,6 @@ class UserSurvey extends Component {
     
     constructor(props, context){
         super(props, context);
-        console.log('UserSurvey component instantiating', { props, context} );
         this.state = {
             activeSurveyIndex: -1
         }
@@ -142,6 +141,7 @@ class UserSurvey extends Component {
 }
 
 const UserSurveyComponent = compose(
+    withApi,
     withRouter,
     withStyles(UserSurvey.styles),
     withTheme()

@@ -37,7 +37,8 @@ import classNames from 'classnames';
 import AddCircleIcon from '@material-ui/icons/AddCircle'
 import DetailIcon from '@material-ui/icons/Details'
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import { isArray, isNil } from 'lodash'
+import { isArray, isNil } from 'lodash';
+import moment from 'moment';
 import { ReactoryFormComponent } from '../reactory';
 import { TableFooter } from '@material-ui/core/Table';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
@@ -45,7 +46,7 @@ import DefaultAvatar from '../../assets/images/profile/default.png';
 import Profile from './Profile';
 import Message from '../message'
 import { omitDeep, getAvatar, CenteredContainer } from '../util';
-
+import styles from '../shared/styles' 
 const UserSearchInputStyles = theme => {
   return {
 
@@ -308,6 +309,10 @@ class Inbox extends Component {
 
   static styles = (theme) => {
     return {
+      ListPane: {
+        maxHeight: '400px',
+        overflowY: 'scroll'
+      },
       PreviewPane: {
         margin: `${theme.spacing.unit}px`,
         padding: `${theme.spacing.unit}px`,
@@ -332,7 +337,7 @@ class Inbox extends Component {
       item: true,
       xs: 12,
       md: 3,
-      lg: 3
+      lg: 3,
     };
 
     const viewProps = {
@@ -343,37 +348,43 @@ class Inbox extends Component {
     };
 
     let viewPane = null;
-    if(selected) {
+    if(isNil(selected) === false) {
       const message = this.props.messages[selected];
       viewPane = (
       <Grid {...viewProps}>
         <Paper className={classes.PreviewPane}>                                                 
           <Typography variant="title">{message.subject}</Typography><br/>
-          <Typography className={classes.PreviewBody} variant="p" dangerouslySetInnerHTML={{__html: message.message}}></Typography>        
+          <Typography className={classes.PreviewBody} variant="body1" dangerouslySetInnerHTML={{__html: message.message}}></Typography>        
         </Paper>
       </Grid>);
     } else {
       viewPane = (<Grid {...viewProps}>
-        <Typography variant="title">Select a message to view</Typography>        
+        <Paper className={classes.PreviewPane}>                                                 
+          <Typography variant="title">Select a message to view</Typography>        
+        </Paper>
       </Grid>);
     }
 
     return (
-      <Paper>
-        <Typography variant="title">Inbox</Typography>
+      <CenteredContainer>
         <Grid container>          
           <Grid {...listProps}>
             <List>
               {this.props.messages.map((message, index) => (
               <ListItem onClick={() => (this.onItemSelect(index))} dense button key={index}>
                 <Avatar>{message.from.substring(0,1).toUpperCase()}</Avatar>
-                <ListItemText primary={message.subject} secondary={ message.sent }/>
+                <ListItemText primary={`${message.from} ${moment(message.sentAt || message.sendAfter).format('DD MMM YY')}`} secondary={message.subject}/>
+                <div>
+                  <IconButton>
+                    <Icon>delete</Icon>
+                  </IconButton>                                    
+                </div>
               </ListItem>))}
             </List>
           </Grid>
           {viewPane}
         </Grid> 
-      </Paper>
+      </CenteredContainer>
     );
   }
 }
@@ -497,23 +508,26 @@ class Forgot extends Component {
     if(this.state.mailSent) {
       const messageData = {
         title: 'Mail sent',
-        mesage: this.state.message
+        message: this.state.message
       };
 
-      return (<Message className={this.props.classes.root} formData={messageData} />);
+      return (<Message 
+        className={this.props.classes.root} 
+        formData={messageData} />);
     }
 
-    if(this.state.hasError) {
-      const messageData = {
-        title: 'Mail sent',
-        mesage: this.state.message
-      };
-      return (<Message className={this.props.classes.root} formData={messageData} />);
+    if(this.state.hasError) {      
+      return (<Message 
+        className={this.props.classes.root} 
+        title={'Mail send failed'}
+        message={this.state.message}  />);
     }
 
+    const beforeComponent = (<div className={this.props.classes.logo}></div>)
+    
     return (
       <CenteredContainer>
-        <ReactoryFormComponent className={this.props.classes.root} formId="forgot-password" uiFramework="material" onSubmit={this.onSubmit}>
+        <ReactoryFormComponent before={beforeComponent} className={this.props.classes.root} formId="forgot-password" uiFramework="material" onSubmit={this.onSubmit}>
           <Button type="button" onClick={this.goBack} variant="flat"><Icon>keyboard_arrow_left</Icon>&nbsp;BACK</Button>
           <Button type="submit" variant="raised" color="primary"><Icon>email</Icon>&nbsp;RESET</Button>      
         </ReactoryFormComponent>
@@ -527,15 +541,14 @@ Forgot.propTypes = {
 }
 
 Forgot.styles = theme => ({
-    root: {
-      padding: theme.spacing.unit,
-      maxWidth: '600px',
-      minWidth: '320px',
-      textAlign: 'center',
-    }
+  ...styles(theme)
 });
 
-export const ForgotForm = compose(withStyles(Forgot.styles), withTheme(), withApi, withRouter)(Forgot);
+export const ForgotForm = compose(
+  withStyles(Forgot.styles), 
+  withTheme(),
+  withApi, 
+  withRouter)(Forgot);
 
 class ResetPassword extends Component {
 
@@ -581,7 +594,9 @@ class ResetPassword extends Component {
     };
 
     return (
-      <CenteredContainer>                        
+      <CenteredContainer>
+        <div className={this.props.classes.logo}>            
+        </div>                        
         <ReactoryFormComponent formId="password-reset" uiFramework="material" onSubmit={this.onSubmit} formData={formData}>          
           <Button type="submit" variant="raised" color="primary"><Icon>save</Icon>&nbsp;UPDATE PASSWORD</Button>      
         </ReactoryFormComponent>
@@ -595,15 +610,14 @@ ResetPassword.propTypes = {
 }
 
 ResetPassword.styles = theme => ({
-  root: {
-    padding: theme.spacing.unit,
-    maxWidth: '600px',
-    minWidth: '320px',
-    textAlign: 'center',
-  }
+  ...styles(theme)
 });
 
-export const ResetPasswordForm = compose(withTheme(), withApi, withRouter)(ResetPassword);
+export const ResetPasswordForm = compose(
+  withStyles(ResetPassword.logo),
+  withTheme(),
+  withApi,
+  withRouter)(ResetPassword);
 
 
 

@@ -4,7 +4,7 @@ import ThreeDeeMockup from './images/3Dmockup.jpg'
 import UserDashboard from '../../components/home/WooSparks';
 import DefaultAssessmentView from '../../components/assess/DefaultView';
 export default {
-    muiTheme: {
+    muiTheme: {        
         type: 'bootstrap',
         palette: {
             primary1Color: '#488A99',
@@ -42,6 +42,7 @@ export default {
                 { 
                     id: 'main_nav', 
                     entries: [    
+                        { id: '0', title: 'Dashboard', link: '/', icon: 'dashboard', roles: ['USER'] },
                         { id: '1', title: 'Product Ideas', link: '/reactory/product-ideas', icon: 'announcement', roles: ['PRODUCT_MANAGER'] },
                         { id: '2', title: 'Feature Ideas', link: '/reactory/feature-ideas', icon: 'check_circle', roles: ['PRODUCT_MANAGER'] },
                         { id: '3', title: 'Validations', link: '/reactory/validations', icon: 'bug_report', roles: ['PRODUCT_MANAGER'] },

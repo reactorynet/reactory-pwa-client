@@ -6,26 +6,28 @@ import uuid from 'uuid';
 import {isNil} from 'lodash';
 import classNames from 'classnames';
 import MobileStepper from '@material-ui/core/MobileStepper';
-import Card, { CardHeader, CardMedia, CardContent, CardActions } from '@material-ui/core/Card';
-import {withStyles, withTheme} from '@material-ui/core/styles';
+import {
+  Menu, MenuItem, 
+  Input, InputLabel, 
+  Card, CardHeader, CardMedia, CardContent, CardActions,
+  ListItemIcon, ListItemText,
+  Stepper, Step, StepButton,
+  Tabs, Tab 
+ } from '@material-ui/core';
+import { withStyles, withTheme} from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
-import Menu, { MenuItem } from '@material-ui/core/Menu';
 import Avatar from '@material-ui/core/Avatar';
 import TextField from '@material-ui/core/TextField';
 import AppBar from '@material-ui/core/AppBar';
-import Tabs, { Tab } from '@material-ui/core/Tabs';
-import Input, { InputLabel } from '@material-ui/core/Input';
-import { ListItemIcon, ListItemText } from '@material-ui/core/List';
-import Stepper, { Step, StepButton } from '@material-ui/core/Stepper';
 import AddIcon from '@material-ui/icons/Add';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import SaveIcon from '@material-ui/icons/Save';
 import CancelIcon from '@material-ui/icons/Cancel';
-import Assessment, {Behaviour} from './Assessment';
+import Assessment, { Behaviour } from './Assessment';
 import StaffImages from '../../assets/images/staff';
 import KeyboardArrowLeft from '@material-ui/icons/KeyboardArrowLeft';
 import KeyboardArrowRight from '@material-ui/icons/KeyboardArrowRight';

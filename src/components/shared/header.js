@@ -147,11 +147,12 @@ class ApplicationHeader extends Component {
     }
 
     signOutClicked = ( evt ) => {
-        localStorage.setItem('auth_token', null)
+        this.props.api.logout();
+        this.navigateTo('/login', false)
     }
 
-    profileClicked = ( evt ) => {
-        this.navigateTo('/profile')
+    profileClicked = ( evt ) => {        
+        this.navigateTo('/profile', false)
     }
 
     adminClicked = evt => this.navigateTo('/admin')
@@ -172,7 +173,7 @@ class ApplicationHeader extends Component {
                 if(nav.id === 'main_nav') {
                     menuItems = nav.entries.map((naventry) => {
                         const goto = () => {                        
-                            self.navigateTo(naventry.link);
+                            self.navigateTo(naventry.link, true);
                         }
                         return (
                         <MenuItem key={naventry.id} onClick={ goto }> 
@@ -194,19 +195,18 @@ class ApplicationHeader extends Component {
                         <Typography type="title" color="inherit" style={{flex:1}}>
                             {theme.content.appTitle}
                         </Typography>
-
-                        <IconButton
+                        {user.anon === true ? null : <IconButton
                             aria-owns={menuOpen ? 'menu-appbar' : null}
                             aria-haspopup="true"
                             onClick={this.handleMenu}
                             color="inherit">
-                        <PowerSettingIcon />
-                        <Logged open={menuOpen === true} 
-                            id={'menu-appbar'} 
-                            anchorEl={self.state.menuAnchor}
-                            onMyProfileClicked={self.profileClicked}
-                            onSignOutClicked={self.signOutClicked} />
-                        </IconButton>
+                            <PowerSettingIcon />
+                            <Logged open={menuOpen === true} 
+                                id={'menu-appbar'} 
+                                anchorEl={self.state.menuAnchor}
+                                onMyProfileClicked={self.profileClicked}
+                                onSignOutClicked={self.signOutClicked} />
+                        </IconButton>}
                     </Toolbar>
                 </AppBar>
                 <Drawer open={this.state.drawerOpen} className={this.props.classes.drawer}>     

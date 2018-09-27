@@ -5,8 +5,7 @@ import {withStyles, withTheme} from '@material-ui/core/styles';
 import { compose } from 'redux';
 import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
-import Input, { InputLabel } from '@material-ui/core/Input';
-import { FormControl } from '@material-ui/core';
+import { FormControl, Input, InputLabel  } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 import Paper from '@material-ui/core/Paper';
@@ -47,7 +46,7 @@ class MemberInvite extends Component {
     }    
 }
 
-const MemberInviteComponent = withTheme()(MemberInvite);
+const MemberInviteComponent = compose(withTheme())(MemberInvite);
 
 class ChatBubble extends Component {
 

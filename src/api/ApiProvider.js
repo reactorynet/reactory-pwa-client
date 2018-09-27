@@ -40,8 +40,13 @@ export class ReactoryApi extends EventEmitter {
         this.tokenValidated = false;
         this.tokenValid = null;
         this.lastValidation = null;
+        
         this.validateToken = this.validateToken.bind(this);
         this.resetPassword = this.resetPassword.bind(this);
+        this.logout = this.logout.bind(this);
+        this.setUser = this.setUser.bind(this);
+        this.registerComponent = this.registerComponent.bind(this);
+        this.getComponent = this.getComponent.bind(this);
     }
 
     setUser(user) {
