@@ -2,21 +2,27 @@ import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import {
     BrowserRouter as Router,
-    Route,    
+    Route, 
+    Switch,   
   } from 'react-router-dom';
 import { withRouter } from 'react-router';
-import {withStyles, withTheme} from '@material-ui/core/styles';
+
+import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
-import {isNil} from 'lodash';
+import { isNil, find, isArray } from 'lodash';
 import moment from 'moment';
 import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import Chip from '@material-ui/core/Chip';
-import List, { ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core/List';
-import Card, { CardHeader, CardMedia, CardContent, CardActions } from '@material-ui/core/Card';
+import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import {
+    Card, CardHeader, CardMedia, CardContent, CardActions,
+    List,  ListItem, ListItemSecondaryAction, ListItemText
+ } from '@material-ui/core/';
 import Collapse from '@material-ui/core/Collapse';
+import BackIcon from '@material-ui/icons/KeyboardArrowLeft';
 import Button from '@material-ui/core/Button';
 import IconButton from '@material-ui/core/IconButton';
 import SaveIcon from '@material-ui/icons/Save';
@@ -39,26 +45,17 @@ import Avatar from '@material-ui/core/Avatar';
 import TextField from '@material-ui/core/TextField';
 import Paper from '@material-ui/core/Paper';
 import Toolbar from '@material-ui/core/Toolbar';
+import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
 //recharts imports
 import {Radar, RadarChart, PolarGrid, Legend,
     PolarAngleAxis, PolarRadiusAxis,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip
 } from 'recharts';
+import createTypography from '@material-ui/core/styles/createTypography';
 
 let ReportCardsData = require("./mock/ReportCards.json");
 
-
-
-const data = [
-    {name: 'Page A', uv: 4000, pv: 2400, amt: 2400},
-    {name: 'Page B', uv: 3000, pv: 1398, amt: 2210},
-    {name: 'Page C', uv: 2000, pv: 9800, amt: 2290},
-    {name: 'Page D', uv: 2780, pv: 3908, amt: 2000},
-    {name: 'Page E', uv: 1890, pv: 4800, amt: 2181},
-    {name: 'Page F', uv: 2390, pv: 3800, amt: 2500},
-    {name: 'Page G', uv: 3490, pv: 4300, amt: 2100},
-];
 class ReportCard extends Component {
     constructor(props, context){
         super(props, context);
@@ -69,7 +66,8 @@ class ReportCard extends Component {
         this.handleExpandClick = this.handleExpandClick.bind(this);
         this.handleViewDetailClick = this.handleViewDetailClick.bind(this);
     }
-    static styles = theme => ({
+
+    static styles = (theme) => ({
         card: {
           
         },
@@ -90,7 +88,8 @@ class ReportCard extends Component {
           transform: 'rotate(180deg)',
         },
         avatar: {
-          backgroundColor: theme.palette.primary.dark,
+          color: theme.palette.primary.contrastText,
+          backgroundColor: theme.palette.primary.dark,        
         },
         radarContainer: {
             display: 'flex',
@@ -98,20 +97,42 @@ class ReportCard extends Component {
         }
       });
 
+    static propTypes = {}
+
     handleExpandClick(){
         this.setState({expanded: !this.state.expanded });
     }
 
     handleViewDetailClick(){
-        this.props.history.push(`/reports/detail/${this.props.card.id}`);
+        this.props.history.push(`/reports/detail/${this.props.card.survey.id}`);
     }
 
     render(){
         const { classes, card, theme } = this.props;
         const { expanded } = this.state;
         const cardGraphData = [];
-        card.ratings.map((rating) => {
-            cardGraphData.push({ quality: rating.quality.title, score: rating.quality.score  })
+        const qualityIndex = {
+
+        };
+
+        card.assessments.map((assessment) => {
+            if(assessment.ratings && assessment.ratings.length > 0) {
+                assessment.ratings.map((rating) => { 
+                    if(qualityIndex[rating.quality.id]) {
+                        cardGraphData[qualityIndex[rating.quality.id]].score += rating.rating;
+                        cardGraphData[qualityIndex[rating.quality.id]].count += 1;
+                        cardGraphData[qualityIndex[rating.quality.id]].avg += cardGraphData[qualityIndex[rating.quality.id]].score / cardGraphData[qualityIndex[rating.quality.id]].count;
+                    } else {
+                        qualityIndex[rating.quality.id] = cardGraphData.length;
+                        cardGraphData.push({ 
+                            quality: rating.quality.title,
+                            score: rating.rating,
+                            avg: rating.rating / 1,
+                            count: 1
+                        });                        
+                    }
+                });            
+            }            
         });
 
         let radar = {
@@ -123,20 +144,20 @@ class ReportCard extends Component {
         };
 
         return (
-        <Grid item xs={12} sm={ expanded === false ? 4 : 12 }>
+        <Grid item xs={12} sm={ expanded === false ? 4 : 12 } key={this.props.key}>
             <Card className={classes.card}>
                 <CardHeader
                     avatar={
                     <Avatar aria-label="Recipe" className={classes.avatar}>
-                        {card.score}
+                        {card.overall}
                     </Avatar>
                     }                    
-                    title={card.assessmentTitle}
-                    subheader={moment(card.reportDate).format('DD-MM-YYYY')}
+                    title={card.survey.title}
+                    subheader={moment(card.survey.startDate).format('DD-MM-YYYY')}
                 />
                 <Collapse in={this.state.expanded} timeout="auto" unmountOnExit>          
                     <CardContent >
-                        <Typography variant='p'>Your overall score for the assessment is {card.score}. This score is based on the 
+                        <Typography variant='paragraph'>Your overall score for the assessment is {card.overall}. This score is based on the 
                         feedback from your peers, direct reports and supervisors.<br/>  Click the view button to view the 
                         details for this assessment report.
                         </Typography>
@@ -146,15 +167,15 @@ class ReportCard extends Component {
                                     <PolarGrid />
                                     <PolarAngleAxis dataKey="quality" />
                                     <PolarRadiusAxis/>
-                                    <Radar name={`${card.firstName} ${card.lastName}`} dataKey="score" stroke={theme.palette.primary.dark} fill={theme.palette.primary.light} fillOpacity={0.6}/>
+                                    <Radar name={`${card.firstName} ${card.lastName}`} dataKey="avg" stroke={theme.palette.primary.dark} fill={theme.palette.primary.light} fillOpacity={0.6}/>
                                 </RadarChart>
                             </Grid>
                             <Grid item sm={12} md={6}>
-                                <Grid container spacing={4}>
+                                <Grid container spacing={8}>
                                 {cardGraphData.map((qualityScore) => { 
                                     return (
                                         <Grid item sm={12} md={6} style={{paddingTop: '20px'}}>                                                                                    
-                                            <BarChart width={240} height={60} data={data}>
+                                            <BarChart width={240} height={60} data={[]}>
                                                 <Bar dataKey='uv' fill={theme.palette.primary.light}/>
                                             </BarChart>
                                             <Typography variant="caption" style={{textAlign: 'center'}}>{qualityScore.quality}</Typography>                                        
@@ -168,13 +189,7 @@ class ReportCard extends Component {
                 <CardActions className={classes.actions} disableActionSpacing>
                     <IconButton aria-label="View Report Details" onClick={this.handleViewDetailClick}>
                         <PageviewIcon />
-                    </IconButton>
-                    <IconButton aria-label="Print">
-                        <PrintIcon />
-                    </IconButton>
-                    <IconButton aria-label="Print">
-                        <DateRangeIcon />
-                    </IconButton>
+                    </IconButton>                                        
                     <IconButton
                     className={classNames(classes.expand, {
                         [classes.expandOpen]: this.state.expanded,
@@ -194,54 +209,212 @@ class ReportCard extends Component {
 
 const ReportCardComponent = compose(withRouter, withTheme(), withStyles(ReportCard.styles))(ReportCard);
 
-class ReportDashboard extends Component {
+const collectRatingsForQuality = (report, quality) => {
+    const ratings = []
+    if(isArray(report.assessments) === true){
+        report.assessments.map((a) =>  {
+        if(isArray(a.ratings) === true){
+            a.ratings.map((r) => {
+                if(r.quality.id === quality.id) {
+                    ratings.push({ 
+                        ...r,
+                        qOrdinal: r.quality.ordinal,
+                        bOrdinal: r.behaviour.ordinal
+                    });
+                } 
+            });
+        }
+        });
+    }    
+    return ratings;
+};
 
+class BarChartForQuality extends Component  {
 
-    static styles = (theme) => ({
-        mainContainer: {
-            width:'100%',
-            maxWidth: '1024px',
-            marginLeft: 'auto',
-            marginRight: 'auto',                    
-        }        
-    });
+    constructor(props, context){
+        super(props, context)
+        this.state = {
+
+        }
+    }
+
+    static styles = theme => ({
+
+    })
 
     static propTypes = {
-        user:  PropTypes.object
-    };
+        report: PropTypes.object,
+        quality: PropTypes.object
+    }
 
-    static defaultProps = {
-        user: null 
-    };
+
     
-    render(){    
-        const { classes, history } = this.props;
-        
+    render() {
+        const { report, quality, theme } = this.props;        
+        const ratings = collectRatingsForQuality(report, quality);
 
-                                                
         return (
-            <Grid container spacing={16} className={classes.mainContainer}>
-                <Grid item xs={12} sm={12}> 
-                <Toolbar>
-                    <Typography variant="title" color="inherit">
-                        Reports
-                    </Typography>
-                </Toolbar>                              
-                </Grid>
-                {this.state.reportCards.map(reportCard => {
-                    const viewDetails = () => {
-                        
-                    };
-                    return (                
-                    <ReportCardComponent card={reportCard} onViewDetails={viewDetails}/>                
-                    )})}                      
-            </Grid>
-        );
+            <BarChart width={400} height={180} data={ratings}>
+                <XAxis dataKey="bOrdinal" />
+                <YAxis />
+                <Bar dataKey='rating' fill={theme.palette.primary.dark}/>
+            </BarChart>
+        )
+    }
+}
+
+const ThemedBarChartForQuality = compose(withTheme(), withStyles(BarChartForQuality.styles))(BarChartForQuality)
+
+class ReportDetail extends Component {
+    constructor(props, context){
+        super(props,context);
+        this.state = {
+
+        }
     }
 
-    windowResize(){
-        this.forceUpdate();
+    static styles = (theme) => {
+        return {
+            mainContainer: {
+                width:'100%',
+                maxWidth: '1024px',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+            },
+            paragraph: {
+                marginLeft: '15px',
+                marginRight: '15px',
+                textAlign: 'justify'
+            },
+            brandStatement: {
+                marginLeft: '40px',
+                marginRigt: '40px',
+                textAlign: 'center'
+            },
+            paper: {
+                ...theme.mixins.gutters(),
+                paddingTop: theme.spacing.unit * 2,
+                paddingBottom: theme.spacing.unit * 2,
+            }            
+        }
     }
+
+    static propTypes = {
+        report: PropTypes.object,
+        theme: PropTypes.object
+    }
+
+
+    render(){
+        const { classes, history, report, theme } = this.props;
+        return (        
+            <Grid container spacing={16} className={classes.mainContainer}>
+                <Grid item xs={12} sm={12}>            
+                    <Toolbar>                        
+                        <IconButton onClick={()=>{history.goBack()}}> 
+                            <BackIcon/>
+                        </IconButton>
+                        <Typography variant="h1" color="inherit">Report Detail</Typography>                        
+                    </Toolbar>
+                </Grid>
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.paper}>
+                        <Typography variant="h3" color="primary" gutterBottom>1. Introduction</Typography>
+                        <Typography className={classes.paragraph}>{report.user.firstName}, this report compares the results of your self-assessment, with those of the colleagues who assessed you. These assessors include the person you report to and randomly selected colleagues from the list you submitted.</Typography>
+                        <Typography className={classes.paragraph}>You have been assessed against the TowerStone values and supporting leadership behaviours for all TowerStone employees.</Typography>
+                        <br/>
+                        <br/>
+                        <Typography variant="subtitle" color="primary"  className={classes.brandStatement}>{report.survey.leadershipBrand.description}</Typography>
+                        <br/>
+                        <br/>
+                        <Typography  className={classes.paragraph}>The values form the foundation of your desired culture at {report.survey.organization.name} and in order to build this culture, you as leaders
+                        must intentionally live out the values by displaying the supporting behaviours. In this way, you will align your people to
+                        the purpose and strategy of {report.survey.organization.name}.</Typography>
+                        <br/>
+                        <br/>
+                        <Typography variant="subtitle" color="primary" className={classes.brandStatement}>"You cannot manage what you cannot measure"</Typography>
+                        <br/>
+                        <br/>
+                        <Typography className={classes.paragraph}>The TowerStone Leadership Assessment is a tool that provides insight to track your behavioural growth as you seek
+                        to align yourself with the TowerStone values. It is now your responsibility to use this feedback to improve your ability
+                        to (a) model these behaviours and (b) coach the next levels of leadership to align to the TowerStone values. Please
+                        consider the feedback carefully before completing the Personal Development Plan that follows the assessment.</Typography>
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.paper}>
+                        <Typography variant="h3" color="primary" gutterBottom>2. Rating Scale</Typography>
+                        <Typography className={classes.paragraph}>The feedback you have received is in the context of the following rating scale:</Typography>
+                        {report.survey.leadershipBrand.scale.entries.map((entry) => (<Typography>{entry.rating} - {entry.description}</Typography>))}
+                    </Paper>
+                </Grid>                    
+
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.paper}>
+                        <Typography variant="h3" color="primary" gutterBottom>3. Qualities</Typography>                        
+                        <Typography className={classes.paragraph}>The ratings for your different leadership behaviours have been combined to achieve an average rating for each Leadership Quality.</Typography>
+
+                        <Typography variant="h3" color="primary" gutterBottom>3.1 Individual Ratings</Typography>
+                        <Typography className={classes.paragraph}>The chart below indicates the ratings submitted by the individual assessors.</Typography>
+
+                        <Typography variant="h3" color="primary" gutterBottom>3.2 Aggregate Ratings</Typography>
+                        <Typography className={classes.paragraph}>The chart below indicates the combined ratings for all assessors.</Typography>
+
+                    </Paper>
+                </Grid>
+
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.paper}>
+                        <Typography variant="h3" color="primary" gutterBottom>4. Behaviours</Typography>
+                        <Typography variant="body" className={classes.paragraph}>The charts in this section indicate the ratings given by your assessors for each behaviour.</Typography>
+                        {report.survey.leadershipBrand.qualities.map((quality, qi) => {
+                            return (
+                                <div>
+                                    <Typography variant="h3" color="primary" gutterBottom>4.{qi + 1} {quality.title}</Typography>
+                                    {quality.behaviours.map((behaviour, bi) => { 
+                                        <Typography variant="body2">B{bi + 1} -> {behaviour.description}</Typography>                                        
+                                    })}
+                                    <ThemedBarChartForQuality quality={quality} report={report} />
+                                </div>
+                            )
+                        })}
+                        <Typography variant="h4" color="primary" gutterBottom>Start behaviours</Typography>
+                        <Typography variant="body">You received low ratings for the behaviours below - this means the assessors don't see you demonstrating these behaviours at all - time to get started on these!</Typography>
+                        
+                    </Paper>
+                </Grid>
+
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.paper}>
+                        <Typography variant="h3" color="primary" gutterBottom>5. Overall</Typography>
+                        
+                    </Paper>
+                </Grid>
+
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.paper}>
+                        <Typography variant="h3" color="primary" gutterBottom>6. Development Plan</Typography>
+                    </Paper>
+                </Grid>
+
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.paper}>
+                        <Typography variant="h3" color="primary" gutterBottom>7. Acceptance and Commitment</Typography>
+                        <Typography>
+                            I accept and commit to addressing the feedback presented in this assessment, by taking the actions listed within the agreed timeframes.
+                        </Typography>                        
+                    </Paper>
+                </Grid>
+            </Grid>        
+        )
+    }
+
+}
+
+
+const ReportDetailComponent = compose(withTheme(), withStyles(ReportDetail.styles))(ReportDetail)
+
+class ReportDashboard extends Component {
 
     constructor(props, context){
         super(props, context);
@@ -251,12 +424,155 @@ class ReportDashboard extends Component {
         }
         
         window.addEventListener('resize', this.windowResize);
+        this.dashboard = this.dashboard.bind(this);
+        this.detail = this.detail.bind(this);
     }
+        
+    static propTypes = {
+        user:  PropTypes.object,
+        reports: PropTypes.object,
+    };
+
+    static defaultProps = {
+        user: null,
+        reports: {
+            available: [],
+            busy: [],
+            review: []
+        }
+    };
+    
+    dashboard(){
+        const { classes, history, reports } = this.props;
+        return (
+            <Grid container spacing={16} className={classes.mainContainer}>
+                <Grid item xs={12} sm={12}>                
+                    <Toolbar>
+                        <Typography variant="title" color="inherit">Reports</Typography>
+                    </Toolbar>
+                </Grid>
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.reportGroup}>
+                        <Typography>Available Report</Typography>
+                        {reports.available.length === 0 ? (<Typography>No available reports</Typography>) : null}
+                        {reports.available.map((report, idx) => {
+                            const viewDetails = () => {};
+                            return (<ReportCardComponent key={idx} card={report} onViewDetails={viewDetails}/>)
+                        })}
+                    </Paper>                
+                </Grid> 
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.reportGroup}>
+                        <Typography>Pending Report</Typography>
+                        {reports.review.length === 0 ? (<Typography>No pending reports</Typography>) : null}
+                        {reports.review.map((report, idx) => {
+                            const viewDetails = () => {};
+                            return (<ReportCardComponent key={idx} card={report} onViewDetails={viewDetails}/>)
+                        })}
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} sm={12}>
+                    <Paper className={classes.reportGroup}>
+                        <Typography >Assessments Open</Typography>
+                        {reports.busy.length === 0 ? (<Typography>No open assessments</Typography>) : null}
+                        {reports.busy.map((report, idx) => {
+                            const viewDetails = () => {};
+                            return (<ReportCardComponent key={idx} card={report} onViewDetails={viewDetails}/>)
+                        })}
+                    </Paper>
+                </Grid>
+            </Grid>
+        );
+    }
+
+
+    detail(surveyId){
+        const { classes, history, api } = this.props;        
+        
+        return (
+            <Query query={api.queries.Surveys.reportDetailForUser} variables={{ userId: api.getUser().id, surveyId }}>
+            { ({ loading, error, data }) => {
+                if(loading === true) return (<p>Loading report data...</p>);
+                if(isNil(error) === false) return (<p>Error during load...</p>);
+                const report = data.reportDetailForUser;
+                return (<ReportDetailComponent report={report}/>);
+            }}
+            </Query>
+        );
+    }
+
+
+    render(){
+        const that = this                
+        return (
+            <Switch>
+                <Route exact path="/reports">
+                    {this.dashboard()}
+                </Route>
+                <Route path="/reports/detail/:surveyId" render={(props) => {
+                    return that.detail(props.match.params.surveyId)
+                }}>                    
+                </Route>                    
+            </Switch> 
+        )
+    }
+
+    windowResize(){
+        this.forceUpdate();
+    }    
 }
 
-const _component = compose(
+ReportDashboard.styles = (theme) => {
+    return {
+        mainContainer: {
+            width:'100%',
+            maxWidth: '1024px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+        },
+        reportGroup: {
+            padding: theme.spacing.unit
+        }
+    }
+};
+
+
+export const ThemeReportDashboard = compose(
+    withApi,
     withRouter,
     withStyles(ReportDashboard.styles),
     withTheme()
   )(ReportDashboard);
-  export default _component;
+
+const UserReportComponentWithQuery = ({organizationId, api, onUserSelect}) => {  
+    return (
+        <Query query={api.queries.Surveys.reportsForUser} variables={{ id: api.getUser().id }}>
+            { ({ loading, error, data }) => {
+                if(loading === true) return (<p>Loading survey data...</p>);
+                if(isNil(error) === false) return (<p>Error during load...</p>);
+
+                const reports = {
+                    available: [],
+                    busy: [],
+                    review: [],
+                };
+
+                const now = moment();
+                data.userReports.forEach((report) => {
+                    if(report.status === 'READY') reports.available.push(report)
+                    else {                        
+                        if(now.isAfter(moment(report.survey.startDate)) === true) reports.busy.push(report);
+                        else reports.review.push(report);
+                    }
+                });
+
+                return (<ThemeReportDashboard reports={reports} />);
+            }}
+        </Query>);
+}
+
+const  ReportDashboardComponent = compose(
+    withApi
+)(UserReportComponentWithQuery);
+
+export default ReportDashboardComponent;

@@ -7,10 +7,13 @@ import Paper from '@material-ui/core/Paper';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Divider from '@material-ui/core/Divider';
+import { isNil } from 'lodash';
 import {
-  Grid
+  Grid,
+  Typography,
 } from '@material-ui/core';
 import Icon from '@material-ui/core/Icon';
+import SecurityIcon from '@material-ui/icons/Security'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
 import { BasicContainer, CenteredContainer, textStyle, isEmail, isValidPassword } from '../util';
@@ -20,31 +23,36 @@ class LoginCard extends Component {
 
   constructor(props, context) {
     super(props, context);
+    const { api } = props;
     this.state = {
       username: '',
       password: '',
       loginError: null,      
       busy: false,
-      redirectOnLogin: '/'
+      loggedIn: false,
+      redirectOnLogin: isNil(api.queryObject) === false && api.queryObject.r ? api.queryObject.r : '/'
     };
     this.doLogin = this.doLogin.bind(this);
     this.doRegister = this.doRegister.bind(this);
     this.doForgot = this.doForgot.bind(this);
     this.updateUsername = this.updateUsername.bind(this);
     this.updatePassword = this.updatePassword.bind(this);
+    this.keyPressPassword = this.keyPressPassword.bind(this);
   }
 
   doLogin = (evt) => {
     const { history, api } = this.props;
-    const that = this;    
-    api.login(this.state.username, this.state.password)    
-    .then((response)=>{
-      localStorage.setItem('auth_token', response.user.token);
-      that.setState({ loginError: null, busy: false }, ()=>{
-        history.push(that.state.redirectOnLogin);
-      })      
-    }).catch((error) => {
-      that.setState({ loginError: error, busy: false })
+    const that = this;
+    that.setState({ busy: true }, ()=>{
+      api.login(this.state.username, this.state.password).then((response)=>{
+        localStorage.setItem('auth_token', response.user.token);
+        api.afterLogin(response.user);
+        that.setState({ loginError: null, loggedIn: true }, ()=>{
+          setTimeout(()=>{window.location.href = '/';}, 700);
+        });
+      }).catch((error) => {
+        that.setState({ loginError: 'Could not log in due to an error', busy: false });
+      });
     });
   }
 
@@ -52,6 +60,11 @@ class LoginCard extends Component {
   doForgot = evt => this.props.history.push('/forgot')
   updateUsername = (evt) => this.setState({username: evt.target.value})
   updatePassword = (evt) => this.setState({password: evt.target.value})
+  keyPressPassword = (evt) => {
+    if(evt.charCode === 13) {
+      this.doLogin()
+    }
+  }
   render() {
     const that = this;
     const { doLogin, props, context } = that;
@@ -59,19 +72,21 @@ class LoginCard extends Component {
     const { busy, loginError, message } = this.state;
 
     const enableLogin = isEmail(this.state.username) && isValidPassword(this.state.password) && !busy;   
-    return (      
-      <CenteredContainer>
+
+    return (<CenteredContainer>
         <Paper className={classes.root}>
           <div className={classes.logo}>            
           </div>
-
+          <Typography variant="title" color="primary"><SecurityIcon /></Typography><br/>
+          <Typography variant="title" color="primary">{ !busy ? 'Sign In' : 'Signing in...' } </Typography>
+          { loginError ? <Typography variant="subtitle" color="secondary">{loginError} </Typography> : null }
           <TextField
             label="Email"
             style={textStyle}
             value={this.state.username}
             onChange={this.updateUsername}
             disabled={busy}
-            />
+          />
 
           <TextField
             label='Password'
@@ -79,27 +94,21 @@ class LoginCard extends Component {
             style={textStyle}
             value={this.state.password}
             onChange={this.updatePassword}
+            onKeyPress={this.keyPressPassword}
             disabled={busy}
             />
           
           <Button
             id="doLoginButton"                          
-            onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false}>
-            <Icon className="fas fa-sign-in-alt"  />&nbsp;
-            Login
-          </Button>
-
-          <h2>OR</h2>
-          <Button onClick={this.doRegister} color='secondary' disabled={busy}>                              
-              Register
-          </Button>
+            onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false || busy === true}>
+            <Icon className="fas fa-sign-in-alt"  />&nbsp;Login
+          </Button> <br/>                
 
           <Button onClick={this.doForgot} color='secondary' disabled={busy}>                              
               Forgot Password
           </Button>
         </Paper>        
-      </CenteredContainer>
-          )
+      </CenteredContainer>)
   }
 
   static contextTypes = {
@@ -127,6 +136,7 @@ class LoginCard extends Component {
       backgroundRepeat: 'no-repeat',
       backgroundSize: 'contain',
       marginRight: '0px',
+      marginBottom: '20px',
       width: 'auto',
     }
   })

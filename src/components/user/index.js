@@ -241,10 +241,12 @@ export const EditProfile = compose(
           onCancel,
           onSave: (profileData) => {
             console.log('User being saved', profileData)
+            let profileDataInput = omitDeep(profileData );
+            delete profileDataInput.peers
             updateUser({
               variables: {
                 id: profile.id, 
-                profileData: omitDeep(profileData),
+                profileData: profileDataInput,
               }
             });
           }
@@ -319,7 +321,9 @@ class Inbox extends Component {
       },
       PreviewBody: {
         outline: '1px solid black',
-        display: 'block'
+        display: 'block',
+        width: '100%',
+        overflow: 'scroll',        
       }      
     }
   }
@@ -506,22 +510,11 @@ class Forgot extends Component {
   render(){
 
     if(this.state.mailSent) {
-      const messageData = {
-        title: 'Mail sent',
-        message: this.state.message
-      };
-
-      return (<Message 
-        className={this.props.classes.root} 
-        formData={messageData} />);
-    }
-
+      return (<div><Typography variant="heading">An email has been sent with instructions to reset your password. Please allow a few minutes for delivery</Typography></div>)
+    } 
     if(this.state.hasError) {      
-      return (<Message 
-        className={this.props.classes.root} 
-        title={'Mail send failed'}
-        message={this.state.message}  />);
-    }
+      return (<div><Typography variant="heading">{this.state.message}</Typography></div>);
+    }    
 
     const beforeComponent = (<div className={this.props.classes.logo}></div>)
     

@@ -1,21 +1,26 @@
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
-import {withStyles, withTheme} from '@material-ui/core/styles';
+import { Query, Mutation } from 'react-apollo';
+import { withStyles, withTheme} from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
-import {isNil, find} from 'lodash';
-import Grid from '@material-ui/core/Grid';
-import Typography from '@material-ui/core/Typography';
-import { 
+import { isNil, find, isArray } from 'lodash';
+import {
+    AppBar, 
     MenuItem,
     FormControl,
     IconButton,
     InputLabel, 
+    Grid,
     List, 
     ListItem, 
     ListItemSecondaryAction, 
-    ListItemText 
+    ListItemText,
+    Paper,
+    Toolbar,
+    TextField,
+    Typography
 } from '@material-ui/core';
 
 import Select from '@material-ui/core/Select';
@@ -24,10 +29,99 @@ import Button from '@material-ui/core/Button';
 import ChatIcon from '@material-ui/icons/Chat';
 import GroupAddIcon from '@material-ui/icons/GroupAdd';
 import PlayIcon from '@material-ui/icons/PlayCircleFilled';
+import Draggable from 'react-draggable';
 import ChatCard from '../../chat/ChatCard';
 import { TrelloProvider } from '../../tasks/Tasks';
+import { TaskListItemComponent } from '../../tasks/Taskboard';
 import * as mocks from '../../../models/mock';
-import { nilStr } from '../../util';
+import { nilStr, omitDeep } from '../../util';
+import { withApi } from '../../../api/ApiProvider';
+
+
+class AddTask extends Component {
+    constructor(props, context){
+        super(props, context);
+        this.state = {
+            text: ''
+        }
+
+        this.onTextChanged = this.onTextChanged.bind(this)
+        this.keyPress = this.keyPress.bind(this)
+    }
+
+    onTextChanged(e){
+        this.setState({ text: e.target.value })
+    }
+
+    keyPress(e){
+        if(e.charCode === 13){
+           this.props.onSave(this.state.text); 
+        }
+    }
+
+    render(){
+        return (<TextField 
+                    placeholder="Enter task title" 
+                    value={this.state.text} 
+                    onChange={this.onTextChanged}
+                    variant="outlined" 
+                    onKeyPress={this.keyPress}
+                    fullWidth
+                     />)
+    }
+}
+
+const AddTaskComponent = compose(
+    withApi
+  )((props) => {  
+    const { api, organizationId, userId, onCancel, status = 'new', percentComplete = 0 } = props  
+    return (
+      <Mutation mutation={api.mutations.Tasks.createTask} >
+        {(createTask, { loading, error, data }) => {
+
+          let props = {
+            loading,
+            error,
+            onCancel,
+            onSave: (title) => {              
+              let taskInput = { title, status, percentComplete };
+              createTask({
+                variables: {
+                  id: userId,  
+                  taskInput
+                },
+                refetchQueries: ['userTasks']
+              });
+            }
+          }
+  
+          if(loading) return (<p>Updating... please wait</p>)
+          if(error) return (<p>{error.message}</p>)  
+          return <AddTask {...props} />
+        }}
+      </Mutation>
+    )
+  })
+
+const TaskListComponent = compose(
+    withApi
+  )((props) => {  
+    const { api, organizationId, userId, onCancel, status = 'new', percentComplete = 0 } = props  
+    return (
+      <Query query={api.queries.Tasks.userTasks} variables={{id: userId, status}} >
+        {({ loading, error, data }) => {            
+          if(loading) return (<p>Loading...</p>)
+          if(error) return (<p>{error.message}</p>)  
+          
+          if(isArray(data.userTasks) === true && data.userTasks.length > 0){
+              return data.userTasks.map((task) => <TaskListItemComponent task={task} />)
+          } else {
+              return <p>No tasks here</p>
+          } 
+        }}
+      </Query>
+    )
+  })
 
 class ChatDashboard extends Component {
     static styles = (theme) => {
@@ -43,7 +137,7 @@ class ChatDashboard extends Component {
                 marginLeft: 'auto',
                 marginRight: 'auto',
                 minHeight:'300px',
-                backgroundColor: primaryColorDark
+                backgroundColor: '#F3F2F1'
             },
             general: {
                 padding: '5px'
@@ -66,6 +160,13 @@ class ChatDashboard extends Component {
             taskList: {
                 maxHeight: (window.innerHeight - 140) / 2,
                 overflow: 'scroll'
+            },
+            column: {
+                maxHeight: (window.innerHeight - 140),
+                padding: theme.spacing.unit
+            },
+            toolbar: {
+                marginBottom: theme.spacing.unit * 2
             }
         };
     }
@@ -219,7 +320,60 @@ class ChatDashboard extends Component {
                 </Grid>
 
                 <Grid item md={9} sm={8} xs={12} className={classes.mainContainer}>
-                    <ChatCard />
+                <AppBar position="static" color="default" className={classes.toolbar}>
+                    <Toolbar>
+                        <Typography variant="h6" color="inherit">
+                            Task Board
+                        </Typography>
+                    </Toolbar>
+                </AppBar>
+                    <Grid container spacing={16} direction="row" justify="center" alignItems="stretch">
+                        <Grid item md={3}>
+                            <Paper className={classes.column}>
+                                <Typography variant="heading">Planned</Typography>
+                                <List>
+                                    <TaskListComponent status="new"/>
+                                </List>
+                                <AddTaskComponent />
+                            </Paper>
+                        </Grid>
+                        <Grid item md={3}>
+                            <Paper className={classes.column}>
+                                <Typography variant="heading">In Progress</Typography>
+                                <List>
+                                    <TaskListComponent status="in-progress"/>
+                                </List>
+                                <AddTaskComponent status='in-progress'/>
+                            </Paper>
+                        </Grid>
+                        <Grid item md={3}>
+                            <Paper className={classes.column}>
+                                <Typography variant="heading">Completed</Typography>
+                                <List>
+                                    <TaskListComponent status="done"/>
+                                </List>
+                                <AddTaskComponent status='done' />
+                            </Paper>
+                        </Grid>
+                        <Grid item md={3}>
+                            <Paper className={classes.column}>
+                                <Typography variant="heading">Artifacts</Typography>
+                                <List>
+                                    <TaskListComponent status="artifact"/>
+                                </List>
+                                <AddTaskComponent status='team'/>
+                            </Paper>
+                        </Grid>
+                        <Grid item md={3}>
+                            <Paper className={classes.column}>
+                                <Typography variant="heading">Kudos</Typography>
+                                <List>
+                                    <TaskListComponent status="team"/>
+                                </List>
+                                <AddTaskComponent status='team'/>
+                            </Paper>
+                        </Grid>
+                    </Grid>
                 </Grid>                           
             </Grid>
         );
@@ -265,9 +419,7 @@ class ChatDashboard extends Component {
             cards: [],
             projects : [],            
             trello: new TrelloProvider()
-        };
-
-        
+        };        
         this.onProjectSelectionChanged = this.onProjectSelectionChanged.bind(this);
         this.getMemberInfo = this.getMemberInfo.bind(this);    
         this.onChatKeyPress = this.onChatKeyPress.bind(this);
@@ -283,8 +435,9 @@ class ChatDashboard extends Component {
 }
 
 const ChatDashboardComponent = compose(
+    withApi,
     withRouter,
-    withStyles(ChatDashboard.styles),
-    withTheme()
+    withTheme(),
+    withStyles(ChatDashboard.styles),    
   )(ChatDashboard);
   export default ChatDashboardComponent;

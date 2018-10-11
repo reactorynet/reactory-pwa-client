@@ -10,7 +10,7 @@ import { isNil } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
 import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
-import { ApolloProvider } from 'react-apollo';
+import { ApolloProvider, Query, Mutation } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
 import { setContext } from 'apollo-link-context';
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
@@ -166,17 +166,17 @@ class App extends Component {
                     <Route exact path="/forgot" component={ForgotForm}/>
                     <Route exact path="/reset-password" component={ResetPasswordForm}/>    
                     <Route exact path="/register" component={Register } />
-                    <PrivateRoute path="/assess" component={Assessment} />
+                    <PrivateRoute path="/assess/:assessmentId" component={Assessment} />
                     <PrivateRoute exact path="/inbox" component={UserInbox} />
                     <PrivateRoute exact path="/users" component={UserList} />
                     <PrivateRoute path="/profile" component={Profile}/>
                     <PrivateRoute path="/surveys" component={UserSurvey} />
                     <PrivateRoute path="/reports" component={Report} />
-                    <PrivateRoute path="/actions" component={TaskDashboard} />
-                    <Route path="/reactory">
+                    <PrivateRoute path="/actions" component={TaskDashboard} />                    
+                    <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
+                    <Route path="*">
                       <ReactoryRouter />
                     </Route>
-                    <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
                   </div>
                 </MuiThemeProvider>
               </ApiProvider>

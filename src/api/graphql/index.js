@@ -3,9 +3,10 @@ import gql from 'graphql-tag';
 const allScales = gql`
   query ScalesQuery {
     allScales {
+      id
       title
       key 
-      entries {
+      entries {        
         description
         rating
       }
@@ -32,6 +33,7 @@ query brandListForOrganizationQuery($organizationId: String!) {
       title
       description
       scale {
+        id
         key
         title 
         entries {          
@@ -39,11 +41,13 @@ query brandListForOrganizationQuery($organizationId: String!) {
           description
         }
       }
-      qualities {        
+      qualities {
+        id        
         title
         description
         ordinal
         behaviours {
+          id
           title
           description
           ordinal
@@ -154,12 +158,15 @@ const setPassword = gql`
 
 const surveyDetail = gql`
   query SurveyDetail($surveyId: String!){
-    surveysDetail(surveyId: $surveyId){
-      id      
+    surveyDetail(surveyId: $surveyId){
+      id
+			status
       leadershipBrand {
+        id
         title
         description
         scale {
+          id
           title
           entries {
             rating
@@ -167,21 +174,44 @@ const surveyDetail = gql`
           }
         }
         qualities {
+          id
           title
-          behaviours {
+          behaviours {            
             ordinal
             description
           }
         }
       }
       organization {
+        id
         name
         logo
-      }
+      }		
       title
       startDate
       endDate
       mode
+			delegates {
+				delegate {
+					id
+					firstName
+					lastName
+					email
+					avatar
+				}
+				assessments {
+					assessor {
+						id
+						firstName
+						lastName
+            email
+						avatar
+					}
+				}
+				complete
+				launched
+				removed			
+			}
       calendar {
         entryType
         title
@@ -208,11 +238,40 @@ const surveyDetail = gql`
 const surveysForOrganization = gql`
   query SurveysForOrganization($organizationId: String!){
     surveysForOrganization(organizationId: $organizationId){
-      id      
+      id
+      organization {
+        id
+        name
+        logo
+      }      
       leadershipBrand {
+        id
         title
         description                
       }      
+      title
+      startDate
+      endDate
+      mode            
+    }
+  }
+`;
+
+
+const surveysList = gql`
+  query SurveysList{
+    surveysList{
+      id
+      organization {
+        id
+        name
+        logo
+      }      
+      leadershipBrand {
+        id
+        title
+        description
+      }            
       title
       startDate
       endDate
@@ -231,7 +290,30 @@ const userProfile = gql`
       avatar
       businessUnit
       lastLogin
-    }
+      peers {
+        organization {
+          name
+          logo
+        }
+        user {
+          firstName
+          lastName
+          email
+        }
+        peers {
+          user {
+            id
+            firstName
+            lastName
+            email
+            avatar
+          }
+          relationship
+          isInternal
+        }
+        allowEdit		
+      }
+    }    
   }
 `;
 
@@ -245,13 +327,146 @@ query status {
     email
     id
     avatar
+    roles
 	}
 }
 `;
 
+const assessmentWithId = gql`
+query assesmentWithId($id: String) {
+  assessmentWithId(id: $id) {
+    id
+    updatedAt
+		createdAt
+    complete
+    selfAssessment
+		assessor {
+			id
+			username
+			firstName
+			lastName
+			avatar
+		}
+		delegate {
+			id
+			username
+			firstName
+			lastName
+			avatar
+		}
+		survey {
+			title
+			startDate
+			endDate
+			leadershipBrand {
+				title
+				description
+				scale {
+					title
+          min
+          max
+					entries {
+						rating
+						description
+					}
+				}
+				qualities {
+          id
+					title
+					description
+					ordinal
+					behaviours {
+            id
+						title
+						description
+						ordinal
+					}
+				}			
+			}
+		}
+		ratings {
+			quality {
+				id
+				title
+				ordinal
+			}
+			behaviour {
+				id
+				title
+				ordinal
+			}
+			rating
+			comment
+		}
+	}
+}
+` 
+
 const surveysForUser = gql`
-  
-`
+query UserSurveys($id: String) {
+  userSurveys(id: $id) {
+    id
+    updatedAt
+		createdAt
+    complete
+    selfAssessment
+		assessor {
+			id
+			username
+			firstName
+			lastName
+			avatar
+		}
+		delegate {
+			id
+			username
+			firstName
+			lastName
+			avatar
+		}
+		survey {
+			title
+			startDate
+			endDate
+			leadershipBrand {
+				title
+				description
+				scale {
+					title
+					entries {
+						rating
+						description
+					}
+				}
+				qualities {
+					title
+					description
+					ordinal
+					behaviours {
+						title
+						description
+						ordinal
+					}
+				}			
+			}
+		}
+		ratings {
+			quality {
+				id
+				title
+				ordinal
+			}
+			behaviour {
+				id
+				title
+				ordinal
+			}
+			rating
+			comment
+		}
+	}
+}
+`;
 
 const userInbox = gql`
   query UserInboxQuery($id: String, $sort: String){
@@ -282,8 +497,138 @@ const userInbox = gql`
         endDate
       }
     }
-  }
-`;
+  }`;
+
+const reportDetailForUser = gql`
+query ReportDetailForUser($userId: String, $surveyId: String){
+  reportDetailForUser(userId: $userId, surveyId: $surveyId){    
+    overall
+		status
+		survey {
+			id
+			title
+			status
+			startDate
+			endDate
+      organization {
+        id
+        name
+        logo        
+      }
+			leadershipBrand {
+				title
+				description
+        qualities {
+					id
+					title
+					description
+					ordinal
+					behaviours {
+						id
+						title
+						description
+						ordinal
+					}
+				}
+				scale {
+					title
+					min
+					max
+					entries {
+						rating
+						description
+					}
+				}				
+			}
+		}
+		user {
+			id
+			firstName
+			lastName
+			avatar
+			email
+		}
+		assessments {
+      assessor {
+				id
+				firstName
+				lastName
+				email
+			}
+			assessmentType
+			ratings {				
+				quality {
+					id
+					title
+					description
+					ordinal					
+				}
+				behaviour {
+					title
+					description
+					ordinal
+				}
+				rating
+				comment
+			}
+			
+		}
+	}
+}`;
+
+const reportsForUser = gql`
+query UserReports($id: String) {
+  userReports(id: $id) {		
+		overall
+		status
+		survey {
+			id
+			title
+			status
+			startDate
+			endDate
+			leadershipBrand {
+				title
+				description
+				scale {
+					title
+					min
+					max
+					entries {
+						rating
+						description
+					}
+				}				
+			}
+		}
+		user {
+			id
+			firstName
+			lastName
+			avatar
+			email
+		}
+		assessments {
+			assessmentType
+			ratings {				
+				quality {
+					id
+					title
+					description
+					ordinal					
+				}
+				behaviour {
+					title
+					description
+					ordinal
+				}
+				rating
+				comment
+			}
+			
+		}
+	}
+}`;
 
 export default {
   queries: {
@@ -307,17 +652,42 @@ export default {
       surveysForOrganization,
       surveyDetail,
       surveysForUser,
-      calendarForSurvey: null      
+      surveysList,
+      calendarForSurvey: null,
+      reportsForUser,
+      reportDetailForUser      
     },
     Assessments: {
       assessmentsForSurvey: null,
-      assessmentsForUser: null
+      assessmentsForUser: null,
+      assessmentWithId: assessmentWithId
     },
     Notifications: {
       notificationsForUser: null,      
     },
     Tasks: {
-      tasksForUser: null
+      userTasks: gql`
+        query UserTasks($id: String, $status: String){
+          userTasks(id: $id, status: $status){
+            id
+            title
+            status
+            comments {
+              id
+              text
+              who {
+                id
+                firstName
+                lastName
+                avatar
+              }
+              when
+            }
+            createdAt
+            updatedAt            
+          }
+        }
+      `
     },
     System: {
       apiStatus
@@ -344,15 +714,74 @@ export default {
       updateTemplate: null,
     },
     Surveys: {
-      createSurvey: null,
-      updateSurvey: null,
-      launchSurvey: null,
-      linkDelegate: null,
-      unlinkDelegate: null,
-      postReminders: null
+      createSurvey: gql`
+      mutation CreateSurveyMutation($id: String!, $surveyData: SurveyInput!){
+        createSurvey(surveyData: $surveyData){
+          id
+        } 
+      }
+      `,
+      updateSurvey: gql`
+      mutation UpdateSurveyMutation($id: String!, $surveyData: SurveyInput!){
+        updateSurvey(id: $id, surveyData: $surveyData){
+          id
+          errors
+          updated          
+        } 
+      }
+    `,
+      launchSurvey: gql`
+        mutation LaunchSurvey($id: String!, $options: SurveyLaunchOptions!){
+          launchSurvey(id: $id, options: $options){
+            id
+            errors
+          }          
+      }
+      `,
+      linkDelegate: gql`
+        mutation AddDelegateToSurvey($surveyId: String!, $delegateId: String){
+          addDelegateToSurvey(surveyId: $surveyId, delegateId: $delegateId){
+            id
+            errors
+            user {
+              id
+              firstName
+            }            
+          }
+        }
+      `,
+      unlinkDelegate:  gql`
+      mutation removeDelegateFromSurvey($surveyId: String!, $delegateId: String){
+        removeDelegateFromSurvey(surveyId: $surveyId, delegateId: $delegateId){
+          id
+          errors
+          user {
+            id
+            firstName
+          }            
+        }
+      }
+    `,
+      postReminders: gql`
+        mutation postReminders($surveyId: String, $options: ReminderOptions){
+          postReminders(surveyId: $surveyId, options: $options){
+            id
+            errors             
+          }
+        }
+      `
     },
     Tasks: {
-      createTask: null,
+      createTask: gql`
+        mutation createTask($id: String, $taskInput: TaskInput){
+          createTask(id: $id, taskInput: $taskInput){
+            id
+            title
+            description
+            percentComplete
+          }                              
+        }
+      `,
       updateTask: null,
       archive: null
     }

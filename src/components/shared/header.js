@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { Link, withRouter } from 'react-router-dom';
 import { compose } from 'redux';
+import { isArray } from 'lodash';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
 import Avatar from '@material-ui/core/Avatar';
@@ -161,7 +162,7 @@ class ApplicationHeader extends Component {
         //const { match } = this.props;
         const self = this;
         const { toggleDrawer } = this;
-        const { theme } = this.props;
+        const { theme, api } = this.props;
         const { menuOpen } = this.state;
         const user = this.props.api.getUser();
 
@@ -169,19 +170,27 @@ class ApplicationHeader extends Component {
         //get the main nav        
         const { content } = theme;
         if(content.navigation && user.anon !== true) {
-            content.navigation.map((nav) => {
+            content.navigation.map((nav) => {                                
                 if(nav.id === 'main_nav') {
-                    menuItems = nav.entries.map((naventry) => {
-                        const goto = () => {                        
-                            self.navigateTo(naventry.link, true);
+                    nav.entries.map((naventry) => {
+                        let allow = true
+                        if(isArray(naventry.roles) && isArray(user.roles)){
+                            allow = api.hasRole(naventry.roles, user.roles)    
                         }
-                        return (
-                        <MenuItem key={naventry.id} onClick={ goto }> 
-                            <ListItemIcon><Icon color="primary">{naventry.icon}</Icon></ListItemIcon>                       
-                            <ListItemText inset primary={`${naventry.title}`} />
-                        </MenuItem>)
+                        if(allow === true) {
+                            const goto = () => {                        
+                                self.navigateTo(naventry.link, true);
+                            }
+                            menuItems.push((
+                            <MenuItem key={naventry.id} onClick={ goto }> 
+                                <ListItemIcon><Icon color="primary">{naventry.icon}</Icon></ListItemIcon>                       
+                                <ListItemText inset primary={`${naventry.title}`} />
+                            </MenuItem>));
+                        }
+                        
                     });
                 }
+                
             });
         }
                         
@@ -195,7 +204,8 @@ class ApplicationHeader extends Component {
                         <Typography type="title" color="inherit" style={{flex:1}}>
                             {theme.content.appTitle}
                         </Typography>
-                        {user.anon === true ? null : <IconButton
+                        {user.anon === true ? null : 
+                        <IconButton
                             aria-owns={menuOpen ? 'menu-appbar' : null}
                             aria-haspopup="true"
                             onClick={this.handleMenu}
@@ -210,16 +220,18 @@ class ApplicationHeader extends Component {
                     </Toolbar>
                 </AppBar>
                 <Drawer open={this.state.drawerOpen} className={this.props.classes.drawer}>     
-                    <div className={this.props.classes.drawerHeader}>                        
+                    <div className={this.props.classes.drawerHeader}>
+                        <Typography variant="subheading" style={{textAlign:'center'}}>{theme.content.appTitle}</Typography>                        
                         <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
                             <BackIcon />    
                         </IconButton>
                     </div>
                     <Divider />
+                    <Typography variant="subheading" color="secondary" style={{textAlign:'center', marginTop: '20px'}}>{api.getUserFullName(user)}</Typography>
                     { user.anon ? null : 
                     <Link to="/profile">
                         <Avatar src={getAvatar(user)} style={{ height:120, width:120, margin:20, marginLeft:'auto', marginRight:'auto' }} />                                    
-                    </Link> }
+                    </Link> }                    
                     <Divider />
                     {menuItems}
                 </Drawer>

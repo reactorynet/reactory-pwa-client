@@ -246,6 +246,6 @@ export default class Assessment {
     this.validFrom = moment(props.validFrom);
     this.validTill = moment(props.validTill);
     this.survey = props.survey;
-    this.answers = props.answer;
+    this.answers = props.ratings;
   }
 }

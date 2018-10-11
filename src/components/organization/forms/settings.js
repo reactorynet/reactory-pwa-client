@@ -1,13 +1,17 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
-import { withStyles } from '@material-ui/core/styles';
-import ExpansionPanel, {
+import { withRouter } from 'react-router-dom';
+import { Query, Mutation } from 'react-apollo';
+import { withStyles, withTheme } from '@material-ui/core/styles';
+import {
+  ExpansionPanel, 
   ExpansionPanelDetails,
   ExpansionPanelSummary,
-} from '@material-ui/core/ExpansionPanel';
+} from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import { withApi, ReactoryApi } from '../../../api/ApiProvider';
 
 const styles = theme => ({
   root: {
@@ -29,6 +33,10 @@ class ControlledExpansionPanels extends React.Component {
     expanded: null,
   };
 
+  propTypes = {
+    config: PropTypes.object
+  }
+
   handleChange = panel => (event, expanded) => {
     this.setState({
       expanded: expanded ? panel : false,
@@ -43,41 +51,18 @@ class ControlledExpansionPanels extends React.Component {
       <div className={classes.root}>
         <ExpansionPanel expanded={expanded === 'panel1'} onChange={this.handleChange('panel1')}>
           <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography className={classes.heading}>General settings</Typography>
-            <Typography className={classes.secondaryHeading}>Reminder Intervals</Typography>
+            <Typography className={classes.heading}>General settings</Typography>            
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
-            <Typography>
-              General Config Settings Per Company Goes Here
-            </Typography>
+            
           </ExpansionPanelDetails>
-        </ExpansionPanel>
-        <ExpansionPanel expanded={expanded === 'panel2'} onChange={this.handleChange('panel2')}>
-          <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography className={classes.heading}>Users</Typography>
-            <Typography className={classes.secondaryHeading}>
-              You are currently not an owner
-            </Typography>
-          </ExpansionPanelSummary>
-          <ExpansionPanelDetails>
-            <Typography>
-              Donec placerat, lectus sed mattis semper, neque lectus feugiat lectus, varius pulvinar
-              diam eros in elit. Pellentesque convallis laoreet laoreet.
-            </Typography>
-          </ExpansionPanelDetails>
-        </ExpansionPanel>
+        </ExpansionPanel>        
         <ExpansionPanel expanded={expanded === 'panel3'} onChange={this.handleChange('panel3')}>
           <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography className={classes.heading}>Advanced settings</Typography>
-            <Typography className={classes.secondaryHeading}>
-              Filtering has been entirely disabled for whole web server
-            </Typography>
+            <Typography className={classes.heading}>Advanced settings</Typography>            
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
-            <Typography>
-              Nunc vitae orci ultricies, auctor nunc in, volutpat nisl. Integer sit amet egestas
-              eros, vitae egestas augue. Duis vel est augue.
-            </Typography>
+            
           </ExpansionPanelDetails>
         </ExpansionPanel>
         <ExpansionPanel expanded={expanded === 'panel4'} onChange={this.handleChange('panel4')}>
@@ -85,10 +70,7 @@ class ControlledExpansionPanels extends React.Component {
             <Typography className={classes.heading}>Personal data</Typography>
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
-            <Typography>
-              Nunc vitae orci ultricies, auctor nunc in, volutpat nisl. Integer sit amet egestas
-              eros, vitae egestas augue. Duis vel est augue.
-            </Typography>
+            
           </ExpansionPanelDetails>
         </ExpansionPanel>
       </div>
@@ -100,4 +82,4 @@ ControlledExpansionPanels.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-export default withStyles(styles)(ControlledExpansionPanels);
+export default compose(withApi, withRouter, withTheme(), withStyles(styles))(ControlledExpansionPanels);

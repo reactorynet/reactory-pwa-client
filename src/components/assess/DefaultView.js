@@ -3,8 +3,9 @@ import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
 import uuid from 'uuid';
-import {isNil} from 'lodash';
+import {isNil, find} from 'lodash';
 import classNames from 'classnames';
+import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import MobileStepper from '@material-ui/core/MobileStepper';
 import {
   Menu, MenuItem, 
@@ -25,12 +26,14 @@ import TextField from '@material-ui/core/TextField';
 import AppBar from '@material-ui/core/AppBar';
 import AddIcon from '@material-ui/icons/Add';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
+import ReportIcon from '@material-ui/icons/Assessment';
 import SaveIcon from '@material-ui/icons/Save';
 import CancelIcon from '@material-ui/icons/Cancel';
 import Assessment, { Behaviour } from './Assessment';
 import StaffImages from '../../assets/images/staff';
 import KeyboardArrowLeft from '@material-ui/icons/KeyboardArrowLeft';
 import KeyboardArrowRight from '@material-ui/icons/KeyboardArrowRight';
+import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
 const nil = isNil;
 
@@ -72,48 +75,53 @@ class RatingControl extends Component {
   }
 
   render() {
-    const { behaviour, classes } = this.props;
+    const { behaviour, classes, rating, assessment, comment } = this.props;
     const self = this;
     let steps = [];
 
-    for(let stepId = behaviour.scale.min; stepId <= behaviour.scale.max; stepId++){
+    for(let stepId = behaviour.scale.min; stepId < behaviour.scale.max; stepId++){
       const doRatingClick = () => (self.ratingClick(stepId));
+
       steps.push((        
           <Step key={stepId}>
             <StepButton
               onClick={doRatingClick}
               completed={false}>              
             </StepButton>
-          </Step>        
+          </Step>
       ));
     }
 
     let commentControl = null;
-    if( (behaviour.rating > 0 && behaviour.rating < 3 || behaviour.custom === true) ){
+    if( (rating > 0 && rating < 3 || behaviour.custom === true) ){
       commentControl = (<TextField
         id="multiline-flexible"
         label="How does this impact you?"
         multiline
         fullWidth
         rowsMax="4"
-        value={behaviour.comment}
+        value={comment}
         onChange={this.commentChanged}
         className={classes.textField}
+        disabled={assessment.complete === true}
         margin="normal"
         helperText="Provide some context as to how this affects you personally or your ability to perform your duties."
-      />)      
+      />)
+
     }
 
-    let selectedLabel = behaviour.scale.labels[behaviour.rating-1] || 'No rating selected';
+    let selectedLabel = find(behaviour.scale.entries, (entry) => {
+      return entry.rating === behaviour.rating
+    });
 
     return (
       <Grid item sm={12} xs={12}>
         <Paper className={classes.ratingContainer}>
           <p className={classes.behaviourTitle}>{behaviour.title}</p>          
-          <Stepper alternativeLabel nonLinear activeStep={behaviour.rating-1}>
+          <Stepper alternativeLabel nonLinear activeStep={rating - 1}>
             {steps}
           </Stepper>
-          <p  className={`${classes.behaviourSelection}`}>{selectedLabel}</p>
+          <p className={`${classes.behaviourSelection}`}>{selectedLabel}</p>
           {commentControl}
         </Paper>
       </Grid>
@@ -121,7 +129,7 @@ class RatingControl extends Component {
   }
 
   static propTypes = {
-    behaviour: PropTypes.instanceOf(Behaviour),
+    behaviour: PropTypes.object,
     rating: PropTypes.number,
     comment: PropTypes.string,
     onRatingChange: PropTypes.func,
@@ -207,7 +215,9 @@ class DefaultView extends Component {
       brandStatement: {
         color: primaryColor,
         fontWeight: 'lighter',
-        fontStyle: 'italic'
+        fontStyle: 'italic',
+        marginLeft: theme.spacing.unit,
+        marginRight: theme.spacing.unit,
       },
       delegateHeader: {
         display: 'flex',
@@ -264,16 +274,18 @@ class DefaultView extends Component {
   // #endregion 
 
   welcomeScreen() {
-    const {classes, assessment, theme} = this.props;
+    const { classes, assessment, theme, api } = this.props;
     const { nextStep, prevStep } = this;
+
+    
     return (
       <Paper className={classes.welcomeContainer}>
-        <Typography gutterBottom>Thank you for taking the time to assess {assessment.delegateTitle}. This assessment should take approximately
+        <Typography gutterBottom>Thank you for taking the time to assess { assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate) }. This assessment should take approximately
           5 - 7 minutes.<br/>
           You will be asked to provide a rating against a series of behaviours that espouse the organizational
-          leadership brand:
-            <blockquote className={`${classes.brandStatement} ${classes.paragraph}`}>"{assessment.survey.leadershipBrand.title}"</blockquote>     
+          leadership brand:            
         </Typography>
+        <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="title">"{assessment.survey.leadershipBrand.description}"</Typography>     
         <div style={{display:'flex', justifyContent: 'center'}}>
           <img src={theme.assets.login.logo} className={classes.logo} alt={theme}/>       
         </div>        
@@ -288,11 +300,15 @@ class DefaultView extends Component {
       history.push("/");
     }
 
+    const gotoSurveys = () => {
+      history.push("/surveys")
+    }
+
     return (
       <Paper className={classes.welcomeContainer}>        
-        <Typography gutterBottom>Thank you for taking the time to assess {assessment.delegateTitle}.</Typography>
+        <Typography gutterBottom>Thank you for taking the time to complete the assessment .</Typography>
         <Button onClick={gotoDashboard}>Dashboard</Button>
-        <Button>Complete the next available assessment</Button>
+        <Button>Surveys</Button>
       </Paper>
     );
   }
@@ -351,16 +367,17 @@ class DefaultView extends Component {
     const that = this;
     const { classes } = this.props;    
     const { step, assessment, newBehaviourText } = this.state;
-    const { delegate } = assessment;
+    const { delegate, ratings } = assessment;    
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
-    const behaviours = quality.behaviours.map((behaviour) => (
-      <RatingComponent
-        behaviour={new Behaviour( {...behaviour, scale: assessment.survey.scales[0]} )}
-        rating={0}
-        comment={''}
-        onRatingChange={this.onBehaviourRatingChanged}
-      />
-    ));
+    const behaviours = quality.behaviours.map((behaviour) => {
+      const rating = find(ratings, (r)=>{ return behaviour.id === r.behaviour.id && quality.id === r.quality.id });      
+      return (<RatingComponent
+        behaviour={new Behaviour({...behaviour, scale: assessment.survey.leadershipBrand.scale})}
+        rating={rating.rating}
+        comment={rating.comment}
+        assessment={assessment}
+        onRatingChange={this.onBehaviourRatingChanged}/>);
+  });
 
     const setNewBehaviourText = (evt) => {
       that.setState({ newBehaviourText: evt.target.value });
@@ -375,7 +392,8 @@ class DefaultView extends Component {
         <Grid item sm={12} xs={12}>          
           {behaviours}          
         </Grid>
-        <Grid item sm={12} xs={12}>
+        {assessment.complete === false ? (
+          <Grid item sm={12} xs={12}>
           <Paper style={{padding:'5px'}}>
              <Typography>
                If you want to provide a customized behaviour that {delegate.firstName} exhibits that relates to {quality.title} click the add button and provide your rating and feedback.<br/><br/>
@@ -391,6 +409,8 @@ class DefaultView extends Component {
                 </div>
           </Paper>
         </Grid>
+        ) : null }
+        
       </Grid>
     );
   }
@@ -412,9 +432,9 @@ class DefaultView extends Component {
   }
 
   toolbar(content){
-    let tabs = [(<Tab label="Welcome" />)];
-    this.props.assessment.survey.leadershipBrand.qualities.map((quality)=> tabs.push(<Tab label={`${tabs.length}. ${quality.title}`}/>));
-    tabs.push(<Tab label="Complete"/>);    
+    let tabs = [(<Tab key={'w'} label="Welcome" />)];
+    this.props.assessment.survey.leadershipBrand.qualities.map((quality, kidx)=> tabs.push(<Tab key={kidx} label={`${tabs.length}. ${quality.title}`}/>));
+    tabs.push(<Tab key={'c'} label="Complete"/>);
     return (
       <AppBar position="static" color="default">      
           <Tabs
@@ -424,7 +444,7 @@ class DefaultView extends Component {
             scrollButtons="on"
             indicatorColor="primary"
             textColor="primary">
-            {tabs}            
+            {tabs}
           </Tabs>
       </AppBar>
     )
@@ -444,14 +464,16 @@ class DefaultView extends Component {
   }
 
   assessmentOptions(){
-
+    const { assessment } = this.state;
     const cancelAssessment = () => {
-
+      this.props.history.goBack()
     };
 
-    const saveAndCloseAssessment = () => {
-
+    const saveAndCloseAssessment = () => {      
+      this.props.history.push('/survey')
     };
+
+    const viewReport = () => this.props.history.push(`/report/${assessment._id}`)
 
     const options = (props) => (
       <Menu
@@ -468,18 +490,25 @@ class DefaultView extends Component {
             }}>        
           <MenuItem onClick={ props.cancelClicked }>
               <ListItemIcon><CancelIcon/></ListItemIcon>
-              <ListItemText inset primary="Cancel assessment" />
+              <ListItemText inset primary={"Close"} />
           </MenuItem>
-          <MenuItem onClick={ props.saveAndCloseClicked }>
-              <ListItemIcon><SaveIcon /></ListItemIcon>
-              <ListItemText inset primary="Save Progress and close" />        
+          {assessment.complete === true ? 
+            <MenuItem onClick={ props.viewReport }>
+              <ListItemIcon><ReportIcon /></ListItemIcon>
+              <ListItemText inset primary="View Report" />
+            </MenuItem> : 
+            <MenuItem onClick={ props.saveAndCloseClicked }>
+            <ListItemIcon><SaveIcon /></ListItemIcon>
+            <ListItemText inset primary="Save and close" />        
           </MenuItem>
+          }
+          
   
       </Menu>);
   
     options.muiName = 'IconMenu';
 
-    return options({open: this.state.showMenu, anchorEl: this.state.anchorEl, cancelClicked: cancelAssessment, saveAndCloseAssessment: saveAndCloseAssessment});
+    return options({open: this.state.showMenu, anchorEl: this.state.anchorEl, cancelClicked: cancelAssessment, saveAndCloseAssessment: saveAndCloseAssessment, viewReport});
   }
 
   handleMenu(evt){
@@ -487,8 +516,9 @@ class DefaultView extends Component {
   }
 
   render() {
-    const { classes, theme } = this.props;
+    const { classes, theme, api } = this.props;
     const { step, valid, assessment, showMenu } = this.state;
+    const { delegate, assessor } = assessment;
     const { nextStep, toolbar, assessmentOptions, handleMenu, prevStep } = this;
     let wizardControl = null;
     let maxSteps = assessment.survey.leadershipBrand.qualities.length + 2;
@@ -502,9 +532,9 @@ class DefaultView extends Component {
             <Grid container spacing={8}>
               <Grid item xs={12} sm={12}>
                 <CardHeader  
-                  avatar={<Avatar src={StaffImages.TheaN} className={classNames(classes.delegateAvatar)} alt={assessment.delegateTitle}></Avatar>}
-                  title={assessment.delegateTitle}
-                  subheader={assessment.delegate.businessUnit.title}
+                  avatar={<Avatar src={api.getAvatar(delegate)} className={classNames(classes.delegateAvatar)} alt={assessment.delegateTitle}></Avatar>}
+                  title={assessment.delegate ? api.getUserFullName(delegate) : `Unknown` }
+                  subheader={assessment.completed === true ? 'Complete' : 'In progress' }
                   action={
                     <IconButton 
                       aria-owns={showMenu ? 'assessment-options' : null}
@@ -550,7 +580,8 @@ class DefaultView extends Component {
   }
 
   static propTypes = {
-    assessment: PropTypes.instanceOf(Assessment)
+    assessment: PropTypes.object,
+    api: PropTypes.instanceOf(ReactoryApi)
   };
 
   static defaultProps = {
@@ -583,10 +614,22 @@ class DefaultView extends Component {
 };
 
 const DefaultViewComponent = compose(
+  withApi,
   withRouter,
   withStyles(DefaultView.styles),
   withTheme()
 )(DefaultView);
-export default DefaultViewComponent;
 
+const AssessmentWithData = ({ match, api, history }) => {
+  const { assessmentId } = match.params;
+  return (<Query query={api.queries.Assessments.assessmentWithId} variables={{ id: assessmentId }}>
+    {({ loading, error, data}) => {
+      if(loading === true) return (<p>Loading assessment</p>);
+      if(isNil(false) === true) return (<p>Error while loading assessment</p>);
+      if(data && data.assessmentWithId) return (<DefaultViewComponent assessment={{...data.assessmentWithId}} />);
+      return (<p>Could not load assessment</p>);
+    }}
+  </Query>);
+};
 
+export default compose(withApi, withRouter)(AssessmentWithData);

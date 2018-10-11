@@ -22,9 +22,10 @@ export const isEmail = (input) => {
   return rgx.test(input);
 };
 
-export const isValidPassword = (input) => {
-  const rgx = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
-  return rgx.test(input);
+export const isValidPassword = (input = '') => {
+  //const rgx = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
+  //return rgx.test(input);
+  return input.length >= 8
 };
 
 export const paperStyles = {  
@@ -120,6 +121,10 @@ export  const CenteredContainer = ( props ) => {
     
     return profile.avatar
   };
+
+  export const getUserFullName = (user) => {  
+    return `${user.firstName} ${user.lastName}`.trim()
+  }
 
   export const DateHelpers = {
     today: moment().startOf('day'),

@@ -1,4 +1,3 @@
-import AnnounceMentIcon from '@material-ui/icons/Announcement';
 import Avatar from '@material-ui/core/Avatar';
 import Checkbox from '@material-ui/core/Checkbox';
 import Grid from '@material-ui/core/Grid';
@@ -6,17 +5,21 @@ import {
     List, 
     ListItem, 
     ListItemSecondaryAction, 
-    ListItemText } from '@material-ui/core';
+    ListItemText,
+    Typography
+ } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 //import muiThemeable from '@material-ui/core/styles/muiThemeable';
 import { withStyles, withTheme } from '@material-ui/core/styles';
+import AnnouncementIcon from '@material-ui/icons/Announcement';
+import AssessmentIcon from '@material-ui/icons/Assessment';
+import ActivityIcon from '@material-ui/icons/LocalActivity';
 import moment from 'moment';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { LineChart, PieChart } from 'react-easy-chart';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
-import StaffImages from '../../assets/images/staff';
 
 
 const styles = (theme) => {
@@ -67,49 +70,32 @@ const styles = (theme) => {
         },
         logo: {
             maxWidth: '370px'
+        },
+        container: {
+            padding: theme.spacing.unit
         }
     };
 };
 
 const mockNotifications = [
-    { text: 'Thea Nel has nominated you as a peer. Click here to respond.', who: 'Thea Nel', avatar: StaffImages.TheaN },
-    { text: 'A peer has completed feedback on "Q1 Staff Feedback".', who: '', avatar: StaffImages.Anon },
-    { text: 'Mandy Eagar has declined a peer nomination, click here to nominate more.', who: 'Mandy Eagar', avatar: StaffImages.MandyE },
-    { text: 'Sue Bakker has scheduled an online review session, click here to respond.', who: 'Sue Bakker', avatar: StaffImages.SueB },
-    { text: 'Your leadership report for "Q4 Staff Feedback 2017" is availble for review.', who: 'Sue Bakker', avatar: StaffImages.LynneK }
+    
 ];
 
 const mockAssessments = [
-    { text: 'Please complete your self assessment for the "Q1 Staff Feedback" survey.', who: 'Werner Weber', avatar: StaffImages.WernerW },
-    { text: 'Please provide feedback for Thea Nel on the "Annual Managers Feedback" survey, before 27 Feb 2018.', who: 'Thea Nel', avatar: StaffImages.TheaN },
-    { text: 'Please provide feedback for Mandy Eagar on the "Quarterly Executive Feedback" survey, before 28 Mar 2018.', who: 'Mandy Eagar', avatar: StaffImages.MandyE },
-    { text: 'Please provide feedback for Mandy Eagar on the "Annual Managers Feedback" survey, before 27 Mar 2018.', who: 'Mandy Eagar', avatar: StaffImages.MandyE }
+    
 ];
 
 const mockActions = [
-    { text: 'Complete at least 2 online training courses from the company curriculum', complete: false, due: moment('2018/04/01') },
-    { text: 'Provide feedback to at least 3 of your peers and leaders using the assessment platform', complete: false, due: moment('2018/04/01') },
+
 ];
 
 const companyMockScores = [
-    { x: '1-Jan-17', y: 70 },
-    { x: '1-May-17', y: 73 },
-    { x: '1-Sep-17', y: 68 },
-    { x: '1-Jan-18', y: 71 },
 ];
 
 const personalMockScores = [
-    { x: '1-Jan-17', y: 68 },
-    { x: '1-May-17', y: 70 },
-    { x: '1-Sep-17', y: 73 },
-    { x: '1-Jan-18', y: 76 },
 ];
 
 const peersMockScores = [
-    { x: '1-Jan-17', y: 72 },
-    { x: '1-May-17', y: 71 },
-    { x: '1-Sep-17', y: 74 },
-    { x: '1-Jan-18', y: 73 },
 ];
 
 const mockOverallData = [
@@ -185,14 +171,14 @@ class TowerStoneHomeComponent extends Component {
         const self = this;
         const { classes, theme } = this.props;
         const lastRating = [
-            { key: '-', value: 68, color: theme.palette.report.fill },
-            { key: '-', value: 32, color: theme.palette.report.empty },
+            { key: '-', value: 0, color: theme.palette.report.fill },
+            { key: '-', value: 100, color: theme.palette.background.default },
         ];
         const notifications = mockNotifications;
         let notificationItems = [];
         notifications.map((notification, idx) => notificationItems.push((
             <ListItem key={idx} dense button className={classes.listItem}>
-                <Avatar alt="Remy Sharp" src={notification.avatar} />
+                <Avatar alt="" src={notification.avatar} />
                 <ListItemText primary={notification.text} />
                 <ListItemSecondaryAction>
                     <Checkbox />
@@ -200,13 +186,31 @@ class TowerStoneHomeComponent extends Component {
             </ListItem>
         )));
 
+        if(notificationItems.length === 0) {
+            notificationItems.push((
+                <ListItem key={'na'} dense button className={classes.listItem}>                    
+                    <Avatar alt="No notifications">!</Avatar>
+                    <ListItemText primary={'All clear'} />                    
+                </ListItem>
+            ))
+        }
+
         let assessmentItems = [];
         mockAssessments.map((assessment, idx) => assessmentItems.push((
             <ListItem key={idx} dense button className={classes.listItem} onClick={this.startAssessment}>
-                <Avatar alt="Remy Sharp" src={assessment.avatar} />
+                <Avatar alt="" src={assessment.avatar} />
                 <ListItemText primary={assessment.text} />
             </ListItem>
         )));
+
+        if(assessmentItems.length === 0){
+            assessmentItems.push((
+                <ListItem key={'na'} dense button className={classes.listItem}>
+                    <Avatar alt="No Assessments">!</Avatar>
+                    <ListItemText primary={'No Assessment'} />
+                </ListItem>
+            ))
+        }
 
         let actionItems = [];
         mockActions.map((action, index) => actionItems.push((
@@ -214,6 +218,16 @@ class TowerStoneHomeComponent extends Component {
                 <ListItemText primary={action.text} secondary={`Due: ${action.due.format('DD-MM-YYYY')}`} />
             </ListItem>
         )));
+        
+        if(actionItems.length === 0){
+            actionItems.push((
+                <ListItem key={'na'} dense button className={classes.listItem}>
+                    <Avatar alt="No Assessments">!</Avatar>
+                    <ListItemText primary={'No Actions'} />
+                </ListItem>
+            ))
+        }
+        
 
         const filteredMockData = () => {
             let data = [];
@@ -231,49 +245,57 @@ class TowerStoneHomeComponent extends Component {
                             <img src={theme.assets.login.logo} className={classes.logo} alt={theme} />
                         </Grid>
                         <Grid item xs={6} sm={3}>
-                            <h4 className={classes.statsCardLabel}>Personal - Quarter</h4>
-                            <PieChart
-                                id={'personal-quarter'}
-                                styles={{ display: 'flex', justifyContent: 'center' }}
-                                data={lastRating}
-                                size={120}
-                                innerHoleSize={100}
-                            />
-                            <span className={classes.statsScoreLabel}>68%</span>
+                            <Paper>
+                                <h4 className={classes.statsCardLabel}>Personal - Quarter</h4>
+                                <PieChart
+                                    id={'personal-quarter'}
+                                    styles={{ display: 'flex', justifyContent: 'center' }}
+                                    data={lastRating}
+                                    size={120}
+                                    innerHoleSize={100}
+                                />
+                                <span className={classes.statsScoreLabel}>N/A</span>
+                            </Paper>
                         </Grid>
                         <Grid item xs={6} sm={3}>
-                            <h4 className={classes.statsCardLabel}>Company - Quarter</h4>
-                            <PieChart
-                                id={'company-quarter'}
-                                styles={{ display: 'flex', justifyContent: 'center' }}
-                                data={lastRating}
-                                size={120}
-                                innerHoleSize={100}
-                            />
-                            <span className={classes.statsScoreLabel}>72%</span>
+                            <Paper>
+                                <h4 className={classes.statsCardLabel}>Company - Quarter</h4>
+                                <PieChart
+                                    id={'company-quarter'}
+                                    styles={{ display: 'flex', justifyContent: 'center' }}
+                                    data={lastRating}
+                                    size={120}
+                                    innerHoleSize={100}
+                                />
+                                <span className={classes.statsScoreLabel}>N/A</span>
+                            </Paper>
                         </Grid>
                         <Grid item xs={6} sm={3}>
-                            <h4 className={classes.statsCardLabel}>Personal - Annual</h4>
-                            <PieChart
-                                id={'personal-annual'}
-                                styles={{ display: 'flex', justifyContent: 'center' }}
-                                data={lastRating}
-                                size={120}
-                                innerHoleSize={100}
-                            />
-                            <span className={classes.statsScoreLabel}>70%</span>
+                            <Paper>
+                                <h4 className={classes.statsCardLabel}>Personal - Annual</h4>
+                                <PieChart
+                                    id={'personal-annual'}
+                                    styles={{ display: 'flex', justifyContent: 'center' }}
+                                    data={lastRating}
+                                    size={120}
+                                    innerHoleSize={100}
+                                />
+                                <span className={classes.statsScoreLabel}>N/A</span>
+                            </Paper>
                         </Grid>
 
                         <Grid item xs={6} sm={3}>
-                            <h4 className={classes.statsCardLabel}>Company - Annual</h4>
-                            <PieChart
-                                id={'company-annual'}
-                                styles={{ display: 'flex', justifyContent: 'center' }}
-                                data={lastRating}
-                                size={120}
-                                innerHoleSize={100}
-                            />
-                            <span className={classes.statsScoreLabel}>74%</span>
+                            <Paper>
+                                <h4 className={classes.statsCardLabel}>Company - Annual</h4>
+                                <PieChart
+                                    id={'company-annual'}
+                                    styles={{ display: 'flex', justifyContent: 'center' }}
+                                    data={lastRating}
+                                    size={120}
+                                    innerHoleSize={100}
+                                />
+                                <span className={classes.statsScoreLabel}>N/A</span>
+                            </Paper>
                         </Grid>
 
                         <Grid item xs={12} sm={12}>
@@ -315,8 +337,8 @@ class TowerStoneHomeComponent extends Component {
                         </Grid>
 
                         <Grid item xs={12} sm={12}>
-                            <Paper>
-                                <h4 className={classes.statsCardLabel}><AnnounceMentIcon /> Available Assessments</h4>
+                            <Paper className={classes.container}>
+                                <Typography label color="primary">Available Assessments</Typography>
                                 <List>
                                     {assessmentItems}
                                 </List>
@@ -324,16 +346,16 @@ class TowerStoneHomeComponent extends Component {
                         </Grid>
 
                         <Grid item xs={12} sm={6}>
-                            <Paper>
-                                <h4 className={classes.statsCardLabel}><AnnounceMentIcon /> Notifications</h4>
+                            <Paper className={classes.container}>
+                                <Typography label color="primary">Notifications</Typography>
                                 <List>
                                     {notificationItems}
                                 </List>
                             </Paper>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <Paper>
-                                <h4 className={classes.statsCardLabel}><AnnounceMentIcon /> Actions</h4>
+                            <Paper className={classes.container}>
+                                <Typography label color="primary">Actions</Typography>
                                 <List>
                                     {actionItems}
                                 </List>

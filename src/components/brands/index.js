@@ -34,13 +34,10 @@ import DetailIcon from '@material-ui/icons/Details'
 import SaveIcon from '@material-ui/icons/Save'
 import CopyIcon from '@material-ui/icons/ControlPoint'
 import MoreVertIcon from '@material-ui/icons/MoreVert'
+import CheckCircle from '@material-ui/icons/CheckCircle'
 import CloseIcon from '@material-ui/icons/Close'
 import KeyboardArrowDown from '@material-ui/icons/KeyboardArrowDown'
 import KeyboardArrowUp from '@material-ui/icons/KeyboardArrowUp'
-
-import {
-  CheckCircle
-} from '@material-ui/icons'
 
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { isArray, pullAt, isNil } from 'lodash'
@@ -293,7 +290,7 @@ const ScaleSelector = compose(withApi) (( props, context ) => {
       return (
         <Select name="Scale" onChange={onChange} value={selectedKey}>
           {data.allScales.map(scale => (
-            <option key={scale.key} value={scale.key}>
+            <option key={scale.id} value={scale.id}>
               {scale.title}
             </option>
           ))}
@@ -317,7 +314,7 @@ export class BrandEdit extends Component {
     this.onNewQuality = this.onNewQuality.bind(this);
     this.onCancel = this.onCancel.bind(this);
     this.onSave = this.onSave.bind(this);
-    this.onSurveyTypeChanged = this.onSurveyTypeChanged.bind(this);
+    this.onScaleSelect = this.onScaleSelect.bind(this);
   }
 
   static styles = (theme) => {
@@ -329,9 +326,10 @@ export class BrandEdit extends Component {
   onTitleChanged = (evt) => this.setState({ editBrand: { ...this.state.editBrand, title: evt.target.value } });
   onDescriptionChanged = (evt) => this.setState({ editBrand: { ...this.state.editBrand, description: evt.target.value } });
   onNewQuality = (evt) => this.setState({ editBrand: { ...this.state.editBrand, qualities: [...this.state.editBrand.qualities, { ...newQuality, ordinal: this.state.editBrand.qualities.length + 1 }] } })
-  onSurveyTypeChanged = (evt, child) => { 
-    console.log('survey type change', evt)
-    // this.setState({editBrand: { ...this.state.editBrand, scale }});
+  onScaleSelect = (evt, option) => { 
+    console.log('survey type change', option)
+    
+    this.setState({editBrand: { ...this.state.editBrand, scale: option.props.value }});
   }
 
   onCancel = (evt) => {
@@ -382,7 +380,7 @@ export class BrandEdit extends Component {
 
               <FormControl fullWidth className={classes.formControl}>
                 <InputLabel htmlFor="assessmentScale">Assessment Scale</InputLabel>
-                <ScaleSelector onChange={this.onSurveyTypeChanged} selectedKey={scale ? scale.key : null }/>                
+                <ScaleSelector onChange={this.onScaleSelect} selectedKey={scale ? scale : null }/>                
               </FormControl>   
             </Grid>            
             <Grid item xs={12}>
@@ -512,7 +510,7 @@ export const EditBrand = compose(
  * List component for user entries
  * @param {*} param0 
  */
-const BrandList = ({organizationId, api, onSelect = nilf, onNewSelected = nilf}) => {  
+const BrandList = ({organizationId, api, onSelect = nilf, onNewSelected = nilf, selectionOnly = false, selectedId}) => {  
   return (
   <Query query={api.queries.Organization.leadershipBrands} variables={{organizationId}}>
     {({ loading, error, data }) => {
@@ -532,15 +530,21 @@ const BrandList = ({organizationId, api, onSelect = nilf, onNewSelected = nilf})
           {brands.map((brand, index) => {
             const selectBrand = () => {
               onSelect(brand)
-            }                
+            }            
+            const selected = selectedId === brand.id ? (
+            <ListItemIcon>
+              <CheckCircle />
+            </ListItemIcon>) : null;
             return (
               <ListItem key={brand.id} dense button onClick={selectBrand}>
                 <ListItemText primary={brand.title} />
+                {selected}
               </ListItem>)
           })}
-          <ListItem key={brands.length+1} dense button onClick={onNewSelected}>
+          {selectionOnly === false ? (<ListItem key={brands.length+1} dense button onClick={onNewSelected}>
             <ListItemText primary={'NEW BRAND'} secondary={'Click here to create a new leadership brand'} />
-          </ListItem>
+          </ListItem>) : null }          
+          
         </List>      
         );
     }}

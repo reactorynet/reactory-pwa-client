@@ -2,13 +2,14 @@
 import React, { Component, Children } from "react";
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
-import { find } from 'lodash';
+import { find, isArray, intersection } from 'lodash';
 import { compose } from 'redux';
 import moment from 'moment';
 import { ApolloClient } from "apollo-client";
 import { withApollo } from "react-apollo";
 import * as restApi from './RestApi'
 import graphApi from './graphql'
+import { getAvatar, getUserFullName } from '../components/util'
 
 const { queries, mutations } = graphApi
 
@@ -45,8 +46,27 @@ export class ReactoryApi extends EventEmitter {
         this.resetPassword = this.resetPassword.bind(this);
         this.logout = this.logout.bind(this);
         this.setUser = this.setUser.bind(this);
+        this.afterLogin = this.afterLogin.bind(this);
         this.registerComponent = this.registerComponent.bind(this);
         this.getComponent = this.getComponent.bind(this);
+        this.getAvatar = getAvatar;
+        this.getUserFullName = getUserFullName;
+    }
+
+    afterLogin(user){        
+        this.setUser(user);
+    }
+
+    hasRole(itemRoles = [], userRoles = []){
+        return intersection(itemRoles, userRoles).length > 0;
+    }
+
+    addRole(user, organization, role='USER'){
+        return true        
+    }
+
+    removeRole(user, organization, role='USER'){
+        return true
     }
 
     setUser(user) {
@@ -84,15 +104,15 @@ export class ReactoryApi extends EventEmitter {
         if (userString) return JSON.parse(userString);
         return anonUser;
     }
-
+    
     validateToken(token) {
         const that = this;
         this.setAuthToken(token);
         return new Promise((resolve, reject) => {
             that.client.query({ query: that.queries.System.apiStatus }).then((result) => {
                 if (result.data.apiStatus.status === "API OK") {
-                    const { id, firstName, lastName, avatar, email } = result.data.apiStatus;
-                    that.setUser({ id, firstName, lastName, avatar, email });
+                    const { id, firstName, lastName, avatar, email, roles } = result.data.apiStatus;
+                    that.setUser({ id, firstName, lastName, avatar, email, roles });
                     this.lastValidation = moment().valueOf();
                     this.tokenValidated = true;                    
                     resolve(true);
@@ -160,7 +180,7 @@ class ApiProvider extends Component {
     }
 }
 
-ApiProvider = compose(
+ApiProvider = compose(    
     withApollo
 )(ApiProvider);
 

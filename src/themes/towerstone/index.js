@@ -47,7 +47,7 @@ export default {
                         { id: '3', title: 'Reports', link: '/reports', icon: 'bug_report', roles: ['PRODUCT_MANAGER', 'USER'],  },
                         { id: '4', title: 'Actions', link: '/actions', icon: 'autorenew', roles: ['PRODUCT_MANAGER', 'USER'] },
                         { id: '5', title: 'Profile', link: '/profile', icon: 'account_circle', roles: ['USER'] },
-                        { id: '6', title: 'Admin', link: '/admin', icon: 'supervisor_account', roles: ['PRODUCT_MANAGER'] },                        
+                        { id: '6', title: 'Admin', link: '/admin', icon: 'supervisor_account', roles: ['ADMIN'] },                        
                     ] 
                 }
             ]

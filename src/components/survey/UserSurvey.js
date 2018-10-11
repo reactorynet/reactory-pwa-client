@@ -3,15 +3,16 @@ import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import {withStyles, withTheme} from '@material-ui/core/styles';
 import { compose } from 'redux';
-import uuid from 'uuid';
+import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import {isNil} from 'lodash';
-import classNames from 'classnames';
+import moment from 'moment';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import Paper from '@material-ui/core/Paper';
 import Avatar from '@material-ui/core/Avatar';
 import IconButton from '@material-ui/core/IconButton';
 import PlayIcon from '@material-ui/icons/PlayCircleFilled';
+import ViewIcon from '@material-ui/icons/PageviewOutlined'
 import {List, ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
@@ -45,8 +46,29 @@ class UserSurvey extends Component {
 
 
     render(){
-        const { classes, surveys, history } = this.props;
-    
+        const { classes, surveys, history, api } = this.props;
+        
+        const AssessmentListItem = ( { assessment, key } ) => {
+            const { survey, delegate, assessor, selfAssessment, assessmentType } = assessment                            
+            const listTitle = selfAssessment === true ? 'Self assessment' : `${delegate.firstName} ${delegate.lastName}`
+            const goAssessment = () => {
+                history.push(`/assess/${assessment.id}`)
+            }
+            return (
+                <ListItem key={key} dense button className={classes.listItem} onClick={goAssessment}>
+                    <Avatar alt={`${survey.title}`} src={api.getAvatar(delegate)}></Avatar>
+                    <ListItemText 
+                        primary={`${survey.title} - ${listTitle}`} 
+                        secondary={survey.completed} />
+                    <ListItemSecondaryAction>                                    
+                        <IconButton>
+                            <ViewIcon />
+                        </IconButton>                                                                   
+                    </ListItemSecondaryAction>
+                </ListItem>
+            )
+        };
+
         return (
             <Grid container spacing={16} className={classes.mainContainer}>
                 <Grid item sm={12} xs={12} offset={4}>
@@ -57,24 +79,7 @@ class UserSurvey extends Component {
                             If you are unable to perform the assessment please click the trash icon and provide a reason why the survey cannot be completed.                    
                         </Typography>
                         <List>
-                        {surveys.overdue.map((survey, sid) => {
-
-                            const launch = () => {
-                                history.push(`/assess/${survey.id}`)
-                            }
-
-                            return (
-                                <ListItem key={sid} dense button className={classes.listItem}>
-                                    <Avatar alt={`${survey.title}`}>!</Avatar>
-                                    <ListItemText primary={survey.title} secondary={survey.completed} />
-                                    <ListItemSecondaryAction>                                    
-                                        <IconButton onClick={launch}>
-                                            <PlayIcon />
-                                        </IconButton>                                                                   
-                                    </ListItemSecondaryAction>
-                                </ListItem>
-                            )
-                        })}
+                        {surveys.overdue.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                         </List>
                     </Paper>                    
                 </Grid>
@@ -86,19 +91,7 @@ class UserSurvey extends Component {
                             The surveys listed below are surveys which are currently awaiting your feedback.  These are sorted by order of their closing date.
                         </Typography>
                         <List>
-                        {surveys.overdue.map((survey, sid) => {
-                            return (
-                                <ListItem key={sid} dense button className={classes.listItem}>
-                                    <Avatar alt={`${survey.title}`}>{survey.overall}</Avatar>
-                                    <ListItemText primary={survey.title} secondary={survey.completed} />
-                                    <ListItemSecondaryAction>                                    
-                                        <IconButton>
-                                            <PlayIcon />
-                                        </IconButton>                                                                   
-                                    </ListItemSecondaryAction>
-                                </ListItem>
-                            )
-                        })}
+                        {surveys.overdue.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                         </List>
                     </Paper>                    
                 </Grid>
@@ -112,19 +105,7 @@ class UserSurvey extends Component {
                             the results have been released and shared by our facilitators with you.
                         </Typography>
                         <List>
-                        {surveys.complete.map((survey, sid) => {
-                            return (
-                                <ListItem key={sid} dense button className={classes.listItem}>
-                                    <Avatar alt={`${survey.title}`}>{survey.overall}</Avatar>
-                                    <ListItemText primary={survey.title} secondary={survey.completed} />
-                                    <ListItemSecondaryAction>                                    
-                                        <IconButton>
-                                            <PlayIcon />
-                                        </IconButton>                                                                   
-                                    </ListItemSecondaryAction>
-                                </ListItem>
-                            )
-                        })}
+                        {surveys.complete.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                         </List>
                     </Paper>                    
                 </Grid>
@@ -140,10 +121,43 @@ class UserSurvey extends Component {
     }
 }
 
-const UserSurveyComponent = compose(
+const ThemedSurveyComponent = compose(
     withApi,
     withRouter,
     withStyles(UserSurvey.styles),
     withTheme()
   )(UserSurvey);
-  export default UserSurveyComponent;
+
+const UserSurveyComponent = ({ userId, api, onSurveySelect }) => {
+
+return (
+    <Query query={api.queries.Surveys.surveysForUser} variables={{ id: api.getUser().id }}>
+        { ({ loading, error, data }) => {
+            if(loading === true) return (<p>Loading survey data...</p>);
+            if(isNil(error) === false) return (<p>Error during load...</p>);
+
+            const surveys = {
+                overdue: [],
+                current: [],
+                complete: [],
+            };
+
+            data.userSurveys.forEach((assessment) => {
+                if(assessment.complete === true) surveys.complete.push(assessment)
+                else {
+                    const now = moment();
+                    if(now.after(moment(assessment.survey.start)) === true) surveys.overdue.push(assessment);
+                    else surveys.current.push(assessment);
+                } 
+            });
+
+            return (<ThemedSurveyComponent surveys={surveys} />);
+        }}
+    </Query>);
+}
+
+export default compose(
+    withApi
+)(UserSurveyComponent);
+
+  

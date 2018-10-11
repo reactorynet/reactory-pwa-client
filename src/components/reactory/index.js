@@ -118,7 +118,7 @@ class ReactoryComponent extends Component {
     
     this.onSubmit = this.onSubmit.bind(this)
     this.form = this.form.bind(this)
-    this.state = _state;
+    this.state = _state
   }
 
   componentWillMount(){

@@ -10,6 +10,7 @@ const api_headers = {
 }
 
 export const login = (email, password) => {
+  const that = this;
   const token = btoa(`${email}:${password}`)
   return fetch(`${api_root}/login`, {
       method: 'POST',

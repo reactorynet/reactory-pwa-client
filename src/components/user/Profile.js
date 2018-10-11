@@ -4,16 +4,17 @@ import { withRouter } from 'react-router';
 import {withStyles, withTheme} from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
-import {isNil} from 'lodash';
+import {isNil, isArray} from 'lodash';
 import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import Chip from '@material-ui/core/Chip';
-import List, { ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core/List';
+import { List, ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
 import IconButton from '@material-ui/core/IconButton';
 import CloseIcon from '@material-ui/icons/Close';
 import SaveIcon from '@material-ui/icons/Save';
+import TrashIcon from '@material-ui/icons/Delete';
 import SupervisorIcon from '@material-ui/icons/SupervisorAccount';
 import RowingIcon from '@material-ui/icons/Rowing';
 import VertMoreIcon from '@material-ui/icons/MoreVert';
@@ -26,20 +27,21 @@ import Avatar from '@material-ui/core/Avatar';
 import TextField from '@material-ui/core/TextField';
 import Paper from '@material-ui/core/Paper';
 
+import Tooltip from '@material-ui/core/Tooltip';
+
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 import DefaultAvatar from '../../assets/images/profile/default.png';
 import { CDNProfileResource, getAvatar } from '../util';
 
-const defaultProfile = {    
-    title: '',
+const defaultProfile = {
+    __isnew: true,    
     firstName: '',
     lastName: '',
     email: '',
     businessUnit: '',
-    peers: [],
-    surveys: [],
-    teams: [],
-    notifications: [],    
+    peers: {
+        peers: []
+    },
     avatar: null,
 };
 
@@ -106,6 +108,9 @@ class Profile extends Component {
     renderPeers(){
         const { peers, __isnew } = this.state.profile;
         const { classes, history } = this.props;
+        
+        if(__isnew) return null
+
         const defaultFieldProps = {
             margin: "normal",
             fullWidth: true,
@@ -114,6 +119,49 @@ class Profile extends Component {
             },
             className: classes.textFieldBase
         };
+
+        const doInvite = () => {
+
+        };
+
+        const doConfirm = () => {
+
+        };
+
+        
+        const peerlist = isNil(peers) === false && isArray(peers.peers) === true ? peers.peers.map( (entry, pid) => { 
+            return (
+            <ListItem key={pid} dense button>
+                <Avatar alt={`${entry.user.firstName} ${entry.user.lastName}`} src={getAvatar(entry.user) }  />
+                <ListItemText primary={window.innerWidth >= 768 ? `${entry.user.firstName} ${entry.user.lastName}` : `${entry.user.firstName.substring(0,1)} ${entry.user.lastName}` } secondary={ window.innerWidth >= 768 ? `${entry.user.email}` : ''} />                            
+                <ListItemSecondaryAction>
+                    <Tooltip title="Mark as direct report">
+                        <IconButton color={entry.relationship === 'report' ? 'primary' : 'default'}>
+                            <RowingIcon />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Mark as peer">
+                        <IconButton color={entry.relationship === 'peer' ? 'primary' : 'default'}>
+                            <PersonIcon />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Mark as manager / supervisor">
+                        <IconButton color={entry.relationship === 'manager' ? 'primary' : 'default'}>
+                            <SupervisorIcon />
+                        </IconButton>
+                    </Tooltip>         
+
+                    <Tooltip title={`Remove ${entry.user.firstName} as ${entry.relationship}`}>
+                        <IconButton>
+                            <TrashIcon />
+                        </IconButton>                                
+                    </Tooltip>
+                </ListItemSecondaryAction>
+            </ListItem>
+        )}) : null
+
         return (
             <Grid  item sm={12} xs={12} offset={4}>
                 <Paper className={classes.general}>                          
@@ -125,78 +173,17 @@ class Profile extends Component {
                         it is better to nominate more than less.
                     </Typography>
                     <List>
-                    { peers.map( (peer, pid) => (
-                        <ListItem key={pid} dense button className={classes.listItem}>
-                        <Avatar alt={`${peer.firstName} ${peer.lastName}`} src={peer.avatar} />
-                        <ListItemText primary={window.innerWidth >= 768 ? `${peer.firstName} ${peer.lastName}` : `${peer.firstName.substring(0,1)} ${peer.lastName}` } secondary={ window.innerWidth >= 768 ? `${peer.email}` : ''} />
-                        <ListItemSecondaryAction>
-                            <IconButton color={peer.relationship === 'team-member' ? 'primary' : 'default'}>
-                                <RowingIcon />
-                            </IconButton>
-                            <IconButton color={peer.relationship === 'peer' ? 'primary' : 'default'}>
-                                <PersonIcon />
-                            </IconButton>
-                            <IconButton color={peer.relationship === 'supervisor' ? 'primary' : 'default'}>
-                                <SupervisorIcon />
-                            </IconButton>                                
-                        </ListItemSecondaryAction>
-                    </ListItem>
-                    ))}   
+                    { peerlist }   
                     </List>
-                    { TextField({...defaultFieldProps, type:'email', label: 'Invite a colleague', helperText: 'Connect with a colleague and ask them to be an assessor'})}           
-                    <div className={classes.avatarContainer} style={{justifyContent:'flex-end', marginTop: '5px'}}>
-                        <Button variant='raised'><EmailIcon />&nbsp;SEND INVITE</Button>&nbsp;
-                        <Button variant='raised' color='primary'><PlaylistAddCheck />&nbsp;CONFIRM</Button>
+                    <TextField {...defaultFieldProps} type="email" label="Invite a colleague" helperText="Connect with a colleague and ask them to be an assessor" />           
+                    <div className={classes.avatarContainer} style={{justifyContent:'flex-end', marginTop: '5px'}}>                            
+                        <Button variant='raised' onClick={doInvite}><EmailIcon />&nbsp;SEND INVITE</Button>&nbsp;
+                        <Button variant='raised' color='primary' onClick={doConfirm}><PlaylistAddCheck />&nbsp;CONFIRM</Button>
                     </div>
                 </Paper>
             </Grid>)
     }
 
-    renderSurveys(){
-        const { surveys, __isnew } = this.state.profile;
-        const { classes, history } = this.props;
-        const defaultFieldProps = {
-            margin: "normal",
-            fullWidth: true,
-            InputLabelProps: {
-                shrink: true
-            },
-            className: classes.textFieldBase
-        };
-        return (
-            <Grid  item sm={12} xs={12} offset={4}>
-                <Paper className={classes.general}>
-                        <Typography variant='headline'>Surveys</Typography>
-                        <Typography gutterBottom>
-                            Below is a list of your past surveys.  Click on the more icon to get an overview your scores, or click the graph link
-                            which will take you to the details page for that assessement.  If you want to view current assessments you are part of 
-                            please go to the Survey's page for more detail.
-                        </Typography>
-                        <List>
-                        { surveys.map( (survey, pid) => {
-                            
-                            const surveyShowMoreIconButtonClicked = () => {
-                                history.push('/survey');
-                            };
-                            
-                            return (<ListItem key={pid} dense button className={classes.listItem}>
-                                <Avatar alt={`${survey.title}`}>{survey.overall}</Avatar>
-                                <ListItemText primary={survey.title} secondary={survey.completed} />
-                                <ListItemSecondaryAction>                                    
-                                    <IconButton>
-                                        <ShowChartIcon />
-                                    </IconButton>
-                                    <IconButton onClick={surveyShowMoreIconButtonClicked}>
-                                        <VertMoreIcon />
-                                    </IconButton>                                
-                                </ListItemSecondaryAction>
-                            </ListItem>
-                        )})}   
-                        </List>                         
-                </Paper>
-            </Grid> 
-        )
-    }
 
     renderGeneral(){
         const that = this
@@ -286,8 +273,7 @@ class Profile extends Component {
                         { avatarComponent }
                         <TextField {...defaultFieldProps} label='Name' value={firstName} helperText='Please use your given name' onChange={updateFirstname} />
                         <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText='Please use your given name' onChange={updateLastname} />
-                        <TextField {...defaultFieldProps} label='Email' value={email} helperText='Please use your work email address, unless you are an outside provider' onChange={updateEmail} />
-                        <TextField {...defaultFieldProps} label='Business Unit / Division' value={businessUnit} helperText='Your business unit' onChange={updateBusinessUnit} />
+                        <TextField {...defaultFieldProps} label='Email' value={email} helperText='Please use your work email address, unless you are an outside provider' onChange={updateEmail} />                        
                     </form>
 
                     <div className={classes.avatarContainer} style={{justifyContent:'flex-end', marginTop: '5px'}}>
@@ -299,12 +285,11 @@ class Profile extends Component {
     }   
     
     render(){        
-        const { classes, profile: { __isnew }, mode } = this.props;                                                                                 
+        const { classes, profile } = this.props;                                                                                 
         return (
             <Grid container spacing={16} className={classes.mainContainer}>
                 { this.renderGeneral() }
-                { __isnew || mode === 'admin' ? null : this.renderPeers() }
-                { __isnew || mode === 'admin' ? null : this.renderSurveys() }                                                        
+                { this.renderPeers() }
             </Grid>
         );
     }
@@ -320,10 +305,9 @@ class Profile extends Component {
         this.windowResize = this.windowResize.bind(this);        
         this.renderGeneral = this.renderGeneral.bind(this);
         this.renderPeers = this.renderPeers.bind(this);
-        this.renderSurveys = this.renderSurveys.bind(this);
         this.state = {
             avatarMouseOver: false,
-            profile: { ...props.profile, peers: [], surveys: [], teams: [] },
+            profile: { ...props.profile },
             avatarUpdated: false,
         }        
         window.addEventListener('resize', this.windowResize);

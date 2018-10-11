@@ -22,7 +22,7 @@ import { isNil, isEmpty } from 'lodash';
 import { UserListWithData, EditProfile, CreateProfile, UserProfile } from '../../user/index'
 import { BrandListWithData, EditBrand, newBrand, CreateBrand } from '../../brands'
 import Templates from '../../template'
-import AdminCalendar, { SurveyCalendarForOrganization, EditSurveyEntryForOrganization } from '../../admin/widget/AdminCalendar'
+import AdminCalendar, { SurveyCalendarForOrganization, EditSurveyEntryForOrganization, NewSurveyEntryForOrganization } from '../../admin/widget/AdminCalendar'
 import Settings from './settings'
 import { CDNOrganizationResource } from '../../util';
 
@@ -130,7 +130,7 @@ class OrganizationForm extends Component {
     let reader  = new FileReader();
     reader.addEventListener("load", function () {
         preview = reader.result;
-        let organization = that.state.organization;
+        let organization = { ...that.state.organization };
         organization.logo = preview;
         that.setState({organization, pristine: false});
     }, false);
@@ -389,15 +389,17 @@ class DefaultFormContainer extends Component {
             </Route>
             <Route path={'/admin/org/:organizationId/surveys'}>
               <Switch>
+                <Route exact path={'/admin/org/:organizationId/surveys/new'}>
+                  <NewSurveyEntryForOrganization {...this.props} organizationId={this.props.orgId} />  
+                </Route>
                 <Route exact path={'/admin/org/:organizationId/surveys'}>
                   <SurveyCalendarForOrganization {...this.props} organizationId={this.props.orgId} />  
                 </Route>
                 <Route path={'/admin/org/:organizationId/surveys/:surveyId'}>
-                  <EditSurveyEntryForOrganization {...this.props} organizationId={this.props.orgId}  />
+                  <EditSurveyEntryForOrganization organizationId={this.props.orgId} {...this.props} />                    
                 </Route>
               </Switch>              
-            </Route>
-            
+            </Route>            
             <Route path={'/admin/org/:organizationId/templates'} component={TemplateListComponent} />
             <Route path={'/admin/org/:organizationId/configuration'} component={Settings} />
           </Switch>

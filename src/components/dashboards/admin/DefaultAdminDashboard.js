@@ -20,16 +20,7 @@ class DefaultAdminDashboard extends Component {
       <Grid container>
         <Grid item xs={12} md={12}>
           <Typography variant="title">Dashboard</Typography>
-        </Grid>
-        <Grid item xs={12} md={4} lg={3}>          
-          <Charts.OpenSurveysChart />            
-        </Grid>
-        <Grid item xs={12} md={4} lg={3}>
-          <Charts.PendingPeerConfirmations />
-        </Grid>
-        <Grid item xs={12} md={4} lg={3}>
-          <Charts.EmailSent />
-        </Grid>        
+        </Grid>                
         <Grid item xs={12} md={12} lg={12}>
           <Typography variant="caption">Calendar</Typography>
           <AdminCalendar />

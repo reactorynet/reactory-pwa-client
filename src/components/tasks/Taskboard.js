@@ -14,6 +14,7 @@ import { LinearProgress, CircularProgress } from '@material-ui/core';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import {
+    Button,
     Card, CardHeader, CardMedia, CardContent, CardActions,
     ExpansionPanel, ExpansionPanelDetails, ExpansionPanelSummary,
     List, ListItem, ListItemSecondaryAction, ListItemText
@@ -23,6 +24,7 @@ import Paper from '@material-ui/core/Paper';
 import Avatar from '@material-ui/core/Avatar';
 import IconButton from '@material-ui/core/IconButton';
 import CloseIcon from '@material-ui/icons/Close';
+import AddIcon from '@material-ui/icons/Add';
 import red from '@material-ui/core/colors/red';
 import FavoriteIcon from '@material-ui/icons/Favorite';
 import ShareIcon from '@material-ui/icons/Share';
@@ -316,12 +318,15 @@ class TaskList extends Component {
     }
 
     static propTypes = {
-        tasks: PropTypes.array
+        tasks: PropTypes.array,
+        onNewTask: PropTypes.function
+
     }
 
     static defaultProps = {
         groups: [],
-        tasks: []
+        tasks: [],
+        onNewTask: ()=>{}
     }
 
     handleChange (panel, expanded){        
@@ -332,7 +337,7 @@ class TaskList extends Component {
 
     render(){
         const { expanded, viewTask } = this.state;
-        const { classes } = this.props;
+        const { classes, onNewTask } = this.props;
         const that = this;
 
         let expansionControls = [];
@@ -342,14 +347,17 @@ class TaskList extends Component {
                 that.handleChange(group.id, expanded)        
             }
             
-            
+            const newTask = () => {
+                onNewTask(group);
+            };
             return (
                 <ExpansionPanel expanded={expanded === group.id} onChange={toggleExpand}>
                     <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
                         <Typography className={classes.heading}>{group.title}</Typography>
                         <Typography className={classes.secondaryHeading}>{group.subTitle}</Typography>
                     </ExpansionPanelSummary>
-                    <ExpansionPanelDetails>                        
+                    <ExpansionPanelDetails>
+                        <Button onClick={newTask}><AddIcon />&nbsp;ADD TASK</Button>                        
                         <List>
                             {this.props.tasks.map((task) => {return task.groupId === group.id ? (<TaskListItemComponent task={task}  />) : null})}
                         </List>                        
@@ -501,15 +509,17 @@ class TaskDashboard extends Component {
 
     static defaultProps = {
         groups: [
-            {id: 1, title: '360 Assessment', subTitle:'TowerStone Leaders June 2017'},
-            {id: 2, title: '360 Assessment', subTitle:'TowerStone Leaders October 2017'},
-            {id: 3, title: '180 Assessment', subTitle:'TowerStone Technical Team October 2017'},
-            {id: 4, title: '180 Assessment', subTitle:'TowerStone Leadership Team October 2017'},
+            {id: 1, title: 'General', subTitle:'Your personal tasks'},
+            //{id: 2, title: '360 Assessment', subTitle:'TowerStone Leaders October 2017'},
+            //{id: 3, title: '180 Assessment', subTitle:'TowerStone Technical Team October 2017'},
+            //{id: 4, title: '180 Assessment', subTitle:'TowerStone Leadership Team October 2017'},
         ],
         tasks:  [
+            /*
             { id: uuid(), title: 'Read Good to Great', description: 'Give oral feedback to team on Good to Great', due: moment('18 Jan 2018'), completePercentage: 25, done: false, groupId: 1, comments: mocks.comments },
             { id: uuid(), title: 'Achieve Toastmasters Level 1', description: 'Sign up for toastmasters and complete the first grading', due: moment('12 Oct 2017'), completePercentage: 50, done: false, groupId: 1, comments: mocks.comments },
             { id: uuid(), title: 'Achieve Toastmasters Level 2', description: 'Sign up for toastmasters and complete the second grading', due: moment('13 May 2018'), completePercentage: 75, done: false, groupId: 2, comments: mocks.comments },
+            */
         ],
         user: null,
         toolbarTitle: 'Todos'
@@ -570,7 +580,8 @@ class TaskDashboard extends Component {
     constructor(props, context){
         super(props, context);
         this.state = {
-            showCompleted: false
+            showCompleted: false,
+            
         }
 
         this.toggleShowCompleted = this.toggleShowCompleted.bind(this);
