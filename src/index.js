@@ -6,17 +6,15 @@ import './index.css';
 import App from './App';
 import registerServiceWorker from './registerServiceWorker';
 
-
-let themeName = process.env.REACT_APP_THEME || 'towerstone';
-const parsed = qs.parseUrl(document.location.href);
-if(parsed.query.theme) themeName = parsed.query.theme;
-const theme = themes.getTheme(themeName);
+const theme = themes.getTheme();
 const props = {
   appTheme: theme,
-  appTitle: theme.muiTheme.content.appTitle || 'Reactory Web'
+  appTitle: theme.content.appTitle || 'Reactory Web'
 };
 
-ReactDOM.render(<App {...props} />, document.getElementById('root'));
+const rootElement = document.getElementById('root')
+if(rootElement.classList.contains('loading')) rootElement.classList.remove('loading')
+ReactDOM.render(<App {...props} />, rootElement);
 registerServiceWorker();
 
 document.title = props.appTitle;

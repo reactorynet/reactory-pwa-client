@@ -79,10 +79,13 @@
     "whatwg-fetch": "2.0.3"
   },
   "scripts": {
-    "start": "node scripts/start.js",
-    "build": "node scripts/build.js --env=production",
-    "build-qa": "node scripts/build.js --env=qa",
-    "test": "node scripts/test.js --env=jsdom"
+    "start": "REACT_APP_THEME=reactory REACT_APP_CLIENT_KEY=reactory node --max_old_space_size=2000000 scripts/start.js",    
+    "start-towerstone": "REACT_APP_THEME=towerstone REACT_APP_CLIENT_KEY=towerstone node --max_old_space_size=2000000 scripts/start.js",
+    "start-plc": "REACT_APP_THEME=plc REACT_APP_CLIENT_KEY=plc node --max_old_space_size=2000000 scripts/start.js",
+    "start-aot": "REACT_APP_THEME=aot REACT_APP_CLIENT_KEY=aot node --max_old_space_size=2000000 scripts/start.js",        
+    "build": "node --max_old_space_size=2000000 scripts/build.js --env=production",
+    "build-qa": "node --max_old_space_size=2000000 scripts/build.js --env=qa",
+    "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom"
   },
   "jest": {
     "collectCoverageFrom": [

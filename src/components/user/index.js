@@ -184,7 +184,6 @@ class UserTable extends Component {
   }  
 };
 
-
 export const CreateProfile = compose(
   withApi
 )((props) => {
@@ -247,7 +246,8 @@ export const EditProfile = compose(
               variables: {
                 id: profile.id, 
                 profileData: profileDataInput,
-              }
+              },
+              refetchQueries: [{ query: api.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }]
             });
           }
         }
@@ -285,7 +285,7 @@ export const UserProfile = compose(
         }
       }}
     </Query>)
-})
+});
 
 
 const UserListItem = (props) => {
@@ -427,6 +427,13 @@ const UserList = ({organizationId, api, onUserSelect}) => {
         const raiseNewUserSelect = () => {
           if(onUserSelect) onUserSelect(newUser)
         }
+
+        const newUserEntry = (
+        <ListItem onClick={raiseNewUserSelect} dense button key={users.length+1}>
+          <Avatar alt={'New user'} src={ newUser.avatar } />
+          <ListItemText primary={ 'NEW' } secondary={ 'Click here to add a new user / employee' }/>
+        </ListItem>)
+
         return (
           <List>
             {users.map((user, uid) => {
@@ -441,10 +448,7 @@ const UserList = ({organizationId, api, onUserSelect}) => {
                 </ListItem>
               )
             })}
-            <ListItem onClick={raiseNewUserSelect} dense button key={users.length+1}>
-              <Avatar alt={'New user'} src={ newUser.avatar } />
-              <ListItemText primary={ 'NEW' } secondary={ 'Click here to add a new user / employee' }/>
-            </ListItem>
+            {newUserEntry}
           </List>
         )
       }}      
@@ -607,10 +611,38 @@ ResetPassword.styles = theme => ({
 });
 
 export const ResetPasswordForm = compose(
-  withStyles(ResetPassword.logo),
+  withStyles(ResetPassword.styles),
   withTheme(),
   withApi,
   withRouter)(ResetPassword);
 
 
+class Logout extends Component {
+
+  constructor(props, context){
+    super(props, context)
+    this.state = {
+      done: false,
+    }
+  }
+
+  componentDidMount(){
+    this.props.api.logout()
+  }
+
+  componentDidUpdate(){
+
+  }
+
+  render(){
+    if(this.state.done === false) return <Typography>Signing out...</Typography>
+
+    return <Typography>Signing out...done</Typography>
+  }
+}
+
+export const LogoutComponent = compose(
+  withTheme(),
+  withApi
+)(Logout)
 

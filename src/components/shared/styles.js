@@ -10,7 +10,7 @@ const styles = (theme) => ({
     height: '200px',
     margin: 0,
     padding: 0,
-    background: `url(${theme.assets.login.logo || '//placehold.it/200x200'})`,
+    background: `url(${theme.assets.logo || '//placehold.it/200x200'})`,
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'contain',
     marginRight: '0px',

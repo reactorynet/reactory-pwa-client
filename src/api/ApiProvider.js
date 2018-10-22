@@ -2,7 +2,8 @@
 import React, { Component, Children } from "react";
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
-import { find, isArray, intersection } from 'lodash';
+import { Typography } from '@material-ui/core';
+import { find, isArray, intersection, isEmpty, isNil } from 'lodash';
 import { compose } from 'redux';
 import moment from 'moment';
 import { ApolloClient } from "apollo-client";
@@ -10,7 +11,6 @@ import { withApollo } from "react-apollo";
 import * as restApi from './RestApi'
 import graphApi from './graphql'
 import { getAvatar, getUserFullName } from '../components/util'
-
 const { queries, mutations } = graphApi
 
 const storageKeys = {
@@ -18,11 +18,20 @@ const storageKeys = {
     AuthToken: 'auth_token',
 }
 
-const anonUser = { id: '', firstName: '', lastName: '', avatar: '', anon: true };
+const anonUser = { id: '', firstName: '', lastName: '', avatar: '', anon: true, roles: ['ANON'] };
 
 export const ReactoryApiEventNames = {
-    onLogout : 'loggedOut'
+    onLogout : 'loggedOut',
+    onLogin : 'loggedIn'
 };
+
+const EmptyComponent = (fqn) => {
+    return (<Typography>No Component For Fqn: {fqn}</Typography>)
+};
+  
+const componentFqn = ({ nameSpace, name, version }) => {
+    return `${nameSpace}.${name}@${version}`;
+};        
 
 export class ReactoryApi extends EventEmitter {
     constructor(client) {
@@ -31,7 +40,7 @@ export class ReactoryApi extends EventEmitter {
         this.client = client;
         this.queries = queries;
         this.mutations = mutations;
-        this.login = restApi.login;
+        this.login = restApi.login.bind(this);
         this.companyWithId = restApi.companyWithId;
         this.register = restApi.register;
         this.reset = restApi.reset;
@@ -49,13 +58,19 @@ export class ReactoryApi extends EventEmitter {
         this.afterLogin = this.afterLogin.bind(this);
         this.registerComponent = this.registerComponent.bind(this);
         this.getComponent = this.getComponent.bind(this);
+        this.status = this.status.bind(this);
         this.getAvatar = getAvatar;
         this.getUserFullName = getUserFullName;
+        this.getTheme = this.getTheme.bind(this);
+        this.getRoutes = this.getRoutes.bind(this);
+        this.CDN_ROOT = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
     }
 
     afterLogin(user){        
         this.setUser(user);
+        return this.status({ emitLogin: true }).then();        
     }
+
 
     hasRole(itemRoles = [], userRoles = []){
         return intersection(itemRoles, userRoles).length > 0;
@@ -69,26 +84,71 @@ export class ReactoryApi extends EventEmitter {
         return true
     }
 
+    getMenus(target){
+        const user = this.getUser()
+        const { menus } = user
+
+        return menus || []
+    }
+
+    getTheme(){
+        const user = this.getUser()
+        const { themeOptions } = user
+
+        return themeOptions
+    }
+
+    getRoutes(){
+        const user = this.getUser()
+        const { routes } = user;
+
+        return routes || [];
+    }
+
+    getApplicationRoles(){
+        const user = this.getUser()
+        const { roles } = user
+
+        return roles || []
+    }
+
     setUser(user) {
         localStorage.setItem(storageKeys.LoggedInUser, JSON.stringify(user));
-    }
+    }    
 
     setAuthToken(token) {
         localStorage.setItem(storageKeys.AuthToken, token)
     }
 
-    registerComponent(componentDef) {
-        this.componentRegister.push(componentDef)
+    registerComponent(nameSpace, name, version = '1.0.0', component = EmptyComponent){
+        const fqn = `${nameSpace}.${name}.${version}`;
+        if(isEmpty(nameSpace)) throw new Error('nameSpace is required for component registration');
+        if(isEmpty(name)) throw new Error('name is required for component registration');
+        if(isNil(component)) throw new Error('component is required to register component');
+        if(isNil(this.getComponent(fqn)) === true){
+          this.componentRegister.push({nameSpace, name, version, component})
+        }
     }
+    
 
-    getComponent(componentQuery) {
-        find(this.componentRegister, componentQuery);
+    getComponent(fqn){
+        let found = null 
+        this.componentRegister.forEach((component) =>  {
+            if(componentFqn(component) === fqn) {
+                found = component
+            }        
+        })
+        if(found && found.component) return found.component        
+        return null
     }
 
     logout() {
-        this.setUser(anonUser);
+        const user = this.getUser()
         localStorage.removeItem(storageKeys.AuthToken);
-        this.emit(ReactoryApiEventNames.onLogout);
+        this.setUser({ ...user, ...anonUser });
+        this.status({ logout: true }).then((done)=>{
+            this.emit(ReactoryApiEventNames.onLogout);
+        });
     }
 
     getLastValidation(){
@@ -104,17 +164,17 @@ export class ReactoryApi extends EventEmitter {
         if (userString) return JSON.parse(userString);
         return anonUser;
     }
-    
-    validateToken(token) {
-        const that = this;
-        this.setAuthToken(token);
+
+    status( options = { emitLogin: false } ) {
+        const that = this
         return new Promise((resolve, reject) => {
-            that.client.query({ query: that.queries.System.apiStatus }).then((result) => {
-                if (result.data.apiStatus.status === "API OK") {
-                    const { id, firstName, lastName, avatar, email, roles } = result.data.apiStatus;
-                    that.setUser({ id, firstName, lastName, avatar, email, roles });
-                    this.lastValidation = moment().valueOf();
-                    this.tokenValidated = true;                    
+            that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {
+                if (result.data.apiStatus.status === "API OK") {                    
+                    that.setUser({ ...result.data.apiStatus });
+                    that.lastValidation = moment().valueOf();
+                    that.tokenValidated = true; 
+                    
+                    if(options.emitLogin === true) that.emit(ReactoryApiEventNames.onLogin);
                     resolve(true);
                 }
                 else {
@@ -128,6 +188,11 @@ export class ReactoryApi extends EventEmitter {
                 reject(new Error('Coult not execute validation'));
             });
         });
+    }
+    
+    validateToken(token) {
+        this.setAuthToken(token);
+        return this.status()
     }
 
     resetPassword({ password, confirmPassword, resetToken }) {

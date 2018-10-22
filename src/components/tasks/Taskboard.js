@@ -17,7 +17,7 @@ import {
     Button,
     Card, CardHeader, CardMedia, CardContent, CardActions,
     ExpansionPanel, ExpansionPanelDetails, ExpansionPanelSummary,
-    List, ListItem, ListItemSecondaryAction, ListItemText
+    List, ListItem, ListItemSecondaryAction, ListItemText, Popover
   } from '@material-ui/core';
 import Collapse from '@material-ui/core/Collapse';
 import Paper from '@material-ui/core/Paper';
@@ -30,10 +30,12 @@ import FavoriteIcon from '@material-ui/icons/Favorite';
 import ShareIcon from '@material-ui/icons/Share';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
+import IconButtonDropDown from '@material-ui/icons/ArrowDropDown';
 import moment from 'moment';
-import IconButtonDropDown from '../shared/IconButtonDropDown';
+import { AddTaskComponent } from '../home/kanban/KanbanDashboard';
 import Comments from '../shared/Comments';
 import * as mocks from '../../models/mock';
+import Draggable from 'react-draggable';
 
 
 class TaskItem extends Component {
@@ -183,7 +185,6 @@ class Taskboard extends Component {
 
     render(){
         const { classes, user, history, cards } = this.props;
-        debugger;
         const groups = [
             {key: 'hvhp', title: 'High Value - High Probability'},
             {key: 'hvlp', title: 'High Value - Low Probability'},
@@ -239,56 +240,133 @@ const TaskboardComponent = compose(
 
 export default TaskboardComponent;
 
+export const defaultDragProps = { draggable: true }
+
 class TaskListItem extends Component {
 
     static styles = ( theme ) => { 
         return {
-
+            handle: {
+                cursor: 'pointer'
+            }
         }
     }
 
     static propTypes = {
-        task: PropTypes.object
+        task: PropTypes.object,
+        draggable: PropTypes.bool,
+        onTaskSelect: PropTypes.func,
+        draggableBounds: PropTypes.any
     }
 
     static defaultProps = {
-        task: { id: uuid(), title: 'New Action', description: '', due: null, done: false }
+        task: { id: uuid(), title: 'New Action', description: '', due: null, done: false },
+        draggable: true,
+        draggableBounds: null,
+        dragProps: defaultDragProps
+    }
+
+    handleStart(e, data){
+        console.log(`Handle start event ${e.target}`, {e, data});
+    }
+
+    handleDrag(e, data){
+        console.log(`Handle drag event ${e.target}`, {e, data});
+    }
+
+    handleStop(e, data){
+        console.log(`Handle stop event ${e.target}`, {e, data});
     }
 
     handleToggle(){
-        this.props.history.push(`/actions/${this.props.task.id}`)
+        //this.props.history.push(`/actions/${this.props.task.id}`)
+        console.log('Item clicked');
     }
 
-    render(){
+    withDraggable(){
+        const { classes } = this.props;
+        const draggableProps = {
+            handle: `.${classes.handle}`,
+            grid:[25, 25],
+            bounds: `.${this.props.dragProps.bounds}`
+            //onStart: this.handleStart,
+            //onDrag: this.handleDrag,
+            //onStop: this.handleStop
+        };
 
+        return (
+        <Draggable {...draggableProps}>            
+            {this.listItem()}
+        </Draggable>)
+    }
 
+    handleClick = event => {
+        this.setState({
+          anchorEl: event.currentTarget,
+        });
+      };
+    
+      handleClose = () => {
+        this.setState({
+          anchorEl: null,
+        });
+      };
+
+    listItem(){
+        
+        const { classes } = this.props;
+        const { anchorEl } = this.state;
+        const open = Boolean(anchorEl);
+
+        const popover = (<Popover
+            id="simple-popper"
+            open={open}
+            anchorEl={anchorEl}
+            onClose={this.handleClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'center',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'center',
+            }} />);
+        
         return (
             <ListItem
               key={this.props.task.id}
-              dense
-              button
               onClick={this.handleToggle}
+              button
               className={this.props.classes.listItem}>
-              <Checkbox
-                checked={this.props.task.done === true}
-                tabIndex={-1}
-                disableRipple
-              />
+              <IconButtonDropDown>                
+              </IconButtonDropDown>                          
               <ListItemText primary={this.props.task.title} />
               <ListItemSecondaryAction>
-              <CircularProgress                
-                variant="determinate"
-                size={30}
-                value={this.props.task.completePercentage}
-                />
+                <CircularProgress                
+                    variant="determinate"
+                    size={24}
+                    value={this.props.task.percentComplete}
+                    />
               </ListItemSecondaryAction>
             </ListItem>
         )
     }
 
+    render(){
+        return this.listItem()        
+    }
+
     constructor(props, context){
         super(props, context)
         this.handleToggle = this.handleToggle.bind(this);
+        this.withDraggable = this.withDraggable.bind(this);
+        this.listItem = this.listItem.bind(this);
+        this.handleStart = this.handleStart.bind(this);
+        this.handleClick = this.handleClick.bind(this);
+        this.state = {
+            dragging: false,
+            anchorEl: null,
+        };
     }
 }
 
@@ -350,17 +428,23 @@ class TaskList extends Component {
             const newTask = () => {
                 onNewTask(group);
             };
+
             return (
                 <ExpansionPanel expanded={expanded === group.id} onChange={toggleExpand}>
                     <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
                         <Typography className={classes.heading}>{group.title}</Typography>
                         <Typography className={classes.secondaryHeading}>{group.subTitle}</Typography>
                     </ExpansionPanelSummary>
-                    <ExpansionPanelDetails>
-                        <Button onClick={newTask}><AddIcon />&nbsp;ADD TASK</Button>                        
+                    <ExpansionPanelDetails>                                                
                         <List>
-                            {this.props.tasks.map((task) => {return task.groupId === group.id ? (<TaskListItemComponent task={task}  />) : null})}
-                        </List>                        
+                            {this.props.tasks.map((task) => {
+                                const onTaskSelected = () => {
+                                    that.setState({ selectedTask: task });
+                                }
+                                return task.groupId === group.id ? (<TaskListItemComponent task={task}  />) : null
+                            })}
+                        </List>
+                        <AddTaskComponent status='new'/>
                     </ExpansionPanelDetails>
                 </ExpansionPanel>                        
             )
@@ -377,21 +461,18 @@ class TaskList extends Component {
         super(props, context);
         this.state = {
             expanded: [],
-            viewTask: null
-        }
+            viewTask: null,
+            selectedTask: null,
+        };
         this.handleChange = this.handleChange.bind(this);
     }
 }
-
-
 
 export const TaskListComponent = compose(
     withRouter,
     withStyles(TaskList.styles),
     withTheme()
   )(TaskList);
-
-
 
 class TaskDetail extends Component {
     static styles = (theme) => { 
@@ -484,6 +565,7 @@ export const TaskDetailComponent = compose(
     withTheme()
   )(TaskDetail);
 
+
 class TaskDashboard extends Component {
 
     static styles = ( theme ) => { 
@@ -515,11 +597,6 @@ class TaskDashboard extends Component {
             //{id: 4, title: '180 Assessment', subTitle:'TowerStone Leadership Team October 2017'},
         ],
         tasks:  [
-            /*
-            { id: uuid(), title: 'Read Good to Great', description: 'Give oral feedback to team on Good to Great', due: moment('18 Jan 2018'), completePercentage: 25, done: false, groupId: 1, comments: mocks.comments },
-            { id: uuid(), title: 'Achieve Toastmasters Level 1', description: 'Sign up for toastmasters and complete the first grading', due: moment('12 Oct 2017'), completePercentage: 50, done: false, groupId: 1, comments: mocks.comments },
-            { id: uuid(), title: 'Achieve Toastmasters Level 2', description: 'Sign up for toastmasters and complete the second grading', due: moment('13 May 2018'), completePercentage: 75, done: false, groupId: 2, comments: mocks.comments },
-            */
         ],
         user: null,
         toolbarTitle: 'Todos'
@@ -580,8 +657,7 @@ class TaskDashboard extends Component {
     constructor(props, context){
         super(props, context);
         this.state = {
-            showCompleted: false,
-            
+            showCompleted: false,            
         }
 
         this.toggleShowCompleted = this.toggleShowCompleted.bind(this);

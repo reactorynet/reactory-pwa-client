@@ -242,7 +242,7 @@ class TowerStoneHomeComponent extends Component {
                 <div>
                     <Grid container spacing={24}>
                         <Grid item xs={12} sm={12} style={{ textAlign: 'center' }}>
-                            <img src={theme.assets.login.logo} className={classes.logo} alt={theme} />
+                            <img src={theme.assets.logo} className={classes.logo} alt={theme} />
                         </Grid>
                         <Grid item xs={6} sm={3}>
                             <Paper>

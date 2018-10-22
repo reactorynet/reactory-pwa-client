@@ -203,7 +203,7 @@ class DelegateAdmin extends Component {
     this.tabChanged = this.tabChanged.bind(this)
     this.toggleExpand = this.toggleExpand.bind(this)
   }
-
+  
   tabChanged = (evt, value) => {
     this.setState({ tab: value })
   }
@@ -249,6 +249,8 @@ class DelegateAdmin extends Component {
     );
   }
 }
+
+DelegateAdmin.styles = (theme) => ({});
 
 const DelegateAdminComponent = compose(
   withTheme(),

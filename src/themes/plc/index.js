@@ -28,7 +28,7 @@ export default {
         assets: {
             login: {
                 featureImage: stairs,
-                logo
+                logo: logo,
             }
         },
         content: {
@@ -37,22 +37,7 @@ export default {
                 message: 'Each one of us has only one precious life'
             },
             dashboardComponent: UserDashboard,
-            assessmentComponent: DefaultAssessmentView,
-            navigation: [
-                { 
-                    id: 'main_nav', 
-                    entries: [ 
-                        { id: '0', title: 'Dashboard', link: '/', icon: 'dashboard', roles: ['USER'] },   
-                        { id: '1', title: 'Inbox', link: '/inbox', icon: 'email', roles: ['PRODUCT_MANAGER', 'USER'] },
-                        { id: '2', title: 'Surveys', link: '/surveys', icon: 'check_circle', roles: ['PRODUCT_MANAGER', 'USER'] },
-                        { id: '2', title: 'Ideas', link: '/reactory/product-ideas', icon: 'announcement', roles: ['PRODUCT_MANAGER', 'USER'] },
-                        { id: '3', title: 'Reports', link: '/reports', icon: 'bug_report', roles: ['PRODUCT_MANAGER', 'USER'],  },
-                        { id: '4', title: 'Actions', link: '/actions', icon: 'autorenew', roles: ['PRODUCT_MANAGER', 'USER'] },
-                        { id: '5', title: 'Profile', link: '/profile', icon: 'change_history', roles: ['PRODUCT_MANAGER', 'USER'] },
-                        { id: '6', title: 'Admin', link: '/admin', icon: 'description', roles: ['PRODUCT_MANAGER'] },                        
-                    ] 
-                }
-            ]
+            assessmentComponent: DefaultAssessmentView,            
         }
     },    
 };

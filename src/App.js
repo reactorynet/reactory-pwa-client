@@ -22,30 +22,17 @@ import queryString from './query-string';
 import './App.css';
 import AssessorHeaderBar from './components/shared/header';
 import {
-  Assessment,
-  Login,
-  Register,
-  UserList,
-  UserInbox,
-  Home,
-  Profile,
-  UserSurvey, 
-  OrganizationTable,
-  Report,
-  TaskDashboard,
-  AdminDashboard,
-  ReactoryRouter,  
-  ForgotForm,
-  ResetPasswordForm
+  componentRegistery
 } from './components';
 import ApiProvider, { ReactoryApi, ReactoryApiEventNames } from './api/ApiProvider'
 import * as themes from './themes';
 
 
 const authLink = setContext((_, { headers }) => {
+  const anonToken = process.env.ANON_USER_TOKEN
   // get the authentication token from local storage if it exists
-  const token = localStorage.getItem('auth_token');
-  
+  const token = localStorage.getItem('auth_token') || anonToken;
+
   // return the headers to the context so httpLink can read them
   return {
     headers: {
@@ -58,13 +45,13 @@ const authLink = setContext((_, { headers }) => {
 });
 
 const httpLink = createHttpLink({
-  uri: `${process.env.REACT_APP_API_ENDPOINT}/api`,  
+  uri: `${process.env.REACT_APP_API_ENDPOINT}/api`,
 });
 
 const cache = new InMemoryCache();
 
 const client = new ApolloClient({
-  link: authLink.concat(httpLink)  ,
+  link: authLink.concat(httpLink),
   cache
 });
 
@@ -77,17 +64,23 @@ const getTheme = () => {
 }
 
 const api = new ReactoryApi(client);
-const store = configureStore();
+//register built-in components
+componentRegistery.forEach((componentDef) => {
+  const { nameSpace, name, version, component } = componentDef
+  api.registerComponent(nameSpace, name, version, component);
+});
 
-const defaultTheme = themes.woosparksTheme;
+api.status();
+
+const store = configureStore();
 
 class App extends Component {
 
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context);
 
     const query = queryString.parse(window.location.search)
-    if(query.auth_token) localStorage.setItem('auth_token', query.auth_token)            
+    if (query.auth_token) localStorage.setItem('auth_token', query.auth_token)
     api.queryObject = query;
     this.state = {
       drawerOpen: false,
@@ -98,17 +91,17 @@ class App extends Component {
     }
 
     this.onLogout = this.onLogout.bind(this);
-    
     api.on(ReactoryApiEventNames.onLogout, this.onLogout)
+    api.on(ReactoryApiEventNames.onLogin, this.forceUpdate)
   }
 
-  onLogout(){
+  onLogout() {
     this.forceUpdate();
   }
 
-  componentDidMount(){    
+  componentDidMount() {
     const that = this;
-    if(this.state.has_token === true && this.state.auth_validated === false){
+    if (this.state.has_token === true && this.state.auth_validated === false) {
       const auth_token = localStorage.getItem('auth_token');
       try {
         api.validateToken(auth_token).then((valid) => {
@@ -116,40 +109,25 @@ class App extends Component {
         }).catch((validationError) => {
           that.setState({ auth_valid: false, authenticated: false, auth_validated: true })
         });
-      } catch ( vErr) {
-        console.error('vErr',vErr);
+      } catch (vErr) {
+        console.error('vErr', vErr);
       }
-      
     }
   }
 
   render() {
-    const { appTitle, appTheme } = this.props;
-    const { drawerOpen, auth_valid, has_token, auth_validated } = this.state;
-    
-    const muiTheme = createMuiTheme( appTheme.muiTheme );  
-    
-    if(auth_validated === false && has_token === true) {
+    const { auth_valid, has_token, auth_validated } = this.state;
+    let themeOptions = api.getTheme();
+
+    if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
+    if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
+    const muiTheme = createMuiTheme(themeOptions);
+
+    if (auth_validated === false && has_token === true) {
       return <p>Starting application, please wait a moment...</p>
     }
     
-    const PrivateRoute = ({ component: Component, ...rest }) => (
-      <Route
-        {...rest}
-        render={(props) => {          
-          if (has_token === true && auth_valid === true) {
-            return <Component {...props} />
-          } else {
-            return <Redirect
-              to={{
-                pathname: "/login",
-                state: { from: props.location }
-              }}
-            />
-          }       
-        }}
-      />);
-
+    const routes = api.getRoutes()
     return (
       <React.Fragment>
         <CssBaseline />
@@ -158,26 +136,37 @@ class App extends Component {
             <ApolloProvider client={client}>
               <ApiProvider api={api}>
                 <MuiThemeProvider theme={muiTheme}>
-                  <div style={{marginTop:'80px'}}>                    
+                  <div style={{ marginTop: '80px' }}>
                     <AssessorHeaderBar title={muiTheme.content.appTitle} />
-                    <PrivateRoute exact path="/" component={Home}/>                  
-                    <PrivateRoute path="/admin" component={AdminDashboard} />              
-                    <Route exact path="/login" component={Login} />
-                    <Route exact path="/forgot" component={ForgotForm}/>
-                    <Route exact path="/reset-password" component={ResetPasswordForm}/>    
-                    <Route exact path="/register" component={Register } />
-                    <PrivateRoute path="/assess/:assessmentId" component={Assessment} />
-                    <PrivateRoute exact path="/inbox" component={UserInbox} />
-                    <PrivateRoute exact path="/users" component={UserList} />
-                    <PrivateRoute path="/profile" component={Profile}/>
-                    <PrivateRoute path="/surveys" component={UserSurvey} />
-                    <PrivateRoute path="/reports" component={Report} />
-                    <PrivateRoute path="/actions" component={TaskDashboard} />                    
-                    <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
-                    <Route path="*">
-                      <ReactoryRouter />
-                    </Route>
-                  </div>
+                    {
+                      routes.map((routeDef) => {
+                      const routeProps = {
+                        key: routeDef.id,
+                        componentFqn: routeDef.componentFqn,
+                        path: routeDef.path,
+                        exact: routeDef.exact === true,
+                        render: (props) => {       
+                          const ApiComponent = api.getComponent(routeDef.componentFqn)
+                          if (ApiComponent) return <ApiComponent />
+                          else return (<p>No Component for {routeDef.componentFqn}</p>)
+                        }
+                      }
+                      if (routeDef.public === true) {
+                        return (<Route {...routeProps} />)
+                      } else {
+                        if (has_token === true && auth_valid === true) {              
+                          return <Route {...routeProps} />
+                        } else {
+                          return (<Redirect key={routeDef.id}
+                            to={{
+                              pathname: `/login`,
+                              state: { from: routeDef.path }
+                            }}
+                          />)
+                        }                
+                      }
+                    })}
+                  </div>                  
                 </MuiThemeProvider>
               </ApiProvider>
             </ApolloProvider>
@@ -190,12 +179,36 @@ class App extends Component {
 
 App.propTypes = {
   appTitle: PropTypes.string.isRequired,
-  appTheme: PropTypes.object  
+  appTheme: PropTypes.object
 };
 
+
+
 App.defaultProps = {
-  appTitle: defaultTheme.muiTheme.content.appTitle, 
-  appTheme: defaultTheme
+  appTitle: "Reactory",
+  appTheme: {}
 };
 
 export default App;
+
+
+/**
+ * 
+* <PrivateRoute exact path="/" component={Home}/>                  
+                    <PrivateRoute path="/admin" component={AdminDashboard} />              
+                    <Route exact path="/login" component={Login} />
+                    <Route exact path="/forgot" component={ForgotForm}/>
+                    <Route exact path="/reset-password" component={ResetPasswordForm}/>    
+                    <Route exact path="/register" component={Register } />
+                    <PrivateRoute path="/assess/:assessmentId" component={Assessment} />
+                    <PrivateRoute exact path="/inbox" component={UserInbox} />
+                    <PrivateRoute exact path="/users" component={UserList} />
+                    <PrivateRoute path="/profile" component={Profile}/>
+                    <PrivateRoute path="/surveys" component={UserSurvey} />
+                    <PrivateRoute path="/reports" component={Report} />
+                    <PrivateRoute path="/tasks" component={ChatDashboard} />
+                    <PrivateRoute path="/actions" component={TaskDashboard} />                    
+                    <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
+ * 
+ * 
+ */

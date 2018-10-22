@@ -37,20 +37,7 @@ export default {
             },            
             dashboardComponent: UserDashboard,
             assessmentComponent: DefaultAssessmentView,
-            navigation: [
-                { 
-                    id: 'main_nav', 
-                    entries: [    
-                        { id: '0', title: 'Dashboard', link: '/', icon: 'dashboard', roles: ['USER'] },
-                        { id: '1', title: 'Inbox', link: '/inbox', icon: 'email', roles: ['PRODUCT_MANAGER', 'USER'] },
-                        { id: '2', title: 'Surveys', link: '/surveys', icon: 'check_circle', roles: ['PRODUCT_MANAGER', 'USER'] },
-                        { id: '3', title: 'Reports', link: '/reports', icon: 'bug_report', roles: ['PRODUCT_MANAGER', 'USER'],  },
-                        { id: '4', title: 'Actions', link: '/actions', icon: 'autorenew', roles: ['PRODUCT_MANAGER', 'USER'] },
-                        { id: '5', title: 'Profile', link: '/profile', icon: 'account_circle', roles: ['USER'] },
-                        { id: '6', title: 'Admin', link: '/admin', icon: 'supervisor_account', roles: ['ADMIN'] },                        
-                    ] 
-                }
-            ]
+            
         }
     }
 };

@@ -42,13 +42,15 @@ class LoginCard extends Component {
 
   doLogin = (evt) => {
     const { history, api } = this.props;
+    const { redirectOnLogin } = this.state;
     const that = this;
     that.setState({ busy: true }, ()=>{
-      api.login(this.state.username, this.state.password).then((response)=>{
-        localStorage.setItem('auth_token', response.user.token);
-        api.afterLogin(response.user);
-        that.setState({ loginError: null, loggedIn: true }, ()=>{
-          setTimeout(()=>{window.location.href = '/';}, 700);
+      api.login(this.state.username, this.state.password).then((apiStatusResult)=>{
+        console.log('Logged in and got status', apiStatusResult);
+        that.setState({ loginError: null, loggedIn: true }, ()=>{          
+            setTimeout(()=>{ 
+              history.push(redirectOnLogin);
+            }, 700);          
         });
       }).catch((error) => {
         that.setState({ loginError: 'Could not log in due to an error', busy: false });
@@ -132,7 +134,7 @@ class LoginCard extends Component {
       height: '200px',
       margin: 0,
       padding: 0,
-      background: `url(${theme.assets.login.logo || '//placehold.it/200x200'})`,
+      background: `url(${theme.assets.logo || '//placehold.it/200x200'})`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: 'contain',
       marginRight: '0px',

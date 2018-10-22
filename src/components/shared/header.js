@@ -23,29 +23,41 @@ import LockIcon from '@material-ui/icons/Lock';
 import { getAvatar } from '../util';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
-class Login extends Component {
-    
-    static muiName = 'FlatButton';
-
-    render() {
-        const { match } = this.props;
-        return (
-            <Link to={`${match.url}/rendering`}>                
-                <Button {...this.props} label="Login" />
-            </Link>
-            
-        );
-    }
-}
 
 export class Logged extends Component {
-    
-    
+        
     render(){ 
         const { props } = this;
+        const { menus, api, user, self } = props;        
+        const menuItems = [];
+        
+        if(menus && menus.length) {
+            menus.map((menu) => {                                
+                if(menu.target === 'top-right') {
+                    menu.entries.map((menuItem) => {
+                        let allow = true
+                        if(isArray(menuItem.roles) && isArray(user.roles)){
+                            allow = api.hasRole(menuItem.roles, user.roles)    
+                        }
+                        if(allow === true) {
+                            const goto = () => {                        
+                                self.navigateTo(menuItem.link, false);
+                            }
+                            menuItems.push((
+                            <MenuItem key={menuItem.id} onClick={ goto }> 
+                                <ListItemIcon><Icon color="primary">{menuItem.icon}</Icon></ListItemIcon>                       
+                                <ListItemText inset primary={`${menuItem.title}`} />
+                            </MenuItem>));
+                        }                        
+                    });
+                }
+                
+            });
+        }
+
         return(<Menu
                 open={props.open}
-                id='menu-appbar'
+                id='top-right'
                 anchorEl={props.anchorEl}        
                 anchorOrigin={{
                     vertical: 'top',
@@ -55,14 +67,7 @@ export class Logged extends Component {
                     vertical: 'top',
                     horizontal: 'right',
                 }}>        
-                <MenuItem onClick={ props.surveysClicked }>
-                    <ListItemIcon><AccountCircle /></ListItemIcon>
-                    <ListItemText inset primary="My Profile" onClick={props.onMyProfileClicked}/>
-                </MenuItem>
-                <MenuItem>
-                    <ListItemIcon><LockIcon /></ListItemIcon>
-                    <ListItemText inset primary="Sign Out" onClick={props.onSignOutClicked}/>        
-                </MenuItem>
+                { menuItems }
             </Menu>)
     }
 };
@@ -98,8 +103,7 @@ class ApplicationHeader extends Component {
 
 
 
-    navigateTo( where = '/', toggleDrawer = true){
-        const that = this;
+    navigateTo( where = '/', toggleDrawer = false){
         const { history } = this.props;
 
         if(toggleDrawer === true){
@@ -124,7 +128,7 @@ class ApplicationHeader extends Component {
     }
 
     loginClicked = ( evt ) => {
-        this.navigateTo('/login', true);
+        this.navigateTo('/login', false);
     }
 
     homeClicked = ( evt ) => {
@@ -165,29 +169,27 @@ class ApplicationHeader extends Component {
         const { theme, api } = this.props;
         const { menuOpen } = this.state;
         const user = this.props.api.getUser();
-
-        let menuItems = [];
+        const menus = this.props.api.getMenus();
+        let menuItems = [];    
         //get the main nav        
-        const { content } = theme;
-        if(content.navigation && user.anon !== true) {
-            content.navigation.map((nav) => {                                
-                if(nav.id === 'main_nav') {
-                    nav.entries.map((naventry) => {
+        if(menus && menus.length && user.anon !== true) {
+            menus.map((menu) => {                                
+                if(menu.target === 'left-nav') {
+                    menu.entries.map((menuItem) => {
                         let allow = true
-                        if(isArray(naventry.roles) && isArray(user.roles)){
-                            allow = api.hasRole(naventry.roles, user.roles)    
+                        if(isArray(menuItem.roles) && isArray(user.roles)){
+                            allow = api.hasRole(menuItem.roles, user.roles)    
                         }
                         if(allow === true) {
                             const goto = () => {                        
-                                self.navigateTo(naventry.link, true);
+                                self.navigateTo(menuItem.link, true);
                             }
                             menuItems.push((
-                            <MenuItem key={naventry.id} onClick={ goto }> 
-                                <ListItemIcon><Icon color="primary">{naventry.icon}</Icon></ListItemIcon>                       
-                                <ListItemText inset primary={`${naventry.title}`} />
+                            <MenuItem key={menuItem.id} onClick={ goto }> 
+                                <ListItemIcon><Icon color="primary">{menuItem.icon}</Icon></ListItemIcon>                       
+                                <ListItemText inset primary={`${menuItem.title}`} />
                             </MenuItem>));
-                        }
-                        
+                        }                        
                     });
                 }
                 
@@ -206,20 +208,22 @@ class ApplicationHeader extends Component {
                         </Typography>
                         {user.anon === true ? null : 
                         <IconButton
-                            aria-owns={menuOpen ? 'menu-appbar' : null}
+                            aria-owns={menuOpen ? 'top-right' : null}
                             aria-haspopup="true"
                             onClick={this.handleMenu}
                             color="inherit">
                             <PowerSettingIcon />
                             <Logged open={menuOpen === true} 
-                                id={'menu-appbar'} 
+                                id={'top-right'} 
                                 anchorEl={self.state.menuAnchor}
-                                onMyProfileClicked={self.profileClicked}
-                                onSignOutClicked={self.signOutClicked} />
+                                menus={menus}
+                                api={this.props.api}
+                                user={user}
+                                self={self} />
                         </IconButton>}
                     </Toolbar>
                 </AppBar>
-                <Drawer open={this.state.drawerOpen} className={this.props.classes.drawer}>     
+                <Drawer open={this.state.drawerOpen === true} className={this.props.classes.drawer}>     
                     <div className={this.props.classes.drawerHeader}>
                         <Typography variant="subheading" style={{textAlign:'center'}}>{theme.content.appTitle}</Typography>                        
                         <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>

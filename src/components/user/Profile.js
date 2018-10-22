@@ -107,7 +107,7 @@ class Profile extends Component {
 
     renderPeers(){
         const { peers, __isnew } = this.state.profile;
-        const { classes, history } = this.props;
+        const { classes, history, api } = this.props;
         
         if(__isnew) return null
 
@@ -128,6 +128,7 @@ class Profile extends Component {
 
         };
 
+        
         
         const peerlist = isNil(peers) === false && isArray(peers.peers) === true ? peers.peers.map( (entry, pid) => { 
             return (
@@ -162,6 +163,14 @@ class Profile extends Component {
             </ListItem>
         )}) : null
 
+        /**
+         * 
+         *  <List>
+                    { peerlist }   
+                    </List>
+         */
+        const FriendsList = api.getComponent('core.UserList.1.0.0');        
+        const friends = isNil(FriendsList) === false ? <FriendsList /> : null
         return (
             <Grid  item sm={12} xs={12} offset={4}>
                 <Paper className={classes.general}>                          
@@ -172,9 +181,7 @@ class Profile extends Component {
                         or colleagues.  For best results you should have about seven to eight nominees in total.  Keep in mind that some people may decline your nomination, so 
                         it is better to nominate more than less.
                     </Typography>
-                    <List>
-                    { peerlist }   
-                    </List>
+                    {friends}                    
                     <TextField {...defaultFieldProps} type="email" label="Invite a colleague" helperText="Connect with a colleague and ask them to be an assessor" />           
                     <div className={classes.avatarContainer} style={{justifyContent:'flex-end', marginTop: '5px'}}>                            
                         <Button variant='raised' onClick={doInvite}><EmailIcon />&nbsp;SEND INVITE</Button>&nbsp;

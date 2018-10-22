@@ -318,18 +318,58 @@ const userProfile = gql`
 `;
 
 const apiStatus = gql`
-query status {
-  apiStatus {
-		when
-		status
-    firstName
-    lastName
-    email
-    id
-    avatar
-    roles
+		query status {
+		apiStatus {
+			applicationName
+			applicationAvatar
+			when
+			status
+			firstName
+			lastName
+			avatar
+			roles
+			id
+			theme
+			themeOptions
+			routes {
+				id
+				path
+				public
+				roles
+        exact
+				componentFqn
+				component {
+					nameSpace
+					name
+					version
+					args {
+						key
+						value
+					}
+					title
+					description
+					roles
+				}
+			}
+			menus {
+				id
+				key
+				name
+				target
+				roles
+				entries {
+					id
+					ordinal
+					title
+					link
+					external
+					icon
+					roles
+				}
+				
+			}
+		}
 	}
-}
 `;
 
 const assessmentWithId = gql`
@@ -672,6 +712,35 @@ export default {
             id
             title
             status
+            percentComplete
+            comments {
+              id
+              text
+              who {
+                id
+                firstName
+                lastName
+                avatar
+              }
+              when
+            }
+            createdAt
+            updatedAt            
+          }
+        }
+      `,
+      taskDetail: gql`
+        query taskDetail($id: String){
+          taskDetail(id: $id){
+            id
+            title
+            status
+            percentComplete
+            user {
+              id
+              firstName
+              lastName
+            }
             comments {
               id
               text

@@ -287,7 +287,7 @@ class DefaultView extends Component {
         </Typography>
         <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="title">"{assessment.survey.leadershipBrand.description}"</Typography>     
         <div style={{display:'flex', justifyContent: 'center'}}>
-          <img src={theme.assets.login.logo} className={classes.logo} alt={theme}/>       
+          <img src={theme.assets.logo} className={classes.logo} alt={theme}/>       
         </div>        
       </Paper>
     )
