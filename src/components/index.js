@@ -14,10 +14,13 @@ import UserSurveyComponent from './survey/UserSurvey';
 import ReportComponent from './report/index';
 import KanbanDashboardComponent from './home/kanban/KanbanDashboard';
 import TowerStoneHome from './home/TowerStoneHomeComponent';
+import Loading from './shared/Loading';
 import ReactoryRouterComponent, { ReactoryFormComponent } from './reactory'
 import  { TaskListComponent, TaskDashboardComponent } from './tasks/Taskboard';
 import AdminDashboardComponent from './admin/dashboard'
-
+import PaymentGatewayDashboardComponent from './payments/funisave/Dashboard';
+import DateSelector from './dates/DateSelector.js';
+import Layout from './shared/Layout';
 export const UserList = UserComponents.UserListWithData;
 export const UserSearchInput = UserComponents.UserSearchInputComponent;
 export const ForgotForm = UserComponents.ForgotForm;
@@ -38,6 +41,8 @@ export const Register = RegisterPage;
 export const ReactoryRouter = ReactoryRouterComponent;
 export const ReactoryForm = ReactoryFormComponent;
 export const KanbanDashboard = KanbanDashboardComponent;
+export const FuniSaveDashboard = PaymentGatewayDashboardComponent
+
 
 
 export const componentRegistery = [
@@ -52,6 +57,12 @@ export const componentRegistery = [
     name: 'RouteNotHandled', 
     component: <p>Invalid Application Path</p>, 
     version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'Loading',
+    version: '1.0.0',
+    component: Loading
   },
   { 
     nameSpace: 'core',
@@ -107,6 +118,12 @@ export const componentRegistery = [
     component: Login,
     version: '1.0.0',
   }, 
+  {
+    nameSpace: 'core',
+    name: 'DateSelector',
+    component: DateSelector,
+    version: '1.0.0',
+  },
   { 
     nameSpace: 'core', 
     name: 'Profile',
@@ -185,5 +202,17 @@ export const componentRegistery = [
     name: 'Logout',
     version: '1.0.0',
     component: UserComponents.LogoutComponent,
+  },
+  {
+    nameSpace: 'funisave-gw',
+    name: 'Dashboard',
+    version: '1.0.0',
+    component: FuniSaveDashboard
+  },
+  {
+    nameSpace: 'core',
+    name: 'Layout',
+    version: '1.0.0',
+    component: Layout
   }
 ];

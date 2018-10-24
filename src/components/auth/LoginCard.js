@@ -45,12 +45,11 @@ class LoginCard extends Component {
     const { redirectOnLogin } = this.state;
     const that = this;
     that.setState({ busy: true }, ()=>{
-      api.login(this.state.username, this.state.password).then((apiStatusResult)=>{
-        console.log('Logged in and got status', apiStatusResult);
+      api.login(this.state.username, this.state.password).then((apiStatusResult)=>{        
         that.setState({ loginError: null, loggedIn: true }, ()=>{          
-            setTimeout(()=>{ 
+            setTimeout(()=>{               
               history.push(redirectOnLogin);
-            }, 700);          
+            }, 1000);          
         });
       }).catch((error) => {
         that.setState({ loginError: 'Could not log in due to an error', busy: false });

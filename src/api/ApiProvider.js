@@ -36,7 +36,7 @@ const componentFqn = ({ nameSpace, name, version }) => {
 export class ReactoryApi extends EventEmitter {
     constructor(client) {
         super();
-        this.componentRegister = [];
+        this.componentRegister = {};
         this.client = client;
         this.queries = queries;
         this.mutations = mutations;
@@ -58,6 +58,7 @@ export class ReactoryApi extends EventEmitter {
         this.afterLogin = this.afterLogin.bind(this);
         this.registerComponent = this.registerComponent.bind(this);
         this.getComponent = this.getComponent.bind(this);
+        this.getComponents = this.getComponents.bind(this);
         this.status = this.status.bind(this);
         this.getAvatar = getAvatar;
         this.getUserFullName = getUserFullName;
@@ -67,7 +68,8 @@ export class ReactoryApi extends EventEmitter {
     }
 
     afterLogin(user){        
-        this.setUser(user);
+        this.setUser(user); 
+        this.setAuthToken(user.token);   
         return this.status({ emitLogin: true }).then();        
     }
 
@@ -121,23 +123,29 @@ export class ReactoryApi extends EventEmitter {
     }
 
     registerComponent(nameSpace, name, version = '1.0.0', component = EmptyComponent){
-        const fqn = `${nameSpace}.${name}.${version}`;
+        const fqn = `${nameSpace}.${name}@${version}`;
         if(isEmpty(nameSpace)) throw new Error('nameSpace is required for component registration');
         if(isEmpty(name)) throw new Error('name is required for component registration');
         if(isNil(component)) throw new Error('component is required to register component');
         if(isNil(this.getComponent(fqn)) === true){
-          this.componentRegister.push({nameSpace, name, version, component})
+          this.componentRegister[fqn] = {nameSpace, name, version, component}
         }
     }
     
+    getComponents(componentFqns = []){
+        let componentMap = {};
+        componentFqns.forEach(fqn => {
+            const component = this.componentRegister[fqn]
+            if(component) {
+                componentMap[component.name] = component.component
+            }            
+        })
+
+        return componentMap;
+    }
 
     getComponent(fqn){
-        let found = null 
-        this.componentRegister.forEach((component) =>  {
-            if(componentFqn(component) === fqn) {
-                found = component
-            }        
-        })
+        const found = this.componentRegister[fqn]        
         if(found && found.component) return found.component        
         return null
     }
@@ -169,13 +177,13 @@ export class ReactoryApi extends EventEmitter {
         const that = this
         return new Promise((resolve, reject) => {
             that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {
+                console.log('Api Status result', result.data);
                 if (result.data.apiStatus.status === "API OK") {                    
                     that.setUser({ ...result.data.apiStatus });
                     that.lastValidation = moment().valueOf();
-                    that.tokenValidated = true; 
-                    
-                    if(options.emitLogin === true) that.emit(ReactoryApiEventNames.onLogin);
+                    that.tokenValidated = true;                                         
                     resolve(true);
+                    if(options.emitLogin === true) that.emit(ReactoryApiEventNames.onLogin);
                 }
                 else {
                     that.logout();

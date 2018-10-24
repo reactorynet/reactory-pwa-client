@@ -21,7 +21,7 @@ import PowerSettingIcon from '@material-ui/icons/PowerSettingsNew';
 import AccountCircle from '@material-ui/icons/AccountCircle';
 import LockIcon from '@material-ui/icons/Lock';
 import { getAvatar } from '../util';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi, ReactoryApi, ReactoryApiEventNames } from '../../api/ApiProvider';
 
 
 export class Logged extends Component {
@@ -98,10 +98,11 @@ class ApplicationHeader extends Component {
         this.reportsClicked = this.reportsClicked.bind(this);
         this.actionsClicked = this.actionsClicked.bind(this);
         this.adminClicked = this.adminClicked.bind(this);
-
+        this.onLoginEvent = this.onLoginEvent.bind(this)
+        props.api.on(ReactoryApiEventNames.onLogin, this.onLoginEvent)
     }
 
-
+    onLoginEvent = (evt) => this.forceUpdate()
 
     navigateTo( where = '/', toggleDrawer = false){
         const { history } = this.props;

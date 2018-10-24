@@ -227,7 +227,7 @@ export const CreateProfile = compose(
 export const EditProfile = compose(
   withApi
 )((props) => {  
-  const { api, organizationId, profile, onCancel } = props  
+  const { api, organizationId, profile, onCancel, withPeers } = props  
   return (
     <Mutation mutation={api.mutations.Users.updateUser} >
       {(updateUser, { loading, error, data }) => {
@@ -235,6 +235,7 @@ export const EditProfile = compose(
           loading,
           error,
           profile,
+          withPeers,
           mode: 'admin',
           isNew: false,
           onCancel,
@@ -265,7 +266,7 @@ export const UserProfile = compose(
   withApi,
   withRouter,
 )((props) => {
-    const { api, location, profileId, organizationId, match } = props
+    const { api, location, profileId, organizationId, match, withPeers } = props
     let pid = null;
     pid = isNil(profileId) === false ? pid : match.params.profileId;
     if (isNil(pid) === true) pid = api.getUser() ? api.getUser().id : null;
@@ -279,7 +280,7 @@ export const UserProfile = compose(
         if(error) return <p>{error.message}</p>
 
         if(data.userWithId) {          
-          return <EditProfile organizationId={organizationId} profile={data.userWithId} />
+          return <EditProfile organizationId={organizationId} profile={data.userWithId} withPeers={withPeers}/>
         } else {
           return <p>No user data available</p>
         }

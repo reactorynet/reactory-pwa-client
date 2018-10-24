@@ -338,6 +338,10 @@ const apiStatus = gql`
 				roles
         exact
 				componentFqn
+        args {
+          key
+          value
+        }
 				component {
 					nameSpace
 					name

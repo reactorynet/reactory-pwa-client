@@ -6,7 +6,7 @@ import {
   Link,
   Redirect,
 } from 'react-router-dom';
-import { isNil } from 'lodash';
+import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
 import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
@@ -82,6 +82,7 @@ class App extends Component {
     const query = queryString.parse(window.location.search)
     if (query.auth_token) localStorage.setItem('auth_token', query.auth_token)
     api.queryObject = query;
+    api.objectToQueryString = queryString.stringify;
     this.state = {
       drawerOpen: false,
       has_token: localStorage.getItem('auth_token') !== null,
@@ -91,8 +92,14 @@ class App extends Component {
     }
 
     this.onLogout = this.onLogout.bind(this);
+    this.onLogin = this.onLogin.bind(this);
     api.on(ReactoryApiEventNames.onLogout, this.onLogout)
-    api.on(ReactoryApiEventNames.onLogin, this.forceUpdate)
+    api.on(ReactoryApiEventNames.onLogin, this.onLogin)
+  }
+
+  onLogin(){
+    console.log('User logged in');
+    //this.forceUpdate();
   }
 
   onLogout() {
@@ -145,9 +152,15 @@ class App extends Component {
                         componentFqn: routeDef.componentFqn,
                         path: routeDef.path,
                         exact: routeDef.exact === true,
-                        render: (props) => {       
+                        render: (props) => {
+                          const componentArgs = {}
+                          if(isArray(routeDef.args)) {
+                            routeDef.args.forEach((arg) => {
+                              componentArgs[arg.key] = arg.value[arg.key];
+                            })
+                          }
                           const ApiComponent = api.getComponent(routeDef.componentFqn)
-                          if (ApiComponent) return <ApiComponent />
+                          if (ApiComponent) return <ApiComponent {...componentArgs} />
                           else return (<p>No Component for {routeDef.componentFqn}</p>)
                         }
                       }

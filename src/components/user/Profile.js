@@ -107,10 +107,11 @@ class Profile extends Component {
 
     renderPeers(){
         const { peers, __isnew } = this.state.profile;
-        const { classes, history, api } = this.props;
+        const { classes, history, api, withPeers } = this.props;
         
         if(__isnew) return null
-
+        if(withPeers === false) return null
+        
         const defaultFieldProps = {
             margin: "normal",
             fullWidth: true,
@@ -163,12 +164,7 @@ class Profile extends Component {
             </ListItem>
         )}) : null
 
-        /**
-         * 
-         *  <List>
-                    { peerlist }   
-                    </List>
-         */
+       
         const FriendsList = api.getComponent('core.UserList.1.0.0');        
         const friends = isNil(FriendsList) === false ? <FriendsList /> : null
         return (
