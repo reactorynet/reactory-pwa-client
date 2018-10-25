@@ -21,6 +21,7 @@ import AdminDashboardComponent from './admin/dashboard'
 import PaymentGatewayDashboardComponent from './payments/funisave/Dashboard';
 import DateSelector from './dates/DateSelector.js';
 import Layout from './shared/Layout';
+import BasicModal from './shared/BasicModal';
 export const UserList = UserComponents.UserListWithData;
 export const UserSearchInput = UserComponents.UserSearchInputComponent;
 export const ForgotForm = UserComponents.ForgotForm;
@@ -214,5 +215,11 @@ export const componentRegistery = [
     name: 'Layout',
     version: '1.0.0',
     component: Layout
+  },
+  {
+    nameSpace: 'core',
+    name: 'BasicModal',
+    version: '1.0.0',
+    component: BasicModal
   }
 ];

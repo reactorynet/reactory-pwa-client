@@ -10,7 +10,7 @@ import { ApolloClient } from "apollo-client";
 import { withApollo } from "react-apollo";
 import * as restApi from './RestApi'
 import graphApi from './graphql'
-import { getAvatar, getUserFullName } from '../components/util'
+import { getAvatar, getUserFullName, omitDeep } from '../components/util'
 const { queries, mutations } = graphApi
 
 const storageKeys = {
@@ -44,9 +44,17 @@ export class ReactoryApi extends EventEmitter {
         this.companyWithId = restApi.companyWithId;
         this.register = restApi.register;
         this.reset = restApi.reset;
-        this.forgot = restApi.forgot;
+        this.forgot = restApi.forgot;        
         this.forms = restApi.forms;
-
+        this.utils = {
+            omitDeep
+        };
+        this.rest = {
+            json: {
+                get: restApi.getRemoteJson,
+                post: restApi.postRemoteJson,
+            } 
+        };
         this.tokenValidated = false;
         this.tokenValid = null;
         this.lastValidation = null;

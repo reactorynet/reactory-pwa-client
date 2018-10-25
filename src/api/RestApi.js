@@ -68,3 +68,35 @@ export const forms = () => {
     headers: api_headers
   }).then((response) => response.json())
 }
+
+export const getRemoteJson = (route, headers = api_headers) => {
+  return fetch(route, {
+    method: 'get',
+    headers: { ...api_headers, ...headers }
+  }).then((response) => response.json())
+}
+
+export const postRemoteJson = (route, payload, headers = api_headers) => {
+  return fetch(route, {
+    method: 'post',
+    body: JSON.stringify(payload),
+    headers: { ...api_headers, ...headers }
+  }).then((response) => response.json())
+};
+
+export const patchRemoteJson = (route, payload, headers = api_headers) => {
+  return fetch(route, {
+    method: 'patch',
+    body: JSON.stringify(payload),
+    headers: { ...api_headers, ...headers }
+  }).then((response) => response.json())
+};
+
+export const deleteRemoteJson = (route, payload, headers = api_headers) => {
+  return fetch(route, {
+    method: 'delete',
+    body: JSON.stringify(payload),
+    headers: { ...api_headers, ...headers }
+  }).then((response) => response.json())
+};
+

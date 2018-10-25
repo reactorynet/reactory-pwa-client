@@ -9,6 +9,7 @@ import {
   DayPickerRangeController, 
   DateRangePickerWrapper } from 'react-dates';
 import 'react-dates/lib/css/_datepicker.css';
+import { HORIZONTAL_ORIENTATION } from 'react-dates/constants';
 import moment, { momentPropTypes } from 'moment'
 
 class DateSelector extends Component {
@@ -23,7 +24,9 @@ class DateSelector extends Component {
         onDatesChange={this.props.onDatesChange} // PropTypes.func.isRequired,
         focusedInput={this.props.focusedInput} // PropTypes.oneOf([START_DATE, END_DATE]) or null,
         onFocusChange={this.props.onFocusChange} // PropTypes.func.isRequired,
-        displayFormat={'YYYY-MM-DD'}
+        intialStartDate={moment(this.props.startDate)}
+        initialEndDate={moment(this.props.endDate)}
+        orientation={HORIZONTAL_ORIENTATION}
     />)
   }
 }

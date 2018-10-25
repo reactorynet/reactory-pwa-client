@@ -1,4 +1,5 @@
 export default {
   MaterialObjectTemplate: require('./MaterialObjectTemplate'),
-  MaterialFieldTemplate: require('./MaterialFieldTemplate')
+  MaterialFieldTemplate: require('./MaterialFieldTemplate'),
+  MaterialArrayFieldTemplate: require('./MaterialArrayFieldTemplate'),
 }

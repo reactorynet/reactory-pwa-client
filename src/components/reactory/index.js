@@ -24,15 +24,17 @@ import MaterialTemplates from './templates'
 import uiSchemas from './schema/uiSchema'
 
 const { 
+  MaterialArrayField,
   MaterialStringField,
   MaterialTitleField,
   MaterialGridField, 
-  BootstrapGridField, 
+  BootstrapGridField,
 } = Fields;
 
 const { 
   MaterialObjectTemplate,
   MaterialFieldTemplate,
+  MaterialArrayFieldTemplate,
 } = MaterialTemplates;
 
 const simpleSchema = {
@@ -159,7 +161,7 @@ class ReactoryComponent extends Component {
       switch(schema.uiFramework){
         case 'material': {
           schema.fields = {
-            //ArrayField: MaterialArrayField,
+            ArrayField: MaterialArrayFieldTemplate.default,
             //BooleanField: MaterialBooleanField, 
             //DescriptionField: MaterialDescriptionField,
             //NumberField: MaterialNumberField,
@@ -208,14 +210,15 @@ class ReactoryComponent extends Component {
     }
   
     const setFieldTemplate = () => {
+      
       switch(schema.uiFramework){
         case 'material': {
-          schema.FieldTemplate = MaterialFieldTemplate.default
+          schema.FieldTemplate = MaterialFieldTemplate.default          
           break;
         }
         default: { 
           if(schema.FieldTemplate)
-          delete schema.FieldTemplate
+          delete schema.FieldTemplate          
           break
         }
       }
