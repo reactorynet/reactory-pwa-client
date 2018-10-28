@@ -29,7 +29,7 @@ Loading.defaultProps = {
 }
 
 const ThemedLoading = compose(
-  withTheme,
+  withTheme(),
   withStyles(Loading.styles)
 )(Loading)
 

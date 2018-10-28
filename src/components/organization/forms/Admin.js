@@ -339,6 +339,8 @@ class DefaultFormContainer extends Component {
     } = this.state;
     const that = this;
     
+    const UserListWithSearch = that.componentDefs.UserListWithSearch  
+
     return (
       <div className={classes.root}>        
         <AppBar position="static" color="default">
@@ -365,10 +367,8 @@ class DefaultFormContainer extends Component {
             </Route>
             <Route path={'/admin/org/:organizationId/employees'}>
               <Switch>
-                <Route exact path={'/admin/org/:organizationId/employees'} render={({ props }) => {
-                  const UserListWithSearch = that.componentDefs.UserListWithSearch
-                  if(UserListWithSearch) return (<UserListWithData onUserSelect={that.onEmployeeSelected} />)
-                  else return <p>No Employee List</p>
+                <Route exact path={'/admin/org/:organizationId/employees'} render={( props ) => {                  
+                  return (<UserListWithSearch organizationId={props.match.params.organizationId} onUserSelect={that.onEmployeeSelected} />)                  
                 }}> 
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/employees/new'}>

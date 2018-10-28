@@ -266,6 +266,9 @@ class SurveyAdmin extends Component {
     this.state = {
       expanded: null,
       survey: props.survey || newSurvey,
+      from: moment(props.api.queryObject.from || moment(), 'YYYY-MM-DD'),
+      till: moment(props.api.queryObject.till || moment(), 'YYYY-MM-DD'),
+      focusInput: null,
     }
     this.handleChange = this.handleChange.bind(this)
     this.patchTitle = this.patchTitle.bind(this)
@@ -275,6 +278,9 @@ class SurveyAdmin extends Component {
     this.saveGeneral = this.saveGeneral.bind(this)
     this.addNewDelegate = this.addNewDelegate.bind(this)
     this.leadershipBrandSelected = this.leadershipBrandSelected.bind(this);
+    this.onDateRangeChanged = this.onDateRangeChanged.bind(this);
+    this.onDateFocusChanged = this.onDateFocusChanged.bind(this);
+    this.componentDefs = this.props.api.getComponents(['core.DateSelector', 'core.SingleColumnLayout'])
   }
 
   static styles = theme => ({
@@ -317,11 +323,29 @@ class SurveyAdmin extends Component {
     this.props.onSave(this.state.survey)
   } 
 
+  onDateRangeChanged({ startDate, endDate }){ 
+    console.log('Date Changed', {startDate, endDate}); 
+    const updates = {
+      from: moment(this.state.from),
+      till: moment(this.state.till),
+      enableRefresh: true,
+    }
+
+    if(startDate) updates.from = startDate;
+    if(endDate) updates.till = endDate;
+    if(!startDate && !endDate) updates.enableRefresh = false;
+    this.setState({...updates})
+  }
+
+  onDateFocusChanged(focusInput){
+    this.setState({focusInput});
+  }
+
   render(){
     const { classes } = this.props;
-    const { expanded, survey } = this.state;
+    const { expanded, survey, from, till } = this.state;
     const { status, delegates } = survey
-    
+    const { DateSelector, SingleColumnLayout } = this.componentDefs;
     const complete = status === 'complete'
     let delegateComponents = []
 
@@ -332,20 +356,30 @@ class SurveyAdmin extends Component {
     }
 
     return (
-      <div className={classes.root}>
+      <SingleColumnLayout>
         <ExpansionPanel expanded={expanded === 'panel1'} onChange={this.handleChange('panel1')}>
           <ExpansionPanelSummary expandIcon={<ExpandMore />}>
             <Typography className={classes.heading}>General</Typography>
             <Typography className={classes.secondaryHeading}>Configure basic settings for selected survey</Typography>
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
-            <Grid container>
+            <SingleColumnLayout>
               <Grid item xs={12}>
                 <form style={{width:'100%'}}>
+                <DateSelector 
+                 startDate={moment(from)}                 
+                 startDateId="from" // PropTypes.string.isRequired,
+                 endDate={moment(till)}
+                 endDateId="till" // PropTypes.string.isRequired,
+                 onDatesChange={this.onDateRangeChanged} // PropTypes.func.isRequired,
+                 focusedInput={null} // PropTypes.oneOf([START_DATE, END_DATE]) or null,
+                 onFocusChange={this.onDateFocusChanged} // PropTypes.func.isRequired, 
+                 /> 
                   <FormControl fullWidth className={classes.formatControl}>
                     <InputLabel htmlFor="surveytitle">Survey Title</InputLabel>
                     <Input fullWidth id="surveytitle" value={survey.title} onChange={this.patchTitle} disabled={complete} />
                   </FormControl>
+
                   <FormControl fullWidth className={classes.formControl}>
                     <InputLabel htmlFor="surveyType">Survey Type</InputLabel>
                     <Select
@@ -430,7 +464,7 @@ class SurveyAdmin extends Component {
               <Grid item xs={12}>
                 <IconButton onClick={this.saveGeneral}  disabled={complete}><Save /></IconButton>
               </Grid>
-            </Grid>
+              </SingleColumnLayout>
           </ExpansionPanelDetails>
         </ExpansionPanel>
         <ExpansionPanel expanded={expanded === 'panel2'} onChange={this.handleChange('panel2')}>
@@ -462,7 +496,7 @@ class SurveyAdmin extends Component {
             Timeline of activities goes here
           </ExpansionPanelDetails>
         </ExpansionPanel>        
-      </div>
+      </SingleColumnLayout>
     )
   }
 }
@@ -471,7 +505,8 @@ const SurveyAdminComponent = compose(
   withTheme(),
   withStyles(SurveyAdmin.styles),
   withRouter,
-  withApollo
+  withApollo,
+  withApi,
 )(SurveyAdmin)
 
 const CalendarStyles = (theme) => {

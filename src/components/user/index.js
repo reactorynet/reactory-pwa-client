@@ -59,7 +59,7 @@ const UserSearchInput = (props, context) => {
 
   const { classes, value } = props;
   const nilf = () => ({});
-
+  
   return (
     <FormControl className={classNames(classes.margin, classes.textField)}>
         <InputLabel htmlFor={props.id || 'user-search-control'}>Search User</InputLabel>

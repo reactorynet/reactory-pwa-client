@@ -93,7 +93,7 @@ class Layout extends Component {
 
 export const LayoutThemed = compose(
   withApi,
-  withTheme,
+  withTheme(),
   withStyles(Layout.styles)
 )(Layout)
 
@@ -104,7 +104,7 @@ export const CenteredContainer = ( props ) => {
   attrs['children'] = undefined;
 
   return (
-    <Grid container {...attrs} alignItems="center">
+    <Grid container {...attrs}>
       <Grid item xs={12} lg={12} alignItems="center">
         {props.children}
       </Grid>

@@ -55,33 +55,36 @@ import styles from '../../shared/styles'
 
 
 
-class UserListWithSearch extends Component {
+export class UserListWithSearch extends Component {
   
   constructor(props, context){
     super(props, context)
     this.state = {
       searchString: '',
+      inputText: ''
     }
 
     this.doSearch = this.doSearch.bind(this);
-    this.componentDefs = this.props.api.getComponent(['core.SingleColumnLayout', 'core.UserSearch', 'core.UserList'])
+    this.searchStringChanged = this.searchStringChanged.bind(this);
+    this.componentDefs = this.props.api.getComponents(['core.SingleColumnLayout', 'core.UserSearch', 'core.UserList'])
   }
   
 
-  doSearch(searchString){
-    this.setState({searchString});
+  searchStringChanged(evt){
+    console.log('searchString changed', evt);
+    this.setState({inputText: evt.target.value});
   }
 
-  userSelected(user){
-    
+  doSearch(){
+    console.log('do it');
+    this.setState({ searchString: this.state.inputText })
   }
 
   render(){
     const { SingleColumnLayout, UserSearch, UserList } = this.componentDefs;
-    debugger
     return (
       <SingleColumnLayout style={{ maxWidth: 900, margin: 'auto' }}>
-        <UserSearch onSubmit={this.doSearch}/>
+        <UserSearch onSearch={this.doSearch} onChange={this.searchStringChanged} value={this.state.inputText}/>
         <UserList onUserSelect={this.props.onUserSelect} organizationId={this.props.organizationId} searchString={this.state.searchString} />
       </SingleColumnLayout> 
     )
@@ -89,7 +92,7 @@ class UserListWithSearch extends Component {
   
 }
 
-export const UserListWithSearchComponent = compose(withApi,withStyles(styles), withTheme)(UserListWithSearch);
+export const UserListWithSearchComponent = compose(withStyles(styles), withTheme(), withApi)(UserListWithSearch);
 
 export default {
   UserListWithSearchComponent
