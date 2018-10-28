@@ -4,6 +4,7 @@ import { Link, withRouter } from 'react-router-dom';
 import { compose } from 'redux';
 import { isArray } from 'lodash';
 import { withStyles, withTheme } from '@material-ui/core/styles';
+import { Tooltip } from '@material-ui/core';
 import Drawer from '@material-ui/core/Drawer';
 import Avatar from '@material-ui/core/Avatar';
 import AppBar from '@material-ui/core/AppBar';
@@ -21,6 +22,7 @@ import PowerSettingIcon from '@material-ui/icons/PowerSettingsNew';
 import AccountCircle from '@material-ui/icons/AccountCircle';
 import LockIcon from '@material-ui/icons/Lock';
 import { getAvatar } from '../util';
+import moment from 'moment';
 import { withApi, ReactoryApi, ReactoryApiEventNames } from '../../api/ApiProvider';
 
 
@@ -100,6 +102,7 @@ class ApplicationHeader extends Component {
         this.adminClicked = this.adminClicked.bind(this);
         this.onLoginEvent = this.onLoginEvent.bind(this)
         props.api.on(ReactoryApiEventNames.onLogin, this.onLoginEvent)
+        this.componentDefs = this.props.api.getComponents(['core.SystemStatus'])
     }
 
     onLoginEvent = (evt) => this.forceUpdate()
@@ -239,7 +242,15 @@ class ApplicationHeader extends Component {
                     </Link> }                    
                     <Divider />
                     {menuItems}
+                    <div className={this.props.classes.apiStatus}>
+                        <Tooltip title={`Api Available ${moment(api.getUser().when).format('HH:mm:ss')} click to refresh`}>
+                            <IconButton onClick={api.status}>
+                                <Icon>rss_feed</Icon>
+                            </IconButton>    
+                        </Tooltip>
+                    </div>
                 </Drawer>
+                
             </div>
         );
     }    
@@ -265,7 +276,11 @@ ApplicationHeader.styles = theme => ({
         justifyContent: 'flex-end',
         minWidth: '260px',
         padding: `0 ${theme.spacing.unit}px`,
-      },    
+      },
+    apiStatus: {
+        bottom: '10px',
+        position: 'absolute',        
+    }
 })
 
 const ApplicationHeaderComponent = compose(

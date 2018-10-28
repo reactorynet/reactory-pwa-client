@@ -2,7 +2,9 @@
 import React from 'react';
 
 import { 
-  Typography
+  Typography,
+  Grid,
+  Paper
 } from '@material-ui/core';
 import  * as UserComponents  from './user/index';
 import * as OrganizationComponents from './organization/index';
@@ -20,7 +22,8 @@ import  { TaskListComponent, TaskDashboardComponent } from './tasks/Taskboard';
 import AdminDashboardComponent from './admin/dashboard'
 import PaymentGatewayDashboardComponent from './payments/funisave/Dashboard';
 import DateSelector from './dates/DateSelector.js';
-import Layout from './shared/Layout';
+import { LayoutThemed, SingleColumnLayout, TwoColumnGrid, BasicContainer } from './shared/Layout';
+import { UserListWithSearchComponent } from './user/Widgets';
 import Logo from './shared/logo';
 import BasicModal from './shared/BasicModal';
 export const UserList = UserComponents.UserListWithData;
@@ -44,10 +47,25 @@ export const ReactoryRouter = ReactoryRouterComponent;
 export const ReactoryForm = ReactoryFormComponent;
 export const KanbanDashboard = KanbanDashboardComponent;
 export const FuniSaveDashboard = PaymentGatewayDashboardComponent
-
-
-
 export const componentRegistery = [
+  {
+    nameSpace: 'core',
+    name: 'SingleColumnLayout',
+    component: SingleColumnLayout,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'core',
+    name: 'TwoColumnGrid',
+    component: TwoColumnGrid,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'core',
+    name: 'BasicContainer',
+    component: BasicContainer,
+    version: '1.0.0'
+  },
   {
     nameSpace: 'core',
     name: 'Logo',
@@ -76,6 +94,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'UserList', 
     component: UserComponents.UserListWithData, 
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'UserListWithSearch', 
+    component:  UserListWithSearchComponent,
     version: '1.0.0',
   },
   { 
@@ -139,8 +163,8 @@ export const componentRegistery = [
     version: '1.0.0',
   },
   { 
-    nameSpace: 'core', 
-    name: 'UserSurvey',
+    nameSpace: 'towerstone', 
+    name: 'Surveys',
     component: UserSurvey,
     version: '1.0.0',
   },
@@ -193,6 +217,12 @@ export const componentRegistery = [
     component: KanbanDashboard,
     version: '1.0.0',     
   },
+  { 
+    nameSpace: 'core', 
+    name: 'Task',
+    component: KanbanDashboard,
+    version: '1.0.0',     
+  },
   {
     nameSpace: 'towerstone',
     name: 'Dashboard',
@@ -221,7 +251,7 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'Layout',
     version: '1.0.0',
-    component: Layout
+    component: LayoutThemed
   },
   {
     nameSpace: 'core',

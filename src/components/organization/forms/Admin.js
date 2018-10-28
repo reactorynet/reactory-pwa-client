@@ -24,7 +24,8 @@ import { BrandListWithData, EditBrand, newBrand, CreateBrand } from '../../brand
 import Templates from '../../template'
 import AdminCalendar, { SurveyCalendarForOrganization, EditSurveyEntryForOrganization, NewSurveyEntryForOrganization } from '../../admin/widget/AdminCalendar'
 import Settings from './settings'
-import { CDNOrganizationResource } from '../../util';
+import { withApi, ReactoryApi } from '../../../api/ApiProvider'
+import { CDNOrganizationResource, CenteredContainer } from '../../util';
 
 const { EmailTemplateEditorComponent, TemplateListComponent } = Templates;
 
@@ -250,7 +251,8 @@ class DefaultFormContainer extends Component {
   static propTypes = {
     match: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,
-    history: PropTypes.object.isRequired
+    history: PropTypes.object.isRequired,
+    api: PropTypes.instanceOf(ReactoryApi)
   }
 
   constructor(props){
@@ -275,6 +277,7 @@ class DefaultFormContainer extends Component {
     this.onClearEmployeeSelection = this.onClearEmployeeSelection.bind(this)
     this.onCalendarEntrySelect = this.onCalendarEntrySelect.bind(this)
     this.onClearSurveySelect = this.onClearSurveySelect.bind(this)
+    this.componentDefs = this.props.api.getComponents(['core.UserListWithSearch'])
   }
 
   handleSubmit(values) {
@@ -334,8 +337,8 @@ class DefaultFormContainer extends Component {
       survey,
       surveyMode, 
     } = this.state;
-
-            
+    const that = this;
+    
     return (
       <div className={classes.root}>        
         <AppBar position="static" color="default">
@@ -362,8 +365,11 @@ class DefaultFormContainer extends Component {
             </Route>
             <Route path={'/admin/org/:organizationId/employees'}>
               <Switch>
-                <Route exact path={'/admin/org/:organizationId/employees'}>
-                  <UserListWithData onUserSelect={this.onEmployeeSelected} organizationId={this.props.orgId} />
+                <Route exact path={'/admin/org/:organizationId/employees'} render={({ props }) => {
+                  const UserListWithSearch = that.componentDefs.UserListWithSearch
+                  if(UserListWithSearch) return (<UserListWithData onUserSelect={that.onEmployeeSelected} />)
+                  else return <p>No Employee List</p>
+                }}> 
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/employees/new'}>
                   <CreateProfile onCancel={this.onClearEmployeeSelection} organizationId={this.props.orgId} />
@@ -448,6 +454,7 @@ const CompanyAdminStyles = (theme) => {
 
 
 export default compose(
+  withApi,
   withRouter,
   withTheme(),
   withStyles(CompanyAdminStyles),

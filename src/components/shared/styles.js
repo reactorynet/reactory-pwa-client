@@ -1,4 +1,5 @@
 const styles = (theme) => ({
+  
   root600: {
     padding: theme.spacing.unit,
     maxWidth: '600px',

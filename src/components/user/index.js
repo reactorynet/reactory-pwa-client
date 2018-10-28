@@ -410,9 +410,9 @@ export const UserInbox = compose(withApi)(({ api }) => (
   </Query>));
 
 
-const UserList = ({organizationId, api, onUserSelect}) => {  
+const UserList = ({organizationId, api, onUserSelect, searchString}) => {  
   return (
-    <Query query={api.queries.Users.usersForOrganization} variables={{ id: organizationId }}>
+    <Query query={api.queries.Users.usersForOrganization} variables={{ id: organizationId, searchString }}>
       {({ loading, error, data } ) => {
         if(loading === true) return "Loading"
         if(error) return error.message
@@ -479,163 +479,9 @@ export const UserListWithData = compose(
   withApi
 )(UserList);
 
-class Forgot extends Component {
 
-  constructor(props, context){
-    super(props,context)
-    this.state = {
-      formData: { email: '' },
-      mailSent: false,
-      message: '',
-      hasError: false,
-      displayModal: false,
-    }
-
-    this.onSubmit = this.onSubmit.bind(this);
-    this.goBack = this.goBack.bind(this);
-    this.componentRefs = props.api.getComponents([
-      'core.Loading@1.0.0',
-      'core.DateSelector@1.0.0',
-      'core.Layout@1.0.0',
-      'core.ReactoryForm@1.0.0',
-      'core.BasicModal@1.0.0'
-    ]);
-  }
-  
-  onSubmit(form){
-    const that = this;
-    this.props.api.forgot(form.formData).then((forgotResult) => {
-      console.log('Forgot password has been triggered', forgotResult);
-      that.setState({ mailSent: true })
-    }).catch((error)=>{
-      console.error('Error sending forgot password email to user', error);
-      that.setState({ hasError: true,  message: 'Could not send an email. If this problem persists please contact our helpdesk.'})
-    })
-  }
-
-  onChange(formData){
-    console.log('formData changed', formData)
-    this.setState({formData});
-  }
-
-  goBack(){
-    this.props.history.goBack();
-  }
-    
-  render(){
-
-    const {
-      BasicModal 
-    } = this.componentRefs
-
-    if(this.state.mailSent) {
-      
-      return (<BasicModal open={true} onClose={this.goBack} title="Email Sent"><Typography variant="heading">An email has been sent with instructions to reset your password. Please allow a few minutes for delivery</Typography></BasicModal>)
-    } 
-    if(this.state.hasError) {      
-      return (<div><Typography variant="heading">{this.state.message}</Typography></div>);
-    }    
-
-    const beforeComponent = (<div className={this.props.classes.logo} style={{marginBottom: '16px'}}></div>)
-    const fabstyle = {
-      float: 'right',
-      bottom: '61px',
-      right: '10px',
-    };
-    return (
-      <CenteredContainer classNames={this.props.classes.root}>
-        <ReactoryFormComponent before={beforeComponent} className={this.props.classes.root} formId="forgot-password" uiFramework="material" onSubmit={this.onSubmit}>
-          <Button type="button" onClick={this.goBack} variant="flat"><Icon>keyboard_arrow_left</Icon>&nbsp;BACK</Button>
-          <Tooltip title="Click to send a reset email">
-            <Button type="submit" variant="fab" color="primary" style={fabstyle}><Icon>send</Icon></Button>      
-          </Tooltip>
-        </ReactoryFormComponent>
-      </CenteredContainer>
-    )          
-  }
-}
-
-Forgot.propTypes = {
-  api: PropTypes.instanceOf(ReactoryApi)  
-}
-
-Forgot.styles = theme => ({
-  ...styles(theme)
-});
-
-export const ForgotForm = compose(
-  withStyles(Forgot.styles), 
-  withTheme(),
-  withApi, 
-  withRouter)(Forgot);
-
-class ResetPassword extends Component {
-
-  constructor(props, context){
-    super(props,context)
-    this.state = {
-      formData: { email: '', password: '', passwordConfirm: '', authToken: localStorage.getItem('auth_token') },
-      message: '',
-      hasError: false,
-    }
-
-    this.onSubmit = this.onSubmit.bind(this);
-  }  
-
-  onSubmit(form){
-    const that = this;
-    this.props.api.resetPassword(form.formData).then((forgotResult) => {
-      console.log('Forgot password has been triggered', forgotResult);
-      that.setState({ mailSent: true })
-    }).catch((error)=>{
-      console.error('Error sending forgot password email to user', error);
-      that.setState({ hasError: true,  message: 'Could not send an email. If this problem persists please contact our helpdesk.'})
-    })
-  }
-
-  onChange(formData){
-    console.log('formData changed', formData)
-    this.setState({formData});
-  }
-    
-  render(){
-
-    if(this.state.mailSent) {
-      return (<div><Typography variant="body1" value="An email has been sent with instructions to reset your password. Please allow a few minutes for delivery" /></div>)
-    } 
-    if(this.state.hasError) {      
-      return (<div><Typography variant="body2" value={this.state.message} /></div>);
-    }
-
-    const formData = {
-      email: this.props.api.getUser().email,
-      authToken: this.props.api.queryObject.auth_token
-    };
-
-    return (
-      <CenteredContainer>
-        
-        <ReactoryFormComponent formId="password-reset" uiFramework="material" onSubmit={this.onSubmit} formData={formData}>          
-          <Button type="submit" variant="raised" color="primary"><Icon>save</Icon>&nbsp;UPDATE PASSWORD</Button>      
-        </ReactoryFormComponent>
-      </CenteredContainer>
-    )          
-  }
-}
-
-ResetPassword.propTypes = {
-  api: PropTypes.instanceOf(ReactoryApi)
-}
-
-ResetPassword.styles = theme => ({
-  ...styles(theme)
-});
-
-export const ResetPasswordForm = compose(
-  withStyles(ResetPassword.styles),
-  withTheme(),
-  withApi,
-  withRouter)(ResetPassword);
+export const ForgotForm = require('./Forms').default.ForgotForm;
+export const ResetPasswordForm = require('./Forms').default.ResetPasswordForm;
 
 
 class Logout extends Component {
@@ -649,6 +495,12 @@ class Logout extends Component {
 
   componentDidMount(){
     this.props.api.logout()
+    this.props.api.status().then((status) => {
+      this.props.history.push('/login')
+    }).catch(e => {
+      console.log('error logging out', e)
+      this.props.history.push('/login')
+    })
   }
 
   componentDidUpdate(){
@@ -664,6 +516,8 @@ class Logout extends Component {
 
 export const LogoutComponent = compose(
   withTheme(),
-  withApi
+  withApi,
+  withRouter,
 )(Logout)
+
 

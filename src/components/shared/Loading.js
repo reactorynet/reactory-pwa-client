@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import PropTypes from 'react';
 import { compose } from 'recompose';
 import {
   Typography
@@ -15,8 +16,16 @@ class Loading extends Component {
   });
 
   render(){
-    return (<Typography>Loading please stand by...</Typography>)
+    return (<Typography>{this.props.message}</Typography>)
   }
+}
+
+Loading.propTypes = {
+  message: PropTypes.string
+}
+
+Loading.defaultProps = {
+  message: "Loading please stand by..."
 }
 
 const ThemedLoading = compose(

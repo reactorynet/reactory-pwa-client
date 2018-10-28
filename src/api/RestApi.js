@@ -10,24 +10,28 @@ const api_headers = {
   'Content-Type': 'application/json'
 }
 
-export const login = co.wrap(function* loginGenerator(email, password) {
+export const login = (email, password) => {
   const that = this;
-  const token = btoa(`${email}:${password}`)
-  const loginResponse = yield fetch(`${api_root}/login`, {
-    method: 'POST',
-    mode: 'cors',
-    headers: {
-      'authorization': `Basic ${token}`,
-      'accept': 'application/json',
-      'x-client-key': api_client_id,
-      'x-client-pwd': api_client_password,
-      'content-type': 'application/json'
-    }
-  }).then((response) => response.json())  
-  if(that.afterLogin) return yield that.afterLogin(loginResponse.user)
-  
-  return loginResponse.user;
-});
+  return new Promise((resolve, reject) => {
+    const token = btoa(`${email}:${password}`)
+    fetch(`${api_root}/login`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'authorization': `Basic ${token}`,
+        'accept': 'application/json',
+        'x-client-key': api_client_id,
+        'x-client-pwd': api_client_password,
+        'content-type': 'application/json'
+      }
+    }).then((response) => response.json())
+    .then(body => resolve(body))
+    .catch(err => {      
+      reject(err)
+    })
+  })
+};
+
 
 export const companyWithId = (id) => {
   return fetch(`${api_root}/search?types=org,id=${id}`, {

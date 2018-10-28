@@ -111,14 +111,13 @@ const updateBrandMutation = gql`
 `;
 
 const usersForOrganization = gql`
-query UserListQuery($id: String!) {
-  usersForOrganizationWithId(id: $id) {
+query UserListQuery($id: String!, $searchString: String) {
+  usersForOrganizationWithId(id: $id, searchString: $searchString) {
       id      
       email
       firstName
       lastName
       avatar
-      businessUnit
       lastLogin
     }
 }
@@ -288,7 +287,6 @@ const userProfile = gql`
       firstName
       lastName
       avatar
-      businessUnit
       lastLogin
       peers {
         organization {
@@ -318,62 +316,85 @@ const userProfile = gql`
 `;
 
 const apiStatus = gql`
-		query status {
-		apiStatus {
-			applicationName
-			applicationAvatar
-			when
-			status
-			firstName
-			lastName
-			avatar
-			roles
-			id
-			theme
-			themeOptions
-			routes {
-				id
-				path
-				public
-				roles
+  query status {
+      apiStatus {
+      applicationName
+      applicationAvatar
+      when
+      status
+      firstName
+      lastName
+      avatar
+      roles
+      organization {
+        id
+        name
+        logo
+      }
+      businessUnit {
+        id
+        name
+        avatar
+      }
+      memberships {
+        organization {
+          id
+          name
+          logo
+        }
+        businessUnit {
+          id
+          name
+          avatar
+        }
+      }
+      id
+      theme
+      themeOptions
+      routes {
+        id
+        path
+        public
+        roles
+        componentFqn
         exact
-				componentFqn
         args {
           key
           value
         }
-				component {
-					nameSpace
-					name
-					version
-					args {
-						key
-						value
-					}
-					title
-					description
-					roles
-				}
-			}
-			menus {
-				id
-				key
-				name
-				target
-				roles
-				entries {
-					id
-					ordinal
-					title
-					link
-					external
-					icon
-					roles
-				}
-				
-			}
-		}
-	}
+        component {
+          nameSpace
+          name
+          version
+          args {
+            key
+            value
+          }
+          title
+          description
+          roles
+        }
+      }
+      menus {
+        id
+        key
+        name
+        target
+        roles
+        entries {
+          id
+          ordinal
+          title
+          link
+          external
+          icon
+          roles
+        }
+        
+      }
+    }
+  }
+
 `;
 
 const assessmentWithId = gql`
@@ -685,7 +706,7 @@ export default {
       userProfile,
       userInbox,      
       userLogs: null,
-      userPeers: null,
+      userPeers: null,      
     },
     Templates: {
       templateForOrganization: null,
@@ -780,7 +801,7 @@ export default {
       invitePeer: null,
       removePeer: null,
       updatePeer: null,
-      confirmPeers: null,
+      confirmPeers: null,      
     },  
     Templates: {
       createTemplate: null,

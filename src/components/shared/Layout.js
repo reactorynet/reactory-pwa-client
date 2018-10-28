@@ -4,7 +4,8 @@ import { compose } from 'recompose';
 import { isNil } from 'lodash';
 import {
   Grid,
-  Typography
+  Typography,
+  Paper,
 } from '@material-ui/core';
 
 import { withTheme, withStyles } from '@material-ui/core/styles';
@@ -31,7 +32,7 @@ const defaultLayout = {
       }
     }
   }
-};
+};  
 
 class Layout extends Component {
 
@@ -90,10 +91,83 @@ class Layout extends Component {
   }
 }
 
-const LayoutThemed = compose(
+export const LayoutThemed = compose(
   withApi,
   withTheme,
   withStyles(Layout.styles)
 )(Layout)
 
-export default LayoutThemed;
+
+
+export const CenteredContainer = ( props ) => {
+  let attrs = {...props};
+  attrs['children'] = undefined;
+
+  return (
+    <Grid container {...attrs} alignItems="center">
+      <Grid item xs={12} lg={12} alignItems="center">
+        {props.children}
+      </Grid>
+    </Grid>
+  )
+};
+
+export const SingleColumnLayout = CenteredContainer;
+
+export const TwoColumnGrid = ( props ) => {
+  let attrs = {...props};
+  attrs['children'] = undefined;
+
+  return (
+    <Grid container {...attrs} alignItems="center">
+      {props.children.map(child => {
+        return(<Grid item xs={12} lg={6} alignItems="center">
+          {child}
+        </Grid>)
+      })}      
+    </Grid>
+  )
+};
+
+export const paperStyles = {  
+  maxWidth: 900,
+  margin: '25px 5px 25px 5px',  
+  padding: 20,
+  textAlign: 'center',
+  display: 'inline-block',  
+};
+
+export const textStyle = {
+  width: '100%',
+  marginTop: '10px'
+}
+
+export const centered = {
+  width:'100%',
+  height:'auto',
+  display: 'flex',
+  justifyContent: 'center'
+};
+
+export const BasicContainer = ( props ) => {
+
+  let attrs = {...props};
+  if(attrs.style) attrs.style = {...paperStyles, ...attrs.style};
+  else attrs.style = {...paperStyles};
+  attrs['children'] = undefined;
+
+  return (
+    <Paper {...attrs}>
+      {props.children}
+    </Paper>
+  )
+
+};
+
+
+export default {
+  LayoutThemed,
+  CenteredContainer,
+  TwoColumnGrid,
+  BasicContainer,
+} 

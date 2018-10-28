@@ -9,7 +9,6 @@ import Button from '@material-ui/core/Button';
 import Divider from '@material-ui/core/Divider';
 import { isNil } from 'lodash';
 import {
-  Grid,
   Typography,
 } from '@material-ui/core';
 import Icon from '@material-ui/core/Icon';
@@ -26,7 +25,7 @@ class LoginCard extends Component {
     this.state = {
       username: '',
       password: '',
-      loginError: null,      
+      loginError: null,
       busy: false,
       loggedIn: false,
       redirectOnLogin: isNil(api.queryObject) === false && api.queryObject.r ? api.queryObject.r : '/'
@@ -48,12 +47,14 @@ class LoginCard extends Component {
     const { history, api } = this.props;
     const { redirectOnLogin } = this.state;
     const that = this;
-    that.setState({ busy: true }, ()=>{
-      api.login(this.state.username, this.state.password).then((apiStatusResult)=>{        
-        that.setState({ loginError: null, loggedIn: true }, ()=>{          
-            setTimeout(()=>{               
+    that.setState({ busy: true }, () => {
+      api.login(this.state.username, this.state.password).then(({ user }) => {
+        api.afterLogin(user).then(status => {
+          that.setState({ loginError: null, loggedIn: true }, () => {
+            setTimeout(() => {
               history.push(redirectOnLogin);
-            }, 1000);          
+            }, 1000);
+          })                            
         });
       }).catch((error) => {
         that.setState({ loginError: 'Your account details could not be authenticated', busy: false });
@@ -63,26 +64,28 @@ class LoginCard extends Component {
 
   doRegister = evt => this.props.history.push('/register')
   doForgot = evt => this.props.history.push('/forgot')
-  updateUsername = (evt) => this.setState({username: evt.target.value})
-  updatePassword = (evt) => this.setState({password: evt.target.value})
+  updateUsername = (evt) => this.setState({ username: evt.target.value })
+  updatePassword = (evt) => this.setState({ password: evt.target.value })
   keyPressPassword = (evt) => {
-    if(evt.charCode === 13) {
+    if (evt.charCode === 13) {
       this.doLogin()
     }
   }
   render() {
     const that = this;
     const { doLogin, props, context } = that;
-    const { theme, classes } = that.props; 
+    const { theme, classes } = that.props;
     const { busy, loginError, message } = this.state;
     const { Logo } = this.componentRefs;
-    const enableLogin = isEmail(this.state.username) && isValidPassword(this.state.password) && !busy;   
+    const enableLogin = isEmail(this.state.username) && isValidPassword(this.state.password) && !busy;
     return (<CenteredContainer>
-        <Paper className={classes.root}>
-          <Logo />
-          <Typography variant="title" color="primary" style={{fontSize:'42px', marginTop: '20px', marginBottom: '20px'}}><SecurityIcon /></Typography>      
-          { loginError ? <Typography variant="subtitle" color="secondary">{loginError} </Typography> : null }
-
+      <Logo />
+      <Paper className={classes.root}>        
+        <Typography variant="title" color="primary" style={{ fontSize: '80px', marginTop: '20px', marginBottom: '20px' }}>
+          <Icon fontSize='inherit'>security</Icon>
+        </Typography>
+        <Typography variant="subtitle" color="secondary">{loginError || 'Welcome, please sign in below' }</Typography>
+        <form style={{padding: '20px'}}>
           <TextField
             label="Email"
             style={textStyle}
@@ -99,21 +102,22 @@ class LoginCard extends Component {
             onChange={this.updatePassword}
             onKeyPress={this.keyPressPassword}
             disabled={busy}
-            />
-          
-          <Button
-            id="doLoginButton"                    
-            variant="fab"      
-            onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false || busy === true}
-            style={{marginTop:'20px'}}>
-            <Icon className="fas fa-sign-in-alt"  />
-          </Button> <br/>                
+          />
 
-          <Button onClick={this.doForgot} color='secondary' disabled={busy} style={{marginTop:'20px'}}>                              
-              Forgot Password
+          <Button
+            id="doLoginButton"
+            variant="fab"
+            onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false || busy === true}
+            style={{ marginTop: '20px' }}>
+            <Icon className="fas fa-sign-in-alt" />
+          </Button> <br />
+
+          <Button onClick={this.doForgot} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
+            Forgot Password
           </Button>
-        </Paper>        
-      </CenteredContainer>)
+        </form>
+      </Paper>
+    </CenteredContainer>)
   }
 
   static contextTypes = {
@@ -133,18 +137,6 @@ class LoginCard extends Component {
       textAlign: 'center',
       margin: 'auto',
     },
-    logo: {
-      display: 'block',
-      height: '200px',
-      margin: 0,
-      padding: 0,
-      background: `url(${theme.assets.logo || '//placehold.it/200x200'})`,
-      backgroundRepeat: 'no-repeat',
-      backgroundSize: 'contain',
-      marginRight: '0px',
-      marginBottom: '20px',
-      width: 'auto',
-    }
   })
 };
 

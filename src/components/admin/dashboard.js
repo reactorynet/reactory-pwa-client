@@ -18,8 +18,6 @@ import { OrganizationList, Forms } from '../organization';
 //import schemas, { FieldTemplate } from './schemas';
 import Dashboards from '../dashboards';
 
-
-
 class AdminDashboard extends Component {
 
   static styles = theme => ({

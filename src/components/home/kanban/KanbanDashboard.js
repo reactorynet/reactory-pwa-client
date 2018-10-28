@@ -282,7 +282,7 @@ class ChatDashboard extends Component {
     }
 
     static defaultProps = {
-        user: mocks.loggedInUser,
+        user: { firstName: '', lastName: '', email: '' },
         projectKey: '',
         chats: mocks.loggedInUserActiveChats
     }
@@ -296,20 +296,7 @@ class ChatDashboard extends Component {
         const { isMenuOpen, anchorEl } = this.state;
         const that = this;
 
-        /*
-        const renderMenu = (
-            <Menu
-              anchorEl={anchorEl}
-              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-              open={isMenuOpen}
-              onClose={this.handleMenuClose}
-            >
-              <MenuItem onClick={this.handleMenuClose}>Profile</MenuItem>
-              <MenuItem onClick={this.handleMenuClose}>My account</MenuItem>
-            </Menu>
-          );
-        */
+       
         return (
             <Grid
                 container
@@ -318,7 +305,7 @@ class ChatDashboard extends Component {
                 <Grid item md={12} sm={12} xs={12}>
                     <AppBar position="static" color="default" className={classes.toolbar}>
                         <Toolbar>
-                            <Typography variant="h6" color="inherit">Task Board - AOT</Typography>
+                            <Typography variant="h6" color="inherit">Task Board</Typography>
                             <div className={classes.search}>
                                 <div className={classes.searchIcon}>
                                     <SearchIcon />
@@ -376,7 +363,7 @@ class ChatDashboard extends Component {
                 </Grid>
                 <Grid item md={12} sm={12} xs={12} spacing={4} >
                     <Switch>
-                        <Route exact={true} path="/">
+                        <Route path="/">
                             <div className={classes.columnContainer}>
                                 {
                                     ['planned', 'in-progress', 'completed', 'artefacts', 'kudos'].map(status => {

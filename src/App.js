@@ -53,7 +53,20 @@ const cache = new InMemoryCache();
 
 const client = new ApolloClient({
   link: authLink.concat(httpLink),
-  cache
+  cache,
+  defaultOptions: {
+    watchQuery: {
+      fetchPolicy: 'cache-and-network',
+      errorPolicy: 'ignore',
+    },
+    query: {
+      fetchPolicy: 'network-only',
+      errorPolicy: 'all',
+    },
+    mutate: {
+      errorPolicy: 'all',
+    },
+  },
 });
 
 const setTheme = (theme) => {
@@ -70,9 +83,6 @@ componentRegistery.forEach((componentDef) => {
   const { nameSpace, name, version, component } = componentDef
   api.registerComponent(nameSpace, name, version, component);
 });
-
-api.status();
-
 const store = configureStore();
 
 class App extends Component {
@@ -86,9 +96,8 @@ class App extends Component {
     api.objectToQueryString = queryString.stringify;
     this.state = {
       drawerOpen: false,
-      has_token: localStorage.getItem('auth_token') !== null,
       auth_valid: false,
-      auth_validated: isNil(localStorage.getItem('auth_token')) === false ? false : true,
+      auth_validated: false,
       theme: props.appTheme,
     }
 
@@ -96,9 +105,10 @@ class App extends Component {
     this.onLogin = this.onLogin.bind(this);
     api.on(ReactoryApiEventNames.onLogout, this.onLogout)
     api.on(ReactoryApiEventNames.onLogin, this.onLogin)
+    this.componentRefs = api.getComponents(['core.Loading@1.0.0']);
   }
 
-  onLogin(){
+  onLogin() {
     console.log('User logged in');
     //this.forceUpdate();
   }
@@ -109,38 +119,64 @@ class App extends Component {
 
   componentDidMount() {
     const that = this;
-    if(window && !window.reactory) {
+    if (window && !window.reactory) {
       window.reactory = {
         api,
       };
     }
-    if (this.state.has_token === true && this.state.auth_validated === false) {
-      const auth_token = localStorage.getItem('auth_token');
-      try {
-        api.validateToken(auth_token).then((valid) => {
-          that.setState({ auth_valid: valid === true, authenticated: true, auth_validated: true })
-        }).catch((validationError) => {
-          that.setState({ auth_valid: false, authenticated: false, auth_validated: true })
-        });
-      } catch (vErr) {
-        console.error('vErr', vErr);
-      }
+    if (this.state.auth_validated === false) {
+      api.status({ emitLogin: true }).then((user) => {
+        that.setState({ auth_validated: true })
+      }).catch((validationError) => {
+        that.setState({ auth_validated: false })
+      });
     }
   }
 
   render() {
-    const { auth_valid, has_token, auth_validated } = this.state;
+    const { auth_validated } = this.state;
     let themeOptions = api.getTheme();
 
     if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
     const muiTheme = createMuiTheme(themeOptions);
+    const { Loading } = this.componentRefs;
+    const routes = api.getRoutes().map((routeDef) => {
+      const routeProps = {
+        key: routeDef.id,
+        componentFqn: routeDef.componentFqn,
+        path: routeDef.path,
+        exact: routeDef.exact === true,
+        render: (props) => {
+          const componentArgs = {}
+          if (isArray(routeDef.args)) {
+            routeDef.args.forEach((arg) => {
+              componentArgs[arg.key] = arg.value[arg.key];
+            })
+          }
+          const ApiComponent = api.getComponent(routeDef.componentFqn)
+          if (ApiComponent) return (<ApiComponent {...componentArgs} />)
+          else return (<p>No Component for {routeDef.componentFqn}</p>)
+        }
+      }
+      if (routeDef.public === true) {
+        return (<Route {...routeProps} />)
+      } else {
+        if (auth_validated === true) {
+          return <Route {...routeProps} />
+        } else {
+          return (<Redirect key={routeDef.id}
+            to={{
+              pathname: `/login`,
+              state: { from: routeDef.path }
+            }}
+          />)
+        }
+      }
+    })
 
-    if (auth_validated === false && has_token === true) {
-      return <p>Starting application, please wait a moment...</p>
-    }
-    
-    const routes = api.getRoutes()
+
+
     return (
       <React.Fragment>
         <CssBaseline />
@@ -150,42 +186,9 @@ class App extends Component {
               <ApiProvider api={api}>
                 <MuiThemeProvider theme={muiTheme}>
                   <div style={{ marginTop: '80px' }}>
-                    <AssessorHeaderBar title={muiTheme.content.appTitle} />
-                    {
-                      routes.map((routeDef) => {
-                      const routeProps = {
-                        key: routeDef.id,
-                        componentFqn: routeDef.componentFqn,
-                        path: routeDef.path,
-                        exact: routeDef.exact === true,
-                        render: (props) => {
-                          const componentArgs = {}
-                          if(isArray(routeDef.args)) {
-                            routeDef.args.forEach((arg) => {
-                              componentArgs[arg.key] = arg.value[arg.key];
-                            })
-                          }
-                          const ApiComponent = api.getComponent(routeDef.componentFqn)
-                          if (ApiComponent) return <ApiComponent {...componentArgs} />
-                          else return (<p>No Component for {routeDef.componentFqn}</p>)
-                        }
-                      }
-                      if (routeDef.public === true) {
-                        return (<Route {...routeProps} />)
-                      } else {
-                        if (has_token === true && auth_valid === true) {              
-                          return <Route {...routeProps} />
-                        } else {
-                          return (<Redirect key={routeDef.id}
-                            to={{
-                              pathname: `/login`,
-                              state: { from: routeDef.path }
-                            }}
-                          />)
-                        }                
-                      }
-                    })}
-                  </div>                  
+                    <AssessorHeaderBar title={muiTheme.content.appTitle} />                    
+                    { auth_validated === true ? routes :  <p>Checking Auth.</p> }
+                  </div>
                 </MuiThemeProvider>
               </ApiProvider>
             </ApolloProvider>

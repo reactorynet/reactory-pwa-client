@@ -1,13 +1,13 @@
 import Avatar from '@material-ui/core/Avatar';
 import Checkbox from '@material-ui/core/Checkbox';
 import Grid from '@material-ui/core/Grid';
-import { 
-    List, 
-    ListItem, 
-    ListItemSecondaryAction, 
+import {
+    List,
+    ListItem,
+    ListItemSecondaryAction,
     ListItemText,
     Typography
- } from '@material-ui/core';
+} from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 //import muiThemeable from '@material-ui/core/styles/muiThemeable';
 import { withStyles, withTheme } from '@material-ui/core/styles';
@@ -72,17 +72,17 @@ const styles = (theme) => {
             maxWidth: '370px'
         },
         container: {
-            padding: theme.spacing.unit
+            padding: theme.spacing.unit,
         }
     };
 };
 
 const mockNotifications = [
-    
+
 ];
 
 const mockAssessments = [
-    
+
 ];
 
 const mockActions = [
@@ -104,10 +104,27 @@ const mockOverallData = [
     peersMockScores
 ];
 
+class ChartData {
+
+    constructor({ personalQuarter = 0, companyQuarter = 0, personalAnnual = 0, companyAnnual = 0 }) {
+        this.personalQuarter = null;
+        this.companyQuarter = null;
+        this.personalAnnual = null;
+        this.companyAnnual = null;
+        this.showCharts = false
+    }
+
+}
+
 class TowerStoneHomeComponent extends Component {
     static propTypes = {
-        history: PropTypes.object
+        history: PropTypes.object,
+        chartData: PropTypes.instanceOf(ChartData),
     };
+
+    static defaultProps = {
+        chartData: new ChartData({})
+    }
 
     constructor(props, context) {
         super(props, context);
@@ -186,11 +203,11 @@ class TowerStoneHomeComponent extends Component {
             </ListItem>
         )));
 
-        if(notificationItems.length === 0) {
+        if (notificationItems.length === 0) {
             notificationItems.push((
-                <ListItem key={'na'} dense button className={classes.listItem}>                    
+                <ListItem key={'na'} dense button className={classes.listItem}>
                     <Avatar alt="No notifications">!</Avatar>
-                    <ListItemText primary={'All clear'} />                    
+                    <ListItemText primary={'No notifications'} />
                 </ListItem>
             ))
         }
@@ -203,7 +220,7 @@ class TowerStoneHomeComponent extends Component {
             </ListItem>
         )));
 
-        if(assessmentItems.length === 0){
+        if (assessmentItems.length === 0) {
             assessmentItems.push((
                 <ListItem key={'na'} dense button className={classes.listItem}>
                     <Avatar alt="No Assessments">!</Avatar>
@@ -218,8 +235,8 @@ class TowerStoneHomeComponent extends Component {
                 <ListItemText primary={action.text} secondary={`Due: ${action.due.format('DD-MM-YYYY')}`} />
             </ListItem>
         )));
-        
-        if(actionItems.length === 0){
+
+        if (actionItems.length === 0) {
             actionItems.push((
                 <ListItem key={'na'} dense button className={classes.listItem}>
                     <Avatar alt="No Assessments">!</Avatar>
@@ -227,7 +244,7 @@ class TowerStoneHomeComponent extends Component {
                 </ListItem>
             ))
         }
-        
+
 
         const filteredMockData = () => {
             let data = [];
@@ -238,135 +255,135 @@ class TowerStoneHomeComponent extends Component {
             return data;
         };
         return (
-            <div style={{ marginRight: '5px', marginLeft: '5px' }}>
-                <div>
-                    <Grid container spacing={24}>
-                        <Grid item xs={12} sm={12} style={{ textAlign: 'center' }}>
-                            <img src={theme.assets.logo} className={classes.logo} alt={theme} />
-                        </Grid>
-                        <Grid item xs={6} sm={3}>
-                            <Paper>
-                                <h4 className={classes.statsCardLabel}>Personal - Quarter</h4>
-                                <PieChart
-                                    id={'personal-quarter'}
-                                    styles={{ display: 'flex', justifyContent: 'center' }}
-                                    data={lastRating}
-                                    size={120}
-                                    innerHoleSize={100}
-                                />
-                                <span className={classes.statsScoreLabel}>N/A</span>
-                            </Paper>
-                        </Grid>
-                        <Grid item xs={6} sm={3}>
-                            <Paper>
-                                <h4 className={classes.statsCardLabel}>Company - Quarter</h4>
-                                <PieChart
-                                    id={'company-quarter'}
-                                    styles={{ display: 'flex', justifyContent: 'center' }}
-                                    data={lastRating}
-                                    size={120}
-                                    innerHoleSize={100}
-                                />
-                                <span className={classes.statsScoreLabel}>N/A</span>
-                            </Paper>
-                        </Grid>
-                        <Grid item xs={6} sm={3}>
-                            <Paper>
-                                <h4 className={classes.statsCardLabel}>Personal - Annual</h4>
-                                <PieChart
-                                    id={'personal-annual'}
-                                    styles={{ display: 'flex', justifyContent: 'center' }}
-                                    data={lastRating}
-                                    size={120}
-                                    innerHoleSize={100}
-                                />
-                                <span className={classes.statsScoreLabel}>N/A</span>
-                            </Paper>
-                        </Grid>
-
-                        <Grid item xs={6} sm={3}>
-                            <Paper>
-                                <h4 className={classes.statsCardLabel}>Company - Annual</h4>
-                                <PieChart
-                                    id={'company-annual'}
-                                    styles={{ display: 'flex', justifyContent: 'center' }}
-                                    data={lastRating}
-                                    size={120}
-                                    innerHoleSize={100}
-                                />
-                                <span className={classes.statsScoreLabel}>N/A</span>
-                            </Paper>
-                        </Grid>
-
-                        <Grid item xs={12} sm={12}>
-                            <h4 className={classes.statsCardLabel}>Overall</h4>
-                            <Paper>
-                                <LineChart
-                                    xType={'time'}
-                                    axes={true}
-                                    dataPoints
-                                    yDomainRange={[60, 80]}
-                                    xTicks={4}
-                                    interpolate={'cardinal'}
-                                    width={Math.floor(self.state.lineChart.width)}
-                                    tickTimeDisplayFormat={'%m %Y'}
-                                    height={self.state.lineChart.width > 780 ? Math.floor(self.state.lineChart.width / 4) : 250}
-                                    data={filteredMockData()}
-                                />
-                                <List>
-                                    <ListItem key={0} dense button className={classes.listItem}>
-                                        <ListItemText primary={'Personal Avg'} />
-                                        <ListItemSecondaryAction>
-                                            <Checkbox checked={self.state.lineChart.displayPersonalAvg} onChange={self.toggleDisplayPersonalAvg} />
-                                        </ListItemSecondaryAction>
-                                    </ListItem>
-                                    <ListItem key={0} dense button className={classes.listItem}>
-                                        <ListItemText primary={'Business Unit Avg'} />
-                                        <ListItemSecondaryAction>
-                                            <Checkbox checked={self.state.lineChart.displayPeerAvg} onChange={self.toggleDisplayBusinessUnitAvg} />
-                                        </ListItemSecondaryAction>
-                                    </ListItem>
-                                    <ListItem key={0} dense button className={classes.listItem}>
-                                        <ListItemText primary={'Company Avg'} />
-                                        <ListItemSecondaryAction>
-                                            <Checkbox checked={self.state.lineChart.displayCompanyAvg} onChange={self.toggleDisplayCompanyAvg} />
-                                        </ListItemSecondaryAction>
-                                    </ListItem>
-                                </List>
-                            </Paper>
-                        </Grid>
-
-                        <Grid item xs={12} sm={12}>
-                            <Paper className={classes.container}>
-                                <Typography label color="primary">Available Assessments</Typography>
-                                <List>
-                                    {assessmentItems}
-                                </List>
-                            </Paper>
-                        </Grid>
-
-                        <Grid item xs={12} sm={6}>
-                            <Paper className={classes.container}>
-                                <Typography label color="primary">Notifications</Typography>
-                                <List>
-                                    {notificationItems}
-                                </List>
-                            </Paper>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <Paper className={classes.container}>
-                                <Typography label color="primary">Actions</Typography>
-                                <List>
-                                    {actionItems}
-                                </List>
-                            </Paper>
-                        </Grid>
+            <div style={{ maxWidth: 900, margin: 'auto' }}>
+                <Grid container spacing={24}>
+                    <Grid item xs={12} sm={12} style={{ textAlign: 'center' }}>
+                        <img src={theme.assets.logo} className={classes.logo} alt={theme} />
                     </Grid>
-                </div>
+                    {this.props.chartData.showCharts ? <Grid item xs={6} sm={3}>
+                        <Paper className={classes.container}>
+                            <h4 className={classes.statsCardLabel}>Personal - Quarter</h4>
+                            <PieChart
+                                id={'personal-quarter'}
+                                styles={{ display: 'flex', justifyContent: 'center' }}
+                                data={lastRating}
+                                size={120}
+                                innerHoleSize={100}
+                            />
+                            <span className={classes.statsScoreLabel}>N/A</span>
+                        </Paper>
+                    </Grid> : null}
+                    {this.props.chartData.showCharts ? <Grid item xs={6} sm={3}>
+                        <Paper className={classes.container}>
+                            <h4 className={classes.statsCardLabel}>Company - Quarter</h4>
+                            <PieChart
+                                id={'company-quarter'}
+                                styles={{ display: 'flex', justifyContent: 'center' }}
+                                data={lastRating}
+                                size={120}
+                                innerHoleSize={100}
+                            />
+                            <span className={classes.statsScoreLabel}>N/A</span>
+                        </Paper>
+                    </Grid> : null}
+                    {this.props.chartData.showCharts ? <Grid item xs={6} sm={3}>
+                        <Paper className={classes.container}>
+                            <h4 className={classes.statsCardLabel}>Personal - Annual</h4>
+                            <PieChart
+                                id={'personal-annual'}
+                                styles={{ display: 'flex', justifyContent: 'center' }}
+                                data={lastRating}
+                                size={120}
+                                innerHoleSize={100}
+                            />
+                            <span className={classes.statsScoreLabel}>N/A</span>
+                        </Paper>
+                    </Grid> : null}
+
+                    {this.props.chartData.showCharts ? <Grid item xs={6} sm={3}>
+                        <Paper className={classes.container}>
+                            <h4 className={classes.statsCardLabel}>Company - Annual</h4>
+                            <PieChart
+                                id={'company-annual'}
+                                styles={{ display: 'flex', justifyContent: 'center' }}
+                                data={lastRating}
+                                size={120}
+                                innerHoleSize={100}
+                            />
+                            <span className={classes.statsScoreLabel}>N/A</span>
+                        </Paper>
+                    </Grid> : null}
+
+                    {this.props.chartData.showCharts ? <Grid item xs={12} sm={12}>
+                        <h4 className={classes.statsCardLabel}>Overall</h4>
+                        <Paper className={classes.container}>
+                            <LineChart
+                                xType={'time'}
+                                axes={true}
+                                dataPoints
+                                yDomainRange={[60, 80]}
+                                xTicks={4}
+                                interpolate={'cardinal'}
+                                width={Math.floor(self.state.lineChart.width)}
+                                tickTimeDisplayFormat={'%m %Y'}
+                                height={self.state.lineChart.width > 780 ? Math.floor(self.state.lineChart.width / 4) : 250}
+                                data={filteredMockData()}
+                            />
+                            <List>
+                                <ListItem key={0} dense button className={classes.listItem}>
+                                    <ListItemText primary={'Personal Avg'} />
+                                    <ListItemSecondaryAction>
+                                        <Checkbox checked={self.state.lineChart.displayPersonalAvg} onChange={self.toggleDisplayPersonalAvg} />
+                                    </ListItemSecondaryAction>
+                                </ListItem>
+                                <ListItem key={0} dense button className={classes.listItem}>
+                                    <ListItemText primary={'Business Unit Avg'} />
+                                    <ListItemSecondaryAction>
+                                        <Checkbox checked={self.state.lineChart.displayPeerAvg} onChange={self.toggleDisplayBusinessUnitAvg} />
+                                    </ListItemSecondaryAction>
+                                </ListItem>
+                                <ListItem key={0} dense button className={classes.listItem}>
+                                    <ListItemText primary={'Company Avg'} />
+                                    <ListItemSecondaryAction>
+                                        <Checkbox checked={self.state.lineChart.displayCompanyAvg} onChange={self.toggleDisplayCompanyAvg} />
+                                    </ListItemSecondaryAction>
+                                </ListItem>
+                            </List>
+                        </Paper>
+                    </Grid> : null}
+
+                    <Grid item xs={12} sm={12}>
+                        <Paper className={classes.container}>
+                            <Typography label color="primary" align="center">Available Assessments</Typography>
+                            <List>
+                                {assessmentItems}
+                            </List>
+                        </Paper>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                        <Paper className={classes.container}>
+                            <Typography label color="primary" align="center">Notifications</Typography>
+                            <List>
+                                {notificationItems}
+                            </List>
+                        </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Paper className={classes.container}>
+                            <Typography label color="primary" align="center">Actions</Typography>
+                            <List>
+                                {actionItems}
+                            </List>
+                        </Paper>
+                    </Grid>
+                </Grid>
             </div>
         );
     }
 }
+
+
 
 const HomeComponent = compose(
     withRouter,

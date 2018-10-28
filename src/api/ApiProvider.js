@@ -75,10 +75,11 @@ export class ReactoryApi extends EventEmitter {
         this.CDN_ROOT = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
     }
 
-    afterLogin(user){        
+    afterLogin(user){ 
+        console.log('After login called');       
         this.setUser(user); 
         this.setAuthToken(user.token);   
-        return this.status({ emitLogin: true }).then();        
+        return this.status({ emitLogin: true });        
     }
 
 
@@ -143,7 +144,7 @@ export class ReactoryApi extends EventEmitter {
     getComponents(componentFqns = []){
         let componentMap = {};
         componentFqns.forEach(fqn => {
-            const component = this.componentRegister[fqn]
+            const component = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]
             if(component) {
                 componentMap[component.name] = component.component
             }            
@@ -153,18 +154,20 @@ export class ReactoryApi extends EventEmitter {
     }
 
     getComponent(fqn){
-        const found = this.componentRegister[fqn]        
+        const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]        
         if(found && found.component) return found.component        
         return null
     }
 
-    logout() {
+    logout(refreshStatus = true) {
         const user = this.getUser()
         localStorage.removeItem(storageKeys.AuthToken);
         this.setUser({ ...user, ...anonUser });
-        this.status({ logout: true }).then((done)=>{
-            this.emit(ReactoryApiEventNames.onLogout);
-        });
+        if(refreshStatus === true){
+            this.status({ logout: true }).then((done)=>{
+                this.emit(ReactoryApiEventNames.onLogout);
+            });
+        }        
     }
 
     getLastValidation(){
@@ -182,26 +185,28 @@ export class ReactoryApi extends EventEmitter {
     }
 
     status( options = { emitLogin: false } ) {
+        console.log('status refresh request');
         const that = this
         return new Promise((resolve, reject) => {
             that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {
+                console.log('status refresh request = 1', result);
                 console.log('Api Status result', result.data);
                 if (result.data.apiStatus.status === "API OK") {                    
                     that.setUser({ ...result.data.apiStatus });
                     that.lastValidation = moment().valueOf();
                     that.tokenValidated = true;                                         
-                    resolve(true);
                     if(options.emitLogin === true) that.emit(ReactoryApiEventNames.onLogin);
+                    resolve(result.data.apiStatus.user);                    
                 }
                 else {
-                    that.logout();
-                    that.setUser(anonUser);                    
-                    reject(new Error('TOKEN INVALID OR API DOWN'));
+                    that.logout(false);
+                    that.setUser(anonUser);             
+                    resolve(anonUser);       
                 }
             }).catch((clientErr) => {
                 console.error('Error happened during validation', clientErr);
-                that.logout();
-                reject(new Error('Coult not execute validation'));
+                that.logout(false);
+                resolve(anonUser);
             });
         });
     }
@@ -235,6 +240,10 @@ export class ReactoryApi extends EventEmitter {
                 reject(passwordUpdateError);
             });
         })
+    }
+
+    setOrganizationContext(context = { organization: null, businessunit: null}){
+
     }
 
     static propTypes = {
