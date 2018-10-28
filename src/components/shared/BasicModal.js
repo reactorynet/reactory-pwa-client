@@ -5,13 +5,9 @@ import Typography from '@material-ui/core/Typography';
 import Modal from '@material-ui/core/Modal';
 import Button from '@material-ui/core/Button';
 
-function rand() {
-  return Math.round(Math.random() * 20) - 10;
-}
-
 function getModalStyle() {
-  const top = 50 + rand();
-  const left = 50 + rand();
+  const top = 50;
+  const left = 50;
 
   return {
     top: `${top}%`,
@@ -49,15 +45,15 @@ class BasicModal extends React.Component {
   };
 
   render() {
-    const { classes } = this.props;
-
+    const { classes, onClose } = this.props;
+    const closeHandler = onClose || this.handleClose;
     return (
       <div>                
         <Modal
           aria-labelledby="simple-modal-title"
           aria-describedby="simple-modal-description"
           open={this.state.open}
-          onClose={this.handleClose}
+          onClose={closeHandler}
         >
           <div style={getModalStyle()} className={classes.paper}>
             <Typography variant="title" id="modal-title">
@@ -75,7 +71,10 @@ class BasicModal extends React.Component {
 
 BasicModal.propTypes = {
   classes: PropTypes.object.isRequired,
+  onClose: PropTypes.func
 };
+
+
 
 // We need an intermediary variable for handling the recursive nesting.
 const BasicModalWrapped = withStyles(styles)(BasicModal);

@@ -7,7 +7,7 @@ import styles from './styles';
 class Logo extends Component {  
   render(){
     const customStyle = {
-      maxWidth: `${this.props.maxWidth}px`
+      width: `${this.props.width}px`
     };
 
     return <div className={this.props.classes.logo} style={customStyle}></div>
@@ -15,18 +15,20 @@ class Logo extends Component {
 }
 
 Logo.propTypes = {
-  maxWidth: PropTypes.number
+  width: PropTypes.number
 }
 
 Logo.defaultProps = {
-  maxWidth: 300
-}
+  width: 400,
+};
 
 Logo.styles = (theme) => ({
   ...styles(theme)
 });
 
-export default compose( 
+const ThemedLogo = compose( 
   withStyles(Logo.styles),
   withTheme()  
 )(Logo);
+
+export default ThemedLogo;

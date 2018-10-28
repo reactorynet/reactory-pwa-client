@@ -21,6 +21,7 @@ import AdminDashboardComponent from './admin/dashboard'
 import PaymentGatewayDashboardComponent from './payments/funisave/Dashboard';
 import DateSelector from './dates/DateSelector.js';
 import Layout from './shared/Layout';
+import Logo from './shared/logo';
 import BasicModal from './shared/BasicModal';
 export const UserList = UserComponents.UserListWithData;
 export const UserSearchInput = UserComponents.UserSearchInputComponent;
@@ -47,6 +48,12 @@ export const FuniSaveDashboard = PaymentGatewayDashboardComponent
 
 
 export const componentRegistery = [
+  {
+    nameSpace: 'core',
+    name: 'Logo',
+    component: Logo,
+    version: '1.0.0'
+  },
   {
     nameSpace: 'core',
     name: 'EmptyComponent', 

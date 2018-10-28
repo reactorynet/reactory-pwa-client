@@ -39,9 +39,10 @@ function getServedPath(appPackageJson) {
 }
 
 // config after eject: we're in ./config/
+const clientBuildPath = `build/${process.env.REACT_APP_CLIENT_KEY}`;
 module.exports = {
   dotenv: resolveApp('.env'),
-  appBuild: resolveApp(`build/${process.env.REACT_APP_CLIENT_KEY}`),
+  appBuild: resolveApp(clientBuildPath),
   appPublic: resolveApp('public'),
   appHtml: resolveApp('public/index.html'),
   appIndexJs: resolveApp('src/index.js'),

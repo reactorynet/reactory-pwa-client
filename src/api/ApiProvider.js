@@ -275,9 +275,7 @@ export const withApi = (ComponentToWrap) => {
 
         render() {
             const { api } = this.context;
-            return (
-                <ComponentToWrap {...this.props} api={api} />
-            )
+            return <ComponentToWrap {...this.props} api={api} />            
         }
     }
 };

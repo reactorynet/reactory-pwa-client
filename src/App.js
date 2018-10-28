@@ -15,6 +15,7 @@ import { createHttpLink } from 'apollo-link-http';
 import { setContext } from 'apollo-link-context';
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
 import CssBaseline from '@material-ui/core/CssBaseline';
+import classnames from 'classnames';
 import { createMuiTheme } from '@material-ui/core/styles';
 import { forgot } from './api'
 import logo from './logo.svg';
@@ -108,6 +109,11 @@ class App extends Component {
 
   componentDidMount() {
     const that = this;
+    if(window && !window.reactory) {
+      window.reactory = {
+        api,
+      };
+    }
     if (this.state.has_token === true && this.state.auth_validated === false) {
       const auth_token = localStorage.getItem('auth_token');
       try {

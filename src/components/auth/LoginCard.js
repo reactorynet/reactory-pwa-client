@@ -18,7 +18,6 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
 import { BasicContainer, CenteredContainer, textStyle, isEmail, isValidPassword } from '../util';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
-
 class LoginCard extends Component {
 
   constructor(props, context) {
@@ -38,6 +37,11 @@ class LoginCard extends Component {
     this.updateUsername = this.updateUsername.bind(this);
     this.updatePassword = this.updatePassword.bind(this);
     this.keyPressPassword = this.keyPressPassword.bind(this);
+    this.componentRefs = props.api.getComponents([
+      'core.Logo@1.0.0',
+      'core.Loading@1.0.0',
+      'core.BasicModal@1.0.0'
+    ]);
   }
 
   doLogin = (evt) => {
@@ -52,7 +56,7 @@ class LoginCard extends Component {
             }, 1000);          
         });
       }).catch((error) => {
-        that.setState({ loginError: 'Could not log in due to an error', busy: false });
+        that.setState({ loginError: 'Your account details could not be authenticated', busy: false });
       });
     });
   }
@@ -71,16 +75,14 @@ class LoginCard extends Component {
     const { doLogin, props, context } = that;
     const { theme, classes } = that.props; 
     const { busy, loginError, message } = this.state;
-
+    const { Logo } = this.componentRefs;
     const enableLogin = isEmail(this.state.username) && isValidPassword(this.state.password) && !busy;   
-
     return (<CenteredContainer>
         <Paper className={classes.root}>
-          <div className={classes.logo}>            
-          </div>
-          <Typography variant="title" color="primary"><SecurityIcon /></Typography><br/>
-          <Typography variant="title" color="primary">{ !busy ? 'Sign In' : 'Signing in...' } </Typography>
+          <Logo />
+          <Typography variant="title" color="primary" style={{fontSize:'42px', marginTop: '20px', marginBottom: '20px'}}><SecurityIcon /></Typography>      
           { loginError ? <Typography variant="subtitle" color="secondary">{loginError} </Typography> : null }
+
           <TextField
             label="Email"
             style={textStyle}
@@ -100,12 +102,14 @@ class LoginCard extends Component {
             />
           
           <Button
-            id="doLoginButton"                          
-            onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false || busy === true}>
-            <Icon className="fas fa-sign-in-alt"  />&nbsp;Login
+            id="doLoginButton"                    
+            variant="fab"      
+            onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false || busy === true}
+            style={{marginTop:'20px'}}>
+            <Icon className="fas fa-sign-in-alt"  />
           </Button> <br/>                
 
-          <Button onClick={this.doForgot} color='secondary' disabled={busy}>                              
+          <Button onClick={this.doForgot} color='secondary' disabled={busy} style={{marginTop:'20px'}}>                              
               Forgot Password
           </Button>
         </Paper>        
@@ -127,6 +131,7 @@ class LoginCard extends Component {
       minWidth: '320px',
       padding: theme.spacing.unit,
       textAlign: 'center',
+      margin: 'auto',
     },
     logo: {
       display: 'block',

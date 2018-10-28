@@ -8,12 +8,12 @@ const styles = (theme) => ({
   logo: {
     display: 'block',
     height: '200px',
-    margin: 0,
+    margin: 'auto',
     padding: 0,
     background: `url(${theme.assets.logo || '//placehold.it/200x200'})`,
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'contain',
-    marginRight: '0px',
+    backgroundPosition: 'center',
     width: 'auto',
   }
 });

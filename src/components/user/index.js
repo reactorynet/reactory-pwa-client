@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
+import classnames from 'classnames';
 import gql from 'graphql-tag';
 import { compose } from 'redux';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
@@ -25,6 +26,7 @@ import {
   TableHead,  
   TableRow,
   TableCell,
+  Tooltip,
   Typography,
 } from '@material-ui/core';
 
@@ -486,10 +488,18 @@ class Forgot extends Component {
       mailSent: false,
       message: '',
       hasError: false,
+      displayModal: false,
     }
 
     this.onSubmit = this.onSubmit.bind(this);
     this.goBack = this.goBack.bind(this);
+    this.componentRefs = props.api.getComponents([
+      'core.Loading@1.0.0',
+      'core.DateSelector@1.0.0',
+      'core.Layout@1.0.0',
+      'core.ReactoryForm@1.0.0',
+      'core.BasicModal@1.0.0'
+    ]);
   }
   
   onSubmit(form){
@@ -514,20 +524,31 @@ class Forgot extends Component {
     
   render(){
 
+    const {
+      BasicModal 
+    } = this.componentRefs
+
     if(this.state.mailSent) {
-      return (<div><Typography variant="heading">An email has been sent with instructions to reset your password. Please allow a few minutes for delivery</Typography></div>)
+      
+      return (<BasicModal open={true} onClose={this.goBack} title="Email Sent"><Typography variant="heading">An email has been sent with instructions to reset your password. Please allow a few minutes for delivery</Typography></BasicModal>)
     } 
     if(this.state.hasError) {      
       return (<div><Typography variant="heading">{this.state.message}</Typography></div>);
     }    
 
-    const beforeComponent = (<div className={this.props.classes.logo}></div>)
-    
+    const beforeComponent = (<div className={this.props.classes.logo} style={{marginBottom: '16px'}}></div>)
+    const fabstyle = {
+      float: 'right',
+      bottom: '61px',
+      right: '10px',
+    };
     return (
-      <CenteredContainer>
+      <CenteredContainer classNames={this.props.classes.root}>
         <ReactoryFormComponent before={beforeComponent} className={this.props.classes.root} formId="forgot-password" uiFramework="material" onSubmit={this.onSubmit}>
           <Button type="button" onClick={this.goBack} variant="flat"><Icon>keyboard_arrow_left</Icon>&nbsp;BACK</Button>
-          <Button type="submit" variant="raised" color="primary"><Icon>email</Icon>&nbsp;RESET</Button>      
+          <Tooltip title="Click to send a reset email">
+            <Button type="submit" variant="fab" color="primary" style={fabstyle}><Icon>send</Icon></Button>      
+          </Tooltip>
         </ReactoryFormComponent>
       </CenteredContainer>
     )          
@@ -593,8 +614,7 @@ class ResetPassword extends Component {
 
     return (
       <CenteredContainer>
-        <div className={this.props.classes.logo}>            
-        </div>                        
+        
         <ReactoryFormComponent formId="password-reset" uiFramework="material" onSubmit={this.onSubmit} formData={formData}>          
           <Button type="submit" variant="raised" color="primary"><Icon>save</Icon>&nbsp;UPDATE PASSWORD</Button>      
         </ReactoryFormComponent>

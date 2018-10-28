@@ -52,6 +52,7 @@ class Layout extends Component {
   render(){
     const layoutDef = this.props.layout
     const { api } = this.props;
+    debugger
     const components = Object.keys(layoutDef).map(( key ) => {
       const containerDef = layoutDef[key]
       const gridProps = {
@@ -81,11 +82,11 @@ class Layout extends Component {
       return (
       <Grid {...gridProps}>
          {childLayouts}
-         {isNil(ApiComponent) ? null : <ApiComponent />} 
+         {isNil(ApiComponent) ? <p>No component</p> : <ApiComponent />} 
       </Grid>);
     });
     
-    return components;
+    return <Grid container spacing={0}>{components}</Grid>;
   }
 }
 

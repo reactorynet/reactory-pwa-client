@@ -2,7 +2,8 @@ import React from 'react';
 import moment from 'moment';
 import { map } from 'lodash';
 import {
-  Paper
+  Paper,
+  Grid
 } from '@material-ui/core';
 
 import DefaultAvatar from '../assets/images/profile/default.png';
@@ -51,14 +52,14 @@ export const centered = {
   
 export  const CenteredContainer = ( props ) => {
     let attrs = {...props};
-    if(attrs.style) attrs.style = {...centered, ...attrs.style};
-    else attrs.style = {...centered};
     attrs['children'] = undefined;
   
     return (
-      <div {...attrs}>
-        {props.children}
-      </div>
+      <Grid container {...attrs} alignItems="center">
+        <Grid item xs={12} lg={12} alignItems="center">
+          {props.children}
+        </Grid>
+      </Grid>
     )
   };
   
