@@ -64,6 +64,7 @@ import { UserSearchInputComponent, UserProfile } from '../../user';
 import { BrandListWithData } from '../../brands';
 import { withApi } from '../../../api/ApiProvider';
 import { omitDeep, getAvatar } from '../../util';
+import { flattenSelections } from 'apollo-utilities';
 // Setup the localizer by providing the moment (or globalize) Object
 // to the correct localizer.
 
@@ -88,16 +89,24 @@ const newSurvey = {
 
 
 const newDelegate = {
-  id: uuid(),
-  userId: null,  
-  firstName: null,
-  lastName: null,
-  email: null,  
-  assessors: [],
-  availablePeers: [],
-  peersInvited: false,
-  peersConfirmed: false,
-  assessments: []
+  delegate: {    
+    id: null,
+    firstName: '',
+    lastName: '',
+    email: '',
+    avatar: null,
+  },
+  assessments: {
+    assessor: {
+      id: null,
+      firstName: '',
+      lastName: '',
+      avatar: null,
+    }
+  },
+  complete: false,
+  launched: false,
+  removed: false			  
 }
 
 function TabContainer(props) {
@@ -202,6 +211,7 @@ class DelegateAdmin extends Component {
     }
     this.tabChanged = this.tabChanged.bind(this)
     this.toggleExpand = this.toggleExpand.bind(this)
+    this.componentDefs = this.props.api.getComponents(['core.InboxComponent'])
   }
   
   tabChanged = (evt, value) => {
@@ -215,7 +225,7 @@ class DelegateAdmin extends Component {
   render(){
     const { delegate, tab } = this.state
     const { classes } = this.props
-
+    const { InboxComponent } = this.componentDefs
     const nilf = () => ({});
     const avatar = (<Avatar className={classes.avatar} src={getAvatar(delegate.delegate)}></Avatar>)
     const action = (<IconButton onClick={this.toggleExpand}><MoreVertIcon /></IconButton>)
@@ -233,11 +243,13 @@ class DelegateAdmin extends Component {
               <AppBar position="static">
                 <Tabs value={tab} onChange={this.tabChanged}>
                   <Tab label="Delegate Details" />
-                  <Tab label="Assessments" />                  
+                  <Tab label="Assessments" />
+                  <Tab label="Notifications" />                  
                 </Tabs>
               </AppBar>              
               {tab === 0 && <TabContainer><UserProfile profileId={delegate.delegate.id} /></TabContainer>}
               {tab === 1 && <TabContainer><DelegateDetail userId={delegate.delegate.id} surveyId={this.props.surveyId}/></TabContainer>}
+              {tab === 2 && <TabContainer><InboxComponent userId={delegate.delegate.id} surveyId={this.props.surveyId}/></TabContainer>}
             </div>
           </Collapse>
         </CardContent>
@@ -255,8 +267,8 @@ DelegateAdmin.styles = (theme) => ({});
 const DelegateAdminComponent = compose(
   withTheme(),
   withStyles(DelegateAdmin.styles),
-  withApollo,
-  withRouter
+  withRouter,
+  withApi
 )(DelegateAdmin);
 
 class SurveyAdmin extends Component {
