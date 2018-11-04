@@ -103,6 +103,11 @@ class ApplicationHeader extends Component {
         this.onLoginEvent = this.onLoginEvent.bind(this)
         props.api.on(ReactoryApiEventNames.onLogin, this.onLoginEvent)
         this.componentDefs = this.props.api.getComponents(['core.SystemStatus'])
+        this.statusRefresh = this.statusRefresh.bind(this)
+    }
+
+    componentDidMount(){
+
     }
 
     onLoginEvent = (evt) => this.forceUpdate()
@@ -165,6 +170,10 @@ class ApplicationHeader extends Component {
     }
 
     adminClicked = evt => this.navigateTo('/admin')
+
+    statusRefresh = e => {
+        this.props.api.status().catch(e => this.setState({ apiNotAvailable: true })) 
+    }
             
     render() {
         //const { match } = this.props;
@@ -243,8 +252,8 @@ class ApplicationHeader extends Component {
                     <Divider />
                     {menuItems}
                     <div className={this.props.classes.apiStatus}>
-                        <Tooltip title={`Api Available ${moment(api.getUser().when).format('HH:mm:ss')} click to refresh`}>
-                            <IconButton onClick={api.status}>
+                        <Tooltip title={`Api Available @ ${moment(api.getUser().when).format('HH:mm:ss')} click to refresh`}>
+                            <IconButton onClick={this.statusRefresh}>
                                 <Icon>rss_feed</Icon>
                             </IconButton>    
                         </Tooltip>

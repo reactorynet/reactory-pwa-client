@@ -19,6 +19,8 @@ const allOrganizations = gql`
         id
         code
         name
+        avatar
+        logo
         legacyId
         createdAt
         updatedAt

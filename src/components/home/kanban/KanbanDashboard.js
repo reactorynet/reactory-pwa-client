@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import moment, { momentPropTypes } from 'moment';
 import { withRouter, Route, Switch } from 'react-router';
 import { Query, Mutation } from 'react-apollo';
 import { withStyles, withTheme } from '@material-ui/core/styles';
@@ -278,24 +279,30 @@ class ChatDashboard extends Component {
     static propTypes = {
         user: PropTypes.object.isRequired,
         projectKey: PropTypes.string,
-        chats: PropTypes.array
+        from: PropTypes.instanceOf(moment),
+        till: PropTypes.instanceOf(moment)
     }
 
     static defaultProps = {
         user: { firstName: '', lastName: '', email: '' },
         projectKey: '',
-        chats: mocks.loggedInUserActiveChats
+        from: moment(),
+        till: moment()        
     }
 
     handleProfileMenuOpen = event => {
         this.setState({ anchorEl: event.currentTarget });
     };
 
+    onDateRangeChanged(startDate, endDate){
+        console.log('DateRange changed', {startDate, endDate});
+    }
+
     render() {
-        const { classes, user, history } = this.props;
+        const { classes, user, history, from, till } = this.props;
         const { isMenuOpen, anchorEl } = this.state;
         const that = this;
-
+        const { DateSelector } = this.componentDefs;
        
         return (
             <Grid
@@ -318,6 +325,13 @@ class ChatDashboard extends Component {
                                     }}
                                 />
                             </div>
+                            <DateSelector
+                                startDate={moment(from)}
+                                startDateId="from" // PropTypes.string.isRequired,
+                                endDate={moment(till)}
+                                endDateId="till" // PropTypes.string.isRequired,
+                                onDatesChange={that.onDateRangeChanged} // PropTypes.func.isRequired,
+                            />
                             <div className={classes.sectionDesktop}>
                                 <Tooltip title={`You have (${4}) personal tasks in progress`}>
                                     <IconButton color="inherit">
@@ -351,11 +365,7 @@ class ChatDashboard extends Component {
                                     </IconButton>
                                 </Tooltip>
 
-                                <Tooltip title={`Click here to filter by date`}>
-                                    <IconButton color="inherit">
-                                        <Icon>calendar_today</Icon>
-                                    </IconButton>
-                                </Tooltip>
+
 
                             </div>
                         </Toolbar>
@@ -393,6 +403,8 @@ class ChatDashboard extends Component {
             anchorEl: null
         };
         this.handleProfileMenuOpen = this.handleProfileMenuOpen.bind(this);
+
+        this.componentDefs = this.props.api.getComponents(['core.DateSelector'])
     }
 }
 

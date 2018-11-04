@@ -1,4 +1,5 @@
-import React from 'react';
+import React,  { Component, Fragment } from 'react';
+import PropTypes from 'prop-types';
 import IconButton from '@material-ui/core/IconButton';
 import Menu, { MenuItem } from '@material-ui/core/Menu';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
@@ -13,10 +14,26 @@ const options = [
 
 const ITEM_HEIGHT = 48;
 
-class IconButtonDropDown extends React.Component {
-  state = {
-    anchorEl: null,
+class IconButtonDropDown extends Component {
+
+  static propTypes = {
+    options: PropTypes.array,
+    keyField: PropTypes.string,
+    valueField: PropTypes.string
+  }
+
+  static defaultProps = {
+    options
   };
+
+  constructor(props, context){
+    super(props, context)
+
+    this.state = {
+      anchorEl: null,
+    };
+  }
+  
 
   handleClick = event => {
 
@@ -31,7 +48,7 @@ class IconButtonDropDown extends React.Component {
     const { anchorEl } = this.state;
 
     return (
-      <div>
+      <Fragment>
         <IconButton
           aria-label="More"
           aria-owns={anchorEl ? 'long-menu' : null}
@@ -61,9 +78,11 @@ class IconButtonDropDown extends React.Component {
           )}
           )}
         </Menu>
-      </div>
+      </Fragment>
     );
   }
 }
+
+
 
 export default IconButtonDropDown;

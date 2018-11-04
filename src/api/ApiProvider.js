@@ -45,7 +45,7 @@ export class ReactoryApi extends EventEmitter {
         this.register = restApi.register;
         this.reset = restApi.reset;
         this.forgot = restApi.forgot;        
-        this.forms = restApi.forms;
+        this.forms = this.forms.bind(this)
         this.utils = {
             omitDeep
         };
@@ -53,6 +53,9 @@ export class ReactoryApi extends EventEmitter {
             json: {
                 get: restApi.getRemoteJson,
                 post: restApi.postRemoteJson,
+            },
+            text: {
+                get: restApi.getContent
             } 
         };
         this.tokenValidated = false;
@@ -72,7 +75,10 @@ export class ReactoryApi extends EventEmitter {
         this.getUserFullName = getUserFullName;
         this.getTheme = this.getTheme.bind(this);
         this.getRoutes = this.getRoutes.bind(this);
+        this.isAnon = this.isAnon.bind(this);
         this.CDN_ROOT = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
+        this.formSchemas = []
+        this.formSchemaLastFetch = null;
     }
 
     afterLogin(user){ 
@@ -82,9 +88,36 @@ export class ReactoryApi extends EventEmitter {
         return this.status({ emitLogin: true });        
     }
 
+    forms(){
+        return new Promise((resolve) => {
 
-    hasRole(itemRoles = [], userRoles = []){
+            const refresh = () => {
+                restApi.forms().then((formsResult) => {
+                    this.formSchemas = formsResult;
+                    resolve(formsResult)
+                }).catch((error) => {
+                    console.error('Error loading forms from api', error)
+                    resolve([])
+                });
+            }
+
+            if(this.formSchemaLastFetch !== null) {
+                if(moment(this.formSchemaLastFetch).add(60, 'seconds').isAfter(moment())) {
+                   refresh() 
+                } else {
+                    resolve(this.formSchemas)
+                }
+            } else refresh()
+            
+        });        
+    }
+
+    hasRole(itemRoles = [], userRoles = this.getApplicationRoles()){             
         return intersection(itemRoles, userRoles).length > 0;
+    }
+
+    isAnon(){
+        return this.hasRole(['ANON']) === true;
     }
 
     addRole(user, organization, role='USER'){
@@ -242,8 +275,13 @@ export class ReactoryApi extends EventEmitter {
         })
     }
 
-    setOrganizationContext(context = { organization: null, businessunit: null}){
+    setViewContext(context = {}){
+        const newContext = { ...this.getViewContext(), ...context };
+        localStorage.setItem(storageKeys.viewContext, JSON.stringify(newContext));
+    }
 
+    getViewContext(){
+        return JSON.parse(localStorage.getItem(storageKeys.viewContext) || '{}');
     }
 
     static propTypes = {

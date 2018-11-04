@@ -7,11 +7,11 @@ import {
   Paper
 } from '@material-ui/core';
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import coreStyles from '../shared/styles';
-import { CenteredContainer } from '../shared/Layout';
-import Logo from '../shared/logo'
+import coreStyles from '../../shared/styles';
+import { CenteredContainer } from '../../shared/Layout';
+import Logo from '../../shared/logo'
 
-class Loading extends Component {
+class AnalyticsDashboard extends Component {
 
   static styles = theme => { 
     const core = coreStyles(theme);
@@ -35,29 +35,29 @@ class Loading extends Component {
         <CenteredContainer>          
           <Paper className={`${classes.root600} ${classes.paper}`}>
             <Logo />
-            <Typography variant={'title'}>{message} &nbsp;<Icon className={spinIcon === true ? classes.spinning: ''}>{icon}</Icon></Typography>
+            <p>Sexy Charts</p>
           </Paper>
         </CenteredContainer>
       );
   }
 }
 
-Loading.propTypes = {
+AnalyticsDashboard.propTypes = {
   message: PropTypes.string,
   classes: PropTypes.object,
   icon: PropTypes.string,
   spinIcon: PropTypes.boolean
 }
 
-Loading.defaultProps = {
+AnalyticsDashboard.defaultProps = {
   message: "Loading please stand by...",
   icon: 'cached',
   spinIcon: true
 }
 
-const ThemedLoading = compose(
+const AnalyticsDashboardComponent = compose(
   withTheme(),
-  withStyles(Loading.styles)
-)(Loading)
+  withStyles(AnalyticsDashboard.styles)
+)(AnalyticsDashboard)
 
-export default ThemedLoading;
+export default AnalyticsDashboardComponent;

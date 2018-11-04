@@ -28,7 +28,8 @@ export default (props) => {
     registry,
     required,
     schema, 
-    uiScehma 
+    uiSchema, 
+    hidden
   } = props;
   
   const inputProps = {
@@ -38,6 +39,7 @@ export default (props) => {
     disabled,
     autofocus
   }
+
 
   return(<Input readOnly={schema.readOnly} value={formData} onChange={(evt) => { evt.persist(); onChange(evt.target.value); }} />) 
 };

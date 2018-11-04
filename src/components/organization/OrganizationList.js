@@ -3,9 +3,10 @@ import PropTypes from 'prop-types';
 import { withRouter } from 'react-router'
 import { compose } from 'redux';
 import gql from 'graphql-tag';
-import { graphql } from 'react-apollo';
+import { graphql, Query, Mutation } from 'react-apollo';
 import Paper from '@material-ui/core/Paper';
-import { List, ListItem, ListItemText } from '@material-ui/core';
+import { List, ListItem, ListItemText, Typography } from '@material-ui/core';
+import { withApi } from '../../api/ApiProvider';
 
 /**
  * List component for user entries
@@ -91,12 +92,33 @@ OrganizationList.defaultProps = {
 
 };
 
+
+const OrganizationLabelForId = ({ organizationId, api } ) => {
+  return <Query query={gql`query OrganizationWithId($id: ObjID) {
+    organizationWithId(id: $id)
+    name
+    logo
+  }`} variables={{ id: organizationId }} options={{ name: 'organization' }}>
+  {({ loading, data, error}, context) => {
+
+    if(loading) return <p>loading organization</p>
+    if(error) return <p>Error Occured Fetching Organization</p>
+
+    return <Typography>{data.organization.name}</Typography>
+  }}
+  </Query>
+}
+
+export const OrganizationLabelForIdComponent = compose(withApi)(OrganizationLabelForId);
+
 const organizationQuery = gql`
   query OrganizationQuery {
       allOrganizations {
         id
         code
         name
+        logo
+        avatar
         legacyId
         createdAt
         updatedAt

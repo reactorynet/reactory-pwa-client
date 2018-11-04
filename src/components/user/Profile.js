@@ -80,6 +80,7 @@ class Profile extends Component {
 
     static propTypes = {
         profile:  PropTypes.object.isRequired,
+        profileTitle: PropTypes.string,
         api: PropTypes.instanceOf(ReactoryApi),
         loading: PropTypes.bool,
         mode: PropTypes.string,
@@ -91,6 +92,7 @@ class Profile extends Component {
     static defaultProps = {
         profile: defaultProfile,
         loading: false,
+        profileTitle: 'My Profile',
         mode: 'user',
         isNew: false,
         onCancel: nilf,
@@ -192,7 +194,7 @@ class Profile extends Component {
         const that = this
         const { profile, avatarUpdated } = this.state;
         const { firstName, lastName, businessUnit, email, avatar, peers, surveys, teams, __isnew, id } = profile;        
-        const { mode, classes, history } = this.props;
+        const { mode, classes, history, profileTitle } = this.props;
         const defaultFieldProps = {
             margin: "normal",
             fullWidth: true,
@@ -272,7 +274,7 @@ class Profile extends Component {
             <Grid item sm={12} xs={12} offset={4}>
                 <Paper className={classes.general}>
                     <form>        
-                        <Typography variant='headline'>Profile</Typography>
+                        <Typography variant='headline'>{profileTitle || 'My Profile'}</Typography>
                         { avatarComponent }
                         <TextField {...defaultFieldProps} label='Name' value={firstName} helperText='Please use your given name' onChange={updateFirstname} />
                         <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText='Please use your given name' onChange={updateLastname} />

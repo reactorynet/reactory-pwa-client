@@ -19,7 +19,7 @@ Logo.propTypes = {
 }
 
 Logo.defaultProps = {
-  width: 400,
+  width: 'auto',
 };
 
 Logo.styles = (theme) => ({

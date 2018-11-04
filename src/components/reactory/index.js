@@ -25,6 +25,7 @@ import uiSchemas from './schema/uiSchema'
 
 const { 
   MaterialArrayField,
+  MaterialBooleanField,
   MaterialStringField,
   MaterialTitleField,
   MaterialGridField, 
@@ -94,7 +95,7 @@ class ReactoryComponent extends Component {
   static propTypes = {
     formId: PropTypes.string,
     uiSchemaId: PropTypes.string,
-    uiFramework: PropTypes.oneOf(['schema', 'material', 'bootstrap3'])
+    uiFramework: PropTypes.oneOf(['schema', 'material', 'bootstrap3']),
   }
 
   static defaultProps = {
@@ -162,7 +163,7 @@ class ReactoryComponent extends Component {
         case 'material': {
           schema.fields = {
             ArrayField: MaterialArrayFieldTemplate.default,
-            //BooleanField: MaterialBooleanField, 
+            BooleanField: MaterialBooleanField, 
             //DescriptionField: MaterialDescriptionField,
             //NumberField: MaterialNumberField,
             //ObjectField: MaterialObjectField,
@@ -184,6 +185,11 @@ class ReactoryComponent extends Component {
     };
   
     const setWidgets = () => {
+      switch(schema.uiFramework){
+        case 'material': {
+
+        }
+      }
       const widgets = {
         //AltDateTimeWidget
         //AltDateWidget
@@ -296,6 +302,7 @@ class ReactoryComponent extends Component {
     const formProps = {
       ...this.props,
       ...this.form(),
+      formData: {...data},
       onSubmit: this.onSubmit,
     }       
     return (

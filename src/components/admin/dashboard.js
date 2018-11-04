@@ -17,6 +17,7 @@ import Grid from '@material-ui/core/Grid'
 import { OrganizationList, Forms } from '../organization';
 //import schemas, { FieldTemplate } from './schemas';
 import Dashboards from '../dashboards';
+import { withApi, ReactoryApi } from '../../api/ApiProvider'
 
 class AdminDashboard extends Component {
 
@@ -43,24 +44,24 @@ class AdminDashboard extends Component {
       <Grid container spacing={8}>
         <Grid item xs={12}>
           <Toolbar>
-            <Link to="/admin">
+            <Link to="/admin/">
               <Typography variant="title">Dashboard</Typography>
             </Link>            
           </Toolbar>
         </Grid>
-        <Grid item md={3} xs={12}>          
+        <Grid item md={3} xs={12}>
           <OrganizationList admin={true} newOrganizationLink={true} />                    
         </Grid>
         <Grid item md={9} xs={12}>        
           <Switch>
-            <Route exact path='/admin'>
+            <Route exact path='/admin/'>
               <Dashboards.DefaultAdminDashboard />
             </Route>
-            <Route exact path='/admin/org/new/:tab'>
-              <Forms.Default mode={'new'} orgId={null} tab={'general'} />
+            <Route exact path='/admin/org/new/general'>
+              <Forms.Default mode={'new'} tab={'general'} />
             </Route>
-            <Route path='/admin/org/:orgId/:tab' render={ props =>
-              <Forms.Default orgId={props.match.params.orgId} tab={props.match.params.tab} mode={'edit'} {...props} />              
+            <Route path='/admin/org/:organizationId/:tab' render={ props =>
+              <Forms.Default organizationId={props.match.params.organizationId} tab={props.match.params.tab} mode={'edit'} {...props} />              
             } />                        
           </Switch> 
         </Grid>        
@@ -75,6 +76,7 @@ class AdminDashboard extends Component {
 }
 
 export default compose(
+  withApi,
   withRouter,
   withStyles(AdminDashboard.styles),
   withTheme()

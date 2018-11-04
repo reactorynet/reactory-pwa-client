@@ -61,13 +61,13 @@ const UserSearchInput = (props, context) => {
   const nilf = () => ({});
   
   return (
-    <FormControl className={classNames(classes.margin, classes.textField)}>
+    <FormControl>
         <InputLabel htmlFor={props.id || 'user-search-control'}>Search User</InputLabel>
         <Input
           id={props.id || 'user-search-control'}
           type={'text'}
           value={value}
-          onChange={props.onChange || nilf}
+          fullWidth
           endAdornment={
             <InputAdornment position="end">
               <IconButton

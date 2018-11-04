@@ -73,6 +73,13 @@ export const forms = () => {
   }).then((response) => response.json())
 }
 
+export const getContent = (route, header = api_headers) => {
+  return fetch(`${route}`, {
+    method: 'get',
+    headers: { ...api_headers,  'accept': 'application/text', 'content-type': 'application/text' }
+  }).then((response) => response.text())
+};
+
 export const getRemoteJson = (route, headers = api_headers) => {
   return fetch(route, {
     method: 'get',

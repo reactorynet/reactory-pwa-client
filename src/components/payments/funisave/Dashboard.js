@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import co from 'co';
 import moment from 'moment';
@@ -9,7 +9,7 @@ import {
   Badge,
   ExpansionPanel,
   ExpansionPanelDetails,
-  ExpansionPanelSummary,  
+  ExpansionPanelSummary,
   Button,
   MenuItem,
   FormGroup,
@@ -42,6 +42,7 @@ import gql from 'graphql-tag';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import { compose } from 'redux';
 import { withApi } from '../../../api/ApiProvider'
+import { styles } from '../../shared/styles'
 
 const endpointForTarget = (target) => {
   switch (target) {
@@ -142,16 +143,17 @@ class GatewayDashboardData {
 
 }
 
-const itemsList = (items,   
-  primaryBinder=(item)=>(`${item.toString()}`)) => {
+const itemsList = (items,
+  primaryBinder = (item) => (`${item.toString()}`)) => {
   return (
-  <List>
-      { items.map((item) => {
+    <List>
+      {items.map((item) => {
         return (<ListItem>
-          <ListItemText primary={primaryBinder(item)}/>
-        </ListItem>)})
+          <ListItemText primary={primaryBinder(item)} />
+        </ListItem>)
+      })
       }
-  </List>
+    </List>
   );
 };
 
@@ -170,120 +172,134 @@ const itemsList = (items,
         </ExpansionPanel>
 */
 
-const transactionsList = (audit, itemClick = () => {}, onPanelChange = () => {}) => {
+const transactionsList = (audit, itemClick = () => { }, onPanelChange = () => { }) => {
   let fileAuditItems = []
-  if(isArray(audit)){
+  if (isArray(audit)) {
     fileAuditItems = audit.map((auditEntry) => {
-      const items = auditEntry.transactions      
+      const items = auditEntry.transactions
       return (
-      <div>
-        
-        <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
-          {items.map( (item, idx ) => { 
-            const folderClicked = e => itemClick(item)
-            return (
-            <ListItem key={idx} button onClick={folderClicked}>
-              <ListItemText primary={`${item.partnerId} -> ${item.transactionId}`}/>
-            </ListItem>)})}
-        </List>    
-        
-      </div>
-      )});      
-    }
-    
-    return (
-      <div>
-        {fileAuditItems}
-      </div>
-    )
+        <div>
+
+          <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
+            {items.map((item, idx) => {
+              const transactionClicked = e => itemClick(item)
+              return (
+                <ListItem key={idx} button onClick={transactionClicked}>
+                  <ListItemText primary={`${item.partnerId} -> ${item.transactionId}`} />
+                </ListItem>)
+            })}
+          </List>
+
+        </div>
+      )
+    });
+  }
+
+  return (
+    <div>
+      {fileAuditItems}
+    </div>
+  )
 };
 
-const paymentSchedulesList = (audit = [], itemClick = () => {}) => {
+const paymentSchedulesList = (audit = [], itemClick = () => { }) => {
   let fileAuditItems = []
-  if(isArray(audit)){
+  if (isArray(audit)) {
     fileAuditItems = audit.map((auditEntry) => {
-      const items = auditEntry.paymentSchedules      
+      const items = auditEntry.paymentSchedules
       return (
-      <div>
-        <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
-          {items.map( (paymentSchedule ) => {            
-            const folderClicked = e => itemClick(paymentSchedule)
-            return (
-            <ListItem key={paymentSchedule.id} button onClick={folderClicked}>
-              <ListItemText 
-                primary={`${paymentSchedule.payAtNumber || 'NO-PAY_AT'} @ ${paymentSchedule.productName}, ${paymentSchedule.productType}`}
-                secondary={`${paymentSchedule.paymentMethod} ${paymentSchedule.debitOrder.status} (${paymentSchedule.paymentDay})`}
-              />
-            </ListItem>)})}
-        </List>    
-      </div>
-      )});      
-    }
-    
-    return (
-      <div>
-        {fileAuditItems}
-      </div>
-    )
+        <div>
+          <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
+            {items.map((paymentSchedule) => {
+              const folderClicked = e => itemClick(paymentSchedule)
+              return (
+                <ListItem key={paymentSchedule.id} button onClick={folderClicked}>
+                  <ListItemText
+                    primary={`${paymentSchedule.payAtNumber || 'NO-PAY_AT'} @ ${paymentSchedule.productName}, ${paymentSchedule.productType}`}
+                    secondary={`${paymentSchedule.paymentMethod} ${paymentSchedule.debitOrder.status} (${paymentSchedule.paymentDay})`}
+                  />
+                </ListItem>)
+            })}
+          </List>
+        </div>
+      )
+    });
+  }
+
+  return (
+    <div>
+      {fileAuditItems}
+    </div>
+  )
 };
 
-const errorsList = (audit = [], itemClick = () => {}) => {
+const errorsList = (audit = [], itemClick = () => { }) => {
   let fileAuditItems = []
-  if(isArray(audit)){
+  if (isArray(audit)) {
     fileAuditItems = audit.map((auditEntry) => {
-      const items = auditEntry.errors      
+      const items = auditEntry.errors
       return (
-      <div>
-        <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
-          {items.map( (item, eidx ) => { 
-            const folderClicked = e => itemClick(item)
-            return (
-            <ListItem key={eidx} button onClick={folderClicked}>
-              <ListItemText primary={`${item.partner}`}/>
-            </ListItem>)})}
-        </List>    
-      </div>
-      )});      
-    }
-    
-    return (
-      <div>
-        {fileAuditItems}
-      </div>
-    )
+        <div>
+          <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
+            {items.map((item, eidx) => {
+              const folderClicked = e => itemClick(item)
+              return (
+                <ListItem key={eidx} button onClick={folderClicked}>
+                  <ListItemText primary={`${item.partner}`} />
+                </ListItem>)
+            })}
+          </List>
+        </div>
+      )
+    });
+  }
+
+  return (
+    <div>
+      {fileAuditItems}
+    </div>
+  )
 };
 
-const filesList = (audit, itemClick = ()=>({})) => {
-  let fileAuditItems = []
-  if(isArray(audit)){
-    fileAuditItems = audit.map((auditEntry) => {
-      const items = Object.keys(auditEntry.files).map((key) => ({  key, ...auditEntry.files[key] }))      
-      return (
-      <div>
-        <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
-          {items.map( (folder ) => { 
-            const folderClicked = e => itemClick(folder)
-            return (
-            <ListItem key={folder.key} button onClick={folderClicked}>
-              <ListItemText primary={`${folder.key.toUpperCase()} (${folder.count})`} secondary={`${folder.path}`}/>
-            </ListItem>)})}
-        </List>    
-      </div>
-      )});      
-    }
+const makeCalendarFromAudit = (audit) => {
+  return audit.map((audit) => ({
     
-    return (
-      <div>
-        {fileAuditItems}
-      </div>
-    )
+  }))
+}
+
+const filesList = (audit, itemClick = () => ({})) => {
+  let fileAuditItems = []
+  if (isArray(audit)) {
+    fileAuditItems = audit.map((auditEntry) => {
+      const items = Object.keys(auditEntry.files).map((key) => ({ key, ...auditEntry.files[key] }))
+      return (
+        <div>
+          <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
+            {items.map((folder) => {
+              const folderClicked = e => itemClick(folder)
+              return (
+                <ListItem key={folder.key} button onClick={folderClicked}>
+                  <ListItemText primary={`${folder.key.toUpperCase()} (${folder.count})`} secondary={`${folder.path}`} />
+                </ListItem>)
+            })}
+          </List>
+        </div>
+      )
+    });
+  }
+
+  return (
+    <div>
+      {fileAuditItems}
+    </div>
+  )
 };
 
 class PaymentGatewayDashboard extends Component {
 
   static styles = (theme) => {
 
-    return {
+    return styles(theme, {
       mainContainer: {
         padding: '5px',
         height: '100%',
@@ -400,11 +416,12 @@ class PaymentGatewayDashboard extends Component {
         bottom: theme.spacing.unit * 6,
         right: theme.spacing.unit * 2,
       },
-    };
+    });
   }
 
   static propTypes = {
-    dashboardData: PropTypes.instanceOf(GatewayDashboardData)
+    dashboardData: PropTypes.instanceOf(GatewayDashboardData),
+    refresh: PropTypes.func
   };
 
   constructor(props, context) {
@@ -418,102 +435,114 @@ class PaymentGatewayDashboard extends Component {
       gatewayData: null,
       message: null,
       displayMessage: false,
+      remoteFolder: null,
+      fileData: null,
+      selectedTransaction: null,
     }
     this.componentRefs = props.api.getComponents([
       'core.Loading@1.0.0',
       'core.DateSelector@1.0.0',
       'core.Layout@1.0.0',
       'core.ReactoryForm@1.0.0',
-      'core.BasicModal@1.0.0'
+      'core.BasicModal@1.0.0',
+      'core.FullScreenModal@1.0.0',
+      'core.Calendar@1.0.0',
+      'core.SpeedDial'
     ]);
     this.onDateRangeChanged = this.onDateRangeChanged.bind(this);
     this.onDateFocusChanged = this.onDateFocusChanged.bind(this);
     this.doRefresh = this.doRefresh.bind(this);
     this.loadData = this.loadData.bind(this);
     this.fileSelected = this.fileSelected.bind(this);
+    this.transactionSelected = this.transactionSelected.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.onProductPaymentSubmit = this.onProductPaymentSubmit.bind(this);
     this.synchronizeMembers = this.synchronizeMembers.bind(this);
     this.resetSchedule = this.resetSchedule.bind(this);
     this.synchGateways = this.synchGateways.bind(this);
     this.publishSchedule = this.publishSchedule.bind(this);
+    this.downloadRemoteFile = this.downloadRemoteFile.bind(this);
+    this.transferFiles = this.transferFiles.bind(this);
   }
 
-  componentDidMount(){
+  componentDidMount() {
     this.loadData()
   }
 
-  componentDidUpdate(){
-    
+  componentDidUpdate() {
+
   }
 
-  transferSettingsTransform(response){
+  transferSettingsTransform(response) {
     console.log('transforming result', response);
     const { value } = response;
-    return {         
+    return {
       sending: value.disabled === false,
       receiving: value.disable_receive === false,
     }
   }
-  
-  loadData(){
+
+  loadData() {
     const { api } = this.props;
     const that = this;
     const endpoint = this.props.endpoint || 'http://localhost:3001/'
     let dataRequest = {
-      transferSettings: {uri: `${endpoint}settings/transfers`, transform: this.transferSettingsTransform },
-      cpsHealth: { uri: `${endpoint}cps`},
+      transferSettings: { uri: `${endpoint}settings/transfers`, transform: this.transferSettingsTransform },
+      cpsHealth: { uri: `${endpoint}cps` },
       //currentSchedule: `${endpoint}cps/schedule?from=${moment(this.state.from).startOf('day').valueOf}&till=${moment(this.state.till).endOf('day').value()}`
     }
-    co.wrap(function* loadDataGenerator(requests){
+    co.wrap(function* loadDataGenerator(requests) {
       const requestIds = Object.keys(requests);
       const results = {}
-      for(let reqid = 0; reqid < requestIds.length; reqid += 1){
+      for (let reqid = 0; reqid < requestIds.length; reqid += 1) {
         const request = requests[requestIds[reqid]];
         let result = null;
-        if(typeof request === "string") {
+        if (typeof request === "string") {
           result = yield api.rest.json.get(request)
           results[requestIds[reqid]] = result
         } else {
           result = yield api.rest.json.get(request.uri)
           results[requestIds[reqid]] = request.transform ? request.transform(result) : result
-        }   
+        }
       }
       return results;
-    })(dataRequest).then(( dataResult ) => { that.setState( { gatewayData: { ...dataResult } })});
+    })(dataRequest).then((dataResult) => { that.setState({ gatewayData: { ...dataResult } }) });
   }
-  
-  onDateRangeChanged({ startDate, endDate }){ 
-    console.log('Date Changed', {startDate, endDate}); 
+
+  onDateRangeChanged(startDate, endDate) {
+    console.log('Date Changed', { startDate, endDate });
     const updates = {
       from: moment(this.state.from),
       till: moment(this.state.till),
       enableRefresh: true,
     }
 
-    if(startDate) updates.from = startDate;
-    if(endDate) updates.till = endDate;
-    if(!startDate && !endDate) updates.enableRefresh = false;
-    this.setState({...updates})
+    if (startDate) updates.from = startDate;
+    if (endDate) updates.till = endDate;
+    if (!startDate && !endDate) updates.enableRefresh = false;
+    this.setState({ ...updates })
   }
 
-  onDateFocusChanged(focusInput){
-    this.setState({focusInput});
+  onDateFocusChanged(focusInput) {
+    this.setState({ focusInput });
   }
 
-  doRefresh(){
+  doRefresh() {
     const { history, match, api } = this.props;
     const { from, till } = this.state;
-    const filter = api.objectToQueryString({ 
-      from: from.format('YYYY-MM-DD'), 
+    const filter = api.objectToQueryString({
+      ...api.queryObject,
+      from: from.format('YYYY-MM-DD'),
       till: till.format('YYYY-MM-DD')
     });
     const path = `${match.url}?${filter}`;
-    
+    api.queryObject = api.queryString.parse(filter)
     history.push(path)
+    this.props.refresh()
+
   }
 
-  
+
 
   handleChange = name => event => {
     const gatewayData = { ...this.state.gatewayData }
@@ -521,8 +550,8 @@ class PaymentGatewayDashboard extends Component {
     const { api } = this.props;
     const that = this;
     gatewayData.transferSettings[name] = event.target.checked;
-    this.setState({ gatewayData }, ()=>{
-      api.rest.json.post(`${this.props.endpoint}settings/transfers`,{ 
+    this.setState({ gatewayData }, () => {
+      api.rest.json.post(`${this.props.endpoint}settings/transfers`, {
         disabled: gatewayData.transferSettings.sending === false,
         disable_receive: gatewayData.transferSettings.receiving === false,
         reason: "FuniSave Gateway App"
@@ -534,105 +563,140 @@ class PaymentGatewayDashboard extends Component {
     });
   };
 
-  fileSelected(item){
-    console.log('file item selected');
+  fileSelected(item) {
+    console.log('file item selected', item);
+    this.setState({ remoteFolder: item })
   }
 
-  transactionSelected(item){
-    console.log('transaction item selected');
+  transactionSelected(item) {
+    console.log('transaction item selected', item);
+    this.setState({ selectedTransaction: item })
   }
 
-  scheduleItemSelected(item){
+  scheduleItemSelected(item) {
     console.log('schedule item selected');
   }
 
-  resetSchedule(schedule){
+  resetSchedule(schedule) {
     console.log('resetting schedule', schedule);
     const that = this
-    this.setState({ displayMessage: true, message: 'Resetting Schedule' }, ()=> {
+    this.setState({ displayMessage: true, message: 'Resetting Schedule' }, () => {
       this.props.api.rest.json.post(`${this.props.endpoint}cps/schedule/reset`, {
         deleteFiles: true,
         all: true,
         from: moment(that.state.from).startOf('day').valueOf(),
         till: moment(that.state.till).endOf('day').valueOf()
-      }).then((resetResponse)=>{
-        that.setState({ displayMessage: false, message: 'Schedule Reset Complete', isError: false, }, ()=>{
+      }).then((resetResponse) => {
+        that.setState({ displayMessage: false, message: 'Schedule Reset Complete', isError: false, }, () => {
           that.loadData()
         });
       }).catch(resetErr => {
-        that.setState({ displayMessage: false, message: 'Schedule Reset Encountered Error', isError: true }, ()=>{
+        that.setState({ displayMessage: false, message: 'Schedule Reset Encountered Error', isError: true }, () => {
           that.loadData()
         });
       });
     });
   }
 
-  onProductPaymentSubmit(payment){
+  onProductPaymentSubmit(payment) {
     console.log('Product payment submit', payment);
     const { api, endpoint } = this.props;
     const that = this;
-    that.setState({ message: 'Allocating new payment, please wait', displayMessage: true }, ()=>{
+    that.setState({ message: 'Allocating new payment, please wait', displayMessage: true }, () => {
       api.rest.json.post(`${endpoint}admin/product-payment`, payment.formData).then((payment_result) => {
         that.setState({ message: `New payment allocated ref: ${payment_result.referenceNumber}`, displayMessage: true })
       }).catch((payment_error) => {
         console.error(payment_error);
         that.setState({ message: 'Could not allocate the payment due to an error', displayMessage: true, isError: true })
       })
-    })    
+    })
   }
 
-  synchronizeMembers(){
+  synchronizeMembers() {
     console.log('Members Sync');
     const { api, endpoint } = this.props;
     const that = this;
-    that.setState({ message: 'Synching members please wait', displayMessage: true }, ()=>{
+    that.setState({ message: 'Synching members please wait', displayMessage: true }, () => {
       api.rest.json.post(`${endpoint}payment-schedule-sync/`).then((payment_result) => {
-        that.setState({ message: `Done`, displayMessage: true }, ()=>{
+        that.setState({ message: `Done`, displayMessage: true }, () => {
           that.loadData();
         })
       }).catch((payment_error) => {
         console.error(payment_error);
         that.setState({ message: 'Could not synch members', displayMessage: true, isError: true })
       })
-    })    
+    })
   }
 
-  synchGateways(){
+  synchGateways() {
     console.log('Gateway Sync');
     const { api, endpoint } = this.props;
     const that = this;
-    that.setState({ message: 'Synching gateways please wait', displayMessage: true }, ()=>{
+    that.setState({ message: 'Synching gateways please wait', displayMessage: true }, () => {
       api.rest.json.get(`${endpoint}admin/syncgateway`).then((payment_result) => {
-        that.setState({ message: `Done`, displayMessage: true }, ()=>{
+        that.setState({ message: `Done`, displayMessage: true }, () => {
           that.loadData();
         })
       }).catch((payment_error) => {
         console.error(payment_error);
         that.setState({ message: 'Could not synch gateway', displayMessage: true, isError: true })
       })
-    })    
+    })
   }
 
-  publishSchedule(){
+  publishSchedule() {
     console.log('Publish Schedule');
     const { api, endpoint } = this.props;
     const that = this;
-    that.setState({ message: 'Publishing Schedule Please Wait', displayMessage: true }, ()=>{
+    that.setState({ message: 'Publishing Schedule Please Wait', displayMessage: true }, () => {
       api.rest.json.post(`${endpoint}cps/schedule`).then((payment_result) => {
-        that.setState({ message: `Done`, displayMessage: true }, ()=>{
+        that.setState({ message: `Done`, displayMessage: true }, () => {
           that.loadData();
         })
       }).catch((payment_error) => {
         console.error(payment_error);
-        that.setState({ message: 'Could not synch gaeway', displayMessage: true, isError: true })
+        that.setState({ message: 'Could not synch gateway', displayMessage: true, isError: true })
       })
-    })    
+    })
   }
 
-  render() {    
+  downloadRemoteFile({ folder, file }) {
+    const { api, endpoint, target } = this.props;
+    const that = this
+    let mappedFolder = folder
+    if(target.toLowerCase() === 'local') {
+      const folderPortions = folder.split('//')
+      mappedFolder = folderPortions[folderPortions.length - 1]
+    } else {
+      mappedFolder = folder.replace('/data/', '')
+    }
+    
+    api.rest.text.get(`${endpoint}cps/file/?path=${mappedFolder}&file=${file}`).then(fileData => {
+      this.setState({ fileData: fileData })
+    }).catch(downloadError => {
+      console.error(downloadError);
+      that.setState({ message: 'Could not download file', displayMessage: true, isError: true })
+    });
+  }
+
+  transferFiles(){
+    const that = this;
+    const { api, endpoint, target } = this.props;
+    api.rest.json.get(`${endpoint}cps/transfers/`).then( response => {
+      //this.setState({ fileData: fileData })
+      that.setState({ message: `Completed file transfers`, displayMessage: true }, () => {
+        that.loadData();
+      })
+    }).catch(downloadError => {
+      console.error(downloadError);
+      that.setState({ message: 'Could not download file', displayMessage: true, isError: true })
+    });
+  }
+
+  render() {
     const { classes, error, loading, audit, target } = this.props;
-    const { from, till, enableRefresh, gatewayData, message, displayMessage, isError } = this.state;
-    const { DateSelector, Loading, Layout, ReactoryForm, BasicModal } = this.componentRefs;
+    const { from, till, enableRefresh, gatewayData, message, displayMessage, isError, remoteFolder, fileData, selectedTransaction } = this.state;
+    const { DateSelector, Loading, Layout, ReactoryForm, BasicModal, FullScreenModal, Calendar, SpeedDial } = this.componentRefs;
     const that = this;
     let transferSettings = {
       sending: false,
@@ -640,13 +704,34 @@ class PaymentGatewayDashboard extends Component {
     }
 
     let modal = null;
-    if(gatewayData && gatewayData.transferSettings) transferSettings = gatewayData.transferSettings
-    if(displayMessage === true) {
+    if (gatewayData && gatewayData.transferSettings) transferSettings = gatewayData.transferSettings
+    if (displayMessage === true) {
       modal = (
-      <BasicModal title="Note" open={true}>
-        <Typography variant="paragraph">{message}</Typography>
-      </BasicModal>)
+        <BasicModal title="Note" open={true}>
+          <Typography variant="paragraph">{message}</Typography>
+        </BasicModal>)
     }
+
+    if (fileData !== null) {
+      const closeFileData = () => this.setState({ fileData: null })
+      modal = (
+        <FullScreenModal title="File Data" open={true} onClose={closeFileData}>
+          <pre>
+            <div style={{overflow: 'scroll'}}>{fileData.split(/\r\n/).map( line => { return (<Fragment>{line}<br/></Fragment>) } ) }</div>
+          </pre>
+        </FullScreenModal>)
+    }
+
+    if( selectedTransaction !== null ){
+      const closeTransaction = () => this.setState({ selectedTransaction : null });
+
+        modal = (<FullScreenModal title="File Data" open={true} onClose={closeTransaction}>
+          <pre>
+            <div style={{overflow: 'scroll'}}><pre>{JSON.stringify(selectedTransaction, null, 2)}</pre></div>
+          </pre>
+        </FullScreenModal>)
+    }
+
     return (
       <Grid container spacing={8}>
         <Grid item md={12} xs={12}>
@@ -666,19 +751,17 @@ class PaymentGatewayDashboard extends Component {
                   disabled={true}
                 />
               </div>
-              <div className={classes.sectionDesktop}>                
-                <DateSelector 
-                 startDate={moment(from)}                 
-                 startDateId="from" // PropTypes.string.isRequired,
-                 endDate={moment(till)}
-                 endDateId="till" // PropTypes.string.isRequired,
-                 onDatesChange={that.onDateRangeChanged} // PropTypes.func.isRequired,
-                 focusedInput={null} // PropTypes.oneOf([START_DATE, END_DATE]) or null,
-                 onFocusChange={that.onDateFocusChanged} // PropTypes.func.isRequired, 
-                 />                  
-                  <Tooltip title={`Click to refresh after changing dates`}>
-                  <IconButton color="inherit" disabled={!enableRefresh} onClick={that.doRefresh}>
-                    <Badge badgeContent={enableRefresh ? '!' : ''} color="secondary">
+              <div className={classes.sectionDesktop}>
+                <DateSelector
+                  startDate={moment(from)}
+                  startDateId="from" // PropTypes.string.isRequired,
+                  endDate={moment(till)}
+                  endDateId="till" // PropTypes.string.isRequired,
+                  onDatesChange={that.onDateRangeChanged} // PropTypes.func.isRequired,
+                />
+                <Tooltip title={`Click to refresh after changing dates`}>
+                  <IconButton color="inherit" onClick={that.doRefresh}>
+                    <Badge badgeContent={enableRefresh ? '!' : ''} hidden={enableRefresh === false} color="secondary">
                       <Icon>cached</Icon>
                     </Badge>
                   </IconButton>
@@ -686,31 +769,43 @@ class PaymentGatewayDashboard extends Component {
 
                 <Tooltip title={`Synchronize Members Schedule`}>
                   <IconButton color="inherit" onClick={this.synchronizeMembers}>
-                      <Icon>autorenew</Icon>
+                    <Icon>autorenew</Icon>
                   </IconButton>
                 </Tooltip>
 
                 <Tooltip title={`Reset Current Schedule`}>
                   <IconButton color="inherit" onClick={this.resetSchedule}>
-                      <Icon>delete_forever</Icon>
+                    <Icon>delete_forever</Icon>
                   </IconButton>
                 </Tooltip>
-                { target !== 'PRODUCTION' ? 
-                <Tooltip title={`Click here to download gateway data`}>
-                  <IconButton color="inherit" onClick={this.synchGateways}>
+                {target !== 'PRODUCTION' ?
+                  <Tooltip title={`Click here to download gateway data`}>
+                    <IconButton color="inherit" onClick={this.synchGateways}>
                       <Icon>cloud_download</Icon>
-                  </IconButton>
-                </Tooltip> : null }   
+                    </IconButton>
+                  </Tooltip> : null}
                 <Tooltip title={`Click here to publish current schedule`}>
                   <IconButton color="inherit" onClick={this.publishSchedule}>
-                      <Icon>publish</Icon>
+                    <Icon>publish</Icon>
                   </IconButton>
-                </Tooltip>                            
+                </Tooltip>
+                <Tooltip title={`Click here to force file transfers`}>
+                  <IconButton color="inherit" onClick={this.transferFiles}>
+                    <Icon>compare_arrows</Icon>
+                  </IconButton>
+                </Tooltip>
               </div>
             </Toolbar>
           </AppBar>
         </Grid>
-        
+
+        <Grid item md={12} sm={12}>
+            <Paper className={classes.root900} style={{margin: 'auto'}}>              
+              <Calendar style={{minHeight: '450px'}} calendarItems={audit}/>
+              <SpeedDial />
+            </Paper>
+        </Grid>
+
         <Grid item md={8}>
           <Paper className={classes.general}>
             <Typography variant="title">Payment Schedule</Typography>
@@ -718,42 +813,57 @@ class PaymentGatewayDashboard extends Component {
           </Paper>
         </Grid>
 
-        <Grid item md={4}>                      
-            <ReactoryForm formId="payment-schedule-add" uiFramework="material" onSubmit={this.onPaymentScheduleSubmit} formData={{
-              schedule: [ ]
-            }}>          
-              <Tooltip title="Click here to add a new payment schedule">
-                <Button type="submit" color="primary"><Icon>add_to_queue</Icon></Button>
-              </Tooltip>              
-            </ReactoryForm>                      
+        <Grid item md={4}>
+          <ReactoryForm formId="payment-schedule-add" uiFramework="material" onSubmit={this.onPaymentScheduleSubmit} formData={{
+            schedule: []
+          }}>
+            <Tooltip title="Click here to add a new payment schedule">
+              <Button type="submit" color="primary"><Icon>add_to_queue</Icon></Button>
+            </Tooltip>
+          </ReactoryForm>
         </Grid>
 
         <Grid item md={8}>
           <Paper className={classes.general}>
-            <Typography variant="title">Transactions</Typography>                  
-            { loading === false && !error ? transactionsList(audit) : <Loading /> }
+            <Typography variant="title">Transactions</Typography>
+            {loading === false && !error ? transactionsList(audit, this.transactionSelected) : <Loading />}
           </Paper>
         </Grid>
 
-        <Grid item md={4}>                      
-            <ReactoryForm formId="new-product-payment" uiFramework="material" onSubmit={this.onProductPaymentSubmit}>          
-              <Tooltip title="Click here to add a new manual payment">
-                <Button type="submit" color="primary" variant="fab" className={classes.fab}><Icon>payment</Icon></Button>
-              </Tooltip>              
-            </ReactoryForm>                      
+        <Grid item md={4}>
+          <ReactoryForm formId="new-product-payment" uiFramework="material" onSubmit={this.onProductPaymentSubmit}>
+            <Tooltip title="Click here to add a new manual payment">
+              <Button type="submit" color="primary" variant="fab" className={classes.fab}><Icon>payment</Icon></Button>
+            </Tooltip>
+          </ReactoryForm>
         </Grid>
-                        
+
         <Grid item md={12}>
           <Paper className={classes.general}>
             <Typography variant="title">Errors</Typography>
-              { loading === false && !error ? errorsList(audit) : <Loading /> }
+            {loading === false && !error ? errorsList(audit) : <Loading />}
           </Paper>
         </Grid>
-        
+
         <Grid item md={8}>
           <Paper className={classes.general}>
             <Typography variant="title">Files</Typography>
-              { loading === false && !error ? filesList(audit, this.fileSelected) : <Loading /> }
+            <Grid container spacing={4}>
+              <Grid item md={6} sm={12}>
+                {loading === false && !error ? filesList(audit, this.fileSelected) : <Loading />}
+              </Grid>
+
+              <Grid item md={6} sm={12}>
+                {remoteFolder !== null && remoteFolder.files ? (<List>
+                  {remoteFolder.files.map((file, idx) => {
+                    const doDownload = () => {
+                      that.downloadRemoteFile({ folder: remoteFolder.path, file });
+                    };
+                    return (<ListItem key={idx} dense button onClick={doDownload}><ListItemText primary={file} /><Icon>download</Icon></ListItem>)
+                  })}
+                </List>) : null}
+              </Grid>
+            </Grid>
           </Paper>
         </Grid>
 
@@ -781,13 +891,13 @@ class PaymentGatewayDashboard extends Component {
                     />
                   }
                   label={`Sending is ${transferSettings.sending === true ? 'ENABLED' : 'DISABLED'}`}
-                />                
+                />
               </FormGroup>
               <FormHelperText>Be careful</FormHelperText>
             </FormControl>
-          </Paper>        
-        </Grid> 
-        {modal}       
+          </Paper>
+        </Grid>
+        {modal}
       </Grid>
     )
   }
@@ -805,8 +915,8 @@ const PaymentGatewayDashboardComponent = compose(
 const DashboardWidget = compose(
   withApi,
   withRouter,
-)((props)=>{
-  const { target, api, match } = props;
+)((props) => {
+  const { target, api, match, params } = props;
   const variables = {
     from: moment(api.queryObject.from).format('YYYY-MM-DD'),
     till: moment(api.queryObject.till).format('YYYY-MM-DD'),
@@ -815,24 +925,24 @@ const DashboardWidget = compose(
   variables.target = variables.target.toUpperCase();
   return (
     <Query query={DashboardQueries.PaymentGatewayAudit} variables={variables}>
-        {(props, context) => {
-          const { loading, error, data, variables } = props;
-          const { Loading } = api.getComponents(['core.Loading@1.0.0']);
-          
-          if(loading) return <p>loading</p>
-          if(error) return <p>{error}</p>
-          const dashProps = {
-            audit : api.utils.omitDeep(data.gatewayAuditTrail),
-            loading: loading,
-            queryErrors: error,
-            endpoint: endpointForTarget(variables.target),
-            target: variables.target
-          }
-                    
+      {(props, context) => {
+        const { loading, error, data, variables, refetch } = props;
+        const { Loading } = api.getComponents(['core.Loading@1.0.0']);
 
-          return (<PaymentGatewayDashboardComponent {...dashProps} />)
-        }}
-      </Query>
+        if (loading) return <Loading message={'Loading Gateway Dashboard Data'} />
+        if (error) return <p>{error}</p>
+        const dashProps = {
+          audit: api.utils.omitDeep(data.gatewayAuditTrail),
+          loading: loading,
+          queryErrors: error,
+          endpoint: endpointForTarget(variables.target),
+          target: variables.target
+        }
+
+
+        return (<PaymentGatewayDashboardComponent {...dashProps} refresh={refetch} />)
+      }}
+    </Query>
   )
 });
 

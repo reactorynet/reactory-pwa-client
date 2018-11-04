@@ -387,7 +387,7 @@ class TowerStoneHomeComponent extends Component {
 
 const HomeComponent = compose(
     withRouter,
-    withStyles(styles),
-    withTheme()
+    withTheme(),
+    withStyles(styles),    
 )(TowerStoneHomeComponent);
 export default HomeComponent;

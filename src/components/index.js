@@ -22,10 +22,14 @@ import  { TaskListComponent, TaskDashboardComponent } from './tasks/Taskboard';
 import AdminDashboardComponent from './admin/dashboard'
 import PaymentGatewayDashboardComponent from './payments/funisave/Dashboard';
 import DateSelector from './dates/DateSelector.js';
+import Calendar from './dates/Calendar';
 import { LayoutThemed, SingleColumnLayout, TwoColumnGrid, BasicContainer } from './shared/Layout';
 import { UserListWithSearchComponent } from './user/Widgets';
 import Logo from './shared/logo';
 import BasicModal from './shared/BasicModal';
+import AotAnalyticsDashboardComponent from './tasks/analytics/AnalyticsDashboard';
+import SpeedDialWidget from './shared/SpeedDialWidget';
+import FullScreenDialog from './shared/FullScreenDialog';
 export const UserList = UserComponents.UserListWithData;
 export const UserSearchInput = UserComponents.UserSearchInputComponent;
 export const ForgotForm = UserComponents.ForgotForm;
@@ -132,6 +136,12 @@ export const componentRegistery = [
     component: Assessment,
     version: '1.0.0',
   },
+  {
+    nameSpace:'core',
+    name: 'OrganizationLabelForId',
+    component: require('./organization/OrganizationList').OrganizationLabelForIdComponent,
+    version: '1.0.0',
+  },
   { 
     nameSpace: 'core',
     name: 'OrganizationTable',
@@ -155,6 +165,12 @@ export const componentRegistery = [
     name: 'DateSelector',
     component: DateSelector,
     version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'Calendar',
+    version: '1.0.0',
+    component: Calendar
   },
   { 
     nameSpace: 'core', 
@@ -258,5 +274,23 @@ export const componentRegistery = [
     name: 'BasicModal',
     version: '1.0.0',
     component: BasicModal
+  },
+  {
+    nameSpace: 'core',
+    name: 'FullScreenModal',
+    version: '1.0.0',
+    component: FullScreenDialog
+  },
+  {
+    nameSpace: 'aot',
+    name: 'AnalyticsDashboard',
+    version: '1.0.0',
+    component: AotAnalyticsDashboardComponent
+  },
+  {
+    nameSpace: 'core',
+    name: 'SpeedDial',
+    version: '1.0.0',
+    component: SpeedDialWidget
   }
 ];

@@ -1,16 +1,17 @@
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { withRouter, Route, Switch } from 'react-router'
 //import { connect } from 'react-redux';
 //import { Field, reduxForm } from 'redux-form';
-import { graphql, withApollo } from 'react-apollo';
+import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import gql from 'graphql-tag';
 
 import {
-  AppBar, Tabs, Tab, 
-  Button, Grid, Paper, 
-  FormControl, FormHelperText, Input, InputLabel, TextField, Typography } from '@material-ui/core';
+  AppBar, Tabs, Tab,
+  Button, Grid, Paper, Icon,
+  FormControl, FormHelperText, Input, InputLabel, TextField, Typography, Tooltip,
+} from '@material-ui/core';
 
 import SaveIcon from '@material-ui/icons/Save'
 
@@ -26,6 +27,7 @@ import AdminCalendar, { SurveyCalendarForOrganization, EditSurveyEntryForOrganiz
 import Settings from './settings'
 import { withApi, ReactoryApi } from '../../../api/ApiProvider'
 import { CDNOrganizationResource, CenteredContainer } from '../../util';
+import { styles } from '../../shared'
 
 const { EmailTemplateEditorComponent, TemplateListComponent } = Templates;
 
@@ -64,11 +66,17 @@ const DropZoneRender = ( props  ) => {
 }
 */
 
-const FormStyles = ( theme ) => {
-  return {
+const FormStyles = (theme) => {
+  
+  return styles(theme, {    
     formContainer: {
       margin: theme.spacing.unit,
       padding: theme.spacing.unit
+    },
+    dropZone: {
+      position: 'unset !important',
+      width: '100% !important',
+      height: 'unset !important',
     },
     dropzoneContainer: {
       margin: theme.spacing.unit * 1.5
@@ -79,20 +87,27 @@ const FormStyles = ( theme ) => {
       justifyContent: 'center',
       display: 'flex',
       paddingTop: theme.spacing.unit * 1.5,
-      paddingBottom:  theme.spacing.unit * 1.5      
+      paddingBottom: theme.spacing.unit * 1.5
     },
-    logo: {      
-      maxHeight: '200px'      
-    }
-  }
+    logo: {
+      maxHeight: '200px'
+    },    
+  })
 };
+
+const DefaultOrganization = {
+  id: null,
+  code: 'your-code',
+  name: 'Your Company Name',
+  logo: null,
+}
 
 
 class OrganizationForm extends Component {
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context)
     this.state = {
-      organization: this.props.organization.organizationWithId || null,
+      organization: this.props.organization || null,
       pristine: true,
       submitting: false
     }
@@ -102,16 +117,17 @@ class OrganizationForm extends Component {
     this.updateOrganizationPicture = this.updateOrganizationPicture.bind(this)
     this.dropped = this.dropped.bind(this)
     this.updateOrganization = this.updateOrganization.bind(this)
+    this.componentDefs = this.props.api.getComponents(['core.BasicModal', 'core.Loading'])
   }
 
-  componentWillReceiveProps(props){
+  componentWillReceiveProps(props) {
 
-    if(!this.state.organization && props.organization.organizationWithId){
+    if (!this.state.organization && props.organization.organizationWithId) {
       this.setState({ organization: props.organization.organizationWithId });
       return;
     }
 
-    if(this.state.organization && props.organization.organizationWithId && this.state.organization.id !== props.organization.organizationWithId.id) {
+    if (this.state.organization && props.organization.organizationWithId && this.state.organization.id !== props.organization.organizationWithId.id) {
       this.setState({ organization: props.organization.organizationWithId });
       return;
     }
@@ -120,34 +136,36 @@ class OrganizationForm extends Component {
   static propTypes = {
     organization: PropTypes.object,
     match: PropTypes.object,
-    client: PropTypes.object
+    client: PropTypes.object,
+    api: PropTypes.instanceOf(ReactoryApi).isRequired
   }
 
-    
+
   dropped = (acceptedFiles) => {
     const that = this;
     let preview = null;
-    let file    = acceptedFiles[0];
-    let reader  = new FileReader();
+    let file = acceptedFiles[0];
+    let reader = new FileReader();
     reader.addEventListener("load", function () {
-        preview = reader.result;
-        let organization = { ...that.state.organization };
-        organization.logo = preview;
-        that.setState({organization, pristine: false});
+      preview = reader.result;
+      let organization = { ...that.state.organization };
+      organization.logo = preview;
+      that.setState({ organization, pristine: false });
     }, false);
 
     if (file) {
-        reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
     }
   }
-  
-  updateOrganizationName = (evt) => (this.setState({organization: {...this.state.organization, name: evt.target.value }, pristine: false}));
-  updateOrganizationCode = (evt) => (this.setState({organization: {...this.state.organization, code: evt.target.value}, pristine: false}));
-  updateOrganizationPicture = (picture) => (this.setState({organization: {...this.state.organization, logo: picture }, pristine: false})); 
+
+  updateOrganizationName = (evt) => (this.setState({ organization: { ...this.state.organization, name: evt.target.value }, pristine: false }));
+  updateOrganizationCode = (evt) => (this.setState({ organization: { ...this.state.organization, code: evt.target.value }, pristine: false }));
+  updateOrganizationPicture = (picture) => (this.setState({ organization: { ...this.state.organization, logo: picture }, pristine: false }));
   updateOrganization = (evt) => {
     const { client } = this.props;
-    const { organization } = this.state;    
-    const input = {      
+    const { organization } = this.state;
+    const that = this;
+    const input = {
       code: organization.code,
       name: organization.name,
       logo: organization.logo,
@@ -158,84 +176,104 @@ class OrganizationForm extends Component {
       mutation: updateQuery,
       variables: {
         input,
-        id: organization.id,
-        refetchQueries: ['allOrganization']
-      }
+        id: organization.id,        
+      },
+      refetchQueries: [{query: this.props.api.queries.Organization.allOrganizations}]
+    }
+
+    if (organization.id === null) {
+      delete options.variables.id
+      delete options.variables.input.id
+      options.mutation = createQuery
     }
 
     client.mutate(options).then((result) => {
       console.log('Mutation Result', result);
+      
+      let organization = that.props.match.params.organizationId === 'new' ? result.data.createOrganization : result.data.updateOrganization;
+      this.setState({ organization: { ...organization } })
+      if (!organization.id) that.props.history.push(`/admin/org/${organization.id}/general`)
     }).catch((error) => {
       console.error('Mutation error', error);
+      that.setState({ message: error, messageTitle: 'Error saving organization' });
     })
   }
 
-  render(){
+  render() {
     const { classes } = this.props;
-    const { organization, pristine, submitting } = this.state;
-    
-    if(this.props.organization.loading) return <p>Loading...</p>
-
+    const { organization, pristine, submitting, message } = this.state;
+    const { BasicModal, Loading } = this.componentDefs;
+  
+    if (this.props.organization.loading) return <Loading title="Loading organization data" />
+    let modal = null
+    if (message) {
+      modal = <BasicModal title={this.state.messageTitle || 'Note'}>{message}</BasicModal>
+    }
     return (
-    <Paper className={classes.formContainer}>
-      <form>
-        <Grid container spacing={0}>
-          <Grid item xs={12}>
-            <Paper className={classes.logoContainer}>
-              { isEmpty(organization.logo) === true ? <p style={{textAlign: 'center', paddingTop: '30px'}}>Upload Logo</p> : <img src={CDNOrganizationResource(organization.id, organization.logo)} className={classes.logo} alt={organization.name} />}
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={9}>
-          <TextField
-              id="full-width"
-              label="Company Code"
-              InputLabelProps={{
-                shrink: true,
-              }}
-              placeholder="Shortcode"
-              helperText="Please enter company shortcode"
-              fullWidth
-              margin="normal"
-              onChange={this.updateOrganizationCode} 
-              value={organization.code} />   
+      <Paper className={classes.formContainer}>
+        <form>
+          <Grid container spacing={8}>
+            <Tooltip title="Drag and drop a file on the logo area.">
+              <Grid item xs={12}>
+                <Dropzone onDrop={this.dropped} className={classes.dropZone}>
+                  <Paper className={classes.logoContainer}>
+                    {isEmpty(organization.logo) === true ? <p style={{ textAlign: 'center', paddingTop: '30px' }}>Upload Logo</p> : <img src={CDNOrganizationResource(organization.id, organization.logo)} className={classes.logo} alt={organization.name} />}
+                  </Paper>
+                </Dropzone>
+              </Grid>
+            </Tooltip>
+            <Grid item xs={12} md={6}>
+              <Paper className={classes.root600}>
+                <TextField
+                  id="full-width"
+                  label="Company Code"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  placeholder="Shortcode"
+                  helperText="Please enter company shortcode"
+                  fullWidth
+                  margin="normal"
+                  onChange={this.updateOrganizationCode}
+                  value={organization.code} />
 
-            <TextField
-              id="full-width"
-              label="Company Name"
-              InputLabelProps={{
-                shrink: true,
-              }}
-              placeholder="Company Name"
-              helperText="Please enter a company name"
-              fullWidth
-              margin="normal"
-              onChange={this.updateOrganizationName} 
-              value={organization.name} />                         
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <div className={classes.dropzoneContainer}>
-              <Dropzone onDrop={this.dropped}>
+                <TextField
+                  id="full-width"
+                  label="Company Name"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  placeholder="Company Name"
+                  helperText="Please enter a company name"
+                  fullWidth
+                  margin="normal"
+                  onChange={this.updateOrganizationName}
+                  value={organization.name} />
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+                <Paper>
 
-              </Dropzone>
-              <Typography variant="caption">Drag and Drop Logo</Typography>
-            </div>
+                </Paper>
+            </Grid>
+            <Grid item xs={12}>
+              <Button type="button" disabled={pristine || submitting || organization.name === ''} onClick={this.updateOrganization}>
+                <SaveIcon />
+                Save
+            </Button>
+            </Grid>
           </Grid>
-          <Grid item xs={12}>
-            <Button type="button" disabled={pristine || submitting || organization.name === ''} onClick={this.updateOrganization}>
-              <SaveIcon />
-              Save
-            </Button>          
-          </Grid>
-        </Grid>                                  
-      </form>
-    </Paper>);
-  }  
+        </form>
+      </Paper>);
+  }
 };
 
-let DefaultFormComponent = compose(  
-  withTheme(),  
-  withStyles(FormStyles), 
-  withApollo,   
+let DefaultFormComponent = compose(
+  withApi,
+  withRouter,
+  withTheme(),
+  withStyles(FormStyles),
+  withApollo,
 )(OrganizationForm);
 
 function TabContainer({ children, dir }) {
@@ -247,18 +285,27 @@ function TabContainer({ children, dir }) {
 }
 
 class DefaultFormContainer extends Component {
-  
+
   static propTypes = {
     match: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,
     history: PropTypes.object.isRequired,
-    api: PropTypes.instanceOf(ReactoryApi)
+    api: PropTypes.instanceOf(ReactoryApi),
+    organization: PropTypes.object.isRequired,
+    tab: PropTypes.string
   }
 
-  constructor(props){
+  static defaultProps = {
+    organization: DefaultOrganization,
+    tab: 'general'
+  }
+
+  static styles = theme => { }
+
+  constructor(props) {
     super(props)
-    this.state = { 
-      errors: [], 
+    this.state = {
+      errors: [],
       tab: 0,
       leadershipBrand: null,
       leadershipBrandMode: 'new',
@@ -277,43 +324,44 @@ class DefaultFormContainer extends Component {
     this.onClearEmployeeSelection = this.onClearEmployeeSelection.bind(this)
     this.onCalendarEntrySelect = this.onCalendarEntrySelect.bind(this)
     this.onClearSurveySelect = this.onClearSurveySelect.bind(this)
-    this.componentDefs = this.props.api.getComponents(['core.UserListWithSearch'])
+    this.onOrganizationSaved = this.onOrganizationSaved.bind(this)
+    this.componentDefs = this.props.api.getComponents(['core.UserListWithSearch', 'core.SpeedDial', 'core.ReactoryForm'])
   }
 
   handleSubmit(values) {
     console.log(values)
   }
 
-  handleChange = (event, value) => {    
-    this.props.history.push(`/admin/org/${this.props.orgId}/${value}`)
+  handleChange = (event, value) => {
+    this.props.history.push(`/admin/org/${this.props.organization.id}/${value}`)
   };
 
   handleChangeIndex = index => {
     this.setState({ value: index });
   };
 
-  onNewBrand = ( ) => {
-    this.setState({ leadershipBrand: {...newBrand}, leadershipBrandMode: 'new' }, () => {
-      this.props.history.push(`/admin/org/${this.props.orgId}/brands/new`);  
+  onNewBrand = () => {
+    this.setState({ leadershipBrand: { ...newBrand }, leadershipBrandMode: 'new' }, () => {
+      this.props.history.push(`/admin/org/${this.props.organization.id}/brands/new`);
     });
   }
 
-  onBrandSelected = ( brand ) => {    
+  onBrandSelected = (brand) => {
     this.setState({ leadershipBrand: brand, leadershipBrandMode: 'edit' }, () => {
-      this.props.history.push(`/admin/org/${this.props.orgId}/brands/${brand.id}`);    
-    });    
+      this.props.history.push(`/admin/org/${this.props.organization.id}/brands/${brand.id}`);
+    });
   }
 
-  onEmployeeSelected = ( user ) => {
-    if(user.__isnew) this.props.history.push(`/admin/org/${this.props.orgId}/employees/new`)
-    else this.props.history.push(`/admin/org/${this.props.orgId}/employees/${user.id}`)    
+  onEmployeeSelected = (user) => {
+    if (user.__isnew) this.props.history.push(`/admin/org/${this.props.organization.id}/employees/new`)
+    else this.props.history.push(`/admin/org/${this.props.organization.id}/employees/${user.id}`)
   }
 
   onClearEmployeeSelection = () => {
     this.setState({ employee: null, employeeMode: 'list' })
   }
 
-  onCalendarEntrySelect = ( survey ) => {
+  onCalendarEntrySelect = (survey) => {
     this.setState({ survey: survey, surveyMode: survey.__isnew ? 'new' : 'edit' })
   }
 
@@ -321,28 +369,32 @@ class DefaultFormContainer extends Component {
     this.setState({ survey: null, surveyMode: 'calendar' })
   }
 
-  onCancelBrandEdit = () => {    
+  onCancelBrandEdit = () => {
     this.props.history.push(`/admin/org/${this.props.orgId}/brands/`);
     this.setState({ leadershipBrand: null })
   }
 
-  render(){
-    let initialValues = { id: null, name: null };
-    const { classes, theme, tab, match } = this.props;
-    const { 
+  onOrganizationSaved = () => {
+
+  }
+
+  render() {
+    const { classes, theme, tab, match, organization, mode } = this.props;
+    const {
       leadershipBrand,
       leadershipBrandMode,
-      employee, 
+      employee,
       employeeMode,
       survey,
-      surveyMode, 
+      surveyMode,
     } = this.state;
     const that = this;
-    
-    const UserListWithSearch = that.componentDefs.UserListWithSearch  
+    const organizationId = organization.id;
 
+    const { UserListWithSearch, SpeedDial, ReactoryForm } = that.componentDefs;
+    const isNew = mode === 'new';
     return (
-      <div className={classes.root}>        
+      <div className={classes.root}>
         <AppBar position="static" color="default">
           <Tabs
             value={tab}
@@ -350,73 +402,105 @@ class DefaultFormContainer extends Component {
             indicatorColor="primary"
             textColor="primary"
             fullWidth
-          >
-            <Tab label="General" value={'general'}/>
-            <Tab label="Employees" value={'employees'} />
-            <Tab label="Brands" value={'brands'} />
-            <Tab label="Surveys" value={'surveys'}/>
-            <Tab label="Templates" value={'templates'}/>
-            <Tab label="Configuration" value={'configuration'} />
+          >            
+            <Tab label="General" value={'general'} />
+            <Tab label="Business Units" value={'business-units'} disabled={isNew === true} />
+            <Tab label="Employees" value={'employees'} disabled={isNew === true} />
+            <Tab label="Brands" value={'brands'} disabled={isNew === true} />
+            <Tab label="Surveys" value={'surveys'} disabled={isNew === true} />
+            <Tab label="Templates" value={'templates'} disabled={isNew === true} />
+            <Tab label="Configuration" value={'configuration'} disabled={isNew === true} />
           </Tabs>
         </AppBar>
-        <TabContainer>          
+        <TabContainer>
           <Switch>
             <Route exact path={'/admin/org/:organizationId'} component={DefaultFormComponent} />
             <Route path={'/admin/org/:organizationId/general'} >
-              <DefaultFormComponent organization={this.props.organization} />
+              <Fragment>
+                <DefaultFormComponent organization={this.props.organization} onSaved={this.onOrganizationSaved} />
+                <SpeedDial />
+              </Fragment>
             </Route>
-            <Route path={'/admin/org/:organizationId/employees'}>
+            <Route path={'/admin/org/:organizationId/business-units/*'}>
               <Switch>
-                <Route exact path={'/admin/org/:organizationId/employees'} render={( props ) => {                  
-                  return (<UserListWithSearch organizationId={props.match.params.organizationId} onUserSelect={that.onEmployeeSelected} />)                  
-                }}> 
+                <Route exact path={'/admin/org/:organizationId/business-units/'}>
+                  <Fragment>
+                    <ReactoryForm formId="business-units" />
+                  </Fragment>
                 </Route>
-                <Route exact path={'/admin/org/:organizationId/employees/new'}>
-                  <CreateProfile onCancel={this.onClearEmployeeSelection} organizationId={this.props.orgId} />
+                <Route exact path={'/admin/org/:organizationId/business-units/new'}>
+                  <Fragment>
+                      <ReactoryForm formId="new-business-unit" data={{organization: organizationId}}>
+                        <Button type="submit" variant="raised" color="primary"><Icon>save</Icon> Create Business Unit</Button>                        
+                      </ReactoryForm>
+                  </Fragment>
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/employees/:profileId'}>
-                  <UserProfile organizationId={this.props.orgId} />
+                  <UserProfile organizationId={organizationId} />
                 </Route>
-              </Switch>              
+              </Switch>
+            </Route>            
+            <Route path={'/admin/org/:organizationId/employees'}>
+              <Switch>
+                <Route exact path={'/admin/org/:organizationId/employees'}>
+                  <Fragment>
+                    <UserListWithSearch organizationId={organizationId} onUserSelect={that.onEmployeeSelected} />
+                  </Fragment>
+                </Route>
+                <Route exact path={'/admin/org/:organizationId/employees/new'}>
+                  <CreateProfile onCancel={this.onClearEmployeeSelection} organizationId={organizationId} profileTitle="New Employee" />
+                </Route>
+                <Route exact path={'/admin/org/:organizationId/employees/:profileId'}>
+                  <UserProfile organizationId={organizationId} />
+                </Route>
+              </Switch>
             </Route>
             <Route path={'/admin/org/:organizationId/brands'} >
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/brands'}>
-                  <BrandListWithData organizationId={this.props.orgId} onSelect={this.onBrandSelected} onNewSelected={this.onNewBrand}/>
+                  <BrandListWithData organizationId={organizationId} onSelect={this.onBrandSelected} onNewSelected={this.onNewBrand} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/brands/new'}>
-                  <CreateBrand organizationId={this.props.orgId} onCancel={this.onCancelBrandEdit} leadershipBrand={this.state.leadershipBrand} />          
+                  <CreateBrand organizationId={organizationId} onCancel={this.onCancelBrandEdit} leadershipBrand={this.state.leadershipBrand} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/brands/:brandId'}>
-                  <EditBrand organizationId={this.props.orgId} leadershipBrand={this.state.leadershipBrand} onCancel={this.onCancelBrandEdit} />          
+                  <EditBrand organizationId={organizationId} leadershipBrand={this.state.leadershipBrand} onCancel={this.onCancelBrandEdit} />
                 </Route>
               </Switch>
-              
+
             </Route>
             <Route path={'/admin/org/:organizationId/surveys'}>
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/surveys/new'}>
-                  <NewSurveyEntryForOrganization {...this.props} organizationId={this.props.orgId} />  
+                  <NewSurveyEntryForOrganization {...this.props} organizationId={organizationId} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/surveys'}>
-                  <SurveyCalendarForOrganization {...this.props} organizationId={this.props.orgId} />  
+                  <SurveyCalendarForOrganization {...this.props} organizationId={organizationId} />
                 </Route>
                 <Route path={'/admin/org/:organizationId/surveys/:surveyId'}>
-                  <EditSurveyEntryForOrganization organizationId={this.props.orgId} {...this.props} />                    
+                  <EditSurveyEntryForOrganization organizationId={organizationId} {...this.props} />
                 </Route>
-              </Switch>              
-            </Route>            
+              </Switch>
+            </Route>
             <Route path={'/admin/org/:organizationId/templates'} component={TemplateListComponent} />
             <Route path={'/admin/org/:organizationId/configuration'} component={Settings} />
           </Switch>
-        </TabContainer>                        
+        </TabContainer>
+
       </div>
     )
   }
 }
 
+const DefaultFormContainerComponent = compose(
+  withApi,
+  withRouter,
+  withTheme(),
+  withStyles(DefaultFormContainer.styles)
+)(DefaultFormContainer)
+
 const loadQuery = gql`
-  query organizationWithId($id: String!){
+  query organization($id: String!){
     organizationWithId(id: $id) {
       id
       code
@@ -432,12 +516,28 @@ const updateQuery = gql`
  mutation UpdateOrganization($input: UpdateOrganizationInput!, $id: String!) {
     updateOrganization(id: $id, input: $input) {
       id
+      code
+      name
+      logo
     }
   }
 `;
 
+
+const createQuery = gql`
+ mutation CreateOrganization($input: CreateOrganizationInput!) {
+    createOrganization(input: $input) {
+      id
+      code
+      name
+      logo
+    }
+  }
+`;
+
+
 const queryOptions = props => ({
-  skip: props.orgId === null || props.mode === 'new',
+  skip: props.orgId === null || props.orgId === 'new',
   variables: {
     id: props.orgId
   },
@@ -453,10 +553,23 @@ const CompanyAdminStyles = (theme) => {
 };
 
 
+const AdminForm = ({ organizationId, api, tab, mode = 'new' }) => {
+  console.log(`must find for ${organizationId}, ${tab}, ${mode}`)
+
+  if(mode === 'new') return  <DefaultFormContainerComponent organization={DefaultOrganization} tab={'general'} mode={'new'} />
+
+  return (
+    <Query query={loadQuery} variables={{ id: organizationId }} skip={mode === 'new'} options={{ displayName: 'OrganizationQry' }}>
+      {({ loading, error, data }) => {
+        if (loading === true) return (<p>Loading...</p>)
+        if (error) return error.message
+        
+        const organization = data && data.organizationWithId ? data.organizationWithId : DefaultOrganization;
+        return (<DefaultFormContainerComponent organization={organization} tab={tab} mode={mode} />)
+      }}
+    </Query>);
+}
+
 export default compose(
   withApi,
-  withRouter,
-  withTheme(),
-  withStyles(CompanyAdminStyles),
-  graphql(loadQuery, {name: 'organization', options: queryOptions } ),    
-)(DefaultFormContainer);
+)(AdminForm);
