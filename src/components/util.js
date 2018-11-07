@@ -124,6 +124,10 @@ export  const CenteredContainer = ( props ) => {
     return profile.avatar
   };
 
+  export const getOrganizationLogo = (organizationId, file) => {
+    return CDNOrganizationResource(organizationId, file);
+  }
+
   export const getUserFullName = (user) => {  
     return `${user.firstName} ${user.lastName}`.trim()
   }

@@ -8,6 +8,7 @@ import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import gql from 'graphql-tag';
 
 import {
+  Avatar,
   AppBar, Tabs, Tab,
   Button, Grid, Paper, Icon,
   FormControl, FormHelperText, Input, InputLabel, TextField, Typography, Tooltip,
@@ -31,44 +32,9 @@ import { styles } from '../../shared'
 
 const { EmailTemplateEditorComponent, TemplateListComponent } = Templates;
 
-/**
-const RenderField = ( { input, label, classes, type, meta: { touched, error}, fullWidth, help, disabled } ) => {
-  let controlProps = {}
-  if(fullWidth) controlProps.fullWidth = true;
-  if(disabled) controlProps.disabled = true;
-  return (
-    <FormControl {...controlProps}>
-      <InputLabel>{label}</InputLabel>
-      <Input {...input} type={type} placeholder={label}/>
-      <FormHelperText>{help}</FormHelperText>
-    </FormControl>
-  )
-}
-
-const DropZoneRender = ( props  ) => {
-  const { input, label, classes, type, meta: { touched, error}, fullWidth, help, disabled } = props
-  console.log(props);
-  let controlProps = {}
-  if(fullWidth) controlProps.fullWidth = true;
-  if(disabled) controlProps.disabled = true;
-
-  const dropped = (eventData) => {
-    console.log(eventData);
-  }
-
-  return (
-    <div className={classes.dropzoneContainer}>
-      <Dropzone onDrop={dropped}>
-
-      </Dropzone>
-    </div>
-  )
-}
-*/
-
 const FormStyles = (theme) => {
-  
-  return styles(theme, {    
+
+  return styles(theme, {
     formContainer: {
       margin: theme.spacing.unit,
       padding: theme.spacing.unit
@@ -91,7 +57,7 @@ const FormStyles = (theme) => {
     },
     logo: {
       maxHeight: '200px'
-    },    
+    },
   })
 };
 
@@ -176,9 +142,9 @@ class OrganizationForm extends Component {
       mutation: updateQuery,
       variables: {
         input,
-        id: organization.id,        
+        id: organization.id,
       },
-      refetchQueries: [{query: this.props.api.queries.Organization.allOrganizations}]
+      refetchQueries: [{ query: this.props.api.queries.Organization.allOrganizations }]
     }
 
     if (organization.id === null) {
@@ -189,7 +155,7 @@ class OrganizationForm extends Component {
 
     client.mutate(options).then((result) => {
       console.log('Mutation Result', result);
-      
+
       let organization = that.props.match.params.organizationId === 'new' ? result.data.createOrganization : result.data.updateOrganization;
       this.setState({ organization: { ...organization } })
       if (!organization.id) that.props.history.push(`/admin/org/${organization.id}/general`)
@@ -203,8 +169,8 @@ class OrganizationForm extends Component {
     const { classes } = this.props;
     const { organization, pristine, submitting, message } = this.state;
     const { BasicModal, Loading } = this.componentDefs;
-  
-    if (this.props.organization.loading) return <Loading title="Loading organization data" />
+
+    if (this.props.organization.loading) return <Loading message="Loading organization data" />
     let modal = null
     if (message) {
       modal = <BasicModal title={this.state.messageTitle || 'Note'}>{message}</BasicModal>
@@ -252,9 +218,9 @@ class OrganizationForm extends Component {
               </Paper>
             </Grid>
             <Grid item xs={12} md={6}>
-                <Paper>
+              <Paper>
 
-                </Paper>
+              </Paper>
             </Grid>
             <Grid item xs={12}>
               <Button type="button" disabled={pristine || submitting || organization.name === ''} onClick={this.updateOrganization}>
@@ -325,7 +291,15 @@ class DefaultFormContainer extends Component {
     this.onCalendarEntrySelect = this.onCalendarEntrySelect.bind(this)
     this.onClearSurveySelect = this.onClearSurveySelect.bind(this)
     this.onOrganizationSaved = this.onOrganizationSaved.bind(this)
-    this.componentDefs = this.props.api.getComponents(['core.UserListWithSearch', 'core.SpeedDial', 'core.ReactoryForm'])
+    this.componentDefs = this.props.api.getComponents([
+      'core.UserListWithSearch',
+      'core.SpeedDial',
+      'core.ReactoryForm',
+      'core.BusinessUnitList',
+      'core.BusinessUnitForm',
+      'core.BusinessUnitFormWithQuery',
+      'core.Logo',
+    ])
   }
 
   handleSubmit(values) {
@@ -379,7 +353,7 @@ class DefaultFormContainer extends Component {
   }
 
   render() {
-    const { classes, theme, tab, match, organization, mode } = this.props;
+    const { classes, theme, tab, match, organization, mode, api } = this.props;
     const {
       leadershipBrand,
       leadershipBrandMode,
@@ -391,10 +365,10 @@ class DefaultFormContainer extends Component {
     const that = this;
     const organizationId = organization.id;
 
-    const { UserListWithSearch, SpeedDial, ReactoryForm } = that.componentDefs;
+    const { UserListWithSearch, SpeedDial, ReactoryForm, BusinessUnitList, BusinessUnitForm, Logo, BusinessUnitFormWithQuery } = that.componentDefs;
     const isNew = mode === 'new';
     return (
-      <div className={classes.root}>
+      <div className={classes.root}>                      
         <AppBar position="static" color="default">
           <Tabs
             value={tab}
@@ -402,7 +376,7 @@ class DefaultFormContainer extends Component {
             indicatorColor="primary"
             textColor="primary"
             fullWidth
-          >            
+          >
             <Tab label="General" value={'general'} />
             <Tab label="Business Units" value={'business-units'} disabled={isNew === true} />
             <Tab label="Employees" value={'employees'} disabled={isNew === true} />
@@ -421,25 +395,19 @@ class DefaultFormContainer extends Component {
                 <SpeedDial />
               </Fragment>
             </Route>
-            <Route path={'/admin/org/:organizationId/business-units/*'}>
+            <Route path={'/admin/org/:organizationId/business-units*'}>
               <Switch>
-                <Route exact path={'/admin/org/:organizationId/business-units/'}>
-                  <Fragment>
-                    <ReactoryForm formId="business-units" />
-                  </Fragment>
+                <Route exact path={'/admin/org/:organizationId/business-units'}>
+                  <BusinessUnitList organizationId={organizationId} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/business-units/new'}>
-                  <Fragment>
-                      <ReactoryForm formId="new-business-unit" data={{organization: organizationId}}>
-                        <Button type="submit" variant="raised" color="primary"><Icon>save</Icon> Create Business Unit</Button>                        
-                      </ReactoryForm>
-                  </Fragment>
+                  <BusinessUnitForm mode={'new'} organization={organization} businessUnitId={'new'} />
                 </Route>
-                <Route exact path={'/admin/org/:organizationId/employees/:profileId'}>
-                  <UserProfile organizationId={organizationId} />
+                <Route exact path={'/admin/org/:organizationId/business-units/:businessUnitId'}>
+                  <BusinessUnitFormWithQuery mode={'edit'} organization={organization} businessUnitId={match.params.businessUnitId}/>
                 </Route>
               </Switch>
-            </Route>            
+            </Route>
             <Route path={'/admin/org/:organizationId/employees'}>
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/employees'}>
@@ -556,14 +524,14 @@ const CompanyAdminStyles = (theme) => {
 const AdminForm = ({ organizationId, api, tab, mode = 'new' }) => {
   console.log(`must find for ${organizationId}, ${tab}, ${mode}`)
 
-  if(mode === 'new') return  <DefaultFormContainerComponent organization={DefaultOrganization} tab={'general'} mode={'new'} />
+  if (mode === 'new') return <DefaultFormContainerComponent organization={DefaultOrganization} tab={'general'} mode={'new'} />
 
   return (
     <Query query={loadQuery} variables={{ id: organizationId }} skip={mode === 'new'} options={{ displayName: 'OrganizationQry' }}>
       {({ loading, error, data }) => {
         if (loading === true) return (<p>Loading...</p>)
         if (error) return error.message
-        
+
         const organization = data && data.organizationWithId ? data.organizationWithId : DefaultOrganization;
         return (<DefaultFormContainerComponent organization={organization} tab={tab} mode={mode} />)
       }}

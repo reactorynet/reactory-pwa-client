@@ -3,12 +3,12 @@ import PropTypes from 'prop-types'
 import Form from 'react-jsonschema-form'
 import { withRouter, Route, Switch } from 'react-router'
 import { withStyles, withTheme } from '@material-ui/core/styles';
-import { find } from 'lodash';
+import { find, template, templateSettings } from 'lodash';
 import { compose } from 'redux';
 import { Query, Mutation } from 'react-apollo'
 import { nil } from '../util'
 import queryString from '../../query-string';
-import { withApi } from '../../api/ApiProvider'
+import { withApi, ReactoryApi } from '../../api/ApiProvider'
 import {
   Typography,
   Card,
@@ -22,17 +22,19 @@ import Fields from './fields'
 //import { } from './widgets'
 import MaterialTemplates from './templates'
 import uiSchemas from './schema/uiSchema'
+import gql from 'graphql-tag';
 
-const { 
+const {
   MaterialArrayField,
   MaterialBooleanField,
   MaterialStringField,
   MaterialTitleField,
-  MaterialGridField, 
+  MaterialGridField,
   BootstrapGridField,
+  MaterialObjectField,
 } = Fields;
 
-const { 
+const {
   MaterialObjectTemplate,
   MaterialFieldTemplate,
   MaterialArrayFieldTemplate,
@@ -41,12 +43,12 @@ const {
 const simpleSchema = {
   "title": "No form found",
   "description": "No form for a given id",
-  "type": "object",  
+  "type": "object",
   "properties": {
     "message": {
       "type": "string",
       "title": "Message"
-    },    
+    },
   }
 };
 
@@ -55,39 +57,39 @@ const simpleUiSchema = {
     "ui:autofocus": true,
     "ui:emptyValue": "No form found with that id",
     "ui:widget": "label"
-  },  
+  },
 };
 
 const simpleForm = {
-    schema: simpleSchema,
-    uiSchema: simpleUiSchema,
-    widgets: {},
-    fields: {}
+  schema: simpleSchema,
+  uiSchema: simpleUiSchema,
+  widgets: {},
+  fields: {}
 };
 
-const FormWithQuery = (props) => {  
-  
+const FormWithQuery = (props) => {
+
   return (
     <Query query={props.query} variables={props.variables}>
-      {({ loading, error, data } ) => {
-        if(loading === true) return "Loading form data..."
-        if(error) return error.message        
-        const options = {...props.options, data: data || props.data};
+      {({ loading, error, data }) => {
+        if (loading === true) return "Loading form data..."
+        if (error) return error.message
+        const options = { ...props.options, data: data || props.data };
         return (
-          <Form { ...options } />
+          <Form {...options} />
         )
-      }}      
+      }}
     </Query>);
 }
 
 FormWithQuery.propTypes = {
   query: PropTypes.object.isRequired,
   variables: PropTypes.object,
-  data: PropTypes.object,  
+  data: PropTypes.object,
 }
 
-FormWithQuery.defaultProps = {  
-  data: { }
+FormWithQuery.defaultProps = {
+  data: {}
 };
 
 class ReactoryComponent extends Component {
@@ -96,6 +98,7 @@ class ReactoryComponent extends Component {
     formId: PropTypes.string,
     uiSchemaId: PropTypes.string,
     uiFramework: PropTypes.oneOf(['schema', 'material', 'bootstrap3']),
+    api: PropTypes.instanceOf(ReactoryApi)
   }
 
   static defaultProps = {
@@ -104,152 +107,256 @@ class ReactoryComponent extends Component {
     uiFramework: 'schema'
   }
 
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context)
     let _state = {
       loading: true,
       forms: [],
-      uiFramework: props.uiFramework,      
-      uiSchemas: uiSchemas,      
-      data: props.data || { },
+      uiFramework: props.uiFramework,
+      uiSchemas: uiSchemas,
+      formData: props.data || {},
       query: queryString.parse(props.location.search)
     }
 
-    if(_state.query.uiFramework){
+    if (_state.query.uiFramework) {
       _state.uiFramework = _state.query.uiFramework
     }
-    
+
     this.onSubmit = this.onSubmit.bind(this)
+    this.onChange = this.onChange.bind(this)
     this.form = this.form.bind(this)
-    this.state = _state
+    this.formDef = this.formDef.bind(this)
+    this.renderWithQuery = this.renderWithQuery.bind(this)
+    this.renderWithMutation = this.renderWithMutation.bind(this)
+    this.state = _state    
+    this.defaultComponents = ['core.Loading', 'core.Logo']
+    this.componentDefs = props.api.getComponents(this.defaultComponents)
   }
 
-  componentWillMount(){
+  componentWillMount() {
     const that = this;
-    this.props.api.forms().then((forms) => {      
-      that.setState({forms: forms, loading: false})
+    this.props.api.forms().then((forms) => {
+      that.setState({ forms: forms, loading: false }, ()=>{
+        const formDef = that.formDef()
+        if(formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs])
+      })
     }).catch((loadError) => {
-      that.setState({forms: [], formError: { message: loadError.message }})
+      that.setState({ forms: [], formError: { message: loadError.message } })
     })
   }
 
-  
+  formDef(){
+    return (find(this.state.forms, { id: this.props.formId })) || simpleForm
+  }
+
+  renderForm(formData) {
+    const { loading, forms } = this.state;
+    const { uiSchema } = this.props
+    if (loading) return (<p>loading form schema</p>)
+    if (forms.length === 0) return (<p>no forms defined</p>)
+    const formProps = {
+      ...this.props,
+      ...this.form(),
+      formData: { ...formData },
+      onSubmit: this.onSubmit,
+    }
+
+    return (
+      <div>
+        {this.props.before}
+        <Form {...formProps}>
+          {this.props.children}
+        </Form>
+      </div>
+    )
+  }
+
+  renderWithQuery(){
+    
+    const formDef = this.formDef()
+    const query = gql(formDef.graphql.query.queryText)
+    const formData = this.state.formData
+    const that = this;
+    const { Loading } = this.componentDefs;
+    let variables = {}; 
+
+    
+    Object.keys(formDef.graphql.query.variables).map((variable) => {      
+      if(typeof formDef.graphql.query.variables[variable]  === 'string'){
+        const stringTemplate = formDef.graphql.query.variables[variable];
+        variables[variable] = template(stringTemplate)({...formData})
+      } else {
+        variables[variable] = formDef.graphql.query.variables[variable];
+      }      
+    });
+
+    let options = formDef.graphql.query.options || {  };
+
+    return (
+      <Query query={query} variables={variables} options={options}>
+        {(props, context) => {
+          const { loading, data, errors } = props;
+          if(loading) return <Loading message="Fetching Form Data" />
+          if(errors) return <p>Error Fetching Records: ${errors}</p>
+          return that.renderForm({...formData, ...data })  
+        }}
+      </Query>
+    )
+  }
+
+  renderWithMutation(formData){
+    const formDef = this.formDef()
+    const query = gql(formDef.graphql.mutation)    
+    let variables = {}; 
+
+    Object.keys(formDef.graphql.variables).map((variable) => {
+      if(typeof formDef.graphql.variables[variable]  === 'string'){
+        variables[variable] = template(formDef.graphql.variables[variable])({...formData})
+      } else {
+        variables[variable] = formDef.graphql.variables[variable];
+      }      
+    });
+
+    let options = formDef.graphql.options || {  };
+
+    return (
+      <Mutation mutation={query} variables={variables} options={options}>
+        {(props, context) => {
+          const { loading, data, errors } = props;
+          return <p>Mutation Form</p>
+        }}
+      </Mutation>
+    )
+  }
+
   /**
    * Returns the entire form definition
    */
-  form(){
-    const { uiFramework, forms, data } = this.state;
-    let schema = (find(forms, {id: this.props.formId})) || simpleForm
+  form() {
+    const { uiFramework, forms, formData } = this.state;
+    let schema = (find(forms, { id: this.props.formId })) || simpleForm
     const { uiSchemaId } = this.state.query
-    
-    if(uiFramework !== 'schema'){
+    const { Logo, Loading } = this.componentDefs;
+    const { api } = this.props;
+
+    if (uiFramework !== 'schema') {
       //we are not using the schema define ui framework we are assigning a different one
       schema.uiFramework = uiFramework
     }
 
     // set noHtml5Validation if not set by schema
-    if( nil(schema.noHtml5Validate)) schema.noHtml5Validate = true
+    if (nil(schema.noHtml5Validate)) schema.noHtml5Validate = true
 
-    if(uiSchemaId){
-      if(uiSchemaId === 'default') return schema
+    if (uiSchemaId) {
+      if (uiSchemaId === 'default') return schema
 
-      const customSchema = find(this.state.uiSchemas, {id: uiSchemaId})
-      if(customSchema) schema.uiSchema = customSchema.schema
-    }  
+      const customSchema = find(this.state.uiSchemas, { id: uiSchemaId })
+      if (customSchema) schema.uiSchema = customSchema.schema
+    }
 
     // #region setup functions
     const setFields = () => {
-      switch(schema.uiFramework){
+      switch (schema.uiFramework) {
         case 'material': {
           schema.fields = {
             ArrayField: MaterialArrayFieldTemplate.default,
-            BooleanField: MaterialBooleanField, 
-            //DescriptionField: MaterialDescriptionField,
-            //NumberField: MaterialNumberField,
+            BooleanField: MaterialBooleanField,
+            DescriptionField: (props, context) => (<Typography>{props.description}</Typography>),
+            NumberField: (props, context) => (<Input {...props} type="number"  value={props.formData}/>),
             //ObjectField: MaterialObjectField,
             //SchemaField: MaterialSchemaField,
             StringField: MaterialStringField.default,
             TitleField: MaterialTitleField.default,
-            //UnsupportedFiled: UnsupportedMaterialField
+            UnsupportedField: (props, context) => <p>Aah ssheeet dawg</p>,
             layout: MaterialGridField
           };
           break;
         }
         default: {
           schema.fields = {
-            layout: BootstrapGridField          
+            layout: BootstrapGridField
           }
           break;
         }
       }
     };
-  
-    const setWidgets = () => {
-      switch(schema.uiFramework){
-        case 'material': {
 
-        }
-      }
-      const widgets = {
-        //AltDateTimeWidget
-        //AltDateWidget
-        //BaseInput
-        //CheckboxWidget
-        //CheckboxesWidget
-        //ColorWidget
-        //DateTimeWidget
-        //DateWidget
-        //EmailWidget
-        //FileWidget
-        //HiddenWidget
-        //PasswordWidget
-        //RadioWidget
-        //RangeWidget
-        //SelectWidget
-        //TextWidget
-        //TextareaWidget
-        //URLWidget
-        //UpDownWidget
-      }
-  
-      return widgets;
-    }
-  
-    const setFieldTemplate = () => {
-      
-      switch(schema.uiFramework){
+    const setWidgets = () => {
+      switch (schema.uiFramework) {
         case 'material': {
-          schema.FieldTemplate = MaterialFieldTemplate.default          
+          schema.widgets = {
+            //AltDateTimeWidget
+            //AltDateWidget
+            //BaseInput
+            //CheckboxWidget
+            //CheckboxesWidget
+            //ColorWidget
+            //DateTimeWidget
+            //DateWidget
+            EmailWidget: (props, context) => (<Input {...props} type="email"  />),
+            //FileWidget
+            //HiddenWidget
+            //PasswordWidget
+            //RadioWidget
+            //RangeWidget
+            //SelectWidget
+            //TextWidget
+            //TextareaWidget
+            //URLWidget
+            //UpDownWidget
+            LogoWidget:  ({ value, onChange, options }) => {
+              const { backgroundColor } = options;
+              return (
+                <Logo                                                    
+                  backgroundSrc={api.getOrganizationLogo(formData.organization.id, formData.organization.logo)}
+                />
+              );
+            }
+          }
           break;
         }
-        default: { 
-          if(schema.FieldTemplate)
-          delete schema.FieldTemplate          
+        default: {
+          //do nothing
+        }
+      }
+      return {};
+    }
+
+    const setFieldTemplate = () => {
+
+      switch (schema.uiFramework) {
+        case 'material': {
+          schema.FieldTemplate = MaterialFieldTemplate.default
+          break;
+        }
+        default: {
+          if (schema.FieldTemplate)
+            delete schema.FieldTemplate
           break
         }
       }
     }
-  
+
     const setObjectTemplate = () => {
-      switch(schema.uiFramework){
+      switch (schema.uiFramework) {
         case 'material': {
           schema.ObjectFieldTemplate = MaterialObjectTemplate.default
           break;
-        }      
+        }
         default: {
           if (schema.ObjectFieldTemplate) delete schema.ObjectFieldTemplate;
           break;
-        } 
+        }
       }
     }
 
-    const injectResources = () => {      
-      if(document) {
-        if(schema.uiResources && schema.uiResources.length) {          
+    const injectResources = () => {
+      if (document) {
+        if (schema.uiResources && schema.uiResources.length) {
           schema.uiResources.forEach((resource) => {
-            const resourceId =`${schema.id}_res_${resource.type}_${resource.name}`            
-            if(nil(document.getElementById(resourceId))){
-              switch(resource.type){
+            const resourceId = `${schema.id}_res_${resource.type}_${resource.name}`
+            if (nil(document.getElementById(resourceId))) {
+              switch (resource.type) {
                 case 'style': {
                   let styleLink = document.createElement('link')
                   styleLink.id = resourceId
@@ -273,7 +380,7 @@ class ReactoryComponent extends Component {
               }
             }
           })
-        }        
+        }
       }
     }
     // #endregion
@@ -281,38 +388,36 @@ class ReactoryComponent extends Component {
     setWidgets()
     setObjectTemplate()
     setFieldTemplate()
-    injectResources()    
+    injectResources()
     return schema
   }
 
-  onSubmit( data ){
+  onSubmit(data) {
     console.log('form-submit', data);
-    if(this.props.onSubmit) this.props.onSubmit(data);
+    if (this.props.onSubmit) this.props.onSubmit(data);
   }
 
-  onError( errors ){
-    if(this.props.onError) this.props.onError(errors);
+  onChange(data) {
+    console.log('Form Data Changed', data);
+    this.setState({ formData: {...data}})
   }
 
-  render(){
-    const { loading, forms, data }  = this.state;
-    const { uiSchema } = this.props
-    if(loading) return (<p>loading form schema</p>)
-    if(forms.length === 0) return (<p>no forms defined</p>) 
-    const formProps = {
-      ...this.props,
-      ...this.form(),
-      formData: {...data},
-      onSubmit: this.onSubmit,
-    }       
-    return (
-      <div>
-        {this.props.before}      
-        <Form {...formProps}>
-          {this.props.children}
-        </Form>
-      </div>
-    )
+  onError(errors) {
+    console.log('Form onError', errors);
+    if (this.props.onError) this.props.onError(errors);
+  }
+
+  
+
+  render() {
+    const { Loading } = this.componentDefs;
+    if(this.state.loading) return <Loading message="Loading..."/>
+    const formDef = this.formDef()
+    if(formDef.graphql === null || formDef.graphql === undefined) {
+      return this.renderForm(this.state.formData)
+    } else {
+      return this.renderWithQuery()
+    }    
   }
 }
 
@@ -328,11 +433,11 @@ export default compose(withRouter)((props) => {
         <ReactoryFormComponent formId='default' mode='view' />
       </Route>
       <Route path="/reactory/:formId" render={(props) => {
-          return (<ReactoryFormComponent formId={props.match.params.formId || 'default'} mode='view' />)
-        }} />
+        return (<ReactoryFormComponent formId={props.match.params.formId || 'default'} mode='view' />)
+      }} />
       <Route path="/reactory/:formId/:mode" render={(props) => {
-          return (<ReactoryFormComponent formId={props.match.params.formId || 'default'} mode={props.match.params.mode} />)
-        }} />  
+        return (<ReactoryFormComponent formId={props.match.params.formId || 'default'} mode={props.match.params.mode} />)
+      }} />
     </Switch>
   )
 })

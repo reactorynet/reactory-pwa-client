@@ -84,7 +84,7 @@ class LoginCard extends Component {
         <Typography variant="title" color="primary" style={{ fontSize: '80px', marginTop: '20px', marginBottom: '20px' }}>
           <Icon fontSize='inherit'>security</Icon>
         </Typography>
-        <Typography variant="subtitle" color="secondary">{loginError || 'Welcome, please sign in below' }</Typography>
+        <Typography variant="subtitle1" color="secondary">{loginError || 'Welcome, please sign in below' }</Typography>
         <form style={{padding: '20px'}}>
           <TextField
             label="Email"

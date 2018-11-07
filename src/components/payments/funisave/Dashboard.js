@@ -798,13 +798,7 @@ class PaymentGatewayDashboard extends Component {
             </Toolbar>
           </AppBar>
         </Grid>
-
-        <Grid item md={12} sm={12}>
-            <Paper className={classes.root900} style={{margin: 'auto'}}>              
-              <Calendar style={{minHeight: '450px'}} calendarItems={audit}/>
-              <SpeedDial />
-            </Paper>
-        </Grid>
+        
 
         <Grid item md={8}>
           <Paper className={classes.general}>

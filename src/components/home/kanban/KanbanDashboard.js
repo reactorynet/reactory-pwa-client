@@ -312,7 +312,7 @@ class ChatDashboard extends Component {
                 <Grid item md={12} sm={12} xs={12}>
                     <AppBar position="static" color="default" className={classes.toolbar}>
                         <Toolbar>
-                            <Typography variant="h6" color="inherit">Task Board</Typography>
+                            <Typography variant="subtitle2" color="inherit">Task Board</Typography>
                             <div className={classes.search}>
                                 <div className={classes.searchIcon}>
                                     <SearchIcon />

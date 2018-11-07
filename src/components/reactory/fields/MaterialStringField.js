@@ -41,5 +41,5 @@ export default (props) => {
   }
 
 
-  return(<Input readOnly={schema.readOnly} value={formData} onChange={(evt) => { evt.persist(); onChange(evt.target.value); }} />) 
+  return(<Input readOnly={schema.readOnly} value={formData} onChange={(evt) => { evt.persist(); onChange(evt.target.value); }} fullWidth/>) 
 };

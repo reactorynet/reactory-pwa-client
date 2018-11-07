@@ -35,6 +35,9 @@ const ArrayItemToolbar = () => {
 
 class DefaultArrayItem extends Component {
 
+  static styles = theme => {
+    return {}
+  }
 
   render(){
     

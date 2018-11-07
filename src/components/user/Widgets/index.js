@@ -56,34 +56,6 @@ import { omitDeep, getAvatar, CenteredContainer } from '../../util';
 import styles from '../../shared/styles'
 
 
-/**
- * 
- *  <FormControl>
-          <InputLabel htmlFor={'user-search-control'}>Search User</InputLabel>
-          <Input
-            id={'user-search-control'}
-            type={'text'}
-            value={this.state.inputText}
-            onChange={this.searchStringChanged}
-            onKeyPress={this.searchStringOnKeyPress}
-            fullWidth={true}
-            endAdornment={
-              <InputAdornment position="end">
-                <IconButton
-                  aria-label="Search for user"
-                  onClick={this.doSearch}
-                >
-                  <SearchIcon />
-                </IconButton>
-              </InputAdornment>
-            }
-          />
-        </FormControl>
- * 
- */
-
-
-
 export class UserListWithSearch extends Component {
 
   static Styles = theme => {

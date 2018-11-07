@@ -7,19 +7,29 @@ import styles from './styles';
 class Logo extends Component {  
   render(){
     const customStyle = {
-      width: `${this.props.width}px`
+      width: `${this.props.width}px`,
+      maxWidth: `${this.props.width}px`,      
     };
+
+    if(this.props.backgroundSrc !== null) {
+      customStyle.background = `url(${this.props.backgroundSrc})`
+      customStyle.backgroundSize = 'contain'
+      customStyle.backgroundRepeat = 'no-repeat'
+      customStyle.backgroundPosition = 'center !important'
+    }
 
     return <div className={this.props.classes.logo} style={customStyle}></div>
   }
 }
 
 Logo.propTypes = {
-  width: PropTypes.number
+  width: PropTypes.number,
+  backgroundSrc: PropTypes.string,
 }
 
 Logo.defaultProps = {
   width: 'auto',
+  backgroundSrc: null
 };
 
 Logo.styles = (theme) => ({

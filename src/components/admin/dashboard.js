@@ -50,7 +50,7 @@ class AdminDashboard extends Component {
           </Toolbar>
         </Grid>
         <Grid item md={3} xs={12}>
-          <OrganizationList admin={true} newOrganizationLink={true} />                    
+          <OrganizationList admin={true} newOrganizationLink={true}/>                    
         </Grid>
         <Grid item md={9} xs={12}>        
           <Switch>
@@ -72,6 +72,7 @@ class AdminDashboard extends Component {
   constructor(props, context){
     super(props, context);
     this.handleOrganizationSelect = this.handleOrganizationSelect.bind(this);
+   
   }
 }
 

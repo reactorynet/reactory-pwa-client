@@ -10,7 +10,7 @@ import { ApolloClient } from "apollo-client";
 import { withApollo } from "react-apollo";
 import * as restApi from './RestApi'
 import graphApi from './graphql'
-import { getAvatar, getUserFullName, omitDeep } from '../components/util'
+import { getAvatar, getUserFullName, omitDeep, CDNOrganizationResource, getOrganizationLogo } from '../components/util'
 const { queries, mutations } = graphApi
 
 const storageKeys = {
@@ -72,6 +72,7 @@ export class ReactoryApi extends EventEmitter {
         this.getComponents = this.getComponents.bind(this);
         this.status = this.status.bind(this);
         this.getAvatar = getAvatar;
+        this.getOrganizationLogo = getOrganizationLogo;
         this.getUserFullName = getUserFullName;
         this.getTheme = this.getTheme.bind(this);
         this.getRoutes = this.getRoutes.bind(this);
@@ -215,7 +216,7 @@ export class ReactoryApi extends EventEmitter {
         const userString = localStorage.getItem(storageKeys.LoggedInUser);
         if (userString) return JSON.parse(userString);
         return anonUser;
-    }
+    }    
 
     status( options = { emitLogin: false } ) {
         console.log('status refresh request');
