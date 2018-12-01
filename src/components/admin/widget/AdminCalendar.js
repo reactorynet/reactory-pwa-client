@@ -7,8 +7,9 @@ import { isNil, isArray } from 'lodash';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import BigCalendar from 'react-big-calendar';
 import moment from 'moment';
-import {  
+import {
   AppBar,
+  Fab,
   ExpansionPanel,
   ExpansionPanelDetails,
   ExpansionPanelSummary,
@@ -19,7 +20,7 @@ import {
   Switch,
   Typography,
   Avatar,
-  Button,  
+  Button,
   Card, CardActions,
   CardHeader, CardContent,
   Collapse, IconButton,
@@ -30,10 +31,11 @@ import {
   ListItemText,
   ListItemIcon,
   TextField,
+  Icon,
   Input,
   InputLabel,
   FormHelperText,
-  FormControl, 
+  FormControl,
   Select,
   Tooltip,
   Tabs,
@@ -54,7 +56,7 @@ import {
   MoreVert as MoreVertIcon,
   Search as SearchIcon,
   Print as PrintIcon,
-  Add as AddIcon,  
+  Add as AddIcon,
 } from '@material-ui/icons'
 import { DateHelpers } from '../../util';
 
@@ -77,19 +79,19 @@ BigCalendar.momentLocalizer(moment); // or globalizeLocalizer
 const newSurvey = {
   id: null,
   title: '',
-  surveyType: 'TS360', //TWR360 TWR180 PLCDEF
+  surveyType: '360', //TWR360 TWR180 PLCDEF
   leadershipBrand: null,
   delegates: [],
   events: [],
   mode: 'test',
   active: false,
-  startDate: null,  
-  endDate: null
+  startDate: moment().startOf('day'),
+  endDate: moment().add(7,'days').endOf('day')
 }
 
 
 const newDelegate = {
-  delegate: {    
+  delegate: {
     id: null,
     firstName: '',
     lastName: '',
@@ -106,7 +108,7 @@ const newDelegate = {
   },
   complete: false,
   launched: false,
-  removed: false			  
+  removed: false
 }
 
 function TabContainer(props) {
@@ -130,7 +132,7 @@ const styles = theme => ({
 
 class DelegateSearch extends Component {
 
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context)
     this.state = {
       id: null,
@@ -151,7 +153,7 @@ class DelegateSearch extends Component {
 
   }
 
-  render(){
+  render() {
     return (
       <form>
         <UserSearchInputComponent onChange={this.doSearch} />
@@ -169,9 +171,9 @@ const DelegateSearchComponent = compose(
 const DelegateGeneral = ({ delegate }) => {
 
   return (
-    <div>          
+    <div>
       <Typography variant='heading'>{delegate.firstName} {delegate.lastName}</Typography>
-      <Typography variant='subheading'>{delegate.email}</Typography>      
+      <Typography variant='subheading'>{delegate.email}</Typography>
     </div>
   )
 }
@@ -183,29 +185,29 @@ class DelegateAssessments extends Component {
 
 }
 
-const DelegateDetail = compose(withApi)(({ userId, surveyId, api, history }) => {  
+const DelegateDetail = compose(withApi)(({ userId, surveyId, api, history }) => {
   return (
-      <Query query={api.queries.Surveys.reportDetailForUser} variables={{ userId, surveyId }}>
-      { ({ loading, error, data }) => {
-          if(loading === true) return (<p>Loading report data...</p>);
-          //if(isNil(error) === false) return (<p>Error during load...</p>);
-          const report = data.reportDetailForUser || { status : 'NO DATA'};
-          return (
+    <Query query={api.queries.Surveys.reportDetailForUser} variables={{ userId, surveyId }}>
+      {({ loading, error, data }) => {
+        if (loading === true) return (<p>Loading report data...</p>);
+        //if(isNil(error) === false) return (<p>Error during load...</p>);
+        const report = data.reportDetailForUser || { status: 'NO DATA' };
+        return (
           <div>
-            { <Typography variant="heading">{report.status}</Typography> }
-          </div>  
-            );
+            {<Typography variant="heading">{report.status}</Typography>}
+          </div>
+        );
       }}
-      </Query>
+    </Query>
   );
 })
 
 class DelegateAdmin extends Component {
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context)
     this.state = {
-      delegate: props.delegate || {...newDelegate},
-      surveyId: props.surveyId || null,      
+      delegate: props.delegate || { ...newDelegate },
+      surveyId: props.surveyId || null,
       expanded: false,
       tab: 0
     }
@@ -213,16 +215,16 @@ class DelegateAdmin extends Component {
     this.toggleExpand = this.toggleExpand.bind(this)
     this.componentDefs = this.props.api.getComponents(['core.InboxComponent'])
   }
-  
+
   tabChanged = (evt, value) => {
     this.setState({ tab: value })
   }
 
   toggleExpand = (evt) => {
-    this.setState({expanded: !this.state.expanded});
+    this.setState({ expanded: !this.state.expanded });
   }
 
-  render(){
+  render() {
     const { delegate, tab } = this.state
     const { classes } = this.props
     const { InboxComponent } = this.componentDefs
@@ -244,18 +246,18 @@ class DelegateAdmin extends Component {
                 <Tabs value={tab} onChange={this.tabChanged}>
                   <Tab label="Delegate Details" />
                   <Tab label="Assessments" />
-                  <Tab label="Notifications" />                  
+                  <Tab label="Notifications" />
                 </Tabs>
-              </AppBar>              
+              </AppBar>
               {tab === 0 && <TabContainer><UserProfile profileId={delegate.delegate.id} /></TabContainer>}
-              {tab === 1 && <TabContainer><DelegateDetail userId={delegate.delegate.id} surveyId={this.props.surveyId}/></TabContainer>}
-              {tab === 2 && <TabContainer><InboxComponent userId={delegate.delegate.id} surveyId={this.props.surveyId}/></TabContainer>}
+              {tab === 1 && <TabContainer><DelegateDetail userId={delegate.delegate.id} surveyId={this.props.surveyId} /></TabContainer>}
+              {tab === 2 && <TabContainer><InboxComponent userId={delegate.delegate.id} surveyId={this.props.surveyId} /></TabContainer>}
             </div>
           </Collapse>
         </CardContent>
         <CardActions>
-          <IconButton onClick={ nilf }><Email /></IconButton>
-          <IconButton onClick={ nilf } ><DeleteIcon /></IconButton>
+          <IconButton onClick={nilf}><Email /></IconButton>
+          <IconButton onClick={nilf} ><DeleteIcon /></IconButton>
         </CardActions>
       </Card>
     );
@@ -273,21 +275,19 @@ const DelegateAdminComponent = compose(
 
 class SurveyAdmin extends Component {
 
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context)
     this.state = {
       expanded: null,
-      survey: props.survey || newSurvey,
-      from: moment(props.api.queryObject.from || moment(), 'YYYY-MM-DD'),
-      till: moment(props.api.queryObject.till || moment(), 'YYYY-MM-DD'),
+      survey: props.survey || newSurvey,      
       focusInput: null,
+      busy: false,
+      dirty: false,    
     }
     this.handleChange = this.handleChange.bind(this)
     this.patchTitle = this.patchTitle.bind(this)
-    this.patchStartDate = this.patchStartDate.bind(this)
-    this.patchEndDate = this.patchEndDate.bind(this)
     this.patchSurveyType = this.patchSurveyType.bind(this)
-    this.saveGeneral = this.saveGeneral.bind(this)
+    this.onSaveGeneral = this.onSaveGeneral.bind(this)
     this.addNewDelegate = this.addNewDelegate.bind(this)
     this.leadershipBrandSelected = this.leadershipBrandSelected.bind(this);
     this.onDateRangeChanged = this.onDateRangeChanged.bind(this);
@@ -311,7 +311,10 @@ class SurveyAdmin extends Component {
     formControl: {
       marginTop: '5px',
       marginBottom: '5px'
-    }
+    },
+    group: {
+      margin: `${theme.spacing.unit}px 0`,
+    },
   })
 
   handleChange = panel => (event, expanded) => {
@@ -320,50 +323,45 @@ class SurveyAdmin extends Component {
     });
   };
 
-  patchTitle = evt => this.setState({survey: {...this.state.survey, title: evt.target.value}})
-  patchStartDate = evt => this.setState({survey: {...this.state.survey, startDate: moment(evt.target.value).format('YYYY-MM-DD')}})
-  patchEndDate = evt => this.setState({survey: {...this.state.survey, endDate: moment(evt.target.value).format('YYYY-MM-DD')}})
-  patchActive = evt => this.setState({survey: {...this.state.survey, active: evt.target.checked === true  }})
-  patchSurveyType = (evt) => { this.setState({ survey: {...this.state.survey, surveyType: evt.target.value } }) }
-  patchMode = evt => this.setState({survey: {...this.state.survey, mode: evt.target.value}})
-  leadershipBrandSelected = brand => this.setState({survey: {...this.state.survey, leadershipBrand: brand}})
+  patchTitle = evt => this.setState({ survey: { ...this.state.survey, title: evt.target.value } })
+  patchActive = evt => this.setState({ survey: { ...this.state.survey, active: evt.target.checked === true } })
+  patchSurveyType = (evt) => { this.setState({ survey: { ...this.state.survey, surveyType: evt.target.value } }) }
+  patchMode = evt => this.setState({ survey: { ...this.state.survey, mode: evt.target.value } })
+  leadershipBrandSelected = brand => this.setState({ survey: { ...this.state.survey, leadershipBrand: brand } })
   addNewDelegate = (evt) => {
-    this.setState({survey: {...this.state.survey, delegates: [...this.state.survey.delegates, {...newDelegate}]}})
+    this.setState({ survey: { ...this.state.survey, delegates: [...this.state.survey.delegates, { ...newDelegate }] } })
   }
 
-  saveGeneral = (evt) => {    
-    this.props.onSave(this.state.survey)
-  } 
+  onSaveGeneral = (evt) => {
+    this.props.onSave(this.state.survey);
+  }
 
-  onDateRangeChanged({ startDate, endDate }){ 
-    console.log('Date Changed', {startDate, endDate}); 
-    const updates = {
-      from: moment(this.state.from),
-      till: moment(this.state.till),
-      enableRefresh: true,
+  onDateRangeChanged(startDate, endDate) {
+    const updates = { survey: {
+        ...this.state.survey,
+        startDate: startDate || moment(this.state.survey.startDate),
+        endDate: endDate || moment(this.state.survey.endDate),
+      }
     }
 
-    if(startDate) updates.from = startDate;
-    if(endDate) updates.till = endDate;
-    if(!startDate && !endDate) updates.enableRefresh = false;
-    this.setState({...updates})
+    this.setState({ ...updates })
   }
 
-  onDateFocusChanged(focusInput){
-    this.setState({focusInput});
+  onDateFocusChanged(focusInput) {
+    this.setState({ focusInput });
   }
 
-  render(){
+  render() {
     const { classes } = this.props;
-    const { expanded, survey, from, till } = this.state;
+    const { expanded, survey } = this.state;
     const { status, delegates } = survey
     const { DateSelector, SingleColumnLayout } = this.componentDefs;
     const complete = status === 'complete'
     let delegateComponents = []
 
-    if(isArray(delegates)) {
-      delegateComponents = survey.delegates.map(( delegate, didx ) => {
-        return (<DelegateAdminComponent key={didx} delegate={delegate} surveyId={survey.id}/>)
+    if (isArray(delegates) && survey.id !== null) {
+      delegateComponents = survey.delegates.map((delegate, didx) => {
+        return (<DelegateAdminComponent key={didx} delegate={delegate} surveyId={survey.id} />)
       })
     }
 
@@ -377,86 +375,56 @@ class SurveyAdmin extends Component {
           <ExpansionPanelDetails>
             <SingleColumnLayout>
               <Grid item xs={12}>
-                <form style={{width:'100%'}}>
-                <DateSelector 
-                 startDate={moment(from)}                 
-                 startDateId="from" // PropTypes.string.isRequired,
-                 endDate={moment(till)}
-                 endDateId="till" // PropTypes.string.isRequired,
-                 onDatesChange={this.onDateRangeChanged} // PropTypes.func.isRequired,
-                 focusedInput={null} // PropTypes.oneOf([START_DATE, END_DATE]) or null,
-                 onFocusChange={this.onDateFocusChanged} // PropTypes.func.isRequired, 
-                 /> 
+                <form style={{ width: '100%' }}>
+                    <DateSelector                      
+                      startDate={moment(survey.startDate)}
+                      startDateId="from" // PropTypes.string.isRequired,
+                      endDate={moment(survey.endDate)}
+                      endDateId="till" // PropTypes.string.isRequired,
+                      onDatesChange={this.onDateRangeChanged} // PropTypes.func.isRequired,
+                    />
                   <FormControl fullWidth className={classes.formatControl}>
                     <InputLabel htmlFor="surveytitle">Survey Title</InputLabel>
                     <Input fullWidth id="surveytitle" value={survey.title} onChange={this.patchTitle} disabled={complete} />
                   </FormControl>
-
-                  <FormControl fullWidth className={classes.formControl}>
-                    <InputLabel htmlFor="surveyType">Survey Type</InputLabel>
-                    <Select
-                      value={survey.surveyType}
+                  <FormControl component="fieldset" className={classes.formControl}>
+                    <FormLabel component="legend">Assessment Type</FormLabel>
+                    <RadioGroup
+                      aria-label="surveyType"
+                      name="surveyType"
+                      className={classes.group}
+                      value={this.state.survey.surveyType}
                       onChange={this.patchSurveyType}
-                      disabled={complete}
-                      inputProps={{
-                        name: 'surveyType',
-                        id: 'surveyType',
-                      }}
                     >
-                      <option value="">Survey Type</option>
-                      <option value={'TWR360'}>360 Individual Assessments</option>
-                      <option value={'TWR180'}>180 Team Assessments</option>                      
-                    </Select>
+                      <FormControlLabel
+                        value="360"
+                        control={<Radio color="primary" />}
+                        label="360 Personal Assessment"
+                        labelPlacement="start"
+                      />
+                      <FormControlLabel
+                        value="180"
+                        control={<Radio color="primary" />}
+                        label="180 Team Assessment"
+                        labelPlacement="start"
+                      />
+                      <FormControlLabel
+                        value="plc"
+                        control={<Radio color="primary" />}
+                        label="Purposeful Leadership"
+                        labelPlacement="start"
+                      />                      
+                    </RadioGroup>
+                    <FormHelperText>Select the the Assessment Type above.</FormHelperText>
                   </FormControl>
-                  <hr/>
-                  <Typography variant="label">Leadership Brand</Typography>
+                                    
+                  <Typography variant="button">Leadership Brands</Typography>
                   <BrandListWithData
                     organizationId={this.props.match.params.organizationId}
                     selected={survey.leadershipBrand && survey.leadershipBrand.id ? survey.leadershipBrand.id : null}
                     selectionOnly={true}
                     onSelect={this.leadershipBrandSelected}
-                      />                  
-
-                  <TextField
-                    id="startDate"
-                    label="Start Date"
-                    type="date"
-                    fullWidth
-                    defaultValue={moment().format('YYYY-MM-DD')}
-                    className={classes.textField}
-                    value={survey.startDate ? moment(survey.startDate).format('YYYY-MM-DD') : ''}
-                    onChange={this.patchStartDate}
-                    InputLabelProps={{
-                      shrink: true,
-                    }}                    
                   />
-                  <TextField
-                    id="endDate"
-                    label="Start Date"
-                    type="date"
-                    fullWidth
-                    defaultValue={moment().format('YYYY-MM-DD')}
-                    value={survey.endDate ? moment(survey.endDate).format('YYYY-MM-DD') : ''}
-                    className={classes.textField}
-                    onChange={this.patchEndDate}
-                    InputLabelProps={{
-                      shrink: true,
-                    }}                
-                  />  
-                  
-                  <FormControl fullWidth>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={this.state.survey.active}
-                          onChange={this.patchActive}
-                          color="primary"
-                          fullWidth
-                        />
-                      }
-                      label={this.state.survey.active === false ? "Click to activate survey (requires save)" : "Click to disable survey (requires save)"}
-                    />        
-                  </FormControl>
 
                   <FormControl component="fieldset" required className={classes.formControl}>
                     <FormLabel component="legend">Mode</FormLabel>
@@ -467,26 +435,44 @@ class SurveyAdmin extends Component {
                       value={this.state.survey.mode}
                       onChange={this.patchMode}
                     >
-                      <FormControlLabel value="test" control={<Radio />} label="Test Mode" />
-                      <FormControlLabel value="live" control={<Radio />} label="Live Mode" />                      
+                      <FormControlLabel value="test" control={<Radio />} label="Test Mode" labelPlacement="start" />
+                      <FormControlLabel value="live" control={<Radio />} label="Live Mode" labelPlacement="start"/>
                     </RadioGroup>
-                  </FormControl>   
-                </form>     
+                  </FormControl>
+
+                  {this.state.survey.id ? <FormControl fullWidth>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={this.state.survey.active}
+                          onChange={this.patchActive}
+                          color="primary"
+                          fullWidth
+                        />
+                      }
+                      label={this.state.survey.active === false ? "Click to activate survey (requires save)" : "Click to disable survey (requires save)"}
+                    />
+                  </FormControl> : null }
+
+                  
+                </form>
               </Grid>
               <Grid item xs={12}>
-                <IconButton onClick={this.saveGeneral}  disabled={complete}><Save /></IconButton>
+                <Fab onClick={this.onSaveGeneral} color="primary" disabled={complete}>
+                      <Icon>save</Icon>                
+                </Fab>
               </Grid>
-              </SingleColumnLayout>
+            </SingleColumnLayout>
           </ExpansionPanelDetails>
         </ExpansionPanel>
-        <ExpansionPanel expanded={expanded === 'panel2'} onChange={this.handleChange('panel2')}>
+        { survey && survey.id ? <ExpansionPanel expanded={expanded === 'panel2'} onChange={this.handleChange('panel2')}>
           <ExpansionPanelSummary expandIcon={<ExpandMore />}>
             <Typography className={classes.heading}>Delegates</Typography>
             <Typography className={classes.secondaryHeading}>
               Manage delegates for this survey
             </Typography>
           </ExpansionPanelSummary>
-          <ExpansionPanelDetails>            
+          <ExpansionPanelDetails>
             <Grid container>
               <Grid xs={12} item>
                 {delegateComponents}
@@ -494,20 +480,9 @@ class SurveyAdmin extends Component {
               <Grid xs={12} item>
                 <Button variant={'fab'} color={'primary'} onClick={this.addNewDelegate}><AddIcon /></Button>
               </Grid>
-            </Grid>            
+            </Grid>
           </ExpansionPanelDetails>
-        </ExpansionPanel>
-        <ExpansionPanel expanded={expanded === 'panel3'} onChange={this.handleChange('panel3')}>
-          <ExpansionPanelSummary expandIcon={<ExpandMore />}>
-            <Typography className={classes.heading}>Timeline</Typography>
-            <Typography className={classes.secondaryHeading}>
-              A history of activities against this
-            </Typography>
-          </ExpansionPanelSummary>
-          <ExpansionPanelDetails>
-            Timeline of activities goes here
-          </ExpansionPanelDetails>
-        </ExpansionPanel>        
+        </ExpansionPanel> : null }        
       </SingleColumnLayout>
     )
   }
@@ -540,39 +515,39 @@ const CalendarStyles = (theme) => {
     },
     pos: {
       marginBottom: 12,
-    },   
+    },
   }
 }
 
 
 class AdminCalendar extends Component {
-  
-  constructor(props, context){
+
+  constructor(props, context) {
     super(props, context)
     this.state = {
-      selected: null      
+      selected: null
     };
     this.onDoubleClick = this.onDoubleClick.bind(this);
     this.onSelectEvent = this.onSelectEvent.bind(this);
     this.learnMore = this.learnMore.bind(this);
     this.newSurvey = this.newSurvey.bind(this);
   }
-  
-  onDoubleClick(eventObj, e){
+
+  onDoubleClick(eventObj, e) {
     const { selected } = this.state
     this.props.history.push(`/admin/org/${selected.organization.id}/surveys/${selected.id}`);
   }
 
-  onSelectEvent(eventObj, e){
-    this.setState({selected: eventObj})
+  onSelectEvent(eventObj, e) {
+    this.setState({ selected: eventObj })
   }
 
-  learnMore(e){
+  learnMore(e) {
     const { selected } = this.state
     this.props.history.push(`/admin/org/${selected.organization.id}/surveys/${selected.id}`);
   }
 
-  newSurvey(){
+  newSurvey() {
     this.props.history.push(`/admin/org/${this.props.organizationId}/surveys/new`);
   }
 
@@ -580,27 +555,27 @@ class AdminCalendar extends Component {
     const { surveys, classes } = this.props;
     const { selected } = this.state;
     let info = null
-    if(isNil(selected) === false) {
+    if (isNil(selected) === false) {
       info = (
         <Grid item xs={12} sm={12} md={4}>
           <Paper className={this.props.classes.Container}>
             <Card className={classes.card}>
               <CardContent>
                 <Typography className={classes.title} color="textSecondary" gutterBottom>
-                    {selected.title} ||Status: <strong>{selected.complete === false ? 'OPEN' : 'COMPLETE'}</strong>
-                    </Typography>
-                    <Typography variant="h5" component="h2">
-                      {selected.organization.name}
-                    </Typography>
-                    <Typography className={classes.pos} color="textSecondary">
-                      {moment(selected.startDate).format('ddd DD MMM YYYY')} until {moment(selected.endDate).format('ddd DD MMM YYYY')}
-                    </Typography>
-                    <Typography component="p">
-                      {selected.mode}                      
-                    </Typography>                                        
-                  </CardContent>
-                  <CardActions>
-                    <Button size="small" onClick={this.learnMore}>MORE</Button>
+                  {selected.title} ||Status: <strong>{selected.complete === false ? 'OPEN' : 'COMPLETE'}</strong>
+                </Typography>
+                <Typography variant="h5" component="h2">
+                  {selected.organization.name}
+                </Typography>
+                <Typography className={classes.pos} color="textSecondary">
+                  {moment(selected.startDate).format('ddd DD MMM YYYY')} until {moment(selected.endDate).format('ddd DD MMM YYYY')}
+                </Typography>
+                <Typography component="p">
+                  {selected.mode}
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <Button size="small" onClick={this.learnMore}>MORE</Button>
               </CardActions>
             </Card>
           </Paper>
@@ -609,36 +584,36 @@ class AdminCalendar extends Component {
     }
     return (
       <Grid container spacing={0}>
-        <Grid item xs={12} sm={12} md={ info ? 8 : 12}>
+        <Grid item xs={12} sm={12} md={info ? 8 : 12}>
           <Paper className={this.props.classes.Container}>
-              <BigCalendar
-                popup
-                onSelectEvent={this.onSelectEvent}
-                onDoubleClickEvent={this.onDoubleClick}              
-                events={surveys || []}
-                startAccessor='startDate'
-                endAccessor='endDate'
-                defaultDate={new Date()}
-              />
-              {
-                this.props.byOrganization === true ? (
-                <div style={{display:'flex', justifyContent: 'flex-end'}}>
-                <Tooltip title={'Click to add a new survey'}>
-                  <Button variant='fab' color='primary' onClick={this.newSurvey} style={{marginTop: '25px', marginBottom: '25px'}}><AddIcon /></Button>
-                </Tooltip>
+            <BigCalendar
+              popup
+              onSelectEvent={this.onSelectEvent}
+              onDoubleClickEvent={this.onDoubleClick}
+              events={surveys || []}
+              startAccessor='startDate'
+              endAccessor='endDate'
+              defaultDate={new Date()}
+            />
+            {
+              this.props.byOrganization === true ? (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Tooltip title={'Click to add a new survey'}>
+                    <Button variant='fab' color='primary' onClick={this.newSurvey} style={{ marginTop: '25px', marginBottom: '25px' }}><AddIcon /></Button>
+                  </Tooltip>
                 </div>
-              ) : null }            
+              ) : null}
           </Paper>
         </Grid>
         {info}
-    </Grid>
-      )          
+      </Grid>
+    )
   }
-  
-  static propTypes = { 
+
+  static propTypes = {
     organizationId: PropTypes.string,
     byOrganization: PropTypes.bool,
-    surveys: PropTypes.array    
+    surveys: PropTypes.array
   }
 
   static defaultProps = {
@@ -665,29 +640,29 @@ export const EditSurveyEntryForOrganization = compose(withApi, withRouter)(({
   onCancel,
   onSaved,
   match,
-})=>{
+}) => {
   return (
-    <Query query={api.queries.Surveys.surveyDetail} variables={{surveyId: match.params.surveyId}}>
-    {({loading, error, data}) => {
-      if(loading) return <p>Loading Survey Details, please wait.</p>
-      if(error) return <p>{error.message}</p>
-      const survey = omitDeep(data.surveyDetail)
-      return (
-      <Mutation mutation={api.mutations.Surveys.updateSurvey}>
-        {(updateSurvey, {loading, data, error})=>{
-          let surveyAdminProps = {
-            survey: { ...survey },
-            onSave: (updated) => {
-              updateSurvey(omitDeep({variables: { input: {...updated}, organizationId: organization.id }}))
-            },
-            onCancel
-          };
+    <Query query={api.queries.Surveys.surveyDetail} variables={{ surveyId: match.params.surveyId }}>
+      {({ loading, error, data }) => {
+        if (loading) return <p>Loading Survey Details, please wait.</p>
+        if (error) return <p>{error.message}</p>
+        const survey = omitDeep(data.surveyDetail)
+        return (
+          <Mutation mutation={api.mutations.Surveys.updateSurvey}>
+            {(updateSurvey, { loading, data, error }) => {
+              let surveyAdminProps = {
+                survey: { ...survey },
+                onSave: (updated) => {
+                  updateSurvey(omitDeep({ variables: { input: { ...updated }, organizationId: organization.id } }))
+                },
+                onCancel
+              };
 
-          return <SurveyAdminComponent {...surveyAdminProps} />
+              return <SurveyAdminComponent {...surveyAdminProps} />
+            }}
+          </Mutation>);
       }}
-    </Mutation>);
-    }}
-    </Query>    
+    </Query>
   )
 });
 
@@ -696,7 +671,7 @@ export const NewSurveyEntryForOrganization = compose(withApi)(({
   api,
   onCancel = nilf,
   onSaved = nilf
-})=>{
+}) => {
 
   return (
     <Mutation mutation={api.mutations.Surveys.createSurvey}>
@@ -704,9 +679,16 @@ export const NewSurveyEntryForOrganization = compose(withApi)(({
 
         let surveyAdminProps = {
           survey: { ...newSurvey },
-          onSave: (survey) => {
-            debugger;
-            createSurvey(omitDeep({variables: { input: {...survey}, organizationId }}))
+          onSave: (survey) => {            
+            let newSurvey =  { ...survey };
+            delete newSurvey.delegates;
+            delete newSurvey.active;
+            delete newSurvey.events;
+            newSurvey.startDate = survey.startDate.valueOf();
+            newSurvey.endDate = survey.endDate.valueOf();
+            newSurvey.organization = organizationId;
+            newSurvey.leadershipBrand = newSurvey.leadershipBrand.id;
+            createSurvey(omitDeep({ variables: { surveyData: { ...newSurvey }, id: organizationId } }))
           },
           onCancel
         };
@@ -715,21 +697,21 @@ export const NewSurveyEntryForOrganization = compose(withApi)(({
       }}
     </Mutation>
   )
-}); 
+});
 
-export const SurveyCalendarForOrganization = compose(withApi)(({organizationId = null, api}) => {
+export const SurveyCalendarForOrganization = compose(withApi)(({ organizationId = null, api }) => {
   // debugger //eslint-disable-line
   const byOrg = isNil(organizationId) === false;
   const query = byOrg === false ? api.queries.Surveys.surveysList : api.queries.Surveys.surveysForOrganization;
   const variables = byOrg === false ? {} : { organizationId };
   const dataEl = byOrg === false ? 'surveysList' : 'surveysForOrganization';
-  
+
 
   return (
-      <Query query={query} variables={variables}>
-      {({loading, error, data}) => {
-        if(loading) return <p>Loading Calendar, please wait.</p>
-        if(error) return <p>{error.message}</p>        
+    <Query query={query} variables={variables}>
+      {({ loading, error, data }) => {
+        if (loading) return <p>Loading Calendar, please wait.</p>
+        if (error) return <p>{error.message}</p>
         const calendarProps = {
           organizationId,
           byOrganization: byOrg,
@@ -737,8 +719,8 @@ export const SurveyCalendarForOrganization = compose(withApi)(({organizationId =
         }
         return (<ThemedCalendar {...calendarProps} />)
       }}
-      </Query>
-    )
+    </Query>
+  )
 });
 
 

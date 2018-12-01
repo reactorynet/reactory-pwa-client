@@ -10,6 +10,7 @@ import Divider from '@material-ui/core/Divider';
 import { isNil } from 'lodash';
 import {
   Typography,
+  Fab,
 } from '@material-ui/core';
 import Icon from '@material-ui/core/Icon';
 import SecurityIcon from '@material-ui/icons/Security'
@@ -81,7 +82,7 @@ class LoginCard extends Component {
     return (<CenteredContainer>
       <Logo />
       <Paper className={classes.root}>        
-        <Typography variant="title" color="primary" style={{ fontSize: '80px', marginTop: '20px', marginBottom: '20px' }}>
+        <Typography variant="h6" color="primary" style={{ fontSize: '80px', marginTop: '20px', marginBottom: '20px' }}>
           <Icon fontSize='inherit'>security</Icon>
         </Typography>
         <Typography variant="subtitle1" color="secondary">{loginError || 'Welcome, please sign in below' }</Typography>
@@ -104,13 +105,12 @@ class LoginCard extends Component {
             disabled={busy}
           />
 
-          <Button
+          <Fab
             id="doLoginButton"
-            variant="fab"
             onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false || busy === true}
             style={{ marginTop: '20px' }}>
-            <Icon className="fas fa-sign-in-alt" />
-          </Button> <br />
+            <Icon>lock_open</Icon>
+          </Fab> <br />
 
           <Button onClick={this.doForgot} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
             Forgot Password

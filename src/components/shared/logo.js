@@ -23,7 +23,7 @@ class Logo extends Component {
 }
 
 Logo.propTypes = {
-  width: PropTypes.number,
+  width: PropTypes.any,
   backgroundSrc: PropTypes.string,
 }
 

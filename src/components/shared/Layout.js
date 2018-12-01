@@ -102,10 +102,9 @@ export const LayoutThemed = compose(
 export const CenteredContainer = ( props ) => {
   let attrs = {...props};
   attrs['children'] = undefined;
-
   return (
     <Grid container {...attrs}>
-      <Grid item xs={12} lg={12} alignItems="center">
+      <Grid item xs={12} lg={12}>
         {props.children}
       </Grid>
     </Grid>
@@ -158,6 +157,7 @@ export const BasicContainer = ( props ) => {
 
   return (
     <Paper {...attrs}>
+      {props.title ? <Typography variant="button">{props.title}</Typography> : null}
       {props.children}
     </Paper>
   )

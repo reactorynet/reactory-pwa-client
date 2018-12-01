@@ -7,6 +7,7 @@ import { withRouter } from 'react-router';
 import {
   AppBar,
   Badge,
+  Fab,
   ExpansionPanel,
   ExpansionPanelDetails,
   ExpansionPanelSummary,
@@ -180,7 +181,7 @@ const transactionsList = (audit, itemClick = () => { }, onPanelChange = () => { 
       return (
         <div>
 
-          <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
+          <List dense subheader={<Typography variant="button">{auditEntry.label}</Typography>}>
             {items.map((item, idx) => {
               const transactionClicked = e => itemClick(item)
               return (
@@ -209,7 +210,7 @@ const paymentSchedulesList = (audit = [], itemClick = () => { }) => {
       const items = auditEntry.paymentSchedules
       return (
         <div>
-          <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
+          <List dense subheader={<Typography variant="button">{auditEntry.label}</Typography>}>
             {items.map((paymentSchedule) => {
               const folderClicked = e => itemClick(paymentSchedule)
               return (
@@ -240,7 +241,7 @@ const errorsList = (audit = [], itemClick = () => { }) => {
       const items = auditEntry.errors
       return (
         <div>
-          <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
+          <List dense subheader={<Typography variant="button">{auditEntry.label}</Typography>}>
             {items.map((item, eidx) => {
               const folderClicked = e => itemClick(item)
               return (
@@ -274,7 +275,7 @@ const filesList = (audit, itemClick = () => ({})) => {
       const items = Object.keys(auditEntry.files).map((key) => ({ key, ...auditEntry.files[key] }))
       return (
         <div>
-          <List dense subheader={<Typography variant="label">{auditEntry.label}</Typography>}>
+          <List dense subheader={<Typography variant="button">{auditEntry.label}</Typography>}>
             {items.map((folder) => {
               const folderClicked = e => itemClick(folder)
               return (
@@ -737,7 +738,7 @@ class PaymentGatewayDashboard extends Component {
         <Grid item md={12} xs={12}>
           <AppBar position="static" color="default" className={classes.toolbar}>
             <Toolbar>
-              <Typography variant="headline" color="inherit">Payment Gateway - {target} </Typography>
+              <Typography variant="h5" color="inherit">Payment Gateway - {target} </Typography>
               <div className={classes.search}>
                 <div className={classes.searchIcon}>
                   <SearchIcon />
@@ -802,7 +803,7 @@ class PaymentGatewayDashboard extends Component {
 
         <Grid item md={8}>
           <Paper className={classes.general}>
-            <Typography variant="title">Payment Schedule</Typography>
+            <Typography variant="h6">Payment Schedule</Typography>
             {paymentSchedulesList(audit)}
           </Paper>
         </Grid>
@@ -819,7 +820,7 @@ class PaymentGatewayDashboard extends Component {
 
         <Grid item md={8}>
           <Paper className={classes.general}>
-            <Typography variant="title">Transactions</Typography>
+            <Typography variant="h6">Transactions</Typography>
             {loading === false && !error ? transactionsList(audit, this.transactionSelected) : <Loading />}
           </Paper>
         </Grid>
@@ -827,21 +828,21 @@ class PaymentGatewayDashboard extends Component {
         <Grid item md={4}>
           <ReactoryForm formId="new-product-payment" uiFramework="material" onSubmit={this.onProductPaymentSubmit}>
             <Tooltip title="Click here to add a new manual payment">
-              <Button type="submit" color="primary" variant="fab" className={classes.fab}><Icon>payment</Icon></Button>
+              <Fab type="submit" color="primary" className={classes.fab}><Icon>payment</Icon></Fab>
             </Tooltip>
           </ReactoryForm>
         </Grid>
 
         <Grid item md={12}>
           <Paper className={classes.general}>
-            <Typography variant="title">Errors</Typography>
+            <Typography variant="h6">Errors</Typography>
             {loading === false && !error ? errorsList(audit) : <Loading />}
           </Paper>
         </Grid>
 
         <Grid item md={8}>
           <Paper className={classes.general}>
-            <Typography variant="title">Files</Typography>
+            <Typography variant="h6">Files</Typography>
             <Grid container spacing={4}>
               <Grid item md={6} sm={12}>
                 {loading === false && !error ? filesList(audit, this.fileSelected) : <Loading />}

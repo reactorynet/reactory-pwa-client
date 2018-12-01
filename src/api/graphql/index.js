@@ -326,6 +326,7 @@ const apiStatus = gql`
       status
       firstName
       lastName
+      email
       avatar
       roles
       organization {
@@ -812,7 +813,7 @@ export default {
     Surveys: {
       createSurvey: gql`
       mutation CreateSurveyMutation($id: String!, $surveyData: SurveyInput!){
-        createSurvey(surveyData: $surveyData){
+        createSurvey(id: $id, surveyData: $surveyData){
           id
         } 
       }

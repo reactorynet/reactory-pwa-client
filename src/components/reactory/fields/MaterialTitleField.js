@@ -32,5 +32,5 @@ export default (props) => {
     align 
   } = props;
   
-  return(<Typography value={props.value} variant="title" align={align || 'left'}/>) 
+  return(<Typography value={props.value}variant="h6" align={align || 'left'}/>) 
 };

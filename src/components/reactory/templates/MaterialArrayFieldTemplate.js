@@ -2,11 +2,13 @@ import React, { Component, Fragment } from 'react'
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
 import { withStyles, withTheme } from '@material-ui/core/styles';
+import Draggable from 'react-draggable';
 import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from 'react-jsonschema-form/lib/utils'
 
 import {
   AppBar,
   Button,
+  Fab,
   Icon,
   IconButton,
   Typography,
@@ -34,6 +36,9 @@ class ArrayTemplate extends Component {
       top: 'auto',
       bottom: 0,
     },
+    dragHandle: {
+      pointer: 'crosshair'
+    },
     toolbar: {
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -57,6 +62,15 @@ class ArrayTemplate extends Component {
     this.renderNormalArray = this.renderNormalArray.bind(this)
     this.renderArrayFieldItem = this.renderArrayFieldItem.bind(this)
     this.registry = props.registry || getDefaultRegistry();
+    this.onChangeForIndex = this.onChangeForIndex.bind(this);
+    this.state = {
+      expanded: {
+
+      },
+      selected: {
+
+      },
+    };
   }
 
   /**
@@ -65,7 +79,7 @@ class ArrayTemplate extends Component {
    */
   onAddClicked(e) {
     console.log('Add Clicked ', e)
-    debugger;
+    //debugger;
     const {
       formData, //The formData for this array. 
       registry,
@@ -75,9 +89,15 @@ class ArrayTemplate extends Component {
     this.props.onChange([...formData, newItem])
   }
 
-  onChangeForIndex(index, value, errorSchema){
+  onChangeForIndex(value, index, errorSchema){
     console.info('index item change', { index, value, errorSchema })
     //this.props.onChange(formData.map())
+    const newData = this.props.formData.map((item, idx) => { 
+      if(idx === index) return {...item, ...value};
+      return item;
+    });
+    
+    if(this.props.onChange) this.props.onChange(newData);    
   }
 
   renderArrayFieldItem(props) {    
@@ -96,8 +116,12 @@ class ArrayTemplate extends Component {
       onFocus,
       parentSchema,
     } = props;
-
-    console.log('Rendering array item', { props });
+    
+    const { 
+      selected,
+      expanded
+    } = this.state
+    //console.log('Rendering array item', { props });
 
     let orderable = true;
     let removable = true;
@@ -110,6 +134,20 @@ class ArrayTemplate extends Component {
       toolbar: false,
     };
 
+    const changeForIndex = ( formData, errorSchema ) => {
+      this.onChangeForIndex(formData, index, errorSchema);
+    }
+
+    const expandForIndex = ( index ) => {
+      console.log('Expand for index', index);
+      this.setState({ expanded: {...this.state.expanded, index: expanded[index] === true ? false : true }});
+    };
+
+    const selectForIndex = (index) => {
+      console.log('Select for index', index);
+      this.setState({ selected: {...this.state.selected, index: selected[index] === true ? false : true }});
+    }
+
     const SchemaField = this.registry.fields.SchemaField;
     const schemaFieldProps = {
       schema: itemSchema,
@@ -118,23 +156,31 @@ class ArrayTemplate extends Component {
       errorSchema: itemErrorSchema,
       idSchema: itemIdSchema,
       required: itemSchema.type !== "null" || itemSchema.type !== null,
-      onChange: this.onChangeForIndex,
+      onChange: changeForIndex,
       onBlur: onBlur,
-      onFocus: onFocus,
+      onFocus: onFocus,              
       registry: this.registry,
       disabled: this.props.disabled,
       readonly: this.props.readonly,
       autofocus: autofocus,
       rawErrors: this.props.rawErrors,
+      key: index
     };
 
     const containerProps = {
       className: "array-item",
       disabled: this.props.disabled,
+      draggable: true,
+      dragHandle: props.classes.dragHandle,
       hasToolbar: has.toolbar,
+      toolbarPosition: "bottom",
       hasMoveUp: has.moveUp,
       hasMoveDown: has.moveDown,
       hasRemove: has.remove,
+      expanded: expanded[index] === true,
+      selected: selected[index] === true,
+      onExpand: expandForIndex,
+      onSelect: selectForIndex,        
       index: index,
       onDropIndexClick: this.onDropIndexClick,
       onReorderClick: this.onReorderClick,
@@ -142,9 +188,18 @@ class ArrayTemplate extends Component {
     }
     
     return (
-      <SchemaField {...schemaFieldProps}>
+      <Draggable 
+        axis="y"
+        handle={props.classes.dragHandle}
+        defaultPosition={{x: 0, y: 0}}
+        position={null}
+        grid={[25, 25]}
+        key={index}
+      >
+        <SchemaField {...schemaFieldProps} containerProps={containerProps}>
 
-      </SchemaField>
+        </SchemaField>
+      </Draggable>
     )    
   }
 
@@ -174,14 +229,19 @@ class ArrayTemplate extends Component {
       idPrefix,
       api
     } = this.props;
-    debugger;
+    //debugger;
     const uiOptions = uiSchema['ui:options'] || null
+    const uiWidget = uiSchema['ui:widget'] || null
     const definitions = registry.definitions;
     let ArrayComponent = null
     let componentProps = {}
-    if (uiOptions !== null) {
-      if (uiOptions.componentFqn) ArrayComponent = api.getComponent(uiOptions.componentFqn);
-      if (uiOptions.componentProps) {  //map properties to the component
+    debugger;
+    if (uiWidget !== null) {
+      if(registry.widgets[uiWidget]) ArrayComponent = registry.widgets[uiWidget]
+      if(!ArrayComponent) {
+        ArrayComponent = api.getComponent(uiWidget);
+      }      
+      if (uiOptions && uiOptions.componentProps) {  //map properties to the component
         Object.keys(componentProps).map(property => {
           componentProps[property] = formData[uiOptions.componentProps[property]]
         })
@@ -191,9 +251,9 @@ class ArrayTemplate extends Component {
     if (ArrayComponent === null) {
       ArrayComponent = () => (
         <Grid item sm={12} md={12}>
-          {formData.map((item, index) => {
-            debugger;
-            console.log('Rendering item', { item, index })
+          {formData && formData.map && formData.map((item, index) => {
+            //debugger;
+            //console.log('Rendering item', { item, index })
             let itemSchema = retrieveSchema(schema.items, definitions, item);
             let itemErrorSchema = errorSchema ? errorSchema[index] : undefined;
             let itemIdPrefix = idSchema.$id + "_" + index;
@@ -211,27 +271,51 @@ class ArrayTemplate extends Component {
               itemUiSchema: uiSchema.items,
               autofocus: autofocus && index === 0,
               onBlur: onBlur,
-              onFocus: onFocus
+              onFocus: onFocus,
+              classes: this.props.classes
             });
           })}
         </Grid>)
     }
 
-    console.log('schema and uiSchema', { schema, uiSchema, ArrayComponent, formData, onAddClick });
-    return (
-      <Paper className={classes.root}>
-        <Grid container spacing={8}>
-          {ArrayComponent !== null ? <ArrayComponent {...componentProps} /> : null}
-        </Grid>
-        <AppBar position="relative" color="primary" className={classes.appBar}>
-          <Toolbar className={classes.toolbar}>
-            <Button variant="fab" color="secondary" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
-              <Icon>add</Icon>
-            </Button>
-          </Toolbar>
-        </AppBar>
-      </Paper>
-    );
+    if(uiOptions && uiOptions.container) {
+      //resolve Container from API
+      const Container = api.getComponent(uiOptions.container)
+      let containerProps = {}
+      if(uiOptions.containerProps) {
+        containerProps = {...uiOptions.containerProps}
+      }
+      if(Container){
+        return (
+        <Container {...containerProps}>
+          {ArrayComponent !== null ? <ArrayComponent { ...{...this.props, ...componentProps}} /> : null}
+        </Container>);
+      } else {
+        return (
+        <Paper className={classes.root} {...containerProps}>
+          {ArrayComponent !== null ? <ArrayComponent { ...{...this.props,...componentProps}} /> : null}
+        </Paper>);
+      }
+    } else {
+      //default behaviour
+      return (
+        <Paper className={classes.root}>
+          <Grid container spacing={8}>
+            {ArrayComponent !== null ? <ArrayComponent {...componentProps} /> : null}
+          </Grid>
+          <AppBar position="relative" color="primary" className={classes.appBar}>
+            <Toolbar className={classes.toolbar}>
+              <Fab color="secondary" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
+                <Icon>add</Icon>
+              </Fab>
+            </Toolbar>
+          </AppBar>
+        </Paper>
+      );
+    }
+
+    //console.log('schema and uiSchema', { schema, uiSchema, ArrayComponent, formData, onAddClick });
+    
   }
 
 

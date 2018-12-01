@@ -45,7 +45,7 @@ class AdminDashboard extends Component {
         <Grid item xs={12}>
           <Toolbar>
             <Link to="/admin/">
-              <Typography variant="title">Dashboard</Typography>
+              <Typography variant="h6">Dashboard</Typography>
             </Link>            
           </Toolbar>
         </Grid>

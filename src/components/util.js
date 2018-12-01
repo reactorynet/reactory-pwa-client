@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import moment from 'moment';
 import { map } from 'lodash';
 import {
@@ -7,6 +8,31 @@ import {
 } from '@material-ui/core';
 
 import DefaultAvatar from '../assets/images/profile/default.png';
+
+/** Either returns a reference to, or creates (if necessary), 
+ * the element with the given tag name and ID */
+export const getElement = (elementName, id, append = true) => {
+  let el = document.getElementById(id)
+  if (!el) {
+      el = document.createElement(elementName)
+      el.id = id
+      if(append === true)
+          document.body.appendChild( el )
+      else 
+          document.body.insertBefore( el, document.body.childNodes[0])
+  }
+  return el
+};
+
+export const attachComponent = (ComponentToMount, props, element) => {
+  console.log('Attaching component with props to element', { ComponentToMount, props, element });
+  if(element instanceof Array) {
+    element.map(e => { 
+      ReactDOM.render(<ComponentToMount {...props} />, e) 
+    })
+  } else ReactDOM.render(<ComponentToMount />, element);
+};
+
 
 export const nil = ( input ) => { return input === null || input === undefined };
 export const nilStr = ( input ) => { 
@@ -56,7 +82,7 @@ export  const CenteredContainer = ( props ) => {
   
     return (
       <Grid container {...attrs} alignItems="center">
-        <Grid item xs={12} lg={12} alignItems="center">
+        <Grid item xs={12} lg={12}>
           {props.children}
         </Grid>
       </Grid>
@@ -119,7 +145,7 @@ export  const CenteredContainer = ( props ) => {
     if(nil(profile)) return DefaultAvatar;
     if(nil(profile.avatar)) return DefaultAvatar;
     if(profile.anon === true) return DefaultAvatar;
-    if(profile.avatar.endsWith('.jpeg')) return CDNProfileResource(profile.id, profile.avatar);
+    if(profile.avatar.endsWith('.jpeg') || profile.avatar.endsWith('.jpg')) return CDNProfileResource(profile.id, profile.avatar);
     
     return profile.avatar
   };

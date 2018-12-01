@@ -1,11 +1,19 @@
 
 import React from 'react';
-
+import  { compose } from 'redux';
+import { withRouter } from 'react-router'
 import {
   Typography,
   Grid,
-  Paper
+  Paper,
+  Button,
+  Icon,
 } from '@material-ui/core';
+
+import * as MaterialCore from '@material-ui/core'
+import * as MaterialIcons from '@material-ui/icons'
+import * as MaterialLab from '@material-ui/lab'
+import MUIDataTable from "mui-datatables";
 import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
 import LoginPage, { RegisterPage } from './auth';
@@ -14,7 +22,7 @@ import AssessmentView from './assess/index';
 import ProfileComponent from './user/Profile';
 import UserSurveyComponent from './survey/UserSurvey';
 import ReportComponent from './report/index';
-import KanbanDashboardComponent from './home/kanban/KanbanDashboard';
+import KanbanDashboardComponent, { TaskListComponentWithData, TaskDetailWithData } from './home/kanban/KanbanDashboard';
 import TowerStoneHome from './home/TowerStoneHomeComponent';
 import Loading from './shared/Loading';
 import ReactoryRouterComponent, { ReactoryFormComponent } from './reactory'
@@ -30,6 +38,10 @@ import BasicModal from './shared/BasicModal';
 import AotAnalyticsDashboardComponent from './tasks/analytics/AnalyticsDashboard';
 import SpeedDialWidget from './shared/SpeedDialWidget';
 import FullScreenDialog from './shared/FullScreenDialog';
+import FroalaWired from './richtext/Froala';
+
+
+import * as utils from './util';
 export const UserList = UserComponents.UserListWithData;
 export const UserSearchInput = UserComponents.UserSearchInputComponent;
 export const ForgotForm = UserComponents.ForgotForm;
@@ -52,6 +64,12 @@ export const ReactoryForm = ReactoryFormComponent;
 export const KanbanDashboard = KanbanDashboardComponent;
 export const FuniSaveDashboard = PaymentGatewayDashboardComponent
 export const componentRegistery = [
+  {
+    nameSpace:'core',
+    name: 'DataTable',
+    component: MUIDataTable,
+    version: '1.0.0',
+  },
   {
     nameSpace: 'core',
     name: 'SingleColumnLayout',
@@ -78,6 +96,19 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'core',
+    name: 'CompanyLogo',
+    version: '1.0.0',
+    component: (props) => {
+      const { organization } = props;
+      const logoProps = {
+        backgroundSrc: utils.CDNOrganizationResource(organization.id, organization.logo),
+        ...props,
+      };
+      return <Logo {...logoProps} />
+    }
+  },
+  {
+    nameSpace: 'core',
     name: 'EmptyComponent',
     component: <p>Component Not Found</p>,
     version: '1.0.0',
@@ -99,6 +130,35 @@ export const componentRegistery = [
     name: 'UserList',
     component: UserComponents.UserListWithData,
     version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'UserListItem',
+    component: UserComponents.UserListItem,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'towerstone',
+    name: 'OwlyListItem',
+    component: (props) => {
+      const { UserListItem } = UserComponents;
+      return <UserListItem user={{ firstName: 'Owly', lastName: '', id: 'towerstone_owly', avatar: 'owl.jpg' }} message={props.message} />
+    },
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'core',
+    name: 'NotFound',
+    component: compose(withRouter)(({ message, location }) => {
+
+      const backClicked = () => location.goBack();
+      const { UserListItem } = UserComponents;
+      return (<BasicModal>
+        <UserListItem user={{ firstName: 'Owly', lastName: '', id: 'towerstone_owly', avatar: 'owl.jpg' }} message={message} />
+        <Button type="fab" color="primary" onClick={backClicked}><Icon>arrow_left</Icon></Button>
+      </BasicModal>)
+    }),
+    version: '1.0.0'
   },
   {
     nameSpace: 'core',
@@ -216,6 +276,18 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'core',
+    name: 'UserTaskListWithData',
+    component: TaskListComponentWithData,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'UserTaskDetailWithData',
+    component: TaskDetailWithData,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'core',
     name: 'TaskDashboard',
     component: TaskDashboard,
     version: '1.0.0',
@@ -310,5 +382,41 @@ export const componentRegistery = [
     name: 'SpeedDial',
     version: '1.0.0',
     component: SpeedDialWidget
-  }
+  },
+  {
+    nameSpace: 'core',
+    name: 'PageIntegrations',
+    version: '1.0.0',
+    component: require('./template/integrations/index').default
+  },
+  {
+    nameSpace: 'boxcommerce',
+    name: 'PageEditorHome',
+    version: '1.0.0',
+    component: require('./template/PageTemplate').default.PageBuilderComponent
+  },
+  {
+    nameSpace: 'core',
+    name: 'FroalaEditor',
+    version: '1.0.0',
+    component: FroalaWired
+  },
+  {
+    nameSpace: 'material-ui',
+    name: 'MaterialCore',
+    version: '1.0.0',
+    component: MaterialCore,
+  },
+  {
+    nameSpace: 'material-ui',
+    name: 'MaterialIcons',
+    version: '1.0.0',
+    component: MaterialIcons,
+  },
+  {
+    nameSpace: 'material-ui',
+    name: 'MaterialLab',
+    version: '1.0.0',
+    component: MaterialLab,
+  },
 ];

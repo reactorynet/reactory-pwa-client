@@ -2,15 +2,40 @@
 import React, { Component, Children } from "react";
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
+import {
+    BrowserRouter as Router,
+    Route,
+    Link,
+    Redirect,
+  } from 'react-router-dom';
+
+import { Provider } from 'react-redux';
+import { createHttpLink } from 'apollo-link-http';
+import { setContext } from 'apollo-link-context';
+import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
+import { ApolloProvider, Query, Mutation } from 'react-apollo';
 import { Typography } from '@material-ui/core';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
+import { createMuiTheme } from '@material-ui/core/styles';
 import { find, isArray, intersection, isEmpty, isNil } from 'lodash';
 import { compose } from 'redux';
 import moment from 'moment';
-import { ApolloClient } from "apollo-client";
 import { withApollo } from "react-apollo";
-import * as restApi from './RestApi'
-import graphApi from './graphql'
-import { getAvatar, getUserFullName, omitDeep, CDNOrganizationResource, getOrganizationLogo } from '../components/util'
+import * as restApi from './RestApi';
+import graphApi from './graphql';
+import configureStore from '../models/redux';
+import { 
+    getAvatar, 
+    getUserFullName, 
+    omitDeep, 
+    CDNOrganizationResource, 
+    getOrganizationLogo, 
+    attachComponent, 
+    getElement,
+} from '../components/util';
+import amq from '../amq';
+
 const { queries, mutations } = graphApi
 
 const storageKeys = {
@@ -25,6 +50,9 @@ export const ReactoryApiEventNames = {
     onLogin : 'loggedIn'
 };
 
+  
+const store = configureStore();
+  
 const EmptyComponent = (fqn) => {
     return (<Typography>No Component For Fqn: {fqn}</Typography>)
 };
@@ -77,9 +105,15 @@ export class ReactoryApi extends EventEmitter {
         this.getTheme = this.getTheme.bind(this);
         this.getRoutes = this.getRoutes.bind(this);
         this.isAnon = this.isAnon.bind(this);
+        this.raiseFormCommand = this.raiseFormCommand.bind(this);
         this.CDN_ROOT = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
-        this.formSchemas = []
+        this.formSchemas = [];
         this.formSchemaLastFetch = null;
+        this.amq = amq;        
+        this.loadComponentWithFQN = this.loadComponentWithFQN.bind(this);
+        this.loadComponent = this.loadComponent.bind(this);
+        this.renderForm = this.renderForm.bind(this);
+        this.forms().then()
     }
 
     afterLogin(user){ 
@@ -89,12 +123,61 @@ export class ReactoryApi extends EventEmitter {
         return this.status({ emitLogin: true });        
     }
 
+    loadComponent(Component, props, target){        
+        debugger
+        if(!Component) Component = () => (<p>No Component Specified</p>)        
+        attachComponent(Component, props, target);
+    }
+
+    loadComponentWithFQN(fqn, props, target){
+        let Component = this.getComponent(fqn)
+        this.loadComponent(Component, props, target);
+    }
+
+    renderForm(componentView){ 
+        const that = this       
+        return (
+            <React.Fragment>
+                <CssBaseline />
+                <Provider store={that.reduxStore}>
+                    <ApolloProvider client={that.client}>
+                        <MuiThemeProvider theme={that.muiTheme}>
+                            <Router>                    
+                                <ApiProvider api={that}>                        
+                                    { componentView }
+                                </ApiProvider>
+                            </Router>
+                        </MuiThemeProvider>
+                    </ApolloProvider>
+                </Provider>
+            </React.Fragment>
+        )
+    }
+
     forms(){
+        const that = this
         return new Promise((resolve) => {
 
             const refresh = () => {
                 restApi.forms().then((formsResult) => {
-                    this.formSchemas = formsResult;
+                    that.formSchemas = formsResult;
+                    const ReactoryFormComponent = that.getComponent('core.ReactoryForm')
+                    formsResult.forEach((formDef) => {
+                        if(formDef.registerAsComponent) {
+                            const FormComponent = (props, context) => {                                
+                                return that.renderForm(<ReactoryFormComponent 
+                                    formId={formDef.id} 
+                                    key={props.key || 0} 
+                                    onSubmit={props.onSubmit}
+                                    onChange={props.onChange}
+                                    data={props.formData || props.data || formDef.defaultFormData }
+                                    before={props.before}
+                                    >{props.children}
+                                </ReactoryFormComponent>)                                                                                                                                                            
+                            }
+                            that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent)
+                        }                        
+                    })
                     resolve(formsResult)
                 }).catch((error) => {
                     console.error('Error loading forms from api', error)
@@ -113,6 +196,14 @@ export class ReactoryApi extends EventEmitter {
         });        
     }
 
+    raiseFormCommand(commandId, formData){
+        this.amq.raiseFormCommand(commandId, formData);
+    }
+
+    onFormDataEvent(commandId, func){
+        this.amq.onFormDataEvent(commandId, func);
+    }
+    
     hasRole(itemRoles = [], userRoles = this.getApplicationRoles()){             
         return intersection(itemRoles, userRoles).length > 0;
     }
@@ -216,15 +307,23 @@ export class ReactoryApi extends EventEmitter {
         const userString = localStorage.getItem(storageKeys.LoggedInUser);
         if (userString) return JSON.parse(userString);
         return anonUser;
-    }    
+    }
+    
+    storeObjectWithKey(key, objectToStore){
+        localStorage.setItem(key, JSON.stringify(objectToStore))
+    }
 
+    readObjectWithKey(key){
+        return JSON.parse(localStorage.getItem(key))
+    }
+
+    deleteObjectWithKey(key){
+        localStorage.removeItem(key);
+    }
     status( options = { emitLogin: false } ) {
-        console.log('status refresh request');
         const that = this
         return new Promise((resolve, reject) => {
             that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {
-                console.log('status refresh request = 1', result);
-                console.log('Api Status result', result.data);
                 if (result.data.apiStatus.status === "API OK") {                    
                     that.setUser({ ...result.data.apiStatus });
                     that.lastValidation = moment().valueOf();

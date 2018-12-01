@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import PropTypes from 'react';
+import PropTypes from 'prop-types';
 import { compose } from 'recompose';
 import {
   Typography,
@@ -35,7 +35,7 @@ class Loading extends Component {
         <CenteredContainer>          
           <Paper className={`${classes.root600} ${classes.paper}`}>
             <Logo />
-            <Typography variant={'title'}>{message} &nbsp;<Icon className={spinIcon === true ? classes.spinning: ''}>{icon}</Icon></Typography>
+            <Typography variant={'h6'}>{message} &nbsp;<Icon className={spinIcon === true ? classes.spinning: ''}>{icon}</Icon></Typography>
           </Paper>
         </CenteredContainer>
       );
@@ -46,7 +46,7 @@ Loading.propTypes = {
   message: PropTypes.string,
   classes: PropTypes.object,
   icon: PropTypes.string,
-  spinIcon: PropTypes.boolean
+  spinIcon: PropTypes.bool
 }
 
 Loading.defaultProps = {

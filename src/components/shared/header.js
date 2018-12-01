@@ -216,8 +216,8 @@ class ApplicationHeader extends Component {
                         <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
                             <MenuIcon />
                         </IconButton>
-                        <Typography type="title" color="inherit" style={{flex:1}}>
-                            {theme.content.appTitle}
+                        <Typography type="title" color="inherit" style={{flex:1}}>                        
+                            {user.applicationName}
                         </Typography>
                         {user.anon === true ? null : 
                         <IconButton
@@ -238,13 +238,14 @@ class ApplicationHeader extends Component {
                 </AppBar>
                 <Drawer open={this.state.drawerOpen === true} className={this.props.classes.drawer}>     
                     <div className={this.props.classes.drawerHeader}>
-                        <Typography variant="subheading" style={{textAlign:'center'}}>{theme.content.appTitle}</Typography>                        
+                        <Avatar src={user.applicationAvatar} />
+                        <Typography variant="subtitle1" style={{textAlign:'center'}}>{theme.content.appTitle}</Typography>                        
                         <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
                             <BackIcon />    
                         </IconButton>
                     </div>
                     <Divider />
-                    <Typography variant="subheading" color="secondary" style={{textAlign:'center', marginTop: '20px'}}>{api.getUserFullName(user)}</Typography>
+                    <Typography variant="subtitle1" color="secondary" style={{textAlign:'center', marginTop: '20px'}}>{api.getUserFullName(user)}</Typography>
                     { user.anon ? null : 
                     <Link to="/profile">
                         <Avatar src={getAvatar(user)} style={{ height:120, width:120, margin:20, marginLeft:'auto', marginRight:'auto' }} />                                    

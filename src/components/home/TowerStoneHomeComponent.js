@@ -3,6 +3,7 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Grid from '@material-ui/core/Grid';
 import {
     List,
+    ListSubheader,
     ListItem,
     ListItemSecondaryAction,
     ListItemText,
@@ -20,7 +21,7 @@ import React, { Component } from 'react';
 import { LineChart, PieChart } from 'react-easy-chart';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
-
+import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
 const styles = (theme) => {
     const primaryColor = theme.palette.primary.main;
@@ -112,6 +113,8 @@ class ChartData {
         this.personalAnnual = null;
         this.companyAnnual = null;
         this.showCharts = false
+
+
     }
 
 }
@@ -120,6 +123,7 @@ class TowerStoneHomeComponent extends Component {
     static propTypes = {
         history: PropTypes.object,
         chartData: PropTypes.instanceOf(ChartData),
+        api: PropTypes.instanceOf(ReactoryApi)
     };
 
     static defaultProps = {
@@ -145,6 +149,16 @@ class TowerStoneHomeComponent extends Component {
         this.toggleDisplayCompanyAvg = this.toggleDisplayCompanyAvg.bind(this);
         this.toggleDisplayPersonalAvg = this.toggleDisplayCompanyAvg.bind(this);
         this.startAssessment = this.startAssessment.bind(this);
+        this.onTaskSelect = this.onTaskSelect.bind(this);
+
+        this.componentDefs = props.api.getComponents([
+            'core.Logo',
+            'towerstone.Surveys',
+            'core.UserListItem',
+            'core.UserTaskListWithData',
+            'core.UserTaskDetailWithData',
+            'towerstone.OwlyListItem'
+        ]);
     }
 
     handleWindowResize() {
@@ -181,71 +195,21 @@ class TowerStoneHomeComponent extends Component {
         history.push('/assess');
     }
 
-
-
+    onTaskSelect(task) {
+        const { history } = this.props;
+        history.push(`/tasks/${task.id}?vm=modal`)
+    }
 
     render() {
         const self = this;
         const { classes, theme } = this.props;
-        const lastRating = [
-            { key: '-', value: 0, color: theme.palette.report.fill },
-            { key: '-', value: 100, color: theme.palette.background.default },
-        ];
-        const notifications = mockNotifications;
-        let notificationItems = [];
-        notifications.map((notification, idx) => notificationItems.push((
-            <ListItem key={idx} dense button className={classes.listItem}>
-                <Avatar alt="" src={notification.avatar} />
-                <ListItemText primary={notification.text} />
-                <ListItemSecondaryAction>
-                    <Checkbox />
-                </ListItemSecondaryAction>
-            </ListItem>
-        )));
-
-        if (notificationItems.length === 0) {
-            notificationItems.push((
-                <ListItem key={'na'} dense button className={classes.listItem}>
-                    <Avatar alt="No notifications">!</Avatar>
-                    <ListItemText primary={'No notifications'} />
-                </ListItem>
-            ))
-        }
-
-        let assessmentItems = [];
-        mockAssessments.map((assessment, idx) => assessmentItems.push((
-            <ListItem key={idx} dense button className={classes.listItem} onClick={this.startAssessment}>
-                <Avatar alt="" src={assessment.avatar} />
-                <ListItemText primary={assessment.text} />
-            </ListItem>
-        )));
-
-        if (assessmentItems.length === 0) {
-            assessmentItems.push((
-                <ListItem key={'na'} dense button className={classes.listItem}>
-                    <Avatar alt="No Assessments">!</Avatar>
-                    <ListItemText primary={'No Assessment'} />
-                </ListItem>
-            ))
-        }
-
-        let actionItems = [];
-        mockActions.map((action, index) => actionItems.push((
-            <ListItem key={index} dense button className={classes.listItem}>
-                <ListItemText primary={action.text} secondary={`Due: ${action.due.format('DD-MM-YYYY')}`} />
-            </ListItem>
-        )));
-
-        if (actionItems.length === 0) {
-            actionItems.push((
-                <ListItem key={'na'} dense button className={classes.listItem}>
-                    <Avatar alt="No Assessments">!</Avatar>
-                    <ListItemText primary={'No Actions'} />
-                </ListItem>
-            ))
-        }
-
-
+        const { 
+            Logo,
+            Surveys,
+            UserTaskListWithData,
+            OwlyListItem, 
+        } = this.componentDefs;
+    
         const filteredMockData = () => {
             let data = [];
             if (self.state.lineChart.displayCompanyAvg) data.push(companyMockScores);
@@ -258,7 +222,7 @@ class TowerStoneHomeComponent extends Component {
             <div style={{ maxWidth: 900, margin: 'auto' }}>
                 <Grid container spacing={24}>
                     <Grid item xs={12} sm={12} style={{ textAlign: 'center' }}>
-                        <img src={theme.assets.logo} className={classes.logo} alt={theme} />
+                        <Logo />
                     </Grid>
                     {this.props.chartData.showCharts ? <Grid item xs={6} sm={3}>
                         <Paper className={classes.container}>
@@ -266,7 +230,7 @@ class TowerStoneHomeComponent extends Component {
                             <PieChart
                                 id={'personal-quarter'}
                                 styles={{ display: 'flex', justifyContent: 'center' }}
-                                data={lastRating}
+                                data={[]}
                                 size={120}
                                 innerHoleSize={100}
                             />
@@ -279,7 +243,7 @@ class TowerStoneHomeComponent extends Component {
                             <PieChart
                                 id={'company-quarter'}
                                 styles={{ display: 'flex', justifyContent: 'center' }}
-                                data={lastRating}
+                                data={[]}
                                 size={120}
                                 innerHoleSize={100}
                             />
@@ -292,7 +256,7 @@ class TowerStoneHomeComponent extends Component {
                             <PieChart
                                 id={'personal-annual'}
                                 styles={{ display: 'flex', justifyContent: 'center' }}
-                                data={lastRating}
+                                data={[]}
                                 size={120}
                                 innerHoleSize={100}
                             />
@@ -306,7 +270,7 @@ class TowerStoneHomeComponent extends Component {
                             <PieChart
                                 id={'company-annual'}
                                 styles={{ display: 'flex', justifyContent: 'center' }}
-                                data={lastRating}
+                                data={[]}
                                 size={120}
                                 innerHoleSize={100}
                             />
@@ -353,27 +317,27 @@ class TowerStoneHomeComponent extends Component {
                     </Grid> : null}
 
                     <Grid item xs={12} sm={12}>
-                        <Paper className={classes.container}>
-                            <Typography label color="primary" align="center">Available Assessments</Typography>
-                            <List>
-                                {assessmentItems}
-                            </List>
-                        </Paper>
+                        <Surveys minimal={true} showComplete={false} />
                     </Grid>
 
                     <Grid item xs={12} sm={6}>
-                        <Paper className={classes.container}>
-                            <Typography label color="primary" align="center">Notifications</Typography>
+                        <Typography variant={"caption"} color="primary" align="center">Notifications</Typography>
+                        <Paper className={classes.container}>                            
                             <List>
-                                {notificationItems}
+                                <OwlyListItem message="You have no unread notifications" />
                             </List>
                         </Paper>
                     </Grid>
                     <Grid item xs={12} sm={6}>
+                        <Typography variant={"caption"} color="primary" align="center">Tasks</Typography>
                         <Paper className={classes.container}>
-                            <Typography label color="primary" align="center">Actions</Typography>
                             <List>
-                                {actionItems}
+                                <ListSubheader>New</ListSubheader>
+                                <UserTaskListWithData status="new" onTaskSelect={this.onTaskSelect} />
+                                <ListSubheader>Planned Tasks</ListSubheader>
+                                <UserTaskListWithData status="planned" onTaskSelect={this.onTaskSelect} />
+                                <ListSubheader>In Progress</ListSubheader>
+                                <UserTaskListWithData status="in-progress" onTaskSelect={this.onTaskSelect} />
                             </List>
                         </Paper>
                     </Grid>
@@ -387,6 +351,7 @@ class TowerStoneHomeComponent extends Component {
 
 const HomeComponent = compose(
     withRouter,
+    withApi,
     withTheme(),
     withStyles(styles),    
 )(TowerStoneHomeComponent);

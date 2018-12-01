@@ -8,7 +8,8 @@ import {
   Button,
   Card, CardActions,
   CardHeader, CardContent,
-  Collapse, IconButton,
+  Collapse, Checkbox,
+  IconButton,
   Paper,
   Grid,
   List,
@@ -327,8 +328,7 @@ export class BrandEdit extends Component {
   onDescriptionChanged = (evt) => this.setState({ editBrand: { ...this.state.editBrand, description: evt.target.value } });
   onNewQuality = (evt) => this.setState({ editBrand: { ...this.state.editBrand, qualities: [...this.state.editBrand.qualities, { ...newQuality, ordinal: this.state.editBrand.qualities.length + 1 }] } })
   onScaleSelect = (evt, option) => { 
-    console.log('survey type change', option)
-    
+    console.log('survey type change', option)    
     this.setState({editBrand: { ...this.state.editBrand, scale: option.props.value }});
   }
 
@@ -510,7 +510,7 @@ export const EditBrand = compose(
  * List component for user entries
  * @param {*} param0 
  */
-const BrandList = ({organizationId, api, onSelect = nilf, onNewSelected = nilf, selectionOnly = false, selectedId}) => {  
+const BrandList = ({organizationId, api, onSelect = nilf, onNewSelected = nilf, selectionOnly = false, selected}) => {  
   return (
   <Query query={api.queries.Organization.leadershipBrands} variables={{organizationId}}>
     {({ loading, error, data }) => {
@@ -531,14 +531,16 @@ const BrandList = ({organizationId, api, onSelect = nilf, onNewSelected = nilf, 
             const selectBrand = () => {
               onSelect(brand)
             }            
-            const selected = selectedId === brand.id ? (
-            <ListItemIcon>
-              <CheckCircle />
-            </ListItemIcon>) : null;
+            const isSelected = selected === brand.id
+                 
             return (
-              <ListItem key={brand.id} dense button onClick={selectBrand}>
+              <ListItem key={brand.id} dense button>
                 <ListItemText primary={brand.title} />
-                {selected}
+                <Checkbox
+                  checked={isSelected}
+                  tabIndex={-1}
+                  disableRipple
+                  onClick={selectBrand} />
               </ListItem>)
           })}
           {selectionOnly === false ? (<ListItem key={brands.length+1} dense button onClick={onNewSelected}>

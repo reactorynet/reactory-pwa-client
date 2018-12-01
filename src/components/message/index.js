@@ -80,13 +80,13 @@ class Message extends Component {
             title={this.props.title}/>
         ) : ( 
           <CardMedia>
-            <Typography variant="title">
+            <Typography variant="h6">
               <Icon>message</Icon>
             </Typography>
           </CardMedia>)
         }        
         <CardContent>
-          <Typography gutterBottom variant="headline" component="h2">
+          <Typography gutterBottom variant="h5" component="h2">
             {this.props.title}
           </Typography>
           <Typography variant="body1">

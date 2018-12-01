@@ -1,25 +1,33 @@
-import React, { Component } from 'react'
+import React, { Component, Fragment } from 'react'
 import PropTypes from 'prop-types'
 import Form from 'react-jsonschema-form'
 import { withRouter, Route, Switch } from 'react-router'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { find, template, templateSettings } from 'lodash';
 import { compose } from 'redux';
+import uuid from 'uuid';
+import Dropzone from 'react-dropzone';
 import { Query, Mutation } from 'react-apollo'
 import { nil } from '../util'
 import queryString from '../../query-string';
 import { withApi, ReactoryApi } from '../../api/ApiProvider'
 import {
+  AppBar,
+  Button,
+  Fab,
   Typography,
   Card,
   CardContent,
   FormControl,
-  InputLabel,
+  Icon,
+  InputLabel,  
   Input,
+  Tabs,
+  Tab,  
 } from '@material-ui/core'
 
 import Fields from './fields'
-//import { } from './widgets'
+import * as WidgetPresets from './widgets'
 import MaterialTemplates from './templates'
 import uiSchemas from './schema/uiSchema'
 import gql from 'graphql-tag';
@@ -67,6 +75,19 @@ const simpleForm = {
   fields: {}
 };
 
+function TabContainer(props) {
+  return (
+    <Typography component="div" style={{ padding: 8 * 3 }}>
+      {props.children}
+    </Typography>
+  );
+}
+
+TabContainer.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+
 const FormWithQuery = (props) => {
 
   return (
@@ -92,6 +113,8 @@ FormWithQuery.defaultProps = {
   data: {}
 };
 
+
+
 class ReactoryComponent extends Component {
 
   static propTypes = {
@@ -114,7 +137,8 @@ class ReactoryComponent extends Component {
       forms: [],
       uiFramework: props.uiFramework,
       uiSchemas: uiSchemas,
-      formData: props.data || {},
+      formData: props.data || null,
+      dirty: false,
       query: queryString.parse(props.location.search)
     }
 
@@ -124,6 +148,7 @@ class ReactoryComponent extends Component {
 
     this.onSubmit = this.onSubmit.bind(this)
     this.onChange = this.onChange.bind(this)
+    this.onCommand = this.onCommand.bind(this)
     this.form = this.form.bind(this)
     this.formDef = this.formDef.bind(this)
     this.renderWithQuery = this.renderWithQuery.bind(this)
@@ -131,8 +156,9 @@ class ReactoryComponent extends Component {
     this.state = _state    
     this.defaultComponents = ['core.Loading', 'core.Logo']
     this.componentDefs = props.api.getComponents(this.defaultComponents)
+    this.formRef = null;
   }
-
+  
   componentWillMount() {
     const that = this;
     this.props.api.forms().then((forms) => {
@@ -145,6 +171,13 @@ class ReactoryComponent extends Component {
     })
   }
 
+  componentWillUpdate(nextProps, nextState){
+    console.log('componentWillUpdate', {nextProps, nextState, formRef: this.formRef});
+    if(this.state.dirty === false) {
+      nextState.formData = nextProps.data;
+    }    
+  }
+
   formDef(){
     return (find(this.state.forms, { id: this.props.formId })) || simpleForm
   }
@@ -155,10 +188,12 @@ class ReactoryComponent extends Component {
     if (loading) return (<p>loading form schema</p>)
     if (forms.length === 0) return (<p>no forms defined</p>)
     const formProps = {
+      id: uuid(),
       ...this.props,
       ...this.form(),
-      formData: { ...formData },
-      onSubmit: this.onSubmit,
+      formData: formData,
+      onSubmit: this.onSubmit,      
+      ref: (form) => { this.formRef = form }
     }
 
     return (
@@ -234,11 +269,11 @@ class ReactoryComponent extends Component {
    */
   form() {
     const { uiFramework, forms, formData } = this.state;
-    let schema = (find(forms, { id: this.props.formId })) || simpleForm
+    let schema = (find(forms, { id: this.props.formId })) || (this.props.schema || simpleForm)
     const { uiSchemaId } = this.state.query
     const { Logo, Loading } = this.componentDefs;
-    const { api } = this.props;
-
+    const { api, history } = this.props;
+    const self = this;
     if (uiFramework !== 'schema') {
       //we are not using the schema define ui framework we are assigning a different one
       schema.uiFramework = uiFramework
@@ -262,12 +297,12 @@ class ReactoryComponent extends Component {
             ArrayField: MaterialArrayFieldTemplate.default,
             BooleanField: MaterialBooleanField,
             DescriptionField: (props, context) => (<Typography>{props.description}</Typography>),
-            NumberField: (props, context) => (<Input {...props} type="number"  value={props.formData}/>),
+            NumberField: (props, context) => (<Input type="number" value={props.formData} onChange={props.onChange} />),
             //ObjectField: MaterialObjectField,
             //SchemaField: MaterialSchemaField,
             StringField: MaterialStringField.default,
             TitleField: MaterialTitleField.default,
-            UnsupportedField: (props, context) => <p>Aah ssheeet dawg</p>,
+            UnsupportedField: (props, context) => <p>Aah ssheeet dawg</p>,            
             layout: MaterialGridField
           };
           break;
@@ -282,9 +317,11 @@ class ReactoryComponent extends Component {
     };
 
     const setWidgets = () => {
+      
       switch (schema.uiFramework) {
         case 'material': {
           schema.widgets = {
+            ...WidgetPresets,
             //AltDateTimeWidget
             //AltDateWidget
             //BaseInput
@@ -303,7 +340,84 @@ class ReactoryComponent extends Component {
             //TextWidget
             //TextareaWidget
             //URLWidget
-            //UpDownWidget
+            //UpDownWidget            
+            DropZoneWidget: (props, context) => {
+              console.log('Creating DropZone Widget', { props, context });
+              const { uiSchema, formData } = props;
+              const options = uiSchema['ui:options']
+              
+              const onDrop = (acceptedFiles, rejectedFiles) => {
+                console.log('Files Drop', {acceptedFiles, rejectedFiles});
+                acceptedFiles.forEach(file => {
+                  if(options.readAsString === true) {
+                    console.log('reading file as string');
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const fileAsBinaryString = reader.result;
+                        // do whatever you want with the file content
+                        console.log('File Data read');
+                        if(options.returnFileMeta === true) {
+                          props.onChange({content: fileAsBinaryString, file})
+                        } else {
+                          props.onChange(fileAsBinaryString)
+                        }                        
+                    };
+                    reader.onabort = () => console.log('file reading was aborted');
+                    reader.onerror = () => console.log('file reading has failed');
+             
+                    reader.readAsBinaryString(file);
+                  } else {
+                    //pass files back for form post as mime attachment
+                    console.log('sending files', acceptedFiles);                    
+                    props.onChange(acceptedFiles)
+                  }                    
+                });
+              }
+
+              const onCancel = () => {
+                console.log('File Select Cancelled');
+              }
+
+              const dropZoneProps = {
+                accept: options.accept || ['*/*'],
+                onDrop: onDrop,
+                onFileDialogCancel: onCancel, 
+              };
+                            
+              return (
+                <Fragment>
+                  <Dropzone {...dropZoneProps}>
+                    {formData === undefined ? <p>Try dropping some files here, or click to select files to upload. </p> : <div>We have content, drag another to overwrite!</div>}
+                  </Dropzone>
+                  <hr />
+                  <div dangerouslySetInnerHTML={{__html: formData}}></div>
+                </Fragment>
+              )              
+            },                        
+            LinkField: (props, context) => {              
+              let linkText = template('/${formData}')({...props})
+              let linkTitle = props.formData;
+              let linkIcon = null;
+
+              if(props.uiSchema && props.uiSchema["ui:options"]){
+                if(props.uiSchema["ui:options"].format){
+                  linkText = template(props.uiSchema["ui:options"].format)(props)
+                }                
+                if(props.uiSchema["ui:options"].title){
+                  linkTitle = template(props.uiSchema["ui:options"].title)(props)
+                }
+
+                if(props.uiSchema["ui:options"].icon){
+                  linkIcon = <Icon style={{marginLeft:'5px'}}>{props.uiSchema["ui:options"].icon}</Icon>
+                }
+              }
+
+              const goto = () => { history.push(linkText) }
+
+              return (
+                <Fragment><Button onClick={goto} type="button">{linkTitle}{linkIcon}</Button></Fragment>
+              )
+            },
             LogoWidget:  ({ value, onChange, options }) => {
               const { backgroundColor } = options;
               return (
@@ -319,6 +433,29 @@ class ReactoryComponent extends Component {
           //do nothing
         }
       }
+
+      debugger;
+      if(!schema.widgets) schema.widgets = { };
+      if(schema.widgetMap) {
+        console.log('resolving widgetMap', schema.widgetMap)
+        schema.widgetMap.forEach((map) => {
+          if(map.component.indexOf('.') === -1){
+            console.log('simple resolve');
+            schema[map.widget] = self.componentDefs[map.component]
+          } else {
+            console.log('path resolve');
+            const pathArray = map.component.split('.')
+            let component = self.componentDefs[pathArray[0]]
+            if(component && Object.keys(component) > 0) {
+              for(let pi = 1; pi <= pathArray.length - 1; pi += 1){
+                if(component && Object.key(component) > 0) component = component[pathArray[pi]]                              
+              }
+              console.log('component is mapped to', component);
+            }
+          }          
+        });
+      }
+
       return {};
     }
 
@@ -326,12 +463,11 @@ class ReactoryComponent extends Component {
 
       switch (schema.uiFramework) {
         case 'material': {
-          schema.FieldTemplate = MaterialFieldTemplate.default
+          schema.FieldTemplate = MaterialFieldTemplate.default          
           break;
         }
         default: {
-          if (schema.FieldTemplate)
-            delete schema.FieldTemplate
+          if (schema.FieldTemplate) delete schema.FieldTemplate
           break
         }
       }
@@ -362,7 +498,10 @@ class ReactoryComponent extends Component {
                   styleLink.id = resourceId
                   styleLink.href = resource.uri
                   styleLink.rel = 'stylesheet'
-                  document.head.append(styleLink)
+                  setTimeout(()=>{
+                    document.head.append(styleLink)
+                  }, styleLink.delay || 0)
+                  
                   break;
                 }
                 case 'script': {
@@ -370,7 +509,9 @@ class ReactoryComponent extends Component {
                   scriptLink.id = resourceId
                   scriptLink.src = resource.uri
                   scriptLink.type = 'text/javascript'
-                  document.body.append(scriptLink)
+                  setTimeout(()=>{
+                    document.body.append(scriptLink)
+                  }, scriptLink.delay || 0)                  
                   break;
                 }
                 default: {
@@ -389,6 +530,7 @@ class ReactoryComponent extends Component {
     setObjectTemplate()
     setFieldTemplate()
     injectResources()
+    //onCommand: this.onCommand,
     return schema
   }
 
@@ -399,12 +541,19 @@ class ReactoryComponent extends Component {
 
   onChange(data) {
     console.log('Form Data Changed', data);
-    this.setState({ formData: {...data}})
+    this.setState({ formData: {...data}, dirty: true}, ()=>{
+      if(this.props.onChange) this.props.onChange(data)
+    })
   }
 
   onError(errors) {
     console.log('Form onError', errors);
     if (this.props.onError) this.props.onError(errors);
+  }
+
+  onCommand(command, formData){
+    console.log('onCommand raise', {command, formData});
+    if(this.props.onCommand) this.props.onCommand(command, formData);
   }
 
   

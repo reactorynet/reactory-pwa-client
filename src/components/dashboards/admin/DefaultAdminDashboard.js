@@ -19,7 +19,7 @@ class DefaultAdminDashboard extends Component {
     return (
       <Grid container>
         <Grid item xs={12} md={12}>
-          <Typography variant="title">Dashboard</Typography>
+          <Typography variant="h6">Dashboard</Typography>
         </Grid>                
         <Grid item xs={12} md={12} lg={12}>
           <Typography variant="caption">Calendar</Typography>

@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import moment, { momentPropTypes } from 'moment';
 import { withRouter, Route, Switch } from 'react-router';
@@ -11,8 +11,10 @@ import { isNil, find, isArray } from 'lodash';
 import {
     AppBar,
     Badge,
+    Fab,
     MenuItem,
     FormControl,
+    OutlinedInput,
     InputBase,
     IconButton,
     InputLabel,
@@ -29,7 +31,7 @@ import {
     TextField,
     Typography
 } from '@material-ui/core';
-
+import Slider from '@material-ui/lab/Slider';
 import Select from '@material-ui/core/Select';
 import Avatar from '@material-ui/core/Avatar';
 import Button from '@material-ui/core/Button';
@@ -112,7 +114,7 @@ export const AddTaskComponent = compose(
 
 
 
-const TaskListComponent = compose(
+export const TaskListComponentWithData = compose(
     withApi
 )((props) => {
     const { api, organizationId, userId, onCancel, status = 'new', percentComplete = 0, onTaskSelect = () => { }, dragProps = defaultDragProps } = props
@@ -123,40 +125,48 @@ const TaskListComponent = compose(
                 if (error) return (<p>{error.message}</p>)
 
                 if (isArray(data.userTasks) === true && data.userTasks.length > 0) {
-                    return data.userTasks.map((task) => {
+                    return data.userTasks.map((task, key) => {
                         const taskProps = {
                             task,
                             onTaskSelect,
+                            key,
                         };
                         return (<TaskListItemComponent {...taskProps} />)
                     })
-                } else {
-                    return <p>No tasks here</p>
                 }
+
+                return null;
             }}
         </Query>
     )
 });
 
-const TaskDetailWithData = compose(
+export const TaskDetailWithData = compose(
     withApi,
     withRouter
 )((props) => {
     const { api, taskId } = props
 
     return (
-        <Query query={api.queries.Tasks.taskDetail} variables={{ taskId }}>
-            {({ loading, error, data }) => {
+        <Query query={api.queries.Tasks.taskDetail} variables={{ id: taskId }}>
+            {({ loading, errors, data }) => {
                 if (loading) return (<p>Loading detail...</p>)
-                if (error) return (<p>Error loading the task</p>)
+                if (errors) return (<p>Error loading the task</p>)
+                
+                if(data.taskDetail) {
+                    return <TaskDetailComponent task={data.taskDetail} />
+                } else {
+                    const NotFound = api.getComponent('core.NotFound')
 
-                return <TaskDetailComponent task={data.taskDetail} />
+                    return <NotFound message="We couldn't find the Task you were looking for" />
+                }
+                
             }}
         </Query>
     )
 })
 
-class ChatDashboard extends Component {
+class KanbanDashboard extends Component {
     static styles = (theme) => {
         const primaryColor = theme.palette.primary.main;
         const primaryColorDark = theme.palette.primary.dark;
@@ -280,39 +290,160 @@ class ChatDashboard extends Component {
         user: PropTypes.object.isRequired,
         projectKey: PropTypes.string,
         from: PropTypes.instanceOf(moment),
-        till: PropTypes.instanceOf(moment)
+        till: PropTypes.instanceOf(moment),
+        lanes: PropTypes.array,
     }
 
     static defaultProps = {
         user: { firstName: '', lastName: '', email: '' },
         projectKey: '',
         from: moment(),
-        till: moment()        
+        till: moment(),
+        lanes: [
+            { status: 'planned', tite: 'Planned Tasks', icon: 'star_border', color: '#7DAEE8' },
+            { status: 'in-progress', title: 'In Progress', icon: 'star_half', color: '#A3CDFF', addRoles: [] },
+            { status: 'completed', title: 'Complete', icon: 'star', color: '#96E2FF', addRoles: [] },
+            { status: 'outputs', title: 'Outputs', icon: 'attachment', color: '#EFD4FF', addRoles: [] },
+            { status: 'kudos', title: 'Kudos', icon: 'thumb_up_alt', color: '#BC99D1', addRoles: [] }
+        ],
+    }
+
+    constructor(props, context) {
+        super(props, context);
+        this.state = {
+            isMenuOpen: false,
+            anchorEl: null,
+            selectedTask: null,
+            projectId: null,
+            showProjectModal: false,
+            project: null,
+            showTaskboardModal: false,
+            taskboard: null,
+        };
+        this.handleProfileMenuOpen = this.handleProfileMenuOpen.bind(this);
+        this.showModal = this.showModal.bind(this);
+        this.onTaskSelect = this.onTaskSelect.bind(this);
+        this.onProjectIdChange = this.onProjectIdChange.bind(this);
+        this.componentDefs = this.props.api.getComponents([
+            'core.DateSelector', 
+            'core.FullScreenModal', 
+            'core.SpeedDial',
+            'forms.ProjectForm',
+        ])
     }
 
     handleProfileMenuOpen = event => {
         this.setState({ anchorEl: event.currentTarget });
     };
 
-    onDateRangeChanged(startDate, endDate){
-        console.log('DateRange changed', {startDate, endDate});
+    onProjectIdChange = (evt, b, c,) => {
+        console.log('ProjectId changed', { evt, b, c });
+        this.setState({ projectId: evt.target.value })
+    }
+
+    onDateRangeChanged(startDate, endDate) {
+        console.log('DateRange changed', { startDate, endDate });
+    }
+
+    showModal() {
+        this.setState({ showModal: true })
+    }
+
+    onTaskSelect(task) {
+        this.setState({ selectedTask: task, showModal: true })
+    }
+
+    onProjectFormSubmit(projectData){
+        console.log('Submit Project Form Data', projectData)
     }
 
     render() {
         const { classes, user, history, from, till } = this.props;
-        const { isMenuOpen, anchorEl } = this.state;
+        const { isMenuOpen, anchorEl, showModal, selectedTask, projectId } = this.state;
         const that = this;
-        const { DateSelector } = this.componentDefs;
-       
+        const { DateSelector, FullScreenModal, SpeedDial, ProjectForm } = this.componentDefs;
+
+        let modal = null
+        if (showModal === true && selectedTask !== null) {
+            const closeTask = () => {
+                that.setState({selecteTask: null, showModal: false})
+            }
+
+            modal = (
+                <FullScreenModal title={selectedTask.title} open={true} onClose={closeTask}>
+                    <TaskDetailWithData taskId={selectedTask.id} />
+                </FullScreenModal>)
+        }
+
+        if(projectId === "-1") {
+            const closeProject = () => {
+                that.setState({projectId: null, showModal: false})
+            }
+
+            modal = (
+               
+                <FullScreenModal title={"New Project"} open={true} onClose={closeProject}>
+                    <ProjectForm onSubmit={this.onProjectFormSubmit}>
+                        <Fab type="submit" color="primary"><Icon>save</Icon></Fab>
+                    </ProjectForm>
+                </FullScreenModal>)            
+        }
+
         return (
             <Grid
                 container
                 spacing={16}
                 className={classes.mainContainer}>
-                <Grid item md={12} sm={12} xs={12}>
+                <Grid item md={12} sm={12} xs={12}>                    
                     <AppBar position="static" color="default" className={classes.toolbar}>
                         <Toolbar>
-                            <Typography variant="subtitle2" color="inherit">Task Board</Typography>
+                            <FormControl variant="outlined" className={classes.formControl}>
+                                <InputLabel
+                                    ref={ref => {
+                                    this.InputLabelRef = ref;
+                                    }} 
+                                    htmlFor="outlined-age-native-simple">Project</InputLabel>
+                                <Select
+                                    value={this.state.projectId}
+                                    onChange={this.onProjectIdChange}                                    
+                                    autoWidth                           
+                                    input={
+                                    <OutlinedInput
+                                        name="Project"
+                                        id="outlined-age-native-simple"
+                                    />}>
+                                    <option value="" />
+                                    <option value={10}>Project A</option>
+                                    <option value={20}>Project B</option>
+                                    <option value={30}>Project C</option>
+                                    <option value={-1}>NEW PROJECT</option>
+                                </Select>
+                            </FormControl>
+                            
+
+                            <FormControl variant="outlined" className={classes.formControl}>
+                                <InputLabel
+                                    ref={ref => {
+                                    this.InputLabelRef = ref;
+                                    }} 
+                                    htmlFor="outlined-age-native-simple">Board</InputLabel>
+                                <Select
+                                    native
+                                    value={this.state.age}
+                                    autoWidth                            
+                                    input={
+                                    <OutlinedInput
+                                        name="Task Board"
+                                        id="outlined-age-native-simple"
+                                    />}>
+                                    <option value="" />
+                                    <option value={10}>Task Board A</option>
+                                    <option value={20}>Task Board B</option>
+                                    <option value={30}>Task Board C</option>
+                                    <option value={-1}>NEW BOARD</option>
+                                </Select>
+                            </FormControl>
+
                             <div className={classes.search}>
                                 <div className={classes.searchIcon}>
                                     <SearchIcon />
@@ -333,85 +464,76 @@ class ChatDashboard extends Component {
                                 onDatesChange={that.onDateRangeChanged} // PropTypes.func.isRequired,
                             />
                             <div className={classes.sectionDesktop}>
-                                <Tooltip title={`You have (${4}) personal tasks in progress`}>
+                                <Tooltip title={`You have (${0}) personal tasks in progress`}>
                                     <IconButton color="inherit">
-                                        <Badge badgeContent={4} color="secondary">
+                                        <Badge badgeContent={0} color="secondary" onClick={this.showModal}>
                                             <Icon>assignment_ind</Icon>
                                         </Badge>
                                     </IconButton>
                                 </Tooltip>
 
-                                <Tooltip title={`You have (${5}) assgined tasks in progress`}>
+                                <Tooltip title={`You have (${0}) assgined tasks in progress`}>
                                     <IconButton color="inherit">
-                                        <Badge badgeContent={5} color="secondary">
+                                        <Badge badgeContent={0} color="secondary">
                                             <Icon>assignment_returned</Icon>
                                         </Badge>
                                     </IconButton>
                                 </Tooltip>
 
-                                <Tooltip title={`You have (${17}) completed tasks`}>
+                                <Tooltip title={`You have (${0}) completed tasks`}>
                                     <IconButton color="inherit">
-                                        <Badge badgeContent={17} color="secondary">
+                                        <Badge badgeContent={0} color="secondary">
                                             <Icon>assignment_turned_in</Icon>
                                         </Badge>
                                     </IconButton>
                                 </Tooltip>
 
-                                <Tooltip title={`You have (${3}) personal tasks in progress`}>
+                                <Tooltip title={`You have (${0}) personal tasks in progress`}>
                                     <IconButton color="inherit">
-                                        <Badge badgeContent={3} color="secondary">
+                                        <Badge badgeContent={0} color="secondary">
                                             <Icon>delete</Icon>
                                         </Badge>
                                     </IconButton>
                                 </Tooltip>
-
-
-
                             </div>
                         </Toolbar>
                     </AppBar>
                 </Grid>
-                <Grid item md={12} sm={12} xs={12} spacing={4} >
+                <Grid item md={12} sm={12} xs={12}>
                     <Switch>
-                        <Route path="/">
-                            <div className={classes.columnContainer}>
-                                {
-                                    ['planned', 'in-progress', 'completed', 'artefacts', 'kudos'].map(status => {
-                                        return (<Paper className={classes.column} key={status}>
-                                            <Typography variant="heading">{status.toUpperCase()}</Typography>
-                                            <List className={classes.taskList}>
-                                                <TaskListComponent status={status} user={'self'} />
-                                            </List>
-                                            <hr />
-                                            {status === 'planned' ? <AddTaskComponent status={status} /> : null}
-                                        </Paper>)
-                                    })
-                                }
-                            </div>
+                        <Route exact path="/">
+                            <Fragment>
+                                <div className={classes.columnContainer}>
+                                    {
+                                        this.props.lanes.map(lane => {
+                                            return (
+                                            <Paper className={classes.column} key={lane.status} style={{ backgroundColor: lane.color }}>
+                                                <Typography variant="heading"><Icon style={{ marginTop: '5px' }}>{lane.icon}</Icon>&nbsp;{lane.title}</Typography>
+                                                <List className={classes.taskList}>
+                                                    <TaskListComponentWithData status={lane.status} user={'self'} onTaskSelect={this.onTaskSelect} />
+                                                </List>
+                                                <hr />
+                                                {lane.status === 'planned' ? <AddTaskComponent status={'planned'} /> : null}
+                                            </Paper>);
+                                        })
+                                    }
+                                </div>
+                                <SpeedDial />
+                                {modal}
+                            </Fragment>
                         </Route>
-                        <Route path="/task/:taskId" render={props => <TaskDetailWithData taskId={props.match.params.taskId} />} />
+                        <Route path="/tasks/:taskId" render={props => <TaskDetailWithData taskId={props.match.params.taskId} />} />
                     </Switch>
                 </Grid>
             </Grid>
         );
-    }
-
-    constructor(props, context) {
-        super(props, context);
-        this.state = {
-            isMenuOpen: false,
-            anchorEl: null
-        };
-        this.handleProfileMenuOpen = this.handleProfileMenuOpen.bind(this);
-
-        this.componentDefs = this.props.api.getComponents(['core.DateSelector'])
-    }
+    }    
 }
 
-const ChatDashboardComponent = compose(
+const KanbanDashboardComponent = compose(
     withApi,
     withRouter,
     withTheme(),
-    withStyles(ChatDashboard.styles),
-)(ChatDashboard);
-export default ChatDashboardComponent;
+    withStyles(KanbanDashboard.styles),
+)(KanbanDashboard);
+export default KanbanDashboardComponent;

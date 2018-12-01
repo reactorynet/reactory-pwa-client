@@ -298,7 +298,7 @@ class DefaultFormContainer extends Component {
       'core.BusinessUnitList',
       'core.BusinessUnitForm',
       'core.BusinessUnitFormWithQuery',
-      'core.Logo',
+      'core.CompanyLogo',
     ])
   }
 
@@ -365,10 +365,11 @@ class DefaultFormContainer extends Component {
     const that = this;
     const organizationId = organization.id;
 
-    const { UserListWithSearch, SpeedDial, ReactoryForm, BusinessUnitList, BusinessUnitForm, Logo, BusinessUnitFormWithQuery } = that.componentDefs;
+    const { UserListWithSearch, SpeedDial, ReactoryForm, BusinessUnitList, BusinessUnitForm, CompanyLogo, BusinessUnitFormWithQuery } = that.componentDefs;
     const isNew = mode === 'new';
     return (
-      <div className={classes.root}>                      
+      <div className={classes.root}>
+        <Typography variant="caption" color="primary">{organization.name}</Typography>                              
         <AppBar position="static" color="default">
           <Tabs
             value={tab}
@@ -416,9 +417,9 @@ class DefaultFormContainer extends Component {
                   </Fragment>
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/employees/new'}>
-                  <CreateProfile onCancel={this.onClearEmployeeSelection} organizationId={organizationId} profileTitle="New Employee" />
+                  <CreateProfile onCancel={this.onClearEmployeeSelection} mode="admin" organizationId={organizationId} profileTitle="New Employee" />
                 </Route>
-                <Route exact path={'/admin/org/:organizationId/employees/:profileId'}>
+              <Route exact path={'/admin/org/:organizationId/employees/:profileId'} >
                   <UserProfile organizationId={organizationId} />
                 </Route>
               </Switch>

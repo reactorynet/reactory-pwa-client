@@ -174,25 +174,37 @@ export class UserListWithSearch extends Component {
     })
   }
 
+  static propTypes = {
+    businessUnitFilter: PropTypes.bool
+  };
+
+  static defaultProps = {
+    businessUnitFilter: true
+  };
+
   constructor(props, context) {
     super(props, context)
     this.state = {
       searchString: '',
       inputText: '',
       skip: false,
+      selected: [],
+      businessUnitFilter: null,
+      showBusinessUnitFilter: false,
     }
 
     this.doSearch = this.doSearch.bind(this);
     this.doRefresh = this.doRefresh.bind(this);    
     this.searchStringChanged = this.searchStringChanged.bind(this);
     this.searchStringOnKeyPress = this.searchStringOnKeyPress.bind(this);
+    this.onNewUserClick = this.onNewUserClick.bind(this);
+    this.onShowBusinessUnitFilter = this.onShowBusinessUnitFilter.bind(this);
     this.componentDefs = this.props.api.getComponents(['core.SingleColumnLayout', 'core.UserSearch', 'core.UserList'])
   }
 
   doRefresh(){
     this.setState({ skip: false, searchString: this.state.inputText });
   }
-
 
   searchStringChanged(evt) {
     this.setState({ inputText: evt.target.value, skip: true });
@@ -207,6 +219,24 @@ export class UserListWithSearch extends Component {
     this.setState({ searchString: this.state.inputText })
   }
 
+  onUserSelect(user, index){
+    console.log(`User selected ${user.id} ${index}`, {user, index});
+
+    if(this.props.onUserSelect) this.props.onUserSelect(user, index);
+
+  }
+
+  onShowBusinessUnitFilter(){
+    this.setState({ showBusinessUnitFilter: !this.state.showBusinessUnitFilter })
+  }
+
+  onNewUserClick(){
+    if(typeof this.props.onNewUserClick === 'function') {
+      this.props.onNewUserClick()      
+    } else {
+      this.props.history.push(`/admin/org/${this.props.organizationId}/employees/new`)
+    }
+  }
 
   render() {
     const { SingleColumnLayout, UserList } = this.componentDefs;
@@ -241,67 +271,37 @@ export class UserListWithSearch extends Component {
             </Tooltip>
 
             <Tooltip title={`Click to add new employee`}>
-              <IconButton color="inherit" onClick={this.newUser}>
+              <IconButton color="inherit" onClick={this.onNewUserClick}>
                 <Icon>add_circle_outline</Icon>
               </IconButton>
             </Tooltip>
-            <Tooltip title={`Filter By Business Unit`}>
-              <IconButton color="inherit">
+            { this.businessUnitFilter ? <Tooltip title={`Filter By Business Unit`}>
+              <IconButton color="inherit" onClick={this.onShowBusinessUnitFilter}>
                 <Icon>filter</Icon>
               </IconButton>
-            </Tooltip>
+            </Tooltip> : null }
           </Toolbar>
         </AppBar>
 
-        <UserList onUserSelect={this.props.onUserSelect} organizationId={this.props.organizationId} searchString={this.state.searchString} skip={skip} />
+        <UserList 
+          onUserSelect={this.props.onUserSelect} 
+          organizationId={this.props.organizationId} 
+          searchString={this.state.searchString} 
+          skip={skip === true}
+          selected={this.props.selected}
+          multiSelect={this.props.multiSelect === true || false} />
       </SingleColumnLayout>
     )
   }
 
 }
 
-export const UserListWithSearchComponent = compose(withStyles(UserListWithSearch.Styles), withTheme(), withApi)(UserListWithSearch);
+export const UserListWithSearchComponent = compose(
+  withStyles(UserListWithSearch.Styles),
+  withTheme(), 
+  withApi,
+  withRouter)(UserListWithSearch);
 
 export default {
   UserListWithSearchComponent
 };
-
-
-/**
- * <div className={classes.sectionDesktop}>
-              <Tooltip title={`You have (${4}) business units in the filter`}>
-                <IconButton color="inherit">
-                  <Badge badgeContent={4} color="secondary">
-                    <Icon>assignment_ind</Icon>
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-
-              <Tooltip title={`You have (${5}) assgined tasks in progress`}>
-                <IconButton color="inherit">
-                  <Badge badgeContent={5} color="secondary">
-                    <Icon>assignment_returned</Icon>
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-
-              <Tooltip title={`You have (${17}) completed tasks`}>
-                <IconButton color="inherit">
-                  <Badge badgeContent={17} color="secondary">
-                    <Icon>assignment_turned_in</Icon>
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-
-              <Tooltip title={`You have (${3}) personal tasks in progress`}>
-                <IconButton color="inherit">
-                  <Badge badgeContent={3} color="secondary">
-                    <Icon>delete</Icon>
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-            </div>
- * 
- * 
- * */
-

@@ -197,8 +197,9 @@ export class BusinessUnitListWithToolbar extends Component {
     this.searchStringChanged = this.searchStringChanged.bind(this);
     this.searchStringOnKeyPress = this.searchStringOnKeyPress.bind(this);
     this.onItemSelect = this.onItemSelect.bind(this);
-    this.componentDefs = this.props.api.getComponents(['core.SingleColumnLayout',
-    'core.FullScreenDialog'])
+    this.componentDefs = this.props.api.getComponents([
+      'core.SingleColumnLayout',
+      'core.FullScreenDialog'])
   }
 
   doRefresh(){

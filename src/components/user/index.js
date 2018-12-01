@@ -5,9 +5,11 @@ import classnames from 'classnames';
 import gql from 'graphql-tag';
 import { compose } from 'redux';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { intersection } from 'lodash';
 import {
   Avatar,
   Chip,
+  Checkbox,
   Button,
   FormControl,
   List,
@@ -189,7 +191,7 @@ class UserTable extends Component {
 export const CreateProfile = compose(
   withApi
 )((props) => {
-  const { api, organizationId, profile, onCancel, onSave } = props
+  const { api, organizationId, profile, onCancel, onSave, profileTitle } = props
 
   const updateCache = (cache, { data: { createUser } }) => {
     const { usersForOrganizationWithId } = cache.readQuery({ query: api.queries.Users.usersForOrganization, variables: { id: organizationId } })
@@ -207,6 +209,7 @@ export const CreateProfile = compose(
           loading,
           error,
           profile: profile,
+          profileTitle,
           mode: 'admin',
           isNew: true,
           onCancel,
@@ -272,7 +275,7 @@ export const UserProfile = compose(
     let pid = null;
     pid = isNil(profileId) === false ? pid : match.params.profileId;
     if (isNil(pid) === true) pid = api.getUser() ? api.getUser().id : null;
-    if (isNil(pid) === true) return <Typography variant="title" value="No profile id" />
+    if (isNil(pid) === true) return <Typography variant="h6" value="No profile id" />
 
     return (
     <Query query={api.queries.Users.userProfile} variables={{profileId: pid}}>
@@ -291,16 +294,19 @@ export const UserProfile = compose(
 });
 
 
-const UserListItem = (props) => {
-  const { user, selected, key, onClick } = props
+export const UserListItem = (props) => {
+  const { user, selected, key, onClick, message } = props
   const displayText = `${user.firstName} ${user.lastName}`
+  const hasMessage = typeof message === 'string'
   return (
-    <ListItem onClick={onClick} key={key}>
+    <ListItem selected={selected} onClick={onClick} key={key}>
       <Avatar alt={displayText} src={getAvatar(user)} />
-      <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>
+      <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ hasMessage === true ? message : user.email }/>
     </ListItem>
   )
 }
+
+
 
 class Inbox extends Component {
 
@@ -360,14 +366,14 @@ class Inbox extends Component {
       viewPane = (
       <Grid {...viewProps}>
         <Paper className={classes.PreviewPane}>                                                 
-          <Typography variant="title">{message.subject}</Typography><br/>
+          <Typography variant="h6">{message.subject}</Typography><br/>
           <Typography className={classes.PreviewBody} variant="body1" dangerouslySetInnerHTML={{__html: message.message}}></Typography>        
         </Paper>
       </Grid>);
     } else {
       viewPane = (<Grid {...viewProps}>
         <Paper className={classes.PreviewPane}>                                                 
-          <Typography variant="title">Select a message to view</Typography>        
+          <Typography variant="h6">Select a message to view</Typography>        
         </Paper>
       </Grid>);
     }
@@ -410,7 +416,7 @@ export const UserInbox = compose(withApi)(({ api }) => (
   </Query>));
 
 
-const UserList = ({organizationId, api, onUserSelect, searchString}) => {  
+const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect }) => {  
   return (
     <Query query={api.queries.Users.usersForOrganization} variables={{ id: organizationId, searchString }}>
       {({ loading, error, data } ) => {
@@ -421,37 +427,36 @@ const UserList = ({organizationId, api, onUserSelect, searchString}) => {
           lastName: '',
           email: '',
           avatar: DefaultAvatar,
+          businessUnit: null,
           peers: [],
           surveys: [],
           teams: [],
           __isnew: true
         }
         const users = data.usersForOrganizationWithId || []
-        const raiseNewUserSelect = () => {
-          if(onUserSelect) onUserSelect(newUser)
-        }
-
-        const newUserEntry = (
-        <ListItem onClick={raiseNewUserSelect} dense button key={users.length+1}>
-          <Avatar alt={'New user'} src={ newUser.avatar } />
-          <ListItemText primary={ 'NEW' } secondary={ 'Click here to add a new user / employee' }/>
-        </ListItem>)
-
+        
         return (
           <List>
             {users.map((user, uid) => {
               const raiseUserSelected = () => {
                 if(onUserSelect) onUserSelect(user, uid)
               }              
+              const isSelected = intersection(selected, [user.id]).length === 1;
               const displayText = `${user.firstName} ${user.lastName}`
               return (
-                <ListItem onClick={raiseUserSelected} dense button key={uid}>
+                <ListItem selected={isSelected} onClick={raiseUserSelected} dense button key={uid}>
                   <Avatar alt={displayText} src={getAvatar(user)} />
-                  <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>
+                  <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
+                  { multiSelect === true ? 
+                  <Checkbox
+                    checked={isSelected}
+                    tabIndex={-1}
+                    disableRipple
+                    onClick={raiseUserSelected}
+                     /> : null }
                 </ListItem>
               )
-            })}
-            {newUserEntry}
+            })}        
           </List>
         )
       }}      

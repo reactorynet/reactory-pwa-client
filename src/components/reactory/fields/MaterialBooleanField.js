@@ -42,8 +42,7 @@ export default (props) => {
   const toggleSwitch = ( evt, checked ) => {
     if(onChange) onChange(checked)
   }
-
-  debugger 
+  
   return (<FormControlLabel
       control={
       <Switch

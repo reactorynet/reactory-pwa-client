@@ -180,7 +180,7 @@ class ResetPassword extends Component {
       return (<div><Typography variant="body1" value="An email has been sent with instructions to reset your password. Please allow a few minutes for delivery" /></div>)
     }
     if (this.state.hasError) {
-      return (<div><Typography variant="body2" value={this.state.message} /></div>);
+      return (<div><Typography variant="body1" value={this.state.message} /></div>);
     }
 
     const formData = {

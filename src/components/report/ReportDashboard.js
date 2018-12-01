@@ -324,7 +324,7 @@ class ReportDetail extends Component {
                         <Typography className={classes.paragraph}>You have been assessed against the TowerStone values and supporting leadership behaviours for all TowerStone employees.</Typography>
                         <br/>
                         <br/>
-                        <Typography variant="subtitle" color="primary"  className={classes.brandStatement}>{report.survey.leadershipBrand.description}</Typography>
+                        <Typography variant="subtitle1" color="primary"  className={classes.brandStatement}>{report.survey.leadershipBrand.description}</Typography>
                         <br/>
                         <br/>
                         <Typography  className={classes.paragraph}>The values form the foundation of your desired culture at {report.survey.organization.name} and in order to build this culture, you as leaders
@@ -332,7 +332,7 @@ class ReportDetail extends Component {
                         the purpose and strategy of {report.survey.organization.name}.</Typography>
                         <br/>
                         <br/>
-                        <Typography variant="subtitle" color="primary" className={classes.brandStatement}>"You cannot manage what you cannot measure"</Typography>
+                        <Typography variant="subtitle1" color="primary" className={classes.brandStatement}>"You cannot manage what you cannot measure"</Typography>
                         <br/>
                         <br/>
                         <Typography className={classes.paragraph}>The TowerStone Leadership Assessment is a tool that provides insight to track your behavioural growth as you seek
@@ -372,7 +372,7 @@ class ReportDetail extends Component {
                                 <div>
                                     <Typography variant="h3" color="primary" gutterBottom>4.{qi + 1} {quality.title}</Typography>
                                     {quality.behaviours.map((behaviour, bi) => { 
-                                        <Typography variant="body2">B{bi + 1} -> {behaviour.description}</Typography>                                        
+                                        <Typography variant="body1">B{bi + 1} -> {behaviour.description}</Typography>                                        
                                     })}
                                     <ThemedBarChartForQuality quality={quality} report={report} />
                                 </div>
@@ -448,7 +448,7 @@ class ReportDashboard extends Component {
             <Grid container spacing={16} className={classes.mainContainer}>
                 <Grid item xs={12} sm={12}>                
                     <Toolbar>
-                        <Typography variant="title" color="inherit">Reports</Typography>
+                        <Typography variant="h6" color="inherit">Reports</Typography>
                     </Toolbar>
                 </Grid>
                 <Grid item xs={12} sm={12}>

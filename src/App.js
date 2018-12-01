@@ -84,6 +84,7 @@ componentRegistery.forEach((componentDef) => {
   api.registerComponent(nameSpace, name, version, component);
 });
 const store = configureStore();
+api.reduxStore = store;
 
 class App extends Component {
   
@@ -111,9 +112,8 @@ class App extends Component {
 
   
 
-  onLogin() {
-    console.log('User logged in');
-    //this.forceUpdate();
+  onLogin() {    
+    this.forceUpdate();
   }
 
   onLogout() {
@@ -143,7 +143,10 @@ class App extends Component {
     let themeOptions = api.getTheme();
     if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
+    if(!themeOptions.typography) themeOptions.typograph =  { useNextVariants: true };
+    else themeOptions.typography.useNextVariants = true;
     const muiTheme = createMuiTheme(themeOptions);
+    api.muiTheme = muiTheme;
     const routes = api.getRoutes().map((routeDef) => {
       const routeProps = {
         key: routeDef.id,
@@ -177,10 +180,8 @@ class App extends Component {
           />)
         }
       }
-    })
-
-
-
+    });
+            
     return (
       <React.Fragment>
         <CssBaseline />

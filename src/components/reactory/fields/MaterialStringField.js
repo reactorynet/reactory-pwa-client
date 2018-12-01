@@ -10,28 +10,28 @@ import {
   Input,
 } from '@material-ui/core'
 
-export default (props) => {   
-  const { 
-    autofocus, 
-    disabled, 
-    errorSchema, 
-    formContext, 
-    formData, 
-    idPrefix, 
-    idSchema, 
-    name, 
-    onBlur, 
-    onChange, 
-    onFocus, 
+export default (props) => {
+  const {
+    autofocus,
+    disabled,
+    errorSchema,
+    formContext,
+    formData,
+    idPrefix,
+    idSchema,
+    name,
+    onBlur,
+    onChange,
+    onFocus,
     rawErrors,
     readOnly,
     registry,
     required,
-    schema, 
-    uiSchema, 
+    schema,
+    uiSchema,
     hidden
   } = props;
-  
+
   const inputProps = {
     value: '',
     name,
@@ -40,6 +40,27 @@ export default (props) => {
     autofocus
   }
 
+  const uiOptions = uiSchema['ui:options'] || { readOnly: false }
 
-  return(<Input readOnly={schema.readOnly} value={formData} onChange={(evt) => { evt.persist(); onChange(evt.target.value); }} fullWidth/>) 
+  if (uiSchema["ui:widget"]) {
+    const Widget = registry.widgets[uiSchema["ui:widget"]]
+    if (Widget) return <Widget {...props} />
+  } else {
+    let args = {}
+
+    switch (schema.format) {
+      case "password": args.type = "password"; break;
+      case "email": args.type = "email"; break;
+      default: args.type = "text"; break;
+    }
+    
+    const onInputChanged = (evt) => {
+      evt.persist(); 
+      onChange(evt.target.value);
+    }
+    
+    return (<Input {...args} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} fullWidth />)
+  }
+
+
 };

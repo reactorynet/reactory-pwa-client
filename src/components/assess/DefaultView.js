@@ -285,7 +285,7 @@ class DefaultView extends Component {
           You will be asked to provide a rating against a series of behaviours that espouse the organizational
           leadership brand:            
         </Typography>
-        <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="title">"{assessment.survey.leadershipBrand.description}"</Typography>     
+        <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>     
         <div style={{display:'flex', justifyContent: 'center'}}>
           <img src={theme.assets.logo} className={classes.logo} alt={theme}/>       
         </div>        

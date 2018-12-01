@@ -21,7 +21,7 @@ const MaterialFieldStyles = (theme) => {
 };
 
 export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((props) => {
-  debugger
+  //debugger
   const {
     id, //The id of the field in the hierarchy. You can use it to render a label targeting the wrapped widget.
     classNames, //A string containing the base Bootstrap CSS classes, merged with any custom ones defined in your uiSchema.
@@ -43,6 +43,7 @@ export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((p
     uiSchema, //The uiSchema object for this field.
     formContext, //The formContext object that you passed to Form.api, uiSchema, formData
     api,
+    registry,
     classes,
   } = props;  
   const isObject = schema.type === 'object'
@@ -50,24 +51,22 @@ export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((p
   
   const uiOptions = uiSchema['ui:options'] || null
   const uiWidget = uiSchema['ui:widget'] || null
-  let ComponentToRender = null
-
-  if(uiWidget){
-    //ComponentToRender = registry.widgets[uiWidget]
-    //if(ComponentToRender) {
-    //  return (<ComponentToRender {...props} />)
-    //}
-  }
+  let Widget = null
 
   if(uiOptions !== null) 
   {    
     if(hidden === true) {
       return <Fragment>{children}</Fragment>
     }
-    if(uiOptions.componentFqn) ComponentToRender = api.getComponent(uiOptions.componentFqn);    
+    if(uiOptions.componentFqn)  { 
+      Widget = api.getComponent(uiOptions.componentFqn);    
+      if(Widget) {
+        return (<Widget {...props} />)
+      }
+    }
   }
   
-  let labelComponent = isObject === false || isBoolean === true ? <InputLabel htmlFor={id}>{label}</InputLabel> : null;
+  let labelComponent = isObject === false || isBoolean === true ? <InputLabel htmlFor={id} shrink={true}>{label}</InputLabel> : null;
 
   switch(schema.type) {
     case 'array':
@@ -91,7 +90,7 @@ export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((p
     default: {
       return (
         <FormControl className={classes.formControl} fullWidth>     
-          { labelComponent } 
+          { uiWidget === null ? labelComponent : null } 
           { children }
           { isNil(rawHelp) === false ? <FormHelperText id={`${id}_helper`}>{rawHelp}</FormHelperText> : null }
           { errors }
