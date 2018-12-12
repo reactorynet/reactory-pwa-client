@@ -9,7 +9,7 @@ import registerServiceWorker from './registerServiceWorker';
 const theme = themes.getTheme();
 const props = {
   appTheme: theme,
-  appTitle: theme.content.appTitle || 'Reactory Web'
+  appTitle: process.env.REACT_APP_TITLE || 'Reactory Web'
 };
 
 const rootElement = document.getElementById('root')
@@ -17,4 +17,4 @@ if(rootElement.classList.contains('loading')) rootElement.classList.remove('load
 ReactDOM.render(<App {...props} />, rootElement);
 registerServiceWorker();
 
-document.title = props.appTitle;
+document.title = process.env.REACT_APP_TITLE || 'Reactory Web';

@@ -53,7 +53,7 @@ class ChipArray extends Component {
     this.onNewChipLabelTextChange = this.onNewChipLabelTextChange.bind(this)
     this.onHandleChipLabelDelete = this.onHandleChipLabelDelete.bind(this)
     this.onNewChipLabelTextKeyPress = this.onNewChipLabelTextKeyPress.bind(this)
-
+    console.log('Chip Array', {props, context});
   }
 
   onNewChipLabelTextChange(evt){
@@ -65,7 +65,7 @@ class ChipArray extends Component {
       evt.preventDefault()
       const newText = this.state.newChipLabelText
       this.setState({newChipLabelText: "" }, ()=>{
-        this.props.onChange([...this.props.formData, newText])
+        if(this.props.onChange) this.props.onChange([...this.props.formData, newText])
       });      
     }
   }

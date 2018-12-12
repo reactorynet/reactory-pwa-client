@@ -77,16 +77,17 @@ BigCalendar.momentLocalizer(moment); // or globalizeLocalizer
 
 
 const newSurvey = {
-  id: null,
+  id: '',
+  organization: null,
   title: '',
   surveyType: '360', //TWR360 TWR180 PLCDEF
   leadershipBrand: null,
   delegates: [],
   events: [],
   mode: 'test',
-  active: false,
-  startDate: moment().startOf('day'),
-  endDate: moment().add(7,'days').endOf('day')
+  status: 'new',
+  startDate: moment().startOf('day').format('YYYY-MM-DD'),
+  endDate: moment().add(7,'days').endOf('day').format('YYYY-MM-DD')
 }
 
 
@@ -284,6 +285,7 @@ class SurveyAdmin extends Component {
       busy: false,
       dirty: false,    
     }
+    this.onSurveyGeneralSubmit = this.onSurveyGeneralSubmit.bind(this)
     this.handleChange = this.handleChange.bind(this)
     this.patchTitle = this.patchTitle.bind(this)
     this.patchSurveyType = this.patchSurveyType.bind(this)
@@ -292,7 +294,7 @@ class SurveyAdmin extends Component {
     this.leadershipBrandSelected = this.leadershipBrandSelected.bind(this);
     this.onDateRangeChanged = this.onDateRangeChanged.bind(this);
     this.onDateFocusChanged = this.onDateFocusChanged.bind(this);
-    this.componentDefs = this.props.api.getComponents(['core.DateSelector', 'core.SingleColumnLayout'])
+    this.componentDefs = this.props.api.getComponents(['core.DateSelector', 'core.SingleColumnLayout', 'forms.TowerStoneSurveyConfig'])
   }
 
   static styles = theme => ({
@@ -351,18 +353,21 @@ class SurveyAdmin extends Component {
     this.setState({ focusInput });
   }
 
+  onSurveyGeneralSubmit(formData){
+    console.log('Submit the form data for survey', formData)
+  }
+
+
   render() {
     const { classes } = this.props;
     const { expanded, survey } = this.state;
     const { status, delegates } = survey
-    const { DateSelector, SingleColumnLayout } = this.componentDefs;
+    const { DateSelector, SingleColumnLayout, TowerStoneSurveyConfig } = this.componentDefs;
     const complete = status === 'complete'
     let delegateComponents = []
 
     if (isArray(delegates) && survey.id !== null) {
-      delegateComponents = survey.delegates.map((delegate, didx) => {
-        return (<DelegateAdminComponent key={didx} delegate={delegate} surveyId={survey.id} />)
-      })
+      
     }
 
     return (
@@ -374,94 +379,9 @@ class SurveyAdmin extends Component {
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
             <SingleColumnLayout>
-              <Grid item xs={12}>
-                <form style={{ width: '100%' }}>
-                    <DateSelector                      
-                      startDate={moment(survey.startDate)}
-                      startDateId="from" // PropTypes.string.isRequired,
-                      endDate={moment(survey.endDate)}
-                      endDateId="till" // PropTypes.string.isRequired,
-                      onDatesChange={this.onDateRangeChanged} // PropTypes.func.isRequired,
-                    />
-                  <FormControl fullWidth className={classes.formatControl}>
-                    <InputLabel htmlFor="surveytitle">Survey Title</InputLabel>
-                    <Input fullWidth id="surveytitle" value={survey.title} onChange={this.patchTitle} disabled={complete} />
-                  </FormControl>
-                  <FormControl component="fieldset" className={classes.formControl}>
-                    <FormLabel component="legend">Assessment Type</FormLabel>
-                    <RadioGroup
-                      aria-label="surveyType"
-                      name="surveyType"
-                      className={classes.group}
-                      value={this.state.survey.surveyType}
-                      onChange={this.patchSurveyType}
-                    >
-                      <FormControlLabel
-                        value="360"
-                        control={<Radio color="primary" />}
-                        label="360 Personal Assessment"
-                        labelPlacement="start"
-                      />
-                      <FormControlLabel
-                        value="180"
-                        control={<Radio color="primary" />}
-                        label="180 Team Assessment"
-                        labelPlacement="start"
-                      />
-                      <FormControlLabel
-                        value="plc"
-                        control={<Radio color="primary" />}
-                        label="Purposeful Leadership"
-                        labelPlacement="start"
-                      />                      
-                    </RadioGroup>
-                    <FormHelperText>Select the the Assessment Type above.</FormHelperText>
-                  </FormControl>
-                                    
-                  <Typography variant="button">Leadership Brands</Typography>
-                  <BrandListWithData
-                    organizationId={this.props.match.params.organizationId}
-                    selected={survey.leadershipBrand && survey.leadershipBrand.id ? survey.leadershipBrand.id : null}
-                    selectionOnly={true}
-                    onSelect={this.leadershipBrandSelected}
-                  />
-
-                  <FormControl component="fieldset" required className={classes.formControl}>
-                    <FormLabel component="legend">Mode</FormLabel>
-                    <RadioGroup
-                      aria-label="mode"
-                      name="mode"
-                      className={classes.group}
-                      value={this.state.survey.mode}
-                      onChange={this.patchMode}
-                    >
-                      <FormControlLabel value="test" control={<Radio />} label="Test Mode" labelPlacement="start" />
-                      <FormControlLabel value="live" control={<Radio />} label="Live Mode" labelPlacement="start"/>
-                    </RadioGroup>
-                  </FormControl>
-
-                  {this.state.survey.id ? <FormControl fullWidth>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={this.state.survey.active}
-                          onChange={this.patchActive}
-                          color="primary"
-                          fullWidth
-                        />
-                      }
-                      label={this.state.survey.active === false ? "Click to activate survey (requires save)" : "Click to disable survey (requires save)"}
-                    />
-                  </FormControl> : null }
-
-                  
-                </form>
-              </Grid>
-              <Grid item xs={12}>
-                <Fab onClick={this.onSaveGeneral} color="primary" disabled={complete}>
-                      <Icon>save</Icon>                
-                </Fab>
-              </Grid>
+              <TowerStoneSurveyConfig data={survey} onSubmit={this.onSurveyGeneralSubmit}> 
+                <Fab type="submit" color="primary"><Icon>save</Icon></Fab>
+              </TowerStoneSurveyConfig>
             </SingleColumnLayout>
           </ExpansionPanelDetails>
         </ExpansionPanel>
@@ -475,7 +395,7 @@ class SurveyAdmin extends Component {
           <ExpansionPanelDetails>
             <Grid container>
               <Grid xs={12} item>
-                {delegateComponents}
+        
               </Grid>
               <Grid xs={12} item>
                 <Button variant={'fab'} color={'primary'} onClick={this.addNewDelegate}><AddIcon /></Button>
@@ -599,7 +519,7 @@ class AdminCalendar extends Component {
               this.props.byOrganization === true ? (
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Tooltip title={'Click to add a new survey'}>
-                    <Button variant='fab' color='primary' onClick={this.newSurvey} style={{ marginTop: '25px', marginBottom: '25px' }}><AddIcon /></Button>
+                    <Fab  color='primary' onClick={this.newSurvey} style={{ marginTop: '25px', marginBottom: '25px' }}><AddIcon /></Fab>
                   </Tooltip>
                 </div>
               ) : null}
@@ -678,7 +598,7 @@ export const NewSurveyEntryForOrganization = compose(withApi)(({
       {(createSurvey, { loading, data, error }) => {
 
         let surveyAdminProps = {
-          survey: { ...newSurvey },
+          survey: { ...newSurvey, organization: organizationId },
           onSave: (survey) => {            
             let newSurvey =  { ...survey };
             delete newSurvey.delegates;

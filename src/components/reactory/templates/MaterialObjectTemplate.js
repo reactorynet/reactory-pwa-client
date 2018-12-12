@@ -18,6 +18,7 @@ import {
   InputLabel,
   Icon,
   Input,
+  Toolbar,
   Paper,
 } from '@material-ui/core'
 
@@ -39,43 +40,34 @@ class ObjectTemplate extends Component {
 
   
   render() {
-    const { title, description, properties, classes, key, disabled, containerProps, index, uiSchema, api, formData } = this.props
-    // console.log('Object template field', { props: this.props });
+    const { title, description, properties, classes, key, disabled, containerProps, index, uiSchema, api, formData, formContext } = this.props
+    console.log('Object template field', { props: this.props });
     let titleText = title && title.indexOf("$") >= 0 ? template(title)({formData: this.props.formData}) : title;
     const toggleExpand = () => { this.setState({ expanded: !this.state.expanded }, ()=>{
       if(containerProps && containerProps.onExpand) containerProps.onExpand(index)
     });};
 
-    const onRaiseCommand = ( command ) => {
-      api.onFormCommand(command, formData);
-    }
+   
     
-    let toolbar = null
-    if(uiSchema.toolbar){
-      if(uiSchema.toolbar.buttons){
-        toolbar = (
-          <Fragment>
-            <Divider />
-            <ExpansionPanelActions>
-              { uiSchema.toolbar.buttons.map((button) => {
-                return (<Button variant={button.variant || "link"} color={button.color || "default"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></Button>)
-              })}
-            </ExpansionPanelActions>
-          </Fragment>
-        )
-      }
-    }            
+    let toolbar = null          
+    toolbar = (
+        <Toolbar>        
+          <Typography variant="h5" align="left">{titleText}</Typography>          
+          { uiSchema && uiSchema.toolbar && uiSchema.toolbar.buttons && uiSchema.toolbar.buttons.map((button) => {
+            const onRaiseCommand = ( command ) => {
+              console.log('Raising Toolbar Command');
+              api.onFormCommand(command, { formData, formContext });
+            }            
+            return (<Button variant={button.variant || "link"} color={button.color || "default"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></Button>)
+          })}        
+        </Toolbar>
+    )
+                 
     return (
-      <ExpansionPanel className={classes.root} key={key} defaultExpanded={true} disabled={disabled} onChange={toggleExpand}>
-        <ExpansionPanelSummary expandIcon={<Icon>expand_more</Icon>}>
-          <Typography gutterBottom variant="h5" component="h2" align="left">{titleText}</Typography>
-        </ExpansionPanelSummary>
-        <ExpansionPanelDetails style={{ display: 'block' }}>
-          <Typography gutterBottom component="p">{description}</Typography>
-          {properties.map(element => element.content)}
-        </ExpansionPanelDetails>
-        { toolbar }
-      </ExpansionPanel>
+      <Paper className={classes.root} key={key} >
+        <Typography gutterBottom component="p">{description}</Typography>
+        {properties.map(element => element.content)}        
+      </Paper>
     );
   }
 }

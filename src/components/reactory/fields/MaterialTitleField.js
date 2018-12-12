@@ -12,25 +12,11 @@ import {
 
 export default (props) => {   
   const { 
-    autofocus, 
-    disabled, 
-    errorSchema, 
-    formContext, 
-    formData, 
-    idPrefix, 
-    idSchema, 
-    name, 
-    onBlur, 
-    onChange, 
-    onFocus, 
-    rawErrors,
-    readOnly,
-    registry,
     required,
-    schema, 
-    uiScehma,
-    align 
+    align,
+    title, 
+    id
   } = props;
   
-  return(<Typography value={props.value}variant="h6" align={align || 'left'}/>) 
+  return(<Typography id={id} variant="h5" align={align || 'left'}>{title}{required === true ? '*' : null}</Typography>);
 };

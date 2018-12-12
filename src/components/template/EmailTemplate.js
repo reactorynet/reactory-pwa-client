@@ -5,13 +5,6 @@ import { graphql, withApollo } from 'react-apollo';
 import gql from 'graphql-tag';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 
-import { EditorState, convertToRaw, ContentState } from 'draft-js';
-import { Editor } from 'react-draft-wysiwyg';
-import draftToHtml from 'draftjs-to-html';
-import htmlToDraft from 'html-to-draftjs';
-
-import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
-
 import {
   AppBar, Tabs, Tab, 
   Button, Grid, Paper, 
@@ -35,7 +28,7 @@ class EmailTemplateEditor extends Component {
   constructor(props, context){
     super(props, context);
     this.state = {
-      editorState: EditorState.createEmpty(),
+      editorState: "",
     };
 
     this.onEditorStateChange = this.onEditorStateChange.bind(this);
@@ -75,11 +68,7 @@ class EmailTemplateEditor extends Component {
             <Button onClick={this.props.closeEditor}><CloseIcon /> CLOSE</Button>
         </Toolbar>
         <Paper style={{padding: '5px;'}}>
-          <Editor
-            editorState={editorState}
-            wrapperClassName="demo-wrapper"
-            editorClassName="demo-editor"
-            onEditorStateChange={this.onEditorStateChange} />
+          
         </Paper>
       </div>
     );

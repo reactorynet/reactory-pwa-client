@@ -604,7 +604,7 @@ class TaskDetail extends Component {
         }
 
         return (                                                                        
-            <TaskDetailForm onSubmit={this.onTaskFormSubmit}>
+            <TaskDetailForm onSubmit={this.onTaskFormSubmit} formData={{...task}}>
                 <Fab color="primary" type="submit"><Icon>save</Icon></Fab>
             </TaskDetailForm>                                                                                                  
         )

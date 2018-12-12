@@ -12,6 +12,8 @@ import {
   Fab,
   Typography,
   Icon,
+  InputLabel,
+  FormControl,
 } from '@material-ui/core'
 
 
@@ -306,7 +308,11 @@ class FroalaEditor extends Component {
                
         const editorTarget = window.jQuery(`#${this.props.idSchema.$id}`)
         if(editorTarget) {
-          const { onChange } = this.props;
+          const { onChange, uiSchema } = this.props;
+          let formConfig = {}
+          if(uiSchema['ui:options'] && uiSchema['ui:options'].froalaOptions){
+            formConfig = uiSchema['ui:options'].froalaOptions
+          }
           const editor = editorTarget.froalaEditor({ 
             key: '6E4A3E4B3bA2B6D5E2F4C2C2C3I2C1uENARBFSTb2D1QJd1RA==',            
             toolbarInline: true,                                                
@@ -323,7 +329,8 @@ class FroalaEditor extends Component {
             imageDefaultWidth: 300,
             imageDefaultDisplay: 'inline',
             zIndex: 101,
-            pluginsEnabled: ['customPlugin'],            
+            ...formConfig
+            //pluginsEnabled: ['customPlugin'],            
           });
 
           editor.on('froalaEditor.contentChanged', function (e, editorInstance) {
@@ -397,15 +404,17 @@ class FroalaEditor extends Component {
 
   render(){
       const { props } = this;
+      console.log('rendering Froala Widget', props);
       return (
-        <Fragment>
+        <FormControl classes={props.classes.formControl} fullWidth>
+          <InputLabel htmlFor={props.idSchema.$id } shrink={true}>{props.label}</InputLabel> : null;
           <div 
             id={props.idSchema.$id || 'froala-editor'} 
             ref={(contentRef) => { this.contentRef = contentRef }} 
             dangerouslySetInnerHTML={{__html: props.formData }}
             style={{marginLeft: '24px', display: 'block', width: '100%'}}
             />                  
-        </Fragment>
+        </FormControl>
       )
   }    
 }

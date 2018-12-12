@@ -63,6 +63,16 @@ export const ReactoryRouter = ReactoryRouterComponent;
 export const ReactoryForm = ReactoryFormComponent;
 export const KanbanDashboard = KanbanDashboardComponent;
 export const FuniSaveDashboard = PaymentGatewayDashboardComponent
+export const CompanyLogo = (props) => {
+  const { organization } = props;
+  const logoProps = {
+    backgroundSrc: utils.CDNOrganizationResource(organization.id, organization.logo),
+    ...props,
+  };
+  return <Logo {...logoProps} />
+};
+
+
 export const componentRegistery = [
   {
     nameSpace:'core',
@@ -98,14 +108,7 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'CompanyLogo',
     version: '1.0.0',
-    component: (props) => {
-      const { organization } = props;
-      const logoProps = {
-        backgroundSrc: utils.CDNOrganizationResource(organization.id, organization.logo),
-        ...props,
-      };
-      return <Logo {...logoProps} />
-    }
+    component: CompanyLogo,    
   },
   {
     nameSpace: 'core',
@@ -117,6 +120,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'RouteNotHandled',
     component: <p>Invalid Application Path</p>,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'ErrorMessage',
+    component: (props) => (<p>Invalid Application Path</p>),
     version: '1.0.0',
   },
   {
@@ -419,4 +428,10 @@ export const componentRegistery = [
     version: '1.0.0',
     component: MaterialLab,
   },
+  {
+    nameSpace: 'core',
+    name: 'DropDownMenu',
+    version: '1.0.0',
+    component: require('./shared/menus/DropDownMenu').DropDownMenuComponent,
+  },  
 ];

@@ -2,6 +2,7 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import {
+  Fab,
   Button, Icon,
   Grid,
 } from '@material-ui/core';
@@ -39,7 +40,13 @@ class PageBuilder extends Component {
     this.onPublishPage = this.onPublishPage.bind(this)
     this.onPageSubmit = this.onPageSubmit.bind(this)
     this.onLoginFormSubmit = this.onLoginFormSubmit.bind(this)
-    this.componentDefs = props.api.getComponents(['core.ReactoryForm', 'core.PageIntegrations', 'core.FullPageDialog'])
+    this.componentDefs = props.api.getComponents([
+      'core.ReactoryForm', 
+      'core.PageIntegrations', 
+      'core.FullPageDialog', 
+      'forms.PageEditorForm',
+      'forms.ContentPagesList',
+    ])
     this.loadPages = this.loadPages.bind(this)
     this.loadPageContent = this.loadPageContent.bind(this)
   }
@@ -56,7 +63,7 @@ class PageBuilder extends Component {
     const that = this;
     const tokenObject = api.readObjectWithKey('boxcommerce_token');
     PageIntegrations.boxcommerce.listPages(tokenObject.baseUrl, tokenObject.access_token).then((pagesData) => {
-      that.setState({ pagesData })
+      that.setState({ pagesData })      
     }).catch((pagesError) => {
       that.setState({ pagesData: [] })
     })
@@ -108,9 +115,9 @@ class PageBuilder extends Component {
   }
 
   render() {
-    const { PageIntegrations, ReactoryForm } = this.componentDefs;
+    const { ReactoryForm, PageEditorForm, ContentPagesList } = this.componentDefs;
     const { match, api } = this.props;
-    const { pageData, authToken } = this.state; 
+    const { pageData, pagesData, authToken } = this.state; 
     const user = api.getUser()
 
     let pageId = null;
@@ -127,20 +134,19 @@ class PageBuilder extends Component {
     return (
       <Grid container spacing={8}>
         <Grid item md={3}>
-        { authToken === null ? <ReactoryForm formId={"LoginForm"} data={{email: user.email }} onSubmit={this.onLoginFormSubmit}>
+        { authToken === null ? <ReactoryForm formId={"LoginForm"} formData={{email: user.email }} onSubmit={this.onLoginFormSubmit}>
           <Button type="submit" variant="fab" color="secondary"><Icon>lock_open</Icon></Button>
         </ReactoryForm> : null }
-        { authToken !== null ? <ReactoryForm formId={"ContentPages"} data={this.state.pagesData || []}>
-          <Button type="button" variant="link" color="secondary" onClick={logout}><Icon>lock</Icon></Button>
-          <Button type="submit" variant="fab" color="primary"><Icon>save</Icon></Button>
-          
-        </ReactoryForm> : null }        
+        { authToken !== null ? <ContentPagesList formId={"ContentPages"} formData={pagesData}>
+          <Button type="button" variant="text" color="secondary" onClick={logout}><Icon>lock</Icon></Button>
+          <Fab type="submit" color="primary"><Icon>save</Icon></Fab>          
+        </ContentPagesList> : null }        
         </Grid>
         <Grid item md={9}>
           { authToken ? 
-          <ReactoryForm formId={"PageEditorForm"} onSubmit={this.onPageSubmit} data={{ ...pageData }}>
-            <Button type="submit" variant="fab" color="secondary"><Icon>save</Icon></Button>
-          </ReactoryForm> : <p>Login To Edit Pages</p> }
+          <PageEditorForm onSubmit={this.onPageSubmit} formData={pageData}>
+            
+          </PageEditorForm> : <p>Login To Edit Pages</p> }
         </Grid>
       </Grid>
     )

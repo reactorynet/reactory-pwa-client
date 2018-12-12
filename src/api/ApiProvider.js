@@ -107,6 +107,9 @@ export class ReactoryApi extends EventEmitter {
         this.isAnon = this.isAnon.bind(this);
         this.raiseFormCommand = this.raiseFormCommand.bind(this);
         this.CDN_ROOT = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
+        this.API_ROOT = process.env.API_URI_ROOT || 'http://localhost:4000';
+        this.CLIENT_KEY = process.env.REACT_APP_CLIENT_KEY;
+        this.CLIENT_PWD = process.env.REACT_APP_CLIENT_PASSWORD;
         this.formSchemas = [];
         this.formSchemaLastFetch = null;
         this.amq = amq;        
@@ -166,12 +169,13 @@ export class ReactoryApi extends EventEmitter {
                         if(formDef.registerAsComponent) {
                             const FormComponent = (props, context) => {                                
                                 return that.renderForm(<ReactoryFormComponent 
+                                    {...props}
                                     formId={formDef.id} 
                                     key={props.key || 0} 
                                     onSubmit={props.onSubmit}
                                     onChange={props.onChange}
                                     data={props.formData || props.data || formDef.defaultFormData }
-                                    before={props.before}
+                                    before={props.before}                                    
                                     >{props.children}
                                 </ReactoryFormComponent>)                                                                                                                                                            
                             }

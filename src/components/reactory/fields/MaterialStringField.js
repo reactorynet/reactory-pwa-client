@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
+import { throttle } from 'lodash'
 
 import {
   Typography,
@@ -59,7 +60,7 @@ export default (props) => {
       onChange(evt.target.value);
     }
     
-    return (<Input {...args} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} fullWidth />)
+    return (<Input {...args} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={throttle(onInputChanged, 250)} fullWidth />)
   }
 
 

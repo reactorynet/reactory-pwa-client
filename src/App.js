@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { MuiPickersUtilsProvider } from 'material-ui-pickers';
+import MomentUtils from '@date-io/moment';
 import {
   BrowserRouter as Router,
   Route,
@@ -78,6 +80,7 @@ const getTheme = () => {
 }
 
 const api = new ReactoryApi(client);
+
 //register built-in components
 componentRegistery.forEach((componentDef) => {
   const { nameSpace, name, version, component } = componentDef
@@ -183,17 +186,19 @@ class App extends Component {
     });
             
     return (
-      <React.Fragment>
-        <CssBaseline />
+      <React.Fragment>        
+        <CssBaseline />        
         <Router>
           <Provider store={store}>
             <ApolloProvider client={client}>
               <ApiProvider api={api}>
                 <MuiThemeProvider theme={muiTheme}>
+                  <MuiPickersUtilsProvider utils={MomentUtils}>
                   <div style={{ marginTop: '80px' }}>
                     <AssessorHeaderBar title={muiTheme.content.appTitle} />                    
                     { auth_validated === true ? routes :  <Loading message="Checking authentication. Please wait" icon="security" spinIcon={false} /> }
                   </div>
+                  </MuiPickersUtilsProvider>
                 </MuiThemeProvider>
               </ApiProvider>
             </ApolloProvider>

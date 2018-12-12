@@ -1,8 +1,20 @@
 import React from 'react'
-import ObjectField from 'react-jsonschema-form/lib/components/fields/ObjectField'
-import { retrieveSchema } from 'react-jsonschema-form/lib/utils'
-import { Grid, GridList } from '@material-ui/core'
+import { compose } from 'redux';
+import { template } from 'lodash';
+import ObjectField from '../form/components/fields/ObjectField'
+import { retrieveSchema } from '../form/utils'
+import { Grid, Paper } from '@material-ui/core'
 import { Col } from 'react-bootstrap'
+
+import {  Button,
+  Fab,
+  FormControl, 
+  Icon,
+  InputLabel,
+  Typography,
+} from '@material-ui/core';
+import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withApi, ReactoryApi } from '../../../api/ApiProvider';
 
 function DefaultObjectFieldTemplate(props) {
   const { TitleField, DescriptionField } = props;
@@ -46,7 +58,7 @@ export class BootstrapGridField extends ObjectField {
     const schema = retrieveSchema(this.props.schema, definitions)
     const title = (schema.title === undefined) ? '' : schema.title
 
-    const layout = uiSchema['ui:layout']
+    const layout = uiSchema['ui:grid-layout']
 
     return (
       <fieldset>
@@ -121,8 +133,17 @@ export class BootstrapGridField extends ObjectField {
   }
 };
 
-export class MaterialGridField extends ObjectField {
+class MaterialGridField extends ObjectField {
   state = { firstName: 'hasldf' }
+
+  static styles = theme => ({
+    root: {
+      ...theme.mixins.gutters(),
+      paddingTop: theme.spacing.unit * 2,
+      paddingBottom: theme.spacing.unit * 2,
+    }
+  });
+
   render() {
     const {
       uiSchema,
@@ -132,6 +153,7 @@ export class MaterialGridField extends ObjectField {
       disabled,
       readonly,
       onBlur,
+      classes,
       formData
     } = this.props
     const { definitions, fields, formContext } = this.props.registry
@@ -139,10 +161,10 @@ export class MaterialGridField extends ObjectField {
     const schema = retrieveSchema(this.props.schema, definitions)
     const title = (schema.title === undefined) ? '' : schema.title
 
-    const layout = uiSchema['ui:layout']
+    const layout = uiSchema['ui:grid-layout']
 
     return (
-      <fieldset>
+      <Paper className={classes.root}>
         {title ? <TitleField
             id={`${idSchema.$id}__title`}
             title={title}
@@ -156,18 +178,17 @@ export class MaterialGridField extends ObjectField {
         {
           layout.map((row, index) => {
             return (
-              <div className="row" key={index}>
+              <Grid container spacing="8" key={index}>
                 {
                   Object.keys(row).map((name, index) => {
                     const { doShow, ...rowProps } = row[name]
                     let style = {}
                     if (doShow && !doShow({ formData })) {
                       style = { display: 'none' }
-                    }
-                    debugger
+                    }                    
                     if (schema.properties[name]) {
                       return (
-                          <Grid {...rowProps} key={index} style={style}>
+                          <Grid {...rowProps} item key={index} style={style}>
                             <SchemaField
                                name={name}
                                required={this.isRequired(name)}
@@ -206,15 +227,17 @@ export class MaterialGridField extends ObjectField {
                     }
                   })
                 }
-              </div>
+              </Grid>
             )
           })
-        }</fieldset>
+        }</Paper>
     )
   }
 }
 
+export const MaterialGridFieldComponent =  compose(withApi, withStyles(MaterialGridField.styles), withTheme())(MaterialGridField);
+
 export default {
   BootstrapGridField,
-  MaterialGridField
+  MaterialGridField: MaterialGridFieldComponent
 }

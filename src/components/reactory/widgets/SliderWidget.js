@@ -1,22 +1,33 @@
-import React from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
+import {  
+  FormControl,
+} from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Slider from '@material-ui/lab/Slider';
 
-const styles = {
-  root: {
-    width: '100%',
-  },
-  slider: {
-    padding: '22px 0px',
-  },
-};
 
-class SliderWidget extends React.Component {
-  state = {
-    value: 50,
-  };
+class SliderWidget extends Component {
+
+  static styles = theme => ({
+    root: {
+      width: '100%',
+    },
+    slider: {
+      padding: '22px 0px',
+    },
+  });
+  
+  constructor(props, context) {
+    super(props, context)
+    this.state = {
+        value: 50,
+    }
+
+    this.handleChange = this.handleChange.bind(this)
+  }
+
 
   handleChange = (event, value) => {
     //this.setState({ value });
@@ -25,24 +36,24 @@ class SliderWidget extends React.Component {
 
   render() {
     const { classes } = this.props;
-
+    console.log('rendering slider');
     return (
-      <div className={classes.root}>
+      <FormControl className={classes.root} fullWidth>
         <Typography id={this.props.idSchema.$id || 'Label'}>{this.props.formData}%</Typography>
         <Slider
           classes={{ container: classes.slider }}
-          value={this.props.formData || this.props.value}
+          value={this.props.formData}
           aria-labelledby="label"
           onChange={this.handleChange}
         />
-      </div>
+      </FormControl>
     );
   }
 }
 
 SliderWidget.propTypes = {
-  classes: PropTypes.object.isRequired,
+  classes: PropTypes.object,
 };
 
-const SliderWidgetComponent = withStyles(styles)(SliderWidget);
+const SliderWidgetComponent = withStyles(SliderWidget.styles)(SliderWidget);
 export default SliderWidgetComponent

@@ -107,11 +107,11 @@ class SelectWidget extends Component {
       <FormControl className={this.props.classes.formControl}>
           <InputLabel htmlFor={this.props.idSchema.$id}>{this.props.schema.title}</InputLabel>
           <Select
-            value={this.props.formData}
+            value={this.props.formData || ""}
             onChange={onSelectChanged}
             name={this.props.name}
             renderValue={value => `${matchOption(value).label}`}
-            input={<Input id={this.props.idSchema.$id} />}>
+            input={<Input id={this.props.idSchema.$id} value={this.props.formData || ""}/>}>
             <MenuItem value="">
               <em>None</em>
             </MenuItem>

@@ -49,7 +49,7 @@ class FullScreenDialog extends Component {
       <div>
         <Dialog
           fullScreen
-          open={this.state.open}
+          open={this.props.open}
           onClose={this.handleClose}
           TransitionComponent={Transition}
         >

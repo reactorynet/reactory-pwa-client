@@ -1,7 +1,8 @@
-import React, { Component, Fragment } from 'react'
-import PropTypes from 'prop-types'
-import Form from 'react-jsonschema-form'
-import { withRouter, Route, Switch } from 'react-router'
+import React, { Component, Fragment } from 'react';
+import PropTypes from 'prop-types';
+import Form from './form/components/Form';
+import objectMapper from 'object-mapper';
+import { withRouter, Route, Switch } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { find, template, templateSettings } from 'lodash';
 import { compose } from 'redux';
@@ -23,6 +24,7 @@ import {
   InputLabel,  
   Input,
   Tabs,
+  TextField,
   Tab,  
 } from '@material-ui/core'
 
@@ -40,12 +42,14 @@ const {
   MaterialGridField,
   BootstrapGridField,
   MaterialObjectField,
+  MaterialSchemaField,
 } = Fields;
 
 const {
   MaterialObjectTemplate,
   MaterialFieldTemplate,
   MaterialArrayFieldTemplate,
+  MaterialErrorListTemplate
 } = MaterialTemplates;
 
 const simpleSchema = {
@@ -64,7 +68,6 @@ const simpleUiSchema = {
   "message": {
     "ui:autofocus": true,
     "ui:emptyValue": "No form found with that id",
-    "ui:widget": "label"
   },
 };
 
@@ -121,24 +124,33 @@ class ReactoryComponent extends Component {
     formId: PropTypes.string,
     uiSchemaId: PropTypes.string,
     uiFramework: PropTypes.oneOf(['schema', 'material', 'bootstrap3']),
-    api: PropTypes.instanceOf(ReactoryApi)
+    api: PropTypes.instanceOf(ReactoryApi),
+    mode: PropTypes.oneOf(['new', 'edit', 'view']),
+    formContext: PropTypes.object
   }
 
   static defaultProps = {
     formId: 'default',
     uiSchemaId: 'default',
-    uiFramework: 'schema'
+    uiFramework: 'schema',
+    mode: 'new',
+    formContext: {
+
+    }
   }
 
   constructor(props, context) {
     super(props, context)
+    console.log('New form', {props, context});
     let _state = {
       loading: true,
       forms: [],
       uiFramework: props.uiFramework,
-      uiSchemas: uiSchemas,
-      formData: props.data || null,
+      uiSchemaKey: props.uiSchemaKey || 'default',
+      formData: props.data || props.formData,    
       dirty: false,
+      queryComplete: false,
+      showHelp: false,
       query: queryString.parse(props.location.search)
     }
 
@@ -149,94 +161,228 @@ class ReactoryComponent extends Component {
     this.onSubmit = this.onSubmit.bind(this)
     this.onChange = this.onChange.bind(this)
     this.onCommand = this.onCommand.bind(this)
+    this.renderStandardForm = this.renderStandardForm.bind(this)
     this.form = this.form.bind(this)
-    this.formDef = this.formDef.bind(this)
+    this.formDef = this.formDef.bind(this)    
     this.renderWithQuery = this.renderWithQuery.bind(this)
     this.renderWithMutation = this.renderWithMutation.bind(this)
     this.state = _state    
-    this.defaultComponents = ['core.Loading', 'core.Logo']
+    this.defaultComponents = ['core.Loading', 'core.Logo', 'core.FullScreenModal', 'core.DropDownMenu']
     this.componentDefs = props.api.getComponents(this.defaultComponents)
+    this.getFormContext = this.getFormContext.bind(this)
+    this.goBack = this.goBack.bind(this);
+    this.showHelp = this.showHelp.bind(this);
     this.formRef = null;
   }
   
   componentWillMount() {
     const that = this;
     this.props.api.forms().then((forms) => {
-      that.setState({ forms: forms, loading: false }, ()=>{
-        const formDef = that.formDef()
-        if(formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs])
-      })
+      const formDef = find(forms, { id: that.props.formId }) || simpleForm;
+      if(formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
+      that.setState({ forms: forms, loading: false, formDef });
     }).catch((loadError) => {
-      that.setState({ forms: [], formError: { message: loadError.message } })
+      that.setState({ forms: [], formDef: simpleForm, formError: { message: loadError.message } })
     })
   }
 
   componentWillUpdate(nextProps, nextState){
-    console.log('componentWillUpdate', {nextProps, nextState, formRef: this.formRef});
+    console.log('componentWillUpdate ReactoryForm', {nextProps, nextState, formRef: this.formRef});
     if(this.state.dirty === false) {
-      nextState.formData = nextProps.data;
+      nextState.formData = {...nextProps.data, ...nextProps.formData};
+      return true;
     }    
   }
 
   formDef(){
-    return (find(this.state.forms, { id: this.props.formId })) || simpleForm
+    if(this.state.formDef) return this.state.formDef;
+    else {
+      return simpleForm;
+    }     
   }
 
-  renderForm(formData) {
+  goBack(){
+    if(this.props.history) this.props.history.goBack()
+  }
+
+  getHelpScreen(){
+    const { FullScreenModal, Loading } = this.componentDefs
+    const formDef = this.formDef();
+
+    const closeHelp = e => this.setState({ showHelp: false })
+    return (
+      <FullScreenModal open={this.state.showHelp === true} onClose={closeHelp}>
+        <Typography>Help for {formDef.title}</Typography>
+        <Loading message={`Loading Help for ${formDef.title}`} />
+      </FullScreenModal>
+    )
+  }
+
+  showHelp(){
+    this.setState({ showHelp: true })
+  }
+
+  renderForm(formData, onSubmit) {
+    //debugger;
+    console.log('rendering form with data', formData);
     const { loading, forms } = this.state;
-    const { uiSchema } = this.props
+    const self = this;
     if (loading) return (<p>loading form schema</p>)
     if (forms.length === 0) return (<p>no forms defined</p>)
+    const updateFormState = (formPost) => {
+      console.log('updating form state', { formPost });
+      this.setState({ formData: formPost.formData, dirty: true }, ()=>{
+        if(self.props.onChange) self.props.onChange(self.state.formData)
+      })
+    };
+
+    const formDef = this.form();
     const formProps = {
       id: uuid(),
       ...this.props,
-      ...this.form(),
+      ...formDef,
+      onChange: updateFormState,
       formData: formData,
-      onSubmit: this.onSubmit,      
+      ErrorList: MaterialErrorListTemplate,      
+      onSubmit: onSubmit || this.onSubmit,      
       ref: (form) => { this.formRef = form }
+    }
+
+    let icon = 'save'
+    if(formDef.uiSchema && formDef.uiSchema.submitIcon) {
+      icon = formDef.uiSchema.submitIcon 
+    }
+
+    let uiSchemaSelector = null;
+
+    if(formDef.uiSchemas){
+      //debugger;
+      const { DropDownMenu } = this.componentDefs;
+      const onSchemaSelect = (evt, menuItem) => {
+        console.log('Schema Ui Change', {evt, menuItem});
+        self.setState({ uiSchemaKey: menuItem.value })
+      };
+
+      uiSchemaSelector = (<DropDownMenu menus={formDef.uiSchemas} onSelect={onSchemaSelect}/>)
     }
 
     return (
       <div>
+        {uiSchemaSelector}
         {this.props.before}
         <Form {...formProps}>
-          {this.props.children}
+          {formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button>}
+          {formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button>}
+          {this.props.children && this.props.children.length > 0 ? this.props.children : <Fab type="submit" color="primary"><Icon>{icon}</Icon></Fab>}
         </Form>
+        {this.getHelpScreen()}
       </div>
     )
   }
 
-  renderWithQuery(){
-    
+  renderWithQuery(){    
     const formDef = this.formDef()
-    const query = gql(formDef.graphql.query.queryText)
-    const formData = this.state.formData
+    const defaultFormValue = formDef.defaultFormValue ? { ...formDef.defaultFormValue } : { };
+    const formData = { ...defaultFormValue, ...this.state.formData }
+    const { mode } = this.props;
     const that = this;
-    const { Loading } = this.componentDefs;
-    let variables = {}; 
+    const { Loading } = this.componentDefs;    
+    const has = {
+      query: formDef.graphql.query && formDef.graphql.query.text,
+      doQuery: formDef.graphql.query && formDef.graphql.query && formDef.graphql.query[mode] === true,
+      mutation: formDef.graphql.mutation && formDef.graphql.mutation[mode] && formDef.graphql.mutation[mode].text,      
+    };
 
+    const getMutationForm = (_formData) => {
+      const mutation  = formDef.graphql.mutation[mode]
+      //debugger;
+
+      return (
+        <Mutation mutation={gql(mutation.text)}>
+        {(mutateFunction, { loading, errors, data }) => {
+          console.log('Rendering Form With Mutation', { mutation, formDef, loading, errors, data });   
+          //let formData = data 
+          const onFormSubmit = (formSchema) => {            
+            const _variables = objectMapper(formSchema, mutation.variables)            
+            console.log('Must call mutate function and proceed', { formSchema, _variables });
+            mutateFunction({
+              variables: {..._variables},
+              refetchQueries: []
+            });
+          };          
+          
+          let loadingWidget = null;
+          let errorWidget = null;
+
+          if(loading === true) loadingWidget = (<Loading message="Updating... please wait." />)
+          if(errors) errorWidget = (<p>{errors.message}</p>)
+          if(data && data[mutation.name]) {
+            console.log('data result', {data})
+            //debugger;
+            if(mutation.onSuccessMethod === "route") {
+              const inputObj = {
+                formData,                
+              };
+              inputObj[mutation.name] = data[mutation.name];
+              let linkText = template(mutation.onSuccessUrl)(inputObj);              
+              that.props.history.push(linkText)
+            }
+          }
+          
+          return (
+            <Fragment>
+              {loadingWidget}
+              {errorWidget}
+              { !loadingWidget ? that.renderForm(_formData, onFormSubmit) : null }
+            </Fragment>
+          )
+          
+      }}
+      </Mutation>)
+    }
+
+    if(has.query && has.doQuery) {
+      console.log('rendering with query');
+      const query = formDef.graphql.query //gql(formDef.graphql.query.text)          
+      const formContext = this.getFormContext()
+      const _variables = objectMapper({formContext, formData}, query.variables || {})      
+      let options = query.options || {  };
+
+      return (
+        <Query query={gql(query.text)} variables={_variables} options={options} skip={that.state.queryComplete === true}>
+          {(props, context) => {
+            
+            const { loading, data, error } = props;
+            console.log(`Query result for ${formDef.id}`, {props, context, formDef, formData, formContext});
+            if(loading) return <Loading message="Fetching Data" />
+            if(error) return <p>Error Fetching Records: ${error.message}</p>
+            let _formData = { ...formData };
+            
+            if(that.state.queryComplete === false){
+              if(data && data[query.name]) {
+                _formData = {...formData, ...data[query.name] };
+                console.log('Fetched records', _formData);
+              } else {
+                console.warn('Expected data, none found', data)
+              }
+              that.setState({ queryComplete: true, formData: _formData })
+            } 
+                                           
+            if(has.mutation === true) {
+              return getMutationForm(_formData);
+            } else {
+              return that.renderForm(_formData);
+            }                                   
+          }}
+        </Query>
+      );
+    } 
     
-    Object.keys(formDef.graphql.query.variables).map((variable) => {      
-      if(typeof formDef.graphql.query.variables[variable]  === 'string'){
-        const stringTemplate = formDef.graphql.query.variables[variable];
-        variables[variable] = template(stringTemplate)({...formData})
-      } else {
-        variables[variable] = formDef.graphql.query.variables[variable];
-      }      
-    });
+    if(has.mutation) {
+      return getMutationForm(formData)
+    }
 
-    let options = formDef.graphql.query.options || {  };
-
-    return (
-      <Query query={query} variables={variables} options={options}>
-        {(props, context) => {
-          const { loading, data, errors } = props;
-          if(loading) return <Loading message="Fetching Form Data" />
-          if(errors) return <p>Error Fetching Records: ${errors}</p>
-          return that.renderForm({...formData, ...data })  
-        }}
-      </Query>
-    )
+    return that.renderForm(formData)
   }
 
   renderWithMutation(formData){
@@ -264,52 +410,86 @@ class ReactoryComponent extends Component {
     )
   }
 
+  getFormContext(){
+    return {
+      ...this.props,
+      formData: this.state.formData,
+      query: this.state.query,
+    }
+  }
+
   /**
    * Returns the entire form definition
    */
   form() {
-    const { uiFramework, forms, formData } = this.state;
-    let schema = (find(forms, { id: this.props.formId })) || (this.props.schema || simpleForm)
+    const { uiFramework, forms, formData, uiSchemaKey } = this.state;
+    let schema = this.formDef();
+
     const { uiSchemaId } = this.state.query
     const { Logo, Loading } = this.componentDefs;
-    const { api, history } = this.props;
+    const { api, history, mode } = this.props;
     const self = this;
     if (uiFramework !== 'schema') {
       //we are not using the schema define ui framework we are assigning a different one
       schema.uiFramework = uiFramework
-    }
+    }    
 
     // set noHtml5Validation if not set by schema
     if (nil(schema.noHtml5Validate)) schema.noHtml5Validate = true
 
-    if (uiSchemaId) {
-      if (uiSchemaId === 'default') return schema
+    if (uiSchemaKey) {
+      if (uiSchemaKey !== 'default' && schema.uiSchemas && schema.uiSchemas[uiSchemaKey]) {
+        schema.uiSchema = schema.uiSchemas[uiSchemaKey].uiSchema;
+      }
+    }
 
-      const customSchema = find(this.state.uiSchemas, { id: uiSchemaId })
-      if (customSchema) schema.uiSchema = customSchema.schema
+    if (uiSchemaId) {
+      if (uiSchemaId !== 'default' && schema.uiSchemas && schema.uiSchemas[uiSchemaId]) {
+        schema.uiSchema = schema.uiSchemas[uiSchemaId].uiSchema;
+      }
     }
 
     // #region setup functions
+
+    const setFormContext = () => {
+      if(!schema.formContext)  schema.formContext = { }
+      schema.formContext = {...this.getFormContext(), ...schema.formContext };     
+    }
+
     const setFields = () => {
+
       switch (schema.uiFramework) {
         case 'material': {
           schema.fields = {
             ArrayField: MaterialArrayFieldTemplate.default,
             BooleanField: MaterialBooleanField,
             DescriptionField: (props, context) => (<Typography>{props.description}</Typography>),
-            NumberField: (props, context) => (<Input type="number" value={props.formData} onChange={props.onChange} />),
-            //ObjectField: MaterialObjectField,
-            //SchemaField: MaterialSchemaField,
+            NumberField: (props, context) => {
+
+              return (<TextField
+                id={props.idSchema.$id}
+                label={props.schema.title}              
+                placeholder={props.uiSchema && props.uiSchema.placeHolder ? props.uiSchema.placeholder : `Enter value for ${props.schema.title}`}
+                helperText={props.uiSchema && props.uiSchema.helperText ? props.uiSchema.helpText : ''}
+                fullWidth
+                margin="normal"
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />)
+            },
+            ObjectField: MaterialObjectField,
+            SchemaField: MaterialSchemaField,
             StringField: MaterialStringField.default,
             TitleField: MaterialTitleField.default,
-            UnsupportedField: (props, context) => <p>Aah ssheeet dawg</p>,            
-            layout: MaterialGridField
+            UnsupportedField: (props, context) => <Typography>Field {props.schema.title} type not supported</Typography>,            
+            GridLayout: MaterialGridField
           };
           break;
         }
         default: {
           schema.fields = {
-            layout: BootstrapGridField
+            GridLayout: BootstrapGridField
           }
           break;
         }
@@ -434,7 +614,6 @@ class ReactoryComponent extends Component {
         }
       }
 
-      debugger;
       if(!schema.widgets) schema.widgets = { };
       if(schema.widgetMap) {
         console.log('resolving widgetMap', schema.widgetMap)
@@ -530,6 +709,7 @@ class ReactoryComponent extends Component {
     setObjectTemplate()
     setFieldTemplate()
     injectResources()
+    setFormContext()    
     //onCommand: this.onCommand,
     return schema
   }
@@ -556,6 +736,12 @@ class ReactoryComponent extends Component {
     if(this.props.onCommand) this.props.onCommand(command, formData);
   }
 
+  renderStandardForm(){
+    const formDef = this.formDef();
+    const defaultFormValue = formDef.defaultFormValue ? { ...formDef.defaultFormValue } : { };
+    const formData = { ...defaultFormValue, ...this.state.formData }
+    return this.renderForm(formData)
+  }
   
 
   render() {
@@ -563,7 +749,7 @@ class ReactoryComponent extends Component {
     if(this.state.loading) return <Loading message="Loading..."/>
     const formDef = this.formDef()
     if(formDef.graphql === null || formDef.graphql === undefined) {
-      return this.renderForm(this.state.formData)
+      return this.renderStandardForm()
     } else {
       return this.renderWithQuery()
     }    
@@ -578,108 +764,17 @@ export const ReactoryFormComponent = compose(
 export default compose(withRouter)((props) => {
   return (
     <Switch>
-      <Route exact path="/reactory" >
+      <Route exact path="/forms" >
         <ReactoryFormComponent formId='default' mode='view' />
       </Route>
-      <Route path="/reactory/:formId" render={(props) => {
+      <Route path="/forms/:formId" render={(props) => {
         return (<ReactoryFormComponent formId={props.match.params.formId || 'default'} mode='view' />)
       }} />
-      <Route path="/reactory/:formId/:mode" render={(props) => {
+      <Route path="/forms/:formId/:mode" render={(props) => {
         return (<ReactoryFormComponent formId={props.match.params.formId || 'default'} mode={props.match.params.mode} />)
       }} />
     </Switch>
   )
 })
 
-/*
-export const ReactoryFormMutation = compose(
-  withApi
-)((props) => {
-  const { api, organizationId, profile, onCancel } = props  
-  return (
-    <Mutation mutation={api.mutations.Users.updateUser} >
-      {(updateUser, { loading, error, data }) => {
-        let props = {
-          loading,
-          error,
-          profile,
-          mode: 'admin',
-          isNew: false,
-          onCancel,
-          onSave: (profileData) => {
-            console.log('User being saved', profileData)
-            updateUser({
-              variables: { 
-                input: omitDeep(profileData),
-              }
-            });
-          }
-        }
-        return <Profile {...props} />
-      }}
-    </Mutation>
-  )
-})
-
-
-const UserList = ({organizationId, api, onUserSelect}) => {  
-  return (
-    <Query query={api.queries.Users.usersForOrganization} variables={{ id: organizationId }}>
-      {({ loading, error, data } ) => {
-        if(loading === true) return "Loading"
-        if(error) return error.message
-        const newUser = {
-          firstName: '',
-          lastName: '',
-          email: '',
-          avatar: DefaultAvatar,
-          peers: [],
-          surveys: [],
-          teams: [],
-          __isnew: true
-        }
-        const users = data.usersForOrganizationWithId || []
-        const raiseNewUserSelect = () => {
-          if(onUserSelect) onUserSelect(newUser)
-        }
-        return (
-          <List>
-            {users.map((user, uid) => {
-              const raiseUserSelected = () => {
-                if(onUserSelect) onUserSelect(user, uid)
-              }              
-              const displayText = `${user.firstName} ${user.lastName}`
-              return (
-                <ListItem onClick={raiseUserSelected} dense button key={uid}>
-                  <Avatar alt={displayText} src={user.avatar || DefaultAvatar} />
-                  <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>
-                </ListItem>
-              )
-            })}
-            <ListItem onClick={raiseNewUserSelect} dense button key={users.length+1}>
-              <Avatar alt={'New user'} src={ newUser.avatar } />
-              <ListItemText primary={ 'NEW' } secondary={ 'Click here to add a new user / employee' }/>
-            </ListItem>
-          </List>
-        )
-      }}      
-    </Query>);
-}
-
-UserList.propTypes = {
-  organizationId: PropTypes.string,
-  data: PropTypes.object,
-  api: PropTypes.instanceOf(ReactoryApi).isRequired
-}
-
-UserList.defaultProps = {
-  organizationId: null,
-  data: {
-    loading: true,
-    error: null,
-    usersForOrganizationWithId: []
-  }
-};
-
-*/
 

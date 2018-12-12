@@ -5,6 +5,7 @@ export default {
   MaterialArrayField: require('./MaterialArrayField').default,
   MaterialBooleanField: require('./MaterialBooleanField').default,
   MaterialObjectField: require('./MaterialObjectField').default,
-  MaterialGridField: GridFields.MaterialGridField,
+  MaterialSchemaField: require('./MaterialSchemaField').default,
+  MaterialGridField: GridFields.MaterialGridFieldComponent,
   BootstrapGridField: GridFields.BootstrapGridField
 }

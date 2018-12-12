@@ -299,6 +299,12 @@ class DefaultFormContainer extends Component {
       'core.BusinessUnitForm',
       'core.BusinessUnitFormWithQuery',
       'core.CompanyLogo',
+      'forms.TowerStoneLeadershipBrandConfig',
+      'forms.TowerStoneSurveyConfig',
+      'forms.TowerStoneSurveySettingsForm',
+      'forms.TowerStoneSurveyDelegateConfig',
+      'forms.TowerStoneSurveyCalendarConfig',
+      'forms.TemplateEditor',
     ])
   }
 
@@ -365,7 +371,21 @@ class DefaultFormContainer extends Component {
     const that = this;
     const organizationId = organization.id;
 
-    const { UserListWithSearch, SpeedDial, ReactoryForm, BusinessUnitList, BusinessUnitForm, CompanyLogo, BusinessUnitFormWithQuery } = that.componentDefs;
+    const { 
+      UserListWithSearch, 
+      SpeedDial, 
+      ReactoryForm, 
+      BusinessUnitList, 
+      BusinessUnitForm, 
+      CompanyLogo, 
+      BusinessUnitFormWithQuery,
+      TowerStoneLeadershipBrandConfig,
+      TowerStoneSurveyConfig,
+      TowerStoneSurveyDelegateConfig,
+      TowerStoneSurveyCalendarConfig,
+      TemplateEditor,
+      TowerStoneSurveySettingsForm,
+     } = that.componentDefs;
     const isNew = mode === 'new';
     return (
       <div className={classes.root}>
@@ -430,32 +450,48 @@ class DefaultFormContainer extends Component {
                   <BrandListWithData organizationId={organizationId} onSelect={this.onBrandSelected} onNewSelected={this.onNewBrand} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/brands/new'}>
-                  <CreateBrand organizationId={organizationId} onCancel={this.onCancelBrandEdit} leadershipBrand={this.state.leadershipBrand} />
+                  <TowerStoneLeadershipBrandConfig mode="new" formContext={{mode: 'new'}} />
                 </Route>
-                <Route exact path={'/admin/org/:organizationId/brands/:brandId'}>
-                  <EditBrand organizationId={organizationId} leadershipBrand={this.state.leadershipBrand} onCancel={this.onCancelBrandEdit} />
-                </Route>
+                <Route exact path={'/admin/org/:organizationId/brands/:brandId'} render={(props) => {
+                  return (<TowerStoneLeadershipBrandConfig mode="edit" organizationId={props.match.params.organizationId} brandId={props.match.params.brandId} formContext={{mode: 'edit', brandId: props.match.params.brandId }} data={{id: props.match.params.brandId}}/>)
+                }} />                  
               </Switch>
-
             </Route>
             <Route path={'/admin/org/:organizationId/surveys'}>
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/surveys/new'}>
-                  <NewSurveyEntryForOrganization {...this.props} organizationId={organizationId} />
+                  <TowerStoneSurveyConfig mode="new" formContext={{organizationId, match: this.props.match}} formData={{organization: organizationId}} style={{maxWidth:'85%'}}/>                  
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/surveys'}>
                   <SurveyCalendarForOrganization {...this.props} organizationId={organizationId} />
                 </Route>
-                <Route path={'/admin/org/:organizationId/surveys/:surveyId'}>
-                  <EditSurveyEntryForOrganization organizationId={organizationId} {...this.props} />
-                </Route>
+                <Route path={'/admin/org/:organizationId/surveys/:surveyId'} render={(props) => {
+                  console.log('Rendering via route render', props);
+                  return (
+                    <Fragment>
+                      <TowerStoneSurveyConfig 
+                        mode="edit" 
+                        surveyId={props.match.params.surveyId} 
+                        organizationId={organizationId} 
+                        formContext={{organizationId, surveyId: props.match.params.surveyId}} 
+                        formData={{organization: organizationId, id: props.match.params.surveyId}} 
+                        style={{maxWidth:'85%'}} />
+                    </Fragment>
+                  )
+                }}>                  
+                    
+                </Route>                                  
               </Switch>
             </Route>
             <Route path={'/admin/org/:organizationId/templates'} component={TemplateListComponent} />
-            <Route path={'/admin/org/:organizationId/configuration'} component={Settings} />
+            <Route path={'/admin/org/:organizationId/templates/:templateId'}>
+             
+            </Route>
+            <Route path={'/admin/org/:organizationId/configuration'} >
+              <Settings organizationId={organizationId} />
+            </Route>
           </Switch>
         </TabContainer>
-
       </div>
     )
   }

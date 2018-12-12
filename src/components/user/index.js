@@ -296,6 +296,13 @@ export const UserProfile = compose(
 
 export const UserListItem = (props) => {
   const { user, selected, key, onClick, message } = props
+  if(!user) {
+    return (<ListItem button onClick={onClick} key={key}>
+      <Avatar alt={"No user avaialble"} src={getAvatar(user)} />
+      <ListItemText primary={"None"} secondary={ "User not set" }/>
+    </ListItem>)
+  }
+  
   const displayText = `${user.firstName} ${user.lastName}`
   const hasMessage = typeof message === 'string'
   return (

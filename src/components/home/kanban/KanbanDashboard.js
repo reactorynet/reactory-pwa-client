@@ -329,6 +329,7 @@ class KanbanDashboard extends Component {
             'core.FullScreenModal', 
             'core.SpeedDial',
             'forms.ProjectForm',
+            'forms.TaskDetailForm',
         ])
     }
 
@@ -361,7 +362,7 @@ class KanbanDashboard extends Component {
         const { classes, user, history, from, till } = this.props;
         const { isMenuOpen, anchorEl, showModal, selectedTask, projectId } = this.state;
         const that = this;
-        const { DateSelector, FullScreenModal, SpeedDial, ProjectForm } = this.componentDefs;
+        const { DateSelector, FullScreenModal, SpeedDial, ProjectForm, TaskDetailForm } = this.componentDefs;
 
         let modal = null
         if (showModal === true && selectedTask !== null) {
@@ -371,8 +372,9 @@ class KanbanDashboard extends Component {
 
             modal = (
                 <FullScreenModal title={selectedTask.title} open={true} onClose={closeTask}>
-                    <TaskDetailWithData taskId={selectedTask.id} />
-                </FullScreenModal>)
+                    <TaskDetailForm formContext={{}} formData={selectedTask} uiSchemaKey={"detail"} />
+                </FullScreenModal>
+            )
         }
 
         if(projectId === "-1") {

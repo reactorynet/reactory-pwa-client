@@ -3,6 +3,7 @@ import { compose } from 'redux';
 import PropTypes from 'prop-types'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import Draggable from 'react-draggable';
+import { pullAt } from 'lodash';
 import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from 'react-jsonschema-form/lib/utils'
 
 import {
@@ -20,6 +21,7 @@ import {
   Input,
   Paper,
   Toolbar,
+  Tooltip,
 } from '@material-ui/core'
 
 import { withApi } from '../../../api/ApiProvider'
@@ -43,12 +45,14 @@ class ArrayTemplate extends Component {
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    fabButton: {
-      position: 'absolute',
-      top: -30,
-      left: 0,
+    arrayContainer: {
+
+    },
+    fabButton: {      
+      position: 'relative',
       right: 0,
-      margin: '0 auto',
+      marginRight: theme.spacing.unit,
+      float: 'right'
     },
   })
 
@@ -69,7 +73,7 @@ class ArrayTemplate extends Component {
       },
       selected: {
 
-      },
+      },      
     };
   }
 
@@ -131,7 +135,7 @@ class ArrayTemplate extends Component {
       moveUp: orderable && canMoveUp,
       moveDown: orderable && canMoveDown,
       remove: removable && canRemove,
-      toolbar: false,
+      toolbar: true,
     };
 
     const changeForIndex = ( formData, errorSchema ) => {
@@ -139,12 +143,12 @@ class ArrayTemplate extends Component {
     }
 
     const expandForIndex = ( index ) => {
-      console.log('Expand for index', index);
+      //console.log('Expand for index', index);
       this.setState({ expanded: {...this.state.expanded, index: expanded[index] === true ? false : true }});
     };
 
     const selectForIndex = (index) => {
-      console.log('Select for index', index);
+      //console.log('Select for index', index);
       this.setState({ selected: {...this.state.selected, index: selected[index] === true ? false : true }});
     }
 
@@ -152,7 +156,7 @@ class ArrayTemplate extends Component {
     const schemaFieldProps = {
       schema: itemSchema,
       uiSchema: itemUiSchema,
-      formData: itemData,
+      formData: itemSchema.name === "$index" ? index : itemData,
       errorSchema: itemErrorSchema,
       idSchema: itemIdSchema,
       required: itemSchema.type !== "null" || itemSchema.type !== null,
@@ -166,6 +170,21 @@ class ArrayTemplate extends Component {
       rawErrors: this.props.rawErrors,
       key: index
     };
+
+    const deleteItemClick = () => {
+      console.log('deleting item');
+      let items = [...this.props.formData];
+      pullAt(items, [index])
+      this.props.onChange([...items])
+    }
+
+    const onMoveUpClick = () => {
+
+    }
+
+    const onMoveDownClick = () => {
+
+    }
 
     const containerProps = {
       className: "array-item",
@@ -182,24 +201,31 @@ class ArrayTemplate extends Component {
       onExpand: expandForIndex,
       onSelect: selectForIndex,        
       index: index,
-      onDropIndexClick: this.onDropIndexClick,
+      onDropIndexClick: deleteItemClick,
       onReorderClick: this.onReorderClick,
       readonly: this.props.readonly
     }
-    
-    return (
-      <Draggable 
-        axis="y"
-        handle={props.classes.dragHandle}
-        defaultPosition={{x: 0, y: 0}}
-        position={null}
-        grid={[25, 25]}
-        key={index}
-      >
-        <SchemaField {...schemaFieldProps} containerProps={containerProps}>
 
+    console.log('Rendering Default Array Container', { containerProps, schemaFieldProps, props });
+
+    
+
+    let toolbar = null
+    if(has.toolbar){
+      toolbar = (
+        <Toolbar>
+          {has.moveUp === true ? <IconButton type="button"><Icon>keyboard_arrow_up</Icon></IconButton> : null }
+          {has.moveDown === true ? <IconButton type="button"><Icon>keyboard_arrow_down</Icon></IconButton> : null }
+          {has.remove === true ? <IconButton type="button" onClick={deleteItemClick}><Icon>delete_outline</Icon></IconButton> : null }
+        </Toolbar>
+      )
+    }
+    return (
+      <Fragment key={index}>      
+        <SchemaField {...schemaFieldProps} containerProps={containerProps} toolbar={toolbar}>
         </SchemaField>
-      </Draggable>
+        {toolbar}        
+      </Fragment>
     )    
   }
 
@@ -235,7 +261,6 @@ class ArrayTemplate extends Component {
     const definitions = registry.definitions;
     let ArrayComponent = null
     let componentProps = {}
-    debugger;
     if (uiWidget !== null) {
       if(registry.widgets[uiWidget]) ArrayComponent = registry.widgets[uiWidget]
       if(!ArrayComponent) {
@@ -260,6 +285,7 @@ class ArrayTemplate extends Component {
             let itemIdSchema = toIdSchema(itemSchema, itemIdPrefix, definitions, item, idPrefix);
             return this.renderArrayFieldItem({
               index: index,
+              key: index,
               canMoveUp: index > 0,
               canMoveDown: index < formData.length - 1,
               itemSchema: itemSchema,
@@ -275,6 +301,7 @@ class ArrayTemplate extends Component {
               classes: this.props.classes
             });
           })}
+          {!formData || (formData && formData.length === 0) ? <Typography>Create a new {this.props.schema.title} by clicking the <Icon>add</Icon> icon</Typography> : null}
         </Grid>)
     }
 
@@ -300,16 +327,15 @@ class ArrayTemplate extends Component {
       //default behaviour
       return (
         <Paper className={classes.root}>
+          <Typography variant="h4">{schema.title}</Typography>          
           <Grid container spacing={8}>
-            {ArrayComponent !== null ? <ArrayComponent {...componentProps} /> : null}
+            {ArrayComponent !== null ? <ArrayComponent {...componentProps} /> : null}           
           </Grid>
-          <AppBar position="relative" color="primary" className={classes.appBar}>
-            <Toolbar className={classes.toolbar}>
-              <Fab color="secondary" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
+          <Tooltip title={`Click here to add a new ${schema.title}`}>
+              <Button color="secondary" variant="outlined" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
                 <Icon>add</Icon>
-              </Fab>
-            </Toolbar>
-          </AppBar>
+              </Button>   
+            </Tooltip>
         </Paper>
       );
     }

@@ -29,13 +29,26 @@ const styles = theme => ({
 });
 
 class ControlledExpansionPanels extends React.Component {
-  state = {
-    expanded: null,
-  };
 
   propTypes = {
-    config: PropTypes.object
+    config: PropTypes.object,
+    organizationId: PropTypes.string
   }
+
+
+
+  constructor(props, context){
+    super(props, context);
+    this.state = {
+      expanded: null,
+    };
+    this.handleChange = this.handleChange.bind(this);
+    this.componentDefs = props.api.getComponents(['forms.SurveySettingsForm'])
+  }
+
+  
+
+  
 
   handleChange = panel => (event, expanded) => {
     this.setState({
@@ -46,15 +59,16 @@ class ControlledExpansionPanels extends React.Component {
   render() {
     const { classes } = this.props;
     const { expanded } = this.state;
+    const { SurveySettingsForm } = this.componentDefs;
 
     return (
       <div className={classes.root}>
         <ExpansionPanel expanded={expanded === 'panel1'} onChange={this.handleChange('panel1')}>
           <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography className={classes.heading}>General settings</Typography>            
+            <Typography className={classes.heading}>Survey settings</Typography>            
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
-            
+            <SurveySettingsForm formContext={{organizationId: this.props.organizationId}}/>
           </ExpansionPanelDetails>
         </ExpansionPanel>        
         <ExpansionPanel expanded={expanded === 'panel3'} onChange={this.handleChange('panel3')}>
@@ -64,15 +78,7 @@ class ControlledExpansionPanels extends React.Component {
           <ExpansionPanelDetails>
             
           </ExpansionPanelDetails>
-        </ExpansionPanel>
-        <ExpansionPanel expanded={expanded === 'panel4'} onChange={this.handleChange('panel4')}>
-          <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography className={classes.heading}>Personal data</Typography>
-          </ExpansionPanelSummary>
-          <ExpansionPanelDetails>
-            
-          </ExpansionPanelDetails>
-        </ExpansionPanel>
+        </ExpansionPanel>        
       </div>
     );
   }

@@ -702,7 +702,8 @@ export default {
   queries: {
     Organization: {
       allOrganizations: allOrganizations,
-      leadershipBrands: leadershipBrandsForOrganization,      
+      leadershipBrands: leadershipBrandsForOrganization,
+      organizationWithId: require('./organization/organizationWithId').default
     },
     Users: {
       usersForOrganization,
