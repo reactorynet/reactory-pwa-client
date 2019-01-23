@@ -11,7 +11,12 @@ import {
   FormHelperText,
   InputLabel,
   Input,
+  Icon,
+  IconButton,
+  Toolbar, 
+  Tooltip,
 } from '@material-ui/core'
+
 import { withApi } from '../../../api/ApiProvider'
 
 
@@ -21,7 +26,7 @@ const MaterialFieldStyles = (theme) => {
 };
 
 export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((props) => {
-  //debugger
+  //debugger  
   const {
     id, //The id of the field in the hierarchy. You can use it to render a label targeting the wrapped widget.
     classNames, //A string containing the base Bootstrap CSS classes, merged with any custom ones defined in your uiSchema.
@@ -44,6 +49,7 @@ export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((p
     formContext, //The formContext object that you passed to Form.api, uiSchema, formData
     api,
     registry,
+    formData,
     classes,
   } = props;  
   const isObject = schema.type === 'object'
@@ -51,6 +57,7 @@ export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((p
   
   const uiOptions = uiSchema['ui:options'] || null
   const uiWidget = uiSchema['ui:widget'] || null
+  const uiToolbar = uiSchema['ui:toolbar'] || null;
   let Widget = null
 
   if(uiOptions !== null) 
@@ -65,6 +72,28 @@ export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((p
       }
     }
   }
+  let toolbar = null;
+  
+  if(uiToolbar) {        
+    console.log('Generating toolbar with formState', { props });
+    const buttons = uiSchema['ui:toolbar'].map((button) => {
+      const api = formContext.api
+      const onRaiseCommand = ( evt ) => {        
+        console.log('Raising Toolbar Command', { evt, api });
+        if(api) api.raiseFormCommand(button.command, button, { formData: formData, formContext: formContext });
+        else {
+          console.log('No API to handle form command', {api, evt });
+        }
+      }            
+      return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
+    });
+
+    toolbar = (
+      <Toolbar>
+        {buttons}
+      </Toolbar>
+    )
+  }
   
   let labelComponent = isObject === false || isBoolean === true ? <InputLabel htmlFor={id} shrink={true}>{label}</InputLabel> : null;
 
@@ -72,7 +101,7 @@ export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((p
     case 'array':
     case 'boolean': {
       return (
-        <FormControl className={classes.formControl} fullWidth>                
+        <FormControl className={classes.formControl} fullWidth>                          
           { children }          
         </FormControl>    
       )
@@ -80,6 +109,7 @@ export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((p
     case 'object': {
       return (
         <Fragment>
+          {toolbar}
           { children }
         </Fragment>
       )
@@ -89,7 +119,7 @@ export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((p
     case 'file':    
     default: {
       return (
-        <FormControl className={classes.formControl} fullWidth>     
+        <FormControl className={classes.formControl} fullWidth>               
           { uiWidget === null ? labelComponent : null } 
           { children }
           { isNil(rawHelp) === false ? <FormHelperText id={`${id}_helper`}>{rawHelp}</FormHelperText> : null }

@@ -12,7 +12,7 @@ import {
 import { Provider } from 'react-redux';
 import { createHttpLink } from 'apollo-link-http';
 import { setContext } from 'apollo-link-context';
-import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
+import { ApolloClient, InMemoryCache, gql } from 'apollo-client-preset';
 import { ApolloProvider, Query, Mutation } from 'react-apollo';
 import { Typography } from '@material-ui/core';
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -21,6 +21,7 @@ import { createMuiTheme } from '@material-ui/core/styles';
 import { find, isArray, intersection, isEmpty, isNil } from 'lodash';
 import { compose } from 'redux';
 import moment from 'moment';
+import objectMapper from 'object-mapper';
 import { withApollo } from "react-apollo";
 import * as restApi from './RestApi';
 import graphApi from './graphql';
@@ -106,6 +107,8 @@ export class ReactoryApi extends EventEmitter {
         this.getRoutes = this.getRoutes.bind(this);
         this.isAnon = this.isAnon.bind(this);
         this.raiseFormCommand = this.raiseFormCommand.bind(this);
+        this.onFormCommandEvent = this.onFormCommandEvent.bind(this);
+        this.startWorkFlow = this.startWorkFlow.bind(this);
         this.CDN_ROOT = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
         this.API_ROOT = process.env.API_URI_ROOT || 'http://localhost:4000';
         this.CLIENT_KEY = process.env.REACT_APP_CLIENT_KEY;
@@ -116,7 +119,31 @@ export class ReactoryApi extends EventEmitter {
         this.loadComponentWithFQN = this.loadComponentWithFQN.bind(this);
         this.loadComponent = this.loadComponent.bind(this);
         this.renderForm = this.renderForm.bind(this);
+        this.graphqlMutation = this.graphqlMutation.bind(this);
+        this.graphqlQuery = this.graphqlQuery.bind(this);
         this.forms().then()
+    }
+
+    graphqlMutation(mutation, variables, options = { fetchPolicy: 'network-only' }){
+        const that = this
+        return new Promise((resolve, reject) => {
+            that.client.mutate({ mutation: mutation, variables, options }).then((result) => {
+                resolve(result)
+            }).catch((clientErr) => {
+                reject(clientErr)                
+            });
+        });
+    }
+
+    graphqlQuery(query, variables, options = { fetchPolicy: 'network-only' }){
+        const that = this
+        return new Promise((resolve, reject) => {
+            that.client.query({ query, variables, options }).then((result) => {
+                resolve(result)
+            }).catch((clientErr) => {                
+                resolve(clientErr);
+            });
+        });
     }
 
     afterLogin(user){ 
@@ -174,7 +201,7 @@ export class ReactoryApi extends EventEmitter {
                                     key={props.key || 0} 
                                     onSubmit={props.onSubmit}
                                     onChange={props.onChange}
-                                    data={props.formData || props.data || formDef.defaultFormData }
+                                    formData={props.formData || props.data || formDef.defaultFormData }
                                     before={props.before}                                    
                                     >{props.children}
                                 </ReactoryFormComponent>)                                                                                                                                                            
@@ -200,12 +227,66 @@ export class ReactoryApi extends EventEmitter {
         });        
     }
 
-    raiseFormCommand(commandId, formData){
-        this.amq.raiseFormCommand(commandId, formData);
+    async raiseFormCommand(commandId, commandDef, formData){
+        console.log('Raising Form Command Via AMQ', {commandId, formData});
+        if(commandId.indexOf('graphql') === 0){
+            debugger;
+            let commandText = ''
+            let method = 'query';
+            if(commandId.indexOf('.') > 0) method = commandId.split('.')[1];
+            commandText = commandDef[method];
+            let variables = {};
+
+            if(commandDef.variables && commandDef.variableMap) {
+                variables = objectMapper(formData, commandDef.variables)
+            }
+
+            if(commandDef.staticVariables){
+                variables = { ...commandDef.staticVariables, ...variables }
+            }
+
+            let commandResult = null;
+
+            switch(method){                
+                case 'mutation': {
+                    commandResult = await this.graphqlMutation(gql(commandText), variables).then()
+                    break;
+                }
+                case 'query':                                    
+                default: {
+                    commandResult = await this.graphqlQuery(gql(commandText), variables).then()
+                }
+            }
+            return commandResult;
+        }
+
+        if(commandId.indexOf('workflow') === 0){
+            return await this.startWorkFlow(commandId, formData);
+        } else {
+            this.amq.raiseFormCommand(commandId, formData);
+        }        
     }
 
-    onFormDataEvent(commandId, func){
-        this.amq.onFormDataEvent(commandId, func);
+    startWorkFlow(workFlowId, data){
+        //this.amp.raiseWorkFlowEvent(workFlowId, data);
+        const that = this;
+        return new Promise((resolve, reject) => {
+            that.client.query({ query: that.mutations.System.startWorkflow, variables: {name: workFlowId, data}, options: { fetchPolicy: 'network-only' } }).then((result) => {
+                if (result.data.startWorkflow === true) {                                        
+                    resolve(true);                    
+                }
+                else {                    
+                    resolve(false);       
+                }
+            }).catch((clientErr) => {
+                console.error('Error starting workflow', clientErr);                
+                resolve(anonUser);
+            });
+        });
+    }
+
+    onFormCommandEvent(commandId, func){
+        this.amq.onFormCommandEvent(commandId, func);
     }
     
     hasRole(itemRoles = [], userRoles = this.getApplicationRoles()){             

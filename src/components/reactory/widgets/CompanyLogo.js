@@ -54,7 +54,7 @@ class CompanyLogoWidget extends Component {
       const logoProps = {
         src: utils.CDNOrganizationResource(formData, `logo_${formData}_default.jpeg`),
         width: '200px',
-        maxWidth: '200px',
+        style: { maxWidth: '200px' },
         alt: 'No Image'
       };
 

@@ -26,6 +26,7 @@ export const defaultTheme = {
         featureImage: `${process.env.CDN_ROOT}/themes/reactory/images/featured.jpg`,
         logo: `${process.env.CDN_ROOT}/themes/reactory/images/logo.jpg`,
         favicon: `${process.env.CDN_ROOT}/themes/reactory/images/favicon.png`,
+        mainCss: `${process.env.CDN_ROOT}/themes/reactory/css/styles.css`
     },
     content: {
         appTitle: 'Reactory - Build Apps. Fast.',

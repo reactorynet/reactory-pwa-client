@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter, Route, Switch } from 'react-router';
 import classnames from 'classnames';
@@ -564,11 +564,12 @@ class TaskDetail extends Component {
         this.onTitleChanged = this.onTitleChanged.bind(this)
         this.onNewLabelTextChanged = this.onNewLabelTextChanged.bind(this)
         this.onTaskFormSubmit = this.onTaskFormSubmit.bind(this)
+        this.addComment = this.addComment.bind(this)
         this.componentDefs = props.api.getComponents(['forms.TaskDetailForm', 'forms.CommentForm'])
     }
 
     onTaskFormSubmit(taskForm){
-        console.log('Task form submitted');
+        console.log('Task form submitted', taskForm);
     }
 
     toggleExpand() {
@@ -589,24 +590,22 @@ class TaskDetail extends Component {
         this.setState({ newLabelText: evt.target.value });
     }
 
+    addComment(commentForm){
+        console.log('Add Comment', commentForm);
+    }
+
     render() {
         const { classes } = this.props;
         const { expanded, task, newLabelText } = this.state;
         const { TaskDetailForm, CommentForm } = this.componentDefs;
-
-        let dueLabelText = 'NOT SET';
-
-        if (task.dueDate) {
-            const dueMoment = moment(task.dueDate)
-            if (moment.isMoment(dueMoment)) {
-                dueLabelText = dueMoment.format('DD MMM YY')
-            }
-        }
-
+    
         return (                                                                        
-            <TaskDetailForm onSubmit={this.onTaskFormSubmit} formData={{...task}}>
-                <Fab color="primary" type="submit"><Icon>save</Icon></Fab>
-            </TaskDetailForm>                                                                                                  
+            <Fragment>
+                <TaskDetailForm onSubmit={this.onTaskFormSubmit} formData={{...task}} mode={task.id ? 'edit' : 'new' }>
+                    <Fab color="primary" type="submit"><Icon>save</Icon></Fab>
+                </TaskDetailForm>
+                { task.id && <CommentForm onSubmit={this.addComment} /> }
+            </Fragment>
         )
     }
 }

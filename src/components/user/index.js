@@ -245,7 +245,6 @@ export const EditProfile = compose(
           isNew: false,
           onCancel,
           onSave: (profileData) => {
-            console.log('User being saved', profileData)
             let profileDataInput = omitDeep(profileData );
             delete profileDataInput.peers
             updateUser({
@@ -273,12 +272,12 @@ export const UserProfile = compose(
 )((props) => {
     const { api, location, profileId, organizationId, match, withPeers } = props
     let pid = null;
-    pid = isNil(profileId) === false ? pid : match.params.profileId;
+    pid = isNil(profileId) === false ? profileId : match.params.profileId;
     if (isNil(pid) === true) pid = api.getUser() ? api.getUser().id : null;
     if (isNil(pid) === true) return <Typography variant="h6" value="No profile id" />
 
     return (
-    <Query query={api.queries.Users.userProfile} variables={{profileId: pid}}>
+    <Query query={api.queries.Users.userProfile} variables={{profileId: pid}} >
       {(props, context)=>{
         const { loading, error, data } = props;
         if(loading) return <p>Loading User Profile, please wait...</p>
@@ -289,6 +288,43 @@ export const UserProfile = compose(
         } else {
           return <p>No user data available</p>
         }
+      }}
+    </Query>)
+});
+
+export const UserWithQuery = compose(
+  withApi,
+  withRouter
+  )((props) => {
+    const { api, location, userId, organizationId, match, componentFqn, UserWidget, onClick } = props    
+    let Component = UserListItem
+    if(componentFqn) Component = api.getComponent(componentFqn);
+    if(UserWidget) Component = UserWidget
+
+    const skip = userId === null;
+    return (
+    <Query query={api.queries.Users.userProfile} variables={{profileId: userId}} skip={skip}>
+      {(props, context)=>{
+        const { loading, error, data } = props;
+
+        if(skip === false){
+          if(loading) return <p>Fetching user details...</p>
+          if(error) return <p>{error.message}</p>
+          if(data.userWithId) {          
+            const componentProps = {
+              ...props,
+              user: data.userWithId,
+              onClick            
+            };
+
+            return <Component { ...componentProps }  />
+          } else {
+            return <Component { ...props } />
+          }
+        } else {
+          return <Component { ...props } onClick={onClick} />
+        }
+        
       }}
     </Query>)
 });

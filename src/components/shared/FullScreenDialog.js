@@ -44,7 +44,8 @@ class FullScreenDialog extends Component {
   };
 
   render() {
-    const { classes } = this.props;
+    const { classes, title } = this.props;
+
     return (
       <div>
         <Dialog
@@ -54,10 +55,11 @@ class FullScreenDialog extends Component {
           TransitionComponent={Transition}
         >
           <AppBar className={classes.appBar}>
-            <Toolbar title={this.props.title}>
+            <Toolbar>              
               <IconButton color="inherit" onClick={this.handleClose} aria-label="Close">
                 <CloseIcon />
               </IconButton>
+              { title ? <Typography variant="h6" color="inherit">{title}</Typography> : null }
             </Toolbar>
           </AppBar>
           {this.props.children}

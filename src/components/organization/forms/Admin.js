@@ -301,7 +301,7 @@ class DefaultFormContainer extends Component {
       'core.CompanyLogo',
       'forms.TowerStoneLeadershipBrandConfig',
       'forms.TowerStoneSurveyConfig',
-      'forms.TowerStoneSurveySettingsForm',
+      'forms.TowerStoneSurveySettings',
       'forms.TowerStoneSurveyDelegateConfig',
       'forms.TowerStoneSurveyCalendarConfig',
       'forms.TemplateEditor',
@@ -384,7 +384,7 @@ class DefaultFormContainer extends Component {
       TowerStoneSurveyDelegateConfig,
       TowerStoneSurveyCalendarConfig,
       TemplateEditor,
-      TowerStoneSurveySettingsForm,
+      TowerStoneSurveySettings,
      } = that.componentDefs;
     const isNew = mode === 'new';
     return (
@@ -460,7 +460,7 @@ class DefaultFormContainer extends Component {
             <Route path={'/admin/org/:organizationId/surveys'}>
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/surveys/new'}>
-                  <TowerStoneSurveyConfig mode="new" formContext={{organizationId, match: this.props.match}} formData={{organization: organizationId}} style={{maxWidth:'85%'}}/>                  
+                  <TowerStoneSurveyConfig mode="new" organizationId={organizationId} formContext={{organizationId, match: this.props.match}} formData={{organization: organizationId}} style={{maxWidth:'85%'}}/>                  
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/surveys'}>
                   <SurveyCalendarForOrganization {...this.props} organizationId={organizationId} />
@@ -476,6 +476,24 @@ class DefaultFormContainer extends Component {
                         formContext={{organizationId, surveyId: props.match.params.surveyId}} 
                         formData={{organization: organizationId, id: props.match.params.surveyId}} 
                         style={{maxWidth:'85%'}} />
+
+                      <TowerStoneSurveySettings 
+                        mode="edit"
+                        surveyId={props.match.params.surveyId} 
+                        organizationId={organizationId} 
+                        formContext={{organizationId, surveyId: props.match.params.surveyId}} 
+                        formData={{}} 
+                      />
+
+                      <TowerStoneSurveyDelegateConfig 
+                        mode="edit"
+                        surveyId={props.match.params.surveyId} 
+                        organizationId={organizationId} 
+                        formContext={{organizationId, surveyId: props.match.params.surveyId}}
+                        data={[]} 
+                      />
+
+                      
                     </Fragment>
                   )
                 }}>                  

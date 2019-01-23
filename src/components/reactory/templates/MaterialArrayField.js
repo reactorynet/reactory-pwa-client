@@ -1,5 +1,6 @@
 import React, { Component, Fragment } from "react";
 import {
+  AppBar,
   IconButton,
   Icon,
   Fab,
@@ -7,6 +8,7 @@ import {
   Grid,
   Button,
   Toolbar,
+  Tooltip,
   Typography,
 } from '@material-ui/core';
 import { withStyles, withTheme } from '@material-ui/core/styles';
@@ -49,6 +51,7 @@ function ArrayFieldDescription({ DescriptionField, idSchema, description }) {
 
 // Used in the two templates
 function DefaultArrayItem(props) {
+  console.log('Rendering Default Array Item', props);
   const btnStyle = {
     //flex: 1,
     //paddingLeft: 6,
@@ -59,16 +62,9 @@ function DefaultArrayItem(props) {
     <Paper key={props.index} className={props.className}>
       <Fragment>
         {props.children}
-      </Fragment>
-
+      </Fragment>      
       {props.hasToolbar && (
         <Toolbar>
-          <div
-            className="btn-group"
-            style={{
-              display: "flex",
-              justifyContent: "space-around",
-            }}>
             {(props.hasMoveUp || props.hasMoveDown) && (
               <IconButton                
                 tabIndex="-1"                
@@ -93,7 +89,6 @@ function DefaultArrayItem(props) {
                 onClick={props.onDropIndexClick(props.index)}
               ><Icon>delete_outline</Icon></IconButton>
             )}
-          </div>
         </Toolbar>
       )}
     </Paper>
@@ -135,31 +130,41 @@ function DefaultFixedArrayFieldTemplate(props) {
 }
 
 function DefaultNormalArrayFieldTemplate(props) {
-  console.log('rendering default array template', props);
   let visible = true;
   if(props.uiSchema && props.uiSchema['ui:options'] && props.uiSchema['ui:options'].hidden === true) visible = false;
-
+  let buttons = null;
+  if(props.uiSchema && props.uiSchema['ui:toolbar']){    
+    buttons = props.uiSchema['ui:toolbar'].map((button) => {
+      const api = props.formContext.api
+      const onRaiseCommand = ( evt ) => {                
+        if(api) api.raiseFormCommand(button.command, button, { formData: props.formData, formContext: props.formContext });
+        else console.log('No API to handle form command');
+      }            
+      return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
+    });
+  }
+  
   if(visible === false) return null
   return (
     <Fragment>
-      <Toolbar>      
-      <ArrayFieldTitle
-        key={`array-field-title-${props.idSchema.$id}`}
-        TitleField={props.TitleField}
-        idSchema={props.idSchema}
-        title={props.uiSchema["ui:title"] || props.title}
-        required={props.required}
-      />
-      {props.canAdd && (
-        <IconButton          
-          onClick={props.onAddClick}
-          disabled={props.disabled || props.readonly}
-          style={{float:'right'}}
-          color='secondary'
-        ><Icon>add</Icon></IconButton>
-      )}
-      </Toolbar>
-
+      <Toolbar variant="dense">      
+        <ArrayFieldTitle
+          key={`array-field-title-${props.idSchema.$id}`}
+          TitleField={props.TitleField}
+          idSchema={props.idSchema}
+          title={props.uiSchema["ui:title"] || props.title}
+          required={props.required}
+        />
+        {props.canAdd && (
+          <IconButton          
+            onClick={props.onAddClick}
+            disabled={props.disabled || props.readonly}
+            style={{float:'right'}}
+            color='secondary'
+          ><Icon>add</Icon></IconButton>
+        )}
+        {buttons}
+        </Toolbar>
       {(props.uiSchema["ui:description"] || props.schema.description) && (
         <ArrayFieldDescription
           key={`array-field-description-${props.idSchema.$id}`}
@@ -369,10 +374,14 @@ class ArrayField extends Component {
       onFocus,
       idPrefix,
       rawErrors,
+      onChange,
     } = this.props;
     console.log('rendering normal array', {props: this.props});
+    let toolbar = null;    
     const title = schema.title === undefined ? name : schema.title;
     let { ArrayFieldTemplate, definitions, fields } = registry;
+    
+
     if(uiSchema && uiSchema['ui:widget']) {
       const uiOptions = uiSchema['ui:options'];
       let componentProps = {}
@@ -397,11 +406,13 @@ class ArrayField extends Component {
         if(Container){
           return (
           <Container {...containerProps}>
+            {toolbar}
             {ArrayFieldTemplate !== null ? <ArrayFieldTemplate { ...{...this.props, ...componentProps}} /> : null}
           </Container>);
         } else {
           return (
           <Paper {...containerProps}>
+            {toolbar}
             {ArrayFieldTemplate !== null ? <ArrayFieldTemplate { ...{...this.props,...componentProps}} /> : null}
           </Paper>);
         }
@@ -442,6 +453,7 @@ class ArrayField extends Component {
       idSchema,
       uiSchema,
       onAddClick: this.onAddClick,
+      onChange,
       readonly,
       required,
       schema,
@@ -453,8 +465,13 @@ class ArrayField extends Component {
     };
 
     // Check if a custom render function was passed in
+
     const Component = ArrayFieldTemplate || DefaultNormalArrayFieldTemplate;
-    return <Component {...arrayProps} />;
+    return (
+      <Fragment>
+        {toolbar}
+        <Component {...arrayProps} />
+      </Fragment>);
   }
 
   renderMultiSelect() {
@@ -693,7 +710,7 @@ class ArrayField extends Component {
       hasMoveUp: has.moveUp,
       hasMoveDown: has.moveDown,
       hasRemove: has.remove,
-      index,
+      index,      
       onDropIndexClick: this.onDropIndexClick,
       onReorderClick: this.onReorderClick,
       readonly,

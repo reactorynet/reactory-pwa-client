@@ -44,6 +44,7 @@ class LoginCard extends Component {
     ]);
   }
 
+
   doLogin = (evt) => {
     const { history, api } = this.props;
     const { redirectOnLogin } = this.state;
@@ -72,6 +73,7 @@ class LoginCard extends Component {
       this.doLogin()
     }
   }
+
   render() {
     const that = this;
     const { doLogin, props, context } = that;
@@ -93,6 +95,7 @@ class LoginCard extends Component {
             value={this.state.username}
             onChange={this.updateUsername}
             disabled={busy}
+            autoFocus={true}
           />
 
           <TextField

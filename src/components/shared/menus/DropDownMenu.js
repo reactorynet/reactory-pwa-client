@@ -54,6 +54,7 @@ export class DropDownMenu extends Component {
   }
 
   handleMenu(evt){
+    console.log('Menu handle click', { evt, state: this.state });
     this.setState({ open: !this.state.open, anchorEl:  evt.currentTarget });
   }
   
@@ -61,7 +62,7 @@ export class DropDownMenu extends Component {
       const { props } = this;
       const { menus } = props;  
       const { open } = this.state;
-      
+      // debugger
       const ariaId = props.id || uuid();
       const menuItems = [];
       let _menus = menus
@@ -84,15 +85,15 @@ export class DropDownMenu extends Component {
       }
 
       return (<IconButton
-          aria-owns={open ? ariaId : null}
+          aria-owns={open === true ? ariaId : null}
           aria-haspopup="true"
           onClick={this.handleMenu}
           color="inherit">
           <Icon>{props.icon || 'keyboard_arrow_down'}</Icon>
           <Menu
-              open={props.open}
+              open={this.state.open === true}
               id={ariaId}
-              anchorEl={this.state.anchorEl}        
+              anchorEl={this.state.anchorEl}
               anchorOrigin={{
                   vertical: 'top',
                   horizontal: 'right',
@@ -100,7 +101,7 @@ export class DropDownMenu extends Component {
               transformOrigin={{
                   vertical: 'top',
                   horizontal: 'right',
-              }}>        
+              }}>
               { menuItems }
           </Menu>
       </IconButton>)            

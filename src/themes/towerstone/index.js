@@ -28,7 +28,8 @@ export default {
             login: {
                 featureImage: pebbles,
                 logo
-            }
+            },
+            mainCss: `${process.env.CDN_ROOT}/themes/reactory/css/styles.css`
         },
         content: {
             appTitle: 'TowerStone Leadership Centre',

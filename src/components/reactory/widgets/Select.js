@@ -34,7 +34,7 @@ class SelectWidget extends Component {
   });
 
   static propTypes = {
-    formData: PropTypes.array,
+    formData: PropTypes.any,
     onChange: PropTypes.func,
     onSubmit: PropTypes.func,
     readOnly: PropTypes.bool,
@@ -46,40 +46,7 @@ class SelectWidget extends Component {
     formData: [],
     readOnly: false
   }
-
-  constructor(props, context){
-    super(props, context)
-    this.state = {
-      newChipLabelText: "",      
-      
-    };
-
-    this.onNewChipLabelTextChange = this.onNewChipLabelTextChange.bind(this)
-    this.onHandleChipLabelDelete = this.onHandleChipLabelDelete.bind(this)
-    this.onNewChipLabelTextKeyPress = this.onNewChipLabelTextKeyPress.bind(this)
-
-  }
-
-  onNewChipLabelTextChange(evt){
-    this.setState({ newChipLabelText: evt.target.value })
-  }
-
-  onNewChipLabelTextKeyPress(evt){
-    if(evt.charCode === 13){
-      evt.preventDefault()
-      const newText = this.state.newChipLabelText
-      this.setState({newChipLabelText: "" }, ()=>{
-        this.props.onChange([...this.props.formData, newText])
-      });      
-    }
-  }
-
-  onHandleChipLabelDelete(label, index){
-    let items = [...this.props.formData];
-    pullAt(items, [index])
-    this.props.onChange([...items])
-  }
-
+  
   render(){
     const self = this
     let elements = null
@@ -105,13 +72,13 @@ class SelectWidget extends Component {
 
     return (
       <FormControl className={this.props.classes.formControl}>
-          <InputLabel htmlFor={this.props.idSchema.$id}>{this.props.schema.title}</InputLabel>
+          <InputLabel htmlFor={self.props.idSchema.$id}>{self.props.schema.title}</InputLabel>
           <Select
-            value={this.props.formData || ""}
+            value={self.props.formData || ""}
             onChange={onSelectChanged}
-            name={this.props.name}
+            name={self.props.name}
             renderValue={value => `${matchOption(value).label}`}
-            input={<Input id={this.props.idSchema.$id} value={this.props.formData || ""}/>}>
+            input={<Input id={self.props.idSchema.$id} value={self.props.formData || ""}/>}>
             <MenuItem value="">
               <em>None</em>
             </MenuItem>

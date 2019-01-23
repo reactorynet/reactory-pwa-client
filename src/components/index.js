@@ -32,7 +32,7 @@ import PaymentGatewayDashboardComponent from './payments/funisave/Dashboard';
 import DateSelector from './dates/DateSelector.js';
 import Calendar from './dates/Calendar';
 import { LayoutThemed, SingleColumnLayout, TwoColumnGrid, BasicContainer } from './shared/Layout';
-import { UserListWithSearchComponent } from './user/Widgets';
+import { UserListWithSearchComponent, SurveyDelegateWidget } from './user/Widgets';
 import Logo from './shared/logo';
 import BasicModal from './shared/BasicModal';
 import AotAnalyticsDashboardComponent from './tasks/analytics/AnalyticsDashboard';
@@ -125,7 +125,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'ErrorMessage',
-    component: (props) => (<p>Invalid Application Path</p>),
+    component: (props) => (<p>{props.message || 'Invalid Application Path'}</p>),
     version: '1.0.0',
   },
   {
@@ -147,6 +147,12 @@ export const componentRegistery = [
     version: '1.0.0',
   },
   {
+    nameSpace: 'core',
+    name: 'UserWithQuery',
+    component: UserComponents.UserWithQuery,
+    version: '1.0.0',
+  },
+  {
     nameSpace: 'towerstone',
     name: 'OwlyListItem',
     component: (props) => {
@@ -154,6 +160,12 @@ export const componentRegistery = [
       return <UserListItem user={{ firstName: 'Owly', lastName: '', id: 'towerstone_owly', avatar: 'owl.jpg' }} message={props.message} />
     },
     version: '1.0.0'
+  },
+  {
+    nameSpace: 'towerstone',
+    name: 'SurveyDelegateWidget',
+    component: SurveyDelegateWidget,
+    version: '1.0.0',
   },
   {
     nameSpace: 'core',
@@ -433,5 +445,17 @@ export const componentRegistery = [
     name: 'DropDownMenu',
     version: '1.0.0',
     component: require('./shared/menus/DropDownMenu').DropDownMenuComponent,
-  },  
+  },
+  {
+    nameSpace: 'core',
+    name: 'AssessmentList',
+    version: '1.0.0',
+    component: require('./assess/AssessmentList').default,
+  },
+  {
+    nameSpace: 'core',
+    name: 'AssessmentTable',
+    version: '1.0.0',
+    component: require('./assess/AssessmentList').AssessmentTableComponent
+  }  
 ];

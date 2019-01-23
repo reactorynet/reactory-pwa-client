@@ -4,6 +4,7 @@ import { withRouter } from 'react-router';
 import classnames from 'classnames';
 import gql from 'graphql-tag';
 import { compose } from 'redux';
+import { throttle } from 'lodash';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import {
   AppBar,
@@ -50,15 +51,15 @@ import { ReactoryFormComponent } from '../../reactory';
 import { TableFooter } from '@material-ui/core/Table';
 import { withApi, ReactoryApi } from '../../../api/ApiProvider';
 import DefaultAvatar from '../../../assets/images/profile/default.png';
-import Profile from './../Profile';
-import Message from '../../message'
 import { omitDeep, getAvatar, CenteredContainer } from '../../util';
+import SurveyDelegateWidget from '../Widgets/SurveyDelegateWidget'
 import styles from '../../shared/styles'
+
 
 
 export class UserListWithSearch extends Component {
 
-  static Styles = theme => {
+    static Styles = theme => {
     return styles(theme, {
       mainContainer: {
         padding: '5px',
@@ -175,11 +176,16 @@ export class UserListWithSearch extends Component {
   }
 
   static propTypes = {
+    onAcceptSelection: PropTypes.func,
+    organizationId: PropTypes.string.isRequired,
     businessUnitFilter: PropTypes.bool
   };
 
   static defaultProps = {
-    businessUnitFilter: true
+    businessUnitFilter: true,
+    onAcceptSelection: (evt) => { 
+      console.log('No selection accept handler');
+    }
   };
 
   constructor(props, context) {
@@ -226,6 +232,7 @@ export class UserListWithSearch extends Component {
 
   }
 
+  
   onShowBusinessUnitFilter(){
     this.setState({ showBusinessUnitFilter: !this.state.showBusinessUnitFilter })
   }
@@ -267,7 +274,13 @@ export class UserListWithSearch extends Component {
                 <Badge badgeContent={skip ? '!' : ''} hidden={skip === false} color="secondary">
                   <Icon>cached</Icon>
                 </Badge>
-              </IconButton>
+              </IconButton>              
+            </Tooltip>
+
+            <Tooltip title={'Click to accept your selection'}>
+              <IconButton color="inherit" onClick={this.props.onAcceptSelection}>
+                <Icon>check</Icon>
+              </IconButton>              
             </Tooltip>
 
             <Tooltip title={`Click to add new employee`}>
@@ -303,5 +316,6 @@ export const UserListWithSearchComponent = compose(
   withRouter)(UserListWithSearch);
 
 export default {
-  UserListWithSearchComponent
+  UserListWithSearchComponent,
+  SurveyDelegateWidget
 };

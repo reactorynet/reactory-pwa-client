@@ -63,7 +63,7 @@ function DefaultObjectFieldTemplate(props) {
           disabled={props.disabled || props.readonly}>
           <Icon>add</Icon>
         </IconButton>
-      )}
+      )}      
     </fieldset>
   );
 }
@@ -180,8 +180,7 @@ class ObjectField extends Component {
     const schema = retrieveSchema(this.props.schema, definitions, formData);
     const title = schema.title === undefined ? name : schema.title;
     const description = uiSchema["ui:description"] || schema.description;
-    let orderedProperties;
-
+    let orderedProperties;    
     try {
       const properties = Object.keys(schema.properties);
       orderedProperties = orderProperties(properties, uiSchema["ui:order"]);

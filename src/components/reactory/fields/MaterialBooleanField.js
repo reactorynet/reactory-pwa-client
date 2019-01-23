@@ -43,6 +43,7 @@ export default (props) => {
     if(onChange) onChange(checked)
   }
   
+  console.log('render boolean field', props);
   return (<FormControlLabel
       control={
       <Switch
@@ -51,7 +52,7 @@ export default (props) => {
         value={name}
       />
     }
-    label={`${title || name} - ${formData}`}
+    label={`${title || name} - ${formData ? 'Yes' : 'No' }`}
   />)
 
   

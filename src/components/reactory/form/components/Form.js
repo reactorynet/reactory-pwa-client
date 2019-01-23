@@ -245,8 +245,7 @@ export default class Form extends Component {
           onFocus={this.onFocus}
           registry={registry}
           safeRenderCompletion={safeRenderCompletion}
-          disabled={disabled}
-        />
+          disabled={disabled} />
         {children ? (
           children
         ) : (

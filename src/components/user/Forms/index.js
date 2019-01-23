@@ -9,6 +9,7 @@ import {
   Avatar,
   Chip,
   Button,
+  Fab,
   FormControl,
   List,
   ListItem,
@@ -70,28 +71,21 @@ class Forgot extends Component {
     this.componentRefs = props.api.getComponents([
       'core.Loading@1.0.0',
       'core.DateSelector@1.0.0',
-      'core.Layout@1.0.0',
-      'core.ReactoryForm@1.0.0',
-      'core.BasicModal@1.0.0'
+      'core.Layout@1.0.0',      
+      'core.BasicModal@1.0.0',
+      'forms.ForgotPasswordForm@1.0.0'
     ]);
   }
 
   onSubmit(form) {
     const that = this;
     this.props.api.forgot(form.formData).then((forgotResult) => {
-      console.log('Forgot password has been triggered', forgotResult);
       that.setState({ mailSent: true })
     }).catch((error) => {
-      console.error('Error sending forgot password email to user', error);
       that.setState({ hasError: true, message: 'Could not send an email. If this problem persists please contact our helpdesk.' })
     })
   }
-
-  onChange(formData) {
-    console.log('formData changed', formData)
-    this.setState({ formData });
-  }
-
+  
   goBack() {
     this.props.history.goBack();
   }
@@ -99,7 +93,8 @@ class Forgot extends Component {
   render() {
 
     const {
-      BasicModal
+      BasicModal,
+      ForgotPasswordForm
     } = this.componentRefs
 
     if (this.state.mailSent) {
@@ -111,19 +106,15 @@ class Forgot extends Component {
     }
 
     const beforeComponent = (<div className={this.props.classes.logo} style={{ marginBottom: '16px' }}></div>)
-    const fabstyle = {
-      float: 'right',
-      bottom: '61px',
-      right: '10px',
-    };
+    
     return (
       <CenteredContainer classNames={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto' }}>
-        <ReactoryFormComponent before={beforeComponent} className={this.props.classes.root} formId="forgot-password" uiFramework="material" onSubmit={this.onSubmit}>
+        <ForgotPasswordForm before={beforeComponent} onSubmit={this.onSubmit}>
           <Button type="button" onClick={this.goBack} variant="flat"><Icon>keyboard_arrow_left</Icon>&nbsp;BACK</Button>
           <Tooltip title="Click to send a reset email">
-            <Button type="submit" variant="fab" color="primary" style={fabstyle}><Icon>send</Icon></Button>
-          </Tooltip>
-        </ReactoryFormComponent>
+            <Fab type="submit" variant="rounded" color="primary" ><Icon>send</Icon></Fab>
+          </Tooltip>                    
+        </ForgotPasswordForm>
       </CenteredContainer>
     )
   }

@@ -52,9 +52,9 @@ class AddTask extends Component {
         super(props, context);
         this.state = {
             text: ''
-        }
+        };
 
-        this.onTextChanged = this.onTextChanged.bind(this)
+        this.onTextChanged = this.onTextChanged.bind(this);
         this.keyPress = this.keyPress.bind(this)
     }
 
@@ -83,7 +83,7 @@ class AddTask extends Component {
 export const AddTaskComponent = compose(
     withApi
 )((props) => {
-    const { api, organizationId, userId, onCancel, status = 'new', percentComplete = 0 } = props
+    const { api, organizationId, userId, onCancel, status = 'new', percentComplete = 0 } = props;
     return (
         <Mutation mutation={api.mutations.Tasks.createTask} >
             {(createTask, { loading, error, data }) => {
@@ -102,27 +102,27 @@ export const AddTaskComponent = compose(
                             refetchQueries: [{ query: api.queries.Tasks.userTasks, variables: { id: userId, status } }]
                         });
                     }
-                }
+                };
 
-                if (loading) return (<p>Updating... please wait</p>)
-                if (error) return (<p>{error.message}</p>)
+                if (loading) return (<p>Updating... please wait</p>);
+                if (error) return (<p>{error.message}</p>);
                 return <AddTask {...props} />
             }}
         </Mutation>
     )
-})
+});
 
 
 
 export const TaskListComponentWithData = compose(
     withApi
 )((props) => {
-    const { api, organizationId, userId, onCancel, status = 'new', percentComplete = 0, onTaskSelect = () => { }, dragProps = defaultDragProps } = props
+    const { api, organizationId, userId, onCancel, status = 'new', percentComplete = 0, onTaskSelect = () => { }, dragProps = defaultDragProps } = props;
     return (
         <Query query={api.queries.Tasks.userTasks} variables={{ id: userId, status }}  >
             {({ loading, error, data }) => {
-                if (loading) return (<p>Loading...</p>)
-                if (error) return (<p>{error.message}</p>)
+                if (loading) return (<p>Loading...</p>);
+                if (error) return (<p>{error.message}</p>);
 
                 if (isArray(data.userTasks) === true && data.userTasks.length > 0) {
                     return data.userTasks.map((task, key) => {
@@ -145,18 +145,18 @@ export const TaskDetailWithData = compose(
     withApi,
     withRouter
 )((props) => {
-    const { api, taskId } = props
+    const { api, taskId } = props;
 
     return (
         <Query query={api.queries.Tasks.taskDetail} variables={{ id: taskId }}>
             {({ loading, errors, data }) => {
-                if (loading) return (<p>Loading detail...</p>)
-                if (errors) return (<p>Error loading the task</p>)
+                if (loading) return (<p>Loading detail...</p>);
+                if (errors) return (<p>Error loading the task</p>);
                 
                 if(data.taskDetail) {
                     return <TaskDetailComponent task={data.taskDetail} />
                 } else {
-                    const NotFound = api.getComponent('core.NotFound')
+                    const NotFound = api.getComponent('core.NotFound');
 
                     return <NotFound message="We couldn't find the Task you were looking for" />
                 }
@@ -164,7 +164,7 @@ export const TaskDetailWithData = compose(
             }}
         </Query>
     )
-})
+});
 
 class KanbanDashboard extends Component {
     static styles = (theme) => {
@@ -284,7 +284,7 @@ class KanbanDashboard extends Component {
                 },
             }
         };
-    }
+    };
 
     static propTypes = {
         user: PropTypes.object.isRequired,
@@ -292,7 +292,7 @@ class KanbanDashboard extends Component {
         from: PropTypes.instanceOf(moment),
         till: PropTypes.instanceOf(moment),
         lanes: PropTypes.array,
-    }
+    };
 
     static defaultProps = {
         user: { firstName: '', lastName: '', email: '' },
@@ -306,7 +306,7 @@ class KanbanDashboard extends Component {
             { status: 'outputs', title: 'Outputs', icon: 'attachment', color: '#EFD4FF', addRoles: [] },
             { status: 'kudos', title: 'Kudos', icon: 'thumb_up_alt', color: '#BC99D1', addRoles: [] }
         ],
-    }
+    };
 
     constructor(props, context) {
         super(props, context);
@@ -340,7 +340,7 @@ class KanbanDashboard extends Component {
     onProjectIdChange = (evt, b, c,) => {
         console.log('ProjectId changed', { evt, b, c });
         this.setState({ projectId: evt.target.value })
-    }
+    };
 
     onDateRangeChanged(startDate, endDate) {
         console.log('DateRange changed', { startDate, endDate });
@@ -364,11 +364,11 @@ class KanbanDashboard extends Component {
         const that = this;
         const { DateSelector, FullScreenModal, SpeedDial, ProjectForm, TaskDetailForm } = this.componentDefs;
 
-        let modal = null
+        let modal = null;
         if (showModal === true && selectedTask !== null) {
             const closeTask = () => {
                 that.setState({selecteTask: null, showModal: false})
-            }
+            };
 
             modal = (
                 <FullScreenModal title={selectedTask.title} open={true} onClose={closeTask}>
@@ -380,7 +380,7 @@ class KanbanDashboard extends Component {
         if(projectId === "-1") {
             const closeProject = () => {
                 that.setState({projectId: null, showModal: false})
-            }
+            };
 
             modal = (
                

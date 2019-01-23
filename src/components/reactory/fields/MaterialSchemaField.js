@@ -243,7 +243,11 @@ function SchemaFieldRender(props) {
   }
 
   const { __errors, ...fieldErrorSchema } = errorSchema;
-  debugger
+  if(FieldComponent === undefined ||  FieldComponent === null) {
+    console.error('Component resolved to null', { schema, uiSchema, idSchema, fields })
+    debugger
+  }
+  
   // See #439: uiSchema: Don't pass consumed class names to child components
   const field = (
     <FieldComponent

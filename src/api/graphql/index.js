@@ -290,14 +290,33 @@ const userProfile = gql`
       lastName
       avatar
       lastLogin
+      memberships {
+        client {
+          id
+          name
+        }
+        organization {
+          id
+          name
+        }
+        businessUnit {
+          id
+          name
+        }
+        roles
+        enabled
+      }
       peers {
         organization {
+          id
           name
           logo
         }
         user {
+          id
           firstName
           lastName
+          avatar
           email
         }
         peers {
@@ -311,7 +330,7 @@ const userProfile = gql`
           relationship
           isInternal
         }
-        allowEdit		
+        allowEdit      		
       }
     }    
   }
@@ -710,7 +729,18 @@ export default {
       userProfile,
       userInbox,      
       userLogs: null,
-      userPeers: null,      
+      userPeers: null,
+      searchUser: gql`
+        query SearchUser($searchString: String!, $sort: String){
+          searchUser(searchString: $searchString, sort: $sort){
+            id
+            email
+            firstName
+            lastName
+            avatar
+          } 
+        }
+      `      
     },
     Templates: {
       templateForOrganization: null,
@@ -762,9 +792,18 @@ export default {
         query taskDetail($id: String){
           taskDetail(id: $id){
             id
+            project {
+              id
+              title
+              description
+            }
+            
             title
             status
             percentComplete
+            startDate
+            dueDate
+            shortCodeId            
             user {
               id
               firstName
@@ -799,6 +838,15 @@ export default {
     Users: {
       createUser: createUserMutation,
       updateUser: updateUserMutation,
+      setActiveOrganization: gql`
+        mutation SetActiveOrganization($organizationId: String) {
+          setActiveOrganization(organizationId: $organizationId){
+            id,
+            name
+            logo            
+          }
+        }
+      `,
       setPassword,
       createMembership: null,
       removeMembership: null,
@@ -879,9 +927,16 @@ export default {
             percentComplete
           }                              
         }
-      `,
+      `,      
       updateTask: null,
       archive: null
-    }
+    },
+    System: {
+      startWorkflow: `mutation StartWorkflow($name: String, $data: Any){
+        startWorkflow(name: $name, data: $data) {
+          id
+        }
+      }`
+    },
   }
 }

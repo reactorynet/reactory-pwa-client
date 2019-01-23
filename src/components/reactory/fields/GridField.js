@@ -178,7 +178,7 @@ class MaterialGridField extends ObjectField {
         {
           layout.map((row, index) => {
             return (
-              <Grid container spacing="8" key={index}>
+              <Grid container spacing={8} key={index}>
                 {
                   Object.keys(row).map((name, index) => {
                     const { doShow, ...rowProps } = row[name]

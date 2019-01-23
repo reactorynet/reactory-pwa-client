@@ -9,6 +9,7 @@ export const DEFAULT_CHANNELS = {
   TRANSACTIONS: 'transactions',
   FILE: 'file',
   FORM_COMMAND: 'form.command',
+  WORKFLOW: 'workflow',
 };
 
 export const $chan = (name) => {
@@ -22,6 +23,7 @@ export const $sub = {
   data: (eventId, func) => $chan(DEFAULT_CHANNELS.DATA).subscribe(eventId, func),
   metrics: (eventId, func) => $chan(DEFAULT_CHANNELS.METRICS).subscribe(eventId, func),
   formCommand: (eventId, func) => $chan(DEFAULT_CHANNELS.FORM_COMMAND).subscribe(eventId, func),
+  workFlow: (eventId, func) => $chan(DEFAULT_CHANNELS.WORKFLOW).subscribe(eventId, func)
 };
 
 export const $pub = {
@@ -31,6 +33,7 @@ export const $pub = {
   data: (eventId, data = {}) => $chan(DEFAULT_CHANNELS.DATA).publish(eventId, data),
   metrics: (eventId, data = {}) => $chan(DEFAULT_CHANNELS.METRICS).publish(eventId, data),
   formCommand: (eventId, formData) => $chan(DEFAULT_CHANNELS.FORM_COMMAND).publish(eventId, formData),
+  workFlow: (eventId, data) => $chan(DEFAULT_CHANNELS.WORKFLOW).publish(eventId, data),
 };
 
 export default {
@@ -41,10 +44,11 @@ export default {
   onFileEvent: $sub.file,
   onDataEvent: $sub.data,
   onMetricEvent: $sub.metrics,
-  onFormDataEvent: $sub.formCommand,
+  onFormCommandEvent: $sub.formCommand,
   raiseTransactionEvent: $pub.transactions,
   raiseFileEvent: $pub.file,
   raiseDataEvent: $pub.data,
   raiseMetricEvent: $pub.metrics,
-  raiseFormDataEvent: $pub.formCommand,
+  raiseFormCommand: $pub.formCommand, 
+  raiseWorkFlowEvent: $pub.workFlow, 
 };

@@ -1,5 +1,6 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
+import { throttle } from 'lodash';
 import {  
   FormControl,
 } from '@material-ui/core';
@@ -12,17 +13,18 @@ class SliderWidget extends Component {
 
   static styles = theme => ({
     root: {
-      width: '100%',
+      width: '85%',
     },
     slider: {
       padding: '22px 0px',
-    },
+      margin: 'auto'
+    },    
   });
   
   constructor(props, context) {
     super(props, context)
     this.state = {
-        value: 50,
+        value: props.formData || 0,
     }
 
     this.handleChange = this.handleChange.bind(this)
@@ -30,19 +32,25 @@ class SliderWidget extends Component {
 
 
   handleChange = (event, value) => {
-    //this.setState({ value });
-    this.props.onChange(value);
+    this.setState({ value }, ()=>{
+      this.props.onChange(value);
+    });    
   };
 
   render() {
-    const { classes } = this.props;
-    console.log('rendering slider');
+    const { classes, uiSchema, onChange} = this.props;
+    let options = { min: 0, max:  100, step: 1,  }
+    if(uiSchema['ui:options']) options = {...options, ...uiSchema['ui:options']}
+  
     return (
       <FormControl className={classes.root} fullWidth>
-        <Typography id={this.props.idSchema.$id || 'Label'}>{this.props.formData}%</Typography>
+        <Typography id={this.props.idSchema.$id || 'Label'}>{this.props.schema.title} - {this.state.value}</Typography>
         <Slider
           classes={{ container: classes.slider }}
-          value={this.props.formData}
+          value={this.state.value || 0}
+          min={options.min}
+          step={1}
+          max={options.max}
           aria-labelledby="label"
           onChange={this.handleChange}
         />
@@ -55,5 +63,5 @@ SliderWidget.propTypes = {
   classes: PropTypes.object,
 };
 
-const SliderWidgetComponent = withStyles(SliderWidget.styles)(SliderWidget);
+export const SliderWidgetComponent = withStyles(SliderWidget.styles)(SliderWidget);
 export default SliderWidgetComponent

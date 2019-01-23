@@ -12,6 +12,7 @@ const props = {
   appTitle: process.env.REACT_APP_TITLE || 'Reactory Web'
 };
 
+
 const rootElement = document.getElementById('root')
 if(rootElement.classList.contains('loading')) rootElement.classList.remove('loading')
 ReactDOM.render(<App {...props} />, rootElement);

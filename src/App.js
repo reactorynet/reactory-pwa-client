@@ -130,6 +130,7 @@ class App extends Component {
         api,
       };
     }
+    
     if (this.state.auth_validated === false) {
       api.status({ emitLogin: true }).then((user) => {
         that.setState({ auth_validated: true })

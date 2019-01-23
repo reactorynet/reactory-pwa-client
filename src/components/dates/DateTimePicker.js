@@ -13,29 +13,19 @@ export default class DateTimePickerWidget extends PureComponent {
 
   static defaultProps = {
     formData: moment().startOf('day'),
-    outputFormat: ''
+    outputFormat: undefined
   }
-
-  constructor(props, context){
-    super(props, context)
-    this.state = {
-      selectedDate: moment(props.formData),
-    };
-  }
-  
 
   handleDateChange = date => {
     console.log('updating date', date);        
-    if(this.props.onChange) this.props.onChange(date.format())
+    if(this.props.onChange) this.props.onChange(date.format(this.props.outputFormat))
   };
 
   render() {
-    const { selectedDate } = this.state;
-
     return (
       <FormControl>
         <Typography variant="caption" gutterBottom>{this.props.schema.title || 'Select Time'}</Typography>
-        <DateTimePicker value={moment(this.props.formData)} onChange={this.handleDateChange} />
+        <DateTimePicker value={this.props.formData} onChange={this.handleDateChange} />
       </FormControl>
     );
   }
