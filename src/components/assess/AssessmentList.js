@@ -44,14 +44,15 @@ const AssessmentListItem = compose(withApi, withStyles(AssessmentItemStyles), wi
 class AssessmentTable extends Component {
   static propTypes = {
     assessments: PropTypes.array.isRequired,
-    api: PropTypes.instanceOf(ReactoryApi).isRequired,
-    canAdd: PropTypes.bool.isRequired,
+    api: PropTypes.instanceOf(ReactoryApi),
+    canAdd: PropTypes.bool,
     survey: PropTypes.object
   };
 
   static defaultProps = {
     assessments: [],
-    survey: null
+    survey: null,
+    canAdd: false
   };
 
   static styles = (theme) => {
@@ -90,12 +91,13 @@ class AssessmentList extends Component {
 
   static propTypes = {
     assessments: PropTypes.array.isRequired,
-    api: PropTypes.instanceOf(ReactoryApi).isRequired,
-    canAdd: PropTypes.bool.isRequired,
+    api: PropTypes.instanceOf(ReactoryApi),
+    canAdd: PropTypes.bool,
   };
 
   static defaultProps = {
-    assessments: []
+    assessments: [], 
+    canAdd: false,
   };
 
   static styles = (theme) => {
@@ -115,8 +117,9 @@ class AssessmentList extends Component {
   }
 
   getNewAssessmentWidget(){
-    return (
-      <ListItem key={0} dense={true}>      
+    return this.props.canAdd && 
+    (
+      <ListItem key={-1} dense={true}>      
         <ListItemText primary={'Click here to add a new Assessment'} />
         <ListItemSecondaryAction>
           <Icon>add</Icon>
@@ -139,8 +142,7 @@ class AssessmentList extends Component {
   render(){
 
     return (      
-      <List>
-        { this.props.assessments.length === 0 ? this.getEmptyListItem() : null }
+      <List>        
         {this.props.assessments.map((assessment, ids) => {
           return <AssessmentListItem assessment={assessment} key={ids} onClick={this.props.onItemClick} />
         })}

@@ -1,9 +1,10 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
+import moment from 'moment'
 import { withRouter } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
-import MaterialTable from 'material-table';
+import MaterialTable, { MTableToolbar } from 'material-table';
 import om from 'object-mapper';
 import uuid from 'uuid';
 import { isNil, isArray } from 'lodash';
@@ -15,14 +16,6 @@ import Button from '@material-ui/core/Button';
 import IconButton from '@material-ui/core/IconButton';
 import CloseIcon from '@material-ui/icons/Close';
 import SaveIcon from '@material-ui/icons/Save';
-import TrashIcon from '@material-ui/icons/Delete';
-import SupervisorIcon from '@material-ui/icons/SupervisorAccount';
-import RowingIcon from '@material-ui/icons/Rowing';
-import VertMoreIcon from '@material-ui/icons/MoreVert';
-import ShowChartIcon from '@material-ui/icons/ShowChart';
-import PersonIcon from '@material-ui/icons/Person';
-import EmailIcon from '@material-ui/icons/Email';
-import PlaylistAddCheck from '@material-ui/icons/PlaylistAddCheck';
 import PhotoCamera from '@material-ui/icons/PhotoCamera';
 import Avatar from '@material-ui/core/Avatar';
 import TextField from '@material-ui/core/TextField';
@@ -64,6 +57,36 @@ const UserInviteControl = (props, context) => {
     />
 }
 
+const userPeersQueryFragment = ` 
+user {
+    id
+    firstName
+    lastName
+}
+organization {
+    id
+    name
+    avatar                        
+},
+peers {
+    user {
+        id
+        firstName
+        lastName
+        email
+        avatar
+    }
+    isInternal
+    inviteSent
+    confirmed
+    relationship                        
+}
+allowEdit
+confirmedAt
+createdAt
+updatedAt
+`;
+
 const nilf = () => ({});
 
 class Profile extends Component {
@@ -78,9 +101,19 @@ class Profile extends Component {
         margin: {
             margin: theme.spacing.unit,
         },
+        confirmed: {            
+            color: '#02603B'
+        },
+        notConfirmed: {
+            color: theme.palette.primary.dark
+        },
         textField: {
             width: '98%'
         },
+        confirmedLabel: {
+            margin: theme.spacing.unit,
+            marginLeft: theme.spacing.unit * 2
+        },        
         avatarContainer: {
             width: '100%',
             display: 'flex',
@@ -94,7 +127,7 @@ class Profile extends Component {
             height: 120,
         },
         general: {
-            padding: '5px'
+            padding: theme.spacing.unit,
         },
         hiddenInput: {
             display: 'none'
@@ -130,10 +163,56 @@ class Profile extends Component {
         this.setState({ avatarMouseHover: false });
     }
 
+    refreshPeers(){
+        const { selectedMembership, profile } = this.state;
+        const { api } = this.props;
+        const self = this;
+
+        const query = gql`query UserPeers($id: String! $organizationId: String){
+            userPeers(id: $id, organizationId: $organizationId){
+                ${userPeersQueryFragment}
+            }
+        }`;
+
+        const variables = {
+            id: profile.id,
+            organizationId: selectedMembership.organization.id
+        }
+
+        api.graphqlQuery(query, variables).then((result) => {
+            console.log('Result for query', result);
+            if(result && result.data && result.data.userPeers)
+                self.setState({ profile: {...profile, peers: { ...result.data.userPeers } }, loadingPeers: false })
+            else {
+                self.setState({ 
+                    profile: 
+                    {
+                        ...profile, 
+                        peers: {
+                            user: profile.id, 
+                            organization: selectedMembership.organization.id,
+                            allowEdit: true, 
+                            confirmedAt: null, 
+                            peers: [],
+                    } 
+                }, loadingPeers: false });
+            } 
+        }).catch((queryError) => {
+            console.error('Error querying user peers', queryError)
+            self.setState({ showError: true, message: 'Could not load the user peers due to an error', loadingPeers: false })            
+        });
+    }
+
+    onMembershipSelectionChanged(membership){        
+        this.setState({ selectedMembership: membership, loadingPeers: true }, () => {
+            this.refreshPeers()
+        });
+    }
+
     renderUser() {
         return <UserListItem user={this.state.profile} />
     }
-
+    
     inviteUserByEmail() {
         console.log('Inviting user', this.state.inviteEmail);
         const { api } = this.props;
@@ -196,9 +275,9 @@ class Profile extends Component {
                         rowData =>({
                             icon: 'repeat',
                             tooltip: 'Click to load the organigram for this membership',
-                            disabled: rowData.relationship === 'peer',
+                            disabled: rowData.organization === null,
                             onClick: (event, rowData) => {
-                                self.setState({ selectedMembership: rowData })
+                                self.onMembershipSelectionChanged(rowData)
                             },
 
                         })
@@ -210,15 +289,28 @@ class Profile extends Component {
     }
 
     renderPeers() {
-        console.log('render peers')
-        const { profile, selectedMembership, showResult, searching, showPeerSelection } = this.state
+        const { profile, selectedMembership, showResult, searching, showPeerSelection, loadingPeers } = this.state
         const { peers, __isnew } = profile;
         const { BasicModal, Loading } = this.componentDefs        
-        
+        const that = this;
         let content = null
 
-        if(searching === true) content = <Loading title="Looking for peers" />
-                 
+        if(loadingPeers === true) return (<Loading title="Looking for peers" />)
+               
+        //data field for table
+        const data = [];
+        
+        if (peers && peers.peers) {
+            peers.peers.map((entry, index) => {
+                data.push({
+                    ...entry.user,
+                    fullName: `${entry.user.firstName} ${entry.user.lastName}`,
+                    email: entry.user.email,
+                    relationship: entry.relationship
+                });
+            })
+        }
+
         const { classes, history, api, withPeers } = this.props;
         if (__isnew) return null
         if (withPeers === false) return null
@@ -230,29 +322,7 @@ class Profile extends Component {
         const setPeerRelationShip = (peer, relationship, cb = nilf) => {
             const mutation = gql(`mutation SetPeerRelationShip($id: String!, $peer: String!, $organization: String!, $relationship: PeerType){
                 setPeerRelationShip(id: $id, peer: $peer, organization: $organization, relationship: $relationship){
-                    user {
-                        id
-                        firstName
-                        lastName
-                    }
-                    organization {
-                        id
-                        name
-                        avatar                        
-                    },
-                    peers {
-                        user {
-                            id
-                            firstName
-                            lastName
-                        }
-                        isInternal
-                        inviteSent
-                        confirmed
-                        relationship                        
-                    }
-                    allowEdit
-                    lastConfirm
+                    ${userPeersQueryFragment}
                 }
             }`);
 
@@ -265,100 +335,79 @@ class Profile extends Component {
 
             api.graphqlMutation(mutation, variables).then((peerResult) => {
                 console.log('Set the user peer relationship', peerResult)
-                if(cb) cb(peerResult)
+                if(cb && peerResult.setPeerRelationShip) {                    
+                    cb(peerResult.setPeerRelationShip)
+                } else {
+                    that.refreshPeers()
+                } 
             }).catch((peerSetError) => {
                 console.error('Error setting peer relationship', peerSetError)
+                that.refreshPeers()
             })  
         };
  
 
         const removePeer = (peer) => {
-            const mutation = gql(`mutation removePeer($id: String!, $peer: String!, $organization: String!){
+
+            const mutation = gql(`mutation RemovePeer($id: String!, $peer: String!, $organization: String!){
                 removePeer(id: $id, peer: $peer, organization: $organization){
-                    user {
-                        id
-                        firstName
-                        lastName
-                    }
-                    organization {
-                        id
-                        name
-                        avatar                        
-                    },
-                    peers {
-                        user {
-                            id
-                            firstName
-                            lastName
-                        }
-                        isInternal
-                        inviteSent
-                        confirmed
-                        relationship                        
-                    }
-                    allowEdit
-                    lastConfirm
+                    ${userPeersQueryFragment}
                 }
             }`);
 
             const variables = { 
-                id: this.state.profile.id,
+                id: that.state.profile.id,
                 peer: peer.id, 
-                organization: this.state.selectedMembership.organization.id,
+                organization: that.state.selectedMembership.organization.id,
             };
 
             api.graphqlMutation(mutation, variables).then((peerResult) => {
-                console.log('remove user peer relationship', peerResult)
+                console.log('removed user peer relationship', peerResult)
                 //if(cb) cb(peerResult)
+                that.refreshPeers()
             }).catch((peerSetError) => {
                 console.error('Error removing peer from member', peerSetError)
+                that.refreshPeers()
             })  
-        }
+        }        
 
-        const data = [];
-
-        if (peers && peers.peers) {
-            peers.peers.map((entry, index) => {
-                data.push({
-                    ...entry.user,
-                    fullName: `${entry.user.firstName} ${entry.user.lastName}`,
-                    email: entry.user.email,
-                    relationship: entry.relationship
-                });
-            })
-        }
+        const confirmPeers = () => {
+            console.log('Confirming peers for user', this.props, this.state)
+            const mutation = gql`mutation ConfirmPeers($id: String!, $organization: String!){
+                confirmPeers(id: $id, organization: $organization){
+                    ${userPeersQueryFragment}
+                }
+            }`;
+    
+            const variables = {
+                id: profile.id,
+                organization: selectedMembership.organization.id
+            };
+    
+            api.graphqlMutation(mutation, variables).then( result => {
+                if(result && result.data && result.data.confirmPeers) {
+                    that.setState({ profile: { ...profile, peers: {...profile.peers, ...result.data.confirmPeers } }}, that.refreshPeers)
+                }
+            }).catch( ex => {
+                console.error( 'Error confirming peers ', ex)
+                that.setState({ showMessage: true, message: 'An error occured confirming peer settings' })
+            });
+        };
 
         const setUserPeerSelection = (selection) => {
-            console.log('Set the user peer selection', selection);
-            debugger;
-            let updatedPeers = []
-            let found = false
-            if(peers && peers.peers){
-                peers.peers.map( p => { 
-                    if(p.user.id === selection.id) {
-                        found = true                        
-                    } else {
-                        updatedPeers.push({ ...p });
-                    }
-                });                                
-            }
-            
-            if(found === false) {
-                setPeerRelationShip(selection, 'peer', (result) => {                    
-                    console.log('Setting Peer Result', result);
-                    this.setState({ profile: { ...profile, peers: { ...peers, peers: updatedPeers } } })
-                })
-            }
-            
-            
+            console.log('Set the user peer selection', selection);                        
+            setPeerRelationShip(selection, 'peer', (result) => {
+                // that.setState({ profile: { ...profile, peers: { ...result }  } })
+                that.refreshPeers()
+            });
         };
 
         const acceptUserSelection = () => {
-            this.setState({ showPeerSelection: false });
+            that.setState({ showPeerSelection: false });
         }
 
         const editUserSelection = () => {
-            this.setState({ showPeerSelection: true });
+            that.setState({ showPeerSelection: true });
         }
 
         const membershipSelected = selectedMembership && 
@@ -366,8 +415,13 @@ class Profile extends Component {
         selectedMembership.organization.id;                         
 
         const closeSelection = () => {
-            this.setState({ showPeerSelection: false });
+            that.setState({ showPeerSelection: false });
         }
+
+        let excludedUsers = [profile.id]
+        
+        if(peers && peers.peers ) peers.peers.forEach( p => (excludedUsers.push(p.user.id)))
+
 
         return (
             <Fragment>                
@@ -377,19 +431,35 @@ class Profile extends Component {
                             <UserListWithSearchComponent 
                                 onUserSelect={setUserPeerSelection}
                                 onAcceptSelection={acceptUserSelection}
-                                organizationId={this.state.selectedMembership.organization.id}
-                                selected={peers && peers.peers ? peers.peers.map( p => p.user.id ) : []}
-                                multiSelect={true}                            
+                                organizationId={this.state.selectedMembership.organization.id}                                
+                                multiSelect={true}
+                                selected={excludedUsers}
+                                excluded={excludedUsers}
                             />                        
                     }               
                     {
                         !membershipSelected && 
-                        <Typography variant="body2">Select a membership with an organization organization to load peers</Typography> 
+                        <Paper className={this.props.classes.general}><Typography variant="body2">Select a membership with an organization organization to load peers</Typography></Paper> 
                     }
                     {
                         membershipSelected &&
                         !this.state.showPeerSelection && 
                         <MaterialTable
+                        components={{
+                            Toolbar: props => {
+                                return (
+                                    <div>
+                                        <MTableToolbar {...props}/>
+                                        <hr/>
+                                        <Typography className={peers.confirmedAt ? 
+                                            classNames([classes.confirmedLabel, classes.notConfirmed]) : 
+                                            classNames([classes.confirmedLabel, classes.confirmed]) } 
+                                            variant={"body1"}>{peers.confirmedAt ? `Last Confirmed: ${moment(peers.confirmedAt).format('DDD MMM YY')}` : 'Not Confirmed' }
+                                            </Typography>
+                                    </div>
+                                )
+                            } 
+                        }}
                         columns={[
                             { title: 'Delegate', field: 'fullName' },
                             { title: 'Email', field: 'email' },
@@ -400,7 +470,7 @@ class Profile extends Component {
                             },
                         ]}
                         data={data}
-                        title="User Peers"
+                        title={`User Peers in Organization ${selectedMembership.organization.name}`}
                         actions={[
                             rowData => ({
                                 icon: 'supervisor_account',
@@ -417,7 +487,7 @@ class Profile extends Component {
                                 disabled: rowData.relationship === 'peer',
                                 onClick: (event, rowData) => {
                                     console.log('Setting User Peer', { event, rowData });
-                                    setPeerRelationShip(rowData, 'manager')
+                                    setPeerRelationShip(rowData, 'peer')
                                 },
                             }),
                             rowData => ({
@@ -434,17 +504,17 @@ class Profile extends Component {
                                 tooltip: 'Delete user from peers',
                                 disabled: false,
                                 onClick: (event, rowData) => {
-                                    console.log('Delete user from peers', { event, rowData });
                                     removePeer(rowData);
                                 },
                             }),
                             {
                                 icon: 'check_circle',
-                                tooltip: 'Confirm peer selection',
+                                tooltip: peers.confirmedAt ? `Peers last confirmed at ${moment(peers.confirmedAt).format('DDD MMM YYYY')}` : 'Confirm peer selection',
                                 disabled: false,
                                 isFreeAction: true,
                                 onClick: (event, rowData) => {
                                     console.log('Confirm peers', { event, rowData });
+                                    confirmPeers()
                                 },
                             },
                             {
@@ -553,7 +623,7 @@ class Profile extends Component {
             <Grid item sm={12} xs={12} offset={4}>
                 <Paper className={classes.general}>
                     <form>
-                        <Typography variant='caption'>{profileTitle || 'My Profile'}</Typography>
+                        <Typography variant='h6'>{profileTitle || 'My Profile'}</Typography>
                         {avatarComponent}
                         <TextField {...defaultFieldProps} label='Name' value={firstName} helperText='Please use your given name' onChange={updateFirstname} />
                         <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText='Please use your given name' onChange={updateLastname} />
@@ -591,10 +661,12 @@ class Profile extends Component {
         super(props, context);
         this.onAvatarMouseOver = this.onAvatarMouseOver.bind(this);
         this.onAvatarMouseOut = this.onAvatarMouseOut.bind(this);
+        this.onMembershipSelectionChanged = this.onMembershipSelectionChanged.bind(this);
         this.windowResize = this.windowResize.bind(this);
         this.renderGeneral = this.renderGeneral.bind(this);
         this.renderPeers = this.renderPeers.bind(this);
         this.renderUser = this.renderUser.bind(this);
+        this.refreshPeers = this.refreshPeers.bind(this);
         this.renderMemberships = this.renderMemberships.bind(this);
         this.inviteUserByEmail = this.inviteUserByEmail.bind(this);
         this.renderModal = this.renderModal.bind(this)
@@ -603,8 +675,12 @@ class Profile extends Component {
             profile: { ...props.profile },
             avatarUpdated: false,
             showPeerSelection: false,
+            selectedMembership: null,
         };
-        this.componentDefs = props.api.getComponents(['core.BasicModal'])
+        this.componentDefs = props.api.getComponents([
+            'core.BasicModal', 
+            'core.Loading'
+        ])
         window.addEventListener('resize', this.windowResize);
     }
 }

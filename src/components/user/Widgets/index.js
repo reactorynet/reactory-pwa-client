@@ -302,6 +302,7 @@ export class UserListWithSearch extends Component {
           searchString={this.state.searchString} 
           skip={skip === true}
           selected={this.props.selected}
+          excluded={this.props.excluded}
           multiSelect={this.props.multiSelect === true || false} />
       </SingleColumnLayout>
     )

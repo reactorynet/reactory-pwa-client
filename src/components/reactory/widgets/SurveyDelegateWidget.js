@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import classnames from 'classnames';
 import om from 'object-mapper';
-import MaterialTable from 'material-table';
+import MaterialTable, { MTableToolbar } from 'material-table';
 import { isArray, isFunction } from 'lodash';
 import {
   Avatar,
@@ -25,9 +25,16 @@ import { nil } from '../../util';
 
 class SurveyDelegate extends Component {
   
+  static styles = theme => {
+    return {
+
+    }
+  }
+
   constructor(props, context){
     super(props, context);
     this.componentDefs = props.api.getComponents(['core.Loading', 'towerstone.SurveyDelegateWidget'])
+
   }
 
   render(){
@@ -65,6 +72,27 @@ class SurveyDelegates extends Component {
     formData: [],
   };
 
+  static styles = (theme) => {
+    return {
+      container: {
+        'margin': 'auto',
+        minWidth: '320px',
+        maxWidth: '100%'
+      },
+      delegateStatusNew: {
+        backgroundColor: 'cadetblue'
+      },
+      delegateStatusInviteSent: {
+        backgroundColor: 'aliceblue'
+      },
+      delegateStatusLaunched: {
+        backgroundColor: 'bisque',
+      },
+      delegateStatusComplete: {
+        backgroundColor: 'darkturquoise',
+      },
+    }
+  };
   
 
   constructor(props, context){
@@ -82,6 +110,7 @@ class SurveyDelegates extends Component {
       'towerstone.SurveyDelegateWidget', 
       'core.DropDownMenu', 
       'core.FullScreenModal',
+      'core.BasicModal',
       'core.UserListWithSearch',
       'core.Profile',
       'core.AssessmentList',
@@ -95,12 +124,20 @@ class SurveyDelegates extends Component {
     this.getActiveModalView = this.getActiveModalView.bind(this)
     this.addDelegateClicked = this.addDelegateClicked.bind(this)
 
+    this.sendCommunicationToDelegate = this.sendCommunicationToDelegate.bind(this)
+    this.launchSurveyForDelegate = this.launchSurveyForDelegate.bind(this)
+    this.removeDelegateFromSurvey = this.removeDelegateFormSurvey.bind(this)
+    this.doAction = this.doAction.bind(this)
+  }
+
+  componentDidCatch(error, info){
+    console.log('Error in SurveyDelegateWidget', {error, info})
   }
 
   getSecondaryAction(delegateEntry){
     const { DropDownMenu } = this.componentDefs;
     const onMenuItemSelect = (evt, menuItem) => {
-      console.log('trigger menu item', {menuItem, delegateEntry})
+      // console.log('trigger menu item', {menuItem, delegateEntry})
       switch(menuItem.id){
         case 'sendinvite': {
           this.sendInviteEmails(delegateEntry)
@@ -255,7 +292,7 @@ class SurveyDelegates extends Component {
       formData.map((delegateEntry) => {
         if(delegateEntry.delegate.id === userToAdd.id){
           //remove
-          found = delegateEntry          
+          found = delegateEntry
         } else {
           entries.push(delegateEntry)
         }        
@@ -304,23 +341,55 @@ class SurveyDelegates extends Component {
     this.setState({ modal: true, modalType: 'add' })
   }
 
+  doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...'){
+    const { api, formContext } = this.props;
+    const self = this;
+    const mutation = gql(`mutation SurveyDelegateAction($entryId: String!, $survey: String!, $delegate: String!, $action: String!, $inputData: Any){
+      surveyDelegateAction(entryId: $entryId, survey: $survey, delegate: $delegate, action: $action, inputData: $inputData){
+
+      }
+    }`);
+
+    const variables = {
+      survey: formContext.formData.id,
+      entryId: delegateEntry.id,
+      delegate: delegateEntry.delegate.id,
+      action      
+    };
+
+    const doMutation = () => {
+      api.graphqlMutation(mutation, variables).then((mutationResult) => {
+        console.log('Any Result From Mutation', mutationResult)        
+      }).catch((mutationError) => {
+        self.setState({ displayError: true, message: 'An error occured while ....', busy: false })
+      });
+    }
+
+    self.setState({ busy: true, message: busyMessage }, doMutation)    
+  }
+
+  sendCommunicationToDelegate(delegateEntry){
+    this.doAction(delegateEntry, 'sendInvite', {}, `Sending invite to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
+  }
+
+  launchSurveyForDelegate(delegateEntry){
+    this.doAction(delegateEntry, 'launch', {}, `Launching surveys for delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}`);
+  }
+
+  removeDelegateFromSurvey(delegateEntry){
+    this.doAction(delegateEntry, 'remove', {}, `Removing delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} from survey`);
+  }
+
   render(){
     const { formData, classes, api } = this.props;
     const { ErrorMessage } = this.componentDefs;
     const self = this;
     let data = [];
     formData.map((entry) => ( data.push({...entry})));
-    console.log('Rendering SurveyDelegateWidget', data);
+    // console.log('Rendering SurveyDelegateWidget', data);
     if(isArray(formData) === true){
       return (
-        <Paper>
-          <Toolbar>
-            <IconButton color="primary" onClick={this.sendInviteEmails}><Icon>mail</Icon></IconButton>
-            <IconButton color="primary" onClick={this.launchSurvey}><Icon>flight_take_off</Icon></IconButton>
-            <IconButton color="primary" onClick={this.stopSurvey}><Icon>flight_land</Icon></IconButton>
-            <IconButton color="primary" onClick={this.addDelegateClicked}><Icon>add</Icon></IconButton>
-          </Toolbar>
-          <hr/>
+        <Paper>                    
           <MaterialTable
             columns={[
                 {
@@ -345,14 +414,29 @@ class SurveyDelegates extends Component {
                 },                
             ]}                    
             data={data}
+            components={{
+              Toolbar: props => {
+
+                return (
+                  <div>
+                    <MTableToolbar {...props}/>
+                    <Toolbar>
+                      <IconButton color="primary" onClick={this.sendInviteEmails}><Icon>mail</Icon></IconButton>
+                      <IconButton color="primary" onClick={this.launchSurvey}><Icon>flight_take_off</Icon></IconButton>
+                      <IconButton color="primary" onClick={this.stopSurvey}><Icon>flight_land</Icon></IconButton>
+                      <IconButton color="primary" onClick={this.addDelegateClicked}><Icon>add</Icon></IconButton>
+                    </Toolbar>
+                  </div>
+                )
+              },
+            }}
             title="Delegates"
             actions={[
                 rowData =>({
                     icon: 'search',
                     tooltip: 'Click to view details for the delegate',
                     disabled: rowData.status === 'complete',
-                    onClick: (event, rowData) => {
-                      console.log('Action for row item');
+                    onClick: (event, rowData) => {                      
                       self.setState({ activeEntry: rowData, modal: true, modalType: 'detail' })
                     },
                 }),
@@ -361,7 +445,8 @@ class SurveyDelegates extends Component {
                   tooltip: 'Click to send invite',
                   disabled: rowData.status === 'complete',
                   onClick: (event, rowData) => {
-                    console.log('Send invite to delegate', rowData)
+                    console.log('Send invites for all confirmed delegates', rowData)
+                    self.sendCommunicationToDelegate(rowData)
                   }
                 }),
                 rowData => ({
@@ -369,9 +454,18 @@ class SurveyDelegates extends Component {
                   tooltip: 'Click to launch for delegate',
                   disabled: rowData.status === 'complete',
                   onClick: (event, rowData) => {
-                    console.log('Launch for delegate', rowData);
+                    self.launchSurveyForDelegate(rowData)
+                  }
+                }),
+                rowData => ({
+                  icon: 'trash',
+                  tooltip: 'Click to remove delegate from survey',
+                  disabled: rowData.status !== 'new',
+                  onClick: (event, rowData) => {
+                    self.removeDelegateFromSurvey(rowData)
                   }
                 })
+
             ]}/>         
           {self.getActiveModalView()}
         </Paper>
@@ -383,27 +477,6 @@ class SurveyDelegates extends Component {
   }
 }
 
-SurveyDelegates.styles = (theme) => {
-  return {
-    container: {
-      'margin': 'auto',
-      minWidth: '320px',
-      maxWidth: '100%'
-    },
-    delegateStatusNew: {
-      backgroundColor: 'cadetblue'
-    },
-    delegateStatusInviteSent: {
-      backgroundColor: 'aliceblue'
-    },
-    delegateStatusLaunched: {
-      backgroundColor: 'bisque',
-    },
-    delegateStatusComplete: {
-      backgroundColor: 'darkturquoise',
-    },
-  }
-};
 
 export const SurveyDelegatesComponent = compose(withApi, withTheme(), withStyles(SurveyDelegates.styles))(SurveyDelegates)
 

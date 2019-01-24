@@ -459,7 +459,7 @@ export const UserInbox = compose(withApi)(({ api }) => (
   </Query>));
 
 
-const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect }) => {  
+const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [] }) => {  
   return (
     <Query query={api.queries.Users.usersForOrganization} variables={{ id: organizationId, searchString }}>
       {({ loading, error, data } ) => {
@@ -483,11 +483,18 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
             {users.map((user, uid) => {
               const raiseUserSelected = () => {
                 if(onUserSelect) onUserSelect(user, uid)
-              }              
+              }
+              
+              const nilf = () => {};
+              
               const isSelected = intersection(selected, [user.id]).length === 1;
+              const exclude = intersection(excluded, [user.id]).length === 1;
               const displayText = `${user.firstName} ${user.lastName}`
+
+              if(exclude === true) return null
+
               return (
-                <ListItem selected={isSelected} onClick={raiseUserSelected} dense button key={uid}>
+                <ListItem selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf } dense button key={uid}>
                   <Avatar alt={displayText} src={getAvatar(user)} />
                   <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
                   { multiSelect === true ? 
