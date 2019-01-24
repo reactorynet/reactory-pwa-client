@@ -391,12 +391,8 @@ class KanbanDashboard extends Component {
                 </FullScreenModal>)            
         }
 
-        return (
-            <Grid
-                container
-                spacing={16}
-                className={classes.mainContainer}>
-                <Grid item md={12} sm={12} xs={12}>                    
+        const toolbarRow = (
+            <Grid item md={12} sm={12} xs={12}>                    
                     <AppBar position="static" color="default" className={classes.toolbar}>
                         <Toolbar>
                             <FormControl variant="outlined" className={classes.formControl}>
@@ -501,6 +497,14 @@ class KanbanDashboard extends Component {
                         </Toolbar>
                     </AppBar>
                 </Grid>
+        )
+
+        return (
+            <Grid
+                container
+                spacing={16}
+                className={classes.mainContainer}>
+                { false && toolbarRow }
                 <Grid item md={12} sm={12} xs={12}>
                     <Switch>
                         <Route exact path="/">

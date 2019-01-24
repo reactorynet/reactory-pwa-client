@@ -10,7 +10,6 @@ import {
   Paper,
   Typography,
   Toolbar,
-  List,
   Icon, 
   IconButton,
   Tooltip,
@@ -75,7 +74,7 @@ class SurveyDelegates extends Component {
   static styles = (theme) => {
     return {
       container: {
-        'margin': 'auto',
+        margin: 'auto',
         minWidth: '320px',
         maxWidth: '100%'
       },
@@ -109,8 +108,7 @@ class SurveyDelegates extends Component {
       'core.ErrorMessage', 
       'towerstone.SurveyDelegateWidget', 
       'core.DropDownMenu', 
-      'core.FullScreenModal',
-      'core.BasicModal',
+      'core.FullScreenModal',      
       'core.UserListWithSearch',
       'core.Profile',
       'core.AssessmentList',
@@ -126,12 +124,12 @@ class SurveyDelegates extends Component {
 
     this.sendCommunicationToDelegate = this.sendCommunicationToDelegate.bind(this)
     this.launchSurveyForDelegate = this.launchSurveyForDelegate.bind(this)
-    this.removeDelegateFromSurvey = this.removeDelegateFormSurvey.bind(this)
+    this.removeDelegateFromSurvey = this.removeDelegateFromSurvey.bind(this)
     this.doAction = this.doAction.bind(this)
   }
 
   componentDidCatch(error, info){
-    console.log('Error in SurveyDelegateWidget', {error, info})
+    console.error('Error in SurveyDelegateWidget', {error, info})
   }
 
   getSecondaryAction(delegateEntry){
@@ -289,7 +287,7 @@ class SurveyDelegates extends Component {
       console.log('Add user to delegates', { userToAdd, p: this.props });
       let found = null;
       const entries = [];
-      formData.map((delegateEntry) => {
+      formData.forEach((delegateEntry) => {
         if(delegateEntry.delegate.id === userToAdd.id){
           //remove
           found = delegateEntry
@@ -307,6 +305,11 @@ class SurveyDelegates extends Component {
 
     let component = null;
 
+    let excludedUsers = []
+    if(formData && isArray(formData)) {
+      excludedUsers = formData.map( entry => entry.delegate.id )
+    }
+
     switch(modalType){
       case 'add': {
         component = (
@@ -315,7 +318,8 @@ class SurveyDelegates extends Component {
             multiSelect={true}
             onUserSelect={userSelected}
             onAcceptSelection={closeModal}
-            selected={formData ? formData.map( e => e.delegate.id ): []}
+            selected={excludedUsers}
+            excluded={excludedUsers}
             businessUnitFilter={false}
             showFilters={false} />)
         break;
@@ -331,7 +335,7 @@ class SurveyDelegates extends Component {
       <FullScreenModal 
         open={this.state.modal === true} 
         onClose={closeModal} 
-        title={ activeEntry && activeEntry.delegate ? `Assessment Details: ${activeEntry.delegate.firstName} ${activeEntry.delegate.lastName}` : `Waiting for selection...` }>
+        title={ activeEntry && activeEntry.delegate ? `Assessment Details: ${activeEntry.delegate.firstName} ${activeEntry.delegate.lastName}` : `Make Selection` }>
         {component}
       </FullScreenModal>
     )
@@ -342,13 +346,38 @@ class SurveyDelegates extends Component {
   }
 
   doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...'){
+    console.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', {delegateEntry, action, inputData, busyMessage});
+    debugger
     const { api, formContext } = this.props;
     const self = this;
-    const mutation = gql(`mutation SurveyDelegateAction($entryId: String!, $survey: String!, $delegate: String!, $action: String!, $inputData: Any){
-      surveyDelegateAction(entryId: $entryId, survey: $survey, delegate: $delegate, action: $action, inputData: $inputData){
-
+    const mutation = gql`mutation SurveyDelegateAction($entryId: String!, $survey: String!, $delegate: String!, $action: String!, $inputData: Any){
+      surveyDelegateAction(entryId: $entryId, survey: $survey, delegate: $delegate, action: $action, inputData: $inputData) {
+        id
+        delegate {
+          id
+          firstName
+          lastName
+          email
+          avatar 
+        }
+        peers {
+          id
+        }        
+        notifications {
+          id
+        }
+        assessments {
+          id          
+        }
+        status
+        launched 
+        complete
+        removed
+        message
+        updatedAt        
+        lastAction
       }
-    }`);
+    }`;
 
     const variables = {
       survey: formContext.formData.id,
@@ -358,25 +387,33 @@ class SurveyDelegates extends Component {
     };
 
     const doMutation = () => {
+      console.log('SurveyDelegateWidget.doAction(...).doMutation()', {mutation, variables});
       api.graphqlMutation(mutation, variables).then((mutationResult) => {
-        console.log('Any Result From Mutation', mutationResult)        
+        console.log('DelegateEntry Result From Mutation', mutationResult)
+        if(mutationResult.data && mutationResult.data.surveyDelegateAction) {
+          const { assessments, complete, delegate, notifications, removed } = mutationResult.data.surveyDelegateAction;
+          self.setState({ displayError: false, message: '', busy: false })  
+        }
       }).catch((mutationError) => {
         self.setState({ displayError: true, message: 'An error occured while ....', busy: false })
       });
-    }
+    };
 
-    self.setState({ busy: true, message: busyMessage }, doMutation)    
+    this.setState({ busy: true, message: busyMessage }, () => {
+      console.log('State updated', new Date().valueOf()) 
+      doMutation(); 
+    });
   }
 
   sendCommunicationToDelegate(delegateEntry){
-    this.doAction(delegateEntry, 'sendInvite', {}, `Sending invite to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
+    this.doAction(delegateEntry, 'send-invite', {}, `Sending invite to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
   }
 
   launchSurveyForDelegate(delegateEntry){
     this.doAction(delegateEntry, 'launch', {}, `Launching surveys for delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}`);
   }
 
-  removeDelegateFromSurvey(delegateEntry){
+  removeDelegateFromSurvey(delegateEntry){    
     this.doAction(delegateEntry, 'remove', {}, `Removing delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} from survey`);
   }
 
@@ -409,14 +446,13 @@ class SurveyDelegates extends Component {
                 },
                 {
                     title: 'Status', render: (rowData) => {
-                        return rowData && rowData.status ? rowData.status : 'New'
+                        return rowData && rowData.status ? rowData.status.toUpperCase() : 'NEW'
                     }
                 },                
             ]}                    
             data={data}
             components={{
               Toolbar: props => {
-
                 return (
                   <div>
                     <MTableToolbar {...props}/>
@@ -458,7 +494,7 @@ class SurveyDelegates extends Component {
                   }
                 }),
                 rowData => ({
-                  icon: 'trash',
+                  icon: 'delete_outline',
                   tooltip: 'Click to remove delegate from survey',
                   disabled: rowData.status !== 'new',
                   onClick: (event, rowData) => {
