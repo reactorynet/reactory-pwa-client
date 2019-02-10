@@ -24,7 +24,7 @@ const AssessmentItemStyles = (theme) => {
 }
 
 const AssessmentListItem = compose(withApi, withStyles(AssessmentItemStyles), withTheme())((props) => {
-  
+
   const { assessment, api } = props;
   const avatarSrc = api.getAvatar(assessment.assessor);
   const { assessor } = assessment;
@@ -34,8 +34,8 @@ const AssessmentListItem = compose(withApi, withStyles(AssessmentItemStyles), wi
       <ListItemAvatar>
         <Avatar src={avatarSrc} />
       </ListItemAvatar>
-      <ListItemText title={`${assessor.firstName} ${assessor.lastName}`} />
-      <ListItemSecondaryAction> 
+      <ListItemText primary={`${assessor.firstName} ${assessor.lastName}`} secondary={assessor.email} />
+      <ListItemSecondaryAction>
       </ListItemSecondaryAction>
     </ListItem>
   );
@@ -61,7 +61,7 @@ class AssessmentTable extends Component {
     }
   };
 
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context)
     this.state = {
 
@@ -69,17 +69,44 @@ class AssessmentTable extends Component {
   }
 
 
-  render(){
-    const data = []    
+  render() {
+    let rows = this.props.assessments.map(e => { return { ...e } });
+
     return (
       <MaterialTable
-          columns={[
-              { title: 'Assessor', field: 'fullName' },              
-              { title: 'Email', field: 'email' },
-              { title: 'Status', field: 'status' }              
-          ]}
-          data={data}
-          title="Assessments"          
+        columns={[
+          {
+            title: 'Avatar', render: (rowData) => {
+              return rowData && rowData.assessor ? <Avatar src={this.props.api.getAvatar(rowData.assessor)} /> : 'No Delegate'
+            }
+          },
+          {
+            title: 'Assessor', render: (dataRow) => {
+              return `${dataRow.assessor.firstName} ${dataRow.assessor.lastName}`
+            }
+          },
+          {
+            title: 'Email', render: (dataRow) => {
+              return `${dataRow.assessor.email}`
+            }
+          },
+          { title: 'Complete', render: (dataRow) => {
+              return dataRow.complete === true ? 'Yes' : 'No';
+          } }
+        ]}
+        data={rows}
+        actions={[
+          (dataRow) => {
+            return {
+              icon: 'delete_outline',
+              tooltip: 'Click to remove assessment for delegate',
+              onClick: (event, rowData) => {
+                console.log('Delete assessment', rowData);
+              }
+            }
+          },          
+        ]}
+        title="Assessments"
       />
     )
   }
@@ -96,7 +123,7 @@ class AssessmentList extends Component {
   };
 
   static defaultProps = {
-    assessments: [], 
+    assessments: [],
     canAdd: false,
   };
 
@@ -106,7 +133,7 @@ class AssessmentList extends Component {
     }
   };
 
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context)
     this.state = {
 
@@ -116,19 +143,19 @@ class AssessmentList extends Component {
     this.getEmptyListItem = this.getEmptyListItem.bind(this)
   }
 
-  getNewAssessmentWidget(){
-    return this.props.canAdd && 
-    (
-      <ListItem key={-1} dense={true}>      
-        <ListItemText primary={'Click here to add a new Assessment'} />
-        <ListItemSecondaryAction>
-          <Icon>add</Icon>
-        </ListItemSecondaryAction>
-      </ListItem>
-    );
+  getNewAssessmentWidget() {
+    return this.props.canAdd &&
+      (
+        <ListItem key={-1} dense={true}>
+          <ListItemText primary={'Click here to add a new Assessment'} />
+          <ListItemSecondaryAction>
+            <Icon>add</Icon>
+          </ListItemSecondaryAction>
+        </ListItem>
+      );
   }
 
-  getEmptyListItem(){
+  getEmptyListItem() {
     return (
       <ListItem key={0} dense={true}>
         <ListItemText primary={'There are no assessments available'} />
@@ -136,17 +163,17 @@ class AssessmentList extends Component {
           <Icon>add</Icon>
         </ListItemSecondaryAction>
       </ListItem>
-  );
+    );
   }
 
-  render(){
+  render() {
 
-    return (      
-      <List>        
+    return (
+      <List>
         {this.props.assessments.map((assessment, ids) => {
           return <AssessmentListItem assessment={assessment} key={ids} onClick={this.props.onItemClick} />
         })}
-        { this.getNewAssessmentWidget() }
+        {this.getNewAssessmentWidget()}
       </List>
     );
   }

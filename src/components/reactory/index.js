@@ -191,17 +191,17 @@ class ReactoryComponent extends Component {
     })
   }
 
-  componentWillUpdate(nextProps, nextState){
-  //  console.log('componentWillUpdate ReactoryForm', {nextProps, nextState, formRef: this.formRef});
+  //componentWillUpdate(nextProps, nextState){
+     //console.log('b - componentWillUpdate ReactoryForm', {nextProps, nextState, formRef: this.formRef});
     //if(this.state.dirty === false) {
     //  nextState.formData = {...nextProps.data, ...nextProps.formData};
     //  return true;
     //}    
-  }
+  //}
 
-  componetDidUpdate(props, state){
+  //componetDidUpdate(props, state){
 
-  }
+  //}
 
   formDef(){
     if(this.state.formDef) return this.state.formDef;
@@ -252,16 +252,19 @@ class ReactoryComponent extends Component {
   }
 
   renderForm(formData, onSubmit, patch = {}) {
-    //debugger;
+    // debugger;
     // console.log('rendering form with data', formData);
     const { loading, forms } = this.state;
     const self = this;
     if (loading) return (<p>loading form schema</p>);
     if (forms.length === 0) return (<p>no forms defined</p>);
     const updateFormState = (formPost) => {
-      // console.log('updating form state', { formPost });
+      console.log('a - updating form state', { formPost });
       self.setState({ formData: formPost.formData, dirty: true, ...patch }, ()=>{
-        if(self.props.onChange) self.props.onChange(self.state.formData)
+        if(self.props.onChange) {
+          console.log('b - firing onChange', { f: self.props.onChange });
+          self.props.onChange(formPost.formData)
+        } 
       })
     };
 
@@ -270,7 +273,7 @@ class ReactoryComponent extends Component {
       id: uuid(),
       ...this.props,
       ...formDef,
-      // onChange: updateFormState,
+      onChange: updateFormState,
       formData: formData,
       ErrorList: MaterialErrorListTemplate,      
       onSubmit: onSubmit || this.onSubmit,      

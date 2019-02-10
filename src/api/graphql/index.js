@@ -427,6 +427,7 @@ query assesmentWithId($id: String) {
 		createdAt
     complete
     selfAssessment
+    overdue
 		assessor {
 			id
 			username
@@ -442,13 +443,18 @@ query assesmentWithId($id: String) {
 			avatar
 		}
 		survey {
+      id
 			title
 			startDate
 			endDate
+      surveyType
+      status
 			leadershipBrand {
+        id
 				title
 				description
 				scale {
+          id
 					title
           min
           max
@@ -472,6 +478,7 @@ query assesmentWithId($id: String) {
 			}
 		}
 		ratings {
+      id
 			quality {
 				id
 				title
@@ -484,6 +491,8 @@ query assesmentWithId($id: String) {
 			}
 			rating
 			comment
+      custom
+      updatedAt
 		}
 	}
 }
@@ -497,28 +506,32 @@ query UserSurveys($id: String) {
 		createdAt
     complete
     selfAssessment
+    overdue
 		assessor {
 			id
-			username
+			email
 			firstName
 			lastName
 			avatar
 		}
 		delegate {
 			id
-			username
+			email
 			firstName
 			lastName
 			avatar
 		}
 		survey {
+      id
 			title
 			startDate
 			endDate
 			leadershipBrand {
+        id
 				title
 				description
 				scale {
+          id
 					title
 					entries {
 						rating
@@ -526,10 +539,12 @@ query UserSurveys($id: String) {
 					}
 				}
 				qualities {
+          id
 					title
 					description
 					ordinal
 					behaviours {
+            id
 						title
 						description
 						ordinal
@@ -538,6 +553,7 @@ query UserSurveys($id: String) {
 			}
 		}
 		ratings {
+      id
 			quality {
 				id
 				title

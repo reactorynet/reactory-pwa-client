@@ -218,6 +218,24 @@ export const componentRegistery = [
     version: '1.0.0',
   },
   {
+    nameSpace: 'towerstone',
+    name: 'TowerStone180Assessment',
+    component: require('./assess/DefaultView').default,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'towerstone',
+    name: 'TowerStone360Assessment',
+    component: require('./assess/DefaultView').default,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'plc',
+    name: 'PlcDefaultAssessment',
+    component: require('./assess/DefaultView').default,
+    version: '1.0.0',
+  },
+  {
     nameSpace: 'core',
     name: 'OrganizationLabelForId',
     component: require('./organization/OrganizationList').OrganizationLabelForIdComponent,

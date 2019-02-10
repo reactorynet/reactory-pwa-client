@@ -69,7 +69,7 @@ class UserSurvey extends Component {
         const { UserListItem, OwlyListItem } = this.componentDefs;
         const surveyCount = this.totalSurveys();
 
-        const AssessmentListItem = ({ assessment, key }) => {
+        const AssessmentListItem = ({ assessment, key }) => {          
             const { survey, delegate, assessor, selfAssessment, assessmentType } = assessment
             const listTitle = selfAssessment === true ? 'Self assessment' : `${delegate.firstName} ${delegate.lastName}`
             const goAssessment = () => {
@@ -112,12 +112,10 @@ class UserSurvey extends Component {
                     <Typography variant='caption' color='primary'>Current Surveys</Typography>
                     <Paper className={classes.general}>                        
                         {surveys.current.length > 0 && surveyCount > 0 ?
-                            <Fragment>                                
-                                <Typography>
-                                    The surveys listed below are surveys which are currently awaiting your feedback.  These are sorted by order of their closing date.
-                            </Typography>
+                            <Fragment>
                                 <List>
-                                    {surveys.overdue.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
+                                    <OwlyListItem message={"The surveys listed below are surveys which are currently awaiting your feedback.  These are sorted by order of their closing date."} />
+                                    {surveys.current.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                 </List>
                             </Fragment> : <OwlyListItem message={"There are no assessments here"} />}
                     </Paper>
@@ -169,12 +167,15 @@ const UserSurveyComponent = ({ userId, api, onSurveySelect, minimal = true, show
                 };
 
                 data.userSurveys.forEach((assessment) => {
-                    if (assessment.complete === true && showComplete === true) surveys.complete.push(assessment)
-                    else {
-                        const now = moment();
-                        if (now.after(moment(assessment.survey.start)) === true) surveys.overdue.push(assessment);
-                        else surveys.current.push(assessment);
+                    //debugger;
+                    if(assessment) {
+                        if (assessment.complete === true && showComplete === true) surveys.complete.push(assessment)
+                        else {
+                            if(assessment.overdue && assessment.overdue === true) surveys.overdue.push(assessment);                                                    
+                            else surveys.current.push(assessment);
+                        }
                     }
+                    
                 });
 
                 return (<ThemedSurveyComponent surveys={surveys} minimal={minimal} showComplete={showComplete} />);

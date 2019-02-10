@@ -110,6 +110,8 @@ class ApplicationHeader extends Component {
   onLoginEvent = (evt) => this.forceUpdate();
 
   navigateTo(where = '/', toggleDrawer = false) {
+    console.log('Need to redirect', where);
+    debugger; //eslint-disable-line
     const {history} = this.props;
 
     if (toggleDrawer === true) {

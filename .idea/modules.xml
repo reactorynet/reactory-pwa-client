@@ -3,7 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/../assessor-api/assessor-api.iml" filepath="$PROJECT_DIR$/../assessor-api/assessor-api.iml" />
-      <module fileurl="file://$PROJECT_DIR$/assessor-client.iml" filepath="$PROJECT_DIR$/assessor-client.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/assessor-client.iml" filepath="$PROJECT_DIR$/.idea/assessor-client.iml" />
     </modules>
   </component>
 </project>

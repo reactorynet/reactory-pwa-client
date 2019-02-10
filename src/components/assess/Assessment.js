@@ -143,6 +143,14 @@ export class Survey {
     this._theme = value;
   }
 
+  static SurveyTypes = {
+    //enum: ['180', '360', 'plc', 'custom'],
+    TowerStone180: '180',
+    TowerStone360: '360',
+    PLCDefault: 'plc',
+    Custom: 'custom'
+  }
+
   toJSON(){
     return {
       title: this.title,

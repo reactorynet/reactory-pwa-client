@@ -4,7 +4,7 @@ import { compose } from 'redux';
 import classnames from 'classnames';
 import om from 'object-mapper';
 import MaterialTable, { MTableToolbar } from 'material-table';
-import { isArray, isFunction } from 'lodash';
+import { isArray, isFunction, sort, findIndex } from 'lodash';
 import {
   Avatar,
   Paper,
@@ -69,30 +69,7 @@ class SurveyDelegates extends Component {
 
   static defaultProps = {
     formData: [],
-  };
-
-  static styles = (theme) => {
-    return {
-      container: {
-        margin: 'auto',
-        minWidth: '320px',
-        maxWidth: '100%'
-      },
-      delegateStatusNew: {
-        backgroundColor: 'cadetblue'
-      },
-      delegateStatusInviteSent: {
-        backgroundColor: 'aliceblue'
-      },
-      delegateStatusLaunched: {
-        backgroundColor: 'bisque',
-      },
-      delegateStatusComplete: {
-        backgroundColor: 'darkturquoise',
-      },
-    }
-  };
-  
+  };  
 
   constructor(props, context){
     super(props, context)
@@ -102,7 +79,8 @@ class SurveyDelegates extends Component {
       modalType: 'add',
       busy: false,
       message: '',
-      activeTab: 'assessments'
+      activeTab: 'assessments',
+      formData: props.formData || []
     };
     this.componentDefs = props.api.getComponents([
       'core.ErrorMessage', 
@@ -112,6 +90,7 @@ class SurveyDelegates extends Component {
       'core.UserListWithSearch',
       'core.Profile',
       'core.AssessmentList',
+      'core.AssessmentTable'
     ]);
     this.getSecondaryAction = this.getSecondaryAction.bind(this)
     this.sendInviteEmails = this.sendInviteEmails.bind(this)
@@ -121,7 +100,7 @@ class SurveyDelegates extends Component {
     this.getDetailView = this.getDetailView.bind(this)
     this.getActiveModalView = this.getActiveModalView.bind(this)
     this.addDelegateClicked = this.addDelegateClicked.bind(this)
-
+    this.enabledDelegateForSurvey = this.enabledDelegateForSurvey.bind(this)
     this.sendCommunicationToDelegate = this.sendCommunicationToDelegate.bind(this)
     this.launchSurveyForDelegate = this.launchSurveyForDelegate.bind(this)
     this.removeDelegateFromSurvey = this.removeDelegateFromSurvey.bind(this)
@@ -203,7 +182,7 @@ class SurveyDelegates extends Component {
 
   getDetailView(delegateEntry){
     
-    const { Profile, AssessmentList } = this.componentDefs
+    const { Profile, AssessmentList, AssessmentTable } = this.componentDefs
     const { activeTab, activeEntry } = this.state;
     console.log('Getting detailed view', activeEntry);
 
@@ -220,7 +199,7 @@ class SurveyDelegates extends Component {
         </Tabs>
         { activeTab === 'assessments' && 
           <TabContainer>
-            <AssessmentList assessments={activeEntry.assessments} />
+            <AssessmentTable assessments={activeEntry.assessments} />
           </TabContainer>
         }
         { activeTab === 'user' && 
@@ -234,9 +213,9 @@ class SurveyDelegates extends Component {
 
   getActiveModalView(){
     const { FullScreenModal, UserListWithSearch } = this.componentDefs;
-    const { activeEntry, modal, modalType } = this.state;    
-    const { formContext, formData, onChange, api } = this.props;
-
+    const { activeEntry, modal, modalType, formData } = this.state;    
+    const { formContext, onChange, api } = this.props;
+    const self = this;
     const closeModal = () => { 
       this.setState({modal: false}, () => {
       
@@ -281,33 +260,18 @@ class SurveyDelegates extends Component {
       });
     }
 
-    
-
     const userSelected = (userToAdd ) => {
       console.log('Add user to delegates', { userToAdd, p: this.props });
-      let found = null;
-      const entries = [];
-      formData.forEach((delegateEntry) => {
-        if(delegateEntry.delegate.id === userToAdd.id){
-          //remove
-          found = delegateEntry
-        } else {
-          entries.push(delegateEntry)
-        }        
-      });
-
-      if(nil(found) === false) {
-        entries.push({ ...found, removed: true })
-      }
-
-      if(isFunction(onChange) === true) onChange(entries)            
+      self.doAction({ id: "", delegate: userToAdd }, "add"); 
     };
 
     let component = null;
 
-    let excludedUsers = []
+    let excludedUsers = [];
     if(formData && isArray(formData)) {
-      excludedUsers = formData.map( entry => entry.delegate.id )
+      excludedUsers = formData.map( entry =>  {
+        if(entry && entry.delegate ) return entry.delegate.id;
+      })
     }
 
     switch(modalType){
@@ -315,7 +279,7 @@ class SurveyDelegates extends Component {
         component = (
           <UserListWithSearch 
             organizationId={formContext.organizationId}
-            multiSelect={true}
+            multiSelect={false}
             onUserSelect={userSelected}
             onAcceptSelection={closeModal}
             selected={excludedUsers}
@@ -326,6 +290,7 @@ class SurveyDelegates extends Component {
       }
       case 'detail':
       default: {
+        if(activeEntry === null) return null;
         component = this.getDetailView();
         break;
       }
@@ -335,7 +300,7 @@ class SurveyDelegates extends Component {
       <FullScreenModal 
         open={this.state.modal === true} 
         onClose={closeModal} 
-        title={ activeEntry && activeEntry.delegate ? `Assessment Details: ${activeEntry.delegate.firstName} ${activeEntry.delegate.lastName}` : `Make Selection` }>
+        title={ activeEntry && activeEntry.delegate ? `Assessment Details: ${activeEntry.delegate.firstName} ${activeEntry.delegate.lastName}` : `Select Delegates For Survey` }>
         {component}
       </FullScreenModal>
     )
@@ -347,7 +312,6 @@ class SurveyDelegates extends Component {
 
   doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...'){
     console.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', {delegateEntry, action, inputData, busyMessage});
-    debugger
     const { api, formContext } = this.props;
     const self = this;
     const mutation = gql`mutation SurveyDelegateAction($entryId: String!, $survey: String!, $delegate: String!, $action: String!, $inputData: Any){
@@ -378,9 +342,9 @@ class SurveyDelegates extends Component {
         lastAction
       }
     }`;
-
+    
     const variables = {
-      survey: formContext.formData.id,
+      survey: this.props.formContext.surveyId,
       entryId: delegateEntry.id,
       delegate: delegateEntry.delegate.id,
       action      
@@ -391,8 +355,16 @@ class SurveyDelegates extends Component {
       api.graphqlMutation(mutation, variables).then((mutationResult) => {
         console.log('DelegateEntry Result From Mutation', mutationResult)
         if(mutationResult.data && mutationResult.data.surveyDelegateAction) {
-          const { assessments, complete, delegate, notifications, removed } = mutationResult.data.surveyDelegateAction;
-          self.setState({ displayError: false, message: '', busy: false })  
+          //debugger;
+          let formData = [...self.state.formData]  
+          if(action === "add") {
+            formData.push({...mutationResult.data.surveyDelegateAction});
+          } else {
+            const indexToUpdate = findIndex(self.state.formData, {'id': delegateEntry.id });          
+            formData[indexToUpdate] = {...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction };
+          }
+          
+          self.setState({ displayError: false, message: '', busy: false, formData });
         }
       }).catch((mutationError) => {
         self.setState({ displayError: true, message: 'An error occured while ....', busy: false })
@@ -413,18 +385,25 @@ class SurveyDelegates extends Component {
     this.doAction(delegateEntry, 'launch', {}, `Launching surveys for delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}`);
   }
 
-  removeDelegateFromSurvey(delegateEntry){    
-    this.doAction(delegateEntry, 'remove', {}, `Removing delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} from survey`);
+  removeDelegateFromSurvey(delegateEntry, permanent){    
+    this.doAction(delegateEntry, 'remove', { permanent }, `Removing delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} from survey`);
+  }
+
+  enabledDelegateForSurvey(delegateEntry){
+    this.doAction(delegateEntry, 'enable', {}, `Adding delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} from survey`);
   }
 
   render(){
-    const { formData, classes, api } = this.props;
+    const { classes, api } = this.props;
     const { ErrorMessage } = this.componentDefs;
+    const { formData } = this.state;
     const self = this;
     let data = [];
-    formData.map((entry) => ( data.push({...entry})));
-    // console.log('Rendering SurveyDelegateWidget', data);
-    if(isArray(formData) === true){
+    formData.map((entry) => { 
+      if(entry.delegate && entry.delegate.id) data.push({...entry}) 
+    });
+    console.log('Rendering SurveyDelegateWidget', data);
+    if(isArray(data) === true){
       return (
         <Paper>                    
           <MaterialTable
@@ -442,6 +421,11 @@ class SurveyDelegates extends Component {
                 {
                   title: 'Email', render: (rowData) => {
                       return rowData && rowData.delegate ? `${rowData.delegate.email}`  : 'No Delegate'
+                  }
+                },
+                {
+                  title: 'Message', render: (rowData) => {
+                    return rowData && rowData.message ? rowData.message : 'No Message'
                   }
                 },
                 {
@@ -468,40 +452,73 @@ class SurveyDelegates extends Component {
             }}
             title="Delegates"
             actions={[
-                rowData =>({
+                rowData => {
+                  if(rowData.removed === true) return null;
+
+                  return {
                     icon: 'search',
                     tooltip: 'Click to view details for the delegate',
-                    disabled: rowData.status === 'complete',
                     onClick: (event, rowData) => {                      
                       self.setState({ activeEntry: rowData, modal: true, modalType: 'detail' })
-                    },
-                }),
-                rowData => ({
-                  icon: 'mail',
-                  tooltip: 'Click to send invite',
-                  disabled: rowData.status === 'complete',
-                  onClick: (event, rowData) => {
-                    console.log('Send invites for all confirmed delegates', rowData)
-                    self.sendCommunicationToDelegate(rowData)
+                    }
+                  }                  
+                },
+                rowData => {
+                  if(rowData.removed === true) return null; 
+                  
+                  return {
+                    icon: 'mail',
+                    tooltip: 'Click to send invite',
+                    disabled: rowData.status === 'complete',
+                    onClick: (event, rowData) => {
+                      console.log('Send invites for all confirmed delegates', rowData)
+                      self.sendCommunicationToDelegate(rowData)
+                    }
                   }
-                }),
-                rowData => ({
-                  icon: 'flight_takeoff',
-                  tooltip: 'Click to launch for delegate',
-                  disabled: rowData.status === 'complete',
-                  onClick: (event, rowData) => {
-                    self.launchSurveyForDelegate(rowData)
+                },
+                rowData => {
+                  if(rowData.removed === true) return null; 
+                  
+                  return {
+                    icon: 'flight_takeoff',
+                    tooltip: 'Click to launch for delegate',
+                    disabled: rowData.status === 'complete',
+                    onClick: (event, rowData) => {
+                      self.launchSurveyForDelegate(rowData)
+                    }
                   }
-                }),
-                rowData => ({
-                  icon: 'delete_outline',
-                  tooltip: 'Click to remove delegate from survey',
-                  disabled: rowData.status !== 'new',
-                  onClick: (event, rowData) => {
-                    self.removeDelegateFromSurvey(rowData)
+                },
+                rowData => {
+                  if(rowData.removed === true) {
+                    return {
+                      icon: 'restore',
+                      tooltip: 'Click to re-add user to survey',
+                      disabled: rowData.status === 'complete',
+                      onClick: (event, rowData) => {
+                        self.enabledDelegateForSurvey(rowData)
+                      }  
+                    }
+                  }; 
+                  
+                  return {
+                    icon: 'delete_outline',
+                    tooltip: 'Click to remove / disable delegate in survey',                    
+                    onClick: (event, rowData) => {
+                      self.removeDelegateFromSurvey(rowData)
+                    }
                   }
-                })
-
+                },
+                rowData => {
+                  if(rowData.removed === false) return null;
+                  
+                  return {
+                    icon: 'delete_outline',
+                    tooltip: 'Click to completely remove the delegate from the survey',                    
+                    onClick: (event, rowData) => {
+                      self.removeDelegateFromSurvey(rowData, true)
+                    }
+                  }
+                }                                
             ]}/>         
           {self.getActiveModalView()}
         </Paper>
@@ -512,6 +529,29 @@ class SurveyDelegates extends Component {
     
   }
 }
+
+
+SurveyDelegates.styles = (theme) => {
+  return {
+    container: {
+      margin: 'auto',
+      minWidth: '320px',
+      maxWidth: '100%'
+    },
+    delegateStatusNew: {
+      backgroundColor: 'cadetblue'
+    },
+    delegateStatusInviteSent: {
+      backgroundColor: 'aliceblue'
+    },
+    delegateStatusLaunched: {
+      backgroundColor: 'bisque',
+    },
+    delegateStatusComplete: {
+      backgroundColor: 'darkturquoise',
+    },
+  }
+};
 
 
 export const SurveyDelegatesComponent = compose(withApi, withTheme(), withStyles(SurveyDelegates.styles))(SurveyDelegates)

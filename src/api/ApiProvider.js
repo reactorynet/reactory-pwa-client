@@ -154,7 +154,7 @@ export class ReactoryApi extends EventEmitter {
     }
 
     loadComponent(Component, props, target){        
-        debugger
+        // debugger
         if(!Component) Component = () => (<p>No Component Specified</p>)        
         attachComponent(Component, props, target);
     }

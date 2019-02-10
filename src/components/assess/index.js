@@ -1,38 +1,107 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
+import { withRouter } from 'react-router';
+import { compose } from 'redux';
+import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { Survey } from './Assessment';
+import { Typography } from '@material-ui/core';
+import { withStyles, withTheme} from '@material-ui/core/styles';
+import { ReactoryApi, withApi } from '../../api/ApiProvider';
+import { nil } from '../util';
 
 
-export default class Assessment extends Component {
+const InvalidSurveyTypeComponent = (props, context) => {
+    return <Typography>The survey type {props.survey.surveyType} is not supported</Typography>
+};
+
+class AssessmentWrapper extends Component {
     constructor(props, context) {
         super(props, context);
-
-        this.handleRequestClose = this.handleRequestClose.bind(this);
-        this.handleTouchTap = this.handleTouchTap.bind(this);
-
         this.state = {
             open: false,
+            assessment: props.assessment || null
         };
+
+        this.componentDefs = props.api.getComponents([
+            'towerstone.OwlyListItem',
+            'towerstone.TowerStone360Assessment', 
+            'towerstone.TowerStone180Assessment', 
+            'plc.PlcDefaultAssessment'
+        ]);
+    }
+    static propTypes = {
+        api: PropTypes.instanceOf(ReactoryApi).isRequired,
+        survey: PropTypes.object,
+        assessment: PropTypes.object,
+        theme: PropTypes.object,        
     }
 
-    handleRequestClose() {
-        this.setState({
-            open: false,
-        });
+    static defaultProps = {
+        api: null,        
+        theme: null,
+        assessment: null,
+        survey: null
     }
 
-    handleTouchTap() {
-        this.setState({
-            open: true,
-        });
-    }
-
-    render() {
-        const { theme } = this.props;
-        let AssessmentComponent = theme.content.assessmentComponent;
+    renderQuery() {
+        const { match, api } = this.props;
+        const self = this;
         
+        if(match.params.length === 0) return <p>No Assesment Id</p>
+        const assessmentId = match.params[0];                    
         return (
-            <AssessmentComponent muiTheme={theme}/>                
-        )
+        <Query query={api.queries.Assessments.assessmentWithId} variables={{ id: assessmentId }} >
+            {({ loading, error, data}) => {
+                console.log('Rendering query component', { loading, error, data });
+            if(loading === true) return (<p>Loading assessment data, please wait</p>);
+            if(nil(error) === false) return (<p>Error while loading assessment ${error.message}</p>);
+            if(data && data.assessmentWithId) {
+                const assessment = { ...data.assessmentWithId };                
+                self.setState({assessment: assessment})
+                return (<Typography>Loaded, rendering...</Typography>);                                                         
+            } else {
+                return (<Typography>Could not load assessment</Typography>);
+            } 
+            }}
+        </Query>);                                       
+    }
+
+    render(){
+
+        const { assessment } = this.state;
+        if(assessment === null) return this.renderQuery();
+
+        const { TowerStone180Assessment, TowerStone360Assessment, PlcDefaultAssessment } = this.componentDefs;
+        let AssessmentComponent = null;                
+        switch(assessment.survey.surveyType){
+            case Survey.SurveyTypes.TowerStone180: {
+                AssessmentComponent = TowerStone180Assessment;
+                break;                                
+            }
+            case Survey.SurveyTypes.TowerStone360: {
+                AssessmentComponent = TowerStone360Assessment;
+                break;
+            }
+            case Survey.SurveyTypes.PLCDefault: {
+                AssessmentComponent = PlcDefaultAssessment;
+                break;
+            }
+            default: {
+                AssessmentComponent = InvalidSurveyTypeComponent;
+                break;
+            }
+        }
+
+
+        return <AssessmentComponent survey={assessment.survey} assessment={assessment} />
     }
 }
 
-//export default withTheme()(Assessment);
+const AssessmentWrapperComponent = compose(
+    withApi,
+    withRouter,
+    withStyles(AssessmentWrapper.styles),
+    withTheme()
+  )(AssessmentWrapper);
+
+  export default AssessmentWrapperComponent;

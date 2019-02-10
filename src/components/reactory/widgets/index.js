@@ -20,3 +20,4 @@ export const ProgressWidget = require('./ProgressWidget').ProgressWidgetComponen
 export const SurveyDelegateWidget = require('./SurveyDelegateWidget').SurveyDelegateComponent;
 export const SurveyDelegatesWidget = require('./SurveyDelegateWidget').SurveyDelegatesComponent;
 export const UserListItemWidget = require('../../user/Lists/index').default.UserListItem;
+export const MaterialTableWidget = require('./MaterialTableWidget').default;

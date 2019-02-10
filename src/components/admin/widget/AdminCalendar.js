@@ -64,7 +64,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { withApollo, Query, Mutation } from 'react-apollo';
 import { UserSearchInputComponent, UserProfile } from '../../user';
 import { BrandListWithData } from '../../brands';
-import { withApi } from '../../../api/ApiProvider';
+import { withApi, ReactoryApi } from '../../../api/ApiProvider';
 import { omitDeep, getAvatar } from '../../util';
 import { flattenSelections } from 'apollo-utilities';
 // Setup the localizer by providing the moment (or globalize) Object
@@ -495,7 +495,8 @@ class AdminCalendar extends Component {
                 </Typography>
               </CardContent>
               <CardActions>
-                <Button size="small" onClick={this.learnMore}>MORE</Button>
+                <Button size="small" onClick={this.learnMore}><Icon>find_in_page</Icon>MORE</Button>
+                <Button size="small" onClick={this.deleteSurvey}><Icon>delete_forever</Icon>DELETE SURVEY</Button>
               </CardActions>
             </Card>
           </Paper>
@@ -533,7 +534,8 @@ class AdminCalendar extends Component {
   static propTypes = {
     organizationId: PropTypes.string,
     byOrganization: PropTypes.bool,
-    surveys: PropTypes.array
+    surveys: PropTypes.array,
+    api: PropTypes.instanceOf(ReactoryApi),
   }
 
   static defaultProps = {
@@ -544,6 +546,7 @@ class AdminCalendar extends Component {
 }
 
 const ThemedCalendar = compose(
+  withApi,
   withRouter,
   withTheme(),
   withStyles(CalendarStyles)

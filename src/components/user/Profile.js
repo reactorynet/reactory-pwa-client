@@ -454,7 +454,7 @@ class Profile extends Component {
                                         <Typography className={peers.confirmedAt ? 
                                             classNames([classes.confirmedLabel, classes.notConfirmed]) : 
                                             classNames([classes.confirmedLabel, classes.confirmed]) } 
-                                            variant={"body1"}>{peers.confirmedAt ? `Last Confirmed: ${moment(peers.confirmedAt).format('DDD MMM YY')}` : 'Not Confirmed' }
+                                            variant={"body1"}>{peers.confirmedAt ? `Last Confirmed: ${moment(peers.confirmedAt).format('DD-MM-YYYY')} (day-month-year)` : 'Not Confirmed' }
                                             </Typography>
                                     </div>
                                 )
