@@ -9,7 +9,7 @@ pipelines:
           - npm run build-towerstone
     - step:
         name: Deploy TowerStone to QA
-        deployment: statging   # can be test, staging or production
+        deployment: staging   # can be test, staging or production
         trigger: manual  # uncomment to make manual deployment
         script:
-          - rsync clvrz -e build/ $QA_DEPPLOY_ROOT/towerstone
+          - rsync clvrz -e build/ $QA_DEPLOY_ROOT/towerstone
