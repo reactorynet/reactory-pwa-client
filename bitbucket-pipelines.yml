@@ -3,13 +3,13 @@ pipelines:
   branches:
     develop:
     - step:
-        name: Install and Build
+        name: Install and Build TowerStone
         script:
           - npm install
           - npm run build-towerstone
     - step:
-        name: Deploy to QA
-        deployment: production   # can be test, staging or production
+        name: Deploy TowerStone to QA
+        deployment: statging   # can be test, staging or production
         trigger: manual  # uncomment to make manual deployment
         script:
-          - rsync clvrz -e build/ $PRODUCTION_DEPLOY_URL
+          - rsync clvrz -e build/ $QA_DEPPLOY_ROOT/towerstone
