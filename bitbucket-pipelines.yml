@@ -5,9 +5,9 @@ pipelines:
     - step:
         name: Install and Build
         script:
-          - yarn
-          - yarn build
-     - step:
+          - yarn install
+          - yarn build-towerstone
+    - step:
         name: Deploy to QA
         deployment: production   # can be test, staging or production
         trigger: manual  # uncomment to make manual deployment
