@@ -5,8 +5,8 @@ pipelines:
     - step:
         name: Install and Build
         script:
-          - yarn
-          - yarn build-towerstone
+          - npm install
+          - npm build-towerstone
     - step:
         name: Deploy to QA
         deployment: production   # can be test, staging or production
