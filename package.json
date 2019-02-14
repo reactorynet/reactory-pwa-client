@@ -11,6 +11,7 @@
     "apollo-client-preset": "^1.0.4",
     "apollo-link-context": "^1.0.8",
     "autoprefixer": "7.1.6",
+    "@babel/polyfill": "^7.2.5",
     "babel-cli": "^6.26.0",
     "babel-core": "6.26.0",
     "babel-eslint": "^8.0.1",
@@ -109,7 +110,7 @@
     "build-aot": "REACT_APP_TITLE=\"Age Of Teams\" REACT_APP_THEME=aot REACT_APP_CLIENT_KEY=aot node --max_old_space_size=2000000 scripts/build.js --env=production",
     "build-gw": "REACT_APP_TITLE=\"Payment Gateway\" REACT_APP_THEME=funisave-gw REACT_APP_CLIENT_KEY=funisave-gw node --max_old_space_size=2000000 scripts/build.js --env=production",
     "build": "REACT_APP_TITLE=Reactory REACT_APP_THEME=reactory REACT_APP_CLIENT_KEY=reactory node --max_old_space_size=2000000 scripts/build.js --env=production",
-    "build-all": "npm-run-all build build-towerstone build-plc build-aot build-gw",
+    "build-all": "npm-run-all build build-towerstone build-plc build-aot",
     "build-qa": "node --max_old_space_size=2000000 scripts/build.js --env=qa",
     "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom"
   },

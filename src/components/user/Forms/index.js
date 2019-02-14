@@ -49,6 +49,7 @@ import DefaultAvatar from '../../../assets/images/profile/default.png';
 import Profile from './../Profile';
 import Message from '../../message'
 import { omitDeep, getAvatar, CenteredContainer } from '../../util';
+import lodash from 'lodash';
 import styles from '../../shared/styles'
 
 
@@ -64,22 +65,21 @@ class Forgot extends Component {
       message: '',
       hasError: false,
       displayModal: false,
+      email: '',
     }
 
     this.onSubmit = this.onSubmit.bind(this);
     this.goBack = this.goBack.bind(this);
+    this.emailKeyPressHandler = this.emailKeyPressHandler.bind(this);
     this.componentRefs = props.api.getComponents([
       'core.Loading@1.0.0',
-      'core.DateSelector@1.0.0',
       'core.Layout@1.0.0',      
-      'core.BasicModal@1.0.0',
-      'forms.ForgotPasswordForm@1.0.0'
+      'core.BasicModal@1.0.0',      
     ]);
   }
 
-  onSubmit(form) {
-    const that = this;
-    this.props.api.forgot(form.formData).then((forgotResult) => {
+  onSubmit() {
+    const that = this;    this.props.api.forgot({ email: this.state.email }).then((forgotResult) => {
       that.setState({ mailSent: true })
     }).catch((error) => {
       that.setState({ hasError: true, message: 'Could not send an email. If this problem persists please contact our helpdesk.' })
@@ -90,11 +90,18 @@ class Forgot extends Component {
     this.props.history.goBack();
   }
 
+  emailKeyPressHandler(keyPressEvent){
+    if(keyPressEvent.charCode === 13){
+      this.onSubmit();
+    }
+  }
+
   render() {
 
+    const { emailKeyPressHandler } = this;
+
     const {
-      BasicModal,
-      ForgotPasswordForm
+      BasicModal,      
     } = this.componentRefs
 
     if (this.state.mailSent) {
@@ -105,16 +112,38 @@ class Forgot extends Component {
       return (<div><Typography variant="heading">{this.state.message}</Typography></div>);
     }
 
-    const beforeComponent = (<div className={this.props.classes.logo} style={{ marginBottom: '16px' }}></div>)
-    
+    const beforeComponent = (<div className={this.props.classes.logo} style={{ marginBottom: '16px', marginTop: '20%' }}></div>)
+    const updateEmailAddress = e => this.setState({ email: e.target.value })
     return (
-      <CenteredContainer classNames={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto' }}>
-        <ForgotPasswordForm before={beforeComponent} onSubmit={this.onSubmit}>
-          <Button type="button" onClick={this.goBack} variant="flat"><Icon>keyboard_arrow_left</Icon>&nbsp;BACK</Button>
-          <Tooltip title="Click to send a reset email">
-            <Fab type="submit" variant="rounded" color="primary" ><Icon>send</Icon></Fab>
-          </Tooltip>                    
-        </ForgotPasswordForm>
+      <CenteredContainer classNames={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto'  }}>
+        {beforeComponent}
+        <Paper style={{padding: '16px'}}>
+          <Grid container>            
+            <Grid item xs={12}>
+              <TextField 
+                onChange={updateEmailAddress} 
+                onKeyPress={emailKeyPressHandler}
+                value={this.state.email} 
+                label="Email"  
+                fullWidth={true} 
+                helperText="Enter your email and click the send button below to start the reset process for your account"
+                style={{marginBottom: '50px'}}
+                inputProps={{ 
+                  inputProps:{
+                    onKeyPress: emailKeyPressHandler
+                  }
+                 }}
+                />
+            </Grid>
+            <Grid item xs={12}>
+              <Button type="button" onClick={this.goBack} variant="flat"><Icon>keyboard_arrow_left</Icon>&nbsp;BACK</Button>
+              <Tooltip title="Click to send a reset email">
+                <Fab onClick={this.onSubmit} variant="rounded" color="primary" ><Icon>send</Icon></Fab>
+              </Tooltip>                    
+            </Grid>
+          </Grid>
+          
+        </Paper>
       </CenteredContainer>
     )
   }
@@ -141,49 +170,61 @@ class ResetPassword extends Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
-      formData: { email: '', password: '', passwordConfirm: '', authToken: localStorage.getItem('auth_token') },
+      formData: { 
+        email: props.api.getUser().email,
+        authToken: props.api.queryObject.auth_token,
+        password: '', 
+        passwordConfirm: '', 
+        authToken: localStorage.getItem('auth_token') 
+      },
       message: '',
       hasError: false,
-    }
+      passwordUpdated: false,
 
+    }
     this.onSubmit = this.onSubmit.bind(this);
+    this.componentDefs = props.api.getComponents([
+      'forms.ResetPasswordForm', 
+      'core.BasicModal'
+    ]);
   }
 
   onSubmit(form) {
     const that = this;
+    console.log('Submiting Password Change', form);
     this.props.api.resetPassword(form.formData).then((forgotResult) => {
       console.log('Forgot password has been triggered', forgotResult);
-      that.setState({ mailSent: true })
+      that.setState({ passwordUpdated: true, message: 'Your password has been updated, you will be redirected to the dashboard momentarily' }, ()=>{
+        setTimeout(()=>{
+          that.props.history.push('/')
+        }, 1500)
+      });
+
     }).catch((error) => {
       console.error('Error sending forgot password email to user', error);
-      that.setState({ hasError: true, message: 'Could not send an email. If this problem persists please contact our helpdesk.' })
-    })
-  }
-
-  onChange(formData) {
-    console.log('formData changed', formData)
-    this.setState({ formData });
+      //that.setState({ hasError: true, message: 'Could not send an email. If this problem persists please contact our helpdesk.' })
+      that.setState({ passwordUpdated: false, message: 'Your could not be updated, please try again. If this problem persists please contact the administrator', hasError: true });
+    });
   }
 
   render() {
+    const { ResetPasswordForm, BasicModal } = this.componentDefs;
 
-    if (this.state.mailSent) {
-      return (<div><Typography variant="body1" value="An email has been sent with instructions to reset your password. Please allow a few minutes for delivery" /></div>)
+    if (this.state.passwordUpdated === true) {      
+      return (<BasicModal open={true}><Typography variant="body1" >{this.state.message}</Typography></BasicModal>)
     }
-    if (this.state.hasError) {
-      return (<div><Typography variant="body1" value={this.state.message} /></div>);
-    }
+    if (this.state.hasError === true) {
+      const clearError = e => this.setState({ hasError: false, message: '' });
+      return (<BasicModal open={true}><Typography variant="body1" onClose={clearError}>{this.state.message}</Typography></BasicModal>);
+    }    
 
-    const formData = {
-      email: this.props.api.getUser().email,
-      authToken: this.props.api.queryObject.auth_token
-    };
+    const beforeComponent = (<div className={this.props.classes.logo} style={{ marginBottom: '16px', marginTop: '20%' }}></div>)
 
     return (
       <CenteredContainer classNames={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto' }}>
-        <ReactoryFormComponent formId="password-reset" uiFramework="material" onSubmit={this.onSubmit} formData={formData}>
+        <ResetPasswordForm before={beforeComponent} onSubmit={this.onSubmit} formData={this.state.formData}>
           <Button type="submit" variant="raised" color="primary"><Icon>save</Icon>&nbsp;UPDATE PASSWORD</Button>
-        </ReactoryFormComponent>
+        </ResetPasswordForm>
       </CenteredContainer>
     )
   }

@@ -9,6 +9,10 @@ import {
 
 import DefaultAvatar from '../assets/images/profile/default.png';
 
+const DefaultProfile = {
+  id: 'default',
+  name: 'Guest',
+};
 /** Either returns a reference to, or creates (if necessary), 
  * the element with the given tag name and ID */
 export const getElement = (elementName, id, append = true) => {
@@ -74,6 +78,8 @@ export const centered = {
     display: 'flex',
     justifyContent: 'center'
   };
+
+
   
   
 export  const CenteredContainer = ( props ) => {
@@ -133,7 +139,7 @@ export  const CenteredContainer = ( props ) => {
     return CDNResource(`organization/${organizationId}/${file}`);
   };
 
-  export const CDNProfileResource = (profileId, file) => {
+  export const CDNProfileResource = (profileId = 'default', file = 'default.png') => {
     return CDNResource(`profiles/${profileId}/${file}`);
   };
 
@@ -142,9 +148,9 @@ export  const CenteredContainer = ( props ) => {
   };
 
   export const getAvatar = (profile) => {
-    if(nil(profile)) return DefaultAvatar;
-    if(nil(profile.avatar)) return DefaultAvatar;
-    if(profile.anon === true) return DefaultAvatar;
+    if(nil(profile)) return CDNProfileResource();
+    if(nil(profile.avatar)) return CDNProfileResource();
+    if(profile.anon === true) return CDNProfileResource();
     if(profile.avatar.endsWith('.jpeg') || profile.avatar.endsWith('.jpg')) return CDNProfileResource(profile.id, profile.avatar);
     
     return profile.avatar

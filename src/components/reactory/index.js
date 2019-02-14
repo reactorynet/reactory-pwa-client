@@ -273,7 +273,7 @@ class ReactoryComponent extends Component {
       id: uuid(),
       ...this.props,
       ...formDef,
-      onChange: updateFormState,
+      // onChange: updateFormState,
       formData: formData,
       ErrorList: MaterialErrorListTemplate,      
       onSubmit: onSubmit || this.onSubmit,      
