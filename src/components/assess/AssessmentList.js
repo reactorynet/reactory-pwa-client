@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
-
+import lodash from 'lodash';
 import {
   Avatar,
   List,
@@ -16,6 +16,7 @@ import { withTheme, withStyles } from '@material-ui/core/styles';
 import { Typography } from '@material-ui/core';
 import MaterialTable from 'material-table';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import gql from 'graphql-tag';
 
 const AssessmentItemStyles = (theme) => {
   return {
@@ -64,17 +65,73 @@ class AssessmentTable extends Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
-
+      assessments: lodash.cloneDeep(props.assessments || []),
+      deleteIndex: -1
     };
+
+    this.deleteAssessment = this.deleteAssessment.bind(this)
   }
 
+  deleteAssessment(assessment, confirmed = false){
+    console.log('Must delete assessment', { assessment, confirmed });
+    const that = this;
+    if(confirmed === true) {
+      const { api } = this.props;
+      const { deleteIndex, assessments } = this.state;
+      if(that.deleteIndexTimeout) clearTimeout(that.deleteIndexTimeout)
+
+      api.graphqlMutation(gql`mutation DeleteAssessment($id: String!, $remove: Boolean) {
+        deleteAssessment(id: $id, remove: $remove)
+      }`, { 
+        id: assessment.id,
+        remove: true,
+      }).then(result => {
+        if(result.error){
+          console.error('Error Deleting Assessment', result.error)
+        }
+
+        if(result.data) {
+          const newAssessmentsState = lodash.cloneDeep(assessments);
+          if(result.data.deleted === true && result.data.removed !== true) {
+            //soft delete            
+            newAssessmentsState[deleteIndex].deleted = true;
+          } else {
+            //ripped it from the database and all eternity
+            lodash.remove(newAssessmentsState, { id: assessment.id })
+          }
+
+          that.setState({ assessments: newAssessmentsState, deleteIndex: -1 })
+        }
+      }).catch(exception => {
+        console.error(`Some serious problems running graphql`, exception)
+      });
+    } else {
+      //not confirmed
+      if(assessment.tableData.id) {
+        this.setState({ deleteIndex: assessment.tableData.id }, ()=>{
+          that.deleteIndexTimeout = setTimeout(()=>{
+            that.setState({ deleteIndex: -1 })
+          },  2750)
+        });
+      }
+      
+    }
+  }
 
   render() {
-    let rows = this.props.assessments.map(e => { return { ...e } });
-
+    let rows = lodash.cloneDeep(this.state.assessments);
+    const that = this;
+    const { theme } = this.props;
     return (
       <MaterialTable
         columns={[
+          {
+            title: 'Info', render: (rowData) => {
+              if(rowData.tableData.id === this.state.deleteIndex) {
+                return <Typography>Are you sure you want to delete this survey?</Typography>
+              }                            
+            }
+          },
           {
             title: 'Avatar', render: (rowData) => {
               return rowData && rowData.assessor ? <Avatar src={this.props.api.getAvatar(rowData.assessor)} /> : 'No Delegate'
@@ -82,29 +139,39 @@ class AssessmentTable extends Component {
           },
           {
             title: 'Assessor', render: (dataRow) => {
-              return `${dataRow.assessor.firstName} ${dataRow.assessor.lastName}`
+              return <Typography>{dataRow.assessor.firstName} {dataRow.assessor.lastName}</Typography>
             }
-          },
-          {
-            title: 'Email', render: (dataRow) => {
-              return `${dataRow.assessor.email}`
-            }
-          },
+          },          
           { title: 'Complete', render: (dataRow) => {
-              return dataRow.complete === true ? 'Yes' : 'No';
+              return dataRow.complete === true ? <Icon>favorite</Icon> : <Icon>hourglass_empty</Icon>;
           } }
         ]}
         data={rows}
         actions={[
-          (dataRow) => {
-            return {
-              icon: 'delete_outline',
-              tooltip: 'Click to remove assessment for delegate',
-              onClick: (event, rowData) => {
-                console.log('Delete assessment', rowData);
+          (dataRow) => {            
+            if(this.state.deleteIndex === -1) {
+              return {
+                icon: 'delete_outline',
+                tooltip: `Click to remove assessment input from delegate ${dataRow.assessor.firstName}`,
+                onClick: (event) => {
+                  that.deleteAssessment(dataRow, false)
+                }
               }
-            }
-          },          
+            } else {
+              if(dataRow.tableData.id === this.state.deleteIndex){
+                return {
+                  icon: 'delete_forever',
+                  tooltip: `Click again to confirm removal assessment input from delegate ${dataRow.assessor.firstName}`,
+                  onClick: (event) => {
+                    that.deleteAssessment(dataRow, true)
+                  },
+                  iconProps: {
+                    color: theme.palette.primary.dark
+                  }
+                }
+              }
+            }              
+          }          
         ]}
         title="Assessments"
       />

@@ -499,7 +499,8 @@ class DefaultView extends Component {
     const { assessment } = this.state;
     const { behaviour, rating, score } = data
     const that = this;
-    const { api } = this.props;       
+    const { api } = this.props; 
+    if(lodash.isNil(rating)) return;      
     let ratingIndex = lodash.findIndex(assessment.ratings, { 'id': rating.id });
     if (ratingIndex === -1) ratingIndex = lodash.findIndex(assessment.ratings, { 'behaviour.id': behaviour.id });
 
@@ -674,7 +675,9 @@ class DefaultView extends Component {
   nextStep() {
     let maxSteps = this.props.assessment.survey.leadershipBrand.qualities.length + 2;
     if (this.state.step < maxSteps)
-      this.setState({ step: this.state.step + 1 });
+      this.setState({ step: this.state.step + 1 }, ()=>{
+        window.scrollTo({ top: 0 })
+      });
   }
 
   setStep(event, step) {
