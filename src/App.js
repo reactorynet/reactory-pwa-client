@@ -169,6 +169,7 @@ class App extends Component {
           else return (<p>No Component for {routeDef.componentFqn}</p>)
         }
       }
+      debugger;
       if (routeDef.public === true) {
         return (<Route {...routeProps} />)
       } else {

@@ -1,14 +1,21 @@
 import React, { Fragment, Component } from 'react'
 import PropTypes from 'prop-types'
-import { pullAt, find } from 'lodash'
+import lodash, { pullAt, find } from 'lodash'
+import classNames from 'classnames';
 import {
-  FormControl,
+  FormControl, Typography, Icon,
 } from '@material-ui/core';
 
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '../../../api/ApiProvider';
 import * as utils from '../../util';
+import gql from 'graphql-tag';
+
+const LogoErrors = ({ errors }) => {
+  console.error('Error loading logo', errors);
+  return (<Typography>Error Loading logo</Typography>)
+};
 
 class CompanyLogoWidget extends Component {
   
@@ -16,6 +23,8 @@ class CompanyLogoWidget extends Component {
     root: {
       display: 'flex',
       flexWrap: 'wrap',
+    },
+    waitIcon: {
     },
     formControl: {
       minWidth: 120,
@@ -41,18 +50,51 @@ class CompanyLogoWidget extends Component {
 
   constructor(props, context){
     super(props, context)
-    this.componentDefs = props.api.getComponents(['core.Logo'])
+    this.state = {
+      loaded: false,
+      logo: '',
+    };
   }
 
-  
+  componentDidMount(){
+    const that = this;
+    if(this.state.loaded === false && lodash.isNil(this.props.formData) === false) {
+      this.props.api.graphqlQuery(gql`query OrganizationWithId($id: String!){
+        organizationWithId(id: $id){
+          id
+          name
+          logo
+        }
+      }`, { id: this.props.formData }).then((result) => {
+        console.log('Query result', result);
+        const { data, errors } = result;
+        const { organizationWithId = { logo: 'default'} } = data;
+        that.setState({ logo: organizationWithId.logo || 'default', loaded: true, errors })
+      }).catch((apiError) => {
+        console.error('Shit dawg, look here homie!', apiError)
+        that.setState({ logo: '', errors: apiError, loaded: true });
+      })
+    }
+  }
 
   render(){
     const self = this
-    const { Logo } = this.componentDefs;
-    const { formData, uiSchema } = this.props;
+    const { formData, uiSchema, classes } = this.props;
+    const { loaded, logo, errors } = this.state;
+
+    if(loaded === false && lodash.isNil(errors) === true) {
+      return (<div>
+        <Typography>Loading logo <i className={classNames(classes.waitIcon, "fa fa-spin fa-hourglass-o")}></i></Typography>        
+      </div>)
+    } 
+
+    if(lodash.isNil(errors) === false && loaded === true){
+      return <LogoErrors errors={errors} />
+    }
+
     if(formData) {       
       const logoProps = {
-        src: utils.CDNOrganizationResource(formData, `logo_${formData}_default.jpeg`),
+        src: logo === 'default' ? '//placehold.it/200x200' : utils.CDNOrganizationResource(formData, logo),
         width: '200px',
         style: { maxWidth: '200px' },
         alt: 'No Image'
