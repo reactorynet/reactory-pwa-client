@@ -174,9 +174,7 @@ class App extends Component {
           return <Redirect to={{pathname: '/login', state: { from: routeDef.path } }} />
         }
       }
-      if(routeDef.path === "/") {
-        homeRouteDef = routeDef;  
-      }      
+            
       routes.push(<Route {...routeProps} />)            
     });
 

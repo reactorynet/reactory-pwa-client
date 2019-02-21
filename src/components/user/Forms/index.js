@@ -189,6 +189,10 @@ class ResetPassword extends Component {
     ]);
   }
 
+  componentDidCatch(err){
+    this.setState({ errored: true, error: err })
+  }
+
   onSubmit(form) {
     const that = this;
     console.log('Submiting Password Change', form);
@@ -210,6 +214,10 @@ class ResetPassword extends Component {
   render() {
     const { ResetPasswordForm, BasicModal } = this.componentDefs;
 
+    if(this.state.errored === true) {
+      return <p>Error {this.state.error.message}</p>
+    }
+
     if (this.state.passwordUpdated === true) {      
       return (<BasicModal open={true}><Typography variant="body1" >{this.state.message}</Typography></BasicModal>)
     }
@@ -221,7 +229,7 @@ class ResetPassword extends Component {
     const beforeComponent = (<div className={this.props.classes.logo} style={{ marginBottom: '16px', marginTop: '20%' }}></div>)
 
     return (
-      <CenteredContainer classNames={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto' }}>
+      <CenteredContainer className={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto' }}>
         <ResetPasswordForm before={beforeComponent} onSubmit={this.onSubmit} formData={this.state.formData}>
           <Button type="submit" variant="raised" color="primary"><Icon>save</Icon>&nbsp;UPDATE PASSWORD</Button>
         </ResetPasswordForm>
