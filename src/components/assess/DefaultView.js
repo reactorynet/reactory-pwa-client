@@ -693,7 +693,6 @@ class DefaultView extends Component {
       <AppBar position="static" color="default">
         <Tabs
           value={this.state.step}
-          onChange={this.setStep}
           scrollable
           scrollButtons="on"
           indicatorColor="primary"

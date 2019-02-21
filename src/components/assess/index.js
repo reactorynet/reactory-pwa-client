@@ -43,6 +43,10 @@ class AssessmentWrapper extends Component {
         survey: null
     }
 
+    static styles = theme => {
+        return {}
+    }
+
     renderQuery() {
         const { match, api } = this.props;
         const self = this;

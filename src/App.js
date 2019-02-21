@@ -104,23 +104,85 @@ class App extends Component {
       auth_valid: false,
       auth_validated: false,
       theme: props.appTheme,
+      user: api.getUser(),
+      routes: [],
     }
 
     this.onLogout = this.onLogout.bind(this);
     this.onLogin = this.onLogin.bind(this);
+    this.configureRouting = this.configureRouting.bind(this);
     api.on(ReactoryApiEventNames.onLogout, this.onLogout)
     api.on(ReactoryApiEventNames.onLogin, this.onLogin)
-    this.componentRefs = api.getComponents(['core.Loading@1.0.0']);    
+    
+    this.componentRefs = api.getComponents(['core.Loading@1.0.0', 'core.Login@1.0.0']);    
   }
 
   
-
   onLogin() {    
-    this.forceUpdate();
+    this.setState({ user: api.getUser() })
   }
 
   onLogout() {
-    this.forceUpdate();
+    this.setState({ user: api.getUser() })
+  }
+
+  componentWillUpdate(){
+
+  }
+
+  configureRouting(){
+    const { auth_validated, user } = this.state;
+    const { Loading } = this.componentRefs;
+    const routes = [];
+    let loginRouteDef = null;
+    let homeRouteDef = null;
+
+    api.getRoutes().forEach((routeDef) => {
+      console.log(`Creating Route Map ${routeDef.id}`, { routeDef, auth_validated });            
+      const routeProps = {
+        key: routeDef.id,
+        componentFqn: routeDef.componentFqn,
+        path: routeDef.path,
+        exact: routeDef.exact === true,
+        render: (props) => {
+          console.log('Rendering Route', props);
+          const componentArgs = {}
+          if (isArray(routeDef.args)) {
+            routeDef.args.forEach((arg) => {
+              componentArgs[arg.key] = arg.value[arg.key];
+            })
+          }
+
+          const ApiComponent = api.getComponent(routeDef.componentFqn)
+
+          if(routeDef.public === true) {
+            if (ApiComponent) return (<ApiComponent {...componentArgs} />)
+            else return (<p>No Component for {routeDef.componentFqn}</p>)
+          }
+
+          const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles)  === true;
+
+          if (auth_validated === true && hasRolesForRoute === true) {
+            if (ApiComponent) return (<ApiComponent {...componentArgs} />)
+            else return (<p>No Component for {routeDef.componentFqn}</p>)
+          }
+
+          if(api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
+            return <Redirect to={{pathname: '/login', state: { from: routeDef.path } }} />
+          }
+          
+          return <Redirect to={{pathname: '/login', state: { from: routeDef.path } }} />
+        }
+      }
+      if(routeDef.path === "/") {
+        homeRouteDef = routeDef;  
+      }      
+      routes.push(<Route {...routeProps} />)            
+    });
+
+    
+
+    this.setState({ routes });
   }
 
   componentDidMount() {
@@ -133,7 +195,8 @@ class App extends Component {
     
     if (this.state.auth_validated === false) {
       api.status({ emitLogin: true }).then((user) => {
-        that.setState({ auth_validated: true })
+        console.log('Status Called From App.js', { user });
+        that.setState({ auth_validated: true, user }, this.configureRouting)
       }).catch((validationError) => {
         console.log('Could not check status')
         that.setState({ auth_validated: false })
@@ -142,8 +205,9 @@ class App extends Component {
   }
 
   render() {
-    const { auth_validated } = this.state;
+    const { auth_validated, routes } = this.state;
     const { Loading } = this.componentRefs;
+
     let themeOptions = api.getTheme();
     if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
@@ -151,41 +215,7 @@ class App extends Component {
     else themeOptions.typography.useNextVariants = true;
     const muiTheme = createMuiTheme(themeOptions);
     api.muiTheme = muiTheme;
-    const routes = api.getRoutes().map((routeDef) => {
-      const routeProps = {
-        key: routeDef.id,
-        componentFqn: routeDef.componentFqn,
-        path: routeDef.path,
-        exact: routeDef.exact === true,
-        render: (props) => {
-          const componentArgs = {}
-          if (isArray(routeDef.args)) {
-            routeDef.args.forEach((arg) => {
-              componentArgs[arg.key] = arg.value[arg.key];
-            })
-          }
-          const ApiComponent = api.getComponent(routeDef.componentFqn)
-          if (ApiComponent) return (<ApiComponent {...componentArgs} />)
-          else return (<p>No Component for {routeDef.componentFqn}</p>)
-        }
-      }      
-      if (routeDef.public === true) {
-        return (<Route {...routeProps} />)
-      } else {
-        if (auth_validated === true && api.hasRole(routeDef.roles) === true) {
-          return <Route {...routeProps} />
-        } else {
-          const redirectToPath = api.isAnon() === true ? '/login' : '/not-authorized';
-          return (<Redirect key={routeDef.id}
-            to={{
-              pathname: redirectToPath,
-              state: { from: routeDef.path }
-            }}
-          />)
-        }
-      }
-    });
-            
+                
     return (
       <React.Fragment>        
         <CssBaseline />        
@@ -197,7 +227,7 @@ class App extends Component {
                   <MuiPickersUtilsProvider utils={MomentUtils}>
                   <div style={{ marginTop: '80px' }}>
                     <AssessorHeaderBar title={muiTheme.content.appTitle} />                    
-                    { auth_validated === true ? routes :  <Loading message="Checking authentication. Please wait" icon="security" spinIcon={false} /> }
+                    { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
                   </div>
                   </MuiPickersUtilsProvider>
                 </MuiThemeProvider>

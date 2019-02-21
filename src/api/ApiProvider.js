@@ -289,8 +289,9 @@ export class ReactoryApi extends EventEmitter {
         this.amq.onFormCommandEvent(commandId, func);
     }
     
-    hasRole(itemRoles = [], userRoles = this.getApplicationRoles()){             
-        return intersection(itemRoles, userRoles).length > 0;
+    hasRole(itemRoles = [], userRoles = null){        
+        const result = intersection(itemRoles, userRoles);
+        return result.length >= 1;
     }
 
     isAnon(){
@@ -409,12 +410,13 @@ export class ReactoryApi extends EventEmitter {
         const that = this
         return new Promise((resolve, reject) => {
             that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {
+                console.log('Api Status Call', result);
                 if (result.data.apiStatus.status === "API OK") {                    
                     that.setUser({ ...result.data.apiStatus });
                     that.lastValidation = moment().valueOf();
                     that.tokenValidated = true;                                         
                     if(options.emitLogin === true) that.emit(ReactoryApiEventNames.onLogin);
-                    resolve(result.data.apiStatus.user);                    
+                    resolve(that.getUser());                    
                 }
                 else {
                     that.logout(false);
