@@ -150,6 +150,7 @@ class Profile extends Component {
         loading: false,
         profileTitle: 'My Profile',
         mode: 'user',
+        highlight: 'none',
         isNew: false,
         onCancel: nilf,
         onSave: nilf
@@ -372,7 +373,7 @@ class Profile extends Component {
         }        
 
         const confirmPeers = () => {
-            console.log('Confirming peers for user', this.props, this.state)
+            //console.log('Confirming peers for user', this.props, this.state)
             const mutation = gql`mutation ConfirmPeers($id: String!, $organization: String!){
                 confirmPeers(id: $id, organization: $organization){
                     ${userPeersQueryFragment}
@@ -389,7 +390,7 @@ class Profile extends Component {
                     that.setState({ profile: { ...profile, peers: {...profile.peers, ...result.data.confirmPeers } }}, that.refreshPeers)
                 }
             }).catch( ex => {
-                console.error( 'Error confirming peers ', ex)
+                //console.error( 'Error confirming peers ', ex)
                 that.setState({ showMessage: true, message: 'An error occured confirming peer settings' })
             });
         };
@@ -454,7 +455,7 @@ class Profile extends Component {
                                         <Typography className={peers.confirmedAt ? 
                                             classNames([classes.confirmedLabel, classes.notConfirmed]) : 
                                             classNames([classes.confirmedLabel, classes.confirmed]) } 
-                                            variant={"body1"}>{peers.confirmedAt ? `Last Confirmed: ${moment(peers.confirmedAt).format('DD-MM-YYYY')} (day-month-year)` : 'Not Confirmed' }
+                                            variant={"body1"}>{moment.isMoment(moment(peers.confirmedAt)) === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Not Confirmed' }
                                             </Typography>
                                     </div>
                                 )
@@ -676,7 +677,11 @@ class Profile extends Component {
             avatarUpdated: false,
             showPeerSelection: false,
             selectedMembership: null,
+            help: props.api.queryObject.help === "true",
+            helpTopic: props.api.queryObject.helptopics,
+            highlight: props.api.queryObject.highlight
         };
+                
         this.componentDefs = props.api.getComponents([
             'core.BasicModal', 
             'core.Loading'

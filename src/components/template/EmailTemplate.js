@@ -13,6 +13,9 @@ import {
   Typography, List, ListItem, Toolbar,
   ListItemText} from '@material-ui/core';
 
+
+import { withApi, ReactoryApi } from '../../api/ApiProvider';
+
 import SaveIcon from '@material-ui/icons/Save';
 import CloseIcon from '@material-ui/icons/Close';
 
@@ -36,7 +39,7 @@ class EmailTemplateEditor extends Component {
   }
 
   static propTypes = {
-
+    api: PropTypes.instanceOf(ReactoryApi),
   }
 
   static styles = (theme) => {
@@ -78,6 +81,7 @@ class EmailTemplateEditor extends Component {
 
 
 const EmailTemplateEditorComponent = compose(
+  withApi,
   withTheme(),
   withStyles(EmailTemplateEditor.styles),  
   withApollo,
@@ -89,6 +93,8 @@ class TemplateList extends Component {
     this.state = {
       selected: null,
     }
+
+    this.componentDefs = props.api.getComponents(['forms.TemplateList'])
   }
 
   static styles = (theme) => {
@@ -110,6 +116,10 @@ class TemplateList extends Component {
     const that = this;
     const { classes } = this.props;
     const { selected } = this.state;
+
+    const { TemplateList } = this.componentDefs;
+
+    if(TemplateList) return <TemplateList />
 
     let newTemplateLink = null;
 
@@ -145,6 +155,7 @@ class TemplateList extends Component {
 }
 
 const TemplateListComponent = compose(
+  withApi,
   withTheme(),
   withStyles(TemplateList.styles),
   withApollo,  

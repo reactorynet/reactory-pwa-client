@@ -38,7 +38,12 @@ export const UserListItem = (props) => {
 }
 
 UserListItem.propTypes = {
-  key: PropTypes.string.isRequired
+  key: PropTypes.string.isRequired,
+  user: PropTypes.object,
+  selected: PropTypes.bool,
+  onClick: PropTypes.func,
+  secondaryAction: PropTypes.object,
+  onSecondaryItemClicked: PropTypes.func,
 }
 
 export default {

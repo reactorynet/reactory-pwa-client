@@ -163,7 +163,7 @@ class RatingControl extends Component {
 
     let ratingTooltip = rating.rating === 0 ? 
       <Tooltip title="Requires a rating selection"><Icon color="secondary">info</Icon></Tooltip> : 
-      <Tooltip title={`You scored ${rating.rating} `}><Icon>check</Icon></Tooltip>;
+      <Tooltip title={`You scored ${rating.rating} `}><Icon color="primary">check</Icon></Tooltip>;
 
     if(rating.rating > 0 && rating.rating <= 2) {
       if(this.state.comment.length < 50) {
@@ -830,9 +830,9 @@ class DefaultView extends Component {
             position="static"
             activeStep={step}
             nextButton={
-              <Button size="small" onClick={nextStep} disabled={isCurrentStepValid === false}>
+              <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Please ensure you have completed each rating in full'}><Button size="small" onClick={nextStep} disabled={isCurrentStepValid === false}>
                 Next{theme.direction === 'rtl' ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
-              </Button>
+              </Button></Tooltip>
             }
             backButton={
               <Button size="small" onClick={prevStep} disabled={step === 0}>
@@ -841,6 +841,7 @@ class DefaultView extends Component {
                 </Button>
             }
           />
+          <Typography variant="body1" color={"primary"} style={{textAlign: 'right'}}>{isCurrentStepValid ? 'Click next to proceed' : 'Ensure you have completed all ratings and comments in full before proceeding.'}</Typography>
         </Grid>
       </Grid>
     );

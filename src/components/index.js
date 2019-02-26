@@ -157,7 +157,7 @@ export const componentRegistery = [
     name: 'OwlyListItem',
     component: (props) => {
       const { UserListItem } = UserComponents;
-      return <UserListItem user={{ firstName: 'Owly', lastName: '', id: 'towerstone_owly', avatar: 'owl.jpg' }} message={props.message} />
+      return <UserListItem user={{ firstName: 'TowerStone', lastName: 'System', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
     },
     version: '1.0.0'
   },
@@ -475,5 +475,11 @@ export const componentRegistery = [
     name: 'AssessmentTable',
     version: '1.0.0',
     component: require('./assess/AssessmentList').AssessmentTableComponent
+  },
+  {
+    nameSpace: 'widgets',
+    name: 'UserListItemWidget',
+    version: '1.0.0',
+    component: require('./reactory/widgets').UserListItemWidget
   }  
 ];

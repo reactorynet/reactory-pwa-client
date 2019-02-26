@@ -171,8 +171,7 @@ class ResetPassword extends Component {
     super(props, context)
     this.state = {
       formData: { 
-        email: props.api.getUser().email,
-        authToken: props.api.queryObject.auth_token,
+        user: props.api.getUser(),
         password: '', 
         passwordConfirm: '', 
         authToken: localStorage.getItem('auth_token') 
@@ -196,7 +195,13 @@ class ResetPassword extends Component {
   onSubmit(form) {
     const that = this;
     console.log('Submiting Password Change', form);
-    this.props.api.resetPassword(form.formData).then((forgotResult) => {
+    let errors = [];
+        
+    this.props.api.resetPassword({
+      email: form.formData.user.email,
+      authToken: form.formData.authToken,
+      password: form.formData.password,
+    }).then((forgotResult) => {
       console.log('Forgot password has been triggered', forgotResult);
       that.setState({ passwordUpdated: true, message: 'Your password has been updated, you will be redirected to the dashboard momentarily' }, ()=>{
         setTimeout(()=>{

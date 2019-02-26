@@ -506,7 +506,7 @@ class DefaultFormContainer extends Component {
              
             </Route>
             <Route path={'/admin/org/:organizationId/configuration'} >
-              <Settings organizationId={organizationId} />
+              <Typography>Disabled</Typography>
             </Route>
           </Switch>
         </TabContainer>

@@ -113,8 +113,7 @@ class AssessmentTable extends Component {
             that.setState({ deleteIndex: -1 })
           },  2750)
         });
-      }
-      
+      }      
     }
   }
 
@@ -127,14 +126,14 @@ class AssessmentTable extends Component {
         columns={[
           {
             title: 'Info', render: (rowData) => {
-              if(rowData.tableData.id === this.state.deleteIndex) {
+              if(rowData.tableData.id === that.state.deleteIndex) {
                 return <Typography>Are you sure you want to delete this survey?</Typography>
               }                            
             }
           },
           {
             title: 'Avatar', render: (rowData) => {
-              return rowData && rowData.assessor ? <Avatar src={this.props.api.getAvatar(rowData.assessor)} /> : 'No Delegate'
+              return rowData && rowData.assessor ? <Avatar src={that.props.api.getAvatar(rowData.assessor)} /> : 'No Delegate'
             }
           },
           {

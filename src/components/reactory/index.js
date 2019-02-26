@@ -408,12 +408,8 @@ class ReactoryComponent extends Component {
                 let _formData = {...formData};
                 if(data && data[query.name]) {
                   _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap || {});
-                  // console.log('Fetched records and trasnsformed', _formData);
-                } else {
-                  // console.warn('Expected data, none found', data)
-                }
-                
-                that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true})
+                }                
+                that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true});
               };
               setTimeout(doQuery, 500);
               return <Loading message="Loading..." />              
@@ -685,20 +681,20 @@ class ReactoryComponent extends Component {
 
       if(!schema.widgets) schema.widgets = { };
       if(schema.widgetMap) {
-        // console.log('resolving widgetMap', schema.widgetMap);
+        console.log('resolving widgetMap', schema.widgetMap);
         schema.widgetMap.forEach((map) => {
           if(map.component.indexOf('.') === -1){
-            // console.log('simple resolve');
-            schema[map.widget] = self.componentDefs[map.component]
+            console.log('simple resolve');
+            schema.widgets[map.widget] = self.componentDefs[map.component]
           } else {
-            // console.log('path resolve');
+            console.log('path resolve');
             const pathArray = map.component.split('.');
             let component = self.componentDefs[pathArray[0]];
             if(component && Object.keys(component) > 0) {
               for(let pi = 1; pi <= pathArray.length - 1; pi += 1){
                 if(component && Object.key(component) > 0) component = component[pathArray[pi]]                              
               }
-              // console.log('component is mapped to', component);
+              console.log('component is mapped to', component);
             }
           }          
         });

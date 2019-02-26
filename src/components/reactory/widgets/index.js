@@ -3,6 +3,9 @@ import { Query, graphql } from 'react-apollo';
 import { compose } from 'redux';
 import { withApi } from '../../../api/ApiProvider';
 import * as utils from '../../util';
+import UserLists  from '../../user/Lists/index';
+
+
 
 export const ChipArrayWidget = require('./ChipArray').default;
 export const SelectWidget = require('./Select').default;
@@ -19,5 +22,7 @@ export const ToolbarWidget = require('./ToolbarWidget').default;
 export const ProgressWidget = require('./ProgressWidget').ProgressWidgetComponent;
 export const SurveyDelegateWidget = require('./SurveyDelegateWidget').SurveyDelegateComponent;
 export const SurveyDelegatesWidget = require('./SurveyDelegateWidget').SurveyDelegatesComponent;
-export const UserListItemWidget = require('../../user/Lists/index').default.UserListItem;
+export const UserListItemWidget = (props, context) => {
+  return <UserLists.UserListItem {...{ user: props.formData, ...props }} />
+};
 export const MaterialTableWidget = require('./MaterialTableWidget').default;

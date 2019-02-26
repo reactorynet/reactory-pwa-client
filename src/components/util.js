@@ -151,9 +151,8 @@ export  const CenteredContainer = ( props ) => {
     if(nil(profile)) return CDNProfileResource();
     if(nil(profile.avatar)) return CDNProfileResource();
     if(profile.anon === true) return CDNProfileResource();
-    if(profile.avatar.endsWith('.jpeg') || profile.avatar.endsWith('.jpg')) return CDNProfileResource(profile.id, profile.avatar);
-    
-    return profile.avatar
+    return CDNProfileResource(profile.id, profile.avatar);    
+    //return profile.avatar
   };
 
   export const getOrganizationLogo = (organizationId, file) => {

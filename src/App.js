@@ -138,14 +138,12 @@ class App extends Component {
     let homeRouteDef = null;
 
     api.getRoutes().forEach((routeDef) => {
-      console.log(`Creating Route Map ${routeDef.id}`, { routeDef, auth_validated });            
       const routeProps = {
         key: routeDef.id,
         componentFqn: routeDef.componentFqn,
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (props) => {
-          console.log('Rendering Route', props);
           const componentArgs = {}
           if (isArray(routeDef.args)) {
             routeDef.args.forEach((arg) => {
