@@ -369,6 +369,7 @@ const apiStatus = gql`
           name
           avatar
         }
+        roles
       }
       id
       theme
