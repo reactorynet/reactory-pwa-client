@@ -6,19 +6,19 @@ import styles from './styles';
 
 class Logo extends Component {  
   render(){
-    const customStyle = {
+    const customStyle = {      
       width: `${this.props.width}px`,
-      maxWidth: `${this.props.width}px`,      
+      maxWidth: `${this.props.width}px`,            
     };
 
     if(this.props.backgroundSrc !== null) {
       customStyle.background = `url(${this.props.backgroundSrc})`
       customStyle.backgroundSize = 'contain'
       customStyle.backgroundRepeat = 'no-repeat'
-      customStyle.backgroundPosition = 'center !important'
+      customStyle.backgroundPosition = 'center !important'      
     }
 
-    return <div className={this.props.classes.logo} style={customStyle}></div>
+    return <div className={this.props.classes.logo} style={this.props.style ? {...this.props.style, ...customStyle } : {...customStyle}} ></div>
   }
 }
 

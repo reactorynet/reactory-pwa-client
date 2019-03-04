@@ -6,13 +6,15 @@ import { compose } from 'redux';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import { isNil } from 'lodash';
 import moment from 'moment';
-import Grid from '@material-ui/core/Grid';
-import Typography from '@material-ui/core/Typography';
-import Paper from '@material-ui/core/Paper';
-import Avatar from '@material-ui/core/Avatar';
-import IconButton from '@material-ui/core/IconButton';
-import PlayIcon from '@material-ui/icons/PlayCircleFilled';
-import ViewIcon from '@material-ui/icons/PageviewOutlined'
+import {
+    Avatar,
+    Paper,
+    Grid,
+    IconButton,
+    Icon,
+    Typography,
+    Tooltip,
+} from '@material-ui/core';
 import { List, ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
@@ -80,10 +82,14 @@ class UserSurvey extends Component {
                     <Avatar alt={`${survey.title}`} src={api.getAvatar(delegate)}></Avatar>
                     <ListItemText
                         primary={`${survey.title} - ${listTitle}`}
-                        secondary={survey.completed} />
+                        secondary={`Valid from ${moment(survey.startDate).format('DD MM YYYY')} till ${moment(survey.endDate).format('DD MM YYYY')}`} />
                     <ListItemSecondaryAction>
-                        <IconButton>
-                            <ViewIcon />
+                        <IconButton onClick={goAssessment}>
+                            <Tooltip title={assessment.complete === false ? 'Click here to complete this assessment' : 'Click here to view your input into this assessment'}>
+                                <Icon>
+                                    {assessment.complete === false ?'play_circle_filled' : 'search'}
+                                </Icon>
+                            </Tooltip>
                         </IconButton>
                     </ListItemSecondaryAction>
                 </ListItem>

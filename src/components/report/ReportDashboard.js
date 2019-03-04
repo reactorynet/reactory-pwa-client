@@ -19,30 +19,17 @@ import Chip from '@material-ui/core/Chip';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import {
     Card, CardHeader, CardMedia, CardContent, CardActions,
+    Icon,
     List,  ListItem, ListItemSecondaryAction, ListItemText
  } from '@material-ui/core/';
 import Collapse from '@material-ui/core/Collapse';
 import BackIcon from '@material-ui/icons/KeyboardArrowLeft';
 import Button from '@material-ui/core/Button';
 import IconButton from '@material-ui/core/IconButton';
-import SaveIcon from '@material-ui/icons/Save';
-import PrintIcon from '@material-ui/icons/Print';
-import SupervisorIcon from '@material-ui/icons/SupervisorAccount';
-import RowingIcon from '@material-ui/icons/Rowing';
-import FavoriteIcon from '@material-ui/icons/Favorite';
-import ShareIcon from '@material-ui/icons/Share';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import MoreVertIcon from '@material-ui/icons/MoreVert';
 import ScheduleIcon from '@material-ui/icons/Schedule';
 import PageviewIcon from '@material-ui/icons/Pageview';
-import ShowChartIcon from '@material-ui/icons/ShowChart';
-import DateRangeIcon from '@material-ui/icons/DateRange';
-import PersonIcon from '@material-ui/icons/Person';
-import EmailIcon from '@material-ui/icons/Email';
-import PlaylistAddCheck from '@material-ui/icons/PlaylistAddCheck';
-import PhotoCamera from '@material-ui/icons/PhotoCamera';
 import Avatar from '@material-ui/core/Avatar';
-import TextField from '@material-ui/core/TextField';
 import Paper from '@material-ui/core/Paper';
 import Toolbar from '@material-ui/core/Toolbar';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
@@ -270,7 +257,8 @@ class ReportDetail extends Component {
         super(props,context);
         this.state = {
 
-        }
+        };
+        this.componentDefs = props.api.getComponents(['core.Loading', 'core.Logo'])
     }
 
     static styles = (theme) => {
@@ -295,18 +283,84 @@ class ReportDetail extends Component {
                 ...theme.mixins.gutters(),
                 paddingTop: theme.spacing.unit * 2,
                 paddingBottom: theme.spacing.unit * 2,
-            }            
+            },
+            reportHeader: {
+                paddingTop: '120px',
+                paddingBottom: '120px',
+                textAlign: 'center',
+            },
+            reportAvatar: {
+                width: '120px',
+                height: '120px',
+            },                        
         }
     }
 
     static propTypes = {
         report: PropTypes.object,
-        theme: PropTypes.object
+        theme: PropTypes.object,
+        api: PropTypes.instanceOf(ReactoryApi)
     }
 
 
     render(){
-        const { classes, history, report, theme } = this.props;
+        const { classes, history, report, theme, api } = this.props;
+        const { survey, user, assessments } = report;
+        const { Logo, Loading } = this.componentDefs;
+        let reportTitle = 'Default Report Title';
+        switch(survey.surveyType) {
+            case '360': {
+                reportTitle = '360° Leadership Assessment';        
+                break;
+            }
+            case '180': {
+                reportTitle = '180° Team Leadership Assessment';
+                break;
+            }
+            case 'plc': {
+                reportTitle = 'Assessment Report';
+                break;
+            }
+            default: {
+                reportTitle = 'Assessment Report';
+                break;
+            }
+        }
+
+        let radar = {
+            width: 300,
+            height: 300,
+            outerRadius: 100,
+            cx: 150,
+            cy: 150
+        };
+
+        const graphData = [];
+        const qualityIndex = {
+
+        };
+
+        assessments.map((assessment) => {
+            if(assessment.ratings && assessment.ratings.length > 0) {
+                assessment.ratings.map((rating) => { 
+                    if(qualityIndex[rating.quality.id]) {
+                        graphData[qualityIndex[rating.quality.id]].score += rating.rating;
+                        graphData[qualityIndex[rating.quality.id]].count += 1;
+                        graphData[qualityIndex[rating.quality.id]].avg += graphData[qualityIndex[rating.quality.id]].score / graphData[qualityIndex[rating.quality.id]].count;
+                    } else {
+                        qualityIndex[rating.quality.id] = graphData.length;
+                        graphData.push({ 
+                            quality: rating.quality.title,
+                            score: rating.rating,
+                            avg: rating.rating / 1,
+                            count: 1
+                        });                        
+                    }
+                });            
+            }            
+        });
+
+        
         return (        
             <Grid container spacing={16} className={classes.mainContainer}>
                 <Grid item xs={12} sm={12}>            
@@ -314,12 +368,24 @@ class ReportDetail extends Component {
                         <IconButton onClick={()=>{history.goBack()}}> 
                             <BackIcon/>
                         </IconButton>
-                        <Typography variant="h1" color="inherit">Report Detail</Typography>                        
+                        <IconButton>
+                            <Icon>print</Icon>
+                        </IconButton>                        
                     </Toolbar>
                 </Grid>
                 <Grid item xs={12} sm={12}>
+                    <Paper className={classNames(classes.paper, classes.reportHeader)}>
+                        <Avatar src={api.getAvatar(report.user)} className={classes.reportAvatar} />                        
+                        <Typography variant="h3" gutterBottom style={{fontWeight:'bold'}}>{reportTitle}</Typography>
+                        <Typography variant="h3" gutterBottom>{user.firstName} {user.lastName}</Typography>
+                        <Typography variant="h3" gutterBottom>{survey.organization.name}</Typography>
+                        <Typography variant="h3" gutterBottom>{moment(survey.endDate).format('DD MMMM YYYY')}</Typography>
+                        <Logo style={{marginTop: '200px'}}/>
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} sm={12}>
                     <Paper className={classes.paper}>
-                        <Typography variant="h3" color="primary" gutterBottom>1. Introduction</Typography>
+                        <Typography variant="h4" color="primary" gutterBottom>1. Introduction</Typography>
                         <Typography className={classes.paragraph}>{report.user.firstName}, this report compares the results of your self-assessment, with those of the colleagues who assessed you. These assessors include the person you report to and randomly selected colleagues from the list you submitted.</Typography>
                         <Typography className={classes.paragraph}>You have been assessed against the TowerStone values and supporting leadership behaviours for all TowerStone employees.</Typography>
                         <br/>
@@ -343,21 +409,33 @@ class ReportDetail extends Component {
                 </Grid>
                 <Grid item xs={12} sm={12}>
                     <Paper className={classes.paper}>
-                        <Typography variant="h3" color="primary" gutterBottom>2. Rating Scale</Typography>
+                        <Typography variant="h4" color="primary" gutterBottom>2. Rating Scale</Typography>
                         <Typography className={classes.paragraph}>The feedback you have received is in the context of the following rating scale:</Typography>
-                        {report.survey.leadershipBrand.scale.entries.map((entry) => (<Typography>{entry.rating} - {entry.description}</Typography>))}
+                        {report.survey.leadershipBrand.scale.entries.map((entry) => (<Typography className={classes.paragraph}>{entry.rating} - {entry.description}</Typography>))}
                     </Paper>
                 </Grid>                    
 
                 <Grid item xs={12} sm={12}>
                     <Paper className={classes.paper}>
-                        <Typography variant="h3" color="primary" gutterBottom>3. Qualities</Typography>                        
+                        <Typography variant="h4" color="primary" gutterBottom>3. Qualities</Typography>                        
                         <Typography className={classes.paragraph}>The ratings for your different leadership behaviours have been combined to achieve an average rating for each Leadership Quality.</Typography>
 
-                        <Typography variant="h3" color="primary" gutterBottom>3.1 Individual Ratings</Typography>
+                        <Typography variant="h4" color="primary" gutterBottom>3.1 Individual Ratings</Typography>
                         <Typography className={classes.paragraph}>The chart below indicates the ratings submitted by the individual assessors.</Typography>
+                        <RadarChart 
+                            cx={radar.cx} 
+                            cy={radar.cy} 
+                            outerRadius={radar.outerRadius} 
+                            width={radar.width} 
+                            height={radar.height} 
+                            data={graphData}>
+                            <PolarGrid />
+                            <PolarAngleAxis dataKey="quality" />
+                            <PolarRadiusAxis/>
+                            <Radar name={`${user.firstName} ${user.lastName}`} dataKey="avg" stroke={this.props.theme.palette.primary.dark} fill={theme.palette.primary.light} fillOpacity={0.6}/>
+                        </RadarChart>
 
-                        <Typography variant="h3" color="primary" gutterBottom>3.2 Aggregate Ratings</Typography>
+                        <Typography variant="h4" color="primary" gutterBottom>3.2 Aggregate Ratings</Typography>
                         <Typography className={classes.paragraph}>The chart below indicates the combined ratings for all assessors.</Typography>
 
                     </Paper>
@@ -365,14 +443,14 @@ class ReportDetail extends Component {
 
                 <Grid item xs={12} sm={12}>
                     <Paper className={classes.paper}>
-                        <Typography variant="h3" color="primary" gutterBottom>4. Behaviours</Typography>
+                        <Typography variant="h4" color="primary" gutterBottom>4. Behaviours</Typography>
                         <Typography variant="body" className={classes.paragraph}>The charts in this section indicate the ratings given by your assessors for each behaviour.</Typography>
                         {report.survey.leadershipBrand.qualities.map((quality, qi) => {
                             return (
                                 <div>
-                                    <Typography variant="h3" color="primary" gutterBottom>4.{qi + 1} {quality.title}</Typography>
+                                    <Typography variant="h4" color="primary" gutterBottom>4.{qi + 1} {quality.title}</Typography>
                                     {quality.behaviours.map((behaviour, bi) => { 
-                                        <Typography variant="body1">B{bi + 1} -> {behaviour.description}</Typography>                                        
+                                        return (<Typography variant="body1">B{bi + 1} -> {behaviour.description}</Typography>)                                        
                                     })}
                                     <ThemedBarChartForQuality quality={quality} report={report} />
                                 </div>
@@ -386,20 +464,20 @@ class ReportDetail extends Component {
 
                 <Grid item xs={12} sm={12}>
                     <Paper className={classes.paper}>
-                        <Typography variant="h3" color="primary" gutterBottom>5. Overall</Typography>
+                        <Typography variant="h4" color="primary" gutterBottom>5. Overall</Typography>
                         
                     </Paper>
                 </Grid>
 
                 <Grid item xs={12} sm={12}>
                     <Paper className={classes.paper}>
-                        <Typography variant="h3" color="primary" gutterBottom>6. Development Plan</Typography>
+                        <Typography variant="h4" color="primary" gutterBottom>6. Development Plan</Typography>
                     </Paper>
                 </Grid>
 
                 <Grid item xs={12} sm={12}>
                     <Paper className={classes.paper}>
-                        <Typography variant="h3" color="primary" gutterBottom>7. Acceptance and Commitment</Typography>
+                        <Typography variant="h4" color="primary" gutterBottom>7. Acceptance and Commitment</Typography>
                         <Typography>
                             I accept and commit to addressing the feedback presented in this assessment, by taking the actions listed within the agreed timeframes.
                         </Typography>                        
@@ -408,11 +486,10 @@ class ReportDetail extends Component {
             </Grid>        
         )
     }
-
 }
 
 
-const ReportDetailComponent = compose(withTheme(), withStyles(ReportDetail.styles))(ReportDetail)
+const ReportDetailComponent = compose(withApi, withTheme(), withStyles(ReportDetail.styles))(ReportDetail)
 
 class ReportDashboard extends Component {
 
@@ -426,11 +503,13 @@ class ReportDashboard extends Component {
         window.addEventListener('resize', this.windowResize);
         this.dashboard = this.dashboard.bind(this);
         this.detail = this.detail.bind(this);
+        this.componentDefs = props.api.getComponents(['core.Loading'])
     }
         
     static propTypes = {
         user:  PropTypes.object,
         reports: PropTypes.object,
+        api: PropTypes.instanceOf(ReactoryApi)
     };
 
     static defaultProps = {
@@ -488,11 +567,11 @@ class ReportDashboard extends Component {
 
     detail(surveyId){
         const { classes, history, api } = this.props;        
-        
+        const { Loading } = this.componentDefs;
         return (
             <Query query={api.queries.Surveys.reportDetailForUser} variables={{ userId: api.getUser().id, surveyId }}>
             { ({ loading, error, data }) => {
-                if(loading === true) return (<p>Loading report data...</p>);
+                if(loading === true) return (<Loading message="Loading Report Details, please wait a moment" />);
                 if(isNil(error) === false) return (<p>Error during load...</p>);
                 const report = data.reportDetailForUser;
                 return (<ReportDetailComponent report={report}/>);

@@ -10,8 +10,11 @@ import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import gql from 'graphql-tag';
 import MobileStepper from '@material-ui/core/MobileStepper';
 import {
+  Divider,
   Badge,
   Icon,
+  IconButton,
+  InputBase,
   Fab,
   Menu, MenuItem,
   Input, InputLabel,
@@ -25,14 +28,10 @@ import Typography from '@material-ui/core/Typography';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
-import IconButton from '@material-ui/core/IconButton';
 import Avatar from '@material-ui/core/Avatar';
 import TextField from '@material-ui/core/TextField';
 import AppBar from '@material-ui/core/AppBar';
-import AddIcon from '@material-ui/icons/Add';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
-import ReportIcon from '@material-ui/icons/Assessment';
-import SaveIcon from '@material-ui/icons/Save';
 import CancelIcon from '@material-ui/icons/Cancel';
 import Assessment, { Behaviour } from './Assessment';
 import KeyboardArrowLeft from '@material-ui/icons/KeyboardArrowLeft';
@@ -163,7 +162,7 @@ class RatingControl extends Component {
 
     let ratingTooltip = rating.rating === 0 ? 
       <Tooltip title="Requires a rating selection"><Icon color="secondary">info</Icon></Tooltip> : 
-      <Tooltip title={`You scored ${rating.rating} `}><Icon color="primary">check</Icon></Tooltip>;
+      <Tooltip title={`You scored ${rating.rating} `}><Icon color="primary">check_circle</Icon></Tooltip>;
 
     if(rating.rating > 0 && rating.rating <= 2) {
       if(this.state.comment.length < 50) {
@@ -258,6 +257,25 @@ class DefaultView extends Component {
     const windowHeight = window.innerHeight;
 
     return {
+
+      root: {
+        padding: '2px 4px',
+        display: 'flex',
+        alignItems: 'center',
+        width: '100%',
+      },
+      input: {
+        marginLeft: 8,
+        flex: 1,
+      },
+      iconButton: {
+        padding: 10,
+      },
+      divider: {
+        width: 1,
+        height: 28,
+        margin: 4,
+      },
       card: {
         width: '100%',
         maxWidth: '1024px',
@@ -638,6 +656,8 @@ class DefaultView extends Component {
       
     };
 
+    const onClearCustomText = evt => that.setState({ newBehaviourText: '' });
+
     return (
       <Grid container spacing={8}>
         <Grid item sm={12} xs={12}>
@@ -651,14 +671,21 @@ class DefaultView extends Component {
                 If you want to provide a customized behaviour that {delegate.firstName} exhibits that relates to {quality.title} click the add button and provide your rating and feedback.<br /><br />
                 Please note, these custom ratings will not affect the calculation of {delegate.firstName} overall rating for this assessment.
              </Typography>
-              <TextField
-                fullWidth
-                helperText='Add a short behavior description'
-                label={'Custom Behaviour'}
-                onChange={setNewBehaviourText} />
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button onClick={onNewBehaviourClicked} variant='text' color='primary' disabled={isEmpty(newBehaviourText) === true}><AddIcon />Add Custom Behaviour</Button>
-              </div>
+             <Paper className={classes.root} elevation={1}>              
+              <InputBase 
+                className={classes.input} 
+                placeholder={"Please provide a custom behaviour description"}  
+                onChange={setNewBehaviourText}
+                fullWidth={true}
+                value={newBehaviourText} />
+              <IconButton onClick={onNewBehaviourClicked} className={classes.iconButton} aria-label="Search">
+                <Icon>add</Icon>
+              </IconButton>
+              <Divider className={classes.divider} />
+              <IconButton onClick={onClearCustomText} color="primary" className={classes.iconButton} aria-label="Directions">
+                <Icon>close</Icon>
+              </IconButton>
+            </Paper>                            
             </Paper>
           </Grid>
         ) : null}
@@ -758,7 +785,6 @@ class DefaultView extends Component {
 
   currentStepValid(){    
     const { assessment, step } = this.state;
-    console.log(`Checking if current step is valid ${step}`);
     if(step === 0) return true;
     
     let maxSteps = assessment.survey.leadershipBrand.qualities.length + 2;
@@ -767,11 +793,11 @@ class DefaultView extends Component {
     const { ratings } = assessment;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
 
+    
     const invalidRatings = lodash.find(ratings, r => {
       return r.quality.id === quality.id && r.rating <= 2 && lodash.isEmpty(r.comment) === true
     }) || [];
 
-    // console.log(`Invalid Ratings for Quality ${invalidRatings.length}`);
     if(invalidRatings.length === 0) return true;
     else return false;
   }
@@ -779,7 +805,7 @@ class DefaultView extends Component {
   render() {
     const { classes, theme, api } = this.props;
     const { step, valid, assessment, showMenu } = this.state;
-    const { delegate, assessor, survey } = assessment;
+    const { delegate, assessor, survey, selfAssessment } = assessment;
     const { nextStep, toolbar, assessmentOptions, handleMenu, prevStep } = this;
     let wizardControl = null;
     let maxSteps = assessment.survey.leadershipBrand.qualities.length + 2;
@@ -789,6 +815,8 @@ class DefaultView extends Component {
     if (step === maxSteps - 1) wizardControl = this.thankYouScreen();
     if (nil(wizardControl) === true) wizardControl = this.ratingScreen();
 
+    const daysLeft = moment(survey.endDate).diff(moment(), 'days');
+
     return (
       <Grid container spacing={16} className={classes.card}>
         <Grid item xs={12} sm={12}>
@@ -797,11 +825,11 @@ class DefaultView extends Component {
               <Grid item xs={12} sm={12}>
                 <CardHeader
                   avatar={<Badge color={"primary"} 
-                          badgeContent={assessment.overdue === true ? "!" : assessment.complete === true ? 'C' : moment().diff(moment(survey.endDate), 'days')}>
-                          <Avatar src={api.getAvatar(delegate)} className={classNames(classes.delegateAvatar)} alt={assessment.delegateTitle}></Avatar>
+                                badgeContent={ assessment.overdue === true ? "!" : assessment.complete === true ? 'C' : `${daysLeft}` }>
+                            <Avatar src={api.getAvatar(delegate)} className={classNames(classes.delegateAvatar)} alt={assessment.delegateTitle}></Avatar>
                           </Badge>}
-                  title={assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.surveyType} ${survey.title}` : `Unknown`}
-                  subheader={`Survey valid from ${moment(survey.startDate).format('DDD MMMM YYYY')} till ${moment(survey.endDate).format('DDD MMMM YYYY')} - ${assessment.complete === true ? 'Complete' : 'In progress'}`}
+                  title={assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.surveyType} ${survey.title} ${selfAssessment === true ? ' [Self Assessment]' : ''}` : `Unknown`}
+                  subheader={`Survey valid from ${moment(survey.startDate).format('DD MMMM YYYY')} till ${moment(survey.endDate).format('DD MMMM YYYY')} - ${assessment.complete === true ? 'Completed - Review Only' : 'In progress'}`}
                   action={
                     <IconButton
                       aria-owns={showMenu ? 'assessment-options' : null}

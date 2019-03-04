@@ -317,7 +317,7 @@ class TowerStoneHomeComponent extends Component {
                     </Grid> : null}
 
                     <Grid item xs={12} sm={12}>
-                        <Surveys minimal={true} showComplete={false} />
+                        <Surveys minimal={true} showComplete={true} />
                     </Grid>
 
                     <Grid item xs={12} sm={6}>

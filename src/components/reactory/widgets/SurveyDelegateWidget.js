@@ -4,7 +4,7 @@ import { compose } from 'redux';
 import classnames from 'classnames';
 import om from 'object-mapper';
 import MaterialTable, { MTableToolbar } from 'material-table';
-import { isArray, isFunction, sort, findIndex } from 'lodash';
+import { isArray, isFunction, sort, findIndex, countBy } from 'lodash';
 import {
   Avatar,
   Paper,
@@ -14,7 +14,8 @@ import {
   IconButton,
   Tooltip,
   Tabs,
-  Tab
+  Tab,
+  LinearProgress
 } from '@material-ui/core';
 import gql from 'graphql-tag';
 import { UserListItem } from '../../user/Lists';
@@ -180,35 +181,11 @@ class SurveyDelegates extends Component {
     console.log('Generate Report', delegateEntry);
   }
 
-  getDetailView(delegateEntry){
-    
-    const { Profile, AssessmentList, AssessmentTable } = this.componentDefs
-    const { activeTab, activeEntry } = this.state;
-    console.log('Getting detailed view', activeEntry);
+  getDetailView(){    
+    const { Profile } = this.componentDefs
+    const { activeEntry } = this.state;
 
-    const handleTabChange = (e, value) => {
-      console.log('TabChange', {e, value});      
-      this.setState({activeTab: value});
-    }
-
-    return (
-      <Fragment>
-        <Tabs value={activeTab} onChange={handleTabChange}>
-           <Tab value="assessments" label="Assessments"/>
-           <Tab value="user" label={`${activeEntry.delegate.firstName} Profile & Peers`}/>           
-        </Tabs>
-        { activeTab === 'assessments' && 
-          <TabContainer>
-            <AssessmentTable assessments={activeEntry.assessments} />
-          </TabContainer>
-        }
-        { activeTab === 'user' && 
-          <TabContainer>
-            <Profile profileId={activeEntry.delegate.id} withPeers={true} />
-          </TabContainer> 
-        }        
-      </Fragment>
-      )
+    return (<Profile profileId={activeEntry.delegate.id} withPeers={true} />);
   }
 
   getActiveModalView(){
@@ -377,8 +354,8 @@ class SurveyDelegates extends Component {
     });
   }
 
-  sendCommunicationToDelegate(delegateEntry){
-    this.doAction(delegateEntry, 'send-invite', {}, `Sending invite to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
+  sendCommunicationToDelegate(delegateEntry, communication = 'send-invite'){
+    this.doAction(delegateEntry, communication, {}, `Sending invite to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
   }
 
   launchSurveyForDelegate(delegateEntry){
@@ -395,14 +372,13 @@ class SurveyDelegates extends Component {
 
   render(){
     const { classes, api } = this.props;
-    const { ErrorMessage } = this.componentDefs;
+    const { ErrorMessage, AssessmentTable } = this.componentDefs;
     const { formData } = this.state;
     const self = this;
     let data = [];
     formData.map((entry) => { 
       if(entry.delegate && entry.delegate.id) data.push({...entry}) 
-    });
-    console.log('Rendering SurveyDelegateWidget', data);
+    });     
     if(isArray(data) === true){
       return (
         <Paper>                    
@@ -441,16 +417,23 @@ class SurveyDelegates extends Component {
                   <div>
                     <MTableToolbar {...props}/>
                     <Toolbar>
-                      <IconButton color="primary" onClick={this.sendInviteEmails}><Icon>mail</Icon></IconButton>
-                      <IconButton color="primary" onClick={this.launchSurvey}><Icon>flight_take_off</Icon></IconButton>
-                      <IconButton color="primary" onClick={this.stopSurvey}><Icon>flight_land</Icon></IconButton>
-                      <IconButton color="primary" onClick={this.addDelegateClicked}><Icon>add</Icon></IconButton>
+                      <Tooltip title='Click here to trigger suggested email'><IconButton color="primary" onClick={this.sendInviteEmails}><Icon>mail</Icon></IconButton></Tooltip>
+                      <Tooltip title='Click here to add a new delegate to this survey'><IconButton color="primary" onClick={this.addDelegateClicked}><Icon>add</Icon></IconButton></Tooltip>
                     </Toolbar>
                   </div>
                 )
               },
             }}
             title="Delegates"
+            detailPanel={ rowData => {
+              return (
+                  <Fragment>
+                    <Typography variant="h5">Delegate assessment details for {rowData.delegate.firstName} {rowData.delegate.lastName}</Typography>
+                    <LinearProgress variant="determinate" value={rowData.assessments.length > 0 ? Math.floor(((countBy(rowData.assessments, { complete: true }) * 100) / rowData.assessments.length)) : 0 }/>
+                    <AssessmentTable assessments={rowData.assessments} />
+                  </Fragment>
+                )
+            }}
             actions={[
                 rowData => {
                   if(rowData.removed === true) return null;

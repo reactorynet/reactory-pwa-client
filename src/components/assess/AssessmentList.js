@@ -7,7 +7,6 @@ import {
   List,
   ListItem,
   ListItemAvatar,
-  ListItemIcon,
   ListItemSecondaryAction,
   ListItemText,
   Icon,
@@ -17,6 +16,7 @@ import { Typography } from '@material-ui/core';
 import MaterialTable from 'material-table';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 import gql from 'graphql-tag';
+import moment from 'moment';
 
 const AssessmentItemStyles = (theme) => {
   return {
@@ -69,7 +69,25 @@ class AssessmentTable extends Component {
       deleteIndex: -1
     };
 
-    this.deleteAssessment = this.deleteAssessment.bind(this)
+    this.deleteAssessment = this.deleteAssessment.bind(this);
+    this.sendReminder = this.sendReminder.bind(this);
+  }
+
+  sendReminder(assessment){
+    console.log(`Must send a reminder to ${assessment.assessor.firstName}`, assessment);
+
+    return;
+
+    /* 
+    if(assessment.complete === false){
+      const { api } = this.props;
+      api.graphqlMutation(gql``,{ }).then(result => {
+
+      }).catch(exception => {
+
+      })
+    }
+    */
   }
 
   deleteAssessment(assessment, confirmed = false){
@@ -128,7 +146,9 @@ class AssessmentTable extends Component {
             title: 'Info', render: (rowData) => {
               if(rowData.tableData.id === that.state.deleteIndex) {
                 return <Typography>Are you sure you want to delete this survey?</Typography>
-              }                            
+              }              
+              if(rowData.updatedAt) return <Typography variant="body1">Last modified {moment(rowData.updatedAt).format('DD MM YYYY')}</Typography>
+              if(rowData.createdAt) return <Typography variant="body1">Created {moment(rowData.createdAt).format('DD MM YYYY')}</Typography>
             }
           },
           {
@@ -170,6 +190,22 @@ class AssessmentTable extends Component {
                 }
               }
             }              
+          },
+          (dataRow) => {
+            if(dataRow.complete === false){
+              return {
+                icon: 'alarm',
+                tooltip: `Click to send a reminder to ${dataRow.assessor.firstName} ${dataRow.assessor.lastName}`,
+                onClick: (event) => {
+                  that.sendReminder(dataRow, false)
+                },
+                iconProps: {
+                  color: theme.palette.primary.dark
+                }
+              }
+            } else {
+              return null;
+            }
           }          
         ]}
         title="Assessments"

@@ -415,7 +415,7 @@ export class ReactoryApi extends EventEmitter {
                     that.setUser({ ...result.data.apiStatus });
                     that.lastValidation = moment().valueOf();
                     that.tokenValidated = true;                                         
-                    if(options.emitLogin === true) that.emit(ReactoryApiEventNames.onLogin);
+                    if(options.emitLogin === true) that.emit(ReactoryApiEventNames.onLogin, that.getUser());
                     resolve(that.getUser());                    
                 }
                 else {

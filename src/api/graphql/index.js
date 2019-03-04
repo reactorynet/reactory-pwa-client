@@ -614,6 +614,7 @@ query ReportDetailForUser($userId: String, $surveyId: String){
 			status
 			startDate
 			endDate
+      surveyType,
       organization {
         id
         name
