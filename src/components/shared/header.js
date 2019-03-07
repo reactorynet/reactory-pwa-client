@@ -244,6 +244,24 @@ class ApplicationHeader extends Component {
       }
     };
 
+    const searchControl = (<div className={classes.grow}>
+    <div className={classes.search}>
+      <div className={classes.searchIcon}>
+        <Icon>search</Icon>
+      </div>
+      <InputBase
+        placeholder="Search…"
+        classes={{
+          root: classes.inputRoot,
+          input: classes.inputInput,
+        }}
+        onKeyPress={onSearchTextKeyPress}
+        onChange={setSearchText}
+        value={this.state.searchInput}
+      />
+    </div>
+    </div>);
+
     return (
       <Fragment>
         <AppBar position="fixed" style={{backgroundColor: theme.palette.primary1Color}}>
@@ -253,24 +271,7 @@ class ApplicationHeader extends Component {
             </IconButton>
             <Typography type="title" color="inherit" style={{flex: 1}}>
               {user.applicationName}
-            </Typography>
-
-            <div className={classes.grow} />
-            <div className={classes.search}>
-              <div className={classes.searchIcon}>
-                <Icon>search</Icon>
-              </div>
-              <InputBase
-                placeholder="Search…"
-                classes={{
-                  root: classes.inputRoot,
-                  input: classes.inputInput,
-                }}
-                onKeyPress={onSearchTextKeyPress}
-                onChange={setSearchText}
-                value={this.state.searchInput}
-              />
-            </div>
+            </Typography>            
 
             {user.anon === true ? null :
               <IconButton

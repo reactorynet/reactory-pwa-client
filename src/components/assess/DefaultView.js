@@ -440,6 +440,7 @@ class DefaultView extends Component {
       <Paper className={classes.thankYouScreen}>
         {assessment.complete === false && 
           <Fragment>
+            <Typography gutterBottom variant="h4" color="primary">Please note!</Typography>
             <Typography gutterBottom variant="body1">Thank you for taking the time to complete the assessment. If you are happy with the ratings and input you have provided, please click the complete button below.</Typography>
             <Typography variant="body2">If you want to come back later and review your answers, simply click back to Dashboard and return later.</Typography>
             <Button onClick={completeAssessment} color="primary" style={{marginRight: '4px'}}><Icon>save</Icon>&nbsp;Complete</Button>
@@ -795,7 +796,7 @@ class DefaultView extends Component {
 
     
     const invalidRatings = lodash.find(ratings, r => {
-      return r.quality.id === quality.id && r.rating <= 2 && lodash.isEmpty(r.comment) === true
+      return (r.quality.id === quality.id && r.rating <= 2) && (lodash.isEmpty(r.comment) === true || r.comment.length < 50);
     }) || [];
 
     if(invalidRatings.length === 0) return true;

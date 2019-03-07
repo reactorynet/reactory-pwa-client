@@ -510,7 +510,7 @@ class Profile extends Component {
                             }),
                             {
                                 icon: 'check_circle',
-                                tooltip: peers.confirmedAt ? `Peers last confirmed at ${moment(peers.confirmedAt).format('DDD MMM YYYY')}` : 'Confirm peer selection',
+                                tooltip: peers.confirmedAt ? `Peers last confirmed at ${moment(peers.confirmedAt).format('YYYY-MM-DD')}` : 'Confirm peer selection',
                                 disabled: false,
                                 isFreeAction: true,
                                 onClick: (event, rowData) => {
@@ -687,6 +687,21 @@ class Profile extends Component {
             'core.Loading'
         ])
         window.addEventListener('resize', this.windowResize);
+    }
+
+    componentDidMount(){
+        if(this.state.profile.memberships && this.state.profile.memberships.length > 0) {
+            let membershipWithOrganization = null;
+            this.state.profile.memberships.forEach( membership => {
+                if(membership.organization !== null && membershipWithOrganization === null) {
+                    if(membership.organization.name){
+                        membershipWithOrganization = membership;
+                    }
+                }                
+            });
+
+            if(membershipWithOrganization !== null) this.onMembershipSelectionChanged(membershipWithOrganization);
+        }
     }
 }
 
