@@ -99,14 +99,20 @@ class Forgot extends Component {
   render() {
 
     const { emailKeyPressHandler } = this;
-
     const {
       BasicModal,      
-    } = this.componentRefs
+    } = this.componentRefs;
+    const { magicLink } = this.props;
 
     if (this.state.mailSent) {
-
-      return (<BasicModal open={true} onClose={this.goBack} title="Email Sent"><Typography variant="heading">An email has been sent with instructions to reset your password. Please allow a few minutes for delivery</Typography></BasicModal>)
+      return (
+      <BasicModal open={true} onClose={this.goBack} title="Email Sent">
+        <Typography variant="heading">
+          { magicLink === false 
+            ? 'An email has been sent with instructions to reset your password. Please allow a few minutes for delivery' 
+            : 'An email has been sent with a magic link to login. Please allow a few minutes for delivery' } 
+        </Typography>
+      </BasicModal>)
     }
     if (this.state.hasError) {
       return (<div><Typography variant="heading">{this.state.message}</Typography></div>);
@@ -126,7 +132,10 @@ class Forgot extends Component {
                 value={this.state.email} 
                 label="Email"  
                 fullWidth={true} 
-                helperText="Enter your email and click the send button below to start the reset process for your account"
+                helperText={ magicLink === false ? 
+                  "Enter your email and click the send button below to start the reset process for your account." :
+                  "Enter your email address and we will send you link to log in with."
+                }
                 style={{marginBottom: '50px'}}
                 inputProps={{ 
                   inputProps:{
@@ -137,7 +146,7 @@ class Forgot extends Component {
             </Grid>
             <Grid item xs={12}>
               <Button type="button" onClick={this.goBack} variant="flat"><Icon>keyboard_arrow_left</Icon>&nbsp;BACK</Button>
-              <Tooltip title="Click to send a reset email">
+              <Tooltip title={ magicLink === false ? "Click to send a reset email" : "Click to send a magic link to login with" }>
                 <Fab onClick={this.onSubmit} variant="rounded" color="primary" ><Icon>send</Icon></Fab>
               </Tooltip>                    
             </Grid>
@@ -150,8 +159,13 @@ class Forgot extends Component {
 }
 
 Forgot.propTypes = {
-  api: PropTypes.instanceOf(ReactoryApi)
-}
+  api: PropTypes.instanceOf(ReactoryApi),
+  magicLink: PropTypes.bool.isRequired
+};
+
+Forgot.defaultProps = {
+  magicLink: false,
+};
 
 Forgot.styles = theme => ({
   ...styles(theme)
@@ -201,6 +215,7 @@ class ResetPassword extends Component {
       email: form.formData.user.email,
       authToken: form.formData.authToken,
       password: form.formData.password,
+      confirmPassword: form.formData.confirmPassword
     }).then((forgotResult) => {
       console.log('Forgot password has been triggered', forgotResult);
       that.setState({ passwordUpdated: true, message: 'Your password has been updated, you will be redirected to the dashboard momentarily' }, ()=>{

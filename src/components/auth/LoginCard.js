@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
@@ -64,6 +64,11 @@ class LoginCard extends Component {
     });
   }
 
+  doEmailLogin = (evt) => {
+    const { history, api } = this.props;    
+    history.push('/send-link');
+  }
+
   doRegister = evt => this.props.history.push('/register')
   doForgot = evt => this.props.history.push('/forgot')
   updateUsername = (evt) => this.setState({ username: evt.target.value })
@@ -118,6 +123,13 @@ class LoginCard extends Component {
           <Button onClick={this.doForgot} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
             Forgot Password
           </Button>
+          {this.props.magicLink === true && <Fragment>
+              <br/>
+              <Button onClick={this.doEmailLogin} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
+                Send Magic Link
+              </Button>
+            </Fragment>}
+          
         </form>
       </Paper>
     </CenteredContainer>)
@@ -129,7 +141,12 @@ class LoginCard extends Component {
   }
 
   static propTypes = {
-    api: PropTypes.instanceOf(ReactoryApi)
+    api: PropTypes.instanceOf(ReactoryApi),
+    magicLink: PropTypes.bool.isRequired,
+  }
+
+  static defaultProps = {
+    magicLink: false,
   }
 
   static styles = theme => ({

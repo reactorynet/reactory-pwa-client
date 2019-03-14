@@ -5,14 +5,14 @@ import RegisterCard from './RegisterCard';
 export class LoginPage extends Component {
 
     render(){
-        return <LoginCard />
+        return <LoginCard {...this.props} />
     }
 }
 
 export class RegisterPage extends Component {
 
     render(){
-        return <RegisterCard />
+        return <RegisterCard {...this.props} />
     }
 }
 

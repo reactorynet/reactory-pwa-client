@@ -22,6 +22,7 @@ import { UserListItem } from '../../user/Lists';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi, ReactoryApi } from '../../../api/ApiProvider';
 import { nil } from '../../util';
+import moment from 'moment';
 
 class SurveyDelegate extends Component {
   
@@ -383,22 +384,19 @@ class SurveyDelegates extends Component {
       return (
         <Paper>                    
           <MaterialTable
-            columns={[
-                {
-                  title: 'Avatar', render: (rowData) => {
-                    return rowData && rowData.delegate ? <Avatar src={api.getAvatar(rowData.delegate)} />  : 'No Delegate'
-                  }
-                },
+            columns={[                
                 {
                     title: 'Delegate', render: (rowData) => {
-                        return rowData && rowData.delegate ? `${rowData.delegate.firstName} ${rowData.delegate.lastName}`  : 'No Delegate'
+                      const fullName = rowData && rowData.delegate ? `${rowData.delegate.firstName} ${rowData.delegate.lastName}`  : 'No Delegate'
+                      const avatar = rowData && rowData.delegate ? <Avatar src={api.getAvatar(rowData.delegate)} />  : 'No Delegate'
+                        return (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', flexGrow: 1 }}>
+                          {avatar}
+                          <Typography variant="body2">{fullName}</Typography>
+                        </div>)
+                        
                     }
-                },
-                {
-                  title: 'Email', render: (rowData) => {
-                      return rowData && rowData.delegate ? `${rowData.delegate.email}`  : 'No Delegate'
-                  }
-                },
+                },                
                 {
                   title: 'Message', render: (rowData) => {
                     return rowData && rowData.message ? rowData.message : 'No Message'
@@ -409,6 +407,16 @@ class SurveyDelegates extends Component {
                         return rowData && rowData.status ? rowData.status.toUpperCase() : 'NEW'
                     }
                 },                
+                {
+                  title: 'Last Action', render: (rowData) => {
+                    return rowData.lastAction
+                  },
+                },
+                {
+                  title: 'Next Action', render: (rowData) => {
+                    return rowData.nextAction
+                  },
+                },               
             ]}                    
             data={data}
             components={{
