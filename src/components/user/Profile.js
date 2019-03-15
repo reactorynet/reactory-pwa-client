@@ -30,6 +30,7 @@ import { UserListItem } from '.';
 import { UserListWithSearchComponent } from './Widgets'
 import gql from 'graphql-tag';
 import { isNullOrUndefined } from 'util';
+import FullScreenDialog from '../shared/FullScreenDialog';
 
 const defaultProfile = {
     __isnew: true,
@@ -290,7 +291,12 @@ class Profile extends Component {
     }
 
     renderPeers() {
-        const { profile, selectedMembership, showResult, searching, showPeerSelection, loadingPeers } = this.state
+        const { 
+            profile, 
+            selectedMembership, 
+            loadingPeers, 
+            highlight,             
+            showConfirmPeersDialog } = this.state
         const { peers, __isnew } = profile;
         const { BasicModal, Loading } = this.componentDefs        
         const that = this;
@@ -372,27 +378,32 @@ class Profile extends Component {
             })  
         }        
 
-        const confirmPeers = () => {
+        const confirmPeers = (confirmed) => {
             //console.log('Confirming peers for user', this.props, this.state)
-            const mutation = gql`mutation ConfirmPeers($id: String!, $organization: String!){
-                confirmPeers(id: $id, organization: $organization){
-                    ${userPeersQueryFragment}
-                }
-            }`;
-    
-            const variables = {
-                id: profile.id,
-                organization: selectedMembership.organization.id
-            };
-    
-            api.graphqlMutation(mutation, variables).then( result => {
-                if(result && result.data && result.data.confirmPeers) {
-                    that.setState({ profile: { ...profile, peers: {...profile.peers, ...result.data.confirmPeers } }}, that.refreshPeers)
-                }
-            }).catch( ex => {
-                //console.error( 'Error confirming peers ', ex)
-                that.setState({ showMessage: true, message: 'An error occured confirming peer settings' })
-            });
+            if(confirmed === true) {
+                const mutation = gql`mutation ConfirmPeers($id: String!, $organization: String!){
+                    confirmPeers(id: $id, organization: $organization){
+                        ${userPeersQueryFragment}
+                    }
+                }`;
+        
+                const variables = {
+                    id: profile.id,
+                    organization: selectedMembership.organization.id
+                };
+        
+                api.graphqlMutation(mutation, variables).then( result => {
+                    if(result && result.data && result.data.confirmPeers) {
+                        that.setState({ showConfirmPeersDialog: false, profile: { ...profile, peers: {...profile.peers, ...result.data.confirmPeers } }}, that.refreshPeers)
+                    }
+                }).catch( ex => {
+                    //console.error( 'Error confirming peers ', ex)
+                    that.setState({ showConfirmPeersDialog: false, showMessage: true, message: 'An error occured confirming peer settings' })
+                });
+            } else {
+              that.setState({ showConfirmPeersDialog: true })  
+            }
+            
         };
 
         const setUserPeerSelection = (selection) => {
@@ -422,11 +433,27 @@ class Profile extends Component {
         let excludedUsers = [profile.id]
         
         if(peers && peers.peers ) peers.peers.forEach( p => (excludedUsers.push(p.user.id)))
+        let confirmPeersDialog = null
+        if(showConfirmPeersDialog === true) {
+            const closeConfirmDialog = () => {
+                that.setState({ showConfirmPeersDialog: false });
+            }
 
+            const doConfirm = () => {
+                confirmPeers(true);
+            }
 
-        return (
+            confirmPeersDialog = (
+            <BasicModal open={true}>
+                <Typography variant="caption">Are you happy with your peer selection?</Typography>
+                <Button color="primary" onClick={doConfirm}>Yes, Confirm my peers</Button>
+                <Button onClick={closeConfirmDialog}>No, I want to make some changes</Button>
+            </BasicModal>)
+        }
+        const peersComponent = (
             <Fragment>                
                 <Grid item sm={12} xs={12} offset={4}>
+                    {confirmPeersDialog}
                     {
                         membershipSelected && this.state.showPeerSelection &&                        
                             <UserListWithSearchComponent 
@@ -455,7 +482,8 @@ class Profile extends Component {
                                         <Typography className={peers.confirmedAt ? 
                                             classNames([classes.confirmedLabel, classes.notConfirmed]) : 
                                             classNames([classes.confirmedLabel, classes.confirmed]) } 
-                                            variant={"body1"}>{moment.isMoment(moment(peers.confirmedAt)) === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Not Confirmed' }
+                                            variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }
+
                                             </Typography>
                                     </div>
                                 )
@@ -515,7 +543,7 @@ class Profile extends Component {
                                 isFreeAction: true,
                                 onClick: (event, rowData) => {
                                     console.log('Confirm peers', { event, rowData });
-                                    confirmPeers()
+                                    confirmPeers(false);
                                 },
                             },
                             {
@@ -534,8 +562,29 @@ class Profile extends Component {
                 </Grid>
 
             </Fragment>
-
         )
+
+        if(highlight === "peers"){
+            const closePeersHighlight = () => {
+                this.setState({ highlight: null });
+            }
+            return (<FullScreenDialog title="Select your peers" open={true} onClose={closePeersHighlight}>
+                        <Paper style={{margin:'16px', padding: '8px'}}>
+                            <Typography variant="h3" color="primary">
+                                Colleagues / Peer management.
+                            </Typography>
+                            <Typography variant="body1">
+                                Please use the grid below, to manage your peers, direct reports and supervisors.  Use the <IconButton><Icon>edit</Icon></IconButton> on the grid
+                                to display a list of your fellow employees.<br/>
+                                Once you have selected them, please click on the confirm button <IconButton><Icon>check_circle</Icon></IconButton><br/>  
+                                This will notify your colleagues that you have selected them as a potential assessor for future assessment.
+                            </Typography>
+                            {peersComponent}
+                        </Paper>                                            
+            </FullScreenDialog>)
+        } else {
+            return peersComponent;
+        }        
     }
 
 
@@ -679,12 +728,13 @@ class Profile extends Component {
             selectedMembership: null,
             help: props.api.queryObject.help === "true",
             helpTopic: props.api.queryObject.helptopics,
-            highlight: props.api.queryObject.highlight
+            highlight: props.api.queryObject.peerconfig === "true" ? "peers" : null
         };
                 
         this.componentDefs = props.api.getComponents([
             'core.BasicModal', 
-            'core.Loading'
+            'core.Loading',
+            'core.FullScreenModal',
         ])
         window.addEventListener('resize', this.windowResize);
     }
