@@ -341,6 +341,7 @@ ApplicationHeader.styles = theme => ({
     justifyContent: 'space-between',
     minWidth: '260px',
     padding: `0 ${theme.spacing.unit}px`,
+    //height: theme.spacing.
   },
   loggedInUserAvatar: {
     height: 120, 

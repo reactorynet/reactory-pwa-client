@@ -44,14 +44,26 @@ class UserWidgetWithSearch extends Component {
     super(props, context)
     this.state = {
       modal: false,
-      user: null
+      user: null,
+      showNewUser: false,
     };
     this.getModal = this.getModal.bind(this);
-    this.componentDefs = props.api.getComponents(['core.Logo', 'core.UserWithQuery', 'core.FullScreenModal', 'core.UserListWithSearch', 'towerstone.SurveyDelegateWidget'])
+    this.componentDefs = props.api.getComponents([
+      'core.Logo',
+      'core.UserWithQuery',
+      'core.FullScreenModal',
+      'core.BasicDialog',
+      'core.Profile',
+      'core.UserListWithSearch',
+      'core.CreateProfile', 
+      'towerstone.SurveyDelegateWidget'
+    ])
   }
 
   getModal(){
-    const { FullScreenModal, UserListWithSearch } = this.componentDefs;
+    const that = this;
+    const { FullScreenModal, UserListWithSearch, BasicDialog, CreateProfile } = this.componentDefs;
+    const { showNewUser } = this.state;
     const closeModal = () => { 
       this.setState({modal: false});
       this.forceUpdate();
@@ -65,12 +77,25 @@ class UserWidgetWithSearch extends Component {
       })
     };
 
+    const newUserClicked = () => {
+      that.setState({ showNewUser: true });
+    };
+
+    let newUserModal = null;
+    if(showNewUser === true) {
+      newUserModal = (
+      <BasicDialog open={showNewUser} title="New User">
+        <CreateProfile avatarEnabled={false} />
+      </BasicDialog>)
+    }
+
     return (
       <FullScreenModal open={this.state.modal === true} onClose={closeModal} title="Employees">
         <UserListWithSearch 
           organizationId={formContext.organizationId}
           multiSelect={false}
           onUserSelect={userSelected}
+          onNewUserClick={newUserClicked}
           selected={formData ? [formData.id]:[]}
           businessUnitFilter={false}
           showFilters={false} />

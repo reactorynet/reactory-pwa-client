@@ -411,11 +411,17 @@ export const componentRegistery = [
     component: FullScreenDialog
   },
   {
+    nameSpace: 'core',
+    name: 'CreateProfile',
+    version: '1.0.0',
+    component: UserComponents.CreateProfile,
+  },
+  {
     nameSpace: 'aot',
     name: 'AnalyticsDashboard',
     version: '1.0.0',
     component: AotAnalyticsDashboardComponent
-  },
+  },  
   {
     nameSpace: 'core',
     name: 'SpeedDial',

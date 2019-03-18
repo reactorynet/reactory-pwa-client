@@ -143,7 +143,13 @@ class Profile extends Component {
         mode: PropTypes.string,
         isNew: PropTypes.bool,
         onCancel: PropTypes.func,
-        onSave: PropTypes.func
+        onSave: PropTypes.func,
+        withPeers: PropTypes.bool,
+        withAvatar: PropTypes.bool,
+        withMembership: PropTypes.bool,
+        firstNameHelperText: PropTypes.string,
+        surnameHelperText: PropTypes.string,
+        emailHelperText: PropTypes.string
     };
 
     static defaultProps = {
@@ -154,7 +160,13 @@ class Profile extends Component {
         highlight: 'none',
         isNew: false,
         onCancel: nilf,
-        onSave: nilf
+        onSave: nilf,
+        withPeers: true,
+        withAvatar: true,
+        withMembership: true,
+        firstNameHelperText: null,
+        surnameHelperText: null,
+        emailHelperText: null,
     };
 
     onAvatarMouseOver() {
@@ -240,6 +252,10 @@ class Profile extends Component {
 
     renderMemberships() {
         const { memberships } = this.state.profile
+        const { withMembership } = this.props;
+        
+        if(withMembership === false) return null;
+
         const data = [];
         const self = this
         if (memberships && memberships.length) {
@@ -291,14 +307,25 @@ class Profile extends Component {
     }
 
     renderPeers() {
+        const { classes, history, api, withPeers } = this.props;
+        if (withPeers === false) return null
+
         const { 
             profile, 
             selectedMembership, 
             loadingPeers, 
             highlight,             
-            showConfirmPeersDialog } = this.state
+            showConfirmPeersDialog,
+            showAddUserDialog
+         } = this.state
         const { peers, __isnew } = profile;
-        const { BasicModal, Loading } = this.componentDefs        
+        const { 
+            BasicModal, 
+            Loading, 
+            CreateProfile, 
+            FullScreenModal 
+        } = this.componentDefs        
+
         const that = this;
         let content = null
 
@@ -318,9 +345,9 @@ class Profile extends Component {
             })
         }
 
-        const { classes, history, api, withPeers } = this.props;
+        
         if (__isnew) return null
-        if (withPeers === false) return null
+        
 
         const setInviteEmail = evt => { 
             this.setState({ inviteEmail: evt.target.value }) 
@@ -430,6 +457,11 @@ class Profile extends Component {
             that.setState({ showPeerSelection: false });
         }
 
+        const onNewPeerClicked = (e) => {
+            console.log("New Peer for User", e);
+            that.setState({ showAddUserDialog: true });
+        };
+
         let excludedUsers = [profile.id]
         
         if(peers && peers.peers ) peers.peers.forEach( p => (excludedUsers.push(p.user.id)))
@@ -450,20 +482,51 @@ class Profile extends Component {
                 <Button onClick={closeConfirmDialog}>No, I want to make some changes</Button>
             </BasicModal>)
         }
+
+        let addUserDialog = null;
+        const closeAddUserDialog = () => {
+            that.setState({ showAddUserDialog: false });
+        };
+
+        const doConfirm = () => {
+            that.setState({ showAddUserDialog: false });
+        };
+
+        const onUserCreated = (user) => {
+            console.log("User created", user);
+            setUserPeerSelection(user);
+        };
+
+
+        if(isNil(membershipSelected) === false) {
+            addUserDialog = (
+                <FullScreenModal open={showAddUserDialog === true} title="Add a new user" onClose={closeAddUserDialog}>
+                    <CreateProfile withAvatar={false} withPeers={false} withMembership={false} 
+                        onCreate={onUserCreated} profileTitle="Invite new user"
+                        firstNameHelperText="Firstname for your colleague / peer"
+                        surnameHelperText="Surname for your coleague / peer"
+                        emailHelperText="Email for your colleague / peer"
+                        organizationId={ selectedMembership.organization.id }
+                         />
+                </FullScreenModal>
+            );
+        }
+        
         const peersComponent = (
             <Fragment>                
                 <Grid item sm={12} xs={12} offset={4}>
-                    {confirmPeersDialog}
+                    { confirmPeersDialog }
+                    { addUserDialog }
                     {
                         membershipSelected && this.state.showPeerSelection &&                        
                             <UserListWithSearchComponent 
                                 onUserSelect={setUserPeerSelection}
                                 onAcceptSelection={acceptUserSelection}
-                                organizationId={this.state.selectedMembership.organization.id}                                
+                                organizationId={this.state.selectedMembership.organization.id}
+                                onNewUserClick={onNewPeerClicked}                                
                                 multiSelect={true}
                                 selected={excludedUsers}
-                                excluded={excludedUsers}
-                            />                        
+                                excluded={excludedUsers} />                        
                     }               
                     {
                         !membershipSelected && 
@@ -674,10 +737,10 @@ class Profile extends Component {
                 <Paper className={classes.general}>
                     <form>
                         <Typography variant='h6'>{profileTitle || 'My Profile'}</Typography>
-                        {avatarComponent}
-                        <TextField {...defaultFieldProps} label='Name' value={firstName} helperText='Please use your given name' onChange={updateFirstname} />
-                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText='Please use your given name' onChange={updateLastname} />
-                        <TextField {...defaultFieldProps} label='Email' value={email} helperText='Please use your work email address, unless you are an outside provider' onChange={updateEmail} />
+                        { this.props.withAvatar === true ? avatarComponent : null }
+                        <TextField {...defaultFieldProps} label='Name' value={firstName} helperText={this.props.firstNameHelperText || 'Please use your first name'} onChange={updateFirstname} />
+                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} />
+                        <TextField {...defaultFieldProps} label='Email' value={email} helperText={this.props.emailHelperText || 'Please use your work email address, unless you are an outside provider'} onChange={updateEmail} />
                     </form>
 
                     <div className={classes.avatarContainer} style={{ justifyContent: 'flex-end', marginTop: '5px' }}>
@@ -735,6 +798,7 @@ class Profile extends Component {
             'core.BasicModal', 
             'core.Loading',
             'core.FullScreenModal',
+            'core.CreateProfile'
         ])
         window.addEventListener('resize', this.windowResize);
     }

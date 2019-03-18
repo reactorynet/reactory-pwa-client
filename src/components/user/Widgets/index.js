@@ -178,7 +178,8 @@ export class UserListWithSearch extends Component {
   static propTypes = {
     onAcceptSelection: PropTypes.func,
     organizationId: PropTypes.string.isRequired,
-    businessUnitFilter: PropTypes.bool
+    businessUnitFilter: PropTypes.bool,
+    onNewUserClick: PropTypes.func
   };
 
   static defaultProps = {
@@ -238,6 +239,7 @@ export class UserListWithSearch extends Component {
   }
 
   onNewUserClick(){
+    console.log("New User Clicked", {onNewUserClick: this.props.onNewUserClick});
     if(typeof this.props.onNewUserClick === 'function') {
       this.props.onNewUserClick()      
     } else {

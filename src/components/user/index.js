@@ -191,15 +191,24 @@ class UserTable extends Component {
 export const CreateProfile = compose(
   withApi
 )((props) => {
-  const { api, organizationId, profile, onCancel, onSave, profileTitle } = props
+  const { 
+    api, organizationId, 
+    profile, onCancel, 
+    onSave, profileTitle, 
+    withPeers = false, withAvatar = false, 
+    withMembership = false, onUserCreated = () => {}, firstNameHelperText, surnameHelperText, emailHelperText } = props;
 
   const updateCache = (cache, { data: { createUser } }) => {
+    onUserCreated(createUser);
+    
     const { usersForOrganizationWithId } = cache.readQuery({ query: api.queries.Users.usersForOrganization, variables: { id: organizationId } })
+    
     cache.writeQuery({
       query: api.queries.Users.usersForOrganization,
       data: { usersForOrganizationWithId: [...usersForOrganizationWithId, createUser ] },
       variables: { id: organizationId }
     });
+    
   };
 
   return (
@@ -212,7 +221,13 @@ export const CreateProfile = compose(
           profileTitle,
           mode: 'admin',
           isNew: true,
+          withPeers,
+          withAvatar,
+          withMembership,
           onCancel,
+          firstNameHelperText,
+          surnameHelperText,
+          emailHelperText,
           onSave: (profileData) => {            
             createUser({
               variables: {input: omitDeep(profileData, '__isnew'), organizationId }
