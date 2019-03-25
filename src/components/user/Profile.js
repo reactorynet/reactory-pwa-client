@@ -7,13 +7,18 @@ import { compose } from 'redux';
 import MaterialTable, { MTableToolbar } from 'material-table';
 import om from 'object-mapper';
 import uuid from 'uuid';
-import { isNil, isArray } from 'lodash';
+import { isNil, isArray, isString } from 'lodash';
 import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import { CircularProgress , List, ListItem, ListItemSecondaryAction, ListItemText, InputAdornment, Icon } from '@material-ui/core';
+import { 
+    CircularProgress , List, ListItem, 
+    ListItemSecondaryAction, ListItemText, 
+    InputAdornment, Icon, IconButton,
+    Toolbar,
+} from '@material-ui/core';
+
 import Button from '@material-ui/core/Button';
-import IconButton from '@material-ui/core/IconButton';
 import CloseIcon from '@material-ui/icons/Close';
 import SaveIcon from '@material-ui/icons/Save';
 import PhotoCamera from '@material-ui/icons/PhotoCamera';
@@ -147,9 +152,12 @@ class Profile extends Component {
         withPeers: PropTypes.bool,
         withAvatar: PropTypes.bool,
         withMembership: PropTypes.bool,
+        withBackButton: PropTypes.bool,
         firstNameHelperText: PropTypes.string,
         surnameHelperText: PropTypes.string,
-        emailHelperText: PropTypes.string
+        emailHelperText: PropTypes.string,
+        headerComponents: PropTypes.func,
+        footerComponents: PropTypes.func,
     };
 
     static defaultProps = {
@@ -164,9 +172,16 @@ class Profile extends Component {
         withPeers: true,
         withAvatar: true,
         withMembership: true,
+        withBackButton: true,
         firstNameHelperText: null,
         surnameHelperText: null,
         emailHelperText: null,
+        headerComponents: (props) => {
+
+        },
+        footerComponents: (props) => {
+
+        },
     };
 
     onAvatarMouseOver() {
@@ -494,6 +509,7 @@ class Profile extends Component {
 
         const onUserCreated = (user) => {
             console.log("User created", user);
+            closeAddUserDialog();
             setUserPeerSelection(user);
         };
 
@@ -501,13 +517,15 @@ class Profile extends Component {
         if(isNil(membershipSelected) === false) {
             addUserDialog = (
                 <FullScreenModal open={showAddUserDialog === true} title="Add a new user" onClose={closeAddUserDialog}>
-                    <CreateProfile withAvatar={false} withPeers={false} withMembership={false} 
-                        onCreate={onUserCreated} profileTitle="Invite new user"
+                    <Typography variant="h3" style={{margin: "25px auto"}}>Add a new user</Typography>
+                    <CreateProfile 
+                        onUserCreated={onUserCreated} profileTitle="Invite new user"
+                        formProps={{ withBackButton: false, withAvatar: false, withPeers: false, withMembership: false, mode: 'peer'  }}
                         firstNameHelperText="Firstname for your colleague / peer"
                         surnameHelperText="Surname for your coleague / peer"
-                        emailHelperText="Email for your colleague / peer"
-                        organizationId={ selectedMembership.organization.id }
-                         />
+                        emailHelperText="Email for your colleague / peer"                        
+                        organizationId={ selectedMembership.organization.id } />
+
                 </FullScreenModal>
             );
         }
@@ -524,7 +542,7 @@ class Profile extends Component {
                                 onAcceptSelection={acceptUserSelection}
                                 organizationId={this.state.selectedMembership.organization.id}
                                 onNewUserClick={onNewPeerClicked}                                
-                                multiSelect={true}
+                                multiSelect={false}
                                 selected={excludedUsers}
                                 excluded={excludedUsers} />                        
                     }               
@@ -653,8 +671,8 @@ class Profile extends Component {
 
     renderGeneral() {
         const that = this
-        const { profile, avatarUpdated } = this.state;
-        const { firstName, lastName, businessUnit, email, avatar, peers, surveys, teams, __isnew, id } = profile;
+        const { profile, avatarUpdated, emailValid } = this.state;
+        const { firstName, lastName, businessUnit, email, avatar, peers, surveys, teams, __isnew, id, deleted } = profile;
         const { mode, classes, history, profileTitle } = this.props;
         const defaultFieldProps = {
             margin: "normal",
@@ -708,7 +726,7 @@ class Profile extends Component {
         };
 
         const updateEmail = (evt) => {
-            that.setState({ profile: { ...that.state.profile, email: evt.target.value } })
+            that.setState({ profile: { ...that.state.profile, email: evt.target.value }, emailValid: isEmail(evt.target.value) })
         };
 
         const updateBusinessUnit = (evt) => {
@@ -740,28 +758,103 @@ class Profile extends Component {
                         { this.props.withAvatar === true ? avatarComponent : null }
                         <TextField {...defaultFieldProps} label='Name' value={firstName} helperText={this.props.firstNameHelperText || 'Please use your first name'} onChange={updateFirstname} />
                         <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} />
-                        <TextField {...defaultFieldProps} label='Email' value={email} helperText={this.props.emailHelperText || 'Please use your work email address, unless you are an outside provider'} onChange={updateEmail} />
+                        <TextField {...defaultFieldProps} label={emailValid === true ? 'Email' : 'Email!'} value={email} helperText={this.props.emailHelperText || 'Please use your work email address, unless you are an outside provider'} onChange={updateEmail} />
                     </form>
 
                     <div className={classes.avatarContainer} style={{ justifyContent: 'flex-end', marginTop: '5px' }}>
-                        <Button onClick={back}><CloseIcon />&nbsp;BACK</Button>
-                        <Button color='primary' onClick={doSave}><SaveIcon />&nbsp;SAVE</Button>
+                        {this.props.withBackButton && <Button onClick={back}><CloseIcon />&nbsp;BACK</Button> }
+                        {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ 
+                            emailValid === false || 
+                            ( (firstName) || isNil(lastName) ) === true ||
+                            ( (firstName.length < 2 || lastName.length < 2 ) ) }><SaveIcon />&nbsp;SAVE</Button>}
+                        
                     </div>
                 </Paper>
             </Grid>)
     }
+     
+    renderHeader(){
+        const { profile, showConfirmDeleteUser = false } = this.state;
+        const { api } = this.props;
+        const { BasicModal } = this.componentDefs;
+        const that = this;
 
-    renderModal(){
-        //
+        if(this.props.mode !== 'admin') return null;
+
+        const onDeleteClick = e => {
+            that.setState({ showConfirmDeleteUser: true })
+        };
+
+        let confirmDeleteModal = null;
+
+        if(showConfirmDeleteUser === true) {
+
+            const cancelProfileDelete = e => {
+                that.setState({ showConfirmDeleteUser: false, userDeleteMessage: null, userDeleted: false, });
+            };
+
+            const deleteUserProfile = e => {
+                const mutation = gql` mutation DeleteUserMutation($id: String!){
+                    deleteUser(id: $id)
+                }`;
+
+                api.graphqlMutation(mutation, { id: profile.id }).then( result => {
+                    if(result.errors) {
+                        that.setState({ userDeleteMessage: "Could not delete the user at this time, please try again later or contact administrator if the problem persists" })
+                    } else {
+                        that.setState({ showConfirmDeleteUser: false, userDeleted: true, profile: { ...profile, deleted: true } });
+                    }
+                }).catch(error => {
+                    that.setState({ userDeleteMessage: "Could not delete the user due to an unknown error, please contact the administrator if this problem persists" })
+                });
+            };
+
+            confirmDeleteModal = (
+                <BasicModal open={true}>
+                    <Typography>Are you sure you want to delete the account for {profile.firstName} {profile.lastName}</Typography>
+                    <Button type="button" variant="link" onClick={ cancelProfileDelete }>No, I changed my mind</Button>
+                    <Button type="button" variant="raised" onClick={ deleteUserProfile }>Yes, delete user account</Button>
+                </BasicModal>
+            );
+
+            if(this.state.userDeleteMessage) {
+                confirmDeleteModal = (
+                    <BasicModal open={true}>
+                        <Typography>{this.state.userDeleteMessage}</Typography>
+                        <Button type="button" variant="link" onClick={ cancelProfileDelete }>Ok</Button>
+                    </BasicModal>
+                );  
+            }
+        }
+
+        return (
+            <Fragment>
+                <Toolbar>
+                    <Typography variant="caption">Admin: {profile.firstName} {profile.lastName} { profile.deleted === true ? "[ User Deleted ]" : "" }</Typography>                    
+                    {profile.deleted === true  ? null : <Tooltip title="Click here to delete the user">
+                        <IconButton onClick={onDeleteClick}>
+                            <Icon>delete_outline</Icon>
+                        </IconButton>
+                    </Tooltip>}
+                </Toolbar>
+                {confirmDeleteModal}
+            </Fragment>
+        )
+    }
+
+    renderFooter(){
+
     }
 
     render() {
-        const { classes, profile } = this.props;
+        const { classes } = this.props;
         return (
             <Grid container spacing={16} className={classes.mainContainer}>
+                {this.renderHeader()}
                 {this.renderGeneral()}
                 {this.renderMemberships()}
-                {this.renderPeers()}                
+                {this.renderPeers()}
+                {this.renderFooter()}                
             </Grid>
         );
     }
@@ -780,26 +873,31 @@ class Profile extends Component {
         this.renderPeers = this.renderPeers.bind(this);
         this.renderUser = this.renderUser.bind(this);
         this.refreshPeers = this.refreshPeers.bind(this);
+        this.renderHeader = this.renderHeader.bind(this);
+        this.renderFooter = this.renderFooter.bind(this);
         this.renderMemberships = this.renderMemberships.bind(this);
         this.inviteUserByEmail = this.inviteUserByEmail.bind(this);
-        this.renderModal = this.renderModal.bind(this)
+
         this.state = {
             avatarMouseOver: false,
             profile: { ...props.profile },
             avatarUpdated: false,
             showPeerSelection: false,
             selectedMembership: null,
+            emailValid: false,
             help: props.api.queryObject.help === "true",
             helpTopic: props.api.queryObject.helptopics,
             highlight: props.api.queryObject.peerconfig === "true" ? "peers" : null
         };
                 
-        this.componentDefs = props.api.getComponents([
+        const components = [
             'core.BasicModal', 
             'core.Loading',
             'core.FullScreenModal',
-            'core.CreateProfile'
-        ])
+            'core.CreateProfile',
+        ];
+                
+        this.componentDefs = props.api.getComponents(components);
         window.addEventListener('resize', this.windowResize);
     }
 

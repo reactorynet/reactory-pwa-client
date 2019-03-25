@@ -15,6 +15,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemSecondaryAction,
   InputLabel,
   Input,
   Icon,
@@ -22,6 +23,7 @@ import {
   IconButton,
   Grid,
   Paper,
+  Menu,
   TextField,
   Table,
   TableBody,
@@ -41,7 +43,7 @@ import classNames from 'classnames';
 import AddCircleIcon from '@material-ui/icons/AddCircle'
 import DetailIcon from '@material-ui/icons/Details'
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import { isArray, isNil } from 'lodash';
+import { isArray, isNil, isFunction } from 'lodash';
 import moment from 'moment';
 import { ReactoryFormComponent } from '../reactory';
 import { TableFooter } from '@material-ui/core/Table';
@@ -196,19 +198,31 @@ export const CreateProfile = compose(
     profile, onCancel, 
     onSave, profileTitle, 
     withPeers = false, withAvatar = false, 
-    withMembership = false, onUserCreated = () => {}, firstNameHelperText, surnameHelperText, emailHelperText } = props;
+    withMembership = false, onUserCreated = () => {}, 
+    firstNameHelperText, 
+    surnameHelperText, 
+    emailHelperText, formProps = {} } = props;
+  
+    //we update the cache with the server response
+  const updateCache = (cache, { data }) => {        
+    console.log('Updating cache with user create response', data);
+    
+    
+    try {
+      const { usersForOrganizationWithId } = cache.readQuery({ query: api.queries.Users.usersForOrganization, variables: { id: organizationId } })
 
-  const updateCache = (cache, { data: { createUser } }) => {
-    onUserCreated(createUser);
+      cache.writeQuery({
+        query: api.queries.Users.usersForOrganization,
+        data: { usersForOrganizationWithId: [...usersForOrganizationWithId, data.createUser ] },
+        variables: { id: organizationId }
+      });
+    } catch (cacheError) {
+      console.error("Could not update cache.", cacheError)
+    }
     
-    const { usersForOrganizationWithId } = cache.readQuery({ query: api.queries.Users.usersForOrganization, variables: { id: organizationId } })
-    
-    cache.writeQuery({
-      query: api.queries.Users.usersForOrganization,
-      data: { usersForOrganizationWithId: [...usersForOrganizationWithId, createUser ] },
-      variables: { id: organizationId }
-    });
-    
+
+    console.log("Cache has been updaterated");
+    onUserCreated(data.createUser);
   };
 
   return (
@@ -228,6 +242,7 @@ export const CreateProfile = compose(
           firstNameHelperText,
           surnameHelperText,
           emailHelperText,
+          ...formProps,
           onSave: (profileData) => {            
             createUser({
               variables: {input: omitDeep(profileData, '__isnew'), organizationId }
@@ -247,18 +262,21 @@ export const CreateProfile = compose(
 export const EditProfile = compose(
   withApi
 )((props) => {  
-  const { api, organizationId, profile, onCancel, withPeers } = props  
+  const { api, organizationId, profile, onCancel, withPeers, profileTitle, mode, headerComponents, footerComponents } = props  
   return (
     <Mutation mutation={api.mutations.Users.updateUser} >
       {(updateUser, { loading, error, data }) => {
-        let props = {
+        let _props = {
           loading,
           error,
           profile,
           withPeers,
-          mode: 'admin',
+          mode,
           isNew: false,
           onCancel,
+          profileTitle,
+          footerComponents,
+          headerComponents,
           onSave: (profileData) => {
             let profileDataInput = omitDeep(profileData );
             delete profileDataInput.peers
@@ -275,7 +293,7 @@ export const EditProfile = compose(
         if(loading) return (<p>Updating... please wait</p>)
         if(error) return (<p>{error.message}</p>)
 
-        return <Profile {...props} />
+        return <Profile {..._props} />
       }}
     </Mutation>
   )
@@ -285,7 +303,7 @@ export const UserProfile = compose(
   withApi,
   withRouter,
 )((props) => {
-    const { api, location, profileId, organizationId, match, withPeers } = props
+    const { api, location, profileId, organizationId, match, withPeers, profileTitle, mode } = props
     let pid = null;
     pid = isNil(profileId) === false ? profileId : match.params.profileId;
     if (isNil(pid) === true) pid = api.getUser() ? api.getUser().id : null;
@@ -299,7 +317,7 @@ export const UserProfile = compose(
         if(error) return <p>{error.message}</p>
 
         if(data.userWithId) {          
-          return <EditProfile organizationId={organizationId} profile={data.userWithId} withPeers={withPeers}/>
+          return <EditProfile organizationId={organizationId} profile={data.userWithId} withPeers={withPeers} profileTitle={profileTitle} mode={mode} />
         } else {
           return <p>No user data available</p>
         }
@@ -474,7 +492,7 @@ export const UserInbox = compose(withApi)(({ api }) => (
   </Query>));
 
 
-const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [] }) => {  
+const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null }) => {  
   return (
     <Query query={api.queries.Users.usersForOrganization} variables={{ id: organizationId, searchString }}>
       {({ loading, error, data } ) => {
@@ -507,7 +525,7 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
               const displayText = `${user.firstName} ${user.lastName}`
 
               if(exclude === true) return null
-
+                                                        
               return (
                 <ListItem selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf } dense button key={uid}>
                   <Avatar alt={displayText} src={getAvatar(user)} />
@@ -519,6 +537,9 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
                     disableRipple
                     onClick={raiseUserSelected}
                      /> : null }
+                  { isFunction(secondaryAction) === true ? 
+                    secondaryAction(user) : 
+                    secondaryAction }
                 </ListItem>
               )
             })}        

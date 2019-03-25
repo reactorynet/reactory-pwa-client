@@ -218,7 +218,7 @@ export class UserListWithSearch extends Component {
   }
 
   searchStringOnKeyPress(evt) {
-    if (evt.keyCode === 13) this.doSearch()
+    if (evt.charCode === 13) this.doSearch()
   }
 
 
@@ -265,6 +265,7 @@ export class UserListWithSearch extends Component {
                 placeholder="Search…"
                 value={this.state.inputText}
                 onChange={this.searchStringChanged}
+                onKeyPress={this.searchStringOnKeyPress}
                 classes={{
                   root: classes.inputRoot,
                   input: classes.inputInput,

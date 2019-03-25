@@ -262,6 +262,7 @@ class SurveyDelegates extends Component {
             onAcceptSelection={closeModal}
             selected={excludedUsers}
             excluded={excludedUsers}
+            formProps={{ mode: 'admin' }}
             businessUnitFilter={false}
             showFilters={false} />)
         break;

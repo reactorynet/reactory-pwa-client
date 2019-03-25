@@ -129,6 +129,10 @@ const createUserMutation = gql`
   mutation CreateUserMutation($input: CreateUserInput!, $organizationId: String!){
     createUser(input: $input, organizationId: $organizationId){
       id
+      firstName
+      lastName
+      avatar
+      lastLogin
     } 
   }
 `;
@@ -290,6 +294,7 @@ const userProfile = gql`
       lastName
       avatar
       lastLogin
+      deleted
       memberships {
         client {
           id

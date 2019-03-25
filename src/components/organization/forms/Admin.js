@@ -11,7 +11,10 @@ import {
   Avatar,
   AppBar, Tabs, Tab,
   Button, Grid, Paper, Icon,
-  FormControl, FormHelperText, Input, InputLabel, TextField, Typography, Tooltip,
+  FormControl, FormHelperText, 
+  Input, InputLabel, 
+  TextField, Typography, Tooltip,
+  Toolbar,  
 } from '@material-ui/core';
 
 import SaveIcon from '@material-ui/icons/Save'
@@ -291,6 +294,7 @@ class DefaultFormContainer extends Component {
     this.onCalendarEntrySelect = this.onCalendarEntrySelect.bind(this)
     this.onClearSurveySelect = this.onClearSurveySelect.bind(this)
     this.onOrganizationSaved = this.onOrganizationSaved.bind(this)
+    this.getAdminUserToolbar = this.getAdminUserToolbar.bind(this)
     this.componentDefs = this.props.api.getComponents([
       'core.UserListWithSearch',
       'core.SpeedDial',
@@ -356,6 +360,15 @@ class DefaultFormContainer extends Component {
 
   onOrganizationSaved = () => {
 
+  }
+
+  getAdminUserToolbar(props){
+    const { profile } = props;
+    return (
+      <Toolbar>
+        {profile.firstName} {profile.lastName} admin
+      </Toolbar>
+    )
   }
 
   render() {
@@ -440,7 +453,7 @@ class DefaultFormContainer extends Component {
                   <CreateProfile onCancel={this.onClearEmployeeSelection} mode="admin" organizationId={organizationId} profileTitle="New Employee" />
                 </Route>
               <Route exact path={'/admin/org/:organizationId/employees/:profileId'} >
-                  <UserProfile organizationId={organizationId} />
+                  <UserProfile organizationId={organizationId} mode="admin" profileTitle="Manage Employee" beforeComponents={ this.getAdminUserToolbar }/>
                 </Route>
               </Switch>
             </Route>
