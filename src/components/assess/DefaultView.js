@@ -397,8 +397,7 @@ class DefaultView extends Component {
       <Paper className={classes.welcomeContainer}>
         <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
           5 - 7 minutes.<br />
-          You will be asked to provide a rating against a series of behaviours that espouse the organizational
-          leadership brand:
+          You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
         </Typography>
         <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -669,8 +668,8 @@ class DefaultView extends Component {
           <Grid item sm={12} xs={12}>
             <Paper style={{ padding: '5px' }}>
               <Typography>
-                If you want to provide a customized behaviour that {delegate.firstName} exhibits that relates to {quality.title} click the add button and provide your rating and feedback.<br /><br />
-                Please note, these custom ratings will not affect the calculation of {delegate.firstName} overall rating for this assessment.
+                If you want to provide a customised behaviour that {delegate.firstName} exhibits that relates to {quality.title}, type it in the box below and then click the add <Icon>add</Icon> button and provide your rating and feedback.<br /><br />
+                Please note, these custom ratings will not affect the calculation of {delegate.firstName}'s overall rating for this assessment.
              </Typography>
              <Paper className={classes.root} elevation={1}>              
               <InputBase 

@@ -1,13 +1,13 @@
 import { SchemaType, FormatType } from '../../models/schema';
 
 const schema = {
-    title: "Organization",
+    title: "Organisation",
     type: "object",
     required: ["code", "name", "logo"],
     properties: {
         id: {
             type: SchemaType.String,
-            title: "Organization Id"
+            title: "Organisation Id"
         },
         code: {
             type: SchemaType.String,
@@ -15,12 +15,12 @@ const schema = {
         },
         name: {
             type: SchemaType.String,
-            title: "Organization Name",
+            title: "Organisation Name",
             maxLength: 255
         },
         logo: {
             type: SchemaType.String,
-            title: "Organization Logo"
+            title: "Organisation Logo"
         },
         legacyId: {
             type: SchemaType.Integer,

@@ -287,8 +287,8 @@ class Profile extends Component {
                             }
                         },
                         {
-                            title: 'Organization', render: (rowData) => {
-                                return rowData && rowData.organization ? rowData.organization.name : 'No Organization'
+                            title: 'Organisation', render: (rowData) => {
+                                return rowData && rowData.organization ? rowData.organization.name : 'No Organisation'
                             }
                         },
                         {
@@ -580,7 +580,7 @@ class Profile extends Component {
                             },
                         ]}
                         data={data}
-                        title={`User Peers in Organization ${selectedMembership.organization.name}`}
+                        title={`User Peers in Organisation ${selectedMembership.organization.name}`}
                         actions={[
                             rowData => ({
                                 icon: 'supervisor_account',
@@ -651,8 +651,8 @@ class Profile extends Component {
             }
             return (<FullScreenDialog title="Select your peers" open={true} onClose={closePeersHighlight}>
                         <Paper style={{margin:'16px', padding: '8px'}}>
-                            <Typography variant="h3" color="primary">
-                                Colleagues / Peer management.
+                            <Typography variant="h5" color="primary">
+                                Colleagues/Peer management
                             </Typography>
                             <Typography variant="body1">
                                 Please use the grid below, to manage your peers, direct reports and supervisors.  Use the <IconButton><Icon>edit</Icon></IconButton> on the grid

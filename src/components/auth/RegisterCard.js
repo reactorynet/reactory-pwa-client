@@ -184,7 +184,7 @@ class RegisterCard extends Component {
             <div className={classes.logo}>            
             </div>
             <TextField
-              label="Organization"
+              label="Organisation"
               style={textStyle}
               value={this.state.organizationName}
               onChange={this.updateOrganizationName}

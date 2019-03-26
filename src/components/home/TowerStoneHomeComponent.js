@@ -218,6 +218,16 @@ class TowerStoneHomeComponent extends Component {
 
             return data;
         };
+
+        const notifications = (<Grid item xs={12} sm={12}>
+            <Typography variant={"caption"} color="primary" align="center">Notifications</Typography>
+            <Paper className={classes.container}>                            
+                <List>
+                    <OwlyListItem message="You have no unread notifications" />
+                </List>
+            </Paper>
+        </Grid>);
+
         return (
             <div style={{ maxWidth: 900, margin: 'auto' }}>
                 <Grid container spacing={24}>
@@ -320,15 +330,8 @@ class TowerStoneHomeComponent extends Component {
                         <Surveys minimal={true} showComplete={true} />
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
-                        <Typography variant={"caption"} color="primary" align="center">Notifications</Typography>
-                        <Paper className={classes.container}>                            
-                            <List>
-                                <OwlyListItem message="You have no unread notifications" />
-                            </List>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
+                    
+                    <Grid item xs={12} sm={12}>
                         <Typography variant={"caption"} color="primary" align="center">Tasks</Typography>
                         <Paper className={classes.container}>
                             <List>

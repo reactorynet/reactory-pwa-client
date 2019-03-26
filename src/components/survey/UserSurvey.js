@@ -4,7 +4,7 @@ import { withRouter } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
-import { isNil } from 'lodash';
+import { isNil, sortBy, reverse } from 'lodash';
 import moment from 'moment';
 import {
     Avatar,
@@ -57,7 +57,7 @@ class UserSurvey extends Component {
         this.state = {
             activeSurveyIndex: -1
         }
-        this.componentDefs = props.api.getComponents(['core.UserListItem', 'towerstone.OwlyListItem']);
+        this.componentDefs = props.api.getComponents(['core.UserListItem', 'towerstone.OwlyListItem', 'core.Logo']);
         this.totalSurveys = this.totalSurveys.bind(this)
     }
 
@@ -68,7 +68,7 @@ class UserSurvey extends Component {
 
     render() {
         const { classes, surveys, history, api, minimal, showComplete, theme } = this.props;
-        const { UserListItem, OwlyListItem } = this.componentDefs;
+        const { UserListItem, OwlyListItem, Logo } = this.componentDefs;
         const surveyCount = this.totalSurveys();
 
         const AssessmentListItem = ({ assessment, key }) => {          
@@ -97,24 +97,27 @@ class UserSurvey extends Component {
         };
 
         return (
-            <Grid container spacing={16} className={classes.mainContainer} style={{marginTop: `${theme.spacing.unit * 4}`}}>                
-                <Grid item sm={12} xs={12} md={6} offset={4}>
+            <Grid container spacing={16} className={classes.mainContainer} style={{marginTop: `${theme.spacing.unit * 4}`}}>
+                {minimal === false ?  <Grid item sm={12} xs={12} md={12} offset={4}><Logo /></Grid> : null }                
+                
+                <Grid item sm={12} xs={12} md={12} offset={4}>
                     <Typography variant='caption' color='primary'>Overdue Surveys</Typography>
                     <Paper className={classes.general}>
-                        {surveys.overdue.length > 0 && surveyCount > 0 ?
+                        {
+                            surveys.overdue.length > 0 && surveyCount > 0 ?
                             <Fragment>                                
                                 {minimal === true ? <Typography>
-                                    The surveys listed below already past the official cut off date for completion and should be attended to first.
-                                    If you are unable to perform the assessment please click the trash icon and provide a reason why the survey cannot be completed.
+                                    The surveys listed below are already past the official cut-off date for completion and should be attended to first.                                                                        
                             </Typography> : null}
                                 <List>
                                     {surveys.overdue.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                 </List>
-                            </Fragment> : <OwlyListItem message={"There are no overdue assessments here"} />}
+                            </Fragment> : <OwlyListItem message={"There are no overdue assessments here"} />
+                        }
                     </Paper>
                 </Grid>
 
-                <Grid item sm={12} xs={12} md={6}  offset={4}>
+                <Grid item sm={12} xs={12} md={12}  offset={4}>
                     <Typography variant='caption' color='primary'>Current Surveys</Typography>
                     <Paper className={classes.general}>                        
                         {surveys.current.length > 0 && surveyCount > 0 ?
@@ -134,11 +137,10 @@ class UserSurvey extends Component {
                             surveys.complete.length > 0 && surveyCount > 0 ?
                                 <Fragment>                                    
                                     <Typography>
-                                        The surveys below are completed and are for review only.  Survey results will only appear here once
-                                        the results have been released and shared by our facilitators with you.
+                                    The surveys below are completed and are for review only. Survey results will only appear here once the results have been released and shared with you by one of our facilitators.
                                     </Typography>
                                     <List>
-                                        {surveys.complete.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
+                                        {reverse(sortBy(surveys.complete, [(assessment)=>{ return moment(assessment.survey.startDate || '2010-01-01').valueOf() }])).map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                     </List>
                                 </Fragment> : <OwlyListItem message={"You don't have any assessment results available yet"} />
                         }                        
