@@ -16,6 +16,7 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
+  ListSubheader,
   InputLabel,
   Input,
   Icon,
@@ -43,7 +44,7 @@ import classNames from 'classnames';
 import AddCircleIcon from '@material-ui/icons/AddCircle'
 import DetailIcon from '@material-ui/icons/Details'
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import { isArray, isNil, isFunction } from 'lodash';
+import { isArray, isNil, isFunction, sortedUniqBy, uniq, filter } from 'lodash';
 import moment from 'moment';
 import { ReactoryFormComponent } from '../reactory';
 import { TableFooter } from '@material-ui/core/Table';
@@ -492,7 +493,7 @@ export const UserInbox = compose(withApi)(({ api }) => (
   </Query>));
 
 
-const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null }) => {  
+const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null, classes }) => {  
   return (
     <Query query={api.queries.Users.usersForOrganization} variables={{ id: organizationId, searchString }}>
       {({ loading, error, data } ) => {
@@ -510,39 +511,51 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
           __isnew: true
         }
         const users = data.usersForOrganizationWithId || []
-        
+        const availableAlphabet = uniq(sortedUniqBy(users, u => u.firstName.substring(0,1).toUpperCase()).map( user => user.firstName.substring(0,1).toUpperCase()));
+        console.log("Available Alphabet is", {availableAlphabet});
         return (
-          <List>
-            {users.map((user, uid) => {
-              const raiseUserSelected = () => {
-                if(onUserSelect) onUserSelect(user, uid)
-              }
-              
-              const nilf = () => {};
-              
-              const isSelected = intersection(selected, [user.id]).length === 1;
-              const exclude = intersection(excluded, [user.id]).length === 1;
-              const displayText = `${user.firstName} ${user.lastName}`
-
-              if(exclude === true) return null
-                                                        
+          <List subheader={ <li /> }>
+          { 
+            availableAlphabet.map( ( letter, index ) => {
               return (
-                <ListItem selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf } dense button key={uid}>
-                  <Avatar alt={displayText} src={getAvatar(user)} />
-                  <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
-                  { multiSelect === true ? 
-                  <Checkbox
-                    checked={isSelected}
-                    tabIndex={-1}
-                    disableRipple
-                    onClick={raiseUserSelected}
-                     /> : null }
-                  { isFunction(secondaryAction) === true ? 
-                    secondaryAction(user) : 
-                    secondaryAction }
-                </ListItem>
-              )
-            })}        
+              <li key={letter} className={classes && classes.userListSubheader ? classes.userListSubheader : ''}>
+                <ul>
+                  <ListSubheader>{letter}</ListSubheader>
+                  {
+                    filter(users, user => user.firstName.substring(0,1).toUpperCase() === letter).map((user, uid) => {
+                    const raiseUserSelected = () => {
+                      if(onUserSelect) onUserSelect(user, uid)
+                    }              
+                    const nilf = () => {};
+                    const isSelected = intersection(selected, [user.id]).length === 1;
+                    const exclude = intersection(excluded, [user.id]).length === 1;
+                    const displayText = `${user.firstName} ${user.lastName}`;
+
+                    if(exclude === true) return null;
+                                                          
+                    return (
+                      <ListItem selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf } dense button key={uid}>
+                        <Avatar alt={displayText} src={getAvatar(user)} />
+                        <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
+                        { multiSelect === true ? 
+                        <Checkbox
+                          checked={isSelected}
+                          tabIndex={-1}
+                          disableRipple
+                          onClick={raiseUserSelected}
+                          /> : null }
+                        { isFunction(secondaryAction) === true ? 
+                          secondaryAction(user) : 
+                          secondaryAction }
+                      </ListItem>
+                    )
+                  })
+                }
+                </ul>                  
+              </li>
+              );    
+            })
+          }                
           </List>
         )
       }}      

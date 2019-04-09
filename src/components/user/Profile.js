@@ -554,6 +554,7 @@ class Profile extends Component {
                         membershipSelected &&
                         !this.state.showPeerSelection && 
                         <MaterialTable
+                        options={{pageSize: 10}}
                         components={{
                             Toolbar: props => {
                                 return (
@@ -563,9 +564,7 @@ class Profile extends Component {
                                         <Typography className={peers.confirmedAt ? 
                                             classNames([classes.confirmedLabel, classes.notConfirmed]) : 
                                             classNames([classes.confirmedLabel, classes.confirmed]) } 
-                                            variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }
-
-                                            </Typography>
+                                            variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }</Typography>
                                     </div>
                                 )
                             } 
@@ -619,11 +618,11 @@ class Profile extends Component {
                             }),
                             {
                                 icon: 'check_circle',
-                                tooltip: peers.confirmedAt ? `Peers last confirmed at ${moment(peers.confirmedAt).format('YYYY-MM-DD')}` : 'Confirm peer selection',
-                                disabled: false,
+                                tooltip: data.length < 5 ? 'Remember to nominate a total of at least 5 people' : (peers.confirmedAt ? `Peers last confirmed at ${moment(peers.confirmedAt).format('YYYY-MM-DD')}` : 'Confirm peer selection'),
+                                disabled: data.length < 5,
                                 isFreeAction: true,
                                 onClick: (event, rowData) => {
-                                    console.log('Confirm peers', { event, rowData });
+                                    // console.log('Confirm peers', { event, rowData });
                                     confirmPeers(false);
                                 },
                             },
@@ -649,17 +648,20 @@ class Profile extends Component {
             const closePeersHighlight = () => {
                 this.setState({ highlight: null });
             }
+
+            
+            
             return (<FullScreenDialog title="Select your peers" open={true} onClose={closePeersHighlight}>
                         <Paper style={{margin:'16px', padding: '8px'}}>
                             <Typography variant="h5" color="primary">
                                 Colleagues/Peer management
                             </Typography>
                             <Typography variant="body1">
-                                Please use the grid below, to manage your peers, direct reports and supervisors.  Use the <IconButton><Icon>edit</Icon></IconButton> on the grid
-                                to display a list of your fellow employees.<br/>
+                                Please use the grid below to manage your peers, direct reports and leader.  Use the <IconButton><Icon>edit</Icon></IconButton> on the grid
+                                to display a list of your fellow employees. You can also remove a colleague by clicking the <IconButton><Icon>delete_outline</Icon></IconButton> icon.<br/> 
                                 Once you have selected them, please click on the confirm button <IconButton><Icon>check_circle</Icon></IconButton><br/>  
                                 This will notify your colleagues that you have selected them as a potential assessor for future assessment.
-                            </Typography>
+                            </Typography>                            
                             {peersComponent}
                         </Paper>                                            
             </FullScreenDialog>)

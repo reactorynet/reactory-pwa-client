@@ -179,14 +179,20 @@ export class UserListWithSearch extends Component {
     onAcceptSelection: PropTypes.func,
     organizationId: PropTypes.string.isRequired,
     businessUnitFilter: PropTypes.bool,
-    onNewUserClick: PropTypes.func
+    onNewUserClick: PropTypes.func,
+    onDeleteUsersClick: PropTypes.func,
+    allowDelete: PropTypes.bool
   };
 
   static defaultProps = {
     businessUnitFilter: true,
     onAcceptSelection: (evt) => { 
       console.log('No selection accept handler');
-    }
+    },
+    onDeleteUsersClick: (evt) => {
+      console.log('No delete handler');
+    },
+    allowDelete: false,
   };
 
   constructor(props, context) {
@@ -296,6 +302,14 @@ export class UserListWithSearch extends Component {
                 <Icon>filter</Icon>
               </IconButton>
             </Tooltip> : null }
+
+            { this.props.allowDelete === true && 
+            <Tooltip title='Click here to delete the employee(s) selected'>
+                <IconButton color="inherit" onClick={this.props.onDeleteUsersClick}>
+                <Icon>delete</Icon>
+              </IconButton>
+            </Tooltip>
+          }
           </Toolbar>
         </AppBar>
 

@@ -446,7 +446,11 @@ class DefaultFormContainer extends Component {
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/employees'}>
                   <Fragment>
-                    <UserListWithSearch organizationId={organizationId} onUserSelect={that.onEmployeeSelected} />
+                    <UserListWithSearch 
+                      organizationId={organizationId} 
+                      onUserSelect={that.onEmployeeSelected}
+                      allowDelete={true}
+                      multiSelect={true} />
                   </Fragment>
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/employees/new'}>
@@ -515,9 +519,9 @@ class DefaultFormContainer extends Component {
               </Switch>
             </Route>
             <Route path={'/admin/org/:organizationId/templates'} component={TemplateListComponent} />
-            <Route path={'/admin/org/:organizationId/templates/:templateId'}>
-             
-            </Route>
+            <Route path={'/admin/org/:organizationId/templates/:templateId'} render={(props) => {
+              return (<TemplateEditor templateId={props.match.tempateId}/>)
+            }} />                            
             <Route path={'/admin/org/:organizationId/configuration'} >
               <Typography>Disabled</Typography>
             </Route>
