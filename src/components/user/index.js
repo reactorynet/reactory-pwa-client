@@ -499,6 +499,7 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
       {({ loading, error, data } ) => {
         if(loading === true) return "Loading"
         if(error) return error.message
+        
         const newUser = {
           firstName: '',
           lastName: '',
@@ -525,7 +526,11 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
                     filter(users, user => user.firstName.substring(0,1).toUpperCase() === letter).map((user, uid) => {
                     const raiseUserSelected = () => {
                       if(onUserSelect) onUserSelect(user, uid)
-                    }              
+                    }
+                    
+                    const raiseUserChecked = () => {
+                      if(onUserSelect) onUserSelect(user, uid, { toggle: true })
+                    }
                     const nilf = () => {};
                     const isSelected = intersection(selected, [user.id]).length === 1;
                     const exclude = intersection(excluded, [user.id]).length === 1;
@@ -542,7 +547,7 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
                           checked={isSelected}
                           tabIndex={-1}
                           disableRipple
-                          onClick={raiseUserSelected}
+                          onClick={raiseUserChecked}
                           /> : null }
                         { isFunction(secondaryAction) === true ? 
                           secondaryAction(user) : 

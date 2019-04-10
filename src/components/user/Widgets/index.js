@@ -181,7 +181,9 @@ export class UserListWithSearch extends Component {
     businessUnitFilter: PropTypes.bool,
     onNewUserClick: PropTypes.func,
     onDeleteUsersClick: PropTypes.func,
-    allowDelete: PropTypes.bool
+    allowDelete: PropTypes.bool,
+    selected: PropTypes.array,
+    multiSelect: PropTypes.bool,
   };
 
   static defaultProps = {
@@ -193,6 +195,8 @@ export class UserListWithSearch extends Component {
       console.log('No delete handler');
     },
     allowDelete: false,
+    selected: [],
+    multiSelect: false,
   };
 
   constructor(props, context) {
@@ -260,7 +264,7 @@ export class UserListWithSearch extends Component {
 
     return (
       <SingleColumnLayout style={{ maxWidth: 900, margin: 'auto' }}>
-        <AppBar position="static" color="default" className={classes.toolbar}>
+        <AppBar position="sticky" color="default" className={classes.toolbar}>
           <Toolbar>
             <Typography variant="h6" color="inherit">Employees</Typography>
             <div className={classes.search}>
@@ -303,13 +307,13 @@ export class UserListWithSearch extends Component {
               </IconButton>
             </Tooltip> : null }
 
-            { this.props.allowDelete === true && 
-            <Tooltip title='Click here to delete the employee(s) selected'>
+            { this.props.allowDelete === true && this.props.selected.length > 0 &&
+            <Tooltip title={`Click here to delete the ${this.props.selected.length > 1 ? `${this.props.selected.length} employees` : 'employee' } selected`}>
                 <IconButton color="inherit" onClick={this.props.onDeleteUsersClick}>
                 <Icon>delete</Icon>
               </IconButton>
             </Tooltip>
-          }
+            }
           </Toolbar>
         </AppBar>
 

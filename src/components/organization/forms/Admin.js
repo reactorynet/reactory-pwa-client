@@ -22,7 +22,7 @@ import SaveIcon from '@material-ui/icons/Save'
 //import SwipeableViews from 'react-swipeable-views';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import Dropzone from 'react-dropzone';
-import { isNil, isEmpty } from 'lodash';
+import { isNil, isEmpty, indexOf, remove, filter } from 'lodash';
 
 import { UserListWithData, EditProfile, CreateProfile, UserProfile } from '../../user/index'
 import { BrandListWithData, EditBrand, newBrand, CreateBrand } from '../../brands'
@@ -281,7 +281,9 @@ class DefaultFormContainer extends Component {
       employee: null,
       employeeMode: 'list',
       survey: null,
-      surveyMode: 'calendar'
+      surveyMode: 'calendar',
+      selectedEmployees: [],
+      showConfirmDelete: false,
     };
     this.handleSubmit = this.handleSubmit.bind(this)
     this.handleChange = this.handleChange.bind(this)
@@ -295,6 +297,10 @@ class DefaultFormContainer extends Component {
     this.onClearSurveySelect = this.onClearSurveySelect.bind(this)
     this.onOrganizationSaved = this.onOrganizationSaved.bind(this)
     this.getAdminUserToolbar = this.getAdminUserToolbar.bind(this)
+    this.onCancelDeleteEmployees = this.onCancelDeleteEmployees.bind(this);
+    this.onConfirmDeleteEmployees = this.onConfirmDeleteEmployees.bind(this);
+    this.onDeleteSelectedEmployees = this.onDeleteSelectedEmployees.bind(this);
+
     this.componentDefs = this.props.api.getComponents([
       'core.UserListWithSearch',
       'core.SpeedDial',
@@ -303,6 +309,7 @@ class DefaultFormContainer extends Component {
       'core.BusinessUnitForm',
       'core.BusinessUnitFormWithQuery',
       'core.CompanyLogo',
+      'core.BasicModal',
       'forms.TowerStoneLeadershipBrandConfig',
       'forms.TowerStoneSurveyConfig',
       'forms.TowerStoneSurveySettings',
@@ -336,9 +343,64 @@ class DefaultFormContainer extends Component {
     });
   }
 
-  onEmployeeSelected = (user) => {
-    if (user.__isnew) this.props.history.push(`/admin/org/${this.props.organization.id}/employees/new`)
-    else this.props.history.push(`/admin/org/${this.props.organization.id}/employees/${user.id}`)
+  onDeleteSelectedEmployees = () => {
+
+    this.setState({ showConfirmDelete: true });
+    this.forceUpdate();
+  };
+
+  onEmployeeSelected = (user, uid, options) => {
+    if(options && options.toggle) {
+      //toggle selection
+      // debugger;
+      const { selectedEmployees } = this.state;
+      if(indexOf(this.state.selectedEmployees, user.id) < 0) {
+        this.setState({ selectedEmployees: [...selectedEmployees, user.id ]});
+      } else {
+        let _employees = filter(this.state.selectedEmployees, (id) => {return id !== user.id });
+        this.setState({  selectedEmployees: _employees });
+      }
+    } else {
+      if (user.__isnew) this.props.history.push(`/admin/org/${this.props.organization.id}/employees/new`);
+      else this.props.history.push(`/admin/org/${this.props.organization.id}/employees/${user.id}`);
+    }
+    
+  }
+
+
+
+  onConfirmDeleteEmployees = () => {
+    const { api } = this.props;
+    const that = this;
+
+    let promises = this.state.selectedEmployees.forEach( id => {
+      return new Promise((resolve, reject) => {
+        const mutation = gql` mutation DeleteUserMutation($id: String!){
+            deleteUser(id: $id)
+        }`;
+
+        api.graphqlMutation(mutation, { id }).then( result => {
+            if(result.errors) {
+              resolve(id);
+            } else {
+              reject(result.errors);
+            }
+        }).catch(error => {
+            reject(error);
+        });
+      });
+    });
+
+    Promise.all(promises).then(results => {
+      that.setState({ message: `${results.length}, user(s) deleted`, selectedEmployees: [], showConfirmDelete: false });
+      that.forceUpdate();
+    }).catch(error => {
+      that.setState({ error: true, message: `An error occured while deleting some of the user records ${error.message}`, showConfirmDelete: false });
+    });
+  }
+
+  onCancelDeleteEmployees = () => {
+    this.setState({ showConfirmDelete: false });
   }
 
   onClearEmployeeSelection = () => {
@@ -398,6 +460,7 @@ class DefaultFormContainer extends Component {
       TowerStoneSurveyCalendarConfig,
       TemplateEditor,
       TowerStoneSurveySettings,
+      BasicModal
      } = that.componentDefs;
     const isNew = mode === 'new';
     return (
@@ -449,8 +512,27 @@ class DefaultFormContainer extends Component {
                     <UserListWithSearch 
                       organizationId={organizationId} 
                       onUserSelect={that.onEmployeeSelected}
+                      onDeleteUsersClick={that.onDeleteSelectedEmployees}
                       allowDelete={true}
-                      multiSelect={true} />
+                      multiSelect={true}
+                      selected={this.state.selectedEmployees}
+                       />
+                    
+                    {
+                      this.state.showConfirmDelete === true && <BasicModal open={true} onClose={()=>{ that.setState({ showConfirmDelete: false}) }}>
+                      <Typography variant="body1">{this.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
+                      <Button variant="raised" color="primary" onClick={this.onConfirmDeleteEmployees}>Yes</Button>
+                      <Button variant="flat" onClick={this.onCancelDeleteEmployees}>No</Button>
+                    </BasicModal>
+                    }
+                    {
+                      isNil(this.state.message) === false && <BasicModal open={true} onClose={()=>{ that.setState({ message: null }) }}>
+                      <Typography variant="body1">{this.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
+                      <Button variant="raised" color="primary" onClick={this.onConfirmDeleteEmployees}>Yes</Button>
+                      <Button variant="flat" onClick={this.onCancelDeleteEmployees}>No</Button>
+                      </BasicModal>
+                    }
+                    
                   </Fragment>
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/employees/new'}>
