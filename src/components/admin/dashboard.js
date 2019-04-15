@@ -38,7 +38,7 @@ class AdminDashboard extends Component {
   render(){
     const { classes } = this.props;
 
-    const log = (type) => console.log.bind(console, type);    
+    const log = (type) => //console.log.bind(console, type);    
 
     return(
       <Grid container spacing={8}>

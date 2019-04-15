@@ -221,7 +221,7 @@ export class BusinessUnitListWithToolbar extends Component {
   }
 
   onItemSelect(businessUnit){
-    console.log('Business Unit Selected', businessUnit);
+    //console.log('Business Unit Selected', businessUnit);
     const { organizationId } = this.props;
     this.props.history.push(`/admin/org/${organizationId}/business-units/${businessUnit.id}`)
   }

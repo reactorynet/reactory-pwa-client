@@ -55,15 +55,15 @@ class ChatCard extends Component {
     };
 
     handleStart() {
-        console.log('handle start called');
+        //console.log('handle start called');
     }
 
     handleDrag() {
-        console.log('handle drag called');
+        //console.log('handle drag called');
     }
 
     handleStop() {
-        console.log('handle stop called');
+        //console.log('handle stop called');
     }
 
     render() {

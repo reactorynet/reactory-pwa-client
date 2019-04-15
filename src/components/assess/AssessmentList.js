@@ -74,7 +74,7 @@ class AssessmentTable extends Component {
   }
 
   sendReminder(assessment){
-    console.log(`Must send a reminder to ${assessment.assessor.firstName}`, assessment);
+    //console.log(`Must send a reminder to ${assessment.assessor.firstName}`, assessment);
 
     return;
 
@@ -91,7 +91,7 @@ class AssessmentTable extends Component {
   }
 
   deleteAssessment(assessment, confirmed = false){
-    console.log('Must delete assessment', { assessment, confirmed });
+    //console.log('Must delete assessment', { assessment, confirmed });
     const that = this;
     if(confirmed === true) {
       const { api } = this.props;

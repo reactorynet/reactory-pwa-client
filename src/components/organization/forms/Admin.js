@@ -157,7 +157,7 @@ class OrganizationForm extends Component {
     }
 
     client.mutate(options).then((result) => {
-      console.log('Mutation Result', result);
+      //console.log('Mutation Result', result);
 
       let organization = that.props.match.params.organizationId === 'new' ? result.data.createOrganization : result.data.updateOrganization;
       this.setState({ organization: { ...organization } })
@@ -320,7 +320,7 @@ class DefaultFormContainer extends Component {
   }
 
   handleSubmit(values) {
-    console.log(values)
+    //console.log(values)
   }
 
   handleChange = (event, value) => {
@@ -565,7 +565,7 @@ class DefaultFormContainer extends Component {
                   <SurveyCalendarForOrganization {...this.props} organizationId={organizationId} />
                 </Route>
                 <Route path={'/admin/org/:organizationId/surveys/:surveyId'} render={(props) => {
-                  console.log('Rendering via route render', props);
+                  //console.log('Rendering via route render', props);
                   return (
                     <Fragment>
                       <TowerStoneSurveyConfig 
@@ -676,7 +676,7 @@ const CompanyAdminStyles = (theme) => {
 
 
 const AdminForm = ({ organizationId, api, tab, mode = 'new' }) => {
-  console.log(`must find for ${organizationId}, ${tab}, ${mode}`)
+  //console.log(`must find for ${organizationId}, ${tab}, ${mode}`)
 
   if (mode === 'new') return <DefaultFormContainerComponent organization={DefaultOrganization} tab={'general'} mode={'new'} />
 

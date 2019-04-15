@@ -144,7 +144,7 @@ class ReactoryComponent extends Component {
 
   constructor(props, context) {
     super(props, context);
-    // console.log('New form', {props, context});
+    // //console.log('New form', {props, context});
     let _state = {
       loading: true,
       forms: [],
@@ -192,7 +192,7 @@ class ReactoryComponent extends Component {
   }
 
   //componentWillUpdate(nextProps, nextState){
-     //console.log('b - componentWillUpdate ReactoryForm', {nextProps, nextState, formRef: this.formRef});
+     ////console.log('b - componentWillUpdate ReactoryForm', {nextProps, nextState, formRef: this.formRef});
     //if(this.state.dirty === false) {
     //  nextState.formData = {...nextProps.data, ...nextProps.formData};
     //  return true;
@@ -253,16 +253,16 @@ class ReactoryComponent extends Component {
 
   renderForm(formData, onSubmit, patch = {}) {
     // debugger;
-    // console.log('rendering form with data', formData);
+    // //console.log('rendering form with data', formData);
     const { loading, forms } = this.state;
     const self = this;
     if (loading) return (<p>loading form schema</p>);
     if (forms.length === 0) return (<p>no forms defined</p>);
     const updateFormState = (formPost) => {
-      console.log('a - updating form state', { formPost });
+      //console.log('a - updating form state', { formPost });
       self.setState({ formData: formPost.formData, dirty: true, ...patch }, ()=>{
         if(self.props.onChange) {
-          console.log('b - firing onChange', { f: self.props.onChange });
+          //console.log('b - firing onChange', { f: self.props.onChange });
           self.props.onChange(formPost.formData)
         } 
       })
@@ -296,7 +296,7 @@ class ReactoryComponent extends Component {
       //debugger;
       const { DropDownMenu } = this.componentDefs;
       const onSchemaSelect = (evt, menuItem) => {
-        // console.log('Schema Ui Change', {evt, menuItem});
+        // //console.log('Schema Ui Change', {evt, menuItem});
         self.setState({ uiSchemaKey: menuItem.value })
       };
 
@@ -344,12 +344,12 @@ class ReactoryComponent extends Component {
       return (
         <Mutation mutation={gql(mutation.text)}>
         {(mutateFunction, { loading, errors, data }) => {
-          // console.log('Rendering Form With Mutation', { mutation, formDef, loading, errors, data });   
+          // //console.log('Rendering Form With Mutation', { mutation, formDef, loading, errors, data });   
           //let formData = data 
           const onFormSubmit = (formSchema) => {            
-            // console.log('Form Submit Mutation Handler', formSchema);
+            // //console.log('Form Submit Mutation Handler', formSchema);
             const _variables = objectMapper({...formSchema, formContext: that.getFormContext() }, mutation.variables);
-            // console.log('Must call mutate function and proceed', { formSchema, _variables });
+            // //console.log('Must call mutate function and proceed', { formSchema, _variables });
             mutateFunction({
               variables: {..._variables},
               refetchQueries: []
@@ -362,7 +362,7 @@ class ReactoryComponent extends Component {
           if(loading === true) loadingWidget = (<Loading message="Updating... please wait." />);
           if(errors) errorWidget = (<p>{errors.message}</p>);
           if(data && data[mutation.name]) {
-            // console.log('data result', {data});
+            // //console.log('data result', {data});
             //debugger;
             if(mutation.onSuccessMethod === "route") {
               const inputObj = {
@@ -387,7 +387,7 @@ class ReactoryComponent extends Component {
     };
 
     if(has.query && has.doQuery) {
-      // console.log('rendering with query', has);
+      // //console.log('rendering with query', has);
       const query = formDef.graphql.query; //gql(formDef.graphql.query.text)
       const formContext = this.getFormContext();
       const _variables = objectMapper({formContext, formData}, query.variables || {});
@@ -404,7 +404,7 @@ class ReactoryComponent extends Component {
                   variables: _variables
                 });
 
-                // console.log('Fetched results for form data', data);
+                // //console.log('Fetched results for form data', data);
                 let _formData = {...formData};
                 if(data && data[query.name]) {
                   _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap || {});
@@ -581,40 +581,40 @@ class ReactoryComponent extends Component {
             //URLWidget
             //UpDownWidget            
             DropZoneWidget: (props, context) => {
-              // console.log('Creating DropZone Widget', { props, context });
+              // //console.log('Creating DropZone Widget', { props, context });
               const { uiSchema, formData } = props;
               const options = uiSchema['ui:options'];
               
               const onDrop = (acceptedFiles, rejectedFiles) => {
-                // console.log('Files Drop', {acceptedFiles, rejectedFiles});
+                // //console.log('Files Drop', {acceptedFiles, rejectedFiles});
                 acceptedFiles.forEach(file => {
                   if(options.readAsString === true) {
-                    // console.log('reading file as string');
+                    // //console.log('reading file as string');
                     const reader = new FileReader();
                     reader.onload = () => {
                         const fileAsBinaryString = reader.result;
                         // do whatever you want with the file content
-                        // console.log('File Data read');
+                        // //console.log('File Data read');
                         if(options.returnFileMeta === true) {
                           props.onChange({content: fileAsBinaryString, file})
                         } else {
                           props.onChange(fileAsBinaryString)
                         }                        
                     };
-                    reader.onabort = () => {} // console.log('file reading was aborted');
-                    reader.onerror = () => {}// console.log('file reading has failed');
+                    reader.onabort = () => {} // //console.log('file reading was aborted');
+                    reader.onerror = () => {}// //console.log('file reading has failed');
              
                     reader.readAsBinaryString(file);
                   } else {
                     //pass files back for form post as mime attachment
-                    // console.log('sending files', acceptedFiles);                    
+                    // //console.log('sending files', acceptedFiles);                    
                     props.onChange(acceptedFiles)
                   }                    
                 });
               };
 
               const onCancel = () => {
-                // console.log('File Select Cancelled');
+                // //console.log('File Select Cancelled');
               };
 
               const dropZoneProps = {
@@ -681,20 +681,20 @@ class ReactoryComponent extends Component {
 
       if(!schema.widgets) schema.widgets = { };
       if(schema.widgetMap) {
-        console.log('resolving widgetMap', schema.widgetMap);
+        //console.log('resolving widgetMap', schema.widgetMap);
         schema.widgetMap.forEach((map) => {
           if(map.component.indexOf('.') === -1){
-            console.log('simple resolve');
+            //console.log('simple resolve');
             schema.widgets[map.widget] = self.componentDefs[map.component]
           } else {
-            console.log('path resolve');
+            //console.log('path resolve');
             const pathArray = map.component.split('.');
             let component = self.componentDefs[pathArray[0]];
             if(component && Object.keys(component) > 0) {
               for(let pi = 1; pi <= pathArray.length - 1; pi += 1){
                 if(component && Object.key(component) > 0) component = component[pathArray[pi]]                              
               }
-              console.log('component is mapped to', component);
+              //console.log('component is mapped to', component);
             }
           }          
         });
@@ -780,24 +780,24 @@ class ReactoryComponent extends Component {
   }
 
   onSubmit(data) {
-    // console.log('form-submit', data);
+    // //console.log('form-submit', data);
     if (this.props.onSubmit) this.props.onSubmit(data);
   }
 
   onChange(data) {
-    // console.log('Form Data Changed', data);
+    // //console.log('Form Data Changed', data);
     this.setState({ formData: {...data}, dirty: true}, ()=>{
       if(this.props.onChange) this.props.onChange(data)
     })
   }
 
   onError(errors) {
-    // console.log('Form onError', errors);
+    // //console.log('Form onError', errors);
     if (this.props.onError) this.props.onError(errors);
   }
 
   onCommand(command, formData){
-    // console.log('onCommand raise', {command, formData});
+    // //console.log('onCommand raise', {command, formData});
     if(this.props.onCommand) this.props.onCommand(command, formData);
   }
 

@@ -597,7 +597,7 @@ export const fetchGridEditorConfig = (siteId = 42180, auth_token = null) => {
  * 
  */
 export const saveGridEditorConfig = (config) => {
-    console.log('Saving config', config);
+    //console.log('Saving config', config);
     return new Promise((resolve, reject) => {
         restClient({
             path: 'https://admin.devsite.ninja/api/PageTemplateConfig/Config',
@@ -616,7 +616,7 @@ export const saveGridEditorConfig = (config) => {
 };
 
 export const deleteGridEditorConfig = (uuid) => {
-    console.log('Delete Grid Editor Config', uuid);
+    //console.log('Delete Grid Editor Config', uuid);
     return new Promise((resolve, reject) => {
         restClient({
             path: `https://admin.devsite.ninja/api/PageTemplateConfig/Config/${uuid}`,

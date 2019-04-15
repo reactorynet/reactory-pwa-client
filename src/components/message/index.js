@@ -64,7 +64,7 @@ class Message extends Component {
   };
 
   onSubmit(formData){
-    console.log('Form data submitted', formData);
+    //console.log('Form data submitted', formData);
   }
 
   render(){

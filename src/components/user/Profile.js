@@ -15,6 +15,8 @@ import {
     CircularProgress , List, ListItem, 
     ListItemSecondaryAction, ListItemText, 
     InputAdornment, Icon, IconButton,
+    ExpansionPanel, ExpansionPanelActions,
+    ExpansionPanelDetails, ExpansionPanelSummary,    
     Toolbar,
 } from '@material-ui/core';
 
@@ -31,7 +33,6 @@ import Tooltip from '@material-ui/core/Tooltip';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 import DefaultAvatar from '../../assets/images/profile/default.png';
 import { CDNProfileResource, getAvatar, isEmail } from '../util';
-import { UserListItem } from '.';
 import { UserListWithSearchComponent } from './Widgets'
 import gql from 'graphql-tag';
 import { isNullOrUndefined } from 'util';
@@ -137,6 +138,11 @@ class Profile extends Component {
         },
         hiddenInput: {
             display: 'none'
+        },
+        peerToolHeader: {
+            ...theme.mixins.gutters(),
+            paddingTop: theme.spacing.unit * 2,
+            paddingBottom: theme.spacing.unit * 2,
         }
     });
 
@@ -209,7 +215,7 @@ class Profile extends Component {
         }
 
         api.graphqlQuery(query, variables).then((result) => {
-            console.log('Result for query', result);
+            //console.log('Result for query', result);
             if(result && result.data && result.data.userPeers)
                 self.setState({ profile: {...profile, peers: { ...result.data.userPeers } }, loadingPeers: false })
             else {
@@ -239,11 +245,12 @@ class Profile extends Component {
     }
 
     renderUser() {
+        const { UserListItem } = this.componentDefs;
         return <UserListItem user={this.state.profile} />
     }
     
     inviteUserByEmail() {
-        console.log('Inviting user', this.state.inviteEmail);
+        //console.log('Inviting user', this.state.inviteEmail);
         const { api } = this.props;
         const { profile } = this.state;
         const self = this
@@ -254,10 +261,10 @@ class Profile extends Component {
             };
 
             api.graphqlQuery(api.queries.Users.searchUser, options).then((userResult) => {
-                console.log('Search Result', userResult);
+                //console.log('Search Result', userResult);
                 self.setState({ findPeersResult: userResult, searching: false, showResult: true })
             }).catch((searchError) => {
-                console.log('Search Error', searchError);
+                //console.log('Search Error', searchError);
                 self.setState({ searching: false, findPeersResult: [] })
             });
         }
@@ -338,7 +345,8 @@ class Profile extends Component {
             BasicModal, 
             Loading, 
             CreateProfile, 
-            FullScreenModal 
+            FullScreenModal,
+            UserListItem, 
         } = this.componentDefs        
 
         const that = this;
@@ -383,7 +391,7 @@ class Profile extends Component {
             };
 
             api.graphqlMutation(mutation, variables).then((peerResult) => {
-                console.log('Set the user peer relationship', peerResult)
+                //console.log('Set the user peer relationship', peerResult)
                 if(cb && peerResult.setPeerRelationShip) {                    
                     cb(peerResult.setPeerRelationShip)
                 } else {
@@ -411,7 +419,7 @@ class Profile extends Component {
             };
 
             api.graphqlMutation(mutation, variables).then((peerResult) => {
-                console.log('removed user peer relationship', peerResult)
+                //console.log('removed user peer relationship', peerResult)
                 //if(cb) cb(peerResult)
                 that.refreshPeers()
             }).catch((peerSetError) => {
@@ -421,7 +429,7 @@ class Profile extends Component {
         }        
 
         const confirmPeers = (confirmed) => {
-            //console.log('Confirming peers for user', this.props, this.state)
+            ////console.log('Confirming peers for user', this.props, this.state)
             if(confirmed === true) {
                 const mutation = gql`mutation ConfirmPeers($id: String!, $organization: String!){
                     confirmPeers(id: $id, organization: $organization){
@@ -437,6 +445,7 @@ class Profile extends Component {
                 api.graphqlMutation(mutation, variables).then( result => {
                     if(result && result.data && result.data.confirmPeers) {
                         that.setState({ showConfirmPeersDialog: false, profile: { ...profile, peers: {...profile.peers, ...result.data.confirmPeers } }}, that.refreshPeers)
+                        history.push('/');
                     }
                 }).catch( ex => {
                     //console.error( 'Error confirming peers ', ex)
@@ -449,7 +458,7 @@ class Profile extends Component {
         };
 
         const setUserPeerSelection = (selection) => {
-            console.log('Set the user peer selection', selection);                        
+            //console.log('Set the user peer selection', selection);                        
             setPeerRelationShip(selection, 'peer', (result) => {
                 // that.setState({ profile: { ...profile, peers: { ...result }  } })
                 that.refreshPeers()
@@ -461,7 +470,7 @@ class Profile extends Component {
         }
 
         const editUserSelection = () => {
-            that.setState({ showPeerSelection: true });
+            that.setState({ showAddUserDialog: true });
         }
 
         const membershipSelected = selectedMembership && 
@@ -473,7 +482,6 @@ class Profile extends Component {
         }
 
         const onNewPeerClicked = (e) => {
-            console.log("New Peer for User", e);
             that.setState({ showAddUserDialog: true });
         };
 
@@ -492,9 +500,8 @@ class Profile extends Component {
 
             confirmPeersDialog = (
             <BasicModal open={true}>
-                <Typography variant="caption">Are you happy with your peer selection?</Typography>
-                <Button color="primary" onClick={doConfirm}>Yes, Confirm my peers</Button>
-                <Button onClick={closeConfirmDialog}>No, I want to make some changes</Button>
+                <Typography variant="caption">Thank you for confirming.</Typography>
+                <Button color="primary" onClick={doConfirm}>Ok</Button>
             </BasicModal>)
         }
 
@@ -508,136 +515,235 @@ class Profile extends Component {
         };
 
         const onUserCreated = (user) => {
-            console.log("User created", user);
+            //console.log("User created", user);
             closeAddUserDialog();
             setUserPeerSelection(user);
         };
 
+        let materialTable = null;        
+        if(isNil(membershipSelected) === false) {
+            materialTable = (<MaterialTable
+                options={{pageSize: 10}}
+                components={{
+                    Toolbar: props => {
+                        return (
+                            <div>
+                                <MTableToolbar {...props}/>
+                                <hr/>
+                                <Typography className={peers.confirmedAt ? 
+                                    classNames([classes.confirmedLabel, classes.notConfirmed]) : 
+                                    classNames([classes.confirmedLabel, classes.confirmed]) } 
+                                    variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }</Typography>
+                            </div>
+                        )
+                    } 
+                }}
+                columns={[
+                    { title: 'Delegate', field: 'fullName' },
+                    { title: 'Email', field: 'email' },
+                    {
+                        title: 'Relationship',
+                        field: 'relationship',
+                        render: (rowData) => { 
+                            switch(rowData.relationship.toLowerCase()) {
+                                case 'manager': {
+                                    return 'LEADER'
+                                }
+                                default: {
+                                    return rowData.relationship.toUpperCase()
+                                }
+                            }                            
+                        }
+                    },
+                ]}
+                data={data}
+                title={`User Peers in Organisation ${selectedMembership.organization.name}`}
+                actions={[
+                    rowData => ({
+                        icon: 'supervisor_account',
+                        tooltip: 'Set user as leader',
+                        disabled: rowData.relationship === 'manager',
+                        onClick: (event, rowData) => {
+                            ////console.log('Making User Supervisor', { event, rowData });
+                            setPeerRelationShip(rowData, 'manager')
+                        },
+                    }),
+                    rowData => ({
+                        icon: 'account_box',
+                        tooltip: 'Set user as peer',
+                        disabled: rowData.relationship === 'peer',
+                        onClick: (event, rowData) => {
+                            ////console.log('Setting User Peer', { event, rowData });
+                            setPeerRelationShip(rowData, 'peer')
+                        },
+                    }),
+                    rowData => ({
+                        icon: 'account_circle',
+                        tooltip: 'Set user as direct report',
+                        disabled: rowData.relationship === 'report',
+                        onClick: (event, rowData) => {
+                            ////console.log('Making User Supervisor', { event, rowData });
+                            setPeerRelationShip(rowData, 'report')
+                        },
+                    }),
+                    rowData => ({
+                        icon: 'delete_outline',
+                        tooltip: 'Delete user from peers',
+                        disabled: false,
+                        onClick: (event, rowData) => {
+                            removePeer(rowData);
+                        },
+                    }),
+                    {
+                        icon: 'check_circle',
+                        tooltip: data.length < 5 ? 'Remember to nominate a total of at least 5 people' : (peers.confirmedAt ? `Peers last confirmed at ${moment(peers.confirmedAt).format('YYYY-MM-DD')}` : 'Confirm peer selection'),
+                        disabled: data.length < 5,
+                        isFreeAction: true,
+                        onClick: (event, rowData) => {
+                            // //console.log('Confirm peers', { event, rowData });
+                            confirmPeers(false);
+                        },
+                    },
+                    {
+                        icon: 'edit',
+                        tooltip: 'Edit Selection',
+                        disabled: false,
+                        isFreeAction: true,
+                        onClick: (event, rowData) => {
+                            // //console.log('Edit peer selection', { event, rowData });
+                            editUserSelection()
+                        },
+                    }
+                ]}
+            />);
+
+            
+
+            materialTable = (
+                <Paper>                    
+                    <Toolbar>
+                        <IconButton onClick={editUserSelection}><Icon>edit</Icon></IconButton>
+                        <IconButton disabled={data.length < 5} onClick={e => confirmPeers(false) }><Icon>check_circle</Icon></IconButton>
+                    </Toolbar>
+                    <Paper className={classes.peerToolHeader} elevation={2}>
+                    <Typography variant="body1">
+                        Use the list below to manage your peers.  Click on the <Icon>edit</Icon> above to add a new colleague to your list of peers.
+                    </Typography>
+                    <Typography variant="body1">
+                        To change an existing peer configuration, expand the peer by clicking on the delegate or the <Icon>expand</Icon> icon, you will be able to change
+                        the relationship type (LEADER, PEER, DIRECT REPORT) or remove the peer by clicking the <Icon>delete_outline</Icon> button.<br/>
+                        Once you have selected a minimum of 5 colleagues in total, please click the <Icon>check_circle</Icon> button to confirm your peer selection.
+                    </Typography>
+                    <hr/>
+                    <Typography className={peers.confirmedAt ? 
+                        classNames([classes.confirmedLabel, classes.notConfirmed]) : 
+                        classNames([classes.confirmedLabel, classes.confirmed]) } 
+                        variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }</Typography>
+                    </Paper>
+                    <div>
+                        {
+                            data.map(usr => {
+                                const makeSupervisor = e => setPeerRelationShip(usr, 'manager');
+                                const makePeer = e => setPeerRelationShip(usr, 'peer');
+                                const makeDirectReport = e => setPeerRelationShip(usr, 'report');
+                                const deletePeer = e => removePeer(usr);
+
+                                const handleChange = event => {
+                                    if(this.state.expanded === usr.id) {
+                                        this.setState({
+                                            expanded: null,
+                                        });
+                                    }
+                                    else 
+                                    {
+                                        this.setState({
+                                            expanded: usr.id,
+                                        });
+                                    }                                    
+                                };
+
+                                const selectorWidget = (
+                                    <Toolbar dense={true}>
+                                        <Button onClick={makeSupervisor}><Icon>supervisor_account</Icon> Make Leader</Button>
+                                        <Button onClick={makePeer}><Icon>account_box</Icon> Make Peer</Button>
+                                        <Button onClick={makeDirectReport}><Icon>account_circle</Icon> Make Direct Report</Button>
+                                        <Button onClick={deletePeer}><Icon>delete_outline</Icon> Remove As Peer</Button>
+                                    </Toolbar>
+                                );
+
+                                let relationshipBadge = null;
+                                switch(usr.relationship.toLowerCase()) {
+                                    case 'manager': {
+                                        relationshipBadge = "LEADER";
+                                        break;
+                                    }
+                                    default: {
+                                        relationshipBadge = usr.relationship.toUpperCase();
+                                        break;
+                                    }
+                                }                            
+                        
+                                return (<ExpansionPanel
+                                        square
+                                        expanded={this.state.expanded === usr.id}
+                                        onChange={handleChange}>
+                                        <ExpansionPanelSummary expandIcon={<Icon>expand</Icon>}>
+                                            <UserListItem user={usr} message={`${usr.firstName} (${usr.email}) is set as a ${relationshipBadge}`}/>
+                                        </ExpansionPanelSummary>
+                                        <ExpansionPanelDetails>                                            
+                                            {selectorWidget}
+                                        </ExpansionPanelDetails>
+                                        </ExpansionPanel>)
+                            })
+                        }
+                    </div>
+                </Paper>
+            )
+        }
 
         if(isNil(membershipSelected) === false) {
             addUserDialog = (
-                <FullScreenModal open={showAddUserDialog === true} title="Add a new user" onClose={closeAddUserDialog}>
-                    <Typography variant="h3" style={{margin: "25px auto"}}>Add a new user</Typography>
+                <FullScreenModal open={showAddUserDialog === true} title="Add / Find a new peer" onClose={closeAddUserDialog}>
+                    <Typography variant="h3" style={{margin: "25px auto"}}>Add / Find a new peer</Typography>
                     <CreateProfile 
-                        onUserCreated={onUserCreated} profileTitle="Invite new user"
+                        onUserCreated={onUserCreated} profileTitle="Invite new peer / colleague"                        
                         formProps={{ withBackButton: false, withAvatar: false, withPeers: false, withMembership: false, mode: 'peer'  }}
                         firstNameHelperText="Firstname for your colleague / peer"
-                        surnameHelperText="Surname for your coleague / peer"
-                        emailHelperText="Email for your colleague / peer"                        
+                        surnameHelperText="Surname for your colleague / peer"
+                        emailHelperText="Email for your colleague / peer"
                         organizationId={ selectedMembership.organization.id } />
-
                 </FullScreenModal>
             );
         }
+
+        /**
+         * 
+         * 
+         * 
+            membershipSelected && this.state.showPeerSelection &&                        
+                <UserListWithSearchComponent 
+                    onUserSelect={setUserPeerSelection}
+                    onAcceptSelection={acceptUserSelection}
+                    organizationId={this.state.selectedMembership.organization.id}
+                    onNewUserClick={onNewPeerClicked}                                
+                    multiSelect={false}
+                    selected={excludedUsers}
+                    excluded={excludedUsers} />                        
+         * 
+         */
         
         const peersComponent = (
             <Fragment>                
                 <Grid item sm={12} xs={12} offset={4}>
                     { confirmPeersDialog }
-                    { addUserDialog }
-                    {
-                        membershipSelected && this.state.showPeerSelection &&                        
-                            <UserListWithSearchComponent 
-                                onUserSelect={setUserPeerSelection}
-                                onAcceptSelection={acceptUserSelection}
-                                organizationId={this.state.selectedMembership.organization.id}
-                                onNewUserClick={onNewPeerClicked}                                
-                                multiSelect={false}
-                                selected={excludedUsers}
-                                excluded={excludedUsers} />                        
-                    }               
+                    { addUserDialog }                                   
                     {
                         !membershipSelected && 
                         <Paper className={this.props.classes.general}><Typography variant="body2">Select a membership with an organization organization to load peers</Typography></Paper> 
                     }
                     {
                         membershipSelected &&
-                        !this.state.showPeerSelection && 
-                        <MaterialTable
-                        options={{pageSize: 10}}
-                        components={{
-                            Toolbar: props => {
-                                return (
-                                    <div>
-                                        <MTableToolbar {...props}/>
-                                        <hr/>
-                                        <Typography className={peers.confirmedAt ? 
-                                            classNames([classes.confirmedLabel, classes.notConfirmed]) : 
-                                            classNames([classes.confirmedLabel, classes.confirmed]) } 
-                                            variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }</Typography>
-                                    </div>
-                                )
-                            } 
-                        }}
-                        columns={[
-                            { title: 'Delegate', field: 'fullName' },
-                            { title: 'Email', field: 'email' },
-                            {
-                                title: 'Relationship',
-                                field: 'relationship',
-                                render: (rowData) => { return rowData.relationship.toUpperCase() }
-                            },
-                        ]}
-                        data={data}
-                        title={`User Peers in Organisation ${selectedMembership.organization.name}`}
-                        actions={[
-                            rowData => ({
-                                icon: 'supervisor_account',
-                                tooltip: 'Set user as supervisor',
-                                disabled: rowData.relationship === 'manager',
-                                onClick: (event, rowData) => {
-                                    console.log('Making User Supervisor', { event, rowData });
-                                    setPeerRelationShip(rowData, 'manager')
-                                },
-                            }),
-                            rowData => ({
-                                icon: 'account_box',
-                                tooltip: 'Set user as peer',
-                                disabled: rowData.relationship === 'peer',
-                                onClick: (event, rowData) => {
-                                    console.log('Setting User Peer', { event, rowData });
-                                    setPeerRelationShip(rowData, 'peer')
-                                },
-                            }),
-                            rowData => ({
-                                icon: 'account_circle',
-                                tooltip: 'Set user as direct report',
-                                disabled: rowData.relationship === 'report',
-                                onClick: (event, rowData) => {
-                                    console.log('Making User Supervisor', { event, rowData });
-                                    setPeerRelationShip(rowData, 'report')
-                                },
-                            }),
-                            rowData => ({
-                                icon: 'delete_outline',
-                                tooltip: 'Delete user from peers',
-                                disabled: false,
-                                onClick: (event, rowData) => {
-                                    removePeer(rowData);
-                                },
-                            }),
-                            {
-                                icon: 'check_circle',
-                                tooltip: data.length < 5 ? 'Remember to nominate a total of at least 5 people' : (peers.confirmedAt ? `Peers last confirmed at ${moment(peers.confirmedAt).format('YYYY-MM-DD')}` : 'Confirm peer selection'),
-                                disabled: data.length < 5,
-                                isFreeAction: true,
-                                onClick: (event, rowData) => {
-                                    // console.log('Confirm peers', { event, rowData });
-                                    confirmPeers(false);
-                                },
-                            },
-                            {
-                                icon: 'edit',
-                                tooltip: 'Edit Selection',
-                                disabled: false,
-                                isFreeAction: true,
-                                onClick: (event, rowData) => {
-                                    console.log('Edit peer selection', { event, rowData });
-                                    editUserSelection()
-                                },
-                            }
-                        ]}
-                    />
+                        !this.state.showPeerSelection && materialTable                        
                     }                    
                 </Grid>
 
@@ -648,9 +754,7 @@ class Profile extends Component {
             const closePeersHighlight = () => {
                 this.setState({ highlight: null });
             }
-
-            
-            
+                        
             return (<FullScreenDialog title="Select your peers" open={true} onClose={closePeersHighlight}>
                         <Paper style={{margin:'16px', padding: '8px'}}>
                             <Typography variant="h5" color="primary">
@@ -758,9 +862,9 @@ class Profile extends Component {
                     <form>
                         <Typography variant='h6'>{profileTitle || 'My Profile'}</Typography>
                         { this.props.withAvatar === true ? avatarComponent : null }
-                        <TextField {...defaultFieldProps} label='Name' value={firstName} helperText={this.props.firstNameHelperText || 'Please use your first name'} onChange={updateFirstname} />
-                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} />
                         <TextField {...defaultFieldProps} label={emailValid === true ? 'Email' : 'Email!'} value={email} helperText={this.props.emailHelperText || 'Please use your work email address, unless you are an outside provider'} onChange={updateEmail} />
+                        <TextField {...defaultFieldProps} label='Name' value={firstName} helperText={this.props.firstNameHelperText || 'Please use your first name'} onChange={updateFirstname} />
+                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} />                        
                     </form>
 
                     <div className={classes.avatarContainer} style={{ justifyContent: 'flex-end', marginTop: '5px' }}>
@@ -897,6 +1001,7 @@ class Profile extends Component {
             'core.Loading',
             'core.FullScreenModal',
             'core.CreateProfile',
+            'core.UserListItem'
         ];
                 
         this.componentDefs = props.api.getComponents(components);

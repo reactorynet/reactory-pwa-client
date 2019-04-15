@@ -328,7 +328,7 @@ export class BrandEdit extends Component {
   onDescriptionChanged = (evt) => this.setState({ editBrand: { ...this.state.editBrand, description: evt.target.value } });
   onNewQuality = (evt) => this.setState({ editBrand: { ...this.state.editBrand, qualities: [...this.state.editBrand.qualities, { ...newQuality, ordinal: this.state.editBrand.qualities.length + 1 }] } })
   onScaleSelect = (evt, option) => { 
-    console.log('survey type change', option)    
+    //console.log('survey type change', option)    
     this.setState({editBrand: { ...this.state.editBrand, scale: option.props.value }});
   }
 

@@ -227,9 +227,9 @@ class RatingControl extends Component {
       rating: 0,
     },
     comment: '',
-    onRatingChange: (rating) => { console.log('onRatingChange not implemented', rating); },
-    onCommentChange: (comment) => { console.log('onCommentChange not implemented', comment) },
-    onDelete: (rating) => { console.log('onDelete not implemented', rating) }
+    onRatingChange: (rating) => { //console.log('onRatingChange not implemented', rating); },
+    onCommentChange: (comment) => { //console.log('onCommentChange not implemented', comment) },
+    onDelete: (rating) => { //console.log('onDelete not implemented', rating) }
   };
 
   constructor(props, context) {
@@ -532,7 +532,7 @@ class DefaultView extends Component {
         that.persistRating(ratingEntry, ratingIndex);
       });
     } else {
-      console.log('Rating Index not found');
+      //console.log('Rating Index not found');
     }
 
   }
@@ -557,12 +557,12 @@ class DefaultView extends Component {
       });
 
     } else {
-      console.log('Rating Index not found');
+      //console.log('Rating Index not found');
     }
   }
 
   onNewBehaviour(quality, behaviour) {
-    console.log('Adding a new Quality', { quality, behaviour });  
+    //console.log('Adding a new Quality', { quality, behaviour });  
     this.persistRating({
       id: 'NEW',
       rating: 0,
@@ -591,7 +591,7 @@ class DefaultView extends Component {
       let rating = assessment.ratings[ratingIndex];
 
       if (!rating) {
-        console.log(`No rating object for quality: ${quality.id}, ${behaviour.id}`);
+        //console.log(`No rating object for quality: ${quality.id}, ${behaviour.id}`);
         rating = { rating: 0, comment: '', id: null, custom: false, behaviourText: null };
       }
 
@@ -708,7 +708,7 @@ class DefaultView extends Component {
   }
 
   setStep(event, step) {
-    console.log('Step change', step);
+    //console.log('Step change', step);
     this.setState({ step });
   }
 

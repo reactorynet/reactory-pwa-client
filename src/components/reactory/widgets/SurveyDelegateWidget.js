@@ -41,7 +41,7 @@ class SurveyDelegate extends Component {
   render(){
     const { SurveyDelegateWidget } = this.componentDefs;
     const { props } = this;
-    console.log('Rendering Survey Delegate Widget', { SurveyDelegateWidget, props });
+    //console.log('Rendering Survey Delegate Widget', { SurveyDelegateWidget, props });
     return (<SurveyDelegateWidget />)
   }
 }
@@ -116,7 +116,7 @@ class SurveyDelegates extends Component {
   getSecondaryAction(delegateEntry){
     const { DropDownMenu } = this.componentDefs;
     const onMenuItemSelect = (evt, menuItem) => {
-      // console.log('trigger menu item', {menuItem, delegateEntry})
+      // //console.log('trigger menu item', {menuItem, delegateEntry})
       switch(menuItem.id){
         case 'sendinvite': {
           this.sendInviteEmails(delegateEntry)
@@ -163,23 +163,23 @@ class SurveyDelegates extends Component {
   }
 
   sendInviteEmails(delegateEntry){
-    console.log('Send Invite Emails', delegateEntry);    
+    //console.log('Send Invite Emails', delegateEntry);    
   }
 
   launchSurvey(delegateEntry){
-    console.log('Launch Survey', delegateEntry);
+    //console.log('Launch Survey', delegateEntry);
   }
 
   stopSurvey(delegateEntry){
-    console.log('Stop Survey', delegateEntry);
+    //console.log('Stop Survey', delegateEntry);
   }
 
   addDelegate(delegateEntry){
-    console.log('Show Delegate Add', delegateEntry);
+    //console.log('Show Delegate Add', delegateEntry);
   }
 
   generateReport(delegateEntry){
-    console.log('Generate Report', delegateEntry);
+    //console.log('Generate Report', delegateEntry);
   }
 
   getDetailView(){    
@@ -226,12 +226,12 @@ class SurveyDelegates extends Component {
         'formData[].removed': 'delegates[].removed',
       });
       variables.replace = false
-      console.log('variables for mutation', { variables, formContext, formData });
+      //console.log('variables for mutation', { variables, formContext, formData });
       const options = {};
       
                   
       api.graphqlMutation(gql(mutation), variables, options).then((result) => {
-          console.log('Updated delegates', { result, variables });
+          //console.log('Updated delegates', { result, variables });
         }).catch((err) => {
           console.error('Error in setting delegates for survey', { err, variables });
         });
@@ -239,7 +239,7 @@ class SurveyDelegates extends Component {
     }
 
     const userSelected = (userToAdd ) => {
-      console.log('Add user to delegates', { userToAdd, p: this.props });
+      //console.log('Add user to delegates', { userToAdd, p: this.props });
       self.doAction({ id: "", delegate: userToAdd }, "add"); 
     };
 
@@ -290,7 +290,7 @@ class SurveyDelegates extends Component {
   }
 
   doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...'){
-    console.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', {delegateEntry, action, inputData, busyMessage});
+    //console.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', {delegateEntry, action, inputData, busyMessage});
     const { api, formContext } = this.props;
     const self = this;
     const mutation = gql`mutation SurveyDelegateAction($entryId: String!, $survey: String!, $delegate: String!, $action: String!, $inputData: Any){
@@ -330,9 +330,9 @@ class SurveyDelegates extends Component {
     };
 
     const doMutation = () => {
-      console.log('SurveyDelegateWidget.doAction(...).doMutation()', {mutation, variables});
+      //console.log('SurveyDelegateWidget.doAction(...).doMutation()', {mutation, variables});
       api.graphqlMutation(mutation, variables).then((mutationResult) => {
-        console.log('DelegateEntry Result From Mutation', mutationResult)
+        //console.log('DelegateEntry Result From Mutation', mutationResult)
         if(mutationResult.data && mutationResult.data.surveyDelegateAction) {
           //debugger;
           let formData = [...self.state.formData]  
@@ -351,7 +351,7 @@ class SurveyDelegates extends Component {
     };
 
     this.setState({ busy: true, message: busyMessage }, () => {
-      console.log('State updated', new Date().valueOf()) 
+      //console.log('State updated', new Date().valueOf()) 
       doMutation(); 
     });
   }
@@ -400,24 +400,30 @@ class SurveyDelegates extends Component {
                 },                
                 {
                   title: 'Message', render: (rowData) => {
-                    return rowData && rowData.message ? rowData.message : 'No Message'
-                  }
+                    return rowData && rowData.message ? rowData.message : 'No Message';
+                  },
                 },
                 {
                     title: 'Status', render: (rowData) => {
-                        return rowData && rowData.status ? rowData.status.toUpperCase() : 'NEW'
-                    }
+                        return rowData && rowData.status ? rowData.status.toUpperCase() : 'NEW';
+                    },
                 },                
                 {
                   title: 'Last Action', render: (rowData) => {
-                    return rowData.lastAction
+                    return rowData.lastAction;
                   },
                 },
                 {
                   title: 'Next Action', render: (rowData) => {
-                    return rowData.nextAction
+                    return rowData.nextAction;
                   },
-                },               
+                },
+                {
+                  title: 'Peers Confirmed', render: (rowData) => {
+                    if(rowData.peers === null) return 'No Peers Defined';                    
+                    return rowData.peers.confirmedAt === null ? 'Not confirmed' : moment(rowData.peers.confirmedAt).format("YYYY-MM-DD");
+                }
+              }               
             ]}                    
             data={data}
             components={{
@@ -463,7 +469,7 @@ class SurveyDelegates extends Component {
                     tooltip: 'Click to send invite',
                     disabled: rowData.status === 'complete',
                     onClick: (event, rowData) => {
-                      console.log('Send invites for all confirmed delegates', rowData)
+                      //console.log('Send invites for all confirmed delegates', rowData)
                       self.sendCommunicationToDelegate(rowData)
                     }
                   }

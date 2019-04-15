@@ -29,7 +29,7 @@ export const getElement = (elementName, id, append = true) => {
 };
 
 export const attachComponent = (ComponentToMount, props, element) => {
-  console.log('Attaching component with props to element', { ComponentToMount, props, element });
+  //console.log('Attaching component with props to element', { ComponentToMount, props, element });
   if(element instanceof Array) {
     element.map(e => { 
       ReactDOM.render(<ComponentToMount {...props} />, e) 

@@ -208,7 +208,7 @@ class ResetPassword extends Component {
 
   onSubmit(form) {
     const that = this;
-    console.log('Submiting Password Change', form);
+    //console.log('Submiting Password Change', form);
     let errors = [];
         
     this.props.api.resetPassword({
@@ -217,7 +217,7 @@ class ResetPassword extends Component {
       password: form.formData.password,
       confirmPassword: form.formData.confirmPassword
     }).then((forgotResult) => {
-      console.log('Forgot password has been triggered', forgotResult);
+      //console.log('Forgot password has been triggered', forgotResult);
       that.setState({ passwordUpdated: true, message: 'Your password has been updated, you will be redirected to the dashboard momentarily' }, ()=>{
         setTimeout(()=>{
           that.props.history.push('/')
@@ -280,7 +280,7 @@ class SearchUser extends Component {
   
 
   onChange(formData) {
-    console.log('formData changed', formData)
+    //console.log('formData changed', formData)
     this.setState({ formData });
   }
   

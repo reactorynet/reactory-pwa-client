@@ -24,7 +24,7 @@ class PlcHomeComponent extends Component {
 
     render() {
         const { muiTheme } = this.props;
-        console.log('Theme component', muiTheme)
+        //console.log('Theme component', muiTheme)
         return (
             <div>
                 <Toolbar>

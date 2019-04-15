@@ -338,12 +338,12 @@ class KanbanDashboard extends Component {
     };
 
     onProjectIdChange = (evt, b, c,) => {
-        console.log('ProjectId changed', { evt, b, c });
+        //console.log('ProjectId changed', { evt, b, c });
         this.setState({ projectId: evt.target.value })
     };
 
     onDateRangeChanged(startDate, endDate) {
-        console.log('DateRange changed', { startDate, endDate });
+        //console.log('DateRange changed', { startDate, endDate });
     }
 
     showModal() {
@@ -355,7 +355,7 @@ class KanbanDashboard extends Component {
     }
 
     onProjectFormSubmit(projectData){
-        console.log('Submit Project Form Data', projectData)
+        //console.log('Submit Project Form Data', projectData)
     }
 
     render() {

@@ -42,7 +42,7 @@ class ProgressWidget extends Component {
   render(){
     const self = this
     const { formData, uiSchema, idSchema, classes } = this.props
-    console.log('Rendering Pie Chart', this.props);
+    //console.log('Rendering Pie Chart', this.props);
     let options = {};
     if(uiSchema['ui:options']) options = { ...uiSchema['ui:options'] };
     return (

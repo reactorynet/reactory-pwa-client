@@ -91,7 +91,7 @@ export class TrelloProvider {
         return new Promise((resolve, reject) => {
             if(orgId === null){
                 this.trello.getBoards('me').then((boards)=>{
-                    console.log('retrieve boards from trello', boards);
+                    //console.log('retrieve boards from trello', boards);
                     resolve(boards);
                 });
             }else{

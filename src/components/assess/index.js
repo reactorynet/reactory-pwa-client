@@ -56,7 +56,7 @@ class AssessmentWrapper extends Component {
         return (
         <Query query={api.queries.Assessments.assessmentWithId} variables={{ id: assessmentId }} >
             {({ loading, error, data}) => {
-                console.log('Rendering query component', { loading, error, data });
+                //console.log('Rendering query component', { loading, error, data });
             if(loading === true) return (<p>Loading assessment data, please wait</p>);
             if(nil(error) === false) return (<p>Error while loading assessment ${error.message}</p>);
             if(data && data.assessmentWithId) {

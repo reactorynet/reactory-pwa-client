@@ -57,7 +57,7 @@ class EmailTemplateEditor extends Component {
   };
 
   saveTemplate(){
-    //console.log
+    ////console.log
   }
 
   render(){
@@ -108,7 +108,7 @@ class TemplateList extends Component {
   }
 
   handleTemplateSelect(template){
-    console.log('Template item selected', template);
+    //console.log('Template item selected', template);
     this.setState({ selected:  template });
   }
 

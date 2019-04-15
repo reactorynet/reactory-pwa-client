@@ -17,7 +17,7 @@ export default class DateTimePickerWidget extends PureComponent {
   }
 
   handleDateChange = date => {
-    console.log('updating date', date);        
+    //console.log('updating date', date);        
     if(this.props.onChange) this.props.onChange(date.format(this.props.outputFormat))
   };
 

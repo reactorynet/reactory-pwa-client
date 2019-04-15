@@ -41,7 +41,7 @@ export class DropDownMenu extends Component {
   };
 
   static noHandler = (evt, menuItem) => {      
-    console.log('DropDownMenu requires onSelect function handler.', {evt, menuItem});
+    //console.log('DropDownMenu requires onSelect function handler.', {evt, menuItem});
   }
 
   constructor(props, context){
@@ -54,7 +54,7 @@ export class DropDownMenu extends Component {
   }
 
   handleMenu(evt){
-    console.log('Menu handle click', { evt, state: this.state });
+    //console.log('Menu handle click', { evt, state: this.state });
     this.setState({ open: !this.state.open, anchorEl:  evt.currentTarget });
   }
   

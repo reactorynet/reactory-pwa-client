@@ -86,7 +86,7 @@ class BusinessUnitForm extends Component {
   }
 
   onToggleUserMembership(item, index) {
-    console.log('Toggling user membership', { item, index });
+    //console.log('Toggling user membership', { item, index });
     debugger;
     const { businessUnit } = this.state;
     let members = [...businessUnit.members];
@@ -239,7 +239,7 @@ const BusinessUnitFormComponent = compose(withApi, withRouter, withStyles(Busine
 
 const BusinessUnitFormWithQueryComponent = compose(withRouter)((props, context) => {
   const { businessUnitId } = props.match.params
-  console.log('matching business unit id', businessUnitId)
+  //console.log('matching business unit id', businessUnitId)
   return (<Query query={gql`query BusinessUnitWithId($id: String!){
     businessUnitWithId(id: $id){
       id

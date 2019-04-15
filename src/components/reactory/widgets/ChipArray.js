@@ -53,7 +53,7 @@ class ChipArray extends Component {
     this.onNewChipLabelTextChange = this.onNewChipLabelTextChange.bind(this)
     this.onHandleChipLabelDelete = this.onHandleChipLabelDelete.bind(this)
     this.onNewChipLabelTextKeyPress = this.onNewChipLabelTextKeyPress.bind(this)
-    console.log('Chip Array', {props, context});
+    //console.log('Chip Array', {props, context});
   }
 
   onNewChipLabelTextChange(evt){

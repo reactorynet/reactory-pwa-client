@@ -147,7 +147,7 @@ export class ReactoryApi extends EventEmitter {
     }
 
     afterLogin(user){ 
-        console.log('After login called');       
+        ////console.log('After login called');       
         this.setUser(user); 
         this.setAuthToken(user.token);   
         return this.status({ emitLogin: true });        
@@ -228,7 +228,7 @@ export class ReactoryApi extends EventEmitter {
     }
 
     async raiseFormCommand(commandId, commandDef, formData){
-        console.log('Raising Form Command Via AMQ', {commandId, formData});
+        ////console.log('Raising Form Command Via AMQ', {commandId, formData});
         if(commandId.indexOf('graphql') === 0){
             debugger;
             let commandText = ''
@@ -410,7 +410,7 @@ export class ReactoryApi extends EventEmitter {
         const that = this
         return new Promise((resolve, reject) => {
             that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {
-                console.log('Api Status Call', result);
+                ////console.log('Api Status Call', result);
                 if (result.data.apiStatus.status === "API OK") {                    
                     that.setUser({ ...result.data.apiStatus });
                     that.lastValidation = moment().valueOf();

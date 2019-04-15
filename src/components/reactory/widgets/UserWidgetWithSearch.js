@@ -104,7 +104,7 @@ class UserWidgetWithSearch extends Component {
   }
 
   render(){
-    console.log('rendering User Widget with search');
+    //console.log('rendering User Widget with search');
     const self = this
     const { UserWithQuery, SurveyDelegateWidget } = this.componentDefs;
     const { formData, uiSchema } = this.props;

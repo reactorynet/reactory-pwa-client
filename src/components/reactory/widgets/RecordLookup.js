@@ -65,7 +65,7 @@ class RecordLookup extends Component {
     const showLookup = () => { self.setState({showLookup: true})}
     const closeLookup = () => { self.setState({closeLookup: true})}
 
-    console.log('RecordLookup Item', {props: this.props, state: this.state});
+    //console.log('RecordLookup Item', {props: this.props, state: this.state});
     return (
       <Fragment>
         <Button type="button" variant="outline" color="primary" onClick={showLookup}>

@@ -354,7 +354,7 @@ class SurveyAdmin extends Component {
   }
 
   onSurveyGeneralSubmit(formData){
-    console.log('Submit the form data for survey', formData)
+    //console.log('Submit the form data for survey', formData)
   }
 
 

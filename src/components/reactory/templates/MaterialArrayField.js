@@ -51,7 +51,7 @@ function ArrayFieldDescription({ DescriptionField, idSchema, description }) {
 
 // Used in the two templates
 function DefaultArrayItem(props) {
-  console.log('Rendering Default Array Item', props);
+  //console.log('Rendering Default Array Item', props);
   const btnStyle = {
     //flex: 1,
     //paddingLeft: 6,
@@ -138,7 +138,7 @@ function DefaultNormalArrayFieldTemplate(props) {
       const api = props.formContext.api
       const onRaiseCommand = ( evt ) => {                
         if(api) api.raiseFormCommand(button.command, button, { formData: props.formData, formContext: props.formContext });
-        else console.log('No API to handle form command');
+        else //console.log('No API to handle form command');
       }            
       return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
     });
@@ -376,7 +376,7 @@ class ArrayField extends Component {
       rawErrors,
       onChange,
     } = this.props;
-    console.log('rendering normal array', {props: this.props});
+    //console.log('rendering normal array', {props: this.props});
     let toolbar = null;    
     const title = schema.title === undefined ? name : schema.title;
     let { ArrayFieldTemplate, definitions, fields } = registry;

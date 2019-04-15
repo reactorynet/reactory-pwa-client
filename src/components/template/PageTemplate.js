@@ -86,11 +86,11 @@ class PageBuilder extends Component {
   }
 
   onPageSubmit(data){
-    console.log('Page submit', {data});
+    //console.log('Page submit', {data});
   }
 
   onLoginFormSubmit(loginForm){
-    console.log('Login Form Submit', loginForm);
+    //console.log('Login Form Submit', loginForm);
     //do login with integration
     const { PageIntegrations } = this.componentDefs
     const that = this;
@@ -103,7 +103,7 @@ class PageBuilder extends Component {
     } = loginForm.formData;
     
     PageIntegrations.boxcommerce.login(`https://${clientId}.${baseUrl}`, email, password, clientId).then((loginResponse) => {
-      console.log('Logged in with boxcommerce', loginResponse);      
+      //console.log('Logged in with boxcommerce', loginResponse);      
       that.setState({ authToken: loginResponse }, ()=>{ 
         api.storeObjectWithKey('boxcommerce_token', { ...loginResponse, baseUrl: `https://${clientId}.${baseUrl}`} );
         that.loadPages()

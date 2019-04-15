@@ -304,20 +304,20 @@ class TaskListItem extends Component {
     }
 
     handleStart(e, data) {
-        console.log(`Handle start event ${e.target}`, { e, data });
+        //console.log(`Handle start event ${e.target}`, { e, data });
     }
 
     handleDrag(e, data) {
-        console.log(`Handle drag event ${e.target}`, { e, data });
+        //console.log(`Handle drag event ${e.target}`, { e, data });
     }
 
     handleStop(e, data) {
-        console.log(`Handle stop event ${e.target}`, { e, data });
+        //console.log(`Handle stop event ${e.target}`, { e, data });
     }
 
     handleToggle() {
         //this.props.history.push(`/actions/${this.props.task.id}`)
-        console.log('Item clicked');
+        //console.log('Item clicked');
     }
 
     withDraggable() {
@@ -340,7 +340,7 @@ class TaskListItem extends Component {
     handleClick = event => {
         //debugger;
         const that = this;
-        console.log('toggle task', { event });
+        //console.log('toggle task', { event });
         this.setState({
             anchorEl: event.currentTarget,
             selected: !that.state.selected
@@ -569,7 +569,7 @@ class TaskDetail extends Component {
     }
 
     onTaskFormSubmit(taskForm){
-        console.log('Task form submitted', taskForm);
+        //console.log('Task form submitted', taskForm);
     }
 
     toggleExpand() {
@@ -591,7 +591,7 @@ class TaskDetail extends Component {
     }
 
     addComment(commentForm){
-        console.log('Add Comment', commentForm);
+        //console.log('Add Comment', commentForm);
     }
 
     render() {

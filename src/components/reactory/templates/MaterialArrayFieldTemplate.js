@@ -82,7 +82,7 @@ class ArrayTemplate extends Component {
    * @param {React.SynthecticEvent} e 
    */
   onAddClicked(e) {
-    console.log('Add Clicked ', e)
+    //console.log('Add Clicked ', e)
     //debugger;
     const {
       formData, //The formData for this array. 
@@ -125,7 +125,7 @@ class ArrayTemplate extends Component {
       selected,
       expanded
     } = this.state
-    //console.log('Rendering array item', { props });
+    ////console.log('Rendering array item', { props });
 
     let orderable = true;
     let removable = true;
@@ -143,12 +143,12 @@ class ArrayTemplate extends Component {
     }
 
     const expandForIndex = ( index ) => {
-      //console.log('Expand for index', index);
+      ////console.log('Expand for index', index);
       this.setState({ expanded: {...this.state.expanded, index: expanded[index] === true ? false : true }});
     };
 
     const selectForIndex = (index) => {
-      //console.log('Select for index', index);
+      ////console.log('Select for index', index);
       this.setState({ selected: {...this.state.selected, index: selected[index] === true ? false : true }});
     }
 
@@ -172,7 +172,7 @@ class ArrayTemplate extends Component {
     };
 
     const deleteItemClick = () => {
-      console.log('deleting item');
+      //console.log('deleting item');
       let items = [...this.props.formData];
       pullAt(items, [index])
       this.props.onChange([...items])
@@ -206,7 +206,7 @@ class ArrayTemplate extends Component {
       readonly: this.props.readonly
     }
 
-    console.log('Rendering Default Array Container', { containerProps, schemaFieldProps, props });
+    //console.log('Rendering Default Array Container', { containerProps, schemaFieldProps, props });
 
     
 
@@ -278,7 +278,7 @@ class ArrayTemplate extends Component {
         <Grid item sm={12} md={12}>
           {formData && formData.map && formData.map((item, index) => {
             //debugger;
-            //console.log('Rendering item', { item, index })
+            ////console.log('Rendering item', { item, index })
             let itemSchema = retrieveSchema(schema.items, definitions, item);
             let itemErrorSchema = errorSchema ? errorSchema[index] : undefined;
             let itemIdPrefix = idSchema.$id + "_" + index;
@@ -340,7 +340,7 @@ class ArrayTemplate extends Component {
       );
     }
 
-    //console.log('schema and uiSchema', { schema, uiSchema, ArrayComponent, formData, onAddClick });
+    ////console.log('schema and uiSchema', { schema, uiSchema, ArrayComponent, formData, onAddClick });
     
   }
 

@@ -101,7 +101,7 @@ class RegisterCard extends Component {
     };
     
     this.props.api.register(payload).then(( registerResult) => {
-      console.log('Register Complete', registerResult)
+      //console.log('Register Complete', registerResult)
       that.doLogin();
     }).catch((registerError) => {
       console.error('Register Error', registerError)

@@ -117,7 +117,7 @@ class ApplicationHeader extends Component {
   onLoginEvent = (evt) => this.forceUpdate();
 
   navigateTo(where = '/', toggleDrawer = false) {
-    console.log('Need to redirect', where);
+    //console.log('Need to redirect', where);
     const {history} = this.props;
 
     if (toggleDrawer === true) {

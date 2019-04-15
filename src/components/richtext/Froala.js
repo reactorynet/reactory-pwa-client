@@ -60,14 +60,14 @@ class FroalaEditor extends Component {
   }
                                           
   componentDidMount(){
-    console.log('froala editor widget mounted', {p: this.props, ref: this.contentRef});
+    //console.log('froala editor widget mounted', {p: this.props, ref: this.contentRef});
     const that = this;
     that.froalaInterval = setInterval(this.froalaCheck, 500)        
   }
 
 
   componentWillUpdate(nextProps, nextState){
-    console.log('componentWillUpdate For Editor', {nextProps, nextState, formRef: this.formRef});
+    //console.log('componentWillUpdate For Editor', {nextProps, nextState, formRef: this.formRef});
     if(this.state.editor === null) {
       nextState.formData = nextProps.data;    
     }    
@@ -98,7 +98,7 @@ class FroalaEditor extends Component {
             refreshAfterCallback: true,
             plugin: 'customPlugin',
             callback: function (command) {                  
-              console.log('Using block builder', {command})
+              //console.log('Using block builder', {command})
               that.setState({ showBlocks: true, showTemplateConfig: false, showComponentSelector: false }, ()=>{
                 //editor.customPlugin.showPopup()
                 that.forceUpdate()
@@ -114,7 +114,7 @@ class FroalaEditor extends Component {
           refreshAfterCallback: true,
           plugin: 'customPlugin',
           callback: (command)=>{            
-            console.log('Using template builder', {command})
+            //console.log('Using template builder', {command})
             that.setState({ showBlocks: false, showTemplateConfig: true, showComponentSelector: false }, () => {              
               that.forceUpdate()
             });
@@ -168,7 +168,7 @@ class FroalaEditor extends Component {
        
             // Create popup.
             var $popup = editor.popups.create('customPlugin.popup', template);
-            console.log('custom plugin popup created', $popup)
+            //console.log('custom plugin popup created', $popup)
             return $popup;
           }
        
@@ -199,7 +199,7 @@ class FroalaEditor extends Component {
             // Show the custom popup.
             // The button's outerHeight is required in case the popup needs to be displayed above it.
             editor.popups.show('customPlugin.popup', left, top, $btn.outerHeight());
-            console.log('popup shown');
+            //console.log('popup shown');
             //bind the view
             const { showTemplateConfig, showBlocks, showComponentSelector } = that.state
             const elem = document.querySelector(`#${that.props.idSchema.$id}_popup`);
@@ -208,7 +208,7 @@ class FroalaEditor extends Component {
               
               const { FileLoader } = that.componentDefs
               const onSubmit = (fileData) => {
-                console.log('Files To Be Processed', fileData)
+                //console.log('Files To Be Processed', fileData)
                 const editorTarget = $(`#${that.props.idSchema.$id}`)
                 editorTarget.froalaEditor('html.set', fileData.formData.content);                
               };
@@ -230,7 +230,7 @@ class FroalaEditor extends Component {
             if(showTemplateConfig === true) {
               const { PageTemplateConfig } = that.componentDefs
               const onConfigSubmit = (configData) => {
-                console.log('Config Submit', configData);
+                //console.log('Config Submit', configData);
               }
               const beforeComponents = (<Fragment>
                 <Typography variant="subtitle1">Configure your template</Typography>
@@ -251,7 +251,7 @@ class FroalaEditor extends Component {
             if(showComponentSelector === true) {
               const { ComponentSelector } = that.componentDefs
               const onComponentSelected = (configData) => {
-                console.log('ComponentSelection', configData);
+                //console.log('ComponentSelection', configData);
 
               }
               const beforeComponents = (<Fragment>
@@ -272,7 +272,7 @@ class FroalaEditor extends Component {
           // Hide the custom popup.
           function hidePopup () {
             editor.popups.hide('customPlugin.popup');
-            console.log('popup closed');
+            //console.log('popup closed');
           }
        
           // Methods visible outside the plugin.
@@ -335,7 +335,7 @@ class FroalaEditor extends Component {
 
           editor.on('froalaEditor.contentChanged', function (e, editorInstance) {
             // Do something here.
-            console.log('Content changed', { e, editorInstance })
+            //console.log('Content changed', { e, editorInstance })
           });
           
           clearInterval(this.froalaInterval);
@@ -360,7 +360,7 @@ class FroalaEditor extends Component {
     const close = () => this.setState({ showBlocks: false })
     const select = () => { this.setState({ showBlocks: false, })}
     const processFiles = (fileData) => {
-      console.log('Files To Be Processed', fileData)
+      //console.log('Files To Be Processed', fileData)
       const editorTarget = window.jQuery(`#${this.props.idSchema.$id}`)
       editorTarget.froalaEditor('html.set', fileData.formData.content);
       this.setState({ blockStep: 1, blockContent: fileData.formData.content })
@@ -404,7 +404,7 @@ class FroalaEditor extends Component {
 
   render(){
       const { props } = this;
-      console.log('rendering Froala Widget', props);
+      //console.log('rendering Froala Widget', props);
       return (
         <FormControl classes={props.classes.formControl} fullWidth>
           <InputLabel htmlFor={props.idSchema.$id } shrink={true}>{props.label}</InputLabel> : null;

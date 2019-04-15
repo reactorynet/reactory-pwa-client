@@ -189,10 +189,10 @@ export class UserListWithSearch extends Component {
   static defaultProps = {
     businessUnitFilter: true,
     onAcceptSelection: (evt) => { 
-      console.log('No selection accept handler');
+      //console.log('No selection accept handler');
     },
     onDeleteUsersClick: (evt) => {
-      console.log('No delete handler');
+      //console.log('No delete handler');
     },
     allowDelete: false,
     selected: [],
@@ -237,7 +237,7 @@ export class UserListWithSearch extends Component {
   }
 
   onUserSelect(user, index){
-    console.log(`User selected ${user.id} ${index}`, {user, index});
+    //console.log(`User selected ${user.id} ${index}`, {user, index});
 
     if(this.props.onUserSelect) this.props.onUserSelect(user, index);
 
@@ -249,7 +249,7 @@ export class UserListWithSearch extends Component {
   }
 
   onNewUserClick(){
-    console.log("New User Clicked", {onNewUserClick: this.props.onNewUserClick});
+    //console.log("New User Clicked", {onNewUserClick: this.props.onNewUserClick});
     if(typeof this.props.onNewUserClick === 'function') {
       this.props.onNewUserClick()      
     } else {

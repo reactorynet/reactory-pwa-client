@@ -32,7 +32,7 @@ export const UserListItem = (props) => {
     <ListItem selected={user.isSelected} onClick={onClick} key={key} className={props.className}>
       <Avatar alt={displayText} src={getAvatar(user)} />
       <ListItemText primary={ user.isNew ? 'NEW' : displayText} secondary={ hasMessage === true ? message : user.email }/>
-      { secondaryComponent }
+      { secondaryAction }
     </ListItem>
   )
 }

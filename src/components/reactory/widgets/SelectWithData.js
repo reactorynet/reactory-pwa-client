@@ -60,13 +60,13 @@ class SelectWithDataWidget extends Component {
   render(){
     const self = this
     const { classes, formContext, formData } = this.props;
-    console.log('Rendering Select With Data', { formContext, formData });
+    //console.log('Rendering Select With Data', { formContext, formData });
     if(this.props.uiSchema['ui:options']){
       
       const { query, propertyMap, resultsMap, resultItem } = this.props.uiSchema['ui:options'];      
       const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
       const onSelectChanged = (evt) => {
-        console.log('Raising onChange for data select', {v: evt.target.value})
+        //console.log('Raising onChange for data select', {v: evt.target.value})
         self.props.onChange(evt.target.value)
       }
             

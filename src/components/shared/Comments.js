@@ -61,7 +61,7 @@ class Comments extends Component {
   }
 
   static defaultProps = {
-    newCommentAdded : (comment) => { console.log('Comment added', comment)}
+    newCommentAdded : (comment) => { //console.log('Comment added', comment)}
   }
 
   setNewCommentText(evt){

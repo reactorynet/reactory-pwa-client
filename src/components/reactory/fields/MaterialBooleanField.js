@@ -43,7 +43,7 @@ export default (props) => {
     if(onChange) onChange(checked)
   }
   
-  console.log('render boolean field', props);
+  //console.log('render boolean field', props);
   return (<FormControlLabel
       control={
       <Switch

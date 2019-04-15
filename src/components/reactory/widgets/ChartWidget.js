@@ -48,7 +48,7 @@ class PieChartWidget extends Component {
   render(){
     const self = this
     const { formData, uiSchema, idSchema } = this.props
-    console.log('Rendering Pie Chart', this.props);
+    //console.log('Rendering Pie Chart', this.props);
     return (
       <Fragment>
        <PieChart

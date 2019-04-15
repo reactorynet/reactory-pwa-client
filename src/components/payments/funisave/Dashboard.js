@@ -475,7 +475,7 @@ class PaymentGatewayDashboard extends Component {
   }
 
   transferSettingsTransform(response) {
-    console.log('transforming result', response);
+    //console.log('transforming result', response);
     const { value } = response;
     return {
       sending: value.disabled === false,
@@ -511,7 +511,7 @@ class PaymentGatewayDashboard extends Component {
   }
 
   onDateRangeChanged(startDate, endDate) {
-    console.log('Date Changed', { startDate, endDate });
+    //console.log('Date Changed', { startDate, endDate });
     const updates = {
       from: moment(this.state.from),
       till: moment(this.state.till),
@@ -557,7 +557,7 @@ class PaymentGatewayDashboard extends Component {
         disable_receive: gatewayData.transferSettings.receiving === false,
         reason: "FuniSave Gateway App"
       }).catch((err) => {
-        console.log(err);
+        //console.log(err);
         gatewayData.transferSettings = { sending, receiving };
         that.setState({ gatewayData, message: 'Could not set transfer settigns', displayMessage: true })
       });
@@ -565,21 +565,21 @@ class PaymentGatewayDashboard extends Component {
   };
 
   fileSelected(item) {
-    console.log('file item selected', item);
+    //console.log('file item selected', item);
     this.setState({ remoteFolder: item })
   }
 
   transactionSelected(item) {
-    console.log('transaction item selected', item);
+    //console.log('transaction item selected', item);
     this.setState({ selectedTransaction: item })
   }
 
   scheduleItemSelected(item) {
-    console.log('schedule item selected');
+    //console.log('schedule item selected');
   }
 
   resetSchedule(schedule) {
-    console.log('resetting schedule', schedule);
+    //console.log('resetting schedule', schedule);
     const that = this
     this.setState({ displayMessage: true, message: 'Resetting Schedule' }, () => {
       this.props.api.rest.json.post(`${this.props.endpoint}cps/schedule/reset`, {
@@ -600,7 +600,7 @@ class PaymentGatewayDashboard extends Component {
   }
 
   onProductPaymentSubmit(payment) {
-    console.log('Product payment submit', payment);
+    //console.log('Product payment submit', payment);
     const { api, endpoint } = this.props;
     const that = this;
     that.setState({ message: 'Allocating new payment, please wait', displayMessage: true }, () => {
@@ -614,7 +614,7 @@ class PaymentGatewayDashboard extends Component {
   }
 
   synchronizeMembers() {
-    console.log('Members Sync');
+    //console.log('Members Sync');
     const { api, endpoint } = this.props;
     const that = this;
     that.setState({ message: 'Synching members please wait', displayMessage: true }, () => {
@@ -630,7 +630,7 @@ class PaymentGatewayDashboard extends Component {
   }
 
   synchGateways() {
-    console.log('Gateway Sync');
+    //console.log('Gateway Sync');
     const { api, endpoint } = this.props;
     const that = this;
     that.setState({ message: 'Synching gateways please wait', displayMessage: true }, () => {
@@ -646,7 +646,7 @@ class PaymentGatewayDashboard extends Component {
   }
 
   publishSchedule() {
-    console.log('Publish Schedule');
+    //console.log('Publish Schedule');
     const { api, endpoint } = this.props;
     const that = this;
     that.setState({ message: 'Publishing Schedule Please Wait', displayMessage: true }, () => {

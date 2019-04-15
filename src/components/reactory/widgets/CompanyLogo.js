@@ -66,7 +66,7 @@ class CompanyLogoWidget extends Component {
           logo
         }
       }`, { id: this.props.formData }).then((result) => {
-        console.log('Query result', result);
+        //console.log('Query result', result);
         const { data, errors } = result;
         const { organizationWithId = { logo: 'default'} } = data;
         that.setState({ logo: organizationWithId.logo || 'default', loaded: true, errors })

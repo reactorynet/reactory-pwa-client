@@ -208,7 +208,7 @@ class ObjectField extends Component {
     let Template = registry.ObjectFieldTemplate || DefaultObjectFieldTemplate;
 
     if(lodash.isString(widget) && lodash.isFunction(registry.widgets[widget])) {
-      console.log('Set new Template for schema object', Template);
+      //console.log('Set new Template for schema object', Template);
       Template = registry.widgets[widget];  
       
     }

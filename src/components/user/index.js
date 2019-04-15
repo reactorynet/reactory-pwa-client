@@ -206,7 +206,7 @@ export const CreateProfile = compose(
   
     //we update the cache with the server response
   const updateCache = (cache, { data }) => {        
-    console.log('Updating cache with user create response', data);
+    //console.log('Updating cache with user create response', data);
     
     
     try {
@@ -222,7 +222,7 @@ export const CreateProfile = compose(
     }
     
 
-    console.log("Cache has been updaterated");
+    //console.log("Cache has been updaterated");
     onUserCreated(data.createUser);
   };
 
@@ -513,7 +513,7 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
         }
         const users = data.usersForOrganizationWithId || []
         const availableAlphabet = uniq(sortedUniqBy(users, u => u.firstName.substring(0,1).toUpperCase()).map( user => user.firstName.substring(0,1).toUpperCase()));
-        console.log("Available Alphabet is", {availableAlphabet});
+        //console.log("Available Alphabet is", {availableAlphabet});
         return (
           <List subheader={ <li /> }>
           { 
@@ -531,6 +531,8 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
                     const raiseUserChecked = () => {
                       if(onUserSelect) onUserSelect(user, uid, { toggle: true })
                     }
+
+
                     const nilf = () => {};
                     const isSelected = intersection(selected, [user.id]).length === 1;
                     const exclude = intersection(excluded, [user.id]).length === 1;
@@ -539,9 +541,9 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
                     if(exclude === true) return null;
                                                           
                     return (
-                      <ListItem selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf } dense button key={uid}>
-                        <Avatar alt={displayText} src={getAvatar(user)} />
-                        <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
+                      <ListItem selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf  } dense button key={uid}>
+                        <Avatar alt={displayText} src={getAvatar(user)} onClick={ raiseUserSelected } />
+                        <ListItemText primary={ user.__isnew ? 'NEW' : displayText} onClick={ raiseUserSelected } secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
                         { multiSelect === true ? 
                         <Checkbox
                           checked={isSelected}
@@ -607,7 +609,7 @@ class Logout extends Component {
     this.props.api.status().then((status) => {
       this.props.history.push('/login')
     }).catch(e => {
-      console.log('error logging out', e)
+      //console.log('error logging out', e)
       this.props.history.push('/login')
     })
   }

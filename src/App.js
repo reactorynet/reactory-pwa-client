@@ -191,10 +191,10 @@ class App extends Component {
     
     if (this.state.auth_validated === false) {
       api.status({ emitLogin: true }).then((user) => {
-        console.log('Status Called From App.js', { user });
+        //console.log('Status Called From App.js', { user });
         that.setState({ auth_validated: true, user }, this.configureRouting)
       }).catch((validationError) => {
-        console.log('Could not check status')
+        //console.log('Could not check status')
         that.setState({ auth_validated: false })
       });
     }
