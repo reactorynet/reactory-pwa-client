@@ -138,7 +138,6 @@ function DefaultNormalArrayFieldTemplate(props) {
       const api = props.formContext.api
       const onRaiseCommand = ( evt ) => {                
         if(api) api.raiseFormCommand(button.command, button, { formData: props.formData, formContext: props.formContext });
-        else //console.log('No API to handle form command');
       }            
       return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
     });

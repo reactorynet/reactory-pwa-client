@@ -2,6 +2,7 @@ import classNames from 'classnames';
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
+import { isFunction } from 'lodash';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import FormLabel from '@material-ui/core/FormLabel';
 import Radio from '@material-ui/core/Radio';
@@ -63,10 +64,14 @@ class SpeedDials extends React.Component {
     hidden: false,
   };
 
-  handleClick = () => {
+  handleClick = (evt) => {
+    const that = this;
+    if(isFunction(evt.persist)) evt.persist();    
     this.setState(state => ({
       open: !state.open,
-    }));
+    }), () => {
+      if(isFunction(that.props.onClick) === true) that.props.onClick(evt);
+    });
   };
 
   handleDirectionChange = (event, value) => {
@@ -92,7 +97,7 @@ class SpeedDials extends React.Component {
   };
 
   render() {
-    const { classes } = this.props;
+    const { classes, icon, actions } = this.props;
     const { direction, hidden, open } = this.state;
 
     const speedDialClassName = classNames(
@@ -107,7 +112,7 @@ class SpeedDials extends React.Component {
             ariaLabel="QuickPick"
             className={speedDialClassName}
             hidden={hidden}
-            icon={<SpeedDialIcon />}
+            icon={ icon || <SpeedDialIcon />}
             onBlur={this.handleClose}
             onClick={this.handleClick}
             onClose={this.handleClose}
@@ -119,10 +124,10 @@ class SpeedDials extends React.Component {
           >
             {actions.map(action => (
               <SpeedDialAction
-                key={action.name}
+                key={action.key}
                 icon={action.icon}
-                tooltipTitle={action.name}
-                onClick={this.handleClick}
+                tooltipTitle={action.title}
+                onClick={ action.clickHandler || this.handleClick }
               />
             ))}
           </SpeedDial>
@@ -134,11 +139,15 @@ class SpeedDials extends React.Component {
 
 SpeedDials.propTypes = {
   classes: PropTypes.object.isRequired,
-  actions: PropTypes.array
+  actions: PropTypes.array,
+  icon: PropTypes.object,
+  onClick: PropTypes.func
 };
 
 SpeedDials.defaultProps = {
-  actions
+  actions,
+  icon: SpeedDialIcon,
+  onClick: evt => { return false; }
 };
 
 export default withStyles(styles)(SpeedDials);

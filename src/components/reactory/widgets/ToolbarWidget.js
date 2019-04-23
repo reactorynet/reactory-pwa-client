@@ -37,7 +37,6 @@ class ToolbarWidget extends Component {
       const onRaiseCommand = ( evt ) => {        
         ////console.log('Raising Toolbar Command', api);
         if(api) api.raiseFormCommand(command.command, { formData: formData, formContext: formContext });
-        else //console.log('No API to handle form command');
       }            
       return (
       <Tooltip key={command.id} title={command.tooltip || command.id}>

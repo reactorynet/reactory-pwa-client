@@ -86,6 +86,7 @@ peers {
     isInternal
     inviteSent
     confirmed
+    confirmedAt
     relationship                        
 }
 allowEdit
@@ -227,10 +228,14 @@ class Profile extends Component {
                             user: profile.id, 
                             organization: selectedMembership.organization.id,
                             allowEdit: true, 
-                            confirmedAt: null, 
+                            confirmedAt: null,
+                            confirmed: false,
+                            inviteSent: false, 
                             peers: [],
-                    } 
-                }, loadingPeers: false });
+                        } 
+                    }, 
+                    loadingPeers: false 
+                });
             } 
         }).catch((queryError) => {
             console.error('Error querying user peers', queryError)
@@ -274,7 +279,7 @@ class Profile extends Component {
 
     renderMemberships() {
         const { memberships } = this.state.profile
-        const { withMembership } = this.props;
+        const { withMembership, classes } = this.props;
         
         if(withMembership === false) return null;
 
@@ -283,8 +288,34 @@ class Profile extends Component {
         if (memberships && memberships.length) {
             memberships.map(m => data.push({ ...m }))
         }
-        return (
+        const membershipList = (
+            <Grid item sm={12} xs={12} offset={4}>
+                <Paper className={classes.general}>
+                    <Typography variant="h6">Organization Membership(s)</Typography>
+                    <Typography variant="body2">
+                        If you are registered to participate in other organizations, your memberships will appear here. <br /> 
+                        Selecting a membership will load your peer nominations, for that organization or business unit. <br />
+                        Most users will only have one membership. <br />These memberships are managed by the administrators of the system.
+                    </Typography>
+                    <List>
+                        {data.map( membership => (
+                            membership.organization && 
+                            <ListItem>
+                                <Avatar>{membership.organization.name.substring(0,2)}</Avatar>
+                                <ListItemText secondary={`${membership.client.name}`} primary={!isNil(membership.organization) ? membership.organization.name : 'No organization'}></ListItemText>
+                                <ListItemSecondaryAction>
+                                    <IconButton onClick={() => {self.onMembershipSelectionChanged(membership)}}><Icon>more</Icon></IconButton>
+                                </ListItemSecondaryAction>
+                            </ListItem>))}
+                    </List>
+                </Paper>
+            </Grid>            
+        );
 
+        return membershipList;
+       
+        /*
+        const membersGrid = (
             <Grid item sm={12} xs={12} offset={4}>
                 <MaterialTable
                     columns={[
@@ -326,6 +357,8 @@ class Profile extends Component {
             </Grid>
 
         )
+        */
+        
     }
 
     renderPeers() {
@@ -363,9 +396,12 @@ class Profile extends Component {
                     ...entry.user,
                     fullName: `${entry.user.firstName} ${entry.user.lastName}`,
                     email: entry.user.email,
-                    relationship: entry.relationship
+                    relationship: entry.relationship,
+                    confirmed: entry.confirmed,
+                    confirmedAt: entry.confirmedAt,
+                    inviteSent: entry.inviteSent
                 });
-            })
+            });
         }
 
         
@@ -611,7 +647,7 @@ class Profile extends Component {
                         isFreeAction: true,
                         onClick: (event, rowData) => {
                             // //console.log('Edit peer selection', { event, rowData });
-                            editUserSelection()
+                            editUserSelection();
                         },
                     }
                 ]}
@@ -620,29 +656,34 @@ class Profile extends Component {
             
 
             materialTable = (
-                <Paper>                    
+                <Paper className={classes.general}>
+                    <Typography variant="h6">Nominees for {this.state.selectedMembership.organization.name}</Typography>
                     <Toolbar>
                         <IconButton onClick={editUserSelection}><Icon>edit</Icon></IconButton>
                         <IconButton disabled={data.length < 5} onClick={e => confirmPeers(false) }><Icon>check_circle</Icon></IconButton>
                     </Toolbar>
                     <Paper className={classes.peerToolHeader} elevation={2}>
                     <Typography variant="body1">
-                        Use the list below to manage your peers.  Click on the <Icon>edit</Icon> above to add a new colleague to your list of peers.
+                        Use the list below to manage your nominees.  Click on the <Icon>edit</Icon> above to add a new colleague to your list.
                     </Typography>
                     <Typography variant="body1">
-                        To change an existing peer configuration, expand the peer by clicking on the delegate or the <Icon>expand</Icon> icon, you will be able to change
+                        If you need to edit the details an existing colleague you nominated previously, click on their name or the <Icon>expand</Icon> icon. This will enable you to change
                         the relationship type (LEADER, PEER, DIRECT REPORT) or remove the peer by clicking the <Icon>delete_outline</Icon> button.<br/>
-                        Once you have selected a minimum of 5 colleagues in total, please click the <Icon>check_circle</Icon> button to confirm your peer selection.
+                        Once you have selected seven colleagues (a minimum of five if you don't have seven) in total, please click the <Icon>check_circle</Icon> button to confirm your peer selection.<br />
+                        Your nominees will only be notified of their nomination a maximum of once every 30 days.
                     </Typography>
                     <hr/>
                     <Typography className={peers.confirmedAt ? 
                         classNames([classes.confirmedLabel, classes.notConfirmed]) : 
                         classNames([classes.confirmedLabel, classes.confirmed]) } 
-                        variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }</Typography>
+                        variant={"body1"}>
+                        {moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }
+                    </Typography>
                     </Paper>
                     <div>
                         {
                             data.map(usr => {
+                                console.log('Binding peer user', usr);
                                 const makeSupervisor = e => setPeerRelationShip(usr, 'manager');
                                 const makePeer = e => setPeerRelationShip(usr, 'peer');
                                 const makeDirectReport = e => setPeerRelationShip(usr, 'report');
@@ -663,12 +704,34 @@ class Profile extends Component {
                                 };
 
                                 const selectorWidget = (
-                                    <Toolbar dense={true}>
-                                        <Button onClick={makeSupervisor}><Icon>supervisor_account</Icon> Make Leader</Button>
-                                        <Button onClick={makePeer}><Icon>account_box</Icon> Make Peer</Button>
-                                        <Button onClick={makeDirectReport}><Icon>account_circle</Icon> Make Direct Report</Button>
-                                        <Button onClick={deletePeer}><Icon>delete_outline</Icon> Remove As Peer</Button>
-                                    </Toolbar>
+                                    <Fragment>                                        
+                                        <List dense fullWidth={true}>
+                                            <ListItem>
+                                                <Avatar><Icon>mail</Icon></Avatar>
+                                                <ListItemText primary={usr.inviteSent ===  true ? 'Confirmation sent' : 'Confirmation not sent'} secondary={usr.inviteSent ===  true ? moment(usr.confirmedAt).format('YYYY-MM-DD') : 'Wil be confirmed with next confirmation'}/>
+                                            </ListItem>
+
+                                            <ListItem selected={usr.relationship === 'manager'} onClick={ usr.relationship !== 'manager' ? makeSupervisor : nilf}>
+                                                <Avatar><Icon>supervisor_account</Icon></Avatar>
+                                                <ListItemText primary={usr.relationship !== 'manager' ? 'Select As Leader' : `${usr.firstName} ${usr.lastName} is flagged as a leader`} />                                                                                                
+                                            </ListItem>
+
+                                            <ListItem selected={usr.relationship === 'peer'} onClick={ usr.relationship !== 'peer' ? makePeer : nilf}>
+                                                <Avatar><Icon>account_box</Icon></Avatar>
+                                                <ListItemText primary={usr.relationship !== 'peer' ? 'Select As Peer' : `${usr.firstName} ${usr.lastName} is flagged as a peer`} />
+                                            </ListItem>
+                                            
+                                            <ListItem selected={usr.relationship === 'report'} onClick={ usr.relationship !== 'report' ? makeDirectReport : nilf}>
+                                                <Avatar><Icon>account_circle</Icon></Avatar>
+                                                <ListItemText primary={usr.relationship !== 'report' ? 'Select As Report' : `${usr.firstName} ${usr.lastName} is flagged as a report`} />                                                
+                                            </ListItem>
+
+                                            <ListItem onClick={deletePeer}>
+                                                <Avatar><Icon>delete_outline</Icon></Avatar>
+                                                <ListItemText primary={`Remove ${usr.firstName} ${usr.lastName} as nominee`} />
+                                            </ListItem>                                                                                 
+                                        </List>                                        
+                                    </Fragment>
                                 );
 
                                 let relationshipBadge = null;
@@ -684,11 +747,12 @@ class Profile extends Component {
                                 }                            
                         
                                 return (<ExpansionPanel
+                                        key={usr.id}
                                         square
                                         expanded={this.state.expanded === usr.id}
                                         onChange={handleChange}>
                                         <ExpansionPanelSummary expandIcon={<Icon>expand</Icon>}>
-                                            <UserListItem user={usr} message={`${usr.firstName} (${usr.email}) is set as a ${relationshipBadge}`}/>
+                                            <UserListItem user={usr} message={`${usr.firstName} (${usr.email}) is set as a ${relationshipBadge}`} />
                                         </ExpansionPanelSummary>
                                         <ExpansionPanelDetails>                                            
                                             {selectorWidget}
@@ -717,19 +781,15 @@ class Profile extends Component {
         }
 
         /**
-         * 
-         * 
-         * 
             membershipSelected && this.state.showPeerSelection &&                        
-                <UserListWithSearchComponent 
-                    onUserSelect={setUserPeerSelection}
-                    onAcceptSelection={acceptUserSelection}
-                    organizationId={this.state.selectedMembership.organization.id}
-                    onNewUserClick={onNewPeerClicked}                                
-                    multiSelect={false}
-                    selected={excludedUsers}
-                    excluded={excludedUsers} />                        
-         * 
+            <UserListWithSearchComponent 
+                onUserSelect={setUserPeerSelection}
+                onAcceptSelection={acceptUserSelection}
+                organizationId={this.state.selectedMembership.organization.id}
+                onNewUserClick={onNewPeerClicked}                                
+                multiSelect={false}
+                selected={excludedUsers}
+                excluded={excludedUsers} />                        
          */
         
         const peersComponent = (
@@ -758,13 +818,7 @@ class Profile extends Component {
             return (<FullScreenDialog title="Select your peers" open={true} onClose={closePeersHighlight}>
                         <Paper style={{margin:'16px', padding: '8px'}}>
                             <Typography variant="h5" color="primary">
-                                Colleagues/Peer management
-                            </Typography>
-                            <Typography variant="body1">
-                                Please use the grid below to manage your peers, direct reports and leader.  Use the <IconButton><Icon>edit</Icon></IconButton> on the grid
-                                to display a list of your fellow employees. You can also remove a colleague by clicking the <IconButton><Icon>delete_outline</Icon></IconButton> icon.<br/> 
-                                Once you have selected them, please click on the confirm button <IconButton><Icon>check_circle</Icon></IconButton><br/>  
-                                This will notify your colleagues that you have selected them as a potential assessor for future assessment.
+                                Colleagues / Peer management
                             </Typography>                            
                             {peersComponent}
                         </Paper>                                            

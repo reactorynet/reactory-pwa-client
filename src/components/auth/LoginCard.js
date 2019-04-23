@@ -24,7 +24,7 @@ class LoginCard extends Component {
     super(props, context);
     const { api } = props;
     this.state = {
-      username: '',
+      username: localStorage ? localStorage.getItem('$reactory$last_logged_in_user') : '',
       password: '',
       loginError: null,
       busy: false,
@@ -50,6 +50,7 @@ class LoginCard extends Component {
     const { redirectOnLogin } = this.state;
     const that = this;
     that.setState({ busy: true }, () => {
+      api.setLastUserEmail(this.state.username);
       api.login(this.state.username, this.state.password).then(({ user }) => {
         api.afterLogin(user).then(status => {
           that.setState({ loginError: null, loggedIn: true }, () => {
@@ -71,7 +72,12 @@ class LoginCard extends Component {
 
   doRegister = evt => this.props.history.push('/register')
   doForgot = evt => this.props.history.push('/forgot')
-  updateUsername = (evt) => this.setState({ username: evt.target.value })
+  updateUsername = (evt) => { 
+    this.setState({ username: evt.target.value }) 
+    if(localStorage) {
+      localStorage.setItem('$reactory$last_logged_in_user', evt.target.value);
+    }
+  }
   updatePassword = (evt) => this.setState({ password: evt.target.value })
   keyPressPassword = (evt) => {
     if (evt.charCode === 13) {

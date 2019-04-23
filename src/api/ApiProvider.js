@@ -42,6 +42,7 @@ const { queries, mutations } = graphApi
 const storageKeys = {
     LoggedInUser: 'loggedInUser',
     AuthToken: 'auth_token',
+    LastLoggedInEmail: '$reactory$last_logged_in_user'
 }
 
 const anonUser = { id: '', firstName: '', lastName: '', avatar: '', anon: true, roles: ['ANON'] };
@@ -121,6 +122,8 @@ export class ReactoryApi extends EventEmitter {
         this.renderForm = this.renderForm.bind(this);
         this.graphqlMutation = this.graphqlMutation.bind(this);
         this.graphqlQuery = this.graphqlQuery.bind(this);
+        this.getLastUserEmail = this.getLastUserEmail.bind(this);
+        this.setLastUserEmail = this.setLastUserEmail.bind(this);
         this.forms().then()
     }
 
@@ -340,6 +343,15 @@ export class ReactoryApi extends EventEmitter {
 
     setAuthToken(token) {
         localStorage.setItem(storageKeys.AuthToken, token)
+    }
+
+    setLastUserEmail(email) {
+        localStorage.setItem(storageKeys.LastLoggedInEmail, email);
+    }
+
+    getLastUserEmail() {
+        //debugger;
+        localStorage.getItem(storageKeys.LastLoggedInEmail);
     }
 
     registerComponent(nameSpace, name, version = '1.0.0', component = EmptyComponent){

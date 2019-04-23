@@ -227,9 +227,9 @@ class RatingControl extends Component {
       rating: 0,
     },
     comment: '',
-    onRatingChange: (rating) => { //console.log('onRatingChange not implemented', rating); },
-    onCommentChange: (comment) => { //console.log('onCommentChange not implemented', comment) },
-    onDelete: (rating) => { //console.log('onDelete not implemented', rating) }
+    onRatingChange: (rating) => {  },
+    onCommentChange: (comment) => {  },
+    onDelete: (rating) => {  }
   };
 
   constructor(props, context) {

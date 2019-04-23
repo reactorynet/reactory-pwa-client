@@ -2,16 +2,20 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import {
   Avatar,
+  Checkbox,
   IconButton,
   Icon,
   ListItem,
   ListItemText,
   ListItemSecondaryAction,  
 } from '@material-ui/core';
+import {
+  isNil
+} from 'lodash';
 import { getAvatar } from '../../util';
 
 export const UserListItem = (props) => {
-  const { user, selected, key, onClick, message, secondaryAction } = props
+  const { user, selected, key, onClick, message, secondaryAction, checkbox, onSelectChanged, primaryText } = props
   
   if(!user) {
     return (<ListItem button onClick={onClick} key={key}>
@@ -20,18 +24,24 @@ export const UserListItem = (props) => {
     </ListItem>)
   }
   
-  const displayText = `${user.firstName} ${user.lastName}`
-  const hasMessage = typeof message === 'string'
+  const displayText = primaryText || `${user.firstName} ${user.lastName}`;
+  const hasMessage = isNil(message) === false
 
   let secondaryComponent = null;
   if(secondaryAction) {
     secondaryComponent = (<ListItemSecondaryAction>{secondaryAction}</ListItemSecondaryAction>);
   }
 
+  let checkboxComponent = null;
+  if(checkbox === true) {
+    checkboxComponent = <Checkbox checked={selected === true} onChange={onSelectChanged} />
+  }
+
   return (
-    <ListItem selected={user.isSelected} onClick={onClick} key={key} className={props.className}>
+    <ListItem selected={user.isSelected} onClick={onClick} key={key || user.id} className={props.className}>
+      {checkboxComponent}
       <Avatar alt={displayText} src={getAvatar(user)} />
-      <ListItemText primary={ user.isNew ? 'NEW' : displayText} secondary={ hasMessage === true ? message : user.email }/>
+      <ListItemText primary={ displayText } secondary={ hasMessage === true ? message : user.email }/>
       { secondaryAction }
     </ListItem>
   )
@@ -42,8 +52,13 @@ UserListItem.propTypes = {
   user: PropTypes.object,
   selected: PropTypes.bool,
   onClick: PropTypes.func,
+  onSelectChanged: PropTypes.func, 
   secondaryAction: PropTypes.object,
   onSecondaryItemClicked: PropTypes.func,
+}
+
+UserListItem.defaultProps = {
+  onSelectChanged: () => {}
 }
 
 export default {
