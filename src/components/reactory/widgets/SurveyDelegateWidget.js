@@ -154,6 +154,10 @@ class SurveyDelegates extends Component {
           this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'details' });
           break;
         }
+        case 'remove': {          
+          this.removeDelegateFromSurvey(delegateEntry, delegateEntry.removed === true);
+          break;
+        }
         case 'report': 
         default: {
           this.generateReport(delegateEntry)
@@ -164,11 +168,13 @@ class SurveyDelegates extends Component {
 
     const menus = [
       { title: 'View Delegate Details', icon: 'account_circle', id: 'view-details', key: 'view-details' },                      
+      { title: 'Remove from Survey', icon: 'delete_outline', id: 'remove', key:'remove' },
     ];
 
     switch(delegateEntry.status.toLowerCase()){
       case 'invite-sent': {
         menus.push({ title: 'Launch for delegate', icon: 'flight_takeoff', id: 'launch', key:'launch' });
+        menus.push({ title: 'Re-send invite', icon: 'mail', id: 'sendinvite', key:'send-invite' });
         break;
       }
       case 'complete': {
@@ -180,7 +186,7 @@ class SurveyDelegates extends Component {
         break;
       }
       case 'launched': {
-        menus.push({ title: 'Send Reminders', icon: 'mail_outline', id: 'send-reminder', key:'reminder' });
+        menus.push({ title: 'Send Reminders', icon: 'mail_outline', id: 'send-reminder', key:'reminder' });        
         menus.push({ title: 'View Assessment Details', icon: 'assignment', id: 'view-assessments', key:'view-assessments' });
         break;
       }
@@ -757,13 +763,111 @@ class SurveyDelegates extends Component {
           key: 'feedback-complete',
           title: 'Feedback Completed',
           icon: 'comment'
+        },
+        {
+          key: 'removed',
+          title: 'Removed / Disabled for Survey',
+          icon: 'delete_outline'
         }
       ];
+
+      const renderDelegateItem = (delegateEntry, status) => {
+        
+
+        const itemDetailClicked = (e) => {
+          console.log('Item detail clicked', e);
+          self.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic' });
+        };
+                                                          
+        let secondaryItem = (<IconButton onClick={itemDetailClicked}><Icon>more_vert</Icon></IconButton>);
+        secondaryItem = self.getSecondaryAction(delegateEntry);
+        const selectUser = e => {
+          console.log(`User select clicked ${delegateEntry.delegate.firstName}`);
+          const _selected = {...this.state.selected};
+          if(_selected.hasOwnProperty(delegateEntry.delegate.id)) {
+            _selected[delegateEntry.delegate.id].selected = !_selected[delegateEntry.delegate.id].selected;                  
+          } else {
+            _selected[delegateEntry.delegate.id] = {
+              selected: true
+            }
+          }
+
+          self.setState({selected: _selected});
+        }
+
+        const isSelected = this.state.selected.hasOwnProperty(delegateEntry.delegate.id) === true ? this.state.selected[delegateEntry.delegate.id].selected === true : false;
+        let userMessage = null;
+        
+        switch(status.key){                        
+          case 'launched': {
+            let statusCount = countBy(delegateEntry.assessments, 'complete')
+            console.log('Status Count', statusCount);
+            userMessage = (
+            <span>{delegateEntry.message}<br/>
+            {statusCount.true || 0} / {delegateEntry.assessments.length} assessment(s) complete.
+            </span>);
+            break;
+          }
+          case 'closed': {
+            userMessage = (<span>{delegateEntry.message}</span>)
+            break;
+          }
+          case 'feedback-complete': {
+            userMessage = (<span>{delegateEntry.message}</span>)
+            break;
+          }
+          case 'invite-sent':
+          case 'new':
+          default: {
+            let peersConfirmed = false;
+            let hasPeers = false;
+            console.log('Rendering for delegate Entry', delegateEntry);
+            if(delegateEntry.peers) {
+              hasPeers = true;
+              peersConfirmed = moment.isMoment(moment(delegateEntry.peers.confirmedAt))
+            }
+
+            if(hasPeers === false) {
+              userMessage = (<span>{delegateEntry.message}<br/>No peers available for user</span>);
+            } else {
+              if(peersConfirmed === false) {
+                userMessage = (<span>{delegateEntry.message}<br/>User has peers but has not confimed them yet</span>);
+              }                              
+              else {
+                userMessage = (<span>{delegateEntry.message}<br/>Peers confirmed {hdate.relativeTime(delegateEntry.peers.confirmedAt)}</span>);
+              }                              
+            }                          
+            break;
+          }
+        }
+        return (
+          <UserListItem
+            key={delegateEntry.id}
+            user={delegateEntry.delegate}
+            primaryText={`${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} [${delegateEntry.delegate.email}]`} 
+            message={userMessage} 
+            secondaryAction={secondaryItem}  
+            checkbox={true}
+            selected={isSelected}
+            onSelectChanged={selectUser}            
+             />
+        );
+      }
+
+      
 
       const list = (        
         <List subheader={ <li /> }>                    
           {
             statusList.map(status => {
+              let removedItems = null;
+              
+              if(status.key === "removed") {
+                removedItems = filter(data, (elem) => { return elem.removed === true}).map((delegateEntry, index) => {
+                  return renderDelegateItem(delegateEntry, status);
+                });
+              }
+
               return (<li key={status.key} className={classes && classes.userListSubheader ? classes.userListSubheader : ''}>
                 <ul>
                   <ListSubheader>
@@ -773,89 +877,12 @@ class SurveyDelegates extends Component {
                     </Paper>                    
                   </ListSubheader>
                   {
-                    filter(data, (elem) => { return elem.status.toLowerCase() === status.key}).map( delegateEntry => {
-                      //let iconToUse = "contact_support";
-                      const itemDetailClicked = (e) => {
-                        console.log('Item detail clicked', e);
-                        self.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic' });
-                      };
-                                                                        
-                      let secondaryItem = (<IconButton onClick={itemDetailClicked}><Icon>more_vert</Icon></IconButton>);
-                      secondaryItem = self.getSecondaryAction(delegateEntry);
-                      const selectUser = e => {
-                        console.log(`User select clicked ${delegateEntry.delegate.firstName}`);
-                        const _selected = {...this.state.selected};
-                        if(_selected.hasOwnProperty(delegateEntry.delegate.id)) {
-                          _selected[delegateEntry.delegate.id].selected = !_selected[delegateEntry.delegate.id].selected;                  
-                        } else {
-                          _selected[delegateEntry.delegate.id] = {
-                            selected: true
-                          }
-                        }
-
-                        self.setState({selected: _selected});
-                      }
-        
-                      const isSelected = this.state.selected.hasOwnProperty(delegateEntry.delegate.id) === true ? this.state.selected[delegateEntry.delegate.id].selected === true : false;
-                      let userMessage = null;
-                      
-                      switch(status.key){                        
-                        case 'launched': {
-                          let statusCount = countBy(delegateEntry.assessments, 'complete')
-                          console.log('Status Count', statusCount);
-                          userMessage = (
-                          <span>{delegateEntry.message}<br/>
-                          {statusCount.true || 0} / {delegateEntry.assessments.length} assessment(s) complete.
-                          </span>);
-                          break;
-                        }
-                        case 'closed': {
-                          userMessage = (<span>{delegateEntry.message}</span>)
-                          break;
-                        }
-                        case 'feedback-complete': {
-                          userMessage = (<span>{delegateEntry.message}</span>)
-                          break;
-                        }
-                        case 'invite-sent':
-                        case 'new':
-                        default: {
-                          let peersConfirmed = false;
-                          let hasPeers = false;
-                          console.log('Rendering for delegate Entry', delegateEntry);
-                          if(delegateEntry.peers) {
-                            hasPeers = true;
-                            peersConfirmed = moment.isMoment(moment(delegateEntry.peers.confirmedAt))
-                          }
-
-                          if(hasPeers === false) {
-                            userMessage = (<span>{delegateEntry.message}<br/>No peers available for user</span>);
-                          } else {
-                            if(peersConfirmed === false) {
-                              userMessage = (<span>{delegateEntry.message}<br/>User has peers but has not confimed them yet</span>);
-                            }                              
-                            else {
-                              userMessage = (<span>{delegateEntry.message}<br/>Peers confirmed {hdate.relativeTime(delegateEntry.peers.confirmedAt)}</span>);
-                            }                              
-                          }                          
-                          break;
-                        }
-                      }
-                      return (
-                        <UserListItem
-                          key={delegateEntry.id}
-                          user={delegateEntry.delegate}
-                          primaryText={`${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} [${delegateEntry.delegate.email}]`} 
-                          message={userMessage} 
-                          secondaryAction={secondaryItem}  
-                          checkbox={true}
-                          selected={isSelected}
-                          onSelectChanged={selectUser} />
-                      );
+                    filter(data, (elem) => { return elem.status.toLowerCase() === status.key && elem.removed !== true }).map( (delegateEntry, index) => {                                         
+                      return renderDelegateItem(delegateEntry, status);
                     })
-                  }                  
+                  }
+                  {removedItems}                                                      
                 </ul>
-                <hr/>
               </li>);
             })
             
