@@ -109,7 +109,7 @@
     "start-aot": "REACT_APP_TITLE=\"Age of Teams\" REACT_APP_THEME=aot REACT_APP_CLIENT_KEY=aot node --max_old_space_size=2000000 scripts/start.js",
     "start-gw": "REACT_APP_TITLE=\"Payment Gateway\" REACT_APP_THEME=funisave-gw REACT_APP_CLIENT_KEY=funisave-gw node --max_old_space_size=2000000 scripts/start.js",
     "build-towerstone": "REACT_APP_TITLE=\"TowerStone Engage\" REACT_APP_THEME=towerstone REACT_APP_CLIENT_KEY=towerstone node --max_old_space_size=2000000 scripts/build.js --env=production",
-    "build-lasec-crm": "REACT_APP_TITLE=\"TowerStone Engage\" REACT_APP_THEME=towerstone REACT_APP_CLIENT_KEY=towerstone node --max_old_space_size=2000000 scripts/build.js --env=production",
+    "build-lasec-crm": "REACT_APP_TITLE=\"Lasec CRM\" REACT_APP_THEME=lasec-crm REACT_APP_CLIENT_KEY=lasec-crm node --max_old_space_size=2000000 scripts/build.js --env=production",
     "build-plc": "REACT_APP_TITLE=\"Purposeful Leadership Company\" REACT_APP_THEME=plc REACT_APP_CLIENT_KEY=plc node --max_old_space_size=2000000 scripts/build.js --env=production",
     "build-aot": "REACT_APP_TITLE=\"Age Of Teams\" REACT_APP_THEME=aot REACT_APP_CLIENT_KEY=aot node --max_old_space_size=2000000 scripts/build.js --env=production",
     "build-gw": "REACT_APP_TITLE=\"Payment Gateway\" REACT_APP_THEME=funisave-gw REACT_APP_CLIENT_KEY=funisave-gw node --max_old_space_size=2000000 scripts/build.js --env=production",
