@@ -82,7 +82,7 @@ class UserSurvey extends Component {
                     <Avatar alt={`${survey.title}`} src={api.getAvatar(delegate)}></Avatar>
                     <ListItemText
                         primary={`${survey.title} - ${listTitle}`}
-                        secondary={`Valid from ${moment(survey.startDate).format('DD MM YYYY')} till ${moment(survey.endDate).format('DD MM YYYY')}`} />
+                        secondary={`Valid from ${moment(survey.startDate).format('DD MMMM YYYY')} till ${moment(survey.endDate).format('DD MMMM YYYY')}`} />
                     <ListItemSecondaryAction>
                         <IconButton onClick={goAssessment}>
                             <Tooltip title={assessment.complete === false ? 'Click here to complete this assessment' : 'Click here to view your input into this assessment'}>
@@ -105,11 +105,9 @@ class UserSurvey extends Component {
                     <Paper className={classes.general}>
                         {
                             surveys.overdue.length > 0 && surveyCount > 0 ?
-                            <Fragment>                                
-                                {minimal === true ? <Typography>
-                                    The surveys listed below are already past the official cut-off date for completion and should be attended to first.                                                                        
-                            </Typography> : null}
+                            <Fragment>                                                                
                                 <List>
+                                    <OwlyListItem message={"The surveys listed below are already past the official cut-off date for completion and should be attended to first."} />
                                     {surveys.overdue.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                 </List>
                             </Fragment> : <OwlyListItem message={"There are no overdue assessments here"} />
@@ -135,11 +133,9 @@ class UserSurvey extends Component {
                     <Paper className={classes.general}>                    
                         {
                             surveys.complete.length > 0 && surveyCount > 0 ?
-                                <Fragment>                                    
-                                    <Typography>
-                                    The surveys below are completed and are for review only. Survey results will only appear here once the results have been released and shared with you by one of our facilitators.
-                                    </Typography>
+                                <Fragment>                                                                        
                                     <List>
+                                        <OwlyListItem message={"The surveys below are completed and are for review only. Survey results will only appear here once the results have been released and shared with you by one of our facilitators."} />
                                         {reverse(sortBy(surveys.complete, [(assessment)=>{ return moment(assessment.survey.startDate || '2010-01-01').valueOf() }])).map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                     </List>
                                 </Fragment> : <OwlyListItem message={"You don't have any assessment results available yet"} />

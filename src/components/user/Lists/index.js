@@ -15,7 +15,7 @@ import {
 import { getAvatar } from '../../util';
 
 export const UserListItem = (props) => {
-  const { user, selected, key, onClick, message, secondaryAction, checkbox, onSelectChanged, primaryText } = props
+  const { user, selected, key, onClick, message, secondaryAction, checkbox, onSelectChanged, primaryText, style = {}} = props
   
   if(!user) {
     return (<ListItem button onClick={onClick} key={key}>
@@ -38,7 +38,7 @@ export const UserListItem = (props) => {
   }
 
   return (
-    <ListItem selected={user.isSelected} onClick={onClick} key={key || user.id} className={props.className}>
+    <ListItem selected={user.isSelected} onClick={onClick} key={key || user.id} className={props.className} style={style}>
       {checkboxComponent}
       <Avatar alt={displayText} src={getAvatar(user)} />
       <ListItemText primary={ displayText } secondary={ hasMessage === true ? message : user.email }/>

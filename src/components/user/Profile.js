@@ -667,9 +667,9 @@ class Profile extends Component {
                         Use the list below to manage your nominees.  Click on the <Icon>edit</Icon> above to add a new colleague to your list.
                     </Typography>
                     <Typography variant="body1">
-                        If you need to edit the details an existing colleague you nominated previously, click on their name or the <Icon>expand</Icon> icon. This will enable you to change
+                        If you need to edit the details of an existing colleague you nominated previously, click on their name or the <Icon>expand</Icon> icon. This will enable you to change
                         the relationship type (LEADER, PEER, DIRECT REPORT) or remove the peer by clicking the <Icon>delete_outline</Icon> button.<br/>
-                        Once you have selected seven colleagues (a minimum of five if you don't have seven) in total, please click the <Icon>check_circle</Icon> button to confirm your peer selection.<br />
+                        Once you have selected seven colleagues (a minimum of five if you don't have seven),  please click the <Icon>check_circle</Icon> button to confirm your peer selection.<br />
                         Your nominees will only be notified of their nomination a maximum of once every 30 days.
                     </Typography>
                     <hr/>
@@ -683,7 +683,7 @@ class Profile extends Component {
                     <div>
                         {
                             data.map(usr => {
-                                console.log('Binding peer user', usr);
+                                // console.log('Binding peer user', usr);
                                 const makeSupervisor = e => setPeerRelationShip(usr, 'manager');
                                 const makePeer = e => setPeerRelationShip(usr, 'peer');
                                 const makeDirectReport = e => setPeerRelationShip(usr, 'report');
@@ -843,6 +843,10 @@ class Profile extends Component {
             className: classes.textFieldBase
         };
 
+        const saveDisabled =  (emailValid === false || 
+        ( (firstName) || isNil(lastName) ) === true ||
+        ( (firstName.length < 2 || lastName.length < 2 ) ));
+
         const { avatarMouseOver } = this.state;
 
         const doSave = () => {
@@ -893,6 +897,12 @@ class Profile extends Component {
             that.setState({ profile: { ...that.state.profile, businessUnit: evt.target.value } })
         };
 
+        const onSurnameKeyPress = (evt) => {
+            if(evt.charCode === 13 && saveDisabled === false) {
+                doSave();
+            }
+        }
+
         let avatarComponent = null;
         avatarComponent = (
             <div className={classes.avatarContainer}>
@@ -918,16 +928,12 @@ class Profile extends Component {
                         { this.props.withAvatar === true ? avatarComponent : null }
                         <TextField {...defaultFieldProps} label={emailValid === true ? 'Email' : 'Email!'} value={email} helperText={this.props.emailHelperText || 'Please use your work email address, unless you are an outside provider'} onChange={updateEmail} />
                         <TextField {...defaultFieldProps} label='Name' value={firstName} helperText={this.props.firstNameHelperText || 'Please use your first name'} onChange={updateFirstname} />
-                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} />                        
+                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} onKeyPressCapture={onSurnameKeyPress}/>                        
                     </form>
 
                     <div className={classes.avatarContainer} style={{ justifyContent: 'flex-end', marginTop: '5px' }}>
                         {this.props.withBackButton && <Button onClick={back}><CloseIcon />&nbsp;BACK</Button> }
-                        {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ 
-                            emailValid === false || 
-                            ( (firstName) || isNil(lastName) ) === true ||
-                            ( (firstName.length < 2 || lastName.length < 2 ) ) }><SaveIcon />&nbsp;SAVE</Button>}
-                        
+                        {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ saveDisabled }><SaveIcon />&nbsp;SAVE</Button>}                        
                     </div>
                 </Paper>
             </Grid>)

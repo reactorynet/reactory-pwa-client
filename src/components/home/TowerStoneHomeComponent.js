@@ -330,8 +330,8 @@ class TowerStoneHomeComponent extends Component {
                         <Surveys minimal={true} showComplete={true} />
                     </Grid>
 
-                    
-                    <Grid item xs={12} sm={12}>
+                    {
+                     false && <Grid item xs={12} sm={12}>
                         <Typography variant={"caption"} color="primary" align="center">Tasks</Typography>
                         <Paper className={classes.container}>
                             <List>
@@ -344,6 +344,7 @@ class TowerStoneHomeComponent extends Component {
                             </List>
                         </Paper>
                     </Grid>
+                    }
                 </Grid>
             </div>
         );

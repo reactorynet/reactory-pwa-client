@@ -402,69 +402,99 @@ class SurveyDelegates extends Component {
     this.setState({ modal: true, modalType: 'add' })
   }
 
-  doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...'){
-    //console.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', {delegateEntry, action, inputData, busyMessage});
+  doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...', batch = false){
+    console.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', {delegateEntry, action, inputData, busyMessage, batch});
     const { api, formContext } = this.props;
-    const self = this;
-    const mutation = gql`mutation SurveyDelegateAction($entryId: String!, $survey: String!, $delegate: String!, $action: String!, $inputData: Any){
-      surveyDelegateAction(entryId: $entryId, survey: $survey, delegate: $delegate, action: $action, inputData: $inputData) {
-        id
-        delegate {
-          id
-          firstName
-          lastName
-          email
-          avatar 
-        }
-        peers {
-          id
-        }        
-        notifications {
-          id
-        }
-        assessments {
-          id          
-        }
-        status
-        launched 
-        complete
-        removed
-        message
-        updatedAt        
-        lastAction
-      }
-    }`;
-    
-    const variables = {
-      survey: this.props.formContext.surveyId,
-      entryId: delegateEntry.id,
-      delegate: delegateEntry.delegate.id,
-      action      
-    };
-
+    const self = this;    
     const doMutation = () => {
       //console.log('SurveyDelegateWidget.doAction(...).doMutation()', {mutation, variables});
-      api.graphqlMutation(mutation, variables).then((mutationResult) => {
-        //console.log('DelegateEntry Result From Mutation', mutationResult)
-        if(mutationResult.data && mutationResult.data.surveyDelegateAction) {
-          //debugger;
-          let formData = [...self.state.formData]  
-          if(action === "add") {
-            formData.push({...mutationResult.data.surveyDelegateAction});
-          } else {
-            const indexToUpdate = findIndex(self.state.formData, {'id': delegateEntry.id });          
-            formData[indexToUpdate] = {...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction };
+
+      const mutation = gql`mutation SurveyDelegateAction($entryId: String!, $survey: String!, $delegate: String!, $action: String!, $inputData: Any){
+        surveyDelegateAction(entryId: $entryId, survey: $survey, delegate: $delegate, action: $action, inputData: $inputData) {
+          id
+          delegate {
+            id
+            firstName
+            lastName
+            email
+            avatar 
           }
-          
-          self.setState({ displayError: false, message: '', busy: false, formData });
+          peers {
+            id
+          }        
+          notifications {
+            id
+          }
+          assessments {
+            id          
+          }
+          status
+          launched 
+          complete
+          removed
+          message
+          updatedAt        
+          lastAction
         }
-      }).catch((mutationError) => {
-        self.setState({ displayError: true, message: 'An error occured while ....', busy: false })
-      });
+      }`;
+      
+      
+
+      if(batch === true && isArray(delegateEntry)) {
+
+        let promises = delegateEntry.map( entry => {
+          const variables = {
+            survey: self.props.formContext.surveyId,
+            entryId: entry.id,
+            delegate: entry.delegate.id,
+            action      
+          };
+
+          return api.graphqlMutation(mutation, variables);
+        });
+        
+        Promise.all(promises).then(( promiseResults ) => {
+          console.log("Promises returned", promiseResults);
+          self.setState({ displayError: false, message: '', busy: false }, () => {
+            if(self.props.formContext && isFunction(self.props.formContext.refresh) === true){
+              self.props.formContext.refresh();
+            }
+          });
+        }).catch((promiseError) => {
+          console.log('Error processing batch', promiseError);
+          self.setState({ displayError: true, message: 'An error occured doing a batch update', busy: false });
+        });
+
+      } else {
+        console.log('Single use action');
+        const variables = {
+          survey: this.props.formContext.surveyId,
+          entryId: delegateEntry.id,
+          delegate: delegateEntry.delegate.id,
+          action      
+        };
+
+        api.graphqlMutation(mutation, variables).then((mutationResult) => {
+          //console.log('DelegateEntry Result From Mutation', mutationResult)
+          if(mutationResult.data && mutationResult.data.surveyDelegateAction) {
+            //debugger;
+            let formData = [...self.state.formData]  
+            if(action === "add") {
+              formData.push({...mutationResult.data.surveyDelegateAction});
+            } else {
+              const indexToUpdate = findIndex(self.state.formData, {'id': delegateEntry.id });          
+              formData[indexToUpdate] = {...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction };
+            }
+            
+            self.setState({ displayError: false, message: '', busy: false, formData });
+          }
+        }).catch((mutationError) => {
+          self.setState({ displayError: true, message: 'An error occured while ....', busy: false })
+        });
+      }      
     };
 
-    this.setState({ busy: true, message: busyMessage }, () => {
-      //console.log('State updated', new Date().valueOf()) 
+    this.setState({ busy: true, message: busyMessage }, () => {      
       doMutation(); 
     });
   }
@@ -488,7 +518,7 @@ class SurveyDelegates extends Component {
   render(){
     const { classes, api } = this.props;
     const { ErrorMessage, AssessmentTable, SpeedDial } = this.componentDefs;
-    const { formData } = this.state;
+    const { formData, selected } = this.state;
     const self = this;
     let data = [];
     formData.map((entry) => { 
@@ -822,10 +852,10 @@ class SurveyDelegates extends Component {
             let peersConfirmed = false;
             let hasPeers = false;
             console.log('Rendering for delegate Entry', delegateEntry);
-            if(delegateEntry.peers) {
+            if(nil(delegateEntry.peers) === false) {
               hasPeers = true;
-              peersConfirmed = moment.isMoment(moment(delegateEntry.peers.confirmedAt))
-            }
+              peersConfirmed = moment(delegateEntry.peers.confirmedAt).isValid() === true              
+            } 
 
             if(hasPeers === false) {
               userMessage = (<span>{delegateEntry.message}<br/>No peers available for user</span>);
@@ -833,10 +863,11 @@ class SurveyDelegates extends Component {
               if(peersConfirmed === false) {
                 userMessage = (<span>{delegateEntry.message}<br/>User has peers but has not confimed them yet</span>);
               }                              
-              else {
-                userMessage = (<span>{delegateEntry.message}<br/>Peers confirmed {hdate.relativeTime(delegateEntry.peers.confirmedAt)}</span>);
+              else {                                
+                userMessage = (<span>{delegateEntry.message}<br/>Peers confirmed {delegateEntry.peers.confirmedAt} ({hdate.relativeTime(delegateEntry.peers.confirmedAt)})</span>);
               }                              
-            }                          
+            }
+                                      
             break;
           }
         }
@@ -849,7 +880,8 @@ class SurveyDelegates extends Component {
             secondaryAction={secondaryItem}  
             checkbox={true}
             selected={isSelected}
-            onSelectChanged={selectUser}            
+            onSelectChanged={selectUser}
+            style={{ padding: '0px' }}            
              />
         );
       }
@@ -868,12 +900,32 @@ class SurveyDelegates extends Component {
                 });
               }
 
+              const toggleWithStatus = e => {
+                let _selectedPatch = { };
+                filter(data, (elem) => { return elem.status.toLowerCase() === status.key && elem.removed !== true }).map( (delegateEntry, index) => {                                         
+                  if(selected.hasOwnProperty(delegateEntry.delegate.id) === true) {
+                    _selectedPatch[delegateEntry.delegate.id] = {
+                      selected: !selected[delegateEntry.delegate.id].selected
+                    };
+                  } else {
+                    _selectedPatch[delegateEntry.delegate.id] = {
+                      selected: true
+                    }
+                  }                    
+                  self.setState({ selected: {...selected, ..._selectedPatch }});
+                });                
+              };
+
               return (<li key={status.key} className={classes && classes.userListSubheader ? classes.userListSubheader : ''}>
-                <ul>
-                  <ListSubheader>
-                    <Paper style={{display: 'flex', justifyContent: 'flex-start', margin: self.props.theme.spacing.unit, padding: self.props.theme.spacing.unit }}>                      
-                      <Avatar color="primary" style={{marginRight: self.props.theme.spacing.unit * 2}}><Icon>{status.icon}</Icon></Avatar>
-                      <Typography color="primary" variant="caption" style={{marginLeft: 'auto'}}>{status.title}</Typography>                      
+                <ul style={{ margin: "0px", padding: '0px' }}>
+                  <ListSubheader style={{ padding: "0px" }}>
+                    <Paper style={{display: 'flex', justifyContent: 'flex-start' }}>                      
+                      <Tooltip title="Click to toggle the select status">
+                        <IconButton color="primary" onClick={toggleWithStatus} style={{marginRight: self.props.theme.spacing.unit * 2}}>
+                          <Icon>{status.icon}</Icon>
+                        </IconButton>
+                      </Tooltip>
+                      <Typography color="primary" variant="caption" style={{marginLeft: 'auto', marginRight: self.props.theme.spacing.unit, paddingTop: self.props.theme.spacing.unit }}>{status.title}</Typography>                      
                     </Paper>                    
                   </ListSubheader>
                   {
@@ -890,6 +942,7 @@ class SurveyDelegates extends Component {
         </List>
       )
 
+      const selectedDelegates = filter(data, (delegateEntry) => { return self.state.selected.hasOwnProperty(delegateEntry.delegate.id) === true });
       const speedDialActions = [
         {
           key: 'add-new-delegate',
@@ -897,53 +950,66 @@ class SurveyDelegates extends Component {
           clickHandler: (evt)=>{
             this.addDelegateClicked();
           },
-          icon: <Icon>group_add</Icon>
+          icon: <Icon>group_add</Icon>,
+          enabled: true,
         },
         {
           key: 'send-invites',
           title: 'Send Invites',
           clickHandler: evt => {
-            console.log('Send invites to all new charnas');
+            //console.log('Send invites to all new charnas');
+            self.doAction(selectedDelegates, "send-invite", null ,`Sending invitations for ${selectedDelegates.length} delegates, please wait`, true);
           },
-          icon: <Icon>email</Icon>
+          icon: <Icon>email</Icon>,
+          enabled: selectedDelegates.length > 0,
         },
         {
           key: 'launch',
           title: 'Launch for delegates',
           clickHandler: evt => {
-            console.log('Launch for selected charnas');
+            //console.log('Launch for selected charnas');
+            self.doAction(selectedDelegates, "launch", null ,`Launching for ${selectedDelegates.length} delegates, please wait`, true);
           },
-          icon: <Icon>flight_takeoff</Icon>
+          icon: <Icon>flight_takeoff</Icon>,
+          enabled: selectedDelegates.length > 0,
         },
         {
           key: 'send-reminder',
           title: 'Send reminders',
           clickHandler: evt => {
             console.log('Launch for selected charnas');
+            self.doAction(selectedDelegates, "send-reminder", null ,`Sending Reminders for ${selectedDelegates.length} delegates, please wait`, true);
           },
-          icon: <Icon>alarm</Icon>
+          icon: <Icon>alarm</Icon>,
+          enabled: selectedDelegates.length > 0,
         },
         {
           key: 'close',
           title: 'Close for delegates',
           clickHandler: evt => {
             console.log('Launch for selected charnas');
+            self.doAction(selectedDelegates, "close", null ,`Closing survey for ${selectedDelegates.length} delegates, please wait`, true);
           },
-          icon: <Icon>close</Icon>
+          icon: <Icon>close</Icon>,
+          enabled: selectedDelegates.length > 0,
         },
+        /*
         {
           key: 'send-feedback',
           title: 'Release feedback report',
           clickHandler: evt => {
-            console.log('Launch for selected charnas');
+            self.doAction(selectedDelegates, "report", null ,`Releasing reports for ${selectedDelegates.length} delegates, please wait`, true);
           },
-          icon: <Icon>assignment_turned_in</Icon>
+          icon: <Icon>assignment_turned_in</Icon>,
+          enabled: selectedDelegates.length > 0,
         },
+        */
       ];
 
       return (
         <Paper className={this.props.classes.root}>
-          {list} 
+          {list}
+          {self.state.busy && self.state.message && <Typography variant="caption" color="secondary"><Icon>info</Icon>{self.state.message}</Typography>} 
           {<SpeedDial actions={speedDialActions} icon={<Icon>golf_course</Icon>} />}
           {self.getActiveModalView()}
         </Paper>

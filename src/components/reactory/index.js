@@ -462,6 +462,9 @@ class ReactoryComponent extends Component {
       ...this.props,
       formData: this.state.formData,
       query: this.state.query,
+      refresh: () => {
+        this.setState({ queryComplete: false, dirty: false })
+      }
     }
   }
 
