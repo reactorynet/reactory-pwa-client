@@ -302,47 +302,10 @@ class SurveyDelegates extends Component {
     const { activeEntry, modal, modalType, formData } = this.state;    
     const { formContext, onChange, api } = this.props;
     const self = this;
+    
     const closeModal = () => { 
-      this.setState({modal: false}, () => {
-      
-      const mutation = `mutation SetDelegatesForSurvey($id: String!, $delegates: [DelegateInput], $replace: Boolean){
-        setDelegatesForSurvey(id: $id, delegates: $delegates, replace: $replace){
-          id
-          organization {
-            id
-            name
-          }
-          delegates {                
-            delegate {
-              id
-              firstName
-              lastName
-              avatar
-              email
-            }
-          }                          
-        }
-      }`;
-
-      const variables = om({formContext, formData },  {
-        'formContext.surveyId': 'id',
-        'formData.organization': 'organization.id',
-        'formData[].id': 'delegates[].id',
-        'formData[].delegate.id': 'delegates[].delegate',
-        'formData[].launched': 'delegates[].launched',
-        'formData[].complete': 'delegates[].complete',
-        'formData[].removed': 'delegates[].removed',
-      });
-      variables.replace = false
-      //console.log('variables for mutation', { variables, formContext, formData });
-      const options = {};
-      
-                  
-      api.graphqlMutation(gql(mutation), variables, options).then((result) => {
-          //console.log('Updated delegates', { result, variables });
-        }).catch((err) => {
-          console.error('Error in setting delegates for survey', { err, variables });
-        });
+      self.setState({modal: false}, () => {
+        if(formContext && formContext.refresh) formContext.refresh();
       });
     }
 
@@ -803,6 +766,7 @@ class SurveyDelegates extends Component {
 
       const renderDelegateItem = (delegateEntry, status) => {
         
+        let backgroundColor = null;
 
         const itemDetailClicked = (e) => {
           console.log('Item detail clicked', e);
@@ -858,13 +822,16 @@ class SurveyDelegates extends Component {
             } 
 
             if(hasPeers === false) {
-              userMessage = (<span>{delegateEntry.message}<br/>No peers available for user</span>);
+              userMessage = (<span>{delegateEntry.message}<br/>No peers available for user</span>);              
+              backgroundColor = "gold";
             } else {
               if(peersConfirmed === false) {
                 userMessage = (<span>{delegateEntry.message}<br/>User has peers but has not confimed them yet</span>);
+                backgroundColor = "antiquewhite";
               }                              
               else {                                
                 userMessage = (<span>{delegateEntry.message}<br/>Peers confirmed {delegateEntry.peers.confirmedAt} ({hdate.relativeTime(delegateEntry.peers.confirmedAt)})</span>);
+                backgroundColor = "darkseagreen";
               }                              
             }
                                       
@@ -881,7 +848,7 @@ class SurveyDelegates extends Component {
             checkbox={true}
             selected={isSelected}
             onSelectChanged={selectUser}
-            style={{ padding: '0px' }}            
+            style={{ padding: '0px', backgroundColor }}            
              />
         );
       }
