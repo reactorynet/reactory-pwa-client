@@ -13,13 +13,11 @@ import {
 import * as MaterialCore from '@material-ui/core'
 import * as MaterialIcons from '@material-ui/icons'
 import * as MaterialLab from '@material-ui/lab'
-import MUIDataTable from "mui-datatables";
 import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
 import LoginPage, { RegisterPage } from './auth';
 import Main from './home/index';
 import AssessmentView from './assess/index';
-import ProfileComponent from './user/Profile';
 import UserSurveyComponent from './survey/UserSurvey';
 import ReportComponent from './report/index';
 import KanbanDashboardComponent, { TaskListComponentWithData, TaskDetailWithData } from './home/kanban/KanbanDashboard';
@@ -77,7 +75,7 @@ export const componentRegistery = [
   {
     nameSpace:'core',
     name: 'DataTable',
-    component: MUIDataTable,
+    component: (props) => (<span>core.DataTable deprecated -> use MuiDataTables instead.</span>),
     version: '1.0.0',
   },
   {

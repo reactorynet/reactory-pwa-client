@@ -136,6 +136,10 @@ class SurveyDelegates extends Component {
           //this.sendInviteEmails(delegateEntry)          
           break;
         }
+        case 'relaunch': {
+          self.launchSurveyForDelegate(delegateEntry, true);
+          break;
+        }
         case 'launch': {
           self.launchSurveyForDelegate(delegateEntry);
           //this.launchSurvey(delegateEntry)
@@ -186,7 +190,8 @@ class SurveyDelegates extends Component {
         break;
       }
       case 'launched': {
-        menus.push({ title: 'Send Reminders', icon: 'mail_outline', id: 'send-reminder', key:'reminder' });        
+        menus.push({ title: 'Send Reminders', icon: 'mail_outline', id: 'send-reminder', key:'reminder' });
+        menus.push({ title: 'Re-send Launch', icon: 'flight_takeoff', id: 'relaunch', key:'relaunch' });        
         menus.push({ title: 'View Assessment Details', icon: 'assignment', id: 'view-assessments', key:'view-assessments' });
         break;
       }
@@ -410,7 +415,10 @@ class SurveyDelegates extends Component {
             survey: self.props.formContext.surveyId,
             entryId: entry.id,
             delegate: entry.delegate.id,
-            action      
+            action,
+            inputData: {
+              relaunch: entry.relaunch,
+            }      
           };
 
           return api.graphqlMutation(mutation, variables);
@@ -434,7 +442,10 @@ class SurveyDelegates extends Component {
           survey: this.props.formContext.surveyId,
           entryId: delegateEntry.id,
           delegate: delegateEntry.delegate.id,
-          action      
+          action,
+          inputData: {
+            relaunch: delegateEntry.relaunch === true,
+          }      
         };
 
         api.graphqlMutation(mutation, variables).then((mutationResult) => {
@@ -466,8 +477,8 @@ class SurveyDelegates extends Component {
     this.doAction(delegateEntry, communication, {}, `Sending invite to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
   }
 
-  launchSurveyForDelegate(delegateEntry){
-    this.doAction(delegateEntry, 'launch', {}, `Launching surveys for delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}`);
+  launchSurveyForDelegate(delegateEntry, relaunch = false){    
+    this.doAction({ ...delegateEntry, relaunch }, 'launch', {}, `Launching surveys for delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}`);
   }
 
   removeDelegateFromSurvey(delegateEntry, permanent){    

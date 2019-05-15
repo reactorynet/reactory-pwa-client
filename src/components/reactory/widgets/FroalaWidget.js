@@ -21,7 +21,7 @@ import 'froala-editor/css/froala_editor.pkgd.min.css';
 // Require Font Awesome.
 import 'font-awesome/css/font-awesome.css';
 
-import FroalaEditor from 'react-froala-wysiwyg';
+import  FroalaEditor from 'react-froala-wysiwyg/lib/FroalaEditor';
 
 class FroalaWidget extends Component {
   
