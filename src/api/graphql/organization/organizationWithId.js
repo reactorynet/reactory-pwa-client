@@ -7,4 +7,4 @@ query OrganizationWithIdQuery($id: String!){
     avatar
   }
 }
-`
+`;

@@ -43,7 +43,7 @@ import KeyboardArrowUp from '@material-ui/icons/KeyboardArrowUp'
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { isArray, pullAt, isNil } from 'lodash'
 import { TableFooter } from '@material-ui/core/Table';
-import { select } from 'async';
+// import { select } from 'async';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 import { omitDeep } from '../util';
 const nilf = () => ({})

@@ -2,8 +2,6 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { withRouter, Route, Switch } from 'react-router'
-//import { connect } from 'react-redux';
-//import { Field, reduxForm } from 'redux-form';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import gql from 'graphql-tag';
 

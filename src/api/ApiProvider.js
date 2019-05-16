@@ -1,5 +1,5 @@
 
-import React, { Component, Children } from "react";
+import React, { Component, Children, ReactDOM } from "react";
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
 import {
@@ -157,7 +157,6 @@ export class ReactoryApi extends EventEmitter {
     }
 
     loadComponent(Component, props, target){        
-        // debugger
         if(!Component) Component = () => (<p>No Component Specified</p>)        
         attachComponent(Component, props, target);
     }
@@ -493,6 +492,7 @@ class ApiProvider extends Component {
     static propTypes = {
         api: PropTypes.instanceOf(ReactoryApi).isRequired,
     };
+    
     static childContextTypes = {
         api: PropTypes.instanceOf(ReactoryApi).isRequired,
     };

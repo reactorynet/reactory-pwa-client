@@ -218,19 +218,19 @@ export const componentRegistery = [
   {
     nameSpace: 'towerstone',
     name: 'TowerStone180Assessment',
-    component: require('./assess/DefaultView').default,
+    component: require('./assess/DefaultView'),
     version: '1.0.0',
   },
   {
     nameSpace: 'towerstone',
     name: 'TowerStone360Assessment',
-    component: require('./assess/DefaultView').default,
+    component: require('./assess/DefaultView'),
     version: '1.0.0',
   },
   {
     nameSpace: 'plc',
     name: 'PlcDefaultAssessment',
-    component: require('./assess/DefaultView').default,
+    component: require('./assess/DefaultView'),
     version: '1.0.0',
   },
   {
@@ -254,19 +254,19 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'BusinessUnitList',
-    component: require('./businessunit').default.BusinessUnitListWithToolbar,
+    component: require('./businessunit').BusinessUnitListWithToolbar,
     version: '1.0.0'
   },
   {
     nameSpace: 'core',
     name: 'BusinessUnitForm',
-    component: require('./businessunit').default.BusinessUnitForm,
+    component: require('./businessunit').BusinessUnitForm,
     version: '1.0.0'
   },
   {
     nameSpace: 'core',
     name: 'BusinessUnitFormWithQuery',
-    component: require('./businessunit').default.BusinessUnitFormWithQuery,
+    component: require('./businessunit').BusinessUnitFormWithQuery,
     version: '1.0.0'
   },
   {
@@ -430,13 +430,13 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'PageIntegrations',
     version: '1.0.0',
-    component: require('./template/integrations/index').default
+    component: require('./template/integrations/index')
   },
   {
     nameSpace: 'boxcommerce',
     name: 'PageEditorHome',
     version: '1.0.0',
-    component: require('./template/PageTemplate').default.PageBuilderComponent
+    component: require('./template/PageTemplate').PageBuilderComponent
   },
   {
     nameSpace: 'core',
@@ -472,7 +472,7 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'AssessmentList',
     version: '1.0.0',
-    component: require('./assess/AssessmentList').default,
+    component: require('./assess/AssessmentList'),
   },
   {
     nameSpace: 'core',

@@ -1,3 +1,4 @@
+/*
 import Dexie from 'dexie';
 
 
@@ -23,4 +24,4 @@ const db = {
 };
 
 export default db;
-
+*/

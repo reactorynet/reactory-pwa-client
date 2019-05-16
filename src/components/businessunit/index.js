@@ -1,7 +1,7 @@
 
 export default {
-  BusinessUnitForm: require('./BusinessUnitForms').default.BusinessUnitFormComponent,
-  BusinessUnitFormWithQuery: require('./BusinessUnitForms').default.BusinessUnitFormWithQuery,
-  BusinessUnitList: require('./BusinessUnitLists').default.BusinessUnitList,
-  BusinessUnitListWithToolbar: require('./BusinessUnitLists').default.BusinessUnitListWithToolbar
+  BusinessUnitForm: require('./BusinessUnitForms').BusinessUnitFormComponent,
+  BusinessUnitFormWithQuery: require('./BusinessUnitForms').BusinessUnitFormWithQuery,
+  BusinessUnitList: require('./BusinessUnitLists').BusinessUnitList,
+  BusinessUnitListWithToolbar: require('./BusinessUnitLists').BusinessUnitListWithToolbar
 }
