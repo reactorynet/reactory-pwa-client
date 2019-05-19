@@ -3,7 +3,7 @@ module.exports = function (api) {
 
   const presets = [ 
     "@babel/react",     
-    "@babel/env",    
+    ["@babel/env", { "modules": "commonjs" }],    
    ];
 
   const plugins = [             

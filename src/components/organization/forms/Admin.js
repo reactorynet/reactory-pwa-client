@@ -470,7 +470,7 @@ class DefaultFormContainer extends Component {
             onChange={this.handleChange}
             indicatorColor="primary"
             textColor="primary"
-            fullWidth
+            variant="fullWidth"
           >
             <Tab label="General" value={'general'} />
             <Tab label="Business Units" value={'business-units'} disabled={isNew === true} />
@@ -486,8 +486,7 @@ class DefaultFormContainer extends Component {
             <Route exact path={'/admin/org/:organizationId'} component={DefaultFormComponent} />
             <Route path={'/admin/org/:organizationId/general'} >
               <Fragment>
-                <DefaultFormComponent organization={this.props.organization} onSaved={this.onOrganizationSaved} />
-                <SpeedDial />
+                <DefaultFormComponent organization={this.props.organization} onSaved={this.onOrganizationSaved} />                
               </Fragment>
             </Route>
             <Route path={'/admin/org/:organizationId/business-units*'}>

@@ -1,7 +1,9 @@
+import BusinessUnitForms from './BusinessUnitForms';
+import BusinessUnitLists from './BusinessUnitLists';
 
 export default {
-  BusinessUnitForm: require('./BusinessUnitForms').BusinessUnitFormComponent,
-  BusinessUnitFormWithQuery: require('./BusinessUnitForms').BusinessUnitFormWithQuery,
-  BusinessUnitList: require('./BusinessUnitLists').BusinessUnitList,
-  BusinessUnitListWithToolbar: require('./BusinessUnitLists').BusinessUnitListWithToolbar
+  BusinessUnitForm: BusinessUnitForms.BusinessUnitFormComponent,
+  BusinessUnitFormWithQuery: BusinessUnitForms.BusinessUnitFormWithQuery,
+  BusinessUnitList: BusinessUnitLists.BusinessUnitList,
+  BusinessUnitListWithToolbar: BusinessUnitLists.BusinessUnitListWithToolbar
 }

@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { Query } from 'react-apollo';
 import { Survey } from './Assessment';
 import { Typography } from '@material-ui/core';
 import { withStyles, withTheme} from '@material-ui/core/styles';
@@ -22,11 +22,14 @@ class AssessmentWrapper extends Component {
             assessment: props.assessment || null
         };
 
+        this.renderQuery = this.renderQuery.bind(this);
+
         this.componentDefs = props.api.getComponents([
             'towerstone.OwlyListItem',
             'towerstone.TowerStone360Assessment', 
             'towerstone.TowerStone180Assessment', 
-            'plc.PlcDefaultAssessment'
+            'plc.PlcDefaultAssessment',
+            'core.Loading',
         ]);
     }
     static propTypes = {
@@ -47,9 +50,12 @@ class AssessmentWrapper extends Component {
         return {}
     }
 
+    
+
     renderQuery() {
         const { match, api } = this.props;
         const self = this;
+        const { Loading } = this.componentDefs;
         
         if(match.params.length === 0) return <p>No Assesment Id</p>
         const assessmentId = match.params[0];                    
@@ -57,12 +63,31 @@ class AssessmentWrapper extends Component {
         <Query query={api.queries.Assessments.assessmentWithId} variables={{ id: assessmentId }} >
             {({ loading, error, data}) => {
                 //console.log('Rendering query component', { loading, error, data });
-            if(loading === true) return (<p>Loading assessment data, please wait</p>);
+            if(loading === true) return (<Loading title="Loading assessment data, please wait"/>);
             if(nil(error) === false) return (<p>Error while loading assessment ${error.message}</p>);
             if(data && data.assessmentWithId) {
-                const assessment = { ...data.assessmentWithId };                
-                self.setState({assessment: assessment})
-                return (<Typography>Loaded, rendering...</Typography>);                                                         
+                const assessment = { ...data.assessmentWithId };                                                
+                const { TowerStone180Assessment, TowerStone360Assessment, PlcDefaultAssessment } = this.componentDefs;
+                let AssessmentComponent = null;                
+                switch(assessment.survey.surveyType){
+                    case Survey.SurveyTypes.TowerStone180: {
+                        AssessmentComponent = TowerStone180Assessment;
+                        break;                                
+                    }
+                    case Survey.SurveyTypes.TowerStone360: {
+                        AssessmentComponent = TowerStone360Assessment;
+                        break;
+                    }
+                    case Survey.SurveyTypes.PLCDefault: {
+                        AssessmentComponent = PlcDefaultAssessment;
+                        break;
+                    }
+                    default: {
+                        AssessmentComponent = InvalidSurveyTypeComponent;
+                        break;
+                    }
+                }
+                return <AssessmentComponent survey={assessment.survey} assessment={assessment} />                                                         
             } else {
                 return (<Typography>Could not load assessment</Typography>);
             } 
@@ -72,32 +97,10 @@ class AssessmentWrapper extends Component {
 
     render(){
 
-        const { assessment } = this.state;
-        if(assessment === null) return this.renderQuery();
+        //const { assessment } = this.state;
+        return this.renderQuery();
 
-        const { TowerStone180Assessment, TowerStone360Assessment, PlcDefaultAssessment } = this.componentDefs;
-        let AssessmentComponent = null;                
-        switch(assessment.survey.surveyType){
-            case Survey.SurveyTypes.TowerStone180: {
-                AssessmentComponent = TowerStone180Assessment;
-                break;                                
-            }
-            case Survey.SurveyTypes.TowerStone360: {
-                AssessmentComponent = TowerStone360Assessment;
-                break;
-            }
-            case Survey.SurveyTypes.PLCDefault: {
-                AssessmentComponent = PlcDefaultAssessment;
-                break;
-            }
-            default: {
-                AssessmentComponent = InvalidSurveyTypeComponent;
-                break;
-            }
-        }
-
-
-        return <AssessmentComponent survey={assessment.survey} assessment={assessment} />
+        
     }
 }
 

@@ -42,75 +42,11 @@ import SearchIcon from '@material-ui/icons/Search';
 import Draggable from 'react-draggable';
 import ChatCard from '../../chat/ChatCard';
 import { TrelloProvider } from '../../tasks/Tasks';
-import { TaskListItemComponent, defaultDragProps, TaskDetailComponent } from '../../tasks/Taskboard';
+import { TaskListItemComponent, defaultDragProps, TaskDetailComponent, AddTaskComponent } from '../../tasks/Taskboard';
 import * as mocks from '../../../models/mock';
 import { nilStr, omitDeep } from '../../util';
 import { withApi } from '../../../api/ApiProvider';
 
-class AddTask extends Component {
-    constructor(props, context) {
-        super(props, context);
-        this.state = {
-            text: ''
-        };
-
-        this.onTextChanged = this.onTextChanged.bind(this);
-        this.keyPress = this.keyPress.bind(this)
-    }
-
-    onTextChanged(e) {
-        this.setState({ text: e.target.value })
-    }
-
-    keyPress(e) {
-        if (e.charCode === 13) {
-            this.props.onSave(this.state.text);
-        }
-    }
-
-    render() {
-        return (<TextField
-            placeholder="Enter task title"
-            value={this.state.text}
-            onChange={this.onTextChanged}
-            variant="outlined"
-            onKeyPress={this.keyPress}
-            fullWidth
-        />)
-    }
-}
-
-export const AddTaskComponent = compose(
-    withApi
-)((props) => {
-    const { api, organizationId, userId, onCancel, status = 'new', percentComplete = 0 } = props;
-    return (
-        <Mutation mutation={api.mutations.Tasks.createTask} >
-            {(createTask, { loading, error, data }) => {
-
-                let props = {
-                    loading,
-                    error,
-                    onCancel,
-                    onSave: (title) => {
-                        let taskInput = { title, status, percentComplete };
-                        createTask({
-                            variables: {
-                                id: userId,
-                                taskInput
-                            },
-                            refetchQueries: [{ query: api.queries.Tasks.userTasks, variables: { id: userId, status } }]
-                        });
-                    }
-                };
-
-                if (loading) return (<p>Updating... please wait</p>);
-                if (error) return (<p>{error.message}</p>);
-                return <AddTask {...props} />
-            }}
-        </Mutation>
-    )
-});
 
 
 

@@ -66,7 +66,7 @@
     "whatwg-fetch": "2.0.3"
   },
   "scripts": {
-    "analyze": "source-map-explorer 'build/towerstone/static/js/*.js'",
+    "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "REACT_APP_TITLE=Reactory REACT_APP_THEME=reactory REACT_APP_CLIENT_KEY=reactory node --max_old_space_size=2000000 scripts/start.js",
     "start-boxcommerce": "REACT_APP_TITLE=\"BoxCommerce Site Editor\" REACT_APP_THEME=boxcommerce REACT_APP_CLIENT_KEY=boxcommerce node --max_old_space_size=2000000 scripts/start.js",
     "start-towerstone": "REACT_APP_TITLE=\"TowerStone Engage\" REACT_APP_THEME=towerstone REACT_APP_CLIENT_KEY=towerstone node --max_old_space_size=2000000 scripts/start.js",
@@ -80,7 +80,7 @@
     "build-aot": "REACT_APP_TITLE=\"Age Of Teams\" REACT_APP_THEME=aot REACT_APP_CLIENT_KEY=aot node --max_old_space_size=2000000 scripts/build.js --env=production",
     "build-gw": "REACT_APP_TITLE=\"Payment Gateway\" REACT_APP_THEME=funisave-gw REACT_APP_CLIENT_KEY=funisave-gw node --max_old_space_size=2000000 scripts/build.js --env=production",
     "build": "REACT_APP_TITLE=Reactory REACT_APP_THEME=reactory REACT_APP_CLIENT_KEY=reactory node --max_old_space_size=2000000 scripts/build.js --env=production",
-    "build-all": "npm-run-all build build-towerstone build-plc build-aot",
+    "build-all": "npm-run-all build build-towerstone build-plc build-lasec-crm",
     "build-qa": "node --max_old_space_size=2000000 scripts/build.js --env=qa",
     "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom"
   },

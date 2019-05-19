@@ -73,11 +73,13 @@ const resolveModule = (resolveFn, filePath) => {
   return resolveFn(`${filePath}.js`);
 };
 
+const client_key = process.env.REACT_APP_CLIENT_KEY
+
 // config after eject: we're in ./config/
 module.exports = {
   dotenv: resolveApp('.env'),
   appPath: resolveApp('.'),
-  appBuild: resolveApp('build'),
+  appBuild: resolveApp('build') + "/" + client_key,
   appPublic: resolveApp('public'),
   appHtml: resolveApp('public/index.html'),
   appIndexJs: resolveModule(resolveApp, 'src/index'),
@@ -94,6 +96,7 @@ module.exports = {
 };
 
 // @remove-on-eject-begin
+/*
 const resolveOwn = relativePath => path.resolve(__dirname, '..', relativePath);
 
 // config before eject: we're in ./node_modules/react-scripts/config/
@@ -156,6 +159,7 @@ if (
     ownTypeDeclarations: resolveOwn('lib/react-app.d.ts'),
   };
 }
+*/
 // @remove-on-eject-end
 
 module.exports.moduleFileExtensions = moduleFileExtensions;

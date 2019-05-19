@@ -71,7 +71,7 @@ import { flattenSelections } from 'apollo-utilities';
 // to the correct localizer.
 
 
-BigCalendar.momentLocalizer(moment); // or globalizeLocalizer
+const localizer = BigCalendar.momentLocalizer(moment); // or globalizeLocalizer
 
 
 
@@ -509,6 +509,7 @@ class AdminCalendar extends Component {
           <Paper className={this.props.classes.Container}>
             <BigCalendar
               popup
+              localizer={localizer}
               onSelectEvent={this.onSelectEvent}
               onDoubleClickEvent={this.onDoubleClick}
               events={surveys || []}

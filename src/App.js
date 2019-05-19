@@ -17,10 +17,7 @@ import { createHttpLink } from 'apollo-link-http';
 import { setContext } from 'apollo-link-context';
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import classnames from 'classnames';
 import { createMuiTheme } from '@material-ui/core/styles';
-import { forgot } from './api'
-import logo from './logo.svg';
 import queryString from './query-string';
 import './App.css';
 import AssessorHeaderBar from './components/shared/header';
@@ -99,6 +96,7 @@ class App extends Component {
     api.queryObject = query;
     api.queryString = queryString;
     api.objectToQueryString = queryString.stringify;
+
     this.state = {
       drawerOpen: false,
       auth_valid: false,
@@ -136,6 +134,7 @@ class App extends Component {
     const routes = [];
     let loginRouteDef = null;
     let homeRouteDef = null;
+    const that = this;
 
     api.getRoutes().forEach((routeDef) => {
       const routeProps = {
@@ -178,7 +177,16 @@ class App extends Component {
 
     
 
-    this.setState({ routes });
+    this.setState({ routes },()=>{
+      //routes have been set, check if there is a redirect on the properties
+      if(api.queryObject && api.queryObject.redirect){
+        debugger;
+        let redirect = api.queryObject.redirect;
+        delete api.queryObject.redirect;
+
+        that.props.location.push(redirect)
+      }
+    });
   }
 
   componentDidMount() {

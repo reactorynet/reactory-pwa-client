@@ -25,7 +25,7 @@ import objectMapper from 'object-mapper';
 import { withApollo } from "react-apollo";
 import * as restApi from './RestApi';
 import graphApi from './graphql';
-import configureStore from '../models/redux';
+
 import { 
     getAvatar, 
     getUserFullName, 
@@ -53,7 +53,7 @@ export const ReactoryApiEventNames = {
 };
 
   
-const store = configureStore();
+
   
 const EmptyComponent = (fqn) => {
     return (<Typography>No Component For Fqn: {fqn}</Typography>)

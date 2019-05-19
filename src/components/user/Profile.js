@@ -53,17 +53,6 @@ const defaultProfile = {
     avatar: null,
 };
 
-const UserInviteControl = (props, context) => {
-
-    const { onChange, value } = props;
-
-    return <TextField
-        id={'peerInviteByEmail'}
-        onChange
-        value
-    />
-}
-
 const userPeersQueryFragment = ` 
 user {
     id
@@ -298,9 +287,9 @@ class Profile extends Component {
                         Most users will only have one membership. <br />These memberships are managed by the administrators of the system.
                     </Typography>
                     <List>
-                        {data.map( membership => (
+                        {data.map( (membership, index) => (
                             membership.organization && 
-                            <ListItem>
+                            <ListItem key={index}>
                                 <Avatar>{membership.organization.name.substring(0,2)}</Avatar>
                                 <ListItemText secondary={`${membership.client.name}`} primary={!isNil(membership.organization) ? membership.organization.name : 'No organization'}></ListItemText>
                                 <ListItemSecondaryAction>
@@ -704,34 +693,34 @@ class Profile extends Component {
                                 };
 
                                 const selectorWidget = (
-                                    <Fragment>                                        
-                                        <List dense fullWidth={true}>
-                                            <ListItem>
+                                    <div style={{width:"100%"}}>                                        
+                                        <List dense component="nav">
+                                            <ListItem key={0}>
                                                 <Avatar><Icon>mail</Icon></Avatar>
                                                 <ListItemText primary={usr.inviteSent ===  true ? 'Confirmation sent' : 'Confirmation not sent'} secondary={usr.inviteSent ===  true ? moment(usr.confirmedAt).format('YYYY-MM-DD') : 'Wil be confirmed with next confirmation'}/>
                                             </ListItem>
 
-                                            <ListItem selected={usr.relationship === 'manager'} onClick={ usr.relationship !== 'manager' ? makeSupervisor : nilf}>
+                                            <ListItem key={1} selected={usr.relationship === 'manager'} onClick={ usr.relationship !== 'manager' ? makeSupervisor : nilf}>
                                                 <Avatar><Icon>supervisor_account</Icon></Avatar>
                                                 <ListItemText primary={usr.relationship !== 'manager' ? 'Select As Leader' : `${usr.firstName} ${usr.lastName} is flagged as a leader`} />                                                                                                
                                             </ListItem>
 
-                                            <ListItem selected={usr.relationship === 'peer'} onClick={ usr.relationship !== 'peer' ? makePeer : nilf}>
+                                            <ListItem key={2} selected={usr.relationship === 'peer'} onClick={ usr.relationship !== 'peer' ? makePeer : nilf}>
                                                 <Avatar><Icon>account_box</Icon></Avatar>
                                                 <ListItemText primary={usr.relationship !== 'peer' ? 'Select As Peer' : `${usr.firstName} ${usr.lastName} is flagged as a peer`} />
                                             </ListItem>
                                             
-                                            <ListItem selected={usr.relationship === 'report'} onClick={ usr.relationship !== 'report' ? makeDirectReport : nilf}>
+                                            <ListItem key={3} selected={usr.relationship === 'report'} onClick={ usr.relationship !== 'report' ? makeDirectReport : nilf}>
                                                 <Avatar><Icon>account_circle</Icon></Avatar>
                                                 <ListItemText primary={usr.relationship !== 'report' ? 'Select As Report' : `${usr.firstName} ${usr.lastName} is flagged as a report`} />                                                
                                             </ListItem>
 
-                                            <ListItem onClick={deletePeer}>
+                                            <ListItem key={4} onClick={deletePeer}>
                                                 <Avatar><Icon>delete_outline</Icon></Avatar>
                                                 <ListItemText primary={`Remove ${usr.firstName} ${usr.lastName} as nominee`} />
                                             </ListItem>                                                                                 
                                         </List>                                        
-                                    </Fragment>
+                                    </div>
                                 );
 
                                 let relationshipBadge = null;

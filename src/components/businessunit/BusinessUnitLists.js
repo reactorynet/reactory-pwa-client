@@ -1,4 +1,5 @@
 import React, { Component, Fragment } from 'react';
+import PropTypes from 'prop-types';
 import { Query, Mutation } from 'react-apollo';
 import { compose } from 'redux';
 import { withRouter } from 'react-router';
@@ -18,7 +19,6 @@ import {
 } from '@material-ui/core';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import {
-  Visibility,
   VisibilityOff,
   Search as SearchIcon
 } from '@material-ui/icons';
@@ -181,8 +181,17 @@ export class BusinessUnitListWithToolbar extends Component {
     })
   }
 
+  static propTypes = {
+    api: PropTypes.instanceOf(ReactoryApi)
+  };
+
+  static defaultProps = {
+    api: null
+  };
+
+
   constructor(props, context) {
-    super(props, context)
+    super(props, context);
     this.state = {
       searchString: '',
       inputText: '',
@@ -197,7 +206,7 @@ export class BusinessUnitListWithToolbar extends Component {
     this.searchStringChanged = this.searchStringChanged.bind(this);
     this.searchStringOnKeyPress = this.searchStringOnKeyPress.bind(this);
     this.onItemSelect = this.onItemSelect.bind(this);
-    this.componentDefs = this.props.api.getComponents([
+    this.componentDefs = props.api.getComponents([
       'core.SingleColumnLayout',
       'core.FullScreenDialog'])
   }
@@ -277,10 +286,10 @@ export class BusinessUnitListWithToolbar extends Component {
 }
 
 export const BusinessUnitListWithToolbarComponent = compose(
+  withApi,
   withRouter,
   withStyles(BusinessUnitListWithToolbar.Styles), 
-  withTheme(), 
-  withApi)(BusinessUnitListWithToolbar);
+  withTheme())(BusinessUnitListWithToolbar);
 
 export default {
   BusinessUnitList: BusinessUnitListsComponent,

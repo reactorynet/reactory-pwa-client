@@ -1,8 +1,11 @@
 import { combineReducers } from 'redux';
 
-const rootReducer = combineReducers({
-  
+const nullReducer = function item_list(state = {}, action) {
+  return state;
+};
+
+const rootReducer = combineReducers({ 
+  nullReducer
 });
 
-export default rootReducer;
-
+export default rootReducer; 

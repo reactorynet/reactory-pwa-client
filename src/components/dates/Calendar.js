@@ -3,6 +3,7 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import BigCalendar from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css'
+import moment from 'moment';
 import StyledComponent from '../shared/StyledComponent';
 
 class Calendar extends StyledComponent {
@@ -54,6 +55,7 @@ class Calendar extends StyledComponent {
       <Fragment>
         <BigCalendar
           popup
+          localizer={BigCalendar.momentLocalizer(moment)}
           onSelectEvent={this.onSelectEvent}
           onDoubleClickEvent={this.onDoubleClick}
           events={calendarItems || []}

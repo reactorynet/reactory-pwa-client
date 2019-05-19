@@ -2,10 +2,10 @@ const GridFields = require('./GridField');
 export default {
   MaterialStringField: require('./MaterialStringField'),
   MaterialTitleField: require('./MaterialTitleField'),
-  MaterialArrayField: require('./MaterialArrayField').default,
-  MaterialBooleanField: require('./MaterialBooleanField').default,
-  MaterialObjectField: require('./MaterialObjectField').default,
-  MaterialSchemaField: require('./MaterialSchemaField').default,
+  MaterialArrayField: require('./MaterialArrayField'),
+  MaterialBooleanField: require('./MaterialBooleanField'),
+  MaterialObjectField: require('./MaterialObjectField'),
+  MaterialSchemaField: require('./MaterialSchemaField'),
   MaterialGridField: GridFields.MaterialGridFieldComponent,
   BootstrapGridField: GridFields.BootstrapGridField
 }
