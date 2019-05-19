@@ -420,8 +420,7 @@ export class ReactoryApi extends EventEmitter {
     status( options = { emitLogin: false } ) {
         const that = this
         return new Promise((resolve, reject) => {
-            that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {
-                ////console.log('Api Status Call', result);
+            that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {                
                 if (result.data.apiStatus.status === "API OK") {                    
                     that.setUser({ ...result.data.apiStatus });
                     that.lastValidation = moment().valueOf();
@@ -434,8 +433,7 @@ export class ReactoryApi extends EventEmitter {
                     that.setUser(anonUser);             
                     resolve(anonUser);       
                 }
-            }).catch((clientErr) => {
-                console.error('Error happened during validation', clientErr);
+            }).catch((clientErr) => {                
                 that.logout(false);
                 resolve(anonUser);
             });

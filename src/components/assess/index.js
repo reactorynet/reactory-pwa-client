@@ -49,9 +49,7 @@ class AssessmentWrapper extends Component {
     static styles = theme => {
         return {}
     }
-
     
-
     renderQuery() {
         const { match, api } = this.props;
         const self = this;
@@ -61,44 +59,48 @@ class AssessmentWrapper extends Component {
         const assessmentId = match.params[0];                    
         return (
         <Query query={api.queries.Assessments.assessmentWithId} variables={{ id: assessmentId }} >
-            {({ loading, error, data}) => {
-                //console.log('Rendering query component', { loading, error, data });
-            if(loading === true) return (<Loading title="Loading assessment data, please wait"/>);
-            if(nil(error) === false) return (<p>Error while loading assessment ${error.message}</p>);
-            if(data && data.assessmentWithId) {
-                const assessment = { ...data.assessmentWithId };                                                
-                const { TowerStone180Assessment, TowerStone360Assessment, PlcDefaultAssessment } = this.componentDefs;
-                let AssessmentComponent = null;                
-                switch(assessment.survey.surveyType){
-                    case Survey.SurveyTypes.TowerStone180: {
-                        AssessmentComponent = TowerStone180Assessment;
-                        break;                                
+            {({ loading, error, data}) => {                
+                debugger;
+                if(loading === true) return (<Loading title="Loading assessment data, please wait"/>);
+                if(nil(error) === false) return (<p>Error while loading assessment ${error.message}</p>);
+                if(data && data.assessmentWithId) {
+                    const assessment = { ...data.assessmentWithId };                                                
+                    const { TowerStone180Assessment, TowerStone360Assessment, PlcDefaultAssessment } = this.componentDefs;
+                    let AssessmentComponent = null;                
+                    switch(assessment.survey.surveyType){
+                        case Survey.SurveyTypes.TowerStone180: {
+                            AssessmentComponent = TowerStone180Assessment;
+                            break;                                
+                        }
+                        case Survey.SurveyTypes.TowerStone360: {
+                            AssessmentComponent = TowerStone360Assessment;
+                            break;
+                        }
+                        case Survey.SurveyTypes.PLCDefault: {
+                            AssessmentComponent = PlcDefaultAssessment;
+                            break;
+                        }
+                        default: {
+                            AssessmentComponent = InvalidSurveyTypeComponent;
+                            break;
+                        }
                     }
-                    case Survey.SurveyTypes.TowerStone360: {
-                        AssessmentComponent = TowerStone360Assessment;
-                        break;
-                    }
-                    case Survey.SurveyTypes.PLCDefault: {
-                        AssessmentComponent = PlcDefaultAssessment;
-                        break;
-                    }
-                    default: {
-                        AssessmentComponent = InvalidSurveyTypeComponent;
-                        break;
-                    }
-                }
-                return <AssessmentComponent survey={assessment.survey} assessment={assessment} />                                                         
-            } else {
-                return (<Typography>Could not load assessment</Typography>);
-            } 
+                    return <AssessmentComponent survey={assessment.survey} assessment={assessment} />                                                         
+                } else {
+                    return (<Typography>Could not load assessment</Typography>);
+                } 
             }}
         </Query>);                                       
     }
 
     render(){
 
-        //const { assessment } = this.state;
-        return this.renderQuery();
+        try {
+            return this.renderQuery();
+        } catch (exc) {
+            return <Typography>{ exc.message }</Typography>
+        }
+        
 
         
     }
