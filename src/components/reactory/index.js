@@ -2,7 +2,7 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import Form from './form/components/Form';
 import objectMapper from 'object-mapper';
-import { isArray } from 'lodash';
+import { isArray, isNil, isString } from 'lodash';
 import { withRouter, Route, Switch } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { find, template, templateSettings } from 'lodash';
@@ -15,20 +15,12 @@ import { nil } from '../util'
 import queryString from '../../query-string';
 import { withApi, ReactoryApi } from '../../api/ApiProvider'
 import {
-  AppBar,
   Button,
   Fab,
   Typography,
-  Card,
-  CardContent,
-  FormControl,
   Icon,
-  InputLabel,  
   Input,
-  Tabs,
   Toolbar,
-  TextField,
-  Tab,  
 } from '@material-ui/core'
 
 import Fields from './fields'
@@ -147,6 +139,7 @@ class ReactoryComponent extends Component {
     // //console.log('New form', {props, context});
     let _state = {
       loading: true,
+      forms_loaded: false,
       forms: [],
       uiFramework: props.uiFramework,
       uiSchemaKey: props.uiSchemaKey || 'default',
@@ -178,31 +171,9 @@ class ReactoryComponent extends Component {
     this.showHelp = this.showHelp.bind(this);
     this.showDebug = this.showDebug.bind(this);
     this.formRef = null;
+    this.downloadForms = this.downloadForms.bind(this);
   }
   
-  componentWillMount() {
-    const that = this;
-    this.props.api.forms().then((forms) => {
-      const formDef = find(forms, { id: that.props.formId }) || simpleForm;
-      if(formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
-      that.setState({ forms: forms, loading: false, formDef });
-    }).catch((loadError) => {
-      that.setState({ forms: [], formDef: simpleForm, formError: { message: loadError.message } })
-    })
-  }
-
-  //componentWillUpdate(nextProps, nextState){
-     ////console.log('b - componentWillUpdate ReactoryForm', {nextProps, nextState, formRef: this.formRef});
-    //if(this.state.dirty === false) {
-    //  nextState.formData = {...nextProps.data, ...nextProps.formData};
-    //  return true;
-    //}    
-  //}
-
-  //componetDidUpdate(props, state){
-
-  //}
-
   formDef(){
     if(this.state.formDef) return this.state.formDef;
     else {
@@ -252,11 +223,11 @@ class ReactoryComponent extends Component {
   }
 
   renderForm(formData, onSubmit, patch = {}) {
-    // debugger;
+    
     // //console.log('rendering form with data', formData);
     const { loading, forms } = this.state;
     const self = this;
-    if (loading) return (<p>loading form schema</p>);
+    
     if (forms.length === 0) return (<p>no forms defined</p>);
     const updateFormState = (formPost) => {
       //console.log('a - updating form state', { formPost });
@@ -324,32 +295,26 @@ class ReactoryComponent extends Component {
     )
   }
 
-  renderWithQuery(){    
+  renderWithQuery(){        
     const formDef = this.formDef();
     let formData = this.getFormData();  
-    const { mode } = this.props;
+    const { mode, api } = this.props;
     const { queryComplete } = this.state;
     const that = this;
     const { Loading } = this.componentDefs;    
     const has = {
-      query: formDef.graphql.query && formDef.graphql.query.text,
+      query: isNil(formDef.graphql.query) === false && isString(formDef.graphql.query.text) === true,
       doQuery: formDef.graphql.query && formDef.graphql.query && formDef.graphql.query[mode] === true,
-      mutation: formDef.graphql.mutation && formDef.graphql.mutation[mode] && formDef.graphql.mutation[mode].text,      
+      mutation: isNil(formDef.graphql.mutation) === false && isNil(formDef.graphql.mutation[mode]) === false && isString(formDef.graphql.mutation[mode].text) === true,      
     };
 
     const getMutationForm = (_formData, patch) => {
       const mutation  = formDef.graphql.mutation[mode];
-      //debugger;
-
       return (
         <Mutation mutation={gql(mutation.text)}>
-        {(mutateFunction, { loading, errors, data }) => {
-          // //console.log('Rendering Form With Mutation', { mutation, formDef, loading, errors, data });   
-          //let formData = data 
+        {(mutateFunction, { loading, errors, data }) => {          
           const onFormSubmit = (formSchema) => {            
-            // //console.log('Form Submit Mutation Handler', formSchema);
             const _variables = objectMapper({...formSchema, formContext: that.getFormContext() }, mutation.variables);
-            // //console.log('Must call mutate function and proceed', { formSchema, _variables });
             mutateFunction({
               variables: {..._variables},
               refetchQueries: []
@@ -362,8 +327,6 @@ class ReactoryComponent extends Component {
           if(loading === true) loadingWidget = (<Loading message="Updating... please wait." />);
           if(errors) errorWidget = (<p>{errors.message}</p>);
           if(data && data[mutation.name]) {
-            // //console.log('data result', {data});
-            //debugger;
             if(mutation.onSuccessMethod === "route") {
               const inputObj = {
                 formData,                
@@ -386,49 +349,32 @@ class ReactoryComponent extends Component {
       </Mutation>)
     };
 
-    if(has.query && has.doQuery) {
+    if(has.query === true && has.doQuery === true && queryComplete === false && this.state.loading === false) {
       // //console.log('rendering with query', has);
       const query = formDef.graphql.query; //gql(formDef.graphql.query.text)
       const formContext = this.getFormContext();
       const _variables = objectMapper({formContext, formData}, query.variables || {});
       let options = query.options || {  };
-      //query={gql(query.text)} variables={_variables} options={options} skip={that.state.queryComplete === true}
-      return (
-        <ApolloConsumer>
-          {(client) => {
-            
-            if(queryComplete === false) {
-              const doQuery = async () => {
-                const { data } = await client.query({
-                  query: gql(query.text),
-                  variables: _variables
-                });
+      
+      api.graphqlQuery(gql(query.text), _variables).then(( result ) => {
+        console.log('Fetched results for form data', result);
+        const { data, loading, error } = result;
+        let _formData = {...formData};
+        if(data && data[query.name]) {
+          _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap || {});
+        }
+        that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: error, loading });          
+      }).catch((queryError) => {
+        that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false });
+      });
 
-                // //console.log('Fetched results for form data', data);
-                let _formData = {...formData};
-                if(data && data[query.name]) {
-                  _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap || {});
-                }                
-                that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true});
-              };
-              setTimeout(doQuery, 500);
-              return <Loading message="Loading..." />              
-            } else {
-              if(has.mutation) {
-                return getMutationForm(formData);
-              } else {
-                return that.renderForm(formData);
-              }     
-            }                                              
-          }}
-        </ApolloConsumer>
-      );
+      return <Loading title={`Fetching data for ${formDef.title}`} />     
     } 
     
-    if(has.mutation) {
+    if ( has.mutation === true) {
       return getMutationForm(formData)
-    }
-
+    } 
+      
     return that.renderForm(formData)
   }
 
@@ -511,7 +457,7 @@ class ReactoryComponent extends Component {
       switch (schema.uiFramework) {
         case 'material': {
           schema.fields = {
-            ArrayField: MaterialArrayFieldTemplate.default,
+            ArrayField: MaterialArrayFieldTemplate,
             BooleanField: MaterialBooleanField,
             DescriptionField: (props, context) => (<Typography>{props.description}</Typography>),
             NumberField: (props, context) => {
@@ -542,8 +488,8 @@ class ReactoryComponent extends Component {
             },
             ObjectField: MaterialObjectField,
             SchemaField: MaterialSchemaField,
-            StringField: MaterialStringField.default,
-            TitleField: MaterialTitleField.default,
+            StringField: MaterialStringField,
+            TitleField: MaterialTitleField,
             UnsupportedField: (props, context) => <Typography>Field {props.schema.title} type not supported</Typography>,            
             GridLayout: MaterialGridField
           };
@@ -710,7 +656,7 @@ class ReactoryComponent extends Component {
 
       switch (schema.uiFramework) {
         case 'material': {
-          schema.FieldTemplate = MaterialFieldTemplate.default;
+          schema.FieldTemplate = MaterialFieldTemplate;
           break;
         }
         default: {
@@ -723,7 +669,7 @@ class ReactoryComponent extends Component {
     const setObjectTemplate = () => {
       switch (schema.uiFramework) {
         case 'material': {
-          schema.ObjectFieldTemplate = MaterialObjectTemplate.default;
+          schema.ObjectFieldTemplate = MaterialObjectTemplate;
           break;
         }
         default: {
@@ -835,12 +781,31 @@ class ReactoryComponent extends Component {
     return formData
   }
 
+  downloadForms(){
+    const that = this;
+    try {
+      this.props.api.forms().then((forms) => {
+        const formDef = find(forms, { id: that.props.formId }) || simpleForm;
+        if(formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
+        that.setState({ forms: forms, forms_loaded: true, loading: false, formDef });
+      }).catch((loadError) => {
+        that.setState({ forms: [], forms_loaded: true, loading: false, formDef: simpleForm, formError: { message: loadError.message } })
+      })
+    } catch (formloadError) {
+      console.log(formloadError);
+    }    
+  }
+
   render() {
-    const { Loading } = this.componentDefs;
-    if(this.state.loading) return <Loading message="Loading..."/>;
     const formDef = this.formDef();
+    const { Loading } = this.componentDefs;
+    if(this.state.forms_loaded === false) {      
+      this.downloadForms();
+      return <Loading message={`Loading Form Definitions`} />
+    }
+    
     if(formDef.graphql === null || formDef.graphql === undefined) {
-      return this.renderForm(this.getFormData())
+      return this.renderForm(this.getFormData());
     } else {
       return this.renderWithQuery()
     }    

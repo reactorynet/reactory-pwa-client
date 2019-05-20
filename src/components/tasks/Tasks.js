@@ -1,4 +1,4 @@
-import Trello from 'trello';
+// import Trello from 'trello';
 import co from 'co';
 import { nilStr, nil } from '../util';
 import db from '../../models/database';
@@ -33,16 +33,7 @@ export class TrelloProvider {
     }
 
     createTrelloInstance(){            
-        const init = () => this.trello = new Trello(this.apiKey, this.userToken); 
-        if(nilStr(this.apiKey) === false && nilStr(this.userToken) === false) {
-            init();
-        }
         
-        window.addEventListener('storage', (evt)=>{
-            if(evt.key === 'trello_apiKey' || evt.key === 'trello_userToken'){
-                init();
-            }
-        });
     }
 
     loadBoardData(boardId){

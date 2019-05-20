@@ -57,8 +57,8 @@ const widgetMap = {
 
 export function getDefaultRegistry() {
   return {
-    fields: require("./components/fields").default,
-    widgets: require("./components/widgets").default,
+    fields: require("./components/fields"),
+    widgets: require("./components/widgets"),
     definitions: {},
     formContext: {},
   };

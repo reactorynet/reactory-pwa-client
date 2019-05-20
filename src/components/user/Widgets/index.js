@@ -1,61 +1,26 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
-import classnames from 'classnames';
-import gql from 'graphql-tag';
 import { compose } from 'redux';
-import { throttle } from 'lodash';
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import {
   AppBar,
-  Avatar,
   Badge,
-  Chip,
-  Button,
-  FormControl,
-  List,
-  ListItem,
-  ListItemText,
-  InputLabel,
-  Input,
   InputBase,
   Icon,
-  InputAdornment,
   IconButton,
-  Grid,
-  Paper,
-  TextField,
-  Table,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
   Toolbar,
   Tooltip,
   Typography,
 } from '@material-ui/core';
 
 import {
-  Visibility,
-  VisibilityOff,
   Search as SearchIcon
 } from '@material-ui/icons'
 import { fade } from '@material-ui/core/styles/colorManipulator';
-import classNames from 'classnames';
-import AddCircleIcon from '@material-ui/icons/AddCircle'
-import DetailIcon from '@material-ui/icons/Details'
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import { isArray, isNil } from 'lodash';
-import moment from 'moment';
-import { ReactoryFormComponent } from '../../reactory';
-import { TableFooter } from '@material-ui/core/Table';
 import { withApi, ReactoryApi } from '../../../api/ApiProvider';
-import DefaultAvatar from '../../../assets/images/profile/default.png';
-import { omitDeep, getAvatar, CenteredContainer } from '../../util';
 import SurveyDelegateWidget from '../Widgets/SurveyDelegateWidget'
 import styles from '../../shared/styles'
-
-
 
 export class UserListWithSearch extends Component {
 
@@ -336,6 +301,7 @@ export const UserListWithSearchComponent = compose(
   withTheme(), 
   withApi,
   withRouter)(UserListWithSearch);
+
 
 export default {
   UserListWithSearchComponent,

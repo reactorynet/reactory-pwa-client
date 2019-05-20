@@ -591,8 +591,8 @@ export const UserListWithData = compose(
 )(UserList);
 
 
-export const ForgotForm = require('./Forms').default.ForgotForm;
-export const ResetPasswordForm = require('./Forms').default.ResetPasswordForm;
+export const ForgotForm = require('./Forms').ForgotForm;
+export const ResetPasswordForm = require('./Forms').ResetPasswordForm;
 
 
 class Logout extends Component {

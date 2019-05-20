@@ -1,6 +1,7 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter, Route, Switch } from 'react-router';
+import { Query, Mutation } from 'react-apollo';
 import classnames from 'classnames';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
@@ -32,11 +33,76 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import IconButtonDropDown from '@material-ui/icons/ArrowDropDown';
 import moment from 'moment';
-import { AddTaskComponent } from '../home/kanban/KanbanDashboard';
 import { withApi, ReactoryApi } from '../../api/ApiProvider'
 import Comments from '../shared/Comments';
 import * as mocks from '../../models/mock';
 import Draggable from 'react-draggable';
+
+
+class AddTask extends Component {
+    constructor(props, context) {
+        super(props, context);
+        this.state = {
+            text: ''
+        };
+
+        this.onTextChanged = this.onTextChanged.bind(this);
+        this.keyPress = this.keyPress.bind(this)
+    }
+
+    onTextChanged(e) {
+        this.setState({ text: e.target.value })
+    }
+
+    keyPress(e) {
+        if (e.charCode === 13) {
+            this.props.onSave(this.state.text);
+        }
+    }
+
+    render() {
+        return (<TextField
+            placeholder="Enter task title"
+            value={this.state.text}
+            onChange={this.onTextChanged}
+            variant="outlined"
+            onKeyPress={this.keyPress}
+            fullWidth
+        />)
+    }
+}
+
+export const AddTaskComponent = compose(
+    withApi
+)((props) => {
+    const { api, organizationId, userId, onCancel, status = 'new', percentComplete = 0 } = props;
+    return (
+        <Mutation mutation={api.mutations.Tasks.createTask} >
+            {(createTask, { loading, error, data }) => {
+
+                let props = {
+                    loading,
+                    error,
+                    onCancel,
+                    onSave: (title) => {
+                        let taskInput = { title, status, percentComplete };
+                        createTask({
+                            variables: {
+                                id: userId,
+                                taskInput
+                            },
+                            refetchQueries: [{ query: api.queries.Tasks.userTasks, variables: { id: userId, status } }]
+                        });
+                    }
+                };
+
+                if (loading) return (<p>Updating... please wait</p>);
+                if (error) return (<p>{error.message}</p>);
+                return <AddTask {...props} />
+            }}
+        </Mutation>
+    )
+});
 
 
 
@@ -484,7 +550,7 @@ class TaskList extends Component {
                                 const onTaskSelected = () => {
                                     that.setState({ selectedTask: task });
                                 }
-                                return task.groupId === group.id ? (<TaskListItemComponent task={task} />) : null
+                                return task.groupId === group.id ? (<TaskListItemComponent task={task}  />) : null
                             })}
                         </List>
                         <AddTaskComponent status='new' />

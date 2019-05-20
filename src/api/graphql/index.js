@@ -745,7 +745,7 @@ export default {
     Organization: {
       allOrganizations: allOrganizations,
       leadershipBrands: leadershipBrandsForOrganization,
-      organizationWithId: require('./organization/organizationWithId').default
+      organizationWithId: require('./organization/organizationWithId')
     },
     Users: {
       usersForOrganization,

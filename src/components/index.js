@@ -13,13 +13,11 @@ import {
 import * as MaterialCore from '@material-ui/core'
 import * as MaterialIcons from '@material-ui/icons'
 import * as MaterialLab from '@material-ui/lab'
-import MUIDataTable from "mui-datatables";
 import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
 import LoginPage, { RegisterPage } from './auth';
 import Main from './home/index';
 import AssessmentView from './assess/index';
-import ProfileComponent from './user/Profile';
 import UserSurveyComponent from './survey/UserSurvey';
 import ReportComponent from './report/index';
 import KanbanDashboardComponent, { TaskListComponentWithData, TaskDetailWithData } from './home/kanban/KanbanDashboard';
@@ -77,7 +75,7 @@ export const componentRegistery = [
   {
     nameSpace:'core',
     name: 'DataTable',
-    component: MUIDataTable,
+    component: (props) => (<span>core.DataTable deprecated -> use MuiDataTables instead.</span>),
     version: '1.0.0',
   },
   {
@@ -256,19 +254,19 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'BusinessUnitList',
-    component: require('./businessunit').default.BusinessUnitListWithToolbar,
+    component: require('./businessunit').BusinessUnitListWithToolbar,
     version: '1.0.0'
   },
   {
     nameSpace: 'core',
     name: 'BusinessUnitForm',
-    component: require('./businessunit').default.BusinessUnitForm,
+    component: require('./businessunit').BusinessUnitForm,
     version: '1.0.0'
   },
   {
     nameSpace: 'core',
     name: 'BusinessUnitFormWithQuery',
-    component: require('./businessunit').default.BusinessUnitFormWithQuery,
+    component: require('./businessunit').BusinessUnitFormWithQuery,
     version: '1.0.0'
   },
   {
@@ -432,13 +430,13 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'PageIntegrations',
     version: '1.0.0',
-    component: require('./template/integrations/index').default
+    component: require('./template/integrations/index')
   },
   {
     nameSpace: 'boxcommerce',
     name: 'PageEditorHome',
     version: '1.0.0',
-    component: require('./template/PageTemplate').default.PageBuilderComponent
+    component: require('./template/PageTemplate').PageBuilderComponent
   },
   {
     nameSpace: 'core',
@@ -474,7 +472,7 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'AssessmentList',
     version: '1.0.0',
-    component: require('./assess/AssessmentList').default,
+    component: require('./assess/AssessmentList'),
   },
   {
     nameSpace: 'core',

@@ -1,5 +1,5 @@
 
-import React, { Component, Children } from "react";
+import React, { Component, Children, ReactDOM } from "react";
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
 import {
@@ -25,7 +25,7 @@ import objectMapper from 'object-mapper';
 import { withApollo } from "react-apollo";
 import * as restApi from './RestApi';
 import graphApi from './graphql';
-import configureStore from '../models/redux';
+
 import { 
     getAvatar, 
     getUserFullName, 
@@ -53,7 +53,7 @@ export const ReactoryApiEventNames = {
 };
 
   
-const store = configureStore();
+
   
 const EmptyComponent = (fqn) => {
     return (<Typography>No Component For Fqn: {fqn}</Typography>)
@@ -157,7 +157,6 @@ export class ReactoryApi extends EventEmitter {
     }
 
     loadComponent(Component, props, target){        
-        // debugger
         if(!Component) Component = () => (<p>No Component Specified</p>)        
         attachComponent(Component, props, target);
     }
@@ -421,8 +420,7 @@ export class ReactoryApi extends EventEmitter {
     status( options = { emitLogin: false } ) {
         const that = this
         return new Promise((resolve, reject) => {
-            that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {
-                ////console.log('Api Status Call', result);
+            that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {                
                 if (result.data.apiStatus.status === "API OK") {                    
                     that.setUser({ ...result.data.apiStatus });
                     that.lastValidation = moment().valueOf();
@@ -435,8 +433,7 @@ export class ReactoryApi extends EventEmitter {
                     that.setUser(anonUser);             
                     resolve(anonUser);       
                 }
-            }).catch((clientErr) => {
-                console.error('Error happened during validation', clientErr);
+            }).catch((clientErr) => {                
                 that.logout(false);
                 resolve(anonUser);
             });
@@ -493,6 +490,7 @@ class ApiProvider extends Component {
     static propTypes = {
         api: PropTypes.instanceOf(ReactoryApi).isRequired,
     };
+    
     static childContextTypes = {
         api: PropTypes.instanceOf(ReactoryApi).isRequired,
     };

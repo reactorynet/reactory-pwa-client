@@ -5,11 +5,10 @@ import { graphql } from 'react-apollo';
 import {
   Table,
   TableBody,
-  TableHeader,
-  TableHeaderColumn,
+  TableHead,
   TableRow,
-  TableRowColumn,
-} from '@material-ui/core/Table';
+  TableCell,
+} from '@material-ui/core';
 
 /**
  * List component for user entries
@@ -48,20 +47,20 @@ class OrganizationTable extends Component {
 
     return (
       <Table onRowSelection={handleRowSelection}>
-        <TableHeader>
+        <TableHead>
           <TableRow>
-            <TableHeaderColumn>Code</TableHeaderColumn>
-            <TableHeaderColumn>Name</TableHeaderColumn>
-            <TableHeaderColumn>Logo</TableHeaderColumn>
+            <TableCell>Code</TableCell>
+            <TableCell>Name</TableCell>
+            <TableCell>Logo</TableCell>
           </TableRow>
-        </TableHeader>
+        </TableHead>
         <TableBody>
         {allOrganizations.map( (organization, index) => {    
           return (
             <TableRow selected={isSelected(index)}>
-            <TableRowColumn>{organization.code}</TableRowColumn>
-            <TableRowColumn>{organization.name}</TableRowColumn>
-            <TableRowColumn>{organization.logo}</TableRowColumn>
+            <TableCell>{organization.code}</TableCell>
+            <TableCell>{organization.name}</TableCell>
+            <TableCell>{organization.logo}</TableCell>
           </TableRow>)}) }        
         </TableBody>
       </Table>);

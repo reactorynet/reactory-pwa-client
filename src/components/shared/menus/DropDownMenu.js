@@ -23,17 +23,17 @@ import { List, ListItemIcon, ListItemText } from '@material-ui/core';
 export class DropDownMenu extends Component {
   
   static styles = (theme) => {
-    return {}
-  }
+    return { }
+  };
 
-  static propTypes: {
+  static propTypes = {
     onSelect: PropTypes.func.isRequired,
     menus: PropTypes.array,
     propertyMap: PropTypes.object,
     open: PropTypes.bool,
   };
 
-  static defaultProps: {
+  static defaultProps = {
     menus: [],
     propertyMap: null,
     onSelect: DropDownMenu.noHandler,

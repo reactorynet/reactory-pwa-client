@@ -26,7 +26,7 @@ class SurveyDelegateWidget extends Component {
     launched: false,
     invited: false,
     complete: false,
-    user: new User(),
+    user: null,
     assessments: [],
   };
 

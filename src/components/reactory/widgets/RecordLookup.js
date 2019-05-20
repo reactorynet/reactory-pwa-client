@@ -55,7 +55,7 @@ class RecordLookup extends Component {
     this.state = {
       showLookup: false
     };
-    this.componentDefs =  props.api.getComponents(['core.DataTable', 'core.BasicModal'])
+    this.componentDefs =  props.api.getComponents(['core.BasicModal'])
   }
   
   render(){

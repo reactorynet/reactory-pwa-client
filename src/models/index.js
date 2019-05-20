@@ -1,4 +1,4 @@
-export const User = require('./userModel').default;
+export const User = require('./userModel');
 
 
 export default {

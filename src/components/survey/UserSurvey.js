@@ -71,14 +71,15 @@ class UserSurvey extends Component {
         const { UserListItem, OwlyListItem, Logo } = this.componentDefs;
         const surveyCount = this.totalSurveys();
 
-        const AssessmentListItem = ({ assessment, key }) => {          
+        const AssessmentListItem = (props) => {
+            const { assessment } = props;          
             const { survey, delegate, assessor, selfAssessment, assessmentType } = assessment
             const listTitle = selfAssessment === true ? 'Self assessment' : `${delegate.firstName} ${delegate.lastName}`
             const goAssessment = () => {
                 history.push(`/assess/${assessment.id}`)
             }
             return (
-                <ListItem key={key} dense button className={classes.listItem} onClick={goAssessment}>
+                <ListItem key={assessment.id} dense button className={classes.listItem} onClick={goAssessment}>
                     <Avatar alt={`${survey.title}`} src={api.getAvatar(delegate)}></Avatar>
                     <ListItemText
                         primary={`${survey.title} - ${listTitle}`}

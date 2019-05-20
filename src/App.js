@@ -17,10 +17,7 @@ import { createHttpLink } from 'apollo-link-http';
 import { setContext } from 'apollo-link-context';
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import classnames from 'classnames';
 import { createMuiTheme } from '@material-ui/core/styles';
-import { forgot } from './api'
-import logo from './logo.svg';
 import queryString from './query-string';
 import './App.css';
 import AssessorHeaderBar from './components/shared/header';
@@ -93,12 +90,13 @@ class App extends Component {
   
   constructor(props, context) {
     super(props, context);
-
+    
     const query = queryString.parse(window.location.search)
-    if (query.auth_token) localStorage.setItem('auth_token', query.auth_token)
+    if (query.auth_token) localStorage.setItem('auth_token', query.auth_token);
     api.queryObject = query;
-    api.queryString = queryString;
+    api.queryString = window.location.search;
     api.objectToQueryString = queryString.stringify;
+
     this.state = {
       drawerOpen: false,
       auth_valid: false,
@@ -118,16 +116,13 @@ class App extends Component {
   }
 
   
-  onLogin() {    
-    this.setState({ user: api.getUser() })
+  onLogin() {
+    const loggedInUser = api.getUser();        
+    this.setState({ user: loggedInUser });
   }
 
   onLogout() {
     this.setState({ user: api.getUser() })
-  }
-
-  componentWillUpdate(){
-
   }
 
   configureRouting(){
@@ -136,6 +131,7 @@ class App extends Component {
     const routes = [];
     let loginRouteDef = null;
     let homeRouteDef = null;
+    const that = this;
 
     api.getRoutes().forEach((routeDef) => {
       const routeProps = {
@@ -174,12 +170,11 @@ class App extends Component {
       }
             
       routes.push(<Route {...routeProps} />)            
-    });
-
-    
+    });    
 
     this.setState({ routes });
   }
+
 
   componentDidMount() {
     const that = this;
@@ -189,12 +184,10 @@ class App extends Component {
       };
     }
     
-    if (this.state.auth_validated === false) {
-      api.status({ emitLogin: true }).then((user) => {
-        //console.log('Status Called From App.js', { user });
-        that.setState({ auth_validated: true, user }, this.configureRouting)
+    if (this.state.auth_validated === false) {      
+      api.status({ emitLogin: true }).then((user) => {                
+        that.setState({ auth_validated: true, user }, that.configureRouting)
       }).catch((validationError) => {
-        //console.log('Could not check status')
         that.setState({ auth_validated: false })
       });
     }
