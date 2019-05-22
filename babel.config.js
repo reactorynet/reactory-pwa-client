@@ -3,14 +3,18 @@ module.exports = function (api) {
 
   const presets = [ 
     "@babel/react",     
-    ["@babel/env", { "modules": "commonjs" }],    
+    ["@babel/env", { 
+      "modules": "auto",
+      "useBuiltIns": "false",
+      "corejs": "3"         
+    }],    
    ];
 
   const plugins = [             
     "add-module-exports",
     // "babel-plugin-transform-class-properties",
     //stage 0
-    ["@babel/plugin-proposal-class-properties", { "loose": true }],
+    ["@babel/plugin-proposal-class-properties", { "loose": false }],
     "@babel/plugin-proposal-function-bind",
     "@babel/plugin-proposal-export-default-from",
     "@babel/plugin-proposal-json-strings",

@@ -2,7 +2,7 @@ import AddButton from "../AddButton";
 import IconButton from "../IconButton";
 import React, { Component } from "react";
 import PropTypes from "prop-types";
-import includes from "core-js/library/fn/array/includes";
+import includes from "lodash/includes";
 
 import UnsupportedField from "./UnsupportedField";
 import {

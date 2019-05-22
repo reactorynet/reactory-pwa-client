@@ -1,3 +1,4 @@
+import "@babel/polyfill";
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { MuiPickersUtilsProvider } from 'material-ui-pickers';
@@ -25,6 +26,7 @@ import {
   componentRegistery
 } from './components';
 import ApiProvider, { ReactoryApi, ReactoryApiEventNames } from './api/ApiProvider'
+import { fetch } from "whatwg-fetch";
 import * as themes from './themes';
 
 
@@ -46,6 +48,7 @@ const authLink = setContext((_, { headers }) => {
 
 const httpLink = createHttpLink({
   uri: `${process.env.REACT_APP_API_ENDPOINT}/api`,
+  fetch: fetch
 });
 
 const cache = new InMemoryCache();

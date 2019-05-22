@@ -1,17 +1,6 @@
 import React, { Component, Fragment } from "react";
-import {
-  IconButton,
-  Icon,
-  Fab,
-  Paper,
-  Grid,
-  Button,
-  Toolbar,
-  Typography,
-} from '@material-ui/core';
-import { withStyles, withTheme } from '@material-ui/core/styles';
 import PropTypes from "prop-types";
-import includes from "core-js/library/fn/array/includes";
+
 
 import  { UnsupportedField } from "react-jsonschema-form";
 

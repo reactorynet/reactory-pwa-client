@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
-import uuid from 'uuid';
 import { isNil, isArray } from 'lodash';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import BigCalendar from 'react-big-calendar';

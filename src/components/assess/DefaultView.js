@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
 import moment from 'moment';
-import uuid from 'uuid';
 import lodash, { isNil, find, isEmpty } from 'lodash';
 import classNames from 'classnames';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';

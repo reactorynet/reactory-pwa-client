@@ -1,9 +1,7 @@
 import React, { Component, Fragment } from "react";
 import {
-  AppBar,
   IconButton,
   Icon,
-  Fab,
   Paper,
   Grid,
   Button,
@@ -11,9 +9,8 @@ import {
   Tooltip,
   Typography,
 } from '@material-ui/core';
-import { withStyles, withTheme } from '@material-ui/core/styles';
 import PropTypes from "prop-types";
-import includes from "core-js/library/fn/array/includes";
+import includes from "lodash/includes";
 
 import  { UnsupportedField } from "react-jsonschema-form";
 

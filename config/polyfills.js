@@ -2,6 +2,13 @@
 
 require('@babel/polyfill');
 
+require('core-js');
+//require('core-js/es/set');
+//require('core-js/es/array');
+//require('core-js/es/symbol');
+//require('core-js/es/date');
+//require('core-js/es/promise');
+
 if (typeof Promise === 'undefined') {
   // Rejection tracking prevents a common issue where React gets into an
   // inconsistent state due to an error, but it gets swallowed by a Promise,

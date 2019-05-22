@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import * as themes from './themes';
-import qs from './query-string';
 import './index.css';
 import App from './App';
 import registerServiceWorker from './registerServiceWorker';

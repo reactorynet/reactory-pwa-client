@@ -1,6 +1,7 @@
 import React from "react";
+import fill from "lodash/fill";
 import validateFormData from "./validate";
-import fill from "core-js/library/fn/array/fill";
+
 
 export const ADDITIONAL_PROPERTY_FLAG = "__additional_property";
 
