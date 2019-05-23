@@ -302,9 +302,10 @@ class ReactoryComponent extends Component {
     const { queryComplete } = this.state;
     const that = this;
     const { Loading } = this.componentDefs;    
+    
     const has = {
       query: isNil(formDef.graphql.query) === false && isString(formDef.graphql.query.text) === true,
-      doQuery: formDef.graphql.query && formDef.graphql.query && formDef.graphql.query[mode] === true,
+      doQuery: isNil(formDef.graphql.query) === false,
       mutation: isNil(formDef.graphql.mutation) === false && isNil(formDef.graphql.mutation[mode]) === false && isString(formDef.graphql.mutation[mode].text) === true,      
     };
 
@@ -350,7 +351,7 @@ class ReactoryComponent extends Component {
     };
 
     if(has.query === true && has.doQuery === true && queryComplete === false && this.state.loading === false) {
-      // //console.log('rendering with query', has);
+      // //console.log('rendering with query', has);      
       const query = formDef.graphql.query; //gql(formDef.graphql.query.text)
       const formContext = this.getFormContext();
       const _variables = objectMapper({formContext, formData}, query.variables || {});
@@ -582,7 +583,7 @@ class ReactoryComponent extends Component {
                 </Fragment>
               )              
             },                        
-            LinkField: (props, context) => {              
+            LinkField: (props, context) => {                            
               let linkText = template('/${formData}')({...props});
               let linkTitle = props.formData;
               let linkIcon = null;
@@ -600,7 +601,10 @@ class ReactoryComponent extends Component {
                 }
               }
 
-              const goto = () => { history.push(linkText) };
+              const goto = () => { 
+                if(props.uiSchema["ui:options"].userouter === false) window.location.assign(linkText);
+                else history.push(linkText); 
+              };
 
               return (
                 <Fragment><Button onClick={goto} type="button">{linkTitle}{linkIcon}</Button></Fragment>
@@ -751,10 +755,9 @@ class ReactoryComponent extends Component {
   }
 
   getFormData() {
-    const formDef = this.formDef();
-    let defaultFormValue = formDef.defaultFormValue;
+    const formDef = this.formDef();        
+    let defaultFormValue = formDef.defaultFormValue || null;
     let formData = null;
-
     switch(formDef.schema.type){
       case 'array': {
         formData = isArray(formDef.defaultFormValue) === true ? formDef.defaultFormValue : [];
@@ -762,22 +765,22 @@ class ReactoryComponent extends Component {
         break
       }
       case 'object': {
-        if(formDef.defaultFormValue){
-          defaultFormValue = Object.keys(formDef.defaultFormValue) > 0 ? { ...formDef.defaultFormValue } : {};                    
-        } else defaultFormValue = {};
+        if(nil(defaultFormValue) === false){
+          defaultFormValue = Object.keys(defaultFormValue).length > 0 ? { ...defaultFormValue } : {};                    
+        } else {
+          defaultFormValue = {};
+        }         
+        formData = (nil(this.state.formData) === false && Object.keys(this.state.formData).length > 0) 
+          ? { ...defaultFormValue, ...this.state.formData }        
+          : formData = { ...defaultFormValue };
 
-        if(this.state.formData) {
-          if(Object.keys(this.state.formData) > 0) formData = { ...defaultFormValue, ...this.state.formData };
-          else formData = { ...defaultFormValue, ...this.state.formData };
-        }                
         break;
       }
       default: {
         formData = defaultFormValue || this.state.formData;
         break;
       }
-    }
-
+    }    
     return formData
   }
 
@@ -801,7 +804,7 @@ class ReactoryComponent extends Component {
     const { Loading } = this.componentDefs;
     if(this.state.forms_loaded === false) {      
       this.downloadForms();
-      return <Loading message={`Loading Form Definitions`} />
+      return <Loading message={`Loading Form Definitions`} nologo={true} />
     }
     
     if(formDef.graphql === null || formDef.graphql === undefined) {

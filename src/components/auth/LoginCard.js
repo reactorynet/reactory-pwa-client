@@ -40,7 +40,8 @@ class LoginCard extends Component {
     this.componentRefs = props.api.getComponents([
       'core.Logo@1.0.0',
       'core.Loading@1.0.0',
-      'core.BasicModal@1.0.0'
+      'core.BasicModal@1.0.0',
+      'microsoft.MicrosoftLogin@1.0.0'
     ]);
   }
 
@@ -88,10 +89,63 @@ class LoginCard extends Component {
   render() {
     const that = this;
     const { doLogin, props, context } = that;
-    const { theme, classes } = that.props;
+    const { theme, classes, authlist, magicLink } = props;
     const { busy, loginError, message } = this.state;
-    const { Logo } = this.componentRefs;
+    const { Logo, MicrosoftLogin } = this.componentRefs;
     const enableLogin = isEmail(this.state.username) && isValidPassword(this.state.password) && !busy;
+
+    const authcomponents = [];
+    
+    authlist.forEach( authType => {
+      switch (authType) {
+        case 'local': {
+          authcomponents.push((
+            <form style={{padding: '20px', borderBottom: `1px ${theme.palette.primary.main}`}} key={authType}>
+              <TextField
+                label="Email"
+                style={textStyle}
+                value={this.state.username}
+                onChange={this.updateUsername}
+                disabled={busy}
+                autoFocus={true}
+              />
+
+              <TextField
+                label='Password'
+                type='password'
+                style={textStyle}
+                value={this.state.password}
+                onChange={this.updatePassword}
+                onKeyPress={this.keyPressPassword}
+                disabled={busy}
+              />
+
+              <Fab
+                id="doLoginButton"
+                onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false || busy === true}
+                style={{ marginTop: '20px' }}>
+                <Icon>lock_open</Icon>
+              </Fab> <br />
+
+              <Button onClick={this.doForgot} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
+                Forgot Password
+              </Button>
+              {this.props.magicLink === true && <Fragment>
+                  <br/>
+                  <Button onClick={this.doEmailLogin} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
+                    Send Magic Link
+                  </Button>
+                </Fragment>}                    
+            </form>))
+            break;
+        }
+        case 'microsoft': {
+          authcomponents.push((<MicrosoftLogin key={authType} /> || <p>Login Button goes here</p>));
+          break;
+        }
+      }
+    });
+
     return (<CenteredContainer>
       <Logo />
       <Paper className={classes.root}>        
@@ -99,44 +153,7 @@ class LoginCard extends Component {
           <Icon fontSize='inherit'>security</Icon>
         </Typography>
         <Typography variant="subtitle1" color="secondary">{loginError || 'Welcome, please sign in below' }</Typography>
-        <form style={{padding: '20px'}}>
-          <TextField
-            label="Email"
-            style={textStyle}
-            value={this.state.username}
-            onChange={this.updateUsername}
-            disabled={busy}
-            autoFocus={true}
-          />
-
-          <TextField
-            label='Password'
-            type='password'
-            style={textStyle}
-            value={this.state.password}
-            onChange={this.updatePassword}
-            onKeyPress={this.keyPressPassword}
-            disabled={busy}
-          />
-
-          <Fab
-            id="doLoginButton"
-            onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false || busy === true}
-            style={{ marginTop: '20px' }}>
-            <Icon>lock_open</Icon>
-          </Fab> <br />
-
-          <Button onClick={this.doForgot} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
-            Forgot Password
-          </Button>
-          {this.props.magicLink === true && <Fragment>
-              <br/>
-              <Button onClick={this.doEmailLogin} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
-                Send Magic Link
-              </Button>
-            </Fragment>}
-          
-        </form>
+        {authcomponents}
       </Paper>
     </CenteredContainer>)
   }
@@ -149,10 +166,12 @@ class LoginCard extends Component {
   static propTypes = {
     api: PropTypes.instanceOf(ReactoryApi),
     magicLink: PropTypes.bool.isRequired,
+    authlist: PropTypes.array
   }
 
   static defaultProps = {
     magicLink: false,
+    authlist: ['local'],
   }
 
   static styles = theme => ({

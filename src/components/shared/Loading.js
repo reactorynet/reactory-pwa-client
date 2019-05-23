@@ -25,16 +25,19 @@ class Loading extends Component {
         margin: 'auto',
         marginTop: '100px',        
         minHeight: '300px',
+      },
+      nologo: {
+        minHeight: 'unset!'
       }    
     }
   };
 
   render(){
-    const { classes, icon, message, spinIcon } = this.props;
+    const { classes, icon, message, spinIcon, nologo } = this.props;
     return ( 
         <CenteredContainer>          
-          <Paper className={`${classes.root600} ${classes.paper}`}>
-            <Logo />
+          <Paper className={`${classes.root600} ${classes.paper} ${nologo === true ? classes.nologo : ''}`}>
+            { nologo === true ? null : <Logo /> }
             <Typography variant={'h6'}>{message} &nbsp;<Icon className={spinIcon === true ? classes.spinning: ''}>{icon}</Icon></Typography>
           </Paper>
         </CenteredContainer>
@@ -46,13 +49,15 @@ Loading.propTypes = {
   message: PropTypes.string,
   classes: PropTypes.object,
   icon: PropTypes.string,
-  spinIcon: PropTypes.bool
+  spinIcon: PropTypes.bool,
+  nologo: PropTypes.bool
 }
 
 Loading.defaultProps = {
   message: "Loading please stand by...",
   icon: 'cached',
-  spinIcon: true
+  spinIcon: true,
+  nologo: false
 }
 
 const ThemedLoading = compose(

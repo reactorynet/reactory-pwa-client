@@ -578,8 +578,8 @@ query UserSurveys($id: String) {
 `;
 
 const userInbox = gql`
-  query UserInboxQuery($id: String, $sort: String){
-    userInbox(id: $id, sort: $sort){
+  query UserInboxQuery($id: String, $sort: String, $via: String){
+    userInbox(id: $id, sort: $sort, via: $via){
       id
       sendAfter
       sentAt

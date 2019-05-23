@@ -79,7 +79,10 @@ const getTheme = () => {
   return localStorage.getItem('theme')
 }
 
-const api = new ReactoryApi(client);
+const api = new ReactoryApi(client, {
+  clientId: `${process.env.REACT_APP_CLIENT_KEY}`,
+  clientSecret: `${process.env.REACT_APP_CLIENT_PASSWORD}`
+});
 
 //register built-in components
 componentRegistery.forEach((componentDef) => {

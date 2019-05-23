@@ -64,8 +64,9 @@ const componentFqn = ({ nameSpace, name, version }) => {
 };        
 
 export class ReactoryApi extends EventEmitter {
-    constructor(client) {
+    constructor(client, props) {
         super();
+        this.props = props;
         this.componentRegister = {};
         this.client = client;
         this.queries = queries;
@@ -124,7 +125,7 @@ export class ReactoryApi extends EventEmitter {
         this.graphqlQuery = this.graphqlQuery.bind(this);
         this.getLastUserEmail = this.getLastUserEmail.bind(this);
         this.setLastUserEmail = this.setLastUserEmail.bind(this);
-        this.forms().then()
+        this.forms().then()        
     }
 
     graphqlMutation(mutation, variables, options = { fetchPolicy: 'network-only' }){
