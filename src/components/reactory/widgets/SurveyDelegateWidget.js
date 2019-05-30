@@ -129,7 +129,7 @@ class SurveyDelegates extends Component {
     const { DropDownMenu } = this.componentDefs;
     const self = this;
     const onMenuItemSelect = (evt, menuItem) => {
-      // //console.log('trigger menu item', {menuItem, delegateEntry})
+      console.log('trigger menu item', {menuItem, delegateEntry})
       switch(menuItem.id){
         case 'sendinvite': {
           self.sendCommunicationToDelegate(delegateEntry);
@@ -143,6 +143,10 @@ class SurveyDelegates extends Component {
         case 'launch': {
           self.launchSurveyForDelegate(delegateEntry);
           //this.launchSurvey(delegateEntry)
+          break;
+        }
+        case 'send-reminder': {
+          self.sendCommunicationToDelegate(delegateEntry, 'send-reminder');
           break;
         }
         case 'stop': {
@@ -374,8 +378,7 @@ class SurveyDelegates extends Component {
     console.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', {delegateEntry, action, inputData, busyMessage, batch});
     const { api, formContext } = this.props;
     const self = this;    
-    const doMutation = () => {
-      //console.log('SurveyDelegateWidget.doAction(...).doMutation()', {mutation, variables});
+    const doMutation = () => {      
 
       const mutation = gql`mutation SurveyDelegateAction($entryId: String!, $survey: String!, $delegate: String!, $action: String!, $inputData: Any){
         surveyDelegateAction(entryId: $entryId, survey: $survey, delegate: $delegate, action: $action, inputData: $inputData) {
@@ -724,7 +727,7 @@ class SurveyDelegates extends Component {
         },
         { 
           key: 'reminded',
-          title: 'Launched',
+          title: 'Reminded',
           description: '',
           icon: ''
         },
@@ -806,7 +809,7 @@ class SurveyDelegates extends Component {
         switch(status.key){                        
           case 'launched': {
             let statusCount = countBy(delegateEntry.assessments, 'complete')
-            console.log('Status Count', statusCount);
+            //console.log('Status Count', statusCount);
             userMessage = (
             <span>{delegateEntry.message}<br/>
             {statusCount.true || 0} / {delegateEntry.assessments.length} assessment(s) complete.
@@ -955,7 +958,7 @@ class SurveyDelegates extends Component {
           key: 'send-reminder',
           title: 'Send reminders',
           clickHandler: evt => {
-            console.log('Launch for selected charnas');
+            console.log('Send reminder to selected users');
             self.doAction(selectedDelegates, "send-reminder", null ,`Sending Reminders for ${selectedDelegates.length} delegates, please wait`, true);
           },
           icon: <Icon>alarm</Icon>,

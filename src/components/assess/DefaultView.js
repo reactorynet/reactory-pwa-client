@@ -660,8 +660,17 @@ class DefaultView extends Component {
     return (
       <Grid container spacing={8}>
         <Grid item sm={12} xs={12}>
+          <Typography variant="caption" color="primary">System Defined Behaviours for {quality.title}</Typography>
           {behaviours}
-          {customBehaviours}
+          
+          {customBehaviours.length > 0 ? 
+            <Fragment>
+              <hr style={{  marginBottom: `${this.props.theme.spacing.unit * 2}px`, 
+                          marginTop: `${this.props.theme.spacing.unit * 2}px` }} />
+              <Typography variant="caption" color="primary">Custom Behaviours for {quality.title} added by you</Typography>
+              {customBehaviours}
+            </Fragment> : null }
+          
         </Grid>
         {assessment.complete === false ? (
           <Grid item sm={12} xs={12}>
@@ -852,9 +861,13 @@ class DefaultView extends Component {
         </Grid>
         <Grid item xs={12} sm={12}>
           <MobileStepper
+            style={{              
+              background: '#fff',
+              borderTop: `1px solid ${theme.palette.primary.main}`,
+            }}
             variant="dots"
             steps={maxSteps}
-            position="static"
+            position="bottom"
             activeStep={step}
             nextButton={
               <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Please ensure you have completed each rating in full'}><Button size="small" onClick={nextStep} disabled={isCurrentStepValid === false}>
