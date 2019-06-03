@@ -58,7 +58,7 @@ class DefaultArrayItem extends Component {
 
 const MaterialArrayFieldItem = compose(
   withStyles(DefaultArrayItem.styles), 
-  withTheme())(DefaultArrayItem);
+  withTheme)(DefaultArrayItem);
 
 export default (props) => {
   return (<MaterialArrayFieldItem {...props} />)

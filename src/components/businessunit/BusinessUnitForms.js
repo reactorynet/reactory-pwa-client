@@ -233,7 +233,7 @@ class BusinessUnitForm extends Component {
   }
 }
 
-const BusinessUnitFormComponent = compose(withApi, withRouter, withStyles(BusinessUnitForm.Styles), withTheme())(BusinessUnitForm)
+const BusinessUnitFormComponent = compose(withApi, withRouter, withStyles(BusinessUnitForm.Styles), withTheme)(BusinessUnitForm)
 
 const BusinessUnitFormWithQueryComponent = compose(withRouter)((props, context) => {
   const { businessUnitId } = props.match.params

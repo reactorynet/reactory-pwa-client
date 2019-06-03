@@ -82,7 +82,7 @@ class EmailTemplateEditor extends Component {
 
 const EmailTemplateEditorComponent = compose(
   withApi,
-  withTheme(),
+  withTheme,
   withStyles(EmailTemplateEditor.styles),  
   withApollo,
 )(EmailTemplateEditor);
@@ -156,7 +156,7 @@ class TemplateList extends Component {
 
 const TemplateListComponent = compose(
   withApi,
-  withTheme(),
+  withTheme,
   withStyles(TemplateList.styles),
   withApollo,  
 )(TemplateList);

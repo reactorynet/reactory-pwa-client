@@ -161,6 +161,6 @@ class ChatCard extends Component {
 const _component = compose(
     withRouter,
     withStyles(ChatCard.styles),
-    withTheme()
+    withTheme
 )(ChatCard);
 export default _component;

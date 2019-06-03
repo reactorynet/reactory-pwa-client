@@ -238,7 +238,7 @@ class OrganizationForm extends Component {
 let DefaultFormComponent = compose(
   withApi,
   withRouter,
-  withTheme(),
+  withTheme,
   withStyles(FormStyles),
   withApollo,
 )(OrganizationForm);
@@ -614,7 +614,7 @@ class DefaultFormContainer extends Component {
 const DefaultFormContainerComponent = compose(
   withApi,
   withRouter,
-  withTheme(),
+  withTheme,
   withStyles(DefaultFormContainer.styles)
 )(DefaultFormContainer)
 

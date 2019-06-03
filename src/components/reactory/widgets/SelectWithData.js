@@ -32,7 +32,7 @@ class SelectWithDataWidget extends Component {
       minWidth: 120,
     },
     selectEmpty: {
-      marginTop: theme.spacing.unit * 2,
+      marginTop: theme.spacing(2),
     },
   });
 
@@ -122,5 +122,5 @@ class SelectWithDataWidget extends Component {
     }          
   }
 }
-const SelectWithDataWidgetComponent = compose(withTheme(), withStyles(SelectWithDataWidget.styles))(SelectWithDataWidget)
+const SelectWithDataWidgetComponent = compose(withTheme, withStyles(SelectWithDataWidget.styles))(SelectWithDataWidget)
 export default SelectWithDataWidgetComponent

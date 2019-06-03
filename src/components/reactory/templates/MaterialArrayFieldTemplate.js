@@ -30,11 +30,11 @@ class ArrayTemplate extends Component {
 
   static styles = (theme) => ({
     root: {
-      padding: theme.spacing.unit,
+      padding: theme.spacing(1),
       minHeight: '200px',
     },
     appBar: {
-      marginTop: theme.spacing.unit * 14,
+      marginTop: theme.spacing(14),
       top: 'auto',
       bottom: 0,
     },
@@ -51,7 +51,7 @@ class ArrayTemplate extends Component {
     fabButton: {      
       position: 'relative',
       right: 0,
-      marginRight: theme.spacing.unit,
+      marginRight: theme.spacing(1),
       float: 'right'
     },
   })
@@ -353,7 +353,7 @@ class ArrayTemplate extends Component {
 const MaterialArrayTemplate = compose(
   withApi,
   withStyles(ArrayTemplate.styles),
-  withTheme())(ArrayTemplate);
+  withTheme)(ArrayTemplate);
 
 export default (props) => {
   return (<MaterialArrayTemplate {...props} />)

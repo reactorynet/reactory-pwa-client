@@ -38,7 +38,7 @@ class Comment extends Component {
 
 export const CommentComponent = compose(
   withStyles(Comment.styles),
-  withTheme()
+  withTheme
 )(Comment)
 
 class Comments extends Component {
@@ -116,5 +116,5 @@ class Comments extends Component {
 
 export default compose(
   withStyles(Comments.styles),
-  withTheme()
+  withTheme
 )(Comments)

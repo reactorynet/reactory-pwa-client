@@ -54,5 +54,5 @@ const EmailSent = (props, context) => {
 
 export default compose(
   withStyles(ChartStyles),
-  withTheme()
+  withTheme
 )(EmailSent);

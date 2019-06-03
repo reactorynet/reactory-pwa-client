@@ -110,7 +110,7 @@ const AssessmentWrapperComponent = compose(
     withApi,
     withRouter,
     withStyles(AssessmentWrapper.styles),
-    withTheme()
+    withTheme
   )(AssessmentWrapper);
 
   export default AssessmentWrapperComponent;

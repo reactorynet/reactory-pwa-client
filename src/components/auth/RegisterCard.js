@@ -44,7 +44,7 @@ class RegisterCard extends Component {
     root: {
       maxWidth: '600px',
       minWidth: '320px',
-      padding: theme.spacing.unit,
+      padding: theme.spacing(1),
       textAlign: 'center',
     },
     logo: {
@@ -253,4 +253,4 @@ class RegisterCard extends Component {
   }
 };
 
-export default compose(withApi, withStyles(RegisterCard.styles), withTheme(), withRouter)(RegisterCard);
+export default compose(withApi, withStyles(RegisterCard.styles), withTheme, withRouter)(RegisterCard);

@@ -178,11 +178,11 @@ class LoginCard extends Component {
     root: {
       maxWidth: '600px',
       minWidth: '320px',
-      padding: theme.spacing.unit,
+      padding: theme.spacing(1),
       textAlign: 'center',
       margin: 'auto',
     },
   })
 };
 
-export default compose(withApi, withStyles(LoginCard.styles), withTheme(), withRouter)(LoginCard);
+export default compose(withApi, withStyles(LoginCard.styles), withTheme, withRouter)(LoginCard);

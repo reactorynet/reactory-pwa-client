@@ -28,8 +28,8 @@ class ObjectTemplate extends Component {
 
   static styles = (theme) => ({
     root: {
-      padding: theme.spacing.unit,
-      margin: theme.spacing.unit
+      padding: theme.spacing(1),
+      margin: theme.spacing(1)
     }
   })
 
@@ -85,7 +85,7 @@ class ObjectTemplate extends Component {
 const MaterialObjectTemplate = compose(
   withApi,
   withStyles(ObjectTemplate.styles),
-  withTheme())(ObjectTemplate)
+  withTheme)(ObjectTemplate)
 
 const MaterialObjectTemplateFunction = (props) => {
   return (<MaterialObjectTemplate {...props} />)

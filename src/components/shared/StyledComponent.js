@@ -25,4 +25,4 @@ StyledComponent.defaultProps = {
   styles: styles
 }
 
-export default StyledComponent = compose(withTheme(), withStyles(StyledComponent.styles))(StyledComponent)
+export default StyledComponent = compose(withTheme, withStyles(StyledComponent.styles))(StyledComponent)

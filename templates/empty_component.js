@@ -81,6 +81,6 @@ class NewComponent extends Component {
 const _component = compose(
     withRouter,
     withStyles(NewComponent.styles),
-    withTheme()
+    withTheme
   )(NewComponent);
   export default _component;

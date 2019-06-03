@@ -444,4 +444,4 @@ class FroalaWidget extends Component {
   }  
 }
 
-export default compose(withApi, withStyles(FroalaWidget.FroalaStyles), withTheme())(FroalaWidget)
+export default compose(withApi, withStyles(FroalaWidget.FroalaStyles), withTheme)(FroalaWidget)

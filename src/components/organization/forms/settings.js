@@ -88,4 +88,4 @@ ControlledExpansionPanels.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-export default compose(withApi, withRouter, withTheme(), withStyles(styles))(ControlledExpansionPanels);
+export default compose(withApi, withRouter, withTheme, withStyles(styles))(ControlledExpansionPanels);

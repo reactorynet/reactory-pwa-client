@@ -46,7 +46,7 @@ class MemberInvite extends Component {
     }    
 }
 
-const MemberInviteComponent = compose(withTheme())(MemberInvite);
+const MemberInviteComponent = compose(withTheme)(MemberInvite);
 
 class ChatBubble extends Component {
 
@@ -116,6 +116,6 @@ class ChatBubble extends Component {
 const _component = compose(
     withRouter,
     withStyles(ChatBubble.styles),
-    withTheme()
+    withTheme
   )(ChatBubble);
   export default _component;

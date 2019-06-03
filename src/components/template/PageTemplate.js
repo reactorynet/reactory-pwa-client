@@ -154,5 +154,5 @@ class PageBuilder extends Component {
 }
 
 export default {
-  PageBuilderComponent: compose(withApi, withStyles(PageBuilder.styles), withTheme(), withRouter)(PageBuilder)
+  PageBuilderComponent: compose(withApi, withStyles(PageBuilder.styles), withTheme, withRouter)(PageBuilder)
 }

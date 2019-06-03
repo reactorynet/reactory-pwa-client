@@ -42,7 +42,7 @@ class ProgressWidget extends Component {
   render(){
     const self = this
     const { formData, uiSchema, idSchema, classes } = this.props
-    //console.log('Rendering Pie Chart', this.props);
+    console.log('Rendering Pie Chart', this.props);
     let options = {};
     if(uiSchema['ui:options']) options = { ...uiSchema['ui:options'] };
     return (
@@ -53,7 +53,7 @@ class ProgressWidget extends Component {
     )
   }
 }
-export const ProgressWidgetComponent = compose(withTheme(), withStyles(ProgressWidget.styles))(ProgressWidget)
+export const ProgressWidgetComponent = compose(withTheme, withStyles(ProgressWidget.styles))(ProgressWidget)
 export default { 
   ProgressWidgetComponent
 }

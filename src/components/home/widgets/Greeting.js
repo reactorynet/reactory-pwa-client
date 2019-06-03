@@ -81,6 +81,6 @@ class GreetingWidget extends Component {
 const _component = compose(
     withRouter,
     withStyles(GreetingWidget.styles),
-    withTheme()
+    withTheme
   )(GreetingWidget);
   export default _component;

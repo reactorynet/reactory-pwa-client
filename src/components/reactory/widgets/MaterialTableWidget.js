@@ -1,17 +1,11 @@
 import React, { Fragment, Component } from 'react'
 import PropTypes from 'prop-types'
-import { pullAt } from 'lodash'
+import { pullAt, isNil } from 'lodash'
 import {
-  Chip,
-  IconButton,
-  Icon,
-  InputLabel,
-  Input,
-  Typography,
-  Tooltip,
-} from '@material-ui/core';
+  Typography 
+} from '@material-ui/core'
 import MaterialTable, { MTableToolbar } from 'material-table';
-
+import { withApi } from '../../../api/ApiProvider';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 
@@ -24,10 +18,10 @@ class MaterialTableWidget extends Component {
       flexWrap: 'wrap',
     },
     chip: {
-      margin: theme.spacing.unit,
+      margin: theme.spacing(1),
     },
     newChipInput: {
-      margin: theme.spacing.unit
+      margin: theme.spacing(1)
     }
   });
 
@@ -56,11 +50,35 @@ class MaterialTableWidget extends Component {
 
   render(){
     const self = this;
-    const uiOptions = this.props.uiSchema['ui:options'];
+    const { api } = self.props;
+    const uiOptions = this.props.uiSchema['ui:options'] || {};
     const { formData } = this.props;
     let columns = [];
     
-    if(uiOptions.columns && uiOptions.columns.length) columns = [...uiOptions.columns];        
+    if(uiOptions.columns && uiOptions.columns.length) { 
+      columns = uiOptions.columns.map( coldef => {
+        
+        const def = {
+          ...coldef
+        };
+
+        if(isNil(def.component) === false) {
+          const ColRenderer = api.getComponent(def.component);
+          def.render = ( rowData ) => {           
+            let props = { ...rowData };
+            if(def.props) {
+              props = { ...props, ...def.props }
+            } 
+            if(ColRenderer) return <ColRenderer { ...props } />
+            else return <Typography>Renderer {def.component} Not Found</Typography>
+          }
+
+          delete def.component;
+        }
+
+        return def;
+      });        
+    }
     let data = [];
     if(formData && formData.length) {
       formData.forEach( row => {
@@ -72,10 +90,10 @@ class MaterialTableWidget extends Component {
         <MaterialTable
             columns={columns}                    
             data={data}            
-            title={this.props.title || "no title"}
+            title={this.props.title || uiOptions.title || "no title"}            
             />
     )
   }
 }
-const MaterialTableWidgetComponent = compose(withTheme(), withStyles(MaterialTableWidget.styles))(MaterialTableWidget)
+const MaterialTableWidgetComponent = compose(withApi, withTheme, withStyles(MaterialTableWidget.styles))(MaterialTableWidget)
 export default MaterialTableWidgetComponent

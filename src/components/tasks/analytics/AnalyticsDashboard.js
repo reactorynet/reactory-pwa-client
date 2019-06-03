@@ -21,12 +21,12 @@ class AnalyticsDashboard extends Component {
         animation: 'spin 3s infinite',      
       },
       paper: {      
-        padding: theme.spacing.unit,        
+        padding: theme.spacing(1),        
         margin: 'auto',
         marginTop: '100px',        
         minHeight: '300px',
       }    
-    }
+    };
   };
 
   render(){
@@ -56,7 +56,7 @@ AnalyticsDashboard.defaultProps = {
 }
 
 const AnalyticsDashboardComponent = compose(
-  withTheme(),
+  withTheme,
   withStyles(AnalyticsDashboard.styles)
 )(AnalyticsDashboard)
 

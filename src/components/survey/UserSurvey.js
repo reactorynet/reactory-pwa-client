@@ -98,7 +98,7 @@ class UserSurvey extends Component {
         };
 
         return (
-            <Grid container spacing={16} className={classes.mainContainer} style={{marginTop: `${theme.spacing.unit * 4}`}}>
+            <Grid container spacing={16} className={classes.mainContainer} style={{marginTop: `${theme.spacing(1)}`}}>
                 {minimal === false ?  <Grid item sm={12} xs={12} md={12} offset={4}><Logo /></Grid> : null }                
                 
                 <Grid item sm={12} xs={12} md={12} offset={4}>
@@ -154,7 +154,7 @@ const ThemedSurveyComponent = compose(
     withApi,
     withRouter,
     withStyles(UserSurvey.styles),
-    withTheme()
+    withTheme
 )(UserSurvey);
 
 const UserSurveyComponent = ({ userId, api, onSurveySelect, minimal = true, showComplete = true }) => {

@@ -39,4 +39,4 @@ class Main extends Component {
     }
 }
 
-export default withTheme()(Main);
+export default withTheme(Main);

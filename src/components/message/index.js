@@ -111,4 +111,4 @@ class Message extends Component {
 export default compose(
   withMobileDialog, 
   withStyles(Message.styles), 
-  withTheme())(Message);
+  withTheme)(Message);

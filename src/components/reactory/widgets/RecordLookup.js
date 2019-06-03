@@ -31,7 +31,7 @@ class RecordLookup extends Component {
       minWidth: 120,
     },
     selectEmpty: {
-      marginTop: theme.spacing.unit * 2,
+      marginTop: theme.spacing(2),
     },
   });
 
@@ -77,5 +77,5 @@ class RecordLookup extends Component {
     )
   }
 }
-const RecordLookupWidgetComponent = compose(withApi, withTheme(), withStyles(RecordLookup.styles))(RecordLookup)
+const RecordLookupWidgetComponent = compose(withApi, withTheme, withStyles(RecordLookup.styles))(RecordLookup)
 export default RecordLookupWidgetComponent

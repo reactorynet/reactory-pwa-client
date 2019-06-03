@@ -248,11 +248,11 @@ class Taskboard extends Component {
                 padding: '5px'
             },
             formControl: {
-                margin: theme.spacing.unit,
+                margin: theme.spacing(1),
                 minWidth: 120,
             },
             selectEmpty: {
-                marginTop: theme.spacing.unit * 2,
+                marginTop: theme.spacing(2),
             },
             buttonRow: {
                 display: 'flex',
@@ -336,7 +336,7 @@ class Taskboard extends Component {
 const TaskboardComponent = compose(
     withRouter,
     withStyles(Taskboard.styles),
-    withTheme()
+    withTheme
 )(Taskboard);
 
 export default TaskboardComponent;
@@ -482,7 +482,7 @@ class TaskListItem extends Component {
 export const TaskListItemComponent = compose(
     withRouter,
     withStyles(TaskListItem.styles),
-    withTheme()
+    withTheme
 )(TaskListItem);
 
 class TaskList extends Component {
@@ -580,7 +580,7 @@ class TaskList extends Component {
 export const TaskListComponent = compose(
     withRouter,
     withStyles(TaskList.styles),
-    withTheme()
+    withTheme
 )(TaskList);
 
 class TaskDetail extends Component {
@@ -593,7 +593,7 @@ class TaskDetail extends Component {
                 float: 'right'
             },
             taskHeader: {
-                marginBottom: theme.spacing.unit * 1.5,
+                marginBottom: theme.spacing(1.5),
                 display: 'flex',
                 flex: 1,
                 justifyContent: 'space-between'
@@ -602,16 +602,16 @@ class TaskDetail extends Component {
                 display: 'flex',
                 flex: 1,
                 justifyContent: 'space-between',
-                marginTop: theme.spacing.unit,
+                marginTop: theme.spacing(1),
             },
             taskDetail: {
-                paddingTop: theme.spacing.unit,
-                paddingBottom: theme.spacing.unit,
+                paddingTop: theme.spacing(1),
+                paddingBottom: theme.spacing(1),
             },
             createdBy: {
                 extend: 'taskDetail',
             }
-        }
+        };
     };
 
     static propTypes = {
@@ -680,7 +680,7 @@ export const TaskDetailComponent = compose(
     withApi,
     withRouter,
     withStyles(TaskDetail.styles),
-    withTheme()
+    withTheme
 )(TaskDetail);
 
 
@@ -785,6 +785,6 @@ class TaskDashboard extends Component {
 export const TaskDashboardComponent = compose(
     withRouter,
     withStyles(TaskDashboard.styles),
-    withTheme()
+    withTheme
 )(TaskDashboard);
 

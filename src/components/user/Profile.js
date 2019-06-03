@@ -96,7 +96,7 @@ class Profile extends Component {
             marginRight: 'auto',
         },
         margin: {
-            margin: theme.spacing.unit,
+            margin: theme.spacing(1),
         },
         confirmed: {            
             color: '#02603B'
@@ -108,8 +108,8 @@ class Profile extends Component {
             width: '98%'
         },
         confirmedLabel: {
-            margin: theme.spacing.unit,
-            marginLeft: theme.spacing.unit * 2
+            margin: theme.spacing(1),
+            marginLeft: theme.spacing(2)
         },        
         avatarContainer: {
             width: '100%',
@@ -124,15 +124,15 @@ class Profile extends Component {
             height: 120,
         },
         general: {
-            padding: theme.spacing.unit,
+            padding: theme.spacing(1),
         },
         hiddenInput: {
             display: 'none'
         },
         peerToolHeader: {
             ...theme.mixins.gutters(),
-            paddingTop: theme.spacing.unit * 2,
-            paddingBottom: theme.spacing.unit * 2,
+            paddingTop: theme.spacing(2),
+            paddingBottom: theme.spacing(2),
         }
     });
 
@@ -1077,6 +1077,6 @@ const ProfileViewComponent = compose(
     withRouter,
     withApi,
     withStyles(Profile.styles),
-    withTheme()
+    withTheme
 )(Profile);
 export default ProfileViewComponent;

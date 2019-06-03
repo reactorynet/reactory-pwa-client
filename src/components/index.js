@@ -23,6 +23,7 @@ import ReportComponent from './report/index';
 import KanbanDashboardComponent, { TaskListComponentWithData, TaskDetailWithData } from './home/kanban/KanbanDashboard';
 import TowerStoneHome from './home/TowerStoneHomeComponent';
 import Loading from './shared/Loading';
+import LinkComponent from './shared/Link';
 import ReactoryRouterComponent, { ReactoryFormComponent } from './reactory'
 import { TaskListComponent, TaskDashboardComponent } from './tasks/Taskboard';
 import AdminDashboardComponent from './admin/dashboard'
@@ -36,6 +37,7 @@ import BasicModal from './shared/BasicModal';
 import AotAnalyticsDashboardComponent from './tasks/analytics/AnalyticsDashboard';
 import SpeedDialWidget from './shared/SpeedDialWidget';
 import FullScreenDialog from './shared/FullScreenDialog';
+import FramedWindow from './shared/FramedWindow';
 import FroalaWired from './richtext/Froala';
 
 
@@ -80,6 +82,12 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'core',
+    name: 'Link',
+    component: LinkComponent,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
     name: 'SingleColumnLayout',
     component: SingleColumnLayout,
     version: '1.0.0'
@@ -113,6 +121,12 @@ export const componentRegistery = [
     name: 'EmptyComponent',
     component: <p>Component Not Found</p>,
     version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'FramedWindow',
+    version: '1.0.0',
+    component: FramedWindow,
   },
   {
     nameSpace: 'core',
@@ -443,7 +457,7 @@ export const componentRegistery = [
     name: 'FroalaEditor',
     version: '1.0.0',
     component: FroalaWired
-  },
+  },  
   {
     nameSpace: 'material-ui',
     name: 'MaterialCore',
@@ -461,7 +475,7 @@ export const componentRegistery = [
     name: 'MaterialLab',
     version: '1.0.0',
     component: MaterialLab,
-  },
+  },  
   {
     nameSpace: 'core',
     name: 'DropDownMenu',

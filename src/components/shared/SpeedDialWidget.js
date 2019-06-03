@@ -23,24 +23,24 @@ const styles = theme => ({
     width: '100%',
   },
   controls: {
-    margin: theme.spacing.unit * 3,
+    margin: theme.spacing(1)
   },
   exampleWrapper: {
     position: 'relative',
     height: 80,
   },
   radioGroup: {
-    margin: `${theme.spacing.unit}px 0`,
+    margin: `${theme.spacing(1)}px 0`,
   },
   speedDial: {
     position: 'absolute',
     '&$directionUp, &$directionLeft': {
-      bottom: theme.spacing.unit * 2,
-      right: theme.spacing.unit * 2,
+      bottom: theme.spacing(2),
+      right: theme.spacing(2),
     },
     '&$directionDown, &$directionRight': {
-      top: theme.spacing.unit * 2,
-      left: theme.spacing.unit * 3,
+      top: theme.spacing(2),
+      left: theme.spacing(3),
     },
   },
   directionUp: {},

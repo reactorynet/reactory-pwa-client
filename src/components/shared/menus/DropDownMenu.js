@@ -110,7 +110,7 @@ export class DropDownMenu extends Component {
 
 DropDownMenu.muiName = 'IconMenu';
 
-export const DropDownMenuComponent = compose(withStyles(DropDownMenu.styles), withTheme())(DropDownMenu);
+export const DropDownMenuComponent = compose(withStyles(DropDownMenu.styles), withTheme)(DropDownMenu);
 export default {
   DropDownMenuComponent
 };

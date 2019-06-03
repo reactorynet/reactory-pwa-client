@@ -6,11 +6,11 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import moment from 'moment';
 import StyledComponent from '../shared/StyledComponent';
 
-class Calendar extends StyledComponent {
+class Calendar extends Component {
 
   static CalendarStyles = (theme) => StyledComponent.styles(theme, {
     Container: {
-      padding: theme.spacing.unit,
+      padding: theme.spacing(1),
       height: '550px',
     },
     card: {

@@ -22,7 +22,7 @@ class UserWidgetWithSearch extends Component {
       minWidth: 120,
     },
     selectEmpty: {
-      marginTop: theme.spacing.unit * 2,
+      marginTop: theme.spacing(2),
     },
   });
 
@@ -126,7 +126,7 @@ class UserWidgetWithSearch extends Component {
 }
 const UserWidgetWithSearchComponent = compose(
   withApi,
-  withTheme(),
+  withTheme,
   withStyles(UserWidgetWithSearch.styles)
   )(UserWidgetWithSearch)
 export default UserWidgetWithSearchComponent

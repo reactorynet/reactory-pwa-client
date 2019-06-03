@@ -52,7 +52,7 @@ class SurveyDelegate extends Component {
   }
 }
 
-export const SurveyDelegateComponent = compose(withApi, withTheme(), withStyles(SurveyDelegate.styles))(SurveyDelegate);
+export const SurveyDelegateComponent = compose(withApi, withTheme, withStyles(SurveyDelegate.styles))(SurveyDelegate);
 
 function TabContainer(props) {
   return (
@@ -902,11 +902,11 @@ class SurveyDelegates extends Component {
                   <ListSubheader style={{ padding: "0px" }}>
                     <Paper style={{display: 'flex', justifyContent: 'flex-start' }}>                      
                       <Tooltip title="Click to toggle the select status">
-                        <IconButton color="primary" onClick={toggleWithStatus} style={{marginRight: self.props.theme.spacing.unit * 2}}>
+                        <IconButton color="primary" onClick={toggleWithStatus} style={{marginRight: self.props.theme.spacing(2)}}>
                           <Icon>{status.icon}</Icon>
                         </IconButton>
                       </Tooltip>
-                      <Typography color="primary" variant="caption" style={{marginLeft: 'auto', marginRight: self.props.theme.spacing.unit, paddingTop: self.props.theme.spacing.unit }}>{status.title}</Typography>                      
+                      <Typography color="primary" variant="caption" style={{marginLeft: 'auto', marginRight: self.props.theme.spacing(1), paddingTop: self.props.theme.spacing(1) }}>{status.title}</Typography>                      
                     </Paper>                    
                   </ListSubheader>
                   {
@@ -1006,7 +1006,7 @@ class SurveyDelegates extends Component {
 SurveyDelegates.styles = (theme) => {
   return {
     root: {
-      padding: theme.spacing.unit * 2
+      padding: theme.spacing(1)
     },
     container: {
       margin: 'auto',
@@ -1029,7 +1029,7 @@ SurveyDelegates.styles = (theme) => {
 };
 
 
-export const SurveyDelegatesComponent = compose(withApi, withTheme(), withStyles(SurveyDelegates.styles))(SurveyDelegates)
+export const SurveyDelegatesComponent = compose(withApi, withTheme, withStyles(SurveyDelegates.styles))(SurveyDelegates)
 
 
 export default {

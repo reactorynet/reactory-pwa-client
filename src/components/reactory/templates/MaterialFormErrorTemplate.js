@@ -10,8 +10,8 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 
 class MaterialFormErrorTemplate extends Component {
   static ErrorStyles = (theme) => ({
-    margin: theme.spacing.unit * 2,
-    padding: theme.spacing.unit * 2,
+    margin: theme.spacing(2),
+    padding: theme.spacing(2),
   });
 
   render(){
@@ -24,7 +24,7 @@ class MaterialFormErrorTemplate extends Component {
   }
 }
 
-export const MaterialFormTemplateComponent = compose(withStyles(MaterialFormErrorTemplate.ErrorStyles), withTheme())(MaterialFormErrorTemplate);
+export const MaterialFormTemplateComponent = compose(withStyles(MaterialFormErrorTemplate.ErrorStyles), withTheme)(MaterialFormErrorTemplate);
 export default {
   MaterialFormTemplateComponent,
 }

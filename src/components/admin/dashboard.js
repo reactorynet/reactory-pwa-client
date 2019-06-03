@@ -77,5 +77,5 @@ export default compose(
   withApi,
   withRouter,
   withStyles(AdminDashboard.styles),
-  withTheme()
+  withTheme
 )(AdminDashboard)

@@ -23,10 +23,10 @@ class ChipArray extends Component {
       flexWrap: 'wrap',
     },
     chip: {
-      margin: theme.spacing.unit,
+      margin: theme.spacing(1),
     },
     newChipInput: {
-      margin: theme.spacing.unit
+      margin: theme.spacing(1)
     }
   });
 
@@ -83,7 +83,7 @@ class ChipArray extends Component {
         self.onHandleChipLabelDelete(label, index);
       }
 
-      return (<Chip key={index} color="primary" onDelete={handleDelete} variant="outlined" label={label}/>); 
+      return (<Chip key={index} onDelete={handleDelete} variant="outlined" label={label}/>); 
     });
 
     const clearAll = () => this.props.onChange([])
@@ -107,5 +107,5 @@ class ChipArray extends Component {
     )
   }
 }
-const ChipArrayComponent = compose(withTheme(), withStyles(ChipArray.styles))(ChipArray)
+const ChipArrayComponent = compose(withTheme, withStyles(ChipArray.styles))(ChipArray)
 export default ChipArrayComponent

@@ -163,7 +163,7 @@ class DelegateSearch extends Component {
 }
 
 const DelegateSearchComponent = compose(
-  withTheme(),
+  withTheme,
   withStyles(DelegateSearch.styles),
   withApollo
 )(DelegateSearch)
@@ -267,7 +267,7 @@ class DelegateAdmin extends Component {
 DelegateAdmin.styles = (theme) => ({});
 
 const DelegateAdminComponent = compose(
-  withTheme(),
+  withTheme,
   withStyles(DelegateAdmin.styles),
   withRouter,
   withApi
@@ -314,7 +314,7 @@ class SurveyAdmin extends Component {
       marginBottom: '5px'
     },
     group: {
-      margin: `${theme.spacing.unit}px 0`,
+      margin: `${theme.spacing(1)}px 0`,
     },
   })
 
@@ -408,7 +408,7 @@ class SurveyAdmin extends Component {
 }
 
 const SurveyAdminComponent = compose(
-  withTheme(),
+  withTheme,
   withStyles(SurveyAdmin.styles),
   withRouter,
   withApollo,
@@ -418,7 +418,7 @@ const SurveyAdminComponent = compose(
 const CalendarStyles = (theme) => {
   return {
     Container: {
-      padding: theme.spacing.unit,
+      padding: theme.spacing(1),
       height: '550px',
     },
     card: {
@@ -435,7 +435,7 @@ const CalendarStyles = (theme) => {
     pos: {
       marginBottom: 12,
     },
-  }
+  };
 }
 
 
@@ -548,7 +548,7 @@ class AdminCalendar extends Component {
 const ThemedCalendar = compose(
   withApi,
   withRouter,
-  withTheme(),
+  withTheme,
   withStyles(CalendarStyles)
 )(AdminCalendar)
 

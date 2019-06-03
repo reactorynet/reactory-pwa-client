@@ -38,7 +38,7 @@ export class UserListWithSearch extends Component {
         width: '100%',
         overflowX: 'scroll',
         maxHeight: (window.innerHeight - 140),
-        padding: theme.spacing.unit,
+        padding: theme.spacing(1),
         display: 'flex',
         justifyContent: 'center',
         minWidth: 250 * 5
@@ -47,11 +47,11 @@ export class UserListWithSearch extends Component {
         padding: '5px'
       },
       formControl: {
-        margin: theme.spacing.unit,
+        margin: theme.spacing(1),
         minWidth: 120,
       },
       selectEmpty: {
-        marginTop: theme.spacing.unit * 2,
+        marginTop: theme.spacing(2),
       },
       buttonRow: {
         display: 'flex',
@@ -67,14 +67,14 @@ export class UserListWithSearch extends Component {
       column: {
         maxHeight: (window.innerHeight - 140),
         overflowY: 'scroll',
-        padding: theme.spacing.unit,
-        margin: theme.spacing.unit * 2,
+        padding: theme.spacing(1),
+        margin: theme.spacing(2),
         minWidth: '250px',
         maxWidth: '350px',
         width: (window.innerWidth / 5)
       },
       toolbar: {
-        marginBottom: theme.spacing.unit * 2
+        marginBottom: theme.spacing(2)
       },
       menuButton: {
         marginLeft: -12,
@@ -93,16 +93,16 @@ export class UserListWithSearch extends Component {
         '&:hover': {
           backgroundColor: fade(theme.palette.common.white, 0.25),
         },
-        marginRight: theme.spacing.unit * 2,
+        marginRight: theme.spacing(2),
         marginLeft: 0,
         width: '100%',
         [theme.breakpoints.up('sm')]: {
-          marginLeft: theme.spacing.unit * 3,
+          marginLeft: theme.spacing(3),
           width: 'auto',
         },
       },
       searchIcon: {
-        width: theme.spacing.unit * 9,
+        width: theme.spacing(9),
         height: '100%',
         position: 'absolute',
         pointerEvents: 'none',
@@ -115,10 +115,10 @@ export class UserListWithSearch extends Component {
         width: '100%',
       },
       inputInput: {
-        paddingTop: theme.spacing.unit,
-        paddingRight: theme.spacing.unit,
-        paddingBottom: theme.spacing.unit,
-        paddingLeft: theme.spacing.unit * 10,
+        paddingTop: theme.spacing(1),
+        paddingRight: theme.spacing(1),
+        paddingBottom: theme.spacing(1),
+        paddingLeft: theme.spacing(10),
         transition: theme.transitions.create('width'),
         width: '100%',
         [theme.breakpoints.up('md')]: {
@@ -137,7 +137,7 @@ export class UserListWithSearch extends Component {
           display: 'none',
         },
       }
-    })
+    });
   }
 
   static propTypes = {
@@ -298,7 +298,7 @@ export class UserListWithSearch extends Component {
 
 export const UserListWithSearchComponent = compose(
   withStyles(UserListWithSearch.Styles),
-  withTheme(), 
+  withTheme, 
   withApi,
   withRouter)(UserListWithSearch);
 

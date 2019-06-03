@@ -24,7 +24,7 @@ const AssessmentItemStyles = (theme) => {
   }
 }
 
-const AssessmentListItem = compose(withApi, withStyles(AssessmentItemStyles), withTheme())((props) => {
+const AssessmentListItem = compose(withApi, withStyles(AssessmentItemStyles), withTheme)((props) => {
 
   const { assessment, api } = props;
   const avatarSrc = api.getAvatar(assessment.assessor);
@@ -214,7 +214,7 @@ class AssessmentTable extends Component {
   }
 }
 
-export const AssessmentTableComponent = compose(withApi, withTheme(), withStyles(AssessmentTable.styles))(AssessmentTable)
+export const AssessmentTableComponent = compose(withApi, withTheme, withStyles(AssessmentTable.styles))(AssessmentTable)
 
 class AssessmentList extends Component {
 
@@ -281,4 +281,4 @@ class AssessmentList extends Component {
   }
 }
 
-export default compose(withTheme(), withStyles(AssessmentList.styles))(AssessmentList)
+export default compose(withTheme, withStyles(AssessmentList.styles))(AssessmentList)

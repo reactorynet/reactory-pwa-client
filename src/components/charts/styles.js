@@ -1,6 +1,6 @@
 
 export const ChartStyles = (theme) => ({
   chartContainer: {
-    padding: theme.spacing.unit
+    padding: theme.spacing(1)
   }
 })

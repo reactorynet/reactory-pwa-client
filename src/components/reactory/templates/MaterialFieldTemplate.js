@@ -25,7 +25,7 @@ const MaterialFieldStyles = (theme) => {
   return { }
 };
 
-export default compose(withTheme(), withStyles(MaterialFieldStyles), withApi)((props) => {
+export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((props) => {
   //debugger  
   const {
     id, //The id of the field in the hierarchy. You can use it to render a label targeting the wrapped widget.

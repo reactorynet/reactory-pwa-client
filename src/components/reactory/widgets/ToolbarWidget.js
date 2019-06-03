@@ -57,5 +57,5 @@ ToolbarWidget.propTypes = {
   classes: PropTypes.object,
 };
 
-export const ToolbarWidgetComponent = compose(withApi, withStyles(ToolbarWidget.styles), withTheme())(ToolbarWidget);
+export const ToolbarWidgetComponent = compose(withApi, withStyles(ToolbarWidget.styles), withTheme)(ToolbarWidget);
 export default ToolbarWidgetComponent

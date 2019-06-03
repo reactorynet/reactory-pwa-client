@@ -173,7 +173,7 @@ Forgot.styles = theme => ({
 
 export const ForgotForm = compose(
   withStyles(Forgot.styles),
-  withTheme(),
+  withTheme,
   withApi,
   withRouter)(Forgot);
 
@@ -307,12 +307,12 @@ SearchUser.styles = theme => ({
 
 export const SearchUserForm = compose(
   withStyles(SearchUser.styles),
-  withTheme(),
+  withTheme,
 )(SearchUser);
 
 export const ResetPasswordForm = compose(
   withStyles(ResetPassword.styles),
-  withTheme(),
+  withTheme,
   withApi,
   withRouter)(ResetPassword);
 

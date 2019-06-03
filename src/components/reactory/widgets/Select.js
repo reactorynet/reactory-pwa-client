@@ -29,7 +29,7 @@ class SelectWidget extends Component {
       minWidth: 120,
     },
     selectEmpty: {
-      marginTop: theme.spacing.unit * 2,
+      marginTop: theme.spacing(2),
     },
   });
 
@@ -88,5 +88,5 @@ class SelectWidget extends Component {
     )
   }
 }
-const SelectWidgetComponent = compose(withTheme(), withStyles(SelectWidget.styles))(SelectWidget)
+const SelectWidgetComponent = compose(withTheme, withStyles(SelectWidget.styles))(SelectWidget)
 export default SelectWidgetComponent

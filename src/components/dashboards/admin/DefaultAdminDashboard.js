@@ -52,7 +52,7 @@ class DefaultAdminDashboard extends Component {
 
 let DefaultAdminDashboardComponent = compose(
   withStyles(DefaultAdminDashboard.styles),
-  withTheme(),  
+  withTheme,  
   connect(DefaultAdminDashboard.mapStateToProps, DefaultAdminDashboard.mapDispatchToProps)
 )(DefaultAdminDashboard)
 

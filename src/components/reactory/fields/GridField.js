@@ -139,8 +139,8 @@ class MaterialGridField extends ObjectField {
   static styles = theme => ({
     root: {
       ...theme.mixins.gutters(),
-      paddingTop: theme.spacing.unit * 2,
-      paddingBottom: theme.spacing.unit * 2,
+      paddingTop: theme.spacing(2),
+      paddingBottom: theme.spacing(2),
     }
   });
 
@@ -235,7 +235,7 @@ class MaterialGridField extends ObjectField {
   }
 }
 
-export const MaterialGridFieldComponent =  compose(withApi, withStyles(MaterialGridField.styles), withTheme())(MaterialGridField);
+export const MaterialGridFieldComponent =  compose(withApi, withStyles(MaterialGridField.styles), withTheme)(MaterialGridField);
 
 export default {
   BootstrapGridField,

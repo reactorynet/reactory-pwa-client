@@ -73,7 +73,7 @@ const styles = (theme) => {
             maxWidth: '370px'
         },
         container: {
-            padding: theme.spacing.unit,
+            padding: theme.spacing(1),
         }
     };
 };
@@ -356,7 +356,7 @@ class TowerStoneHomeComponent extends Component {
 const HomeComponent = compose(
     withRouter,
     withApi,
-    withTheme(),
+    withTheme,
     withStyles(styles),    
 )(TowerStoneHomeComponent);
 export default HomeComponent;

@@ -38,7 +38,7 @@ Logo.styles = (theme) => ({
 
 const ThemedLogo = compose( 
   withStyles(Logo.styles),
-  withTheme()  
+  withTheme  
 )(Logo);
 
 export default ThemedLogo;

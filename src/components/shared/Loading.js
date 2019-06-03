@@ -21,7 +21,7 @@ class Loading extends Component {
         animation: 'spin 3s infinite',      
       },
       paper: {      
-        padding: theme.spacing.unit,        
+        padding: theme.spacing(1),        
         margin: 'auto',
         marginTop: '100px',        
         minHeight: '300px',
@@ -29,7 +29,7 @@ class Loading extends Component {
       nologo: {
         minHeight: 'unset!'
       }    
-    }
+    };
   };
 
   render(){
@@ -61,7 +61,7 @@ Loading.defaultProps = {
 }
 
 const ThemedLoading = compose(
-  withTheme(),
+  withTheme,
   withStyles(Loading.styles)
 )(Loading)
 

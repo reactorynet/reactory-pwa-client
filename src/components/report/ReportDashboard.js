@@ -194,7 +194,7 @@ class ReportCard extends Component {
     }
 }
 
-const ReportCardComponent = compose(withRouter, withTheme(), withStyles(ReportCard.styles))(ReportCard);
+const ReportCardComponent = compose(withRouter, withTheme, withStyles(ReportCard.styles))(ReportCard);
 
 const collectRatingsForQuality = (report, quality) => {
     const ratings = []
@@ -250,7 +250,7 @@ class BarChartForQuality extends Component  {
     }
 }
 
-const ThemedBarChartForQuality = compose(withTheme(), withStyles(BarChartForQuality.styles))(BarChartForQuality)
+const ThemedBarChartForQuality = compose(withTheme, withStyles(BarChartForQuality.styles))(BarChartForQuality)
 
 class ReportDetail extends Component {
     constructor(props, context){
@@ -281,8 +281,8 @@ class ReportDetail extends Component {
             },
             paper: {
                 ...theme.mixins.gutters(),
-                paddingTop: theme.spacing.unit * 2,
-                paddingBottom: theme.spacing.unit * 2,
+                paddingTop: theme.spacing(2),
+                paddingBottom: theme.spacing(2),
             },
             reportHeader: {
                 paddingTop: '120px',
@@ -293,7 +293,7 @@ class ReportDetail extends Component {
                 width: '120px',
                 height: '120px',
             },                        
-        }
+        };
     }
 
     static propTypes = {
@@ -489,7 +489,7 @@ class ReportDetail extends Component {
 }
 
 
-const ReportDetailComponent = compose(withApi, withTheme(), withStyles(ReportDetail.styles))(ReportDetail)
+const ReportDetailComponent = compose(withApi, withTheme, withStyles(ReportDetail.styles))(ReportDetail)
 
 class ReportDashboard extends Component {
 
@@ -610,9 +610,9 @@ ReportDashboard.styles = (theme) => {
             marginRight: 'auto',
         },
         reportGroup: {
-            padding: theme.spacing.unit
+            padding: theme.spacing(1)
         }
-    }
+    };
 };
 
 
@@ -620,7 +620,7 @@ export const ThemeReportDashboard = compose(
     withApi,
     withRouter,
     withStyles(ReportDashboard.styles),
-    withTheme()
+    withTheme
   )(ReportDashboard);
 
 const UserReportComponentWithQuery = ({organizationId, api, onUserSelect}) => {  

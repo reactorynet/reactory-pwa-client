@@ -377,9 +377,15 @@ export class ReactoryApi extends EventEmitter {
     }
 
     getComponent(fqn){
-        const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]        
-        if(found && found.component) return found.component        
-        return null
+        try {
+            const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]        
+            if(found && found.component) return found.component        
+            return null
+        } catch (err) {
+            console.error(`Bad component name "${fqn}"`)
+            return null
+        }
+        
     }
 
     logout(refreshStatus = true) {

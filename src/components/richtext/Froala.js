@@ -22,9 +22,9 @@ class FroalaEditor extends Component {
   static styles = (theme) => {
     return { 
       popupContainer: {
-        margin: theme.spacing.unit,
+        margin: theme.spacing(1),
       },
-    }
+    };
   }
 
   constructor(props, context) { 
@@ -419,5 +419,5 @@ class FroalaEditor extends Component {
   }    
 }
 
-const FroalaWired = compose(withApi, withTheme(), withStyles(FroalaEditor.styles))(FroalaEditor);
+const FroalaWired = compose(withApi, withTheme, withStyles(FroalaEditor.styles))(FroalaEditor);
 export default FroalaWired;

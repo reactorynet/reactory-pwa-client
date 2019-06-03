@@ -30,5 +30,5 @@ const PendingPeerConfirmations = (props, context) => {
 
 export default compose(
   withStyles(ChartStyles),
-  withTheme()
+  withTheme
 )(PendingPeerConfirmations);

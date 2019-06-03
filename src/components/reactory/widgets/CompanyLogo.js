@@ -30,7 +30,7 @@ class CompanyLogoWidget extends Component {
       minWidth: 120,
     },
     selectEmpty: {
-      marginTop: theme.spacing.unit * 2,
+      marginTop: theme.spacing(2),
     },
   });
 
@@ -110,7 +110,7 @@ class CompanyLogoWidget extends Component {
 }
 const CompanyLogoWidgetComponent = compose(
   withApi,
-  withTheme(),
+  withTheme,
   withStyles(CompanyLogoWidget.styles)
   )(CompanyLogoWidget)
 export default CompanyLogoWidgetComponent

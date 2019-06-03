@@ -89,7 +89,7 @@ const UserSearchInput = (props, context) => {
 }
 
 export const UserSearchInputComponent = compose(
-  withTheme(),
+  withTheme,
   withStyles(UserSearchInputStyles)
 )(UserSearchInput)
 
@@ -402,8 +402,8 @@ class Inbox extends Component {
         overflowY: 'scroll'
       },
       PreviewPane: {
-        margin: `${theme.spacing.unit}px`,
-        padding: `${theme.spacing.unit}px`,
+        margin: `${theme.spacing(1)}px`,
+        padding: `${theme.spacing(1)}px`,
       },
       PreviewBody: {
         outline: '1px solid black',
@@ -411,7 +411,7 @@ class Inbox extends Component {
         width: '100%',
         overflow: 'scroll',        
       }      
-    }
+    };
   }
 
   onItemSelect(index){
@@ -479,7 +479,7 @@ class Inbox extends Component {
   }
 }
 
-export const ThemedInbox = compose(withTheme(), withStyles(Inbox.styles))(Inbox);
+export const ThemedInbox = compose(withTheme, withStyles(Inbox.styles))(Inbox);
 
 export const UserInbox = compose(withApi)(({ api, via = 'local' }) => (
   <Query query={api.queries.Users.userInbox} variables={{ order: 'asc', via }}>
@@ -586,7 +586,7 @@ UserList.defaultProps = {
 
  
 export const UserListWithData = compose(
-  withTheme(),
+  withTheme,
   withApi
 )(UserList);
 
@@ -626,7 +626,7 @@ class Logout extends Component {
 }
 
 export const LogoutComponent = compose(
-  withTheme(),
+  withTheme,
   withApi,
   withRouter,
 )(Logout)

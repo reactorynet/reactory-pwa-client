@@ -23,10 +23,10 @@ class UserPeers extends Component {
       flexWrap: 'wrap',
     },
     chip: {
-      margin: theme.spacing.unit,
+      margin: theme.spacing(1),
     },
     newChipInput: {
-      margin: theme.spacing.unit
+      margin: theme.spacing(1)
     }
   });
 
@@ -62,5 +62,5 @@ class UserPeers extends Component {
     )
   }
 }
-const UserPeersComponent = compose(withTheme(), withStyles(UserPeers.styles))(UserPeers)
+const UserPeersComponent = compose(withTheme, withStyles(UserPeers.styles))(UserPeers)
 export default UserPeersComponent

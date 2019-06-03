@@ -1,12 +1,12 @@
 export const coreStyles = (theme) => ({
   root600: {
-    padding: theme.spacing.unit,
+    padding: theme.spacing(1),
     maxWidth: '600px',
     minWidth: '320px',
     textAlign: 'center',
   },
   root900: {
-    padding: theme.spacing.unit,
+    padding: theme.spacing(1),
     maxWidth: '900px',
   },
   logo: {

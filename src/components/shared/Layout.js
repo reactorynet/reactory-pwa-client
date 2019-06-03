@@ -93,7 +93,7 @@ class Layout extends Component {
 
 export const LayoutThemed = compose(
   withApi,
-  withTheme(),
+  withTheme,
   withStyles(Layout.styles)
 )(Layout)
 

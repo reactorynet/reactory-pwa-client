@@ -276,7 +276,7 @@ class QualityCard extends Component {
 }
 
 const QualityCardComponent = compose(
-  withTheme(),
+  withTheme,
   withStyles(QualityCard.styles),
 )(QualityCard)
 
@@ -457,7 +457,7 @@ BrandEdit.defaultProps = {
 
 
 export const BrandEditComponent = compose(
-  withTheme(),
+  withTheme,
   withStyles(BrandEdit.styles),
 )(BrandEdit);
 
@@ -572,6 +572,6 @@ BrandList.defaultProps = {
 
 
 export const BrandListWithData = compose(
-  withTheme(),
+  withTheme,
   withApi  
 )(BrandList);

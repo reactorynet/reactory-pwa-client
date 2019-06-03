@@ -243,7 +243,7 @@ class RatingControl extends Component {
   }
 }
 
-export const RatingComponent = compose(withApi, withTheme(), withStyles(RatingControl.styles))(RatingControl);
+export const RatingComponent = compose(withApi, withTheme, withStyles(RatingControl.styles))(RatingControl);
 
 class DefaultView extends Component {
 
@@ -280,7 +280,7 @@ class DefaultView extends Component {
         maxWidth: '1024px',
         marginLeft: 'auto',
         marginRight: 'auto',
-        padding: theme.spacing.unit,
+        padding: theme.spacing(1),
         color: primaryColorLight,
       },
       media: {
@@ -324,8 +324,8 @@ class DefaultView extends Component {
         color: primaryColor,
         fontWeight: 'lighter',
         fontStyle: 'italic',
-        marginLeft: theme.spacing.unit,
-        marginRight: theme.spacing.unit,
+        marginLeft: theme.spacing(1),
+        marginRight: theme.spacing(1),
       },
       delegateHeader: {
         display: 'flex',
@@ -340,21 +340,21 @@ class DefaultView extends Component {
         color: primaryColor,
         marginTop: '5px',
         marginBottom: '5px',
-        marginLeft: theme.spacing.unit,
-        fontSize: theme.spacing.unit * 2.5
+        marginLeft: theme.spacing(1),
+        fontSize: theme.spacing(2.5)
       },
       delegateBusinessUnit: {
         color: primaryColorLight,
-        marginLeft: theme.spacing.unit,
+        marginLeft: theme.spacing(1),
         marginTop: '5px',
         marginBottom: '5px',
-        fontSize: theme.spacing.unit * 1.5,
+        fontSize: theme.spacing(1.5),
         fontWeight: 'bold'
       },
       delegateAvatar: {
         width: 60,
         height: 60,
-        marginLeft: theme.spacing.unit
+        marginLeft: theme.spacing(1)
       },
       assessmentTitle: {
         width: '100%',
@@ -370,11 +370,11 @@ class DefaultView extends Component {
       },
       stopActivityDescription: {
         color: theme.palette.text.primary,
-        padding: theme.spacing.unit * 1.5
+        padding: theme.spacing(1.5)
       },
       stopBehaviorTextFieldContainer: {
-        marginLeft: theme.spacing.unit * 1.5,
-        marginRight: theme.spacing.unit * 1.5,
+        marginLeft: theme.spacing(1.5),
+        marginRight: theme.spacing(1.5),
         width: '100%'
       },
       thankYouScreen: {
@@ -665,8 +665,8 @@ class DefaultView extends Component {
           
           {customBehaviours.length > 0 ? 
             <Fragment>
-              <hr style={{  marginBottom: `${this.props.theme.spacing.unit * 2}px`, 
-                          marginTop: `${this.props.theme.spacing.unit * 2}px` }} />
+              <hr style={{  marginBottom: `${this.props.theme.spacing(1)}px`, 
+                          marginTop: `${this.props.theme.spacing(1)}px` }} />
               <Typography variant="caption" color="primary">Custom Behaviours for {quality.title} added by you</Typography>
               {customBehaviours}
             </Fragment> : null }
@@ -926,7 +926,7 @@ const DefaultViewComponent = compose(
   withApi,
   withRouter,
   withStyles(DefaultView.styles),
-  withTheme()
+  withTheme
 )(DefaultView);
 
 export default DefaultViewComponent;

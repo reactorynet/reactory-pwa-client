@@ -31,5 +31,5 @@ const OpenSurveyChart = (props, context) => {
 
 export default compose(
   withStyles(ChartStyles),
-  withTheme()
+  withTheme
 )(OpenSurveyChart);
