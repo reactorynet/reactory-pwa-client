@@ -96,7 +96,8 @@ class SurveyDelegates extends Component {
     };
     this.componentDefs = props.api.getComponents([
       'core.ErrorMessage', 
-      'towerstone.SurveyDelegateWidget', 
+      'towerstone.SurveyDelegateWidget',
+      'towerstone.Assessment',
       'core.DropDownMenu', 
       'core.FullScreenModal',      
       'core.UserListWithSearch',
@@ -118,6 +119,7 @@ class SurveyDelegates extends Component {
     this.launchSurveyForDelegate = this.launchSurveyForDelegate.bind(this)
     this.removeDelegateFromSurvey = this.removeDelegateFromSurvey.bind(this)
     this.getBasicModalView = this.getBasicModalView.bind(this)
+    this.removeAssessorForDelegate = this.removeAssessorForDelegate.bind(this)
     this.doAction = this.doAction.bind(this)
   }
 
@@ -228,8 +230,9 @@ class SurveyDelegates extends Component {
   }
 
   getBasicModalView() {
-    const { activeEntry } = this.state;
-    const { DropDownMenu } = this.componentDefs;
+    const self = this;
+    const { activeEntry, assessment } = this.state;
+    const { DropDownMenu, Assessment } = this.componentDefs;
     
 
     return (
@@ -246,10 +249,12 @@ class SurveyDelegates extends Component {
                   case "send-reminder": {          
                     break;
                   }
-                  case "remove": {
+                  case "remove-assessment": {
+                    self.removeAssessorForDelegate(activeEntry, assessment);
                     break;
                   }
                   case "details": {
+                    self.setState({ assessment })
                     break;
                   }
                   default: {
@@ -262,8 +267,8 @@ class SurveyDelegates extends Component {
                 {
                   title: 'Remove', 
                   icon: 'delete_outline', 
-                  id: 'remove', 
-                  key:'remove'
+                  id: 'remove-assessment', 
+                  key:'remove-assessment'
                 },
                 {
                   title: 'Details', 
@@ -287,7 +292,7 @@ class SurveyDelegates extends Component {
               const { assessor } = assessment;
               return (
               <UserListItem 
-                key={ assessor.id } 
+                key={ assessor.id || assessor._id } 
                 user={ assessor } 
                 message={ assessment.complete ? 'Assessment complete' : 'Pending' } 
                 secondaryAction={ dropdown } />
@@ -295,6 +300,8 @@ class SurveyDelegates extends Component {
             })
           }
         </List>
+        { assessment && <hr />}
+        { assessment && <Assessment assessmentId={assessment.id || assessment._id}  mode="admin" /> }
       </Paper>
     </Fragment>)
   }
@@ -420,7 +427,8 @@ class SurveyDelegates extends Component {
             delegate: entry.delegate.id,
             action,
             inputData: {
-              relaunch: entry.relaunch,
+              relaunch: entry.relaunch === true,
+              ...inputData
             }      
           };
 
@@ -448,6 +456,7 @@ class SurveyDelegates extends Component {
           action,
           inputData: {
             relaunch: delegateEntry.relaunch === true,
+            ...inputData
           }      
         };
 
@@ -490,6 +499,13 @@ class SurveyDelegates extends Component {
 
   enabledDelegateForSurvey(delegateEntry){
     this.doAction(delegateEntry, 'enable', {}, `Adding delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} from survey`);
+  }
+
+  removeAssessorForDelegate(delegateEntry, assessment) {
+    console.log('SurveyDelegateWidget.removeAssessorForDelegate(delegateEntry, assessment)', { delegateEntry, assessment });
+    if(delegateEntry && assessment) {
+      this.doAction(delegateEntry, 'remove-assessor', { assessmentId: assessment.id  || assessment._id }, `Removing Assessor From Survey`)
+    }
   }
 
   render(){

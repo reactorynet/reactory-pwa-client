@@ -889,11 +889,13 @@ class DefaultView extends Component {
 
   static propTypes = {
     assessment: PropTypes.object,
-    api: PropTypes.instanceOf(ReactoryApi)
+    api: PropTypes.instanceOf(ReactoryApi),
+    mode: PropTypes.objectOf([ 'assessor', 'delegate', 'admin' ])
   };
 
   static defaultProps = {
-    assessment: new Assessment()
+    assessment: new Assessment(),
+    mode: 'assessor'
   };
 
   constructor(props, context) {
