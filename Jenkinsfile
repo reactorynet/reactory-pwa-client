@@ -1,13 +1,13 @@
 pipeline {
     agent any
-    stages {
-        stage('Build') { 
-          dir('/mnt/d/data/builds') {
-            // some block
-            steps {
-              sh 'npm install' 
-            }
-          }          
-        }
-    }
+    dir('/mnt/d/data/builds') {
+      stages {       
+        stage('Build') {          
+          // some block
+          steps {
+            sh 'npm install' 
+          }
+        }                  
+      }
+    }    
 }
