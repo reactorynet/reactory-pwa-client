@@ -57,7 +57,7 @@ class UserSurvey extends Component {
         this.state = {
             activeSurveyIndex: -1
         }
-        this.componentDefs = props.api.getComponents(['core.UserListItem', 'towerstone.OwlyListItem', 'core.Logo']);
+        this.componentDefs = props.api.getComponents(['core.UserListItem', 'towerstone.OwlyListItem', 'core.Logo', 'core.ApplicationUserListItem']);
         this.totalSurveys = this.totalSurveys.bind(this)
     }
 
@@ -68,8 +68,17 @@ class UserSurvey extends Component {
 
     render() {
         const { classes, surveys, history, api, minimal, showComplete, theme } = this.props;
-        const { UserListItem, OwlyListItem, Logo } = this.componentDefs;
+        const { UserListItem, OwlyListItem, Logo, ApplicationUserListItem } = this.componentDefs;
         const surveyCount = this.totalSurveys();
+
+        let SystemUserListItem = OwlyListItem;
+        if(theme.key === 'plc'){
+
+         SystemUserListItem = ( props ) => { 
+                const p = {...props, firstName: 'Purposeful Leadership', lastName: 'Company' };
+                return (<ApplicationUserListItem {...p} />);
+            }
+        }
 
         const AssessmentListItem = (props) => {
             const { assessment } = props;          
@@ -108,10 +117,10 @@ class UserSurvey extends Component {
                             surveys.overdue.length > 0 && surveyCount > 0 ?
                             <Fragment>                                                                
                                 <List>
-                                    <OwlyListItem message={"The surveys listed below are already past the official cut-off date for completion and should be attended to first."} />
+                                    <SystemUserListItem message={"The surveys listed below are already past the official cut-off date for completion and should be attended to first."} />
                                     {surveys.overdue.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                 </List>
-                            </Fragment> : <OwlyListItem message={"There are no overdue assessments here"} />
+                            </Fragment> : <SystemUserListItem message={"There are no overdue assessments here"} />
                         }
                     </Paper>
                 </Grid>
@@ -122,10 +131,10 @@ class UserSurvey extends Component {
                         {surveys.current.length > 0 && surveyCount > 0 ?
                             <Fragment>
                                 <List>
-                                    <OwlyListItem message={"The surveys listed below are surveys which are currently awaiting your feedback.  These are sorted by order of their closing date."} />
+                                    <SystemUserListItem message={"The surveys listed below are surveys which are currently awaiting your feedback.  These are sorted by order of their closing date."} />
                                     {surveys.current.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                 </List>
-                            </Fragment> : <OwlyListItem message={"There are no assessments here"} />}
+                            </Fragment> : <SystemUserListItem message={"There are no assessments here"} />}
                     </Paper>
                 </Grid>
 
@@ -136,10 +145,10 @@ class UserSurvey extends Component {
                             surveys.complete.length > 0 && surveyCount > 0 ?
                                 <Fragment>                                                                        
                                     <List>
-                                        <OwlyListItem message={"The surveys below are completed and are for review only. Survey results will only appear here once the results have been released and shared with you by one of our facilitators."} />
+                                        <SystemUserListItem message={"The surveys below are completed and are for review only. Survey results will only appear here once the results have been released and shared with you by one of our facilitators."} />
                                         {reverse(sortBy(surveys.complete, [(assessment)=>{ return moment(assessment.survey.startDate || '2010-01-01').valueOf() }])).map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                     </List>
-                                </Fragment> : <OwlyListItem message={"You don't have any assessment results available yet"} />
+                                </Fragment> : <SystemUserListItem message={"You don't have any assessment results available yet"} />
                         }                        
                     </Paper>
                 </Grid>

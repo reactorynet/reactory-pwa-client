@@ -358,11 +358,23 @@ class ReactoryComponent extends Component {
       let options = query.options || {  };
       
       api.graphqlQuery(gql(query.text), _variables).then(( result ) => {
-        console.log('Fetched results for form data', result);
+        
         const { data, loading, error } = result;
-        let _formData = {...formData};
-        if(data && data[query.name]) {
-          _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap || {});
+        let _formData = formData;
+        if(data && data[query.name]) {          
+          switch(query.resultType) {
+            case 'array' :{
+              let mergedData = []
+              if(isArray(formData) === true) mergedData = [...formData];
+              if(isArray(data[query.name]) === true) mergedData = [...mergedData, ...data[query.name]];
+              _formData = objectMapper(mergedData, query.resultMap || {});
+              break;
+            }
+            default: {
+              _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap || {});
+            }
+          }
+          
         }
         that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: error, loading });          
       }).catch((queryError) => {

@@ -84,7 +84,7 @@ class OrganizationForm extends Component {
     this.updateOrganizationPicture = this.updateOrganizationPicture.bind(this)
     this.dropped = this.dropped.bind(this)
     this.updateOrganization = this.updateOrganization.bind(this)
-    this.componentDefs = this.props.api.getComponents(['core.BasicModal', 'core.Loading'])
+    this.componentDefs = this.props.api.getComponents(['core.BasicModal', 'core.Loading', 'forms.OrganizationForm']);
   }
 
   componentWillReceiveProps(props) {
@@ -164,29 +164,13 @@ class OrganizationForm extends Component {
       console.error('Mutation error', error);
       that.setState({ message: error, messageTitle: 'Error saving organization' });
     })
-  }
-
-  render() {
-    const { classes } = this.props;
-    const { organization, pristine, submitting, message } = this.state;
-    const { BasicModal, Loading } = this.componentDefs;
-
-    if (this.props.organization.loading) return <Loading message="Loading organization data" />
-    let modal = null
-    if (message) {
-      modal = <BasicModal title={this.state.messageTitle || 'Note'}>{message}</BasicModal>
-    }
-    return (
-      <Paper className={classes.formContainer}>
-        <form>
+  
+  /**
+   * <form>
           <Grid container spacing={8}>
             <Tooltip title="Drag and drop a file on the logo area.">
               <Grid item xs={12}>
-                <Dropzone onDrop={this.dropped} className={classes.dropZone}>
-                  <Paper className={classes.logoContainer}>
-                    {isEmpty(organization.logo) === true ? <p style={{ textAlign: 'center', paddingTop: '30px' }}>Upload Logo</p> : <img src={CDNOrganizationResource(organization.id, organization.logo)} className={classes.logo} alt={organization.name} />}
-                  </Paper>
-                </Dropzone>
+                
               </Grid>
             </Tooltip>
             <Grid item xs={12} md={6}>
@@ -231,6 +215,26 @@ class OrganizationForm extends Component {
             </Grid>
           </Grid>
         </form>
+   * 
+   *  */
+  }
+
+
+
+  render() {
+    const { classes } = this.props;
+    const { organization, pristine, submitting, message } = this.state;
+    const { BasicModal, Loading, OrganizationForm } = this.componentDefs;
+
+    if (this.props.organization.loading) return <Loading message="Loading organization data" />
+    let modal = null
+    if (message) {
+      modal = <BasicModal title={this.state.messageTitle || 'Note'}>{message}</BasicModal>
+    }
+    
+    return (
+      <Paper className={classes.formContainer}>
+        <OrganizationForm formData={ organization } />
       </Paper>);
   }
 };

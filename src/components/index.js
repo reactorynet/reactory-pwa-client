@@ -42,6 +42,7 @@ import FroalaWired from './richtext/Froala';
 
 
 import * as utils from './util';
+import { withTheme } from '@material-ui/styles';
 export const UserList = UserComponents.UserListWithData;
 export const UserSearchInput = UserComponents.UserSearchInputComponent;
 export const ForgotForm = UserComponents.ForgotForm;
@@ -165,11 +166,32 @@ export const componentRegistery = [
     version: '1.0.0',
   },
   {
+    nameSpace: 'core',
+    name: 'ApplicationUserListItem',
+    component: withTheme((props) => {
+      const { UserListItem } = UserComponents;
+      if(props.theme && props.theme.key) {
+        return <UserListItem user={{ firstName: props.firstName || 'Reactory', lastName: props.lastName || 'System', id: props.id || `${props.theme.key}_app`, avatar: 'avatar.png' }} message={props.message} />
+      }
+      
+      return <UserListItem user={{ firstName: 'Reactory', lastName: 'System', id: 'reactory_app', avatar: 'avatar.png' }} message={props.message} />              
+    }),
+    version: '1.0.0'
+  },
+  {
     nameSpace: 'towerstone',
     name: 'OwlyListItem',
-    component: (props) => {
+    component: (props) => {      
       const { UserListItem } = UserComponents;
-      return <UserListItem user={{ firstName: 'TowerStone', lastName: 'System', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
+      return <UserListItem user={{ firstName: 'TowerStone Leadership', lastName: 'Centre', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
+    },
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'towerstone',
+    name: 'OwlyListItem',
+    component: (props) => {      
+      return <UserListItem user={{ firstName: 'TowerStone Leadership', lastName: 'Centre', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
     },
     version: '1.0.0'
   },

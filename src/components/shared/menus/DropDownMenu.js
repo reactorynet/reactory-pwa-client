@@ -79,7 +79,7 @@ export class DropDownMenu extends Component {
               menuItems.push((
                 <MenuItem key={menu.id} onClick={ onMenuItemSelect }> 
                     { menu.icon ? <ListItemIcon><Icon color="primary">{menu.icon}</Icon></ListItemIcon> : null }                      
-                    <ListItemText inset primary={`${menu.title}`} />
+                    { menu.title }
                 </MenuItem>));
             });
       }

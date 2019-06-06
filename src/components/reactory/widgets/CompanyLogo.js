@@ -5,12 +5,14 @@ import classNames from 'classnames';
 import {
   FormControl, Typography, Icon,
 } from '@material-ui/core';
+import gql from 'graphql-tag';
 
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '../../../api/ApiProvider';
 import * as utils from '../../util';
-import gql from 'graphql-tag';
+import om from 'object-mapper';
+
 
 const LogoErrors = ({ errors }) => {
   console.error('Error loading logo', errors);
@@ -40,12 +42,15 @@ class CompanyLogoWidget extends Component {
     onSubmit: PropTypes.func,
     readOnly: PropTypes.bool,
     schema: PropTypes.object,
-    uiSchema: PropTypes.object
+    uiSchema: PropTypes.object,
+    organizationId: PropTypes.string,
+    isLoaded: PropTypes.bool,
   }
 
   static defaultProps = {
     formData: null,
-    readOnly: false
+    readOnly: false,
+    isLoaded: false,
   }
 
   constructor(props, context){
@@ -58,14 +63,17 @@ class CompanyLogoWidget extends Component {
 
   componentDidMount(){
     const that = this;
-    if(this.state.loaded === false && lodash.isNil(this.props.formData) === false) {
+    //this only when we need to lookup the logo 
+    if(this.state.loaded === false && lodash.isNil(this.props.formData) === false && this.props.nolookup !== true) {
+      const { formData } = this.props;
+      const variables = { id : formData };
+
       this.props.api.graphqlQuery(gql`query OrganizationWithId($id: String!){
         organizationWithId(id: $id){
-          id
-          name
+          id        
           logo
         }
-      }`, { id: this.props.formData }).then((result) => {
+      }`, variables ).then((result) => {
         //console.log('Query result', result);
         const { data, errors } = result;
         const { organizationWithId = { logo: 'default'} } = data;
@@ -80,32 +88,37 @@ class CompanyLogoWidget extends Component {
   render(){
     const self = this
     const { formData, uiSchema, classes } = this.props;
-    const { loaded, logo, errors } = this.state;
+    let { loaded, logo, errors } = this.state;
 
-    if(loaded === false && lodash.isNil(errors) === true) {
-      return (<div>
-        <Typography>Loading logo <i className={classNames(classes.waitIcon, "fa fa-spin fa-hourglass-o")}></i></Typography>        
-      </div>)
-    } 
+    let logoProps = {
+      width: '200px',
+      style: { maxWidth: '200px' },
+      alt: 'No Image'
+    };
 
-    if(lodash.isNil(errors) === false && loaded === true){
-      return <LogoErrors errors={errors} />
+    const options = uiSchema['ui:options'] || {}
+    const { readOnly, noLookup, mapping  } = options;
+    
+    if(mapping) {      
+      const params = om(this.props, mapping);
+      logoProps.src = params.logo === 'default' || lodash.isNil(params.logo) === true ? '//placehold.it/200x200' : utils.CDNOrganizationResource(params.id, params.logo);  
     }
-
-    if(formData) {       
-      const logoProps = {
-        src: logo === 'default' ? '//placehold.it/200x200' : utils.CDNOrganizationResource(formData, logo),
-        width: '200px',
-        style: { maxWidth: '200px' },
-        alt: 'No Image'
-      };
-
-      const options = uiSchema['ui:options'] || {}
-
-      return <img {...{...logoProps, ...options}} />
-    } else {
-      return (<p>No Data</p>);
-    }      
+    
+    if(noLookup !== true) {
+      if(loaded === false && lodash.isNil(errors) === true) {
+        return (<Typography>Loading logo <i className={classNames(classes.waitIcon, "fa fa-spin fa-hourglass-o")}></i></Typography>)
+      } 
+  
+      if(lodash.isNil(errors) === false && loaded === true){
+        return <LogoErrors errors={errors} />
+      }
+  
+      if(formData) {       
+        logoProps.src = logo === 'default' ? '//placehold.it/200x200' : utils.CDNOrganizationResource(formData, logo);  
+      }
+    }
+    
+    return <img {...{...logoProps, style: options.style  }} />          
   }
 }
 const CompanyLogoWidgetComponent = compose(
