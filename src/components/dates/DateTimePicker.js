@@ -2,7 +2,7 @@ import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import moment from 'moment';
 import { FormControl, Typography } from '@material-ui/core';
-import { DateTimePicker } from 'material-ui-pickers';
+import { DatePicker } from '@material-ui/pickers';
 
 export default class DateTimePickerWidget extends PureComponent {
   
@@ -25,7 +25,7 @@ export default class DateTimePickerWidget extends PureComponent {
     return (
       <FormControl>
         <Typography variant="caption" gutterBottom>{this.props.schema.title || 'Select Time'}</Typography>
-        <DateTimePicker value={this.props.formData} onChange={this.handleDateChange} />
+        <DatePicker variant="inline" value={this.props.formData} onChange={this.handleDateChange} />
       </FormControl>
     );
   }

@@ -44,7 +44,7 @@ class FullScreenDialog extends Component {
   };
 
   render() {
-    const { classes, title } = this.props;
+    const { classes, title, containerProps = {} } = this.props;
 
     return (
       <div>
@@ -53,6 +53,7 @@ class FullScreenDialog extends Component {
           open={this.props.open}
           onClose={this.handleClose}
           TransitionComponent={Transition}
+          {...containerProps}          
         >
           <AppBar className={classes.appBar}>
             <Toolbar>              

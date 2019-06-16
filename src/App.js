@@ -1,7 +1,6 @@
-import "@babel/polyfill";
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { MuiPickersUtilsProvider } from 'material-ui-pickers';
+import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import MomentUtils from '@date-io/moment';
 import {
   BrowserRouter as Router,
@@ -29,6 +28,19 @@ import ApiProvider, { ReactoryApi, ReactoryApiEventNames } from './api/ApiProvid
 import { fetch } from "whatwg-fetch";
 import * as themes from './themes';
 
+const packageInfo = require('../package.json');
+
+const {
+  REACT_APP_CLIENT_KEY,
+  REACT_APP_CLIENT_PASSWORD,
+  REACT_APP_API_ENDPOINT
+} = process.env;
+
+if(localStorage) {
+  localStorage.setItem('REACT_APP_CLIENT_KEY', REACT_APP_CLIENT_KEY);
+  localStorage.setItem('REACT_APP_CLIENT_PASSWORD', REACT_APP_CLIENT_PASSWORD);
+  localStorage.setItem('REACT_APP_API_ENDPOINT', REACT_APP_API_ENDPOINT);
+}
 
 const authLink = setContext((_, { headers }) => {
   const anonToken = process.env.ANON_USER_TOKEN
@@ -47,7 +59,7 @@ const authLink = setContext((_, { headers }) => {
 });
 
 const httpLink = createHttpLink({
-  uri: `${process.env.REACT_APP_API_ENDPOINT}/api`,
+  uri: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`,
   fetch: fetch
 });
 
@@ -80,8 +92,9 @@ const getTheme = () => {
 }
 
 const api = new ReactoryApi(client, {
-  clientId: `${process.env.REACT_APP_CLIENT_KEY}`,
-  clientSecret: `${process.env.REACT_APP_CLIENT_PASSWORD}`
+  clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
+  clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
+  $version: packageInfo.version
 });
 
 //register built-in components
@@ -102,6 +115,9 @@ class App extends Component {
     api.queryObject = query;
     api.queryString = window.location.search;
     api.objectToQueryString = queryString.stringify;
+    if(api.utils) {
+
+    }
 
     this.state = {
       drawerOpen: false,
@@ -208,6 +224,9 @@ class App extends Component {
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
     if(!themeOptions.typography) themeOptions.typograph =  { useNextVariants: true };
     else themeOptions.typography.useNextVariants = true;
+
+    
+
     const muiTheme = createMuiTheme(themeOptions);
     api.muiTheme = muiTheme;
                 
@@ -220,8 +239,9 @@ class App extends Component {
               <ApiProvider api={api}>
                 <MuiThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
-                  <div style={{ marginTop: '80px' }}>
-                    <AssessorHeaderBar title={muiTheme.content.appTitle} />                    
+                  <AssessorHeaderBar title={muiTheme.content.appTitle} />
+                  <div style={{ marginTop: '80px', paddingLeft: '8px', paddingRight: '8px', marginBottom: '8px' }}>
+                                        
                     { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
                   </div>
                   </MuiPickersUtilsProvider>

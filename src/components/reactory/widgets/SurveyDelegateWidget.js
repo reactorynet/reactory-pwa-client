@@ -105,6 +105,7 @@ class SurveyDelegates extends Component {
       'core.AssessmentList',
       'core.AssessmentTable',
       'core.SpeedDial',
+      'core.ReportViewer'
     ]);
     this.getSecondaryAction = this.getSecondaryAction.bind(this)
     this.sendInviteEmails = this.sendInviteEmails.bind(this)
@@ -232,8 +233,9 @@ class SurveyDelegates extends Component {
   getBasicModalView() {
     const self = this;
     const { activeEntry, assessment } = this.state;
-    const { DropDownMenu, Assessment } = this.componentDefs;
+    const { DropDownMenu, Assessment, ReportViewer } = this.componentDefs;
     
+    //src: http://localhost:4000/pdf/towerstone/delegate-360-assessment?x-client-key=${this.props.api.CLIENT_KEY}&x-client-pwd=${this.props.api.CLIENT_PWD}
 
     return (
     <Fragment>
@@ -302,6 +304,13 @@ class SurveyDelegates extends Component {
         </List>
         { assessment && <hr />}
         { assessment && <Assessment assessmentId={assessment.id || assessment._id}  mode="admin" /> }
+        <ReportViewer 
+          folder="towerstone" 
+          report="delegate-360-assessment" 
+          method="get" 
+          delivery="inline"           
+          waitingText="Loading Report Data, please wait." 
+          data={{ surveyId: self.props.formContext.surveyId, delegateId: activeEntry.id }} />
       </Paper>
     </Fragment>)
   }

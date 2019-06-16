@@ -18,6 +18,7 @@ require('../config/env');
 const path = require('path');
 const chalk = require('react-dev-utils/chalk');
 const fs = require('fs-extra');
+const moment = require('moment');
 const webpack = require('webpack');
 const configFactory = require('../config/webpack.config');
 const paths = require('../config/paths');
@@ -26,6 +27,7 @@ const formatWebpackMessages = require('react-dev-utils/formatWebpackMessages');
 const printHostingInstructions = require('react-dev-utils/printHostingInstructions');
 const FileSizeReporter = require('react-dev-utils/FileSizeReporter');
 const printBuildError = require('react-dev-utils/printBuildError');
+const manifestJson = require('./reactory/makeManifest');
 
 const measureFileSizesBeforeBuild =
   FileSizeReporter.measureFileSizesBeforeBuild;
@@ -61,6 +63,8 @@ checkBrowsers(paths.appPath, isInteractive)
     fs.emptyDirSync(paths.appBuild);
     // Merge with the public folder
     copyPublicFolder();
+    // we write the updated Manifest File
+    writeManifestJson();
     // Start the webpack build
     return build(previousFileSizes);
   })
@@ -131,8 +135,22 @@ function build(previousFileSizes) {
     );
     console.log();
   }
+  var startedAt = moment();
+  var datefrmt = 'DD MMM \'YY HH:mm:ss';
+  var buildmessage = "------------------------------------------------------------------------\n"
+  buildmessage += 'Creating an optimized production build: started @ ' + startedAt.format(datefrmt);
+  buildmessage += "\n------------------------------------------------------------------------"
+  buildmessage += '\nApplication Title:\t' + process.env.REACT_APP_TITLE;  
+  buildmessage += '\nApplication API:\t'+ process.env.REACT_APP_API_ENDPOINT;
+  buildmessage += '\nApplication CDN:\t'+ process.env.REACT_APP_CDN;
+  buildmessage += '\nApplication Theme:\t'+ process.env.REACT_APP_THEME;
+  buildmessage += '\nClient Key:\t'+ process.env.REACT_APP_CLIENT_KEY;
+  buildmessage += '\nTarget Url:\t' + process.env.PUBLIC_URL;
+  buildmessage += "\n------------------------------------------------------------------------\n";
+  buildmessage += 'NB: Always check deployment urls and ensure caches are cleared\nafter deployments are complete';
+  buildmessage += "\n------------------------------------------------------------------------";
 
-  console.log('Creating an optimized production build...');
+  console.log(buildmessage);
 
   const compiler = webpack(config);
   return new Promise((resolve, reject) => {
@@ -174,6 +192,11 @@ function build(previousFileSizes) {
         return reject(new Error(messages.warnings.join('\n\n')));
       }
 
+      buildmessage = "\n------------------------------------------------------------------------\n";
+      buildmessage += 'Build completed @ ' + moment().format(datefrmt) + '\n(' + moment().diff(startedAt, 'seconds') + ') seconds to complete';
+      buildmessage += "\n------------------------------------------------------------------------";
+      buildmessage += '\n run: curl ' + process.env.PUBLIC_URL + '/index.html -s -I -H "secret-header:true" to invalidate nginx file cache'
+      console.log(buildmessage);
       return resolve({
         stats,
         previousFileSizes,
@@ -188,4 +211,9 @@ function copyPublicFolder() {
     dereference: true,
     filter: file => file !== paths.appHtml,
   });
+}
+
+function writeManifestJson() {
+  fs.writeJSONSync(paths.appBuild + '/manifest.json', manifestJson, { spaces: 2 });
+  console.log('Updated manifest.json');
 }

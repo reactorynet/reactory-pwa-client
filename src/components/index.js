@@ -37,7 +37,8 @@ import BasicModal from './shared/BasicModal';
 import AotAnalyticsDashboardComponent from './tasks/analytics/AnalyticsDashboard';
 import SpeedDialWidget from './shared/SpeedDialWidget';
 import FullScreenDialog from './shared/FullScreenDialog';
-import FramedWindow from './shared/FramedWindow';
+import FramedWindow, { ReportViewerComponent } from './shared/FramedWindow';
+
 import FroalaWired from './richtext/Froala';
 
 
@@ -128,6 +129,12 @@ export const componentRegistery = [
     name: 'FramedWindow',
     version: '1.0.0',
     component: FramedWindow,
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReportViewer',
+    version: '1.0.0',
+    component: ReportViewerComponent
   },
   {
     nameSpace: 'core',

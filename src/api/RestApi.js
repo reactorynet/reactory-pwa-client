@@ -1,4 +1,4 @@
-import co from 'co';
+
 const api_root = process.env.REACT_APP_API_ENDPOINT;
 const api_client_id = process.env.REACT_APP_CLIENT_KEY;
 const api_client_password = process.env.REACT_APP_CLIENT_PASSWORD;
@@ -80,6 +80,21 @@ export const getContent = (route, header = api_headers) => {
   }).then((response) => response.text())
 };
 
+export const getPDF = ( folder, report, params = { __t: new Date().valueOf()  }, filename = 'pdfout.pdf' ) => {
+  const { api } = window.reactory;
+  api.utils.queryString.stringify(params)
+  return fetch(`${api_root}/pdf/${folder}/${report}?`, {
+    method: 'get',
+    header: { ...api}
+  }).then((pdf) => {
+    const blob=new Blob([pdf]);
+    const link=document.createElement('a');
+    link.href=window.URL.createObjectURL(blob);
+    link.download=filename;
+    link.click();
+  });
+};
+
 export const getRemoteJson = (route, headers = api_headers) => {
   return fetch(route, {
     method: 'get',
@@ -109,5 +124,5 @@ export const deleteRemoteJson = (route, payload, headers = api_headers) => {
     body: JSON.stringify(payload),
     headers: { ...api_headers, ...headers }
   }).then((response) => response.json())
-};
+}; 
 

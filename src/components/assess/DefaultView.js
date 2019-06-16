@@ -55,6 +55,16 @@ class RatingControl extends Component {
         marginRight: '10px'
       },
       textField: {
+        backgroundColor: 'unset'
+      },
+      textFieldGood: {
+        
+      },
+      textFieldWarn: {
+        backgroundColor: primaryColorLight
+      },
+      textFieldDanger: {
+
       },
       ratingContainer: {
         paddingLeft: '5px',
@@ -119,7 +129,7 @@ class RatingControl extends Component {
     const { behaviour, classes, rating, assessment } = this.props;
     const self = this;
     let steps = [];
-
+    let needsAttention = false;
     for (let stepId = behaviour.scale.min; stepId < behaviour.scale.max; stepId++) {
       const doRatingClick = () => (self.ratingClick(stepId));
 
@@ -137,19 +147,24 @@ class RatingControl extends Component {
 
     let commentControl = null;
     if ((rating.rating > 0 && rating.rating < 3 || behaviour.custom === true)) {
+      //const controlClasses = classNames( this.state.comment.split(' ').length < 10 ? classes.)
+      const hasError = this.state.comment.split(' ').length < 10;                  
       commentControl = (<TextField
         id="multiline-flexible"
-        label="How does this impact you?"
+        label={this.state.comment.split(' ').length < 10 ? "How does this impact you? - * required" : "How does this impact you?"}
         multiline
         fullWidth
         rowsMax="4"
+        variant="outlined"
+        error={hasError}
         maxLength={5000}
         value={this.state.comment}
         onChange={assessment.complete === false ? this.commentChanged : () => {}}
         onBlur={assessment.complete === false ? this.notifyChange : ()=> {}}
+        autoFocus={this.state.comment.split(' ').length < 10}
         className={classes.textField}
         disabled={assessment.complete === true}
-        margin="normal"
+        margin="normal"        
         helperText="Provide some context as to how this affects you personally or your ability to perform your duties (at least 10 words)."
       />)
 
@@ -161,7 +176,7 @@ class RatingControl extends Component {
 
     let ratingTooltip = rating.rating === 0 ? 
       <Tooltip title="Requires a rating selection"><Icon color="secondary">info</Icon></Tooltip> : 
-      <Tooltip title={`You scored ${rating.rating} `}><Icon color="primary">check_circle</Icon></Tooltip>;
+      <Tooltip title={`You provide a score of ${rating.rating}`}><Icon color="action">check_circle</Icon></Tooltip>;
 
     if(rating.rating > 0 && rating.rating <= 2) {
       if(this.state.comment.length < 50) {
@@ -171,7 +186,7 @@ class RatingControl extends Component {
 
     const ratingComponent = (
       <Fragment>        
-        <Typography variant="caption" className={classes.behaviourTitle}>{behaviour.title}{ratingTooltip}</Typography>
+        <Badge>{ratingTooltip}</Badge> <Typography variant="body1" className={classes.behaviourTitle}>{behaviour.title}</Typography>
         <Stepper alternativeLabel nonLinear activeStep={rating.rating - 1}>
           {steps}
         </Stepper>
@@ -238,7 +253,7 @@ class RatingControl extends Component {
     this.notifyChange = this.notifyChange.bind(this);
     this.confirmCustomDelete = this.confirmCustomDelete.bind(this);
     this.state = {
-      comment: props.comment
+      comment: props.comment || ''
     }
   }
 }
@@ -279,8 +294,7 @@ class DefaultView extends Component {
         width: '100%',
         maxWidth: '1024px',
         marginLeft: 'auto',
-        marginRight: 'auto',
-        padding: theme.spacing(1),
+        marginRight: 'auto',        
         color: primaryColorLight,
       },
       media: {
@@ -754,7 +768,7 @@ class DefaultView extends Component {
   assessmentOptions() {
     const { assessment } = this.state;
     const cancelAssessment = () => {
-      this.props.history.goBack()
+      this.props.history.push('/')
     };
 
     const saveAndCloseAssessment = () => {
@@ -778,7 +792,7 @@ class DefaultView extends Component {
         }}>
         <MenuItem onClick={props.cancelClicked}>
           <ListItemIcon><CancelIcon /></ListItemIcon>
-          <ListItemText inset primary={"Close"} />
+          Close
         </MenuItem>      
       </Menu>);
 
@@ -826,7 +840,7 @@ class DefaultView extends Component {
     const daysLeft = moment(survey.endDate).diff(moment(), 'days');
 
     return (
-      <Grid container spacing={16} className={classes.card}>
+      <Grid container spacing={1} className={classes.card}>
         <Grid item xs={12} sm={12}>
           <Paper>
             <Grid container spacing={8}>
@@ -856,10 +870,13 @@ class DefaultView extends Component {
         <Grid item xs={12} sm={12}>
           {toolbar()}
         </Grid>
-        <Grid item xs={12} sm={12}>
+        <Grid item xs={12} sm={12} style={{marginBottom: '16px'}}>
           {wizardControl}
         </Grid>
         <Grid item xs={12} sm={12}>
+          <Typography variant="body1" color={"primary"} style={{textAlign: 'right', marginBottom: '40px' }}>
+            {isCurrentStepValid ? 'Click next to proceed' : 'Ensure you have completed all ratings and comments in full before proceeding.'}
+          </Typography>
           <MobileStepper
             style={{              
               background: '#fff',
@@ -880,8 +897,7 @@ class DefaultView extends Component {
                 Back
                 </Button>
             }
-          />
-          <Typography variant="body1" color={"primary"} style={{textAlign: 'right'}}>{isCurrentStepValid ? 'Click next to proceed' : 'Ensure you have completed all ratings and comments in full before proceeding.'}</Typography>
+          />          
         </Grid>
       </Grid>
     );

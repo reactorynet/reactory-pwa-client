@@ -1,3 +1,4 @@
+import "@babel/polyfill";
 import React from 'react';
 import ReactDOM from 'react-dom';
 import * as themes from './themes';
@@ -17,4 +18,4 @@ if(rootElement.classList.contains('loading')) rootElement.classList.remove('load
 ReactDOM.render(<App {...props} />, rootElement);
 registerServiceWorker();
 
-document.title = process.env.REACT_APP_TITLE || 'Reactory Web';
+document.title = process.env.REACT_APP_TITLE || 'Reactory Client';

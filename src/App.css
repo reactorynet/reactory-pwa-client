@@ -33,3 +33,16 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+::-webkit-scrollbar {
+  width: 0.5em;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px aliceblue;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: slategrey;
+  outline: 1px solid slateblue;
+}

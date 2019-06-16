@@ -74,7 +74,6 @@ const resolveModule = (resolveFn, filePath) => {
 };
 
 const client_key = process.env.REACT_APP_CLIENT_KEY
-
 // config after eject: we're in ./config/
 module.exports = {
   dotenv: resolveApp('.env'),

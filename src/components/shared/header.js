@@ -46,7 +46,7 @@ export class Logged extends Component {
               menuItems.push((
                 <MenuItem key={menuItem.id} onClick={goto}>
                   <ListItemIcon><Icon color="primary">{menuItem.icon}</Icon></ListItemIcon>
-                  <ListItemText inset primary={`${menuItem.title}`}/>
+                  {menuItem.title}
                 </MenuItem>));
             }
           });
@@ -228,7 +228,7 @@ class ApplicationHeader extends Component {
               menuItems.push((
                 <MenuItem key={menuItem.id} onClick={goto}>
                   <ListItemIcon><Icon color="primary">{menuItem.icon}</Icon></ListItemIcon>
-                  <ListItemText inset primary={`${menuItem.title}`}/>
+                  {menuItem.title}
                 </MenuItem>));
             }
           });
@@ -314,6 +314,7 @@ class ApplicationHeader extends Component {
                 <Icon>rss_feed</Icon>
               </IconButton>
             </Tooltip>
+            <span className={this.props.classes.version}>Client Version: {api.props.$version}</span>
           </div>
         </Drawer>
         {this.renderHelpInterface()}
@@ -353,6 +354,9 @@ ApplicationHeader.styles = theme => ({
   apiStatus: {
     bottom: '10px',
     position: 'absolute',
+  },
+  version: {
+    fontSize: '10px',
   },
   root: {
     width: '100%',

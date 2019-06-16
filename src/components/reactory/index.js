@@ -258,7 +258,7 @@ class ReactoryComponent extends Component {
 
     let showSubmit = true;
     if(formDef.uiSchema && formDef.uiSchema['ui:options']) {      
-      showSubmit = formDef.uiSchema['ui:options'].showSubmit || true
+      showSubmit = formDef.uiSchema['ui:options'].showSubmit === true || true;
     }
 
     let uiSchemaSelector = null;

@@ -25,7 +25,7 @@ import objectMapper from 'object-mapper';
 import { withApollo } from "react-apollo";
 import * as restApi from './RestApi';
 import graphApi from './graphql';
-
+import queryString from '../query-string';
 import { 
     getAvatar, 
     getUserFullName, 
@@ -78,7 +78,16 @@ export class ReactoryApi extends EventEmitter {
         this.forgot = restApi.forgot;        
         this.forms = this.forms.bind(this)
         this.utils = {
-            omitDeep
+            omitDeep,
+            queryString,
+            hashCode: (inputString)=>{
+                let i=0;
+                let h=0;
+                for(i<inputString.length;i+=1;){
+                    h=Math.imul(31,h)+inputString.charCodeAt(i)|0;
+                    return h;
+                }
+            }
         };
         this.rest = {
             json: {
@@ -112,7 +121,7 @@ export class ReactoryApi extends EventEmitter {
         this.onFormCommandEvent = this.onFormCommandEvent.bind(this);
         this.startWorkFlow = this.startWorkFlow.bind(this);
         this.CDN_ROOT = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
-        this.API_ROOT = process.env.API_URI_ROOT || 'http://localhost:4000';
+        this.API_ROOT = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
         this.CLIENT_KEY = process.env.REACT_APP_CLIENT_KEY;
         this.CLIENT_PWD = process.env.REACT_APP_CLIENT_PASSWORD;
         this.formSchemas = [];
@@ -125,6 +134,8 @@ export class ReactoryApi extends EventEmitter {
         this.graphqlQuery = this.graphqlQuery.bind(this);
         this.getLastUserEmail = this.getLastUserEmail.bind(this);
         this.setLastUserEmail = this.setLastUserEmail.bind(this);
+        this.setAuthToken = this.setAuthToken.bind(this);
+        this.getAuthToken = this.getAuthToken.bind(this);
         this.forms().then()        
     }
 
@@ -343,6 +354,10 @@ export class ReactoryApi extends EventEmitter {
 
     setAuthToken(token) {
         localStorage.setItem(storageKeys.AuthToken, token)
+    }
+
+    getAuthToken(){
+        return localStorage.getItem(storageKeys.AuthToken);
     }
 
     setLastUserEmail(email) {
