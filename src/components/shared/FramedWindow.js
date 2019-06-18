@@ -13,7 +13,8 @@ const defaultFrameProps = {
     top: '65px',
     bottom: '0px',
     width: '100%',
-    border: 'none'
+    height: '100%',
+    border: 'none',
   }    
 };
 
@@ -31,12 +32,13 @@ class FramedWindow extends Component {
     containerProps: {
       style: {
         display: 'block',
-        // position: 'fixed',
+        position: 'fixed',
         top: '65px',
         bottom: '0px',
         width: '100%',
+        height: '100%'
       },
-      with: '100%',
+      width: '100%',
     },
     frameProps: defaultFrameProps,
     method: 'get',
@@ -170,8 +172,8 @@ class ReportViewer extends Component {
       'x-client-pwd': api.CLIENT_PWD,
       'auth_token': api.getAuthToken(),      
     };
-
-    reportWindowProps.src = `${api.API_ROOT}/pdf/${folder}/${report}?${api.utils.queryString.stringify(queryparams)}`;
+  
+    reportWindowProps.url = `${api.API_ROOT}/pdf/${folder}/${report}?${api.utils.queryString.stringify(queryparams)}`;
     return (<FramedWindowComponent id={`reactory-report-window`} frameProps={{ ...reportWindowProps }} method={method} />)
   }
 
@@ -242,12 +244,7 @@ class ReportViewer extends Component {
     }
     
     return (
-      <div>
-        <Toolbar>
-          <IconButton onClick={this.onSubmitReport}>
-            <Icon>print</Icon>
-          </IconButton>
-        </Toolbar>
+      <div style={{display:'content', top: '0', bottom: '0'}}>        
         { content }
       </div>
     );

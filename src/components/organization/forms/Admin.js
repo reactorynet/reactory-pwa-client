@@ -234,7 +234,7 @@ class OrganizationForm extends Component {
     
     return (
       <Paper className={classes.formContainer}>
-        <OrganizationForm formData={ organization } />
+        <OrganizationForm formData={ organization } mode={ organization.id === null ? 'new' : 'edit' } />
       </Paper>);
   }
 };
@@ -576,6 +576,14 @@ class DefaultFormContainer extends Component {
                         formContext={{organizationId, surveyId: props.match.params.surveyId}} 
                         formData={{organization: organizationId, id: props.match.params.surveyId}} 
                         style={{maxWidth:'85%'}} />
+                      
+                      <TowerStoneSurveyDelegateConfig 
+                        mode="edit"
+                        surveyId={props.match.params.surveyId} 
+                        organizationId={organizationId} 
+                        formContext={{organizationId, surveyId: props.match.params.surveyId}}
+                        data={[]} 
+                      />
 
                       <TowerStoneSurveySettings 
                         mode="edit"
@@ -583,14 +591,6 @@ class DefaultFormContainer extends Component {
                         organizationId={organizationId} 
                         formContext={{organizationId, surveyId: props.match.params.surveyId}} 
                         formData={{}} 
-                      />
-
-                      <TowerStoneSurveyDelegateConfig 
-                        mode="edit"
-                        surveyId={props.match.params.surveyId} 
-                        organizationId={organizationId} 
-                        formContext={{organizationId, surveyId: props.match.params.surveyId}}
-                        data={[]} 
                       />
 
                       

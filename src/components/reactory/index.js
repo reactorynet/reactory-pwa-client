@@ -16,6 +16,7 @@ import queryString from '../../query-string';
 import { withApi, ReactoryApi } from '../../api/ApiProvider'
 import {
   Button,
+  ButtonGroup,
   Fab,
   Typography,
   Icon,
@@ -143,6 +144,7 @@ class ReactoryComponent extends Component {
       forms: [],
       uiFramework: props.uiFramework,
       uiSchemaKey: props.uiSchemaKey || 'default',
+      activeUiSchemaMenuItem: null,
       formData: props.data || props.formData,    
       dirty: false,
       queryComplete: false,
@@ -250,7 +252,7 @@ class ReactoryComponent extends Component {
       onSubmit: onSubmit || this.onSubmit,      
       ref: (form) => { this.formRef = form }
     };
-
+    
     let icon = 'save';
     if(formDef.uiSchema && formDef.uiSchema.submitIcon) {
       icon = formDef.uiSchema.submitIcon 
@@ -264,24 +266,30 @@ class ReactoryComponent extends Component {
     let uiSchemaSelector = null;
 
     if(formDef.uiSchemas){
-      //debugger;
+      // debugger;
       const { DropDownMenu } = this.componentDefs;
       const onSchemaSelect = (evt, menuItem) => {
-        // //console.log('Schema Ui Change', {evt, menuItem});
-        self.setState({ uiSchemaKey: menuItem.value })
+        // console.log('Schema Ui Change', {evt, menuItem});
+        self.setState({ activeUiSchemaMenuItem: menuItem })
       };
 
-      uiSchemaSelector = (<DropDownMenu menus={formDef.uiSchemas} onSelect={onSchemaSelect}/>)
+      const { activeUiSchemaMenuItem } = self.state;            
+      uiSchemaSelector = (
+        <Fragment>
+          {activeUiSchemaMenuItem.title}
+          <DropDownMenu menus={formDef.uiSchemas} onSelect={onSchemaSelect} selected={activeUiSchemaMenuItem} />
+        </Fragment>
+        )
     }
 
     const refreshClick = evt => self.setState({ queryComplete: false, dirty: false });
 
     return (
-      <div>
-        {uiSchemaSelector}
-        {this.props.before}
+      <Fragment>        
+        {this.props.before}        
         <Form {...formProps}>
           <Toolbar>
+            {uiSchemaSelector}
             {this.props.children && this.props.children.length > 0 ? this.props.children : showSubmit && <Fab type="submit" color="primary"><Icon>{icon}</Icon></Fab>}
             {self.state.allowRefresh && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}            
             {formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button>}
@@ -291,7 +299,7 @@ class ReactoryComponent extends Component {
         </Form>
         {this.getHelpScreen()}
         {this.getDebugScreen()}
-      </div>
+      </Fragment>
     )
   }
 
@@ -301,8 +309,7 @@ class ReactoryComponent extends Component {
     const { mode, api } = this.props;
     const { queryComplete } = this.state;
     const that = this;
-    const { Loading } = this.componentDefs;    
-    
+    const { Loading } = this.componentDefs;        
     const has = {
       query: isNil(formDef.graphql.query) === false && isString(formDef.graphql.query.text) === true,
       doQuery: isNil(formDef.graphql.query) === false,
@@ -314,7 +321,9 @@ class ReactoryComponent extends Component {
       return (
         <Mutation mutation={gql(mutation.text)}>
         {(mutateFunction, { loading, errors, data }) => {          
-          const onFormSubmit = (formSchema) => {            
+          const onFormSubmit = (formSchema) => {  
+            console.debug(`Form Submitting, post via graphql`, formSchema);
+            debugger;          
             const _variables = objectMapper({...formSchema, formContext: that.getFormContext() }, mutation.variables);
             mutateFunction({
               variables: {..._variables},
@@ -353,12 +362,11 @@ class ReactoryComponent extends Component {
     if(has.query === true && has.doQuery === true && queryComplete === false && this.state.loading === false) {
       // //console.log('rendering with query', has);      
       const query = formDef.graphql.query; //gql(formDef.graphql.query.text)
-      const formContext = this.getFormContext();
+      const formContext = this.getFormContext();      
       const _variables = objectMapper({formContext, formData}, query.variables || {});
       let options = query.options || {  };
       
-      api.graphqlQuery(gql(query.text), _variables).then(( result ) => {
-        
+      api.graphqlQuery(gql(query.text), _variables).then(( result ) => {        
         const { data, loading, error } = result;
         let _formData = formData;
         if(data && data[query.name]) {          
@@ -385,6 +393,7 @@ class ReactoryComponent extends Component {
     } 
     
     if ( has.mutation === true) {
+      console.debug('Form has mutation defined.')
       return getMutationForm(formData)
     } 
       
@@ -434,7 +443,7 @@ class ReactoryComponent extends Component {
     const { uiFramework, forms, formData, uiSchemaKey } = this.state;
     let schema = this.formDef();
 
-    const { uiSchemaId } = this.state.query;
+    const { uiSchemaId, activeUiSchemaMenuItem } = this.state.query;
     const { Logo, Loading } = this.componentDefs;
     const { api, history, mode } = this.props;
     const self = this;
@@ -445,17 +454,22 @@ class ReactoryComponent extends Component {
 
     // set noHtml5Validation if not set by schema
     if (nil(schema.noHtml5Validate)) schema.noHtml5Validate = true;
-
+        
     if (uiSchemaKey) {
-      if (uiSchemaKey !== 'default' && schema.uiSchemas && schema.uiSchemas[uiSchemaKey]) {
-        schema.uiSchema = schema.uiSchemas[uiSchemaKey].uiSchema;
+      if (uiSchemaKey !== 'default' && find(schema.uiSchemas, {key: uiSchemaKey})) {
+        schema.uiSchema = find(schema.uiSchemas, {key: uiSchemaKey}).uiSchema;
       }
     }
 
     if (uiSchemaId) {
-      if (uiSchemaId !== 'default' && schema.uiSchemas && schema.uiSchemas[uiSchemaId]) {
-        schema.uiSchema = schema.uiSchemas[uiSchemaId].uiSchema;
+      if (uiSchemaId !== 'default' && find(schema.uiSchemas, {key: uiSchemaKey})) {
+        schema.uiSchema = find(schema.uiSchemas, {key: uiSchemaId}).uiSchema;
       }
+    }
+
+    if(activeUiSchemaMenuItem && activeUiSchemaMenuItem.uiSchema) {
+      console.log(`Setting ui schema to acitveSchema ${activeUiSchemaMenuItem.title}`);
+      schema.uiSchema = activeUiSchemaMenuItem.uiSchema;
     }
 
     // #region setup functions
@@ -802,8 +816,14 @@ class ReactoryComponent extends Component {
       this.props.api.forms().then((forms) => {
         const formDef = find(forms, { id: that.props.formId }) || simpleForm;
         if(formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
-        that.setState({ forms: forms, forms_loaded: true, loading: false, formDef });
+        let _activeUiSchemaMenuItem = null;
+        if(isArray(formDef.uiSchemas) === true && formDef.uiSchemas.length > 0) {
+          _activeUiSchemaMenuItem = formDef.uiSchemas[0];
+        }
+
+        that.setState({ forms: forms, forms_loaded: true, loading: false, formDef, activeUiSchemaMenuItem: _activeUiSchemaMenuItem });
       }).catch((loadError) => {
+        console.error(`Error while downloading / setting forms info ${loadError.message}`, loadError);
         that.setState({ forms: [], forms_loaded: true, loading: false, formDef: simpleForm, formError: { message: loadError.message } })
       })
     } catch (formloadError) {

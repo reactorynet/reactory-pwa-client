@@ -2,6 +2,7 @@
 import React from 'react';
 import  { compose } from 'redux';
 import { withRouter } from 'react-router'
+import Loadable from 'react-loadable';
 import {
   Typography,
   Grid,
@@ -87,7 +88,7 @@ export const componentRegistery = [
     name: 'Link',
     component: LinkComponent,
     version: '1.0.0',
-  },
+  },  
   {
     nameSpace: 'core',
     name: 'SingleColumnLayout',
@@ -117,6 +118,12 @@ export const componentRegistery = [
     name: 'CompanyLogo',
     version: '1.0.0',
     component: CompanyLogo,    
+  },
+  {
+    nameSpace: 'core',
+    name: 'Cropper',
+    version: '1.0.0',
+    component: require('./shared/image/Cropper').Cropper,
   },
   {
     nameSpace: 'core',

@@ -158,20 +158,21 @@ class SurveyDelegates extends Component {
           break;
         }
         case 'view-assessments': {          
-          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic' });
+          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'assessments' });
           break;
         }
         case 'view-details': {
           this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'details' });
           break;
         }
+        
         case 'remove': {          
           this.removeDelegateFromSurvey(delegateEntry, delegateEntry.removed === true);
           break;
         }
         case 'report': 
         default: {
-          this.generateReport(delegateEntry)
+          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report' });
           break;
         }
       }
@@ -200,6 +201,7 @@ class SurveyDelegates extends Component {
         menus.push({ title: 'Send Reminders', icon: 'mail_outline', id: 'send-reminder', key:'reminder' });
         menus.push({ title: 'Re-send Launch', icon: 'flight_takeoff', id: 'relaunch', key:'relaunch' });        
         menus.push({ title: 'View Assessment Details', icon: 'assignment', id: 'view-assessments', key:'view-assessments' });
+        menus.push({ title: 'Generate Reports', icon: 'assessment', id: 'report', key:'report' });
         break;
       }
       default: {
@@ -228,91 +230,96 @@ class SurveyDelegates extends Component {
 
   generateReport(delegateEntry){
     //console.log('Generate Report', delegateEntry);
+    this.setState({ })
   }
 
-  getBasicModalView() {
+  getBasicModalView( ) {
     const self = this;
-    const { activeEntry, assessment } = this.state;
+    const { activeEntry, assessment, basicModalViewMode } = this.state;
     const { DropDownMenu, Assessment, ReportViewer } = this.componentDefs;
     
     //src: http://localhost:4000/pdf/towerstone/delegate-360-assessment?x-client-key=${this.props.api.CLIENT_KEY}&x-client-pwd=${this.props.api.CLIENT_PWD}
-
-    return (
-    <Fragment>
-      <Paper className={this.props.classes.root} elevation={2}>
-        <UserListItem key={activeEntry.id} user={activeEntry.delegate} />
-        <hr/>
-        <Typography variant="caption">Assessments</Typography>
-        <List>
-          {
-            activeEntry.assessments.map( ( assessment ) => {
-              const onMenuItemSelect = (evt, menuItem) => {
-                switch(menuItem.id){
-                  case "send-reminder": {          
-                    break;
-                  }
-                  case "remove-assessment": {
-                    self.removeAssessorForDelegate(activeEntry, assessment);
-                    break;
-                  }
-                  case "details": {
-                    self.setState({ assessment })
-                    break;
-                  }
-                  default: {
-                    break;
-                  }
-                }
-              };
-          
-              const menus = [
-                {
-                  title: 'Remove', 
-                  icon: 'delete_outline', 
-                  id: 'remove-assessment', 
-                  key:'remove-assessment'
-                },
-                {
-                  title: 'Details', 
-                  icon: 'search', 
-                  id: 'details', 
-                  key:'details'
-                }
-              ];
+    if(basicModalViewMode === 'report') {
+      return (<ReportViewer 
+      folder="towerstone" 
+      report="delegate-360-assessment" 
+      method="get" 
+      delivery="inline"           
+      waitingText="Loading Report Data, please wait." 
+      data={{ surveyId: self.props.formContext.surveyId, delegateId: activeEntry.id }} />)
+    } else {
+      return (
+        <Fragment>
+          <Paper className={this.props.classes.root} elevation={2}>
+            <UserListItem key={activeEntry.id} user={activeEntry.delegate} />
+            <hr/>
+            <Typography variant="caption">Assessments</Typography>
+            <List>
+              {
+                activeEntry.assessments.map( ( assessment ) => {
+                  const onMenuItemSelect = (evt, menuItem) => {
+                    switch(menuItem.id){
+                      case "send-reminder": {          
+                        break;
+                      }
+                      case "remove-assessment": {
+                        self.removeAssessorForDelegate(activeEntry, assessment);
+                        break;
+                      }
+                      case "details": {
+                        self.setState({ assessment })
+                        break;
+                      }
+                      default: {
+                        break;
+                      }
+                    }
+                  };
               
-              if(assessment.complete !== true) {
-                menus.push({
-                  title: 'Send Reminders', 
-                  icon: 'mail_outline', 
-                  id: 'send-reminder', 
-                  key:'reminder'
-                });
+                  const menus = [
+                    {
+                      title: 'Remove', 
+                      icon: 'delete_outline', 
+                      id: 'remove-assessment', 
+                      key:'remove-assessment'
+                    },
+                    {
+                      title: 'Details', 
+                      icon: 'search', 
+                      id: 'details', 
+                      key:'details'
+                    }
+                  ];
+                  
+                  if(assessment.complete !== true) {
+                    menus.push({
+                      title: 'Send Reminders', 
+                      icon: 'mail_outline', 
+                      id: 'send-reminder', 
+                      key:'reminder'
+                    });
+                  }
+                                                    
+                  const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
+    
+                  const { assessor } = assessment;
+                  return (
+                  <UserListItem 
+                    key={ assessor.id || assessor._id } 
+                    user={ assessor } 
+                    message={ assessment.complete ? 'Assessment complete' : 'Pending' } 
+                    secondaryAction={ dropdown } />
+                  );
+                })
               }
-                                                
-              const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
+            </List>
+            { assessment && <hr />}
+            { assessment && <Assessment assessmentId={assessment.id || assessment._id}  mode="admin" /> }            
+          </Paper>
+        </Fragment>);
+    }
 
-              const { assessor } = assessment;
-              return (
-              <UserListItem 
-                key={ assessor.id || assessor._id } 
-                user={ assessor } 
-                message={ assessment.complete ? 'Assessment complete' : 'Pending' } 
-                secondaryAction={ dropdown } />
-              );
-            })
-          }
-        </List>
-        { assessment && <hr />}
-        { assessment && <Assessment assessmentId={assessment.id || assessment._id}  mode="admin" /> }
-        <ReportViewer 
-          folder="towerstone" 
-          report="delegate-360-assessment" 
-          method="get" 
-          delivery="inline"           
-          waitingText="Loading Report Data, please wait." 
-          data={{ surveyId: self.props.formContext.surveyId, delegateId: activeEntry.id }} />
-      </Paper>
-    </Fragment>)
+    
   }
 
   getDetailView(){    

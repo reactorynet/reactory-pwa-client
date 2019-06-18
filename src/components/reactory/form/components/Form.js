@@ -37,7 +37,9 @@ export default class Form extends Component {
   }
 
   componentWillReceiveProps(nextProps) {
+    
     const nextState = this.getStateFromProps(nextProps);
+    console.log('Form received new props', { nextProps, nextState});
     if (
       !deepEquals(nextState.formData, nextProps.formData) &&
       !deepEquals(nextState.formData, this.state.formData) &&
@@ -83,7 +85,8 @@ export default class Form extends Component {
     };
   }
 
-  shouldComponentUpdate(nextProps, nextState) {
+  shouldComponentUpdate(nextProps, nextState) {    
+    console.log(`shouldComponentRender`, {nextProps, nextState, res: shouldRender(this, nextProps, nextState)});
     return shouldRender(this, nextProps, nextState);
   }
 
