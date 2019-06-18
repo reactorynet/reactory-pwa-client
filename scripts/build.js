@@ -147,7 +147,7 @@ function build(previousFileSizes) {
   buildmessage += '\nClient Key:\t'+ process.env.REACT_APP_CLIENT_KEY;
   buildmessage += '\nTarget Url:\t' + process.env.PUBLIC_URL;
   buildmessage += "\n------------------------------------------------------------------------\n";
-  buildmessage += 'NB: Always check deployment urls and ensure caches are cleared\nafter deployments are complete';
+  buildmessage += 'NB: Always check deployment urls and ensure caches are cleared\nafter deployments are complete. Ensure your application manifest files resolve.';
   buildmessage += "\n------------------------------------------------------------------------";
 
   console.log(buildmessage);

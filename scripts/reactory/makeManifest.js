@@ -8,17 +8,17 @@ var manifestJson = {
       "type": "image/x-icon"
     },
     {
-      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/icon-44.png",
+      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/icons-144.png",
       "sizes": "144x144",
       "type": "image/png"
     },
     {
-      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/icon-192.png",
+      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/icons-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/icon-512.png",
+      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/icons-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
