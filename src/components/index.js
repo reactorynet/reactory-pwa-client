@@ -237,6 +237,12 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'core',
+    name: 'HelpMe',
+    version: '1.0.0',
+    component: require('../components/shared/HelpMe')
+  },
+  {
+    nameSpace: 'core',
     name: 'UserSearch',
     component: UserComponents.UserSearchInputComponent,
     version: '1.0.0'
@@ -470,6 +476,12 @@ export const componentRegistery = [
     version: '1.0.0',
     component: AotAnalyticsDashboardComponent
   },  
+  {
+    nameSpace: 'core',
+    name: 'RememberCredentials',
+    version: '1.0.0',
+    component: require('./user/Forms/index').RememberCredentialsComponent,
+  },
   {
     nameSpace: 'core',
     name: 'SpeedDial',

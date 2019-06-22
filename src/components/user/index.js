@@ -481,7 +481,7 @@ class Inbox extends Component {
 
 export const ThemedInbox = compose(withTheme, withStyles(Inbox.styles))(Inbox);
 
-export const UserInbox = compose(withApi)(({ api, via = 'local' }) => (
+export const UserInbox = compose(withApi)(({ api, via = 'local', display = 'default', filter = '' }) => (
   <Query query={api.queries.Users.userInbox} variables={{ order: 'asc', via }}>
    {(props, context) => {
       const { loading, error, data } = props;

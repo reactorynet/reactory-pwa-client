@@ -1,23 +1,18 @@
 
-import React, { Component, Children, ReactDOM } from "react";
+import React, { Component, Children } from "react";
+import ReactDOM from 'react-dom';
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
 import {
     BrowserRouter as Router,
-    Route,
-    Link,
-    Redirect,
   } from 'react-router-dom';
 
 import { Provider } from 'react-redux';
-import { createHttpLink } from 'apollo-link-http';
-import { setContext } from 'apollo-link-context';
 import { ApolloClient, InMemoryCache, gql } from 'apollo-client-preset';
 import { ApolloProvider, Query, Mutation } from 'react-apollo';
 import { Typography } from '@material-ui/core';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
-import { createMuiTheme } from '@material-ui/core/styles';
 import { find, isArray, intersection, isEmpty, isNil } from 'lodash';
 import { compose } from 'redux';
 import moment from 'moment';
@@ -25,6 +20,7 @@ import objectMapper from 'object-mapper';
 import { withApollo } from "react-apollo";
 import * as restApi from './RestApi';
 import graphApi from './graphql';
+import icons from '../assets/icons'; 
 import queryString from '../query-string';
 import { 
     getAvatar, 
@@ -34,9 +30,9 @@ import {
     getOrganizationLogo, 
     attachComponent, 
     getElement,
+    injectResources,
 } from '../components/util';
 import amq from '../amq';
-
 const { queries, mutations } = graphApi
 
 const storageKeys = {
@@ -49,12 +45,10 @@ const anonUser = { id: '', firstName: '', lastName: '', avatar: '', anon: true, 
 
 export const ReactoryApiEventNames = {
     onLogout : 'loggedOut',
-    onLogin : 'loggedIn'
+    onLogin : 'loggedIn',
+    onPluginLoaded: 'onPluginLoaded'
 };
-
-  
-
-  
+    
 const EmptyComponent = (fqn) => {
     return (<Typography>No Component For Fqn: {fqn}</Typography>)
 };
@@ -87,7 +81,8 @@ export class ReactoryApi extends EventEmitter {
                     h=Math.imul(31,h)+inputString.charCodeAt(i)|0;
                     return h;
                 }
-            }
+            },
+            injectResources
         };
         this.rest = {
             json: {
@@ -109,6 +104,7 @@ export class ReactoryApi extends EventEmitter {
         this.afterLogin = this.afterLogin.bind(this);
         this.registerComponent = this.registerComponent.bind(this);
         this.getComponent = this.getComponent.bind(this);
+        this.mountComponent = this.mountComponent.bind(this);
         this.getComponents = this.getComponents.bind(this);
         this.status = this.status.bind(this);
         this.getAvatar = getAvatar;
@@ -134,10 +130,109 @@ export class ReactoryApi extends EventEmitter {
         this.graphqlQuery = this.graphqlQuery.bind(this);
         this.getLastUserEmail = this.getLastUserEmail.bind(this);
         this.setLastUserEmail = this.setLastUserEmail.bind(this);
+        this.saveUserLoginCredentials = this.saveUserLoginCredentials.bind(this);
+        this.getUserLoginCredentials = this.getUserLoginCredentials.bind(this);
         this.setAuthToken = this.setAuthToken.bind(this);
         this.getAuthToken = this.getAuthToken.bind(this);
-        this.forms().then()        
+        this.forms().then()
+        this.assets = {
+            logo: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/logo.png`,
+            avatar: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/avatar.png`,
+            icons: {
+                144: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-144.png`,
+                192: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-192.png`,
+                512: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-512.png`,
+            }
+        };
+        this.log = this.log.bind(this);
+        this.stat = this.stat.bind(this);
+        this.flushstats = this.flushstats.bind(this);
+        this.publishstats = this.publishstats.bind(this);
+        this.statistics = {
+            __delta: 0,
+            __keys: [],
+            __lastFlush: null,
+            __flushInterval: 5000,
+            items: {
+
+            }
+        };
+        //bind internal queue listeners
+        this.amq.onReactoryPluginEvent('loaded', (data)=>{
+            this.emit(ReactoryApiEventNames.onPluginLoaded, ...data );
+        });
+
+        this.flushIntervalTimer = setInterval(this.flushstats.bind(this, true), 5000);
     }
+
+    log(message, params = [], kind = 'log') {
+        const dolog = () => params.length === 0 ? console[kind](`Reactory::${message}`) : console[kind](`Reactory::${message}`, params);
+        if(process.env.NODE_ENV !== 'production') {
+            dolog();
+        } else {
+            //if it is production, we can enable / disable the log level by inspecting window.reactory object
+            if(window.reactory && window.reactory.log && window.reactory.log[kind] === true) {
+                dolog();
+            }
+        }
+    }
+
+    publishstats(){
+        
+        this.publishingStats = true;
+        
+        if(this.statistics.__delta > 0) {
+            this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, {}, 'debug');
+            this.graphqlMutation(gql`mutation PublishStatistics($statistics: [StatisticEntry]!){
+                Core_PublishStatistics(statistics: $statistics)
+            }`,{ 
+                collectedStats: this.statistics.items             
+            }).then((publishResult) => {
+                
+                this.statistics = {
+                    __delta: 0,
+                    __keys: [],
+                    __lastFlush: null,
+                    __flushInterval: this.statistics.__flushInterval,
+                    items: {
+        
+                    }
+                }
+                this.log('Statistics published and flushed', publishResult, 'debug');
+
+                this.publishingStats = false;
+            }).catch((error) => {
+                this.log(error.message, error, 'error');
+                this.publishingStats = false;
+            });
+        }        
+    }
+
+    flushstats(save){
+        if(save === true) {
+            this.publishstats()
+        } else {
+            this.statistics = {
+                __delta: 0,
+                __keys: [],
+                __lastflush: null,
+                __flushinterval: this.statistics.__flushinterval,
+                items: {
+    
+                }
+            };
+        }                
+    };
+
+    stat( key,  statistic ){                               
+        if(this.statistics.items[key]) {
+           this.statistics.items[key] = { ...this.statistics.item[key], ...statistic };
+           this.statistics.__keys.push(key);
+        } else {
+            this.statistics.items[key] = statistic;
+        }
+        this.statistics.__delta += 1;        
+    };
 
     graphqlMutation(mutation, variables, options = { fetchPolicy: 'network-only' }){
         const that = this
@@ -161,8 +256,7 @@ export class ReactoryApi extends EventEmitter {
         });
     }
 
-    afterLogin(user){ 
-        ////console.log('After login called');       
+    afterLogin(user){               
         this.setUser(user); 
         this.setAuthToken(user.token);   
         return this.status({ emitLogin: true });        
@@ -244,7 +338,6 @@ export class ReactoryApi extends EventEmitter {
     async raiseFormCommand(commandId, commandDef, formData){
         ////console.log('Raising Form Command Via AMQ', {commandId, formData});
         if(commandId.indexOf('graphql') === 0){
-            debugger;
             let commandText = ''
             let method = 'query';
             if(commandId.indexOf('.') > 0) method = commandId.split('.')[1];
@@ -330,8 +423,13 @@ export class ReactoryApi extends EventEmitter {
     getTheme(){
         const user = this.getUser()
         const { themeOptions } = user
-
-        return themeOptions
+        //add theme extension
+        const extensions = {
+            reactory: {
+                icons                 
+            }
+        }
+        return { ...themeOptions, extensions  };
     }
 
     getRoutes(){
@@ -399,8 +497,57 @@ export class ReactoryApi extends EventEmitter {
         } catch (err) {
             console.error(`Bad component name "${fqn}"`)
             return null
+        }        
+    }
+
+    mountComponent(ComponentToMount, props, domNode, theme = true, callback){
+        const that = this    
+        if(theme === true) {
+            ReactDOM.render(<React.Fragment>
+            <CssBaseline />
+            <Provider store={that.reduxStore}>
+                <ApolloProvider client={that.client}>
+                    <MuiThemeProvider theme={that.muiTheme}>
+                        <Router>                    
+                            <ApiProvider api={that}>                        
+                                <ComponentToMount {...props} />
+                            </ApiProvider>
+                        </Router>
+                    </MuiThemeProvider>
+                </ApolloProvider>
+            </Provider>
+        </React.Fragment>, domNode, callback)
+        } else {
+            ReactDOM.render(<ComponentToMount {...props} />, domNode, callback);        
         }
         
+    }
+
+    createElement(ComponentToCreate, props, domNode, theme, callback = ()=>{}) {
+        const that = this   
+        /* 
+        ReactDOM.render(<div>
+            <CssBaseline />
+            <Provider store={that.reduxStore}>
+                <ApolloProvider client={that.client}>
+                    <MuiThemeProvider theme={that.muiTheme}>
+                        <Router>                    
+                            <ApiProvider api={that}>                        
+                                { React.createElement(ComponentToCreate, props) }
+                            </ApiProvider>
+                        </Router>
+                    </MuiThemeProvider>
+                </ApolloProvider>
+            </Provider>
+        </div>, domNode, callback)
+        */
+
+       return React.createElement(ComponentToCreate, props)
+            
+    }
+
+    unmountComponent(node){
+        return ReactDOM.unmountComponentAtNode(node)
     }
 
     logout(refreshStatus = true) {
@@ -426,6 +573,22 @@ export class ReactoryApi extends EventEmitter {
         const userString = localStorage.getItem(storageKeys.LoggedInUser);
         if (userString) return JSON.parse(userString);
         return anonUser;
+    }
+
+    saveUserLoginCredentials(provider, username, password) {
+        return this.graphqlMutation(gql`mutation AddUserCredentials($provider: String!, $username: String!, $password: String!){
+            addUserCredentials(provider: $provider, username: $username, password: $password)
+        }`, { provider, username, password});
+    }
+
+    getUserLoginCredentials(provider) {
+        return this.graphqlQuery(gql`query GetUserCredentials($provider: String!) {
+            getUserCredentials(provider: $provider) {
+                provider
+                props
+                lastLogin
+            }            
+        }`, { provider } );
     }
     
     storeObjectWithKey(key, objectToStore){

@@ -8,11 +8,11 @@ import { Link } from 'react-router-dom';
 class LinkComponent extends Component {
   
   constructor(props, context){
-    super(props, context)
+    super(props, context)    
   }
-
+  
   render() {
-    const { props } = this;
+    const { props, theme } = this;
 
     let linkText = template('${link}')({...props});
     let linkTitle = props.linkTitle;
@@ -26,8 +26,15 @@ class LinkComponent extends Component {
         linkTitle = template(props.uiSchema["ui:options"].title)(props)
       }
   
-      if(props.uiSchema["ui:options"].icon){
-        linkIcon = <Icon style={{marginLeft:'5px'}}>{props.uiSchema["ui:options"].icon}</Icon>
+      if(props.uiSchema["ui:options"].icon){        
+        const iconProps = {styles: { marginLeft: theme.spacing(1) }};        
+        const custom = props.uiSchema["ui:options"].iconType                
+        let IconComponent = custom !== undefined ? theme.extensions[custom].icons[props.uiSchema["ui:options"].icon] : null;
+        if(IconComponent) {
+          linkIcon = <IconComponent {...iconProps} />
+        } else {
+          linkIcon = <Icon {...iconProps}>{props.uiSchema["ui:options"].icon}</Icon>
+        }                
       }
     }        
     return (

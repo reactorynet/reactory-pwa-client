@@ -294,8 +294,8 @@ class ApplicationHeader extends Component {
           <div className={this.props.classes.drawerHeader}>
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <BackIcon/>
-            </IconButton>
-            <Avatar src={user.applicationAvatar}/>                        
+            </IconButton>                          
+            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{style: { width: '32px', objectFit: "contain" }}} />            
           </div>
           <Divider/>
           <Typography variant="subtitle1" color="secondary"

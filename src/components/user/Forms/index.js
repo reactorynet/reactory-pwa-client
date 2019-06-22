@@ -8,6 +8,7 @@ import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import {
   Avatar,
   Chip,
+  Container,
   Button,
   Fab,
   FormControl,
@@ -297,6 +298,93 @@ class SearchUser extends Component {
     )
   }
 }
+
+
+class RememberCredentials extends Component {
+
+  static propTypes = {
+    username: PropTypes.string,
+    password: PropTypes.string,
+    provider: PropTypes.string,
+    onOk: PropTypes.func,
+    api: PropTypes.instanceOf(ReactoryApi)
+  }
+
+  static defaultProps = {
+    onComplete: ()=> {
+
+    }
+  }
+
+  static styles = theme => ({ })
+
+  constructor(props, context){
+    super(props, context);  
+    this.componentDefs = props.api.getComponents([
+      'core.Loading',
+      'core.Logo',      
+    ]);
+
+    this.state = {
+      saving: false
+    }
+
+    this.saveCredentials = this.saveCredentials.bind(this);
+    this.cancelSave = this.cancelSave.bind(this);
+  }
+
+  componentDidCatch(unhandled) {
+    this.props.api.log('An unhandled error occured in RememberCredentials Form', unhandled, 'warning')
+  }
+
+  saveCredentials(){
+    const { username, password, provider, onComplete, api } = this.props;    
+    const self = this;    
+    this.setState({ saving: true }, ()=>{      
+      api.saveUserLoginCredentials(provider, username, password).then( (saved) => {        
+        self.setState({ saving: false, complete: true, message: 'Your credentials has been stored and kept safe' }, ()=>{
+          onComplete(saved.data.addUserCredentials);      
+        });        
+      }).catch((saveError) => {
+        const errorMessage = 'saveError.message';                
+        self.setState({ saving: false, complete: true, message: 'We could not save your credentials due to a system error.' }, ()=>{          
+          onComplete(false, errorMessage);
+        });      
+      });
+    })    
+  }
+
+  cancelSave(){
+    if(this.props.onClose) {
+      this.props.onClose()
+    }
+  }
+
+
+
+  render(){
+    const { Logo, Loading } = this.componentDefs;
+    const { api } = this.props;
+    const user = api.getUser();
+    return (
+      <Container maxWidth="sm" style={{paddingTop: '10%'}}>                
+        { this.state.saving && (<Loading message={'Please wait while we set things up.'} />) }
+        { this.state.saving === false ? (<Logo backgroundSrc={api.assets.logo} />) : null }
+        <Typography variant="h4" style={{marginTyop:"40px"}}>Would you like us to keep you logged in?</Typography>
+        <Typography variant="body2">
+          We can store your credentials and login for you whenever you access this page or use services which 
+          require your Lasec 360 account.  If you choose not to you will need to login to 360 whenever you login to 
+          {user.applicationTitle}.
+        </Typography>        
+        <Button color="primary" onClick={this.saveCredentials}><Icon>check</Icon>Yes please</Button>
+        <Button onClick={this.cancelSave}><Icon>close</Icon>No thanks</Button>
+      </Container>
+    )
+  }
+}
+
+export const RememberCredentialsComponent = compose(withApi, withTheme, withStyles(RememberCredentials.styles))(RememberCredentials)
+
 
 SearchUser.propTypes = {
 }

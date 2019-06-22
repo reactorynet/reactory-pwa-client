@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -47,7 +47,7 @@ class FullScreenDialog extends Component {
     const { classes, title, containerProps = {} } = this.props;
 
     return (
-      <div>
+      <Fragment>
         <Dialog
           fullScreen
           open={this.props.open}
@@ -65,7 +65,7 @@ class FullScreenDialog extends Component {
           </AppBar>
           {this.props.children}
         </Dialog>
-      </div>
+      </Fragment>
     );
   }
 }

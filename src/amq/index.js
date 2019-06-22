@@ -1,4 +1,7 @@
 /**
+ * AMQ - Asynchronous Message Queue. We use postal.js to create a
+ * pub - sub in memory bus.
+ * 
  * This is the basic setup and configuration of channels for UI events
  */
 import postal from 'postal';
@@ -10,6 +13,8 @@ export const DEFAULT_CHANNELS = {
   FILE: 'file',
   FORM_COMMAND: 'form.command',
   WORKFLOW: 'workflow',
+  CROSS_ORIGIN: 'cross_origin',
+  PLUGINS: 'reactory.plugins',
 };
 
 export const $chan = (name) => {
@@ -23,7 +28,9 @@ export const $sub = {
   data: (eventId, func) => $chan(DEFAULT_CHANNELS.DATA).subscribe(eventId, func),
   metrics: (eventId, func) => $chan(DEFAULT_CHANNELS.METRICS).subscribe(eventId, func),
   formCommand: (eventId, func) => $chan(DEFAULT_CHANNELS.FORM_COMMAND).subscribe(eventId, func),
-  workFlow: (eventId, func) => $chan(DEFAULT_CHANNELS.WORKFLOW).subscribe(eventId, func)
+  workFlow: (eventId, func) => $chan(DEFAULT_CHANNELS.WORKFLOW).subscribe(eventId, func),
+  messageHandlerLoaded: (eventId, func) => $chan(DEFAULT_CHANNELS.CROSS_ORIGIN).subscribe(eventId, func),
+  pluginLoaded: (eventId, func) => $chan(DEFAULT_CHANNELS.PLUGINS).subscribe(eventId, func),
 };
 
 export const $pub = {
@@ -34,6 +41,8 @@ export const $pub = {
   metrics: (eventId, data = {}) => $chan(DEFAULT_CHANNELS.METRICS).publish(eventId, data),
   formCommand: (eventId, formData) => $chan(DEFAULT_CHANNELS.FORM_COMMAND).publish(eventId, formData),
   workFlow: (eventId, data) => $chan(DEFAULT_CHANNELS.WORKFLOW).publish(eventId, data),
+  messageHandlerLoaded: (eventId, data) => $chan(DEFAULT_CHANNELS.CROSS_ORIGIN).publish(eventId, data),
+  pluginLoaded: (eventId, data) => $chan(DEFAULT_CHANNELS.PLUGINS).publish(eventId, data),
 };
 
 export default {
@@ -45,10 +54,15 @@ export default {
   onDataEvent: $sub.data,
   onMetricEvent: $sub.metrics,
   onFormCommandEvent: $sub.formCommand,
+  onMessageHandlerLoaded: $sub.messageHandlerLoaded,
+  onReactoryPluginLoaded: $sub.pluginLoaded,
+  onReactoryPluginEvent: $sub.pluginLoaded,
   raiseTransactionEvent: $pub.transactions,
   raiseFileEvent: $pub.file,
   raiseDataEvent: $pub.data,
   raiseMetricEvent: $pub.metrics,
   raiseFormCommand: $pub.formCommand, 
-  raiseWorkFlowEvent: $pub.workFlow, 
+  raiseWorkFlowEvent: $pub.workFlow,
+  raiseMessageHandlerLoadedEvent: $pub.messageHandlerLoaded,
+  raiseReactoryPluginEvent: $pub.pluginLoaded 
 };

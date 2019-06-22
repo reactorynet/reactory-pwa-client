@@ -14,6 +14,8 @@ export const HiddenWidget = (props, context) => (<input type="hidden" id={props.
 export const RecordLookupWidget = require('./RecordLookup');
 export const SliderWidget = require('./SliderWidget').SliderWidgetComponent;
 export const FroalaWidget = require('./FroalaWidget');
+export const LinkFieldWidget = require('./LinkFieldWidget');
+export const LinkField = LinkFieldWidget; //added for backward compatibility
 export const DateSelectorWidget = require('../../dates/DateTimePicker');
 export const CompanyLogoWidget = require('./CompanyLogo');
 export const UserWidgetWithSearch = require('./UserWidgetWithSearch');

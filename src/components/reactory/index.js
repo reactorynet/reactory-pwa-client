@@ -165,7 +165,7 @@ class ReactoryComponent extends Component {
     this.renderWithQuery = this.renderWithQuery.bind(this);
     this.renderWithMutation = this.renderWithMutation.bind(this);
     this.state = _state;
-    this.defaultComponents = ['core.Loading', 'core.Logo', 'core.FullScreenModal', 'core.DropDownMenu'];
+    this.defaultComponents = ['core.Loading', 'core.Logo', 'core.FullScreenModal', 'core.DropDownMenu', 'core.HelpMe'];
     this.componentDefs = props.api.getComponents(this.defaultComponents);
     this.getFormContext = this.getFormContext.bind(this);
     this.getFormData = this.getFormData.bind(this);
@@ -174,6 +174,25 @@ class ReactoryComponent extends Component {
     this.showDebug = this.showDebug.bind(this);
     this.formRef = null;
     this.downloadForms = this.downloadForms.bind(this);
+    this.onPluginLoaded = this.onPluginLoaded.bind(this);
+    this.getHelpScreen = this.getHelpScreen.bind(this);
+    this.plugins = { };
+  }
+
+  onPluginLoaded(plugin){    
+    try {
+      this.plugins[plugin.componentFqn] = plugin.component(this.props, { form: this });
+      this.plugins[plugin.componentFqn].__container = this;
+    } catch (pluginFailure) {
+      this.props.api.log(`An error occured loading plugin ${plugin.componentFqn}`,  { plugin, pluginFailure });
+    }
+    
+  }
+
+  componentDidMount(){
+    const { api } = this.props;
+    api.log('ReactoryComponent.componentDidMount', {props: this.props, context: this.context }, 'debug');
+    api.amq.onReactoryPluginLoaded('loaded', this.onPluginLoaded);
   }
   
   formDef(){
@@ -188,15 +207,13 @@ class ReactoryComponent extends Component {
   }
 
   getHelpScreen(){
-    const { FullScreenModal, Loading } = this.componentDefs;
+    const { HelpMe } = this.componentDefs;
     const formDef = this.formDef();
 
     const closeHelp = e => this.setState({ showHelp: false });
     return (
-      <FullScreenModal open={this.state.showHelp === true} onClose={closeHelp}>
-        <Typography>Help for {formDef.title}</Typography>
-        <Loading message={`Loading Help for ${formDef.title}`} />
-      </FullScreenModal>
+      <HelpMe topics={formDef.helpTopics} tags={formDef.keywords} title={formDef.title} open={ this.state.showHelp === true } onClose={closeHelp}>
+      </HelpMe>            
     )
   }
 
@@ -259,8 +276,8 @@ class ReactoryComponent extends Component {
     }
 
     let showSubmit = true;
-    if(formDef.uiSchema && formDef.uiSchema['ui:options']) {      
-      showSubmit = formDef.uiSchema['ui:options'].showSubmit === true || true;
+    if(formDef.uiSchema && formDef.uiSchema['ui:options']) {
+      showSubmit = formDef.uiSchema['ui:options'].showSubmit === true;
     }
 
     let uiSchemaSelector = null;
@@ -293,8 +310,7 @@ class ReactoryComponent extends Component {
             {this.props.children && this.props.children.length > 0 ? this.props.children : showSubmit && <Fab type="submit" color="primary"><Icon>{icon}</Icon></Fab>}
             {self.state.allowRefresh && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}            
             {formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button>}
-            {formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button>}
-            {formDef.debug || process.env.NODE_ENV === 'development' && <Button variant="text" onClick={this.showDebug}><Icon>bug</Icon></Button> }             
+            {formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button>}                       
           </Toolbar>
         </Form>
         {this.getHelpScreen()}
@@ -322,8 +338,7 @@ class ReactoryComponent extends Component {
         <Mutation mutation={gql(mutation.text)}>
         {(mutateFunction, { loading, errors, data }) => {          
           const onFormSubmit = (formSchema) => {  
-            console.debug(`Form Submitting, post via graphql`, formSchema);
-            debugger;          
+            api.log(`Form Submitting, post via graphql`, formSchema, 'debug');            
             const _variables = objectMapper({...formSchema, formContext: that.getFormContext() }, mutation.variables);
             mutateFunction({
               variables: {..._variables},
@@ -335,7 +350,9 @@ class ReactoryComponent extends Component {
           let errorWidget = null;
 
           if(loading === true) loadingWidget = (<Loading message="Updating... please wait." />);
-          if(errors) errorWidget = (<p>{errors.message}</p>);
+          if(errors) {
+            errorWidget = (<p>{errors.message}</p>);
+          }
           if(data && data[mutation.name]) {
             if(mutation.onSuccessMethod === "route") {
               const inputObj = {
@@ -365,10 +382,11 @@ class ReactoryComponent extends Component {
       const formContext = this.getFormContext();      
       const _variables = objectMapper({formContext, formData}, query.variables || {});
       let options = query.options || {  };
-      
+            
       api.graphqlQuery(gql(query.text), _variables).then(( result ) => {        
-        const { data, loading, error } = result;
+        const { data, loading, errors } = result;
         let _formData = formData;
+
         if(data && data[query.name]) {          
           switch(query.resultType) {
             case 'array' :{
@@ -381,19 +399,37 @@ class ReactoryComponent extends Component {
             default: {
               _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap || {});
             }
+          }          
+        }      
+        
+        that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, ()=>{
+          if(errors)  {            
+            api.log(`Error executing graphql query`, errors)
+            if( formDef.graphql.query.onError ) {            
+              const componentToCall = api.getComponent(formDef.graphql.query.onError.component);
+              if(componentToCall && typeof componentToCall[formDef.graphql.query.onError.method] === 'function') {
+                componentToCall[formDef.graphql.query.onError.method](errors);
+              }
+            }  
           }
-          
-        }
-        that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: error, loading });          
+        });
+
       }).catch((queryError) => {
-        that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false });
+        that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false }, ()=>{
+          debugger;
+          if( formDef.graphql.query.onError ) {            
+            const componentToCall = api.getComponent(formDef.graphql.query.onError.component);
+            if(componentToCall && typeof componentToCall[formDef.graphql.query.onError.method] === 'function') {
+              componentToCall[formDef.graphql.query.onError.method](queryError)
+            }
+          }
+        });
       });
 
       return <Loading title={`Fetching data for ${formDef.title}`} />     
     } 
     
-    if ( has.mutation === true) {
-      console.debug('Form has mutation defined.')
+    if ( has.mutation === true) {      
       return getMutationForm(formData)
     } 
       
@@ -531,9 +567,8 @@ class ReactoryComponent extends Component {
       }
     };
 
-    const setWidgets = () => {
-      
-      switch (schema.uiFramework) {
+    const setWidgets = () => {     
+      switch (schema.uiFramework) {        
         case 'material': {
           schema.widgets = {
             ...WidgetPresets,
@@ -608,34 +643,7 @@ class ReactoryComponent extends Component {
                   <div dangerouslySetInnerHTML={{__html: formData}}></div>
                 </Fragment>
               )              
-            },                        
-            LinkField: (props, context) => {                            
-              let linkText = template('/${formData}')({...props});
-              let linkTitle = props.formData;
-              let linkIcon = null;
-
-              if(props.uiSchema && props.uiSchema["ui:options"]){
-                if(props.uiSchema["ui:options"].format){
-                  linkText = template(props.uiSchema["ui:options"].format)(props)
-                }                
-                if(props.uiSchema["ui:options"].title){
-                  linkTitle = template(props.uiSchema["ui:options"].title)(props)
-                }
-
-                if(props.uiSchema["ui:options"].icon){
-                  linkIcon = <Icon style={{marginLeft:'5px'}}>{props.uiSchema["ui:options"].icon}</Icon>
-                }
-              }
-
-              const goto = () => { 
-                if(props.uiSchema["ui:options"].userouter === false) window.location.assign(linkText);
-                else history.push(linkText); 
-              };
-
-              return (
-                <Fragment><Button onClick={goto} type="button">{linkTitle}{linkIcon}</Button></Fragment>
-              )
-            },
+            },                                    
             LogoWidget:  (props) => {
               const { formData } = props
               if(formData === undefined || formData === null) return <Typography>Logo loading...</Typography>
