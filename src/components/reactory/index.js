@@ -137,6 +137,7 @@ class ReactoryComponent extends Component {
 
   constructor(props, context) {
     super(props, context);
+    
     // //console.log('New form', {props, context});
     let _state = {
       loading: true,
@@ -187,6 +188,10 @@ class ReactoryComponent extends Component {
       this.props.api.log(`An error occured loading plugin ${plugin.componentFqn}`,  { plugin, pluginFailure });
     }
     
+  }
+
+  componentDidCatch(error) {
+    this.props.api.log(`An error occured outside of form boundary`, error, 'error');
   }
 
   componentDidMount(){
@@ -382,7 +387,23 @@ class ReactoryComponent extends Component {
       const formContext = this.getFormContext();      
       const _variables = objectMapper({formContext, formData}, query.variables || {});
       let options = query.options || {  };
-            
+      
+      const handleErrors = (errors) => {
+        if( formDef.graphql.query.onError ) {            
+          const componentToCall = api.getComponent(formDef.graphql.query.onError.componentRef);
+          if(componentToCall && typeof componentToCall === 'function') {                
+            const componentInstance = componentToCall(that.props, { ...that.context, form: that })
+            if(typeof componentInstance[formDef.graphql.query.onError.method] === 'function'){
+              try {
+                componentInstance[formDef.graphql.query.onError.method](errors);
+              } catch(err) {
+                that.api.log(err.message, err, 'error');
+              }                  
+            }
+          }
+        }
+      };
+      
       api.graphqlQuery(gql(query.text), _variables).then(( result ) => {        
         const { data, loading, errors } = result;
         let _formData = formData;
@@ -405,23 +426,14 @@ class ReactoryComponent extends Component {
         that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, ()=>{
           if(errors)  {            
             api.log(`Error executing graphql query`, errors)
-            if( formDef.graphql.query.onError ) {            
-              const componentToCall = api.getComponent(formDef.graphql.query.onError.component);
-              if(componentToCall && typeof componentToCall[formDef.graphql.query.onError.method] === 'function') {
-                componentToCall[formDef.graphql.query.onError.method](errors);
-              }
-            }  
+            handleErrors(errors);  
           }
         });
 
       }).catch((queryError) => {
-        that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false }, ()=>{
-          debugger;
+        that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false }, ()=>{                
           if( formDef.graphql.query.onError ) {            
-            const componentToCall = api.getComponent(formDef.graphql.query.onError.component);
-            if(componentToCall && typeof componentToCall[formDef.graphql.query.onError.method] === 'function') {
-              componentToCall[formDef.graphql.query.onError.method](queryError)
-            }
+            handleErrors([queryError]);
           }
         });
       });

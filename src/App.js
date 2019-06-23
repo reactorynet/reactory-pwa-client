@@ -224,9 +224,7 @@ class App extends Component {
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
     if(!themeOptions.typography) themeOptions.typograph =  { useNextVariants: true };
     else themeOptions.typography.useNextVariants = true;
-
-    
-
+        
     const muiTheme = createMuiTheme(themeOptions);
     api.muiTheme = muiTheme;
                 
@@ -239,7 +237,7 @@ class App extends Component {
               <ApiProvider api={api}>
                 <MuiThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
-                  <AssessorHeaderBar title={muiTheme.content.appTitle} />
+                  <AssessorHeaderBar title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
                   <div style={{ marginTop: '80px', paddingLeft: '8px', paddingRight: '8px', marginBottom: '8px' }}>
                                         
                     { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }

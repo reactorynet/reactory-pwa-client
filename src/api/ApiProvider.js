@@ -159,10 +159,12 @@ export class ReactoryApi extends EventEmitter {
         };
         //bind internal queue listeners
         this.amq.onReactoryPluginEvent('loaded', (data)=>{
-            this.emit(ReactoryApiEventNames.onPluginLoaded, ...data );
+            
+            this.emit(ReactoryApiEventNames.onPluginLoaded, data );
         });
 
         this.flushIntervalTimer = setInterval(this.flushstats.bind(this, true), 5000);
+        this.status();
     }
 
     log(message, params = [], kind = 'log') {
@@ -183,10 +185,12 @@ export class ReactoryApi extends EventEmitter {
         
         if(this.statistics.__delta > 0) {
             this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, {}, 'debug');
-            this.graphqlMutation(gql`mutation PublishStatistics($statistics: [StatisticEntry]!){
-                Core_PublishStatistics(statistics: $statistics)
+            const entries = this.statistics.__keys.map( key => ({ key, stat: this.statistics.items[key] }));
+            
+            this.graphqlMutation(gql`mutation PublishStatistics($entries: [StatisticsInput]!){
+                CorePublishStatistics(entries: $entries)
             }`,{ 
-                collectedStats: this.statistics.items             
+                entries             
             }).then((publishResult) => {
                 
                 this.statistics = {
@@ -236,6 +240,7 @@ export class ReactoryApi extends EventEmitter {
 
     graphqlMutation(mutation, variables, options = { fetchPolicy: 'network-only' }){
         const that = this
+        if(typeof mutation === 'string') mutation = gql(mutation);
         return new Promise((resolve, reject) => {
             that.client.mutate({ mutation: mutation, variables, options }).then((result) => {
                 resolve(result)
@@ -247,6 +252,7 @@ export class ReactoryApi extends EventEmitter {
 
     graphqlQuery(query, variables, options = { fetchPolicy: 'network-only' }){
         const that = this
+        if(typeof query === 'string') query = gql(query);
         return new Promise((resolve, reject) => {
             that.client.query({ query, variables, options }).then((result) => {
                 resolve(result)
@@ -494,7 +500,7 @@ export class ReactoryApi extends EventEmitter {
             const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]        
             if(found && found.component) return found.component        
             return null
-        } catch (err) {
+        } catch (err) {            
             console.error(`Bad component name "${fqn}"`)
             return null
         }        

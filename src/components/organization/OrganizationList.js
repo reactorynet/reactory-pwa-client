@@ -25,6 +25,7 @@ class OrganizationList extends Component {
   }
   
   handleOrganizationSelect(organization){
+    debugger;
     if(intersection(this.state.selected, [organization.id]).length === 1){
       //deselect  
       this.setState({selected: remove(this.state.selected,organization.id)}, ()=>{
@@ -75,15 +76,24 @@ class OrganizationList extends Component {
     const list = (
       <List>
         {newOrganizationLink}
-        {allOrganizations.map( (organization, index) => {    
-          const selectOrganization = () => {
-            that.handleOrganizationSelect(organization);
-          }          
-          const organizationSelected = intersection(that.state.selected, [organization.id]).length === 1;
-          return (
-            <ListItem selected={organizationSelected === true || organization.id === organizationId} key={index} dense button onClick={selectOrganization}>              
-              <ListItemText primary={organization.name} />
-            </ListItem>)}) }
+        {allOrganizations.map( (organization, index) => {
+            
+            if(organization) {
+            
+            const selectOrganization = () => {
+              that.handleOrganizationSelect(organization);
+            }
+
+            const organizationSelected = intersection(that.state.selected, [organization.id]).length === 1;
+            
+            return (
+              <ListItem selected={organizationSelected === true || organization.id === organizationId} key={index} dense button onClick={selectOrganization}>              
+                <ListItemText primary={organization.name} />
+              </ListItem>)
+            } else {
+              return null;
+            }
+          })}        
       </List>);
 
     let component = null;
@@ -133,7 +143,6 @@ const organizationQuery = gql`
         name
         logo
         avatar
-        legacyId
         createdAt
         updatedAt
       }
