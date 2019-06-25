@@ -379,6 +379,7 @@ const apiStatus = gql`
       id
       theme
       themeOptions
+      colorSchemes
       routes {
         id
         path
