@@ -29,6 +29,10 @@ const FileSizeReporter = require('react-dev-utils/FileSizeReporter');
 const printBuildError = require('react-dev-utils/printBuildError');
 const manifestJson = require('./reactory/makeManifest');
 
+const sys = require('sys')
+const exec = require('child_process').exec;
+
+
 const measureFileSizesBeforeBuild =
   FileSizeReporter.measureFileSizesBeforeBuild;
 const printFileSizesAfterBuild = FileSizeReporter.printFileSizesAfterBuild;
@@ -108,6 +112,24 @@ checkBrowsers(paths.appPath, isInteractive)
         buildFolder,
         useYarn
       );
+
+      //start deployment
+      const instructions = `run: curl ${process.env.PUBLIC_URL}/index.html -s -I -H "secret-header:true" to invalidate nginx file cache` 
+      console.log(instructions);
+      /*
+      TODO: Werner Weber 
+      
+      Build Improvement: If deploy is present in process.env.DEPLOY=true deploy using available method
+      deployment instruction can be passed to seperate script      
+      sftp, using ssh to remote folder
+      run above curl afterwards
+      
+      exec('npm deploy', function(error, stdout, stderr) {
+        if (error) {
+          console.log(error.code);
+        }
+      });
+      */
     },
     err => {
       console.log(chalk.red('Failed to compile.\n'));
@@ -193,9 +215,9 @@ function build(previousFileSizes) {
       }
 
       buildmessage = "\n------------------------------------------------------------------------\n";
-      buildmessage += 'Build completed @ ' + moment().format(datefrmt) + '\n(' + moment().diff(startedAt, 'seconds') + ') seconds to complete';
+      buildmessage += 'Build completed @ ' + moment().format(datefrmt) + '\n(' + moment().diff(startedAt, 'minutes') + ') minutes to complete';
       buildmessage += "\n------------------------------------------------------------------------";
-      buildmessage += '\n run: curl ' + process.env.PUBLIC_URL + '/index.html -s -I -H "secret-header:true" to invalidate nginx file cache'
+      
       console.log(buildmessage);
       return resolve({
         stats,

@@ -73,16 +73,24 @@ const resolveModule = (resolveFn, filePath) => {
   return resolveFn(`${filePath}.js`);
 };
 
+const appPackageJson = resolveApp('package.json');
+const buildPath = resolveApp('build');
 const client_key = process.env.REACT_APP_CLIENT_KEY
+
+const package_json = require(appPackageJson)
+const appBuild = path.join(buildPath, package_json.version, client_key);
+
+console.log(`Using ${appBuild} build path.`);
+
 // config after eject: we're in ./config/
 module.exports = {
   dotenv: resolveApp('.env'),
   appPath: resolveApp('.'),
-  appBuild: resolveApp('build') + "/" + client_key,
+  appBuild,
   appPublic: resolveApp('public'),
   appHtml: resolveApp('public/index.html'),
   appIndexJs: resolveModule(resolveApp, 'src/index'),
-  appPackageJson: resolveApp('package.json'),
+  appPackageJson: appPackageJson,
   appSrc: resolveApp('src'),
   appTsConfig: resolveApp('tsconfig.json'),
   appJsConfig: resolveApp('jsconfig.json'),
