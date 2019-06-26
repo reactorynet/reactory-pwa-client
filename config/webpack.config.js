@@ -144,7 +144,7 @@ module.exports = function(webpackEnv) {
       paths.appIndexJs,
       // We include the app code last so that if there is a runtime error during
       // initialization, it doesn't blow up the WebpackDevServer client, and
-      // changing JS code would still trigger a refresh.
+      // changing JS code would still trigger a refresh.      
     ].filter(Boolean),
     output: {
       // The build folder.
@@ -243,8 +243,14 @@ module.exports = function(webpackEnv) {
       // https://twitter.com/wSokra/status/969633336732905474
       // https://medium.com/webpack/webpack-4-code-splitting-chunk-graph-and-the-splitchunks-optimization-be739a861366
       splitChunks: {
-        chunks: 'all',
         name: false,
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/](react|react-dom|froala-editor|react-bootstrap|redux)[\\/]/,
+            name: 'vendor',
+            chunks: 'all',
+          }
+        }
       },
       // Keep the runtime chunk separated to enable long term caching
       // https://twitter.com/wSokra/status/969679223278505985
