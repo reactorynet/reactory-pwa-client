@@ -112,7 +112,7 @@
     "ci:build:qa:lasec": "env-cmd -f config/env/.env.lasec.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
     "ci:build:prod:lasec": "env-cmd -f config/env/.env.lasec.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
         
-    "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom",
+    "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom"
   },
   "jest": {
     "collectCoverageFrom": [
