@@ -76,11 +76,10 @@
   "scripts": {
     "analyze": "source-map-explorer 'build/reactory/static/js/*.js'",
     
-    "start": "REACT_APP_TITLE=Reactory REACT_APP_THEME=reactory REACT_APP_CLIENT_KEY=reactory node --max_old_space_size=2000000 scripts/start.js",
-    
+    "start": "REACT_APP_TITLE=Reactory REACT_APP_THEME=reactory REACT_APP_CLIENT_KEY=reactory node --max_old_space_size=2000000 scripts/start.js",    
     "start:towerstone": "REACT_APP_TITLE=\"TowerStone Leadership Centre\" REACT_APP_THEME=towerstone REACT_APP_CLIENT_KEY=towerstone node --max_old_space_size=2000000 scripts/start.js",
     "start:lasec-crm": "REACT_APP_TITLE=\"Lasec CRM\" REACT_APP_THEME=lasec-crm REACT_APP_CLIENT_KEY=lasec-crm node --max_old_space_size=2000000 scripts/start.js",
-    "start-plc": "REACT_APP_TITLE=\"Purposeful Leadership Company\" REACT_APP_THEME=plc REACT_APP_CLIENT_KEY=plc node --max_old_space_size=2000000 scripts/start.js",
+    "start:plc": "REACT_APP_TITLE=\"Purposeful Leadership Company\" REACT_APP_THEME=plc REACT_APP_CLIENT_KEY=plc node --max_old_space_size=2000000 scripts/start.js",
     
     "ngrok": "env-cmd -f config/env/.env.reactory.ngrok",
 
@@ -191,6 +190,7 @@
     "@babel/preset-env": "7.4.4",
     "@babel/preset-react": "7.0.0",
     "@babel/runtime": "7.4.3",
+    "@csstools/normalize.css": "10.1.0",
     "acorn": "6.1.1",
     "babel-eslint": "10.0.1",
     "babel-loader": "8.0.6",
@@ -199,7 +199,7 @@
     "babel-preset-react-app": "9.0.0",
     "babel-runtime": "^6.26.0",
     "case-sensitive-paths-webpack-plugin": "2.1.1",
-    "chalk": "2.4.2",
+    "chalk": "2.4.2",    
     "css-loader": "2.1.1",
     "dotenv": "4.0.0",
     "dotenv-expand": "^5.1.0",
