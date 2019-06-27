@@ -95,8 +95,8 @@
     "build:qa:plc": "env-cmd -f config/env/.env.plc.qa node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
     "build:prod:plc": "env-cmd -f config/env/.env.plc.prod node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
     
-    "build:qa:lasec": "env-cmd -f config/env/.env.lasec.qa node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
-    "build:prod:lasec": "env-cmd -f config/env/.env.lasec.prod node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
+    "build:qa:lasec-crm": "env-cmd -f config/env/.env.lasec.qa node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
+    "build:prod:lasec-crm": "env-cmd -f config/env/.env.lasec.prod node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
     
     "build-all": "npm-run-all build:prod:reactory build:prod:towerstone build:prod:towerstone build:prod:plc build:prod:lasec",
 
@@ -109,8 +109,8 @@
     "ci:build:qa:plc": "env-cmd -f config/env/.env.plc.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
     "ci:build:prod:plc": "env-cmd -f config/env/.env.plc.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
     
-    "ci:build:qa:lasec": "env-cmd -f config/env/.env.lasec.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
-    "ci:build:prod:lasec": "env-cmd -f config/env/.env.lasec.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
+    "ci:build:qa:lasec-crm": "env-cmd -f config/env/.env.lasec.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
+    "ci:build:prod:lasec-crm": "env-cmd -f config/env/.env.lasec.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
         
     "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom"
   },
