@@ -78,9 +78,8 @@ const buildPath = resolveApp('build');
 const client_key = process.env.REACT_APP_CLIENT_KEY
 
 const package_json = require(appPackageJson)
-const appBuild = path.join(buildPath, package_json.version, client_key);
+const appBuild = path.join(buildPath, client_key);
 
-console.log(`Using ${appBuild} build path.`);
 
 // config after eject: we're in ./config/
 module.exports = {
