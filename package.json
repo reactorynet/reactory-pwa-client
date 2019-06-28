@@ -119,7 +119,7 @@
     "ci:deploy:qa:reactory": "env-cmd -f config/env/.env.reactory.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
     "ci:deploy:local:reactoy": "env-cmd -f config/env/.env.reactory.local node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
 
-    "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom",
+    "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom"
   },
   "jest": {
     "collectCoverageFrom": [
