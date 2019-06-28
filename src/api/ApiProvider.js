@@ -168,31 +168,35 @@ export class ReactoryApi extends EventEmitter {
     }
 
     log(message, params = [], kind = 'log') {
-        
-        switch(kind) {
-            case 'log':
-            case 'debug':
-            case 'error':
-            case 'warn':
-            case 'info': {
-                // do nothing we good
-                break;
+        try {
+            switch(kind) {
+                case 'log':
+                case 'debug':
+                case 'error':
+                case 'warn':
+                case 'info': {
+                    // do nothing we good
+                    break;
+                }
+                default: {
+                    //different kind.. we don't do your kind around here.
+                    kind = 'debug';
+                    break;
+                }
             }
-            default: {
-                kind = 'debug';
-                break;
-            }
-        }
-
-        const dolog = () => params && params.length === 0 ? console[kind](`Reactory::${message}`) : console[kind](`Reactory::${message}`, params);
-        if(process.env.NODE_ENV !== 'production') {
-            dolog();
-        } else {
-            //if it is production, we can enable / disable the log level by inspecting window.reactory object
-            if(window.reactory && window.reactory.log && window.reactory.log[kind] === true) {
+    
+            const dolog = () => params && params.length === 0 ? console[kind](`Reactory::${message}`) : console[kind](`Reactory::${message}`, params);
+            if(process.env.NODE_ENV !== 'production') {
                 dolog();
+            } else {
+                //if it is production, we can enable / disable the log level by inspecting window.reactory object
+                if(window.reactory && window.reactory.log && window.reactory.log[kind] === true) {
+                    dolog();
+                }
             }
-        }
+        } catch ( err ) {
+
+        }        
     }
 
     publishstats(){
