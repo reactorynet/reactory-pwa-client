@@ -62,7 +62,6 @@ export class DropDownMenu extends Component {
       const { props } = this;
       const { menus } = props;  
       const { open } = this.state;
-      // debugger
       const ariaId = props.id || uuid();
       const menuItems = [];
       let _menus = menus

@@ -199,7 +199,7 @@ class ResetPassword extends Component {
     this.onSubmit = this.onSubmit.bind(this);
     this.componentDefs = props.api.getComponents([
       'forms.ResetPasswordForm', 
-      'core.BasicModal'
+      'core.BasicModal',
     ]);
   }
 
@@ -306,6 +306,9 @@ class RememberCredentials extends Component {
     username: PropTypes.string,
     password: PropTypes.string,
     provider: PropTypes.string,
+    showLogin: PropTypes.bool,
+    message: PropTypes.string,
+    title: PropTypes.string,
     onOk: PropTypes.func,
     api: PropTypes.instanceOf(ReactoryApi)
   }
@@ -313,7 +316,9 @@ class RememberCredentials extends Component {
   static defaultProps = {
     onComplete: ()=> {
 
-    }
+    },
+    showLogin: false,  
+    title: 'We need some security information'
   }
 
   static styles = theme => ({ })
@@ -323,14 +328,23 @@ class RememberCredentials extends Component {
     this.componentDefs = props.api.getComponents([
       'core.Loading',
       'core.Logo',      
+      'forms.LoginForm'
     ]);
 
     this.state = {
-      saving: false
+      saving: false,
+      username: props.username,
+      password: props.password
     }
 
     this.saveCredentials = this.saveCredentials.bind(this);
     this.cancelSave = this.cancelSave.bind(this);
+  }
+
+  componentDidMount(){
+    //make sure we have the provider localsetting store
+    localStorage.setItem(`reactory.authentications.${this.props.provider}.prompt.remember`, 'not-set');    
+    localStorage.setItem(`reactory.authentications.${this.props.provider}.prompt.last`, new Date().valueOf());
   }
 
   componentDidCatch(unhandled) {
@@ -338,8 +352,10 @@ class RememberCredentials extends Component {
   }
 
   saveCredentials(){
-    const { username, password, provider, onComplete, api } = this.props;    
-    const self = this;    
+    const {  provider, onComplete, api } = this.props;    
+    const { username, password } = this.state;
+
+    const self = this;
     this.setState({ saving: true }, ()=>{      
       api.saveUserLoginCredentials(provider, username, password).then( (saved) => {        
         self.setState({ saving: false, complete: true, message: 'Your credentials has been stored and kept safe' }, ()=>{
@@ -354,30 +370,57 @@ class RememberCredentials extends Component {
     })    
   }
 
-  cancelSave(){
+  cancelSave(){    
     if(this.props.onClose) {
       this.props.onClose()
     }
   }
 
-
-
   render(){
-    const { Logo, Loading } = this.componentDefs;
-    const { api } = this.props;
+    const { Logo, Loading, LoginForm } = this.componentDefs;
+    const { api, showLogin, message } = this.props;
     const user = api.getUser();
+
+    const fixSchema = ( formSchema) => {
+      //we remove baseUrl and client Id
+      
+      const { schema, uiSchema }  = formSchema
+      delete schema.properties.baseUrl;
+      delete schema.properties.clientId;
+      schema.properties.email.title = 'Please use your email or 360 username'
+      delete schema.format;
+
+      return {
+        ...formSchema,
+        schema,
+        uiSchema
+      }
+    };
+
+    const collectLogin = (form) => {
+      api.log(`Collected formData`, formData);
+      const { formData } = form;
+      const { email, password } = formData
+      this.setState({ username: email, password }, this.saveCredentials)      
+    };
+
+
     return (
-      <Container maxWidth="sm" style={{paddingTop: '10%'}}>                
+      <Container maxWidth="sm" style={{paddingTop: '3%'}}>                
         { this.state.saving && (<Loading message={'Please wait while we set things up.'} />) }
         { this.state.saving === false ? (<Logo backgroundSrc={api.assets.logo} />) : null }
-        <Typography variant="h4" style={{marginTyop:"40px"}}>Would you like us to keep you logged in?</Typography>
+        <Typography variant="h4" style={{marginTyop:"40px"}}>{this.props.title}</Typography>
         <Typography variant="body2">
-          We can store your credentials and login for you whenever you access this page or use services which 
-          require your Lasec 360 account.  If you choose not to you will need to login to 360 whenever you login to 
-          {user.applicationTitle}.
-        </Typography>        
-        <Button color="primary" onClick={this.saveCredentials}><Icon>check</Icon>Yes please</Button>
-        <Button onClick={this.cancelSave}><Icon>close</Icon>No thanks</Button>
+          {message || 'Credentials required'}
+        </Typography>
+        { showLogin === true && <LoginForm extendSchema={fixSchema} formData={{email: user.email }} onSubmit={collectLogin} /> }               
+        { showLogin === false ? (
+          <React.Fragment> 
+            <Button color="primary" onClick={this.saveCredentials}><Icon>check</Icon>Yes please</Button>
+            <Button onClick={this.cancelSave}><Icon>close</Icon>No thanks</Button> 
+          </React.Fragment>) : 
+          null }      
+        
       </Container>
     )
   }

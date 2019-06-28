@@ -25,7 +25,7 @@ class OrganizationList extends Component {
   }
   
   handleOrganizationSelect(organization){
-    debugger;
+    
     if(intersection(this.state.selected, [organization.id]).length === 1){
       //deselect  
       this.setState({selected: remove(this.state.selected,organization.id)}, ()=>{

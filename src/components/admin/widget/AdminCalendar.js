@@ -623,7 +623,6 @@ export const NewSurveyEntryForOrganization = compose(withApi)(({
 });
 
 export const SurveyCalendarForOrganization = compose(withApi)(({ organizationId = null, api }) => {
-  // debugger //eslint-disable-line
   const byOrg = isNil(organizationId) === false;
   const query = byOrg === false ? api.queries.Surveys.surveysList : api.queries.Surveys.surveysForOrganization;
   const variables = byOrg === false ? {} : { organizationId };

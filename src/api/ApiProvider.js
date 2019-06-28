@@ -168,7 +168,23 @@ export class ReactoryApi extends EventEmitter {
     }
 
     log(message, params = [], kind = 'log') {
-        const dolog = () => params.length === 0 ? console[kind](`Reactory::${message}`) : console[kind](`Reactory::${message}`, params);
+        
+        switch(kind) {
+            case 'log':
+            case 'debug':
+            case 'error':
+            case 'warn':
+            case 'info': {
+                // do nothing we good
+                break;
+            }
+            default: {
+                kind = 'debug';
+                break;
+            }
+        }
+
+        const dolog = () => params && params.length === 0 ? console[kind](`Reactory::${message}`) : console[kind](`Reactory::${message}`, params);
         if(process.env.NODE_ENV !== 'production') {
             dolog();
         } else {
@@ -469,7 +485,7 @@ export class ReactoryApi extends EventEmitter {
     }
 
     getLastUserEmail() {
-        //debugger;
+        ;
         localStorage.getItem(storageKeys.LastLoggedInEmail);
     }
 

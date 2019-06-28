@@ -26,7 +26,7 @@ const MaterialFieldStyles = (theme) => {
 };
 
 export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((props) => {
-  //debugger  
+    
   const {
     id, //The id of the field in the hierarchy. You can use it to render a label targeting the wrapped widget.
     classNames, //A string containing the base Bootstrap CSS classes, merged with any custom ones defined in your uiSchema.

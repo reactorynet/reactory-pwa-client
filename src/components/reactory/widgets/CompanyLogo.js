@@ -143,7 +143,7 @@ class CompanyLogoWidget extends Component {
     const { onChange } = this.props;
     const acceptCrop = (elem, croppedImage) => {            
       this.setState({ logo: croppedImage }, ()=>{
-        debugger;
+        
         onChange(croppedImage);
       });
     };

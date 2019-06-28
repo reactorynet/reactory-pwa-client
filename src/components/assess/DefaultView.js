@@ -471,7 +471,7 @@ class DefaultView extends Component {
     const that = this;
     const { api } = this.props;
     const { assessment } = this.state;
-    //debugger;
+    ;
     api.graphqlMutation(gql`mutation SetRatingForAssessment(
         $id: String, $ratingId: String, 
         $rating: Int, $comment: String, 

@@ -181,7 +181,7 @@ const UserSurveyComponent = ({ userId, api, onSurveySelect, minimal = true, show
                 };
 
                 data.userSurveys.forEach((assessment) => {
-                    //debugger;
+                    ;
                     if(assessment) {
                         if (assessment.complete === true && showComplete === true) surveys.complete.push(assessment)
                         else {

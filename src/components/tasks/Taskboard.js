@@ -404,7 +404,7 @@ class TaskListItem extends Component {
     }
 
     handleClick = event => {
-        //debugger;
+        ;
         const that = this;
         //console.log('toggle task', { event });
         this.setState({

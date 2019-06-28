@@ -354,7 +354,6 @@ class DefaultFormContainer extends Component {
   onEmployeeSelected = (user, uid, options) => {
     if(options && options.toggle) {
       //toggle selection
-      // debugger;
       const { selectedEmployees } = this.state;
       if(indexOf(this.state.selectedEmployees, user.id) < 0) {
         this.setState({ selectedEmployees: [...selectedEmployees, user.id ]});

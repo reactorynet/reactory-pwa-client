@@ -84,8 +84,7 @@ class BusinessUnitForm extends Component {
   }
 
   onToggleUserMembership(item, index) {
-    //console.log('Toggling user membership', { item, index });
-    debugger;
+    //console.log('Toggling user membership', { item, index });    
     const { businessUnit } = this.state;
     let members = [...businessUnit.members];
     const memberFound = findIndex(members, { id: item.id });
@@ -160,7 +159,7 @@ class BusinessUnitForm extends Component {
     });
 
     let modal = null
-    debugger
+    
     if (displayMessage === true) {
       modal = (
         <BasicModal title="Error">

@@ -53,7 +53,6 @@ class Layout extends Component {
   render(){
     const layoutDef = this.props.layout
     const { api } = this.props;
-    debugger
     const components = Object.keys(layoutDef).map(( key ) => {
       const containerDef = layoutDef[key]
       const gridProps = {

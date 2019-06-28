@@ -122,7 +122,8 @@ class ReactoryComponent extends Component {
     uiFramework: PropTypes.oneOf(['schema', 'material', 'bootstrap3']),
     api: PropTypes.instanceOf(ReactoryApi),
     mode: PropTypes.oneOf(['new', 'edit', 'view']),
-    formContext: PropTypes.object
+    formContext: PropTypes.object,
+    extendSchema: PropTypes.func,
   };
 
   static defaultProps = {
@@ -132,7 +133,8 @@ class ReactoryComponent extends Component {
     mode: 'new',
     formContext: {
 
-    }
+    },
+    extendSchema: ( schema ) => { return schema; }
   };
 
   constructor(props, context) {
@@ -288,7 +290,6 @@ class ReactoryComponent extends Component {
     let uiSchemaSelector = null;
 
     if(formDef.uiSchemas){
-      // debugger;
       const { DropDownMenu } = this.componentDefs;
       const onSchemaSelect = (evt, menuItem) => {
         // console.log('Schema Ui Change', {evt, menuItem});
@@ -490,10 +491,13 @@ class ReactoryComponent extends Component {
   form() {
     const { uiFramework, forms, formData, uiSchemaKey } = this.state;
     let schema = this.formDef();
-
+    
     const { uiSchemaId, activeUiSchemaMenuItem } = this.state.query;
     const { Logo, Loading } = this.componentDefs;
-    const { api, history, mode } = this.props;
+    const { api, history, mode, extendSchema } = this.props;
+
+    schema = extendSchema(schema);
+    
     const self = this;
     if (uiFramework !== 'schema') {
       //we are not using the schema define ui framework we are assigning a different one

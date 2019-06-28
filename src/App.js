@@ -26,7 +26,6 @@ import {
 } from './components';
 import ApiProvider, { ReactoryApi, ReactoryApiEventNames } from './api/ApiProvider'
 import { fetch } from "whatwg-fetch";
-import * as themes from './themes';
 
 const packageInfo = require('../package.json');
 
@@ -222,10 +221,24 @@ class App extends Component {
     let themeOptions = api.getTheme();
     if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
-    if(!themeOptions.typography) themeOptions.typograph =  { useNextVariants: true };
-    else themeOptions.typography.useNextVariants = true;
-        
-    const muiTheme = createMuiTheme(themeOptions);
+
+    //if(!themeOptions.typography) themeOptions.typograph =  { useNextVariants: true };
+    //else themeOptions.typography.useNextVariants = true;
+    
+    let muiTheme = createMuiTheme(themeOptions);
+
+    if(themeOptions.provider && typeof themeOptions.type === 'string') {
+      if(themeOptions.provider[themeOptions.type]) {
+        //using new mechanism.
+        switch(themeOptions.type) {          
+          case 'material':
+          default: {
+            muiTheme = createMuiTheme(themeOptions);
+          }
+        }
+      }
+    }
+
     api.muiTheme = muiTheme;
                 
     return (
@@ -238,8 +251,7 @@ class App extends Component {
                 <MuiThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
                   <AssessorHeaderBar title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
-                  <div style={{ marginTop: '80px', paddingLeft: '8px', paddingRight: '8px', marginBottom: '8px' }}>
-                                        
+                  <div style={{ marginTop: '80px', paddingLeft: '8px', paddingRight: '8px', marginBottom: '8px' }}>                                        
                     { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
                   </div>
                   </MuiPickersUtilsProvider>

@@ -98,7 +98,6 @@ export class Cropper extends Component {
 
     const acceptCrop = () => {
       if(onAccept) {
-        debugger;
        //var a = new FileReader();
         //a.onload = function(e) { 
         //  onAccept(e.target.result);

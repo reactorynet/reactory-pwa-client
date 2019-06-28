@@ -479,7 +479,7 @@ class SurveyDelegates extends Component {
         api.graphqlMutation(mutation, variables).then((mutationResult) => {
           //console.log('DelegateEntry Result From Mutation', mutationResult)
           if(mutationResult.data && mutationResult.data.surveyDelegateAction) {
-            //debugger;
+            ;
             let formData = [...self.state.formData]  
             if(action === "add") {
               formData.push({...mutationResult.data.surveyDelegateAction});

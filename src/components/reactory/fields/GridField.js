@@ -82,8 +82,7 @@ export class BootstrapGridField extends ObjectField {
                     let style = {}
                     if (doShow && !doShow({ formData })) {
                       style = { display: 'none' }
-                    }
-                    debugger
+                    }                    
                     if (schema.properties[name]) {
                       return (
                           <Col {...rowProps} key={index} style={style}>
@@ -186,7 +185,7 @@ class MaterialGridField extends ObjectField {
                     if (doShow && !doShow({ formData })) {
                       style = { display: 'none' }
                     }                    
-                    if (schema.properties[name]) {
+                    if (schema.properties[name]) {                      
                       return (
                           <Grid {...rowProps} item key={index} style={style}>
                             <SchemaField

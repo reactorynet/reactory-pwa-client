@@ -83,7 +83,7 @@ class ArrayTemplate extends Component {
    */
   onAddClicked(e) {
     //console.log('Add Clicked ', e)
-    //debugger;
+    ;
     const {
       formData, //The formData for this array. 
       registry,
@@ -255,7 +255,7 @@ class ArrayTemplate extends Component {
       idPrefix,
       api
     } = this.props;
-    //debugger;
+    ;
     const uiOptions = uiSchema['ui:options'] || null
     const uiWidget = uiSchema['ui:widget'] || null
     const definitions = registry.definitions;
@@ -277,7 +277,7 @@ class ArrayTemplate extends Component {
       ArrayComponent = () => (
         <Grid item sm={12} md={12}>
           {formData && formData.map && formData.map((item, index) => {
-            //debugger;
+            ;
             ////console.log('Rendering item', { item, index })
             let itemSchema = retrieveSchema(schema.items, definitions, item);
             let itemErrorSchema = errorSchema ? errorSchema[index] : undefined;
