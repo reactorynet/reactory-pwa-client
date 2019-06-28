@@ -92,7 +92,8 @@ class FramedWindow extends Component {
       const _handlerRefs = {};
 
       this.props.messageHandlers.forEach( handlerFqn => {
-        const HandlerComponent = api.getComponent(handlerFqn);
+      
+        const HandlerComponent = api.getComponent(`${handlerFqn.nameSpace}.${handlerFqn.name}@${handlerFqn.version}`);
         if(typeof HandlerComponent === 'function'){
               const HandlerInstance = HandlerComponent({ ...this.props, sendMessage: this.sendMessage }, this.context);
               if(typeof HandlerInstance === 'function') {                

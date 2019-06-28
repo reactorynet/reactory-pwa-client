@@ -195,7 +195,7 @@ export class ReactoryApi extends EventEmitter {
                 }
             }
         } catch ( err ) {
-
+            console.error(loggingErr);
         }        
     }
 

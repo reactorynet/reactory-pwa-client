@@ -12,6 +12,7 @@ import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import { 
+    Container,
     CircularProgress , List, ListItem, 
     ListItemSecondaryAction, ListItemText, 
     InputAdornment, Icon, IconButton,
@@ -1004,13 +1005,15 @@ class Profile extends Component {
     render() {
         const { classes } = this.props;
         return (
-            <Grid container spacing={16} className={classes.mainContainer}>
+            <Container md="6" sm="12" xs="12">
+                <Grid container spacing={3}>
                 {this.renderHeader()}
                 {this.renderGeneral()}
                 {this.renderMemberships()}
                 {this.renderPeers()}
                 {this.renderFooter()}                
-            </Grid>
+                </Grid>
+            </Container>            
         );
     }
 

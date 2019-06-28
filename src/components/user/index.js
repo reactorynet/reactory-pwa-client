@@ -488,7 +488,7 @@ export const UserInbox = compose(withApi)(({ api, via = 'local', display = 'defa
       if(loading === true) return <p>Loading emails</p>
       if(error) return <p>{error.message}</p>
       return (
-        <ThemedInbox {...props} messages={data.userInbox} />
+        <ThemedInbox {...props} messages={ data.userInbox || [] } />
       )}}
   </Query>));
 
