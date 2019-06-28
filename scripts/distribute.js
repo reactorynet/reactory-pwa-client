@@ -55,8 +55,8 @@ const {
     REACT_APP_CLIENT_PASSWORD,
     REACT_APP_CDN,
     REACT_APP_API_ENDPOINT,
-    PUBLIC_URL,
-    
+    REACT_APP_WEBROOT,
+    PUBLIC_URL,    
 } = process.env;
 
 console.log(`Called distribute, zipping files in ${paths.appBuild} and sending to ${REACT_APP_CDN}/builds/${appPackage.version}/${REACT_APP_CLIENT_KEY}/ for distribution`);
@@ -121,7 +121,7 @@ const doUpload = function(){
                                 meta: {
                                     installer: 'nginx',
                                     installerprops: {
-                                        path: `/mnt/d/data/reactory/www/html/${REACT_APP_CLIENT_KEY}`,
+                                        path: `${REACT_APP_WEBROOT}/${REACT_APP_CLIENT_KEY}`,
                                         uri: PUBLIC_URL
                                     },
                                     release: true,
