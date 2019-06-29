@@ -59,6 +59,8 @@ const {
     PUBLIC_URL,    
 } = process.env;
 
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0; //EEEEEKK
+
 console.log(`Called distribute, zipping files in ${paths.appBuild} and sending to ${REACT_APP_CDN}/builds/${appPackage.version}/${REACT_APP_CLIENT_KEY}/ for distribution`);
 
 
@@ -144,7 +146,21 @@ const doUpload = function(){
                                     headers: kwargs.headers,
                                 }).then((installResult) => {
                                     console.log(`resource has been installed`, installResult.data);
-                                    process.exit(0);
+                                    // https://towerstone.reactory.net//index.html -s -I -H "secret-header:true"
+                                    axios({
+                                        method: 'GET',
+                                        url: `${PUBLIC_URL}/index.html`,
+                                        headers: {
+                                            'secret-header': 'true'
+                                        },
+                                    }).then((cacheInvalidate) => {
+                                        console.warn(`Nginx Cache invalidated ${cacheInvalidate.status}`);
+                                        process.exit(0);
+                                    }).catch(( invalidationError ) => {
+                                        console.warn(`Could not invalidate nginx cache - please do a manual invalidation using:\n curl ${PUBLIC_URL}/index.html -s -I -H "secret-header:true"`)
+                                        process.exit(0);
+                                    });
+                                    
                                 });
                             } else {
                                 console.error('Catalog did not responde correctly');

@@ -76,49 +76,73 @@
   },
   "scripts": {
     "analyze": "source-map-explorer 'build/reactory/static/js/*.js'",
-    "start": "REACT_APP_TITLE=Reactory REACT_APP_THEME=reactory REACT_APP_CLIENT_KEY=reactory node --max_old_space_size=2000000 scripts/start.js",
-    "start:towerstone": "REACT_APP_TITLE=\"TowerStone Leadership Centre\" REACT_APP_THEME=towerstone REACT_APP_CLIENT_KEY=towerstone node --max_old_space_size=2000000 scripts/start.js",
-    "start:lasec-crm": "REACT_APP_TITLE=\"Lasec CRM\" REACT_APP_THEME=lasec-crm REACT_APP_CLIENT_KEY=lasec-crm node --max_old_space_size=2000000 scripts/start.js",
-    "start:plc": "REACT_APP_TITLE=\"Purposeful Leadership Company\" REACT_APP_THEME=plc REACT_APP_CLIENT_KEY=plc node --max_old_space_size=2000000 scripts/start.js",
+    "analyze:lasec-crm": "source-map-explorer 'build/lasec-crm/static/js/*.js'",
+
+    "start": "env-cmd -f config/env/.env.reactory.local node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/start.js",
+    "start:lasec-crm": "env-cmd -f config/env/.env.lasec-crm.local node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/start.js",
+    "start:plc": "env-cmd -f config/env/.env.plc.local node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/start.js",
+    "start:towerstone": "env-cmd -f config/env/.env.towerstone.local node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/start.js",        
+    
     "ngrok": "env-cmd -f config/env/.env.reactory.ngrok",
-    "start:ngrok:towerstone": "npm-run-all ngrok start:towerstone",
+    
+    "start:ngrok": "npm-run-all ngrok start",
+    "start:ngrok:plc": "npm-run-all ngrok start:plc",
+    "start:ngrok:towerstone": "npm-run-all ngrok start:towerstone",    
     "start:ngrok:lasec-crm": "npm-run-all ngrok start:lasec-crm",
+    
     "build:qa:reactory": "env-cmd -f config/env/.env.reactory.qa node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
     "build:prod:reactory": "env-cmd -f config/env/.env.reactory.prod node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
-    "build:qa:towerstone": "env-cmd -f config/env/.env.towerstone.qa node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
-    "build:prod:towerstone": "env-cmd -f config/env/.env.towerstone.prod node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
-    "build:qa:plc": "env-cmd -f config/env/.env.plc.qa node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
-    "build:prod:plc": "env-cmd -f config/env/.env.plc.prod node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
+    
     "build:qa:lasec-crm": "env-cmd -f config/env/.env.lasec.qa node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
     "build:prod:lasec-crm": "env-cmd -f config/env/.env.lasec.prod node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
-    "build-all": "npm-run-all build:prod:reactory build:prod:towerstone build:prod:towerstone build:prod:plc build:prod:lasec",
+
+    "build:qa:towerstone": "env-cmd -f config/env/.env.towerstone.qa node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
+    "build:prod:towerstone": "env-cmd -f config/env/.env.towerstone.prod node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
+    
+    "build:qa:plc": "env-cmd -f config/env/.env.plc.qa node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",
+    "build:prod:plc": "env-cmd -f config/env/.env.plc.prod node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/build.js",            
+          
     "ci:build:qa:reactory": "env-cmd -f config/env/.env.reactory.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
     "ci:build:prod:reactory": "env-cmd -f config/env/.env.reactory.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
-    "ci:build:qa:towerstone": "env-cmd -f config/env/.env.towerstone.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
-    "ci:build:prod:towerstone": "env-cmd -f config/env/.env.towerstone.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
-    "ci:build:qa:plc": "env-cmd -f config/env/.env.plc.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
-    "ci:build:prod:plc": "env-cmd -f config/env/.env.plc.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
+    
     "ci:build:qa:lasec-crm": "env-cmd -f config/env/.env.lasec.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
     "ci:build:prod:lasec-crm": "env-cmd -f config/env/.env.lasec.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",    
-    "ci:build-deploy:qa:lasec-crm": "npm-run-all ci:build:qa:lasec-crm ci:deploy:qa:lasec-crm",
-    
-    
+
+    "ci:build:qa:plc": "env-cmd -f config/env/.env.plc.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
+    "ci:build:prod:plc": "env-cmd -f config/env/.env.plc.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
+
+    "ci:build:qa:towerstone": "env-cmd -f config/env/.env.towerstone.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
+    "ci:build:prod:towerstone": "env-cmd -f config/env/.env.towerstone.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/build.js",
+                        
+    "ci:deploy:prod:reactory": "env-cmd -f config/env/.env.reactory.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
+    "ci:deploy:qa:reactory": "env-cmd -f config/env/.env.reactory.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
+    "ci:deploy:local:reactoy": "env-cmd -f config/env/.env.reactory.local node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
+        
     "ci:deploy:prod:lasec-crm": "env-cmd -f config/env/.env.lasec.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
     "ci:deploy:qa:lasec-crm": "env-cmd -f config/env/.env.lasec.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
     "ci:deploy:local:lasec-crm": "env-cmd -f config/env/.env.lasec.local node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
-
+    
     "ci:deploy:prod:towerstone": "env-cmd -f config/env/.env.towerstone.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
     "ci:deploy:qa:towerstone": "env-cmd -f config/env/.env.towerstone.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
     "ci:deploy:local:towerstone": "env-cmd -f config/env/.env.towerstone.local node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
-
+    
     "ci:deploy:prod:plc": "env-cmd -f config/env/.env.plc.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
     "ci:deploy:qa:plc": "env-cmd -f config/env/.env.plc.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
     "ci:deploy:local:plc": "env-cmd -f config/env/.env.plc.local node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
 
-    "ci:deploy:prod:reactory": "env-cmd -f config/env/.env.reactory.prod node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
-    "ci:deploy:qa:reactory": "env-cmd -f config/env/.env.reactory.qa node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
-    "ci:deploy:local:reactoy": "env-cmd -f config/env/.env.reactory.local node --max_semi_space_size=2 --max_old_space_size=4096 scripts/distribute.js",
+    "ci:build-deploy:prod:reactory": "npm-run-all ci:build:qa:lasec-crm ci:deploy:qa:lasec-crm",
+    "ci:build-deploy:prod:lasec-crm": "npm-run-all ci:build:qa:lasec-crm ci:deploy:qa:lasec-crm",
+    "ci:build-deploy:prod:plc": "npm-run-all ci:build:qa:lasec-crm ci:deploy:qa:lasec-crm",
+    "ci:build-deploy:prod:towerstone": "npm-run-all ci:build:qa:towerstone ci:deploy:qa:towerstone",
 
+    "ci:build-deploy:qa:reactory": "npm-run-all ci:build:qa:lasec-crm ci:deploy:qa:lasec-crm",
+    "ci:build-deploy:qa:lasec-crm": "npm-run-all ci:build:qa:lasec-crm ci:deploy:qa:lasec-crm",
+    "ci:build-deploy:qa:plc": "npm-run-all ci:build:qa:lasec-crm ci:deploy:qa:lasec-crm",
+    "ci:build-deploy:qa:towerstone": "npm-run-all ci:build:qa:towerstone ci:deploy:qa:towerstone",
+    
+    "ci:deploy:prod:all": "npm-run-all ci:build-deploy:prod:reactory ci:build-deploy:prod:lasec-crm ci:build-deploy:prod:plc ci:build-deploy:prod:towerstone",
+    "ci:deploy:qa:all": "npm-run-all ci:build-deploy:qa:reactory ci:build-deploy:qa:lasec-crm ci:build-deploy:qa:towerstone",
+        
     "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom"
   },
   "jest": {
