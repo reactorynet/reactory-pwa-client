@@ -79,7 +79,7 @@
     "analyze:lasec-crm": "source-map-explorer 'build/lasec-crm/static/js/*.js'",
 
     "start": "env-cmd -f config/env/.env.reactory.local node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/start.js",
-    "start:lasec-crm": "env-cmd -f config/env/.env.lasec-crm.local node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/start.js",
+    "start:lasec-crm": "env-cmd -f config/env/.env.lasec.local node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/start.js",
     "start:plc": "env-cmd -f config/env/.env.plc.local node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/start.js",
     "start:towerstone": "env-cmd -f config/env/.env.towerstone.local node --max_semi_space_size=2 --max_old_space_size=2000000 scripts/start.js",        
     
@@ -142,7 +142,7 @@
     
     "ci:deploy:prod:all": "npm-run-all ci:build-deploy:prod:reactory ci:build-deploy:prod:lasec-crm ci:build-deploy:prod:plc ci:build-deploy:prod:towerstone",
     "ci:deploy:qa:all": "npm-run-all ci:build-deploy:qa:reactory ci:build-deploy:qa:lasec-crm ci:build-deploy:qa:towerstone",
-        
+
     "test": "node --max_old_space_size=2000000 scripts/test.js --env=jsdom"
   },
   "jest": {
