@@ -124,6 +124,7 @@ class ReactoryComponent extends Component {
     mode: PropTypes.oneOf(['new', 'edit', 'view']),
     formContext: PropTypes.object,
     extendSchema: PropTypes.func,
+    busy: PropTypes.bool,
   };
 
   static defaultProps = {
@@ -134,7 +135,8 @@ class ReactoryComponent extends Component {
     formContext: {
 
     },
-    extendSchema: ( schema ) => { return schema; }
+    extendSchema: ( schema ) => { return schema; },
+    busy: false,
   };
 
   constructor(props, context) {
@@ -152,7 +154,8 @@ class ReactoryComponent extends Component {
       dirty: false,
       queryComplete: false,
       showHelp: false,
-      query: queryString.parse(props.location.search)
+      query: queryString.parse(props.location.search),
+      busy: props.busy === true,
     };
 
     if (_state.query.uiFramework) {
@@ -251,7 +254,7 @@ class ReactoryComponent extends Component {
   renderForm(formData, onSubmit, patch = {}) {
     
     // //console.log('rendering form with data', formData);
-    const { loading, forms } = this.state;
+    const { loading, forms, busy } = this.state;
     const self = this;
     
     if (forms.length === 0) return (<p>no forms defined</p>);
@@ -306,7 +309,7 @@ class ReactoryComponent extends Component {
     }
 
     const refreshClick = evt => self.setState({ queryComplete: false, dirty: false });
-
+    
     return (
       <Fragment>        
         {this.props.before}        
@@ -784,7 +787,12 @@ class ReactoryComponent extends Component {
 
   onSubmit(data) {
     // //console.log('form-submit', data);
-    if (this.props.onSubmit) this.props.onSubmit(data);
+    this.setState({ busy: true }, ()=>{
+        if (this.props.onSubmit) this.props.onSubmit(data, ( done )=>{ this.setState( { busy: false, message: done.message || 'Form has been submitted' } )  });
+        else {
+          api.log(`Form id:[${this.props.formId}] has no valid submit handler`, { formProps: this.props }, 'warn');
+        }
+    });  
   }
 
   onChange(data) {

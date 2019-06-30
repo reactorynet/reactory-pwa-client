@@ -309,16 +309,21 @@ class RememberCredentials extends Component {
     showLogin: PropTypes.bool,
     message: PropTypes.string,
     title: PropTypes.string,
-    onOk: PropTypes.func,
-    api: PropTypes.instanceOf(ReactoryApi)
+    onOk: PropTypes.func,    
+    api: PropTypes.instanceOf(ReactoryApi),    
   }
 
   static defaultProps = {
     onComplete: ()=> {
 
-    },
+    },    
     showLogin: false,  
-    title: 'We need some security information'
+    title: 'We need some security information',
+    loginHandler: () => {
+      return new Promise(( resolve, reject ) => { 
+        reject('No login handler available');
+      });
+    }
   }
 
   static styles = theme => ({ })
@@ -353,17 +358,17 @@ class RememberCredentials extends Component {
 
   saveCredentials(){
     const {  provider, onComplete, api } = this.props;    
-    const { username, password } = this.state;
+    const { username, password, loginResults } = this.state;
 
     const self = this;
-    this.setState({ saving: true }, ()=>{      
-      api.saveUserLoginCredentials(provider, username, password).then( (saved) => {        
-        self.setState({ saving: false, complete: true, message: 'Your credentials has been stored and kept safe' }, ()=>{
-          onComplete(saved.data.addUserCredentials);      
-        });        
+    this.setState({ saving: true, busy: true }, ()=>{      
+      api.saveUserLoginCredentials(provider, { username, password }).then((saved) => {        
+        self.setState({ saving: false, busy: false, complete: true, message: 'Your credentials has been stored and kept safe' }, ()=>{
+          onComplete(saved.data.addUserCredentials === true);
+        });
       }).catch((saveError) => {
-        const errorMessage = 'saveError.message';                
-        self.setState({ saving: false, complete: true, message: 'We could not save your credentials due to a system error.' }, ()=>{          
+        const errorMessage = saveError.message;
+        self.setState({ saving: false, busy: false, complete: true, message: `We could not save your credentials due to a system error. ${errorMessage}` }, ()=>{          
           onComplete(false, errorMessage);
         });      
       });
@@ -378,8 +383,10 @@ class RememberCredentials extends Component {
 
   render(){
     const { Logo, Loading, LoginForm } = this.componentDefs;
-    const { api, showLogin, message } = this.props;
+    const { api, showLogin, message, loginHandler } = this.props;
+    const { loginError, loginResult, busy } = this.state;
     const user = api.getUser();
+    const self = this;
 
     const fixSchema = ( formSchema) => {
       //we remove baseUrl and client Id
@@ -401,7 +408,7 @@ class RememberCredentials extends Component {
       api.log(`Collected formData`, formData);
       const { formData } = form;
       const { email, password } = formData
-      this.setState({ username: email, password }, this.saveCredentials)      
+      this.setState({ username: email, password, busy: true }, this.saveCredentials);      
     };
 
 
@@ -413,7 +420,7 @@ class RememberCredentials extends Component {
         <Typography variant="body2">
           {message || 'Credentials required'}
         </Typography>
-        { showLogin === true && <LoginForm extendSchema={fixSchema} formData={{email: user.email }} onSubmit={collectLogin} /> }               
+        { showLogin === true && <LoginForm extendSchema={fixSchema} formData={{email: user.email }} onSubmit={collectLogin} busy={ busy === true } /> }               
         { showLogin === false ? (
           <React.Fragment> 
             <Button color="primary" onClick={this.saveCredentials}><Icon>check</Icon>Yes please</Button>

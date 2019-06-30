@@ -15,6 +15,7 @@ const defaultFrameProps = {
     width: '100%',
     height: '100%',
     border: 'none',
+    marginLeft: '-8px',
   }    
 };
 
@@ -37,8 +38,7 @@ class FramedWindow extends Component {
         position: 'fixed',
         top: '65px',
         bottom: '0px',
-        width: '100%',
-        height: '100%'
+        width: '100%',        
       },
       width: '100%',
     },
@@ -169,10 +169,12 @@ class FramedWindow extends Component {
   }
 
   sendMessage(message, targetOrigin = "*"){
-    if(this.targetWindow && typeof this.targetWindow.contentWindow.postMessage === 'function') {
-      this.props.api.log(`Sending message to window ${message.type}`);
-      this.targetWindow.contentWindow.postMessage(message, targetOrigin);      
-    }
+    if(message && targetOrigin) {
+      if(this.targetWindow && typeof this.targetWindow.contentWindow.postMessage === 'function') {
+        this.props.api.log(`Sending message to window ${message.type}`);
+        this.targetWindow.contentWindow.postMessage(message, targetOrigin);      
+      }
+    }    
   }
   
   getForm(){

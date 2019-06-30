@@ -601,10 +601,15 @@ export class ReactoryApi extends EventEmitter {
         return anonUser;
     }
 
-    saveUserLoginCredentials(provider, username, password) {
-        return this.graphqlMutation(gql`mutation AddUserCredentials($provider: String!, $username: String!, $password: String!){
-            addUserCredentials(provider: $provider, username: $username, password: $password)
-        }`, { provider, username, password});
+    saveUserLoginCredentials(provider, props) {
+        //username, password, loginResult
+        return this.graphqlMutation(gql`mutation AddUserCredentials($provider: String!, $props: Any){
+            addUserCredentials(provider: $provider, props: $props)
+        }`, 
+        { 
+            provider,                         
+            props
+        });
     }
 
     getUserLoginCredentials(provider) {
