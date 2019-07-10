@@ -218,12 +218,12 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'NotFound',
-    component: compose(withRouter)(({ message, location }) => {
+    component: compose(withRouter)(({ message = 'Could not load your component. Please check component registry', location }) => {
 
       const backClicked = () => location.goBack();
       const { UserListItem } = UserComponents;
       return (<BasicModal>
-        <UserListItem user={{ firstName: 'Owly', lastName: '', id: 'towerstone_owly', avatar: 'owl.jpg' }} message={message} />
+        <UserListItem user={{ firstName: 'Reactory', lastName: 'Bot', id: 'reactory', avatar: 'reactory_bot.png' }} message={message} />
         <Button type="fab" color="primary" onClick={backClicked}><Icon>arrow_left</Icon></Button>
       </BasicModal>)
     }),

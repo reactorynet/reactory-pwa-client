@@ -35,6 +35,7 @@ const {
   MaterialBooleanField,
   MaterialStringField,
   MaterialTitleField,
+  MaterialDescriptionField,
   MaterialGridField,
   BootstrapGridField,
   MaterialObjectField,
@@ -541,7 +542,7 @@ class ReactoryComponent extends Component {
           schema.fields = {
             ArrayField: MaterialArrayFieldTemplate,
             BooleanField: MaterialBooleanField,
-            DescriptionField: (props, context) => (<Typography>{props.description}</Typography>),
+            DescriptionField: MaterialDescriptionField,
             NumberField: (props, context) => {
               const nilf = () => ({});
               const { uiSchema, registry, onChange } = props;              
@@ -787,6 +788,7 @@ class ReactoryComponent extends Component {
 
   onSubmit(data) {
     // //console.log('form-submit', data);
+    const { api } = this.props;
     this.setState({ busy: true }, ()=>{
         if (this.props.onSubmit) this.props.onSubmit(data, ( done )=>{ this.setState( { busy: false, message: done.message || 'Form has been submitted' } )  });
         else {

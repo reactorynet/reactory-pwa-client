@@ -29,3 +29,4 @@ export const UserListItemWidget = (props, context) => {
   return <UserLists.UserListItem {...{ user: props.formData, ...props }} />
 };
 export const MaterialTableWidget = require('./MaterialTableWidget');
+export const StepperWidget = require('./StepperWidget')

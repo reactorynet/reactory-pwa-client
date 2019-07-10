@@ -55,7 +55,38 @@ const EmptyComponent = (fqn) => {
   
 const componentFqn = ({ nameSpace, name, version }) => {
     return `${nameSpace}.${name}@${version}`;
-};        
+};
+
+
+const componentPartsFromFqn = ( fqn ) => {
+    if(typeof fqn === 'string' && fqn.length > 0) {        
+        if(fqn.indexOf('.') >= 1) {
+            let _fqn = fqn; 
+            const atpos = fqn.indexOf('@'); 
+            const componentMeta = {
+                nameSpace: '',
+                name: '',
+                version: '',            
+            };
+
+            if(atpos >= 3) {
+                //shortest possible compnonent name a.b@1
+                const versionParts = fqn.split('@')
+                componentMeta.version = versionParts[1];
+                _fqn = versionParts[0];
+            }
+
+            const nameParts = _fqn.split('.')
+
+            componentMeta.nameSpace = nameParts[0];
+            componentMeta.name = nameParts[1];
+
+            return componentMeta;
+            
+        }                
+    } 
+    throw new Error('Component FQN not valid, must have at least nameSpace.name with version being options i.e. nameSpace.name@version')
+}
 
 export class ReactoryApi extends EventEmitter {
     constructor(client, props) {
@@ -82,7 +113,9 @@ export class ReactoryApi extends EventEmitter {
                     return h;
                 }
             },
-            injectResources
+            injectResources,
+            componentFqn,
+            //componentDefinitionFromFqn,
         };
         this.rest = {
             json: {
@@ -112,6 +145,7 @@ export class ReactoryApi extends EventEmitter {
         this.getUserFullName = getUserFullName;
         this.getTheme = this.getTheme.bind(this);
         this.getRoutes = this.getRoutes.bind(this);
+        this.getNotFoundComponent = this.getNotFoundComponent.bind(this);
         this.isAnon = this.isAnon.bind(this);
         this.raiseFormCommand = this.raiseFormCommand.bind(this);
         this.onFormCommandEvent = this.onFormCommandEvent.bind(this);
@@ -488,8 +522,7 @@ export class ReactoryApi extends EventEmitter {
         localStorage.setItem(storageKeys.LastLoggedInEmail, email);
     }
 
-    getLastUserEmail() {
-        ;
+    getLastUserEmail() {        
         localStorage.getItem(storageKeys.LastLoggedInEmail);
     }
 
@@ -498,7 +531,7 @@ export class ReactoryApi extends EventEmitter {
         if(isEmpty(nameSpace)) throw new Error('nameSpace is required for component registration');
         if(isEmpty(name)) throw new Error('name is required for component registration');
         if(isNil(component)) throw new Error('component is required to register component');
-        if(isNil(this.getComponent(fqn)) === true){
+        if(isNil(this.componentRegister[fqn]) === true){
           this.componentRegister[fqn] = {nameSpace, name, version, component}
         }
     }
@@ -509,8 +542,10 @@ export class ReactoryApi extends EventEmitter {
             const component = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]
             if(component) {
                 componentMap[component.name] = component.component
-            }            
-        })
+            } else {
+                componentMap[componentPartsFromFqn(fqn).name] = this.getNotFoundComponent();
+            }                       
+        });
 
         return componentMap;
     }
@@ -519,11 +554,21 @@ export class ReactoryApi extends EventEmitter {
         try {
             const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]        
             if(found && found.component) return found.component        
-            return null
+            return null //we must return null, because the component is not found, we cannot automatically return the not found component, that is the responsibility of the component
         } catch (err) {            
-            console.error(`Bad component name "${fqn}"`)
-            return null
-        }        
+            this.log('Bad component name', fqn);     
+            if(this.componentRegister && this.componentRegister['core.NotFound@1.0.0']) {
+                return this.getNotFoundComponent();
+            }
+        }
+    }
+
+    getNotFoundComponent( notFoundComponent = 'core.NotFound@1.0.0' ){
+        if(this.componentRegister && this.componentRegister[notFoundComponent]) {
+            return this.componentRegister[notFoundComponent].component
+        } else {
+            return (<p>Component Find Failure, please check component registry and component name requested</p>)
+        }
     }
 
     mountComponent(ComponentToMount, props, domNode, theme = true, callback){

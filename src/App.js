@@ -125,6 +125,7 @@ class App extends Component {
       theme: props.appTheme,
       user: api.getUser(),
       routes: [],
+      validationError: null,
     }
 
     this.onLogout = this.onLogout.bind(this);
@@ -209,7 +210,7 @@ class App extends Component {
       api.status({ emitLogin: true }).then((user) => {                
         that.setState({ auth_validated: true, user }, that.configureRouting)
       }).catch((validationError) => {
-        that.setState({ auth_validated: false })
+        that.setState({ auth_validated: false, validationError })
       });
     }
   }
