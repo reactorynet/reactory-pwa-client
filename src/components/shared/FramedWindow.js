@@ -301,7 +301,8 @@ class ReportViewer extends Component {
       ...data,
       'x-client-key': api.CLIENT_KEY,
       'x-client-pwd': api.CLIENT_PWD,
-      'auth_token': api.getAuthToken(),      
+      'auth_token': api.getAuthToken(),
+      'view': 'inline',      
     };
   
     reportWindowProps.url = `${api.API_ROOT}/pdf/${folder}/${report}?${api.utils.queryString.stringify(queryparams)}`;
@@ -309,7 +310,22 @@ class ReportViewer extends Component {
   }
 
   getDownloadViewResult(){
-    return <Typography>Your download will being shortly</Typography>
+    const { folder, report, api, method, data } = this.props;
+    
+    const queryparams = {
+      ...data,
+      'x-client-key': api.CLIENT_KEY,
+      'x-client-pwd': api.CLIENT_PWD,
+      'auth_token': api.getAuthToken(),
+      'view': 'attachment',      
+    };
+  
+    const downloaduri = `${api.API_ROOT}/pdf/${folder}/${report}?${api.utils.queryString.stringify(queryparams)}`;
+    setTimeout(()=>{
+      window.open(downloaduri, '_blank')
+    }, 1200)
+    
+    return <Typography>Your download will being shortly. If the download does not automatically start after a few seconds please click <a href={downloaduri} target="_blank">here</a></Typography>
   }
 
   getUrlViewResult(){

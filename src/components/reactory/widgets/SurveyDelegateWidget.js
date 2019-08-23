@@ -66,6 +66,16 @@ TabContainer.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
+const ReportTypes = {
+  DelegateReport: "delegate-360-assessment",
+  SurveyStatusReport: "survey-status-report"
+};
+
+const BasicModalViewModes = {
+  ReportPreview: "report_preview",
+  ReportDownload: "report_download",
+  AddDelegates: "add_delegates"
+};
 
 class SurveyDelegates extends Component {
   
@@ -170,9 +180,13 @@ class SurveyDelegates extends Component {
           this.removeDelegateFromSurvey(delegateEntry, delegateEntry.removed === true);
           break;
         }
+        case 'report_preview': {
+          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report_preview', });
+          break;
+        }
         case 'report': 
         default: {
-          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report' });
+          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report_download' });
           break;
         }
       }
@@ -201,7 +215,8 @@ class SurveyDelegates extends Component {
         menus.push({ title: 'Send Reminders', icon: 'mail_outline', id: 'send-reminder', key:'reminder' });
         menus.push({ title: 'Re-send Launch', icon: 'flight_takeoff', id: 'relaunch', key:'relaunch' });        
         menus.push({ title: 'View Assessment Details', icon: 'assignment', id: 'view-assessments', key:'view-assessments' });
-        menus.push({ title: 'Generate Reports', icon: 'assessment', id: 'report', key:'report' });
+        menus.push({ title: 'Download Report', icon: 'cloud_download', id: 'report', key:'report' });
+        menus.push({ title: 'Preview Report', icon: 'assessment', id: 'report_preview', key:'report' })
         break;
       }
       default: {
@@ -228,28 +243,53 @@ class SurveyDelegates extends Component {
     //console.log('Show Delegate Add', delegateEntry);
   }
 
-  generateReport(delegateEntry){
-    //console.log('Generate Report', delegateEntry);
-    this.setState({ })
+  generateReport(reportType = 'survey-status-delegates'){
+    console.log('Generate Report');
+    if(this.props.formData.length === 0) return;
+    
+    this.setState({ basicModalViewMode: 'report_preview', reportType, modal: true, modalType: 'basic', activeEntry: this.props.formData[0]  });
   }
 
   getBasicModalView( ) {
     const self = this;
-    const { activeEntry, assessment, basicModalViewMode } = this.state;
+    const { activeEntry, assessment, basicModalViewMode, reportType } = this.state;
     const { DropDownMenu, Assessment, ReportViewer } = this.componentDefs;
     
     //src: http://localhost:4000/pdf/towerstone/delegate-360-assessment?x-client-key=${this.props.api.CLIENT_KEY}&x-client-pwd=${this.props.api.CLIENT_PWD}
-    if(basicModalViewMode === 'report') {
-      return (<ReportViewer 
-      folder="towerstone" 
-      report="delegate-360-assessment" 
-      method="get" 
-      delivery="inline"           
-      waitingText="Loading Report Data, please wait." 
-      data={{ surveyId: self.props.formContext.surveyId, delegateId: activeEntry.id }} />)
-    } else {
-      return (
-        <Fragment>
+
+    let modalviewComponent = null;
+    let reportData = {
+      surveyId: self.props.formContext.surveyId,
+      delegateId: activeEntry.id
+    };
+
+    switch(reportType) {
+      case ReportTypes.SurveyStatusReport: delete reportData.delegateId; break;            
+    }
+
+    switch(basicModalViewMode) {
+      case 'report_preview': {
+        modalviewComponent = (<ReportViewer 
+          folder="towerstone" 
+          report={reportType || "delegate-360-assessment"} 
+          method="get" 
+          delivery="inline"           
+          waitingText="Loading Report Data, please wait." 
+          data={reportData} />)  
+        break;
+      }
+      case 'report_download': {
+        modalviewComponent = (<ReportViewer 
+          folder="towerstone" 
+          report={reportType || "delegate-360-assessment"} 
+          method="get" 
+          delivery="download"           
+          waitingText="Loading Report Data, please wait." 
+          data={reportData} />)
+        break;
+      }
+      default: {
+        modalviewComponent = (
           <Paper className={this.props.classes.root} elevation={2}>
             <UserListItem key={activeEntry.id} user={activeEntry.delegate} />
             <hr/>
@@ -316,10 +356,11 @@ class SurveyDelegates extends Component {
             { assessment && <hr />}
             { assessment && <Assessment assessmentId={assessment.id || assessment._id}  mode="admin" /> }            
           </Paper>
-        </Fragment>);
+        );
+      }
     }
 
-    
+    return modalviewComponent;      
   }
 
   getDetailView(){    
@@ -331,7 +372,7 @@ class SurveyDelegates extends Component {
 
   getActiveModalView(){
     const { FullScreenModal, UserListWithSearch } = this.componentDefs;
-    const { activeEntry, modal, modalType, formData } = this.state;    
+    const { activeEntry, modal, modalType, formData, basicModalViewMode } = this.state;    
     const { formContext, onChange, api } = this.props;
     const self = this;
     
@@ -355,6 +396,8 @@ class SurveyDelegates extends Component {
       })
     }
 
+    let modalTitle = activeEntry && activeEntry.delegate ? `Assessment Details: ${activeEntry.delegate.firstName} ${activeEntry.delegate.lastName}` : `Select Delegates For Survey`;
+
     switch(modalType){
       case 'add': {
         component = (
@@ -368,10 +411,16 @@ class SurveyDelegates extends Component {
             formProps={{ mode: 'admin' }}
             businessUnitFilter={false}
             showFilters={false} />)
+
+        modalTitle  = 'Select Delegates For Survey'
         break;
       }
       case 'basic' : {
-        if(activeEntry === null) return null;
+        switch(basicModalViewMode) {
+          case BasicModalViewModes.ReportDownload: modalTitle = 'Survey Status Report Download'; break;
+          case BasicModalViewModes.ReportPreview:  modalTitle = 'Survey Status Report Preview'; break;          
+        }
+        
         component = this.getBasicModalView();
         break;        
       }
@@ -383,11 +432,13 @@ class SurveyDelegates extends Component {
       }
     }
 
+
+
     return (
       <FullScreenModal 
         open={this.state.modal === true} 
         onClose={closeModal} 
-        title={ activeEntry && activeEntry.delegate ? `Assessment Details: ${activeEntry.delegate.firstName} ${activeEntry.delegate.lastName}` : `Select Delegates For Survey` }>
+        title={ modalTitle }>
         {component}
       </FullScreenModal>
     )
@@ -1017,6 +1068,15 @@ class SurveyDelegates extends Component {
           enabled: selectedDelegates.length > 0,
         },
         */
+        {
+          key: 'status-report',
+          title: 'Status Report',
+          clickHandler: evt => {
+            self.generateReport();
+          },
+          icon: <Icon>all_inclusive</Icon>,
+          enabled: true,
+        },
       ];
 
       return (

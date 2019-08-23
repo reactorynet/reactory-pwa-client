@@ -12,7 +12,16 @@ import uuid from 'uuid';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend,
+  PieChart,
+  Pie,
+  Sector,
 } from 'recharts';
 
 const data = [

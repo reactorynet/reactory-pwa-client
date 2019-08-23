@@ -171,14 +171,23 @@ class ReactoryComponent extends Component {
     this.renderForm = this.renderForm.bind(this);
     this.renderWithQuery = this.renderWithQuery.bind(this);
     this.renderWithMutation = this.renderWithMutation.bind(this);
-    this.state = _state;
-    this.defaultComponents = ['core.Loading', 'core.Logo', 'core.FullScreenModal', 'core.DropDownMenu', 'core.HelpMe'];
+    this.state = _state;    
+    this.defaultComponents = [
+      'core.Loading',
+      'core.Logo',
+      'core.FullScreenModal',
+      'core.DropDownMenu',
+      'core.HelpMe',
+      'core.ReportViewer'
+    ];
     this.componentDefs = props.api.getComponents(this.defaultComponents);
     this.getFormContext = this.getFormContext.bind(this);
     this.getFormData = this.getFormData.bind(this);
+    this.getReportWidget = this.getReportWidget.bind(this);
     this.goBack = this.goBack.bind(this);
     this.showHelp = this.showHelp.bind(this);
     this.showDebug = this.showDebug.bind(this);
+    this.showReportModal = this.showReportModal.bind(this);
     this.formRef = null;
     this.downloadForms = this.downloadForms.bind(this);
     this.onPluginLoaded = this.onPluginLoaded.bind(this);
@@ -228,6 +237,23 @@ class ReactoryComponent extends Component {
     )
   }
 
+  getReportWidget(){
+    const { ReportViewer, FullScreenModal } = this.componentDefs;
+    const formDef = this.formDef();
+
+    const closeReport = e => this.setState({ showReportModal: false });
+    
+    return (
+      <FullScreenModal open={this.state.showReportModal === true} onClose={closeReport}>
+        <ReportViewer 
+          {...formDef.defaultReport}
+          data={this.state.formData}      
+        />
+      </FullScreenModal>
+    )
+
+  }
+
   getDebugScreen(formData = { null: true }){
     const { FullScreenModal, Loading } = this.componentDefs;
     const formDef = this.formDef();
@@ -250,6 +276,10 @@ class ReactoryComponent extends Component {
 
   showDebug(){
     this.setState({ showDebug: true })
+  }
+
+  showReportModal(){
+    this.setState({ showReportModal: true })
   }
 
   renderForm(formData, onSubmit, patch = {}) {
@@ -311,20 +341,29 @@ class ReactoryComponent extends Component {
 
     const refreshClick = evt => self.setState({ queryComplete: false, dirty: false });
     
+    
+    let reportButton = null;
+
+    if(formDef.defaultReport) {
+      reportButton = (<Button variant="text" onClick={this.showReportModal} color="secondary"><Icon>print</Icon></Button>);
+    }
+
     return (
       <Fragment>        
         {this.props.before}        
         <Form {...formProps}>
           <Toolbar>
-            {uiSchemaSelector}
-            {this.props.children && this.props.children.length > 0 ? this.props.children : showSubmit && <Fab type="submit" color="primary"><Icon>{icon}</Icon></Fab>}
-            {self.state.allowRefresh && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}            
-            {formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button>}
-            {formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button>}                       
+            { uiSchemaSelector }
+            { this.props.children && this.props.children.length > 0 ? this.props.children : showSubmit && <Fab type="submit" color="primary"><Icon>{icon}</Icon></Fab> }
+            { self.state.allowRefresh && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button> }            
+            { formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button> }
+            { formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button> }
+            { reportButton }
           </Toolbar>
         </Form>
         {this.getHelpScreen()}
         {this.getDebugScreen()}
+        {this.getReportWidget()}
       </Fragment>
     )
   }

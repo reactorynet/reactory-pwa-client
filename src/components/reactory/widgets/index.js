@@ -19,7 +19,7 @@ export const LinkField = LinkFieldWidget; //added for backward compatibility
 export const DateSelectorWidget = require('../../dates/DateTimePicker');
 export const CompanyLogoWidget = require('./CompanyLogo');
 export const UserWidgetWithSearch = require('./UserWidgetWithSearch');
-//export const PieChartWidget = require('./ChartWidget').default.PieChartWidgetComponent;
+export const PieChartWidget = require('./ChartWidget').PieChartWidgetComponent;
 //export const LineChartWidget = require('./ChartWidget').default.LineChartWidgetComponent;
 export const ToolbarWidget = require('./ToolbarWidget');
 export const ProgressWidget = require('./ProgressWidget').ProgressWidgetComponent;
@@ -30,3 +30,4 @@ export const UserListItemWidget = (props, context) => {
 };
 export const MaterialTableWidget = require('./MaterialTableWidget');
 export const StepperWidget = require('./StepperWidget')
+export { default as SearchWidget } from './SearchWidget';
