@@ -304,6 +304,9 @@ class ReactoryComponent extends Component {
       id: uuid(),
       ...this.props,
       ...formDef,
+      validate: (formData, errors) => {
+        return []; //hack to test form posts
+      },
       // onChange: updateFormState,
       formData: formData,
       ErrorList: MaterialErrorListTemplate,      
@@ -603,6 +606,7 @@ class ReactoryComponent extends Component {
                   type="number"
                   margin="normal"                  
                   onChange={onInputChanged}
+                  value={props.formData || 0}
                 />)
               }
 
@@ -649,7 +653,8 @@ class ReactoryComponent extends Component {
             //TextWidget
             //TextareaWidget
             //URLWidget
-            //UpDownWidget            
+            //UpDownWidget
+                  
             DropZoneWidget: (props, context) => {
               // //console.log('Creating DropZone Widget', { props, context });
               const { uiSchema, formData } = props;

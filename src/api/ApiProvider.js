@@ -35,6 +35,23 @@ import {
 import amq from '../amq';
 const { queries, mutations } = graphApi
 
+const pluginDefinitionValid = (definition) => {
+    const pass = {
+        nameSpace: false,
+        name: false,
+        component: false,
+        version: false
+    };
+
+    if(isNil(definition) === true) return false;
+
+    Object.keys(definition).forEach((property) => {
+        pass[property] = isNil(definition[property]) === false;
+    });
+
+    return pass.nameSpace && pass.name && pass.component && pass.version;
+};
+
 const storageKeys = {
     LoggedInUser: 'loggedInUser',
     AuthToken: 'auth_token',
@@ -116,6 +133,7 @@ export class ReactoryApi extends EventEmitter {
             injectResources,
             componentFqn,
             //componentDefinitionFromFqn,
+            pluginDefinitionValid,
         };
         this.rest = {
             json: {

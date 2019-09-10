@@ -547,5 +547,11 @@ export const componentRegistery = [
     name: 'UserListItemWidget',
     version: '1.0.0',
     component: require('./reactory/widgets').UserListItemWidget
-  }  
+  },
+  {
+    nameSpace: 'core',
+    name: 'MaterialFormWidgets',
+    version: '1.0.0',
+    component: require('./reactory/widgets')
+  },  
 ];

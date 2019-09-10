@@ -14,12 +14,16 @@ export const HiddenWidget = (props, context) => (<input type="hidden" id={props.
 export const RecordLookupWidget = require('./RecordLookup');
 export const SliderWidget = require('./SliderWidget').SliderWidgetComponent;
 export const FroalaWidget = require('./FroalaWidget');
+export const LabelWidget = require('./LabelWidget');
 export const LinkFieldWidget = require('./LinkFieldWidget');
 export const LinkField = LinkFieldWidget; //added for backward compatibility
 export const DateSelectorWidget = require('../../dates/DateTimePicker');
 export const CompanyLogoWidget = require('./CompanyLogo');
 export const UserWidgetWithSearch = require('./UserWidgetWithSearch');
-export const PieChartWidget = require('./ChartWidget').PieChartWidgetComponent;
+export const UserSelectorWidget = require('./UserSelectorWidget');
+export const PieChartWidget = require('./ChartWidget').default.PieChartWidgetComponent;
+export const FunnelChartWidget = require('./ChartWidget').default.FunnelChartWidgetComponent;
+export const ComposedChartWidget = require('./ChartWidget').default.ComposedChartWidgetComponent;
 //export const LineChartWidget = require('./ChartWidget').default.LineChartWidgetComponent;
 export const ToolbarWidget = require('./ToolbarWidget');
 export const ProgressWidget = require('./ProgressWidget').ProgressWidgetComponent;
@@ -31,3 +35,4 @@ export const UserListItemWidget = (props, context) => {
 export const MaterialTableWidget = require('./MaterialTableWidget');
 export const StepperWidget = require('./StepperWidget')
 export { default as SearchWidget } from './SearchWidget';
+

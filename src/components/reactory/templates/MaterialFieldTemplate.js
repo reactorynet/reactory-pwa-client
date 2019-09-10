@@ -58,7 +58,7 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
   const uiOptions = uiSchema['ui:options'] || null
   const uiWidget = uiSchema['ui:widget'] || null
   const uiToolbar = uiSchema['ui:toolbar'] || null;
-  let Widget = null
+  let Widget = null;
 
   if(uiOptions !== null) 
   {    
