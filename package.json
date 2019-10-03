@@ -1,8 +1,15 @@
 {
-  "name": "reactory-client",
-  "version": "0.8.1-RC2",
+  "name": "@reactory/client",
+  "displayName": "Reactory Client",
+  "browser": "index.js",
+  "version": "0.8.2",
   "private": true,
   "homepage": ".",
+  "author": {
+    "name": "Werner Weber",
+    "email": "werner.weber@reactory.net"    
+  },  
+  "licenses": [{"license":"Apache-2.0"}],  
   "dependencies": {
     "@babel/polyfill": "7.4.3",
     "@date-io/moment": "1.3.5",

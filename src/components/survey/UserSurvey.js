@@ -89,7 +89,7 @@ class UserSurvey extends Component {
             }
             return (
                 <ListItem key={assessment.id} dense button className={classes.listItem} onClick={goAssessment}>
-                    <Avatar alt={`${survey.title}`} src={api.getAvatar(delegate)}></Avatar>
+                    <Avatar alt={`${survey.title}`} src={api.getAvatar(delegate)} style={{marginRight: '8px'}}></Avatar>
                     <ListItemText
                         primary={`${survey.title} - ${listTitle}`}
                         secondary={`Valid from ${moment(survey.startDate).format('DD MMMM YYYY')} till ${moment(survey.endDate).format('DD MMMM YYYY')}`} />

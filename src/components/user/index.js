@@ -365,10 +365,10 @@ export const UserWithQuery = compose(
 
 
 export const UserListItem = (props) => {
-  const { user, selected, key, onClick, message } = props
+  const { user, selected, key, onClick, message, withTheme } = props
   if(!user) {
     return (<ListItem button onClick={onClick} key={key}>
-      <Avatar alt={"No user avaialble"} src={getAvatar(user)} />
+      <Avatar alt={"No user avaialble"} src={getAvatar(user)} style={{marginRight: '8px'}}/>
       <ListItemText primary={"None"} secondary={ "User not set" }/>
     </ListItem>)
   }
@@ -377,7 +377,7 @@ export const UserListItem = (props) => {
   const hasMessage = typeof message === 'string'
   return (
     <ListItem selected={selected} onClick={onClick} key={key}>
-      <Avatar alt={displayText} src={getAvatar(user)} />
+      <Avatar alt={displayText} src={getAvatar(user)} style={{marginRight: '8px'}} />
       <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ hasMessage === true ? message : user.email }/>
     </ListItem>
   )

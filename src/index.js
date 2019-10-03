@@ -19,3 +19,5 @@ ReactDOM.render(<App {...props} />, rootElement);
 registerServiceWorker();
 
 document.title = process.env.REACT_APP_TITLE || 'Reactory Client';
+
+export default App;

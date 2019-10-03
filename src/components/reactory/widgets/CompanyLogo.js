@@ -62,7 +62,7 @@ class CompanyLogoWidget extends Component {
     super(props, context)
     this.state = {
       loaded: false,
-      logo: props.formData,
+      logo: props.formData.id && props.formData.logo ? props.formData.logo : props.formData,
     }; 
     
     this.renderDropZone = this.renderDropZone.bind(this);
@@ -75,7 +75,14 @@ class CompanyLogoWidget extends Component {
     //this only when we need to lookup the logo 
     if(this.state.loaded === false && lodash.isNil(this.props.formData) === false && this.props.nolookup !== true) {
       const { formData } = this.props;
-      const variables = { id : formData };
+      let variables = { id : formData };
+
+      if(typeof variables.id !== 'string') {
+        if(variables.id.id) variables.id = variables.id.id;
+        else {
+          this.props.api.log('CompanyLogo component expecting a string id or an object with an id', { formData }, 'warn');
+        }
+      }
 
       this.props.api.graphqlQuery(gql`query OrganizationWithId($id: String!){
         organizationWithId(id: $id){
@@ -195,7 +202,7 @@ class CompanyLogoWidget extends Component {
     }
   
     if(readOnly === true) {
-      return <img {...{...logoProps, style: options.style  }} />          
+      return <img {...{...logoProps, style: { ...logoProps.style, ...options.style }  }} />          
     } else {
 
       if(logo) {

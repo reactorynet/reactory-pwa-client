@@ -41,7 +41,7 @@ export const UserListItem = (props) => {
     <ListItem selected={user.isSelected} onClick={onClick} key={key || user.id} className={props.className} style={style}>
       {checkboxComponent}
       <Avatar alt={displayText} src={getAvatar(user)} />
-      <ListItemText primary={ displayText } secondary={ hasMessage === true ? message : user.email }/>
+      <ListItemText primary={ displayText } secondary={ hasMessage === true ? message : user.email } style={{marginLeft: '8px'}}/>
       { secondaryAction }
     </ListItem>
   )

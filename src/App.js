@@ -26,6 +26,7 @@ import {
 } from './components';
 import ApiProvider, { ReactoryApi, ReactoryApiEventNames } from './api/ApiProvider'
 import { fetch } from "whatwg-fetch";
+import { deepEquals } from './components/reactory/form/utils';
 
 const packageInfo = require('../package.json');
 
@@ -114,10 +115,7 @@ class App extends Component {
     api.queryObject = query;
     api.queryString = window.location.search;
     api.objectToQueryString = queryString.stringify;
-    if(api.utils) {
-
-    }
-
+    
     this.state = {
       drawerOpen: false,
       auth_valid: false,
@@ -126,15 +124,19 @@ class App extends Component {
       user: api.getUser(),
       routes: [],
       validationError: null,
-    }
+      offline: false,
+    };
 
     this.onLogout = this.onLogout.bind(this);
     this.onLogin = this.onLogin.bind(this);
+    this.onApiStatusUpdate = this.onApiStatusUpdate.bind(this);
+
     this.configureRouting = this.configureRouting.bind(this);
     api.on(ReactoryApiEventNames.onLogout, this.onLogout)
     api.on(ReactoryApiEventNames.onLogin, this.onLogin)
+    api.on(ReactoryApiEventNames.onApiStatusUpdate, this.onApiStatusUpdate);
     
-    this.componentRefs = api.getComponents(['core.Loading@1.0.0', 'core.Login@1.0.0']);    
+    this.componentRefs = api.getComponents(['core.Loading@1.0.0', 'core.Login@1.0.0', 'core.FullScreenModal@1.0.0']);    
   }
 
   
@@ -144,7 +146,21 @@ class App extends Component {
   }
 
   onLogout() {
-    this.setState({ user: api.getUser() })
+    this.setState({ user: api.getUser() });
+  }
+
+  onApiStatusUpdate(status){
+    api.log('App.onApiStatusUpdate(status)', {status}, status.offline === true ? 'error' : 'debug');
+    let isOffline = status.offline === true;
+    let user = api.getUser();
+    delete user.when;
+    let _user = this.state.user;
+    delete _user.when;
+
+    if(deepEquals(user, _user) === false || isOffline !== this.state.offline) {
+      this.setState({ user, offline: isOffline });
+    }
+    
   }
 
   configureRouting(){
@@ -216,15 +232,12 @@ class App extends Component {
   }
 
   render() {
-    const { auth_validated, routes } = this.state;
-    const { Loading } = this.componentRefs;
+    const { auth_validated, routes, user, offline } = this.state;
+    const { Loading, FullScreenModal } = this.componentRefs;
 
     let themeOptions = api.getTheme();
     if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
-
-    //if(!themeOptions.typography) themeOptions.typograph =  { useNextVariants: true };
-    //else themeOptions.typography.useNextVariants = true;
     
     let muiTheme = createMuiTheme(themeOptions);
 
@@ -241,6 +254,16 @@ class App extends Component {
     }
 
     api.muiTheme = muiTheme;
+
+    let modal = null;
+
+    if(offline === true) {
+      modal = (
+        <FullScreenModal open={true} title={'Server is offline, stand by'}>
+          <p style={{margin: 'auto', fontSize: '20px'}}>We apologise for the inconvenience, but it seems like the reactory server offline. This notification will close automatically when the server is available again.</p>
+        </FullScreenModal>
+      )
+    }
                 
     return (
       <React.Fragment>        
@@ -251,11 +274,15 @@ class App extends Component {
               <ApiProvider api={api}>
                 <MuiThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
-                  <AssessorHeaderBar title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
-                  <div style={{ marginTop: '80px', paddingLeft: '8px', paddingRight: '8px', marginBottom: '8px' }}>                                        
-                    { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
-                  </div>
-                  </MuiPickersUtilsProvider>
+                    <React.Fragment>
+                      <AssessorHeaderBar title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
+                      <div style={{ marginTop: '80px', paddingLeft: '8px', paddingRight: '8px', marginBottom: '8px' }}>                                        
+                        { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
+                      </div>
+                      
+                    </React.Fragment>
+                  </MuiPickersUtilsProvider>                  
+                  
                 </MuiThemeProvider>
               </ApiProvider>
             </ApolloProvider>

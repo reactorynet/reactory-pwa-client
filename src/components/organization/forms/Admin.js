@@ -559,7 +559,12 @@ class DefaultFormContainer extends Component {
             <Route path={'/admin/org/:organizationId/surveys'}>
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/surveys/new'}>
-                  <TowerStoneSurveyConfig mode="new" organizationId={organizationId} formContext={{organizationId, match: this.props.match}} formData={{organization: organizationId}} style={{maxWidth:'85%'}}/>                  
+                  <TowerStoneSurveyConfig 
+                    mode="new" 
+                    organizationId={organizationId} 
+                    formContext={{organizationId, match: this.props.match}} 
+                    formData={{organization: organization}}
+                    style={{maxWidth:'85%'}}/>                  
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/surveys'}>
                   <SurveyCalendarForOrganization {...this.props} organizationId={organizationId} />

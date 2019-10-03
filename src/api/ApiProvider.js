@@ -63,7 +63,8 @@ const anonUser = { id: '', firstName: '', lastName: '', avatar: '', anon: true, 
 export const ReactoryApiEventNames = {
     onLogout : 'loggedOut',
     onLogin : 'loggedIn',
-    onPluginLoaded: 'onPluginLoaded'
+    onPluginLoaded: 'onPluginLoaded',
+    onApiStatusUpdate: 'onApiStatusUpdate'
 };
     
 const EmptyComponent = (fqn) => {
@@ -134,6 +135,7 @@ export class ReactoryApi extends EventEmitter {
             componentFqn,
             //componentDefinitionFromFqn,
             pluginDefinitionValid,
+            moment
         };
         this.rest = {
             json: {
@@ -156,6 +158,7 @@ export class ReactoryApi extends EventEmitter {
         this.registerComponent = this.registerComponent.bind(this);
         this.getComponent = this.getComponent.bind(this);
         this.mountComponent = this.mountComponent.bind(this);
+        this.showModalWithComponent = this.showModalWithComponent.bind(this);
         this.getComponents = this.getComponents.bind(this);
         this.status = this.status.bind(this);
         this.getAvatar = getAvatar;
@@ -216,7 +219,9 @@ export class ReactoryApi extends EventEmitter {
         });
 
         this.flushIntervalTimer = setInterval(this.flushstats.bind(this, true), 5000);
+        this.statusIntervalTime = setInterval(this.status.bind(this), 30000);
         this.status();
+        this.__REACTORYAPI = true;
     }
 
     log(message, params = [], kind = 'log') {
@@ -474,7 +479,11 @@ export class ReactoryApi extends EventEmitter {
         this.amq.onFormCommandEvent(commandId, func);
     }
     
-    hasRole(itemRoles = [], userRoles = null){        
+    hasRole(itemRoles = [], userRoles = null){  
+        if(itemRoles.length === 1 && itemRoles[0] === '*') return true;
+
+        if(userRoles === null) userRoles === this.getUser().roles;
+
         const result = intersection(itemRoles, userRoles);
         return result.length >= 1;
     }
@@ -544,25 +553,55 @@ export class ReactoryApi extends EventEmitter {
         localStorage.getItem(storageKeys.LastLoggedInEmail);
     }
 
-    registerComponent(nameSpace, name, version = '1.0.0', component = EmptyComponent){
+    registerComponent(nameSpace, name, version = '1.0.0', component = EmptyComponent, tags=[], roles=['*'], wrapWithApi = false){
         const fqn = `${nameSpace}.${name}@${version}`;
         if(isEmpty(nameSpace)) throw new Error('nameSpace is required for component registration');
         if(isEmpty(name)) throw new Error('name is required for component registration');
-        if(isNil(component)) throw new Error('component is required to register component');
-        if(isNil(this.componentRegister[fqn]) === true){
-          this.componentRegister[fqn] = {nameSpace, name, version, component}
-        }
+        if(isNil(component)) throw new Error('component is required to register component');        
+        this.componentRegister[fqn] = {
+            nameSpace, 
+            name, 
+            version, 
+            component: wrapWithApi === false ? component : withApi(component), 
+            tags, 
+            roles
+        }        
     }
     
     getComponents(componentFqns = []){
         let componentMap = {};
         componentFqns.forEach(fqn => {
-            const component = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]
-            if(component) {
-                componentMap[component.name] = component.component
-            } else {
-                componentMap[componentPartsFromFqn(fqn).name] = this.getNotFoundComponent();
-            }                       
+            let component = null;
+            if(typeof fqn === 'string') {
+                component = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]
+                try {
+                    if(component) {
+                        const canUserCreateComponent =  isArray(component.roles) === true ? this.hasRole(component.roles) : true;
+                        componentMap[component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
+                    } else {
+                        componentMap[componentPartsFromFqn(fqn).name] = this.getNotFoundComponent();
+                    }
+                } catch (e) {
+                    this.log('Error Occured Loading Component Fqns', fqn, 'error');
+                }
+            }
+            
+            if(typeof fqn === 'object') {
+                if(typeof fqn.componentFqn === 'string') {
+                    component = this.componentRegister[`${fqn.componentFqn}${fqn.componentFqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]
+                    try {
+                        if(component) {
+                            const canUserCreateComponent =  isArray(component.roles) === true ? this.hasRole(component.roles) : true;
+                            componentMap[typeof fqn.alias === 'string' ? fqn.alias : component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
+                        } else {
+                            componentMap[componentPartsFromFqn(fqn.componentFqn).name] = this.getNotFoundComponent();
+                        }
+                    } catch (e) {
+                        this.log('Error Occured Loading Component Fqns', fqn.componentFqn, 'error');
+                    }                     
+                }
+            }
+                                   
         });
 
         return componentMap;
@@ -585,7 +624,15 @@ export class ReactoryApi extends EventEmitter {
         if(this.componentRegister && this.componentRegister[notFoundComponent]) {
             return this.componentRegister[notFoundComponent].component
         } else {
-            return (<p>Component Find Failure, please check component registry and component name requested</p>)
+            return (React.forwardRef((props, context)=>(<div>Component Find Failure, please check component registry and component name requested</div>)))
+        }
+    }
+
+    getNotAllowedComponent( notAllowedComponentFqn = 'core.NotAllowed@1.0.0') {
+        if(this.componentRegister && this.componentRegister[notAllowedComponentFqn]) {
+            return this.componentRegister[notAllowedComponentFqn].component
+        } else {
+            return (React.forwardRef((props, context) =>(<div>Access Denied</div>)));
         }
     }
 
@@ -608,8 +655,58 @@ export class ReactoryApi extends EventEmitter {
         </React.Fragment>, domNode, callback)
         } else {
             ReactDOM.render(<ComponentToMount {...props} />, domNode, callback);        
+        }        
+    }
+
+    showModalWithComponent(title = '',  ComponentToMount, props, modalProps = {},  domNode, theme = true, callback){
+        const that = this    
+        const FullScreenModal = that.getComponent('core.FullScreenModal');
+
+        const _modalProps = { ...modalProps }
+        _modalProps.open = true;
+        _modalProps.title = title;
+
+        if(isNil(_modalProps.onClose)) {
+            modalProps.onClose = () => {
+                _modalProps.open = false;                
+                _render(_modalProps);
+                setTimeout(()=>{
+                    that.unmountComponent(domNode)
+                }, 2000);
+                
+            }
+        }
+
+        const _render = (_mprops) => {
+            if(theme === true) {
+                ReactDOM.render(<React.Fragment>
+                <CssBaseline />
+                <Provider store={that.reduxStore}>
+                    <ApolloProvider client={that.client}>
+                        <MuiThemeProvider theme={that.muiTheme}>
+                            <Router>                    
+                                <ApiProvider api={that}>                        
+                                    <FullScreenModal {..._mprops}>
+                                        <ComponentToMount {...props} />
+                                    </FullScreenModal> 
+                                </ApiProvider>
+                            </Router>
+                        </MuiThemeProvider>
+                    </ApolloProvider>
+                </Provider>
+            </React.Fragment>, domNode, callback)
+            } else {
+                ReactDOM.render(
+                    <React.Fragment>
+                        <FullScreenModal {..._mprops}>
+                            <ComponentToMount {...props} />
+                        </FullScreenModal> 
+                    </React.Fragment>, domNode, callback);        
+            }
         }
         
+        _render(_modalProps);
+                
     }
 
     createElement(ComponentToCreate, props, domNode, theme, callback = ()=>{}) {
@@ -647,6 +744,8 @@ export class ReactoryApi extends EventEmitter {
             this.status({ logout: true }).then((done)=>{
                 this.emit(ReactoryApiEventNames.onLogout);
             });
+        } else {
+            this.emit(ReactoryApiEventNames.onLogout);
         }        
     }
 
@@ -697,7 +796,7 @@ export class ReactoryApi extends EventEmitter {
         localStorage.removeItem(key);
     }
     status( options = { emitLogin: false } ) {
-        const that = this
+        const that = this        
         return new Promise((resolve, reject) => {
             that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {                
                 if (result.data.apiStatus.status === "API OK") {                    
@@ -705,16 +804,19 @@ export class ReactoryApi extends EventEmitter {
                     that.lastValidation = moment().valueOf();
                     that.tokenValidated = true;                                         
                     if(options.emitLogin === true) that.emit(ReactoryApiEventNames.onLogin, that.getUser());
+                    that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result })
                     resolve(that.getUser());                    
                 }
                 else {
                     that.logout(false);
+                    that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: true })
                     that.setUser(anonUser);             
                     resolve(anonUser);       
                 }
             }).catch((clientErr) => {                
                 that.logout(false);
-                resolve(anonUser);
+                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { offline: true, clientError: clientErr });
+                resolve({ ...anonUser, offline: true, offlineError: true });
             });
         });
     }

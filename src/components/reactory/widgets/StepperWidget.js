@@ -19,7 +19,7 @@ import {
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 
-import { withApi } from '../../../api/ApiProvider';
+import { withApi, ReactoryApi } from '../../../api/ApiProvider';
 
 class StepperWidget extends Component {
   
@@ -38,6 +38,7 @@ class StepperWidget extends Component {
   });
 
   static propTypes = {
+    api: PropTypes.instanceOf(ReactoryApi),
     formData: PropTypes.number,
     onChange: PropTypes.func,
     onSubmit: PropTypes.func,
@@ -64,8 +65,10 @@ class StepperWidget extends Component {
     
     const self = this;
 
-    const { onChange, uiSchema } = self.props;
+    const { onChange, uiSchema, api, schema, idSchema } = self.props;
     const options = uiSchema['ui:options'];
+    api.log('Getting steps for stepper', { props: this.props }, 'debug' );
+
 
     let _options = {
       filter: {
@@ -98,10 +101,12 @@ class StepperWidget extends Component {
     if(_options.filter && _options.filter.predicate) {
       Object.getOwnPropertyNames(_options.filter.predicate).map(property => {
         if(typeof _options.filter.predicate[property] === 'string') {
-          try {
-            _options.filter.predicate[property] = _.template( _options.filter.predicate[property], { variable: 'props' } )(this.props);
+          try {            
+            _options.filter.predicate[property] = _.template( _options.filter.predicate[property], { variable: 'props' } )(self.props);
+            api.log(`Predicate Resolved For ${idSchema.$id}`, { predicate: _options.filter.predicate[property] }, 'debug' );  
           } catch (templateError) {
              //
+            api.log('core.StepperWidget Could not create generate predicate for filter', { predicate: _options.filter.predicate[property],  property }, 'warning' )
           }          
         }
       });
@@ -115,8 +120,8 @@ class StepperWidget extends Component {
 
         const selectStep = () => {  
           self.setState({ activeStep: step.step }, ()=>{
-            if(self.onChange && typeof self.onChange === 'function') {
-              self.onChange(step.value);
+            if(self.props.onChange && typeof self.props.onChange === 'function') {
+              self.props.onChange(step.value);
             };
           });          
         };  

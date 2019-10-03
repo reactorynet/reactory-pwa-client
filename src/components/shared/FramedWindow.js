@@ -138,7 +138,7 @@ class FramedWindow extends Component {
                 try {
                   activeHandlers[handlerKey](data, origin, source, this.props);
                 }catch(messageHanlderError) {
-                  api.log(`Could not execute message handler`, {}, 'error');
+                  api.log(`Could not execute message handler`, { error: messageHanlderError }, 'error');
                 }
               }
             });

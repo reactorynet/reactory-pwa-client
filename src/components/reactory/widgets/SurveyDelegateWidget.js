@@ -4,7 +4,7 @@ import { compose } from 'redux';
 import classnames from 'classnames';
 import om from 'object-mapper';
 import MaterialTable, { MTableToolbar } from 'material-table';
-import { isArray, isFunction, sort, findIndex, countBy, isNil, filter } from 'lodash';
+import { isArray, isFunction, sort, findIndex, countBy, isNil, filter, sortBy } from 'lodash';
 import {
   Avatar,
   Paper,
@@ -20,7 +20,8 @@ import {
   ListSubheader,
   Tabs,
   Tab,
-  LinearProgress
+  LinearProgress,
+  Grid
 } from '@material-ui/core';
 import gql from 'graphql-tag';
 import { UserListItem } from '../../user/Lists';
@@ -91,7 +92,7 @@ class SurveyDelegates extends Component {
 
   constructor(props, context){
     super(props, context)
-    this.state = {
+    const state = {
       activeEntry: null,
       modal: false,
       modalType: 'add',
@@ -102,8 +103,15 @@ class SurveyDelegates extends Component {
       groupBy: 'status', //status, last-action, next-action
       selected: {
 
-      }
+      },
+      surveyType: '360',      
     };
+
+    if(props.formContext && props.formContext.formData && props.formContext.formData.surveyType)
+      state.surveyType = props.formContext.formData.surveyType;
+
+    this.state = state;
+
     this.componentDefs = props.api.getComponents([
       'core.ErrorMessage', 
       'towerstone.SurveyDelegateWidget',
@@ -130,6 +138,7 @@ class SurveyDelegates extends Component {
     this.launchSurveyForDelegate = this.launchSurveyForDelegate.bind(this)
     this.removeDelegateFromSurvey = this.removeDelegateFromSurvey.bind(this)
     this.getBasicModalView = this.getBasicModalView.bind(this)
+    this.getSurveyType = this.getSurveyType.bind(this)
     this.removeAssessorForDelegate = this.removeAssessorForDelegate.bind(this)
     this.doAction = this.doAction.bind(this)
   }
@@ -141,6 +150,9 @@ class SurveyDelegates extends Component {
   getSecondaryAction(delegateEntry){
     const { DropDownMenu } = this.componentDefs;
     const self = this;
+    const { formData } = this.props.formContext;
+    const { surveyType } = formData;
+
     const onMenuItemSelect = (evt, menuItem) => {
       console.log('trigger menu item', {menuItem, delegateEntry})
       switch(menuItem.id){
@@ -253,7 +265,7 @@ class SurveyDelegates extends Component {
   getBasicModalView( ) {
     const self = this;
     const { activeEntry, assessment, basicModalViewMode, reportType } = this.state;
-    const { DropDownMenu, Assessment, ReportViewer } = this.componentDefs;
+    const { DropDownMenu, Assessment, ReportViewer, FullScreenModal } = this.componentDefs;
     
     //src: http://localhost:4000/pdf/towerstone/delegate-360-assessment?x-client-key=${this.props.api.CLIENT_KEY}&x-client-pwd=${this.props.api.CLIENT_PWD}
 
@@ -294,67 +306,80 @@ class SurveyDelegates extends Component {
             <UserListItem key={activeEntry.id} user={activeEntry.delegate} />
             <hr/>
             <Typography variant="caption">Assessments</Typography>
-            <List>
-              {
-                activeEntry.assessments.map( ( assessment ) => {
-                  const onMenuItemSelect = (evt, menuItem) => {
-                    switch(menuItem.id){
-                      case "send-reminder": {          
-                        break;
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={3}>
+                <List>
+                {
+                  activeEntry.assessments.map( ( _assessment ) => {
+                    const onMenuItemSelect = (evt, menuItem) => {
+                      switch(menuItem.id){
+                        case "send-reminder": {          
+                          break;
+                        }
+                        case "remove-assessment": {
+                          self.removeAssessorForDelegate(activeEntry, _assessment);
+                          break;
+                        }
+                        case "details": {
+                          self.setState({ assessment: _assessment })
+                          break;
+                        }
+                        default: {
+                          break;
+                        }
                       }
-                      case "remove-assessment": {
-                        self.removeAssessorForDelegate(activeEntry, assessment);
-                        break;
+                    };
+                
+                    const menus = [
+                      {
+                        title: 'Remove', 
+                        icon: 'delete_outline', 
+                        id: 'remove-assessment', 
+                        key:'remove-assessment'
+                      },
+                      {
+                        title: 'Details', 
+                        icon: 'search', 
+                        id: 'details', 
+                        key:'details'
                       }
-                      case "details": {
-                        self.setState({ assessment })
-                        break;
-                      }
-                      default: {
-                        break;
-                      }
+                    ];
+                    
+                    if(_assessment.complete !== true) {
+                      menus.push({
+                        title: 'Send Reminders', 
+                        icon: 'mail_outline', 
+                        id: 'send-reminder', 
+                        key:'reminder'
+                      });
                     }
-                  };
-              
-                  const menus = [
-                    {
-                      title: 'Remove', 
-                      icon: 'delete_outline', 
-                      id: 'remove-assessment', 
-                      key:'remove-assessment'
-                    },
-                    {
-                      title: 'Details', 
-                      icon: 'search', 
-                      id: 'details', 
-                      key:'details'
-                    }
-                  ];
-                  
-                  if(assessment.complete !== true) {
-                    menus.push({
-                      title: 'Send Reminders', 
-                      icon: 'mail_outline', 
-                      id: 'send-reminder', 
-                      key:'reminder'
-                    });
-                  }
-                                                    
-                  const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
-    
-                  const { assessor } = assessment;
-                  return (
-                  <UserListItem 
-                    key={ assessor.id || assessor._id } 
-                    user={ assessor } 
-                    message={ assessment.complete ? 'Assessment complete' : 'Pending' } 
-                    secondaryAction={ dropdown } />
-                  );
-                })
-              }
-            </List>
-            { assessment && <hr />}
-            { assessment && <Assessment assessmentId={assessment.id || assessment._id}  mode="admin" /> }            
+                                                      
+                    const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
+      
+                    const { assessor } = _assessment;
+                    return (
+                    <UserListItem 
+                      key={ assessor.id || assessor._id } 
+                      user={ assessor } 
+                      message={ _assessment.complete === true ? 'Assessment complete' : 'Pending' } 
+                      secondaryAction={ dropdown } />
+                    );
+                  })
+                }
+              </List>
+              </Grid>
+              <Grid item sm={12} md={9}>
+                <Typography>Overview</Typography>
+              </Grid>
+              { assessment && 
+                <FullScreenModal 
+                open={ assessment !== null } 
+                onClose={()=> { this.setState({ assessment: null }) }} 
+                title={ `Viewing ${assessment.assessor.firstName} ${assessment.assessor.lastName} assessment for ${activeEntry.delegate.firstName} ${activeEntry.delegate.lastName}` }>
+                <Assessment assessmentId={assessment.id || assessment._id}  mode="admin" />
+              </FullScreenModal>
+              } 
+            </Grid>                                               
           </Paper>
         );
       }
@@ -575,8 +600,14 @@ class SurveyDelegates extends Component {
     }
   }
 
+  getSurveyType(){
+    const { formContext } = this.props;
+    if(formContext.formData && formContext.formData.surveyType) return formContext.formData.surveyType;
+    return '360'
+  }
+
   render(){
-    const { classes, api } = this.props;
+    const { classes, api, formContext } = this.props;
     const { ErrorMessage, AssessmentTable, SpeedDial } = this.componentDefs;
     const { formData, selected } = this.state;
     const self = this;
@@ -584,153 +615,13 @@ class SurveyDelegates extends Component {
     formData.map((entry) => { 
       if(entry.delegate && entry.delegate.id) data.push({...entry}) 
     }); 
-    
-  
-    if(isArray(data) === true){
 
-      const table = (
-        <MaterialTable
-              columns={[                
-                  {
-                      title: 'Delegate', 
-                      render: (rowData) => {
-                        const fullName = rowData && rowData.delegate ? `${rowData.delegate.firstName} ${rowData.delegate.lastName}`  : 'No Delegate'
-                        const avatar = rowData && rowData.delegate ? <Avatar src={api.getAvatar(rowData.delegate)} />  : 'No Delegate'
-                        return (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', flexGrow: 1 }}>
-                            {avatar}
-                            <Typography variant="body2">{fullName}</Typography>
-                          </div>
-                        );
-                      }
-                  },                
-                  {
-                    title: 'Message',
-                    render: (rowData) => {
-                      return rowData && rowData.message ? rowData.message : 'No Message';
-                    },
-                  },
-                  {
-                    title: 'Status', 
-                    render: (rowData) => {
-                      return rowData && rowData.status ? rowData.status.toUpperCase() : 'NEW';
-                    },
-                  },
-                  {
-                    title: 'Last Action',
-                    render: (rowData) => {
-                      return rowData.lastAction;
-                    },
-                  },
-                  {
-                    title: 'Next Action',
-                    render: (rowData) => {
-                      return rowData.nextAction;
-                    },
-                  },
-                  {
-                    title: 'Peers Confirmed', 
-                    render: (rowData) => {
-                      if(rowData.peers === null) return 'No Peers Defined';
-                      return rowData.peers.confirmedAt === null ? 'Not confirmed' : moment(rowData.peers.confirmedAt).format("YYYY-MM-DD");
-                    }
-                  }               
-              ]}                    
-              data={data}
-              components={{
-                Toolbar: props => {
-                  return (
-                    <div>
-                      <MTableToolbar {...props}/>
-                      <Toolbar>
-                        <Tooltip title='Click here to trigger suggested email'><IconButton color="primary" onClick={this.sendInviteEmails}><Icon>mail</Icon></IconButton></Tooltip>
-                        <Tooltip title='Click here to add a new delegate to this survey'><IconButton color="primary" onClick={this.addDelegateClicked}><Icon>add</Icon></IconButton></Tooltip>
-                      </Toolbar>
-                    </div>
-                  )
-                },
-              }}
-              title="Delegates"
-              detailPanel={ rowData => {
-                return (
-                    <Fragment>
-                      <Typography variant="h5">Delegate assessment details for {rowData.delegate.firstName} {rowData.delegate.lastName}</Typography>
-                      <LinearProgress variant="determinate" value={rowData.assessments.length > 0 ? Math.floor(((countBy(rowData.assessments, { complete: true }) * 100) / rowData.assessments.length)) : 0 }/>
-                      <AssessmentTable assessments={rowData.assessments} />
-                    </Fragment>
-                  )
-              }}
-              actions={[
-                  rowData => {
-                    if(rowData.removed === true) return null;
-  
-                    return {
-                      icon: 'search',
-                      tooltip: 'Click to view details for the delegate',
-                      onClick: (event, rowData) => {                      
-                        self.setState({ activeEntry: rowData, modal: true, modalType: 'detail' })
-                      }
-                    }                  
-                  },
-                  rowData => {
-                    if(rowData.removed === true) return null; 
-                    
-                    return {
-                      icon: 'mail',
-                      tooltip: 'Click to send invite',
-                      disabled: rowData.status === 'complete',
-                      onClick: (event, rowData) => {
-                        //console.log('Send invites for all confirmed delegates', rowData)
-                        self.sendCommunicationToDelegate(rowData)
-                      }
-                    }
-                  },
-                  rowData => {
-                    if(rowData.removed === true) return null; 
-                    
-                    return {
-                      icon: 'flight_takeoff',
-                      tooltip: 'Click to launch for delegate',
-                      disabled: rowData.status === 'complete',
-                      onClick: (event, rowData) => {
-                        self.launchSurveyForDelegate(rowData)
-                      }
-                    }
-                  },
-                  rowData => {
-                    if(rowData.removed === true) {
-                      return {
-                        icon: 'restore',
-                        tooltip: 'Click to re-add user to survey',
-                        disabled: rowData.status === 'complete',
-                        onClick: (event, rowData) => {
-                          self.enabledDelegateForSurvey(rowData)
-                        }  
-                      }
-                    }; 
-                    
-                    return {
-                      icon: 'delete_outline',
-                      tooltip: 'Click to remove / disable delegate in survey',                    
-                      onClick: (event, rowData) => {
-                        self.removeDelegateFromSurvey(rowData)
-                      }
-                    }
-                  },
-                  rowData => {
-                    if(rowData.removed === false) return null;
-                    
-                    return {
-                      icon: 'delete_outline',
-                      tooltip: 'Click to completely remove the delegate from the survey',                    
-                      onClick: (event, rowData) => {
-                        self.removeDelegateFromSurvey(rowData, true)
-                      }
-                    }
-                  }                                
-              ]}
-          />
-      );
+    
+    
+          
+    if(isArray(data) === true){
+      data = sortBy(data, (delegateEntry) => { return `${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}` })
+     
   
       const secondaryAction = (<IconButton></IconButton>);
       /**
@@ -828,8 +719,15 @@ class SurveyDelegates extends Component {
         },
       ]
       //new, invite-sent, launched, 
-      const statusList = [
-        {
+      const surveyType = this.getSurveyType();
+      const is180 = surveyType === '180';
+      const is360 = surveyType === '360';
+      const isPLC = surveyType === 'plc';
+
+      let statusList = [];
+
+      if(is360 === true || isPLC === true) {
+        statusList = [{
           key: 'new',
           title: 'Added to survey',
           icon: 'new_releases',          
@@ -858,8 +756,46 @@ class SurveyDelegates extends Component {
           key: 'removed',
           title: 'Removed / Disabled for Survey',
           icon: 'delete_outline'
-        }
-      ];
+        }];
+      }
+
+      if(is180 === true) {        
+        statusList = [
+          {
+            key: 'new',
+            title: `Added to ${formContext.formData.delegateTeamName || 'Delegates'}`,
+            icon: 'new_releases',          
+          },
+          {
+            key: 'new',
+            title: `Added to ${formContext.formData.assessorTeamName || 'Assessors'}`,
+            icon: 'new_releases',          
+          },
+          {
+            key: 'invite-sent',
+            title: 'Invitation Sent',
+            icon: 'email',          
+          },
+          {
+            key: 'launched',
+            title: `Launched for ${formContext.formData.delegateTeamName || 'Assessors'}`,
+            icon: 'flight_takeoff'
+          },
+          {
+            key: 'launched',
+            title: `Launched for ${formContext.formData.assessorTeamName || 'Assessors'}`,
+            icon: 'flight_takeoff'
+          },          
+          {
+            key: 'removed',
+            title: 'Removed / Disabled for Survey',
+            icon: 'delete_outline'
+          }
+        ];
+      }
+
+      
+        
 
       const renderDelegateItem = (delegateEntry, status) => {
         
@@ -959,7 +895,7 @@ class SurveyDelegates extends Component {
               let removedItems = null;
               
               if(status.key === "removed") {
-                removedItems = filter(data, (elem) => { return elem.removed === true}).map((delegateEntry, index) => {
+                removedItems = sortBy(filter(data, (elem) => { return elem.removed === true}), (delegateEntry) => {  return `${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}` }).map((delegateEntry, index) => {
                   return renderDelegateItem(delegateEntry, status);
                 });
               }
@@ -1016,7 +952,8 @@ class SurveyDelegates extends Component {
           },
           icon: <Icon>group_add</Icon>,
           enabled: true,
-        },
+          ordinal: 0,
+        },        
         {
           key: 'send-invites',
           title: 'Send Invites',
@@ -1026,6 +963,7 @@ class SurveyDelegates extends Component {
           },
           icon: <Icon>email</Icon>,
           enabled: selectedDelegates.length > 0,
+          ordinal: 1,
         },
         {
           key: 'launch',
@@ -1036,6 +974,7 @@ class SurveyDelegates extends Component {
           },
           icon: <Icon>flight_takeoff</Icon>,
           enabled: selectedDelegates.length > 0,
+          ordinal: 2,
         },
         {
           key: 'send-reminder',
@@ -1046,6 +985,7 @@ class SurveyDelegates extends Component {
           },
           icon: <Icon>alarm</Icon>,
           enabled: selectedDelegates.length > 0,
+          ordinal: 3,
         },
         {
           key: 'close',
@@ -1056,6 +996,7 @@ class SurveyDelegates extends Component {
           },
           icon: <Icon>close</Icon>,
           enabled: selectedDelegates.length > 0,
+          ordinal: 4,
         },
         /*
         {
@@ -1074,16 +1015,19 @@ class SurveyDelegates extends Component {
           clickHandler: evt => {
             self.generateReport();
           },
-          icon: <Icon>all_inclusive</Icon>,
+          icon: <Icon>print</Icon>,
           enabled: true,
+          ordinal: 5,
         },
       ];
+
+
 
       return (
         <Paper className={this.props.classes.root}>
           {list}
           {self.state.busy && self.state.message && <Typography variant="caption" color="secondary"><Icon>info</Icon>{self.state.message}</Typography>} 
-          {<SpeedDial actions={speedDialActions} icon={<Icon>golf_course</Icon>} />}
+          {<SpeedDial actions={sortBy(speedDialActions, e => e.ordinal )} icon={<Icon>golf_course</Icon>} />}
           {self.getActiveModalView()}
         </Paper>
       )

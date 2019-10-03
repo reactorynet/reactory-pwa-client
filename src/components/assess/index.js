@@ -51,14 +51,17 @@ class AssessmentWrapper extends Component {
     }
     
     renderQuery() {
-        const { match, api, mode } = this.props;
+        const { match, api, mode, assessmentId } = this.props;
         const self = this;
         const { Loading } = this.componentDefs;
-        
-        if(match.params.length === 0) return <p>No Assesment Id</p>
-        const assessmentId = match.params[0];                    
+
+        let useUri = false;
+        if(match.url.indexOf('/assess/') === 0) {
+            useUri = true;
+        };
+                                                        
         return (
-        <Query query={api.queries.Assessments.assessmentWithId} variables={{ id: assessmentId }} >
+        <Query query={api.queries.Assessments.assessmentWithId} variables={{ id: useUri ? match.params[0] : assessmentId }} >
             {({ loading, error, data}) => {                            
                 if(loading === true) return (<Loading title="Loading assessment data, please wait"/>);
                 if(nil(error) === false) return (<p>Error while loading assessment ${error.message}</p>);

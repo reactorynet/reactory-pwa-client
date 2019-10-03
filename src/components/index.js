@@ -204,7 +204,8 @@ export const componentRegistery = [
   {
     nameSpace: 'towerstone',
     name: 'OwlyListItem',
-    component: (props) => {      
+    component: (props) => {
+      const { UserListItem } = UserComponents;      
       return <UserListItem user={{ firstName: 'TowerStone Leadership', lastName: 'Centre', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
     },
     version: '1.0.0'

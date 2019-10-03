@@ -138,7 +138,6 @@ class PieChartWidget extends Component {
 class PieChartWidget extends PureComponent {  
 
   render() {
-    debugger;
     let options = { multiple:  false }; 
     let data = { data: { } };
     let pieProps = {
@@ -154,7 +153,7 @@ class PieChartWidget extends PureComponent {
       ],
     };    
     
-    const  { formData, idSchema, uiSchema } = this.props;
+    const  { formData, idSchema, uiSchema, contentRect } = this.props;
     const pies = [];
     
     pieProps.id = idSchema && idSchema.id ? idSchema.id : uuid();
@@ -191,9 +190,11 @@ class PieChartWidget extends PureComponent {
 
 
     return (
-      <PieChart width={options.width || 400} height={ options.width || 400}>
+      <ResponsiveContainer height={contentRect.bounds.height || 400} width="95%">
+      <PieChart>
         {pies}
       </PieChart>
+      </ResponsiveContainer>
     );
   }
 }
@@ -210,7 +211,7 @@ class FunnelChartWidget extends PureComponent {
     if(lodash.isObject(formData) === true && lodash.isArray(formData.data) === true) data = formData.data; 
     
     return (
-      <ResponsiveContainer height={contentRect.bounds.height} width="80%">
+      <ResponsiveContainer height={contentRect.bounds.height} width="95%">
          <FunnelChart>
           <Tooltip />
           <Funnel
@@ -258,28 +259,37 @@ class ComposedChartWidget extends Component {
   
 
   render() {
-    const { formData } = this.props;
+    let { formData, contentRect } = this.props;
 
-    const { 
-      area, 
-      bar, 
-      line, 
-      xAxis 
-    } = formData.options;
+    if(isNull(formData) === true || formData === undefined) {
+      return <Typography>[Composed Chart] - NO DATA</Typography> 
+    }
 
-    const { data = [] } = formData;
-    return (
-      <ComposedChart width={730} height={250} data={data}>
-        <XAxis {...xAxis} />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <CartesianGrid stroke="#f5f5f5" />
-        <Area {...area} />
-        <Bar {...bar} />
-        <Line {...line} />
-      </ComposedChart>
-    );    
+    if(isNull(formData.options) === true || formData.options === undefined) return <Typography>[Composed Chart] - NO OPTIONS</Typography> 
+    else {
+      let { 
+        area, 
+        bar, 
+        line, 
+        xAxis 
+      } = formData.options;
+          
+      const { data = [] } = formData;
+      return (      
+        <ResponsiveContainer height={contentRect.bounds.height || 400} width="95%">
+          <ComposedChart width={contentRect.bounds.width || 640} height={contentRect.bounds.height || 400} data={data}>
+            <XAxis {...xAxis} />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <CartesianGrid stroke="#f5f5f5" />
+            <Area {...area} />
+            <Bar {...bar} />
+            <Line {...line} />
+          </ComposedChart>    
+        </ResponsiveContainer>  
+      );
+    }      
   }
 }
 
