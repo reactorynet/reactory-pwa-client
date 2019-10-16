@@ -43,7 +43,7 @@ import DetailIcon from '@material-ui/icons/Details'
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { isArray, isNil } from 'lodash';
 import moment from 'moment';
-import { ReactoryFormComponent } from '../../reactory';
+import { ReactoryFormComponent } from '../../reactory/ReactoryFormComponent';
 import { TableFooter } from '@material-ui/core/Table';
 import { withApi, ReactoryApi } from '../../../api/ApiProvider';
 import DefaultAvatar from '../../../assets/images/profile/default.png';

@@ -66,9 +66,19 @@ class MaterialTableWidget extends Component {
           const ColRenderer = api.getComponent(def.component);
           def.render = ( rowData ) => {           
             let props = { ...rowData };
+            let mappedProps = {};
+
             if(def.props) {
-              props = { ...props, ...def.props }
+              props = { ...props, ...def.props, ...mappedProps }
             } 
+
+            //check if there is a propsMap property
+            //maps self props 
+            if(def.propsMap && props) {
+              mappedProps = api.utils.objectMapper(props, def.propsMap);
+              props = {...props, ...mappedProps };
+            }
+            
             if(ColRenderer) return <ColRenderer { ...props } />
             else return <Typography>Renderer {def.component} Not Found</Typography>
           }
@@ -90,7 +100,10 @@ class MaterialTableWidget extends Component {
         <MaterialTable
             columns={columns}                    
             data={data}            
-            title={this.props.title || uiOptions.title || "no title"}            
+            title={this.props.title || uiOptions.title || "no title"}
+            options={{
+              grouping: uiOptions.options && uiOptions.options.grouping === true
+            }}            
             />
     )
   }

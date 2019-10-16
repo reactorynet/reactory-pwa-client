@@ -25,7 +25,7 @@ import KanbanDashboardComponent, { TaskListComponentWithData, TaskDetailWithData
 import TowerStoneHome from './home/TowerStoneHomeComponent';
 import Loading from './shared/Loading';
 import LinkComponent from './shared/Link';
-import ReactoryRouterComponent, { ReactoryFormComponent } from './reactory'
+import ReactoryRouterComponent, { ReactoryFormComponent } from './reactory/ReactoryFormComponent'
 import { TaskListComponent, TaskDashboardComponent } from './tasks/Taskboard';
 import AdminDashboardComponent from './admin/dashboard'
 import PaymentGatewayDashboardComponent from './payments/funisave/Dashboard';
@@ -34,11 +34,12 @@ import Calendar from './dates/Calendar';
 import { LayoutThemed, SingleColumnLayout, TwoColumnGrid, BasicContainer } from './shared/Layout';
 import { UserListWithSearchComponent, SurveyDelegateWidget } from './user/Widgets';
 import Logo from './shared/logo';
+import SlideOutLauncher from './shared/SlideOutLauncher';
 import BasicModal from './shared/BasicModal';
 import AotAnalyticsDashboardComponent from './tasks/analytics/AnalyticsDashboard';
 import SpeedDialWidget from './shared/SpeedDialWidget';
 import FullScreenDialog from './shared/FullScreenDialog';
-import FramedWindow, { ReportViewerComponent } from './shared/FramedWindow';
+import FramedWindow, { ReportViewerComponent, GraphiqlWindow } from './shared/FramedWindow';
 
 import FroalaWired from './richtext/Froala';
 
@@ -403,7 +404,6 @@ export const componentRegistery = [
     name: 'ReactoryRouter',
     component: ReactoryRouter,
     version: '1.0.0',
-
   },
   {
     nameSpace: 'core',
@@ -554,5 +554,8 @@ export const componentRegistery = [
     name: 'MaterialFormWidgets',
     version: '1.0.0',
     component: require('./reactory/widgets')
-  },  
+  },
+  GraphiqlWindow.meta,
+  SlideOutLauncher.meta,
+  require('./shared/currency/CurrencyLabel')  
 ];

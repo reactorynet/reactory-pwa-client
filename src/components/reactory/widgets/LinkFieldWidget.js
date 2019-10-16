@@ -1,5 +1,5 @@
 import React,  { Component, Fragment } from 'react';
-import { Button } from '@material-ui/core';
+import { Button, Icon } from '@material-ui/core';
 import { compose } from 'recompose';
 import { withTheme } from '@material-ui/styles';
 import { template } from 'lodash';
@@ -45,8 +45,9 @@ class LinkFieldWidget extends Component {
     }
 
     const goto = () => { 
+      debugger;
       if(props.uiSchema["ui:options"].userouter === false) window.location.assign(linkText);
-      else history.push(linkText); 
+      else history.replace(linkText); 
     };
 
     return (

@@ -7,6 +7,7 @@ import UserLists  from '../../user/Lists/index';
 
 
 
+
 export const ChipArrayWidget = require('./ChipArray');
 export const SelectWidget = require('./Select');
 export const SelectWithDataWidget = require('./SelectWithData');
@@ -34,5 +35,7 @@ export const UserListItemWidget = (props, context) => {
 };
 export const MaterialTableWidget = require('./MaterialTableWidget');
 export const StepperWidget = require('./StepperWidget')
+export { default as MaterialListWidget } from './MaterialListWidget';
 export { default as SearchWidget } from './SearchWidget';
+export { default as WidgetNotAvailable } from './WidgetNotAvailable';
 

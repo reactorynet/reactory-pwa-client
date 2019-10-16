@@ -3,7 +3,7 @@ import { Icon } from '@material-ui/core';
 import { template } from 'lodash';
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import { Link } from 'react-router-dom';
+import { Link, withRouter } from 'react-router-dom';
 
 class LinkComponent extends Component {
   
@@ -45,5 +45,5 @@ class LinkComponent extends Component {
   static styles = (theme) => ({ })
 };
 
-const ThemeLinkComponent = compose(withTheme, withStyles(LinkComponent.styles))(LinkComponent);
+const ThemeLinkComponent = compose(withRouter, withTheme, withStyles(LinkComponent.styles))(LinkComponent);
 export default ThemeLinkComponent;

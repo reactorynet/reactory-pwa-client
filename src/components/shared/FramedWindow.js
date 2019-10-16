@@ -221,6 +221,45 @@ class FramedWindow extends Component {
 
 const FramedWindowComponent = compose(withTheme, withApi)(FramedWindow);
 
+class _GraphiqlWindow extends Component {
+  
+  render(){    
+    const { api } = this.props;
+    const { themeOptions } = api.getUser();
+    let color1 = themeOptions && themeOptions.palette && themeOptions.palette.primary1Color 
+      ? themeOptions.palette.primary1Color 
+      : 'unset'
+
+    const queryparams = {      
+      'x-client-key': api.CLIENT_KEY,
+      'x-client-pwd': api.CLIENT_PWD,
+      'auth_token': api.getAuthToken(), 
+      'color1':  color1,     
+    };
+  
+    return (
+      <FramedWindowComponent 
+        id={`reactory-graphiql-window`} 
+        frameProps={{ url :`${api.CDN_ROOT}/plugins/graphiql/index.html?${api.utils.queryString.stringify(queryparams)}` }} 
+        method={'get'} 
+        />)
+  }
+}
+
+const GraphiqlWindowComponent = compose(withTheme, withApi)(_GraphiqlWindow); 
+GraphiqlWindowComponent.meta = {
+  nameSpace: 'core',
+  name: 'ReactoryGraphiQLExplorer',
+  version: '1.0.0',
+  component: GraphiqlWindowComponent,
+  tags: ['graphql', 'development'],
+  description: 'Graphql Express Explorer',
+  roles: ['DEVELOPER', 'ADMIN']
+};
+
+export const GraphiqlWindow = GraphiqlWindowComponent;
+
+
 class ReportViewer extends Component {
 
   static propTypes = {    

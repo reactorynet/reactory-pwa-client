@@ -219,7 +219,7 @@ class ApplicationHeader extends Component {
           menu.entries.map((menuItem) => {
             let allow = true;
             if (isArray(menuItem.roles) && isArray(user.roles)) {
-              allow = api.hasRole(menuItem.roles, user.roles)
+              allow = api.hasRole(menuItem.roles, user.roles);
             }
             if (allow === true) {
               const goto = () => {
@@ -227,7 +227,9 @@ class ApplicationHeader extends Component {
               };
               menuItems.push((
                 <MenuItem key={menuItem.id} onClick={goto}>
-                  <ListItemIcon><Icon color="primary">{menuItem.icon}</Icon></ListItemIcon>
+                  <ListItemIcon>
+                    <Icon color="primary">{menuItem.icon}</Icon>
+                  </ListItemIcon>
                   {menuItem.title}
                 </MenuItem>));
             }

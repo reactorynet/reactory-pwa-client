@@ -1,6 +1,6 @@
 import React, { Fragment, Component } from 'react'
 import PropTypes from 'prop-types'
-import { pullAt, forEach } from 'lodash'
+import { pullAt, forEach, isArray, intersection } from 'lodash'
 import {
   Chip,
   IconButton,
@@ -67,6 +67,7 @@ class StepperWidget extends Component {
 
     const { onChange, uiSchema, api, schema, idSchema } = self.props;
     const options = uiSchema['ui:options'];
+    const objectMapper = api.utils.objectMapper;
     api.log('Getting steps for stepper', { props: this.props }, 'debug' );
 
 
@@ -99,43 +100,102 @@ class StepperWidget extends Component {
     }
     
     if(_options.filter && _options.filter.predicate) {
-      Object.getOwnPropertyNames(_options.filter.predicate).map(property => {
-        if(typeof _options.filter.predicate[property] === 'string') {
-          try {            
-            _options.filter.predicate[property] = _.template( _options.filter.predicate[property], { variable: 'props' } )(self.props);
-            api.log(`Predicate Resolved For ${idSchema.$id}`, { predicate: _options.filter.predicate[property] }, 'debug' );  
-          } catch (templateError) {
-             //
+      Object.getOwnPropertyNames(_options.filter.predicate).map((property) => {
+        const allowedFilters = 'group key value $func';
+
+        if(typeof _options.filter.predicate[property] === 'string' && allowedFilters.indexOf(property) >= 0) {
+          try { 
+            if(_options.filter.predicate[property].indexOf('$ref://') === 0) {
+              let __map = {};
+              __map[`${_options.filter.predicate[property].replace('$ref://', '')}`] = '_v';
+              const mapped = objectMapper(self, __map);                                
+              _options.filter.predicate[property] = mapped._v;
+            } else {
+              _options.filter.predicate[property] = _.template( _options.filter.predicate[property], { variable: 'props' } )(self.props);                                    
+            }            
+            api.log(`Predicate Resolved For ${idSchema.$id}`, { predicate: _options.filter.predicate }, 'debug' );  
+          } catch (templateError) {             
             api.log('core.StepperWidget Could not create generate predicate for filter', { predicate: _options.filter.predicate[property],  property }, 'warning' )
           }          
         }
-      });
 
-      _options.steps = _.filter(_options.steps, _options.filter.predicate);
+        /**
+        if(allowedFilters.indexOf(property) >= 0) {
+          if(property === '$func') {
+            api.log('calling api registered function');          
+            if(api.$func[_options.filter.predicate.$func]) {
+              _options.filter.predicate = api.$func[_options.filter.predicate.$func].bind(self);
+            } else {
+              _options.filter.predicate = api.$func['core.NullFunction'];
+            }          
+          } 
+          else 
+          {
+            if(typeof _options.filter.predicate[property] === 'string') {
+              try { 
+                if(_options.filter.predicate[property].indexOf('$ref://') === 0) {
+                  let __map = {};
+                  __map[`${_options.filter.predicate[property].replace('$ref://', '')}`] = '_v';
+                  const mapped = objectMapper(self, __map);                                
+                  _options.filter.predicate[property] = mapped._v;
+                } else {
+                  _options.filter.predicate[property] = _.template( _options.filter.predicate[property], { variable: 'props' } )(self.props);                                    
+                }            
+                api.log(`Predicate Resolved For ${idSchema.$id}`, { predicate: _options.filter.predicate }, 'debug' );  
+              } catch (templateError) {             
+                api.log('core.StepperWidget Could not create generate predicate for filter', { predicate: _options.filter.predicate[property],  property }, 'warning' )
+              }          
+            }
+          }          
+        }*/
+      });        
+      //predicate resolves                        
+      const originalSteps = [..._options.steps];
+      //this may include steps that are grouped steps which reference others
+      debugger;
+      let prefiltered = _.filter(_options.steps, _options.filter.predicate);
+      const groupedFiltered = _.filter(prefiltered, { isGroup: true });
+      if(groupedFiltered.length > 0) {
+        groupedFiltered.forEach((groupItem) => {
+          let expanded = _.filter(originalSteps, (step)=>{
+             return _.countBy(groupItem.items, { key: step.key }) === 1  
+          });
+
+          prefiltered = [...prefiltered, ...expanded];
+        })        
+      } 
+
+      _options.steps = _.sortBy(prefiltered, ['key']).map((step, sdx) => { 
+        step.step = sdx + 1;
+        return step;
+      });
     }
         
     let stepElements = [];
     forEach( _options.steps, (step, stepIndex)=> {      
+        if(step) {
+          //debugger;
 
-
-        const selectStep = () => {  
-          self.setState({ activeStep: step.step }, ()=>{
-            if(self.props.onChange && typeof self.props.onChange === 'function') {
-              self.props.onChange(step.value);
-            };
-          });          
-        };  
+          const selectStep = () => {  
+            self.setState({ activeStep: step.step }, ()=>{
+              if(self.props.onChange && typeof self.props.onChange === 'function') {
+                self.props.onChange(step.value);
+              };
+            });          
+          };  
+          
+          stepElements.push((
+            <Step key={step.key}>
+              <StepButton
+                onClick={ selectStep }
+                completed={false}
+                active={self.state.activeStep === step.step}>
+                  {step.label}
+              </StepButton>            
+            </Step>
+          ));      
+        }
         
-        stepElements.push((
-          <Step key={step.key}>
-            <StepButton
-              onClick={ selectStep }
-              completed={false}
-              active={self.state.activeStep === step.step}>
-                {step.label}
-            </StepButton>            
-          </Step>
-        ));      
     });
 
     return stepElements;

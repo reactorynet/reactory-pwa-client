@@ -38,7 +38,7 @@ import {
 
 import { CenteredContainer } from '../util';
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import { ReactoryFormComponent } from '../reactory';
+import { ReactoryFormComponent } from '../reactory/ReactoryFormComponent';
 
 class Message extends Component {
 

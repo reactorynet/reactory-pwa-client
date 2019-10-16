@@ -13,8 +13,9 @@ import { ApolloProvider, Query, Mutation } from 'react-apollo';
 import { Typography } from '@material-ui/core';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
-import { find, isArray, intersection, isEmpty, isNil } from 'lodash';
+import { find, isArray, intersection, isEmpty, isNil, template } from 'lodash';
 import { compose } from 'redux';
+import uuid from 'uuid';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
 import { withApollo } from "react-apollo";
@@ -22,6 +23,7 @@ import * as restApi from './RestApi';
 import graphApi from './graphql';
 import icons from '../assets/icons'; 
 import queryString from '../query-string';
+
 import { 
     getAvatar, 
     getUserFullName, 
@@ -74,6 +76,18 @@ const EmptyComponent = (fqn) => {
 const componentFqn = ({ nameSpace, name, version }) => {
     return `${nameSpace}.${name}@${version}`;
 };
+
+const reactoryDomNode = () => {
+    const domNode = document.createElement('div');
+    const reactoryAttribute = new Attr;
+    reactoryAttribute.name = 'reactory';
+    reactoryAttribute.value = 'generated';
+    reactoryAttribute.namespaceURI = 'https://reactory.net/cdn/ns';
+    domNode.attributes.setNamedItemNS(reactoryAttribute);
+    domNode.id = `reactory_modal_widget_${uuid()}`;
+
+    return domNode;
+}
 
 
 const componentPartsFromFqn = ( fqn ) => {
@@ -135,8 +149,19 @@ export class ReactoryApi extends EventEmitter {
             componentFqn,
             //componentDefinitionFromFqn,
             pluginDefinitionValid,
-            moment
+            moment,
+            objectMapper,
+            template
         };
+        this.$func = {
+            'core.NullFunction': (params) => {
+                this.log('An extension function was not found', { params }, 'warning');
+                return 0;
+            }
+        };
+
+        this.registerFunction = this.registerFunction.bind(this);
+
         this.rest = {
             json: {
                 get: restApi.getRemoteJson,
@@ -212,6 +237,10 @@ export class ReactoryApi extends EventEmitter {
 
             }
         };
+        this.__form_instances = {
+
+        };
+        this.trackFormInstance = this.trackFormInstance.bind(this);
         //bind internal queue listeners
         this.amq.onReactoryPluginEvent('loaded', (data)=>{
             
@@ -219,10 +248,23 @@ export class ReactoryApi extends EventEmitter {
         });
 
         this.flushIntervalTimer = setInterval(this.flushstats.bind(this, true), 5000);
-        this.statusIntervalTime = setInterval(this.status.bind(this), 30000);
+        // this.statusIntervalTime = setInterval(this.status.bind(this), 30000);
         this.status();
         this.__REACTORYAPI = true;
     }
+
+    registerFunction(fqn, functionReference, requiresApi = false) {
+        this.log(`Registering function ${fqn}`, {functionReference, requiresApi}, 'debug');
+        if(typeof functionReference === 'function') {
+            if(requiresApi === true) {
+                this.$func[fqn] = (props) => {                
+                    functionReference({...props, api: this});
+                }                
+            } else {
+                this.$func[fqn] = functionReference
+            }
+        }                
+    };
 
     log(message, params = [], kind = 'log') {
         try {
@@ -314,6 +356,16 @@ export class ReactoryApi extends EventEmitter {
         }
         this.statistics.__delta += 1;        
     };
+
+    trackFormInstance(formInstance){        
+        const self = this;
+        self.log('ApiProvider.trackingFormInstance(formInstance)', { formInstance }, 'debug');
+        this.__form_instances[formInstance.state._instance_id] = formInstance;
+        formInstance.on('componentWillUnmount', (instance)=>{
+            self.log('ApiProvider.trackingFormInstance(formInstance).on("componentWillUnmount")', { formInstance }, 'debug');
+            delete self.__form_instances[formInstance.state._instance_id];
+        });
+    }
 
     graphqlMutation(mutation, variables, options = { fetchPolicy: 'network-only' }){
         const that = this
@@ -565,7 +617,9 @@ export class ReactoryApi extends EventEmitter {
             component: wrapWithApi === false ? component : withApi(component), 
             tags, 
             roles
-        }        
+        }
+        
+        this.emit('componentRegistered', fqn);
     }
     
     getComponents(componentFqns = []){
@@ -658,7 +712,12 @@ export class ReactoryApi extends EventEmitter {
         }        
     }
 
-    showModalWithComponent(title = '',  ComponentToMount, props, modalProps = {},  domNode, theme = true, callback){
+    showModalWithCompnentFqn(componentFqn, title = '', props = {}, modalProps = {}, domNode = null, theme = true, callback) {
+        const ComponentToMount = that.getComponent(componentFqn);
+        this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback)
+    }
+
+    showModalWithComponent(title = '',  ComponentToMount, props, modalProps = {},  domNode = null, theme = true, callback){
         const that = this    
         const FullScreenModal = that.getComponent('core.FullScreenModal');
 
@@ -666,12 +725,18 @@ export class ReactoryApi extends EventEmitter {
         _modalProps.open = true;
         _modalProps.title = title;
 
+
+
+        let _domNode = domNode || reactoryDomNode();
+
+        
+
         if(isNil(_modalProps.onClose)) {
             modalProps.onClose = () => {
                 _modalProps.open = false;                
                 _render(_modalProps);
                 setTimeout(()=>{
-                    that.unmountComponent(domNode)
+                    that.unmountComponent(_domNode)
                 }, 2000);
                 
             }
@@ -694,14 +759,14 @@ export class ReactoryApi extends EventEmitter {
                         </MuiThemeProvider>
                     </ApolloProvider>
                 </Provider>
-            </React.Fragment>, domNode, callback)
+            </React.Fragment>, _domNode, callback)
             } else {
                 ReactDOM.render(
                     <React.Fragment>
                         <FullScreenModal {..._mprops}>
                             <ComponentToMount {...props} />
                         </FullScreenModal> 
-                    </React.Fragment>, domNode, callback);        
+                    </React.Fragment>, _domNode, callback);        
             }
         }
         
@@ -709,27 +774,8 @@ export class ReactoryApi extends EventEmitter {
                 
     }
 
-    createElement(ComponentToCreate, props, domNode, theme, callback = ()=>{}) {
-        const that = this   
-        /* 
-        ReactDOM.render(<div>
-            <CssBaseline />
-            <Provider store={that.reduxStore}>
-                <ApolloProvider client={that.client}>
-                    <MuiThemeProvider theme={that.muiTheme}>
-                        <Router>                    
-                            <ApiProvider api={that}>                        
-                                { React.createElement(ComponentToCreate, props) }
-                            </ApiProvider>
-                        </Router>
-                    </MuiThemeProvider>
-                </ApolloProvider>
-            </Provider>
-        </div>, domNode, callback)
-        */
-
-       return React.createElement(ComponentToCreate, props)
-            
+    createElement(ComponentToCreate, props) {
+       return React.createElement(ComponentToCreate, props)            
     }
 
     unmountComponent(node){
@@ -860,6 +906,8 @@ export class ReactoryApi extends EventEmitter {
     getViewContext(){
         return JSON.parse(localStorage.getItem(storageKeys.viewContext) || '{}');
     }
+
+
 
     static propTypes = {
         client: PropTypes.instanceOf(ApolloClient).isRequired
