@@ -309,7 +309,9 @@ class RememberCredentials extends Component {
     showLogin: PropTypes.bool,
     message: PropTypes.string,
     title: PropTypes.string,
-    onOk: PropTypes.func,    
+    onOk: PropTypes.func,
+    loginHandler: PropTypes.func,
+    attemptLogin: PropTypes.bool,    
     api: PropTypes.instanceOf(ReactoryApi),    
   }
 
@@ -317,7 +319,8 @@ class RememberCredentials extends Component {
     onComplete: ()=> {
 
     },    
-    showLogin: false,  
+    showLogin: false,
+    attemptLogin: false,
     title: 'We need some security information',
     loginHandler: () => {
       return new Promise(( resolve, reject ) => { 
@@ -357,21 +360,54 @@ class RememberCredentials extends Component {
   }
 
   saveCredentials(){
-    const {  provider, onComplete, api } = this.props;    
+    const {  provider, onComplete, api, loginHandler, attemptLogin } = this.props;    
     const { username, password, loginResults } = this.state;
 
     const self = this;
-    this.setState({ saving: true, busy: true }, ()=>{      
-      api.saveUserLoginCredentials(provider, { username, password }).then((saved) => {        
-        self.setState({ saving: false, busy: false, complete: true, message: 'Your credentials has been stored and kept safe' }, ()=>{
-          onComplete(saved.data.addUserCredentials === true);
+    this.setState({ saving: true, busy: true }, ()=>{
+      
+      const doSave = () => {
+        api.saveUserLoginCredentials(provider, { username, password }).then((saved) => {        
+          self.setState({ saving: false, busy: false, complete: true, message: 'Your credentials has been stored and kept safe' }, ()=>{
+            onComplete(saved.data.addUserCredentials === true);
+          });
+        }).catch((saveError) => {
+          const errorMessage = saveError.message;
+          self.setState({ saving: false, busy: false, complete: true, message: `We could not save your credentials due to a system error. ${errorMessage}` }, ()=>{          
+            onComplete(false, errorMessage);
+          });      
         });
-      }).catch((saveError) => {
-        const errorMessage = saveError.message;
-        self.setState({ saving: false, busy: false, complete: true, message: `We could not save your credentials due to a system error. ${errorMessage}` }, ()=>{          
-          onComplete(false, errorMessage);
-        });      
-      });
+      }
+      
+      if(attemptLogin === true) {
+        loginHandler(username, password).then(( { success, message, error, mustSave = true} ) => {
+          if(success === true && mustSave === true) {
+            doSave();
+          } else {
+            if(success === true) {
+              self.setState({ saving: false, busy: false, complete: true, message: 'You have been authenticated and your credentials stored.'},
+              ()=>{          
+                onComplete(true, 'You have been authenticated and your credentials stored.');
+              });  
+            } else {
+              self.setState({ saving: false, busy: false, complete: true, message: `We could not authenticate your account using the credentials provided. [${message || error || 'No Other Error Details'}]`},
+              ()=>{          
+                onComplete(false, message);
+              });  
+            }            
+          }
+        }).catch((authError) => {
+          self.setState({ saving: false, busy: false, complete: true, message: `We could not authenticate your account using the credentials provided. [${authError.message || 'No Other Error Details'}]`},
+          ()=>{          
+            onComplete(false, authError.message);
+          });
+        });
+      } else {
+        doSave();
+      }
+
+
+      
     })    
   }
 
@@ -418,7 +454,7 @@ class RememberCredentials extends Component {
         { this.state.saving === false ? (<Logo backgroundSrc={api.assets.logo} />) : null }
         <Typography variant="h4" style={{marginTyop:"40px"}}>{this.props.title}</Typography>
         <Typography variant="body2">
-          {message || 'Credentials required'}
+          {this.state.message || message || 'Credentials required'}
         </Typography>
         { showLogin === true && <LoginForm extendSchema={fixSchema} formData={{email: user.email }} onSubmit={collectLogin} busy={ busy === true } /> }               
         { showLogin === false ? (

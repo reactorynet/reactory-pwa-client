@@ -23,6 +23,7 @@ import * as restApi from './RestApi';
 import graphApi from './graphql';
 import icons from '../assets/icons'; 
 import queryString from '../query-string';
+import humanNumber from 'human-number';
 
 import { 
     getAvatar, 
@@ -151,7 +152,8 @@ export class ReactoryApi extends EventEmitter {
             pluginDefinitionValid,
             moment,
             objectMapper,
-            template
+            template,
+            humanNumber,
         };
         this.$func = {
             'core.NullFunction': (params) => {

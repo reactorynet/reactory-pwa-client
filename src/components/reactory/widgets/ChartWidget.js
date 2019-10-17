@@ -16,6 +16,7 @@ import { withContentRect } from 'react-measure';
 import {
   Area,
   Bar,
+  Cell,
   ComposedChart,
   Funnel,
   FunnelChart,
@@ -57,6 +58,47 @@ const data = [
     name: 'Page G', uv: 3490, pv: 4300, amt: 2100,
   },
 ];
+
+
+const renderSimpleActiveShape = (props, value) => (
+  <g>
+    <text
+      x={props.cx}
+      y={props.cy}
+      fontSize="40"
+      fontWeight="bold"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fill="#fff"
+    >
+      {value}
+    </text>
+    <Sector
+      cx={props.cx}
+      cy={props.cy}
+      innerRadius={props.innerRadius}
+      outerRadius={props.outerRadius}
+      startAngle={props.startAngle}
+      endAngle={props.endAngle}
+      fill={props.fill}
+    />
+  </g>
+);
+
+const renderNoDataPie = (cx, cy, innerRadius, outerRadius) => (
+  <Pie
+    activeIndex={0}
+    activeShape={props => renderSimpleActiveShape(props, 0)}
+    data={[{name: 'data', value: 100}]}
+    dataKey="value"
+    stroke="none"
+    fill="#87a1ca"
+    cx={cx}
+    cy={cy}
+    innerRadius={innerRadius}
+    outerRadius={outerRadius}
+  />
+);
 
 class LineChartWidget extends PureComponent {  
 
@@ -135,11 +177,84 @@ class PieChartWidget extends Component {
 */
 
 
-class PieChartWidget extends PureComponent {  
+class PieChartWidget extends Component {  
+  constructor(props) {
+    super(props);
+    this.state = {
+      activeIndex: 0
+    };
+    this.onPieEnter = this.onPieEnter.bind(this);
+    this.renderActiveShape = this.renderActiveShape.bind(this);
+    this.renderChart = this.renderChart.bind(this);
+  }
 
-  render() {
+
+  clearingChartData(chartData) {
+    if(!chartData) return [];
+
+    return chartData.filter(item => item.value > 0);
+  }
+
+  onPieEnter(data, index) {
+    this.setState({
+      activeIndex: index,
+      activeElementData: data
+    });
+  }
+
+  renderActiveShape(props){
+    const RADIAN = Math.PI / 180;
+    const { humanNumber } = this.props.api.utils;
+    const {
+      cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle,
+      fill, payload, percent, value, textColor = '#000'
+    } = props;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 10) * cos;
+    const sy = cy + (outerRadius + 10) * sin;
+    const mx = cx + (outerRadius + 30) * cos;
+    const my = cy + (outerRadius + 30) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+
+    return (
+      <g>
+        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={textColor}>{payload.name}</text>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+        <Sector
+          cx={cx}
+          cy={cy}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          innerRadius={outerRadius + 6}
+          outerRadius={outerRadius + 10}
+          fill={fill}
+        />
+        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
+        <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
+        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill={textColor}>{`${humanNumber(value)}`}</text>
+        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill={textColor} style={{fontSize:'10px', fontWeight: 'bold'}}>
+          {`${(percent * 100).toFixed(2)}%`}
+        </text>
+      </g>
+    );
+  }
+
+  renderChart() {
+
     let options = { multiple:  false }; 
     let data = { data: { } };
+    
     let pieProps = {
       dataKey:"value", 
       nameKey:"name",
@@ -153,7 +268,7 @@ class PieChartWidget extends PureComponent {
       ],
     };    
     
-    const  { formData, idSchema, uiSchema, contentRect } = this.props;
+    const  { formData, idSchema, uiSchema, theme, api } = this.props;
     const pies = [];
     
     pieProps.id = idSchema && idSchema.id ? idSchema.id : uuid();
@@ -180,20 +295,53 @@ class PieChartWidget extends PureComponent {
       pieProps = { ...uiSchema['ui:options'], ...pieProps };
     }
 
+    pieProps.onMouseEnter = this.onPieEnter;
+    pieProps.activeIndex= this.state.activeIndex;
+    pieProps.activeShape = this.renderActiveShape;
+
+    const isSingleChartValue = options.multiple === true;;
+    const hasData = pieProps.data.length > 0;
     if(options.multiple === true) {
       pieProps.data.forEach( props => {
-        pies.push(<Pie { ...pieProps } />)
+        pies.push(<Pie { ...pieProps }>
+          {props.data.map( (entry, index) => {            
+            return (<Cell key={index} stroke="#3c7abe" strokeWidth={isSingleChartValue ? 0 : 2} fill={entry.color} />);
+          })}          
+        </Pie>)
       });
     } else {
-      pies.push(<Pie { ...pieProps } />)
+      pies.push(
+      <Pie { ...pieProps } >
+        {pieProps.data.map((entry, index)=>{
+            return  (<Cell
+            key={index}
+            stroke="#3c7abe"
+            strokeWidth={isSingleChartValue ? 0 : 2}
+            fill={entry.fill}
+            />)
+          }) }
+      </Pie>)
     }
-
-
+        
+    if(hasData) {
+      return (
+          <PieChart>
+            {pies}          
+          </PieChart>
+      );
+    }  
     return (
-      <ResponsiveContainer height={contentRect.bounds.height || 400} width="95%">
       <PieChart>
-        {pies}
+        {renderNoDataPie("50%", "50%", pieProps.innerRadius || 70, pieProps.outerRadius || 120)}
       </PieChart>
+    );
+  }
+
+  render() {
+   
+    return (
+      <ResponsiveContainer height={this.props.contentRect.bounds.height || 400} width="95%">
+      {this.renderChart()}
       </ResponsiveContainer>
     );
   }

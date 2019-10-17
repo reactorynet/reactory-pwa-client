@@ -3,7 +3,8 @@ import PropTypes from 'prop-types';
 import Form from './form/components/Form';
 import EventEmitter from 'eventemitter3';
 import objectMapper from 'object-mapper';
-import { isArray, isNil, isString } from 'lodash';
+import { diff, addedDiff, deletedDiff, updatedDiff, detailedDiff } from 'deep-object-diff';
+import { isArray, isNil, isString, differenceWith, isEqual } from 'lodash';
 import { withRouter, Route, Switch } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { find, template, templateSettings } from 'lodash';
@@ -181,6 +182,7 @@ class ReactoryComponent extends Component {
       showHelp: false,
       query:  {...props.query, ...queryString.parse(props.location.search) },
       busy: props.busy === true,
+      liveUpdate: false,
       pendingResources: {},
       _instance_id,
     };
@@ -941,11 +943,20 @@ class ReactoryComponent extends Component {
     });  
   }
 
-  onChange(data) {
-    // //console.log('Form Data Changed', data);
+  onChange(data) {    
     if(deepEquals(this.state.formData, data.formData) === false) {
-      if(this.props.onChange) this.props.onChange(data, this)
-      this.setState({ formData: data.formData }); 
+      const changed = diff(data.formData, this.state.formData)
+      const rchanged = diff(this.state.formData, data.formData)
+      
+      if(this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {
+        const { refresh } = this.state.formDef;        
+        
+        this.props.api.log('Form Delta', { changed, rchanged, refresh }, 'debug');
+        if(this.props.onChange) this.props.onChange(data, this, { before: changed, after: rchanged });
+      } else {
+        if(this.props.onChange) this.props.onChange(data, this, { before: changed, after: rchanged })
+        this.setState({ formData: data.formData }); 
+      }          
     }    
   }
 
