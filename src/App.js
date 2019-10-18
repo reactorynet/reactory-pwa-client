@@ -178,7 +178,9 @@ class App extends Component {
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (props) => {
-          const componentArgs = {}
+          const componentArgs = {
+            $route: props.match
+          }
           if (isArray(routeDef.args)) {
             routeDef.args.forEach((arg) => {
               componentArgs[arg.key] = arg.value[arg.key];

@@ -12,11 +12,45 @@ import {  Button,
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi, ReactoryApi } from '../../../api/ApiProvider';
 import uuid from 'uuid';
+
+
+// Require Editor JS files.
 import 'froala-editor/js/froala_editor.pkgd.min.js';
+import 'froala-editor/js/plugins/align.min.js';
+import 'froala-editor/js/plugins/char_counter.min.js';
+import 'froala-editor/js/plugins/colors.min.js';
+import 'froala-editor/js/plugins/draggable.min.js';
+import 'froala-editor/js/plugins/align.min.js';
+//import 'froala-editor/js/plugins/font_awesome.min.js';
+import 'froala-editor/js/plugins/file.min.js';
+import 'froala-editor/js/plugins/font_family.min.js';
+import 'froala-editor/js/plugins/font_size.min.js';
+import 'froala-editor/js/plugins/image.min.js';
+import 'froala-editor/js/plugins/image_manager.min.js';
+import 'froala-editor/js/plugins/line_breaker.min.js';
+import 'froala-editor/js/plugins/line_height.min.js';
+import 'froala-editor/js/plugins/link.min.js';
+import 'froala-editor/js/plugins/lists.min.js';
+import 'froala-editor/js/plugins/paragraph_format.min.js';
+import 'froala-editor/js/plugins/print.min.js';
+import 'froala-editor/js/plugins/quick_insert.min.js';
+import 'froala-editor/js/plugins/quote.min.js';
+import 'froala-editor/js/plugins/save.min.js';
+import 'froala-editor/js/plugins/table.min.js';
+import 'froala-editor/js/plugins/url.min.js';
+import 'froala-editor/js/plugins/video.min.js';
 
 // Require Editor CSS files.
 import 'froala-editor/css/froala_style.min.css';
 import 'froala-editor/css/froala_editor.pkgd.min.css';
+
+import 'froala-editor/css/plugins/char_counter.min.css';
+import 'froala-editor/css/plugins/colors.min.css';
+import 'froala-editor/css/plugins/draggable.min.css';
+import 'froala-editor/css/plugins/file.min.css';
+import 'froala-editor/css/plugins/special_characters.min.css';
+import 'froala-editor/css/plugins/table.min.css';
+import 'froala-editor/css/plugins/video.min.css';
 
 // Require Font Awesome.
 import 'font-awesome/css/font-awesome.css';
@@ -386,7 +420,7 @@ class FroalaWidget extends Component {
   render(){
     let config = {
       id: this.props.idSchema.id || this.state._id,
-      key: '6E4A3E4B3bA2B6D5E2F4C2C2C3I2C1uENARBFSTb2D1QJd1RA==',            
+      key: 'SDB17hB8E7F6D3eMRPYa1c1REe1BGQOQIc1CDBREJImD6F5E4G3E1A9D7C3B4B4==',            
       toolbarInline: true,                                                
       toolbarButtons: [
         'bold', 'italic', 'underline',

@@ -441,7 +441,7 @@ class ReactoryComponent extends Component {
           const onFormSubmit = (formSchema) => {  
             api.log(`Form Submitting, post via graphql`, formSchema, 'debug');  
             //debugger;          
-            const _variables = objectMapper({...formSchema, formContext: that.getFormContext() }, mutation.variables);
+            const _variables = objectMapper({...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
             mutateFunction({
               variables: {..._variables},
               refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
@@ -493,7 +493,13 @@ class ReactoryComponent extends Component {
       // //console.log('rendering with query', has);      
       const query = formDef.graphql.query; //gql(formDef.graphql.query.text)
       const formContext = this.getFormContext();      
-      const _variables = objectMapper({formContext, formData}, query.variables || {});
+      const _variables = objectMapper({ 
+        formContext, 
+        formData, 
+        $route: 
+        that.props.$route
+      }, query.variables || {});
+
       let options = query.options || {  };
       
       //error handler function

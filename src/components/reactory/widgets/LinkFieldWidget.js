@@ -45,7 +45,6 @@ class LinkFieldWidget extends Component {
     }
 
     const goto = () => { 
-      debugger;
       if(props.uiSchema["ui:options"].userouter === false) window.location.assign(linkText);
       else history.replace(linkText); 
     };

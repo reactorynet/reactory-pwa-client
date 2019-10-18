@@ -42,9 +42,17 @@ export default (props) => {
   const toggleSwitch = ( evt, checked ) => {
     if(onChange) onChange(checked)
   }
-  
-  //console.log('render boolean field', props);
-  return (<FormControlLabel
+
+  let yesLabel = 'Yes';
+  let noLabel = 'No';
+
+  if(uiSchema && uiSchema['ui:options']){
+     if(uiSchema['ui:options'].yesLabel) yesLabel = uiSchema['ui:options'].yesLabel;
+     if(uiSchema['ui:options'].noLabel) yesLabel = uiSchema['ui:options'].noLabel;
+  }
+     
+  return (
+  <FormControlLabel
       control={
       <Switch
         checked={formData === true}
@@ -52,7 +60,7 @@ export default (props) => {
         value={name}
       />
     }
-    label={`${title || name} - ${formData ? 'Yes' : 'No' }`}
+    label={`${schema.title || name} - ${formData ? yesLabel : noLabel }`}
   />)
 
   

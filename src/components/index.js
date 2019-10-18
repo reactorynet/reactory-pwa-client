@@ -557,5 +557,6 @@ export const componentRegistery = [
   },
   GraphiqlWindow.meta,
   SlideOutLauncher.meta,
-  require('./shared/currency/CurrencyLabel')  
+  require('./shared/currency/CurrencyLabel'),
+  require('./shared/StaticContent').meta
 ];
