@@ -67,7 +67,8 @@ export const ReactoryApiEventNames = {
     onLogout : 'loggedOut',
     onLogin : 'loggedIn',
     onPluginLoaded: 'onPluginLoaded',
-    onApiStatusUpdate: 'onApiStatusUpdate'
+    onApiStatusUpdate: 'onApiStatusUpdate',
+    onRouteChanged: 'onRouteChanged',
 };
     
 const EmptyComponent = (fqn) => {
@@ -253,6 +254,15 @@ export class ReactoryApi extends EventEmitter {
         // this.statusIntervalTime = setInterval(this.status.bind(this), 30000);
         this.status();
         this.__REACTORYAPI = true;
+        this.goto = this.goto.bind(this);
+    }
+
+    goto(where = "/", state = {}){
+        if(this.router && this.router.history) {
+            debugger;
+            this.router.history.push({ pathname: where, state });
+            this.emit(ReactoryApiEventNames.onRouteChanged, {where, state});
+        }
     }
 
     registerFunction(fqn, functionReference, requiresApi = false) {

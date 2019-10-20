@@ -6,7 +6,7 @@ import {
   BrowserRouter as Router,
   Route,
   Link,
-  Redirect,
+  Redirect,    
 } from 'react-router-dom';
 import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
@@ -115,7 +115,7 @@ class App extends Component {
     api.queryObject = query;
     api.queryString = window.location.search;
     api.objectToQueryString = queryString.stringify;
-    
+        
     this.state = {
       drawerOpen: false,
       auth_valid: false,
@@ -125,21 +125,26 @@ class App extends Component {
       routes: [],
       validationError: null,
       offline: false,
+      currentRoute: null,
     };
 
     this.onLogout = this.onLogout.bind(this);
     this.onLogin = this.onLogin.bind(this);
     this.onApiStatusUpdate = this.onApiStatusUpdate.bind(this);
-
+    this.onRouteChanged = this.onRouteChanged.bind(this);
     this.configureRouting = this.configureRouting.bind(this);
     api.on(ReactoryApiEventNames.onLogout, this.onLogout)
     api.on(ReactoryApiEventNames.onLogin, this.onLogin)
     api.on(ReactoryApiEventNames.onApiStatusUpdate, this.onApiStatusUpdate);
-    
+    api.on(ReactoryApiEventNames.onRouteChanged, this.onRouteChanged) 
     this.componentRefs = api.getComponents(['core.Loading@1.0.0', 'core.Login@1.0.0', 'core.FullScreenModal@1.0.0']);    
   }
 
-  
+  onRouteChanged(path, state){
+    api.log(`onRouteChange Handler`, { path, state }, 'debug');
+    this.setState({ currentRoute: path });
+  }
+    
   onLogin() {
     const loggedInUser = api.getUser();        
     this.setState({ user: loggedInUser });
@@ -164,12 +169,13 @@ class App extends Component {
   }
 
   configureRouting(){
-    const { auth_validated, user } = this.state;
+    const { auth_validated, user } = this.state;    
     const { Loading } = this.componentRefs;
     const routes = [];
     let loginRouteDef = null;
     let homeRouteDef = null;
     const that = this;
+    
 
     api.getRoutes().forEach((routeDef) => {
       const routeProps = {
@@ -178,6 +184,7 @@ class App extends Component {
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (props) => {
+          api.log(`Rendering Route ${routeDef.path}`, routeDef, 'debug');
           const componentArgs = {
             $route: props.match
           }
@@ -212,7 +219,8 @@ class App extends Component {
       routes.push(<Route {...routeProps} />)            
     });    
 
-    this.setState({ routes });
+    //this.setState({ routes });
+    return routes
   }
 
 
@@ -234,7 +242,7 @@ class App extends Component {
   }
 
   render() {
-    const { auth_validated, routes, user, offline } = this.state;
+    const { auth_validated, user, offline } = this.state;
     const { Loading, FullScreenModal } = this.componentRefs;
 
     let themeOptions = api.getTheme();
@@ -266,6 +274,8 @@ class App extends Component {
         </FullScreenModal>
       )
     }
+
+    const routes = this.configureRouting();
                 
     return (
       <React.Fragment>        
@@ -279,7 +289,9 @@ class App extends Component {
                     <React.Fragment>
                       <AssessorHeaderBar title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
                       <div style={{ marginTop: '80px', paddingLeft: '8px', paddingRight: '8px', marginBottom: '8px' }}>                                        
-                        { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
+                        { auth_validated === true && routes.length > 0 ? 
+                            routes : 
+                            <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
                       </div>
                       
                     </React.Fragment>

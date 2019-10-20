@@ -12,6 +12,14 @@ module.exports = function (api) {
 
   const plugins = [             
     "add-module-exports",
+
+    ["module-resolver", {
+      "root": "./src",
+      "alias": {
+        "@reactory/client-core" : "./src"
+      }      
+    }],
+
     // "babel-plugin-transform-class-properties",
     //stage 0
     ["@babel/plugin-proposal-class-properties", { "loose": false }],
@@ -37,7 +45,8 @@ module.exports = function (api) {
     // "@babel/plugin-transform-react-jsx-compat",
     "@babel/plugin-transform-react-jsx",    
     "@babel/plugin-transform-react-inline-elements",
-    "@babel/plugin-transform-react-constant-elements"    
+    "@babel/plugin-transform-react-constant-elements",
+        
   ];
 
   return {

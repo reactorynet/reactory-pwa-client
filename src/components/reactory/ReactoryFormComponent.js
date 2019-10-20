@@ -524,7 +524,6 @@ class ReactoryComponent extends Component {
         const { data, loading, errors } = result;
         let _formData = formData;        
         if(data && data[query.name]) {          
-          debugger
           switch(query.resultType) {
             case 'array' :{              
               let mergedData = []

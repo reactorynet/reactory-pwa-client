@@ -1,10 +1,12 @@
 import React, { Fragment, Component } from 'react';
 import PropTypes from 'prop-types'
 import { pullAt, isNil, template } from 'lodash';
+import { withRouter, Link } from 'react-router-dom';
 import uuid from 'uuid';
 import {
   Avatar,
   Icon,
+  IconButton,
   List,
   ListItem,
   ListItemAvatar,
@@ -14,9 +16,24 @@ import {
   ListSubheader,
   Typography 
 } from '@material-ui/core';
-import { withApi } from '../../../api/ApiProvider';
+import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux';
 import { withStyles, withTheme } from '@material-ui/core/styles';
+
+
+function LinkIconButton(link, icon) {
+  let history = useHistory();
+
+  function handleClick() {
+    history.push(link);
+  }
+
+  return (
+    <IconButton onClick={handleClick}>
+      <Icon>{icon}</Icon>  
+    </IconButton>
+  );
+}
 
 class MaterialListWidget extends Component {
   
@@ -53,16 +70,17 @@ class MaterialListWidget extends Component {
     this.state = {
       
     };
+
   }
 
 
   render(){
     const self = this;
-    const { api } = self.props;
+    const { api, history } = self.props;
     const uiOptions = this.props.uiSchema['ui:options'] || {};
     const { formData } = this.props;
     let columns = [];
-    
+        
     
     let data = [];
     if(formData && formData.length) {
@@ -75,7 +93,6 @@ class MaterialListWidget extends Component {
 
         <List>
           {data.map( item => {
-            debugger;
             //Create a list item entry using the uiOptions for the widget
 
             const widgetsLeft = []; //widgets to render left of text
@@ -199,15 +216,34 @@ class MaterialListWidget extends Component {
             
             if(uiOptions.secondaryAction) {
               let secondaryActionWidget = null;                            
-
               if(typeof(uiOptions.secondaryAction) === 'object') {
-                const { label, iconKey } = uiOptions.secondaryAction;
+                const { 
+                  label, 
+                  iconKey,
+                  componentFqn, 
+                  action,
+                  actionData,
+                  link
+                } = uiOptions.secondaryAction;
                 let secondaryActionIconKey = 'info'
+                const path = template(link)({ item, props: this.props });
+
+                const actionClick = ()=>{
+                  api.log('Secondary Action Clicked For List Item', item, 'debug');
+                  if(typeof action === 'string' && action.indexOf('event:')  === 0){
+                    //raise an event via AMQ / the form 
+                    const eventName = action.split(':')[1];
+                    history.push({ pathname: path })
+                    api.emit(eventName, { actionData, path });                    
+                  }                                    
+                };                                
+
+                
                 secondaryActionWidget = (
-                  <ListItemSecondaryAction>
-                    <IconButton edge="end" aria-label={label}>
-                      <Icon>{iconKey}</Icon>
-                    </IconButton>
+                  <ListItemSecondaryAction>                    
+                    <IconButton onClick={actionClick}>                      
+                      <Icon>{iconKey}</Icon>                                            
+                    </IconButton>                             
                   </ListItemSecondaryAction>)
               }
                                                                  
@@ -225,6 +261,10 @@ class MaterialListWidget extends Component {
             if(uiOptions && typeof uiOptions.listItemStyle === 'object') {
               listItemProps.style = { ...uiOptions.listItemStyle };
             }
+
+            if(uiOptions && uiOptions.variant === 'button') {
+              listItemProps.button = true;
+            }
             
             return (
               <ListItem {...listItemProps}>                
@@ -238,5 +278,5 @@ class MaterialListWidget extends Component {
     )
   }
 }
-const MaterialListWidgetComponent = compose(withApi, withTheme, withStyles(MaterialListWidget.styles))(MaterialListWidget)
+const MaterialListWidgetComponent = compose(withApi, withRouter, withTheme, withStyles(MaterialListWidget.styles))(MaterialListWidget)
 export default MaterialListWidgetComponent

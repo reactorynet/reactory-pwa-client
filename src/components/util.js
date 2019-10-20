@@ -140,7 +140,7 @@ export  const CenteredContainer = ( props ) => {
   };
 
   export const CDNProfileResource = (profileId = 'default', file = 'default.png') => {
-    return CDNResource(`profiles/${profileId}/${file}`);
+    return CDNResource(`profiles/${profileId}/${file}?t=${new Date().valueOf()}`);
   };
 
   export const CDNResource = ( path ) => {
