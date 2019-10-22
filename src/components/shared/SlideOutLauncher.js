@@ -6,59 +6,95 @@ import { compose } from 'recompose';
 import { withTheme } from '@material-ui/styles';
 import { withApi, ReactoryApi } from '../../api/ApiProvider';
 
-
 class SlideOutLauncher extends Component {
-  
-  
-  
-  constructor(props, context){
+
+  // CONFIRGURATION OPTIONS
+  // buttonVariant - Static | SpeedDial
+
+
+  // Click Actions:
+  // Navigate
+  // Emit
+  // MountComponent
+
+  // TO ADD
+  // SpeedDial needs actions
+
+  constructor(props, context) {
     super(props, context);
-    
-    //the handlers must return a function that returns a message call        
+
+    //the handlers must return a function that returns a message call
     this.state = {
-      open: false,      
+      open: false,
     };
-    
+
     this.onClick = this.onClick.bind(this);
+
+    this.componentDefs = props.api.getComponents(['core.SpeedDial']);
   }
 
-  onClick(){
+  onClick() {
     this.setState({ open: !this.state.open });
   }
-  
-     
-  render(){
 
-    const { api, formData, uiSchema, componentFqn, buttonTitle, windowTitle, componentProps } = this.props;    
+  render() {
+
+    const { api, formData, uiSchema, componentFqn, buttonTitle, windowTitle, buttonVariant, componentProps } = this.props;
     const { onClick } = this;
-    let icon = 'search';    
+
+    api.log('SLIDEOUTLAUNCHER - PROPS', this.props);
+
+    let icon = 'search';
+
     let _buttonTitle = buttonTitle ? api.utils.template(buttonTitle)(this.props) : '';
     let _windowTitle = windowTitle ? api.utils.template(windowTitle)(this.props) : '';
-    
+    let _buttonVariant = buttonVariant ? api.utils.template(buttonVariant)(this.props) : '';
+
     const FullScreenModal = api.getComponent('core.FullScreenModal');
     const ChildComponent = api.getComponent(componentFqn || 'core.Loading');
-    
+
     let childprops = {};
 
-    if(componentProps) {
+    if (componentProps) {
       childprops = api.utils.objectMapper(this.props, componentProps);
+    }
+
+    let LaunchButton = (<Button onClick={onClick}>
+      <Icon>{icon}</Icon>
+      {_buttonTitle}
+    </Button>);
+
+    const { SpeedDial } = this.componentDefs;
+
+    const testActions = [
+      {
+        key: 'testKey',
+        title: 'Test Action',
+        clickHandler: (evt) => { },
+        icon: <Icon>group_add</Icon>,
+        enabled: true,
+        ordinal: 0,
+      }];
+
+    // // REMOVE THIS
+    _buttonVariant = 'SpeedDial';
+
+    if (_buttonVariant === 'SpeedDial') {
+      LaunchButton = <SpeedDial actions={testActions} icon={<Icon>add</Icon>} />
     }
 
     return (
       <div>
-        <Button onClick={onClick}>
-          <Icon>{icon}</Icon>
-          {_buttonTitle}          
-        </Button>
-        <FullScreenModal 
-          open={this.state.open === true} 
-          title={_windowTitle} 
+        {LaunchButton}
+        <FullScreenModal
+          open={this.state.open === true}
+          title={_windowTitle}
           slide={this.props.slideDirection}
           onClose={onClick}
-          >
-            <ChildComponent {...childprops }/>
+        >
+          <ChildComponent {...childprops} />
         </FullScreenModal>
-      </div>      
+      </div>
     )
   }
 }
@@ -84,8 +120,8 @@ SlideOutLauncherComponent.meta = {
   name: 'SlideOutLauncher',
   version: '1.0.0',
   component: SlideOutLauncherComponent,
-  tags: ['widget', 'api-enabled','wrapper'],
-  description: 'Widget to launch slide out containers with',  
+  tags: ['widget', 'api-enabled', 'wrapper'],
+  description: 'Widget to launch slide out containers with',
 };
 
 

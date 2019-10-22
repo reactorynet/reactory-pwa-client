@@ -43,6 +43,9 @@ import FramedWindow, { ReportViewerComponent, GraphiqlWindow } from './shared/Fr
 
 import FroalaWired from './richtext/Froala';
 
+// DREW
+import TabbedNavigation from './shared/tabbedNavigation';
+
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -79,6 +82,12 @@ export const CompanyLogo = (props) => {
 
 export const componentRegistery = [
   {
+    nameSpace: 'core',
+    name: 'TabbedNavigation',
+    component: TabbedNavigation,
+    version: '1.0.0',
+  },
+  {
     nameSpace:'core',
     name: 'DataTable',
     component: (props) => (<span>core.DataTable deprecated -> use MuiDataTables instead.</span>),
@@ -89,7 +98,7 @@ export const componentRegistery = [
     name: 'Link',
     component: LinkComponent,
     version: '1.0.0',
-  },  
+  },
   {
     nameSpace: 'core',
     name: 'SingleColumnLayout',
@@ -118,7 +127,7 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'CompanyLogo',
     version: '1.0.0',
-    component: CompanyLogo,    
+    component: CompanyLogo,
   },
   {
     nameSpace: 'core',
@@ -188,15 +197,15 @@ export const componentRegistery = [
       if(props.theme && props.theme.key) {
         return <UserListItem user={{ firstName: props.firstName || 'Reactory', lastName: props.lastName || 'System', id: props.id || `${props.theme.key}_app`, avatar: 'avatar.png' }} message={props.message} />
       }
-      
-      return <UserListItem user={{ firstName: 'Reactory', lastName: 'System', id: 'reactory_app', avatar: 'avatar.png' }} message={props.message} />              
+
+      return <UserListItem user={{ firstName: 'Reactory', lastName: 'System', id: 'reactory_app', avatar: 'avatar.png' }} message={props.message} />
     }),
     version: '1.0.0'
   },
   {
     nameSpace: 'towerstone',
     name: 'OwlyListItem',
-    component: (props) => {      
+    component: (props) => {
       const { UserListItem } = UserComponents;
       return <UserListItem user={{ firstName: 'TowerStone Leadership', lastName: 'Centre', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
     },
@@ -206,7 +215,7 @@ export const componentRegistery = [
     nameSpace: 'towerstone',
     name: 'OwlyListItem',
     component: (props) => {
-      const { UserListItem } = UserComponents;      
+      const { UserListItem } = UserComponents;
       return <UserListItem user={{ firstName: 'TowerStone Leadership', lastName: 'Centre', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
     },
     version: '1.0.0'
@@ -476,7 +485,7 @@ export const componentRegistery = [
     name: 'AnalyticsDashboard',
     version: '1.0.0',
     component: AotAnalyticsDashboardComponent
-  },  
+  },
   {
     nameSpace: 'core',
     name: 'RememberCredentials',
@@ -506,7 +515,7 @@ export const componentRegistery = [
     name: 'FroalaEditor',
     version: '1.0.0',
     component: FroalaWired
-  },  
+  },
   {
     nameSpace: 'material-ui',
     name: 'MaterialCore',
@@ -524,7 +533,7 @@ export const componentRegistery = [
     name: 'MaterialLab',
     version: '1.0.0',
     component: MaterialLab,
-  },  
+  },
   {
     nameSpace: 'core',
     name: 'DropDownMenu',
