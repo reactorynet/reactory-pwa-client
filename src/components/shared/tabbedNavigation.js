@@ -82,6 +82,9 @@ class TabbedNavComponent extends Component {
 
         const additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps }) => {
           const ComponentToMount = api.getComponent(componentFqn);
+
+          api.log('TabbedNavigationComponent: ADDITIONALCOMPONENT', { componentProps, componentFqn });
+
           return <ComponentToMount {...componentProps}/>
         });
 

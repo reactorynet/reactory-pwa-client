@@ -524,13 +524,13 @@ class ReactoryComponent extends Component {
         const { data, loading, errors } = result;
         let _formData = formData;
         if(data && data[query.name]) {
+          debugger;
           switch(query.resultType) {
             case 'array' :{
               let mergedData = []
               if(isArray(formData) === true) mergedData = [...formData];
               if(isArray(data[query.name]) === true) mergedData = [...mergedData, ...data[query.name]];
               if(query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0 ) {
-                debugger;
                 _formData = objectMapper(mergedData, query.resultMap);
               } else {
                 _formData = mergedData;
