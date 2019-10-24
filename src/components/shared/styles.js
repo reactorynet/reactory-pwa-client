@@ -14,7 +14,7 @@ export const coreStyles = (theme) => ({
     height: '200px',
     margin: 'auto',
     padding: 0,
-    background: `url(${theme.assets.logo || '//placehold.it/200x200'})`,
+    background: `url(${theme && theme.assets && theme.assets.logo ? theme.assets.logo : '//placehold.it/200x200' })`,
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'contain',
     backgroundPosition: 'center',
