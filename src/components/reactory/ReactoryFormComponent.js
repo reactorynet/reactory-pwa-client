@@ -355,16 +355,70 @@ class ReactoryComponent extends Component {
       onSubmit: onSubmit || this.onSubmit,      
       ref: (form) => { this.formRef = form }
     };
+
+    /**
+     * 
+     * submitIcon: '$none',
+      'ui:options': {
+        submitProps: {
+          variant: 'button',
+          text: 'Next'
+          iconAlign: 'left' | 'right'
+        },
+      },
+     * 
+     */
     
     let icon = 'save';
     if(formDef.uiSchema && formDef.uiSchema.submitIcon) {
-      icon = formDef.uiSchema.submitIcon 
+      if(typeof formDef.uiSchema.submitIcon === 'string') {
+        icon = formDef.uiSchema.submitIcon         
+      }
+      
     }
 
+    let iconWidget = (icon === '$none' ? null : <Icon>{icon}</Icon>);    
+    
+
     let showSubmit = true;
+    let submitButton = null;
+
     if(formDef.uiSchema && formDef.uiSchema['ui:options']) {
-      showSubmit = formDef.uiSchema['ui:options'].showSubmit === true;
+      showSubmit = formDef.uiSchema['ui:options'].showSubmit === true || showSubmit;
+      const { submitProps } = formDef.uiSchema['ui:options'];
+      if(typeof submitProps === 'object' && showSubmit === true) {
+        const { variant = 'fab', iconAlign = 'left' } = submitProps;
+        const _props = { ...submitProps };
+        delete _props.variant;
+        delete _props.iconAlign;
+
+        if(variant && typeof variant === 'string' && showSubmit === true) {
+          switch(variant) {
+            case 'button': {
+              submitButton = (<Button type="submit" {..._props}>{ iconAlign === 'left' && iconWidget}{template(_props.text)({ ...this })}{ iconAlign === 'right' && iconWidget}</Button>);
+              break;
+            }
+            case 'fab':
+              default: {
+                submitButton = (<Fab type="submit"  {..._props}>{iconWidget}</Fab>);
+              }
+          }
+        }
+      }      
+      /**
+       * options for submit buttons
+       * variant = 'fab' / 'button' 
+       * 
+       */
+      
     }
+
+    if(showSubmit === true && submitButton === null) submitButton = (<Fab type="submit" color="primary">{iconWidget}</Fab>);
+     
+    
+
+    
+
 
     let uiSchemaSelector = null;
 
@@ -399,7 +453,8 @@ class ReactoryComponent extends Component {
         <Form {...formProps}>
           <Toolbar>
             { uiSchemaSelector }
-            { this.props.children && this.props.children.length > 0 ? this.props.children : showSubmit && <Fab type="submit" color="primary"><Icon>{icon}</Icon></Fab> }
+            { this.props.children && this.props.children.length > 0 ? this.props.children : null }
+            { showSubmit && submitButton }
             { self.state.allowRefresh && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button> }            
             { formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button> }
             { formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button> }
