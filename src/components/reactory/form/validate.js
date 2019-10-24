@@ -133,6 +133,7 @@ function transformAjvErrors(errors = []) {
   }
 
   return errors.map(e => {
+    debugger;
     const { dataPath, keyword, message, params } = e;
     let property = `${dataPath}`;
 
