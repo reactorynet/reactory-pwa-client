@@ -13,7 +13,7 @@ import {
   Input,
   Icon,
   IconButton,
-  Toolbar, 
+  Toolbar,
   Tooltip,
 } from '@material-ui/core'
 
@@ -26,7 +26,7 @@ const MaterialFieldStyles = (theme) => {
 };
 
 export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((props) => {
-    
+
   const {
     id, //The id of the field in the hierarchy. You can use it to render a label targeting the wrapped widget.
     classNames, //A string containing the base Bootstrap CSS classes, merged with any custom ones defined in your uiSchema.
@@ -51,40 +51,44 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
     registry,
     formData,
     classes,
-  } = props;  
+  } = props;
   const isObject = schema.type === 'object'
   const isBoolean = schema.type === 'boolean'
-  
+
   const uiOptions = uiSchema['ui:options'] || null
   const uiWidget = uiSchema['ui:widget'] || null
   const uiToolbar = uiSchema['ui:toolbar'] || null;
   let Widget = null;
 
-  if(uiOptions !== null) 
-  {    
+  if(uiOptions !== null)
+  {
     if(hidden === true) {
       return <Fragment>{children}</Fragment>
     }
-    if(uiOptions.componentFqn)  { 
-      Widget = api.getComponent(uiOptions.componentFqn);    
+    if(uiOptions.componentFqn)  {
+      Widget = api.getComponent(uiOptions.componentFqn);
+      let _props = { ...props };
+      if(typeof uiOptions.componentProps === 'object') {
+        _props = { ..._props, ...uiOptions.componentProps}
+      }
       if(Widget) {
-        return (<Widget {...props} />)
+        return (<Widget {..._props } />)
       }
     }
   }
   let toolbar = null;
-  
-  if(uiToolbar) {        
+
+  if(uiToolbar) {
     //console.log('Generating toolbar with formState', { props });
     const buttons = uiSchema['ui:toolbar'].map((button) => {
       const api = formContext.api
-      const onRaiseCommand = ( evt ) => {        
+      const onRaiseCommand = ( evt ) => {
         //console.log('Raising Toolbar Command', { evt, api });
         if(api) api.raiseFormCommand(button.command, button, { formData: formData, formContext: formContext });
         else {
           //console.log('No API to handle form command', {api, evt });
         }
-      }            
+      }
       return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
     });
 
@@ -94,16 +98,16 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
       </Toolbar>
     )
   }
-  
+
   let labelComponent = isObject === false || isBoolean === true ? <InputLabel htmlFor={id} shrink={true}>{label}</InputLabel> : null;
 
   switch(schema.type) {
     case 'array':
     case 'boolean': {
       return (
-        <FormControl className={classes.formControl} fullWidth>                          
-          { children }          
-        </FormControl>    
+        <FormControl className={classes.formControl} fullWidth>
+          { children }
+        </FormControl>
       )
     }
     case 'object': {
@@ -116,19 +120,19 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
     }
     case 'string':
     case 'number':
-    case 'file':    
+    case 'file':
     default: {
       return (
-        <FormControl className={classes.formControl} fullWidth>               
-          { uiWidget === null ? labelComponent : null } 
+        <FormControl className={classes.formControl} fullWidth>
+          { uiWidget === null ? labelComponent : null }
           { children }
           { isNil(rawHelp) === false ? <FormHelperText id={`${id}_helper`}>{rawHelp}</FormHelperText> : null }
           { errors }
           { rawHelp }
-        </FormControl>    
+        </FormControl>
       );
-    }    
+    }
   }
 
-  
+
 })

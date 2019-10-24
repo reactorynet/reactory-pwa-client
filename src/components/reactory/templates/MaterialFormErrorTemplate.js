@@ -1,12 +1,9 @@
 import React, { Component } from 'react';
 import { compose } from 'redux';
 import {
-  Badge,
   List,
   ListItem,
-  ListItemIcon,
   ListItemText, 
-  ListItemSecondaryAction,    
   Paper,
   Typography,
   Icon,
@@ -15,12 +12,34 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 
 class MaterialFormErrorTemplate extends Component {
   
+  constructor(props, context){
+    super(props, context);
+    this.renderSingleError = this.renderSingleError.bind(this);
+  }
 
-  render(){
+  renderSingleError(){
+    const { errors } = this.props;
+
+    return (
+      <Paper className={this.props.classes.errorForm}>
+        <Typography variant="h5" color='primary' gutterBottom><Icon>notifications_active</Icon>&nbsp;Please correct the error below, then try again.</Typography>
+        <List>
+          {errors.map((error) => {
+            return (
+            <ListItem>
+              <ListItemText primary={error.stack} secondary={error.toString()} />
+            </ListItem>)
+          })}
+        </List>
+      </Paper>
+    )
+  }
+
+  renderMultipleErrors(){
     const {errors} = this.props;
     return (
       <Paper className={this.props.classes.errorForm}>
-        <Typography variant="h5" color='primary' gutterBottom><Icon>notifications_active</Icon>&nbsp;Please correct {errors.length} the below errors, then try again.</Typography>
+        <Typography variant="h5" color='primary' gutterBottom><Icon>notifications_active</Icon>&nbsp;Please correct the {errors.length} errors below, then try again.</Typography>
         <List>
           {errors.map((error) => {
             return (
@@ -31,6 +50,15 @@ class MaterialFormErrorTemplate extends Component {
         </List>
       </Paper>
     );
+  }
+
+  render(){
+    const {errors} = this.props;
+
+    if(errors.length === 1) return renderSingleError();      
+    if(errors.length > 1) return this.renderMultipleErrors();
+
+    return null;    
   }
 }
 

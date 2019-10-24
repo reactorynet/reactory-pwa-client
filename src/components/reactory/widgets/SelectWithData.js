@@ -22,7 +22,7 @@ import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 
 class SelectWithDataWidget extends Component {
-  
+
   static styles = (theme) => ({
     root: {
       display: 'flex',
@@ -52,31 +52,31 @@ class SelectWithDataWidget extends Component {
 
   constructor(props, context){
     super(props, context)
-    this.state = {      
-      
+    this.state = {
+
     };
   }
-  
+
   render(){
     const self = this
     const { classes, formContext, formData } = this.props;
     //console.log('Rendering Select With Data', { formContext, formData });
     if(this.props.uiSchema['ui:options']){
-      
-      const { query, propertyMap, resultsMap, resultItem } = this.props.uiSchema['ui:options'];      
+
+      const { query, propertyMap, resultsMap, resultItem } = this.props.uiSchema['ui:options'];
       const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
       const onSelectChanged = (evt) => {
         //console.log('Raising onChange for data select', {v: evt.target.value})
         self.props.onChange(evt.target.value)
       }
-            
+
       return (
         <Query query={gql`${query}`} variables={variables}>
         {(props, context)=> {
           const { data, loading, error } = props;
           if(loading === true) return (<p>Loading lookups</p>)
           if(error) return (<p>Error Loading lookup: {error}</p>)
-          
+
           if(data && data[resultItem]) {
             let menuItems = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
             return (
@@ -85,7 +85,7 @@ class SelectWithDataWidget extends Component {
               <Select
                 value={this.props.formData}
                 onChange={onSelectChanged}
-                name={this.props.name}              
+                name={this.props.name}
                 input={<Input id={this.props.idSchema.$id} value={this.props.formData || ""}/>}>
                 <MenuItem value="">
                   <em>None</em>
@@ -103,7 +103,7 @@ class SelectWithDataWidget extends Component {
             return <p>No Data Result</p>
           }
         }}
-        </Query>        
+        </Query>
       )
 
     } else {
@@ -116,10 +116,10 @@ class SelectWithDataWidget extends Component {
         input={<Input id={this.props.idSchema.$id} />}>
         <MenuItem value="">
           <em>No Query For Select Defined</em>
-        </MenuItem>        
+        </MenuItem>
       </Select>
     </FormControl>
-    }          
+    }
   }
 }
 const SelectWithDataWidgetComponent = compose(withTheme, withStyles(SelectWithDataWidget.styles))(SelectWithDataWidget)

@@ -1,7 +1,7 @@
 import React, { Fragment, Component } from 'react'
 import Loadable from 'react-loadable'
 import PropTypes from 'prop-types'
-import lodash, { pullAt, find } from 'lodash'
+import lodash, { isString } from 'lodash'
 import classNames from 'classnames';
 import {
   Badge,
@@ -60,10 +60,21 @@ class CompanyLogoWidget extends Component {
 
   constructor(props, context){
     super(props, context)
-    this.state = {
+    let _state = {
       loaded: false,
-      logo: props.formData.id && props.formData.logo ? props.formData.logo : props.formData,
+      logo: '//placehold.it/200x200/'
     }; 
+
+
+    if(props && props.formData && isString(props.formData) === true) {
+      _state.logo = props.formData;  
+    }
+
+    if(props && props.formData && typeof props.formData === 'object') {
+      if(props.formData.id && isString(props.formData.logo)  === true) _state.logo = props.formData.logo;
+    }    
+
+    this.state = _state;
     
     this.renderDropZone = this.renderDropZone.bind(this);
     this.renderCropper = this.renderCropper.bind(this);
