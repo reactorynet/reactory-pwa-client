@@ -21,8 +21,14 @@ import BackIcon from '@material-ui/icons/ArrowBack';
 import PowerSettingIcon from '@material-ui/icons/PowerSettingsNew';
 import {getAvatar} from '../util';
 import moment from 'moment';
-import {withApi, ReactoryApi, ReactoryApiEventNames} from '../../api/ApiProvider';
+import {withApi, ReactoryApi, ReactoryApiEventNames} from '@reactory/client-core/api/ApiProvider';
 
+export class ISearchConfig {  
+  show = true;
+  placeholder = 'Search'
+}
+
+const defaultSearchConfig = new ISearchConfig()
 
 export class Logged extends Component {
 
@@ -85,8 +91,9 @@ class ApplicationHeader extends Component {
       logged: true,
       drawerOpen: false,
       menuOpen: false,
-      menuAnchor: null
-    };
+      menuAnchor: null,
+      search: props.search || defaultSearchConfig            
+    };    
 
     this.navigateTo = this.navigateTo.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -327,11 +334,16 @@ class ApplicationHeader extends Component {
 
 ApplicationHeader.propTypes = {
   title: PropTypes.string,
-  api: PropTypes.instanceOf(ReactoryApi)
+  api: PropTypes.instanceOf(ReactoryApi),
+  search: PropTypes.instanceOf(ISearchConfig)
 };
 
 ApplicationHeader.defaultProps = {
-  title: 'Reactory'
+  title: 'Reactory',
+  search: {
+    show: true,
+    placeholder: 'Search'
+  }
 };
 
 ApplicationHeader.contextTypes = {

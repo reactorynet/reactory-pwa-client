@@ -80,14 +80,9 @@ const componentFqn = ({ nameSpace, name, version }) => {
 };
 
 const reactoryDomNode = () => {
-    const domNode = document.createElement('div');
-    const reactoryAttribute = new Attr;
-    reactoryAttribute.name = 'reactory';
-    reactoryAttribute.value = 'generated';
-    reactoryAttribute.namespaceURI = 'https://reactory.net/cdn/ns';
-    domNode.attributes.setNamedItemNS(reactoryAttribute);
-    domNode.id = `reactory_modal_widget_${uuid()}`;
-
+    const domNode = document.createElement("div");
+    domNode.setAttribute('reactory', 'generated')    
+    domNode.id = `reactory_modal_widget_${uuid().replace("-","_")}`;
     return domNode;
 }
 
@@ -724,8 +719,8 @@ export class ReactoryApi extends EventEmitter {
         }        
     }
 
-    showModalWithCompnentFqn(componentFqn, title = '', props = {}, modalProps = {}, domNode = null, theme = true, callback) {
-        const ComponentToMount = that.getComponent(componentFqn);
+    showModalWithComponentFqn(componentFqn, title = '', props = {}, modalProps = {}, domNode = null, theme = true, callback) {
+        const ComponentToMount = this.getComponent(componentFqn);
         this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback)
     }
 
@@ -754,36 +749,9 @@ export class ReactoryApi extends EventEmitter {
             }
         }
 
-        const _render = (_mprops) => {
-            if(theme === true) {
-                ReactDOM.render(<React.Fragment>
-                <CssBaseline />
-                <Provider store={that.reduxStore}>
-                    <ApolloProvider client={that.client}>
-                        <MuiThemeProvider theme={that.muiTheme}>
-                            <Router>                    
-                                <ApiProvider api={that}>                        
-                                    <FullScreenModal {..._mprops}>
-                                        <ComponentToMount {...props} />
-                                    </FullScreenModal> 
-                                </ApiProvider>
-                            </Router>
-                        </MuiThemeProvider>
-                    </ApolloProvider>
-                </Provider>
-            </React.Fragment>, _domNode, callback)
-            } else {
-                ReactDOM.render(
-                    <React.Fragment>
-                        <FullScreenModal {..._mprops}>
-                            <ComponentToMount {...props} />
-                        </FullScreenModal> 
-                    </React.Fragment>, _domNode, callback);        
-            }
-        }
-        
-        _render(_modalProps);
-                
+        const ModalMounted = (<FullScreenModal {..._modalProps}> <ComponentToMount {...props} /> </FullScreenModal>)
+
+        this.mountComponent((<ModalMounted />), {}, _domNode, true, callback);                        
     }
 
     createElement(ComponentToCreate, props) {
