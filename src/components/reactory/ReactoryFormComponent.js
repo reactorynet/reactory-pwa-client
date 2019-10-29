@@ -383,8 +383,11 @@ class ReactoryComponent extends Component {
     let showSubmit = true;
     let submitButton = null;
 
-    if(formDef.uiSchema && formDef.uiSchema['ui:options']) {
-      showSubmit = formDef.uiSchema['ui:options'].showSubmit === true || showSubmit;
+    if(formDef.uiSchema && formDef.uiSchema['ui:options']) {      
+      if(formDef.uiSchema['ui:options'] && formDef.uiSchema['ui:options']) {
+        showSubmit = formDef.uiSchema['ui:options'].showSubmit === true;
+      }
+      
       const { submitProps } = formDef.uiSchema['ui:options'];
       if(typeof submitProps === 'object' && showSubmit === true) {
         const { variant = 'fab', iconAlign = 'left' } = submitProps;
@@ -395,7 +398,7 @@ class ReactoryComponent extends Component {
         if(variant && typeof variant === 'string' && showSubmit === true) {
           switch(variant) {
             case 'button': {
-              submitButton = (<Button type="submit" {..._props}>{ iconAlign === 'left' && iconWidget}{template(_props.text)({ ...this })}{ iconAlign === 'right' && iconWidget}</Button>);
+              submitButton = (<Button type="submit" {..._props}>{ iconAlign === 'left' && iconWidget}{template(_props.text)({ props: self.props, this: self })}{ iconAlign === 'right' && iconWidget}</Button>);
               break;
             }
             case 'fab':

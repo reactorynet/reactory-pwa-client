@@ -173,6 +173,7 @@ class ApplicationHeader extends Component {
   };
 
   signOutClicked = (evt) => {
+    debugger;
     this.props.api.logout();
     this.navigateTo('/login', false)
   };
@@ -334,7 +335,7 @@ class ApplicationHeader extends Component {
 
 ApplicationHeader.propTypes = {
   title: PropTypes.string,
-  api: PropTypes.instanceOf(ReactoryApi),
+  api: PropTypes.instanceOf(ReactoryApi).isRequired,
   search: PropTypes.instanceOf(ISearchConfig)
 };
 

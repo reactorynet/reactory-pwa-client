@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
 import moment from 'moment';
-import lodash, { isNil, find, isEmpty } from 'lodash';
+import lodash, { isNil, find, isEmpty, template } from 'lodash';
 import classNames from 'classnames';
 import { graphql, withApollo, Query, Mutation } from 'react-apollo';
 import gql from 'graphql-tag';
@@ -186,7 +186,7 @@ class RatingControl extends Component {
 
     const ratingComponent = (
       <Fragment>        
-        <Badge>{ratingTooltip}</Badge> <Typography variant="body1" className={classes.behaviourTitle}>{behaviour.title}</Typography>
+        <Badge>{ratingTooltip}</Badge> <Typography variant="body1" className={classes.behaviourTitle}>{template(behaviour.title)({ employee: assessment.delegate, assessment, api: this.props.api })}</Typography>
         <Stepper alternativeLabel nonLinear activeStep={rating.rating - 1}>
           {steps}
         </Stepper>
