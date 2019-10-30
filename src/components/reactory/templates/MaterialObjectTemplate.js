@@ -106,7 +106,7 @@ class ObjectTemplate extends Component {
       return (<Widget {...this.props} />)
     }
 
-    let ContainerComponent = null;
+    let ContainerComponent = Paper;
 
     if(uiOptions && uiOptions.container) {
       switch(uiOptions.container) {
@@ -132,7 +132,7 @@ class ObjectTemplate extends Component {
     
     
     return (
-      <ContainerComponent className={classes.root} key={key} styles={uiOptions.styles || {}}>
+      <ContainerComponent className={classes.root} key={key} >
         { isNil(titleText) === false && isEmpty(titleText) === false ? <Typography gutterBottom>{titleText}</Typography> : null }
         { isNil(description) === false && isEmpty(titleText) === false ? <Typography gutterBottom component="p">{description}</Typography> : null }
         {toolbar}       
