@@ -17,13 +17,13 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import {
   orderProperties,
   retrieveSchema,
-  
+
   getDefaultRegistry,
   getUiOptions,
 } from "react-jsonschema-form/lib/utils";
 
 function DefaultObjectFieldTemplate(props) {
-  
+
   const canExpand = function canExpand() {
     const { formData, schema, uiSchema } = props;
     if (!schema.additionalProperties) {
@@ -61,12 +61,12 @@ function DefaultObjectFieldTemplate(props) {
       )}
       {props.properties.map(prop => prop.content)}
       {canExpand() && (
-        <IconButton          
+        <IconButton
           onClick={props.onAddClick(props.schema)}
           disabled={props.disabled || props.readonly}>
           <Icon>add</Icon>
         </IconButton>
-      )}      
+      )}
     </fieldset>
   );
 }
@@ -181,15 +181,15 @@ class ObjectField extends Component {
     const { definitions, fields, formContext } = registry;
     const { SchemaField, TitleField, DescriptionField } = fields;
     const schema = retrieveSchema(this.props.schema, definitions, formData);
-    // const uiSchema = retrieve    
-    
+    // const uiSchema = retrieve
+
     const title = schema.title === undefined ? name : schema.title;
     const description = uiSchema["ui:description"] || schema.description;
     const widget = uiSchema["ui:widget"]
     let orderedProperties;
 
-    
-    
+
+
     try {
       const properties = Object.keys(schema.properties);
       orderedProperties = orderProperties(properties, uiSchema["ui:order"]);
@@ -209,8 +209,8 @@ class ObjectField extends Component {
 
     if(lodash.isString(widget) && lodash.isFunction(registry.widgets[widget])) {
       //console.log('Set new Template for schema object', Template);
-      Template = registry.widgets[widget];  
-      
+      Template = registry.widgets[widget];
+
     }
 
     const templateProps = {
