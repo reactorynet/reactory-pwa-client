@@ -119,8 +119,8 @@ const Menus = (props) => {
             allow = api.hasRole(menuItem.roles, user.roles);
           }
           if (allow === true) {
-            const goto = (link) => {
-              self.navigateTo(link || menuItem.link, true);
+            const goto = () => {
+              self.navigateTo(menuItem.link, true);
             };
 
             if (isArray(menuItem.items) === true && menuItem.items.length > 0) {     
@@ -129,8 +129,12 @@ const Menus = (props) => {
                 <Collapse in={isExpanded === true} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
                     {menuItem.items.map((submenu) => {
+                      const submenuGoto = () => {
+                        self.navigateTo(submenu.link, true);
+                      };
+                      
                       return (
-                        <ListItem key={submenu.id} onClick={goto.bind(this, submenu.link)} style={{ cursor: 'pointer' }}>
+                        <ListItem key={submenu.id} button onClick={submenuGoto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
                           <ListItemIcon>
                             {
                               submenu.icon ?
@@ -146,7 +150,8 @@ const Menus = (props) => {
                 </Collapse>
               );
 
-              const toggleMenu = () => {
+              const toggleMenu = (e) => {
+                debugger;
                 let currentToggle = self.state.expanded[menuItem.id];
                 if(!currentToggle) currentToggle = { value: false };
                 
@@ -159,13 +164,13 @@ const Menus = (props) => {
 
               expandButton = (
                 <IconButton key={`${menuItem.id}`} onClick={toggleMenu}>
-                  <Icon>keyboard_arrow_right</Icon>
+                  <Icon>{isExpanded === true ? 'keyboard_arrow_down' : 'keyboard_arrow_right'}</Icon>
                 </IconButton>
               )
             }
 
             menuItems.push(
-              <ListItem key={menuItem.id} onClick={expandButton ? () => {} : goto} button>
+              <ListItem key={menuItem.id} onClick={goto} button>
                 <ListItemIcon>
                   <Icon color="primary">{menuItem.icon}</Icon>
                 </ListItemIcon>                
