@@ -12,7 +12,7 @@ import { ApolloClient, InMemoryCache, gql } from 'apollo-client-preset';
 import { ApolloProvider, Query, Mutation } from 'react-apollo';
 import { Typography } from '@material-ui/core';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
+import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
 import { find, isArray, intersection, isEmpty, isNil, template } from 'lodash';
 import { compose } from 'redux';
 import uuid from 'uuid';
@@ -254,7 +254,6 @@ export class ReactoryApi extends EventEmitter {
 
     goto(where = "/", state = {}){
         if(this.router && this.router.history) {
-            debugger;
             this.router.history.push({ pathname: where, state });
             this.emit(ReactoryApiEventNames.onRouteChanged, {where, state});
         }

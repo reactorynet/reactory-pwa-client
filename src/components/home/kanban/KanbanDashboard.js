@@ -12,7 +12,6 @@ import {
     AppBar,
     Badge,
     Fab,
-    MenuItem,
     FormControl,
     OutlinedInput,
     InputBase,
@@ -20,31 +19,15 @@ import {
     InputLabel,
     Grid,
     List,
-    ListItem,
-    ListItemSecondaryAction,
-    ListItemText,
-    Menu,
     Icon,
     Paper,
     Toolbar,
     Tooltip,
-    TextField,
     Typography
 } from '@material-ui/core';
-import Slider from '@material-ui/lab/Slider';
 import Select from '@material-ui/core/Select';
-import Avatar from '@material-ui/core/Avatar';
-import Button from '@material-ui/core/Button';
-import ChatIcon from '@material-ui/icons/Chat';
-import GroupAddIcon from '@material-ui/icons/GroupAdd';
-import PlayIcon from '@material-ui/icons/PlayCircleFilled';
 import SearchIcon from '@material-ui/icons/Search';
-import Draggable from 'react-draggable';
-import ChatCard from '../../chat/ChatCard';
-import { TrelloProvider } from '../../tasks/Tasks';
 import { TaskListItemComponent, defaultDragProps, TaskDetailComponent, AddTaskComponent } from '../../tasks/Taskboard';
-import * as mocks from '../../../models/mock';
-import { nilStr, omitDeep } from '../../util';
 import { withApi } from '../../../api/ApiProvider';
 
 

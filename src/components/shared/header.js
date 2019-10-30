@@ -4,7 +4,13 @@ import {Link, withRouter} from 'react-router-dom';
 import {compose} from 'redux';
 import {isArray} from 'lodash';
 import {withStyles, withTheme} from '@material-ui/core/styles';
-import {Tooltip, Button} from '@material-ui/core';
+import {
+  Tooltip, 
+  Button, 
+  ListItem, 
+  ListItemSecondaryAction, 
+  Collapse
+} from '@material-ui/core';
 import Drawer from '@material-ui/core/Drawer';
 import Avatar from '@material-ui/core/Avatar';
 import AppBar from '@material-ui/core/AppBar';
@@ -79,6 +85,70 @@ export class Logged extends Component {
 }
 
 Logged.muiName = 'IconMenu';
+
+const SubMenus = (props) => {
+  const { items = [], history, user, api, self, classes } = props;
+  return items.map((menu) => {
+    const goto = () => history.push(menu.link);
+   
+    return (
+      <ListItem key={menu.id} onClick={goto} style={{cursor: 'pointer'}}>
+        <ListItemIcon>
+          { 
+            menu.icon ? 
+            (<Icon color="primary">{menu.icon}</Icon>)
+            : null  
+          }
+        </ListItemIcon>
+        { menu.title}
+        { subnav }
+      </ListItem>)    
+    });    
+};
+
+const Menus = (props) => {
+  const { menus = [], target = 'left-nav', history, user, api, self, classes } = props;  
+  let menuItems = [];
+  if (menus && menus.length) {
+    menus.map((menu) => {
+      if (menu.target === target) {
+        menu.entries.map((menuItem) => {
+          let subnav = null;
+          let allow = true;
+          if (isArray(menuItem.roles) && isArray(user.roles)) {
+            allow = api.hasRole(menuItem.roles, user.roles);
+          }
+          if (allow === true) {
+            const goto = () => {
+              self.navigateTo(menuItem.link, true);
+            };
+
+            if(isArray(menuItem.items) === true && menuItem.items.length > 0) {
+              subnav = (
+                <Collapse in={true} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {SubMenus({ items: menuItems.items, history, user, api, classes })}
+                  </List>
+                </Collapse>
+              );
+            }
+
+            menuItems.push(
+              <ListItem key={ menuItem.id } onClick={ goto } button>
+                <ListItemIcon>
+                  <Icon color="primary">{menuItem.icon}</Icon>
+                </ListItemIcon>
+                { menuItem.title }                
+                { subnav }
+              </ListItem>);
+          }
+        });
+      }
+    });
+  }
+
+  return menuItems;
+};
 
 /**
  * This example is taking advantage of the composability of the `AppBar`
@@ -173,7 +243,6 @@ class ApplicationHeader extends Component {
   };
 
   signOutClicked = (evt) => {
-    debugger;
     this.props.api.logout();
     this.navigateTo('/login', false)
   };
@@ -209,43 +278,20 @@ class ApplicationHeader extends Component {
         <HelpListForm />
       </FullScreenModal>
     );
-  }
+  }  
 
   render() {
     //const { match } = this.props;
     const self = this;
     const {toggleDrawer} = this;
-    const {theme, api, classes} = this.props;
+    const {theme, api, classes, history} = this.props;
     const {menuOpen} = this.state;
     const user = this.props.api.getUser();
     const menus = this.props.api.getMenus();
     let menuItems = [];
     //get the main nav
-    if (menus && menus.length && user.anon !== true) {
-      menus.map((menu) => {
-        if (menu.target === 'left-nav') {
-          menu.entries.map((menuItem) => {
-            let allow = true;
-            if (isArray(menuItem.roles) && isArray(user.roles)) {
-              allow = api.hasRole(menuItem.roles, user.roles);
-            }
-            if (allow === true) {
-              const goto = () => {
-                self.navigateTo(menuItem.link, true);
-              };
-              menuItems.push((
-                <MenuItem key={menuItem.id} onClick={goto}>
-                  <ListItemIcon>
-                    <Icon color="primary">{menuItem.icon}</Icon>
-                  </ListItemIcon>
-                  {menuItem.title}
-                </MenuItem>));
-            }
-          });
-        }
+    
 
-      });
-    }
 
     const setSearchText = e => this.setState({ searchInput: e.target.value });
     const onSearchTextKeyPress = e => {
@@ -317,15 +363,17 @@ class ApplicationHeader extends Component {
                       />
             </Link>}
           <Divider/>
-          {menuItems}
-          <div className={this.props.classes.apiStatus}>
-            <Tooltip title={`Api Available @ ${moment(api.getUser().when).format('HH:mm:ss')} click to refresh`}>
-              <IconButton onClick={this.statusRefresh}>
-                <Icon>rss_feed</Icon>
-              </IconButton>
-            </Tooltip>
-            <span className={this.props.classes.version}>Client Version: {api.props.$version}</span>
-          </div>
+          <List className={this.props.classes.menuItems}>
+            <Menus { ...{ menus: menus, history: this.props.history, user, api, self, classes } } />
+            <ListItem onClick={this.statusRefresh} button>
+              <ListItemIcon>
+                <Tooltip title={`Api Available @ ${moment(api.getUser().when).format('HH:mm:ss')} click to refresh`}>                
+                    <Icon color="primary">rss_feed</Icon>
+                </Tooltip>              
+              </ListItemIcon>
+              Refresh API Status              
+            </ListItem>
+          </List>                           
         </Drawer>
         {this.renderHelpInterface()}
       </Fragment>
@@ -359,17 +407,16 @@ ApplicationHeader.styles = theme => ({
     padding: `0 ${theme.spacing(1)}px`,
     //height: theme.spacing.
   },
+  nested: {
+    paddingLeft: theme.spacing(4),
+  },
   loggedInUserAvatar: {
     height: 120, 
     width: 120, 
     margin: 20, 
     marginLeft: 'auto', 
     marginRight: 'auto'
-  },
-  apiStatus: {
-    bottom: '10px',
-    position: 'absolute',
-  },
+  },  
   version: {
     fontSize: '10px',
   },
@@ -378,6 +425,9 @@ ApplicationHeader.styles = theme => ({
   },
   grow: {
     flexGrow: 1,
+  },
+  menuItem: {
+    cursor: 'pointer'
   },
   menuButton: {
     marginLeft: -12,

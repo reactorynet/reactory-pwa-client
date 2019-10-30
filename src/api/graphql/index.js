@@ -418,6 +418,15 @@ const apiStatus = gql`
           external
           icon
           roles
+          items {
+            id
+            ordinal
+            title
+            link
+            external
+            icon
+            roles            
+          }
         }
         
       }

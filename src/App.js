@@ -15,7 +15,7 @@ import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
 import { ApolloProvider, Query, Mutation } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
 import { setContext } from 'apollo-link-context';
-import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
+import { ThemeProvider } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { createMuiTheme } from '@material-ui/core/styles';
 import queryString from './query-string';
@@ -284,7 +284,7 @@ class App extends Component {
           <Provider store={store}>
             <ApolloProvider client={client}>
               <ApiProvider api={api}>
-                <MuiThemeProvider theme={muiTheme}>
+                <ThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
                     <React.Fragment>
                       <AssessorHeaderBar title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
@@ -297,7 +297,7 @@ class App extends Component {
                     </React.Fragment>
                   </MuiPickersUtilsProvider>                  
                   
-                </MuiThemeProvider>
+                </ThemeProvider>
               </ApiProvider>
             </ApolloProvider>
           </Provider>

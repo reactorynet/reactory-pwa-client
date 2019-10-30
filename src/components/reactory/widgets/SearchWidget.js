@@ -12,7 +12,7 @@ import {
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
-import Slider from '@material-ui/lab/Slider';
+import Slider from '@material-ui/core/Slider';
 
 
 class SearchWidget extends Component {
@@ -45,7 +45,6 @@ class SearchWidget extends Component {
   };
 
   onSearch() {
-    debugger;
     const { formData } = this.props
   }
   

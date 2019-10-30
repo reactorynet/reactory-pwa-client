@@ -152,7 +152,6 @@ class StepperWidget extends Component {
       //predicate resolves                        
       const originalSteps = [..._options.steps];
       //this may include steps that are grouped steps which reference others
-      debugger;
       let prefiltered = _.filter(_options.steps, _options.filter.predicate);
       const groupedFiltered = _.filter(prefiltered, { isGroup: true });
       if(groupedFiltered.length > 0) {
@@ -174,7 +173,6 @@ class StepperWidget extends Component {
     let stepElements = [];
     forEach( _options.steps, (step, stepIndex)=> {      
         if(step) {
-          //debugger;
 
           const selectStep = () => {  
             self.setState({ activeStep: step.step }, ()=>{

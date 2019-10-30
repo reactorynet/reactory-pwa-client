@@ -498,7 +498,6 @@ class ReactoryComponent extends Component {
 
           const onFormSubmit = (formSchema) => {  
             api.log(`Form Submitting, post via graphql`, formSchema, 'debug');  
-            //debugger;          
             const _variables = objectMapper({...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
             mutateFunction({
               variables: {..._variables},
