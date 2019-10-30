@@ -3,7 +3,7 @@ import { compose } from 'redux';
 import PropTypes from 'prop-types'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi, ReactoryApi } from '../../../api/ApiProvider';
-import { template } from 'lodash';
+import { template, isNil, isEmpty } from 'lodash';
 import * as Widgets from '../widgets';
 import {
   Button,
@@ -106,15 +106,38 @@ class ObjectTemplate extends Component {
       return (<Widget {...this.props} />)
     }
 
+    let ContainerComponent = null;
+
+    if(uiOptions.container) {
+      switch(uiOptions.container) {
+        case "React.Fragment":
+        case "Fragment": {
+          ContainerComponent = React.Fragment;
+          break;
+        }
+        case "div": {
+          ContainerComponent = (props) => (<div className={props.className} key={props.key}>{props.children}</div>)
+        }
+        case "Custom" : {
+          ContainerComponent = api.getComponent(uiOptions.componentFqn);
+          break;
+        }
+        case "Paper": 
+        default: {
+          ContainerComponent = Paper;
+          break;
+        }
+      }
+    }
     
     
     return (
-      <Paper className={classes.root} key={key} >
-        <Typography gutterBottom>{titleText}</Typography>        
-        {toolbar}        
-        <Typography gutterBottom component="p">{description}</Typography>        
+      <ContainerComponent className={classes.root} key={key} >
+        { isNil(titleText) === false && isEmpty(titleText) === false ? <Typography gutterBottom>{titleText}</Typography> : null }
+        { isNil(description) === false && isEmpty(titleText) === false ? <Typography gutterBottom component="p">{description}</Typography> : null }
+        {toolbar}       
         {properties.map(element => element.content)}        
-      </Paper>
+      </ContainerComponent>
     );
   }
 }
