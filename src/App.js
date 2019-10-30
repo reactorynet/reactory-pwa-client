@@ -20,11 +20,11 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import { createMuiTheme } from '@material-ui/core/styles';
 import queryString from './query-string';
 import './App.css';
-import AssessorHeaderBar from './components/shared/header';
+import Header from '@reactory/client-core/components/shared/DefaultHeader';
 import {
   componentRegistery
 } from './components';
-import ApiProvider, { ReactoryApi, ReactoryApiEventNames } from './api/ApiProvider'
+import ApiProvider, { ReactoryApi, ReactoryApiEventNames } from './api/ApiProvider';
 import { fetch } from "whatwg-fetch";
 import { deepEquals } from './components/reactory/form/utils';
 
@@ -287,8 +287,8 @@ class App extends Component {
                 <ThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
                     <React.Fragment>
-                      <AssessorHeaderBar title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
-                      <div style={{ marginTop: '80px', paddingLeft: '8px', paddingRight: '8px', marginBottom: '8px' }}>                                        
+                      <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
+                      <div style={{ marginTop: '80px', paddingLeft: '4px', paddingRight: '4px', marginBottom: '4px' }}>                                        
                         { auth_validated === true && routes.length > 0 ? 
                             routes : 
                             <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }

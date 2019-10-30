@@ -1,14 +1,14 @@
-import React, {Component, Fragment} from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import {Link, withRouter} from 'react-router-dom';
-import {compose} from 'redux';
-import {isArray} from 'lodash';
-import {withStyles, withTheme} from '@material-ui/core/styles';
+import { Link, withRouter } from 'react-router-dom';
+import { compose } from 'redux';
+import { isArray } from 'lodash';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 import {
-  Tooltip, 
-  Button, 
-  ListItem, 
-  ListItemSecondaryAction, 
+  Tooltip,
+  Button,
+  ListItem,
+  ListItemSecondaryAction,
   Collapse
 } from '@material-ui/core';
 import Drawer from '@material-ui/core/Drawer';
@@ -18,18 +18,18 @@ import Divider from '@material-ui/core/Divider';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import IconButton from '@material-ui/core/IconButton';
-import {Menu, MenuItem, InputBase} from '@material-ui/core';
+import { Menu, MenuItem, InputBase } from '@material-ui/core';
 import Icon from '@material-ui/core/Icon';
-import {List, ListItemIcon, ListItemText} from '@material-ui/core';
+import { List, ListItemIcon, ListItemText } from '@material-ui/core';
 import { fade } from '@material-ui/core/styles/colorManipulator';
 import MenuIcon from '@material-ui/icons/Menu';
 import BackIcon from '@material-ui/icons/ArrowBack';
 import PowerSettingIcon from '@material-ui/icons/PowerSettingsNew';
-import {getAvatar} from '../util';
+import { getAvatar } from '../util';
 import moment from 'moment';
-import {withApi, ReactoryApi, ReactoryApiEventNames} from '@reactory/client-core/api/ApiProvider';
+import { withApi, ReactoryApi, ReactoryApiEventNames } from '@reactory/client-core/api/ApiProvider';
 
-export class ISearchConfig {  
+export class ISearchConfig {
   show = true;
   placeholder = 'Search'
 }
@@ -39,8 +39,8 @@ const defaultSearchConfig = new ISearchConfig()
 export class Logged extends Component {
 
   render() {
-    const {props} = this;
-    const {menus, api, user, self} = props;
+    const { props } = this;
+    const { menus, api, user, self } = props;
     const menuItems = [];
 
     if (menus && menus.length) {
@@ -90,57 +90,94 @@ const SubMenus = (props) => {
   const { items = [], history, user, api, self, classes } = props;
   return items.map((menu) => {
     const goto = () => history.push(menu.link);
-   
+    debugger;
     return (
-      <ListItem key={menu.id} onClick={goto} style={{cursor: 'pointer'}}>
+      <ListItem key={menu.id} onClick={goto} style={{ cursor: 'pointer' }}>
         <ListItemIcon>
-          { 
-            menu.icon ? 
-            (<Icon color="primary">{menu.icon}</Icon>)
-            : null  
+          {
+            menu.icon ?
+              (<Icon color="primary">{menu.icon}</Icon>)
+              : null
           }
         </ListItemIcon>
-        { menu.title}
-        { subnav }
-      </ListItem>)    
-    });    
+        {menu.title}
+      </ListItem>)
+  });
 };
 
 const Menus = (props) => {
-  const { menus = [], target = 'left-nav', history, user, api, self, classes } = props;  
+  const { menus = [], target = 'left-nav', history, user, api, self, classes } = props;
   let menuItems = [];
   if (menus && menus.length) {
     menus.map((menu) => {
       if (menu.target === target) {
         menu.entries.map((menuItem) => {
           let subnav = null;
+          let expandButton = null;
           let allow = true;
           if (isArray(menuItem.roles) && isArray(user.roles)) {
             allow = api.hasRole(menuItem.roles, user.roles);
           }
           if (allow === true) {
-            const goto = () => {
-              self.navigateTo(menuItem.link, true);
+            const goto = (link) => {
+              self.navigateTo(link || menuItem.link, true);
             };
 
-            if(isArray(menuItem.items) === true && menuItem.items.length > 0) {
+            if (isArray(menuItem.items) === true && menuItem.items.length > 0) {     
+              const isExpanded = self.state.expanded[menuItem.id] && self.state.expanded[menuItem.id].value === true;         
               subnav = (
-                <Collapse in={true} timeout="auto" unmountOnExit>
+                <Collapse in={isExpanded === true} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    {SubMenus({ items: menuItems.items, history, user, api, classes })}
+                    {menuItem.items.map((submenu) => {
+                      return (
+                        <ListItem key={submenu.id} onClick={goto.bind(this, submenu.link)} style={{ cursor: 'pointer' }}>
+                          <ListItemIcon>
+                            {
+                              submenu.icon ?
+                                (<Icon color="secondary">{submenu.icon}</Icon>)
+                                : null
+                            }
+                          </ListItemIcon>
+                          {submenu.title}
+                        </ListItem>
+                      )
+                    })}
                   </List>
                 </Collapse>
               );
+
+              const toggleMenu = () => {
+                let currentToggle = self.state.expanded[menuItem.id];
+                if(!currentToggle) currentToggle = { value: false };
+                
+                currentToggle.value = !currentToggle.value;
+                const _state = {...self.state};
+                _state.expanded[menuItem.id] = currentToggle;
+
+                self.setState(_state);
+              };
+
+              expandButton = (
+                <IconButton key={`${menuItem.id}`} onClick={toggleMenu}>
+                  <Icon>keyboard_arrow_right</Icon>
+                </IconButton>
+              )
             }
 
             menuItems.push(
-              <ListItem key={ menuItem.id } onClick={ goto } button>
+              <ListItem key={menuItem.id} onClick={expandButton ? () => {} : goto} button>
                 <ListItemIcon>
                   <Icon color="primary">{menuItem.icon}</Icon>
-                </ListItemIcon>
-                { menuItem.title }                
-                { subnav }
+                </ListItemIcon>                
+                {menuItem.title}
+                {expandButton ? <ListItemSecondaryAction>
+                  {expandButton}
+                </ListItemSecondaryAction> : null}
               </ListItem>);
+            
+            if(subnav) {
+              menuItems.push(subnav);
+            }
           }
         });
       }
@@ -162,8 +199,11 @@ class ApplicationHeader extends Component {
       drawerOpen: false,
       menuOpen: false,
       menuAnchor: null,
-      search: props.search || defaultSearchConfig            
-    };    
+      search: props.search || defaultSearchConfig,
+      expanded: {
+
+      }
+    };
 
     this.navigateTo = this.navigateTo.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -178,9 +218,9 @@ class ApplicationHeader extends Component {
     this.onLoginEvent = this.onLoginEvent.bind(this);
     props.api.on(ReactoryApiEventNames.onLogin, this.onLoginEvent);
     this.componentDefs = this.props.api.getComponents([
-      'core.SystemStatus', 
+      'core.SystemStatus',
       'core.FullScreenModal',
-      'core.Loading', 
+      'core.Loading',
       'forms.HelpListForm']);
     this.statusRefresh = this.statusRefresh.bind(this);
     this.doSearch = this.doSearch.bind(this);
@@ -195,10 +235,10 @@ class ApplicationHeader extends Component {
 
   navigateTo(where = '/', toggleDrawer = false) {
     //console.log('Need to redirect', where);
-    const {history} = this.props;
+    const { history } = this.props;
 
     if (toggleDrawer === true) {
-      this.setState({...this.state, drawerOpen: !this.state.drawerOpen}, () => {
+      this.setState({ ...this.state, drawerOpen: !this.state.drawerOpen }, () => {
         history.push(where);
       });
     } else {
@@ -207,15 +247,15 @@ class ApplicationHeader extends Component {
   }
 
   handleChange = (event, logged) => {
-    this.setState({logged: logged});
+    this.setState({ logged: logged });
   };
 
   toggleDrawer = () => {
-    this.setState({...this.state, drawerOpen: !this.state.drawerOpen});
+    this.setState({ ...this.state, drawerOpen: !this.state.drawerOpen });
   };
 
   handleMenu = (evt) => {
-    this.setState({menuOpen: !this.state.menuOpen, menuAnchor: evt.currentTarget})
+    this.setState({ menuOpen: !this.state.menuOpen, menuAnchor: evt.currentTarget })
   };
 
   loginClicked = (evt) => {
@@ -254,7 +294,7 @@ class ApplicationHeader extends Component {
   adminClicked = evt => this.navigateTo('/admin');
 
   statusRefresh = e => {
-    this.props.api.status().catch(e => this.setState({apiNotAvailable: true}))
+    this.props.api.status().catch(e => this.setState({ apiNotAvailable: true }))
   };
 
   doSearch() {
@@ -265,69 +305,69 @@ class ApplicationHeader extends Component {
    * This is the main render entry point for the help interface.
    * Accessible to all, use the search input as keyword filter.
    */
-  renderHelpInterface(){
+  renderHelpInterface() {
     const that = this;
-    const { displaySearch, searchInput } = this.state;    
+    const { displaySearch, searchInput } = this.state;
     const { FullScreenModal, Loading } = this.componentDefs;
     const HelpListForm = this.props.api.getComponent('forms.HelpListForm@1.0.0');
-    if(displaySearch !== true) return null;
+    if (displaySearch !== true) return null;
     const closeSearch = e => this.setState({ searchInput: '', displaySearch: false })
     const onFilterSearch = form => this.setState({ searchInput: form.searchInput })
     return (
-      <FullScreenModal open={displaySearch === true} onClose={ closeSearch } title={`Searching For: ${searchInput}`}>        
+      <FullScreenModal open={displaySearch === true} onClose={closeSearch} title={`Searching For: ${searchInput}`}>
         <HelpListForm />
       </FullScreenModal>
     );
-  }  
+  }
 
   render() {
     //const { match } = this.props;
     const self = this;
-    const {toggleDrawer} = this;
-    const {theme, api, classes, history} = this.props;
-    const {menuOpen} = this.state;
+    const { toggleDrawer } = this;
+    const { theme, api, classes, history } = this.props;
+    const { menuOpen } = this.state;
     const user = this.props.api.getUser();
     const menus = this.props.api.getMenus();
     let menuItems = [];
     //get the main nav
-    
+
 
 
     const setSearchText = e => this.setState({ searchInput: e.target.value });
     const onSearchTextKeyPress = e => {
-      if(e.charCode === 13) {
+      if (e.charCode === 13) {
         self.doSearch();
       }
     };
 
     const searchControl = (<div className={classes.grow}>
-    <div className={classes.search}>
-      <div className={classes.searchIcon}>
-        <Icon>search</Icon>
+      <div className={classes.search}>
+        <div className={classes.searchIcon}>
+          <Icon>search</Icon>
+        </div>
+        <InputBase
+          placeholder="Search…"
+          classes={{
+            root: classes.inputRoot,
+            input: classes.inputInput,
+          }}
+          onKeyPress={onSearchTextKeyPress}
+          onChange={setSearchText}
+          value={this.state.searchInput}
+        />
       </div>
-      <InputBase
-        placeholder="Search…"
-        classes={{
-          root: classes.inputRoot,
-          input: classes.inputInput,
-        }}
-        onKeyPress={onSearchTextKeyPress}
-        onChange={setSearchText}
-        value={this.state.searchInput}
-      />
-    </div>
     </div>);
 
     return (
       <Fragment>
-        <AppBar position="fixed" style={{backgroundColor: theme.palette.primary1Color}}>
+        <AppBar position="fixed" style={{ backgroundColor: theme.palette.primary1Color }}>
           <Toolbar>
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
-              <MenuIcon/>
+              <MenuIcon />
             </IconButton>
-            <Typography type="title" color="inherit" style={{flex: 1}}>
+            <Typography type="title" color="inherit" style={{ flex: 1 }}>
               {user.applicationName}
-            </Typography>            
+            </Typography>
 
             {user.anon === true ? null :
               <IconButton
@@ -335,45 +375,45 @@ class ApplicationHeader extends Component {
                 aria-haspopup="true"
                 onClick={this.handleMenu}
                 color="inherit">
-                <PowerSettingIcon/>
+                <PowerSettingIcon />
                 <Logged open={menuOpen === true}
-                        id={'top-right'}
-                        anchorEl={self.state.menuAnchor}
-                        menus={menus}
-                        api={this.props.api}
-                        user={user}
-                        self={self}/>
+                  id={'top-right'}
+                  anchorEl={self.state.menuAnchor}
+                  menus={menus}
+                  api={this.props.api}
+                  user={user}
+                  self={self} />
               </IconButton>}
           </Toolbar>
         </AppBar>
         <Drawer open={this.state.drawerOpen === true} className={this.props.classes.drawer}>
           <div className={this.props.classes.drawerHeader}>
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
-              <BackIcon/>
-            </IconButton>                          
-            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{style: { width: '32px', objectFit: "contain" }}} />            
+              <BackIcon />
+            </IconButton>
+            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />
           </div>
-          <Divider/>
+          <Divider />
           <Typography variant="subtitle1" color="secondary"
-                      style={{textAlign: 'center', marginTop: '20px'}}>{api.getUserFullName(user)}</Typography>
+            style={{ textAlign: 'center', marginTop: '20px' }}>{api.getUserFullName(user)}</Typography>
           {user.anon ? null :
             <Link to="/profile/">
               <Avatar src={getAvatar(user)}
-                      className={this.props.classes.loggedInUserAvatar}
-                      />
+                className={this.props.classes.loggedInUserAvatar}
+              />
             </Link>}
-          <Divider/>
+          <Divider />
           <List className={this.props.classes.menuItems}>
-            <Menus { ...{ menus: menus, history: this.props.history, user, api, self, classes } } />
+            <Menus {...{ menus: menus, history: this.props.history, user, api, self, classes }} />
             <ListItem onClick={this.statusRefresh} button>
               <ListItemIcon>
-                <Tooltip title={`Api Available @ ${moment(api.getUser().when).format('HH:mm:ss')} click to refresh`}>                
-                    <Icon color="primary">rss_feed</Icon>
-                </Tooltip>              
+                <Tooltip title={`Api Available @ ${moment(api.getUser().when).format('HH:mm:ss')} click to refresh`}>
+                  <Icon color="primary">rss_feed</Icon>
+                </Tooltip>
               </ListItemIcon>
-              Refresh API Status              
+              Refresh API Status
             </ListItem>
-          </List>                           
+          </List>
         </Drawer>
         {this.renderHelpInterface()}
       </Fragment>
@@ -401,7 +441,7 @@ ApplicationHeader.contextTypes = {
 
 ApplicationHeader.styles = theme => ({
   drawerHeader: {
-    display: 'flex',    
+    display: 'flex',
     justifyContent: 'space-between',
     minWidth: '260px',
     padding: `0 ${theme.spacing(1)}px`,
@@ -411,12 +451,12 @@ ApplicationHeader.styles = theme => ({
     paddingLeft: theme.spacing(4),
   },
   loggedInUserAvatar: {
-    height: 120, 
-    width: 120, 
-    margin: 20, 
-    marginLeft: 'auto', 
+    height: 120,
+    width: 120,
+    margin: 20,
+    marginLeft: 'auto',
     marginRight: 'auto'
-  },  
+  },
   version: {
     fontSize: '10px',
   },

@@ -108,7 +108,7 @@ class ObjectTemplate extends Component {
 
     let ContainerComponent = null;
 
-    if(uiOptions.container) {
+    if(uiOptions && uiOptions.container) {
       switch(uiOptions.container) {
         case "React.Fragment":
         case "Fragment": {
@@ -116,7 +116,7 @@ class ObjectTemplate extends Component {
           break;
         }
         case "div": {
-          ContainerComponent = (props) => (<div className={props.className} key={props.key}>{props.children}</div>)
+          ContainerComponent = (props) => (<div className={props.className} key={props.key} styles={props.styles || {}}>{props.children}</div>)
         }
         case "Custom" : {
           ContainerComponent = api.getComponent(uiOptions.componentFqn);
@@ -132,7 +132,7 @@ class ObjectTemplate extends Component {
     
     
     return (
-      <ContainerComponent className={classes.root} key={key} >
+      <ContainerComponent className={classes.root} key={key} styles={uiOptions.styles || {}}>
         { isNil(titleText) === false && isEmpty(titleText) === false ? <Typography gutterBottom>{titleText}</Typography> : null }
         { isNil(description) === false && isEmpty(titleText) === false ? <Typography gutterBottom component="p">{description}</Typography> : null }
         {toolbar}       
