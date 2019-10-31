@@ -107,16 +107,24 @@ class ObjectTemplate extends Component {
     }
 
     let ContainerComponent = Paper;
+    let ContainerStyles = {};
 
-    if(uiOptions && uiOptions.container) {
+    if(uiOptions && uiOptions.container) {      
+      if( typeof uiOptions.containerStyles === 'object') {
+        ContainerStyles = { ...uiOptions.containerStyles}
+      }
+
       switch(uiOptions.container) {
         case "React.Fragment":
         case "Fragment": {
           ContainerComponent = React.Fragment;
           break;
         }
-        case "div": {
-          ContainerComponent = (props) => (<div className={props.className} key={props.key} styles={props.styles || {}}>{props.children}</div>)
+        case "div": {          
+          ContainerComponent = (props) => {             
+            return (<div className={props.className} key={props.key} style={props.style || {}}>{props.children}</div>) 
+          }
+          break;
         }
         case "Custom" : {
           ContainerComponent = api.getComponent(uiOptions.componentFqn);
@@ -129,14 +137,13 @@ class ObjectTemplate extends Component {
         }
       }
     }
-    
-    
+            
     return (
-      <ContainerComponent className={classes.root} key={key} >
+      <ContainerComponent className={classes.root} key={key} style={ContainerStyles}>
         { isNil(titleText) === false && isEmpty(titleText) === false ? <Typography gutterBottom>{titleText}</Typography> : null }
         { isNil(description) === false && isEmpty(titleText) === false ? <Typography gutterBottom component="p">{description}</Typography> : null }
-        {toolbar}       
-        {properties.map(element => element.content)}        
+        {toolbar}
+        {properties.map(element => element.content)}
       </ContainerComponent>
     );
   }

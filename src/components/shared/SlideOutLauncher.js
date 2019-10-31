@@ -76,7 +76,16 @@ class SlideOutLauncher extends Component {
     //   }];
 
     if (_buttonVariant === 'SpeedDial') {
-      actions.forEach(action => action.icon = <Icon>{action.icon}</Icon>);
+      
+      actions.forEach(( action ) => { 
+        action.icon = (<Icon>{action.icon}</Icon>);
+        action.clickHandler = () => {
+          debugger;
+          if(action.clickAction && action.clickAction === 'navigate') {
+            api.goto(action.link);
+          }
+        }
+      });
       LaunchButton = <SpeedDial actions={actions} icon={<Icon>add</Icon>} />
     }
 
@@ -87,8 +96,7 @@ class SlideOutLauncher extends Component {
           open={this.state.open === true}
           title={_windowTitle}
           slide={this.props.slideDirection}
-          onClose={onClick}
-        >
+          onClose={onClick}>
           <ChildComponent {...childprops} />
         </FullScreenModal>
       </div>

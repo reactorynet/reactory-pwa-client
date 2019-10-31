@@ -5,6 +5,7 @@ import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
 import {
     BrowserRouter as Router,
+    withRouter
   } from 'react-router-dom';
 
 import { Provider } from 'react-redux';
@@ -252,9 +253,10 @@ export class ReactoryApi extends EventEmitter {
         this.goto = this.goto.bind(this);
     }
 
-    goto(where = "/", state = {}){
-        if(this.router && this.router.history) {
-            this.router.history.push({ pathname: where, state });
+    goto(where = "/", state = { __t: new Date().valueOf() }){
+        debugger;
+        if(this.history && this.history) {
+            this.history.replace({ pathname: where, state });
             this.emit(ReactoryApiEventNames.onRouteChanged, {where, state});
         }
     }
@@ -668,12 +670,14 @@ export class ReactoryApi extends EventEmitter {
     }
 
     getComponent(fqn){
+        if(fqn === undefined) throw new Error('NO NULL FQN');
         try {
+            
             const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0' }`]        
             if(found && found.component) return found.component        
             return null //we must return null, because the component is not found, we cannot automatically return the not found component, that is the responsibility of the component
         } catch (err) {            
-            this.log('Bad component name', fqn);     
+            this.log(`Bad component name ${err.message}`, fqn, 'error');     
             if(this.componentRegister && this.componentRegister['core.NotFound@1.0.0']) {
                 return this.getNotFoundComponent();
             }
@@ -904,7 +908,8 @@ class ApiProvider extends Component {
     };
 
     getChildContext() {
-        let { api } = this.props;
+        let { api, history } = this.props;
+        api.history = history;
         return { api };
     };
 
@@ -914,7 +919,8 @@ class ApiProvider extends Component {
 }
 
 ApiProvider = compose(    
-    withApollo
+    withApollo,
+    withRouter,
 )(ApiProvider);
 
 

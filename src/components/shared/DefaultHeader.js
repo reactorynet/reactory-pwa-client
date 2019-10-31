@@ -345,6 +345,7 @@ class ApplicationHeader extends Component {
       }
     };
 
+    /*
     const searchControl = (<div className={classes.grow}>
       <div className={classes.search}>
         <div className={classes.searchIcon}>
@@ -362,7 +363,7 @@ class ApplicationHeader extends Component {
         />
       </div>
     </div>);
-
+          */
     return (
       <Fragment>
         <AppBar position="fixed" style={{ backgroundColor: theme.palette.primary1Color }}>

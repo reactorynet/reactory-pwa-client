@@ -136,13 +136,17 @@ class App extends Component {
     api.on(ReactoryApiEventNames.onLogout, this.onLogout)
     api.on(ReactoryApiEventNames.onLogin, this.onLogin)
     api.on(ReactoryApiEventNames.onApiStatusUpdate, this.onApiStatusUpdate);
-    api.on(ReactoryApiEventNames.onRouteChanged, this.onRouteChanged) 
-    this.componentRefs = api.getComponents(['core.Loading@1.0.0', 'core.Login@1.0.0', 'core.FullScreenModal@1.0.0']);    
+    api.on(ReactoryApiEventNames.onRouteChanged, this.onRouteChanged);
+    this.componentRefs = api.getComponents([
+      'core.Loading@1.0.0', 
+      'core.Login@1.0.0', 
+      'core.FullScreenModal@1.0.0'
+    ]);    
   }
 
   onRouteChanged(path, state){
     api.log(`onRouteChange Handler`, { path, state }, 'debug');
-    this.setState({ currentRoute: path });
+    this.setState({ currentRoute: path }, this.configureRouting);
   }
     
   onLogin() {
