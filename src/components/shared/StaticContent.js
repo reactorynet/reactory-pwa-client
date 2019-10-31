@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'recompose';
+import { withRouter, BrowserRouter } from 'react-router-dom';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import moment from 'moment';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi, ReactoryApi } from '@reactory/client-core/api/ApiProvider';
 
 
 
@@ -26,6 +27,15 @@ class StaticContent extends Component {
 
   componentDidMount(){
     const that = this;
+    const getSlug = () => {
+      if(that.props.slugSource === 'property') return that.props.slug;
+      if(that.props.slugSource === 'route' && typeof that.props.slugSourceProps === 'object') {      
+        const { paramId } = that.props.slugSourceProps;
+        return that.props.history.match.params[paramId];
+      }
+    };
+
+
     this.props.api.graphqlQuery(`
     query ReactoryGetContentBySlug($slug: String!) {
       ReactoryGetContentBySlug(slug: $slug) {
@@ -66,10 +76,17 @@ class StaticContent extends Component {
 StaticContent.propTypes = {
   api: PropTypes.instanceOf(ReactoryApi).isRequired,
   showTitle: PropTypes.bool,
-  slug: PropTypes.string.isRequired
+  slug: PropTypes.string.isRequired,
+  slugSource: PropTypes.string,
+  slugSourceProps: PropTypes.any,
+  history: PropTypes.instanceOf(BrowserRouter).isRequired
 };
 
-const StaticContentComponent = compose(withApi, withTheme, withStyles(StaticContent.styles))(StaticContent);
+StaticContent.defaultProps = {
+  slugSource: 'property' // can be route
+};
+
+const StaticContentComponent = compose(withApi, withRouter, withTheme, withStyles(StaticContent.styles))(StaticContent);
 
 StaticContentComponent.meta = {
   nameSpace: 'core',

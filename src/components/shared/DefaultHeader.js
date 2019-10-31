@@ -9,7 +9,8 @@ import {
   Button,
   ListItem,
   ListItemSecondaryAction,
-  Collapse
+  Collapse,
+  CircularProgress
 } from '@material-ui/core';
 import Drawer from '@material-ui/core/Drawer';
 import Avatar from '@material-ui/core/Avatar';
@@ -150,8 +151,7 @@ const Menus = (props) => {
                 </Collapse>
               );
 
-              const toggleMenu = (e) => {
-                debugger;
+              const toggleMenu = (e) => {                
                 let currentToggle = self.state.expanded[menuItem.id];
                 if(!currentToggle) currentToggle = { value: false };
                 
@@ -396,7 +396,7 @@ class ApplicationHeader extends Component {
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <BackIcon />
             </IconButton>
-            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />
+            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />          
           </div>
           <Divider />
           <Typography variant="subtitle1" color="secondary"
@@ -406,7 +406,7 @@ class ApplicationHeader extends Component {
               <Avatar src={getAvatar(user)}
                 className={this.props.classes.loggedInUserAvatar}
               />
-            </Link>}
+            </Link>}            
           <Divider />
           <List className={this.props.classes.menuItems}>
             <Menus {...{ menus: menus, history: this.props.history, user, api, self, classes }} />
@@ -416,7 +416,7 @@ class ApplicationHeader extends Component {
                   <Icon color="primary">rss_feed</Icon>
                 </Tooltip>
               </ListItemIcon>
-              Refresh API Status
+            <ListItemText primary="Refresh API Status" secondary={<span className={classes.version}>`Client: ${api.props.$version}`</span>}/>
             </ListItem>
           </List>
         </Drawer>
@@ -461,6 +461,9 @@ ApplicationHeader.styles = theme => ({
     margin: 20,
     marginLeft: 'auto',
     marginRight: 'auto'
+  },
+  busyIndicator: {
+    outline: '1px solid black',
   },
   version: {
     fontSize: '10px',
