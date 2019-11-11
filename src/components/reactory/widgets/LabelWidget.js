@@ -93,4 +93,11 @@ class LabelWidget extends Component {
 
 const LabelFieldComponent = compose(withTheme)(LabelWidget)
 
+LabelFieldComponent.meta = {
+  nameSpace: "core",
+  name: "Label",
+  version: "1.0.0",
+  component: LabelFieldComponent
+};
+
 export default LabelFieldComponent;

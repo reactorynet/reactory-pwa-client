@@ -62,7 +62,7 @@ class MaterialTableWidget extends Component {
           ...coldef
         };
 
-        if(isNil(def.component) === false) {
+        if(isNil(def.component) === false && def.component !== undefined) {
           const ColRenderer = api.getComponent(def.component);
           def.render = ( rowData ) => {           
             let props = { ...rowData };
