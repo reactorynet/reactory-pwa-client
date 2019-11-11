@@ -90,8 +90,7 @@ Logged.muiName = 'IconMenu';
 const SubMenus = (props) => {
   const { items = [], history, user, api, self, classes } = props;
   return items.map((menu) => {
-    const goto = () => history.push(menu.link);
-    debugger;
+    const goto = () => history.push(menu.link);    
     return (
       <ListItem key={menu.id} onClick={goto} style={{ cursor: 'pointer' }}>
         <ListItemIcon>
@@ -117,6 +116,7 @@ const Menus = (props) => {
           let expandButton = null;
           let allow = true;
           if (isArray(menuItem.roles) && isArray(user.roles)) {
+            debugger;
             allow = api.hasRole(menuItem.roles, user.roles);
           }
           if (allow === true) {
@@ -417,7 +417,7 @@ class ApplicationHeader extends Component {
                   <Icon color="primary">rss_feed</Icon>
                 </Tooltip>
               </ListItemIcon>
-            <ListItemText primary="Refresh API Status" secondary={<span className={classes.version}>`Client: ${api.props.$version}`</span>}/>
+            <ListItemText primary="Refresh API Status" secondary={<span className={classes.version}>Client: {api.props.$version}</span>}/>
             </ListItem>
           </List>
         </Drawer>

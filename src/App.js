@@ -180,6 +180,7 @@ class App extends Component {
     let homeRouteDef = null;
     const that = this;
     
+    api.log('Configuring Routing', { auth_validated, user }, 'debug');
 
     api.getRoutes().forEach((routeDef) => {
       const routeProps = {
@@ -188,10 +189,11 @@ class App extends Component {
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (props) => {
-          api.log(`Rendering Route ${routeDef.path}`, routeDef, 'debug');
+          api.log(`Rendering Route ${routeDef.path}`, { routeDef }, 'debug');
           const componentArgs = {
             $route: props.match
-          }
+          };
+          
           if (isArray(routeDef.args)) {
             routeDef.args.forEach((arg) => {
               componentArgs[arg.key] = arg.value[arg.key];
