@@ -90,7 +90,7 @@ Logged.muiName = 'IconMenu';
 const SubMenus = (props) => {
   const { items = [], history, user, api, self, classes } = props;
   return items.map((menu) => {
-    const goto = () => history.push(menu.link);    
+    const goto = () => history.push(menu.link);
     return (
       <ListItem key={menu.id} onClick={goto} style={{ cursor: 'pointer' }}>
         <ListItemIcon>
@@ -116,7 +116,6 @@ const Menus = (props) => {
           let expandButton = null;
           let allow = true;
           if (isArray(menuItem.roles) && isArray(user.roles)) {
-            debugger;
             allow = api.hasRole(menuItem.roles, user.roles);
           }
           if (allow === true) {
@@ -124,8 +123,8 @@ const Menus = (props) => {
               self.navigateTo(menuItem.link, true);
             };
 
-            if (isArray(menuItem.items) === true && menuItem.items.length > 0) {     
-              const isExpanded = self.state.expanded[menuItem.id] && self.state.expanded[menuItem.id].value === true;         
+            if (isArray(menuItem.items) === true && menuItem.items.length > 0) {
+              const isExpanded = self.state.expanded[menuItem.id] && self.state.expanded[menuItem.id].value === true;
               subnav = (
                 <Collapse in={isExpanded === true} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
@@ -133,7 +132,7 @@ const Menus = (props) => {
                       const submenuGoto = () => {
                         self.navigateTo(submenu.link, true);
                       };
-                      
+
                       return (
                         <ListItem key={submenu.id} button onClick={submenuGoto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
                           <ListItemIcon>
@@ -151,10 +150,10 @@ const Menus = (props) => {
                 </Collapse>
               );
 
-              const toggleMenu = (e) => {                
+              const toggleMenu = (e) => {
                 let currentToggle = self.state.expanded[menuItem.id];
                 if(!currentToggle) currentToggle = { value: false };
-                
+
                 currentToggle.value = !currentToggle.value;
                 const _state = {...self.state};
                 _state.expanded[menuItem.id] = currentToggle;
@@ -173,13 +172,13 @@ const Menus = (props) => {
               <ListItem key={menuItem.id} onClick={goto} button>
                 <ListItemIcon>
                   <Icon color="primary">{menuItem.icon}</Icon>
-                </ListItemIcon>                
+                </ListItemIcon>
                 {menuItem.title}
                 {expandButton ? <ListItemSecondaryAction>
                   {expandButton}
                 </ListItemSecondaryAction> : null}
               </ListItem>);
-            
+
             if(subnav) {
               menuItems.push(subnav);
             }
@@ -397,7 +396,7 @@ class ApplicationHeader extends Component {
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <BackIcon />
             </IconButton>
-            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />          
+            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />
           </div>
           <Divider />
           <Typography variant="subtitle1" color="secondary"
@@ -407,7 +406,7 @@ class ApplicationHeader extends Component {
               <Avatar src={getAvatar(user)}
                 className={this.props.classes.loggedInUserAvatar}
               />
-            </Link>}            
+            </Link>}
           <Divider />
           <List className={this.props.classes.menuItems}>
             <Menus {...{ menus: menus, history: this.props.history, user, api, self, classes }} />
