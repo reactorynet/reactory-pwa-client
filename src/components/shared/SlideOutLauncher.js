@@ -12,6 +12,7 @@ class SlideOutLauncher extends Component {
   // buttonVariant - Static | SpeedDial
 
   // Click Actions:
+  // Launch
   // Navigate
   // Emit
   // MountComponent
@@ -38,10 +39,18 @@ class SlideOutLauncher extends Component {
 
   render() {
 
-    const { api, formData, uiSchema, componentFqn, buttonTitle, windowTitle, buttonVariant, componentProps, actions } = this.props;
+    const {
+      api,
+      formData,
+      uiSchema,
+      componentFqn,
+      buttonTitle,
+      windowTitle,
+      buttonVariant,
+      componentProps,
+      actions
+    } = this.props;
     const { onClick } = this;
-
-
 
     let icon = 'search';
 
@@ -76,13 +85,15 @@ class SlideOutLauncher extends Component {
     //   }];
 
     if (_buttonVariant === 'SpeedDial') {
-      
-      actions.forEach(( action ) => { 
+
+      actions.forEach((action) => {
         action.icon = (<Icon>{action.icon}</Icon>);
         action.clickHandler = () => {
-          debugger;
-          if(action.clickAction && action.clickAction === 'navigate') {
+          if (action.clickAction && action.clickAction === 'navigate') {
             api.goto(action.link);
+          }
+          else if (action.clickAction && action.clickAction === 'launch-slideout') {
+            this.onClick();
           }
         }
       });
