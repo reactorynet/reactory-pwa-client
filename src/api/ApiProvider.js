@@ -254,7 +254,6 @@ export class ReactoryApi extends EventEmitter {
     }
 
     goto(where = "/", state = { __t: new Date().valueOf() }){
-        debugger;
         if(this.history && this.history) {
             this.history.replace({ pathname: where, state });
             this.emit(ReactoryApiEventNames.onRouteChanged, {where, state});
