@@ -80,7 +80,6 @@ class SlideOutLauncher extends Component {
       actions.forEach(( action ) => { 
         action.icon = (<Icon>{action.icon}</Icon>);
         action.clickHandler = () => {
-          debugger;
           if(action.clickAction && action.clickAction === 'navigate') {
             api.goto(action.link);
           }

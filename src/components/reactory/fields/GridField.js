@@ -59,7 +59,6 @@ export class BootstrapGridField extends ObjectField {
     const title = (schema.title === undefined) ? '' : schema.title
 
     const layout = uiSchema['ui:grid-layout']
-
     return (
       <fieldset>
         {title ? <TitleField
@@ -74,6 +73,7 @@ export class BootstrapGridField extends ObjectField {
             formContext={formContext}/> : null}
         {
           layout.map((row, index) => {
+            
             return (
               <div className="row" key={index}>
                 {
@@ -161,6 +161,14 @@ class MaterialGridField extends ObjectField {
     const title = (schema.title === undefined) ? '' : schema.title
 
     const layout = uiSchema['ui:grid-layout']
+    let gridOptions = {
+      spacing: 8
+    };
+
+    if(uiSchema['ui:grid-options']) {
+      gridOptions = uiSchema['ui:grid-options'];
+
+    }
 
     return (
       <Paper className={classes.root}>
@@ -177,14 +185,14 @@ class MaterialGridField extends ObjectField {
         {
           layout.map((row, index) => {
             return (
-              <Grid container spacing={8} key={index}>
+              <Grid container spacing={gridOptions.spacing} key={index}>
                 {
                   Object.keys(row).map((name, index) => {
                     const { doShow, ...rowProps } = row[name]
                     let style = {}
                     if (doShow && !doShow({ formData })) {
                       style = { display: 'none' }
-                    }                    
+                    } 
                     if (schema.properties[name]) {                      
                       return (
                           <Grid {...rowProps} item key={index} style={style}>
@@ -212,7 +220,7 @@ class MaterialGridField extends ObjectField {
                       }
 
                       return (
-                            <Grid {...rowProps} key={index} style={style}>
+                            <Grid {...rowProps} item key={index} style={style}>
                               <UIComponent
                                 name={name}
                                 formData={formData}

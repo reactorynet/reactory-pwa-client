@@ -1,21 +1,17 @@
-import React, { Fragment, Component } from 'react'
-import PropTypes from 'prop-types'
-import { pullAt, find } from 'lodash'
+import React, { Fragment, Component } from 'react';
+import PropTypes from 'prop-types';
+import { pullAt, find } from 'lodash';
 import {
-  Chip,
-  IconButton,
   Icon,
   FormControl,
   InputLabel,
   Input,
   MenuItem,
-  Typography,
-  Tooltip,
   Select,
   FormHelperText,
 } from '@material-ui/core';
 
-import { compose } from 'redux'
+import { compose } from 'recompose';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 
 class SelectWidget extends Component {
@@ -51,6 +47,16 @@ class SelectWidget extends Component {
     const self = this
     let elements = null
 
+    let allowNull = true;
+    const { 
+      schema, 
+      errorSchema,
+      uiSchema, 
+      formData, 
+      required 
+    } = this.props;
+
+
     if(this.props.uiSchema['ui:options'] && this.props.uiSchema['ui:options'].selectOptions){
       elements = this.props.uiSchema['ui:options'].selectOptions.map((option, index) => (
         <MenuItem key={option.key || index} value={option.value}>
@@ -70,6 +76,8 @@ class SelectWidget extends Component {
       this.props.onChange(evt.target.value)
     }
 
+    
+
     return (
       <FormControl className={this.props.classes.formControl}>
           <InputLabel htmlFor={self.props.idSchema.$id}>{self.props.schema.title}</InputLabel>
@@ -79,11 +87,12 @@ class SelectWidget extends Component {
             name={self.props.name}
             renderValue={value => `${matchOption(value).label}`}
             input={<Input id={self.props.idSchema.$id} value={self.props.formData || ""}/>}>
-            <MenuItem value="">
+            { required === false ? <MenuItem value="">
               <em>None</em>
-            </MenuItem>
+            </MenuItem> : null }
             { elements }
           </Select>
+          <FormHelperText>{schema.description}</FormHelperText>
         </FormControl>
     )
   }

@@ -116,7 +116,6 @@ const Menus = (props) => {
           let expandButton = null;
           let allow = true;
           if (isArray(menuItem.roles) && isArray(user.roles)) {
-            debugger;
             allow = api.hasRole(menuItem.roles, user.roles);
           }
           if (allow === true) {
@@ -226,7 +225,8 @@ class ApplicationHeader extends Component {
       'core.SystemStatus',
       'core.FullScreenModal',
       'core.Loading',
-      'forms.HelpListForm']);
+      'forms.HelpListForm'
+    ]);
     this.statusRefresh = this.statusRefresh.bind(this);
     this.doSearch = this.doSearch.bind(this);
     this.renderHelpInterface = this.renderHelpInterface.bind(this);

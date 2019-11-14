@@ -460,16 +460,20 @@ class Inbox extends Component {
         <Grid container>          
           <Grid {...listProps}>
             <List>
-              {this.props.messages.map((message, index) => (
-              <ListItem onClick={() => (this.onItemSelect(index))} dense button key={index}>
-                <Avatar>{message.from.substring(0,1).toUpperCase()}</Avatar>
-                <ListItemText primary={`${message.from} ${moment(message.sentAt || message.sendAfter).format('DD MMM YY')}`} secondary={message.subject}/>
-                <div>
-                  <IconButton>
-                    <Icon>delete</Icon>
-                  </IconButton>                                    
-                </div>
-              </ListItem>))}
+              {this.props.messages.map((message, index) => {
+                if(message && message.from) {
+                  return (
+                    <ListItem onClick={() => (this.onItemSelect(index))} dense button key={index}>
+                      <Avatar>{message.from.substring(0,1).toUpperCase()}</Avatar>
+                      <ListItemText primary={`${message.from} ${moment(message.sentAt || message.sendAfter).format('DD MMM YY')}`} secondary={message.subject}/>
+                      <div>
+                        <IconButton>
+                          <Icon>delete</Icon>
+                        </IconButton>                                    
+                      </div>
+                    </ListItem>)}
+                }
+              )}
             </List>
           </Grid>
           {viewPane}
