@@ -220,7 +220,9 @@ class ApplicationHeader extends Component {
     this.actionsClicked = this.actionsClicked.bind(this);
     this.adminClicked = this.adminClicked.bind(this);
     this.onLoginEvent = this.onLoginEvent.bind(this);
+    this.onRouteChanged = this.onRouteChanged.bind(this);
     props.api.on(ReactoryApiEventNames.onLogin, this.onLoginEvent);
+    props.api.on(ReactoryApiEventNames.onRouteChanged, this.onRouteChanged)
     this.componentDefs = this.props.api.getComponents([
       'core.SystemStatus',
       'core.FullScreenModal',
@@ -230,10 +232,17 @@ class ApplicationHeader extends Component {
     this.statusRefresh = this.statusRefresh.bind(this);
     this.doSearch = this.doSearch.bind(this);
     this.renderHelpInterface = this.renderHelpInterface.bind(this);
+    
   }
 
   componentDidMount() {
 
+  }
+
+  onRouteChanged(props) {
+   this.props.api.log('ApiPath changed, handle in header app', props);
+   const { actionData, path } = props;
+   this.navigateTo(path); 
   }
 
   onLoginEvent = (evt) => this.forceUpdate();

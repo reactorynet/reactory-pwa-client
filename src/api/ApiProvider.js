@@ -37,6 +37,7 @@ import {
     injectResources,
 } from '../components/util';
 import amq from '../amq';
+import { width } from "@material-ui/system";
 const { queries, mutations } = graphApi
 
 const pluginDefinitionValid = (definition) => {
@@ -247,11 +248,12 @@ export class ReactoryApi extends EventEmitter {
         });
 
         this.flushIntervalTimer = setInterval(this.flushstats.bind(this, true), 5000);
-        // this.statusIntervalTime = setInterval(this.status.bind(this), 30000);
+        // this.statusIntervalTime = setInterval(this.status.bind(this), 30000);        
         this.status();
         this.__REACTORYAPI = true;
         this.goto = this.goto.bind(this);
-    }
+
+    }    
 
     goto(where = "/", state = { __t: new Date().valueOf() }){
         if(this.history && this.history) {

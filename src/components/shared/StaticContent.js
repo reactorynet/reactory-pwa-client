@@ -14,13 +14,15 @@ class StaticContent extends Component {
     super(props, context);
     this.state = {
       content: {
-        title: 'loading...',
-        content: 'loading...',
+        title: `Loading`,
+        content: 'Loading',
         createdBy: {
           id: null,
-          fullName: 'loading...',
+          fullName: 'Loading',
         },
-        createdAt: moment()
+        createdAt: moment(),
+        topics: [],
+        published: false,
       }
     }
   }
@@ -43,6 +45,8 @@ class StaticContent extends Component {
         slug
         title
         content
+        topics
+        published
         createdBy {
           id
           fullName
@@ -53,6 +57,8 @@ class StaticContent extends Component {
     `, { slug: this.props.slug }).then((result) => {
       if(result.data && result.data.ReactoryGetContentBySlug) {
         that.setState({ content: result.data.ReactoryGetContentBySlug });
+      } else {
+        that.setState({ content: { content: `Content for content: "${this.props.slug}" does not exists, please create it.`, title: "Not Found" } });
       }
     }).catch((err) => {
       that.setState({ content: {

@@ -1,6 +1,6 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { IconButton, Toolbar, Icon, Typography } from '@material-ui/core';
+import { AppBar, IconButton, Toolbar, Icon, Typography } from '@material-ui/core';
 import { isArray } from 'lodash';
 import { compose } from 'recompose';
 import { withTheme } from '@material-ui/styles';
@@ -28,7 +28,9 @@ class FramedWindow extends Component {
     data: PropTypes.object,
     api: PropTypes.instanceOf(ReactoryApi).isRequired,
     sendApi: PropTypes.bool,
-    messageHandlers: PropTypes.array    
+    messageHandlers: PropTypes.array,
+    header: PropTypes.element,
+    footer: PropTypes.element
   };
 
   static defaultProps = {
@@ -199,11 +201,13 @@ class FramedWindow extends Component {
       //}, 1500); 
       return (
         <div { ..._cprops } >
+            {this.props.header}
             <iframe id={frameid} { ...frameprops } ref={ frame => this.targetWindow = frame } />
             <form action={_fprops.url} method="post" target={frameid}>
               <input type="hidden" name="data" id="data" value={JSON.stringify(data)}/>
               <input type="submit" value="submit" />
             </form>
+            {this.props.footer}
         </div>
       )
     } else {
@@ -345,7 +349,19 @@ class ReportViewer extends Component {
     };
   
     reportWindowProps.url = `${api.API_ROOT}/pdf/${folder}/${report}?${api.utils.queryString.stringify(queryparams)}`;
-    return (<FramedWindowComponent id={`reactory-report-window`} frameProps={{ ...reportWindowProps }} method={method} />)
+
+    const toolbar = (
+      <AppBar>
+        <Toolbar>
+          <IconButton>
+            <Icon>refresh</Icon>
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+      
+    );
+
+    return (<FramedWindowComponent id={`reactory-report-window`} frameProps={{ ...reportWindowProps }} method={method} header={toolbar} />)
   }
 
   getDownloadViewResult(){

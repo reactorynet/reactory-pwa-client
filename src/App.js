@@ -131,7 +131,7 @@ class App extends Component {
     this.onLogout = this.onLogout.bind(this);
     this.onLogin = this.onLogin.bind(this);
     this.onApiStatusUpdate = this.onApiStatusUpdate.bind(this);
-    this.onRouteChanged = this.onRouteChanged.bind(this);
+    this.onRouteChanged = this.onRouteChanged.bind(this);    
     this.configureRouting = this.configureRouting.bind(this);
     api.on(ReactoryApiEventNames.onLogout, this.onLogout)
     api.on(ReactoryApiEventNames.onLogin, this.onLogin)
@@ -141,12 +141,12 @@ class App extends Component {
       'core.Loading@1.0.0', 
       'core.Login@1.0.0', 
       'core.FullScreenModal@1.0.0'
-    ]);    
+    ]);         
   }
 
   onRouteChanged(path, state){
     api.log(`onRouteChange Handler`, { path, state }, 'debug');
-    this.setState({ currentRoute: path }, this.configureRouting);
+    this.setState({ currentRoute: path }, this.configureRouting);    
   }
     
   onLogin() {
@@ -245,6 +245,26 @@ class App extends Component {
         that.setState({ auth_validated: false, validationError })
       });
     }
+
+    window.addEventListener('resize', ()=>{
+      const { 
+          innerHeight,
+          outerHeight,
+          innerWidth,
+          outerWidth,            
+      } = window;
+
+      let view = 'landscape';
+      let size = 'lg';
+      if(window.innerHeight > window.innerWidth) {
+          view = 'portrait';
+      }
+
+      if(innerWidth >= 2560) size = 'lg',
+      
+      api.log('Window resize', { innerHeight, innerWidth, outerHeight, outerWidth, size, view });
+      api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
+    });
   }
 
   render() {
@@ -284,31 +304,29 @@ class App extends Component {
     const routes = this.configureRouting();
                 
     return (
-      <React.Fragment>        
-        <CssBaseline />        
-        <Router>
-          <Provider store={store}>
-            <ApolloProvider client={client}>
-              <ApiProvider api={api}>
-                <ThemeProvider theme={muiTheme}>
-                  <MuiPickersUtilsProvider utils={MomentUtils}>
-                    <React.Fragment>
-                      <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
-                      <div style={{ marginTop: '80px', paddingLeft: '4px', paddingRight: '4px', marginBottom: '4px' }}>                                        
-                        { auth_validated === true && routes.length > 0 ? 
-                            routes : 
-                            <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
-                      </div>
-                      
-                    </React.Fragment>
-                  </MuiPickersUtilsProvider>                  
-                  
-                </ThemeProvider>
-              </ApiProvider>
-            </ApolloProvider>
-          </Provider>
-        </Router>
-      </React.Fragment>
+      <Router ref={this.router}>
+        <React.Fragment>        
+          <CssBaseline />                
+            <Provider store={store}>
+              <ApolloProvider client={client}>
+                <ApiProvider api={api}>
+                  <ThemeProvider theme={muiTheme}>
+                    <MuiPickersUtilsProvider utils={MomentUtils}>
+                      <React.Fragment>
+                        <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
+                        <div style={{ marginTop: '80px', paddingLeft: '4px', paddingRight: '4px', marginBottom: '4px' }}>                                        
+                          { auth_validated === true && routes.length > 0 ? 
+                              routes : 
+                              <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
+                        </div>                      
+                      </React.Fragment>
+                    </MuiPickersUtilsProvider>                                    
+                  </ThemeProvider>
+                </ApiProvider>
+              </ApolloProvider>
+            </Provider>        
+        </React.Fragment>
+      </Router>
     );
   }
 }
