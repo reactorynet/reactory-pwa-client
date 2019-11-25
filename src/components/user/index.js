@@ -547,7 +547,7 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
                     return (
                       <ListItem selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf  } dense button key={uid}>
                         <Avatar alt={displayText} src={getAvatar(user)} onClick={ raiseUserSelected } />
-                        <ListItemText primary={ user.__isnew ? 'NEW' : displayText} onClick={ raiseUserSelected } secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
+                        <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
                         { multiSelect === true ? 
                         <Checkbox
                           checked={isSelected}

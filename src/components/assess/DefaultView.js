@@ -401,23 +401,46 @@ class DefaultView extends Component {
     console.error('error defaultview', e);
   }
 
+  is180(survey) {
+    if(survey && survey.surveyType === '180') return true;
+
+    return false;
+  }
+
   welcomeScreen() {
     const { classes, assessment, theme, api } = this.props;
     const { nextStep, prevStep } = this;
+    const { survey } = assessment;
 
+    const is180 = this.is180(survey);
 
-    return (
-      <Paper className={classes.welcomeContainer}>
-        <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
-          5 - 7 minutes.<br />
-          You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
-        </Typography>
-        <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <img src={theme.assets.logo} className={classes.logo} alt={theme} />
-        </div>
-      </Paper>
-    )
+    if(!is180) {
+      return (
+        <Paper className={classes.welcomeContainer}>
+          <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
+            5 - 7 minutes.<br />
+            You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
+          </Typography>
+          <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <img src={theme.assets.logo} className={classes.logo} alt={theme} />
+          </div>
+        </Paper>  
+      )
+    } else {
+      return (
+        <Paper className={classes.welcomeContainer}>
+          <Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
+            5 - 7 minutes.<br />
+            You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
+          </Typography>
+          <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <img src={theme.assets.logo} className={classes.logo} alt={theme} />
+          </div>
+        </Paper>  
+      )
+    }    
   }
 
   thankYouScreen() {
@@ -592,6 +615,19 @@ class DefaultView extends Component {
     }, -1);    
   }
 
+  getDelegateTeamList(){
+    const { FullScreenModal, StaticContent } = this.componentDefs;
+    const closeDelegateTeamList = () => {
+      this.setState({ showTeamMembers: !this.state.showTeamMembers })
+    };
+
+    return (
+      <FullScreenModal open={this.state.showTeamMembers === true} onClose={closeDelegateTeamList} title={"Team Details"}>
+        <StaticContent slug={`towerstone-team-members-${this.props.assessment.survey.id}`}/>        
+      </FullScreenModal> 
+    );
+  }
+
   ratingScreen() {
     const that = this;
     const { classes } = this.props;
@@ -669,15 +705,20 @@ class DefaultView extends Component {
       
     };
 
-    const onClearCustomText = evt => that.setState({ newBehaviourText: '' });
+    const toggleShowTeam = () => {
+      that.setState({ showTeamMembers: !that.state.showTeamMembers })
+    }
 
+    const onClearCustomText = evt => that.setState({ newBehaviourText: '' });
+    
     return (
       <Grid container spacing={8}>
         <Grid item sm={12} xs={12}>
-          <Typography variant="caption" color="primary">System Defined Behaviours for {quality.title}</Typography>
-          {behaviours}
-          
-          {customBehaviours.length > 0 ? 
+          <Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed</Typography>
+          { this.is180(assessment.survey) === true ? <Typography variant="caption" color="primary"><i>&nbsp;** Please provide ratings in context of the entire team <IconButton onClick={toggleShowTeam}><Icon>supervised_user_circle</Icon></IconButton>.</i></Typography> : null }
+          { this.is180(assessment.survey) === true ? this.getDelegateTeamList() : null }
+          { behaviours }          
+          { customBehaviours.length > 0 ? 
             <Fragment>
               <hr style={{  marginBottom: `${this.props.theme.spacing(1)}px`, 
                           marginTop: `${this.props.theme.spacing(1)}px` }} />
@@ -775,7 +816,7 @@ class DefaultView extends Component {
       this.props.history.push('/survey')
     };
 
-    const viewReport = () => this.props.history.push(`/report/${assessment._id}`)
+    const viewReport = () => this.props.history.push(`/report/${assessment._id}`)    
 
     const options = (props) => (
       <Menu
@@ -839,6 +880,13 @@ class DefaultView extends Component {
 
     const daysLeft = moment(survey.endDate).diff(moment(), 'days');
 
+    const is180 = this.is180(survey);
+    
+    let headerTitle = assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.surveyType} ${survey.title} ${selfAssessment === true ? ' [Self Assessment]' : ''}` : `Unknown`;
+    if(is180  === true) {
+      headerTitle = `Team assessment ${survey.delegateTeamName}${survey.delegateTeamName === assessment.team ? '[Self Assessment]' : ` assessing as team ${survey.assessorTeamName}`}`;
+    }
+
     return (
       <Grid container spacing={1} className={classes.card}>
         <Grid item xs={12} sm={12}>
@@ -846,11 +894,10 @@ class DefaultView extends Component {
             <Grid container spacing={8}>
               <Grid item xs={12} sm={12}>
                 <CardHeader
-                  avatar={<Badge color={"primary"} 
-                                badgeContent={ assessment.overdue === true ? "!" : assessment.complete === true ? 'C' : `${daysLeft}` }>
+                  avatar={<Badge color={"primary"} badgeContent={ assessment.overdue === true ? "!" : assessment.complete === true ? 'C' : `${daysLeft}` }>
                             <Avatar src={api.getAvatar(delegate)} className={classNames(classes.delegateAvatar)} alt={assessment.delegateTitle}></Avatar>
                           </Badge>}
-                  title={assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.surveyType} ${survey.title} ${selfAssessment === true ? ' [Self Assessment]' : ''}` : `Unknown`}
+                  title={headerTitle}
                   subheader={`Survey valid from ${moment(survey.startDate).format('DD MMMM YYYY')} till ${moment(survey.endDate).format('DD MMMM YYYY')} - ${assessment.complete === true ? 'Completed - Review Only' : 'In progress'}`}
                   action={
                     <IconButton
@@ -920,7 +967,9 @@ class DefaultView extends Component {
       valid: true,
       step: 0,
       assessment: props.assessment,
-      showMenu: false
+      showMenu: false,
+      showTeamMembers: false,
+      showHelp: false      
     };
     this.welcomeScreen = this.welcomeScreen.bind(this);
     this.thankYouScreen = this.thankYouScreen.bind(this);
@@ -937,6 +986,13 @@ class DefaultView extends Component {
     this.onNewBehaviour = this.onNewBehaviour.bind(this);
     this.persistRating = this.persistRating.bind(this);
     this.currentStepValid = this.currentStepValid.bind(this);
+    this.getDelegateTeamList = this.getDelegateTeamList.bind(this);
+    this.componentDefs = this.props.api.getComponents([
+      'core.Loading',
+      'core.Logo',
+      'core.FullScreenModal',
+      'core.StaticContent'
+    ]);
   }
 };
 

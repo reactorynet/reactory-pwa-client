@@ -126,9 +126,6 @@ class SurveyDelegates extends Component {
       'core.ReportViewer'
     ]);
     this.getSecondaryAction = this.getSecondaryAction.bind(this)
-    this.sendInviteEmails = this.sendInviteEmails.bind(this)
-    this.launchSurvey = this.launchSurvey.bind(this)
-    this.stopSurvey = this.stopSurvey.bind(this)
     this.generateReport = this.generateReport.bind(this)
     this.getDetailView = this.getDetailView.bind(this)
     this.getActiveModalView = this.getActiveModalView.bind(this)
@@ -136,11 +133,12 @@ class SurveyDelegates extends Component {
     this.enabledDelegateForSurvey = this.enabledDelegateForSurvey.bind(this)
     this.sendCommunicationToDelegate = this.sendCommunicationToDelegate.bind(this)
     this.launchSurveyForDelegate = this.launchSurveyForDelegate.bind(this)
-    this.removeDelegateFromSurvey = this.removeDelegateFromSurvey.bind(this)
-    this.getBasicModalView = this.getBasicModalView.bind(this)
-    this.getSurveyType = this.getSurveyType.bind(this)
-    this.removeAssessorForDelegate = this.removeAssessorForDelegate.bind(this)
-    this.doAction = this.doAction.bind(this)
+    this.removeDelegateFromSurvey = this.removeDelegateFromSurvey.bind(this);
+    this.getBasicModalView = this.getBasicModalView.bind(this);
+    this.getSurveyType = this.getSurveyType.bind(this);
+    this.removeAssessorForDelegate = this.removeAssessorForDelegate.bind(this);
+    this.doAction = this.doAction.bind(this);
+    this.addAssessorClicked = this.addAssessorClicked.bind(this);
   }
 
   componentDidCatch(error, info){
@@ -239,21 +237,8 @@ class SurveyDelegates extends Component {
     return (<DropDownMenu menus={menus} onSelect={onMenuItemSelect} />)    
   }
 
-  sendInviteEmails(delegateEntry){
-    //console.log('Send Invite Emails', delegateEntry);    
-  }
 
-  launchSurvey(delegateEntry){
-    //console.log('Launch Survey', delegateEntry);
-  }
 
-  stopSurvey(delegateEntry){
-    //console.log('Stop Survey', delegateEntry);
-  }
-
-  addDelegate(delegateEntry){
-    //console.log('Show Delegate Add', delegateEntry);
-  }
 
   generateReport(reportType = 'survey-status-delegates'){
     console.log('Generate Report');
@@ -397,7 +382,7 @@ class SurveyDelegates extends Component {
 
   getActiveModalView(){
     const { FullScreenModal, UserListWithSearch } = this.componentDefs;
-    const { activeEntry, modal, modalType, formData, basicModalViewMode } = this.state;    
+    const { activeEntry, modal, modalType, formData, basicModalViewMode, userAddType } = this.state;    
     const { formContext, onChange, api } = this.props;
     const self = this;
     
@@ -409,7 +394,8 @@ class SurveyDelegates extends Component {
 
     const userSelected = (userToAdd ) => {
       //console.log('Add user to delegates', { userToAdd, p: this.props });
-      self.doAction({ id: "", delegate: userToAdd }, "add"); 
+
+      self.doAction({ id: "", delegate: userToAdd}, "add", { userAddType: userAddType }); 
     };
 
     let component = null;
@@ -437,7 +423,13 @@ class SurveyDelegates extends Component {
             businessUnitFilter={false}
             showFilters={false} />)
 
-        modalTitle  = 'Select Delegates For Survey'
+        if(userAddType === 'delegate') {
+          modalTitle  = 'Select Delegates For Survey'
+        } else {
+          modalTitle  = 'Select Assessors For Survey'
+        }
+
+        
         break;
       }
       case 'basic' : {
@@ -470,7 +462,11 @@ class SurveyDelegates extends Component {
   }
 
   addDelegateClicked(){
-    this.setState({ modal: true, modalType: 'add' })
+    this.setState({ modal: true, modalType: 'add', userAddType: 'delegate' })
+  }
+
+  addAssessorClicked(){
+    this.setState({ modal: true, modalType: 'add', userAddType: 'assessor' })
   }
 
   doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...', batch = false){
@@ -489,6 +485,7 @@ class SurveyDelegates extends Component {
             email
             avatar 
           }
+          team
           peers {
             id
           }        
@@ -528,7 +525,7 @@ class SurveyDelegates extends Component {
         });
         
         Promise.all(promises).then(( promiseResults ) => {
-          console.log("Promises returned", promiseResults);
+          api.log("Promises returned", promiseResults, 'debug');
           self.setState({ displayError: false, message: '', busy: false }, () => {
             if(self.props.formContext && isFunction(self.props.formContext.refresh) === true){
               self.props.formContext.refresh();
@@ -724,7 +721,71 @@ class SurveyDelegates extends Component {
       const is360 = surveyType === '360';
       const isPLC = surveyType === 'plc';
 
+      const selectedDelegates = filter(data, (delegateEntry) => { return self.state.selected.hasOwnProperty(delegateEntry.delegate.id) === true });
+
       let statusList = [];
+      let speedDialActions = [
+        {
+          key: 'add-new-delegate',
+          title: 'Add Delegate',
+          clickHandler: (evt)=>{
+            this.addDelegateClicked();
+          },
+          icon: <Icon>group_add</Icon>,
+          enabled: true,
+          ordinal: 0,
+        },        
+        {
+          key: 'send-invites',
+          title: 'Send Invites',
+          clickHandler: evt => {
+            self.doAction(selectedDelegates, "send-invite", null ,`Sending invitations for ${selectedDelegates.length} delegates, please wait`, true);
+          },
+          icon: <Icon>email</Icon>,
+          enabled: selectedDelegates.length > 0,
+          ordinal: 1,
+        },
+        {
+          key: 'launch',
+          title: 'Launch for delegates',
+          clickHandler: evt => {
+            self.doAction(selectedDelegates, "launch", null ,`Launching for ${selectedDelegates.length} delegates, please wait`, true);
+          },
+          icon: <Icon>flight_takeoff</Icon>,
+          enabled: selectedDelegates.length > 0,
+          ordinal: 2,
+        },
+        {
+          key: 'send-reminder',
+          title: 'Send reminders',
+          clickHandler: evt => {
+            self.doAction(selectedDelegates, "send-reminder", null ,`Sending Reminders for ${selectedDelegates.length} delegates, please wait`, true);
+          },
+          icon: <Icon>alarm</Icon>,
+          enabled: selectedDelegates.length > 0,
+          ordinal: 3,
+        },
+        {
+          key: 'close',
+          title: 'Close for delegates',
+          clickHandler: evt => {
+            self.doAction(selectedDelegates, "close", null ,`Closing survey for ${selectedDelegates.length} delegates, please wait`, true);
+          },
+          icon: <Icon>close</Icon>,
+          enabled: selectedDelegates.length > 0,
+          ordinal: 4,
+        },       
+        {
+          key: 'status-report',
+          title: 'Status Report',
+          clickHandler: evt => {
+            self.generateReport();
+          },
+          icon: <Icon>print</Icon>,
+          enabled: true,
+          ordinal: 5,
+        },
+      ];
 
       if(is360 === true || isPLC === true) {
         statusList = [{
@@ -756,18 +817,18 @@ class SurveyDelegates extends Component {
           key: 'removed',
           title: 'Removed / Disabled for Survey',
           icon: 'delete_outline'
-        }];
+        }];       
       }
 
       if(is180 === true) {        
         statusList = [
           {
-            key: 'new',
+            key: 'new-delegate',
             title: `Added to ${formContext.formData.delegateTeamName || 'Delegates'}`,
             icon: 'new_releases',          
           },
           {
-            key: 'new',
+            key: 'new-assessor',
             title: `Added to ${formContext.formData.assessorTeamName || 'Assessors'}`,
             icon: 'new_releases',          
           },
@@ -777,12 +838,12 @@ class SurveyDelegates extends Component {
             icon: 'email',          
           },
           {
-            key: 'launched',
+            key: 'launched-assessor',
             title: `Launched for ${formContext.formData.delegateTeamName || 'Assessors'}`,
             icon: 'flight_takeoff'
           },
           {
-            key: 'launched',
+            key: 'launched-delegate',
             title: `Launched for ${formContext.formData.assessorTeamName || 'Assessors'}`,
             icon: 'flight_takeoff'
           },          
@@ -792,10 +853,19 @@ class SurveyDelegates extends Component {
             icon: 'delete_outline'
           }
         ];
-      }
 
-      
-        
+        speedDialActions.push( {
+          key: 'add-new-assessor',
+          title: 'Add Assessor',
+          clickHandler: (evt)=>{
+            this.addAssessorClicked();
+          },
+          icon: <Icon>group_add</Icon>,
+          enabled: true,
+          ordinal: -1,
+        });
+
+      }              
 
       const renderDelegateItem = (delegateEntry, status) => {
         
@@ -885,9 +955,7 @@ class SurveyDelegates extends Component {
              />
         );
       }
-
       
-
       const list = (        
         <List subheader={ <li /> }>                    
           {
@@ -941,88 +1009,7 @@ class SurveyDelegates extends Component {
           }
         </List>
       )
-
-      const selectedDelegates = filter(data, (delegateEntry) => { return self.state.selected.hasOwnProperty(delegateEntry.delegate.id) === true });
-      const speedDialActions = [
-        {
-          key: 'add-new-delegate',
-          title: 'Add Delegate',
-          clickHandler: (evt)=>{
-            this.addDelegateClicked();
-          },
-          icon: <Icon>group_add</Icon>,
-          enabled: true,
-          ordinal: 0,
-        },        
-        {
-          key: 'send-invites',
-          title: 'Send Invites',
-          clickHandler: evt => {
-            //console.log('Send invites to all new charnas');
-            self.doAction(selectedDelegates, "send-invite", null ,`Sending invitations for ${selectedDelegates.length} delegates, please wait`, true);
-          },
-          icon: <Icon>email</Icon>,
-          enabled: selectedDelegates.length > 0,
-          ordinal: 1,
-        },
-        {
-          key: 'launch',
-          title: 'Launch for delegates',
-          clickHandler: evt => {
-            //console.log('Launch for selected charnas');
-            self.doAction(selectedDelegates, "launch", null ,`Launching for ${selectedDelegates.length} delegates, please wait`, true);
-          },
-          icon: <Icon>flight_takeoff</Icon>,
-          enabled: selectedDelegates.length > 0,
-          ordinal: 2,
-        },
-        {
-          key: 'send-reminder',
-          title: 'Send reminders',
-          clickHandler: evt => {
-            console.log('Send reminder to selected users');
-            self.doAction(selectedDelegates, "send-reminder", null ,`Sending Reminders for ${selectedDelegates.length} delegates, please wait`, true);
-          },
-          icon: <Icon>alarm</Icon>,
-          enabled: selectedDelegates.length > 0,
-          ordinal: 3,
-        },
-        {
-          key: 'close',
-          title: 'Close for delegates',
-          clickHandler: evt => {
-            console.log('Launch for selected charnas');
-            self.doAction(selectedDelegates, "close", null ,`Closing survey for ${selectedDelegates.length} delegates, please wait`, true);
-          },
-          icon: <Icon>close</Icon>,
-          enabled: selectedDelegates.length > 0,
-          ordinal: 4,
-        },
-        /*
-        {
-          key: 'send-feedback',
-          title: 'Release feedback report',
-          clickHandler: evt => {
-            self.doAction(selectedDelegates, "report", null ,`Releasing reports for ${selectedDelegates.length} delegates, please wait`, true);
-          },
-          icon: <Icon>assignment_turned_in</Icon>,
-          enabled: selectedDelegates.length > 0,
-        },
-        */
-        {
-          key: 'status-report',
-          title: 'Status Report',
-          clickHandler: evt => {
-            self.generateReport();
-          },
-          icon: <Icon>print</Icon>,
-          enabled: true,
-          ordinal: 5,
-        },
-      ];
-
-
-
+         
       return (
         <Paper className={this.props.classes.root}>
           {list}

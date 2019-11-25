@@ -444,6 +444,7 @@ query assesmentWithId($id: String) {
     complete
     selfAssessment
     overdue
+    team
 		assessor {
 			id
 			username
@@ -465,6 +466,19 @@ query assesmentWithId($id: String) {
 			endDate
       surveyType
       status
+      delegateTeamName
+      assessorTeamName
+      delegates {
+        id          
+        delegate {
+          id
+          email
+          firstName
+          lastName
+          avatar
+        }
+        team
+      }
 			leadershipBrand {
         id
 				title
