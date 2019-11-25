@@ -3,19 +3,17 @@ import PropTypes from 'prop-types';
 import Form from './form/components/Form';
 import EventEmitter from 'eventemitter3';
 import objectMapper from 'object-mapper';
-import { diff, addedDiff, deletedDiff, updatedDiff, detailedDiff } from 'deep-object-diff';
-import { isArray, isNil, isString, differenceWith, isEqual } from 'lodash';
+import { diff } from 'deep-object-diff';
+import { find, template, isArray, isNil, isString, isEmpty } from 'lodash';
 import { withRouter, Route, Switch } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
-import { find, template, templateSettings } from 'lodash';
 import { compose } from 'redux';
 import uuid from 'uuid';
 import Dropzone from 'react-dropzone';
-import {parse, stringify} from 'flatted/esm';
-import { Query, Mutation, ApolloConsumer } from 'react-apollo'
-import { nil } from '../util'
-import queryString from '../../query-string';
-import { withApi, ReactoryApi } from '../../api/ApiProvider'
+import { Query, Mutation } from 'react-apollo';
+import { nil } from '@reactory/client-core/components/util';
+import queryString from '@reactory/client-core/query-string';
+import { withApi, ReactoryApi } from '@reactory/client-core/api/ApiProvider';
 import {
   Button,
   ButtonGroup,
@@ -24,12 +22,12 @@ import {
   Icon,
   Input,
   Toolbar,
-} from '@material-ui/core'
+} from '@material-ui/core';
 
-import Fields from './fields'
-import * as WidgetPresets from './widgets'
-import MaterialTemplates from './templates'
-import uiSchemas from './schema/uiSchema'
+import Fields from './fields';
+import * as WidgetPresets from './widgets';
+import MaterialTemplates from './templates';
+import uiSchemas from './schema/uiSchema';
 import gql from 'graphql-tag';
 import { deepEquals } from './form/utils';
 
@@ -383,13 +381,15 @@ class ReactoryComponent extends Component {
     let showSubmit = true;
     let submitButton = null;
 
-    if(formDef.uiSchema && formDef.uiSchema['ui:options']) {      
-      if(formDef.uiSchema['ui:options'] && formDef.uiSchema['ui:options']) {
+    const formUiOptions = formDef.uiSchema['ui:options'];
+
+    if(formUiOptions) {      
+      if(formUiOptions && formUiOptions.showSubmit) {
         showSubmit = formDef.uiSchema['ui:options'].showSubmit === true;
       }
       
-      const { submitProps } = formDef.uiSchema['ui:options'];
-      if(typeof submitProps === 'object' && showSubmit === true) {
+      const { submitProps } = formUiOptions;
+      if(typeof submitProps === 'object' && showSubmit === true) {        
         const { variant = 'fab', iconAlign = 'left' } = submitProps;
         const _props = { ...submitProps };
         delete _props.variant;
@@ -417,12 +417,7 @@ class ReactoryComponent extends Component {
     }
 
     if(showSubmit === true && submitButton === null) submitButton = (<Fab type="submit" color="primary">{iconWidget}</Fab>);
-     
-    
-
-    
-
-
+             
     let uiSchemaSelector = null;
 
     if(formDef.uiSchemas){
@@ -457,7 +452,7 @@ class ReactoryComponent extends Component {
           <Toolbar>
             { uiSchemaSelector }
             { this.props.children && this.props.children.length > 0 ? this.props.children : null }
-            { showSubmit && submitButton }
+            { showSubmit === true && submitButton }
             { self.state.allowRefresh && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button> }            
             { formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button> }
             { formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button> }
@@ -519,7 +514,7 @@ class ReactoryComponent extends Component {
               };
               inputObj[mutation.name] = data[mutation.name];
               let linkText = template(mutation.onSuccessUrl)(inputObj);              
-              that.props.history.push(linkText)
+              that.props.api.goto(linkText)
             }
 
             if(mutation.onSuccessMethod.indexOf('event:') === 1) {
@@ -527,7 +522,7 @@ class ReactoryComponent extends Component {
               api.amq.raiseFormCommand(eventName, {form: that, result: data[mutation.name] }),
               that.$events.emit(eventName, data[mutation.name]);
             }
-
+            
             that.$events.emit('onMutateComplete', {
               result:  data[mutation.name],
               errors: errors,
@@ -579,8 +574,9 @@ class ReactoryComponent extends Component {
       //execute query 
       api.graphqlQuery(gql(query.text), _variables).then(( result ) => {        
         const { data, loading, errors } = result;
+        debugger
         let _formData = formData;        
-        if(data && data[query.name]) {          
+        if(data && data[query.name]) {    
           switch(query.resultType) {
             case 'array' :{              
               let mergedData = []
@@ -622,7 +618,11 @@ class ReactoryComponent extends Component {
         });
       });
 
-      return <Loading title={`Fetching data for ${formDef.title}`} />     
+      if(isEmpty(formDef.graphql.query.queryMessage) === false) {
+        return <Loading title={template(formDef.graphql.query.queryMessage)({props: this.props, state: this.state})} />         
+      } 
+      
+      return <Loading title={`Fetching data for ${formDef.title}`} />
     } 
     
     if ( has.mutation === true) {      

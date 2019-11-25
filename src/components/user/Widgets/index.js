@@ -18,9 +18,8 @@ import {
 } from '@material-ui/icons'
 import { fade } from '@material-ui/core/styles/colorManipulator';
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import { withApi, ReactoryApi } from '../../../api/ApiProvider';
-import SurveyDelegateWidget from '../Widgets/SurveyDelegateWidget'
-import styles from '../../shared/styles'
+import { withApi} from '@reactory/client-core/api/ApiProvider';
+import styles from '@reactory/client-core/components/shared/styles';
 
 export class UserListWithSearch extends Component {
 
@@ -305,5 +304,4 @@ export const UserListWithSearchComponent = compose(
 
 export default {
   UserListWithSearchComponent,
-  SurveyDelegateWidget
 };

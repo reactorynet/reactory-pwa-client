@@ -312,12 +312,13 @@ class DefaultFormContainer extends Component {
       'core.BusinessUnitFormWithQuery',
       'core.CompanyLogo',
       'core.BasicModal',
-      'forms.TowerStoneLeadershipBrandConfig',
-      'forms.TowerStoneSurveyConfig',
-      'forms.TowerStoneSurveySettings',
-      'forms.TowerStoneSurveyDelegateConfig',
-      'forms.TowerStoneSurveyCalendarConfig',
-      'forms.TemplateEditor',
+      'towerstone.TowerStoneLeadershipBrandConfig',
+      'towerstone.TowerStoneSurveyConfig',
+      'towerstone.TowerStoneSurveySettings',
+      'towerstone.TowerStoneSurveyDelegateConfig',
+      'towerstone.TowerStoneSurveyCalendarConfig',
+      'towerstone.TowerStoneSurveyTemplatesForm',
+      'towerstone.TemplateEditor',
     ])
   }
 
@@ -461,6 +462,7 @@ class DefaultFormContainer extends Component {
       TowerStoneSurveyCalendarConfig,
       TemplateEditor,
       TowerStoneSurveySettings,
+      TowerStoneSurveyTemplatesForm,
       BasicModal
      } = that.componentDefs;
     const isNew = mode === 'new';
@@ -473,8 +475,7 @@ class DefaultFormContainer extends Component {
             onChange={this.handleChange}
             indicatorColor="primary"
             textColor="primary"
-            variant="fullWidth"
-          >
+            variant="fullWidth">
             <Tab label="General" value={'general'} />
             <Tab label="Business Units" value={'business-units'} disabled={isNew === true} />
             <Tab label="Employees" value={'employees'} disabled={isNew === true} />
@@ -597,6 +598,12 @@ class DefaultFormContainer extends Component {
                         formData={{}} 
                       />
 
+                      <TowerStoneSurveyTemplatesForm 
+                        mode="edit"
+                        surveyId={props.match.params.surveyId}
+                        organizationId={organizationId} 
+                        formContext={{organizationId, surveyId: props.match.params.surveyId}}
+                      />
                       
                     </Fragment>
                   )
@@ -681,8 +688,6 @@ const CompanyAdminStyles = (theme) => {
 
 
 const AdminForm = ({ organizationId, api, tab, mode = 'new' }) => {
-  //console.log(`must find for ${organizationId}, ${tab}, ${mode}`)
-
   if (mode === 'new') return <DefaultFormContainerComponent organization={DefaultOrganization} tab={'general'} mode={'new'} />
 
   return (

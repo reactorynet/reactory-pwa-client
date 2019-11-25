@@ -258,7 +258,7 @@ export class ReactoryApi extends EventEmitter {
     goto(where = "/", state = { __t: new Date().valueOf() }){
         if(this.history && this.history) {
             this.history.replace({ pathname: where, state });
-            this.emit(ReactoryApiEventNames.onRouteChanged, {where, state});
+            this.emit(ReactoryApiEventNames.onRouteChanged, {path: where, state, where});
         }
     }
 
@@ -395,7 +395,7 @@ export class ReactoryApi extends EventEmitter {
             that.client.query({ query, variables, options }).then((result) => {
                 resolve(result)
             }).catch((clientErr) => {                
-                resolve(clientErr);
+                resolve({ data: null, loading: false, errors: [clientErr] });
             });
         });
     }
