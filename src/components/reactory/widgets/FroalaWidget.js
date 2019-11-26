@@ -39,6 +39,7 @@ import 'froala-editor/js/plugins/save.min.js';
 import 'froala-editor/js/plugins/table.min.js';
 import 'froala-editor/js/plugins/url.min.js';
 import 'froala-editor/js/plugins/video.min.js';
+import 'froala-editor/js/plugins/code_view.min.js';
 
 // Require Editor CSS files.
 import 'froala-editor/css/froala_style.min.css';
@@ -51,6 +52,7 @@ import 'froala-editor/css/plugins/file.min.css';
 import 'froala-editor/css/plugins/special_characters.min.css';
 import 'froala-editor/css/plugins/table.min.css';
 import 'froala-editor/css/plugins/video.min.css';
+import 'froala-editor/css/plugins/code_view.min.css';
 
 // Require Font Awesome.
 import 'font-awesome/css/font-awesome.css';
@@ -420,18 +422,22 @@ class FroalaWidget extends Component {
   render(){
     let config = {
       id: this.props.idSchema.id || this.state._id,
-      key: 'SDB17hB8E7F6D3eMRPYa1c1REe1BGQOQIc1CDBREJImD6F5E4G3E1A9D7C3B4B4==',            
-      toolbarInline: true,                                                
-      toolbarButtons: [
-        'bold', 'italic', 'underline',
-        'strikeThrough', 'subscript', 'superscript', '-', 
-        'paragraphFormat', 'align', 'formatOL', 'formatUL', 'indent', 'outdent', '-', 
-        'insertImage', 'insertLink', 'insertFile', 'insertVideo', 'undo', 'redo', '-', 
-      ],
-      toolbarVisibleWithoutSelection: true,
+      key: 'SDB17hB8E7F6D3eMRPYa1c1REe1BGQOQIc1CDBREJImD6F5E4G3E1A9D7C3B4B4==',                  
       imageDefaultWidth: 300,
       imageDefaultDisplay: 'inline',
       zIndex: 101,
+      htmlAllowedTags: ['.*'],
+      htmlAllowedAttrs: ['.*'],
+      htmlRemoveTags: [''],
+      lineBreakerTags: [''],
+      lineBreakerOffset: 0,
+      linkAlwaysBlank: true,
+      linkText: true,
+      linkAutoPrefix: '',
+      linkAttributes: {
+        clicktracking: "Click Tracking"
+      },
+      fullPage: true,
       events: {
         'froalaEditor.initialized': this.onEditorInitialized
       },

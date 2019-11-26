@@ -913,31 +913,45 @@ class SurveyDelegates extends Component {
             userMessage = (<span>{delegateEntry.message}</span>)
             break;
           }
+          case 'launched-assessor':          
+          {
+            if(is180) {
+              userMessage = 'Launched as team assessor'
+            }
+            break;
+          }  
+          case 'launched-delegate': {
+            if(is180) {
+              userMessage = 'Launched as team delegate'
+            }
+            break;
+          }
           case 'invite-sent':
           case 'new':
           default: {
-            let peersConfirmed = false;
-            let hasPeers = false;
-            console.log('Rendering for delegate Entry', delegateEntry);
-            if(nil(delegateEntry.peers) === false) {
-              hasPeers = true;
-              peersConfirmed = moment(delegateEntry.peers.confirmedAt).isValid() === true              
-            } 
+            if(!is180) {
+              let peersConfirmed = false;
+              let hasPeers = false;
+              console.log('Rendering for delegate Entry', delegateEntry);
+              if(nil(delegateEntry.peers) === false) {
+                hasPeers = true;
+                peersConfirmed = moment(delegateEntry.peers.confirmedAt).isValid() === true              
+              } 
 
-            if(hasPeers === false) {
-              userMessage = (<span>{delegateEntry.message}<br/>No peers available for user</span>);              
-              backgroundColor = "gold";
-            } else {
-              if(peersConfirmed === false) {
-                userMessage = (<span>{delegateEntry.message}<br/>User has peers but has not confimed them yet</span>);
-                backgroundColor = "antiquewhite";
-              }                              
-              else {                                
-                userMessage = (<span>{delegateEntry.message}<br/>Peers confirmed {delegateEntry.peers.confirmedAt} ({hdate.relativeTime(delegateEntry.peers.confirmedAt)})</span>);
-                backgroundColor = "darkseagreen";
-              }                              
-            }
-                                      
+              if(hasPeers === false) {
+                userMessage = (<span>{delegateEntry.message}<br/>No peers available for user</span>);              
+                backgroundColor = "gold";
+              } else {
+                if(peersConfirmed === false) {
+                  userMessage = (<span>{delegateEntry.message}<br/>User has peers but has not confimed them yet</span>);
+                  backgroundColor = "antiquewhite";
+                }                              
+                else {                                
+                  userMessage = (<span>{delegateEntry.message}<br/>Peers confirmed {delegateEntry.peers.confirmedAt} ({hdate.relativeTime(delegateEntry.peers.confirmedAt)})</span>);
+                  backgroundColor = "darkseagreen";
+                }                              
+              }
+            }                                             
             break;
           }
         }
