@@ -85,29 +85,35 @@ export const getPDF = ( folder, report, params = { __t: new Date().valueOf()  },
   api.utils.queryString.stringify(params)
   return fetch(`${api_root}/pdf/${folder}/${report}?`, {
     method: 'get',
-    header: { ...api}
-  }).then((pdf) => {
-    const blob=new Blob([pdf]);
+    headers: { ...api}
+  }).then((pdf: Response) => {
+    return pdf.blob();
+  }).then((pdfBlob: Blob) => {
+    const blob=new Blob([pdfBlob]);
     const link=document.createElement('a');
     link.href=window.URL.createObjectURL(blob);
     link.download=filename;
-    link.click();
-  });
+    link.click();;    
+  })
+  
 };
 
-export const getExcel = ( folder, report, params = { __t: new Date().valueOf()  }, filename = 'form.xlsx' ) => {
+export const getExcel = ( formId: string, params = { __t: new Date().valueOf()  }, filename = 'form.xlsx' ) => {
   const { api } = window.reactory;
   api.utils.queryString.stringify(params)
   return fetch(`${api_root}/excel/${formId}?`, {
     method: 'get',
-    header: { ...api}
+    headers: { ...api}
   }).then((excel) => {
-    const blob=new Blob([excel]);
+
+    return excel.blob();
+  }).then((excelBlob: Blob) => {
+    const blob=new Blob([excelBlob]);
     const link=document.createElement('a');
     link.href=window.URL.createObjectURL(blob);
     link.download=filename;
     link.click();
-  });
+  })    
 };
 
 export const getRemoteJson = (route, headers = api_headers) => {

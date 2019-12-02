@@ -7,8 +7,6 @@ import {
   Grid
 } from '@material-ui/core';
 
-import DefaultAvatar from '../assets/images/profile/default.png';
-
 const DefaultProfile = {
   id: 'default',
   name: 'Guest',
@@ -213,7 +211,7 @@ export const injectResources = (sources = []) => {
           styleLink.rel = 'stylesheet';
           setTimeout(()=>{
             document.head.append(styleLink)
-          }, styleLink.delay || 0);
+          }, 0);
           
           break;
         }
@@ -224,7 +222,7 @@ export const injectResources = (sources = []) => {
           scriptLink.type = 'text/javascript';
           setTimeout(()=>{
             document.body.append(scriptLink)
-          }, scriptLink.delay || 0);
+          }, 0);
           break;
         }
         default: {

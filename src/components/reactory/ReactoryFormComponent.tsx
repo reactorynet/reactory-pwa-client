@@ -1,7 +1,7 @@
-import React, { Component, Fragment } from 'react';
-import PropTypes from 'prop-types';
+import React, { Component, Fragment, ReactNode } from 'react';
+import PropTypes, { ReactNodeArray } from 'prop-types';
 import Form from './form/components/Form';
-import EventEmitter from 'eventemitter3';
+import EventEmitter, { ListenerFn } from 'eventemitter3';
 import objectMapper from 'object-mapper';
 import { diff } from 'deep-object-diff';
 import { find, template, isArray, isNil, isString, isEmpty } from 'lodash';
@@ -9,11 +9,13 @@ import { withRouter, Route, Switch } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
-import Dropzone from 'react-dropzone';
+import Dropzone, { DropzoneState } from 'react-dropzone';
 import { Query, Mutation, QueryProps, QueryResult, MutationResult } from 'react-apollo';
 import { nil } from '@reactory/client-core/components/util';
 import queryString from '@reactory/client-core/query-string';
-import { withApi, ReactoryApi } from '@reactory/client-core/api/ApiProvider';
+import ReactoryApi from '../../api/ReactoryApi';
+import { withApi } from '../../api/ApiProvider';
+
 import {
   Button,
   ButtonGroup,
@@ -140,7 +142,12 @@ export interface ReactoryFormProperties {
   events?: Object,
   query?: Object,
   onChange?: Function,
-  onSubmit?: Function
+  onSubmit?: Function,
+  onError?: Function,
+  onCommand?: Function,
+  before?: Component | undefined,
+  children?: ReactNodeArray,
+  $route?: string
 }
 
 export interface ReactoryFormState {
@@ -150,7 +157,7 @@ export interface ReactoryFormState {
   forms: Reactory.IReactoryForm[],
   uiFramework: string,
   uiSchemaKey: string,
-  activeUiSchemaMenuItem: string | undefined,
+  activeUiSchemaMenuItem: Reactory.IUISchemaMenuItem | undefined,
   formDef?: Reactory.IReactoryForm,
   formData?: any,    
   dirty: boolean,
@@ -158,11 +165,15 @@ export interface ReactoryFormState {
   showHelp: boolean,
   showReportModal: boolean,
   showExcelWindow: boolean,
-  query?:  Object,
+  query?:  any,
   busy: boolean,
   liveUpdate: boolean,
-  pendingResources: Object,
+  pendingResources: any,
   _instance_id: string,
+  plugins?: any, 
+  queryError?: any, 
+  message?: string,
+  formError?: any
 }
 
 
@@ -200,7 +211,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     busy: false,
     query: {
       
-    }
+    },
+    api: null,
+    data: null,
+    formData: null,
+    history: null,
+    location: null,
+    uiSchemaKey: 'default'        
   };
 
   $events: EventEmitter = new EventEmitter();
@@ -256,7 +273,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.formDef = this.formDef.bind(this);
     this.renderForm = this.renderForm.bind(this);
     this.renderWithQuery = this.renderWithQuery.bind(this);
-    this.renderWithMutation = this.renderWithMutation.bind(this);
     this.state = _state;    
     this.defaultComponents = [
       'core.Loading',
@@ -284,7 +300,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.plugins = { };     
   }
 
-  on(eventName: string, listener: Function, context: any){      
+  on(eventName: string, listener: ListenerFn, context: any){      
     this.$events.on(eventName, listener, context);
   }
 
@@ -342,7 +358,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     const closeHelp = e => this.setState({ showHelp: false });
     return (
-      <HelpMe topics={formDef.helpTopics} tags={formDef.keywords} title={formDef.title} open={ this.state.showHelp === true } onClose={closeHelp}>
+      <HelpMe topics={formDef.helpTopics} tags={formDef.tags} title={formDef.title} open={ this.state.showHelp === true } onClose={closeHelp}>
       </HelpMe>            
     )
   }
@@ -385,7 +401,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 
   showDebug(){
-    this.setState({ showDebug: true })
+    // this.setState({ showDebug: true })
   }
 
   showReportModal(){
@@ -396,7 +412,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.setState({ showExcelWindow: true });
   }
 
-  renderForm(formData: any, onSubmit: Function, patch: Object = {}) {
+  renderForm(formData: any, onSubmit?: Function) {
     this.props.api.log('Rendering Form', {props: this.props, state: this.state}, 'debug')
     const { loading, forms, busy, _instance_id } = this.state;
     const self = this;
@@ -559,7 +575,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.props.api.log('ReactoryFormComponent.renderWithQuery()', { formData, mode, queryComplete }, 'debug');
 
     //returns a form wrapped with a mutation handler
-    const getMutationForm = (_formData, patch) => {
+    const getMutationForm = (_formData) => {
       const mutation  = formDef.graphql.mutation[mode];
       return (
         <Mutation mutation={gql(mutation.text)}>
@@ -599,7 +615,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             
             that.$events.emit('onMutateComplete', {
               result:  data[mutation.name],
-              errors: errors,
+              errors: error,
+              error: error
             });
           }
           
@@ -607,7 +624,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             <Fragment>
               {loadingWidget}
               {errorWidget}
-              { !loadingWidget ? that.renderForm(_formData, onFormSubmit, patch) : null }
+              { !loadingWidget ? that.renderForm(_formData, onFormSubmit) : null }
             </Fragment>
           )
           
@@ -705,31 +722,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     return that.renderForm(formData)
   }
 
-  renderWithMutation(formData){
-    const formDef = this.formDef();
-    const query = gql(formDef.graphql.mutation);
-    let variables = {}; 
-
-    Object.keys(formDef.graphql.variables).map((variable) => {
-      if(typeof formDef.graphql.variables[variable]  === 'string'){
-        variables[variable] = template(formDef.graphql.variables[variable])({...formData})
-      } else {
-        variables[variable] = formDef.graphql.variables[variable];
-      }      
-    });
-
-    let options = formDef.graphql.options || {  };
-
-    return (
-      <Mutation mutation={query} variables={variables} options={options}>
-        {(props, context) => {
-          const { loading, data, errors } = props;
-          return <p>Mutation Form</p>
-        }}
-      </Mutation>
-    )
-  }
-
   getFormContext(){
     return {
       ...this.props,
@@ -814,7 +806,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 return (<Input
                   id={props.idSchema.$id}                  
                   type="number"
-                  margin="normal"                  
+                  margin="none"                  
                   onChange={onInputChanged}
                   value={props.formData || 0}
                 />)
@@ -902,17 +894,23 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 // //console.log('File Select Cancelled');
               };
 
+   
+            
+              const DzContent = (state: DropzoneState) => { 
+                
+                return formData === undefined ? (<p>Try dropping some files here, or click to select files to upload. </p>) : (<div>We have content, drag another to overwrite!</div>)
+              }
+              
               const dropZoneProps = {
                 accept: options.accept || ['*/*'],
                 onDrop: onDrop,
                 onFileDialogCancel: onCancel, 
+                children: DzContent,
               };
-                            
+              
               return (
                 <Fragment>
-                  <Dropzone {...dropZoneProps}>
-                    {formData === undefined ? <p>Try dropping some files here, or click to select files to upload. </p> : <div>We have content, drag another to overwrite!</div>}
-                  </Dropzone>
+                  <Dropzone {...dropZoneProps} />                                    
                   <hr />
                   <div dangerouslySetInnerHTML={{__html: formData}}></div>
                 </Fragment>
@@ -949,10 +947,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           if(map.component && typeof map.component === 'string') {            
             if(map.component.indexOf('.') > -1) {
               const pathArray = map.component.split('.');
-              let component = self.componentDefs[pathArray[0]];
-              if(component && Object.keys(component) > 0) {
+              let component: Object = self.componentDefs[pathArray[0]];
+              if(component && Object.keys(component).length > 0) {
                 for(let pi = 1; pi <= pathArray.length - 1; pi += 1){
-                  if(component && Object.key(component) > 0) component = component[pathArray[pi]]                              
+                  if(component && Object.keys(component).length > 0) component = component[pathArray[pi]]                              
                 }                
                 schema.widgets[map.widget] = component;
                 mapped = true;
@@ -1070,7 +1068,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     const { api } = this.props;
     const that = this;
     that.setState({ busy: true }, ()=>{
-        if (that.props.onSubmit) that.props.onSubmit(data, ( done )=>{ that.setState( { busy: false, message: done.message || 'Form has been submitted' } )  });
+        if (that.props.onSubmit) { 
+          that.props.onSubmit(data, ( done )=>{ that.setState( { busy: false, message: done.message || 'Form has been submitted' } )  });
+        }
         else {
           api.log('Form has been submitted, no onSubmit handler provided, check graphql', {data})
           api.log(`Form id:[${that.props.formId}] has no valid submit handler`, { formProps: that.props }, 'warn');
@@ -1137,11 +1137,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           ? { ...defaultFormValue, ...this.state.formData }        
           : formData = { ...defaultFormValue };
 
-        if(Object.keys(this.state.query).forEach( property => {          
+        Object.keys(this.state.query).forEach( property => {          
           if(isNil(formData[property]) === true && isNil(self.state.query[property]) === false)  {
             formData[property] = self.state.query[property];
           }
-        }))
+        });
 
         break;
       }
@@ -1197,7 +1197,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 }
 
-export const ReactoryFormComponent = compose(
+export const ReactoryFormComponent: any = compose(
   withApi,
   withTheme,
   withStyles(ReactoryComponent.styles),
@@ -1205,7 +1205,7 @@ export const ReactoryFormComponent = compose(
 )(ReactoryComponent);
 
 
-class ReactoryFormRouter extends Component {
+class ReactoryFormRouter extends Component<any, any> {
 
   constructor(props, context) {
     super(props, context);

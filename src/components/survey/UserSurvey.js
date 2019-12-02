@@ -83,8 +83,14 @@ class UserSurvey extends Component {
 
         const AssessmentListItem = (props) => {
             const { assessment } = props;          
-            const { survey, delegate, assessor, selfAssessment, assessmentType } = assessment
-            const listTitle = selfAssessment === true ? 'Self assessment' : `${delegate.firstName} ${delegate.lastName}`
+            const { survey, delegate, assessor, selfAssessment, assessmentType } = assessment;
+            let is180 = survey.surveyType === '180';            
+            let listTitle = selfAssessment === true ? 'Self assessment' : `${delegate.firstName} ${delegate.lastName}`
+
+            if(is180 === true) {
+                listTitle = `Assessing Team ${survey.delegateTeamName}`
+            }
+
             const goAssessment = () => {
                 history.push(`/assess/${assessment.id}`)
             }

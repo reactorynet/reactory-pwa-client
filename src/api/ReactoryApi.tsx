@@ -5,7 +5,7 @@ import EventEmitter from 'eventemitter3';
 import uuid from 'uuid';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql } from 'apollo-client-preset';
+import { ApolloClient, gql, FetchPolicy } from 'apollo-client-preset';
 import { ApolloProvider } from 'react-apollo';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
@@ -16,20 +16,22 @@ import { getAvatar, getUserFullName, getOrganizationLogo, attachComponent } from
 import amq from '../amq';
 import * as RestApi from './RestApi';
 import { width } from "@material-ui/system";
-import { queries, mutations } from './graphql';
+import GraphQL from '@reactory/client-core/api/graphql';
 import { Typography } from "@material-ui/core";
 import icons from '../assets/icons'; 
 import queryString from '../query-string';
 import humanNumber from 'human-number';
 import ApiProvider, { withApi } from './ApiProvider';
-
-
+import { Reactory } from "types/reactory";
 import { 
     omitDeep, 
     CDNOrganizationResource, 
     getElement,
     injectResources,
 } from '../components/util';
+import { Store, AnyAction } from "redux";
+
+
 
 const pluginDefinitionValid = (definition) => {
     const pass = {
@@ -51,7 +53,8 @@ const pluginDefinitionValid = (definition) => {
 export const storageKeys = {
     LoggedInUser: 'loggedInUser',
     AuthToken: 'auth_token',
-    LastLoggedInEmail: '$reactory$last_logged_in_user'
+    LastLoggedInEmail: '$reactory$last_logged_in_user',
+    viewContext: '$rectory$viewContext',
 };
 
 export const anonUser = { 
@@ -118,13 +121,53 @@ export const componentPartsFromFqn = ( fqn ) => {
 }
 
 class ReactoryApi extends EventEmitter {
+    
+    history: any;
+    queries: any;
+    mutations: any;
+    props: Object;
+    componentRegister: Object;
+    client: ApolloClient<any>;  
+    login: Function = null;
+    register: Function = null;
+    reset: Function = null;
+    forgot: Function = null;
+    utils: Object = {};     
+    companyWithId: Function = null; 
+    $func: Object;
+    rest: Object = null;
+    tokenValidated: boolean = false;
+    lastValidation: number;
+    tokenValid: boolean = false;
+    getAvatar: Function;
+    getOrganizationLogo: Function;
+    getUserFullName: Function;
+    CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
+    API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
+    CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
+    CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
+    formSchemas: Reactory.IReactoryForm[]
+    formSchemaLastFetch: moment.Moment = null;
+    assets: Object = null;
+    amq: any = null;
+    statistics: any = null;
+    __form_instances: any = null;
+    flushIntervalTimer: any = null;
+    __REACTORYAPI: boolean = true;
+    publishingStats: boolean;
+    reduxStore: any;
+    muiTheme: any;
+    queryObject: any;
+    queryString: any;
+    objectToQueryString: Function;    
     constructor(client, props) {
         super();
+        this.history = null;
         this.props = props;
         this.componentRegister = {};
         this.client = client;
-        this.queries = queries;
-        this.mutations = mutations;
+        this.queries = GraphQL.queries;
+        this.mutations = GraphQL.mutations;
         this.login = RestApi.login.bind(this);
         this.companyWithId = RestApi.companyWithId;
         this.register = RestApi.register;
@@ -153,7 +196,7 @@ class ReactoryApi extends EventEmitter {
         };
         this.$func = {
             'core.NullFunction': (params) => {
-                this.log('An extension function was not found', { params }, 'warning');
+                this.log('An extension function was not found', [ params ], 'warning');
                 return 0;
             }
         };
@@ -249,7 +292,7 @@ class ReactoryApi extends EventEmitter {
         }
     }
     registerFunction(fqn, functionReference, requiresApi = false) {
-        this.log(`Registering function ${fqn}`, { functionReference, requiresApi }, 'debug');
+        this.log(`Registering function ${fqn}`, [ functionReference, requiresApi ], 'debug');
         if (typeof functionReference === 'function') {
             if (requiresApi === true) {
                 this.$func[fqn] = (props) => {
@@ -262,7 +305,7 @@ class ReactoryApi extends EventEmitter {
         }
     }
     ;
-    log(message, params = [], kind = 'log') {
+    log(message, params: any = [], kind = 'log') {
         try {
             switch (kind) {
                 case 'log':
@@ -291,13 +334,13 @@ class ReactoryApi extends EventEmitter {
             }
         }
         catch (err) {
-            console.error(loggingErr);
+            console.error(err);
         }
     }
     publishstats() {
         this.publishingStats = true;
         if (this.statistics.__delta > 0) {
-            this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, {}, 'debug');
+            this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, [], 'debug');
             const entries = this.statistics.__keys.map(key => ({ key, stat: this.statistics.items[key] }));
             this.graphqlMutation(gql`mutation PublishStatistics($entries: [StatisticsInput]!){
                 CorePublishStatistics(entries: $entries)
@@ -311,7 +354,7 @@ class ReactoryApi extends EventEmitter {
                     __flushInterval: this.statistics.__flushInterval,
                     items: {}
                 };
-                this.log('Statistics published and flushed', publishResult, 'debug');
+                this.log('Statistics published and flushed', [ publishResult ], 'debug');
                 this.publishingStats = false;
             }).catch((error) => {
                 this.log(error.message, error, 'error');
@@ -347,31 +390,32 @@ class ReactoryApi extends EventEmitter {
     ;
     trackFormInstance(formInstance) {
         const self = this;
-        self.log('ApiProvider.trackingFormInstance(formInstance)', { formInstance }, 'debug');
+        self.log('ApiProvider.trackingFormInstance(formInstance)', [ formInstance ], 'debug');
         this.__form_instances[formInstance.state._instance_id] = formInstance;
         formInstance.on('componentWillUnmount', (instance) => {
-            self.log('ApiProvider.trackingFormInstance(formInstance).on("componentWillUnmount")', { formInstance }, 'debug');
+            self.log('ApiProvider.trackingFormInstance(formInstance).on("componentWillUnmount")', [ formInstance ], 'debug');
             delete self.__form_instances[formInstance.state._instance_id];
         });
     }
-    graphqlMutation(mutation, variables, options = { fetchPolicy: 'network-only' }) {
+    graphqlMutation(mutation, variables, options: any = { fetchPolicy: "network-only" } ) {
         const that = this;
         if (typeof mutation === 'string')
             mutation = gql(mutation);
         return new Promise((resolve, reject) => {
-            that.client.mutate({ mutation: mutation, variables, options }).then((result) => {
+            that.client.mutate({ mutation: mutation, variables, fetchPolicy: "no-cache" }).then((result) => {
                 resolve(result);
             }).catch((clientErr) => {
                 reject(clientErr);
             });
         });
     }
-    graphqlQuery(query, variables, options = { fetchPolicy: 'network-only' }) {
+    
+    graphqlQuery(query, variables, options: any = { fetchPolicy: 'network-only' }) {
         const that = this;
         if (typeof query === 'string')
             query = gql(query);
         return new Promise((resolve, reject) => {
-            that.client.query({ query, variables, options }).then((result) => {
+            that.client.query({ query, variables, fetchPolicy: options.fetchPolicy || "network-only" }).then((result) => {
                 resolve(result);
             }).catch((clientErr) => {
                 resolve({ data: null, loading: false, errors: [clientErr] });
@@ -400,7 +444,7 @@ class ReactoryApi extends EventEmitter {
                 <ApolloProvider client={that.client}>
                     <MuiThemeProvider theme={that.muiTheme}>
                         <Router>
-                            <ApiProvider api={that}>
+                            <ApiProvider api={that} history={this.history}>                                
                                 {componentView}
                             </ApiProvider>
                         </Router>
@@ -482,7 +526,7 @@ class ReactoryApi extends EventEmitter {
         //this.amp.raiseWorkFlowEvent(workFlowId, data);
         const that = this;
         return new Promise((resolve, reject) => {
-            that.client.query({ query: that.mutations.System.startWorkflow, variables: { name: workFlowId, data }, options: { fetchPolicy: 'network-only' } }).then((result) => {
+            that.client.query({ query: that.mutations.System.startWorkflow, variables: { name: workFlowId, data }, fetchPolicy: 'network-only' }).then((result) => {
                 if (result.data.startWorkflow === true) {
                     resolve(true);
                 }
@@ -556,7 +600,7 @@ class ReactoryApi extends EventEmitter {
     getLastUserEmail() {
         localStorage.getItem(storageKeys.LastLoggedInEmail);
     }
-    registerComponent(nameSpace, name, version = '1.0.0', component = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false) {
+    registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false) {
         const fqn = `${nameSpace}.${name}@${version}`;
         if (isEmpty(nameSpace))
             throw new Error('nameSpace is required for component registration');
@@ -590,7 +634,7 @@ class ReactoryApi extends EventEmitter {
                     }
                 }
                 catch (e) {
-                    this.log('Error Occured Loading Component Fqns', fqn, 'error');
+                    this.log('Error Occured Loading Component Fqns',  [ fqn ], 'error');
                 }
             }
             if (typeof fqn === 'object') {
@@ -654,7 +698,7 @@ class ReactoryApi extends EventEmitter {
                     <ApolloProvider client={that.client}>
                         <MuiThemeProvider theme={that.muiTheme}>
                             <Router>
-                                <ApiProvider api={that}>
+                                <ApiProvider api={that} history={this.history}>
                                     <ComponentToMount {...props} />
                                 </ApiProvider>
                             </Router>
@@ -671,24 +715,23 @@ class ReactoryApi extends EventEmitter {
         const ComponentToMount = this.getComponent(componentFqn);
         this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback);
     }
-    showModalWithComponent(title = '', ComponentToMount, props, modalProps = {}, domNode = null, theme = true, callback) {
+    showModalWithComponent(title = '', ComponentToMount, props, modalProps: any = {}, domNode = null, theme = true, callback) {
         const that = this;
         const FullScreenModal = that.getComponent('core.FullScreenModal');
-        const _modalProps = { ...modalProps };
+        const _modalProps: any = { ...modalProps };
         _modalProps.open = true;
         _modalProps.title = title;
         let _domNode = domNode || reactoryDomNode();
         if (isNil(_modalProps.onClose)) {
             modalProps.onClose = () => {
                 _modalProps.open = false;
-                _render(_modalProps);
                 setTimeout(() => {
                     that.unmountComponent(_domNode);
                 }, 2000);
             };
         }
         const ModalMounted = (<FullScreenModal {..._modalProps}> <ComponentToMount {...props} /> </FullScreenModal>);
-        this.mountComponent((<ModalMounted />), {}, _domNode, true, callback);
+        this.mountComponent(ModalMounted, {}, _domNode, true, callback);
     }
     createElement(ComponentToCreate, props) {
         return React.createElement(ComponentToCreate, props);
@@ -701,7 +744,7 @@ class ReactoryApi extends EventEmitter {
         localStorage.removeItem(storageKeys.AuthToken);
         this.setUser({ ...user, ...anonUser });
         if (refreshStatus === true) {
-            this.status({ logout: true }).then((done) => {
+            this.status({ emitLogin: false }).then((done) => {
                 this.emit(ReactoryApiEventNames.onLogout);
             });
         }
@@ -751,7 +794,7 @@ class ReactoryApi extends EventEmitter {
     status(options = { emitLogin: false }) {
         const that = this;
         return new Promise((resolve, reject) => {
-            that.client.query({ query: that.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }).then((result) => {
+            that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
                 if (result.data.apiStatus.status === "API OK") {
                     that.setUser({ ...result.data.apiStatus });
                     that.lastValidation = moment().valueOf();
@@ -824,5 +867,7 @@ export const forgot = ReactoryApi.forgot
 export const reset = ReactoryApi.reset
 export const forms = ReactoryApi.forms
 */
+
+
 
 export default ReactoryApi;

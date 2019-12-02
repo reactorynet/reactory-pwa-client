@@ -121,6 +121,7 @@ declare namespace Reactory {
     title?: string | undefined,
     description?: string | undefined,
     default?: any | undefined
+    
   }
   
   export interface IObjectSchema extends ISchema {  
@@ -131,15 +132,23 @@ declare namespace Reactory {
     items: IObjectSchema | IArraySchema
   }
 
+  export interface IReactoryFormQueryErrorHandlerDefinition {
+    componentRef: string,
+    method: string
+  }
+
   export interface IReactoryFormQuery {
-    name: String,
-    text: String,
+    name: string,
+    text: string,
     resultMap?: Object,
-    queryMessage?: String,
+    queryMessage?: string,
     variables: Object,
     edit?: boolean,
     new?: boolean,
-    delete?: boolean
+    delete?: boolean,
+    options?: any,
+    onError?: IReactoryFormQueryErrorHandlerDefinition,
+    resultType?: string,
   }
 
   export interface IReactoryFormMutation {
@@ -152,6 +161,8 @@ declare namespace Reactory {
     onSuccessUrl?: String,
     onSuccessRedirectTimeout?: number,
     options?: any,
+    onError?: IReactoryFormQueryErrorHandlerDefinition
+    resultType?: string,
   }
 
   export interface IReactoryFormMutations {
@@ -166,8 +177,9 @@ declare namespace Reactory {
   }
   
   export interface IWidgetMap {
-    componentFqn: String,
-    widget: String
+    component: string | any;
+    componentFqn: string,
+    widget: string
   }
 
   export interface IReactoryPdfReport extends Client.IFramedWindowProperties {
@@ -176,6 +188,15 @@ declare namespace Reactory {
 
   export interface IExcelExport extends Client.IFramedWindowProperties {
     title?: string
+  }
+
+  export interface IUISchemaMenuItem {
+    id: string,
+    title: string,
+    key: string,
+    description: stirng,
+    icon: string,
+    uiSchema: any,
   }
 
   export interface IReactoryForm {
@@ -188,6 +209,7 @@ declare namespace Reactory {
     helpTopics?: String[]
     schema: ISchema | IObjectSchema | IArraySchema,
     uiSchema?: any,
+    uiSchemas?: IUISchemaMenuItem[],
     registerAsComponent: boolean,
     nameSpace: String,
     name: String,
@@ -205,6 +227,12 @@ declare namespace Reactory {
     widgetMap?: IWidgetMap[],
     backButton?: Boolean,
     workflow?: Object,
+    noHtml5Validate?: boolean,
+    formContext?: any,
+    fields?: any,
+    widgets?: any,
+    FieldTemplate?: Function,
+    ObjectFieldTemplate?: Function,
     /**
      * components to mount in the componentDef propertie
      */

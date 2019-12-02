@@ -15,7 +15,7 @@ import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
 import { ApolloProvider, Query, Mutation } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
 import { setContext } from 'apollo-link-context';
-import { ThemeProvider } from '@material-ui/core/styles';
+import { ThemeProvider, Theme } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { createMuiTheme } from '@material-ui/core/styles';
 import queryString from './query-string';
@@ -106,8 +106,26 @@ componentRegistery.forEach((componentDef) => {
 const store = configureStore();
 api.reduxStore = store;
 
-class App extends Component {
-  
+export interface AppState {
+  user: any,
+  drawerOpen: boolean,
+  auth_valid: boolean,
+  auth_validated: boolean,
+  theme: any,
+  routes: any[],
+  validationError: any,
+  offline: boolean,
+  currentRoute: any
+
+}
+
+class App extends Component<any, AppState> {
+
+  componentRefs: any
+  router: any
+  static propTypes: { appTitle: PropTypes.Validator<string>; appTheme: PropTypes.Requireable<object>; };
+  static defaultProps: { appTitle: string; appTheme: {}; };
+
   constructor(props, context) {
     super(props, context);
     
@@ -146,7 +164,7 @@ class App extends Component {
   }
 
   onRouteChanged(path, state){
-    api.log(`onRouteChange Handler`, { path, state }, 'debug');
+    api.log(`onRouteChange Handler`, [ path, state ], 'debug');
     this.setState({ currentRoute: path }, this.configureRouting);    
   }
     
@@ -160,7 +178,7 @@ class App extends Component {
   }
 
   onApiStatusUpdate(status){
-    api.log('App.onApiStatusUpdate(status)', {status}, status.offline === true ? 'error' : 'debug');
+    api.log('App.onApiStatusUpdate(status)', [ status ], status.offline === true ? 'error' : 'debug');
     let isOffline = status.offline === true;
     let user = api.getUser();
     delete user.when;
@@ -181,7 +199,7 @@ class App extends Component {
     let homeRouteDef = null;
     const that = this;
     
-    api.log('Configuring Routing', { auth_validated, user }, 'debug');
+    api.log('Configuring Routing', [ auth_validated, user ], 'debug');
 
     api.getRoutes().forEach((routeDef) => {
       const routeProps = {
@@ -190,7 +208,7 @@ class App extends Component {
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (props) => {
-          api.log(`Rendering Route ${routeDef.path}`, { routeDef }, 'debug');
+          api.log(`Rendering Route ${routeDef.path}`, [ routeDef ], 'debug');
           const componentArgs = {
             $route: props.match
           };
@@ -263,7 +281,7 @@ class App extends Component {
 
       if(innerWidth >= 2560) size = 'lg',
       
-      api.log('Window resize', { innerHeight, innerWidth, outerHeight, outerWidth, size, view });
+      api.log('Window resize', [ innerHeight, innerWidth, outerHeight, outerWidth, size, view ]);
       api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
     });
   }
@@ -276,7 +294,7 @@ class App extends Component {
     if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
     
-    let muiTheme = createMuiTheme(themeOptions);
+    let muiTheme: Theme & any = createMuiTheme(themeOptions);
 
     if(themeOptions.provider && typeof themeOptions.type === 'string') {
       if(themeOptions.provider[themeOptions.type]) {
@@ -310,7 +328,7 @@ class App extends Component {
           <CssBaseline />                
             <Provider store={store}>
               <ApolloProvider client={client}>
-                <ApiProvider api={api}>
+                <ApiProvider api={api} history={this.props.history}>
                   <ThemeProvider theme={muiTheme}>
                     <MuiPickersUtilsProvider utils={MomentUtils}>
                       <React.Fragment>

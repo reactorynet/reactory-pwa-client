@@ -1,4 +1,3 @@
-
 'use strict';
 
 // Do this as the first thing so that any code reading it knows the right env.
@@ -28,10 +27,6 @@ const printHostingInstructions = require('react-dev-utils/printHostingInstructio
 const FileSizeReporter = require('react-dev-utils/FileSizeReporter');
 const printBuildError = require('react-dev-utils/printBuildError');
 const manifestJson = require('./reactory/makeManifest');
-
-const sys = require('sys')
-const exec = require('child_process').exec;
-
 
 const measureFileSizesBeforeBuild =
   FileSizeReporter.measureFileSizesBeforeBuild;
@@ -100,7 +95,7 @@ checkBrowsers(paths.appPath, isInteractive)
         WARN_AFTER_CHUNK_GZIP_SIZE
       );
       console.log();
-        
+
       const appPackage = require(paths.appPackageJson);
       const publicUrl = paths.publicUrl;
       const publicPath = config.output.publicPath;
@@ -113,28 +108,23 @@ checkBrowsers(paths.appPath, isInteractive)
         useYarn
       );
 
-      //start deployment
       const instructions = `run: curl ${process.env.PUBLIC_URL}/index.html -s -I -H "secret-header:true" to invalidate nginx file cache` 
       console.log(instructions);
-      /*
-      TODO: Werner Weber 
-      
-      Build Improvement: If deploy is present in process.env.DEPLOY=true deploy using available method
-      deployment instruction can be passed to seperate script      
-      sftp, using ssh to remote folder
-      run above curl afterwards
-      
-      exec('npm deploy', function(error, stdout, stderr) {
-        if (error) {
-          console.log(error.code);
-        }
-      });
-      */
     },
     err => {
-      console.log(chalk.red('Failed to compile.\n'));
-      printBuildError(err);
-      process.exit(1);
+      const tscCompileOnError = process.env.TSC_COMPILE_ON_ERROR === 'true';
+      if (tscCompileOnError) {
+        console.log(
+          chalk.yellow(
+            'Compiled with the following type errors (you may want to check these before deploying your app):\n'
+          )
+        );
+        printBuildError(err);
+      } else {
+        console.log(chalk.red('Failed to compile.\n'));
+        printBuildError(err);
+        process.exit(1);
+      }
     }
   )
   .catch(err => {
@@ -157,8 +147,6 @@ function build(previousFileSizes) {
     );
     console.log();
   }
-
-  
 
   var startedAt = moment();
   var datefrmt = 'DD MMM \'YY HH:mm:ss';
@@ -185,8 +173,18 @@ function build(previousFileSizes) {
         if (!err.message) {
           return reject(err);
         }
+
+        let errMessage = err.message;
+
+        // Add additional information for postcss errors
+        if (Object.prototype.hasOwnProperty.call(err, 'postcssNode')) {
+          errMessage +=
+            '\nCompileError: Begins at CSS selector ' +
+            err['postcssNode'].selector;
+        }
+
         messages = formatWebpackMessages({
-          errors: [err.message],
+          errors: [errMessage],
           warnings: [],
         });
       } else {
@@ -222,6 +220,7 @@ function build(previousFileSizes) {
       buildmessage += "\n------------------------------------------------------------------------";
       
       console.log(buildmessage);
+
       return resolve({
         stats,
         previousFileSizes,

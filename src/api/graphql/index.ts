@@ -556,6 +556,8 @@ query UserSurveys($id: String) {
 			title
 			startDate
 			endDate
+      surveyType
+      delegateTeamName
 			leadershipBrand {
         id
 				title
@@ -764,7 +766,7 @@ query UserReports($id: String) {
 	}
 }`;
 
-export default {
+const graphql = {
   queries: {
     Organization: {
       allOrganizations: allOrganizations,
@@ -987,3 +989,5 @@ export default {
     },
   }
 };
+
+export default graphql;

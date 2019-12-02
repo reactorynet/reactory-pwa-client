@@ -5,7 +5,12 @@ import { compose } from 'redux';
 import { withApollo } from "react-apollo";
 import ReactoryApi from "./ReactoryApi";
 
-export class ApiProvider extends Component {
+export interface ApiProviderProps {
+    api: ReactoryApi,
+    history: History
+}
+
+class ApiProvider extends Component<ApiProviderProps> {
 
     static propTypes = {
         api: PropTypes.instanceOf(ReactoryApi).isRequired,
@@ -26,7 +31,7 @@ export class ApiProvider extends Component {
     }
 }
 
-ApiProvider = compose(    
+const ApiProviderComponent = compose(    
     withApollo,
     withRouter,
 )(ApiProvider);
