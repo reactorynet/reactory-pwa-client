@@ -26,7 +26,8 @@ import {
 import gql from 'graphql-tag';
 import { UserListItem } from '../../user/Lists';
 import { withStyles, withTheme } from '@material-ui/core/styles';
-import { withApi, ReactoryApi } from '../../../api/ApiProvider';
+import { withApi } from '../../../api/ApiProvider';
+import { ReactoryApi } from "../../../api/ReactoryApi";
 import { nil } from '../../util';
 import moment from 'moment';
 import hdate from 'human-date';

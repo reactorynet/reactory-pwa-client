@@ -17,7 +17,8 @@ import Grid from '@material-ui/core/Grid'
 import { OrganizationList, Forms } from '../organization';
 //import schemas, { FieldTemplate } from './schemas';
 import Dashboards from '../dashboards';
-import { withApi, ReactoryApi } from '../../api/ApiProvider'
+import { withApi } from '../../api/ApiProvider'
+import { ReactoryApi } from "../../api/ReactoryApi";
 
 class AdminDashboard extends Component {
 

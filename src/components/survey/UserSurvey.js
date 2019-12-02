@@ -16,7 +16,8 @@ import {
     Tooltip,
 } from '@material-ui/core';
 import { List, ListItem, ListItemSecondaryAction, ListItemText } from '@material-ui/core';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 
 const owly = { firstName: 'Owly', lastName: '', id: 'towerstone_owly', avatar: 'owl.jpg' };
 

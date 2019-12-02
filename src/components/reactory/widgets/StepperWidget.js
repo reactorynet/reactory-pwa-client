@@ -19,7 +19,8 @@ import {
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 
-import { withApi, ReactoryApi } from '../../../api/ApiProvider';
+import { withApi } from '../../../api/ApiProvider';
+import { ReactoryApi } from "../../../api/ReactoryApi";
 
 class StepperWidget extends Component {
   

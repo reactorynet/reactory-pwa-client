@@ -10,7 +10,8 @@ import {  Button,
   Typography,
 } from '@material-ui/core';
 import { withStyles, withTheme } from '@material-ui/core/styles';
-import { withApi, ReactoryApi } from '../../../api/ApiProvider';
+import { withApi } from '../../../api/ApiProvider';
+import { ReactoryApi } from "../../../api/ReactoryApi";
 import uuid from 'uuid';
 
 

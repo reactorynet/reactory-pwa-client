@@ -17,7 +17,8 @@ import SecurityIcon from '@material-ui/icons/Security'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
 import { BasicContainer, CenteredContainer, textStyle, isEmail, isValidPassword } from '../util';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 class LoginCard extends Component {
 
   constructor(props, context) {

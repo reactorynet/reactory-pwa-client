@@ -48,7 +48,8 @@ import { isArray, isNil, isFunction, sortedUniqBy, uniq, filter } from 'lodash';
 import moment from 'moment';
 import { ReactoryFormComponent } from '../reactory/ReactoryFormComponent';
 import { TableFooter } from '@material-ui/core/Table';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 import DefaultAvatar from '../../assets/images/profile/default.png';
 import Profile from './Profile';
 import Message from '../message'

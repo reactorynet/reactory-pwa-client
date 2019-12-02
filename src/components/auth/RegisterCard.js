@@ -12,7 +12,8 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import defaultProfileImage from '../../assets/images/profile/default.png';
 import { BasicContainer, CenteredContainer, textStyle, nilStr, isEmail, isValidPassword } from '../util';
 import queryString from '../../query-string';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 
 
 class RegisterCard extends Component {

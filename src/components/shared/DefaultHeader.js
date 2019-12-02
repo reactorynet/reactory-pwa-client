@@ -28,7 +28,7 @@ import BackIcon from '@material-ui/icons/ArrowBack';
 import PowerSettingIcon from '@material-ui/icons/PowerSettingsNew';
 import { getAvatar } from '../util';
 import moment from 'moment';
-import { withApi, ReactoryApi, ReactoryApiEventNames } from '@reactory/client-core/api/ApiProvider';
+import { withApi, ReactoryApi, ReactoryApiEventNames } from '@reactory/client-core/api';
 
 export class ISearchConfig {
   show = true;

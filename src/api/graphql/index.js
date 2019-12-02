@@ -986,4 +986,4 @@ export default {
       }`
     },
   }
-}
+};

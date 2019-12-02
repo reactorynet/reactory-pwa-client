@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+      "noImplicitAny": true,
+      "removeComments": true,
+      "moduleResolution": "node",
+      "allowSyntheticDefaultImports": true,
+      "allowJs": true,  
+      "target":"es6",
+      "jsx": "preserve",
+      "experimentalDecorators": false,
+      "sourceMap": true,
+      "skipDefaultLibCheck": true,      
+      "skipLibCheck": true,
+      "strict": true,
+      "lib": ["es6", "dom"],
+      "types": ["webpack-env"],
+      "baseUrl": "src",
+      "noUnusedLocals": false,
+      "noUnusedParameters": false,
+      "watch": true,
+      "paths": {
+        "*": ["src/*"],
+        "@reactory/client-core/": ["src/*"],
+        "test/*": ["test/*"]
+      },
+      "pretty": true
+  }, 
+  "compileOnSave": true,  
+  "exclude": [ "node_modules", "dist/*", "build/*", "config/*" ],
+  "include": ["src/**/*"]
+}

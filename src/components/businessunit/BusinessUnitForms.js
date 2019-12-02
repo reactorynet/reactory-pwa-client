@@ -20,7 +20,8 @@ import SaveIcon from '@material-ui/icons/Save'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import Dropzone from 'react-dropzone';
 import { isNil, isEmpty, find, remove, findIndex, sortBy } from 'lodash';
-import { withApi, ReactoryApi } from '../../api/ApiProvider'
+import { withApi } from '../../api/ApiProvider'
+import { ReactoryApi } from "../../api/ReactoryApi";
 import { CDNOrganizationResource, CenteredContainer } from '../../components/util';
 import { styles } from '../shared'
 import BusinessUnitGrapQL from './graphql'

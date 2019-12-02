@@ -27,7 +27,8 @@ import { BrandListWithData, EditBrand, newBrand, CreateBrand } from '../../brand
 import Templates from '../../template'
 import AdminCalendar, { SurveyCalendarForOrganization, EditSurveyEntryForOrganization, NewSurveyEntryForOrganization } from '../../admin/widget/AdminCalendar'
 import Settings from './settings'
-import { withApi, ReactoryApi } from '../../../api/ApiProvider'
+import { withApi } from '../../../api/ApiProvider'
+import { ReactoryApi } from "../../../api/ReactoryApi";
 import { CDNOrganizationResource, CenteredContainer } from '../../util';
 import { styles } from '../../shared'
 

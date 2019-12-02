@@ -95,6 +95,21 @@ export const getPDF = ( folder, report, params = { __t: new Date().valueOf()  },
   });
 };
 
+export const getExcel = ( folder, report, params = { __t: new Date().valueOf()  }, filename = 'form.xlsx' ) => {
+  const { api } = window.reactory;
+  api.utils.queryString.stringify(params)
+  return fetch(`${api_root}/excel/${formId}?`, {
+    method: 'get',
+    header: { ...api}
+  }).then((excel) => {
+    const blob=new Blob([excel]);
+    const link=document.createElement('a');
+    link.href=window.URL.createObjectURL(blob);
+    link.download=filename;
+    link.click();
+  });
+};
+
 export const getRemoteJson = (route, headers = api_headers) => {
   return fetch(route, {
     method: 'get',

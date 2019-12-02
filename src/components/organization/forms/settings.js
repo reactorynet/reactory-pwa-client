@@ -11,7 +11,8 @@ import {
 } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import { withApi, ReactoryApi } from '../../../api/ApiProvider';
+import { withApi } from '../../../api/ApiProvider';
+import { ReactoryApi } from "../../../api/ReactoryApi";
 
 const styles = theme => ({
   root: {

@@ -6,7 +6,8 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import { find, template, templateSettings } from 'lodash';
 import { compose } from 'redux';
 import uuid from 'uuid';
-import { withApi, ReactoryApi } from '../../api/ApiProvider'
+import { withApi } from '../../api/ApiProvider'
+import { ReactoryApi } from "../../api/ReactoryApi";
 import {
   Button,
   Fab,

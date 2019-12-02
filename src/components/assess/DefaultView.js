@@ -35,7 +35,8 @@ import CancelIcon from '@material-ui/icons/Cancel';
 import Assessment, { Behaviour } from './Assessment';
 import KeyboardArrowLeft from '@material-ui/icons/KeyboardArrowLeft';
 import KeyboardArrowRight from '@material-ui/icons/KeyboardArrowRight';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 import { isArray } from 'util';
 
 const nil = isNil;
@@ -186,7 +187,10 @@ class RatingControl extends Component {
 
     const ratingComponent = (
       <Fragment>        
-        <Badge>{ratingTooltip}</Badge> <Typography variant="body1" className={classes.behaviourTitle}>{template(behaviour.title)({ employee: assessment.delegate, assessment, api: this.props.api })}</Typography>
+        <Badge>{ratingTooltip}</Badge> 
+        <Typography variant="body1" className={classes.behaviourTitle}>
+          {template(behaviour.title)({ employee: assessment.delegate, assessment, survey: assessment.survey, api: this.props.api })}
+        </Typography>
         <Stepper alternativeLabel nonLinear activeStep={rating.rating - 1}>
           {steps}
         </Stepper>
@@ -714,8 +718,8 @@ class DefaultView extends Component {
     return (
       <Grid container spacing={8}>
         <Grid item sm={12} xs={12}>
-          <Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed</Typography>
-          { this.is180(assessment.survey) === true ? <Typography variant="caption" color="primary"><i>&nbsp;** Please provide ratings in context of the entire team <IconButton onClick={toggleShowTeam}><Icon>supervised_user_circle</Icon></IconButton>.</i></Typography> : null }
+          <Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed.</Typography>
+          { this.is180(assessment.survey) === true ? <Typography variant="caption" color="primary">&nbsp;Please provide ratings in context of the entire team <IconButton onClick={toggleShowTeam}><Icon>supervised_user_circle</Icon></IconButton></Typography> : null }
           { this.is180(assessment.survey) === true ? this.getDelegateTeamList() : null }
           { behaviours }          
           { customBehaviours.length > 0 ? 
@@ -731,8 +735,8 @@ class DefaultView extends Component {
           <Grid item sm={12} xs={12}>
             <Paper style={{ padding: '5px' }}>
               <Typography>
-                If you want to provide a customised behaviour that {delegate.firstName} exhibits that relates to {quality.title}, type it in the box below and then click the add <Icon>add</Icon> button and provide your rating and feedback.<br /><br />
-                Please note, these custom ratings will not affect the calculation of {delegate.firstName}'s overall rating for this assessment.
+                If you want to provide a customised behaviour that {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName} exhibits that relates to {quality.title}, type it in the box below and then click the add <Icon>add</Icon> button and provide your rating and feedback.<br /><br />
+                Please note, these custom ratings will not affect the calculation of {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName}'s overall rating for this assessment.
              </Typography>
              <Paper className={classes.root} elevation={1}>              
               <InputBase 
@@ -884,7 +888,7 @@ class DefaultView extends Component {
     
     let headerTitle = assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.surveyType} ${survey.title} ${selfAssessment === true ? ' [Self Assessment]' : ''}` : `Unknown`;
     if(is180  === true) {
-      headerTitle = `Team assessment ${survey.delegateTeamName}${survey.delegateTeamName === assessment.team ? '[Self Assessment]' : ` assessing as team ${survey.assessorTeamName}`}`;
+      headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName} team`;
     }
 
     return (

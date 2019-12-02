@@ -1,8 +1,4 @@
-import { ReactoryApi } from './ApiProvider'
-
-export const login = ReactoryApi.login
-export const companyWithId = ReactoryApi.companyWithId
-export const register = ReactoryApi.register
-export const forgot = ReactoryApi.forgot
-export const reset = ReactoryApi.reset
-export const forms = ReactoryApi.forms
+import ReactoryApi from '@reactory/client-core/api/ReactoryApi';
+export { default as ApiProvider, withApi } from '@reactory/client-core/api/ApiProvider';
+export { ReactoryApiEventNames } from '@reactory/client-core/api/ReactoryApi'; 
+export default ReactoryApi;

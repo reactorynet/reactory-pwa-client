@@ -9,7 +9,8 @@ import {
 } from '@material-ui/core';
 
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import { withApi, ReactoryApi } from '../../api/ApiProvider'
+import { withApi } from '../../api/ApiProvider'
+import { ReactoryApi } from "../../api/ReactoryApi";
 
 const defaultLayout = {
   main: {

@@ -14,7 +14,8 @@ import {
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { Typography } from '@material-ui/core';
 import MaterialTable from 'material-table';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 import gql from 'graphql-tag';
 import moment from 'moment';
 

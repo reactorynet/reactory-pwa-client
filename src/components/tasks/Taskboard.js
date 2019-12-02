@@ -33,7 +33,8 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import IconButtonDropDown from '@material-ui/icons/ArrowDropDown';
 import moment from 'moment';
-import { withApi, ReactoryApi } from '../../api/ApiProvider'
+import { withApi } from '../../api/ApiProvider'
+import { ReactoryApi } from "../../api/ReactoryApi";
 import Comments from '../shared/Comments';
 import * as mocks from '../../models/mock';
 import Draggable from 'react-draggable';

@@ -10,7 +10,7 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
 import Dropzone from 'react-dropzone';
-import { Query, Mutation } from 'react-apollo';
+import { Query, Mutation, QueryProps, QueryResult, MutationResult } from 'react-apollo';
 import { nil } from '@reactory/client-core/components/util';
 import queryString from '@reactory/client-core/query-string';
 import { withApi, ReactoryApi } from '@reactory/client-core/api/ApiProvider';
@@ -27,9 +27,10 @@ import {
 import Fields from './fields';
 import * as WidgetPresets from './widgets';
 import MaterialTemplates from './templates';
-import uiSchemas from './schema/uiSchema';
 import gql from 'graphql-tag';
 import { deepEquals } from './form/utils';
+import { Reactory } from '../../types/reactory';
+import { History } from 'history';
 
 const {
   MaterialArrayField,
@@ -69,11 +70,17 @@ const simpleUiSchema = {
   },
 };
 
-const simpleForm = {
+const simpleForm : Reactory.IReactoryForm = {
+  id: 'ReactoryFormNotFoundForm',
   schema: simpleSchema,
   uiSchema: simpleUiSchema,
-  widgets: {},
-  fields: {}
+  name: 'FormNotFound',
+  uiFramework: 'material',
+  uiSupport: ['material'],
+  nameSpace: 'core',
+  version: '1.0.0',
+  title: "Form Not Found Form",
+  registerAsComponent: false,  
 };
 
 function TabContainer(props) {
@@ -93,7 +100,8 @@ const FormWithQuery = (props) => {
 
   return (
     <Query query={props.query} variables={props.variables}>
-      {({ loading, error, data }) => {
+      {(queryResult: QueryResult) => {
+        const { loading, error, data } = queryResult;
         if (loading === true) return "Loading form data...";
         if (error) return error.message;
         const options = { ...props.options, data: data || props.data };
@@ -114,9 +122,53 @@ FormWithQuery.defaultProps = {
   data: {}
 };
 
-class ReactoryComponent extends Component {
 
-  static styles = (theme) => {
+export interface ReactoryFormProperties {
+  uiSchemaKey?: string;
+  data: any;
+  formData: any;
+  location: any;
+  api: any;
+  formId: string,
+  uiSchemaId: string,
+  uiFramework: string,
+  mode: string,
+  history: History,
+  formContext?: any,
+  extendSchema?: Function,
+  busy: boolean,
+  events?: Object,
+  query?: Object,
+  onChange?: Function,
+  onSubmit?: Function
+}
+
+export interface ReactoryFormState {
+  loading: boolean,
+  allowRefresh?: boolean,
+  forms_loaded: boolean,
+  forms: Reactory.IReactoryForm[],
+  uiFramework: string,
+  uiSchemaKey: string,
+  activeUiSchemaMenuItem: string | undefined,
+  formDef?: Reactory.IReactoryForm,
+  formData?: any,    
+  dirty: boolean,
+  queryComplete: boolean,
+  showHelp: boolean,
+  showReportModal: boolean,
+  showExcelWindow: boolean,
+  query?:  Object,
+  busy: boolean,
+  liveUpdate: boolean,
+  pendingResources: Object,
+  _instance_id: string,
+}
+
+
+class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormState> {
+
+  static styles = (theme: Object) => {
     return {
 
     }
@@ -135,31 +187,36 @@ class ReactoryComponent extends Component {
     events: PropTypes.object
   };
 
-  static defaultProps = {
+  static defaultProps: ReactoryFormProperties = {
     formId: 'default',
     uiSchemaId: 'default',
     uiFramework: 'schema',
+    
     mode: 'new',
     formContext: {
 
     },
-    extendSchema: ( schema ) => { return schema; },
+    extendSchema: ( schema: Reactory.IReactoryForm ) => { return schema; },
     busy: false,
     query: {
       
     }
   };
 
-  constructor(props, context) {
+  $events: EventEmitter = new EventEmitter();
+  defaultComponents: string[];
+  componentDefs: any;
+  formRef: null;
+  plugins: {};
+  api: any;
+
+  constructor(props: ReactoryFormProperties, context: any) {    
     super(props, context);
-    
-    // //console.log('New form', {props, context});
-    const $events = new EventEmitter();
-    
+            
     if(props.events) {
       Object.getOwnPropertyNames(props.events).map((eventName)=>{
         if(typeof props.events[eventName] === 'function') {
-          $events.on(eventName, props.events[eventName]);
+          this.$events.on(eventName, props.events[eventName]);
         }        
       });
     }
@@ -170,14 +227,17 @@ class ReactoryComponent extends Component {
     let _state = {
       loading: true,
       forms_loaded: false,
+      formDef: null,
       forms: [],
       uiFramework: props.uiFramework,
       uiSchemaKey: props.uiSchemaKey || 'default',
-      activeUiSchemaMenuItem: null,
+      activeUiSchemaMenuItem: undefined,
       formData: props.data || props.formData,    
       dirty: false,
       queryComplete: false,
       showHelp: false,
+      showExcelWindow: false,
+      showReportModal: false,
       query:  {...props.query, ...queryString.parse(props.location.search) },
       busy: props.busy === true,
       liveUpdate: false,
@@ -210,20 +270,21 @@ class ReactoryComponent extends Component {
     this.getFormContext = this.getFormContext.bind(this);
     this.getFormData = this.getFormData.bind(this);
     this.getReportWidget = this.getReportWidget.bind(this);
+    this.getExcelWidget = this.getExcelWidget.bind(this);
     this.goBack = this.goBack.bind(this);
     this.showHelp = this.showHelp.bind(this);
     this.showDebug = this.showDebug.bind(this);
-    this.showReportModal = this.showReportModal.bind(this);
+    this.showReportModal = this.showReportModal.bind(this);    
+    this.showExcelModal = this.showExcelModal.bind(this);
     this.refreshForm = this.refreshForm.bind(this);
     this.formRef = null;
     this.downloadForms = this.downloadForms.bind(this);
     this.onPluginLoaded = this.onPluginLoaded.bind(this);
     this.getHelpScreen = this.getHelpScreen.bind(this);
-    this.plugins = { };
-    this.$events = $events;    
+    this.plugins = { };     
   }
 
-  on(eventName, listener, context){      
+  on(eventName: string, listener: Function, context: any){      
     this.$events.on(eventName, listener, context);
   }
 
@@ -254,7 +315,7 @@ class ReactoryComponent extends Component {
     this.$events.removeAllListeners();    
   }
 
-  componentDidCatch(error) {
+  componentDidCatch(error: Error) {
     this.props.api.log(`An error occured outside of form boundary`, error, 'error');
   }
 
@@ -265,11 +326,10 @@ class ReactoryComponent extends Component {
     api.amq.onReactoryPluginLoaded('loaded', this.onPluginLoaded);
   }
   
-  formDef(){
+  formDef = ():Reactory.IReactoryForm | undefined => {
     if(this.state.formDef) return this.state.formDef;
-    else {
-      return simpleForm;
-    }     
+    
+    return undefined
   }
 
   goBack(){
@@ -296,28 +356,28 @@ class ReactoryComponent extends Component {
     return (
       <FullScreenModal open={this.state.showReportModal === true} onClose={closeReport}>
         <ReportViewer 
-          {...formDef.defaultReport}
+          {...formDef.defaultPdfReport}
           data={this.state.formData}      
         />
       </FullScreenModal>
     )
-
   }
 
-  getDebugScreen(formData = { null: true }){
-    const { FullScreenModal, Loading } = this.componentDefs;
+  getExcelWidget(){
+    const { ReportViewer, FullScreenModal } = this.componentDefs;
     const formDef = this.formDef();
+    if(formDef !== undefined) {
+      const closeReport = ( e : React.SyntheticEvent ) : void => {  this.setState({ showExcelWindow: false }); }
     
-    const closeDebug = e => this.setState({ showDebug: false });
-    return (
-      <FullScreenModal open={this.state.showDebug === true} onClose={closeDebug}>
-        <Typography>Debug {formDef.title}</Typography>
-        <pre>
-          
-        </pre>
-        <hr/>
-      </FullScreenModal>
-    )
+      return (
+        <FullScreenModal open={this.state.showExcelWindow === true} onClose={closeReport}>
+          <ReportViewer 
+            {...formDef.defaultExcelExport}
+            data={this.state.formData}
+          />
+        </FullScreenModal>
+      )
+    }
   }
 
   showHelp(){
@@ -332,7 +392,11 @@ class ReactoryComponent extends Component {
     this.setState({ showReportModal: true })
   }
 
-  renderForm(formData, onSubmit, patch = {}) {
+  showExcelModal(){
+    this.setState({ showExcelWindow: true });
+  }
+
+  renderForm(formData: any, onSubmit: Function, patch: Object = {}) {
     this.props.api.log('Rendering Form', {props: this.props, state: this.state}, 'debug')
     const { loading, forms, busy, _instance_id } = this.state;
     const self = this;
@@ -441,8 +505,17 @@ class ReactoryComponent extends Component {
     
     let reportButton = null;
 
-    if(formDef.defaultReport) {
+    if(formDef.defaultPdfReport) {
       reportButton = (<Button variant="text" onClick={this.showReportModal} color="secondary"><Icon>print</Icon></Button>);
+    }
+
+    let exportButton = null;
+
+    if(formDef.defaultExcelExport) {
+      exportButton = (
+        <Button variant="text" onClick={this.showExcelModal} color="secondary">
+          <Icon>cloud_download</Icon>
+        </Button>);
     }
 
     return (
@@ -457,11 +530,12 @@ class ReactoryComponent extends Component {
             { formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button> }
             { formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button> }
             { reportButton }
+            { exportButton }
           </Toolbar>
         </Form>
         {this.getHelpScreen()}
-        {this.getDebugScreen()}
         {this.getReportWidget()}
+        {this.getExcelWidget()}
       </Fragment>
     )
   }
@@ -489,8 +563,8 @@ class ReactoryComponent extends Component {
       const mutation  = formDef.graphql.mutation[mode];
       return (
         <Mutation mutation={gql(mutation.text)}>
-        {(mutateFunction, { loading, errors, data }) => {
-
+        {(mutateFunction: Function, mutationResult: MutationResult) => {
+          const { loading, error, data } = mutationResult
           const onFormSubmit = (formSchema) => {  
             api.log(`Form Submitting, post via graphql`, formSchema, 'debug');  
             const _variables = objectMapper({...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
@@ -504,8 +578,8 @@ class ReactoryComponent extends Component {
           let errorWidget = null;
           
           if(loading === true) loadingWidget = (<Loading message={"Updating... please wait."} />);
-          if(errors) {
-            errorWidget = (<p>{errors.message}</p>);
+          if(error) {
+            errorWidget = (<p>{error.message}</p>);
           }
           if(data && data[mutation.name]) {
             if(mutation.onSuccessMethod === "route") {              
@@ -572,9 +646,8 @@ class ReactoryComponent extends Component {
       };
       
       //execute query 
-      api.graphqlQuery(gql(query.text), _variables).then(( result ) => {        
-        const { data, loading, errors } = result;
-        debugger
+      api.graphqlQuery(gql(query.text), _variables).then(( result: QueryResult ) => {        
+        const { data, loading, error } = result;
         let _formData = formData;        
         if(data && data[query.name]) {    
           switch(query.resultType) {
@@ -601,12 +674,12 @@ class ReactoryComponent extends Component {
         }      
         
         //update component state with new form data
-        that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, ()=>{
+        that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: error, loading }, ()=>{
           that.$events.emit('onQueryComplete', { formData: _formData, form: that } );
 
-          if(errors)  {            
-            api.log(`Error executing graphql query`, errors)
-            handleErrors(errors);  
+          if(error)  {            
+            api.log(`Error executing graphql query`, error)
+            handleErrors(error);  
           }
         });
 
@@ -1080,10 +1153,13 @@ class ReactoryComponent extends Component {
     return formData
   }
 
+  /**
+   * Internal function responsible for Fetching Forms from remote source
+   */
   downloadForms(){
     const that = this;
     try {
-      this.props.api.forms().then((forms) => {
+      this.props.api.forms().then((forms: Reactory.IReactoryForm[]) => {
         const formDef = find(forms, { id: that.props.formId }) || simpleForm;
         if(formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
         let _activeUiSchemaMenuItem = null;

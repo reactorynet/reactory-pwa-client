@@ -1,16 +1,19 @@
-module.exports = function (api) {  
-  api.cache(true);
-
-  const presets = [ 
+{
+  "presets": [ 
     "@babel/react",     
     ["@babel/env", { 
       "modules": "auto",
       "useBuiltIns": "false",
       "corejs": "3"         
-    }],    
-   ];
-
-  const plugins = [             
+    }],
+    ["@babel/preset-typescript",
+    { 
+      "isTSX": true,
+      "allowNamespaces": true,
+      "allExtensions": true,
+    }]    
+   ],
+   "plugins": [
     "add-module-exports",
 
     ["module-resolver", {
@@ -20,7 +23,6 @@ module.exports = function (api) {
       }      
     }],
 
-    // "babel-plugin-transform-class-properties",
     //stage 0
     ["@babel/plugin-proposal-class-properties", { "loose": false }],
     "@babel/plugin-proposal-function-bind",
@@ -45,12 +47,6 @@ module.exports = function (api) {
     // "@babel/plugin-transform-react-jsx-compat",
     "@babel/plugin-transform-react-jsx",    
     "@babel/plugin-transform-react-inline-elements",
-    "@babel/plugin-transform-react-constant-elements",
-        
-  ];
-
-  return {
-    presets,
-    plugins
-  };
+    "@babel/plugin-transform-react-constant-elements"
+   ]
 }

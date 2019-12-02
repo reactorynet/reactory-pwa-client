@@ -31,7 +31,8 @@ import Paper from '@material-ui/core/Paper';
 
 import Tooltip from '@material-ui/core/Tooltip';
 
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 import DefaultAvatar from '../../assets/images/profile/default.png';
 import { CDNProfileResource, getAvatar, isEmail } from '../util';
 import { UserListWithSearchComponent } from './Widgets'

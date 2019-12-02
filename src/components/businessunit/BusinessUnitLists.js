@@ -23,7 +23,8 @@ import {
   Search as SearchIcon
 } from '@material-ui/icons';
 import { fade } from '@material-ui/core/styles/colorManipulator';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 import styles from '../shared/styles';
 import businessUnitApi from './graphql';
 

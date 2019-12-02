@@ -6,7 +6,8 @@ import { Query } from 'react-apollo';
 import { Survey } from './Assessment';
 import { Typography } from '@material-ui/core';
 import { withStyles, withTheme} from '@material-ui/core/styles';
-import { ReactoryApi, withApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 import { nil } from '../util';
 
 

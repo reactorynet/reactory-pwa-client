@@ -32,7 +32,8 @@ import PageviewIcon from '@material-ui/icons/Pageview';
 import Avatar from '@material-ui/core/Avatar';
 import Paper from '@material-ui/core/Paper';
 import Toolbar from '@material-ui/core/Toolbar';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 
 //recharts imports
 import {Radar, RadarChart, PolarGrid, Legend,

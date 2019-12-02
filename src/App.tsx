@@ -24,7 +24,8 @@ import Header from '@reactory/client-core/components/shared/DefaultHeader';
 import {
   componentRegistery
 } from './components';
-import ApiProvider, { ReactoryApi, ReactoryApiEventNames } from './api/ApiProvider';
+
+import ReactoryApi, { ApiProvider, ReactoryApiEventNames } from './api'
 import { fetch } from "whatwg-fetch";
 import { deepEquals } from './components/reactory/form/utils';
 

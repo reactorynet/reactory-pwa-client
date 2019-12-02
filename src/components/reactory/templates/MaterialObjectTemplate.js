@@ -2,7 +2,8 @@ import React, { Component, Fragment } from 'react'
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
 import { withStyles, withTheme } from '@material-ui/core/styles';
-import { withApi, ReactoryApi } from '../../../api/ApiProvider';
+import { withApi } from '../../../api/ApiProvider';
+import { ReactoryApi } from "../../../api/ReactoryApi";
 import { template, isNil, isEmpty } from 'lodash';
 import * as Widgets from '../widgets';
 import {

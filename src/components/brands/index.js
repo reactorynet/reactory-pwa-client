@@ -44,7 +44,8 @@ import { withTheme, withStyles } from '@material-ui/core/styles';
 import { isArray, pullAt, isNil } from 'lodash'
 import { TableFooter } from '@material-ui/core/Table';
 // import { select } from 'async';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 import { omitDeep } from '../util';
 const nilf = () => ({})
 

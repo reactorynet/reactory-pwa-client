@@ -63,7 +63,8 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { withApollo, Query, Mutation } from 'react-apollo';
 import { UserSearchInputComponent, UserProfile } from '../../user';
 import { BrandListWithData } from '../../brands';
-import { withApi, ReactoryApi } from '../../../api/ApiProvider';
+import { withApi } from '../../../api/ApiProvider';
+import { ReactoryApi } from "../../../api/ReactoryApi";
 import { omitDeep, getAvatar } from '../../util';
 import { flattenSelections } from 'apollo-utilities';
 // Setup the localizer by providing the moment (or globalize) Object

@@ -157,6 +157,9 @@ function build(previousFileSizes) {
     );
     console.log();
   }
+
+  
+
   var startedAt = moment();
   var datefrmt = 'DD MMM \'YY HH:mm:ss';
   var buildmessage = "------------------------------------------------------------------------\n"

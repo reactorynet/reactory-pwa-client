@@ -4,7 +4,8 @@ import { Button, IconButton, Icon, Typography } from '@material-ui/core';
 import { isArray } from 'lodash';
 import { compose } from 'recompose';
 import { withTheme } from '@material-ui/styles';
-import { withApi, ReactoryApi } from '../../api/ApiProvider';
+import { withApi } from '../../api/ApiProvider';
+import { ReactoryApi } from "../../api/ReactoryApi";
 
 class SlideOutLauncher extends Component {
 
