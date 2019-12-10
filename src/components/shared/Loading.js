@@ -39,6 +39,7 @@ class Loading extends Component {
           <Paper className={`${classes.root600} ${classes.paper} ${nologo === true ? classes.nologo : ''}`}>
             { nologo === true ? null : <Logo /> }
             <Typography variant={'h6'}>{message} &nbsp;<Icon className={spinIcon === true ? classes.spinning: ''}>{icon}</Icon></Typography>
+            {this.props.children}
           </Paper>
         </CenteredContainer>
       );

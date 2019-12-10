@@ -31,11 +31,10 @@ class ApiProvider extends Component<ApiProviderProps> {
     }
 }
 
-const ApiProviderComponent = compose(    
+export const ApiProviderComponent = compose(    
     withApollo,
     withRouter,
 )(ApiProvider);
-
 
 export const withApi = (ComponentToWrap) => {
     return class ApiWrappedComponent extends Component {

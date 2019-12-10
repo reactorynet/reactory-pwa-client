@@ -3,34 +3,31 @@ import ReactDOM from 'react-dom';
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
 import uuid from 'uuid';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { ApolloClient, gql, FetchPolicy } from 'apollo-client-preset';
-import { ApolloProvider } from 'react-apollo';
+import {BrowserRouter as Router} from 'react-router-dom';
+import {Provider} from 'react-redux';
+import {ApolloClient, gql} from 'apollo-client-preset';
+import {ApolloProvider} from 'react-apollo';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
-import { isArray, intersection, isEmpty, isNil, template } from 'lodash';
+import {ThemeProvider as MuiThemeProvider} from '@material-ui/core/styles';
+import {intersection, isArray, isEmpty, isNil, template} from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
-import { getAvatar, getUserFullName, getOrganizationLogo, attachComponent } from '../components/util';
+import {
+  attachComponent,
+  getAvatar,
+  getOrganizationLogo,
+  getUserFullName,
+  injectResources,
+  omitDeep
+} from '../components/util';
 import amq from '../amq';
 import * as RestApi from './RestApi';
-import { width } from "@material-ui/system";
 import GraphQL from '@reactory/client-core/api/graphql';
-import { Typography } from "@material-ui/core";
-import icons from '../assets/icons'; 
+import {Typography} from "@material-ui/core";
+import icons from '../assets/icons';
 import queryString from '../query-string';
 import humanNumber from 'human-number';
-import ApiProvider, { withApi } from './ApiProvider';
-import { Reactory } from "types/reactory";
-import { 
-    omitDeep, 
-    CDNOrganizationResource, 
-    getElement,
-    injectResources,
-} from '../components/util';
-import { Store, AnyAction } from "redux";
-
+import ApiProvider, {withApi} from './ApiProvider';
 
 
 const pluginDefinitionValid = (definition) => {
@@ -120,46 +117,47 @@ export const componentPartsFromFqn = ( fqn ) => {
     throw new Error('Component FQN not valid, must have at least nameSpace.name with version being options i.e. nameSpace.name@version')
 }
 
+
 class ReactoryApi extends EventEmitter {
-    
-    history: any;
-    queries: any;
-    mutations: any;
-    props: Object;
-    componentRegister: Object;
-    client: ApolloClient<any>;  
-    login: Function = null;
-    register: Function = null;
-    reset: Function = null;
-    forgot: Function = null;
-    utils: Object = {};     
-    companyWithId: Function = null; 
-    $func: Object;
-    rest: Object = null;
-    tokenValidated: boolean = false;
-    lastValidation: number;
-    tokenValid: boolean = false;
-    getAvatar: Function;
-    getOrganizationLogo: Function;
-    getUserFullName: Function;
-    CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
-    API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
-    CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
-    CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
-    formSchemas: Reactory.IReactoryForm[]
-    formSchemaLastFetch: moment.Moment = null;
-    assets: Object = null;
-    amq: any = null;
-    statistics: any = null;
-    __form_instances: any = null;
-    flushIntervalTimer: any = null;
-    __REACTORYAPI: boolean = true;
-    publishingStats: boolean;
-    reduxStore: any;
-    muiTheme: any;
-    queryObject: any;
-    queryString: any;
-    objectToQueryString: Function;    
+
+  history: any;
+  queries: any;
+  mutations: any;
+  props: Object;
+  componentRegister: Object;
+  client: ApolloClient<any>;
+  login: Function = null;
+  register: Function = null;
+  reset: Function = null;
+  forgot: Function = null;
+  utils: Object = {};
+  companyWithId: Function = null;
+  $func: Object;
+  rest: Object = null;
+  tokenValidated: boolean = false;
+  lastValidation: number;
+  tokenValid: boolean = false;
+  getAvatar: Function;
+  getOrganizationLogo: Function;
+  getUserFullName: Function;
+  CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
+  API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
+  CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
+  CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
+  formSchemas: Reactory.IReactoryForm[]
+  formSchemaLastFetch: moment.Moment = null;
+  assets: Object = null;
+  amq: any = null;
+  statistics: any = null;
+  __form_instances: any = null;
+  flushIntervalTimer: any = null;
+  __REACTORYAPI: boolean = true;
+  publishingStats: boolean;
+  reduxStore: any;
+  muiTheme: any;
+  queryObject: any;
+  queryString: any;
+  objectToQueryString: Function;
     constructor(client, props) {
         super();
         this.history = null;
@@ -285,576 +283,618 @@ class ReactoryApi extends EventEmitter {
         this.__REACTORYAPI = true;
         this.goto = this.goto.bind(this);
     }
-    goto(where = "/", state = { __t: new Date().valueOf() }) {
-        if (this.history && this.history) {
-            this.history.replace({ pathname: where, state });
-            this.emit(ReactoryApiEventNames.onRouteChanged, { path: where, state, where });
-        }
+
+  goto(where = "/", state = {__t: new Date().valueOf()}) {
+    if (this.history && this.history) {
+      this.history.replace({pathname: where, state});
+      this.emit(ReactoryApiEventNames.onRouteChanged, {path: where, state, where});
     }
-    registerFunction(fqn, functionReference, requiresApi = false) {
-        this.log(`Registering function ${fqn}`, [ functionReference, requiresApi ], 'debug');
-        if (typeof functionReference === 'function') {
-            if (requiresApi === true) {
-                this.$func[fqn] = (props) => {
-                    functionReference({ ...props, api: this });
-                };
-            }
-            else {
-                this.$func[fqn] = functionReference;
-            }
-        }
+  }
+
+  registerFunction(fqn, functionReference, requiresApi = false) {
+    this.log(`Registering function ${fqn}`, [functionReference, requiresApi], 'debug');
+    if (typeof functionReference === 'function') {
+      if (requiresApi === true) {
+        this.$func[fqn] = (props) => {
+          functionReference({...props, api: this});
+        };
+      } else {
+        this.$func[fqn] = functionReference;
+      }
     }
-    ;
-    log(message, params: any = [], kind = 'log') {
-        try {
-            switch (kind) {
-                case 'log':
-                case 'debug':
-                case 'error':
-                case 'warn':
-                case 'info': {
-                    // do nothing we good
-                    break;
-                }
-                default: {
-                    //different kind.. we don't do your kind around here.
-                    kind = 'debug';
-                    break;
-                }
-            }
-            const dolog = () => params && params.length === 0 ? console[kind](`Reactory::${message}`) : console[kind](`Reactory::${message}`, params);
-            if (process.env.NODE_ENV !== 'production') {
-                dolog();
-            }
-            else {
-                //if it is production, we can enable / disable the log level by inspecting window.reactory object
-                if (window.reactory && window.reactory.log && window.reactory.log[kind] === true) {
-                    dolog();
-                }
-            }
+  }
+  ;
+
+  log(message, params: any = [], kind = 'log') {
+    try {
+      switch (kind) {
+        case 'log':
+        case 'debug':
+        case 'error':
+        case 'warn':
+        case 'info': {
+          // do nothing we good
+          break;
         }
-        catch (err) {
-            console.error(err);
+        default: {
+          //different kind.. we don't do your kind around here.
+          kind = 'debug';
+          break;
         }
+      }
+      const dolog = () => params && params.length === 0 ? console[kind](`Reactory::${message}`) : console[kind](`Reactory::${message}`, params);
+      if (process.env.NODE_ENV !== 'production') {
+        dolog();
+      } else {
+        //if it is production, we can enable / disable the log level by inspecting window.reactory object
+        if (window.reactory && window.reactory.log && window.reactory.log[kind] === true) {
+          dolog();
+        }
+      }
+    } catch (err) {
+      console.error(err);
     }
-    publishstats() {
-        this.publishingStats = true;
-        if (this.statistics.__delta > 0) {
-            this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, [], 'debug');
-            const entries = this.statistics.__keys.map(key => ({ key, stat: this.statistics.items[key] }));
-            this.graphqlMutation(gql`mutation PublishStatistics($entries: [StatisticsInput]!){
+  }
+
+  publishstats() {
+    this.publishingStats = true;
+    if (this.statistics.__delta > 0) {
+      this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, [], 'debug');
+      const entries = this.statistics.__keys.map(key => ({key, stat: this.statistics.items[key]}));
+      this.graphqlMutation(gql`mutation PublishStatistics($entries: [StatisticsInput]!){
                 CorePublishStatistics(entries: $entries)
             }`, {
-                entries
-            }).then((publishResult) => {
-                this.statistics = {
-                    __delta: 0,
-                    __keys: [],
-                    __lastFlush: null,
-                    __flushInterval: this.statistics.__flushInterval,
-                    items: {}
-                };
-                this.log('Statistics published and flushed', [ publishResult ], 'debug');
-                this.publishingStats = false;
-            }).catch((error) => {
-                this.log(error.message, error, 'error');
-                this.publishingStats = false;
-            });
-        }
-    }
-    flushstats(save) {
-        if (save === true) {
-            this.publishstats();
-        }
-        else {
-            this.statistics = {
-                __delta: 0,
-                __keys: [],
-                __lastflush: null,
-                __flushinterval: this.statistics.__flushinterval,
-                items: {}
-            };
-        }
-    }
-    ;
-    stat(key, statistic) {
-        if (this.statistics.items[key]) {
-            this.statistics.items[key] = { ...this.statistics.item[key], ...statistic };
-            this.statistics.__keys.push(key);
-        }
-        else {
-            this.statistics.items[key] = statistic;
-        }
-        this.statistics.__delta += 1;
-    }
-    ;
-    trackFormInstance(formInstance) {
-        const self = this;
-        self.log('ApiProvider.trackingFormInstance(formInstance)', [ formInstance ], 'debug');
-        this.__form_instances[formInstance.state._instance_id] = formInstance;
-        formInstance.on('componentWillUnmount', (instance) => {
-            self.log('ApiProvider.trackingFormInstance(formInstance).on("componentWillUnmount")', [ formInstance ], 'debug');
-            delete self.__form_instances[formInstance.state._instance_id];
-        });
-    }
-    graphqlMutation(mutation, variables, options: any = { fetchPolicy: "network-only" } ) {
-        const that = this;
-        if (typeof mutation === 'string')
-            mutation = gql(mutation);
-        return new Promise((resolve, reject) => {
-            that.client.mutate({ mutation: mutation, variables, fetchPolicy: "no-cache" }).then((result) => {
-                resolve(result);
-            }).catch((clientErr) => {
-                reject(clientErr);
-            });
-        });
-    }
-    
-    graphqlQuery(query, variables, options: any = { fetchPolicy: 'network-only' }) {
-        const that = this;
-        if (typeof query === 'string')
-            query = gql(query);
-        return new Promise((resolve, reject) => {
-            that.client.query({ query, variables, fetchPolicy: options.fetchPolicy || "network-only" }).then((result) => {
-                resolve(result);
-            }).catch((clientErr) => {
-                resolve({ data: null, loading: false, errors: [clientErr] });
-            });
-        });
-    }
-    afterLogin(user) {
-        this.setUser(user);
-        this.setAuthToken(user.token);
-        return this.status({ emitLogin: true });
-    }
-    loadComponent(Component, props, target) {
-        if (!Component)
-            Component = () => (<p>No Component Specified</p>);
-        attachComponent(Component, props, target);
-    }
-    loadComponentWithFQN(fqn, props, target) {
-        let Component = this.getComponent(fqn);
-        this.loadComponent(Component, props, target);
-    }
-    renderForm(componentView) {
-        const that = this;
-        return (<React.Fragment>
-            <CssBaseline />
-            <Provider store={that.reduxStore}>
-                <ApolloProvider client={that.client}>
-                    <MuiThemeProvider theme={that.muiTheme}>
-                        <Router>
-                            <ApiProvider api={that} history={this.history}>                                
-                                {componentView}
-                            </ApiProvider>
-                        </Router>
-                    </MuiThemeProvider>
-                </ApolloProvider>
-            </Provider>
-        </React.Fragment>);
-    }
-    forms() {
-        const that = this;
-        return new Promise((resolve) => {
-            const refresh = () => {
-                RestApi.forms().then((formsResult) => {
-                    that.formSchemas = formsResult;
-                    const ReactoryFormComponent = that.getComponent('core.ReactoryForm');
-                    formsResult.forEach((formDef) => {
-                        if (formDef.registerAsComponent) {
-                            const FormComponent = (props, context) => {
-                                return that.renderForm(<ReactoryFormComponent {...props} formId={formDef.id} key={props.key || 0} onSubmit={props.onSubmit} onChange={props.onChange} formData={props.formData || props.data || formDef.defaultFormData} before={props.before}>{props.children}
-                                </ReactoryFormComponent>);
-                            };
-                            that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent);
-                        }
-                    });
-                    resolve(formsResult);
-                }).catch((error) => {
-                    console.error('Error loading forms from api', error);
-                    resolve([]);
-                });
-            };
-            if (this.formSchemaLastFetch !== null) {
-                if (moment(this.formSchemaLastFetch).add(60, 'seconds').isAfter(moment())) {
-                    refresh();
-                }
-                else {
-                    resolve(this.formSchemas);
-                }
-            }
-            else
-                refresh();
-        });
-    }
-    async raiseFormCommand(commandId, commandDef, formData) {
-        ////console.log('Raising Form Command Via AMQ', {commandId, formData});
-        if (commandId.indexOf('graphql') === 0) {
-            let commandText = '';
-            let method = 'query';
-            if (commandId.indexOf('.') > 0)
-                method = commandId.split('.')[1];
-            commandText = commandDef[method];
-            let variables = {};
-            if (commandDef.variables && commandDef.variableMap) {
-                variables = objectMapper(formData, commandDef.variables);
-            }
-            if (commandDef.staticVariables) {
-                variables = { ...commandDef.staticVariables, ...variables };
-            }
-            let commandResult = null;
-            switch (method) {
-                case 'mutation': {
-                    commandResult = await this.graphqlMutation(gql(commandText), variables).then();
-                    break;
-                }
-                case 'query':
-                default: {
-                    commandResult = await this.graphqlQuery(gql(commandText), variables).then();
-                }
-            }
-            return commandResult;
-        }
-        if (commandId.indexOf('workflow') === 0) {
-            return await this.startWorkFlow(commandId, formData);
-        }
-        else {
-            this.amq.raiseFormCommand(commandId, formData);
-        }
-    }
-    startWorkFlow(workFlowId, data) {
-        //this.amp.raiseWorkFlowEvent(workFlowId, data);
-        const that = this;
-        return new Promise((resolve, reject) => {
-            that.client.query({ query: that.mutations.System.startWorkflow, variables: { name: workFlowId, data }, fetchPolicy: 'network-only' }).then((result) => {
-                if (result.data.startWorkflow === true) {
-                    resolve(true);
-                }
-                else {
-                    resolve(false);
-                }
-            }).catch((clientErr) => {
-                console.error('Error starting workflow', clientErr);
-                resolve(anonUser);
-            });
-        });
-    }
-    onFormCommandEvent(commandId, func) {
-        this.amq.onFormCommandEvent(commandId, func);
-    }
-    hasRole(itemRoles = [], userRoles = null) {
-        if (itemRoles.length === 1 && itemRoles[0] === '*')
-            return true;
-        if (userRoles === null)
-            userRoles === this.getUser().roles;
-        const result = intersection(itemRoles, userRoles);
-        return result.length >= 1;
-    }
-    isAnon() {
-        return this.hasRole(['ANON']) === true;
-    }
-    addRole(user, organization, role = 'USER') {
-        return true;
-    }
-    removeRole(user, organization, role = 'USER') {
-        return true;
-    }
-    getMenus(target) {
-        const user = this.getUser();
-        const { menus } = user;
-        return menus || [];
-    }
-    getTheme() {
-        const user = this.getUser();
-        const { themeOptions } = user;
-        //add theme extension
-        const extensions = {
-            reactory: {
-                icons
-            }
+        entries
+      }).then((publishResult) => {
+        this.statistics = {
+          __delta: 0,
+          __keys: [],
+          __lastFlush: null,
+          __flushInterval: this.statistics.__flushInterval,
+          items: {}
         };
-        return { ...themeOptions, extensions };
+        this.log('Statistics published and flushed', [publishResult], 'debug');
+        this.publishingStats = false;
+      }).catch((error) => {
+        this.log(error.message, error, 'error');
+        this.publishingStats = false;
+      });
     }
-    getRoutes() {
-        const user = this.getUser();
-        const { routes } = user;
-        return routes || [];
+  }
+
+  flushstats(save) {
+    if (save === true) {
+      this.publishstats();
+    } else {
+      this.statistics = {
+        __delta: 0,
+        __keys: [],
+        __lastflush: null,
+        __flushinterval: this.statistics.__flushinterval,
+        items: {}
+      };
     }
-    getApplicationRoles() {
-        const user = this.getUser();
-        const { roles } = user;
-        return roles || [];
+  }
+  ;
+
+  stat(key, statistic) {
+    if (this.statistics.items[key]) {
+      this.statistics.items[key] = {...this.statistics.item[key], ...statistic};
+      this.statistics.__keys.push(key);
+    } else {
+      this.statistics.items[key] = statistic;
     }
-    setUser(user) {
-        localStorage.setItem(storageKeys.LoggedInUser, JSON.stringify(user));
-    }
-    setAuthToken(token) {
-        localStorage.setItem(storageKeys.AuthToken, token);
-    }
-    getAuthToken() {
-        return localStorage.getItem(storageKeys.AuthToken);
-    }
-    setLastUserEmail(email) {
-        localStorage.setItem(storageKeys.LastLoggedInEmail, email);
-    }
-    getLastUserEmail() {
-        localStorage.getItem(storageKeys.LastLoggedInEmail);
-    }
-    registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false) {
-        const fqn = `${nameSpace}.${name}@${version}`;
-        if (isEmpty(nameSpace))
-            throw new Error('nameSpace is required for component registration');
-        if (isEmpty(name))
-            throw new Error('name is required for component registration');
-        if (isNil(component))
-            throw new Error('component is required to register component');
-        this.componentRegister[fqn] = {
-            nameSpace,
-            name,
-            version,
-            component: wrapWithApi === false ? component : withApi(component),
-            tags,
-            roles
-        };
-        this.emit('componentRegistered', fqn);
-    }
-    getComponents(componentFqns = []) {
-        let componentMap = {};
-        componentFqns.forEach(fqn => {
-            let component = null;
-            if (typeof fqn === 'string') {
-                component = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
-                try {
-                    if (component) {
-                        const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
-                        componentMap[component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
-                    }
-                    else {
-                        componentMap[componentPartsFromFqn(fqn).name] = this.getNotFoundComponent();
-                    }
-                }
-                catch (e) {
-                    this.log('Error Occured Loading Component Fqns',  [ fqn ], 'error');
-                }
+    this.statistics.__delta += 1;
+  }
+  ;
+
+  trackFormInstance(formInstance) {
+    const self = this;
+    self.log('ApiProvider.trackingFormInstance(formInstance)', [formInstance], 'debug');
+    this.__form_instances[formInstance.state._instance_id] = formInstance;
+    formInstance.on('componentWillUnmount', (instance) => {
+      self.log('ApiProvider.trackingFormInstance(formInstance).on("componentWillUnmount")', [formInstance], 'debug');
+      delete self.__form_instances[formInstance.state._instance_id];
+    });
+  }
+
+  graphqlMutation(mutation, variables, options: any = {fetchPolicy: "network-only"}) {
+    const that = this;
+    if (typeof mutation === 'string')
+      mutation = gql(mutation);
+    return new Promise((resolve, reject) => {
+      that.client.mutate({mutation: mutation, variables, fetchPolicy: "no-cache"}).then((result) => {
+        resolve(result);
+      }).catch((clientErr) => {
+        reject(clientErr);
+      });
+    });
+  }
+
+  graphqlQuery(query, variables, options: any = {fetchPolicy: 'network-only'}) {
+    const that = this;
+    if (typeof query === 'string')
+      query = gql(query);
+    return new Promise((resolve, reject) => {
+      that.client.query({query, variables, fetchPolicy: options.fetchPolicy || "network-only"}).then((result) => {
+        resolve(result);
+      }).catch((clientErr) => {
+        resolve({data: null, loading: false, errors: [clientErr]});
+      });
+    });
+  }
+
+  afterLogin(user) {
+    this.setUser(user);
+    this.setAuthToken(user.token);
+    return this.status({emitLogin: true});
+  }
+
+  loadComponent(Component, props, target) {
+    if (!Component)
+      Component = () => (<p>No Component Specified</p>);
+    attachComponent(Component, props, target);
+  }
+
+  loadComponentWithFQN(fqn, props, target) {
+    let Component = this.getComponent(fqn);
+    this.loadComponent(Component, props, target);
+  }
+
+  renderForm(componentView) {
+    const that = this;
+    return (<React.Fragment>
+      <CssBaseline/>
+      <Provider store={that.reduxStore}>
+        <ApolloProvider client={that.client}>
+          <MuiThemeProvider theme={that.muiTheme}>
+            <Router>
+              <ApiProvider api={that} history={this.history}>
+                {componentView}
+              </ApiProvider>
+            </Router>
+          </MuiThemeProvider>
+        </ApolloProvider>
+      </Provider>
+    </React.Fragment>);
+  }
+
+  forms() {
+    const that = this;
+    return new Promise((resolve) => {
+      const refresh = () => {
+        RestApi.forms().then((formsResult) => {
+          that.formSchemas = formsResult;
+          const ReactoryFormComponent = that.getComponent('core.ReactoryForm');
+          formsResult.forEach((formDef) => {
+            if (formDef.registerAsComponent) {
+              const FormComponent = (props, context) => {
+                return that.renderForm(<ReactoryFormComponent {...props} formId={formDef.id} key={props.key || 0}
+                                                              onSubmit={props.onSubmit} onChange={props.onChange}
+                                                              formData={props.formData || props.data || formDef.defaultFormData}
+                                                              before={props.before}>{props.children}
+                </ReactoryFormComponent>);
+              };
+              that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent);
             }
-            if (typeof fqn === 'object') {
-                if (typeof fqn.componentFqn === 'string') {
-                    component = this.componentRegister[`${fqn.componentFqn}${fqn.componentFqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
-                    try {
-                        if (component) {
-                            const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
-                            componentMap[typeof fqn.alias === 'string' ? fqn.alias : component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
-                        }
-                        else {
-                            componentMap[componentPartsFromFqn(fqn.componentFqn).name] = this.getNotFoundComponent();
-                        }
-                    }
-                    catch (e) {
-                        this.log('Error Occured Loading Component Fqns', fqn.componentFqn, 'error');
-                    }
-                }
-            }
+          });
+          resolve(formsResult);
+        }).catch((error) => {
+          console.error('Error loading forms from api', error);
+          resolve([]);
         });
-        return componentMap;
+      };
+      if (this.formSchemaLastFetch !== null) {
+        if (moment(this.formSchemaLastFetch).add(60, 'seconds').isAfter(moment())) {
+          refresh();
+        } else {
+          resolve(this.formSchemas);
+        }
+      } else
+        refresh();
+    });
+  }
+
+  async raiseFormCommand(commandId, commandDef, formData) {
+    ////console.log('Raising Form Command Via AMQ', {commandId, formData});
+    if (commandId.indexOf('graphql') === 0) {
+      let commandText = '';
+      let method = 'query';
+      if (commandId.indexOf('.') > 0)
+        method = commandId.split('.')[1];
+      commandText = commandDef[method];
+      let variables = {};
+      if (commandDef.variables && commandDef.variableMap) {
+        variables = objectMapper(formData, commandDef.variables);
+      }
+      if (commandDef.staticVariables) {
+        variables = {...commandDef.staticVariables, ...variables};
+      }
+      let commandResult = null;
+      switch (method) {
+        case 'mutation': {
+          commandResult = await this.graphqlMutation(gql(commandText), variables).then();
+          break;
+        }
+        case 'query':
+        default: {
+          commandResult = await this.graphqlQuery(gql(commandText), variables).then();
+        }
+      }
+      return commandResult;
     }
-    getComponent(fqn) {
-        if (fqn === undefined)
-            throw new Error('NO NULL FQN');
+    if (commandId.indexOf('workflow') === 0) {
+      return await this.startWorkFlow(commandId, formData);
+    } else {
+      this.amq.raiseFormCommand(commandId, formData);
+    }
+  }
+
+  startWorkFlow(workFlowId, data) {
+    //this.amp.raiseWorkFlowEvent(workFlowId, data);
+    const that = this;
+    return new Promise((resolve, reject) => {
+      that.client.query({
+        query: that.mutations.System.startWorkflow,
+        variables: {name: workFlowId, data},
+        fetchPolicy: 'network-only'
+      }).then((result) => {
+        if (result.data.startWorkflow === true) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      }).catch((clientErr) => {
+        console.error('Error starting workflow', clientErr);
+        resolve(anonUser);
+      });
+    });
+  }
+
+  onFormCommandEvent(commandId, func) {
+    this.amq.onFormCommandEvent(commandId, func);
+  }
+
+  hasRole(itemRoles = [], userRoles = null) {
+    if (itemRoles.length === 1 && itemRoles[0] === '*')
+      return true;
+    if (userRoles === null)
+      userRoles === this.getUser().roles;
+    const result = intersection(itemRoles, userRoles);
+    return result.length >= 1;
+  }
+
+  isAnon() {
+    return this.hasRole(['ANON']) === true;
+  }
+
+  addRole(user, organization, role = 'USER') {
+    return true;
+  }
+
+  removeRole(user, organization, role = 'USER') {
+    return true;
+  }
+
+  getMenus(target) {
+    const user = this.getUser();
+    const {menus} = user;
+    return menus || [];
+  }
+
+  getTheme() {
+    const user = this.getUser();
+    const {themeOptions} = user;
+    //add theme extension
+    const extensions = {
+      reactory: {
+        icons
+      }
+    };
+    return {...themeOptions, extensions};
+  }
+
+  getRoutes() {
+    const user = this.getUser();
+    const {routes} = user;
+    return routes || [];
+  }
+
+  getApplicationRoles() {
+    const user = this.getUser();
+    const {roles} = user;
+    return roles || [];
+  }
+
+  setUser(user) {
+    localStorage.setItem(storageKeys.LoggedInUser, JSON.stringify(user));
+  }
+
+  setAuthToken(token) {
+    localStorage.setItem(storageKeys.AuthToken, token);
+  }
+
+  getAuthToken() {
+    return localStorage.getItem(storageKeys.AuthToken);
+  }
+
+  setLastUserEmail(email) {
+    localStorage.setItem(storageKeys.LastLoggedInEmail, email);
+  }
+
+  getLastUserEmail() {
+    localStorage.getItem(storageKeys.LastLoggedInEmail);
+  }
+
+  registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false) {
+    const fqn = `${nameSpace}.${name}@${version}`;
+    if (isEmpty(nameSpace))
+      throw new Error('nameSpace is required for component registration');
+    if (isEmpty(name))
+      throw new Error('name is required for component registration');
+    if (isNil(component))
+      throw new Error('component is required to register component');
+    this.componentRegister[fqn] = {
+      nameSpace,
+      name,
+      version,
+      component: wrapWithApi === false ? component : withApi(component),
+      tags,
+      roles
+    };
+    this.emit('componentRegistered', fqn);
+  }
+
+  getComponents(componentFqns = []) {
+    let componentMap = {};
+    componentFqns.forEach(fqn => {
+      let component = null;
+      if (typeof fqn === 'string') {
+        component = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
         try {
-            const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
-            if (found && found.component)
-                return found.component;
-            return null; //we must return null, because the component is not found, we cannot automatically return the not found component, that is the responsibility of the component
+          if (component) {
+            const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
+            componentMap[component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
+          } else {
+            componentMap[componentPartsFromFqn(fqn).name] = this.getNotFoundComponent();
+          }
+        } catch (e) {
+          this.log('Error Occured Loading Component Fqns', [fqn], 'error');
         }
-        catch (err) {
-            this.log(`Bad component name ${err.message}`, fqn, 'error');
-            if (this.componentRegister && this.componentRegister['core.NotFound@1.0.0']) {
-                return this.getNotFoundComponent();
+      }
+      if (typeof fqn === 'object') {
+        if (typeof fqn.componentFqn === 'string') {
+          component = this.componentRegister[`${fqn.componentFqn}${fqn.componentFqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
+          try {
+            if (component) {
+              const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
+              componentMap[typeof fqn.alias === 'string' ? fqn.alias : component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
+            } else {
+              componentMap[componentPartsFromFqn(fqn.componentFqn).name] = this.getNotFoundComponent();
             }
+          } catch (e) {
+            this.log('Error Occured Loading Component Fqns', fqn.componentFqn, 'error');
+          }
         }
+      }
+    });
+    return componentMap;
+  }
+
+  getComponent(fqn) {
+    if (fqn === undefined)
+      throw new Error('NO NULL FQN');
+    try {
+      const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
+      if (found && found.component)
+        return found.component;
+      return null; //we must return null, because the component is not found, we cannot automatically return the not found component, that is the responsibility of the component
+    } catch (err) {
+      this.log(`Bad component name ${err.message}`, fqn, 'error');
+      if (this.componentRegister && this.componentRegister['core.NotFound@1.0.0']) {
+        return this.getNotFoundComponent();
+      }
     }
-    getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0') {
-        if (this.componentRegister && this.componentRegister[notFoundComponent]) {
-            return this.componentRegister[notFoundComponent].component;
-        }
-        else {
-            return (React.forwardRef((props, context) => (<div>Component Find Failure, please check component registry and component name requested</div>)));
-        }
+  }
+
+  getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0') {
+    if (this.componentRegister && this.componentRegister[notFoundComponent]) {
+      return this.componentRegister[notFoundComponent].component;
+    } else {
+      return (React.forwardRef((props, context) => (
+        <div>Component Find Failure, please check component registry and component name requested</div>)));
     }
-    getNotAllowedComponent(notAllowedComponentFqn = 'core.NotAllowed@1.0.0') {
-        if (this.componentRegister && this.componentRegister[notAllowedComponentFqn]) {
-            return this.componentRegister[notAllowedComponentFqn].component;
-        }
-        else {
-            return (React.forwardRef((props, context) => (<div>Access Denied</div>)));
-        }
+  }
+
+  getNotAllowedComponent(notAllowedComponentFqn = 'core.NotAllowed@1.0.0') {
+    if (this.componentRegister && this.componentRegister[notAllowedComponentFqn]) {
+      return this.componentRegister[notAllowedComponentFqn].component;
+    } else {
+      return (React.forwardRef((props, context) => (<div>Access Denied</div>)));
     }
-    mountComponent(ComponentToMount, props, domNode, theme = true, callback) {
-        const that = this;
-        if (theme === true) {
-            ReactDOM.render(<React.Fragment>
-                <CssBaseline />
-                <Provider store={that.reduxStore}>
-                    <ApolloProvider client={that.client}>
-                        <MuiThemeProvider theme={that.muiTheme}>
-                            <Router>
-                                <ApiProvider api={that} history={this.history}>
-                                    <ComponentToMount {...props} />
-                                </ApiProvider>
-                            </Router>
-                        </MuiThemeProvider>
-                    </ApolloProvider>
-                </Provider>
-            </React.Fragment>, domNode, callback);
-        }
-        else {
-            ReactDOM.render(<ComponentToMount {...props} />, domNode, callback);
-        }
+  }
+
+  mountComponent(ComponentToMount, props, domNode, theme = true, callback) {
+    const that = this;
+    if (theme === true) {
+      ReactDOM.render(<React.Fragment>
+        <CssBaseline/>
+        <Provider store={that.reduxStore}>
+          <ApolloProvider client={that.client}>
+            <MuiThemeProvider theme={that.muiTheme}>
+              <Router>
+                <ApiProvider api={that} history={this.history}>
+                  <ComponentToMount {...props} />
+                </ApiProvider>
+              </Router>
+            </MuiThemeProvider>
+          </ApolloProvider>
+        </Provider>
+      </React.Fragment>, domNode, callback);
+    } else {
+      ReactDOM.render(<ComponentToMount {...props} />, domNode, callback);
     }
-    showModalWithComponentFqn(componentFqn, title = '', props = {}, modalProps = {}, domNode = null, theme = true, callback) {
-        const ComponentToMount = this.getComponent(componentFqn);
-        this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback);
+  }
+
+  showModalWithComponentFqn(componentFqn, title = '', props = {}, modalProps = {}, domNode = null, theme = true, callback) {
+    const ComponentToMount = this.getComponent(componentFqn);
+    this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback);
+  }
+
+  showModalWithComponent(title = '', ComponentToMount, props, modalProps: any = {}, domNode = null, theme = true, callback) {
+    const that = this;
+    const FullScreenModal = that.getComponent('core.FullScreenModal');
+    const _modalProps: any = {...modalProps};
+    _modalProps.open = true;
+    _modalProps.title = title;
+    let _domNode = domNode || reactoryDomNode();
+    if (isNil(_modalProps.onClose)) {
+      modalProps.onClose = () => {
+        _modalProps.open = false;
+        setTimeout(() => {
+          that.unmountComponent(_domNode);
+        }, 2000);
+      };
     }
-    showModalWithComponent(title = '', ComponentToMount, props, modalProps: any = {}, domNode = null, theme = true, callback) {
-        const that = this;
-        const FullScreenModal = that.getComponent('core.FullScreenModal');
-        const _modalProps: any = { ...modalProps };
-        _modalProps.open = true;
-        _modalProps.title = title;
-        let _domNode = domNode || reactoryDomNode();
-        if (isNil(_modalProps.onClose)) {
-            modalProps.onClose = () => {
-                _modalProps.open = false;
-                setTimeout(() => {
-                    that.unmountComponent(_domNode);
-                }, 2000);
-            };
-        }
-        const ModalMounted = (<FullScreenModal {..._modalProps}> <ComponentToMount {...props} /> </FullScreenModal>);
-        this.mountComponent(ModalMounted, {}, _domNode, true, callback);
+    const ModalMounted = (<FullScreenModal {..._modalProps}> <ComponentToMount {...props} /> </FullScreenModal>);
+    this.mountComponent(ModalMounted, {}, _domNode, true, callback);
+  }
+
+  createElement(ComponentToCreate, props) {
+    return React.createElement(ComponentToCreate, props);
+  }
+
+  unmountComponent(node) {
+    return ReactDOM.unmountComponentAtNode(node);
+  }
+
+  logout(refreshStatus = true) {
+    const user = this.getUser();
+    localStorage.removeItem(storageKeys.AuthToken);
+    this.setUser({...user, ...anonUser});
+    if (refreshStatus === true) {
+      this.status({emitLogin: false}).then((done) => {
+        this.emit(ReactoryApiEventNames.onLogout);
+      });
+    } else {
+      this.emit(ReactoryApiEventNames.onLogout);
     }
-    createElement(ComponentToCreate, props) {
-        return React.createElement(ComponentToCreate, props);
-    }
-    unmountComponent(node) {
-        return ReactDOM.unmountComponentAtNode(node);
-    }
-    logout(refreshStatus = true) {
-        const user = this.getUser();
-        localStorage.removeItem(storageKeys.AuthToken);
-        this.setUser({ ...user, ...anonUser });
-        if (refreshStatus === true) {
-            this.status({ emitLogin: false }).then((done) => {
-                this.emit(ReactoryApiEventNames.onLogout);
-            });
-        }
-        else {
-            this.emit(ReactoryApiEventNames.onLogout);
-        }
-    }
-    getLastValidation() {
-        return this.lastValidation;
-    }
-    getTokenValidated() {
-        return this.tokenValidated;
-    }
-    getUser() {
-        const userString = localStorage.getItem(storageKeys.LoggedInUser);
-        if (userString)
-            return JSON.parse(userString);
-        return anonUser;
-    }
-    saveUserLoginCredentials(provider, props) {
-        //username, password, loginResult
-        return this.graphqlMutation(gql`mutation AddUserCredentials($provider: String!, $props: Any){
+  }
+
+  getLastValidation() {
+    return this.lastValidation;
+  }
+
+  getTokenValidated() {
+    return this.tokenValidated;
+  }
+
+  getUser() {
+    const userString = localStorage.getItem(storageKeys.LoggedInUser);
+    if (userString)
+      return JSON.parse(userString);
+    return anonUser;
+  }
+
+  saveUserLoginCredentials(provider, props) {
+    //username, password, loginResult
+    return this.graphqlMutation(gql`mutation AddUserCredentials($provider: String!, $props: Any){
             addUserCredentials(provider: $provider, props: $props)
         }`, {
-            provider,
-            props
-        });
-    }
-    getUserLoginCredentials(provider) {
-        return this.graphqlQuery(gql`query GetUserCredentials($provider: String!) {
+      provider,
+      props
+    });
+  }
+
+  getUserLoginCredentials(provider) {
+    return this.graphqlQuery(gql`query GetUserCredentials($provider: String!) {
             getUserCredentials(provider: $provider) {
                 provider
                 props
                 lastLogin
             }            
-        }`, { provider });
-    }
-    storeObjectWithKey(key, objectToStore) {
-        localStorage.setItem(key, JSON.stringify(objectToStore));
-    }
-    readObjectWithKey(key) {
-        return JSON.parse(localStorage.getItem(key));
-    }
-    deleteObjectWithKey(key) {
-        localStorage.removeItem(key);
-    }
-    status(options = { emitLogin: false }) {
-        const that = this;
-        return new Promise((resolve, reject) => {
-            that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
-                if (result.data.apiStatus.status === "API OK") {
-                    that.setUser({ ...result.data.apiStatus });
-                    that.lastValidation = moment().valueOf();
-                    that.tokenValidated = true;
-                    if (options.emitLogin === true)
-                        that.emit(ReactoryApiEventNames.onLogin, that.getUser());
-                    that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result });
-                    resolve(that.getUser());
-                }
-                else {
-                    that.logout(false);
-                    that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: true });
-                    that.setUser(anonUser);
-                    resolve(anonUser);
-                }
-            }).catch((clientErr) => {
-                that.logout(false);
-                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { offline: true, clientError: clientErr });
-                resolve({ ...anonUser, offline: true, offlineError: true });
-            });
-        });
-    }
-    validateToken(token) {
-        this.setAuthToken(token);
-        return this.status();
-    }
-    resetPassword({ password, confirmPassword, resetToken }) {
-        const that = this;
-        return new Promise((resolve, reject) => {
-            const setPasswordMutation = that.mutations.Users.setPassword;
-            return that.client.mutate({
-                mutation: setPasswordMutation,
-                variables: {
-                    input: {
-                        password,
-                        confirmPassword,
-                        authToken: localStorage.getItem('auth_token')
-                    }
-                }
-            }).then((result) => {
-                if (result.data) {
-                    resolve(result.data);
-                }
-                else {
-                    reject(new Error('No Data'));
-                }
-            }).catch((passwordUpdateError) => {
-                console.error(passwordUpdateError);
-                reject(passwordUpdateError);
-            });
-        });
-    }
-    setViewContext(context = {}) {
-        const newContext = { ...this.getViewContext(), ...context };
-        localStorage.setItem(storageKeys.viewContext, JSON.stringify(newContext));
-    }
-    getViewContext() {
-        return JSON.parse(localStorage.getItem(storageKeys.viewContext) || '{}');
-    }
-    static propTypes = {
+        }`, {provider});
+  }
+
+  storeObjectWithKey(key, objectToStore) {
+    localStorage.setItem(key, JSON.stringify(objectToStore));
+  }
+
+  readObjectWithKey(key) {
+    return JSON.parse(localStorage.getItem(key));
+  }
+
+  deleteObjectWithKey(key) {
+    localStorage.removeItem(key);
+  }
+
+  status(options = {emitLogin: false}) {
+    const that = this;
+    return new Promise((resolve, reject) => {
+      that.client.query({query: that.queries.System.apiStatus, fetchPolicy: 'network-only'}).then((result) => {
+        if (result.data.apiStatus.status === "API OK") {
+          that.setUser({...result.data.apiStatus});
+          that.lastValidation = moment().valueOf();
+          that.tokenValidated = true;
+          if (options.emitLogin === true)
+            that.emit(ReactoryApiEventNames.onLogin, that.getUser());
+          that.emit(ReactoryApiEventNames.onApiStatusUpdate, {result});
+          resolve(that.getUser());
+        } else {
+          that.logout(false);
+          that.emit(ReactoryApiEventNames.onApiStatusUpdate, {result, offline: true});
+          that.setUser(anonUser);
+          resolve(anonUser);
+        }
+      }).catch((clientErr) => {
+        that.logout(false);
+        that.emit(ReactoryApiEventNames.onApiStatusUpdate, {offline: true, clientError: clientErr});
+        resolve({...anonUser, offline: true, offlineError: true});
+      });
+    });
+  }
+
+  validateToken(token) {
+    this.setAuthToken(token);
+    return this.status();
+  }
+
+  resetPassword({password, confirmPassword, resetToken}) {
+    const that = this;
+    return new Promise((resolve, reject) => {
+      const setPasswordMutation = that.mutations.Users.setPassword;
+      return that.client.mutate({
+        mutation: setPasswordMutation,
+        variables: {
+          input: {
+            password,
+            confirmPassword,
+            authToken: localStorage.getItem('auth_token')
+          }
+        }
+      }).then((result) => {
+        if (result.data) {
+          resolve(result.data);
+        } else {
+          reject(new Error('No Data'));
+        }
+      }).catch((passwordUpdateError) => {
+        console.error(passwordUpdateError);
+        reject(passwordUpdateError);
+      });
+    });
+  }
+
+  setViewContext(context = {}) {
+    const newContext = {...this.getViewContext(), ...context};
+    localStorage.setItem(storageKeys.viewContext, JSON.stringify(newContext));
+  }
+
+  getViewContext() {
+    return JSON.parse(localStorage.getItem(storageKeys.viewContext) || '{}');
+  }
+
+  static propTypes = {
         client: PropTypes.instanceOf(ApolloClient).isRequired
     };
 }
