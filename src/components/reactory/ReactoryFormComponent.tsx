@@ -164,7 +164,7 @@ export interface ReactoryFormState {
   queryComplete: boolean,
   showHelp: boolean,
   showReportModal: boolean,
-  showExcelWindow: boolean,
+  showExportWindow: boolean,
   query?:  any,
   busy: boolean,
   liveUpdate: boolean,
@@ -253,7 +253,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       dirty: false,
       queryComplete: false,
       showHelp: false,
-      showExcelWindow: false,
+      showExportWindow: false,
       showReportModal: false,
       query:  {...props.query, ...queryString.parse(props.location.search) },
       busy: props.busy === true,
@@ -381,14 +381,16 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   getExcelWidget(){
     const { ReportViewer, FullScreenModal } = this.componentDefs;
-    const formDef = this.formDef();
+    const formDef: Reactory.IReactoryForm = this.formDef();
     if(formDef !== undefined) {
-      const closeReport = ( e : React.SyntheticEvent ) : void => {  this.setState({ showExcelWindow: false }); }
-    
+      const closeReport = ( e : React.SyntheticEvent ) : void => {  this.setState({ showExportWindow: false }); }
       return (
-        <FullScreenModal open={this.state.showExcelWindow === true} onClose={closeReport}>
+        <FullScreenModal open={this.state.showExportWindow === true} onClose={closeReport}>
           <ReportViewer 
-            {...formDef.defaultExcelExport}
+            engine={'excel'}
+            formDef={formDef}          
+            exportDefinition={formDef.defaultExport}
+            useClient={true}
             data={this.state.formData}
           />
         </FullScreenModal>
@@ -409,7 +411,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 
   showExcelModal(){
-    this.setState({ showExcelWindow: true });
+    this.setState({ showExportWindow: true });
   }
 
   renderForm(formData: any, onSubmit?: Function) {
@@ -527,7 +529,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     let exportButton = null;
 
-    if(formDef.defaultExcelExport) {
+    if(formDef.defaultExport) {
       exportButton = (
         <Button variant="text" onClick={this.showExcelModal} color="secondary">
           <Icon>cloud_download</Icon>

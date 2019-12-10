@@ -1,6 +1,11 @@
-import { TemplateType, UIFrameWork } from "./constants";
 
-declare namespace Reactory {
+import moment from 'moment';
+import { TemplateOptions } from 'lodash';
+import ApolloClient from 'apollo-client';
+import { TemplateType, UIFrameWork } from './constants';
+
+
+export namespace Reactory {
 
   export interface IComponentFqnDefinition {
     nameSpace: string
@@ -10,8 +15,178 @@ declare namespace Reactory {
 
   export namespace Client {
 
-    export interface IReactoryApi {
+    export interface LoadashTemplateExecutor {
+      (data?: object): string;
+      source: string;
+    }
 
+    export interface ClientUtils {
+      omitDeep(): any,
+      queryString(): any,
+      hashCode: (inputString: string) => any,
+      injectResources(sources: any[]): void,
+      componentFqn(fqn: Reactory.IComponentFqnDefinition): string,      
+      pluginDefinitionValid(definition: any): boolean,
+      moment: moment.Moment,
+      objectMapper(src: any, map: any): any,
+      template(
+        string?: string,
+        options?: TemplateOptions
+      ): LoadashTemplateExecutor
+      humanNumber(value: any | number)
+    }
+
+    export interface IReactoryApi {
+      history: any;
+      queries: any;
+      mutations: any;
+      props: any;
+      componentRegister: any;
+      client: ApolloClient<any>;
+      login: Function;
+      register: Function;
+      reset: Function;
+      forgot: Function;
+      utils: any;
+      companyWithId: Function;
+      $func: any;
+      rest: any;
+      tokenValidated: boolean;
+      lastValidation: number;
+      tokenValid: boolean;
+      getAvatar: Function;
+      getOrganizationLogo: Function;
+      getUserFullName: Function;
+      CDN_ROOT: string;
+      API_ROOT: string;
+      CLIENT_KEY: string;
+      CLIENT_PWD: string;
+      formSchemas: Reactory.IReactoryForm[];
+      formSchemaLastFetch: moment.Moment;
+      assets: any;
+      amq: any;
+      statistics: any;
+      __form_instances: any;
+      flushIntervalTimer: any;
+      __REACTORYAPI: boolean;
+      publishingStats: boolean;
+      reduxStore: any;
+      muiTheme: any;
+      queryObject: any;
+      queryString: any;
+      objectToQueryString: Function;
+
+      goto(where, state): void;
+
+      registerFunction(fqn, functionReference, requiresApi): void;
+
+      log(message, params: any, kind): void;
+
+      publishstats(): void;
+
+      flushstats(save): void;
+
+      stat(key, statistic): void;
+
+      trackFormInstance(formInstance): void;
+
+      graphqlMutation(mutation, variables, options: any): void;
+
+      graphqlQuery(query, variables, options: any): void;
+
+      afterLogin(user): any;
+
+      loadComponent(Component, props, target): void;
+
+      loadComponentWithFQN(fqn, props, target): void;
+
+      renderForm(componentView): any;
+
+      forms(): void;
+
+      raiseFormCommand(commandId, commandDef, formData): Promise<any>;
+
+      startWorkFlow(workFlowId, data): void;
+
+      onFormCommandEvent(commandId, func): void;
+
+      hasRole(itemRoles, userRoles): boolean;
+
+      isAnon(): boolean;
+
+      addRole(user, organization, role): boolean;
+
+      removeRole(user, organization, role): boolean;
+
+      getMenus(target): any[];
+
+      getTheme(): { extensions: { reactory: { icons } } };
+
+      getRoutes(): any[];
+
+      getApplicationRoles(): any[];
+
+      setUser(user): void;
+
+      setAuthToken(token): void;
+
+      getAuthToken(): string;
+
+      setLastUserEmail(email): void;
+
+      getLastUserEmail(): void;
+
+      registerComponent(nameSpace, name, version, component: any, tags, roles, wrapWithApi): void;
+
+      getComponents(componentFqns): {};
+
+      getComponent(fqn): any;
+
+      getNotFoundComponent(notFoundComponent): any;
+
+      getNotAllowedComponent(notAllowedComponentFqn): any;
+
+      mountComponent(ComponentToMount, props, domNode, theme, callback): void;
+
+      showModalWithComponentFqn(componentFqn, title, props, modalProps, domNode, theme, callback): void;
+
+      showModalWithComponent(title, ComponentToMount, props, modalProps: any, domNode, theme, callback): void;
+
+      createElement(ComponentToCreate, props): React.DetailedReactHTMLElement<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
+
+      unmountComponent(node): boolean;
+
+      logout(refreshStatus): void;
+
+      getLastValidation(): number | any;
+
+      getTokenValidated(): boolean | any;
+
+      getUser(): any;
+
+      saveUserLoginCredentials(provider, props): Promise<any>;
+
+      getUserLoginCredentials(provider): Promise<any>;
+
+      storeObjectWithKey(key, objectToStore): void;
+
+      readObjectWithKey(key): any;
+
+      deleteObjectWithKey(key): void;
+
+      status(options): void;
+
+      validateToken(token): any;
+
+      resetPassword({password, confirmPassword, resetToken}): void;
+
+      setViewContext(context): void;
+
+      getViewContext(): any;
+    }
+
+    export interface IReactoryWiredComponent {
+      api: IReactoryApi
     }
 
     export interface IFrameProperties {
@@ -186,15 +361,43 @@ declare namespace Reactory {
     title?: string
   }
 
-  export interface IExcelExport extends Client.IFramedWindowProperties {
+  
+
+  export interface IExcelColumnDefinition {
+    title: string
+    propertyField: string
+    format: string
+    type: string
+    required: boolean    
+  }
+
+  export interface IExcelSheet {
+    name: string
+    index: number
+    arrayField: string
+    startRow: number
+    columns: IExcelColumnDefinition[]
+  }
+
+  export interface IExcelExportOptions {
+    filename: string
+    sheets: IExcelSheet[]
+  }
+
+  export interface IExport extends Client.IFramedWindowProperties {
     title?: string
+    engine?: string
+    useClient?: boolean    
+    mappingType?: string
+    mapping?: any
+    exportOptions?: any | IExcelExportOptions
   }
 
   export interface IUISchemaMenuItem {
     id: string,
     title: string,
     key: string,
-    description: stirng,
+    description: string,
     icon: string,
     uiSchema: any,
   }
@@ -220,9 +423,9 @@ declare namespace Reactory {
     graphql?: IFormGraphDefinition,
     defaultFormValue?: any,
     defaultPdfReport?: IReactoryPdfReport, 
-    defaultExcelExport?: IExcelExport,
+    defaultExport?: IExport,
     reports?: IReactoryPdfReport[],
-    excelExports?:IExcelExport[], 
+    excelExports?:IExport[], 
     refresh?: any,
     widgetMap?: IWidgetMap[],
     backButton?: Boolean,
@@ -295,5 +498,4 @@ declare namespace Reactory {
         
   }
 }
-
 
