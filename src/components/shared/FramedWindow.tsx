@@ -9,6 +9,7 @@ import ReactoryApi from "../../api/ReactoryApi";
 import { Reactory } from '../../types/reactory';
 import * as ExcelJS from 'exceljs';
 import moment from 'moment';
+import { closeSync } from 'fs';
 
 const defaultFrameProps = {
   url: 'http://localhost:3001/',
@@ -290,12 +291,14 @@ export interface ReportViewerProperties extends Reactory.Client.IReactoryWiredCo
   inputForm?: string,
   formDef?: Reactory.IReactoryForm,
   exportDefinition?: Reactory.IExport,
-  useClient?: boolean
+  useClient?: boolean,
+  theme: Reactory.ITheme
 };
 
 export interface ReportViewerState {
   ready: boolean,
   inlineLocalFile: string,
+  downloaded: boolean
 }
 
 
@@ -369,6 +372,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
     this.state = {
       ready: props.useClient === true ? false : props.method === 'get' && props.delivery === 'inline',
       inlineLocalFile: '',
+      downloaded: false,
     };
 
     this.onSubmitReport = this.onSubmitReport.bind(this);
@@ -458,27 +462,28 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
   getClientSide = () => {    
 
     const { Loading } = this.componentDefs;
+    const { theme } = this.props;
 
     if(this.props.useClient === false) {
       throw new Error('Cannot call getClientSide() when useClient === false');
     }    
 
     const self = this;
-    const { ready, inlineLocalFile } = this.state;
+    const { ready, inlineLocalFile, downloaded } = this.state;
 
     if(inlineLocalFile && ready === true) {
       return (
-      <Loading message="File ready, download will start shortly" icon="done_outline" spinIcon={false}>
+      <Loading message={downloaded === false ? "File ready, download will start shortly" : "File has been downloaded, you can close this window"} icon="done_outline" spinIcon={false}>
 
       </Loading>
       )
     }
 
     const exportDefinition: Reactory.IExport = this.props.exportDefinition
-    let formData = this.props.data;
-
+    let formData = self.props.data;
+    
     if(exportDefinition.mapping && exportDefinition.mappingType === 'om') {
-      formData = this.props.api.utils.objectMapper(formData, exportDefinition.mapping);
+      formData = self.props.api.utils.objectMapper({ formData }, exportDefinition.mapping);
     }
 
 
@@ -487,23 +492,23 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
       const excelOptions: Reactory.IExcelExportOptions = exportDefinition.exportOptions;
             
       const options: Partial<ExcelJS.XlsxWriteOptions> = {
-        filename: `${this.props.api.utils.template(excelOptions.filename)({ formData: this.props.data, moment: moment })}`,
+        filename: `${self.props.api.utils.template(excelOptions.filename)({ formData: this.props.data, moment: moment })}`,
       };
-
-      const { mapping } = exportDefinition;
-
+      
       const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-      const mappedData = this.props.api.utils.objectMapper(this.props.data, mapping || { '*': '*' }); 
-
       excelOptions.sheets.forEach((sheet: Reactory.IExcelSheet, sheetIndex: number) => {
         const ws = wb.addWorksheet(sheet.name);               
         
         sheet.columns.forEach((column: Reactory.IExcelColumnDefinition, columnIndex: number) => {
-          const headerCell = ws.getCell(`${cols[columnIndex]}1`);
-
+          const headerCell = ws.getCell(`${cols[columnIndex]}1`);          
+          ws.columns[columnIndex].width = column.width;
+          if(column.style) {
+            ws.columns[columnIndex].style = { ...column.style }
+          }
+          
           let titleText: ExcelJS.CellValue = {
             'richText': [
-                {'font': { 'size': 12 },'text': column.title },
+                { 'font': { 'size': 12 },'text': column.title },
             ]
           };
 
@@ -519,19 +524,42 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
             top: {
                 style: "medium",                            
             }
-          };
+          };          
 
-          headerCell.value = titleText;          
+          headerCell.style = {
+            ...column.style,
+            font: {
+              color: {
+                argb: theme.palette.primary.contrastText.replace('#', ""),
+              }, 
+            },
+            fill: {
+              type: "pattern",
+              pattern: "solid",
+              bgColor: {
+                argb: theme.palette.primary.main.replace('#', "")
+              },
+              fgColor: {
+                argb: theme.palette.primary.main.replace('#', ""),
+              },
+            }
+          }
+          headerCell.value = titleText;                    
         });
-        
-        if(mappedData && mappedData.sheets) {
-          const sheetObject: any = mappedData.sheets[sheet.name];
+                 
+        if(formData && formData.sheets) {
+         
+          const sheetObject: any = formData.sheets[sheet.name];
           if(sheetObject && sheetObject[sheet.arrayField]) {
             const dataArray: any[] = sheetObject[sheet.arrayField];          
-            dataArray.forEach((row: any) => {
-              sheet.columns.forEach(() => {
-                
-              })
+            dataArray.forEach((row: any, rowIndex: number) => {
+              console.log(`Processing row ${rowIndex}`, { row, rowIndex });
+              sheet.columns.forEach(( column: Reactory.IExcelColumnDefinition, columnIndex: number ) => {                
+                let fieldValue: string = row[column.propertyField];
+                let cell = ws.getCell(rowIndex + 2, columnIndex + 1);
+                cell.numFmt = "";
+                cell.value = fieldValue;
+              })  
             });
           }          
         }        
@@ -550,7 +578,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
           // Remove anchor from body
           // document.body.removeChild(a)           
           //update local file reference
-          self.setState({ inlineLocalFile: options.filename, ready: true })
+          self.setState({ inlineLocalFile: options.filename, ready: true, downloaded: true })
         });
 
         return (<Loading message="Writing Excel, please wait" />)

@@ -13,6 +13,25 @@ export namespace Reactory {
     version: string
   }
 
+  export interface IPalette {
+    light: string,
+    main: string,
+    dark: string,
+    contrastText: string
+  }
+
+  export interface IThemePalette {
+    primary1Color: string
+    primary: IPalette
+    secondary: IPalette
+    report: IPalette
+  }
+
+  export interface ITheme {
+    type: string
+    palette: IThemePalette
+  }
+
   export namespace Client {
 
     export interface LoadashTemplateExecutor {
@@ -368,7 +387,10 @@ export namespace Reactory {
     propertyField: string
     format: string
     type: string
-    required: boolean    
+    width?: number,
+    key?: string,    
+    required: boolean,
+    style?: any    
   }
 
   export interface IExcelSheet {
