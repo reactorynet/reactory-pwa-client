@@ -490,12 +490,14 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
         filename: `${this.props.api.utils.template(excelOptions.filename)({ formData: this.props.data, moment: moment })}`,
       };
 
+      const { mapping } = exportDefinition;
+
       const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+      const mappedData = this.props.api.utils.objectMapper(this.props.data, mapping || { '*': '*' }); 
 
       excelOptions.sheets.forEach((sheet: Reactory.IExcelSheet, sheetIndex: number) => {
         const ws = wb.addWorksheet(sheet.name);               
         
-        debugger;
         sheet.columns.forEach((column: Reactory.IExcelColumnDefinition, columnIndex: number) => {
           const headerCell = ws.getCell(`${cols[columnIndex]}1`);
 
@@ -520,7 +522,19 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
           };
 
           headerCell.value = titleText;          
-        });                
+        });
+        
+        if(mappedData && mappedData.sheets) {
+          const sheetObject: any = mappedData.sheets[sheet.name];
+          if(sheetObject && sheetObject[sheet.arrayField]) {
+            const dataArray: any[] = sheetObject[sheet.arrayField];          
+            dataArray.forEach((row: any) => {
+              sheet.columns.forEach(() => {
+                
+              })
+            });
+          }          
+        }        
       });
 
       if(this.state.ready === false) {
