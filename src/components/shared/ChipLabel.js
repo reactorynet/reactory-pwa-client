@@ -1,11 +1,11 @@
 import React, { Fragment, Component } from 'react'
-import {
-  Chip,
-} from '@material-ui/core';
-
+import { Chip } from '@material-ui/core';
+import { template } from 'lodash';
+import PropTypes from 'prop-types'
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import Avatar from '@material-ui/core/Avatar';
+import { getAvatar } from '../util';
 
 class ChipLabel extends Component {
 
@@ -20,9 +20,13 @@ class ChipLabel extends Component {
     },
   });
 
-  static propTypes = {}
+  static propTypes = {
+    formData: PropTypes.array,
+  }
 
-  static defaultProps = {}
+  static defaultProps = {
+    formData: [],
+  }
 
   constructor(props, context) {
     super(props, context)
@@ -32,10 +36,8 @@ class ChipLabel extends Component {
 
     const {
       formData,
-      uiSchema
+      uiSchema,
     } = this.props;
-
-    debugger;
 
     let labelTitle = '';
     let containerStyles = {
@@ -43,6 +45,7 @@ class ChipLabel extends Component {
       flexDirection: 'row',
       justifyContent: 'flex-start',
       alignItems: 'center',
+      marginTop: '5px'
     };
 
     let containerProps = {
@@ -51,15 +54,20 @@ class ChipLabel extends Component {
       },
     };
 
+    debugger;
+
     if (uiSchema) {
       if (uiSchema['ui:options'] && uiSchema['ui:options'].title && uiSchema['ui:options'].title != '') {
         labelTitle = uiSchema['ui:options'].title;
       }
     }
 
+    const { format, useUserAvatar } = uiSchema["ui:options"];
     const chips = formData.map((chip, index) => {
-      let _avatar = (chip.avatar && chip.avatar != '') && <Avatar src={chip.avatar} />
-      return (<Chip avatar={_avatar} style={{ marginRight: '5px' }} key={index} variant="outlined" label={chip.label} />);
+      let _avatar = useUserAvatar ? <Avatar alt="Natacha" src={getAvatar(chip)} /> : null;
+      let chipLabel = format ? template(format)(chip) : chip;
+
+      return (<Chip avatar={_avatar} style={{ marginRight: '5px' }} key={index} variant="outlined" label={chipLabel} />);
     });
 
     return (
