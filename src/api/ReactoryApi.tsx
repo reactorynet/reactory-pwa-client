@@ -29,6 +29,9 @@ import queryString from '../query-string';
 import humanNumber from 'human-number';
 import ApiProvider, {withApi} from './ApiProvider';
 
+import { Reactory } from '../types/reactory';
+
+
 
 const pluginDefinitionValid = (definition) => {
     const pass = {
