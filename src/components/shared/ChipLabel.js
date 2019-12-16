@@ -6,6 +6,7 @@ import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import Avatar from '@material-ui/core/Avatar';
 import { getAvatar } from '../util';
+import { withApi } from '../../api/ApiProvider';
 
 class ChipLabel extends Component {
 
@@ -35,9 +36,16 @@ class ChipLabel extends Component {
   render() {
 
     const {
+      api,
       formData,
       uiSchema,
+      componentProps
     } = this.props;
+
+    let childprops = {};
+    if (componentProps) {
+      childprops = api.utils.objectMapper(this.props, componentProps);
+    }
 
     let labelTitle = '';
     let containerStyles = {
@@ -54,7 +62,6 @@ class ChipLabel extends Component {
       },
     };
 
-    debugger;
 
     if (uiSchema) {
       if (uiSchema['ui:options'] && uiSchema['ui:options'].title && uiSchema['ui:options'].title != '') {
@@ -63,7 +70,8 @@ class ChipLabel extends Component {
     }
 
     const { format, useUserAvatar } = uiSchema["ui:options"];
-    const chips = formData.map((chip, index) => {
+    let chipData = formData && formData.length > 0 ? formData : childprops.chips;
+    const chips = chipData.map((chip, index) => {
       let _avatar = useUserAvatar ? <Avatar alt="Natacha" src={getAvatar(chip)} /> : null;
       let chipLabel = format ? template(format)(chip) : chip;
 
@@ -80,5 +88,5 @@ class ChipLabel extends Component {
     )
   }
 }
-const ChipLabelComponent = compose(withTheme, withStyles(ChipLabel.styles))(ChipLabel)
+const ChipLabelComponent = compose(withTheme, withApi, withStyles(ChipLabel.styles))(ChipLabel)
 export default ChipLabelComponent
