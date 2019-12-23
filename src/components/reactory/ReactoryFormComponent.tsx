@@ -649,7 +649,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       
       //error handler function
       const handleErrors = (errors) => {
-        if( formDef.graphql.query.onError ) {            
+        if( formDef.graphql.query.onError ) { 
+          debugger           
           const componentToCall = api.getComponent(formDef.graphql.query.onError.componentRef);
           if(componentToCall && typeof componentToCall === 'function') {                
             const componentInstance = componentToCall(that.props, { ...that.context, form: that })
@@ -665,8 +666,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       };
       
       //execute query 
-      api.graphqlQuery(gql(query.text), _variables).then(( result: QueryResult ) => {        
-        const { data, loading, error } = result;
+      //TODO: Updated / fix types so that errors is available on result
+      api.graphqlQuery(gql(query.text), _variables).then(( result: any ) => {  
+
+        const { data, loading, errors } = result;
         let _formData = formData;        
         if(data && data[query.name]) {    
           switch(query.resultType) {
@@ -693,12 +696,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         }      
         
         //update component state with new form data
-        that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: error, loading }, ()=>{
+        that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, ()=>{
           that.$events.emit('onQueryComplete', { formData: _formData, form: that } );
 
-          if(error)  {            
-            api.log(`Error executing graphql query`, error)
-            handleErrors(error);  
+          if(errors)  {            
+            api.log(`Error executing graphql query`, errors)
+            handleErrors(errors);  
           }
         });
 
@@ -1221,13 +1224,13 @@ class ReactoryFormRouter extends Component<any, any> {
       <Fragment>
         <Switch>
           <Route path={`${routePrefix}/:formId/:mode/`} render={(props) => {
-            return (<ReactoryFormComponent formId={props.match.params.formId || 'ReactoryFormList'} mode={props.match.params.mode} />)
+            return (<ReactoryFormComponent formId={props.match.params.formId || 'ReactoryFormList'} mode={props.match.params.mode} {...props} />)
           }} />
           <Route path={`${routePrefix}/:formId/`} render={(props) => {
-            return (<ReactoryFormComponent formId={props.match.params.formId || 'ReactoryFormList'} mode='view' />)
+            return (<ReactoryFormComponent formId={props.match.params.formId || 'ReactoryFormList'} mode='view' {...props}/>)
           }} />      
           <Route exact path={`${routePrefix}/`} render={(props) => {
-            return (<ReactoryFormComponent formId='ReactoryFormList' formData={{forms: api.formSchemas}} mode='view' />)
+            return (<ReactoryFormComponent formId='ReactoryFormList' formData={{forms: api.formSchemas}} mode='view' {...props}/>)
           }}>            
           </Route>      
         </Switch>
