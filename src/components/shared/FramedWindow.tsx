@@ -486,7 +486,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
       formData = self.props.api.utils.objectMapper({ formData }, exportDefinition.mapping);
     }
 
-
+    
     if(exportDefinition) {
       const wb = new ExcelJS.Workbook();            
       const excelOptions: Reactory.IExcelExportOptions = exportDefinition.exportOptions;
@@ -530,7 +530,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
             ...column.style,
             font: {
               color: {
-                argb: theme.palette.primary.contrastText.replace('#', ""),
+                argb: `FF${theme.palette.primary.contrastText.replace('#', "")}`,
               }, 
             },
             fill: {
