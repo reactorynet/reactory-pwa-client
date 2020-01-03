@@ -73,7 +73,7 @@ export class DropDownMenu extends Component {
           _menus.map(
             (menu) => {
               const onMenuItemSelect = (evt) => {
-                props.onSelect(evt, menu)
+                props.onSelect(evt, menu);
               };
               menuItems.push((
                 <MenuItem key={menu.id} onClick={ onMenuItemSelect }> 

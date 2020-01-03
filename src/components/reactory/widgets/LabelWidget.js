@@ -55,8 +55,21 @@ class LabelWidget extends Component {
         variant = "h6",
         iconProps = {},
       } = props.uiSchema["ui:options"];
-      if (format) labelText = template(format)(props);
-      if (title) labelTitle = template(title)(props);
+      if (format) {
+        try {
+          labelText = template(format)(props);  
+        } catch(labelError) {
+          labelText = 'bad template / props (' + format + ')';  
+        }        
+      }
+      if (title) {
+        try {
+          labelTitle = template(title)(props);
+        } catch(labelError) {
+          labelTitle = 'bad template / props (' + format + ')';  
+        }
+      }
+        
       if (variant) _variant = variant;
       if (iconPosition) _iconPosition = iconPosition;
 

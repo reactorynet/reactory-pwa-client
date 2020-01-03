@@ -89,9 +89,11 @@ class MaterialListWidget extends Component {
       });
     }
 
+    let listProps = uiOptions.listProps || {};
+
     return (
 
-        <List>
+        <List {...listProps}>
           {data.map( item => {
             //Create a list item entry using the uiOptions for the widget
 
@@ -168,10 +170,30 @@ class MaterialListWidget extends Component {
             }
 
             /** TEXT **/          
-            const listItemTextProps = {
-              primary: template(uiOptions.primaryText || '${item.text || item.primaryText}')({ props: this.props, item }),
-              secondary: template(uiOptions.secondaryText || '${item.secondaryText}')({ props: this.props, item })
-            };
+            let listItemTextProps = {
+              primary: "",
+              secondary: ""
+            };            
+            
+            try 
+            {
+              listItemTextProps.primary = template(uiOptions.primaryText || '${item.text || item.primaryText}')({ props: this.props, item });
+            } 
+            catch (templateError) 
+            { 
+              listItemTextProps.primary = `Bad Template ${templateError.message}`
+            }
+            
+            try 
+            {
+              listItemTextProps.secondary = template(uiOptions.secondaryText || '${item.secondaryText}')({ props: this.props, item });
+            } 
+            catch (templateError) 
+            {
+              listItemTextProps.secondary = `Bad Template ${templateError.message}`;
+            }
+            
+            
             
             /** AVATAR */
 
@@ -220,7 +242,7 @@ class MaterialListWidget extends Component {
                 const { 
                   label, 
                   iconKey,
-                  componentFqn, 
+                  componentFqn,                   
                   action,
                   actionData,
                   link
@@ -236,14 +258,35 @@ class MaterialListWidget extends Component {
                     history.push({ pathname: path })
                     api.emit(eventName, { actionData, path });                    
                   }                                    
-                };                                
+                };
+                
+                let componentToRender = (
+                  <IconButton onClick={actionClick}>                      
+                    <Icon>{iconKey}</Icon>                                            
+                  </IconButton>       
+                )
+
+                if(typeof action === 'string' && action.indexOf('mount:')  === 0){
+                  if(isNil(componentFqn) === false && componentFqn !== undefined) {
+                    const SecondaryItemComponent = api.getComponent(componentFqn);
+                    let objectmapDefinition = uiOptions.secondaryAction.props.componentProps || {}
+                    const secondaryComponentProps = {
+                      formData: item,
+                      ...uiOptions.secondaryAction.props                                            
+                    };
+                    debugger;
+
+                    //secondaryComponentProps.componentProps = this.props.api.utils.objectMapper(item, objectmapDefinition)
+
+                    componentToRender = <SecondaryItemComponent { ...secondaryComponentProps } />                    
+                  }
+                }
+                
 
                 
                 secondaryActionWidget = (
                   <ListItemSecondaryAction>                    
-                    <IconButton onClick={actionClick}>                      
-                      <Icon>{iconKey}</Icon>                                            
-                    </IconButton>                             
+                    {componentToRender}                     
                   </ListItemSecondaryAction>)
               }
                                                                  

@@ -5,9 +5,6 @@ import { withApi } from '../../../api/ApiProvider';
 import * as utils from '../../util';
 import UserLists  from '../../user/Lists/index';
 
-
-
-
 export const ChipArrayWidget = require('./ChipArray');
 export const SelectWidget = require('./Select');
 export const SelectWithDataWidget = require('./SelectWithData');
@@ -34,8 +31,11 @@ export const UserListItemWidget = (props, context) => {
   return <UserLists.UserListItem {...{ user: props.formData, ...props }} />
 };
 export const MaterialTableWidget = require('./MaterialTableWidget');
-export const StepperWidget = require('./StepperWidget')
+export const StepperWidget = require('./StepperWidget');
+
 export { default as MaterialListWidget } from './MaterialListWidget';
 export { default as SearchWidget } from './SearchWidget';
 export { default as WidgetNotAvailable } from './WidgetNotAvailable';
-
+export { default as ColumnSelectorWidget } from './ColumnSelectorWidget';
+export { default as ColumnFilterWidget } from './ColumnFilterWidget';
+export { default as DataPageWidget } from './DataPageWidget';

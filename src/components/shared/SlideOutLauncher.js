@@ -55,23 +55,34 @@ class SlideOutLauncher extends Component {
 
     let icon = 'search';
 
-    let _buttonTitle = buttonTitle ? api.utils.template(buttonTitle)(this.props) : '';
-    let _windowTitle = windowTitle ? api.utils.template(windowTitle)(this.props) : '';
-    let _buttonVariant = buttonVariant ? api.utils.template(buttonVariant)(this.props) : '';
+    const tpl = (format) => {
+      try {
+        return api.utils.template(format)(this.props);
+      }
+      catch(templateError){
+        return `Bad Template ${templateError.message}`;
+      }
+    }
+
+    let _buttonTitle = buttonTitle ? tpl(buttonTitle) : '';
+    let _windowTitle = windowTitle ? tpl(windowTitle) : '';
+    let _buttonVariant = buttonVariant ? tpl(buttonVariant) : '';
 
     const FullScreenModal = api.getComponent('core.FullScreenModal');
     const ChildComponent = api.getComponent(componentFqn || 'core.Loading');
 
     let childprops = {};
 
-    if (componentProps) {
+    if (componentProps && this.state.open === true) {      
       childprops = api.utils.objectMapper(this.props, componentProps);
     }
 
-    let LaunchButton = (<Button onClick={onClick}>
-      <Icon>{icon}</Icon>
-      {_buttonTitle}
-    </Button>);
+    let LaunchButton = (
+      <Button onClick={onClick}>
+        <Icon>{icon}</Icon>
+        {_buttonTitle}
+      </Button>
+    );
 
     const { SpeedDial } = this.componentDefs;
 
@@ -83,7 +94,16 @@ class SlideOutLauncher extends Component {
     //     icon: <Icon>group_add</Icon>,
     //     enabled: true,
     //     ordinal: 0,
-    //   }];
+    //   }
+    // ];
+    
+    if(_buttonVariant === 'IconButton'){
+      LaunchButton = (
+        <IconButton onClick={onClick}>
+          <Icon>{icon}</Icon>
+        </IconButton>
+      )
+    }
 
     if (_buttonVariant === 'SpeedDial') {
 
@@ -98,9 +118,12 @@ class SlideOutLauncher extends Component {
           }
         }
       });
-      LaunchButton = <SpeedDial actions={actions} icon={<Icon>add</Icon>} />
+      
+      LaunchButton = (<SpeedDial actions={actions} icon={<Icon>add</Icon>} />)
     }
 
+    debugger;
+    
     return (
       <div>
         {LaunchButton}
@@ -109,7 +132,7 @@ class SlideOutLauncher extends Component {
           title={_windowTitle}
           slide={this.props.slideDirection}
           onClose={onClick}>
-          <ChildComponent {...childprops} />
+          { this.state.open === true ? <ChildComponent {...childprops} /> : null }
         </FullScreenModal>
       </div>
     )

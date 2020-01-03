@@ -31,7 +31,7 @@ import * as WidgetPresets from './widgets';
 import MaterialTemplates from './templates';
 import gql from 'graphql-tag';
 import { deepEquals } from './form/utils';
-import { Reactory } from '../../types/reactory';
+import Reactory from '../../types/reactory';
 import { History } from 'history';
 
 const {
@@ -728,13 +728,18 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 
   getFormContext(){
+    const self = this;
     return {
       ...this.props,
       formData: { ...this.state.formData },
       query: { ...this.state.query },
       refresh: () => {
         this.setState({ queryComplete: false, dirty: false })
-      }
+      },
+      setFormData: (formData: any, callback = ()=>{}) => {
+        const _state = { ...self.state, formData: formData };
+        self.setState(_state, callback);
+      },
     }
   }
 

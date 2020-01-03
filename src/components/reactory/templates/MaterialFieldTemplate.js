@@ -80,11 +80,13 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
 
   if(uiToolbar) {
     //console.log('Generating toolbar with formState', { props });
-    const buttons = uiSchema['ui:toolbar'].map((button) => {
+    const buttons = uiSchema['ui:toolbar'].buttons.map((button) => {
       const api = formContext.api
       const onRaiseCommand = ( evt ) => {
         //console.log('Raising Toolbar Command', { evt, api });
-        if(api) api.raiseFormCommand(button.command, button, { formData: formData, formContext: formContext });
+        if(api){
+          api.raiseFormCommand(button.command, button, { formData: formData, formContext: formContext });
+        } 
         else {
           //console.log('No API to handle form command', {api, evt });
         }

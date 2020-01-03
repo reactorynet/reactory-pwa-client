@@ -20,9 +20,9 @@ class HelpMe extends Component {
   render() {
     const { FullScreenModal, StaticContent } = this.componentDefs;
     const { topics = [] } = this.props;
-    const helpItems = topics.map((topic) => {
+    const helpItems = topics.map((topic, index) => {
       return ( 
-        <Paper style={{margin:this.props.theme.spacing(2)}}>
+        <Paper key={index} style={{margin:this.props.theme.spacing(2)}}>
           <StaticContent slug={topic} slugSource={'property'} >
           </StaticContent>
         </Paper> 

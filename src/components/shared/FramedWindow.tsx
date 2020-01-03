@@ -6,7 +6,7 @@ import { compose } from 'recompose';
 import { withTheme } from '@material-ui/styles';
 import { withApi } from '../../api/ApiProvider';
 import ReactoryApi from "../../api/ReactoryApi";
-import { Reactory } from '../../types/reactory';
+import Reactory from '@reactory/client-core/types/reactory';
 import * as ExcelJS from 'exceljs';
 import moment from 'moment';
 import { closeSync } from 'fs';

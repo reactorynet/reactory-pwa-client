@@ -60,6 +60,9 @@ class ObjectTemplate extends Component {
       formData, 
       formContext 
     } = this.props
+    if(formContext.api) {
+      formContext.api.log('MaterialObjectTemplate rendering', {props: this.props}, 'debug');
+    }
     // //console.log('Object template field', { props: this.props, uiSchema });
     let titleText = title && title.indexOf("$") >= 0 ? template(title)({formData: this.props.formData}) : title;    
     const toggleExpand = () => { 

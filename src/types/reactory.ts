@@ -5,7 +5,7 @@ import ApolloClient from 'apollo-client';
 import { TemplateType, UIFrameWork } from './constants';
 
 
-export namespace Reactory {
+namespace Reactory {
 
   export interface IComponentFqnDefinition {
     nameSpace: string
@@ -314,12 +314,15 @@ export namespace Reactory {
     type: string,
     title?: string | undefined,
     description?: string | undefined,
-    default?: any | undefined
-    
+    default?: any | undefined    
+  }
+
+  export interface IObjectProperties {
+    [field: string]: ISchema
   }
   
   export interface IObjectSchema extends ISchema {  
-    properties?: Object, 
+    properties?: IObjectProperties, 
   }
   
   export interface IArraySchema extends ISchema {  
@@ -521,3 +524,4 @@ export namespace Reactory {
   }
 }
 
+export default Reactory
