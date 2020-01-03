@@ -42,7 +42,6 @@ class ChipLabel extends Component {
       componentProps
     } = this.props;
 
-    debugger;
     let childprops = {};
     if (componentProps) {
       childprops = api.utils.objectMapper(this.props, componentProps);
