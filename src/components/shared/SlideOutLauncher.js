@@ -48,12 +48,13 @@ class SlideOutLauncher extends Component {
       buttonTitle,
       windowTitle,
       buttonVariant,
+      buttonIcon,
       componentProps,
       actions
     } = this.props;
     const { onClick } = this;
 
-    let icon = 'search';
+    let icon = buttonIcon || 'search';
 
     const tpl = (format) => {
       try {
@@ -119,7 +120,7 @@ class SlideOutLauncher extends Component {
         }
       });
       
-      LaunchButton = (<SpeedDial actions={actions} icon={<Icon>add</Icon>} />)
+      LaunchButton = (<SpeedDial actions={actions} icon={<Icon>{icon}</Icon>} />)
     }
 
     debugger;
