@@ -274,16 +274,12 @@ class MaterialListWidget extends Component {
                       formData: item,
                       ...uiOptions.secondaryAction.props                                            
                     };
-                    debugger;
-
-                    //secondaryComponentProps.componentProps = this.props.api.utils.objectMapper(item, objectmapDefinition)
-
+                    // debugger;
+                    // secondaryComponentProps.componentProps = this.props.api.utils.objectMapper(item, objectmapDefinition)
                     componentToRender = <SecondaryItemComponent { ...secondaryComponentProps } />                    
                   }
                 }
-                
-
-                
+                                
                 secondaryActionWidget = (
                   <ListItemSecondaryAction>                    
                     {componentToRender}                     

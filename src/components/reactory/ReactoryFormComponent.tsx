@@ -1076,6 +1076,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   onSubmit(data) {
     // //console.log('form-submit', data);
     const { api } = this.props;
+    api.log('Form Submit Clicked', { data }, 'debug');
     const that = this;
     that.setState({ busy: true }, ()=>{
         if (that.props.onSubmit) { 

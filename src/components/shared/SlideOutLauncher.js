@@ -123,7 +123,7 @@ class SlideOutLauncher extends Component {
       LaunchButton = (<SpeedDial actions={actions} icon={<Icon>{icon}</Icon>} />)
     }
 
-    debugger;
+    // debugger;
     
     return (
       <div>
