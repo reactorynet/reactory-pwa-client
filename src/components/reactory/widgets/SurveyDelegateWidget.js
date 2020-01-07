@@ -896,9 +896,22 @@ class SurveyDelegates extends Component {
         const isSelected = this.state.selected.hasOwnProperty(delegateEntry.delegate.id) === true ? this.state.selected[delegateEntry.delegate.id].selected === true : false;
         let userMessage = null;
         
+
+        let statusCount = { true: 0, false: 0 };// 
+        let allComplete = false;
+        if(delegateEntry.assessments && isArray(delegateEntry.assessments) === true) {
+          statusCount = countBy(delegateEntry.assessments, 'complete');
+          allComplete = statusCount.true === delegateEntry.assessments.length && delegateEntry.assessments.length > 0;
+        } 
+
+        if(allComplete === true) {
+          backgroundColor = "darkseagreen";
+        }
+         
+
+        api.log(`(${statusCount.true}) assessments complete for ${delegateEntry.delegate.firstName}`, delegateEntry, 'debug')
         switch(status.key){                        
           case 'launched': {
-            let statusCount = countBy(delegateEntry.assessments, 'complete')
             //console.log('Status Count', statusCount);
             userMessage = (
             <span>{delegateEntry.message}<br/>
@@ -917,13 +930,13 @@ class SurveyDelegates extends Component {
           case 'launched-assessor':          
           {
             if(is180) {
-              userMessage = 'Launched as team assessor'
+              userMessage = `Launched as team assessor ${allComplete === true ? 'and completed assessement' : 'and has not completed assessment'}`                        
             }
             break;
           }  
           case 'launched-delegate': {
             if(is180) {
-              userMessage = 'Launched as team delegate'
+              userMessage = `Launched as team delegate ${allComplete === true ? 'and completed assessement' : 'and has not completed assessment'}`              
             }
             break;
           }
