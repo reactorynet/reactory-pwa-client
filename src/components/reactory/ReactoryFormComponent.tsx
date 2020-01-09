@@ -165,6 +165,7 @@ export interface ReactoryFormState {
   showHelp: boolean,
   showReportModal: boolean,
   showExportWindow: boolean,
+  activeExportDefinition?: Reactory.IExport,
   query?:  any,
   busy: boolean,
   liveUpdate: boolean,
@@ -249,6 +250,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       uiFramework: props.uiFramework,
       uiSchemaKey: props.uiSchemaKey || 'default',
       activeUiSchemaMenuItem: undefined,
+      activeExportDefinition: undefined,
       formData: props.data || props.formData,    
       dirty: false,
       queryComplete: false,
@@ -389,7 +391,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           <ReportViewer 
             engine={'excel'}
             formDef={formDef}          
-            exportDefinition={formDef.defaultExport}
+            exportDefinition={this.state.activeExportDefinition || formDef.defaultExport}
             useClient={true}
             data={this.state.formData}
           />
@@ -410,13 +412,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.setState({ showReportModal: true })
   }
 
-  showExcelModal(){
-    this.setState({ showExportWindow: true });
+  showExcelModal( exportDefinition: Reactory.IExport = undefined ){
+    this.setState({ showExportWindow: true, activeExportDefinition: exportDefinition });
   }
 
   renderForm(formData: any, onSubmit?: Function) {
     this.props.api.log('Rendering Form', {props: this.props, state: this.state}, 'debug')
     const { loading, forms, busy, _instance_id } = this.state;
+    const { DropDownMenu } = this.componentDefs;
     const self = this;
     
     if (forms.length === 0) return (<p>no forms defined</p>);
@@ -530,10 +533,34 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     let exportButton = null;
 
     if(formDef.defaultExport) {
+      const defaultExportClicked = () => {
+        self.showExcelModal(formDef.defaultExport)
+      };
+
       exportButton = (
-        <Button variant="text" onClick={this.showExcelModal} color="secondary">
+        <Button variant="text" onClick={defaultExportClicked} color="secondary">
           <Icon>cloud_download</Icon>
         </Button>);
+    }
+
+    if(isArray(formDef.exports) === true) {
+      
+      const onDropDownSelect = (evt, menuItem: any) => {
+        self.props.api.log('Export Item Selected', {evt, menuItem}, 'debug');
+        self.showExcelModal(menuItem.data);
+      };
+
+      let exportMenus = formDef.exports.map((exportDef: Reactory.IExport, index) => {
+        return {
+          title: exportDef.title,
+          icon: exportDef.icon,
+          key: index,
+          id: `exportButton_${index}`,
+          data: exportDef,
+          disabled: self.props.api.utils.template(exportDef.disabled || "false")({ props: self.props, state: self.state }) === 'true',
+        }
+      });
+      exportButton = (<DropDownMenu menus={exportMenus} onSelect={onDropDownSelect} icon={"import_export"} />)
     }
 
     return (

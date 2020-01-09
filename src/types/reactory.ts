@@ -411,11 +411,13 @@ namespace Reactory {
 
   export interface IExport extends Client.IFramedWindowProperties {
     title?: string
-    engine?: string
+    engine?: string  
     useClient?: boolean    
     mappingType?: string
     mapping?: any
+    icon?: string
     exportOptions?: any | IExcelExportOptions
+    disabled?: string 
   }
 
   export interface IUISchemaMenuItem {
@@ -450,7 +452,7 @@ namespace Reactory {
     defaultPdfReport?: IReactoryPdfReport, 
     defaultExport?: IExport,
     reports?: IReactoryPdfReport[],
-    excelExports?:IExport[], 
+    exports?:IExport[], 
     refresh?: any,
     widgetMap?: IWidgetMap[],
     backButton?: Boolean,

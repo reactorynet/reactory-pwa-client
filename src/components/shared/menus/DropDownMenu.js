@@ -4,7 +4,7 @@ import uuid from 'uuid';
 import om from 'object-mapper';
 import { Link, withRouter } from 'react-router-dom';
 import { compose } from 'redux';
-import { isArray } from 'lodash';
+import { isArray, isNil } from 'lodash';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { Tooltip } from '@material-ui/core';
 import Drawer from '@material-ui/core/Drawer';
@@ -64,19 +64,25 @@ export class DropDownMenu extends Component {
       const { open } = this.state;
       const ariaId = props.id || uuid();
       const menuItems = [];
-      let _menus = menus
+      let _menus = menus;
       if(props.propertyMap) {
         _menus = om(menus, props.propertyMap)
       }
-
+      
       if(_menus && _menus.length) {
           _menus.map(
             (menu) => {
               const onMenuItemSelect = (evt) => {
                 props.onSelect(evt, menu);
               };
+
+              let disabled = false;
+              if(isNil(menu.disabled) === false && menu.disabled === true) {
+                disabled = true;
+              } 
+
               menuItems.push((
-                <MenuItem key={menu.id} onClick={ onMenuItemSelect }> 
+                <MenuItem key={menu.id} onClick={ onMenuItemSelect } disabled={  disabled }> 
                     { menu.icon ? <ListItemIcon><Icon color="primary">{menu.icon}</Icon></ListItemIcon> : null }                      
                     { menu.title }
                 </MenuItem>));
@@ -87,7 +93,7 @@ export class DropDownMenu extends Component {
           aria-owns={open === true ? ariaId : null}
           aria-haspopup="true"
           onClick={this.handleMenu}
-          color="inherit">
+          color={this.props.color || "primary"}>
           <Icon>{props.icon || 'keyboard_arrow_down'}</Icon>
           <Menu
               open={this.state.open === true}
