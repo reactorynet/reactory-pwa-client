@@ -1,6 +1,6 @@
 import React, { Fragment, Component } from 'react'
 import PropTypes from 'prop-types'
-import { pullAt, isNil } from 'lodash'
+import { pullAt, isNil, remove } from 'lodash'
 import {
   Typography 
 } from '@material-ui/core'
@@ -55,9 +55,22 @@ class MaterialTableWidget extends Component {
     const { formData } = this.props;
     let columns = [];
     
-    if(uiOptions.columns && uiOptions.columns.length) { 
-      columns = uiOptions.columns.map( coldef => {
+    if(uiOptions.columns && uiOptions.columns.length) {
+      let _columnRef = [];
+      let _mergeColumns = false;
+      if(isNil(uiOptions.columnsProperty) === false) {
+          
+        _columnRef = self.props.formContext.formData[uiOptions.columnsProperty];
+        if(isNil(uiOptions.columnsPropertyMap) === false) {
+          _columnRef = api.utils.objectMapper(_columnRef, uiOptions.columnsPropertyMap)
+        }
         
+        _mergeColumns = true;
+      }
+      
+      let _columns = _mergeColumns === true ? _columnRef : uiOptions.columns; 
+      remove(_columns, (col) => { return col.selected === false });
+      columns = _columns.map( coldef => {        
         const def = {
           ...coldef
         };
@@ -96,14 +109,22 @@ class MaterialTableWidget extends Component {
       })
     }
 
+    let options = {
+
+    };
+    
+    if(uiOptions.options) {
+      options = { ...options, ...uiOptions.options }
+    }
+
+    
+
     return (
         <MaterialTable
             columns={columns}                    
             data={data}            
             title={this.props.title || uiOptions.title || "no title"}
-            options={{
-              grouping: uiOptions.options && uiOptions.options.grouping === true
-            }}            
+            options={options}            
             />
     )
   }
