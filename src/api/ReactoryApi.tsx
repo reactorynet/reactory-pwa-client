@@ -500,36 +500,33 @@ class ReactoryApi extends EventEmitter {
 
   async raiseFormCommand(commandId, commandDef, formData) {
 
-    debugger;
-
-    console.log('Raising Form Command Via AMQ', { commandId, commandDef, formData });
+    console.log('RAISING FORM COMMANT VIA AMQ', { commandId, commandDef, formData });
 
     if (commandDef.hasOwnProperty('graphql')) {
-
-      console.log('HAS PROP GRAPHQL', commandDef.graphqql );
-
-
       if (commandDef.graphql.hasOwnProperty('mutation')) {
         let variables = {};
         if (commandDef.graphql.mutation.variables) {
           let data = formData.formData || formData.formContext.formData;
           variables = objectMapper(data, commandDef.graphql.mutation.variables);
+          debugger;
+        }
+        if (commandDef.graphql.mutation.staticVariables) {
+          variables = { ...commandDef.graphql.mutation.staticVariables, ...variables };
         }
 
-        console.log(`VARIABLES::  ${JSON.stringify(variables)}`);
-
-        // if (commandDef.graphql.mutation.staticVariables) {
-        //   variables = { ...commandDef.graphql.mutation.staticVariables, ...variables };
-        // }
-
-        let commandResult = null;
-        commandResult = await this.graphqlMutation(gql(commandDef.graphql.mutation.text), variables).then();
-
-        console.log(`COMMMAND RESULT::  ${JSON.stringify(commandResult)}`);
-
-        return commandResult;
-
+        let mutationText = gql`${commandDef.graphql.mutation.text}`;
+        return await this.graphqlMutation(mutationText, { nextActions: variables }).then();
       }
+
+      // TODO IMPLEMENT QUERY
+
+    }
+
+    // TODO - COMPLETE WORKFLOW IMPLEMENTATION AS ABOVE
+    if (commandId.indexOf('workflow') === 0) {
+      return await this.startWorkFlow(commandId, formData);
+    } else {
+      this.amq.raiseFormCommand(commandId, formData);
     }
 
 
@@ -559,11 +556,7 @@ class ReactoryApi extends EventEmitter {
     //   }
     //   return commandResult;
     // }
-    // if (commandId.indexOf('workflow') === 0) {
-    //   return await this.startWorkFlow(commandId, formData);
-    // } else {
-    //   this.amq.raiseFormCommand(commandId, formData);
-    // }
+
   }
 
   startWorkFlow(workFlowId, data) {
