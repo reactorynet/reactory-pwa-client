@@ -498,15 +498,15 @@ class ReactoryApi extends EventEmitter {
     });
   }
 
-  async raiseFormCommand(commandId, commandDef, formData) {
+  async raiseFormCommand(commandId, commandDef, formProps) {
 
-    console.log('RAISING FORM COMMANT VIA AMQ', { commandId, commandDef, formData });
+    console.log('RAISING FORM COMMANT VIA AMQ', { commandId, commandDef, formProps });
 
     if (commandDef.hasOwnProperty('graphql')) {
       if (commandDef.graphql.hasOwnProperty('mutation')) {
         let variables = {};
         if (commandDef.graphql.mutation.variables) {
-          let data = formData.formData || formData.formContext.formData;
+          let data = formProps.formData || formProps.formContext.formData;
           variables = objectMapper(data, commandDef.graphql.mutation.variables);
           debugger;
         }
@@ -515,7 +515,14 @@ class ReactoryApi extends EventEmitter {
         }
 
         let mutationText = gql`${commandDef.graphql.mutation.text}`;
-        return await this.graphqlMutation(mutationText, { nextActions: variables }).then();
+        let mutationResult = await this.graphqlMutation(mutationText, { nextActions: variables }).then(result => {
+          if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'refresh'){
+            console.log(`EXECUTING FORM REFRESH:: ${JSON.stringify(mutationResult)}`);
+            formProps.formContext.refresh();
+          }
+        });
+
+        return mutationResult;
       }
 
       // TODO IMPLEMENT QUERY
@@ -524,9 +531,9 @@ class ReactoryApi extends EventEmitter {
 
     // TODO - COMPLETE WORKFLOW IMPLEMENTATION AS ABOVE
     if (commandId.indexOf('workflow') === 0) {
-      return await this.startWorkFlow(commandId, formData);
+      return await this.startWorkFlow(commandId, formProps);
     } else {
-      this.amq.raiseFormCommand(commandId, formData);
+      this.amq.raiseFormCommand(commandId, formProps);
     }
 
 
