@@ -14,7 +14,9 @@ import {
   ListItemText,
   ListItemIcon,
   ListSubheader,
-  Typography 
+  Typography,
+  Switch,
+  Checkbox 
 } from '@material-ui/core';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux';
@@ -57,7 +59,7 @@ class MaterialListWidget extends Component {
     onSubmit: PropTypes.func,
     readOnly: PropTypes.bool,
     schema: PropTypes.object,
-    uiSchema: PropTypes.object
+    uiSchema: PropTypes.object,    
   }
 
   static defaultProps = {
@@ -89,6 +91,8 @@ class MaterialListWidget extends Component {
       });
     }
 
+   
+
     let listProps = uiOptions.listProps || {};
 
     return (
@@ -98,8 +102,7 @@ class MaterialListWidget extends Component {
             //Create a list item entry using the uiOptions for the widget
 
             const widgetsLeft = []; //widgets to render left of text
-            const widgetsRight = []; //widgets to render right of text
-
+            const widgetsRight = []; //widgets to render right of text            
             /*
               ** ICON MANAGEMENT **
               iconField: 'actionType',
@@ -114,7 +117,8 @@ class MaterialListWidget extends Component {
             */
 
             const hasIcon = typeof uiOptions.icon === 'string' || typeof uiOptions.iconField === 'string';
-            let iconProps = {};
+            let iconProps = {              
+            };
             let icon = null;
             const iconPosition = uiOptions.iconPosition || 'left';
         
@@ -219,17 +223,17 @@ class MaterialListWidget extends Component {
                     avatarIcon = (<Icon>{item[uiOptions.avatarIconField]}</Icon>)
                   }                                
                 }
-                              
+
                 avatar = (
                   <ListItemAvatar>
                     <Avatar {...listItemAvatarProps}>
                     {avatarIcon ? avatarIcon : listItemTextProps.primary.substring(0,1)}
                     </Avatar>
                   </ListItemAvatar>
-                )
+                );
 
-                if(avatar && avatarPosition === 'left') widgetsLeft.push(avatar)
-                if(avatar && avatarPosition === 'right') widgetsRight.push(avatar)                
+                if(avatar && avatarPosition === 'left') widgetsLeft.push(avatar);
+                if(avatar && avatarPosition === 'right') widgetsRight.push(avatar);                
               }
 
             }
@@ -291,6 +295,26 @@ class MaterialListWidget extends Component {
               }
             }
 
+
+            /** SELECTED  */
+            if(uiOptions.selectOptions) {
+              let selectVariant = 'toggle'; //switch, checkbox, highlight
+              let selectedField = uiOptions.selectOptions.selectedField || 'selected'; //
+              
+              let SelectedWidget = null;
+              /*
+              switch(selectedVariant) {
+                case 'switch': {
+                  SelectedWidget = <Switch  checked={formData["selectedField"] === true} onChange={} />
+                  break;
+                }
+                case 'checkbox': {
+                  SelectedWidget = <Checkbox />
+                  break;
+                }               
+              }
+              */
+            }
             
             /** Root Item Properties */
             const listItemProps = {
@@ -300,6 +324,8 @@ class MaterialListWidget extends Component {
             if(uiOptions && typeof uiOptions.listItemStyle === 'object') {
               listItemProps.style = { ...uiOptions.listItemStyle };
             }
+
+            if(uiOptions && typeof uiOptions.listItemSelectedStyle )
 
             if(uiOptions && uiOptions.variant === 'button') {
               listItemProps.button = true;

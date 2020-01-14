@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '../../../api/ApiProvider';
 import { ReactoryApi } from "../../../api/ReactoryApi";
-import { template, isNil, isEmpty } from 'lodash';
+import { template, isNil, isEmpty, isArray } from 'lodash';
 import * as Widgets from '../widgets';
 import {
   Button,
@@ -85,7 +85,7 @@ class ObjectTemplate extends Component {
           const buttons = uiToolbar.buttons.map((button) => {
             const api = formContext.api
             const onRaiseCommand = ( evt ) => {                      
-              if(api) api.raiseFormCommand(button.command, { formData: formData, formContext: formContext });              
+              if(api) api.raiseFormCommand(button.command,  { formData: formData, formContext: formContext });              
             };            
             return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
           });

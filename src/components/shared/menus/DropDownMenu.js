@@ -81,35 +81,38 @@ export class DropDownMenu extends Component {
                 disabled = true;
               } 
 
-              menuItems.push((
-                <MenuItem key={menu.id} onClick={ onMenuItemSelect } disabled={  disabled }> 
+              menuItems.push(
+                (<MenuItem key={menu.id} onClick={ onMenuItemSelect } disabled={  disabled }> 
                     { menu.icon ? <ListItemIcon><Icon color="primary">{menu.icon}</Icon></ListItemIcon> : null }                      
                     { menu.title }
-                </MenuItem>));
+                </MenuItem>)
+              );
             });
       }
 
-      return (<IconButton
-          aria-owns={open === true ? ariaId : null}
-          aria-haspopup="true"
-          onClick={this.handleMenu}
-          color={this.props.color || "primary"}>
-          <Icon>{props.icon || 'keyboard_arrow_down'}</Icon>
-          <Menu
-              open={this.state.open === true}
-              id={ariaId}
-              anchorEl={this.state.anchorEl}
-              anchorOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-              }}
-              transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-              }}>
-              { menuItems }
-          </Menu>
-      </IconButton>)            
+      return (
+      <IconButton
+        aria-owns={open === true ? ariaId : null}
+        aria-haspopup="true"
+        onClick={this.handleMenu}
+        color={this.props.color || "primary"}>
+        <Icon>{props.icon || 'keyboard_arrow_down'}</Icon>
+        <Menu
+            open={this.state.open === true}
+            id={ariaId}
+            anchorEl={this.state.anchorEl}
+            anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+            }}
+            transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+            }}>
+            { menuItems }
+        </Menu>
+      </IconButton>
+    )            
   }
 };
 

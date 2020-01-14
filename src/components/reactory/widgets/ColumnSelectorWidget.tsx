@@ -80,7 +80,13 @@ class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSe
   }
 
   acceptSelection(){
-    this.setState({ expanded: !this.state.expanded });
+    const { onChange } = this.props
+    const { columns } = this.state
+    this.setState({ expanded: !this.state.expanded }, ()=>{
+      if(onChange && typeof onChange === 'function') {
+        onChange(columns);
+      }      
+    });
   }
   
   render(){
@@ -152,6 +158,7 @@ class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSe
 
                 return (
                   <ListItem key={index} >
+                    <Switch checked={columnDefinition.selected} onChange={changeColumnDefinition} />
                     <ListItemText 
                       primary={columnDefinition.title} 
                       secondary={`${columnDefinition.title} renders using ${columnDefinition.widget || 'default'} widget`} 

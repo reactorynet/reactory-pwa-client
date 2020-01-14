@@ -1,6 +1,6 @@
 import React, { Fragment, Component } from 'react'
 import PropTypes from 'prop-types'
-import { pullAt, isNil, remove } from 'lodash'
+import { pullAt, isNil, remove,filter } from 'lodash'
 import {
   Typography 
 } from '@material-ui/core'
@@ -58,18 +58,18 @@ class MaterialTableWidget extends Component {
     if(uiOptions.columns && uiOptions.columns.length) {
       let _columnRef = [];
       let _mergeColumns = false;
-      if(isNil(uiOptions.columnsProperty) === false) {
-          
-        _columnRef = self.props.formContext.formData[uiOptions.columnsProperty];
+      let _columns = uiOptions.columns; 
+      if(isNil(uiOptions.columnsProperty) === false) {          
+        _columns = [...self.props.formContext.formData[uiOptions.columnsProperty]];        
         if(isNil(uiOptions.columnsPropertyMap) === false) {
-          _columnRef = api.utils.objectMapper(_columnRef, uiOptions.columnsPropertyMap)
-        }
-        
-        _mergeColumns = true;
+          _columns = api.utils.objectMapper(_columns, uiOptions.columnsPropertyMap)
+        }                
       }
       
-      let _columns = _mergeColumns === true ? _columnRef : uiOptions.columns; 
-      remove(_columns, (col) => { return col.selected === false });
+      
+      api.log(`Columns available ${_columns.length}`);     
+      remove(_columns, { selected: false });
+      api.log(`Columns selected ${_columns.length}`);
       columns = _columns.map( coldef => {        
         const def = {
           ...coldef

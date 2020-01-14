@@ -440,29 +440,25 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     };
 
     /**
-     * 
-     * submitIcon: '$none',
-      'ui:options': {
-        submitProps: {
-          variant: 'button',
-          text: 'Next'
-          iconAlign: 'left' | 'right'
-        },
+      
+    submitIcon: '$none',
+    'ui:options': {
+      submitProps: {
+        variant: 'button',
+        text: 'Next',
+        iconAlign: 'left' | 'right'
       },
-     * 
-     */
+    },           
+    */
     
     let icon = 'save';
     if(formDef.uiSchema && formDef.uiSchema.submitIcon) {
       if(typeof formDef.uiSchema.submitIcon === 'string') {
         icon = formDef.uiSchema.submitIcon         
-      }
-      
+      }      
     }
 
     let iconWidget = (icon === '$none' ? null : <Icon>{icon}</Icon>);    
-    
-
     let showSubmit = true;
     let submitButton = null;
 
@@ -757,11 +753,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   getFormContext(){
     const self = this;
     return {
-      ...this.props,
-      formData: { ...this.state.formData },
-      query: { ...this.state.query },
+      ...self.props,
+      formData: { ...self.state.formData },
+      query: { ...self.state.query },
       refresh: () => {
-        this.setState({ queryComplete: false, dirty: false })
+        self.setState({ queryComplete: false, dirty: false })
       },
       setFormData: (formData: any, callback = ()=>{}) => {
         const _state = { ...self.state, formData: formData };
@@ -928,7 +924,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
               };
 
               const onCancel = () => {
-                // //console.log('File Select Cancelled');
+                //console.log('File Select Cancelled');
               };
 
    
