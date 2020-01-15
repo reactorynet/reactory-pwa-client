@@ -89,10 +89,10 @@ Logged.muiName = 'IconMenu';
 
 const SubMenus = (props) => {
   const { items = [], history, user, api, self, classes } = props;
-  return items.map((menu) => {
+  return items.map((menu, index) => {
     const goto = () => history.push(menu.link);
     return (
-      <ListItem key={menu.id} onClick={goto} style={{ cursor: 'pointer' }}>
+      <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer' }}>
         <ListItemIcon>
           {
             menu.icon ?
@@ -128,13 +128,13 @@ const Menus = (props) => {
               subnav = (
                 <Collapse in={isExpanded === true} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    {menuItem.items.map((submenu) => {
+                    {menuItem.items.map((submenu, subindex) => {
                       const submenuGoto = () => {
                         self.navigateTo(submenu.link, true);
                       };
 
                       return (
-                        <ListItem key={submenu.id} button onClick={submenuGoto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
+                        <ListItem key={submenu.id ||subindex} button onClick={submenuGoto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
                           <ListItemIcon>
                             {
                               submenu.icon ?
