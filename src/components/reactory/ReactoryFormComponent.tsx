@@ -422,6 +422,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     const { DropDownMenu } = this.componentDefs;
     const self = this;
 
+    debugger;
+
     if (forms.length === 0) return (<p>no forms defined</p>);
 
     const formDef = this.form();
