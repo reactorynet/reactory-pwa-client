@@ -756,6 +756,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       ...self.props,
       formData: { ...self.state.formData },
       query: { ...self.state.query },
+      formInstanceId: self.state._instance_id,
+      $ref: self,      
       refresh: () => {
         self.setState({ queryComplete: false, dirty: false })
       },
