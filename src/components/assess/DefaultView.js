@@ -417,13 +417,13 @@ class DefaultView extends Component {
     const { survey } = assessment;
 
     const is180 = this.is180(survey);
-
+    const isPLC = survey.surveyType === 'plc';
     if(!is180) {
       return (
         <Paper className={classes.welcomeContainer}>
           <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
             5 - 7 minutes.<br />
-            You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
+            You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? ' well the Five Essentials of Leadership is displayed:' : ` we live the organisation's leadership brand:`} 
           </Typography>
           <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
