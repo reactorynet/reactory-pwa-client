@@ -76,7 +76,7 @@ class UserSurvey extends Component {
         if(theme.key === 'plc'){
 
          SystemUserListItem = ( props ) => { 
-                const p = {...props, firstName: 'Purposeful Leadership', lastName: 'Company' };
+                const p = {...props, firstName: 'The Purposeful Leadership', lastName: 'Company' };
                 return (<ApplicationUserListItem {...p} />);
             }
         }

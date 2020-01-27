@@ -233,7 +233,7 @@ class TowerStoneHomeComponent extends Component {
             <div style={{ maxWidth: 900, margin: 'auto' }}>
                 <Grid container spacing={24}>
                     <Grid item xs={12} sm={12} style={{ textAlign: 'center' }}>
-                        <Logo />
+                        <Logo style={{ maxHeight: '140px'}}/>
                     </Grid>
                     {this.props.chartData.showCharts ? <Grid item xs={6} sm={3}>
                         <Paper className={classes.container}>

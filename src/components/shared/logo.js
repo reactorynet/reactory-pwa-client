@@ -4,7 +4,8 @@ import { compose } from 'recompose';
 import { withStyles, withTheme } from '@material-ui/core';
 import styles from './styles';
 
-class Logo extends Component {  
+class Logo extends Component { 
+
   render(){
     const customStyle = {      
       width: `${this.props.width}px`,
@@ -31,6 +32,8 @@ Logo.defaultProps = {
   width: 'auto',
   backgroundSrc: null
 };
+
+
 
 Logo.styles = (theme) => ({
   ...styles(theme)

@@ -460,14 +460,20 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     let iconWidget = (icon === '$none' ? null : <Icon>{icon}</Icon>);    
     let showSubmit = true;
+    let showHelp = true;
     let submitButton = null;
 
     const formUiOptions = formDef.uiSchema['ui:options'];
-
+    
     if(formUiOptions) {      
-      if(formUiOptions && formUiOptions.showSubmit) {
-        showSubmit = formDef.uiSchema['ui:options'].showSubmit === true;
+      if(formUiOptions && isNil(formUiOptions.showSubmit) === false) {                
+        showSubmit = formUiOptions.showSubmit === true;
       }
+
+      if(formUiOptions && isNil(formUiOptions.showHelp) === false) {                
+        showHelp = formUiOptions.showHelp === true;
+      }
+
       
       const { submitProps } = formUiOptions;
       if(typeof submitProps === 'object' && showSubmit === true) {        

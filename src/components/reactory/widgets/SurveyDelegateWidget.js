@@ -222,7 +222,9 @@ class SurveyDelegates extends Component {
         menus.push({ title: 'Send Invite', icon: 'mail', id: 'sendinvite', key:'send-invite' });
         break;
       }
-      case 'launched': {
+      case 'launched':
+      case 'launched-assessor':
+      case 'launched-delegate': {
         menus.push({ title: 'Send Reminders', icon: 'mail_outline', id: 'send-reminder', key:'reminder' });
         menus.push({ title: 'Re-send Launch', icon: 'flight_takeoff', id: 'relaunch', key:'relaunch' });        
         menus.push({ title: 'View Assessment Details', icon: 'assignment', id: 'view-assessments', key:'view-assessments' });
