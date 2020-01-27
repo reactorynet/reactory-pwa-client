@@ -26,6 +26,8 @@ class LabelWidget extends Component {
   render() {
     const { props } = this;
 
+    debugger;
+
     let labelText = template('${formData}')({ ...props });
     let labelTitle = props.uiSchema.title;
     let labelIcon = null;
@@ -37,6 +39,7 @@ class LabelWidget extends Component {
       justifyContent: 'flex-start',
       alignItems: 'center'
     };
+    let _renderHtml = false;
 
     let labelContainerProps = {
       id: `${props.idSchema && props.idSchema.$id ? props.idSchema.$id : undefined}`,
@@ -54,24 +57,26 @@ class LabelWidget extends Component {
         iconPosition,
         variant = "h6",
         iconProps = {},
+        renderHtml
       } = props.uiSchema["ui:options"];
       if (format) {
         try {
-          labelText = template(format)(props);  
+          labelText = template(format)(props);
         } catch(labelError) {
-          labelText = 'bad template / props (' + format + ')';  
-        }        
+          labelText = 'bad template / props (' + format + ')';
+        }
       }
       if (title) {
         try {
           labelTitle = template(title)(props);
         } catch(labelError) {
-          labelTitle = 'bad template / props (' + format + ')';  
+          labelTitle = 'bad template / props (' + format + ')';
         }
       }
-        
+
       if (variant) _variant = variant;
       if (iconPosition) _iconPosition = iconPosition;
+      if (renderHtml) _renderHtml = renderHtml;
 
       if (icon) {
         const _iconProps = {
@@ -95,13 +100,19 @@ class LabelWidget extends Component {
       }
     }
 
+    let LabelBody;
+    if (_renderHtml){
+      LabelBody = <Typography variant={_variant} dangerouslySetInnerHTML={{__html: labelText}}></Typography>
+    } else {
+      LabelBody = <Typography variant={_variant}>{labelText}</Typography>
+    }
+
     return (
       <div {...labelContainerProps}>
         {_iconPosition === 'left' ? labelIcon : null}
         <div>
           {labelTitle != '' && <label>{labelTitle}</label>}
-          <Typography variant={_variant}>{labelText}
-          </Typography>
+          { LabelBody }
         </div>
         {_iconPosition === 'right' ? labelIcon : null}
       </div>
