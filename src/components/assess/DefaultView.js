@@ -386,6 +386,11 @@ class DefaultView extends Component {
         marginLeft: 'auto',
         marginRight: 'auto'
       },
+      plcLogo: {
+        height: '280px',
+        marginLeft: 'auto',
+        marginRight: 'auto'
+      },
       stopActivityDescription: {
         color: theme.palette.text.primary,
         padding: theme.spacing(1.5)
@@ -422,12 +427,12 @@ class DefaultView extends Component {
       return (
         <Paper className={classes.welcomeContainer}>
           <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
-            5 - 7 minutes.<br />
-            You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? ' well the Five Essentials of Leadership is displayed:' : ` we live the organisation's leadership brand:`} 
+            5 - 7 minutes to complete.<br />
+            You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? ' well the Five Essentials of Purposeful Leadership are displayed:' : ` we live the organisation's leadership brand:`} 
           </Typography>
           <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <img src={theme.assets.logo} className={classes.logo} alt={theme} />
+            <img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo}  alt={theme} />
           </div>
         </Paper>  
       )
@@ -479,9 +484,8 @@ class DefaultView extends Component {
       <Paper className={classes.thankYouScreen}>
         {assessment.complete === false && 
           <Fragment>
-            <Typography gutterBottom variant="h4" color="primary">Please note!</Typography>
-            <Typography gutterBottom variant="body1">Thank you for taking the time to complete the assessment. If you are happy with the ratings and input you have provided, please click the complete button below.</Typography>
-            <Typography variant="body2">If you want to come back later and review your answers, simply click back to Dashboard and return later.</Typography>
+            <Typography gutterBottom variant="body1">Thank you for taking the time to complete the assessment. If you are comfortable with the ratings and input that you have provided, please click the complete button below.</Typography>
+            <Typography variant="body1">If you want to come back later and review your answers, simply click back to Dashboard and return later.</Typography>
             <Button onClick={completeAssessment} color="primary" style={{marginRight: '4px'}}><Icon>save</Icon>&nbsp;Complete</Button>
             <Button onClick={gotoDashboard}><Icon>dashboard</Icon>Dashboard</Button>        
           </Fragment>}
@@ -926,7 +930,7 @@ class DefaultView extends Component {
         </Grid>
         <Grid item xs={12} sm={12}>
           <Typography variant="body1" color={"primary"} style={{textAlign: 'right', marginBottom: '40px' }}>
-            {isCurrentStepValid ? 'Click next to proceed' : 'Ensure you have completed all ratings and comments in full before proceeding.'}
+            {isCurrentStepValid ? 'Click next to proceed' : 'Ensure that you have completed all ratings and comments in full before proceeding.'}
           </Typography>
           <MobileStepper
             style={{              

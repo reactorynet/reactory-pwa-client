@@ -375,8 +375,8 @@ class ApplicationHeader extends Component {
           */
     return (
       <Fragment>
-        <AppBar position="fixed" style={{ backgroundColor: theme.palette.primary1Color }}>
-          <Toolbar>
+        <AppBar position="static" color="primary">
+          <Toolbar variant="dense">
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <MenuIcon />
             </IconButton>
@@ -537,7 +537,7 @@ ApplicationHeader.styles = theme => ({
         width: 200,
       },
     },
-  },
+  }
 });
 
 const ApplicationHeaderComponent = compose(

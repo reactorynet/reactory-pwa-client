@@ -81,12 +81,12 @@ export class DropDownMenu extends Component {
                 disabled = true;
               } 
 
-              menuItems.push(
-                (<MenuItem key={menu.id} onClick={ onMenuItemSelect } disabled={  disabled }> 
+              menuItems.push((
+                <MenuItem key={menu.id} onClick={ onMenuItemSelect } disabled={  disabled }> 
                     { menu.icon ? <ListItemIcon><Icon color="primary">{menu.icon}</Icon></ListItemIcon> : null }                      
                     { menu.title }
-                </MenuItem>)
-              );
+                </MenuItem>
+              ));
             });
       }
 

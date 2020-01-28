@@ -25,9 +25,7 @@ class LabelWidget extends Component {
 
   render() {
     const { props } = this;
-
-    debugger;
-
+    
     let labelText = template('${formData}')({ ...props });
     let labelTitle = props.uiSchema.title;
     let labelIcon = null;

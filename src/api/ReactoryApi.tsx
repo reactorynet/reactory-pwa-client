@@ -498,10 +498,10 @@ class ReactoryApi extends EventEmitter {
     });
   }
 
-  async raiseFormCommand(commandId, commandDef, formData) {
+  async raiseFormCommand(commandId, commandDef, formProps) {
 
-    debugger;
-
+    // TODO - COMPLETE
+    // Launch modal from button click
     if (commandDef.action && commandDef.action === 'component') {
 
       debugger;
@@ -514,39 +514,41 @@ class ReactoryApi extends EventEmitter {
 
     }
 
+    console.log('RAISING FORM COMMANT VIA AMQ', { commandId, commandDef, formProps });
 
-    ////console.log('Raising Form Command Via AMQ', {commandId, formData});
-    if (commandId.indexOf('graphql') === 0) {
-      let commandText = '';
-      let method = 'query';
-      if (commandId.indexOf('.') > 0)
-        method = commandId.split('.')[1];
-      commandText = commandDef[method];
-      let variables = {};
-      if (commandDef.variables && commandDef.variableMap) {
-        variables = objectMapper(formData, commandDef.variables);
-      }
-      if (commandDef.staticVariables) {
-        variables = { ...commandDef.staticVariables, ...variables };
-      }
-      let commandResult = null;
-      switch (method) {
-        case 'mutation': {
-          commandResult = await this.graphqlMutation(gql(commandText), variables).then();
-          break;
+    if (commandDef.hasOwnProperty('graphql')) {
+      if (commandDef.graphql.hasOwnProperty('mutation')) {
+        let variables = {};
+        if (commandDef.graphql.mutation.variables) {
+          let data = formProps.formData || formProps.formContext.formData;
+          variables = objectMapper(data, commandDef.graphql.mutation.variables);
         }
-        case 'query':
-        default: {
-          commandResult = await this.graphqlQuery(gql(commandText), variables).then();
+        if (commandDef.graphql.mutation.staticVariables) {
+          variables = { ...commandDef.graphql.mutation.staticVariables, ...variables };
         }
+
+        let mutationText = gql`${commandDef.graphql.mutation.text}`;
+        let mutationResult = await this.graphqlMutation(mutationText, { ...variables }).then(result => {
+          if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'refresh') {
+            console.log(`EXECUTING FORM REFRESH:: ${JSON.stringify(mutationResult)}`);
+            formProps.formContext.refresh();
+          }
+        });
+
+        return mutationResult;
       }
-      return commandResult;
+
+      // TODO IMPLEMENT QUERY
+
     }
+
+    // TODO - COMPLETE WORKFLOW IMPLEMENTATION AS ABOVE
     if (commandId.indexOf('workflow') === 0) {
-      return await this.startWorkFlow(commandId, formData);
+      return await this.startWorkFlow(commandId, formProps);
     } else {
-      this.amq.raiseFormCommand(commandId, formData);
+      this.amq.raiseFormCommand(commandId, formProps);
     }
+
   }
 
   startWorkFlow(workFlowId, data) {
@@ -761,17 +763,19 @@ class ReactoryApi extends EventEmitter {
   showModalWithComponentFqn(componentFqn, title = '', props = {}, modalProps = {}, domNode = null, theme = true, callback) {
     debugger;
     const ComponentToMount = this.getComponent(componentFqn);
-    this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback);
+    return this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback);
   }
 
   showModalWithComponent(title = '', ComponentToMount, props, modalProps: any = {}, domNode = null, theme = true, callback) {
     const that = this;
     const FullScreenModal = that.getComponent('core.FullScreenModal');
-    const _modalProps: any = { ...modalProps };
-    _modalProps.open = true;
+    const _modalProps: any = {...modalProps};
+    if(modalProps.open === null || modalProps.open === undefined) _modalProps.open = true;
+    else _modalProps.open = modalProps.open === true;
+
     _modalProps.title = title;
     let _domNode = domNode || reactoryDomNode();
-    if (isNil(_modalProps.onClose)) {
+    if (isNil(_modalProps.onClose) === true) {
       modalProps.onClose = () => {
         _modalProps.open = false;
         setTimeout(() => {
@@ -779,11 +783,9 @@ class ReactoryApi extends EventEmitter {
         }, 2000);
       };
     }
-    const ModalMounted = (<FullScreenModal {..._modalProps}> <ComponentToMount {...props} /> </FullScreenModal>);
-
-    debugger;
-
-    this.mountComponent(ModalMounted, {}, _domNode, theme, callback);
+    const ModalMounted = () => (<FullScreenModal {..._modalProps}> <ComponentToMount {...props} /> </FullScreenModal>);
+    this.mountComponent(ModalMounted, {}, _domNode, true, callback);
+    return _domNode;
   }
 
   createElement(ComponentToCreate, props) {
