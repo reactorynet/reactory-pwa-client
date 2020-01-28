@@ -212,6 +212,7 @@ export default class Form extends Component {
       acceptcharset,
       noHtml5Validate,
       disabled,
+      toolbarPosition = 'bottom'
     } = this.props;
 
     const { schema, uiSchema, formData, errorSchema, idSchema } = this.state;
@@ -235,6 +236,7 @@ export default class Form extends Component {
           this.formElement = form;
         }}>
         {this.renderErrors()}
+        { toolbarPosition.indexOf('top') >= 0 ? (children) : null }
         <_SchemaField
           schema={schema}
           uiSchema={uiSchema}
@@ -248,7 +250,7 @@ export default class Form extends Component {
           registry={registry}
           safeRenderCompletion={safeRenderCompletion}
           disabled={disabled} />
-        {children ? (
+        {children && toolbarPosition.indexOf('bottom') >= 0 ? (
           children
         ) : (
           <p>

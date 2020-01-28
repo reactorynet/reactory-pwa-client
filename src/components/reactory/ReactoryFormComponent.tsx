@@ -460,8 +460,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     let iconWidget = (icon === '$none' ? null : <Icon>{icon}</Icon>);    
     let showSubmit = true;
+    let showRefresh = true;
     let showHelp = true;
     let submitButton = null;
+    let toolbarposition = 'bottom'
 
     const formUiOptions = formDef.uiSchema['ui:options'];
     
@@ -474,7 +476,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         showHelp = formUiOptions.showHelp === true;
       }
 
+      if(formUiOptions && isNil(formUiOptions.showRefresh) === false) {                
+        showRefresh = formUiOptions.showRefresh === true;
+      }
       
+      if(formUiOptions && isNil(formUiOptions.toolbarPosition) === false) {
+        toolbarposition = formUiOptions.toolbarPosition
+      }
+
       const { submitProps } = formUiOptions;
       if(typeof submitProps === 'object' && showSubmit === true) {        
         const { variant = 'fab', iconAlign = 'left' } = submitProps;
@@ -565,20 +574,22 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       exportButton = (<DropDownMenu menus={exportMenus} onSelect={onDropDownSelect} icon={"import_export"} />)
     }
 
+    let formtoolbar = (<Toolbar>
+      { uiSchemaSelector }
+      { this.props.children && this.props.children.length > 0 ? this.props.children : null }
+      { showSubmit === true && submitButton }
+      { self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button> }            
+      { formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button> }
+      { formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button> }
+      { reportButton }
+      { exportButton }
+    </Toolbar>);
+
     return (
       <Fragment>        
-        {this.props.before}        
-        <Form {...formProps}>
-          <Toolbar>
-            { uiSchemaSelector }
-            { this.props.children && this.props.children.length > 0 ? this.props.children : null }
-            { showSubmit === true && submitButton }
-            { self.state.allowRefresh && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button> }            
-            { formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button> }
-            { formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button> }
-            { reportButton }
-            { exportButton }
-          </Toolbar>
+        {this.props.before}                
+        <Form {...{...formProps, toolbarPosition: toolbarposition}}>
+          {formtoolbar}          
         </Form>
         {this.getHelpScreen()}
         {this.getReportWidget()}

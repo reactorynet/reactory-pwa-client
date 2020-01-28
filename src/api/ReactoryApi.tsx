@@ -526,6 +526,7 @@ class ReactoryApi extends EventEmitter {
       }
       return commandResult;
     }
+    
     if (commandId.indexOf('workflow') === 0) {
       return await this.startWorkFlow(commandId, formData);
     } else {
@@ -741,17 +742,19 @@ class ReactoryApi extends EventEmitter {
 
   showModalWithComponentFqn(componentFqn, title = '', props = {}, modalProps = {}, domNode = null, theme = true, callback) {
     const ComponentToMount = this.getComponent(componentFqn);
-    this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback);
+    return this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback);
   }
 
   showModalWithComponent(title = '', ComponentToMount, props, modalProps: any = {}, domNode = null, theme = true, callback) {
     const that = this;
     const FullScreenModal = that.getComponent('core.FullScreenModal');
     const _modalProps: any = {...modalProps};
-    _modalProps.open = true;
+    if(modalProps.open === null || modalProps.open === undefined) _modalProps.open = true;
+    else _modalProps.open = modalProps.open === true;
+
     _modalProps.title = title;
     let _domNode = domNode || reactoryDomNode();
-    if (isNil(_modalProps.onClose)) {
+    if (isNil(_modalProps.onClose) === true) {
       modalProps.onClose = () => {
         _modalProps.open = false;
         setTimeout(() => {
@@ -759,8 +762,9 @@ class ReactoryApi extends EventEmitter {
         }, 2000);
       };
     }
-    const ModalMounted = (<FullScreenModal {..._modalProps}> <ComponentToMount {...props} /> </FullScreenModal>);
+    const ModalMounted = () => (<FullScreenModal {..._modalProps}> <ComponentToMount {...props} /> </FullScreenModal>);
     this.mountComponent(ModalMounted, {}, _domNode, true, callback);
+    return _domNode;
   }
 
   createElement(ComponentToCreate, props) {
