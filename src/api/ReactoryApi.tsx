@@ -500,6 +500,20 @@ class ReactoryApi extends EventEmitter {
 
   async raiseFormCommand(commandId, commandDef, formProps) {
 
+    // TODO - COMPLETE
+    // Launch modal from button click
+    if (commandDef.action && commandDef.action === 'component') {
+
+      debugger;
+
+      const componentToMount = commandDef.component.componentFqn;
+
+      this.showModalWithComponentFqn(componentToMount, commandDef.title, commandDef.component.componentProps, {}, null, false, () => {
+        console.log('MOUNTING THE COMPOENT');
+      });
+
+    }
+
     console.log('RAISING FORM COMMANT VIA AMQ', { commandId, commandDef, formProps });
 
     if (commandDef.hasOwnProperty('graphql')) {
@@ -508,7 +522,6 @@ class ReactoryApi extends EventEmitter {
         if (commandDef.graphql.mutation.variables) {
           let data = formProps.formData || formProps.formContext.formData;
           variables = objectMapper(data, commandDef.graphql.mutation.variables);
-          debugger;
         }
         if (commandDef.graphql.mutation.staticVariables) {
           variables = { ...commandDef.graphql.mutation.staticVariables, ...variables };
@@ -516,7 +529,7 @@ class ReactoryApi extends EventEmitter {
 
         let mutationText = gql`${commandDef.graphql.mutation.text}`;
         let mutationResult = await this.graphqlMutation(mutationText, { ...variables }).then(result => {
-          if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'refresh'){
+          if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'refresh') {
             console.log(`EXECUTING FORM REFRESH:: ${JSON.stringify(mutationResult)}`);
             formProps.formContext.refresh();
           }
@@ -528,7 +541,6 @@ class ReactoryApi extends EventEmitter {
       // TODO IMPLEMENT QUERY
 
     }
-    
 
     // TODO - COMPLETE WORKFLOW IMPLEMENTATION AS ABOVE
     if (commandId.indexOf('workflow') === 0) {
@@ -536,34 +548,6 @@ class ReactoryApi extends EventEmitter {
     } else {
       this.amq.raiseFormCommand(commandId, formProps);
     }
-
-
-    // if (commandId.indexOf('graphql') === 0) {
-    //   let commandText = '';
-    //   let method = 'query';
-    //   if (commandId.indexOf('.') > 0)
-    //     method = commandId.split('.')[1];
-    //   commandText = commandDef[method];
-    //   let variables = {};
-    //   if (commandDef.variables && commandDef.variableMap) {
-    //     variables = objectMapper(formData, commandDef.variables);
-    //   }
-    //   if (commandDef.staticVariables) {
-    //     variables = {...commandDef.staticVariables, ...variables};
-    //   }
-    //   let commandResult = null;
-    //   switch (method) {
-    //     case 'mutation': {
-    //       commandResult = await this.graphqlMutation(gql(commandText), variables).then();
-    //       break;
-    //     }
-    //     case 'query':
-    //     default: {
-    //       commandResult = await this.graphqlQuery(gql(commandText), variables).then();
-    //     }
-    //   }
-    //   return commandResult;
-    // }
 
   }
 
@@ -752,6 +736,9 @@ class ReactoryApi extends EventEmitter {
   }
 
   mountComponent(ComponentToMount, props, domNode, theme = true, callback) {
+
+    debugger;
+
     const that = this;
     if (theme === true) {
       ReactDOM.render(<React.Fragment>
@@ -774,6 +761,7 @@ class ReactoryApi extends EventEmitter {
   }
 
   showModalWithComponentFqn(componentFqn, title = '', props = {}, modalProps = {}, domNode = null, theme = true, callback) {
+    debugger;
     const ComponentToMount = this.getComponent(componentFqn);
     return this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback);
   }
