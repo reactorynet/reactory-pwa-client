@@ -500,21 +500,11 @@ class ReactoryApi extends EventEmitter {
 
   async raiseFormCommand(commandId, commandDef, formProps) {
 
-    // TODO - COMPLETE
-    // Launch modal from button click
     if (commandDef.action && commandDef.action === 'component') {
-
-      debugger;
-
       const componentToMount = commandDef.component.componentFqn;
-
-      this.showModalWithComponentFqn(componentToMount, commandDef.title, commandDef.component.componentProps, {}, null, false, () => {
-        console.log('MOUNTING THE COMPOENT');
-      });
-
+      const _formData = formProps.formData || formProps.formContext.formData;
+      this.showModalWithComponentFqn(componentToMount, commandDef.title, { formData: _formData }, { open: true }, null, false, null);
     }
-
-    console.log('RAISING FORM COMMANT VIA AMQ', { commandId, commandDef, formProps });
 
     if (commandDef.hasOwnProperty('graphql')) {
       if (commandDef.graphql.hasOwnProperty('mutation')) {
@@ -542,7 +532,6 @@ class ReactoryApi extends EventEmitter {
 
     }
 
-    // TODO - COMPLETE WORKFLOW IMPLEMENTATION AS ABOVE
     if (commandId.indexOf('workflow') === 0) {
       return await this.startWorkFlow(commandId, formProps);
     } else {
@@ -736,9 +725,6 @@ class ReactoryApi extends EventEmitter {
   }
 
   mountComponent(ComponentToMount, props, domNode, theme = true, callback) {
-
-    debugger;
-
     const that = this;
     if (theme === true) {
       ReactDOM.render(<React.Fragment>
@@ -761,7 +747,6 @@ class ReactoryApi extends EventEmitter {
   }
 
   showModalWithComponentFqn(componentFqn, title = '', props = {}, modalProps = {}, domNode = null, theme = true, callback) {
-    debugger;
     const ComponentToMount = this.getComponent(componentFqn);
     return this.showModalWithComponent(title, ComponentToMount, props, modalProps, domNode, theme, callback);
   }
@@ -772,11 +757,10 @@ class ReactoryApi extends EventEmitter {
     const _modalProps: any = {...modalProps};
     if(modalProps.open === null || modalProps.open === undefined) _modalProps.open = true;
     else _modalProps.open = modalProps.open === true;
-
     _modalProps.title = title;
     let _domNode = domNode || reactoryDomNode();
     if (isNil(_modalProps.onClose) === true) {
-      modalProps.onClose = () => {
+      _modalProps.onClose = () => {
         _modalProps.open = false;
         setTimeout(() => {
           that.unmountComponent(_domNode);
