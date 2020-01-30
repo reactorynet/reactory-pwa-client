@@ -46,6 +46,7 @@ import FroalaWired from './richtext/Froala';
 // DREW
 import TabbedNavigation from './shared/tabbedNavigation';
 import ChipLabel from './shared/ChipLabel';
+import MaterialInput from './shared/MaterialInput';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -85,6 +86,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'ChipLabel',
     component: ChipLabel,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'MaterialInput',
+    component: MaterialInput,
     version: '1.0.0',
   },
   {
@@ -575,5 +582,6 @@ export const componentRegistery = [
   require('./shared/currency/CurrencyLabel'),
   require('./shared/DateLabel'),
   require('./shared/StaticContent').meta,
-  require('./shared/Label')
+  require('./shared/Label'),
+  // require('./shared/MaterialInput')
 ];
