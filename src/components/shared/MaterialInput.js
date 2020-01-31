@@ -14,8 +14,13 @@ class MaterialInputWidget extends Component {
     let labelIcon = null;
     let _iconPosition = 'left';
     let theme = props.theme;
+    const {
+      formData,
+      schema
+    } = props;
     let args = {
-      type: 'text'
+      type: 'text',
+      placeholder: ''
     }
 
     let containerProps = {
@@ -35,7 +40,12 @@ class MaterialInputWidget extends Component {
         iconType,
         iconPosition,
         iconProps = {},
+        placeholder
       } = props.uiSchema["ui:options"];
+
+      if (placeholder)
+        args.placeholder = placeholder;
+
       if (title) {
         try {
           labelTitle = template(title)(props);
@@ -60,7 +70,7 @@ class MaterialInputWidget extends Component {
         if (IconComponent) {
           labelIcon = <IconComponent {..._iconProps} />
         } else {
-          labelIcon = <Icon {..._iconProps}>{props.uiSchema["ui:options"].icon}</Icon>
+          labelIcon = <Icon color="primary" {..._iconProps}>{props.uiSchema["ui:options"].icon}</Icon>
         }
 
       }
@@ -75,8 +85,8 @@ class MaterialInputWidget extends Component {
       <div {...containerProps}>
         {_iconPosition === 'left' ? labelIcon : null}
         <div>
-          {labelTitle != '' && <label>{labelTitle}</label>}
-          <Input {...args} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={throttle(onInputChanged, 250)} fullWidth />
+          {labelTitle && labelTitle != '' && <label>{labelTitle}</label>}
+          <Input {...args} value={formData || schema.default} onChange={throttle(onInputChanged, 250)} fullWidth />
         </div>
       </div>
     )
@@ -84,12 +94,4 @@ class MaterialInputWidget extends Component {
 }
 
 const MaterialInputComponent = compose(withTheme)(MaterialInputWidget)
-
-// MaterialInputComponent.meta = {
-//   nameSpace: "core",
-//   name: "MaterialInput",
-//   version: "1.0.0",
-//   component: MaterialInputComponent
-// };
-
 export default MaterialInputComponent;
