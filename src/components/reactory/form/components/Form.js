@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, Fragment } from "react";
 import PropTypes from "prop-types";
 
 import { default as DefaultErrorList } from "./ErrorList";
@@ -14,6 +14,7 @@ import {
 import validateFormData, { toErrorList } from "../validate";
 
 export default class Form extends Component {
+
   static defaultProps = {
     uiSchema: {},
     noValidate: false,
@@ -106,14 +107,11 @@ export default class Form extends Component {
     const { ErrorList, showErrorList, formContext } = this.props;
 
     if (errors.length && showErrorList != false) {
-      return (
-        <ErrorList
-          errors={errors}
-          errorSchema={errorSchema}
-          schema={schema}
-          uiSchema={uiSchema}
-          formContext={formContext}
-        />
+      return (<ErrorList errors={errors}
+                         errorSchema={errorSchema}
+                         schema={schema}
+                         uiSchema={uiSchema}
+                         formContext={formContext} />
       );
     }
     return null;
@@ -212,15 +210,71 @@ export default class Form extends Component {
       acceptcharset,
       noHtml5Validate,
       disabled,
-      toolbarPosition = 'bottom'
+      toolbarPosition = 'bottom',           
     } = this.props;
 
     const { schema, uiSchema, formData, errorSchema, idSchema } = this.state;
     const registry = this.getRegistry();
     const _SchemaField = registry.fields.SchemaField;
 
-    return (
-      <form
+    let componentType = 'form';
+    let formUiOptions = {};
+    let style = {} 
+
+    if(uiSchema['ui:options']) {
+      formUiOptions = uiSchema['ui:options'];
+      componentType = formUiOptions.componentType || componentType;
+      style = formUiOptions.style || style;
+    }
+
+    if(componentType === 'form') {
+      return (
+        <form
+          className={className ? className : "rjsf"}
+          id={id}
+          name={name}
+          method={method}
+          target={target}
+          action={action}
+          autoComplete={autocomplete}
+          encType={enctype}
+          acceptCharset={acceptcharset}
+          noValidate={noHtml5Validate}
+          onSubmit={this.onSubmit}
+          style={style}
+          ref={form => {
+            this.formElement = form;
+          }}>
+          {this.renderErrors()}
+          { toolbarPosition.indexOf('top') >= 0 ? (children) : null }
+          <_SchemaField
+            schema={schema}
+            uiSchema={uiSchema}
+            errorSchema={errorSchema}
+            idSchema={idSchema}
+            idPrefix={idPrefix}
+            formData={formData}
+            onChange={this.onChange}
+            onBlur={this.onBlur}
+            onFocus={this.onFocus}
+            registry={registry}
+            safeRenderCompletion={safeRenderCompletion}
+            disabled={disabled} />
+          {children && toolbarPosition.indexOf('bottom') >= 0 ? (
+            children
+          ) : (
+            <p>
+              <button type="submit" className="btn btn-info">
+                Submit
+              </button>
+            </p>
+          )}
+        </form>
+      );
+    }
+
+    if(componentType === 'div') {
+      return (<div
         className={className ? className : "rjsf"}
         id={id}
         name={name}
@@ -232,11 +286,12 @@ export default class Form extends Component {
         acceptCharset={acceptcharset}
         noValidate={noHtml5Validate}
         onSubmit={this.onSubmit}
+        style={style}
         ref={form => {
           this.formElement = form;
         }}>
-        {this.renderErrors()}
-        { toolbarPosition.indexOf('top') >= 0 ? (children) : null }
+          {this.renderErrors()}
+          { toolbarPosition.indexOf('top') >= 0 ? (children) : null }
         <_SchemaField
           schema={schema}
           uiSchema={uiSchema}
@@ -258,9 +313,10 @@ export default class Form extends Component {
               Submit
             </button>
           </p>
-        )}
-      </form>
-    );
+        )} 
+      </div>)
+    }
+    
   }
 }
 

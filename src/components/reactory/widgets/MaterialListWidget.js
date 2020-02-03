@@ -83,9 +83,8 @@ class MaterialListWidget extends Component {
     const { formData } = this.props;
     let columns = [];
 
-
     let data = [];
-    if (formData && formData.length) {
+    if (formData && formData.length > 0) {
       formData.forEach(row => {
         data.push({ ...row })
       });
@@ -274,7 +273,7 @@ class MaterialListWidget extends Component {
                     formData: item,
                     ...uiOptions.secondaryAction.props
                   };
-                  // debugger;
+                  
                   // secondaryComponentProps.componentProps = this.props.api.utils.objectMapper(item, objectmapDefinition)
                   componentToRender = <SecondaryItemComponent {...secondaryComponentProps} />
                 }

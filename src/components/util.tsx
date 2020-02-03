@@ -146,6 +146,11 @@ export  const CenteredContainer = ( props ) => {
     return `${process.env.REACT_APP_CDN}/${path}`;
   };
 
+  export const ThemeResource = ( path = 'images/avatar.png' ) => {
+    const partnerThemeRoute = CDNResource(`themes/${process.env.REACT_APP_CLIENT_KEY}/`);
+    return `${partnerThemeRoute}${path}`;
+  }
+
   export const getAvatar = (profile) => {
     if(nil(profile)) return CDNProfileResource();
     if(nil(profile.avatar)) return CDNProfileResource();

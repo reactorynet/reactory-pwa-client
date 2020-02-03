@@ -39,6 +39,11 @@ namespace Reactory {
       source: string;
     }
 
+    export interface NotificationProperties {
+      title: string,
+      options: NotificationOptions
+    }
+
     export interface ClientUtils {
       omitDeep(): any,
       queryString(): any,
@@ -94,6 +99,8 @@ namespace Reactory {
       queryObject: any;
       queryString: any;
       objectToQueryString: Function;
+
+      createNotification(NtoficationProperties)
 
       goto(where, state): void;
 

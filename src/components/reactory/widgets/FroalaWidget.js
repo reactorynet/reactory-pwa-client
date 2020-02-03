@@ -427,6 +427,15 @@ class FroalaWidget extends Component {
       imageDefaultWidth: 300,
       imageDefaultDisplay: 'inline',
       zIndex: 101,
+      fontFamily: {
+        'Arial,Helvetica,sans-serif': 'Arial',
+        'Georgia,serif': 'Georgia',
+        'Impact,Charcoal,sans-serif': 'Impact',
+        'Tahoma,Geneva,sans-serif': 'Tahoma',
+        "'Times New Roman',Times,serif": 'Times New Roman',
+        'Verdana,Geneva,sans-serif': 'Verdana',
+        "Roboto,Helvetica,Arial,sans-serif": "Roboto"        
+      },
       htmlAllowedTags: ['.*'],
       htmlAllowedAttrs: ['.*'],
       htmlRemoveTags: [''],

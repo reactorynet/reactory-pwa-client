@@ -134,8 +134,7 @@ export class BootstrapGridField extends ObjectField {
 };
 
 class MaterialGridField extends ObjectField {
-  state = { firstName: 'hasldf' }
-
+  
   static styles = theme => ({
     root: {
       ...theme.mixins.gutters(),
@@ -166,13 +165,40 @@ class MaterialGridField extends ObjectField {
       spacing: 8
     };
 
-    if(uiSchema['ui:grid-options']) {
-      gridOptions = uiSchema['ui:grid-options'];
+    let uiOptions = {
+      container: 'Paper'
+    };
 
+    if(uiSchema["ui:options"]) {
+      uiOptions = {...uiOptions, ...(uiSchema["ui:options"] || uiOptions) };
     }
 
+    if(uiSchema['ui:grid-options']) {
+      gridOptions = uiSchema['ui:grid-options'];
+    }
+
+    let Container = null
+
+    switch(uiOptions.container) {
+      case "div" : {
+        Container = (props) => {
+          return (<div className={props.className}>
+            {props.children}
+          </div>)
+        }
+
+        break;
+      }
+      case "Paper":
+      default: {
+        Container = Paper
+        break;
+      }
+    }
+
+
     return (
-      <Paper className={classes.root}>
+      <Container className={classes.root}>
         {title ? <TitleField
             id={`${idSchema.$id}__title`}
             title={title}
@@ -238,7 +264,7 @@ class MaterialGridField extends ObjectField {
               </Grid>
             )
           })
-        }</Paper>
+        }</Container>
     )
   }
 }

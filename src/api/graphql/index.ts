@@ -430,6 +430,28 @@ const apiStatus = gql`
         }
         
       }
+      messages {
+        id
+        title
+        text
+        data
+        via
+        icon
+        image
+        requireInteraction
+        silent
+        timestamp
+        actions {
+          id
+          action
+          icon
+          componentFqn
+          componentProps
+          modal
+          modalSize
+          priority
+        }
+      }
     }
   }
 

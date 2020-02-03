@@ -397,6 +397,9 @@ class ComposedChartWidget extends Component {
   }
 }
 
+class BarChartWidget extends Component {
+  
+}
 
 export const PieChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(PieChartWidget)
 export const LineChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(LineChartWidget)

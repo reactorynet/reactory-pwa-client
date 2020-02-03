@@ -17,6 +17,7 @@ import {
   getAvatar,
   getOrganizationLogo,
   getUserFullName,
+  ThemeResource,
   injectResources,
   omitDeep
 } from '../components/util';
@@ -143,6 +144,7 @@ class ReactoryApi extends EventEmitter {
   getAvatar: Function;
   getOrganizationLogo: Function;
   getUserFullName: Function;
+  getThemeResource: Function;
   CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
@@ -161,8 +163,10 @@ class ReactoryApi extends EventEmitter {
   queryObject: any;
   queryString: any;
   objectToQueryString: Function;
+
   constructor(client, props) {
     super();
+
     this.history = null;
     this.props = props;
     this.componentRegister = {};
@@ -285,6 +289,79 @@ class ReactoryApi extends EventEmitter {
     this.status();
     this.__REACTORYAPI = true;
     this.goto = this.goto.bind(this);
+    this.createNotification = this.createNotification.bind(this);
+    this.getThemeResource = ThemeResource;
+    this.getUser = this.getUser.bind(this);
+  }
+
+  createNotification(title: string, options: NotificationOptions | any = {} ){
+    
+    this.log('Creating Notification', { title, options }, 'debug');
+
+    const defaultNotificationProperties = {
+      title: 'Reactory Notification',
+      body: 'Reactory Notification Body',
+      icon: `${ThemeResource('images/favicon.ico')}`,
+    };
+
+    const checkNotificationPromise = () => {
+      try {
+        Notification.requestPermission().then();
+      } catch(e) {
+        return false;
+      }  
+      return true;
+    }
+
+    const requestPermission = () => {
+      if(checkNotificationPromise() === true) {
+        Notification.requestPermission()
+        .then((permission) => {
+          if(permission === "granted") {
+            this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
+          }          
+        })
+      } else {
+        Notification.requestPermission(function(permission) {
+          if(permission === "granted") {
+            this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
+          }          
+        });
+      }
+    };
+
+
+
+    if(window && window.Notification) {
+     
+      switch(Notification.permission)
+      {
+        case "denied": {
+          //denied notificaitons, use fallback
+          this.amq.raiseFormCommand("reactory.core.display.notification", 
+          { 
+            title: title, 
+            options: { 
+              ...defaultNotificationProperties, 
+              ...options 
+            } 
+          });
+          return;
+        }
+        case "granted": {          
+          let notification = new Notification(title, { ...defaultNotificationProperties, ...options, body: options.text });          
+          setTimeout(notification.close.bind(notification), 4000);
+          return;
+        }        
+        case "default": 
+        default: {
+          requestPermission();
+        }
+      }            
+    } else {
+      this.log('Notification API not supported in this browser', { ...defaultNotificationProperties, ...options }, 'warning');
+    }
+
   }
 
   goto(where = "/", state = { __t: new Date().valueOf() }) {
@@ -499,7 +576,7 @@ class ReactoryApi extends EventEmitter {
   }
 
   async raiseFormCommand(commandId, commandDef, formProps) {
-
+    const self = this;
     if (commandDef.action && commandDef.action === 'component') {
       const componentToMount = commandDef.component.componentFqn;
       const _formData = formProps.formData || formProps.formContext.formData;
@@ -522,6 +599,17 @@ class ReactoryApi extends EventEmitter {
           if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'refresh') {
             console.log(`EXECUTING FORM REFRESH:: ${JSON.stringify(mutationResult)}`);
             formProps.formContext.refresh();
+          }
+
+          if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'notification') {
+            debugger;
+            const resultMap = commandDef.graphql.mutation.resultMap || {'*': '*'};
+            let notificationProperties = { 
+              ...(commandDef.graphql.mutation.notificationProperties || {}), 
+              ...(objectMapper(mutationResult, resultMap)) 
+            };
+            
+            self.createNotification(notificationProperties.title || 'No Title', notificationProperties.options || {});
           }
         });
 
@@ -566,11 +654,17 @@ class ReactoryApi extends EventEmitter {
   }
 
   hasRole(itemRoles = [], userRoles = null) {
+    let comparedRoles = userRoles || [];
+
     if (itemRoles.length === 1 && itemRoles[0] === '*')
       return true;
-    if (userRoles === null)
-      userRoles === this.getUser().roles;
-    const result = intersection(itemRoles, userRoles);
+    
+      if (userRoles === null) {
+      const loggedInUser = this.getUser();
+      comparedRoles = loggedInUser.roles;      
+    }
+      
+    const result = intersection(itemRoles, comparedRoles);
     return result.length >= 1;
   }
 
@@ -803,8 +897,16 @@ class ReactoryApi extends EventEmitter {
 
   getUser() {
     const userString = localStorage.getItem(storageKeys.LoggedInUser);
-    if (userString)
-      return JSON.parse(userString);
+    if (userString){
+      try {
+        let parsedUser = JSON.parse(userString);
+        return parsedUser;
+      } catch(parseError) {
+        this.log('Could not parse the logged in user data', parseError, 'error');
+        return anonUser;
+      }      
+    }
+       
     return anonUser;
   }
 
@@ -847,10 +949,17 @@ class ReactoryApi extends EventEmitter {
         if (result.data.apiStatus.status === "API OK") {
           that.setUser({ ...result.data.apiStatus });
           that.lastValidation = moment().valueOf();
-          that.tokenValidated = true;
+          that.tokenValidated = true;          
           if (options.emitLogin === true)
             that.emit(ReactoryApiEventNames.onLogin, that.getUser());
           that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result });
+
+          if(result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
+            result.data.apiStatus.messages.forEach((message) => {
+              that.createNotification(message.title, message);
+            });
+          }
+
           resolve(that.getUser());
         } else {
           that.logout(false);

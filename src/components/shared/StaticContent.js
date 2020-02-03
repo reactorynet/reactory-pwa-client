@@ -1,10 +1,12 @@
-import React, { Component } from 'react';
+import React, { Component,Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'recompose';
 import { withRouter, BrowserRouter } from 'react-router-dom';
+import { Button, Icon } from '@material-ui/core';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import moment from 'moment';
 import { withApi, ReactoryApi } from '@reactory/client-core/api/ApiProvider';
+
 
 
 
@@ -23,7 +25,8 @@ class StaticContent extends Component {
         createdAt: moment(),
         topics: [],
         published: false,
-      }
+      },
+      editing: false
     }
   }
 
@@ -74,8 +77,32 @@ class StaticContent extends Component {
   }
   
   render(){
-    const containerProps = {};    
-    return (<div {...containerProps} dangerouslySetInnerHTML={{__html: this.state.content.content}}></div>)
+    const containerProps = {};  
+    let isDeveloper = this.props.api.hasRole(['DEVELOPER']);
+    
+    const edit = () => {
+      this.setState({ editing: !this.state.editing })
+    };
+
+    const { editing } = this.state;
+
+    const ContentCapture = this.props.api.getComponent('static.ContentCapture');
+        
+      return (
+        <Fragment>      
+          {editing === true ? 
+            <ContentCapture slug={this.props.slug} formData={{ slug: this.props.slug }} mode="edit"></ContentCapture> : 
+            <div {...containerProps} dangerouslySetInnerHTML={{__html: this.state.content.content}}></div>
+          }        
+        {isDeveloper === true ? 
+          <div>
+            <hr/>
+            <Button onClick={edit} color="primary">
+              <Icon>{editing === false ? 'pencil' : 'check' }</Icon>{editing === false ? 'Edit' : 'Done' }
+            </Button>
+          </div> : null }
+        </Fragment>
+      )        
   }
 }
 

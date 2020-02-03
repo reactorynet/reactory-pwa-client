@@ -52,6 +52,8 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
     formData,
     classes,
   } = props;
+
+  
   const isObject = schema.type === 'object'
   const isBoolean = schema.type === 'boolean'
 

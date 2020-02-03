@@ -17,7 +17,7 @@ export const DEFAULT_CHANNELS = {
   PLUGINS: 'reactory.plugins',
 };
 
-export const $chan = (name) => {
+export const $chan = (name: string) : IChannelDefinition<any> => {
   return postal.channel(name);
 };
 
@@ -44,6 +44,13 @@ export const $pub = {
   messageHandlerLoaded: (eventId, data) => $chan(DEFAULT_CHANNELS.CROSS_ORIGIN).publish(eventId, data),
   pluginLoaded: (eventId, data) => $chan(DEFAULT_CHANNELS.PLUGINS).publish(eventId, data),
 };
+
+export interface IAsynchronousMessageQueue {
+  //$chan: (name: string) => IChannelDefinition<any>
+}
+
+
+
 
 export default {
   $chan,
