@@ -125,58 +125,6 @@ class LineChartWidget extends PureComponent {
 }
 
 
-/*
-class PieChartWidget extends Component {
-  
-  static styles = (theme) => ({
-    root: {
-      display: 'flex',
-      justifyContent: 'center',
-      flexWrap: 'wrap',
-    },
-    chip: {
-      margin: theme.spacing(1),
-    },
-    newChipInput: {
-      margin: theme.spacing(1)
-    }
-  });
-
-  static propTypes = {
-    formData: PropTypes.array,
-    onChange: PropTypes.func,
-    onSubmit: PropTypes.func,
-    readOnly: PropTypes.bool,
-    schema: PropTypes.object,
-    uiSchema: PropTypes.object
-  }
-
-  static defaultProps = {
-    formData: [],
-    readOnly: false
-  }
-    
-  render(){
-    const self = this
-    const { formData, uiSchema, idSchema } = this.props
-    //console.log('Rendering Pie Chart', this.props);
-    return (
-      <Fragment>
-       <PieChart
-            id={idSchema.$id || uuid()}
-            styles={{ display: 'flex', justifyContent: 'center' }}
-            data={this.props.formData}
-            size={120}
-            innerHoleSize={100}
-        />
-        <Typography variant="caption" style={{textAlign: 'center', margin:'auto'}}>{this.props.schema.title}</Typography>
-      </Fragment>
-    )
-  }
-}
-*/
-
-
 class PieChartWidget extends Component {  
   constructor(props) {
     super(props);
@@ -186,6 +134,7 @@ class PieChartWidget extends Component {
     this.onPieEnter = this.onPieEnter.bind(this);
     this.renderActiveShape = this.renderActiveShape.bind(this);
     this.renderChart = this.renderChart.bind(this);
+    this.renderTitle = this.renderTitle.bind(this);
   }
 
 
@@ -337,12 +286,19 @@ class PieChartWidget extends Component {
     );
   }
 
+  renderTitle() {
+    return (<Typography>Chart Title</Typography>)
+  }
+
   render() {
    
     return (
+      <div>
       <ResponsiveContainer height={this.props.contentRect.bounds.height || 400} width="95%">
-      {this.renderChart()}
+      {this.renderChart()}      
       </ResponsiveContainer>
+      <Typography style={{textAlign: 'center'}}>{this.props.schema.title}</Typography>
+      </div>
     );
   }
 }
@@ -441,6 +397,9 @@ class ComposedChartWidget extends Component {
   }
 }
 
+class BarChartWidget extends Component {
+  
+}
 
 export const PieChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(PieChartWidget)
 export const LineChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(LineChartWidget)

@@ -1226,8 +1226,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         that.setState({ forms: [], forms_loaded: true, loading: false, formDef: simpleForm, formError: { message: loadError.message } })
       })
     } catch (formloadError) {
-      console.log(formloadError);
-    }    
+      that.props.api.log(`Error loading forms`, {error: formloadError}, 'error');
+    }
   }
 
   render() {

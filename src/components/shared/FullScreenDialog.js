@@ -25,7 +25,6 @@ const Transition = React.forwardRef(function Transition(props, ref) {
 
 
 class FullScreenDialog extends Component {
-
   constructor(props, context) {
     super(props, context);
     this.state = {
@@ -36,13 +35,15 @@ class FullScreenDialog extends Component {
   }
 
   handleClose = () => {
-    if (this.props.onClose) this.props.onClose()
-    else this.setState({ open: false });
+    if (this.props.onClose) {
+      this.props.onClose()
+    } else {
+      this.setState({ open: false });
+    }
   };
 
   render() {
-    const { classes, title, containerProps = {}, slide='up' } = this.props;
-
+    const { classes, title, containerProps = {}, slide = 'up' } = this.props;
     return (
       <Fragment>
         <Dialog
@@ -50,14 +51,14 @@ class FullScreenDialog extends Component {
           open={this.props.open}
           onClose={this.handleClose}
           TransitionComponent={Transition}
-          {...containerProps}          
+          {...containerProps}
         >
           <AppBar className={classes.appBar}>
-            <Toolbar>              
+            <Toolbar>
               <IconButton color="inherit" onClick={this.handleClose} aria-label="Close">
                 <CloseIcon />
               </IconButton>
-              { title ? <Typography variant="h6" color="inherit">{title}</Typography> : null }
+              {title ? <Typography variant="h6" color="inherit">{title}</Typography> : null}
             </Toolbar>
           </AppBar>
           {this.props.children}

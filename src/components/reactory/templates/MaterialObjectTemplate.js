@@ -1,6 +1,6 @@
-import React, { Component, Fragment } from 'react'
+import React, { Component, Fragment } from 'react';
 import { compose } from 'redux';
-import PropTypes from 'prop-types'
+import PropTypes from 'prop-types';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '../../../api/ApiProvider';
 import { ReactoryApi } from "../../../api/ReactoryApi";
@@ -24,7 +24,7 @@ import {
   Toolbar,
   Tooltip,
   Paper,
-} from '@material-ui/core'
+} from '@material-ui/core';
 
 class ObjectTemplate extends Component {
 
@@ -59,7 +59,7 @@ class ObjectTemplate extends Component {
       api, 
       formData, 
       formContext 
-    } = this.props
+    } = this.props;
     if(formContext.api) {
       formContext.api.log('MaterialObjectTemplate rendering', {props: this.props}, 'debug');
     }
@@ -116,7 +116,7 @@ class ObjectTemplate extends Component {
     if(uiOptions && uiOptions.container) {      
       if( typeof uiOptions.containerStyles === 'object') {
         ContainerStyles = { ...uiOptions.containerStyles}
-      }
+      }      
 
       switch(uiOptions.container) {
         case "React.Fragment":
