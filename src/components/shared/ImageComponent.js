@@ -5,15 +5,18 @@ import { withTheme, withStyles } from '@material-ui/styles';
 
 class ImageWidget extends Component {
 
-   render() {
+  render() {
     const { value, theme } = this.props
 
     let url = value;
     let variant = 'rounded';
-    let avatarStyles = {
-      height: theme.spacing(7),
-      width: theme.spacing(7)
-    };
+
+    let avatarProps = {
+      style: {
+        height: theme.spacing(7),
+        width: theme.spacing(7)
+      }
+    }
 
     let uiOptions = this.props['ui:options'];
     if (uiOptions) {
@@ -23,29 +26,23 @@ class ImageWidget extends Component {
 
       if (uiOptions.size) {
 
-        // if (uiOptions.size == 'medium') {
-        //   avatarStyles = {
-        //     height: theme.spacing(3),
-        //     width: theme.spacing(3)
-        //   }
-        // }
-        // if (uiOptions.size == 'large') {
-        //   avatarStyles = {
-        //     height: theme.spacing(7),
-        //     width: theme.spacing(7)
-        //   }
-        // }
-
-
-
+        if (uiOptions.size == 'medium') {
+          avatarProps.style = {
+            height: `${theme.spacing(10)}px`,
+            width: `${theme.spacing(10)}px`
+          }
+        }
+        if (uiOptions.size == 'large') {
+          avatarProps.style = {
+            height: `${theme.spacing(15)}px`,
+            width: `${theme.spacing(15)}px`
+          }
+        }
       }
-
     }
 
-    debugger;
-
     return (
-      <Avatar alt="Remy Sharp" src={url} styles={avatarStyles}  variant={variant} />
+      <Avatar src={url} {...avatarProps} variant={variant} />
     )
   }
 }

@@ -49,6 +49,8 @@ import ChipLabel from './shared/ChipLabel';
 import MaterialInput from './shared/MaterialInput';
 import FormSubmissionComponent from './shared/FormSubmissionComponent';
 import ImageComponent from './shared/ImageComponent';
+import ConditionalIconComponent from './shared/ConditionalIconComponent';
+import LabelComponent from './reactory/widgets/LabelWidget';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -98,6 +100,12 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'core',
+    name: 'ConditionalIconComponent',
+    component: ConditionalIconComponent,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
     name: 'MaterialInput',
     component: MaterialInput,
     version: '1.0.0',
@@ -106,6 +114,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'FormSubmissionComponent',
     component: FormSubmissionComponent,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'LabelComponent',
+    component: LabelComponent,
     version: '1.0.0',
   },
   {
@@ -597,5 +611,6 @@ export const componentRegistery = [
   require('./shared/DateLabel'),
   require('./shared/StaticContent').meta,
   require('./shared/Label'),
+  // require('./reactory/widgets/LabelWidget'),
   // require('./shared/MaterialInput')
 ];

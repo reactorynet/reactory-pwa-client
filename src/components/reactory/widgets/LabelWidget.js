@@ -24,9 +24,10 @@ class LabelWidget extends Component {
 
 
   render() {
+
     const { props } = this;
-    
-    let labelText = template('${formData}')({ ...props });
+
+    let labelText = props.formData ? template('${formData}')({ ...props }) : props.value;
     let labelTitle = props.uiSchema.title;
     let labelIcon = null;
     let _iconPosition = 'right';
@@ -57,6 +58,7 @@ class LabelWidget extends Component {
         iconProps = {},
         renderHtml
       } = props.uiSchema["ui:options"];
+
       if (format) {
         try {
           labelText = template(format)(props);
@@ -122,7 +124,7 @@ const LabelFieldComponent = compose(withTheme)(LabelWidget)
 
 LabelFieldComponent.meta = {
   nameSpace: "core",
-  name: "Label",
+  name: "LabelComponent",
   version: "1.0.0",
   component: LabelFieldComponent
 };

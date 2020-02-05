@@ -22,8 +22,6 @@ class SubmissionComponent extends Component {
     let buttonText = 'SUBMIT';
     let icon = null;
 
-    debugger;
-
     if (props.uiSchema && props.uiSchema["ui:options"]) {
       const uiOptions = props.uiSchema["ui:options"];
 
