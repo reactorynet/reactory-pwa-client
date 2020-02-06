@@ -51,6 +51,7 @@ import FormSubmissionComponent from './shared/FormSubmissionComponent';
 import ImageComponent from './shared/ImageComponent';
 import ConditionalIconComponent from './shared/ConditionalIconComponent';
 import LabelComponent from './reactory/widgets/LabelWidget';
+import StyledCurrencyLabel from './shared/StyledCurrencyLabel';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -120,6 +121,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'LabelComponent',
     component: LabelComponent,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'StyledCurrencyLabel',
+    component: StyledCurrencyLabel,
     version: '1.0.0',
   },
   {

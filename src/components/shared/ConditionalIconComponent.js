@@ -8,22 +8,20 @@ class ConditionalIconWidget extends Component {
 
   render() {
     const { value, theme, conditions } = this.props
-
-    let ComponentToRender = <p>No matching condition</p>;
-    let matchingCondition = conditions.find(c => c.key == value);
+    let ComponentToRender = null;
     let iconProps = {};
+    let matchingCondition = conditions.find(c => c.key == value);
 
     if (matchingCondition) {
       if (matchingCondition.style) {
         iconProps.style = { ...matchingCondition.style };
       }
 
-      const Icon = <Icon {...iconProps}>{matchingCondition.icon}</Icon>;
-
       if (matchingCondition.tooltip) {
-        ComponentToRender = <Tooltip title={matchingCondition.tooltip}>{Icon}</Tooltip>
+        // ComponentToRender = <Tooltip title={matchingCondition.tooltip} classes={{ tooltip: { backgroundColor: "red" } }} placement="right-end"><Icon {...iconProps}>{matchingCondition.icon}</Icon></Tooltip>
+        ComponentToRender = <Tooltip title={matchingCondition.tooltip} placement="right-end"><Icon {...iconProps}>{matchingCondition.icon}</Icon></Tooltip>
       } else {
-        ComponentToRender = Icon;
+        ComponentToRender = <Icon {...iconProps}>{matchingCondition.icon}</Icon>;
       }
     }
 
