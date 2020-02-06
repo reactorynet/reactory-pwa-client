@@ -2,11 +2,8 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'recompose';
 import { withStyles, withTheme } from '@material-ui/core/styles';
+import { Tooltip } from '@material-ui/core';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
-
-// REQUIREMENTS:
-// Prepend/Postpend text
-// Color
 
 class StyledCurrencyLabel extends Component {
 
@@ -16,8 +13,9 @@ class StyledCurrencyLabel extends Component {
     let isCents = true;
     let _value = value;
     let _prependText = '';
-
-    debugger;
+    let _postpendText = '';
+    let _containerProps = {};
+    let _tooltip = '';
 
     if (uiSchema) {
       const uiOptions = uiSchema['ui:options'];
@@ -28,15 +26,29 @@ class StyledCurrencyLabel extends Component {
       if (uiOptions.prependText && uiOptions.prependText != '')
         _prependText = uiOptions.prependText;
 
+      if (uiOptions.postpendText && uiOptions.postpendText != '')
+        _postpendText = uiOptions.postpendText;
+
+      if (uiOptions.conditionalStyles && condition) {
+        const matchingCondition = uiOptions.conditionalStyles.find(option => option.key === condition);
+        if (matchingCondition) {
+          _containerProps.style = matchingCondition.style;
+          if (matchingCondition.tooltip)
+            _tooltip = matchingCondition.tooltip;
+        }
+      }
     }
 
     return (
-      <div className={classes.currency}>
-        {_prependText != '' && <span>{_prependText}</span>}
-        <span className={classes.currencyValue}>
-          {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
-        </span>
-      </div>
+      <Tooltip title={_tooltip} placement="right-start">
+        <div className={classes.currency} {..._containerProps}>
+          {_prependText != '' && <span>{_prependText}</span>}
+          <span className={classes.currencyValue}>
+            {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
+          </span>
+          {_postpendText != '' && <span>{_postpendText}</span>}
+        </div>
+      </Tooltip>
     );
   }
 }
