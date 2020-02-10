@@ -46,13 +46,19 @@ class PricingSliderWidget extends Component {
   };
 
   render() {
-    const { classes, uiSchema, onChange } = this.props;
-    let _landedCost = '';
-    let _wh10Cost = 0;
-    let _sellingPrice = 0;
-    let _listPrice = '';
+    const { classes, uiSchema, landedPrice, threeMonthAvePrice, wh10CostPrice, listPrice } = this.props;
+    let defaultRegion = 'af';
+    let defaultCurrencyOptions = { style: 'currency', currency: 'ZAR', currencyDisplay: 'symbol' };
+    let _landedCost = landedPrice;
+    let _wh10Cost = wh10CostPrice;
+    let _threeMonthAveSellingPrice = threeMonthAvePrice;
+    let _listPrice = listPrice;
 
-    debugger;
+    let defaultValues = [];
+    defaultValues.push(_wh10Cost);
+    defaultValues.push(_threeMonthAveSellingPrice);
+
+    // debugger;
 
     let options = { min: 0, max: 100, step: 1, }
     if (uiSchema && uiSchema['ui:options']) options = { ...options, ...uiSchema['ui:options'] }
@@ -93,6 +99,8 @@ class PricingSliderWidget extends Component {
       if (index == 1)
         placement = 'top-start'
 
+        // debugger;
+
       return (
         <Tooltip open={open} enterTouchDelay={0} placement={placement} title={value}>
           {children}
@@ -100,12 +108,15 @@ class PricingSliderWidget extends Component {
       );
     }
 
-    const valueLabelFormat = (value, index) => {
+    const valueLabelFormat = (labelValue, index) => {
       if (index == 0) {
-        return `R${value} (WH10 Cost Price)`
+        // return `R${value} (WH10 Cost Price)`
+        // debugger
+        return `${new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(labelValue/100)} (WH10 Cost Price)`
       }
       if (index == 1) {
-        return `R${value} (3 Month ave. Selling Price)`
+      // debugger
+        return `${new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(labelValue/100)} (3 Month ave. Selling Price)`
       }
     }
 
@@ -115,17 +126,17 @@ class PricingSliderWidget extends Component {
           <Grid item xs={12}>
             <CustomSlider
               valueLabelFormat={valueLabelFormat}
-              defaultValue={[_wh10Cost, _sellingPrice]}
+              defaultValue={defaultValues}
               valueLabelDisplay="on"
               ValueLabelComponent={ValueLabelComponent}
               disabled
             />
           </Grid>
           <Grid item xs={6} justify="flex-start">
-            <p className="label2">{_landedCost} (Landed Cost)</p>
+            <p className="label2">{new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(_landedCost/100)} (Landed Cost)</p>
           </Grid>
           <Grid item xs={6} justify="flex-end">
-            <p className="label2">{_listPrice} (List Price)</p>
+            <p className="label2">{new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(_listPrice/100)} (List Price)</p>
           </Grid>
         </Grid>
 
