@@ -35,10 +35,6 @@ class PricingSliderWidget extends Component {
     this.state = {
       value: props.formData || 0,
     }
-
-    let _labelStart = '';
-    let _labelEnd = '';
-
     this.handleChange = this.handleChange.bind(this)
   }
 
@@ -51,8 +47,15 @@ class PricingSliderWidget extends Component {
 
   render() {
     const { classes, uiSchema, onChange } = this.props;
+    let _landedCost = '';
+    let _wh10Cost = 0;
+    let _sellingPrice = 0;
+    let _listPrice = '';
+
+    debugger;
+
     let options = { min: 0, max: 100, step: 1, }
-    if (uiSchema['ui:options']) options = { ...options, ...uiSchema['ui:options'] }
+    if (uiSchema && uiSchema['ui:options']) options = { ...options, ...uiSchema['ui:options'] }
 
     const CustomSlider = withStyles({
       root: {
@@ -112,17 +115,17 @@ class PricingSliderWidget extends Component {
           <Grid item xs={12}>
             <CustomSlider
               valueLabelFormat={valueLabelFormat}
-              defaultValue={[20, 50]}
+              defaultValue={[_wh10Cost, _sellingPrice]}
               valueLabelDisplay="on"
               ValueLabelComponent={ValueLabelComponent}
               disabled
             />
           </Grid>
           <Grid item xs={6} justify="flex-start">
-            <p className="label2">Label 1</p>
+            <p className="label2">{_landedCost} (Landed Cost)</p>
           </Grid>
           <Grid item xs={6} justify="flex-end">
-            <p className="label2">Label 2</p>
+            <p className="label2">{_listPrice} (List Price)</p>
           </Grid>
         </Grid>
 
