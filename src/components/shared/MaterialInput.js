@@ -3,7 +3,7 @@ import { Icon, Input } from '@material-ui/core';
 import { compose } from 'recompose';
 import { withTheme } from '@material-ui/styles';
 import { template } from 'lodash';
-import { throttle } from 'lodash'
+import { throttle } from 'lodash';
 
 class MaterialInputWidget extends Component {
 
@@ -16,7 +16,8 @@ class MaterialInputWidget extends Component {
     let theme = props.theme;
     const {
       formData,
-      schema
+      schema,
+      onChange
     } = props;
     let args = {
       type: 'text',
@@ -40,11 +41,14 @@ class MaterialInputWidget extends Component {
         iconType,
         iconPosition,
         iconProps = {},
-        placeholder
+        placeholder,
+        inputProps = {}
       } = props.uiSchema["ui:options"];
 
       if (placeholder)
         args.placeholder = placeholder;
+      
+      if(inputProps) args = {...args, ...inputProps}
 
       if (title) {
         try {
@@ -88,6 +92,7 @@ class MaterialInputWidget extends Component {
           {labelTitle && labelTitle != '' && <label>{labelTitle}</label>}
           <Input {...args} value={formData || schema.default} onChange={throttle(onInputChanged, 250)} fullWidth />
         </div>
+        {_iconPosition === 'right' ? labelIcon : null}
       </div>
     )
   }

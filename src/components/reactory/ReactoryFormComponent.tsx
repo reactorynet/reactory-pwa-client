@@ -227,6 +227,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   formRef: null;
   plugins: {};
   api: any;
+  instanceId: string;
 
   constructor(props: ReactoryFormProperties, context: any) {    
     super(props, context);
@@ -241,7 +242,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.on = this.on.bind(this);
 
     const _instance_id = uuid();    
-    
+    this.instanceId = _instance_id;
     let _state = {
       loading: true,
       forms_loaded: false,
@@ -528,8 +529,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         <Fragment>
           {activeUiSchemaMenuItem.title}
           <DropDownMenu menus={formDef.uiSchemas} onSelect={onSchemaSelect} selected={activeUiSchemaMenuItem} />
-        </Fragment>
-        )
+        </Fragment>);      
+                
+        formProps.formContext.$schemaSelector = uiSchemaSelector;
     }
 
     const refreshClick = evt => self.setState({ queryComplete: false, dirty: false });
@@ -707,51 +709,56 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       
       //execute query 
       //TODO: Updated / fix types so that errors is available on result
-      api.graphqlQuery(gql(query.text), _variables).then(( result: any ) => {  
+      if(query.autoQuery === false) { 
+        that.setState({ queryComplete: true, dirty: false, allowRefresh: true,  loading: false });        
+      } else {
+        api.graphqlQuery(gql(query.text), _variables).then(( result: any ) => {  
 
-        const { data, loading, errors } = result;
-        let _formData = formData;        
-        if(data && data[query.name]) {    
-          switch(query.resultType) {
-            case 'array' :{              
-              let mergedData = []
-              if(isArray(formData) === true) mergedData = [...formData];
-              if(isArray(data[query.name]) === true) mergedData = [...mergedData, ...data[query.name]];
-              if(query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0 ) {
-                _formData = objectMapper(mergedData, query.resultMap);
-              } else {
-                _formData = mergedData;
-              }             
-              
-              break;
+          const { data, loading, errors } = result;
+          let _formData = formData;        
+          if(data && data[query.name]) {    
+            switch(query.resultType) {
+              case 'array' :{              
+                let mergedData = []
+                if(isArray(formData) === true) mergedData = [...formData];
+                if(isArray(data[query.name]) === true) mergedData = [...mergedData, ...data[query.name]];
+                if(query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0 ) {
+                  _formData = objectMapper(mergedData, query.resultMap);
+                } else {
+                  _formData = mergedData;
+                }             
+                
+                break;
+              }
+              default: {
+                if(query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
+                  _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap);
+                } else {
+                  _formData = {...formData, ...data[query.name] };
+                }             
+              }
+            }          
+          }      
+          
+          //update component state with new form data
+          that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, ()=>{
+            that.$events.emit('onQueryComplete', { formData: _formData, form: that } );
+            if(errors)  {            
+              api.log(`Error executing graphql query`, errors)
+              handleErrors(errors);  
             }
-            default: {
-              if(query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
-                _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap);
-              } else {
-                _formData = {...formData, ...data[query.name] };
-              }             
+          });
+  
+        }).catch((queryError) => {
+          that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false }, ()=>{                
+            if( formDef.graphql.query.onError ) {            
+              handleErrors([queryError]);
             }
-          }          
-        }      
-        
-        //update component state with new form data
-        that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, ()=>{
-          that.$events.emit('onQueryComplete', { formData: _formData, form: that } );
-
-          if(errors)  {            
-            api.log(`Error executing graphql query`, errors)
-            handleErrors(errors);  
-          }
+          });
         });
+      }
 
-      }).catch((queryError) => {
-        that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false }, ()=>{                
-          if( formDef.graphql.query.onError ) {            
-            handleErrors([queryError]);
-          }
-        });
-      });
+     
 
       if(isEmpty(formDef.graphql.query.queryMessage) === false) {
         return <Loading title={template(formDef.graphql.query.queryMessage)({props: this.props, state: this.state})} />         
@@ -1116,9 +1123,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 
   onSubmit(data) {
-    // //console.log('form-submit', data);
-    const { api } = this.props;
-    api.log('Form Submit Clicked', { data }, 'debug');
+    const { api } = this.props;        
+    api.log(`Form Submit Clicked, ${this.instanceId}`, { data }, 'debug');
     const that = this;
     that.setState({ busy: true }, ()=>{
         if (that.props.onSubmit) { 
@@ -1132,8 +1138,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     });  
   }
 
-  onChange(data) {    
+  onChange(data) {        
     if(deepEquals(this.state.formData, data.formData) === false) {
+      
+      const { api } = this.props;        
+      api.log(`Form Submit Clicked, ${this.instanceId}`, { data }, 'debug');
+
       const changed = diff(data.formData, this.state.formData)
       const rchanged = diff(this.state.formData, data.formData)
       

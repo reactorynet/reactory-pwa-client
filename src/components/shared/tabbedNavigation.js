@@ -74,7 +74,11 @@ class TabbedNavComponent extends Component {
         api.log('TabbedNavigationComponent: TAB', tab);
 
         const MainComponentToMount = api.getComponent(tab.componentFqn);
-        const mainComponentProps = { ...tab.componentProps };
+        let mainComponentProps = { ...tab.componentProps };
+        if(tab.componentPropsMap) {
+          debugger
+          mainComponentProps = { ...mainComponentProps, ...api.utils.objectMapper(that, tab.componentProps) };
+        }
         api.log('TabbedNavigationComponent: COMPONENT', MainComponentToMount);
 
         // ADDITIONAL COMPONENTS TO MOUNT
@@ -84,11 +88,11 @@ class TabbedNavComponent extends Component {
           const ComponentToMount = api.getComponent(componentFqn);
 
           api.log('TabbedNavigationComponent: ADDITIONALCOMPONENT', { componentProps, componentFqn });
-
+         
           return <ComponentToMount {...componentProps}/>
         });
 
-        const newPanel = <TabPanel value={this.state.value} index={index}>
+        const newPanel = <TabPanel value={this.state.value} index={index} >
           <MainComponentToMount {...mainComponentProps} />
           {additionalComponentsToMount}
         </TabPanel>

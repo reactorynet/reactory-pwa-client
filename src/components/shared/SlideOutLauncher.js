@@ -85,18 +85,7 @@ class SlideOutLauncher extends Component {
       </Button>
     );
 
-    const { SpeedDial } = this.componentDefs;
-
-    // const testActions = [
-    //   {
-    //     key: 'testKey',
-    //     title: 'Test Action',
-    //     clickHandler: (evt) => { },
-    //     icon: <Icon>group_add</Icon>,
-    //     enabled: true,
-    //     ordinal: 0,
-    //   }
-    // ];
+    const { SpeedDial } = this.componentDefs;    
     
     if(_buttonVariant === 'IconButton'){
       LaunchButton = (
@@ -124,7 +113,7 @@ class SlideOutLauncher extends Component {
     }
     
     return (
-      <div>
+      <Fragment>
         {LaunchButton}
         <FullScreenModal
           open={this.state.open === true}
@@ -133,7 +122,7 @@ class SlideOutLauncher extends Component {
           onClose={onClick}>
           { this.state.open === true ? <ChildComponent {...childprops} /> : null }
         </FullScreenModal>
-      </div>
+      </Fragment>
     )
   }
 }

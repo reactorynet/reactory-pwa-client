@@ -351,6 +351,9 @@ namespace Reactory {
     new?: boolean,
     delete?: boolean,
     options?: any,
+    autoQuery?: boolean,
+    interval?: number,
+    useWebsocket?: boolean,
     onError?: IReactoryFormQueryErrorHandlerDefinition,
     resultType?: string,
   }
@@ -445,6 +448,7 @@ namespace Reactory {
     tags?: String[],
     helpTopics?: String[]
     schema: ISchema | IObjectSchema | IArraySchema,
+    sanitizeSchema?: ISchema | IObjectSchema | IArraySchema,
     uiSchema?: any,
     uiSchemas?: IUISchemaMenuItem[],
     registerAsComponent: boolean,

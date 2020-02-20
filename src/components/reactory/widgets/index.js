@@ -39,3 +39,5 @@ export { default as WidgetNotAvailable } from './WidgetNotAvailable';
 export { default as ColumnSelectorWidget } from './ColumnSelectorWidget';
 export { default as ColumnFilterWidget } from './ColumnFilterWidget';
 export { default as DataPageWidget } from './DataPageWidget';
+export { default as ReactoryFormEditor } from './ReactoryFormEditor';
+export { default as SchemaSelectorWidget } from './SchemaSelectorWidget';

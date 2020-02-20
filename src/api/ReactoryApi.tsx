@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from 'react-dom';
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
+import inspector from 'schema-inspector';
 import uuid from 'uuid';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
@@ -198,6 +199,7 @@ class ReactoryApi extends EventEmitter {
       objectMapper,
       template,
       humanNumber,
+      inspector,
     };
     this.$func = {
       'core.NullFunction': (params) => {
@@ -542,6 +544,7 @@ class ReactoryApi extends EventEmitter {
   forms() {
     const that = this;
     return new Promise((resolve) => {
+      
       const refresh = () => {
         RestApi.forms().then((formsResult) => {
           that.formSchemas = formsResult;
@@ -558,20 +561,22 @@ class ReactoryApi extends EventEmitter {
               that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent);
             }
           });
+          that.formSchemaLastFetch = moment();
           resolve(formsResult);
         }).catch((error) => {
-          console.error('Error loading forms from api', error);
+          that.log('Error loading forms from api', error, 'error');
           resolve([]);
         });
       };
-      if (this.formSchemaLastFetch !== null) {
-        if (moment(this.formSchemaLastFetch).add(60, 'seconds').isAfter(moment())) {
+
+      if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined) {
+        
+        if (moment(that.formSchemaLastFetch).add(60, 'seconds').isBefore(moment())) {
           refresh();
         } else {
-          resolve(this.formSchemas);
+          resolve(that.formSchemas);
         }
-      } else
-        refresh();
+      } else refresh();
     });
   }
 

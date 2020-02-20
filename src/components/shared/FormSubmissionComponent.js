@@ -22,11 +22,20 @@ class SubmissionComponent extends Component {
     let buttonText = 'SUBMIT';
     let icon = null;
 
+    let args = {
+      variant: "contained",
+      color: "primary",      
+    }
+
     if (props.uiSchema && props.uiSchema["ui:options"]) {
       const uiOptions = props.uiSchema["ui:options"];
 
       if (uiOptions.text) {
         buttonText = template(uiOptions.text)(props)
+      }
+
+      if(uiOptions.props) {
+        args = {...args, ...uiOptions.props};
       }
 
       if (uiOptions.icon) {
@@ -42,8 +51,12 @@ class SubmissionComponent extends Component {
       }
     }
 
+    
+
+    
+
     return (
-    <Button variant="contained" color="primary" startIcon={icon}>{buttonText}</Button>
+    <Button {...args} startIcon={icon}>{buttonText}</Button>
     )
   }
   // static styles = (theme) => ({})
