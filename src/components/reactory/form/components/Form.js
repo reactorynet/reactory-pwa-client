@@ -177,7 +177,7 @@ export default class Form extends Component {
     // For BC, accept passed SchemaField and TitleField props and pass them to
     // the "fields" registry one.
     const { fields, widgets } = getDefaultRegistry();
-    return {
+    let registery = {
       fields: { ...fields, ...this.props.fields },
       widgets: { ...widgets, ...this.props.widgets },
       ArrayFieldTemplate: this.props.ArrayFieldTemplate,
@@ -186,6 +186,14 @@ export default class Form extends Component {
       definitions: this.props.schema.definitions || {},
       formContext: this.props.formContext || {},
     };
+
+    if(this.props.formContext) {
+      registery.formContext.$formElement = this.formElement;
+      registery.formContext.$submit = this.submit;
+      registery.formContext.$formData = this.state.formData;
+    }
+
+    return registery;
   }
 
   submit() {

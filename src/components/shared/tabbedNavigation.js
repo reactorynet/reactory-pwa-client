@@ -58,11 +58,11 @@ class TabbedNavComponent extends Component {
 
   render() {
     const { props, theme, state } = this;
-    const { formData, uiSchema, api } = props;
-
+    const { formData, uiSchema, api, formContext } = props;
+    const that = this;
     const uiOptions = uiSchema["ui:options"] || {};
 
-    api.log('TabbedNavigationComponent: RENDER', { uiSchema });
+    api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext });
     api.log('TabbedNavigationComponent: OPTIONS', uiOptions);
 
     let _tabs = [];
@@ -76,10 +76,9 @@ class TabbedNavComponent extends Component {
         const MainComponentToMount = api.getComponent(tab.componentFqn);
         let mainComponentProps = { ...tab.componentProps };
         if(tab.componentPropsMap) {
-          debugger
-          mainComponentProps = { ...mainComponentProps, ...api.utils.objectMapper(that, tab.componentProps) };
+          mainComponentProps = { ...mainComponentProps, ...api.utils.objectMapper(props, tab.componentPropsMap) };
         }
-        api.log('TabbedNavigationComponent: COMPONENT', MainComponentToMount);
+        api.log('TabbedNavigationComponent: COMPONENT', { MainComponentToMount, mainComponentProps }, 'debug');
 
         // ADDITIONAL COMPONENTS TO MOUNT
         const additionalComponents = tab.additionalComponents || [];

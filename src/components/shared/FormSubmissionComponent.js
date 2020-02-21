@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 import { Icon } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
-import { template } from 'lodash';
+import { template, isFunction } from 'lodash';
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { Link, withRouter } from 'react-router-dom';
-
+import { withApi } from '@reactory/client-core/api/ApiProvider';
 //REQUIREMENTS
 // Text
 // Color
@@ -51,16 +51,21 @@ class SubmissionComponent extends Component {
       }
     }
 
-    
+    const submit = () => {      
+      if(props.formContext && isFunction(props.formContext.$submit) === true) {
+        props.api.log('Submitting Form, via Submission Component', {props}, 'debug');
+        props.formContext.$submit()  
+      }
+    }
 
     
 
     return (
-    <Button {...args} startIcon={icon}>{buttonText}</Button>
+      <Button {...args} startIcon={icon} onClick={submit}>{buttonText}</Button>
     )
   }
   // static styles = (theme) => ({})
 };
 
-const FormSubmissionComponent = compose(withTheme)(SubmissionComponent);
+const FormSubmissionComponent = compose(withTheme, withApi)(SubmissionComponent);
 export default FormSubmissionComponent;
