@@ -31,8 +31,12 @@ import moment from 'moment';
 import { withApi, ReactoryApi, ReactoryApiEventNames } from '@reactory/client-core/api';
 
 export class ISearchConfig {
-  show = true;
-  placeholder = 'Search'
+  
+  constructor(params = { show: true, placeholder: 'Search' }){
+    this.show = params.show || true;
+    this.placeholder = params.placeholder || 'Search';
+  }
+  
 }
 
 const defaultSearchConfig = new ISearchConfig()
@@ -444,10 +448,10 @@ ApplicationHeader.propTypes = {
 
 ApplicationHeader.defaultProps = {
   title: 'Reactory',
-  search: {
+  search: new ISearchConfig({
     show: true,
     placeholder: 'Search'
-  }
+  })
 };
 
 ApplicationHeader.contextTypes = {

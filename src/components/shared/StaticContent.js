@@ -119,6 +119,8 @@ StaticContent.defaultProps = {
   slugSource: 'property' // can be route
 };
 
+StaticContent.styles = (theme) => ({})
+
 const StaticContentComponent = compose(withApi, withRouter, withTheme, withStyles(StaticContent.styles))(StaticContent);
 
 StaticContentComponent.meta = {

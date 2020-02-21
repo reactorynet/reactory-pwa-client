@@ -90,7 +90,7 @@ class MaterialInputWidget extends Component {
         {_iconPosition === 'left' ? labelIcon : null}
         <div>
           {labelTitle && labelTitle != '' && <label>{labelTitle}</label>}
-          <Input {...args} value={formData || schema.default} onChange={throttle(onInputChanged, 250)} fullWidth />
+          <Input {...args} value={formData || schema.default} onChange={onInputChanged} fullWidth />
         </div>
         {_iconPosition === 'right' ? labelIcon : null}
       </div>

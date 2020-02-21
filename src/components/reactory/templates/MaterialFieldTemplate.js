@@ -61,9 +61,11 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
   const uiWidget = uiSchema['ui:widget'] || null
   const uiToolbar = uiSchema['ui:toolbar'] || null;
   let Widget = null;
-
+  let showLabel = true;
   if(uiOptions !== null)
   {
+    showLabel = uiOptions.showLabel ? uiOptions.showLabel === true : true;
+
     if(hidden === true) {
       return <Fragment>{children}</Fragment>
     }
@@ -103,7 +105,7 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
     )
   }
 
-  let labelComponent = isObject === false || isBoolean === true ? <InputLabel htmlFor={id} shrink={true}>{label}</InputLabel> : null;
+  let labelComponent = isObject === false || isBoolean === true && showLabel === true ? <InputLabel htmlFor={id} shrink={true}>{label}</InputLabel> : null;
 
   switch(schema.type) {
     case 'array':

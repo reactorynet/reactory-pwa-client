@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { throttle } from 'lodash'
+import om from 'object-mapper';
 
 import {
   Typography,
@@ -8,9 +9,15 @@ import {
   CardContent,
   FormControl,
   InputLabel,
+  Icon,
   Input,
-} from '@material-ui/core'
+  InputAdornment,
+  TextField,
+} from '@material-ui/core';
 
+//import { withApi } from '@reactory/client-core/api/ApiProvider';
+
+//export default withApi( (props) => {
 export default (props) => {
   const {
     autofocus,
@@ -30,7 +37,7 @@ export default (props) => {
     required,
     schema,
     uiSchema,
-    hidden
+    hidden,    
   } = props;
 
   const inputProps = {
@@ -44,24 +51,66 @@ export default (props) => {
   const uiOptions = uiSchema['ui:options'] || { readOnly: false }
 
   if (uiSchema["ui:widget"]) {
+    
     const Widget = registry.widgets[uiSchema["ui:widget"]]
-    if (Widget) return <Widget {...props} />
+    let args = { ...props };
+    if(uiOptions.props) {
+      args = {...args, ...uiOptions.props}
+    }
+
+    if(uiOptions.propsMap) {
+      let margs = om(props, uiOptions.propsMap);
+      args = {...args, ...margs};
+    }
+
+    if (Widget) return (<Widget {...args} />)
   } else {
     let args = {}
 
     switch (schema.format) {
       case "password": args.type = "password"; break;
       case "email": args.type = "email"; break;
-      default: args.type = "text"; break;
+      default: args.type = schema.format || "text"; break;
     }
-    
+
+    if(uiOptions && uiOptions.props) {            
+      args = { ...args, ...uiOptions.props };
+    }
+
+    if(uiOptions.propsMap) {
+      let margs = om(props, uiOptions.propsMap);
+      args = {...args, ...margs};
+    }
+        
     const onInputChanged = (evt) => {
       evt.persist(); 
       onChange(evt.target.value);
     }
     
-    return (<Input {...args} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={throttle(onInputChanged, 250)} fullWidth />)
+    if(uiOptions.component === "TextField") {
+      
+      let inputProps = {
+        onChange: onInputChanged,
+        readOnly: disabled === true,      
+      };
+
+      if(args.type === 'search') {
+        inputProps.endAdornment = (
+          <InputAdornment position="end">
+            <Icon>search</Icon>
+          </InputAdornment>
+        )
+      }
+      
+      return (
+      <TextField 
+          defaultValue={`${formData || schema.default}`.replace("undefined", "")} 
+          variant={uiOptions.variant || "standard"}
+          InputProps={inputProps} />
+          );
+    } else {
+      return (<Input {...args} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />)
+    }    
   }
-
-
-};
+}
+//);

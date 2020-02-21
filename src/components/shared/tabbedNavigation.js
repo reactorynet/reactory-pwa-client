@@ -54,6 +54,16 @@ class TabbedNavComponent extends Component {
     this.state = {
       value: 0
     }
+
+    props.api.log(`TabbedNavComponent.constructor(props, context)`, {props, context});
+  }
+
+  componentWillReceiveProps(nextProps) {
+    this.props.api.log(`TabbedNavComponent.componentWillReceiveProps(nextProps)`, {nextProps});
+  }
+
+  componentDidUpdate(){
+    this.props.api.log(`TabbedNavComponent.componentDidUpdate(nextProps)`, {props: this.props});
   }
 
   render() {
@@ -62,8 +72,7 @@ class TabbedNavComponent extends Component {
     const that = this;
     const uiOptions = uiSchema["ui:options"] || {};
 
-    api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext });
-    api.log('TabbedNavigationComponent: OPTIONS', uiOptions);
+    api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext, uiOptions });    
 
     let _tabs = [];
     let _tabPannels = [];
@@ -91,14 +100,19 @@ class TabbedNavComponent extends Component {
           return <ComponentToMount {...componentProps}/>
         });
 
-        const newPanel = <TabPanel value={this.state.value} index={index} >
+
+
+        let newPanel = index === state.value ? (
+        <TabPanel value={state.value} index={index} >
           <MainComponentToMount {...mainComponentProps} />
           {additionalComponentsToMount}
-        </TabPanel>
+        </TabPanel>) : (
+        <TabPanel value={state.value} index={index} >
+            <Typography>Not Visible Yet</Typography>
+        </TabPanel>); 
 
         _tabPannels.push(newPanel);
-
-        return <Tab label={tab.title} {...a11yProps(index)} />
+        return <Tab label={tab.title} {...a11yProps(index)} key={index} />
       })
     }
 
@@ -116,7 +130,6 @@ class TabbedNavComponent extends Component {
             {_tabs}
           </Tabs>
         </AppBar>
-
         {_tabPannels}
       </div>
     )
