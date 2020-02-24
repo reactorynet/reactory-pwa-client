@@ -162,11 +162,18 @@ class MaterialGridField extends ObjectField {
 
     const layout = uiSchema['ui:grid-layout']
     let gridOptions = {
-      spacing: 8
+      spacing: 8,
+      container: 'Paper',
+      containerStyles: {
+        
+      }
     };
 
     let uiOptions = {
-      container: 'Paper'
+      container: 'Paper',
+      containerStyles: {
+        
+      }
     };
 
     if(uiSchema["ui:options"]) {
@@ -174,15 +181,15 @@ class MaterialGridField extends ObjectField {
     }
 
     if(uiSchema['ui:grid-options']) {
-      gridOptions = uiSchema['ui:grid-options'];
+      gridOptions = { ...gridOptions, ...uiSchema['ui:grid-options']};
     }
 
     let Container = null
-
-    switch(uiOptions.container) {
+    debugger;
+    switch(gridOptions.container) {
       case "div" : {
         Container = (props) => {
-          return (<div className={props.className}>
+          return (<div className={props.className} style={props.style}>
             {props.children}
           </div>)
         }
@@ -198,7 +205,7 @@ class MaterialGridField extends ObjectField {
 
 
     return (
-      <Container className={classes.root}>
+      <Container className={classes.root} style={gridOptions.containerStyles}>
         {title ? <TitleField
             id={`${idSchema.$id}__title`}
             title={title}

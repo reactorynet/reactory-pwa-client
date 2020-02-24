@@ -24,7 +24,8 @@ class SubmissionComponent extends Component {
 
     let args = {
       variant: "contained",
-      color: "primary",      
+      color: "primary", 
+      // type: "submit",     
     }
 
     if (props.uiSchema && props.uiSchema["ui:options"]) {

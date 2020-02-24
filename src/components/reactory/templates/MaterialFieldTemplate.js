@@ -128,8 +128,19 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
     case 'number':
     case 'file':
     default: {
+
+      let formControlProps = {
+        className: classes.formControl,
+        style: uiOptions ? uiOptions.style : {},
+        fullWidth: 'fullWidth'
+      }
+
+      if(uiOptions && uiOptions.fullWidth === false) {
+        delete formControlProps.fullWidth;
+      }
+
       return (
-        <FormControl className={classes.formControl} fullWidth>
+        <FormControl {...formControlProps}>
           { uiWidget === null ? labelComponent : null }
           { children }
           { isNil(rawHelp) === false ? <FormHelperText id={`${id}_helper`}>{rawHelp}</FormHelperText> : null }

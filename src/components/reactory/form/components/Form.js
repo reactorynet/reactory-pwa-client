@@ -268,15 +268,7 @@ export default class Form extends Component {
             registry={registry}
             safeRenderCompletion={safeRenderCompletion}
             disabled={disabled} />
-          {children && toolbarPosition.indexOf('bottom') >= 0 ? (
-            children
-          ) : (
-            <p>
-              <button type="submit" className="btn btn-info">
-                Submit
-              </button>
-            </p>
-          )}
+          {toolbarPosition.indexOf('bottom') >= 0 ? (children) : null } 
         </form>
       );
     }
@@ -313,15 +305,7 @@ export default class Form extends Component {
           registry={registry}
           safeRenderCompletion={safeRenderCompletion}
           disabled={disabled} />
-        {children && toolbarPosition.indexOf('bottom') >= 0 ? (
-          children
-        ) : (
-          <p>
-            <button type="submit" className="btn btn-info">
-              Submit
-            </button>
-          </p>
-        )} 
+        {toolbarPosition.indexOf('bottom') >= 0 ? (children) : null } 
       </div>)
     }
     
