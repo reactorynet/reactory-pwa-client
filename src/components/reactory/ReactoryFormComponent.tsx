@@ -538,33 +538,37 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       };
 
       const { activeUiSchemaMenuItem } = self.state;  
-      
-      if(formUiOptions.schemaSelectorStyle && isString(formUiOptions.schemaSelectorStyle)) {
-        
-        uiSchemaSelector = (
-          <div>
-            <span>
-              {activeUiSchemaMenuItem.title}
-            </span>
-            {formDef.uiSchemas.map((uiSchemaItem, index) => {
-              
-              const onSelectUiSchema = () => {
-                self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
-              };
+      //set default selected
+      uiSchemaSelector = (
+        <Fragment>
+          {activeUiSchemaMenuItem.title}
+          <DropDownMenu menus={formDef.uiSchemas} onSelect={onSchemaSelect} selected={activeUiSchemaMenuItem} />
+        </Fragment>);     
 
-              return (
-              <IconButton onClick={onSelectUiSchema}>
-                <Icon>{uiSchemaItem.icon}</Icon>
-              </IconButton>)
-            })}
-          </div>
-        )
-      } else {
-        uiSchemaSelector = (
-          <Fragment>
-            {activeUiSchemaMenuItem.title}
-            <DropDownMenu menus={formDef.uiSchemas} onSelect={onSchemaSelect} selected={activeUiSchemaMenuItem} />
-          </Fragment>);      
+      if(formUiOptions.schemaSelector) {
+        if(formUiOptions.schemaSelector.variant === "button") {
+          uiSchemaSelector = (
+            <div>
+              {
+                formUiOptions.schemaSelector && 
+                formUiOptions.schemaSelector.showTitle === false ? null : (<span>
+                  {activeUiSchemaMenuItem.title}
+                </span>)
+              }              
+              {formDef.uiSchemas.map((uiSchemaItem, index) => {
+                
+                const onSelectUiSchema = () => {
+                  self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
+                };
+  
+                return (
+                <IconButton onClick={onSelectUiSchema} key={`schema_selector_${index}`}>
+                  <Icon>{uiSchemaItem.icon}</Icon>
+                </IconButton>)
+              })}
+            </div>
+          )
+        }               
       }
                             
       formProps.formContext.$schemaSelector = uiSchemaSelector;

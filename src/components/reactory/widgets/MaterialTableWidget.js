@@ -1,6 +1,6 @@
 import React, { Fragment, Component } from 'react'
 import PropTypes from 'prop-types'
-import { pullAt, isNil, remove,filter } from 'lodash'
+import { pullAt, isNil, remove,filter, isArray } from 'lodash'
 import {
   Typography 
 } from '@material-ui/core'
@@ -65,11 +65,9 @@ class MaterialTableWidget extends Component {
           _columns = api.utils.objectMapper(_columns, uiOptions.columnsPropertyMap)
         }                
       }
+                  
+      remove(_columns, { selected: false });      
       
-      
-      api.log(`Columns available ${_columns.length}`);     
-      remove(_columns, { selected: false });
-      api.log(`Columns selected ${_columns.length}`);
       columns = _columns.map( coldef => {        
         const def = {
           ...coldef
@@ -98,6 +96,44 @@ class MaterialTableWidget extends Component {
 
           delete def.component;
         }
+
+        
+        
+        if(isArray(def.components) === true) {                    
+          api.log(`Rendering Chidren Elements`, def);
+          const { components } = def;
+          def.render = ( rowData ) => {      
+            api.log(`Child element to be rendered`, def);
+            const childrenComponents = components.map((componentDef) => {
+            
+              const ComponentToRender = api.getComponent(componentDef.component);
+                          
+              let props = { ...rowData };
+              let mappedProps = {};
+  
+              if(componentDef.props) {
+                props = { ...props, ...componentDef.props, ...mappedProps }
+              } 
+  
+              if(componentDef.propsMap && props) {
+                mappedProps = api.utils.objectMapper(props, componentDef.propsMap);
+                props = {...props, ...mappedProps };
+              }                                      
+              if(ComponentToRender) return <ComponentToRender { ...props } />
+              else return <Typography>Renderer {componentDef.component} Not Found</Typography>
+              
+            });
+
+          
+            return (<div style={{display: 'flex', 'justifyContent': 'flex-start'}}>
+                {childrenComponents}
+              </div>)
+            
+          }
+          
+          delete def.components;
+        }
+        
 
         return def;
       });        
