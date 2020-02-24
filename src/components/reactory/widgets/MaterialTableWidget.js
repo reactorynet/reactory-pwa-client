@@ -52,7 +52,7 @@ class MaterialTableWidget extends Component {
     const self = this;
     const { api } = self.props;
     const uiOptions = this.props.uiSchema['ui:options'] || {};
-    const { formData } = this.props;
+    const { formData, formContext } = this.props;
     let columns = [];
     
     if(uiOptions.columns && uiOptions.columns.length) {
@@ -102,12 +102,55 @@ class MaterialTableWidget extends Component {
         return def;
       });        
     }
+    
     let data = [];
-    if(formData && formData.length) {
-      formData.forEach( row => {
-        data.push({...row})
-      })
+
+    if(uiOptions.remoteData === true) {
+      data = async (query) => {
+        try {          
+          if(formContext.$formState.formDef.graphql && formContext.$formState.formDef.graphql.query) {
+            
+            let variables = api.utils.objectMapper(formContext.$ref, uiOptions.variables || formContext.$formState.formDef.graphql.query.variables);
+            variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
+            const queryResult = await api.graphqlQuery(formContext.$formState.formDef.graphql.query.text, variables).then();
+            if(queryResult.errors && queryResult.errors.length > 0) {
+              //show a loader error
+              api.log(`Error loading remote data for MaterialTableWidget`, {formContext, queryResult})
+              return {
+                data: [],
+                page: 0,
+                totalCount: 0  
+              }
+            } else {
+              let result = api.utils.objectMapper(queryResult.data[formContext.$formState.formDef.graphql.query.name], uiOptions.resultMap || formContext.$formState.formDef.graphql.query.resultMap);
+              result.page = result.page - 1;
+
+              return result;
+            }
+          } else {
+            return {
+              data: [],
+              page: 0,
+              totalCount: 0
+            }
+          }
+        } catch (remoteDataError) {
+          return {
+            data: [],
+            page: 0,
+            totalCount: 0
+          }
+        }                
+      }
+    } else {
+      if(formData && formData.length) {
+        formData.forEach( row => {
+          data.push({...row})
+        })
+      }
     }
+
+    
 
     let options = {
 

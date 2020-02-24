@@ -185,7 +185,6 @@ class MaterialGridField extends ObjectField {
     }
 
     let Container = null
-    debugger;
     switch(gridOptions.container) {
       case "div" : {
         Container = (props) => {

@@ -22,6 +22,7 @@ import {
   ButtonGroup,
   Fab,
   Typography,
+  IconButton,
   Icon,
   Input,
   Toolbar,
@@ -361,7 +362,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     
     return undefined
   }
-
+  
   goBack(){
     if(this.props.history) this.props.history.goBack()
   }
@@ -536,14 +537,37 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         self.setState({ activeUiSchemaMenuItem: menuItem })
       };
 
-      const { activeUiSchemaMenuItem } = self.state;            
-      uiSchemaSelector = (
-        <Fragment>
-          {activeUiSchemaMenuItem.title}
-          <DropDownMenu menus={formDef.uiSchemas} onSelect={onSchemaSelect} selected={activeUiSchemaMenuItem} />
-        </Fragment>);      
-                
-        formProps.formContext.$schemaSelector = uiSchemaSelector;
+      const { activeUiSchemaMenuItem } = self.state;  
+      
+      if(formUiOptions.schemaSelectorStyle && isString(formUiOptions.schemaSelectorStyle)) {
+        
+        uiSchemaSelector = (
+          <div>
+            <span>
+              {activeUiSchemaMenuItem.title}
+            </span>
+            {formDef.uiSchemas.map((uiSchemaItem, index) => {
+              
+              const onSelectUiSchema = () => {
+                self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
+              };
+
+              return (
+              <IconButton onClick={onSelectUiSchema}>
+                <Icon>{uiSchemaItem.icon}</Icon>
+              </IconButton>)
+            })}
+          </div>
+        )
+      } else {
+        uiSchemaSelector = (
+          <Fragment>
+            {activeUiSchemaMenuItem.title}
+            <DropDownMenu menus={formDef.uiSchemas} onSelect={onSchemaSelect} selected={activeUiSchemaMenuItem} />
+          </Fragment>);      
+      }
+                            
+      formProps.formContext.$schemaSelector = uiSchemaSelector;
     }
 
     const refreshClick = evt => self.setState({ queryComplete: false, dirty: false });
@@ -793,7 +817,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       $formState: self.state,
       query: { ...self.state.query },
       formInstanceId: self.state._instance_id,
-      $ref: self,      
+      $ref: self,            
       refresh: (args = { autoQueryDisabled: true }) => {
         self.refreshForm(args)
       },
