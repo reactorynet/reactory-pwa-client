@@ -337,7 +337,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   componentWillReceiveProps(nextProps) {
     this.props.api.log('ReactoryForm.componentWillReceiveProps', { nextProps }, 'debug');
     if(nextProps.formId !== this.props.formId || deepEquals(nextProps.formData, this.state.formData) === false) {
-      this.setState({ forms_loaded: false, formData: nextProps.formData, queryComplete: false })
+      this.setState({ forms_loaded: false, formData: nextProps.formData, queryComplete: false }, this.forceUpdate)
     }        
   }
 

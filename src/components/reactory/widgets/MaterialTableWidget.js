@@ -96,9 +96,7 @@ class MaterialTableWidget extends Component {
 
           delete def.component;
         }
-
-        
-        
+              
         if(isArray(def.components) === true) {                    
           api.log(`Rendering Chidren Elements`, def);
           const { components } = def;
@@ -134,7 +132,6 @@ class MaterialTableWidget extends Component {
           delete def.components;
         }
         
-
         return def;
       });        
     }
@@ -145,9 +142,11 @@ class MaterialTableWidget extends Component {
       data = async (query) => {
         try {          
           if(formContext.$formState.formDef.graphql && formContext.$formState.formDef.graphql.query) {
-            
-            let variables = api.utils.objectMapper(formContext.$ref, uiOptions.variables || formContext.$formState.formDef.graphql.query.variables);
+            api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables }, 'debug')
+            let variables = api.utils.objectMapper(self, uiOptions.variables || formContext.$formState.formDef.graphql.query.variables);
             variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
+            api.log('MaterialTableWidget - Mapped variables for query', variables, 'debug');
+
             const queryResult = await api.graphqlQuery(formContext.$formState.formDef.graphql.query.text, variables).then();
             if(queryResult.errors && queryResult.errors.length > 0) {
               //show a loader error
