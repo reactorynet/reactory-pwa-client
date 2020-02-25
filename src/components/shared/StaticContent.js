@@ -2,7 +2,7 @@ import React, { Component,Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'recompose';
 import { withRouter, BrowserRouter } from 'react-router-dom';
-import { Button, Icon } from '@material-ui/core';
+import { Button, Icon, IconButton } from '@material-ui/core';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import moment from 'moment';
 import { withApi, ReactoryApi } from '@reactory/client-core/api/ApiProvider';
@@ -26,7 +26,8 @@ class StaticContent extends Component {
         topics: [],
         published: false,
       },
-      editing: false
+      editing: false,
+      found: false,
     }
   }
 
@@ -59,9 +60,9 @@ class StaticContent extends Component {
     }
     `, { slug: this.props.slug }).then((result) => {
       if(result.data && result.data.ReactoryGetContentBySlug) {
-        that.setState({ content: result.data.ReactoryGetContentBySlug });
+        that.setState({ content: result.data.ReactoryGetContentBySlug, found: true });
       } else {
-        that.setState({ content: { content: `Content for content: "${this.props.slug}" does not exists, please create it.`, title: "Not Found" } });
+        that.setState({ content: { content: `Content for content: "${this.props.slug}" does not exists, please create it.`, title: "Not Found" }, found: false });
       }
     }).catch((err) => {
       that.setState({ content: {
@@ -84,22 +85,20 @@ class StaticContent extends Component {
       this.setState({ editing: !this.state.editing })
     };
 
-    const { editing } = this.state;
-
+    const { editing, found, content } = this.state;
+    const { defaultValue = "" } = this.props;
     const ContentCapture = this.props.api.getComponent('static.ContentCapture');
-        
+    const contentComponent = found === true && content.published === true ? (<div {...containerProps} dangerouslySetInnerHTML={{__html: this.state.content.content}}></div>) : defaultValue;
       return (
         <Fragment>      
           {editing === true ? 
-            <ContentCapture slug={this.props.slug} formData={{ slug: this.props.slug }} mode="edit"></ContentCapture> : 
-            <div {...containerProps} dangerouslySetInnerHTML={{__html: this.state.content.content}}></div>
+            <ContentCapture slug={this.props.slug} formData={{ slug: this.props.slug }} mode="edit" /> : contentComponent                        
           }        
         {isDeveloper === true ? 
-          <div>
-            <hr/>
-            <Button onClick={edit} color="primary">
-              <Icon>{editing === false ? 'pencil' : 'check' }</Icon>{editing === false ? 'Edit' : 'Done' }
-            </Button>
+          <div>            
+            <IconButton onClick={edit} color="primary">
+              <Icon>{editing === false ? 'edit' : 'check' }</Icon>
+            </IconButton>
           </div> : null }
         </Fragment>
       )        
@@ -112,6 +111,7 @@ StaticContent.propTypes = {
   slug: PropTypes.string.isRequired,
   slugSource: PropTypes.string,
   slugSourceProps: PropTypes.any,
+  defaultContent: PropTypes.any,
   history: PropTypes.instanceOf(BrowserRouter).isRequired
 };
 

@@ -15,9 +15,12 @@ class TableChildWrapper extends Component {
       ComponentToMount = api.getComponent(uiOptions.componentFqn);
     }
 
+    let mappedProps = api.utils.objectMapper(props, props.propsMap || {});
+    let componentProps = {...props, ...mappedProps}
+    api.log(`TableChildWrapper.render()`, { componentProps, props });
     return (
       <Fragment>
-        {ComponentToMount ? <ComponentToMount /> : <p>No component to mount.</p>}
+        {ComponentToMount ? <ComponentToMount {...componentProps}/> : <p>No component to mount.</p>}
       </Fragment>
     );
   }

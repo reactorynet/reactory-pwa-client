@@ -86,6 +86,17 @@ class RatingControl extends Component {
     }
   };
 
+  constructor(props, context) {
+    super(props, context);
+    this.ratingClick = this.ratingClick.bind(this);
+    this.commentChanged = this.commentChanged.bind(this);
+    this.notifyChange = this.notifyChange.bind(this);
+    this.confirmCustomDelete = this.confirmCustomDelete.bind(this);
+    this.state = {
+      comment: props.comment || ''
+    }
+  }
+
   ratingClick(score) {
     const { behaviour, rating } = this.props;
 
@@ -250,16 +261,7 @@ class RatingControl extends Component {
     onDelete: (rating) => {  }
   };
 
-  constructor(props, context) {
-    super(props, context);
-    this.ratingClick = this.ratingClick.bind(this);
-    this.commentChanged = this.commentChanged.bind(this);
-    this.notifyChange = this.notifyChange.bind(this);
-    this.confirmCustomDelete = this.confirmCustomDelete.bind(this);
-    this.state = {
-      comment: props.comment || ''
-    }
-  }
+ 
 }
 
 export const RatingComponent = compose(withApi, withTheme, withStyles(RatingControl.styles))(RatingControl);
@@ -405,6 +407,41 @@ class DefaultView extends Component {
       }
     };
   };
+
+
+  constructor(props, context) {
+    super(props, context);
+    this.state = {
+      valid: true,
+      step: 0,
+      assessment: props.assessment,
+      showMenu: false,
+      showTeamMembers: false,
+      showHelp: false      
+    };
+    this.welcomeScreen = this.welcomeScreen.bind(this);
+    this.thankYouScreen = this.thankYouScreen.bind(this);
+    this.nextStep = this.nextStep.bind(this);
+    this.prevStep = this.prevStep.bind(this);
+    this.ratingScreen = this.ratingScreen.bind(this);
+    this.toolbar = this.toolbar.bind(this);
+    this.setStep = this.setStep.bind(this);
+    this.stopActivities = this.stopActivities.bind(this);
+    this.handleMenu = this.handleMenu.bind(this);
+    this.assessmentOptions = this.assessmentOptions.bind(this);
+    this.onBehaviourRatingChanged = this.onBehaviourRatingChanged.bind(this);
+    this.onBehaviourCommentChanged = this.onBehaviourCommentChanged.bind(this);
+    this.onNewBehaviour = this.onNewBehaviour.bind(this);
+    this.persistRating = this.persistRating.bind(this);
+    this.currentStepValid = this.currentStepValid.bind(this);
+    this.getDelegateTeamList = this.getDelegateTeamList.bind(this);
+    this.componentDefs = this.props.api.getComponents([
+      'core.Loading',
+      'core.Logo',
+      'core.FullScreenModal',
+      'core.StaticContent'
+    ]);
+  }
   // #endregion 
   componentDidCatch(e) {
     console.error('error defaultview', e);
@@ -418,7 +455,7 @@ class DefaultView extends Component {
 
   welcomeScreen() {
     const { classes, assessment, theme, api } = this.props;
-    const { nextStep, prevStep } = this;
+    const { nextStep, prevStep, componentDefs } = this;
     const { survey } = assessment;
 
     const is180 = this.is180(survey);
@@ -430,9 +467,12 @@ class DefaultView extends Component {
             5 - 7 minutes to complete.<br />
             You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? ' well the Five Essentials of Purposeful Leadership are displayed:' : ` we live the organisation's leadership brand:`} 
           </Typography>
-          <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
+          <componentDefs.StaticContent 
+            slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}-content`} 
+            defaultValue={<Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>} />           
+          
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo}  alt={theme} />
+            <componentDefs.StaticContent slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo}  alt={theme} />} />            
           </div>
         </Paper>  
       )
@@ -929,7 +969,7 @@ class DefaultView extends Component {
           {wizardControl}
         </Grid>
         <Grid item xs={12} sm={12}>
-          <Typography variant="body1" color={"primary"} style={{textAlign: 'right', marginBottom: '40px' }}>
+          <Typography variant="body1" color={isCurrentStepValid === true ? "primary" : "secondary" } style={{textAlign: 'right', minHeight: '100px', display: "block" }}>
             {isCurrentStepValid ? 'Click next to proceed' : 'Ensure that you have completed all ratings and comments in full before proceeding.'}
           </Typography>
           <MobileStepper
@@ -969,39 +1009,7 @@ class DefaultView extends Component {
     mode: 'assessor'
   };
 
-  constructor(props, context) {
-    super(props, context);
-    this.state = {
-      valid: true,
-      step: 0,
-      assessment: props.assessment,
-      showMenu: false,
-      showTeamMembers: false,
-      showHelp: false      
-    };
-    this.welcomeScreen = this.welcomeScreen.bind(this);
-    this.thankYouScreen = this.thankYouScreen.bind(this);
-    this.nextStep = this.nextStep.bind(this);
-    this.prevStep = this.prevStep.bind(this);
-    this.ratingScreen = this.ratingScreen.bind(this);
-    this.toolbar = this.toolbar.bind(this);
-    this.setStep = this.setStep.bind(this);
-    this.stopActivities = this.stopActivities.bind(this);
-    this.handleMenu = this.handleMenu.bind(this);
-    this.assessmentOptions = this.assessmentOptions.bind(this);
-    this.onBehaviourRatingChanged = this.onBehaviourRatingChanged.bind(this);
-    this.onBehaviourCommentChanged = this.onBehaviourCommentChanged.bind(this);
-    this.onNewBehaviour = this.onNewBehaviour.bind(this);
-    this.persistRating = this.persistRating.bind(this);
-    this.currentStepValid = this.currentStepValid.bind(this);
-    this.getDelegateTeamList = this.getDelegateTeamList.bind(this);
-    this.componentDefs = this.props.api.getComponents([
-      'core.Loading',
-      'core.Logo',
-      'core.FullScreenModal',
-      'core.StaticContent'
-    ]);
-  }
+  
 };
 
 const DefaultViewComponent = compose(
