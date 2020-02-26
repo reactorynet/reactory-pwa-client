@@ -76,7 +76,7 @@ class MaterialTableWidget extends Component {
         if(isNil(def.component) === false && def.component !== undefined) {
           const ColRenderer = api.getComponent(def.component);
           def.render = ( rowData ) => {           
-            let props = { ...rowData };
+            let props = { formData: formContext.$formData, rowData };
             let mappedProps = {};
 
             if(def.props) {
@@ -106,7 +106,7 @@ class MaterialTableWidget extends Component {
             
               const ComponentToRender = api.getComponent(componentDef.component);
                           
-              let props = { ...rowData };
+              let props = { formData: formContext.$formData, rowData };
               let mappedProps = {};
   
               if(componentDef.props) {

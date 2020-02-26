@@ -53,6 +53,7 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
     classes,
   } = props;
 
+  api.log(`MaterialFieldTemplate Rendering field ${id}`, props);
   
   const isObject = schema.type === 'object'
   const isBoolean = schema.type === 'boolean'
@@ -61,12 +62,14 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
   const uiWidget = uiSchema['ui:widget'] || null
   const uiToolbar = uiSchema['ui:toolbar'] || null;
   let Widget = null;
-  let showLabel = true;
+  let showLabel = true;  
+
+  
   if(uiOptions !== null)
   {
     showLabel = uiOptions.showLabel ? uiOptions.showLabel === true : true;
 
-    if(hidden === true) {
+    if(hidden === true || uiWidget === "HiddenWidget") {
       return <Fragment>{children}</Fragment>
     }
     if(uiOptions.componentFqn)  {

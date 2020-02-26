@@ -1,5 +1,7 @@
 import React, { Component, Fragment } from 'react';
 import { compose } from 'recompose';
+import { isString } from 'lodash';
+import { Typography } from '@material-ui/core';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 
@@ -7,17 +9,15 @@ class TableChildWrapper extends Component {
 
   render() {
     const { props } = this;
-    const { api } = props;
-    let ComponentToMount;
+    const { api, component } = props;
+    let ComponentToMount = (<Typography>Wrapped Component Loading {component.componentFqn}</Typography>);
 
-    if (props["ui:options"]) {
-      const uiOptions = props["ui:options"];
-      ComponentToMount = api.getComponent(uiOptions.componentFqn);
-    }
-
-    let mappedProps = api.utils.objectMapper(props, props.propsMap || {});
-    let componentProps = {...props, ...mappedProps}
-    api.log(`TableChildWrapper.render()`, { componentProps, props });
+    if (component && isString(component.componentFqn) === true) {
+      ComponentToMount = api.getComponent(component.componentFqn);
+    }    
+    let mappedProps = api.utils.objectMapper(props, component.propsMap || {});    
+    let componentProps = { ...component.props, ...mappedProps };
+    api.log(`TableChildWrapper.render()`, { componentProps, props, ComponentToMount });
     return (
       <Fragment>
         {ComponentToMount ? <ComponentToMount {...componentProps}/> : <p>No component to mount.</p>}

@@ -313,10 +313,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.$events.on(eventName, listener, context);
   }
 
-  refreshForm( { autoQueryDisabled = true }  ){    
+  refreshForm( args = { autoQueryDisabled: true }  ){    
     const self = this;
-    this.setState({ queryComplete: false, dirty: false, autoQueryDisabled: autoQueryDisabled }, ()=>{
+    this.setState({ queryComplete: false, dirty: false, autoQueryDisabled: args.autoQueryDisabled === true }, ()=>{
       if(!this.state.formDef.graphql) {
+        //the form doesn't have a query but may require a layout update due to data change
         self.forceUpdate();
       }
     });
@@ -478,7 +479,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     let showHelp = true;
     let submitButton = null;
     let toolbarposition = 'bottom'
-
+    let showToolbar = true;
+    
     const formUiOptions = formDef.uiSchema['ui:options'];
     
     if(formUiOptions) {      
@@ -626,6 +628,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       { reportButton }
       { exportButton }
     </Toolbar>);
+
+ 
 
     return (
       <Fragment>        
@@ -822,8 +826,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       query: { ...self.state.query },
       formInstanceId: self.state._instance_id,
       $ref: self,            
-      refresh: (args = { autoQueryDisabled: true }) => {
-        self.refreshForm(args)
+      refresh: (args = { autoQueryDisabled: true }) => {        
+        self.refreshForm(args || { autoQueryDisabled: true })
       },
       setFormData: (formData: any, callback = ()=>{}) => {
         const _state = { ...self.state, formData: formData };
