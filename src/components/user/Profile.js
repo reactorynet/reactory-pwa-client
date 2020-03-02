@@ -458,15 +458,16 @@ class Profile extends Component {
         const confirmPeers = (confirmed) => {
             ////console.log('Confirming peers for user', this.props, this.state)
             if(confirmed === true) {
-                const mutation = gql`mutation ConfirmPeers($id: String!, $organization: String!){
-                    confirmPeers(id: $id, organization: $organization){
+                const mutation = gql`mutation ConfirmPeers($id: String!, $organization: String!, $surveyId: String){
+                    confirmPeers(id: $id, organization: $organization, surveyId: $surveyId){
                         ${userPeersQueryFragment}
                     }
                 }`;
         
                 const variables = {
                     id: profile.id,
-                    organization: selectedMembership.organization.id
+                    organization: selectedMembership.organization.id,
+                    surveyId: api.queryObject.survey
                 };
         
                 api.graphqlMutation(mutation, variables).then( result => {
@@ -1046,7 +1047,8 @@ class Profile extends Component {
             emailValid: false,
             help: props.api.queryObject.help === "true",
             helpTopic: props.api.queryObject.helptopics,
-            highlight: props.api.queryObject.peerconfig === "true" ? "peers" : null
+            highlight: props.api.queryObject.peerconfig === "true" ? "peers" : null,
+
         };
                 
         const components = [
