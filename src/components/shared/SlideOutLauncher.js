@@ -49,12 +49,13 @@ class SlideOutLauncher extends Component {
       windowTitle,
       buttonVariant,
       buttonIcon,
+      buttonProps = {},
       componentProps,
       actions
     } = this.props;
     const { onClick } = this;
 
-    let icon = buttonIcon || 'search';
+    let icon = buttonIcon;
 
     const tpl = (format) => {
       try {
@@ -92,6 +93,15 @@ class SlideOutLauncher extends Component {
         <IconButton onClick={onClick}>
           <Icon>{icon}</Icon>
         </IconButton>
+      )
+    }
+
+    if(_buttonVariant === 'Typography') {
+      LaunchButton = (
+        <Typography onClick={onClick} variant={buttonProps.variant || "body2"} style={buttonProps.style || {}}>
+          {icon ? <Icon>{icon}</Icon> : null}
+          {_buttonTitle}
+        </Typography>
       )
     }
 

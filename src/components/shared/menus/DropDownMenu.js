@@ -83,7 +83,7 @@ export class DropDownMenu extends Component {
 
               menuItems.push((
                 <MenuItem key={menu.id} onClick={ onMenuItemSelect } disabled={  disabled }> 
-                    { menu.icon ? <ListItemIcon><Icon color="primary">{menu.icon}</Icon></ListItemIcon> : null }                      
+                    { menu.icon ? <ListItemIcon><Icon color="primary" style={menu.iconProps && menu.iconProps.style ? menu.iconProps.style : {}}>{menu.icon}</Icon></ListItemIcon> : null }                      
                     { menu.title }
                 </MenuItem>
               ));
@@ -95,7 +95,8 @@ export class DropDownMenu extends Component {
         aria-owns={open === true ? ariaId : null}
         aria-haspopup="true"
         onClick={this.handleMenu}
-        color={this.props.color || "primary"}>
+        color={this.props.color || "primary"}
+        style={this.props.style}>
         <Icon>{props.icon || 'keyboard_arrow_down'}</Icon>
         <Menu
             open={this.state.open === true}
