@@ -7,7 +7,7 @@ import DeleteIcon from '@material-ui/icons/Delete';
 class ConditionalIconWidget extends Component {
 
   render() {
-    const { value, theme, conditions, style = {} } = this.props
+    const { value, theme, conditions = [], style = {} } = this.props
     let ComponentToRender = null;
     let iconProps = {style};
     let matchingCondition = conditions.find(c => c.key == value);

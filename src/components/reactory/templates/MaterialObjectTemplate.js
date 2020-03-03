@@ -106,8 +106,23 @@ class ObjectTemplate extends Component {
     if(typeof uiWidget === 'string' && Widget === null && Widgets[uiWidget] !== null ) 
       Widget = Widgets[uiWidget];
      
+    let _props = {...this.props};
+    if(uiOptions && uiOptions.componentPropsMap) {
+      let mappedProps = api.utils.objectMapper(_props, uiOptions.componentPropsMap);
+      if(mappedProps) {
+        _props = {..._props, ...mappedProps}
+      }
+    }
+
+    if(uiOptions &&  uiOptions.propsMap) {
+      let mappedProps = api.utils.objectMapper(_props, uiOptions.propsMap);
+      if(mappedProps) {
+        _props = {..._props, ...mappedProps}
+      }
+    }
+
     if(Widget) {
-      return (<Widget {...this.props} />)
+      return (<Widget {..._props} />)
     }
 
     let ContainerComponent = Paper;

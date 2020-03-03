@@ -16,6 +16,7 @@ class StyledCurrencyLabel extends Component {
     let _postpendText = '';
     let _containerProps = {};
     let _tooltip = '';
+        
 
     if (uiSchema) {
       const uiOptions = uiSchema['ui:options'];

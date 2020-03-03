@@ -50,6 +50,7 @@ function DefaultObjectFieldTemplate(props) {
           title={props.title || props.uiSchema["ui:title"]}
           required={props.required}
           formContext={props.formContext}
+          style={props.uiSchema["ui:titleStyle"] || {}}
         />
       )}
       {props.description && (
@@ -57,8 +58,9 @@ function DefaultObjectFieldTemplate(props) {
           id={`${props.idSchema.$id}__description`}
           description={props.description}
           formContext={props.formContext}
+          style={props.uiSchema["ui:descriptionStyle"] || {}}
         />
-      )}
+      )}      
       {props.properties.map(prop => prop.content)}
       {canExpand() && (
         <IconButton

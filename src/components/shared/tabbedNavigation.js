@@ -115,17 +115,24 @@ class TabbedNavComponent extends Component {
 
         // ADDITIONAL COMPONENTS TO MOUNT
         const additionalComponents = tab.additionalComponents || [];                       
-        const additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps }) => {
+        const additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, componentPropsMap }) => {
           let ComponentToMount = api.getComponent(componentFqn);
           api.log('TabbedNavigationComponent: ADDITIONALCOMPONENT', { componentProps, componentFqn }, 'debug');
           let additionalComponentFound = true;
           if(ComponentToMount === null || ComponentToMount === undefined) {
             additionalComponentFound = false;
-            ComponentToMount = api.getComponent("core.NotFound");
+            ComponentToMount = api.getComponent("core.NotFound");          
           }
 
-          if(additionalComponentFound === true) return <ComponentToMount {...componentProps}/>
-          else return <ComponentToMount message={`Could not load component ${tab.componentFqn}, please check your registry loaders and namings`}/>
+          let mergedProperties = {};
+
+          if(componentPropsMap) {
+            mergedProperties = api.utils.objectMapper(props, componentPropsMap) 
+          }
+           
+
+          if(additionalComponentFound === true) return <ComponentToMount {...{...componentProps, ...mergedProperties}}/>
+          else return <ComponentToMount message={`Could not load component ${componentFqn}, please check your registry loaders and namings`}/>
         });
 
         let newPanel = index === state.value ? (

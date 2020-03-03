@@ -18,6 +18,8 @@ export const MaterialDescriptionField = (props) => {
     align,
     description, 
     id,        
+    style = {},
+    variant = "body2"
   } = props;
 
   let _description = description;
@@ -29,7 +31,7 @@ export const MaterialDescriptionField = (props) => {
     }
   }
   
-  return(<Typography id={id} variant="body1" align={align || 'left'}>{_description}</Typography>);
+  return(<Typography id={id} variant={variant} align={align || 'left'} style={style}>{_description}</Typography>);
 
 }; 
 
@@ -39,6 +41,8 @@ export default (props) => {
     align,
     title, 
     id,
+    style = {},
+    variant = "h5"
   } = props;
 
   let _title = title;
@@ -50,5 +54,5 @@ export default (props) => {
     }
   }
   
-  return(<Typography id={id} variant="h5" align={align || 'left'}>{_title}{required === true ? '*' : null}</Typography>);
+  return(<Typography id={id} variant={variant} align={align || 'left'} style={style}>{_title}{required === true ? '*' : null}</Typography>);
 };

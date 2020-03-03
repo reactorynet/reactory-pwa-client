@@ -78,6 +78,21 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
       if(typeof uiOptions.componentProps === 'object') {
         _props = { ..._props, ...uiOptions.componentProps}
       }
+
+      if(uiOptions.componentPropsMap) {
+        let mappedProps = api.utils.objectMapper(props, uiOptions.componentPropsMap);
+        if(mappedProps) {
+          _props = {..._props, ...mappedProps}
+        }
+      }
+
+      if(uiOptions.propsMap) {
+        let mappedProps = api.utils.objectMapper(props, uiOptions.propsMap);        
+        if(mappedProps) {
+          _props = {..._props, ...mappedProps}
+        }
+      }
+
       if(Widget) {
         return (<Widget {..._props } />)
       }
