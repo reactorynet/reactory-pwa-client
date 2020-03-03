@@ -75,32 +75,58 @@ class TabbedNavComponent extends Component {
     api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext, uiOptions });    
 
     let _tabs = [];
+    let _tabComponents = [];
     let _tabPannels = [];
+    if(isArray(formData) === true) {
+      //making the assumption the data array contains the tabs definition
+      _tabs = [...formData];
+    }
 
     if (uiOptions.tabs && isArray(uiOptions.tabs) === true) {
-      _tabs = uiOptions.tabs.map((tab, index) => {
+      _tabs = [..._tabs, ...uiOptions.tabs];
+    }
 
-        api.log('TabbedNavigationComponent: TAB', tab);
+    const EmptyTab = (tab) => {
+      return <Typography>NO TAB FOR {tab.componentFqn}</Typography>;
+    }
 
-        const MainComponentToMount = api.getComponent(tab.componentFqn);
-        let mainComponentProps = { ...tab.componentProps };
-        if(tab.componentPropsMap) {
-          mainComponentProps = { ...mainComponentProps, ...api.utils.objectMapper(props, tab.componentPropsMap) };
+    if(_tabs.length > 0) {        
+      _tabComponents = _tabs.map((tab, index) => {
+        api.log('TabbedNavigationComponent: TAB', tab, 'debug');
+        let MainComponentToMount = api.getComponent(tab.componentFqn);
+        let componentFound = true;
+        if(MainComponentToMount === null || MainComponentToMount === undefined) {
+          componentFound = false;
+          MainComponentToMount = api.getComponent("core.NotFound");
         }
-        api.log('TabbedNavigationComponent: COMPONENT', { MainComponentToMount, mainComponentProps }, 'debug');
+        
+        let mainComponentProps = {};
+
+        if(componentFound === true) {
+          mainComponentProps = { ...tab.componentProps };
+          if(tab.componentPropsMap) {
+            mainComponentProps = { ...mainComponentProps, ...api.utils.objectMapper(props, tab.componentPropsMap) };
+          }
+          api.log('TabbedNavigationComponent: COMPONENT', { MainComponentToMount, mainComponentProps }, 'debug');          
+        } else {
+          mainComponentProps.message = `Could not find the component ${tab.componentFqn} as MainComponent`;
+        }
+        
 
         // ADDITIONAL COMPONENTS TO MOUNT
-        const additionalComponents = tab.additionalComponents || [];
-
+        const additionalComponents = tab.additionalComponents || [];                       
         const additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps }) => {
-          const ComponentToMount = api.getComponent(componentFqn);
+          let ComponentToMount = api.getComponent(componentFqn);
+          api.log('TabbedNavigationComponent: ADDITIONALCOMPONENT', { componentProps, componentFqn }, 'debug');
+          let additionalComponentFound = true;
+          if(ComponentToMount === null || ComponentToMount === undefined) {
+            additionalComponentFound = false;
+            ComponentToMount = api.getComponent("core.NotFound");
+          }
 
-          api.log('TabbedNavigationComponent: ADDITIONALCOMPONENT', { componentProps, componentFqn });
-         
-          return <ComponentToMount {...componentProps}/>
+          if(additionalComponentFound === true) return <ComponentToMount {...componentProps}/>
+          else return <ComponentToMount message={`Could not load component ${tab.componentFqn}, please check your registry loaders and namings`}/>
         });
-
-
 
         let newPanel = index === state.value ? (
         <TabPanel value={state.value} index={index} >
@@ -127,7 +153,7 @@ class TabbedNavComponent extends Component {
       <div className={classes.root}>
         <AppBar position="static">
           <Tabs value={this.state.value} onChange={handleChange} aria-label="simple tabs example">
-            {_tabs}
+            {_tabComponents}
           </Tabs>
         </AppBar>
         {_tabPannels}

@@ -145,7 +145,7 @@ class MaterialTableWidget extends Component {
             api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables }, 'debug')
             let variables = api.utils.objectMapper(self, uiOptions.variables || formContext.$formState.formDef.graphql.query.variables);
             variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
-            api.log('MaterialTableWidget - Mapped variables for query', variables, 'debug');
+            api.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
             const queryResult = await api.graphqlQuery(formContext.$formState.formDef.graphql.query.text, variables).then();
             if(queryResult.errors && queryResult.errors.length > 0) {
@@ -184,12 +184,8 @@ class MaterialTableWidget extends Component {
         })
       }
     }
-
     
-
-    let options = {
-
-    };
+    let options = {};
     
     if(uiOptions.options) {
       options = { ...options, ...uiOptions.options }
