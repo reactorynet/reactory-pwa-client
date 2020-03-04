@@ -91,7 +91,11 @@ export default (props) => {
       
       let inputProps = {
         onChange: onInputChanged,
-        readOnly: disabled === true,      
+        readOnly: disabled === true,              
+      };
+
+      if(uiOptions.inputProps) {
+        inputProps = { ...inputProps, ...uiOptions.nputProps };
       };
 
       if(args.type === 'search') {
@@ -101,13 +105,18 @@ export default (props) => {
           </InputAdornment>
         )
       }
+
+      let componentProps = {
+        defaultValue:`${formData || schema.default}`.replace("undefined", ""),
+        variant: uiOptions.variant || "standard",
+        InputProps: inputProps        
+      }
+
+      if(uiOptions.componentProps) {
+        componentProps = { ...componentProps, ...uiOptions.componentProps };
+      }
       
-      return (
-      <TextField 
-          defaultValue={`${formData || schema.default}`.replace("undefined", "")} 
-          variant={uiOptions.variant || "standard"}
-          InputProps={inputProps} />
-          );
+      return ( <TextField {...componentProps} /> );
     } else {
       return (<Input {...args} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />)
     }    

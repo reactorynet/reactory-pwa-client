@@ -38,6 +38,8 @@ class LabelWidget extends Component {
       justifyContent: 'flex-start',
       alignItems: 'center'
     };
+    let labelTitleProps = {};
+    let labelBodyProps = {};
     let _renderHtml = false;
 
     let labelContainerProps = {
@@ -55,9 +57,19 @@ class LabelWidget extends Component {
         iconType,
         iconPosition,
         variant = "h6",
-        iconProps = {},
-        renderHtml
+        iconProps = {},        
+        renderHtml,
+        titleProps = {},
+        bodyProps = {},
+        containerProps = {}
       } = props.uiSchema["ui:options"];
+
+      if(containerProps.style) {
+        labelContainerProps.style = { ...labelContainerProps.style, ...containerProps.style };
+      }
+
+      labelTitleProps = titleProps;
+      labelBodyProps = bodyProps;
 
       if (format) {
         try {
@@ -110,8 +122,8 @@ class LabelWidget extends Component {
     return (
       <div {...labelContainerProps}>
         {_iconPosition === 'left' ? labelIcon : null}
-        <div>
-          {labelTitle != '' && <label>{labelTitle}</label>}
+        <div {...labelBodyProps}>
+          {labelTitle != '' && <label {...labelTitleProps}>{labelTitle}</label>}
           { LabelBody }
         </div>
         {_iconPosition === 'right' ? labelIcon : null}

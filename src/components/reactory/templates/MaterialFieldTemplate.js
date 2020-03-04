@@ -1,5 +1,5 @@
 import React, { Component, Fragment } from 'react';
-import { isNil } from 'lodash';
+import { isNil, isEmpty } from 'lodash';
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
 import { withStyles, withTheme } from '@material-ui/core/styles';
@@ -123,7 +123,7 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
     )
   }
 
-  let labelComponent = isObject === false || isBoolean === true && showLabel === true ? <InputLabel htmlFor={id} shrink={true}>{label}</InputLabel> : null;
+  
 
   switch(schema.type) {
     case 'array':
@@ -157,9 +157,21 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
         delete formControlProps.fullWidth;
       }
 
+      let inputLabelProps = {
+        htmlFor: id,
+      }
+
+      if(isNil(formData) === false && isEmpty(formData) === true) {
+        inputLabelProps.shrink = false;
+      } else {
+        inputLabelProps.shrink = true;
+      }
+
+      let labelComponent = isObject === false || isBoolean === true ? <InputLabel {...inputLabelProps}  >{label}</InputLabel> : null;
+
       return (
         <FormControl {...formControlProps}>
-          { uiWidget === null ? labelComponent : null }
+          { uiWidget === null && showLabel !== false ? labelComponent : null }
           { children }
           { isNil(rawHelp) === false ? <FormHelperText id={`${id}_helper`}>{rawHelp}</FormHelperText> : null }
           { errors }
