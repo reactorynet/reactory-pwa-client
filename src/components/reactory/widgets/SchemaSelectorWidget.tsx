@@ -1,10 +1,10 @@
 import React, { Component, Fragment } from 'react';
 import { compose } from 'recompose';
-import {   
-  AppBar, 
-  Button, 
+import {
+  AppBar,
+  Button,
   FormControlLabel,
-  IconButton, 
+  IconButton,
   Icon,
   ListItem,
   ListItemText,
@@ -12,7 +12,7 @@ import {
   ListItemSecondaryAction,
   Switch,
   Toolbar,
-  Typography   
+  Typography
 } from '@material-ui/core';
 import { withStyles, withTheme } from '@material-ui/styles';
 import { withApi } from '@reactory/client-core/api';
@@ -21,8 +21,9 @@ import Reactory from '@reactory/client-core/types/reactory';
 
 class SchemaSelectorWidget extends Component<any,any> {
 
+
   render(){
-    const { formContext } = this.props;    
+    const { formContext } = this.props;
     if(formContext.$schemaSelector) {
       return formContext.$schemaSelector;
     } else {
@@ -40,7 +41,7 @@ class SchemaSelectorWidget extends Component<any,any> {
 
 
 const SchemaSelectorWidgetComponent = compose(
-  withTheme, 
+  withTheme,
   withStyles(SchemaSelectorWidget.styles),
   withApi
 )(SchemaSelectorWidget)

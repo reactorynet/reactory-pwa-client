@@ -1,6 +1,6 @@
 import React, { Component, Fragment, ReactNode } from 'react';
 import PropTypes, { ReactNodeArray } from 'prop-types';
-import IntersectionVisible  from 'react-intersection-visible';
+import IntersectionVisible from 'react-intersection-visible';
 import Form from './form/components/Form';
 import EventEmitter, { ListenerFn } from 'eventemitter3';
 import objectMapper from 'object-mapper';
@@ -74,7 +74,7 @@ const simpleUiSchema = {
   },
 };
 
-const simpleForm : Reactory.IReactoryForm = {
+const simpleForm: Reactory.IReactoryForm = {
   id: 'ReactoryFormNotFoundForm',
   schema: simpleSchema,
   uiSchema: simpleUiSchema,
@@ -84,7 +84,7 @@ const simpleForm : Reactory.IReactoryForm = {
   nameSpace: 'core',
   version: '1.0.0',
   title: "Form Not Found Form",
-  registerAsComponent: false,  
+  registerAsComponent: false,
 };
 
 function TabContainer(props) {
@@ -162,20 +162,20 @@ export interface ReactoryFormState {
   uiSchemaKey: string,
   activeUiSchemaMenuItem: Reactory.IUISchemaMenuItem | undefined,
   formDef?: Reactory.IReactoryForm,
-  formData?: any,    
+  formData?: any,
   dirty: boolean,
   queryComplete: boolean,
   showHelp: boolean,
   showReportModal: boolean,
   showExportWindow: boolean,
   activeExportDefinition?: Reactory.IExport,
-  query?:  any,
+  query?: any,
   busy: boolean,
   liveUpdate: boolean,
   pendingResources: any,
   _instance_id: string,
-  plugins?: any, 
-  queryError?: any, 
+  plugins?: any,
+  queryError?: any,
   message?: string,
   formError?: any,
   autoQueryDisabled?: boolean,
@@ -207,15 +207,15 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     formId: 'default',
     uiSchemaId: 'default',
     uiFramework: 'schema',
-    
+
     mode: 'new',
     formContext: {
 
     },
-    extendSchema: ( schema: Reactory.IReactoryForm ) => { return schema; },
+    extendSchema: (schema: Reactory.IReactoryForm) => { return schema; },
     busy: false,
     query: {
-      
+
     },
     api: null,
     data: null,
@@ -223,7 +223,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     history: null,
     location: null,
     uiSchemaKey: 'default',
-    autoQueryDisabled: false,        
+    autoQueryDisabled: false,
   };
 
   $events: EventEmitter = new EventEmitter();
@@ -234,19 +234,19 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   api: any;
   instanceId: string;
 
-  constructor(props: ReactoryFormProperties, context: any) {    
+  constructor(props: ReactoryFormProperties, context: any) {
     super(props, context);
-            
-    if(props.events) {
-      Object.getOwnPropertyNames(props.events).map((eventName)=>{
-        if(typeof props.events[eventName] === 'function') {
+
+    if (props.events) {
+      Object.getOwnPropertyNames(props.events).map((eventName) => {
+        if (typeof props.events[eventName] === 'function') {
           this.$events.on(eventName, props.events[eventName]);
-        }        
+        }
       });
     }
     this.on = this.on.bind(this);
 
-    const _instance_id = uuid();    
+    const _instance_id = uuid();
     this.instanceId = _instance_id;
     let _state = {
       loading: true,
@@ -257,13 +257,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       uiSchemaKey: props.uiSchemaKey || 'default',
       activeUiSchemaMenuItem: undefined,
       activeExportDefinition: undefined,
-      formData: props.data || props.formData,    
+      formData: props.data || props.formData,
       dirty: false,
       queryComplete: false,
       showHelp: false,
       showExportWindow: false,
       showReportModal: false,
-      query:  {...props.query, ...queryString.parse(props.location.search) },
+      query: { ...props.query, ...queryString.parse(props.location.search) },
       busy: props.busy === true,
       liveUpdate: false,
       pendingResources: {},
@@ -282,7 +282,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.formDef = this.formDef.bind(this);
     this.renderForm = this.renderForm.bind(this);
     this.renderWithQuery = this.renderWithQuery.bind(this);
-    this.state = _state;    
+    this.state = _state;
     this.defaultComponents = [
       'core.Loading',
       'core.Logo',
@@ -299,112 +299,112 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.goBack = this.goBack.bind(this);
     this.showHelp = this.showHelp.bind(this);
     this.showDebug = this.showDebug.bind(this);
-    this.showReportModal = this.showReportModal.bind(this);    
+    this.showReportModal = this.showReportModal.bind(this);
     this.showExcelModal = this.showExcelModal.bind(this);
     this.refreshForm = this.refreshForm.bind(this);
     this.formRef = null;
     this.downloadForms = this.downloadForms.bind(this);
     this.onPluginLoaded = this.onPluginLoaded.bind(this);
     this.getHelpScreen = this.getHelpScreen.bind(this);
-    this.plugins = { };     
+    this.plugins = {};
   }
 
-  on(eventName: string, listener: ListenerFn, context: any){      
+  on(eventName: string, listener: ListenerFn, context: any) {
     this.$events.on(eventName, listener, context);
   }
 
-  refreshForm( args = { autoQueryDisabled: true }  ){    
+  refreshForm(args = { autoQueryDisabled: true }) {
     const self = this;
-    this.setState({ queryComplete: false, dirty: false, autoQueryDisabled: args.autoQueryDisabled === true }, ()=>{
-      if(!this.state.formDef.graphql) {
+    this.setState({ queryComplete: false, dirty: false, autoQueryDisabled: args.autoQueryDisabled === true }, () => {
+      if (!this.state.formDef.graphql) {
         //the form doesn't have a query but may require a layout update due to data change
         self.forceUpdate();
       }
     });
-    
+
   }
 
-  onPluginLoaded(plugin){
-    this.props.api.log('Plugin loaded, activating component', {plugin}, 'debug');    
+  onPluginLoaded(plugin) {
+    this.props.api.log('Plugin loaded, activating component', { plugin }, 'debug');
     try {
       this.plugins[plugin.componentFqn] = plugin.component(this.props, { form: this });
       this.plugins[plugin.componentFqn].__container = this;
       this.setState({ plugins: this.plugins });
     } catch (pluginFailure) {
-      this.props.api.log(`An error occured loading plugin ${plugin.componentFqn}`,  { plugin, pluginFailure });
-    }    
+      this.props.api.log(`An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure });
+    }
   }
 
   componentWillReceiveProps(nextProps) {
     this.props.api.log('ReactoryForm.componentWillReceiveProps', { nextProps }, 'debug');
-    if(nextProps.formId !== this.props.formId || deepEquals(nextProps.formData, this.state.formData) === false) {
+    if (nextProps.formId !== this.props.formId || deepEquals(nextProps.formData, this.state.formData) === false) {
       this.setState({ forms_loaded: false, formData: nextProps.formData, queryComplete: false }, this.forceUpdate)
-    }        
+    }
   }
 
-  componentWillUnmount(){
+  componentWillUnmount() {
     this.$events.emit('componentWillUnmount', this);
-    this.$events.removeAllListeners();    
+    this.$events.removeAllListeners();
   }
 
   componentDidCatch(error: Error) {
     this.props.api.log(`An error occured outside of form boundary`, error, 'error');
   }
 
-  componentDidMount(){
+  componentDidMount() {
     const { api } = this.props;
     api.trackFormInstance(this);
-    api.log('ReactoryComponent.componentDidMount', {props: this.props, context: this.context }, 'debug');
+    api.log('ReactoryComponent.componentDidMount', { props: this.props, context: this.context }, 'debug');
     api.amq.onReactoryPluginLoaded('loaded', this.onPluginLoaded);
   }
-  
-  formDef = ():Reactory.IReactoryForm | undefined => {
-    if(this.state.formDef) return this.state.formDef;
-    
+
+  formDef = (): Reactory.IReactoryForm | undefined => {
+    if (this.state.formDef) return this.state.formDef;
+
     return undefined
   }
-  
-  goBack(){
-    if(this.props.history) this.props.history.goBack()
+
+  goBack() {
+    if (this.props.history) this.props.history.goBack()
   }
 
-  getHelpScreen(){
+  getHelpScreen() {
     const { HelpMe } = this.componentDefs;
     const formDef = this.formDef();
 
     const closeHelp = e => this.setState({ showHelp: false });
     return (
-      <HelpMe topics={formDef.helpTopics} tags={formDef.tags} title={formDef.title} open={ this.state.showHelp === true } onClose={closeHelp}>
-      </HelpMe>            
+      <HelpMe topics={formDef.helpTopics} tags={formDef.tags} title={formDef.title} open={this.state.showHelp === true} onClose={closeHelp}>
+      </HelpMe>
     )
   }
 
-  getReportWidget(){
+  getReportWidget() {
     const { ReportViewer, FullScreenModal } = this.componentDefs;
     const formDef = this.formDef();
 
     const closeReport = e => this.setState({ showReportModal: false });
-    
+
     return (
       <FullScreenModal open={this.state.showReportModal === true} onClose={closeReport}>
-        <ReportViewer 
+        <ReportViewer
           {...formDef.defaultPdfReport}
-          data={this.state.formData}      
+          data={this.state.formData}
         />
       </FullScreenModal>
     )
   }
 
-  getExcelWidget(){
+  getExcelWidget() {
     const { ReportViewer, FullScreenModal } = this.componentDefs;
     const formDef: Reactory.IReactoryForm = this.formDef();
-    if(formDef !== undefined) {
-      const closeReport = ( e : React.SyntheticEvent ) : void => {  this.setState({ showExportWindow: false }); }
+    if (formDef !== undefined) {
+      const closeReport = (e: React.SyntheticEvent): void => { this.setState({ showExportWindow: false }); }
       return (
         <FullScreenModal open={this.state.showExportWindow === true} onClose={closeReport}>
-          <ReportViewer 
+          <ReportViewer
             engine={'excel'}
-            formDef={formDef}          
+            formDef={formDef}
             exportDefinition={this.state.activeExportDefinition || formDef.defaultExport}
             useClient={true}
             data={this.state.formData}
@@ -414,31 +414,31 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     }
   }
 
-  showHelp(){
+  showHelp() {
     this.setState({ showHelp: true })
   }
 
-  showDebug(){
+  showDebug() {
     // this.setState({ showDebug: true })
   }
 
-  showReportModal(){
+  showReportModal() {
     this.setState({ showReportModal: true })
   }
 
-  showExcelModal( exportDefinition: Reactory.IExport = undefined ){
+  showExcelModal(exportDefinition: Reactory.IExport = undefined) {
     this.setState({ showExportWindow: true, activeExportDefinition: exportDefinition });
   }
 
   renderForm(formData: any, onSubmit?: Function) {
-    this.props.api.log('Rendering Form', {props: this.props, state: this.state}, 'debug')
+    this.props.api.log('Rendering Form', { props: this.props, state: this.state }, 'debug')
     const { loading, forms, busy, _instance_id } = this.state;
     const { DropDownMenu } = this.componentDefs;
     const self = this;
-    
+
     if (forms.length === 0) return (<p>no forms defined</p>);
-    
-    
+
+
     const formDef = this.form();
     const formProps = {
       id: _instance_id,
@@ -449,13 +449,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       },
       onChange: this.onChange,
       formData: formData,
-      ErrorList: (props) => (<MaterialErrorListTemplate {...props}/>),      
-      onSubmit: onSubmit || this.onSubmit,      
+      ErrorList: (props) => (<MaterialErrorListTemplate {...props} />),
+      onSubmit: onSubmit || this.onSubmit,
       ref: (form) => { this.formRef = form }
     };
 
     /**
-      
+
     submitIcon: '$none',
     'ui:options': {
       submitProps: {
@@ -463,131 +463,170 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         text: 'Next',
         iconAlign: 'left' | 'right'
       },
-    },           
+    },
     */
-    
+
     let icon = 'save';
-    if(formDef.uiSchema && formDef.uiSchema.submitIcon) {
-      if(typeof formDef.uiSchema.submitIcon === 'string') {
-        icon = formDef.uiSchema.submitIcon         
-      }      
+    if (formDef.uiSchema && formDef.uiSchema.submitIcon) {
+      if (typeof formDef.uiSchema.submitIcon === 'string') {
+        icon = formDef.uiSchema.submitIcon
+      }
     }
 
-    let iconWidget = (icon === '$none' ? null : <Icon>{icon}</Icon>);    
+    let iconWidget = (icon === '$none' ? null : <Icon>{icon}</Icon>);
     let showSubmit = true;
     let showRefresh = true;
     let showHelp = true;
     let submitButton = null;
     let toolbarposition = 'bottom'
     let showToolbar = true;
-    
+
     const formUiOptions = formDef.uiSchema['ui:options'];
-    
-    if(formUiOptions) {      
-      if(formUiOptions && isNil(formUiOptions.showSubmit) === false) {                
+
+    if (formUiOptions) {
+      if (formUiOptions && isNil(formUiOptions.showSubmit) === false) {
         showSubmit = formUiOptions.showSubmit === true;
       }
 
-      if(formUiOptions && isNil(formUiOptions.showHelp) === false) {                
+      if (formUiOptions && isNil(formUiOptions.showHelp) === false) {
         showHelp = formUiOptions.showHelp === true;
       }
 
-      if(formUiOptions && isNil(formUiOptions.showRefresh) === false) {                
+      if (formUiOptions && isNil(formUiOptions.showRefresh) === false) {
         showRefresh = formUiOptions.showRefresh === true;
       }
-      
-      if(formUiOptions && isNil(formUiOptions.toolbarPosition) === false) {
+
+      if (formUiOptions && isNil(formUiOptions.toolbarPosition) === false) {
         toolbarposition = formUiOptions.toolbarPosition
       }
 
       const { submitProps } = formUiOptions;
-      if(typeof submitProps === 'object' && showSubmit === true) {        
+      if (typeof submitProps === 'object' && showSubmit === true) {
         const { variant = 'fab', iconAlign = 'left' } = submitProps;
         const _props = { ...submitProps };
         delete _props.variant;
         delete _props.iconAlign;
 
-        if(variant && typeof variant === 'string' && showSubmit === true) {
-          switch(variant) {
+        if (variant && typeof variant === 'string' && showSubmit === true) {
+          switch (variant) {
             case 'button': {
-              submitButton = (<Button type="submit" {..._props}>{ iconAlign === 'left' && iconWidget}{template(_props.text)({ props: self.props, this: self })}{ iconAlign === 'right' && iconWidget}</Button>);
+              submitButton = (<Button type="submit" {..._props}>{iconAlign === 'left' && iconWidget}{template(_props.text)({ props: self.props, this: self })}{iconAlign === 'right' && iconWidget}</Button>);
               break;
             }
             case 'fab':
-              default: {
-                submitButton = (<Fab type="submit"  {..._props}>{iconWidget}</Fab>);
-              }
+            default: {
+              submitButton = (<Fab type="submit"  {..._props}>{iconWidget}</Fab>);
+            }
           }
         }
-      }      
+      }
       /**
        * options for submit buttons
-       * variant = 'fab' / 'button' 
-       * 
+       * variant = 'fab' / 'button'
+       *
        */
-      
+
     }
 
-    if(showSubmit === true && submitButton === null) submitButton = (<Fab type="submit" color="primary">{iconWidget}</Fab>);
-             
+    if (showSubmit === true && submitButton === null) submitButton = (<Fab type="submit" color="primary">{iconWidget}</Fab>);
+
     let uiSchemaSelector = null;
 
-    if(formDef.uiSchemas){
+    if (formDef.uiSchemas) {
       const { DropDownMenu } = this.componentDefs;
       const onSchemaSelect = (evt, menuItem) => {
         // console.log('Schema Ui Change', {evt, menuItem});
         self.setState({ activeUiSchemaMenuItem: menuItem })
       };
 
-      const { activeUiSchemaMenuItem } = self.state;  
+      const { activeUiSchemaMenuItem } = self.state;
       //set default selected
       uiSchemaSelector = (
         <Fragment>
           {activeUiSchemaMenuItem.title}
           <DropDownMenu menus={formDef.uiSchemas} onSelect={onSchemaSelect} selected={activeUiSchemaMenuItem} />
-        </Fragment>);     
+        </Fragment>);
 
-      if(formUiOptions.schemaSelector) {
-        if(formUiOptions.schemaSelector.variant === "button") {
+      if (formUiOptions && formUiOptions.schemaSelector) {
+        if (formUiOptions.schemaSelector.variant === "icon-button") {
           uiSchemaSelector = (
             <div>
               {
-                formUiOptions.schemaSelector && 
-                formUiOptions.schemaSelector.showTitle === false ? null : (<span>
-                  {activeUiSchemaMenuItem.title}
-                </span>)
-              }              
+                formUiOptions.schemaSelector &&
+                  formUiOptions.schemaSelector.showTitle === false ? null : (<span>
+                    {activeUiSchemaMenuItem.title}
+                  </span>)
+              }
               {formDef.uiSchemas.map((uiSchemaItem, index) => {
-                
+
                 const onSelectUiSchema = () => {
-                  self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
+                  // self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
+
+                  // TODO - this need to be tested
+                  const originalQuery = { ...this.state.query };
+                  self.setState({
+                    query: {
+                      ...originalQuery,
+                      activeUiSchemaMenuItem: uiSchemaItem
+                    }
+                  })
                 };
-  
+
                 return (
-                <IconButton onClick={onSelectUiSchema} key={`schema_selector_${index}`}>
-                  <Icon>{uiSchemaItem.icon}</Icon>
-                </IconButton>)
+                  <IconButton onClick={onSelectUiSchema} key={`schema_selector_${index}`}>
+                    <Icon>{uiSchemaItem.icon}</Icon>
+                  </IconButton>)
               })}
             </div>
           )
-        }               
+        }
+
+        if (formUiOptions.schemaSelector.variant === "button") {
+          const onSelectUiSchema = () => {
+            const selectedSchema = find(formDef.uiSchemas, { id: formUiOptions.schemaSelector.selectSchemaId });
+            // self.setState({ activeUiSchemaMenuItem: selectedSchema })
+
+            // TODO - this needs to be tested
+            const originalQuery = { ...this.state.query };
+            self.setState({
+              query: {
+                ...originalQuery,
+                activeUiSchemaMenuItem: selectedSchema
+              }
+            })
+          };
+
+          debugger;
+
+          uiSchemaSelector = (
+            <div style={{ position: "absolute", top: "10px", right: "10px" }}>
+              {
+                formUiOptions.schemaSelector.buttonVariant && formUiOptions.schemaSelector.buttonVariant == 'contained' ?
+                <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary" } variant="contained">{formUiOptions.schemaSelector.buttonTitle}</Button> :
+              <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary" } >{formUiOptions.schemaSelector.buttonTitle}</Button>
+              }
+              
+            </div>
+          )
+
+        }
       }
-                            
+
       formProps.formContext.$schemaSelector = uiSchemaSelector;
     }
 
     const refreshClick = evt => self.setState({ queryComplete: false, dirty: false });
-    
-    
+
+
     let reportButton = null;
 
-    if(formDef.defaultPdfReport) {
+    if (formDef.defaultPdfReport) {
       reportButton = (<Button variant="text" onClick={this.showReportModal} color="secondary"><Icon>print</Icon></Button>);
     }
 
     let exportButton = null;
 
-    if(formDef.defaultExport) {
+    if (formDef.defaultExport) {
       const defaultExportClicked = () => {
         self.showExcelModal(formDef.defaultExport)
       };
@@ -598,10 +637,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         </Button>);
     }
 
-    if(isArray(formDef.exports) === true) {
-      
+    if (isArray(formDef.exports) === true) {
+
       const onDropDownSelect = (evt, menuItem: any) => {
-        self.props.api.log('Export Item Selected', {evt, menuItem}, 'debug');
+        self.props.api.log('Export Item Selected', { evt, menuItem }, 'debug');
         self.showExcelModal(menuItem.data);
       };
 
@@ -619,23 +658,23 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     }
 
     let formtoolbar = (<Toolbar>
-      { uiSchemaSelector }
-      { this.props.children && this.props.children.length > 0 ? this.props.children : null }
-      { showSubmit === true && submitButton }
-      { self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button> }            
-      { formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button> }
-      { formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button> }
-      { reportButton }
-      { exportButton }
+      {formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}
+      {this.props.children && this.props.children.length > 0 ? this.props.children : null}
+      {showSubmit === true && submitButton}
+      {self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
+      {formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button>}
+      {formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button>}
+      {reportButton}
+      {exportButton}
     </Toolbar>);
 
- 
+
 
     return (
-      <Fragment>        
-        {this.props.before}                
-        <Form {...{...formProps, toolbarPosition: toolbarposition}}>
-          {formtoolbar}          
+      <Fragment>
+        {this.props.before}
+        <Form {...{ ...formProps, toolbarPosition: toolbarposition }}>
+          {formtoolbar}
         </Form>
         {this.getHelpScreen()}
         {this.getReportWidget()}
@@ -644,180 +683,180 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     )
   }
 
-  renderWithQuery(){
-            
+  renderWithQuery() {
+
     const formDef = this.formDef();
-    let formData = this.getFormData();  
+    let formData = this.getFormData();
     const { mode, api } = this.props;
     const { queryComplete } = this.state;
     const that = this;
-    const { Loading } = this.componentDefs;        
+    const { Loading } = this.componentDefs;
     //utility object
 
     const has = {
       query: isNil(formDef.graphql.query) === false && isString(formDef.graphql.query.text) === true,
       doQuery: isNil(formDef.graphql.query) === false,
-      mutation: isNil(formDef.graphql.mutation) === false && isNil(formDef.graphql.mutation[mode]) === false && isString(formDef.graphql.mutation[mode].text) === true,      
+      mutation: isNil(formDef.graphql.mutation) === false && isNil(formDef.graphql.mutation[mode]) === false && isString(formDef.graphql.mutation[mode].text) === true,
     };
 
     this.props.api.log('ReactoryFormComponent.renderWithQuery()', { formData, mode, queryComplete }, 'debug');
 
     //returns a form wrapped with a mutation handler
     const getMutationForm = (_formData) => {
-      const mutation  = formDef.graphql.mutation[mode];
+      const mutation = formDef.graphql.mutation[mode];
       return (
         <Mutation mutation={gql(mutation.text)}>
-        {(mutateFunction: Function, mutationResult: MutationResult) => {
-          const { loading, error, data } = mutationResult
-          const onFormSubmit = (formSchema) => {  
-            api.log(`Form Submitting, post via graphql`, formSchema, 'debug');  
-            const _variables = objectMapper({...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
-            mutateFunction({
-              variables: api.utils.omitDeep({..._variables}),
-              refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
-            });
-          };          
-          
-          let loadingWidget = null;
-          let errorWidget = null;
-          
-          if(loading === true) loadingWidget = (<Loading message={"Updating... please wait."} />);
-          if(error) {
-            errorWidget = (<p>{error.message}</p>);
-          }
-          if(data && data[mutation.name]) {
-            if(mutation.onSuccessMethod === "route") {              
-              const inputObj = {
-                formData,                
-              };
-              inputObj[mutation.name] = data[mutation.name];
-              let linkText = template(mutation.onSuccessUrl)(inputObj);              
-              that.props.api.goto(linkText)
+          {(mutateFunction: Function, mutationResult: MutationResult) => {
+            const { loading, error, data } = mutationResult
+            const onFormSubmit = (formSchema) => {
+              api.log(`Form Submitting, post via graphql`, formSchema, 'debug');
+              const _variables = objectMapper({ ...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
+              mutateFunction({
+                variables: api.utils.omitDeep({ ..._variables }),
+                refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
+              });
+            };
+
+            let loadingWidget = null;
+            let errorWidget = null;
+
+            if (loading === true) loadingWidget = (<Loading message={"Updating... please wait."} />);
+            if (error) {
+              errorWidget = (<p>{error.message}</p>);
+            }
+            if (data && data[mutation.name]) {
+              if (mutation.onSuccessMethod === "route") {
+                const inputObj = {
+                  formData,
+                };
+                inputObj[mutation.name] = data[mutation.name];
+                let linkText = template(mutation.onSuccessUrl)(inputObj);
+                that.props.api.goto(linkText)
+              }
+
+              if (mutation.onSuccessMethod.indexOf('event:') === 1) {
+                let eventName = mutation.onSuccessMethod.split(':')[1];
+                api.amq.raiseFormCommand(eventName, { form: that, result: data[mutation.name] }),
+                  that.$events.emit(eventName, data[mutation.name]);
+              }
+
+              that.$events.emit('onMutateComplete', {
+                result: data[mutation.name],
+                errors: error,
+                error: error
+              });
             }
 
-            if(mutation.onSuccessMethod.indexOf('event:') === 1) {
-              let eventName = mutation.onSuccessMethod.split(':')[1];
-              api.amq.raiseFormCommand(eventName, {form: that, result: data[mutation.name] }),
-              that.$events.emit(eventName, data[mutation.name]);
-            }
-            
-            that.$events.emit('onMutateComplete', {
-              result:  data[mutation.name],
-              errors: error,
-              error: error
-            });
-          }
-          
-          return (
-            <Fragment>
-              {loadingWidget}
-              {errorWidget}
-              { !loadingWidget ? that.renderForm(_formData, onFormSubmit) : null }
-            </Fragment>
-          )
-          
-      }}
-      </Mutation>)
+            return (
+              <Fragment>
+                {loadingWidget}
+                {errorWidget}
+                {!loadingWidget ? that.renderForm(_formData, onFormSubmit) : null}
+              </Fragment>
+            )
+
+          }}
+        </Mutation>)
     };
 
-    if(has.query === true && has.doQuery === true && queryComplete === false && this.state.loading === false) {
-      // //console.log('rendering with query', has);      
+    if (has.query === true && has.doQuery === true && queryComplete === false && this.state.loading === false) {
+      // //console.log('rendering with query', has);
       const query = formDef.graphql.query; //gql(formDef.graphql.query.text)
-      const formContext = this.getFormContext();      
-      const _variables = api.utils.omitDeep(objectMapper({ 
-        formContext, 
-        formData, 
-        $route: 
-        that.props.$route
+      const formContext = this.getFormContext();
+      const _variables = api.utils.omitDeep(objectMapper({
+        formContext,
+        formData,
+        $route:
+          that.props.$route
       }, query.variables || {}));
 
-      let options = query.options || {  };
-      
+      let options = query.options || {};
+
       //error handler function
       const handleErrors = (errors) => {
-        if( formDef.graphql.query.onError ) { 
+        if (formDef.graphql.query.onError) {
           const componentToCall = api.getComponent(formDef.graphql.query.onError.componentRef);
-          if(componentToCall && typeof componentToCall === 'function') {                
+          if (componentToCall && typeof componentToCall === 'function') {
             const componentInstance = componentToCall(that.props, { ...that.context, form: that })
-            if(typeof componentInstance[formDef.graphql.query.onError.method] === 'function'){
+            if (typeof componentInstance[formDef.graphql.query.onError.method] === 'function') {
               try {
                 componentInstance[formDef.graphql.query.onError.method](errors);
-              } catch(err) {
+              } catch (err) {
                 that.api.log(err.message, err, 'error');
-              }                  
+              }
             }
           }
         }
       };
-      
-      //execute query 
+
+      //execute query
       //TODO: Updated / fix types so that errors is available on result
-      if(query.autoQuery === false && that.state.autoQueryDisabled === false) { 
-        that.setState({ queryComplete: true, dirty: false, allowRefresh: true,  loading: false });        
+      if (query.autoQuery === false && that.state.autoQueryDisabled === false) {
+        that.setState({ queryComplete: true, dirty: false, allowRefresh: true, loading: false });
       } else {
-        api.graphqlQuery(gql(query.text), _variables).then(( result: any ) => {  
+        api.graphqlQuery(gql(query.text), _variables).then((result: any) => {
 
           const { data, loading, errors } = result;
-          let _formData = formData;        
-          if(data && data[query.name]) {    
-            switch(query.resultType) {
-              case 'array' :{              
+          let _formData = formData;
+          if (data && data[query.name]) {
+            switch (query.resultType) {
+              case 'array': {
                 let mergedData = []
-                if(isArray(formData) === true) mergedData = [...formData];
-                if(isArray(data[query.name]) === true) mergedData = [...mergedData, ...data[query.name]];
-                if(query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0 ) {
+                if (isArray(formData) === true) mergedData = [...formData];
+                if (isArray(data[query.name]) === true) mergedData = [...mergedData, ...data[query.name]];
+                if (query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
                   _formData = objectMapper(mergedData, query.resultMap);
                 } else {
                   _formData = mergedData;
-                }             
-                
+                }
+
                 break;
               }
               default: {
-                if(query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
-                  _formData = objectMapper({...formData, ...data[query.name] }, query.resultMap);
+                if (query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
+                  _formData = objectMapper({ ...formData, ...data[query.name] }, query.resultMap);
                 } else {
-                  _formData = {...formData, ...data[query.name] };
-                }             
+                  _formData = { ...formData, ...data[query.name] };
+                }
               }
-            }          
-          }      
-          
+            }
+          }
+
           //update component state with new form data
-          that.setState({formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, ()=>{
-            that.$events.emit('onQueryComplete', { formData: _formData, form: that } );
-            if(errors)  {            
+          that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, () => {
+            that.$events.emit('onQueryComplete', { formData: _formData, form: that });
+            if (errors) {
               api.log(`Error executing graphql query`, errors)
-              handleErrors(errors);  
+              handleErrors(errors);
             }
           });
-  
+
         }).catch((queryError) => {
-          that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false }, ()=>{                
-            if( formDef.graphql.query.onError ) {            
+          that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false }, () => {
+            if (formDef.graphql.query.onError) {
               handleErrors([queryError]);
             }
           });
         });
       }
 
-     
 
-      if(isEmpty(formDef.graphql.query.queryMessage) === false) {
-        return <Loading title={template(formDef.graphql.query.queryMessage)({props: this.props, state: this.state})} />         
-      } 
-      
+
+      if (isEmpty(formDef.graphql.query.queryMessage) === false) {
+        return <Loading title={template(formDef.graphql.query.queryMessage)({ props: this.props, state: this.state })} />
+      }
+
       return <Loading title={`Fetching data for ${formDef.title}`} />
-    } 
-    
-    if ( has.mutation === true) {      
+    }
+
+    if (has.mutation === true) {
       return getMutationForm(formData);
-    } 
-      
+    }
+
     return that.renderForm(formData)
   }
 
-  getFormContext(){
+  getFormContext() {
     const self = this;
     return {
       ...self.props,
@@ -825,11 +864,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       $formState: self.state,
       query: { ...self.state.query },
       formInstanceId: self.state._instance_id,
-      $ref: self,            
-      refresh: (args = { autoQueryDisabled: true }) => {        
+      $ref: self,
+      refresh: (args = { autoQueryDisabled: true }) => {
         self.refreshForm(args || { autoQueryDisabled: true })
       },
-      setFormData: (formData: any, callback = ()=>{}) => {
+      setFormData: (formData: any, callback = () => { }) => {
         const _state = { ...self.state, formData: formData };
         self.setState(_state, callback);
       },
@@ -839,38 +878,38 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   /**
    * Returns the entire form definition
    */
-  form() {    
+  form() {
     const { uiFramework, forms, formData, uiSchemaKey, pendingResources } = this.state;
     let schema = this.formDef();
-    
+
     const { uiSchemaId, activeUiSchemaMenuItem } = this.state.query;
     const { Logo, Loading } = this.componentDefs;
     const { api, history, mode, extendSchema } = this.props;
 
     schema = extendSchema(schema);
-    
+
     const self = this;
     if (uiFramework !== 'schema') {
       //we are not using the schema define ui framework we are assigning a different one
       schema.uiFramework = uiFramework
-    }    
+    }
 
     // set noHtml5Validation if not set by schema
     if (nil(schema.noHtml5Validate)) schema.noHtml5Validate = true;
-        
+
     if (uiSchemaKey) {
-      if (uiSchemaKey !== 'default' && find(schema.uiSchemas, {key: uiSchemaKey})) {
-        schema.uiSchema = find(schema.uiSchemas, {key: uiSchemaKey}).uiSchema;
+      if (uiSchemaKey !== 'default' && find(schema.uiSchemas, { key: uiSchemaKey })) {
+        schema.uiSchema = find(schema.uiSchemas, { key: uiSchemaKey }).uiSchema;
       }
     }
 
     if (uiSchemaId) {
-      if (uiSchemaId !== 'default' && find(schema.uiSchemas, {key: uiSchemaKey})) {
-        schema.uiSchema = find(schema.uiSchemas, {key: uiSchemaId}).uiSchema;
+      if (uiSchemaId !== 'default' && find(schema.uiSchemas, { key: uiSchemaKey })) {
+        schema.uiSchema = find(schema.uiSchemas, { key: uiSchemaId }).uiSchema;
       }
     }
 
-    if(activeUiSchemaMenuItem && activeUiSchemaMenuItem.uiSchema) {
+    if (activeUiSchemaMenuItem && activeUiSchemaMenuItem.uiSchema) {
       console.log(`Setting ui schema to acitveSchema ${activeUiSchemaMenuItem.title}`);
       schema.uiSchema = activeUiSchemaMenuItem.uiSchema;
     }
@@ -878,8 +917,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     // #region setup functions
 
     const setFormContext = () => {
-      if(!schema.formContext)  schema.formContext = { };
-      schema.formContext = {...this.getFormContext(), ...schema.formContext };     
+      if (!schema.formContext) schema.formContext = {};
+      schema.formContext = { ...this.getFormContext(), ...schema.formContext };
     };
 
     const setFields = () => {
@@ -892,7 +931,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             DescriptionField: MaterialDescriptionField,
             NumberField: (props, context) => {
               const nilf = () => ({});
-              const { uiSchema, registry, onChange } = props;              
+              const { uiSchema, registry, onChange } = props;
               const uiOptions = uiSchema['ui:options'] || { readOnly: false };
 
               if (uiSchema["ui:widget"]) {
@@ -902,26 +941,26 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
                 let args = {};
                 const onInputChanged = (evt) => {
-                  evt.persist(); 
+                  evt.persist();
                   onChange(evt.target.value);
                 };
-                
+
                 return (<Input
-                  id={props.idSchema.$id}                  
+                  id={props.idSchema.$id}
                   type="number"
-                  margin="none"                  
+                  margin="none"
                   onChange={onInputChanged}
                   value={props.formData || 0}
                 />)
               }
 
-              
+
             },
             ObjectField: MaterialObjectField,
             SchemaField: MaterialSchemaField,
             StringField: MaterialStringField,
             TitleField: MaterialTitleField,
-            UnsupportedField: (props, context) => <Typography>Field {props.schema.title} type not supported</Typography>,            
+            UnsupportedField: (props, context) => <Typography>Field {props.schema.title} type not supported</Typography>,
             GridLayout: MaterialGridField
           };
           break;
@@ -935,8 +974,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       }
     };
 
-    const setWidgets = () => {     
-      switch (schema.uiFramework) {        
+    const setWidgets = () => {
+      switch (schema.uiFramework) {
         case 'material': {
           schema.widgets = {
             ...WidgetPresets,
@@ -948,7 +987,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             //ColorWidget
             //DateTimeWidget
             DateWidget: WidgetPresets.DateSelectorWidget,
-            EmailWidget: (props, context) => (<Input {...props} type="email"  />),
+            EmailWidget: (props, context) => (<Input {...props} type="email" />),
             //FileWidget
             //HiddenWidget
             //PasswordWidget
@@ -959,37 +998,37 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             //TextareaWidget
             //URLWidget
             //UpDownWidget
-                  
+
             DropZoneWidget: (props, context) => {
               // //console.log('Creating DropZone Widget', { props, context });
               const { uiSchema, formData } = props;
               const options = uiSchema['ui:options'];
-              
+
               const onDrop = (acceptedFiles, rejectedFiles) => {
                 // //console.log('Files Drop', {acceptedFiles, rejectedFiles});
                 acceptedFiles.forEach(file => {
-                  if(options.readAsString === true) {
+                  if (options.readAsString === true) {
                     // //console.log('reading file as string');
                     const reader = new FileReader();
                     reader.onload = () => {
-                        const fileAsBinaryString = reader.result;
-                        // do whatever you want with the file content
-                        // //console.log('File Data read');
-                        if(options.returnFileMeta === true) {
-                          props.onChange({content: fileAsBinaryString, file})
-                        } else {
-                          props.onChange(fileAsBinaryString)
-                        }                        
+                      const fileAsBinaryString = reader.result;
+                      // do whatever you want with the file content
+                      // //console.log('File Data read');
+                      if (options.returnFileMeta === true) {
+                        props.onChange({ content: fileAsBinaryString, file })
+                      } else {
+                        props.onChange(fileAsBinaryString)
+                      }
                     };
-                    reader.onabort = () => {} // //console.log('file reading was aborted');
-                    reader.onerror = () => {}// //console.log('file reading has failed');
-             
+                    reader.onabort = () => { } // //console.log('file reading was aborted');
+                    reader.onerror = () => { }// //console.log('file reading has failed');
+
                     reader.readAsBinaryString(file);
                   } else {
                     //pass files back for form post as mime attachment
-                    // //console.log('sending files', acceptedFiles);                    
+                    // //console.log('sending files', acceptedFiles);
                     props.onChange(acceptedFiles)
-                  }                    
+                  }
                 });
               };
 
@@ -997,41 +1036,41 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 //console.log('File Select Cancelled');
               };
 
-   
-            
-              const DzContent = (state: DropzoneState) => { 
-                
+
+
+              const DzContent = (state: DropzoneState) => {
+
                 return formData === undefined ? (<p>Try dropping some files here, or click to select files to upload. </p>) : (<div>We have content, drag another to overwrite!</div>)
               }
-              
+
               const dropZoneProps = {
                 accept: options.accept || ['*/*'],
                 onDrop: onDrop,
-                onFileDialogCancel: onCancel, 
+                onFileDialogCancel: onCancel,
                 children: DzContent,
               };
-              
+
               return (
                 <Fragment>
-                  <Dropzone {...dropZoneProps} />                                    
+                  <Dropzone {...dropZoneProps} />
                   <hr />
-                  <div dangerouslySetInnerHTML={{__html: formData}}></div>
+                  <div dangerouslySetInnerHTML={{ __html: formData }}></div>
                 </Fragment>
-              )              
-            },                                    
-            LogoWidget:  (props) => {
+              )
+            },
+            LogoWidget: (props) => {
               const { formData } = props
-              if(formData === undefined || formData === null) return <Typography>Logo loading...</Typography>
-              if(formData.organization && formData.organization.id) {
+              if (formData === undefined || formData === null) return <Typography>Logo loading...</Typography>
+              if (formData.organization && formData.organization.id) {
                 return (
-                  <Logo                                                    
+                  <Logo
                     backgroundSrc={api.getOrganizationLogo(formData.organization.id, formData.organization.logo)}
                   />
                 );
               } else {
                 return <Typography>Logo Widget Expecting "id" and "logo" properties.</Typography>
               }
-              
+
             }
           };
           break;
@@ -1041,54 +1080,54 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         }
       }
 
-      if(!schema.widgets) schema.widgets = { };
-      if(isArray(schema.widgetMap) === true)  {
+      if (!schema.widgets) schema.widgets = {};
+      if (isArray(schema.widgetMap) === true) {
         schema.widgetMap.forEach((map) => {
           api.log(`ReactoryForm:: Mapping ${map.widget} to ${map.componentFqn || map.component} ${schema.id}`, map, 'debug');
           let mapped = false;
-          
-          if(map.component && typeof map.component === 'string') {            
-            if(map.component.indexOf('.') > -1) {
+
+          if (map.component && typeof map.component === 'string') {
+            if (map.component.indexOf('.') > -1) {
               const pathArray = map.component.split('.');
               let component: Object = self.componentDefs[pathArray[0]];
-              if(component && Object.keys(component).length > 0) {
-                for(let pi = 1; pi <= pathArray.length - 1; pi += 1){
-                  if(component && Object.keys(component).length > 0) component = component[pathArray[pi]]                              
-                }                
+              if (component && Object.keys(component).length > 0) {
+                for (let pi = 1; pi <= pathArray.length - 1; pi += 1) {
+                  if (component && Object.keys(component).length > 0) component = component[pathArray[pi]]
+                }
                 schema.widgets[map.widget] = component;
                 api.log(`Component: ${schema.id}, ${map.component} successfully mapped`, { component }, 'debug')
                 mapped = true;
-            } else {
-              schema.widgets[map.widget] = self.componentDefs[map.component];
-                if(schema.widgets[map.widget]) {
+              } else {
+                schema.widgets[map.widget] = self.componentDefs[map.component];
+                if (schema.widgets[map.widget]) {
                   api.log(`Component: ${schema.id}, ${map.component} successfully mapped`, { component: schema.widgets[map.widget] }, 'debug')
                   mapped = true;
                 }
-              }                                    
+              }
             }
           }
 
-          if(map.componentFqn && map.widget && mapped === false) {
-            if(typeof map.componentFqn === 'string' && typeof map.widget === 'string') {                                          
+          if (map.componentFqn && map.widget && mapped === false) {
+            if (typeof map.componentFqn === 'string' && typeof map.widget === 'string') {
               schema.widgets[map.widget] = api.getComponent(map.componentFqn);
-              if(schema.widgets[map.widget]) {
-                api.log(`Component: ${schema.id}, ${map.componentFqn} successfully mapped`, { component: schema.widgets[map.widget] }, 'debug')            
+              if (schema.widgets[map.widget]) {
+                api.log(`Component: ${schema.id}, ${map.componentFqn} successfully mapped`, { component: schema.widgets[map.widget] }, 'debug')
                 mapped = true;
-              }                
+              }
             }
           }
-          
-          if(mapped === false) {
+
+          if (mapped === false) {
             schema.widgets[map.widget] = (props, context) => {
 
               return (<WidgetPresets.WidgetNotAvailable {...props} map={map} />)
 
             }
-            api.log(`Component could not be mapped for Form: ${schema.id}, ${map.widget}`, { map }, 'warning')            
-          }                  
+            api.log(`Component could not be mapped for Form: ${schema.id}, ${map.widget}`, { map }, 'warning')
+          }
         });
       }
-      
+
     };
 
     const setFieldTemplate = () => {
@@ -1134,7 +1173,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                   //setTimeout(()=>{
                   document.head.append(styleLink)
                   //}, styleLink.delay || 0);
-                  
+
                   break;
                 }
                 case 'script': {
@@ -1151,7 +1190,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                   api.log(`ReactoryFormComponent.form() - injectResources() Resource Type ${resource.type}, not supported.`, { resource }, 'warn');
                   break;
                 }
-              }              
+              }
             }
           })
         }
@@ -1162,47 +1201,47 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     setFields();
     setWidgets();
     setObjectTemplate();
-    setFieldTemplate();    
+    setFieldTemplate();
     setFormContext();
     //onCommand: this.onCommand,
     return schema
   }
 
   onSubmit(data) {
-    const { api } = this.props;        
+    const { api } = this.props;
     api.log(`Form Submit Clicked, ${this.instanceId}`, { data }, 'debug');
     const that = this;
-    that.setState({ busy: true }, ()=>{
-        if (that.props.onSubmit) { 
-          that.props.onSubmit(data, ( done )=>{ that.setState( { busy: false, message: done.message || 'Form has been submitted' } )  });
-        }
-        else {
-          api.log('Form has been submitted, no onSubmit handler provided, check graphql', {data})
-          api.log(`Form id:[${that.props.formId}] has no valid submit handler`, { formProps: that.props }, 'warn');
-          that.setState({ queryComplete: false, dirty: false, formData: data.formData });
-        }
-    });  
+    that.setState({ busy: true }, () => {
+      if (that.props.onSubmit) {
+        that.props.onSubmit(data, (done) => { that.setState({ busy: false, message: done.message || 'Form has been submitted' }) });
+      }
+      else {
+        api.log('Form has been submitted, no onSubmit handler provided, check graphql', { data })
+        api.log(`Form id:[${that.props.formId}] has no valid submit handler`, { formProps: that.props }, 'warn');
+        that.setState({ queryComplete: false, dirty: false, formData: data.formData });
+      }
+    });
   }
 
-  onChange(data) {        
-    if(deepEquals(this.state.formData, data.formData) === false) {
-      
-      const { api } = this.props;        
+  onChange(data) {
+    if (deepEquals(this.state.formData, data.formData) === false) {
+
+      const { api } = this.props;
       api.log(`Form Submit Clicked, ${this.instanceId}`, { data }, 'debug');
 
       const changed = diff(data.formData, this.state.formData)
       const rchanged = diff(this.state.formData, data.formData)
-      
-      if(this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {
-        const { refresh } = this.state.formDef;        
-        
+
+      if (this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {
+        const { refresh } = this.state.formDef;
+
         this.props.api.log('Form Delta', { changed, rchanged, refresh }, 'debug');
-        if(this.props.onChange) this.props.onChange(data, this, { before: changed, after: rchanged });
+        if (this.props.onChange) this.props.onChange(data, this, { before: changed, after: rchanged });
       } else {
-        if(this.props.onChange) this.props.onChange(data, this, { before: changed, after: rchanged })
-        this.setState({ formData: data.formData }); 
-      }          
-    }    
+        if (this.props.onChange) this.props.onChange(data, this, { before: changed, after: rchanged })
+        this.setState({ formData: data.formData });
+      }
+    }
   }
 
   onError(errors) {
@@ -1210,44 +1249,44 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     if (this.props.onError) this.props.onError(errors);
   }
 
-  onCommand(command, formData){
+  onCommand(command, formData) {
     // //console.log('onCommand raise', {command, formData});
-    if(this.props.onCommand) this.props.onCommand(command, formData);
+    if (this.props.onCommand) this.props.onCommand(command, formData);
   }
 
-  
+
   getFormData() {
-    const formDef = this.formDef();        
+    const formDef = this.formDef();
     let defaultFormValue = formDef.defaultFormValue || null;
-    if(typeof defaultFormValue === 'string' && defaultFormValue.indexOf('$$')) {
-       switch(defaultFormValue) {
-         case '$$forms':
-         default: {
-           defaultFormValue = this.state.forms;
-         }
-       }
-    } 
+    if (typeof defaultFormValue === 'string' && defaultFormValue.indexOf('$$')) {
+      switch (defaultFormValue) {
+        case '$$forms':
+        default: {
+          defaultFormValue = this.state.forms;
+        }
+      }
+    }
     let formData = null;
     const self = this;
-    switch(formDef.schema.type){
+    switch (formDef.schema.type) {
       case 'array': {
         formData = isArray(defaultFormValue) === true ? defaultFormValue : [];
-        if(isArray(this.state.formData)) formData = this.state.formData;
+        if (isArray(this.state.formData)) formData = this.state.formData;
         break;
       }
       case 'object': {
-        if(nil(defaultFormValue) === false){
-          defaultFormValue = Object.keys(defaultFormValue).length > 0 ? { ...defaultFormValue } : {};                    
+        if (nil(defaultFormValue) === false) {
+          defaultFormValue = Object.keys(defaultFormValue).length > 0 ? { ...defaultFormValue } : {};
         } else {
           defaultFormValue = {};
         }
-        
-        formData = (nil(this.state.formData) === false && Object.keys(this.state.formData).length > 0) 
-          ? { ...defaultFormValue, ...this.state.formData }        
+
+        formData = (nil(this.state.formData) === false && Object.keys(this.state.formData).length > 0)
+          ? { ...defaultFormValue, ...this.state.formData }
           : formData = { ...defaultFormValue };
 
-        Object.keys(this.state.query).forEach( property => {          
-          if(isNil(formData[property]) === true && isNil(self.state.query[property]) === false)  {
+        Object.keys(this.state.query).forEach(property => {
+          if (isNil(formData[property]) === true && isNil(self.state.query[property]) === false) {
             formData[property] = self.state.query[property];
           }
         });
@@ -1258,21 +1297,21 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         formData = this.state.formData || defaultFormValue;
         break;
       }
-    }    
+    }
     return formData
   }
 
   /**
    * Internal function responsible for Fetching Forms from remote source
    */
-  downloadForms(){
+  downloadForms() {
     const that = this;
     try {
       this.props.api.forms().then((forms: Reactory.IReactoryForm[]) => {
         const formDef = find(forms, { id: that.props.formId }) || simpleForm;
-        if(formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
+        if (formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
         let _activeUiSchemaMenuItem = null;
-        if(isArray(formDef.uiSchemas) === true && formDef.uiSchemas.length > 0) {
+        if (isArray(formDef.uiSchemas) === true && formDef.uiSchemas.length > 0) {
           _activeUiSchemaMenuItem = formDef.uiSchemas[0];
         }
 
@@ -1282,7 +1321,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         that.setState({ forms: [], forms_loaded: true, loading: false, formDef: simpleForm, formError: { message: loadError.message } })
       })
     } catch (formloadError) {
-      that.props.api.log(`Error loading forms`, {error: formloadError}, 'error');
+      that.props.api.log(`Error loading forms`, { error: formloadError }, 'error');
     }
   }
 
@@ -1295,32 +1334,32 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     let renderedComponent = null;
 
-    api.log(`ReactoryFormComponent.render() ${self.instanceId}`, { self }, 'debug' )
+    api.log(`ReactoryFormComponent.render() ${self.instanceId}`, { self }, 'debug')
 
-    if(this.state.forms_loaded === false) {      
+    if (this.state.forms_loaded === false) {
       this.downloadForms();
       renderedComponent = <Loading message={`Loading Form Definitions`} nologo={true} />
     } else {
-      if(formDef.graphql === null || formDef.graphql === undefined) {
+      if (formDef.graphql === null || formDef.graphql === undefined) {
         renderedComponent = this.renderForm(this.getFormData());
       } else {
         renderedComponent = this.renderWithQuery();
-      } 
-      
-      if(intersectionEnabled === true) {
-        
+      }
+
+      if (intersectionEnabled === true) {
+
         const intersectionProps: any = {
           onShow: (entries) => {
             api.log(`Component Visible ${self.instanceId}`, entries);
-          },  
+          },
           onHide: (entries) => {
             api.log(`Component Hide ${self.instanceId}`, entries);
           },
           onIntersect: (entries) => {
             api.log(`Component Insect ${self.instanceId}`, entries);
-          }  
+          }
         }
-  
+
         return (
           <IntersectionVisible  {...intersectionProps}>
             {renderedComponent}
@@ -1328,7 +1367,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         );
       }
     }
-      
+
     return renderedComponent;
   }
 }
@@ -1347,7 +1386,7 @@ class ReactoryFormRouter extends Component<any, any> {
     super(props, context);
   }
 
-  render(){
+  render() {
     const { match, api, routePrefix } = this.props;
 
     api.log('ReactoryFormRouter:render', { props: this.props }, 'debug');
@@ -1358,21 +1397,21 @@ class ReactoryFormRouter extends Component<any, any> {
             return (<ReactoryFormComponent formId={props.match.params.formId || 'ReactoryFormList'} mode={props.match.params.mode} {...props} />)
           }} />
           <Route path={`${routePrefix}/:formId/`} render={(props) => {
-            return (<ReactoryFormComponent formId={props.match.params.formId || 'ReactoryFormList'} mode='view' {...props}/>)
-          }} />      
+            return (<ReactoryFormComponent formId={props.match.params.formId || 'ReactoryFormList'} mode='view' {...props} />)
+          }} />
           <Route exact path={`${routePrefix}/`} render={(props) => {
-            return (<ReactoryFormComponent formId='ReactoryFormList' formData={{forms: api.formSchemas}} mode='view' {...props}/>)
-          }}>            
-          </Route>      
+            return (<ReactoryFormComponent formId='ReactoryFormList' formData={{ forms: api.formSchemas }} mode='view' {...props} />)
+          }}>
+          </Route>
         </Switch>
       </Fragment>
     )
-  }  
+  }
 };
 
 export const ReactoryFormRouterComponent = compose(
-  withApi, 
-  withTheme, 
+  withApi,
+  withTheme,
   withRouter)(ReactoryFormRouter);
 
 export default ReactoryFormRouterComponent;
