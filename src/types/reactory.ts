@@ -388,9 +388,19 @@ namespace Reactory {
     componentFqn: string,
     widget: string
   }
+  
+  export interface IObjectMap {
+    [key: string]: string | Array<any> | object
+  }
 
   export interface IReactoryPdfReport extends Client.IFramedWindowProperties {
-    title?: string
+    title?: string,
+    report: string,
+    folder: string,
+    icon?: string,
+    reportTitle?: string,
+    waitingText?: string,
+    dataMap?: IObjectMap
   }
 
   

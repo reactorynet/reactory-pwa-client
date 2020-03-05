@@ -169,6 +169,7 @@ export interface ReactoryFormState {
   showReportModal: boolean,
   showExportWindow: boolean,
   activeExportDefinition?: Reactory.IExport,
+  activeReportDefinition?:Reactory.IReactoryPdfReport,
   query?: any,
   busy: boolean,
   liveUpdate: boolean,
@@ -382,15 +383,22 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   getReportWidget() {
     const { ReportViewer, FullScreenModal } = this.componentDefs;
     const formDef = this.formDef();
+    const activeReportDefinition = this.state.activeReportDefinition || formDef.defaultPdfReport;
+    const closeReport = e => this.setState({ showReportModal: false, activeReportDefinition: null });
 
-    const closeReport = e => this.setState({ showReportModal: false });
+
+    let data = { ...this.state.formData }
+    if(activeReportDefinition && activeReportDefinition.dataMap) {
+      debugger;
+      data = this.props.api.utils.objectMapper(data, activeReportDefinition.dataMap)
+    }
 
     return (
       <FullScreenModal open={this.state.showReportModal === true} onClose={closeReport}>
+        {activeReportDefinition ? (
         <ReportViewer
-          {...formDef.defaultPdfReport}
-          data={this.state.formData}
-        />
+          {...{...activeReportDefinition, data}}          
+        />) : null}        
       </FullScreenModal>
     )
   }
@@ -422,8 +430,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     // this.setState({ showDebug: true })
   }
 
-  showReportModal() {
-    this.setState({ showReportModal: true })
+  showReportModal( reportDefinition = undefined ) {
+
+    this.setState({ showReportModal: true, activeReportDefinition: reportDefinition })
   }
 
   showExcelModal(exportDefinition: Reactory.IExport = undefined) {
@@ -481,7 +490,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     let toolbarposition = 'bottom'
     let showToolbar = true;
 
-    const formUiOptions = formDef.uiSchema['ui:options'];
+    const formUiOptions = formDef.uiSchema['ui:options'] || {
+      showSchemaSelectorInToolbar: true,
+    };
 
     if (formUiOptions) {
       if (formUiOptions && isNil(formUiOptions.showSubmit) === false) {
@@ -594,9 +605,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 activeUiSchemaMenuItem: selectedSchema
               }
             })
-          };
-
-          debugger;
+          };          
 
           uiSchemaSelector = (
             <div style={{ position: "absolute", top: "10px", right: "10px" }}>
@@ -622,6 +631,26 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     if (formDef.defaultPdfReport) {
       reportButton = (<Button variant="text" onClick={this.showReportModal} color="secondary"><Icon>print</Icon></Button>);
+    }
+
+    if (isArray(formDef.reports) === true) {
+
+      const onDropDownSelect = (evt, menuItem: any) => {        
+        self.props.api.log('Report Item Selected', { evt, menuItem }, 'debug');
+        self.showReportModal(menuItem.data);
+      };
+
+      let exportMenus = formDef.reports.map((reportDef: any, index) => {
+        return {
+          title: reportDef.title,
+          icon: reportDef.icon,
+          key: index,
+          id: `exportButton_${index}`,
+          data: reportDef,
+          disabled: self.props.api.utils.template(reportDef.disabled || "false")({ props: self.props, state: self.state }) === 'true',
+        }
+      });
+      reportButton = (<DropDownMenu menus={exportMenus} onSelect={onDropDownSelect} icon={"print"} />)
     }
 
     let exportButton = null;

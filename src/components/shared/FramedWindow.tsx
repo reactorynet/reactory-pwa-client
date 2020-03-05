@@ -207,7 +207,7 @@ class FramedWindow extends Component<any, any> {
       
       setTimeout(()=>{
         let form = document.forms[frameid];
-        form.submit();
+        if(form && form.submit) form.submit();
       }, 1500); 
       
       return (
