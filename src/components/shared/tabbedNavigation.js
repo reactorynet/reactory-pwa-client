@@ -100,7 +100,7 @@ class TabbedNavComponent extends Component {
           MainComponentToMount = api.getComponent("core.NotFound");
         }
         
-        let mainComponentProps = {};
+        let mainComponentProps = { key: index };
 
         if(componentFound === true) {
           mainComponentProps = { ...tab.componentProps };
@@ -115,7 +115,7 @@ class TabbedNavComponent extends Component {
 
         // ADDITIONAL COMPONENTS TO MOUNT
         const additionalComponents = tab.additionalComponents || [];                       
-        const additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, componentPropsMap }) => {
+        const additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, componentPropsMap }, additionalComponentIndex) => {
           let ComponentToMount = api.getComponent(componentFqn);
           api.log('TabbedNavigationComponent: ADDITIONALCOMPONENT', { componentProps, componentFqn }, 'debug');
           let additionalComponentFound = true;
@@ -131,16 +131,16 @@ class TabbedNavComponent extends Component {
           }
            
 
-          if(additionalComponentFound === true) return <ComponentToMount {...{...componentProps, ...mergedProperties}}/>
-          else return <ComponentToMount message={`Could not load component ${componentFqn}, please check your registry loaders and namings`}/>
+          if(additionalComponentFound === true) return <ComponentToMount {...{...componentProps, ...mergedProperties, key: additionalComponentIndex}}/>
+          else return <ComponentToMount message={`Could not load component ${componentFqn}, please check your registry loaders and namings`} key={additionalComponentIndex} />
         });
 
         let newPanel = index === state.value ? (
-        <TabPanel value={state.value} index={index} >
+        <TabPanel value={state.value} index={index} key={`panel_${index}`}>
           <MainComponentToMount {...mainComponentProps} />
           {additionalComponentsToMount}
         </TabPanel>) : (
-        <TabPanel value={state.value} index={index} >
+        <TabPanel value={state.value} index={index} key={`panel_${index}`}>
             <Typography>Not Visible Yet</Typography>
         </TabPanel>); 
 

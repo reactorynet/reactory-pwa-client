@@ -53,7 +53,7 @@ export default compose(withTheme, withStyles(MaterialFieldStyles), withApi)((pro
     classes,
   } = props;
 
-  api.log(`MaterialFieldTemplate Rendering field ${id}`, props);
+  // api.log(`MaterialFieldTemplate Rendering field ${id}`, props);
   
   const isObject = schema.type === 'object'
   const isBoolean = schema.type === 'boolean'

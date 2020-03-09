@@ -1,9 +1,9 @@
 import React, { Component, Fragment } from 'react';
 import { Button, Typography, Icon } from '@material-ui/core';
 import { compose } from 'recompose';
-import { withTheme } from '@material-ui/styles';
-import { template } from 'lodash';
-
+import { withTheme, withStyles } from '@material-ui/styles';
+import { template, isNil } from 'lodash';
+import { withApi } from '@reactory/client-core/api/ApiProvider';
 function formatMoney(amount, decimalCount = 2, decimal = ".", thousands = ",") {
   try {
     decimalCount = Math.abs(decimalCount);
@@ -22,6 +22,9 @@ function formatMoney(amount, decimalCount = 2, decimal = ".", thousands = ",") {
 
 class LabelWidget extends Component {
 
+  static rootStyle (theme) {
+    return {};
+  }
 
   render() {
 
@@ -41,6 +44,7 @@ class LabelWidget extends Component {
     let labelTitleProps = {};
     let labelBodyProps = {};
     let _renderHtml = false;
+    let LabelBody = null;
 
     let labelContainerProps = {
       id: `${props.idSchema && props.idSchema.$id ? props.idSchema.$id : undefined}`,
@@ -61,7 +65,10 @@ class LabelWidget extends Component {
         renderHtml,
         titleProps = {},
         bodyProps = {},
-        containerProps = {}
+        containerProps = {},
+        componentFqn = null,
+        componentProps = {},
+        componentPropsMap = {},
       } = props.uiSchema["ui:options"];
 
       if(containerProps.style) {
@@ -110,14 +117,32 @@ class LabelWidget extends Component {
         }
 
       }
+
+      if(typeof componentFqn === 'string' && isNil(componentFqn) === false) {        
+        const LabelComponentToMount = this.props.api.getComponent(componentFqn);
+        
+        let $componentProps =  (componentProps && Object.keys(componentProps).length > 1) ? { ...componentProps } : {};
+        if(componentPropsMap) {
+          const $mappedProps = this.props.api.utils.objectMappper(this.props, componentPropsMap);
+          if(Object.keys($mappedProps).length > 0) {
+            $componentProps = {...$componentProps, ...$mappedProps};
+          }
+          try {
+            LabelBody = (<LabelComponentToMount {...$componentProps} />);
+          } catch(componentErr) {
+            props.api.log('Error activating component for label value', {componentErr}, 'error');
+            LabelBody = (<Typography>{componentErr.message}</Typography>)
+          }          
+        }        
+      }
     }
 
-    let LabelBody;
-    if (_renderHtml){
+    
+    if (_renderHtml && LabelBody === null){
       LabelBody = <Typography variant={_variant} dangerouslySetInnerHTML={{__html: labelText}}></Typography>
     } else {
       LabelBody = <Typography variant={_variant}>{labelText}</Typography>
-    }
+    }    
 
     return (
       <div {...labelContainerProps}>
@@ -132,7 +157,7 @@ class LabelWidget extends Component {
   }
 }
 
-const LabelFieldComponent = compose(withTheme)(LabelWidget)
+const LabelFieldComponent = compose(withApi, withTheme, withStyles(LabelWidget.rootStyle))(LabelWidget)
 
 LabelFieldComponent.meta = {
   nameSpace: "core",

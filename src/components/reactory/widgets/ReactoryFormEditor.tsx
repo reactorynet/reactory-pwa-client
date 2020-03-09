@@ -11,10 +11,24 @@ import {
 
 import '@projectstorm/react-diagrams/dist/style.min.css';
 
-class ReactoryFormEditor extends Component {
+import { withStyles, withTheme } from '@material-ui/styles';
+import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { compose } from 'redux';
 
+class ReactoryFormEditor extends Component<any,{}> {
+
+  static styles = (theme) => {
+    return {
+      srdRoot: {
+        minHeight: `500px`
+      }
+    }
+  }
 
   render(){
+
+    const { uiSchema, schema, formData } = this.props;
+    debugger;
     var engine = new DiagramEngine();
     engine.installDefaultFactories();
 
@@ -37,16 +51,21 @@ class ReactoryFormEditor extends Component {
 
     //4) add the models to the root graph
     model.addAll(node1, node2, link1);
+    if(formData && formData.nodes) {
+      formData.nodes.forEach((node) => {
+        model.addNode(new DefaultNodeModel(node.title, node.color));
+      })      
+    }
 
     //5) load model into engine
     engine.setDiagramModel(model);
 
-    //6) render the diagram!
-    return <DiagramWidget diagramEngine={engine} />;
+    //6) render the diagram!    
+    return <DiagramWidget className={this.props.classes.srdRoot} diagramEngine={engine}/>;
   }
 
 }
 
-export default ReactoryFormEditor
+export default compose(withApi, withTheme, withStyles(ReactoryFormEditor.styles))(ReactoryFormEditor)
 
 

@@ -95,6 +95,7 @@ class RatingControl extends Component {
     this.state = {
       comment: props.comment || ''
     }
+    this.minWordCount = 10;
   }
 
   ratingClick(score) {
@@ -128,9 +129,12 @@ class RatingControl extends Component {
       behaviour,
       rating,      
       comment: evt.target.value,
+      persist: false,
     };
 
-    this.setState({ comment:data.comment });
+    this.setState({ comment:data.comment }, ()=> {      
+      that.props.onCommentChange(data);
+    });
   }
 
   confirmCustomDelete(){
@@ -158,29 +162,39 @@ class RatingControl extends Component {
     }
 
     let commentControl = null;
-    if ((rating.rating > 0 && rating.rating < 3 || behaviour.custom === true)) {
-      //const controlClasses = classNames( this.state.comment.split(' ').length < 10 ? classes.)
-      const hasError = this.state.comment.split(' ').length < 10;                  
-      commentControl = (<TextField
-        id="multiline-flexible"
-        label={this.state.comment.split(' ').length < 10 ? "How does this impact you? - * required" : "How does this impact you?"}
-        multiline
-        fullWidth
-        rowsMax="4"
-        variant="outlined"
-        error={hasError}
-        maxLength={5000}
-        value={this.state.comment}
-        onChange={assessment.complete === false ? this.commentChanged : () => {}}
-        onBlur={assessment.complete === false ? this.notifyChange : ()=> {}}
-        autoFocus={this.state.comment.split(' ').length < 10}
-        className={classes.textField}
-        disabled={assessment.complete === true}
-        margin="normal"        
-        helperText="Provide some context as to how this affects you personally or your ability to perform your duties (at least 10 words)."
-      />)
+    //if ((rating.rating > 0 && rating.rating < 3 || behaviour.custom === true)) {
+     //const controlClasses = classNames( this.state.comment.split(' ').length < 10 ? classes.)
+    const hasError = this.state.comment.split(' ').length < self.minWordCount && rating.rating <= 2;   
+    const wordCount = this.state.comment.split(' ').length;               
+    let wordsLeft = ''
 
+    if(wordCount === 0){
+      wordsLeft = ` (at least 10 words ${rating.rating <= 2 ? 'required!' : 'optional'})`;
     }
+
+    if(wordCount > 0 && wordCount < this.minWordCount && this.state.comment.length > 1) {
+      wordsLeft = ` (${this.minWordCount - wordCount} words left)`;
+    }
+    
+    commentControl = (<TextField
+      id="multiline-flexible"
+      label={this.state.comment.split(' ').length < self.minWordCount && rating.rating <= 2 ? "How does this impact you? - * required" : "How does this impact you?"}
+      multiline
+      fullWidth
+      rowsMax="4"
+      variant="outlined"
+      error={hasError}
+      maxLength={5000}
+      value={this.state.comment}
+      onChange={assessment.complete === false ? this.commentChanged : () => {}}
+      onBlur={assessment.complete === false ? this.notifyChange : ()=> {}}
+      autoFocus={this.state.comment.split(' ').length < 10}
+      className={classes.textField}
+      disabled={assessment.complete === true}
+      margin="normal"        
+      helperText={`Provide some ${rating.rating <= 2 ? 'required' : 'optional'} context as to how this affects you personally or your ability to perform your duties${wordsLeft}.`}
+    />);
+    
 
     let selectedLabel = find(behaviour.scale.entries, (entry) => {
       return entry.rating === rating.rating

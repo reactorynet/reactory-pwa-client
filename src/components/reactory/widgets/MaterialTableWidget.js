@@ -76,18 +76,18 @@ class MaterialTableWidget extends Component {
         if(isNil(def.component) === false && def.component !== undefined) {
           const ColRenderer = api.getComponent(def.component);
           def.render = ( rowData ) => {           
-            let props = { formData: formContext.$formData, rowData };
+            let props = { formData: formContext.$formData, rowData, api };
             let mappedProps = {};
 
             if(def.props) {
-              props = { ...props, ...def.props, ...mappedProps }
+              props = { ...props, ...def.props, ...mappedProps, api }
             } 
 
             //check if there is a propsMap property
             //maps self props 
             if(def.propsMap && props) {
               mappedProps = api.utils.objectMapper(props, def.propsMap);
-              props = {...props, ...mappedProps };
+              props = {...props, ...mappedProps, api };
             }
             
             if(ColRenderer) return <ColRenderer { ...props } />
@@ -102,20 +102,20 @@ class MaterialTableWidget extends Component {
           const { components } = def;
           def.render = ( rowData ) => {      
             api.log(`Child element to be rendered`, def);
-            const childrenComponents = components.map((componentDef) => {
+            const childrenComponents = components.map((componentDef, componentIndex) => {
             
               const ComponentToRender = api.getComponent(componentDef.component);
                           
-              let props = { formData: formContext.$formData, rowData };
+              let props = { formData: formContext.$formData, rowData, api, key: componentIndex };
               let mappedProps = {};
   
               if(componentDef.props) {
-                props = { ...props, ...componentDef.props, ...mappedProps }
+                props = { ...props, ...componentDef.props, ...mappedProps, api }
               } 
   
               if(componentDef.propsMap && props) {
                 mappedProps = api.utils.objectMapper(props, componentDef.propsMap);
-                props = {...props, ...mappedProps };
+                props = {...props, ...mappedProps, api };
               }                                      
               if(ComponentToRender) return <ComponentToRender { ...props } />
               else return <Typography>Renderer {componentDef.component} Not Found</Typography>
