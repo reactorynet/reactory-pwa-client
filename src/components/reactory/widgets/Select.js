@@ -1,6 +1,6 @@
 import React, { Fragment, Component } from 'react';
 import PropTypes from 'prop-types';
-import { pullAt, find } from 'lodash';
+import { pullAt, find, isArray } from 'lodash';
 import {
   Icon,
   FormControl,
@@ -56,14 +56,27 @@ class SelectWidget extends Component {
       required 
     } = this.props;
 
+    let controlProps = {
+      style: {
+        
+      },
+      className: `${this.props.classes.formControl}`
+    }; 
+    
+    let uiOptions = this.props.uiSchema['ui:options'] || {};
 
-    if(this.props.uiSchema['ui:options'] && this.props.uiSchema['ui:options'].selectOptions){
-      elements = this.props.uiSchema['ui:options'].selectOptions.map((option, index) => (
+
+    if(uiOptions.selectOptions && isArray(uiOptions.selectOptions) === true){ 
+      elements = uiOptions.selectOptions.map((option, index) => (
         <MenuItem key={option.key || index} value={option.value}>
-          { option.icon ? <Icon>{option.icon}</Icon> : null }
+          { option.icon ? <Icon {...(option.iconProps || { })}>{option.icon}</Icon> : null }
           {option.label}
         </MenuItem>))
     }
+
+    if(uiOptions.FormControl && uiOptions.FormControl.props) {
+      controlProps = { ...controlProps, ...uiOptions.FormControl.props }
+    };
 
     const matchOption = value => {
       if(this.props.uiSchema['ui:options'] && this.props.uiSchema['ui:options'].selectOptions){
@@ -79,7 +92,7 @@ class SelectWidget extends Component {
     
 
     return (
-      <FormControl className={this.props.classes.formControl}>
+      <FormControl className={this.props.classes.formControl} {...controlProps}>
           <InputLabel htmlFor={self.props.idSchema.$id}>{self.props.schema.title}</InputLabel>
           <Select
             value={self.props.formData || ""}

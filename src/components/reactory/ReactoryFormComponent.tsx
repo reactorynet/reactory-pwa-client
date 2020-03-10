@@ -1,4 +1,4 @@
-import React, { Component, Fragment, ReactNode } from 'react';
+import React, { Component, Fragment, ReactNode, DOMElement } from 'react';
 import PropTypes, { ReactNodeArray } from 'prop-types';
 import IntersectionVisible from 'react-intersection-visible';
 import Form from './form/components/Form';
@@ -230,7 +230,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   $events: EventEmitter = new EventEmitter();
   defaultComponents: string[];
   componentDefs: any;
-  formRef: null;
+  formRef: any;
   plugins: {};
   api: any;
   instanceId: string;
@@ -440,7 +440,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 
   renderForm(formData: any, onSubmit?: Function) {
-    this.props.api.log('Rendering Form', { props: this.props, state: this.state }, 'debug')
+    this.props.api.log('Rendering Form', { props: this.props, state: this.state, formData, onSubmit }, 'debug')
     const { loading, forms, busy, _instance_id } = this.state;
     const { DropDownMenu } = this.componentDefs;
     const self = this;
@@ -494,52 +494,62 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       showSchemaSelectorInToolbar: true,
     };
 
-    if (formUiOptions) {
-      if (formUiOptions && isNil(formUiOptions.showSubmit) === false) {
-        showSubmit = formUiOptions.showSubmit === true;
-      }
+    const $submitForm = () => {      
+      if(isNil(self.formRef) === false && self.formRef) {
+        try {
+          self.formRef.onSubmit();
+        } catch(submitError) {
+          self.props.api.log(`Could not submit the form`, submitError, 'error')
+        }
+      }      
+    }
 
-      if (formUiOptions && isNil(formUiOptions.showHelp) === false) {
-        showHelp = formUiOptions.showHelp === true;
-      }
+    if (formUiOptions && isNil(formUiOptions.showSubmit) === false) {
+      showSubmit = formUiOptions.showSubmit === true;
+    }
 
-      if (formUiOptions && isNil(formUiOptions.showRefresh) === false) {
-        showRefresh = formUiOptions.showRefresh === true;
-      }
+    if (formUiOptions && isNil(formUiOptions.showHelp) === false) {
+      showHelp = formUiOptions.showHelp === true;
+    }
 
-      if (formUiOptions && isNil(formUiOptions.toolbarPosition) === false) {
-        toolbarposition = formUiOptions.toolbarPosition
-      }
+    if (formUiOptions && isNil(formUiOptions.showRefresh) === false) {
+      showRefresh = formUiOptions.showRefresh === true;
+    }
 
-      const { submitProps } = formUiOptions;
-      if (typeof submitProps === 'object' && showSubmit === true) {
-        const { variant = 'fab', iconAlign = 'left' } = submitProps;
-        const _props = { ...submitProps };
-        delete _props.variant;
-        delete _props.iconAlign;
+    if (formUiOptions && isNil(formUiOptions.toolbarPosition) === false) {
+      toolbarposition = formUiOptions.toolbarPosition
+    }
 
-        if (variant && typeof variant === 'string' && showSubmit === true) {
-          switch (variant) {
-            case 'button': {
-              submitButton = (<Button type="submit" {..._props}>{iconAlign === 'left' && iconWidget}{template(_props.text)({ props: self.props, this: self })}{iconAlign === 'right' && iconWidget}</Button>);
-              break;
-            }
-            case 'fab':
-            default: {
-              submitButton = (<Fab type="submit"  {..._props}>{iconWidget}</Fab>);
-            }
+    const { submitProps } = formUiOptions;
+    if (typeof submitProps === 'object' && showSubmit === true) {
+      const { variant = 'fab', iconAlign = 'left' } = submitProps;
+      const _props = { ...submitProps };
+      delete _props.variant;
+      delete _props.iconAlign;      
+      _props.onClick = $submitForm;
+
+      if (variant && typeof variant === 'string' && showSubmit === true) {
+        switch (variant) {
+          case 'button': {
+            submitButton = (<Button {..._props}>{iconAlign === 'left' && iconWidget}{template(_props.text)({ props: self.props, this: self })}{iconAlign === 'right' && iconWidget}</Button>);
+            break;
+          }
+          case 'fab':
+          default: {
+            submitButton = (<Fab {..._props}>{iconWidget}</Fab>);
           }
         }
       }
+    }
       /**
        * options for submit buttons
        * variant = 'fab' / 'button'
        *
        */
-
-    }
-
-    if (showSubmit === true && submitButton === null) submitButton = (<Fab type="submit" color="primary">{iconWidget}</Fab>);
+    
+    if (showSubmit === true && submitButton === null) {
+      submitButton = (<Fab onClick={$submitForm} color="primary">{iconWidget}</Fab>);
+    } 
 
     let uiSchemaSelector = null;
 
