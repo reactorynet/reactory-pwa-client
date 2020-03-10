@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { isArray } from 'lodash';
 import { compose } from 'recompose';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { Tooltip } from '@material-ui/core';
@@ -8,7 +9,7 @@ import { withApi } from '@reactory/client-core/api/ApiProvider';
 class StyledCurrencyLabel extends Component {
 
   render() {
-    const { value, condition, currency, region, classes, uiSchema } = this.props;
+    const { value, condition, currency, region, classes, uiSchema, currencies, displayAdditionalCurrencies } = this.props;
 
     let isCents = true;
     let _value = value;
@@ -16,7 +17,8 @@ class StyledCurrencyLabel extends Component {
     let _postpendText = '';
     let _containerProps = {};
     let _tooltip = '';
-        
+    
+    
 
     if (uiSchema) {
       const uiOptions = uiSchema['ui:options'];
@@ -40,6 +42,20 @@ class StyledCurrencyLabel extends Component {
       }
     }
 
+    let otherCurrencies = [];
+    
+    if(currencies && isArray(currencies) && displayAdditionalCurrencies === true) {      
+      otherCurrencies = currencies.map((currency) => {
+        return (
+        <div className={classes.currency} {..._containerProps}>
+            <span>({currency.currency_code})&nbsp;</span>
+            <span className={classes.currencyValue}>
+              {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency.list_price_cents / 100) : currency.list_price_cents)}
+            </span>            
+        </div>)
+      });
+    }
+
     return (
       <Tooltip title={_tooltip} placement="right-start">
         <div className={classes.currency} {..._containerProps}>
@@ -48,7 +64,9 @@ class StyledCurrencyLabel extends Component {
             {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
           </span>
           {_postpendText != '' && <span>{_postpendText}</span>}
+          {otherCurrencies}
         </div>
+        
       </Tooltip>
     );
   }
