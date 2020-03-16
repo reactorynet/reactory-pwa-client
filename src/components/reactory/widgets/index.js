@@ -41,3 +41,4 @@ export { default as ColumnFilterWidget } from './ColumnFilterWidget';
 export { default as DataPageWidget } from './DataPageWidget';
 export { default as ReactoryFormEditor } from './ReactoryFormEditor';
 export { default as SchemaSelectorWidget } from './SchemaSelectorWidget';
+export { default as ReactoryDropZoneWidget } from './ReactoryDropZone';

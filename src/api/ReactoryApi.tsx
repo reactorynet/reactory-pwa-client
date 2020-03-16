@@ -602,12 +602,11 @@ class ReactoryApi extends EventEmitter {
         let mutationText = gql`${commandDef.graphql.mutation.text}`;
         let mutationResult = await this.graphqlMutation(mutationText, { ...variables }).then(result => {
           if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'refresh') {
-            console.log(`EXECUTING FORM REFRESH:: ${JSON.stringify(mutationResult)}`);
+            self.log(`EXECUTING FORM REFRESH:: ${JSON.stringify(mutationResult)}`);
             formProps.formContext.refresh();
           }
 
-          if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'notification') {
-            debugger;
+          if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'notification') {            
             const resultMap = commandDef.graphql.mutation.resultMap || {'*': '*'};
             let notificationProperties = { 
               ...(commandDef.graphql.mutation.notificationProperties || {}), 
