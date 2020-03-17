@@ -54,7 +54,7 @@ class MaterialTableWidget extends Component {
     const uiOptions = this.props.uiSchema['ui:options'] || {};
     const { formData, formContext } = this.props;
     let columns = [];
-    
+    let actions = []
     if(uiOptions.columns && uiOptions.columns.length) {
       let _columnRef = [];
       let _mergeColumns = false;
@@ -142,7 +142,7 @@ class MaterialTableWidget extends Component {
       data = async (query) => {
         try {          
           if(formContext.$formState.formDef.graphql && formContext.$formState.formDef.graphql.query) {
-            api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables }, 'debug')
+            api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables, query }, 'debug')
             let variables = api.utils.objectMapper(self, uiOptions.variables || formContext.$formState.formDef.graphql.query.variables);
             variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
             api.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
@@ -191,6 +191,29 @@ class MaterialTableWidget extends Component {
       options = { ...options, ...uiOptions.options }
     }
 
+    if(uiOptions.actions && isArray(uiOptions.actions) === true) {
+      actions = uiOptions.actions.map((action) => {
+        
+        const actionClickHandler = (rowData) => {
+          api.createNotification("row action click", {  });
+          switch(action.result) {
+            case "refresh":
+            default: {
+              formContext.refresh();
+            }
+          }
+        };
+
+        return {
+          icon: action.icon,
+          iconProps: action.iconProps || {},
+          tooltip: action.tooltip || 'No tooltip',
+          onClick: (evt, rowData) => {
+            actionClickHandler(rowData);
+          }
+        };
+      });
+    }
     
 
     return (
@@ -198,7 +221,8 @@ class MaterialTableWidget extends Component {
             columns={columns}                    
             data={data}            
             title={this.props.title || uiOptions.title || "no title"}
-            options={options}            
+            options={options}
+            actions={actions}            
             />
     )
   }

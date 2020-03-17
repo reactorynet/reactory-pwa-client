@@ -304,6 +304,7 @@ class ReactoryApi extends EventEmitter {
       title: 'Reactory Notification',
       body: 'Reactory Notification Body',
       icon: `${ThemeResource('images/favicon.ico')}`,
+      via: 'NotificationApi',
     };
 
     const checkNotificationPromise = () => {

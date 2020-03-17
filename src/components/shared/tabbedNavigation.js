@@ -14,6 +14,7 @@ import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import ApiProvider, { withApi } from '@reactory/client-core/api/ApiProvider';
 import { isArray } from 'util';
+import { getUiOptions } from '../reactory/form/utils';
 
 
 function TabPanel(props) {
@@ -58,6 +59,21 @@ class TabbedNavComponent extends Component {
     props.api.log(`TabbedNavComponent.constructor(props, context)`, {props, context});
   }
 
+  componentDidMount(){
+    //sync root path with selected item index
+    const { api, formContext, uiSchema } = this.props;
+
+    let options = getUiOptions(uiSchema);
+    if(options.activeTab && typeof options.activeTab === "string") {      
+      try {
+        let activeTab = api.utils.template(options.activeTab)({...this.props});
+      } catch (templateError) {
+        api.log(`Error parsing template`)
+      }
+      
+    }
+  }
+
   componentWillReceiveProps(nextProps) {
     this.props.api.log(`TabbedNavComponent.componentWillReceiveProps(nextProps)`, {nextProps});
   }
@@ -89,6 +105,8 @@ class TabbedNavComponent extends Component {
     const EmptyTab = (tab) => {
       return <Typography>NO TAB FOR {tab.componentFqn}</Typography>;
     }
+
+    let activeTabKey = null;
 
     if(_tabs.length > 0) {        
       _tabComponents = _tabs.map((tab, index) => {
