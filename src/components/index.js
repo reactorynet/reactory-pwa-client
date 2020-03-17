@@ -53,6 +53,7 @@ import ConditionalIconComponent from './shared/ConditionalIconComponent';
 import LabelComponent from './reactory/widgets/LabelWidget';
 import StyledCurrencyLabel from './shared/StyledCurrencyLabel';
 import PricingSliderComponent from './shared/PricingSliderComponent';
+import PricingLineChartComponent from './shared/PricingLineChartComponent';
 import TableChildComponentWrapper from './shared/TableChildComponentWrapper';
 
 import * as utils from './util';
@@ -135,6 +136,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'PricingSliderComponent',
     component: PricingSliderComponent,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'PricingLineChartComponent',
+    component: PricingLineChartComponent,
     version: '1.0.0',
   },
   {
