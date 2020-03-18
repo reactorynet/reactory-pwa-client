@@ -65,13 +65,13 @@ class TabbedNavComponent extends Component {
     const { api, formContext, uiSchema } = this.props;
 
     let options = getUiOptions(uiSchema);
-    if(options.activeTab && typeof options.activeTab === "string") {      
+    if(options.activeTab && typeof options.activeTab === "string") {
       try {
         let activeTab = api.utils.template(options.activeTab)({...this.props});
       } catch (templateError) {
         api.log(`Error parsing template`)
       }
-      
+
     }
   }
 

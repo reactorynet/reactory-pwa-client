@@ -55,6 +55,7 @@ import StyledCurrencyLabel from './shared/StyledCurrencyLabel';
 import PricingSliderComponent from './shared/PricingSliderComponent';
 import PricingLineChartComponent from './shared/PricingLineChartComponent';
 import TableChildComponentWrapper from './shared/TableChildComponentWrapper';
+import AccordionComponent from './shared/AccordionComponent';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -148,6 +149,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'TableChildComponentWrapper',
     component: TableChildComponentWrapper,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'AccordionComponent',
+    component: AccordionComponent,
     version: '1.0.0',
   },
   {
