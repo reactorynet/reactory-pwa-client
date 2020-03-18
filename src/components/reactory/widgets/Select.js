@@ -52,7 +52,8 @@ class SelectWidget extends Component {
       schema, 
       errorSchema,
       uiSchema, 
-      formData, 
+      formData,
+      formContext, 
       required 
     } = this.props;
 
@@ -67,11 +68,13 @@ class SelectWidget extends Component {
 
 
     if(uiOptions.selectOptions && isArray(uiOptions.selectOptions) === true){ 
-      elements = uiOptions.selectOptions.map((option, index) => (
+      elements = uiOptions.selectOptions.map((option, index) => {
+        
+        return (
         <MenuItem key={option.key || index} value={option.value}>
           { option.icon ? <Icon {...(option.iconProps || { })}>{option.icon}</Icon> : null }
           {option.label}
-        </MenuItem>))
+        </MenuItem>)})
     }
 
     if(uiOptions.FormControl && uiOptions.FormControl.props) {
@@ -85,8 +88,8 @@ class SelectWidget extends Component {
       }
     }
 
-    const onSelectChanged = (evt) => {
-      this.props.onChange(evt.target.value)
+    const onSelectChanged = (evt) => {      
+      this.props.onChange(evt.target.value)      
     }
 
     

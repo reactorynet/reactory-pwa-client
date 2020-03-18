@@ -482,6 +482,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       }
     }
 
+    if (formDef.uiSchema && formDef.uiSchema['ui:options']) {
+      if(formDef.uiSchema['ui:options'].submitIcon) {
+        icon = formDef.uiSchema['ui:options'].submitIcon
+      }      
+    }
+
     let iconWidget = (icon === '$none' ? null : <Icon>{icon}</Icon>);
     let showSubmit = true;
     let showRefresh = true;

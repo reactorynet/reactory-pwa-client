@@ -1,6 +1,6 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { Button, IconButton, Icon, Typography } from '@material-ui/core';
+import { Button, IconButton, Icon, Typography, Fab } from '@material-ui/core';
 import { isArray } from 'lodash';
 import { compose } from 'recompose';
 import { withTheme } from '@material-ui/styles';
@@ -71,13 +71,25 @@ class SlideOutLauncher extends Component {
     let _buttonVariant = buttonVariant ? tpl(buttonVariant) : '';
 
     const FullScreenModal = api.getComponent('core.FullScreenModal');
-    const ChildComponent = api.getComponent(componentFqn || 'core.Loading');
-
+    let ChildComponent = api.getComponent(componentFqn || 'core.Loading');
+    let componentFound = true;
     let childprops = {};
 
-    if (componentProps && this.state.open === true) {      
+    if(ChildComponent === null || ChildComponent === undefined) {
+      componentFound = false;
+      ChildComponent = api.getComponent("core.NotFound");
+      childprops = {
+        message: `The component you specified ${componentFqn} could not be found`,
+      };
+    } 
+    
+    if (componentProps && this.state.open === true && componentFound === true) {      
       childprops = api.utils.objectMapper(this.props, componentProps);
     }
+    
+    
+
+    
 
     let LaunchButton = (
       <Button onClick={onClick}>
@@ -90,9 +102,18 @@ class SlideOutLauncher extends Component {
     
     if(_buttonVariant === 'IconButton'){
       LaunchButton = (
-        <IconButton onClick={onClick}>
+        <IconButton onClick={onClick} color={buttonProps.color || "primary"} style={buttonProps.style || {}}>
           <Icon>{icon}</Icon>
         </IconButton>
+      )
+    }
+
+    if(_buttonVariant === "Fab") {
+      LaunchButton = (
+        <Fab size={buttonProps.size || "medium"} variant={buttonProps.variant || "round"} onClick={onClick} color={buttonProps.color || "primary"} style={buttonProps.style || {}}>
+          <Icon>{icon}</Icon>
+          {buttonProps.variant === "extended" && _buttonTitle}
+        </Fab>
       )
     }
 

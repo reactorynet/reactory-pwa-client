@@ -39,6 +39,10 @@ class ImageWidget extends Component {
           }
         }
       }
+
+      if(uiOptions.style) {
+        avatarProps.style = {...avatarProps.style, ...uiOptions.style}
+      }
     }
 
     return (

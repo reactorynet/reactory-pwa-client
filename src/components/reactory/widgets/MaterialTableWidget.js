@@ -54,7 +54,7 @@ class MaterialTableWidget extends Component {
 
   render() {
     const self = this;
-    const { api } = self.props;
+    const { api, theme } = self.props;
     const uiOptions = this.props.uiSchema['ui:options'] || {};
     const { formData, formContext } = this.props;
     let columns = [];
@@ -200,7 +200,24 @@ class MaterialTableWidget extends Component {
       }
     }
 
-    let options = {};
+    let options = {
+      rowStyle: (rowData, index) => {
+        api.log('rowstyle', {rowData, index})
+        let style = {};
+
+        if(theme.MaterialTableWidget) {
+          if(theme.MaterialTableWidget.rowStyle) style = { ...theme.MaterialTableWidget.rowStyle };
+          if(theme.MaterialTableWidget.altRowStyle && index % 2 === 0) style = { ...style, ...theme.MaterialTableWidget.altRowStyle };  
+        }
+
+        if(uiOptions.rowStyle) style = { ...uiOptions.rowStyle };
+        if(uiOptions.altRowStyle && index % 2 === 0) style = { ...style, ...uiOptions.altRowStyle };
+
+        //TODO CONDITIONAL STYLING
+
+        return style;
+      }
+    };
 
     if (uiOptions.options) {
       options = { ...options, ...uiOptions.options }
