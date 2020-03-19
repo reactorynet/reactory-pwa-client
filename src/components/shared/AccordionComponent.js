@@ -27,8 +27,6 @@ class AccordionWidget extends Component {
     let _panels = [];
     let _panelComponents = [];
 
-    console.log('Accordion Component: RENDER', { uiSchema, formContext });
-
     if (isArray(formData) === true) {
       _panels = [...formData];
     }
@@ -36,51 +34,6 @@ class AccordionWidget extends Component {
     if (uiOptions.panels && isArray(uiOptions.panels) === true) {
       _panels = [..._panels, ...uiOptions.panels];
     }
-
-    if (_panels.length > 0) {
-      _panelComponents = _panels.map((panel, index) => {
-
-        console.log('Accordion - ExpanderComponent: Panel', panel, 'debug');
-
-        const Components = panel.Components || [];
-        // const ComponentsToMount = Components.map(({ componentFqn, componentProps, componentPropsMap }, ComponentIndex) => {
-        //   let ComponentToMount = api.getComponent(componentFqn);
-        //   api.log('AcccordionComponent: COMPONENT', { componentProps, componentFqn }, 'debug');
-        //   let ComponentFound = true;
-        //   if (ComponentToMount === null || ComponentToMount === undefined) {
-        //     ComponentFound = false;
-        //     ComponentToMount = api.getComponent("core.NotFound");
-        //   }
-
-        //   let mergedProperties = {};
-
-        //   if (componentPropsMap) {
-        //     mergedProperties = api.utils.objectMapper(props, componentPropsMap)
-        //   }
-
-        //   if (ComponentFound === true)
-        //     return <ComponentToMount {...{ ...componentProps, ...mergedProperties, key: ComponentIndex }} />
-        //   else
-        //     return <ComponentToMount message={`Could not load component ${componentFqn}, please check your registry loaders and namings`} key={ComponentIndex} />
-        // });
-
-        // Create Expand Panels
-        // let newPanel = ()
-        //   <ExpansionPanel>
-        //     <ExpansionPanelSummary className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" >
-        //       <Typography>Panel Name</Typography>
-        //     </ExpansionPanelSummary>
-        //     <ExpansionPanelDetails>
-
-        //     </ExpansionPanelDetails>
-        //   </ExpansionPanel>
-
-        // _panelComponents.push(newPanel);
-
-      });
-    }
-
-    debugger;
 
     return (
       <div>
@@ -105,7 +58,7 @@ class AccordionWidget extends Component {
                     if (componentPropsMap) {
                       mergedProperties = api.utils.objectMapper(props, componentPropsMap)
                     }
-            
+
                     if (ComponentFound === true)
                       return <ComponentToMount {...{ ...componentProps, ...mergedProperties, key: ComponentIndex }} />
                     else
