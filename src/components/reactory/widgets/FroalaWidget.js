@@ -61,10 +61,6 @@ import 'font-awesome/css/font-awesome.css';
 import  FroalaEditor from 'react-froala-wysiwyg/lib/FroalaEditor';
 
 class FroalaWidget extends Component {
-  
-  static FroalaStyles = (theme) => {
-
-  }
 
   constructor(props, context){
     super(props, context)
@@ -427,6 +423,7 @@ class FroalaWidget extends Component {
       imageDefaultWidth: 300,
       imageDefaultDisplay: 'inline',
       zIndex: 101,
+      fontFamilyDefaultSelection: 'Roboto',
       fontFamily: {
         'Arial,Helvetica,sans-serif': 'Arial',
         'Georgia,serif': 'Georgia',
@@ -436,10 +433,11 @@ class FroalaWidget extends Component {
         'Verdana,Geneva,sans-serif': 'Verdana',
         "Roboto,Helvetica,Arial,sans-serif": "Roboto"        
       },
-      htmlAllowedTags: ['.*'],
-      htmlAllowedAttrs: ['.*'],
-      htmlRemoveTags: [''],
-      lineBreakerTags: [''],
+
+      //htmlAllowedTags: ['.*'],
+      //htmlAllowedAttrs: ['.*'],
+      //htmlRemoveTags: [''],
+      //lineBreakerTags: [''],
       lineBreakerOffset: 0,
       linkAlwaysBlank: true,
       linkText: true,
@@ -491,7 +489,11 @@ class FroalaWidget extends Component {
         />
       </FormControl>
     )
-  }  
+  }
+  
+  static FroalaStyles = (theme) => {
+    return {}
+  }
 }
 
 export default compose(withApi, withStyles(FroalaWidget.FroalaStyles), withTheme)(FroalaWidget)

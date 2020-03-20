@@ -17,13 +17,24 @@ import {
 import { withStyles, withTheme } from '@material-ui/styles';
 import { withApi } from '@reactory/client-core/api';
 import Reactory from '@reactory/client-core/types/reactory';
+import { getUiOptions } from '@reactory/client-core/components/reactory/form/utils';
 
 
 class SchemaSelectorWidget extends Component<any,any> {
 
 
   render(){
-    const { formContext } = this.props;
+    const { formContext, uiSchema } = this.props;
+
+    let ComponentToRender = null;
+
+    if(uiSchema ) {
+      let _options = getUiOptions(uiSchema);
+      if(_options) {
+
+      }
+    }
+
     if(formContext.$schemaSelector) {
       return formContext.$schemaSelector;
     } else {
