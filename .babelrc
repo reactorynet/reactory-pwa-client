@@ -19,7 +19,7 @@
     ["module-resolver", {
       "root": "./src",
       "alias": {
-        "@reactory/client-core" : "./src"
+        "@reactory/client-core" : "./src",        
       }      
     }],
 

@@ -215,6 +215,9 @@ class TabbedNavComponent extends Component {
 
     const open = Boolean(this.state.anchorEl);
 
+    let _components = [];
+    
+
     return (
       <div className={classes.root}>
         <AppBar position="static">
@@ -245,6 +248,7 @@ class TabbedNavComponent extends Component {
           }
 
         </Popover>
+        { _components }
       </div>
     );
 

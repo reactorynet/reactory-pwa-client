@@ -839,8 +839,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       if (query.autoQuery === false && that.state.autoQueryDisabled === false) {
         that.setState({ queryComplete: true, dirty: false, allowRefresh: true, loading: false });
       } else {
+        
+        const query_start = new Date().valueOf();
         api.graphqlQuery(gql(query.text), _variables).then((result: any) => {
-
+          const query_end = new Date().valueOf();
+          api.stat(`${formDef.nameSpace}.${formDef.name}@${formDef.version}:query:ttl`, { query_start, query_end, diff: query_end - query_start, unit: 'utc-date' });
           const { data, loading, errors } = result;
           let _formData = formData;
           if (data && data[query.name]) {

@@ -238,7 +238,7 @@ export default class Form extends Component {
     if(componentType === 'form') {
       return (
         <form
-          className={className ? className : "rjsf"}
+          className={className ? className : "reactory-form"}
           id={id}
           name={name}
           method={method}

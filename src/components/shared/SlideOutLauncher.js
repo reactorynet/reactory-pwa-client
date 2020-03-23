@@ -40,10 +40,29 @@ class SlideOutLauncher extends Component {
 
   render() {
 
-    const {
-      api,
+    let _props = { ...this.props };
+
+    let {      
       formData,
-      uiSchema,
+      uiSchema,     
+    } = _props;
+
+    let isFormWidget = false;
+
+    if(formData && uiSchema) {
+      isFormWidget = true;
+    }
+
+    if(isFormWidget && uiSchema["ui:options"]) {
+      const uiOptions = uiSchema["ui:options"];
+      if(uiOptions.props) {
+        _props = { ..._props, ...uiOptions.props }
+      }
+    };
+
+
+    let {
+      api,
       componentFqn,
       buttonTitle,
       windowTitle,
@@ -52,11 +71,13 @@ class SlideOutLauncher extends Component {
       buttonProps = {},
       componentProps,
       actions
-    } = this.props;
+    } = _props;
+
+
     const { onClick } = this;
 
-    let icon = buttonIcon;
-
+    let icon = buttonIcon;    
+            
     const tpl = (format) => {
       try {
         return api.utils.template(format)(this.props);
@@ -86,11 +107,7 @@ class SlideOutLauncher extends Component {
     if (componentProps && this.state.open === true && componentFound === true) {      
       childprops = api.utils.objectMapper(this.props, componentProps);
     }
-    
-    
-
-    
-
+                
     let LaunchButton = (
       <Button onClick={onClick}>
         <Icon>{icon}</Icon>

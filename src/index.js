@@ -5,6 +5,8 @@ import * as themes from './themes';
 import './index.css';
 import App from './App';
 import registerServiceWorker from './registerServiceWorker';
+import * as ReactoryTypes from './types/reactory';
+import * as Globals from './types/global';
 
 const theme = themes.getTheme();
 const props = {

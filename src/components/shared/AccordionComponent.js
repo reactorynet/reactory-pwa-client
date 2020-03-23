@@ -26,6 +26,7 @@ class AccordionWidget extends Component {
     const uiOptions = uiSchema["ui:options"] || {};
     let _panels = [];
     let _panelComponents = [];
+    let headerProps = {};
 
     if (isArray(formData) === true) {
       _panels = [...formData];
@@ -35,13 +36,18 @@ class AccordionWidget extends Component {
       _panels = [..._panels, ...uiOptions.panels];
     }
 
+    
+    if(uiOptions.Header) {
+      headerProps = {...headerProps, ...uiOptions.Header}
+    }
+
     return (
       <div>
         {
           _panels.map((panel, index) => {
             return (
               <ExpansionPanel>
-                <ExpansionPanelSummary className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" >
+                <ExpansionPanelSummary className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
                   <Typography>{`${index + 1}. ${panel.title}`}</Typography>
                 </ExpansionPanelSummary>
                 <ExpansionPanelDetails className={classes.panelBody}>

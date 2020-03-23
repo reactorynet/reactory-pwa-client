@@ -23,9 +23,13 @@
         "@reactory/client-core/*": ["src/*"],
         "test/*": ["test/*"]
       },
-      "pretty": true
+      "pretty": true,
+      "typeRoots": ["./node_modules/@types"]
   }, 
   "compileOnSave": true,  
   "exclude": [ "node_modules", "dist", "build", "config", "scripts" ],
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*",
+    "src/types/**/*.d.ts"
+  ]
 }

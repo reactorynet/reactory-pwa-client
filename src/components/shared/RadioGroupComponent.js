@@ -31,8 +31,6 @@ class RadioGroupWidget extends Component {
       classes,
     } = this.props;
 
-    debugger;
-
     const uiOptions = uiSchema['ui:options'];
     let labelTitle = uiOptions.label || '';
 
