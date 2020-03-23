@@ -1,25 +1,25 @@
-import React, { Fragment, Component } from 'react'
+import React, { Component } from 'react'
 import {
   Radio,
   RadioGroup,
   FormControlLabel
 } from '@material-ui/core';
-import { template } from 'lodash';
-import PropTypes from 'prop-types'
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
-import Avatar from '@material-ui/core/Avatar';
-import { getAvatar } from '../util';
 import { withApi } from '../../api/ApiProvider';
 
 class RadioGroupWidget extends Component {
 
   constructor(props, context) {
     super(props, context)
-
     this.state = {
-      selectedValue: 1
+      selectedValue: null
     }
+  }
+
+  componentDidMount() {
+    if (this.props.formData && this.props.formData != '')
+      this.setState({ selectedValue: this.props.formData });
   }
 
   render() {
@@ -29,15 +29,21 @@ class RadioGroupWidget extends Component {
       formData,
       uiSchema,
       classes,
+      onChange
     } = this.props;
-
-    debugger;
 
     const uiOptions = uiSchema['ui:options'];
     let labelTitle = uiOptions.label || '';
 
+    const self = this;
     const handleChange = event => {
-      this.setState({ value: event.target.value });
+      const value = event.target.value;
+      self.setState({ selectedValue: value }, () => {
+        if (onChange && typeof onChange === 'function') {
+          debugger;
+          this.props.onChange(value);
+        }
+      });
     };
 
     return (
@@ -45,22 +51,25 @@ class RadioGroupWidget extends Component {
         {labelTitle != '' && <label className={classes.label}>{labelTitle}</label>}
         <div>
           {
-            uiOptions.radioOptions.map(option => {
-              return (
-                <FormControlLabel
-                  checked={this.state.value == option.value}
-                  value={option.value}
-                  control={<Radio color="primary" />}
-                  label={option.label}
-                  labelPlacement="left"
-                  onChange={handleChange}
-                />
-              )
-            })
+            <RadioGroup style={{ flexDirection: 'row' }} aria-label="gender" name="radio group" value={this.state.selectedValue} onChange={handleChange}>
+              {
+                uiOptions.radioOptions.map(option => {
+                  return (
+                    <FormControlLabel
+                      control={<Radio color="primary" />}
+                      label={option.label}
+                      labelPlacement="left"
+                      value={option.value}
+                    />
+                  )
+                })
+              }
+            </RadioGroup>
           }
         </div>
-      </div>
+      </div >
     )
+
   }
 }
 
