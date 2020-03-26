@@ -81,15 +81,15 @@ class SlideOutLauncher extends Component {
       childprops = {
         message: `The component you specified ${componentFqn} could not be found`,
       };
-    } 
-    
-    if (componentProps && this.state.open === true && componentFound === true) {      
+    }
+
+    if (componentProps && this.state.open === true && componentFound === true) {
       childprops = api.utils.objectMapper(this.props, componentProps);
     }
-    
-    
 
-    
+
+
+
 
     let LaunchButton = (
       <Button onClick={onClick}>
@@ -98,8 +98,8 @@ class SlideOutLauncher extends Component {
       </Button>
     );
 
-    const { SpeedDial } = this.componentDefs;    
-    
+    const { SpeedDial } = this.componentDefs;
+
     if(_buttonVariant === 'IconButton'){
       LaunchButton = (
         <IconButton onClick={onClick} color={buttonProps.color || "primary"} style={buttonProps.style || {}}>
@@ -119,7 +119,7 @@ class SlideOutLauncher extends Component {
 
     if(_buttonVariant === 'Typography') {
       LaunchButton = (
-        <Typography onClick={onClick} variant={buttonProps.variant || "body2"} style={buttonProps.style || {}}>
+        <Typography onClick={onClick} variant={buttonProps.variant || "body2"} color={buttonProps.color || 'primary' } style={buttonProps.style || {}}>
           {icon ? <Icon>{icon}</Icon> : null}
           {_buttonTitle}
         </Typography>
@@ -139,10 +139,10 @@ class SlideOutLauncher extends Component {
           }
         }
       });
-      
+
       LaunchButton = (<SpeedDial actions={actions} icon={<Icon>{icon}</Icon>} />)
     }
-    
+
     return (
       <Fragment>
         {LaunchButton}
