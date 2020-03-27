@@ -1,4 +1,4 @@
-import React,{ Component } from "react";
+import React,{ Component, Fragment } from "react";
 import ReactDOM from "react-dom";
 import { compose, withProps } from "recompose";
 import {
@@ -44,7 +44,7 @@ const MapHOC = compose(
     >
       <input
         type="text"
-        placeholder="Customized your placeholder"
+        placeholder="Search Address"
         style={{
           boxSizing: `border-box`,
           border: `1px solid transparent`,
@@ -67,20 +67,77 @@ const MapHOC = compose(
 ));
 
 
+const VIEWMODES = {
+    MAP_WITH_SEARCH: 'MAP_WITH_SEARCH',
+    ADDRESS_LABEL: 'ADDRESS_LABEL',
+}
+
 class ReactoryGoogleMapWidget extends Component {
 
+    constructor(props, context) {
+        super(props, context)
+        this.state = {
+            markers: [],
+            places: []
+        }
+
+        this.getSearchResults = this.getSearchResults.bind(this);
+    }
+
+    getSearchResults(){
+        return this.state.places;
+    }
 
     render(){
 
-        const { formData, uiSchema, schema, api } = this.props;
-        let apiKey = process.env.GOOGLE_MAP_API_KEY; //REACTORY DEVELOPMENT KEY
+        const { formData, uiSchema, schema, api, viewMode = 'MAP_WITH_SEARCH' } = this.props;
+        const refs = {};
+        debugger;
         
+        let apiKey = process.env.GOOGLE_MAP_API_KEY; //REACTORY DEVELOPMENT KEY
+        const components = api.getComponents(['core.Loading', 'core.Label']);
+        const { Loading, Label } = components;
+        const self = this;
         let mapProps = {
-            googleMapURL: `https://maps.googleapis.com/maps/api/js?key=${apiKey}U&v=3.exp&libraries=geometry,drawing,places`,
+            ref: (mapRef) => {
+                self.map = mapRef;
+            },
+            googleMapURL: `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=3.exp&libraries=geometry,drawing,places`,
             isMarkerShown: true,
             markers: [],
             defaultZoom: 8,
-            defaultCenter: { lat: -34.397, lng: 150.644 }
+            defaultCenter: { lat: -34.397, lng: 150.644 },
+            onPlacesChanged: ()=>{
+                
+                const places = self.searchBox.getPlaces();
+                const bounds = new google.maps.LatLngBounds();
+
+                places.forEach(place => {
+                    api.log(`ReactoryGoogleMapWidget >>  Places found`, { places })
+                    if (place.geometry.viewport) {
+                        bounds.union(place.geometry.viewport)
+                    } else {
+                    bounds.extend(place.geometry.location)
+                    }
+                });
+                const nextMarkers = places.map(place => ({
+                    position: place.geometry.location,
+                }));
+                const nextCenter = _.get(nextMarkers, '0.position', this.state.center);
+
+                self.setState({
+                    center: nextCenter,
+                    markers: nextMarkers,
+                }, ()=>{                    
+                    if(self && self.map) self.map.fitBounds(bounds);
+                });
+            },
+            onMapMounted: ref => {
+                self.map = ref;
+            },
+            onSearchBoxMounted: (searchBoxRef) => {
+                self.searchBox = searchBoxRef;
+            },
         }
         
         if(uiSchema && uiSchema["ui:options"]) {
@@ -90,7 +147,24 @@ class ReactoryGoogleMapWidget extends Component {
           }  
         } 
 
-        return <MapHOC {...mapProps} />
+        const children = [];
+
+        if(viewMode.indexOf(VIEWMODES.MAP_WITH_SEARCH,0) >= 0) {
+            children.push(<MapHOC {...mapProps} />)
+        }
+
+        if(viewMode.indexOf(VIEWMODES.LABEL, 0) >= 0) {
+            let labelProps = {
+                
+            }
+            children.push(<Label {...labelProps} />)
+        }
+
+
+
+        children.push()
+                                        
+        return <Fragment>{children}</Fragment>
     }
 
     static Styles = (theme) =>({});
