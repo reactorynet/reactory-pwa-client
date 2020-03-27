@@ -57,6 +57,7 @@ import PricingLineChartComponent from './shared/PricingLineChartComponent';
 import TableChildComponentWrapper from './shared/TableChildComponentWrapper';
 import AccordionComponent from './shared/AccordionComponent';
 import RadioGroupComponent from './shared/RadioGroupComponent';
+import LookupComponent from './shared/LookupComponent';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -162,6 +163,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'RadioGroupComponent',
     component: RadioGroupComponent,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'LookupComponent',
+    component: LookupComponent,
     version: '1.0.0',
   },
   {
