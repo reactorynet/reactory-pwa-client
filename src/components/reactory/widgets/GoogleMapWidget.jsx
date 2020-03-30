@@ -1,4 +1,4 @@
-import React,{ Component, Fragment } from "react";
+import React,{ Component, Fragment, useState } from "react";
 import ReactDOM from "react-dom";
 import { compose, withProps } from "recompose";
 import {
@@ -13,8 +13,25 @@ import { SearchBox } from "react-google-maps/lib/components/places/SearchBox";
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { ReactoryApi } from "@reactory/client-core/api/ReactoryApi";
+import { 
+  Avatar, 
+  FormControl,
+  List,   
+  ListItem, 
+  ListItemText, 
+  ListItemAvatar, 
+  Icon, 
+  IconButton,
+  InputLabel,
+  InputAdornment,
+  OutlinedInput,
+  TextField, 
+  Typography,
+  useMediaQuery 
+} from "@material-ui/core";
 
-const DefaultCenter = { lat: -34.397, lng: 150.644 };
+import lodash from 'lodash';
+const DefaultCenter = { lat: -33.93264, lng: 18.4911213 };
 
 
 const MapHOC = compose(
@@ -24,8 +41,7 @@ const MapHOC = compose(
      * https://console.developers.google.com/apis/dashboard
      * The key "GOOGLE-MAP-API-KEY" can be ONLY used in this sandbox (no forked).
      */    
-    loadingElement: <div style={{ height: `100%` }} />,
-    containerElement: <div style={{ height: `400px` }} />,
+    //loadingElement: <div style={{ height: `100%` }} />,    
     mapElement: <div style={{ height: `100%` }} />
   }),
   withScriptjs,
@@ -33,7 +49,8 @@ const MapHOC = compose(
 )(props => (
   <GoogleMap 
     defaultZoom={8} 
-    defaultCenter={{ lat: -34.397, lng: 150.644 }} 
+    defaultCenter={DefaultCenter} 
+    center={props.center || DefaultCenter}
     onBoundsChanged={props.onBoundsChanged} 
     onCenterChanged={props.onCenterChanged} >
    <SearchBox
@@ -42,26 +59,50 @@ const MapHOC = compose(
       controlPosition={google.maps.ControlPosition.TOP_LEFT}
       onPlacesChanged={props.onPlacesChanged}
     >
-      <input
+      <TextField
         type="text"
         placeholder="Search Address"
-        style={{
-          boxSizing: `border-box`,
-          border: `1px solid transparent`,
-          width: `240px`,
-          height: `32px`,
-          marginTop: `27px`,
-          padding: `0 12px`,
-          borderRadius: `3px`,
-          boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
-          fontSize: `14px`,
-          outline: `none`,
-          textOverflow: `ellipses`,
-        }}
+        autoFocus={true}
+        inputProps={{
+          style:{
+            boxSizing: `border-box`,
+            border: `1px solid transparent`,
+            width: `240px`,
+            height: `42px`,
+            marginTop: `10px`,
+            padding: `0 12px`,
+            borderRadius: `3px`,
+            boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
+            //fontSize: `14px`,
+            outline: `none`,
+            textOverflow: `ellipses`,
+            backgroundColor: '#fff'
+          }
+        }}        
       />
     </SearchBox>
-    {props.markers.map((marker, index) =>
-      <Marker key={index} position={marker.position} />
+    {props.markers.map((marker, index) => {
+
+        const LasecMarker = (props) => {
+
+          const [ displayMarkerInfo, setDisplayMarkerInfo ] = useState(false);
+
+          const markerClicked = (evt) => {
+            setDisplayMarkerInfo(!displayMarkerInfo);
+          };
+  
+          return (<Marker {...props} onClick={markerClicked} />)
+        };
+
+        const markerProps = { 
+          key: index, 
+          position: marker.position,
+          title:marker.formatted_address 
+        };
+        
+        return <LasecMarker marker={markerProps} key={index} />
+      }
+      
     )}
   </GoogleMap>
 ));
@@ -70,7 +111,8 @@ const MapHOC = compose(
 const VIEWMODES = {
     MAP_WITH_SEARCH: 'MAP_WITH_SEARCH',
     ADDRESS_LABEL: 'ADDRESS_LABEL',
-}
+    TEXT_FIELD_WITH_LOOKUP: 'TEXT_FIELD_LOOKUP'
+};
 
 class ReactoryGoogleMapWidget extends Component {
 
@@ -78,25 +120,159 @@ class ReactoryGoogleMapWidget extends Component {
         super(props, context)
         this.state = {
             markers: [],
-            places: []
+            places: [],
+            center: null,
+            searchText: null,
         }
 
         this.getSearchResults = this.getSearchResults.bind(this);
+        this.getMarkers = this.getMarkers.bind(this);
+        this.getMapModal = this.getMapModal.bind(this);
+        this.getTextFieldWithSearch = this.getTextFieldWithSearch.bind(this);
+        this.components = props.api.getComponents([
+          'core.FullScreenModal',
+          'core.Loading',
+          'core.Label',
+        ])
     }
 
     getSearchResults(){
-        return this.state.places;
+      const { places } = this.state;
+      const { api } = this.props;
+      const self = this;
+      if(places.length && places.length > 0) {
+        api.log('GoogleMapWidget.getSearchResults', { places }, 'debug')        
+        const searchResults = (
+        <Fragment>
+          <Typography>Found {places.length} results matching</Typography>
+          <List>           
+          {places.map((place, index)=>{
+            api.log('GoogleMapWidget [place]', {place, index})
+            const setCenter = () => {            
+              self.setState({ center:  place.geometry.location }, ()=>{
+                if(self.props.onChange) {                  
+                  api.log('Address Selected', { place }, 'debug');
+                  self.props.onChange(api.utils.objectMapper(place, self.props.objectMap || {} ));
+                }
+              })
+            };
+
+            return(                           
+              <ListItem key={index} onClick={setCenter}>
+                <ListItemAvatar>
+                  <Avatar>
+                    <Icon>map</Icon>
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText key={index} primary={place.formatted_address}/>
+              </ListItem>)
+            })}
+          </List>
+        </Fragment>);
+        
+        return searchResults;
+
+      } else {
+        return null;
+      }      
+    }
+
+    getMarkers(){
+
+      return null;
+    }
+
+    getMapModal(mapProps){
+      const self = this;
+      const { FullScreenModal, Loading } = self.components;
+      const { schema, idSchema, title, theme } = self.props;
+      const { isDialogOpen } = self.state;
+
+      
+            
+      const MapModel = (props) => {
+        const shouldBreak = useMediaQuery(theme.breakpoints.down('sm'));
+        
+        const fullScreenProps = {
+          onClose : () => {
+            self.setState({ isDialogOpen: false })
+          },
+          open: isDialogOpen === true,
+          title: title || schema.title || 'Search Address',
+          id: `${idSchema.$id||schema.name}_GoogleMapWidget`,
+          fullScreen: shouldBreak === true,
+          fullWidth: true,
+          maxWidth: false,          
+        };
+          
+
+        const onMapMarkerClicked = (marker) => {
+          api.log('GoogleMapWidget.onMapMarkerCLicked', {marker}, 'debug');
+        };
+
+        return (
+          <FullScreenModal {...fullScreenProps}>
+            <MapHOC {...{
+              ...mapProps, 
+              containerElement: shouldBreak === true ? (<div style={{ height: window.innerHeight - 80 }} />) : (<div style={{ height: `400px` }} />),
+              loadingElement: (<Loading message="Loading Map"/>),
+              onMapMarkerClicked      
+            }} />
+          </FullScreenModal>
+        );
+      };
+
+      return (<MapModel {...this.props} />)
+      
+    }
+
+    getTextFieldWithSearch() {
+
+      const self = this;
+      const { schema, idSchema, title, formData, uiSchema } = self.props;
+      const { isDialogOpen } = self.state;
+
+      const {
+        fullAddress 
+      } = formData;
+
+      const handleChange = (e) => {
+        self.setState({searchText: e.target.value });
+      };
+
+      const searchClicked = () => { this.setState({ isDialogOpen: true  })}
+
+      return (<FormControl variant="outlined">
+          <InputLabel htmlFor="outlined-adornment-password">{title || schema.title}</InputLabel>
+          <OutlinedInput
+            id="outlined-adornment-password"
+            type={'text'}
+            value={fullAddress}
+            onChange={handleChange}
+            endAdornment={
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={searchClicked}                  
+                  edge="end"
+                >
+                  <Icon>search</Icon>
+                </IconButton>
+              </InputAdornment>
+            }
+            labelWidth={70}
+          />
+        </FormControl>);     
     }
 
     render(){
 
         const { formData, uiSchema, schema, api, viewMode = 'MAP_WITH_SEARCH' } = this.props;
         const refs = {};
-        debugger;
+        const { center } = this.state;        
         
-        let apiKey = process.env.GOOGLE_MAP_API_KEY; //REACTORY DEVELOPMENT KEY
-        const components = api.getComponents(['core.Loading', 'core.Label']);
-        const { Loading, Label } = components;
+        let apiKey = process.env.GOOGLE_MAP_API_KEY; //REACTORY DEVELOPMENT KEY        
+        const { Loading, Label } = this.components;
         const self = this;
         let mapProps = {
             ref: (mapRef) => {
@@ -104,9 +280,10 @@ class ReactoryGoogleMapWidget extends Component {
             },
             googleMapURL: `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=3.exp&libraries=geometry,drawing,places`,
             isMarkerShown: true,
-            markers: [],
+            markers: self.state.markers || [],
             defaultZoom: 8,
-            defaultCenter: { lat: -34.397, lng: 150.644 },
+            defaultCenter: self.state.center || { lat: -34.397, lng: 150.644 },
+            center,
             onPlacesChanged: ()=>{
                 
                 const places = self.searchBox.getPlaces();
@@ -123,11 +300,12 @@ class ReactoryGoogleMapWidget extends Component {
                 const nextMarkers = places.map(place => ({
                     position: place.geometry.location,
                 }));
-                const nextCenter = _.get(nextMarkers, '0.position', this.state.center);
+                const nextCenter = lodash.get(nextMarkers, '0.position', this.state.center);
 
                 self.setState({
                     center: nextCenter,
                     markers: nextMarkers,
+                    places: places,
                 }, ()=>{                    
                     if(self && self.map) self.map.fitBounds(bounds);
                 });
@@ -141,7 +319,6 @@ class ReactoryGoogleMapWidget extends Component {
         }
         
         if(uiSchema && uiSchema["ui:options"]) {
-
           if(uiSchema["ui:options"].mapProps) {
             mapProps = {...mapProps, ...uiSchema["ui:options"].mapProps }
           }  
@@ -149,20 +326,17 @@ class ReactoryGoogleMapWidget extends Component {
 
         const children = [];
 
+        children.push(this.getTextFieldWithSearch());
+
         if(viewMode.indexOf(VIEWMODES.MAP_WITH_SEARCH,0) >= 0) {
-            children.push(<MapHOC {...mapProps} />)
+            children.push(this.getMapModal(mapProps));
         }
 
         if(viewMode.indexOf(VIEWMODES.LABEL, 0) >= 0) {
-            let labelProps = {
-                
-            }
+            let labelProps = {};
             children.push(<Label {...labelProps} />)
         }
-
-
-
-        children.push()
+        
                                         
         return <Fragment>{children}</Fragment>
     }

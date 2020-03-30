@@ -481,13 +481,13 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
 
     const exportDefinition: Reactory.IExport = this.props.exportDefinition
     let formData = self.props.data;
-    
-    if(exportDefinition.mapping && exportDefinition.mappingType === 'om') {
-      formData = self.props.api.utils.objectMapper({ formData }, exportDefinition.mapping);
-    }
-
-    
+            
     if(exportDefinition) {
+
+      if(exportDefinition.mapping && exportDefinition.mappingType === 'om') {
+        formData = self.props.api.utils.objectMapper({ formData }, exportDefinition.mapping);
+      }
+
       const wb = new ExcelJS.Workbook();            
       const excelOptions: Reactory.IExcelExportOptions = exportDefinition.exportOptions;
             

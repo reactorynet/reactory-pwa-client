@@ -1273,21 +1273,21 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   onChange(data) {
     if (deepEquals(this.state.formData, data.formData) === false) {
-
       const { api } = this.props;
-      api.log(`Form Submit Clicked, ${this.instanceId}`, { data }, 'debug');
-
-      const changed = diff(data.formData, this.state.formData)
-      const rchanged = diff(this.state.formData, data.formData)
-
-      if (this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {
-        const { refresh } = this.state.formDef;
-
-        this.props.api.log('Form Delta', { changed, rchanged, refresh }, 'debug');
-        if (this.props.onChange) this.props.onChange(data, this, { before: changed, after: rchanged });
-      } else {
-        if (this.props.onChange) this.props.onChange(data, this, { before: changed, after: rchanged })
-        this.setState({ formData: data.formData });
+      const { formDef } = this.state;
+      api.log(`${formDef.name}[${this.instanceId}].onChange`, { data }, 'debug');
+      const $onChange = this.props.onChange;
+      const trigger_onChange = $onChange && typeof $onChange === 'function';
+      const fire = () => ( $onChange(data, this, { before: changed, after: rchanged }))
+      const changed = diff(data.formData, this.state.formData);
+      const rchanged = diff(this.state.formData, data.formData);
+      api.log(`${formDef.name}[${this.instanceId}].onChange`, { changed, rchanged }, 'debug');
+      if (this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {                
+        if (trigger_onChange === true) fire();
+      } else {        
+        this.setState({ formData: data.formData }, () => {
+          if (trigger_onChange === true) fire();
+        });
       }
     }
   }

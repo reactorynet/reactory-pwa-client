@@ -43,15 +43,23 @@ class FullScreenDialog extends Component {
   };
 
   render() {
-    const { classes, title, containerProps = {}, slide = 'up' } = this.props;
+    const { open, classes, title, containerProps = {}, slide = 'up', fullScreen = true, fullWidth = true, maxWidth = false } = this.props;
+
+    let dialogProps = {
+      fullScreen: fullScreen === true ? 'fullScreen' : undefined,
+      fullWidth,
+      maxWidth,
+      open,
+      onClose: this.handleClose,
+      TransitionComponent: Transition,      
+      ...containerProps
+    };
+
+
     return (
       <Fragment>
         <Dialog
-          fullScreen
-          open={this.props.open}
-          onClose={this.handleClose}
-          TransitionComponent={Transition}
-          {...containerProps}
+          {...dialogProps}
         >
           <AppBar className={classes.appBar}>
             <Toolbar>
