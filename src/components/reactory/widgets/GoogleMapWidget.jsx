@@ -41,21 +41,27 @@ const MapHOC = compose(
      * https://console.developers.google.com/apis/dashboard
      * The key "GOOGLE-MAP-API-KEY" can be ONLY used in this sandbox (no forked).
      */    
-    //loadingElement: <div style={{ height: `100%` }} />,    
+    loadingElement: <div style={{ height: `100%` }} />,    
     mapElement: <div style={{ height: `100%` }} />
   }),
   withScriptjs,
   withGoogleMap
-)(props => (
-  <GoogleMap 
+)(props => { 
+  
+  const $mapProps = props;
+
+  const { api } = $mapProps;
+  
+  return (
+    <GoogleMap 
     defaultZoom={8} 
     defaultCenter={DefaultCenter} 
-    center={props.center || DefaultCenter}
-    onBoundsChanged={props.onBoundsChanged} 
-    onCenterChanged={props.onCenterChanged} >
+    center={$mapProps.center || DefaultCenter}
+    onBoundsChanged={$mapProps.onBoundsChanged} 
+    onCenterChanged={$mapProps.onCenterChanged} >
    <SearchBox
-      ref={props.onSearchBoxMounted}
-      bounds={props.bounds}
+      ref={$mapProps.onSearchBoxMounted}
+      bounds={$mapProps.bounds}
       controlPosition={google.maps.ControlPosition.TOP_LEFT}
       onPlacesChanged={props.onPlacesChanged}
     >
@@ -81,31 +87,34 @@ const MapHOC = compose(
         }}        
       />
     </SearchBox>
-    {props.markers.map((marker, index) => {
-
+    {$mapProps.markers.map((marker, index) => {
         const LasecMarker = (props) => {
-
+          const $LasecMarkerProps = props;
           const [ displayMarkerInfo, setDisplayMarkerInfo ] = useState(false);
 
           const markerClicked = (evt) => {
             setDisplayMarkerInfo(!displayMarkerInfo);
           };
   
-          return (<Marker {...props} onClick={markerClicked} />)
+          return (<Marker {...$LasecMarkerProps} onClick={markerClicked} />)
         };
 
         const markerProps = { 
           key: index, 
           position: marker.position,
-          title:marker.formatted_address 
+          title:marker.formatted_address,
+          marker,
+          onMarkerClicked: (evt) => {
+
+          } 
         };
         
-        return <LasecMarker marker={markerProps} key={index} />
+        return (<LasecMarker {...markerProps} />)
       }
       
     )}
-  </GoogleMap>
-));
+  </GoogleMap>);
+});
 
 
 const VIEWMODES = {
@@ -178,14 +187,13 @@ class ReactoryGoogleMapWidget extends Component {
     }
 
     getMarkers(){
-
-      return null;
+      return this.state.markers;
     }
 
     getMapModal(mapProps){
       const self = this;
       const { FullScreenModal, Loading } = self.components;
-      const { schema, idSchema, title, theme } = self.props;
+      const { schema, idSchema, title, theme, api } = self.props;
       const { isDialogOpen } = self.state;
 
       
@@ -216,7 +224,8 @@ class ReactoryGoogleMapWidget extends Component {
               ...mapProps, 
               containerElement: shouldBreak === true ? (<div style={{ height: window.innerHeight - 80 }} />) : (<div style={{ height: `400px` }} />),
               loadingElement: (<Loading message="Loading Map"/>),
-              onMapMarkerClicked      
+              onMapMarkerClicked, 
+              api      
             }} />
           </FullScreenModal>
         );
@@ -241,22 +250,20 @@ class ReactoryGoogleMapWidget extends Component {
       };
 
       const searchClicked = () => { this.setState({ isDialogOpen: true  })}
-
+      const controlId = `${idSchema.$id}_AddressLabel`;
       return (<FormControl variant="outlined">
-          <InputLabel htmlFor="outlined-adornment-password">{title || schema.title}</InputLabel>
+          <InputLabel htmlFor={`${controlId}`}>{title || schema.title}</InputLabel>
           <OutlinedInput
-            id="outlined-adornment-password"
+            id={`${controlId}`}
             type={'text'}
             value={fullAddress}
-            onChange={handleChange}
+            readOnly            
             endAdornment={
               <InputAdornment position="end">
                 <IconButton
-                  aria-label="toggle password visibility"
+                  aria-label="Find Address"
                   onClick={searchClicked}                  
-                  edge="end"
-                >
-                  <Icon>search</Icon>
+                  edge="end"><Icon>search</Icon>
                 </IconButton>
               </InputAdornment>
             }
@@ -274,6 +281,8 @@ class ReactoryGoogleMapWidget extends Component {
         let apiKey = process.env.GOOGLE_MAP_API_KEY; //REACTORY DEVELOPMENT KEY        
         const { Loading, Label } = this.components;
         const self = this;
+        debugger
+
         let mapProps = {
             ref: (mapRef) => {
                 self.map = mapRef;
@@ -285,7 +294,6 @@ class ReactoryGoogleMapWidget extends Component {
             defaultCenter: self.state.center || { lat: -34.397, lng: 150.644 },
             center,
             onPlacesChanged: ()=>{
-                
                 const places = self.searchBox.getPlaces();
                 const bounds = new google.maps.LatLngBounds();
 
@@ -299,6 +307,8 @@ class ReactoryGoogleMapWidget extends Component {
                 });
                 const nextMarkers = places.map(place => ({
                     position: place.geometry.location,
+                    title: place.formatted_address,
+                    place,
                 }));
                 const nextCenter = lodash.get(nextMarkers, '0.position', this.state.center);
 
