@@ -91,9 +91,11 @@ const MapHOC = compose(
         const LasecMarker = (props) => {
           const $LasecMarkerProps = props;
           const [ displayMarkerInfo, setDisplayMarkerInfo ] = useState(false);
-
           const markerClicked = (evt) => {
             setDisplayMarkerInfo(!displayMarkerInfo);
+            if($LasecMarkerProps && $LasecMarkerProps.onMarkerClicked) {
+              $LasecMarkerProps.onMarkerClicked(evt, marker)
+            }
           };
   
           return (<Marker {...$LasecMarkerProps} onClick={markerClicked} />)
@@ -104,9 +106,9 @@ const MapHOC = compose(
           position: marker.position,
           title:marker.formatted_address,
           marker,
-          onMarkerClicked: (evt) => {
-
-          } 
+          onMarkerClicked: (evt, m) => {
+            api.log(`Marker clicked`, {_marker: m}, 'debug');
+          }, 
         };
         
         return (<LasecMarker {...markerProps} />)

@@ -12,8 +12,11 @@ import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
 import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
-import { ApolloProvider, Query, Mutation } from 'react-apollo';
+import { ApolloProvider, Query, Mutation, Subscription } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
+import { WebSocketLink } from "apollo-link-ws";
+import { SubscriptionClient } from "subscriptions-transport-ws";
+const { createUploadLink } = require('apollo-upload-client');
 import { setContext } from 'apollo-link-context';
 import { ThemeProvider, Theme } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -59,7 +62,13 @@ const authLink = setContext((_, { headers }) => {
   }
 });
 
+/*
 const httpLink = createHttpLink({
+  uri: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`,
+  fetch: fetch
+});
+*/
+const uploadLink = createUploadLink({
   uri: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`,
   fetch: fetch
 });
@@ -67,7 +76,7 @@ const httpLink = createHttpLink({
 const cache = new InMemoryCache();
 
 const client = new ApolloClient({
-  link: authLink.concat(httpLink),
+  link: authLink.concat(uploadLink),
   cache,
   defaultOptions: {
     watchQuery: {
@@ -84,6 +93,15 @@ const client = new ApolloClient({
   },
 });
 
+const ws_client = new SubscriptionClient(`${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`.replace('http', 'ws'), {
+  reconnect: true,
+  reconnectionAttempts: 5,
+  timeout: 1000
+});
+
+const ws_link = new WebSocketLink(ws_client);
+
+
 const setTheme = (theme) => {
   localStorage.setItem('theme', theme)
 };
@@ -95,7 +113,8 @@ const getTheme = () => {
 const api = new ReactoryApi(client, {
   clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
   clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
-  $version: packageInfo.version
+  $version: packageInfo.version,
+  $ws_link: ws_link,
 });
 
 //register built-in components
@@ -103,6 +122,7 @@ componentRegistery.forEach((componentDef) => {
   const { nameSpace, name, version, component } = componentDef
   api.registerComponent(nameSpace, name, version, component);
 });
+
 const store = configureStore();
 api.reduxStore = store;
 
@@ -116,7 +136,6 @@ export interface AppState {
   validationError: any,
   offline: boolean,
   currentRoute: any
-
 }
 
 class App extends Component<any, AppState> {
@@ -364,24 +383,24 @@ App.defaultProps = {
 
 export default App;
 
-
 /**
- * 
-* <PrivateRoute exact path="/" component={Home}/>                  
-                    <PrivateRoute path="/admin" component={AdminDashboard} />              
-                    <Route exact path="/login" component={Login} />
-                    <Route exact path="/forgot" component={ForgotForm}/>
-                    <Route exact path="/reset-password" component={ResetPasswordForm}/>    
-                    <Route exact path="/register" component={Register } />
-                    <PrivateRoute path="/assess/:assessmentId" component={Assessment} />
-                    <PrivateRoute exact path="/inbox" component={UserInbox} />
-                    <PrivateRoute exact path="/users" component={UserList} />
-                    <PrivateRoute path="/profile" component={Profile}/>
-                    <PrivateRoute path="/surveys" component={UserSurvey} />
-                    <PrivateRoute path="/reports" component={Report} />
-                    <PrivateRoute path="/tasks" component={ChatDashboard} />
-                    <PrivateRoute path="/actions" component={TaskDashboard} />                    
-                    <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
+* 
+* 
+  <PrivateRoute exact path="/" component={Home}/>                  
+  <PrivateRoute path="/admin" component={AdminDashboard} />              
+  <Route exact path="/login" component={Login} />
+  <Route exact path="/forgot" component={ForgotForm}/>
+  <Route exact path="/reset-password" component={ResetPasswordForm}/>    
+  <Route exact path="/register" component={Register } />
+  <PrivateRoute path="/assess/:assessmentId" component={Assessment} />
+  <PrivateRoute exact path="/inbox" component={UserInbox} />
+  <PrivateRoute exact path="/users" component={UserList} />
+  <PrivateRoute path="/profile" component={Profile}/>
+  <PrivateRoute path="/surveys" component={UserSurvey} />
+  <PrivateRoute path="/reports" component={Report} />
+  <PrivateRoute path="/tasks" component={ChatDashboard} />
+  <PrivateRoute path="/actions" component={TaskDashboard} />                    
+  <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
  * 
  * 
  */

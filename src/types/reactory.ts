@@ -347,6 +347,7 @@ namespace Reactory {
     resultMap?: Object,
     queryMessage?: string,
     variables: Object,
+    formData?: Object,
     edit?: boolean,
     new?: boolean,
     delete?: boolean,

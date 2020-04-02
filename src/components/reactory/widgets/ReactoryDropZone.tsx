@@ -69,7 +69,8 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
 }
 
 
-class ReactoryDropZone extends Component<any, {}> {
+class ReactoryDropZone extends Component<any, any> {
+  components: any = {};
 
   static styles = (theme) => {
     return {
@@ -80,8 +81,18 @@ class ReactoryDropZone extends Component<any, {}> {
     }
   }
 
-  render() {
+  constructor(props, context) {
+    super(props, context);
 
+    this.state = {
+      uploading: false,
+    }
+
+    this.components = props.api.getComponents(['core.Loading']);
+  }
+
+  render() {
+    const self = this;
     const { uiSchema, schema, formData, classes, api } = this.props;
 
     let widgetProps = {
@@ -115,29 +126,38 @@ class ReactoryDropZone extends Component<any, {}> {
 
     const dropHandler = (acceptedFiles) => {
       console.log('FILE DROPPED:: ', acceptedFiles);
+      self.setState({ uploading: true }, ()=> {
 
-      if (uiSchema && uiSchema['ui:options']) {
-        const uiOptions = uiSchema['ui:options'];
-        const { ReactoryDropZoneProps } = uiOptions;
+        if (uiSchema && uiSchema['ui:options']) {
+          const uiOptions = uiSchema['ui:options'];
+          const { ReactoryDropZoneProps } = uiOptions;
+  
+          if (ReactoryDropZoneProps.mutation) {          
+            const mutation = gql(ReactoryDropZoneProps.mutation.text);
 
-        if (ReactoryDropZoneProps.mutation) {
-          const mutation = gql(ReactoryDropZoneProps.mutation.text);
-          const variables = {
-            ...ReactoryDropZoneProps.mutation.variables,
-            file: acceptedFiles[0]
-          };
-          api.graphqlMutation(mutation, variables).then((docResult) => {
-            console.log('RESULT RECEIVER:: ', docResult);
-          }).catch((docError) => {
-            console.log('ERROR:: ', docError);
-          });
+            const variables = {
+              ...ReactoryDropZoneProps.mutation.variables,
+              file: acceptedFiles[0],              
+            };
+            api.graphqlMutation(mutation, variables).then((docResult) => {
+              console.log('RESULT RECEIVER:: ', docResult);
+              self.setState({ uploading: false })   
+              
+            }).catch((docError) => {
+              console.log('ERROR:: ', docError);
+            });
+          }
         }
-      }
+
+      });
+      
     }
+
+    const { Loading } = this.components;
 
     return (
       <div {...widgetProps}>
-        <DropZoneReactoryFormWidget fileDropped={dropHandler} {...dropZoneProps} />
+        {this.state.uploading === false ? <DropZoneReactoryFormWidget fileDropped={dropHandler} {...dropZoneProps} /> : <Loading title="Uploading file, please wait" icon={'cloud_upload'} spinIcon={false} />  }        
       </div>
     );
   }

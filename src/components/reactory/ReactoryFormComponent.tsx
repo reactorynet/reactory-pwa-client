@@ -808,13 +808,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       // //console.log('rendering with query', has);
       const query = formDef.graphql.query; //gql(formDef.graphql.query.text)
       const formContext = this.getFormContext();
+      const __staticFormData = query.formData || {};
       const _variables = api.utils.omitDeep(objectMapper({
         formContext,
-        formData,
-        $route:
-          that.props.$route
+        formData: {...formData, ...__staticFormData },
+        $route: that.props.$route
       }, query.variables || {}));
-
+      
       let options = query.options || {};
 
       //error handler function
