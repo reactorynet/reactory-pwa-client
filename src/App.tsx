@@ -6,7 +6,7 @@ import {
   BrowserRouter as Router,
   Route,
   Link,
-  Redirect,    
+  Redirect,
 } from 'react-router-dom';
 import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
@@ -16,7 +16,7 @@ import { ApolloProvider, Query, Mutation, Subscription } from 'react-apollo';
 import { createHttpLink } from 'apollo-link-http';
 import { WebSocketLink } from "apollo-link-ws";
 import { SubscriptionClient } from "subscriptions-transport-ws";
-const { createUploadLink } = require('apollo-upload-client');
+import { createUploadLink } from 'apollo-upload-client';
 import { setContext } from 'apollo-link-context';
 import { ThemeProvider, Theme } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -40,7 +40,7 @@ const {
   REACT_APP_API_ENDPOINT
 } = process.env;
 
-if(localStorage) {
+if (localStorage) {
   localStorage.setItem('REACT_APP_CLIENT_KEY', REACT_APP_CLIENT_KEY);
   localStorage.setItem('REACT_APP_CLIENT_PASSWORD', REACT_APP_CLIENT_PASSWORD);
   localStorage.setItem('REACT_APP_API_ENDPOINT', REACT_APP_API_ENDPOINT);
@@ -126,6 +126,12 @@ componentRegistery.forEach((componentDef) => {
 const store = configureStore();
 api.reduxStore = store;
 
+export interface NewNotification {
+  id: string,
+  title: string,
+  type: string
+}
+
 export interface AppState {
   user: any,
   drawerOpen: boolean,
@@ -147,13 +153,13 @@ class App extends Component<any, AppState> {
 
   constructor(props, context) {
     super(props, context);
-    
+
     const query = queryString.parse(window.location.search)
     if (query.auth_token) localStorage.setItem('auth_token', query.auth_token);
     api.queryObject = query;
     api.queryString = window.location.search;
     api.objectToQueryString = queryString.stringify;
-        
+
     this.state = {
       drawerOpen: false,
       auth_valid: false,
@@ -169,26 +175,27 @@ class App extends Component<any, AppState> {
     this.onLogout = this.onLogout.bind(this);
     this.onLogin = this.onLogin.bind(this);
     this.onApiStatusUpdate = this.onApiStatusUpdate.bind(this);
-    this.onRouteChanged = this.onRouteChanged.bind(this);    
+    this.onRouteChanged = this.onRouteChanged.bind(this);
     this.configureRouting = this.configureRouting.bind(this);
     api.on(ReactoryApiEventNames.onLogout, this.onLogout)
     api.on(ReactoryApiEventNames.onLogin, this.onLogin)
     api.on(ReactoryApiEventNames.onApiStatusUpdate, this.onApiStatusUpdate);
     api.on(ReactoryApiEventNames.onRouteChanged, this.onRouteChanged);
     this.componentRefs = api.getComponents([
-      'core.Loading@1.0.0', 
-      'core.Login@1.0.0', 
-      'core.FullScreenModal@1.0.0'
-    ]);         
+      'core.Loading@1.0.0',
+      'core.Login@1.0.0',
+      'core.FullScreenModal@1.0.0',
+      'core.NotificationComponent@1.0.0'
+    ]);
   }
 
-  onRouteChanged(path, state){
-    api.log(`onRouteChange Handler`, [ path, state ], 'debug');
-    this.setState({ currentRoute: path }, this.configureRouting);    
+  onRouteChanged(path, state) {
+    api.log(`onRouteChange Handler`, [path, state], 'debug');
+    this.setState({ currentRoute: path }, this.configureRouting);
   }
-    
+
   onLogin() {
-    const loggedInUser = api.getUser();        
+    const loggedInUser = api.getUser();
     this.setState({ user: loggedInUser });
   }
 
@@ -196,29 +203,29 @@ class App extends Component<any, AppState> {
     this.setState({ user: api.getUser() });
   }
 
-  onApiStatusUpdate(status){
-    api.log('App.onApiStatusUpdate(status)', [ status ], status.offline === true ? 'error' : 'debug');
+  onApiStatusUpdate(status) {
+    api.log('App.onApiStatusUpdate(status)', [status], status.offline === true ? 'error' : 'debug');
     let isOffline = status.offline === true;
     let user = api.getUser();
     delete user.when;
     let _user = this.state.user;
     delete _user.when;
 
-    if(deepEquals(user, _user) === false || isOffline !== this.state.offline) {
+    if (deepEquals(user, _user) === false || isOffline !== this.state.offline) {
       this.setState({ user, offline: isOffline });
     }
-    
+
   }
 
-  configureRouting(){
-    const { auth_validated, user } = this.state;    
+  configureRouting() {
+    const { auth_validated, user } = this.state;
     const { Loading } = this.componentRefs;
     const routes = [];
     let loginRouteDef = null;
     let homeRouteDef = null;
     const that = this;
-    
-    api.log('Configuring Routing', [ auth_validated, user ], 'debug');
+
+    api.log('Configuring Routing', [auth_validated, user], 'debug');
 
     api.getRoutes().forEach((routeDef) => {
       const routeProps = {
@@ -227,11 +234,11 @@ class App extends Component<any, AppState> {
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (props) => {
-          api.log(`Rendering Route ${routeDef.path}`, [ routeDef ], 'debug');
+          api.log(`Rendering Route ${routeDef.path}`, [routeDef], 'debug');
           const componentArgs = {
             $route: props.match
           };
-          
+
           if (isArray(routeDef.args)) {
             routeDef.args.forEach((arg) => {
               componentArgs[arg.key] = arg.value[arg.key];
@@ -240,28 +247,28 @@ class App extends Component<any, AppState> {
 
           const ApiComponent = api.getComponent(routeDef.componentFqn)
 
-          if(routeDef.public === true) {
+          if (routeDef.public === true) {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)
             else return (<p>No Component for {routeDef.componentFqn}</p>)
           }
 
-          const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles)  === true;
+          const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
 
           if (auth_validated === true && hasRolesForRoute === true) {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)
             else return (<p>No Component for {routeDef.componentFqn}</p>)
           }
 
-          if(api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
-            return <Redirect to={{pathname: '/login', state: { from: routeDef.path } }} />
+          if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
+            return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
           }
-          
-          return <Redirect to={{pathname: '/login', state: { from: routeDef.path } }} />
+
+          return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
         }
       }
-            
-      routes.push(<Route {...routeProps} />)            
-    });    
+
+      routes.push(<Route {...routeProps} />)
+    });
 
     //this.setState({ routes });
     return routes
@@ -275,50 +282,50 @@ class App extends Component<any, AppState> {
         api,
       };
     }
-    
-    if (this.state.auth_validated === false) {      
-      api.status({ emitLogin: true }).then((user) => {                
+
+    if (this.state.auth_validated === false) {
+      api.status({ emitLogin: true }).then((user) => {
         that.setState({ auth_validated: true, user }, that.configureRouting)
       }).catch((validationError) => {
         that.setState({ auth_validated: false, validationError })
       });
     }
 
-    window.addEventListener('resize', ()=>{
-      const { 
-          innerHeight,
-          outerHeight,
-          innerWidth,
-          outerWidth,            
+    window.addEventListener('resize', () => {
+      const {
+        innerHeight,
+        outerHeight,
+        innerWidth,
+        outerWidth,
       } = window;
 
       let view = 'landscape';
       let size = 'lg';
-      if(window.innerHeight > window.innerWidth) {
-          view = 'portrait';
+      if (window.innerHeight > window.innerWidth) {
+        view = 'portrait';
       }
 
-      if(innerWidth >= 2560) size = 'lg',
-      
-      api.log('Window resize', [ innerHeight, innerWidth, outerHeight, outerWidth, size, view ]);
+      if (innerWidth >= 2560) size = 'lg',
+
+        api.log('Window resize', [innerHeight, innerWidth, outerHeight, outerWidth, size, view]);
       api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
     });
   }
 
   render() {
     const { auth_validated, user, offline } = this.state;
-    const { Loading, FullScreenModal } = this.componentRefs;
+    const { Loading, FullScreenModal, NotificationComponent } = this.componentRefs;
 
     let themeOptions = api.getTheme();
     if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
-    
+
     let muiTheme: Theme & any = createMuiTheme(themeOptions);
 
-    if(themeOptions.provider && typeof themeOptions.type === 'string') {
-      if(themeOptions.provider[themeOptions.type]) {
+    if (themeOptions.provider && typeof themeOptions.type === 'string') {
+      if (themeOptions.provider[themeOptions.type]) {
         //using new mechanism.
-        switch(themeOptions.type) {          
+        switch (themeOptions.type) {
           case 'material':
           default: {
             muiTheme = createMuiTheme(themeOptions);
@@ -331,38 +338,41 @@ class App extends Component<any, AppState> {
 
     let modal = null;
 
-    if(offline === true) {
+    if (offline === true) {
       modal = (
         <FullScreenModal open={true} title={'Server is offline, stand by'}>
-          <p style={{margin: 'auto', fontSize: '20px'}}>We apologise for the inconvenience, but it seems like the reactory server offline. This notification will close automatically when the server is available again.</p>
+          <p style={{ margin: 'auto', fontSize: '20px' }}>We apologise for the inconvenience, but it seems like the reactory server offline. This notification will close automatically when the server is available again.</p>
         </FullScreenModal>
       )
     }
 
     const routes = this.configureRouting();
-                
+
+    // {this.state.notifications && this.state.notifications.length > 0 && <NotificationComponent notifications={ this.state.notifications } deleteNotification={this.deleteNotification}></NotificationComponent>}
+
     return (
       <Router ref={this.router}>
-        <React.Fragment>        
-          <CssBaseline />                
-            <Provider store={store}>
-              <ApolloProvider client={client}>
-                <ApiProvider api={api} history={this.props.history}>
-                  <ThemeProvider theme={muiTheme}>
-                    <MuiPickersUtilsProvider utils={MomentUtils}>
-                      <React.Fragment>
-                        <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting' } />
-                        <div>                                        
-                          { auth_validated === true && routes.length > 0 ? 
-                              routes : 
-                              <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} /> }
-                        </div>                      
-                      </React.Fragment>
-                    </MuiPickersUtilsProvider>                                    
-                  </ThemeProvider>
-                </ApiProvider>
-              </ApolloProvider>
-            </Provider>        
+        <React.Fragment>
+          <CssBaseline />
+          <Provider store={store}>
+            <ApolloProvider client={client}>
+              <ApiProvider api={api} history={this.props.history}>
+                <ThemeProvider theme={muiTheme}>
+                  <MuiPickersUtilsProvider utils={MomentUtils}>
+                    <React.Fragment>
+                      <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
+                      <NotificationComponent></NotificationComponent>
+                      <div>
+                        {auth_validated === true && routes.length > 0 ?
+                          routes :
+                          <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}
+                      </div>
+                    </React.Fragment>
+                  </MuiPickersUtilsProvider>
+                </ThemeProvider>
+              </ApiProvider>
+            </ApolloProvider>
+          </Provider>
         </React.Fragment>
       </Router>
     );

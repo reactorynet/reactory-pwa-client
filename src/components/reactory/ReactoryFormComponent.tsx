@@ -169,7 +169,7 @@ export interface ReactoryFormState {
   showReportModal: boolean,
   showExportWindow: boolean,
   activeExportDefinition?: Reactory.IExport,
-  activeReportDefinition?:Reactory.IReactoryPdfReport,
+  activeReportDefinition?: Reactory.IReactoryPdfReport,
   query?: any,
   busy: boolean,
   liveUpdate: boolean,
@@ -388,7 +388,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
 
     let data = { ...this.state.formData }
-    if(activeReportDefinition && activeReportDefinition.dataMap) {
+    if (activeReportDefinition && activeReportDefinition.dataMap) {
       debugger;
       data = this.props.api.utils.objectMapper(data, activeReportDefinition.dataMap)
     }
@@ -396,9 +396,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     return (
       <FullScreenModal open={this.state.showReportModal === true} onClose={closeReport}>
         {activeReportDefinition ? (
-        <ReportViewer
-          {...{...activeReportDefinition, data}}          
-        />) : null}        
+          <ReportViewer
+            {...{ ...activeReportDefinition, data }}
+          />) : null}
       </FullScreenModal>
     )
   }
@@ -430,7 +430,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     // this.setState({ showDebug: true })
   }
 
-  showReportModal( reportDefinition = undefined ) {
+  showReportModal(reportDefinition = undefined) {
 
     this.setState({ showReportModal: true, activeReportDefinition: reportDefinition })
   }
@@ -483,9 +483,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     }
 
     if (formDef.uiSchema && formDef.uiSchema['ui:options']) {
-      if(formDef.uiSchema['ui:options'].submitIcon) {
+      if (formDef.uiSchema['ui:options'].submitIcon) {
         icon = formDef.uiSchema['ui:options'].submitIcon
-      }      
+      }
     }
 
     let iconWidget = (icon === '$none' ? null : <Icon>{icon}</Icon>);
@@ -500,14 +500,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       showSchemaSelectorInToolbar: true,
     };
 
-    const $submitForm = () => {      
-      if(isNil(self.formRef) === false && self.formRef) {
+    const $submitForm = () => {
+      if (isNil(self.formRef) === false && self.formRef) {
         try {
           self.formRef.onSubmit();
-        } catch(submitError) {
+        } catch (submitError) {
           self.props.api.log(`Could not submit the form`, submitError, 'error')
         }
-      }      
+      }
     }
 
     if (formUiOptions && isNil(formUiOptions.showSubmit) === false) {
@@ -531,7 +531,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       const { variant = 'fab', iconAlign = 'left' } = submitProps;
       const _props = { ...submitProps };
       delete _props.variant;
-      delete _props.iconAlign;      
+      delete _props.iconAlign;
       _props.onClick = $submitForm;
 
       if (variant && typeof variant === 'string' && showSubmit === true) {
@@ -547,15 +547,15 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         }
       }
     }
-      /**
-       * options for submit buttons
-       * variant = 'fab' / 'button'
-       *
-       */
-    
+    /**
+     * options for submit buttons
+     * variant = 'fab' / 'button'
+     *
+     */
+
     if (showSubmit === true && submitButton === null) {
       submitButton = (<Fab onClick={$submitForm} color="primary">{iconWidget}</Fab>);
-    } 
+    }
 
     let uiSchemaSelector = null;
 
@@ -621,16 +621,16 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 activeUiSchemaMenuItem: selectedSchema
               }
             })
-          };          
+          };
 
           uiSchemaSelector = (
             <div style={{ position: "absolute", top: "10px", right: "10px" }}>
               {
                 formUiOptions.schemaSelector.buttonVariant && formUiOptions.schemaSelector.buttonVariant == 'contained' ?
-                <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary" } variant="contained">{formUiOptions.schemaSelector.buttonTitle}</Button> :
-              <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary" } >{formUiOptions.schemaSelector.buttonTitle}</Button>
+                  <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} variant="contained">{formUiOptions.schemaSelector.buttonTitle}</Button> :
+                  <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} >{formUiOptions.schemaSelector.buttonTitle}</Button>
               }
-              
+
             </div>
           )
 
@@ -651,7 +651,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     if (isArray(formDef.reports) === true) {
 
-      const onDropDownSelect = (evt, menuItem: any) => {        
+      const onDropDownSelect = (evt, menuItem: any) => {
         self.props.api.log('Report Item Selected', { evt, menuItem }, 'debug');
         self.showReportModal(menuItem.data);
       };
@@ -779,6 +779,16 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 that.props.api.goto(linkText)
               }
 
+              if (mutation.onSuccessMethod === "notification") {
+                api.createNotification(
+                  mutation.notification.title,
+                  {
+                    showInAppNotification: mutation.notification.inAppNotification,
+                    type: 'success',
+                    props: mutation.notification.props
+                  });
+              }
+
               if (mutation.onSuccessMethod.indexOf('event:') === 1) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];
                 api.amq.raiseFormCommand(eventName, { form: that, result: data[mutation.name] }),
@@ -799,7 +809,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 {!loadingWidget ? that.renderForm(_formData, onFormSubmit) : null}
               </Fragment>
             )
-
           }}
         </Mutation>)
     };
@@ -839,7 +848,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       if (query.autoQuery === false && that.state.autoQueryDisabled === false) {
         that.setState({ queryComplete: true, dirty: false, allowRefresh: true, loading: false });
       } else {
-        
+
         const query_start = new Date().valueOf();
         api.graphqlQuery(gql(query.text), _variables).then((result: any) => {
           const query_end = new Date().valueOf();
@@ -1278,13 +1287,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       api.log(`${formDef.name}[${this.instanceId}].onChange`, { data }, 'debug');
       const $onChange = this.props.onChange;
       const trigger_onChange = $onChange && typeof $onChange === 'function';
-      const fire = () => ( $onChange(data, this, { before: changed, after: rchanged }))
+      const fire = () => ($onChange(data, this, { before: changed, after: rchanged }))
       const changed = diff(data.formData, this.state.formData);
       const rchanged = diff(this.state.formData, data.formData);
       api.log(`${formDef.name}[${this.instanceId}].onChange`, { changed, rchanged }, 'debug');
-      if (this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {                
+      if (this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {
         if (trigger_onChange === true) fire();
-      } else {        
+      } else {
         this.setState({ formData: data.formData }, () => {
           if (trigger_onChange === true) fire();
         });
