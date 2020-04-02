@@ -74,6 +74,7 @@ export const ReactoryApiEventNames = {
   onPluginLoaded: 'onPluginLoaded',
   onApiStatusUpdate: 'onApiStatusUpdate',
   onRouteChanged: 'onRouteChanged',
+  onShowNotification: 'onShowNotification',
 };
 
 export const EmptyComponent = (fqn) => {
@@ -297,8 +298,12 @@ class ReactoryApi extends EventEmitter {
   }
 
   createNotification(title: string, options: NotificationOptions | any = {} ){
-    
-    this.log('Creating Notification', { title, options }, 'debug');
+    this.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
+
+    if (options.showInAppNotification) {
+      this.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: options.props });
+      return;
+    }
 
     const defaultNotificationProperties = {
       title: 'Reactory Notification',
@@ -312,7 +317,7 @@ class ReactoryApi extends EventEmitter {
         Notification.requestPermission().then();
       } catch(e) {
         return false;
-      }  
+      }
       return true;
     }
 
@@ -322,45 +327,43 @@ class ReactoryApi extends EventEmitter {
         .then((permission) => {
           if(permission === "granted") {
             this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
-          }          
+          }
         })
       } else {
         Notification.requestPermission(function(permission) {
           if(permission === "granted") {
             this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
-          }          
+          }
         });
       }
     };
 
-
-
     if(window && window.Notification) {
-     
+
       switch(Notification.permission)
       {
         case "denied": {
           //denied notificaitons, use fallback
-          this.amq.raiseFormCommand("reactory.core.display.notification", 
-          { 
-            title: title, 
-            options: { 
-              ...defaultNotificationProperties, 
-              ...options 
-            } 
+          this.amq.raiseFormCommand("reactory.core.display.notification",
+          {
+            title: title,
+            options: {
+              ...defaultNotificationProperties,
+              ...options
+            }
           });
           return;
         }
-        case "granted": {          
-          let notification = new Notification(title, { ...defaultNotificationProperties, ...options, body: options.text });          
+        case "granted": {
+          let notification = new Notification(title, { ...defaultNotificationProperties, ...options, body: options.text });
           setTimeout(notification.close.bind(notification), 4000);
           return;
-        }        
-        case "default": 
+        }
+        case "default":
         default: {
           requestPermission();
         }
-      }            
+      }
     } else {
       this.log('Notification API not supported in this browser', { ...defaultNotificationProperties, ...options }, 'warning');
     }
@@ -545,7 +548,7 @@ class ReactoryApi extends EventEmitter {
   forms() {
     const that = this;
     return new Promise((resolve) => {
-      
+
       const refresh = () => {
         RestApi.forms().then((formsResult) => {
           that.formSchemas = formsResult;
@@ -571,7 +574,7 @@ class ReactoryApi extends EventEmitter {
       };
 
       if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined) {
-        
+
         if (moment(that.formSchemaLastFetch).add(60, 'seconds').isBefore(moment())) {
           refresh();
         } else {
@@ -582,7 +585,16 @@ class ReactoryApi extends EventEmitter {
   }
 
   async raiseFormCommand(commandId, commandDef, formProps) {
+
+
+    this.log(`______ RAISE FORM COMMAND ______ `, 'debug');
+    this.log(`______ ACTION ______ ${commandDef.action || 'NOPE'}`, 'debug');
+    this.log(`______ GRAPHQL ______ ${commandDef.hasOwnProperty('graphql') || 'NOPE'}`, 'debug');
+    this.log(`______ MUTATION ______ ${commandDef.hasOwnProperty('mutation') || 'NOPE'}`, 'debug');
+
     const self = this;
+
+
     if (commandDef.action && commandDef.action === 'component') {
       const componentToMount = commandDef.component.componentFqn;
       const _formData = formProps.formData || formProps.formContext.formData;
@@ -591,6 +603,7 @@ class ReactoryApi extends EventEmitter {
 
     if (commandDef.hasOwnProperty('graphql')) {
       if (commandDef.graphql.hasOwnProperty('mutation')) {
+
         let variables = {};
         if (commandDef.graphql.mutation.variables) {
           let data = formProps.formData || formProps.formContext.formData;
@@ -607,13 +620,16 @@ class ReactoryApi extends EventEmitter {
             formProps.formContext.refresh();
           }
 
-          if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'notification') {            
+          if (commandDef.graphql.mutation.onSuccessMethod && commandDef.graphql.mutation.onSuccessMethod == 'notification') {
+
+            self.log(`______ MUTATION NOTIFICATION _______`);
+
             const resultMap = commandDef.graphql.mutation.resultMap || {'*': '*'};
-            let notificationProperties = { 
-              ...(commandDef.graphql.mutation.notificationProperties || {}), 
-              ...(objectMapper(mutationResult, resultMap)) 
+            let notificationProperties = {
+              ...(commandDef.graphql.mutation.notificationProperties || {}),
+              ...(objectMapper(mutationResult, resultMap))
             };
-            
+
             self.createNotification(notificationProperties.title || 'No Title', notificationProperties.options || {});
           }
         });
@@ -663,12 +679,12 @@ class ReactoryApi extends EventEmitter {
 
     if (itemRoles.length === 1 && itemRoles[0] === '*')
       return true;
-    
+
       if (userRoles === null) {
       const loggedInUser = this.getUser();
-      comparedRoles = loggedInUser.roles;      
+      comparedRoles = loggedInUser.roles;
     }
-      
+
     const result = intersection(itemRoles, comparedRoles);
     return result.length >= 1;
   }
@@ -909,9 +925,9 @@ class ReactoryApi extends EventEmitter {
       } catch(parseError) {
         this.log('Could not parse the logged in user data', parseError, 'error');
         return anonUser;
-      }      
+      }
     }
-       
+
     return anonUser;
   }
 
@@ -954,7 +970,7 @@ class ReactoryApi extends EventEmitter {
         if (result.data.apiStatus.status === "API OK") {
           that.setUser({ ...result.data.apiStatus });
           that.lastValidation = moment().valueOf();
-          that.tokenValidated = true;          
+          that.tokenValidated = true;
           if (options.emitLogin === true)
             that.emit(ReactoryApiEventNames.onLogin, that.getUser());
           that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result });

@@ -58,6 +58,7 @@ import TableChildComponentWrapper from './shared/TableChildComponentWrapper';
 import AccordionComponent from './shared/AccordionComponent';
 import RadioGroupComponent from './shared/RadioGroupComponent';
 import LookupComponent from './shared/LookupComponent';
+import NotificationComponent from './shared/NotificationWidget';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -169,6 +170,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'LookupComponent',
     component: LookupComponent,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'NotificationComponent',
+    component: NotificationComponent,
     version: '1.0.0',
   },
   {
