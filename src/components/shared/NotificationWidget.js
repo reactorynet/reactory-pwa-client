@@ -1,5 +1,8 @@
 import React, { Component, Fragment } from 'react';
-import { Icon } from '@material-ui/core';
+import {
+  Icon,
+  Grid
+} from '@material-ui/core';
 import { compose } from 'recompose';
 import { withStyles, withTheme } from '@material-ui/styles';
 import { withApi } from '../../api/ApiProvider';
@@ -20,6 +23,19 @@ class NotificationHOC extends Component {
 
   static styles = theme => {
     return {
+      root: {
+        display: 'flex',
+        justifyContent: 'space-between'
+      },
+      messageColumn: {
+        display: 'flex',
+        alignItems: 'center'
+      },
+      componentColumn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end'
+      },
       container: {
         position: 'relative',
         zIndex: 2000,
@@ -75,18 +91,54 @@ class NotificationHOC extends Component {
   }
 
   render() {
-    let { title, type, classes } = this.props;
+    let { props } = this;
+    let { api, title, type, config, classes } = props;
+    let additionalComponentsToMount = null;
+
+    if (config && config.components && config.components.length > 0) {
+      const additionalComponents = config.components || [];
+      additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, propsMap }, additionalComponentIndex) => {
+        let ComponentToMount = api.getComponent(componentFqn);
+        api.log('NOTIFICATION __ ADITIONAL COMPONENT:: ', { componentProps, componentFqn }, 'debug');
+        let additionalComponentFound = true;
+        if (ComponentToMount === null || ComponentToMount === undefined) {
+          additionalComponentFound = false;
+          ComponentToMount = api.getComponent("core.NotFound");
+        }
+
+        let mappedProps = {};
+        if (propsMap)
+          mappedProps = api.utils.objectMapper({...props.config, api}, propsMap)
+
+        if (additionalComponentFound === true)
+          return <ComponentToMount {...{ ...componentProps, ...mappedProps, key: additionalComponentIndex }} />
+        else
+          return <ComponentToMount message={`Could not load component ${componentFqn}, please check your registry loaders and namings`} key={additionalComponentIndex} />
+      });
+
+    }
 
     return (
       <div onClick={this.clickHandler} className={classNames(classes.notification, (type == 'success' ? classes.success : classes.error ? classes.error : classes.warning))}>
-        <Icon>done</Icon>
-        <p>{title}</p>
+        <Grid container className={classes.root} spacing={2}>
+          <Grid item className={classes.messageColumn}>
+            <Icon>done</Icon>
+            <p>{title}</p>
+          </Grid>
+
+          {
+            config.components && config.components.length > 0 &&
+            <Grid item xs={4} className={classes.componentColumn}>
+              {additionalComponentsToMount}
+            </Grid>
+          }
+        </Grid>
       </div>
     )
   }
 }
 
-const NotificationHOCComponent = compose(withTheme, withStyles(NotificationHOC.styles))(NotificationHOC);
+const NotificationHOCComponent = compose(withTheme, withApi, withStyles(NotificationHOC.styles))(NotificationHOC);
 
 class NotificationWidget extends Component {
   constructor(props, context) {
@@ -121,6 +173,8 @@ class NotificationWidget extends Component {
     let {
       classes
     } = this.props;
+
+    debugger;
 
     return (
       <div className={classes.container}>
