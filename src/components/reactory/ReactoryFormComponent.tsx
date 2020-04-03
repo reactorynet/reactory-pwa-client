@@ -780,12 +780,16 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
               }
 
               if (mutation.onSuccessMethod === "notification") {
+                const dataObject = { formData, resultData: data[mutation.name], formContext: that.getFormContext() };
                 api.createNotification(
                   mutation.notification.title,
                   {
                     showInAppNotification: mutation.notification.inAppNotification,
                     type: 'success',
-                    props: mutation.notification.props
+                    props: {
+                      ...dataObject,
+                      ...mutation.notification.props
+                    }
                   });
               }
 
