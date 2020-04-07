@@ -64,8 +64,16 @@ class CustomInfoWindow extends Component {
         <div>
           <p className={classes.address}>{formatted_address}</p>
           <div className={classes.buttonContainer}>
-            <Button variant="contained" color="primary" onClick={acceptHandler}>Accept</Button>
-            <Button variant="contained" color="default" onClick={onCloseHandler}>Cancel</Button>
+            <Button variant="contained" color="primary" onClick={acceptHandler}>
+              Accept
+            </Button>
+            <Button
+              variant="contained"
+              color="default"
+              onClick={onCloseHandler}
+            >
+              Cancel
+            </Button>
           </div>
         </div>
       </InfoWindow>
@@ -93,10 +101,7 @@ const MapHOC = compose(
 )((props) => {
   const $mapProps = props;
 
-  const {
-    api,
-    onMapMarkerClicked
-  } = $mapProps;
+  const { api, onMapMarkerClicked } = $mapProps;
 
   debugger;
 
@@ -148,12 +153,16 @@ const MapHOC = compose(
           const acceptAddress = (address) => {
             onMapMarkerClicked(address);
             setDisplayMarkerInfo(!displayMarkerInfo);
-          }
+          };
 
           return (
             <Marker {...$LasecMarkerProps} onClick={markerClicked}>
               {displayMarkerInfo && (
-                <CustomInfoWindowComponent acceptAddress={acceptAddress} closeInfoWindow={markerClicked} {...$LasecMarkerProps} />
+                <CustomInfoWindowComponent
+                  acceptAddress={acceptAddress}
+                  closeInfoWindow={markerClicked}
+                  {...$LasecMarkerProps}
+                />
               )}
             </Marker>
           );
@@ -318,29 +327,32 @@ class ReactoryGoogleMapWidget extends Component {
     };
     const controlId = `${idSchema.$id}_AddressLabel`;
     return (
-      <FormControl variant="outlined">
-        <InputLabel htmlFor={`${controlId}`}>
-          {title || schema.title}
-        </InputLabel>
-        <OutlinedInput
-          id={`${controlId}`}
-          type={"text"}
-          value={fullAddress}
-          readOnly
-          endAdornment={
-            <InputAdornment position="end">
-              <IconButton
-                aria-label="Find Address"
-                onClick={searchClicked}
-                edge="end"
-              >
-                <Icon>search</Icon>
-              </IconButton>
-            </InputAdornment>
-          }
-          labelWidth={70}
-        />
-      </FormControl>
+      <div style={{display: 'flex'}}>
+        <FormControl variant="outlined">
+          <InputLabel htmlFor={`${controlId}`}>
+            {title || schema.title}
+          </InputLabel>
+          <OutlinedInput
+            id={`${controlId}`}
+            type={"text"}
+            value={fullAddress}
+            readOnly
+            endAdornment={
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="Find Address"
+                  onClick={searchClicked}
+                  edge="end"
+                >
+                  <Icon>search</Icon>
+                </IconButton>
+              </InputAdornment>
+            }
+            labelWidth={70}
+          />
+        </FormControl>
+        <Button color="primary">Add Address Manually</Button>
+      </div>
     );
   }
 
@@ -417,7 +429,11 @@ class ReactoryGoogleMapWidget extends Component {
     if (uiSchema && uiSchema["ui:options"]) {
       if (uiSchema["ui:options"].mapProps) {
         // mapProps = { ...mapProps, ...uiSchema["ui:options"].mapProps };
-        mapProps = { ...this.props, ...mapProps, ...uiSchema["ui:options"].mapProps }; // TODO - Did this so I can access onchanget to set formdata
+        mapProps = {
+          ...this.props,
+          ...mapProps,
+          ...uiSchema["ui:options"].mapProps,
+        }; // TODO - Did this so I can access onchanget to set formdata
       }
     }
 
