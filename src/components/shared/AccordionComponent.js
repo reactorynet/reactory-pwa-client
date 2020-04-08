@@ -46,11 +46,11 @@ class AccordionWidget extends Component {
         {
           _panels.map((panel, index) => {
             return (
-              <ExpansionPanel>
-                <ExpansionPanelSummary className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
+              <ExpansionPanel key={index}>
+                <ExpansionPanelSummary key={`header_${index}`} className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
                   <Typography>{`${index + 1}. ${panel.title}`}</Typography>
                 </ExpansionPanelSummary>
-                <ExpansionPanelDetails className={classes.panelBody}>
+                <ExpansionPanelDetails key={`details_${index}`} className={classes.panelBody}>
                 {
                   panel.Components.map(({ componentFqn, componentProps, componentPropsMap }, ComponentIndex) => {
                     let ComponentToMount = api.getComponent(componentFqn);

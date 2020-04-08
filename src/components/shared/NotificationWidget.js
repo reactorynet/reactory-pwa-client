@@ -174,8 +174,6 @@ class NotificationWidget extends Component {
       classes
     } = this.props;
 
-    debugger;
-
     return (
       <div className={classes.container}>
         {

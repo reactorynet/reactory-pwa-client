@@ -40,7 +40,6 @@ class RadioGroupWidget extends Component {
       const value = event.target.value;
       self.setState({ selectedValue: value }, () => {
         if (onChange && typeof onChange === 'function') {
-          debugger;
           this.props.onChange(value);
         }
       });

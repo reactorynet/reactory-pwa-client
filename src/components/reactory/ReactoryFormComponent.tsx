@@ -389,7 +389,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     let data = { ...this.state.formData }
     if (activeReportDefinition && activeReportDefinition.dataMap) {
-      debugger;
       data = this.props.api.utils.objectMapper(data, activeReportDefinition.dataMap)
     }
 
@@ -784,7 +783,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 api.createNotification(
                   mutation.notification.title,
                   {
-                    showInAppNotification: mutation.notification.inAppNotification,
+                    showInAppNotification: mutation.notification.inAppNotification === true,
                     type: 'success',
                     props: {
                       ...dataObject,

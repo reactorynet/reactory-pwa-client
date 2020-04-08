@@ -141,7 +141,22 @@ class ReactoryDropZone extends Component<any, any> {
             };
             api.graphqlMutation(mutation, variables).then((docResult) => {
               console.log('RESULT RECEIVER:: ', docResult);
-              self.setState({ uploading: false })   
+              self.setState({ uploading: false }, ()=>{
+                const { filename, size, id, link, mimetype } = docResult.data[ReactoryDropZoneProps.mutation.name]
+                
+                api.createNotification(`File ${filename} has been uploaded`, {
+                  showInAppNotification: true,
+                  type: 'success',
+                  props: {
+                    timeout: 2500,
+                    canDismiss: true,
+                    components: []
+                  }
+                });
+
+                if(ReactoryDropZoneProps.mutation.onSuccessEvent && ReactoryDropZoneProps.mutation.onSuccessEvent.name)
+                  api.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, { filename, link, id, size, mimetype  });                
+              });   
               
             }).catch((docError) => {
               console.log('ERROR:: ', docError);

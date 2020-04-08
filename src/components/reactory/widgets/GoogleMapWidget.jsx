@@ -102,7 +102,7 @@ const MapHOC = compose(
         };
 
         const markerProps = { 
-          key: index, 
+          key: `marker_${index}`, 
           position: marker.position,
           title:marker.formatted_address,
           marker,
@@ -283,7 +283,7 @@ class ReactoryGoogleMapWidget extends Component {
         let apiKey = process.env.GOOGLE_MAP_API_KEY; //REACTORY DEVELOPMENT KEY        
         const { Loading, Label } = this.components;
         const self = this;
-        debugger
+        
 
         let mapProps = {
             ref: (mapRef) => {
