@@ -59,20 +59,27 @@ class CustomInfoWindow extends Component {
       this.props.acceptAddress(formatted_address);
     };
 
+    const editHandler = () => {
+      this.props.editAddress(this.props.marker);
+    };
+
     return (
       <InfoWindow onCloseClick={onCloseHandler}>
         <div>
           <p className={classes.address}>{formatted_address}</p>
           <div className={classes.buttonContainer}>
             <Button variant="contained" color="primary" onClick={acceptHandler}>
-              Accept
+              ACCEPT
+            </Button>
+            <Button variant="contained" color="secondary" onClick={editHandler}>
+              EDIT ADDRESS
             </Button>
             <Button
               variant="contained"
               color="default"
               onClick={onCloseHandler}
             >
-              Cancel
+              CANCEL
             </Button>
           </div>
         </div>
@@ -100,10 +107,7 @@ const MapHOC = compose(
   withGoogleMap
 )((props) => {
   const $mapProps = props;
-
-  const { api, onMapMarkerClicked } = $mapProps;
-
-  debugger;
+  const { api, onMapMarkerClicked, onEditClicked } = $mapProps;
 
   return (
     <GoogleMap
@@ -148,8 +152,8 @@ const MapHOC = compose(
 
           const markerClicked = (evt) => {
             setDisplayMarkerInfo(!displayMarkerInfo);
-            if($LasecMarkerProps && $LasecMarkerProps.onMarkerClicked) {
-              $LasecMarkerProps.onMarkerClicked(evt, marker)
+            if ($LasecMarkerProps && $LasecMarkerProps.onMarkerClicked) {
+              $LasecMarkerProps.onMarkerClicked(evt, marker);
             }
           };
 
@@ -158,11 +162,16 @@ const MapHOC = compose(
             setDisplayMarkerInfo(!displayMarkerInfo);
           };
 
+          const editAddress = (place) => {
+            onEditClicked(place);
+          };
+
           return (
             <Marker {...$LasecMarkerProps} onClick={markerClicked}>
               {displayMarkerInfo && (
                 <CustomInfoWindowComponent
                   acceptAddress={acceptAddress}
+                  editAddress={editAddress}
                   closeInfoWindow={markerClicked}
                   {...$LasecMarkerProps}
                 />
@@ -189,6 +198,7 @@ const VIEWMODES = {
   MAP_WITH_SEARCH: "MAP_WITH_SEARCH",
   ADDRESS_LABEL: "ADDRESS_LABEL",
   TEXT_FIELD_WITH_LOOKUP: "TEXT_FIELD_LOOKUP",
+  TEXT_NEW_ADRRESS: "TEXT_NEW_ADRRESS",
 };
 
 class ReactoryGoogleMapWidget extends Component {
@@ -264,7 +274,11 @@ class ReactoryGoogleMapWidget extends Component {
     const self = this;
     const { FullScreenModal, Loading } = self.components;
     const { schema, idSchema, title, theme, api } = self.props;
-    const { isDialogOpen } = self.state;
+    const { isDialogOpen, isNewAddress } = self.state;
+
+    const NewAddressForm = api.getComponent(
+      "lasec-crm.LasecCRMNewCustomerAddress@1.0.0"
+    );
 
     const MapModel = (props) => {
       const shouldBreak = useMediaQuery(theme.breakpoints.down("sm"));
@@ -291,22 +305,31 @@ class ReactoryGoogleMapWidget extends Component {
         // return props.onChange(address); // TODO - onchange is undefined
       };
 
+      const onEditClicked = (place) => {
+        console.log("EDIT ADDRESS:: ", place);
+        this.setState({ isNewAddress: true });
+      };
+
       return (
         <FullScreenModal {...fullScreenProps}>
-          <MapHOC
-            {...{
-              ...mapProps,
-              containerElement:
-                shouldBreak === true ? (
-                  <div style={{ height: window.innerHeight - 80 }} />
-                ) : (
-                  <div style={{ height: `400px` }} />
-                ),
-              loadingElement: <Loading message="Loading Map" />,
-              onMapMarkerClicked,
-              api,
-            }}
-          />
+          { this.state.isNewAddress && <NewAddressForm></NewAddressForm> }
+          {
+            !this.state.isNewAddress && <MapHOC
+              {...{
+                ...mapProps,
+                containerElement:
+                  shouldBreak === true ? (
+                    <div style={{ height: window.innerHeight - 80 }} />
+                  ) : (
+                    <div style={{ height: `400px` }} />
+                  ),
+                loadingElement: <Loading message="Loading Map" />,
+                onMapMarkerClicked,
+                onEditClicked,
+                api,
+              }}
+            />
+          }
         </FullScreenModal>
       );
     };
@@ -330,7 +353,7 @@ class ReactoryGoogleMapWidget extends Component {
     };
     const controlId = `${idSchema.$id}_AddressLabel`;
     return (
-      <div style={{display: 'flex'}}>
+      <div style={{ display: "flex" }}>
         <FormControl variant="outlined">
           <InputLabel htmlFor={`${controlId}`}>
             {title || schema.title}
@@ -354,7 +377,6 @@ class ReactoryGoogleMapWidget extends Component {
             labelWidth={70}
           />
         </FormControl>
-        <Button color="primary">Add Address Manually</Button>
       </div>
     );
   }
@@ -367,8 +389,6 @@ class ReactoryGoogleMapWidget extends Component {
       api,
       viewMode = "MAP_WITH_SEARCH",
     } = this.props;
-
-    debugger;
 
     const refs = {};
     const { center } = this.state;
