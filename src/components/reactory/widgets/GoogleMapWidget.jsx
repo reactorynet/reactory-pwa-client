@@ -33,6 +33,9 @@ import {
 } from "@material-ui/core";
 
 import lodash from "lodash";
+
+import fetch from "node-fetch";
+
 const DefaultCenter = { lat: -33.93264, lng: 18.4911213 };
 
 class CustomInfoWindow extends Component {
@@ -60,7 +63,8 @@ class CustomInfoWindow extends Component {
     };
 
     const editHandler = () => {
-      this.props.editAddress(this.props.marker);
+      console.log(this.props);
+      this.props.editAddress(this.props.marker.place);
     };
 
     return (
@@ -276,9 +280,11 @@ class ReactoryGoogleMapWidget extends Component {
     const { schema, idSchema, title, theme, api } = self.props;
     const { isDialogOpen, isNewAddress } = self.state;
 
+    // FORM TO CREATE NEW ADDRESS
     const NewAddressForm = api.getComponent(
       "lasec-crm.LasecCRMNewCustomerAddress@1.0.0"
     );
+    let NewAddressFormProps = {};
 
     const MapModel = (props) => {
       const shouldBreak = useMediaQuery(theme.breakpoints.down("sm"));
@@ -286,6 +292,7 @@ class ReactoryGoogleMapWidget extends Component {
       const fullScreenProps = {
         onClose: () => {
           self.setState({ isDialogOpen: false });
+          this.setState({ isNewAddress: false });
         },
         open: isDialogOpen === true,
         title: title || schema.title || "Search Address",
@@ -306,15 +313,16 @@ class ReactoryGoogleMapWidget extends Component {
       };
 
       const onEditClicked = (place) => {
-        console.log("EDIT ADDRESS:: ", place);
-        this.setState({ isNewAddress: true });
+        this.setState({ isNewAddress: true, selectedPlace: place });
       };
 
       return (
         <FullScreenModal {...fullScreenProps}>
-          { this.state.isNewAddress && <NewAddressForm></NewAddressForm> }
-          {
-            !this.state.isNewAddress && <MapHOC
+          {this.state.isNewAddress && (
+            <NewAddressForm place_id={this.state.selectedPlace.place_id}></NewAddressForm>
+          )}
+          {!this.state.isNewAddress && (
+            <MapHOC
               {...{
                 ...mapProps,
                 containerElement:
@@ -329,7 +337,7 @@ class ReactoryGoogleMapWidget extends Component {
                 api,
               }}
             />
-          }
+          )}
         </FullScreenModal>
       );
     };
