@@ -52,14 +52,14 @@ class CustomInfoWindow extends Component {
 
   render() {
     const { classes } = this.props;
-    const { formatted_address = "" } = this.props.marker.place;
+    const { formatted_address = "", place_id } = this.props.marker.place;
 
     const onCloseHandler = () => {
       this.props.closeInfoWindow();
     };
 
     const acceptHandler = () => {
-      this.props.acceptAddress(formatted_address);
+      this.props.acceptAddress(formatted_address, place_id);
     };
 
     const editHandler = () => {
@@ -161,8 +161,8 @@ const MapHOC = compose(
             }
           };
 
-          const acceptAddress = (address) => {
-            onMapMarkerClicked(address);
+          const acceptAddress = (address, place_id) => {
+            onMapMarkerClicked(address, place_id);
             setDisplayMarkerInfo(!displayMarkerInfo);
           };
 
@@ -215,6 +215,8 @@ class ReactoryGoogleMapWidget extends Component {
       searchText: null,
     };
 
+    this.updateFormData = this.updateFormData.bind(this);
+
     this.getSearchResults = this.getSearchResults.bind(this);
     this.getMarkers = this.getMarkers.bind(this);
     this.getMapModal = this.getMapModal.bind(this);
@@ -224,6 +226,17 @@ class ReactoryGoogleMapWidget extends Component {
       "core.Loading",
       "core.Label",
     ]);
+  }
+
+  updateFormData(address, place_id) {
+    this.props.formData.fullAddress = address; // not right, but shows in text box
+
+    const newFormData = {
+      fullAddress: address,
+      placeId: place_id
+    }
+
+    // props.onChange(newFormData);
   }
 
   getSearchResults() {
@@ -302,14 +315,10 @@ class ReactoryGoogleMapWidget extends Component {
         maxWidth: false,
       };
 
-      const onMapMarkerClicked = (address) => {
-        console.log(`ON MAP MARKER CLICKED:: ${address}`);
-        api.log("GoogleMapWidget.onMapMarkerCLicked", { address }, "debug");
-
-        debugger;
-
+      const onMapMarkerClicked = (address, place_id) => {
+        console.log(`ON MAP MARKER CLICKED:: ${address} ${place_id}`);
         this.setState({ isDialogOpen: false });
-        // return props.onChange(address); // TODO - onchange is undefined
+        this.updateFormData(address, place_id);
       };
 
       const onEditClicked = (place) => {
@@ -319,7 +328,9 @@ class ReactoryGoogleMapWidget extends Component {
       return (
         <FullScreenModal {...fullScreenProps}>
           {this.state.isNewAddress && (
-            <NewAddressForm place_id={this.state.selectedPlace.place_id}></NewAddressForm>
+            <NewAddressForm
+              place_id={this.state.selectedPlace.place_id}
+            ></NewAddressForm>
           )}
           {!this.state.isNewAddress && (
             <MapHOC
@@ -363,9 +374,11 @@ class ReactoryGoogleMapWidget extends Component {
     return (
       <div style={{ display: "flex" }}>
         <FormControl variant="outlined">
-          <InputLabel htmlFor={`${controlId}`}>
-            {title || schema.title}
-          </InputLabel>
+          {fullAddress == undefined || fullAddress == "" ?
+            <InputLabel htmlFor={`${controlId}`}>
+              {title || schema.title}
+            </InputLabel> : null
+          }
           <OutlinedInput
             id={`${controlId}`}
             type={"text"}
