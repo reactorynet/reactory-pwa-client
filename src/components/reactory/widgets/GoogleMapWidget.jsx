@@ -100,10 +100,7 @@ const MapHOC = compose(
   withGoogleMap
 )((props) => {
   const $mapProps = props;
-
   const { api, onMapMarkerClicked } = $mapProps;
-
-  debugger;
 
   return (
     <GoogleMap
@@ -285,8 +282,6 @@ class ReactoryGoogleMapWidget extends Component {
         console.log(`ON MAP MARKER CLICKED:: ${address}`);
         api.log("GoogleMapWidget.onMapMarkerCLicked", { address }, "debug");
 
-        debugger;
-
         this.setState({ isDialogOpen: false });
         // return props.onChange(address); // TODO - onchange is undefined
       };
@@ -368,7 +363,6 @@ class ReactoryGoogleMapWidget extends Component {
       viewMode = "MAP_WITH_SEARCH",
     } = this.props;
 
-    debugger;
 
     const refs = {};
     const { center } = this.state;

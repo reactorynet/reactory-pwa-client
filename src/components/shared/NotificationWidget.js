@@ -127,7 +127,7 @@ class NotificationHOC extends Component {
           </Grid>
 
           {
-            config.components && config.components.length > 0 &&
+            config && config.components && config.components.length > 0 &&
             <Grid item xs={4} className={classes.componentColumn}>
               {additionalComponentsToMount}
             </Grid>

@@ -307,7 +307,18 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.downloadForms = this.downloadForms.bind(this);
     this.onPluginLoaded = this.onPluginLoaded.bind(this);
     this.getHelpScreen = this.getHelpScreen.bind(this);
+    this.submit = this.submit.bind(this);
     this.plugins = {};
+  }
+
+  submit(){
+    if (isNil(this.formRef) === false && this.formRef) {
+      try {
+        this.formRef.onSubmit();
+      } catch (submitError) {
+        this.props.api.log(`Could not submit the form`, submitError, 'error')
+      }
+    }
   }
 
   on(eventName: string, listener: ListenerFn, context: any) {
@@ -507,7 +518,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           self.props.api.log(`Could not submit the form`, submitError, 'error')
         }
       }
-    }
+    }    
 
     if (formUiOptions && isNil(formUiOptions.showSubmit) === false) {
       showSubmit = formUiOptions.showSubmit === true;
@@ -919,9 +930,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   getFormContext() {
     const self = this;
     return {
-      ...self.props,
+      ...self.props,            
+      formDef: { ...self.state.formDef },
       formData: { ...self.state.formData },
-      $formState: self.state,
+      $formState: self.state,      
       query: { ...self.state.query },
       formInstanceId: self.state._instance_id,
       $ref: self,

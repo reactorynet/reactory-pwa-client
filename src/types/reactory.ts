@@ -209,6 +209,8 @@ namespace Reactory {
       setViewContext(context): void;
 
       getViewContext(): any;
+
+      extendClientResolver( resolver: any );
     }
 
     export interface IReactoryWiredComponent {

@@ -154,8 +154,9 @@ class ReactoryDropZone extends Component<any, any> {
                   }
                 });
 
-                if(ReactoryDropZoneProps.mutation.onSuccessEvent && ReactoryDropZoneProps.mutation.onSuccessEvent.name)
-                  api.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, { filename, link, id, size, mimetype  });                
+                if(ReactoryDropZoneProps.mutation.onSuccessEvent && ReactoryDropZoneProps.mutation.onSuccessEvent.name)  {                  
+                  api.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, { filename, link, id, size, mimetype  });
+                }
               });   
               
             }).catch((docError) => {

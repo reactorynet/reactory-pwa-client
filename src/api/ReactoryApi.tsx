@@ -6,7 +6,7 @@ import inspector from 'schema-inspector';
 import uuid from 'uuid';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql } from 'apollo-client-preset';
+import { ApolloClient, gql, Resolvers } from 'apollo-client-preset';
 import { ApolloProvider } from 'react-apollo';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
@@ -146,7 +146,7 @@ class ReactoryApi extends EventEmitter {
   getAvatar: Function;
   getOrganizationLogo: Function;
   getUserFullName: Function;
-  getThemeResource: Function;
+  getThemeResource: Function;  
   CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
@@ -201,6 +201,7 @@ class ReactoryApi extends EventEmitter {
       template,
       humanNumber,
       inspector,
+      gql
     };
     this.$func = {
       'core.NullFunction': (params) => {
@@ -295,6 +296,15 @@ class ReactoryApi extends EventEmitter {
     this.createNotification = this.createNotification.bind(this);
     this.getThemeResource = ThemeResource;
     this.getUser = this.getUser.bind(this);
+    this.extendClientResolver = this.extendClientResolver.bind(this);
+  }
+
+
+  extendClientResolver( resolvers: Resolvers) {
+    const { client } = this;
+    if(client && resolvers) {       
+      client.addResolvers(resolvers);      
+    }
   }
 
   createNotification(title: string, options: NotificationOptions | any = {} ){
@@ -388,27 +398,36 @@ class ReactoryApi extends EventEmitter {
         this.$func[fqn] = functionReference;
       }
     }
-  }
-  ;
+  };
 
-  log(message, params: any = [], kind = 'log') {
+  log(message, params: any = [], kind = 'log', formatting = "") {
     try {
       switch (kind) {
         case 'log':
         case 'debug':
+          formatting = "color: grey;"
+          break;
         case 'error':
+          formatting = "color: red; font-weight: bold;"
+          break;        
         case 'warn':
+          {
+            formatting = "color: yellow, font-weight: bold;"
+            break;
+          }
         case 'info': {
           // do nothing we good
+          formatting = "color: blue"
           break;
         }
         default: {
           //different kind.. we don't do your kind around here.
           kind = 'debug';
+          formatting = "color: grey;"
           break;
         }
       }
-      const dolog = () => params && params.length === 0 ? console[kind](`Reactory::${message}`) : console[kind](`Reactory::${message}`, params);
+      const dolog = () => params && params.length === 0 ? console[kind](`%cReactory::${message}`, formatting) : console[kind](`%cReactory::${message}`, formatting, params);
       if (process.env.NODE_ENV !== 'production') {
         dolog();
       } else {
@@ -460,8 +479,7 @@ class ReactoryApi extends EventEmitter {
         items: {}
       };
     }
-  }
-  ;
+  };
 
   stat(key, statistic) {
     if (this.statistics.items[key]) {
@@ -471,8 +489,7 @@ class ReactoryApi extends EventEmitter {
       this.statistics.items[key] = statistic;
     }
     this.statistics.__delta += 1;
-  }
-  ;
+  };
 
   trackFormInstance(formInstance) {
     const self = this;
@@ -513,6 +530,7 @@ class ReactoryApi extends EventEmitter {
   afterLogin(user) {
     this.setUser(user);
     this.setAuthToken(user.token);
+    this.forms(true).then();
     return this.status({ emitLogin: true });
   }
 
@@ -545,7 +563,7 @@ class ReactoryApi extends EventEmitter {
     </React.Fragment>);
   }
 
-  forms() {
+  forms(bypassCache: boolean = false) {
     const that = this;
     return new Promise((resolve) => {
 
@@ -573,7 +591,7 @@ class ReactoryApi extends EventEmitter {
         });
       };
 
-      if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined) {
+      if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined && bypassCache === false) {
 
         if (moment(that.formSchemaLastFetch).add(60, 'seconds').isBefore(moment())) {
           refresh();
@@ -973,6 +991,7 @@ class ReactoryApi extends EventEmitter {
           that.tokenValidated = true;
           if (options.emitLogin === true)
             that.emit(ReactoryApiEventNames.onLogin, that.getUser());
+
           that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result });
 
           if(result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {

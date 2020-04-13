@@ -49,8 +49,55 @@ class MaterialTableWidget extends Component {
       newChipLabelText: ""
     };
 
+    this.refreshHandler = this.refreshHandler.bind(this);
+
+    this.tableRef = React.createRef();
+
   }
 
+  componentWillUnmount(){
+    const uiOptions = this.props.uiSchema['ui:options'] || {};
+    const { api } = this.props;
+    const self = this;
+    if(uiOptions.refreshEvents ) {
+      //itterate through list of event names, 
+      //for now we just do a force refresh which will trigger re-rendering 
+      //logic in the widget.      
+      uiOptions.refreshEvents.forEach(( reactoryEvent ) => {
+        api.log(`MaterialTableWidget - Reming Binding refresh event "${reactoryEvent.name}"`, undefined , 'debug' );        
+        api.removeListener(reactoryEvent.name, self.refreshHandler);
+      });
+    };
+  }
+
+  componentDidMount(){
+    const uiOptions = this.props.uiSchema['ui:options'] || {};
+    const { api } = this.props;
+    const self = this;
+    if(uiOptions.refreshEvents ) {
+      //itterate through list of event names, 
+      //for now we just do a force refresh which will trigger re-rendering 
+      //logic in the widget.      
+      uiOptions.refreshEvents.forEach(( reactoryEvent ) => {
+        api.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined , 'debug' );        
+        api.on(reactoryEvent.name, self.refreshHandler.bind(self, reactoryEvent.name));
+      });
+    };
+  }
+
+  refreshHandler(eventName, eventData ) {         
+    
+    const uiOptions = this.props.uiSchema['ui:options'] || {};
+    const { api } = this.props;
+    const self = this;
+    
+    this.props.api.log(`MaterialTableWidget - Handled ${eventName}`, eventData , 'debug' );
+    if(uiOptions.remoteData === true) {
+      self.tableRef.current && self.tableRef.current.onQueryChange()
+    } else {
+      self.forceUpdate();
+    }    
+  };
 
   render() {
     const self = this;
@@ -58,7 +105,8 @@ class MaterialTableWidget extends Component {
     const uiOptions = this.props.uiSchema['ui:options'] || {};
     const { formData, formContext } = this.props;
     let columns = [];
-    let actions = []
+    let actions = [];
+
     if(uiOptions.columns && uiOptions.columns.length) {
       let _columnRef = [];
       let _mergeColumns = false;
@@ -69,7 +117,7 @@ class MaterialTableWidget extends Component {
           _columns = api.utils.objectMapper(_columns, uiOptions.columnsPropertyMap)
         }
       }
-
+      
       remove(_columns, { selected: false });
 
       columns = _columns.map(coldef => {
@@ -158,16 +206,11 @@ class MaterialTableWidget extends Component {
         try {          
           if(formContext.$formState.formDef.graphql && formContext.$formState.formDef.graphql.query) {
             
-            const { refreshEvents } = formContext.$formState.formDef.graphql;
-
-            if(refreshEvents && isArray(refreshEvents) === true) {
-              refreshEvents.map((evt) => {
-                api.on(evt.name, this.forceUpdate);
-              });
-            }    
+            const { refreshEvents } = formContext.$formState.formDef.graphql;             
               
-            api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables, query }, 'debug')
+            api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables, query }, 'debug')            
             let variables = api.utils.objectMapper(self, uiOptions.variables || formContext.$formState.formDef.graphql.query.variables);
+
             variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
             api.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
@@ -201,9 +244,6 @@ class MaterialTableWidget extends Component {
           }
         }
       }
-
-
-
     } else {
       if (formData && formData.length) {
         formData.forEach(row => {
@@ -213,8 +253,7 @@ class MaterialTableWidget extends Component {
     }
 
     let options = {
-      rowStyle: (rowData, index) => {
-        api.log('rowstyle', {rowData, index})
+      rowStyle: (rowData, index) => {        
         let style = {};
 
         if(theme.MaterialTableWidget) {
@@ -226,7 +265,6 @@ class MaterialTableWidget extends Component {
         if(uiOptions.altRowStyle && index % 2 === 0) style = { ...style, ...uiOptions.altRowStyle };
 
         //TODO CONDITIONAL STYLING
-
         return style;
       }
     };
@@ -238,13 +276,24 @@ class MaterialTableWidget extends Component {
     if(uiOptions.actions && isArray(uiOptions.actions) === true) {
       actions = uiOptions.actions.map((action) => {
         
-        const actionClickHandler = (rowData) => {
-          api.createNotification("row action click", {  });
-          switch(action.result) {
-            case "refresh":
-            default: {
-              formContext.refresh();
-            }
+        const actionClickHandler = (selected) => {          
+          // api.createNotification("row action click", { row  });          
+          if(action.mutation) {            
+            const mutationDefinition = formContext.formDef.graphql.mutation[action.mutation];
+            
+            api.graphqlMutation(mutationDefinition.text, api.utils.objectMapper({ ...self.props, selected }, mutationDefinition.variables)).then((mutationResult) => {
+              api.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult })
+              
+              if(uiOptions.remoteData === true) {
+                self.tableRef.current && self.tableRef.current.onQueryChange()
+              } else {
+                self.forceUpdate();
+              }    
+              
+            }).catch((rejectedError) => {
+              api.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' })              
+
+            });
           }
         };
 
@@ -252,22 +301,21 @@ class MaterialTableWidget extends Component {
           icon: action.icon,
           iconProps: action.iconProps || {},
           tooltip: action.tooltip || 'No tooltip',
-          onClick: (evt, rowData) => {
-            actionClickHandler(rowData);
+          onClick: (evt, selected) => {
+            actionClickHandler(selected);
           }
         };
       });
     }
-    
-
+  
     return (
-        <MaterialTable
-            columns={columns}                    
-            data={data}            
-            title={this.props.title || uiOptions.title || "no title"}
-            options={options}
-            actions={actions}            
-            />
+      <MaterialTable
+          columns={columns}
+          tableRef={this.tableRef}                    
+          data={data}            
+          title={this.props.title || uiOptions.title || "no title"}
+          options={options}
+          actions={actions} />
     )
   }
 }

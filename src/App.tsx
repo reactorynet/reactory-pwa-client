@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, LegacyRef } from 'react';
 import PropTypes from 'prop-types';
 import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import MomentUtils from '@date-io/moment';
@@ -7,6 +7,7 @@ import {
   Route,
   Link,
   Redirect,
+  BrowserRouter,
 } from 'react-router-dom';
 import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
@@ -187,7 +188,7 @@ class App extends Component<any, AppState> {
       'core.FullScreenModal@1.0.0',
       'core.NotificationComponent@1.0.0'
     ]);
-  }
+  }  
 
   onRouteChanged(path, state) {
     api.log(`onRouteChange Handler`, [path, state], 'debug');
@@ -260,6 +261,9 @@ class App extends Component<any, AppState> {
           }
 
           if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
+            if(localStorage) {            
+              localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
+            }
             return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
           }
 
@@ -306,10 +310,18 @@ class App extends Component<any, AppState> {
       }
 
       if (innerWidth >= 2560) size = 'lg',
-
         api.log('Window resize', [innerHeight, innerWidth, outerHeight, outerWidth, size, view]);
-      api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
+        api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
     });
+
+    if(localStorage) {
+      let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
+      if(lastRoute !== null ) {
+        lastRoute = lastRoute.trim();        
+        localStorage.removeItem('$reactory.last.attempted.route$');
+        location.assign(lastRoute);
+      }
+    }
   }
 
   render() {
