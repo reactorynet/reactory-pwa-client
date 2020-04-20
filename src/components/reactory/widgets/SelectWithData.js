@@ -88,14 +88,14 @@ class SelectWithDataWidget extends Component {
               <InputLabel htmlFor={this.props.idSchema.$id}>{this.props.schema.title}</InputLabel>
               <Select
                 multiple={multiSelect === true}
-                value={this.props.formData}
+                value={`${this.props.formData}`}
                 onChange={onSelectChanged}
                 name={this.props.name}
-                input={<Input id={this.props.idSchema.$id} value={this.props.formData || ""}/>}>                
+                input={<Input id={this.props.idSchema.$id} value={`${this.props.formData}`.trim() || ""}/>}>                
                 { emptySelect }
                 { menuItems.map((option, index) => {
                   return (
-                    <MenuItem key={option.key || index} value={option.value}>
+                    <MenuItem key={option.key || index} value={`${option.value}`}>
                       { option.icon ? <Icon>{option.icon}</Icon> : null }
                       { option.label }
                     </MenuItem>)

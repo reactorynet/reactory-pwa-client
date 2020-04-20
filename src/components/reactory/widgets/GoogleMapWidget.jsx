@@ -1,4 +1,5 @@
 import React, { Component, Fragment, useState } from "react";
+import PropTypes from "prop-types";
 import ReactDOM from "react-dom";
 import { compose, withProps } from "recompose";
 import {
@@ -22,6 +23,7 @@ import {
   ListItemText,
   ListItemAvatar,
   Icon,
+  Paper,
   IconButton,
   InputLabel,
   InputAdornment,
@@ -69,30 +71,21 @@ class CustomInfoWindow extends Component {
 
     return (
       <InfoWindow onCloseClick={onCloseHandler}>
-        <div>
-          <p className={classes.address}>{formatted_address}</p>
+        <Paper>
+          <Typography variant='caption'>{formatted_address}</Typography>
           <div className={classes.buttonContainer}>
-            <Button variant="contained" color="primary" onClick={acceptHandler}>
-              ACCEPT
-            </Button>
-            <Button variant="contained" color="secondary" onClick={editHandler}>
-              EDIT ADDRESS
-            </Button>
-            <Button
-              variant="contained"
-              color="default"
-              onClick={onCloseHandler}
-            >
-              CANCEL
-            </Button>
+            <IconButton variant="contained" color="primary" onClick={acceptHandler}><Icon>check</Icon></IconButton>            
+            <IconButton variant="contained" color="default" onClick={editHandler}><Icon>edit</Icon></IconButton>
+            <IconButton variant="contained" color="default"onClick={onCloseHandler}><Icon>close</Icon></IconButton>
           </div>
-        </div>
+        </Paper>
       </InfoWindow>
     );
   }
 }
 
 const CustomInfoWindowComponent = compose(
+  withApi,
   withStyles(CustomInfoWindow.Styles),
   withTheme
 )(CustomInfoWindow);
@@ -111,7 +104,7 @@ const MapHOC = compose(
   withGoogleMap
 )((props) => {
   const $mapProps = props;
-  const { api, onMapMarkerClicked, onEditClicked } = $mapProps;
+  const { api, onMapMarkerClicked, onEditClicked, onAddressSelected } = $mapProps;
 
   return (
     <GoogleMap
@@ -164,6 +157,11 @@ const MapHOC = compose(
           const acceptAddress = (address, place_id) => {
             onMapMarkerClicked(address, place_id);
             setDisplayMarkerInfo(!displayMarkerInfo);
+            if(onAddressSelected && typeof onAddressSelected === "function") {
+              debugger;
+              api.log(`LasecMarker => acceptAddress `, {address, place_id}, 'debug');
+              onAddressSelected(address, place_id)
+            }
           };
 
           const editAddress = (place) => {
@@ -206,6 +204,11 @@ const VIEWMODES = {
 };
 
 class ReactoryGoogleMapWidget extends Component {
+
+  static propsTypes = {
+    api: PropTypes.instanceOf(ReactoryApi).isRequired
+  }
+
   constructor(props, context) {
     super(props, context);
     this.state = {
@@ -229,6 +232,7 @@ class ReactoryGoogleMapWidget extends Component {
   }
 
   updateFormData(address, place_id) {
+    debugger;
     this.props.formData.fullAddress = address; // not right, but shows in text box
 
     const newFormData = {
@@ -294,9 +298,7 @@ class ReactoryGoogleMapWidget extends Component {
     const { isDialogOpen, isNewAddress } = self.state;
 
     // FORM TO CREATE NEW ADDRESS
-    const NewAddressForm = api.getComponent(
-      "lasec-crm.LasecCRMNewCustomerAddress@1.0.0"
-    );
+    const NewAddressForm = api.getComponent("lasec-crm.LasecCRMNewCustomerAddress@1.0.0");
     let NewAddressFormProps = {};
 
     const MapModel = (props) => {
@@ -316,7 +318,7 @@ class ReactoryGoogleMapWidget extends Component {
       };
 
       const onMapMarkerClicked = (address, place_id) => {
-        console.log(`ON MAP MARKER CLICKED:: ${address} ${place_id}`);
+        console.log(`ON MAP MARKER CLICKED:: ${address} ${place_id}`,{ self: this });
         this.setState({ isDialogOpen: false });
         this.updateFormData(address, place_id);
       };
@@ -325,11 +327,17 @@ class ReactoryGoogleMapWidget extends Component {
         this.setState({ isNewAddress: true, selectedPlace: place });
       };
 
+      const onCancelEdit = () => {
+        this.setState({ isNewAddress: false });
+      }
+      
+
       return (
         <FullScreenModal {...fullScreenProps}>
           {this.state.isNewAddress && (
             <NewAddressForm
               place_id={this.state.selectedPlace.place_id}
+              onCancel={onCancelEdit}
             ></NewAddressForm>
           )}
           {!this.state.isNewAddress && (
@@ -345,6 +353,7 @@ class ReactoryGoogleMapWidget extends Component {
                 loadingElement: <Loading message="Loading Map" />,
                 onMapMarkerClicked,
                 onEditClicked,
+                onAddressSelected: mapProps.onAddressSelected,
                 api,
               }}
             />
@@ -358,7 +367,7 @@ class ReactoryGoogleMapWidget extends Component {
 
   getTextFieldWithSearch() {
     const self = this;
-    const { schema, idSchema, title, formData, uiSchema } = self.props;
+    const { schema, idSchema, title, formData, uiSchema, uiOptions } = self.props;
     const { isDialogOpen } = self.state;
 
     const { fullAddress } = formData;
@@ -373,7 +382,7 @@ class ReactoryGoogleMapWidget extends Component {
     const controlId = `${idSchema.$id}_AddressLabel`;
     return (
       <div style={{ display: "flex" }}>
-        <FormControl variant="outlined">
+        <FormControl variant="outlined" fullWidth={true}>
           {fullAddress == undefined || fullAddress == "" ?
             <InputLabel htmlFor={`${controlId}`}>
               {title || schema.title}
@@ -384,6 +393,7 @@ class ReactoryGoogleMapWidget extends Component {
             type={"text"}
             value={fullAddress}
             readOnly
+            fullWidth={true}
             endAdornment={
               <InputAdornment position="end">
                 <IconButton
@@ -409,6 +419,7 @@ class ReactoryGoogleMapWidget extends Component {
       schema,
       api,
       viewMode = "MAP_WITH_SEARCH",
+      onChange
     } = this.props;
 
     const refs = {};
@@ -463,11 +474,18 @@ class ReactoryGoogleMapWidget extends Component {
         );
       },
       onMapMounted: (ref) => {
-        self.map = ref;
+        self.map = React.forwardRef(ref);
       },
       onSearchBoxMounted: (searchBoxRef) => {
         self.searchBox = searchBoxRef;
       },
+      onAddressSelected: (address) => {        
+        api.log(`Address ${address.fullAddressSelected}`, address, 'debug');
+        debugger;
+        if(onChange && typeof onChange === 'function' ) {
+          onChange(address);
+        }
+      }
     };
 
     if (uiSchema && uiSchema["ui:options"]) {

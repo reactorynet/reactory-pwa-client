@@ -1,6 +1,6 @@
 import React, { Fragment, Component } from 'react';
 import PropTypes from 'prop-types';
-import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from 'react-jsonschema-form/lib/utils';
+import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from  '@reactory/client-core/components/reactory/form/utils';
 import { pullAt, isNil, template, isString } from 'lodash';
 import { withRouter, Link } from 'react-router-dom';
 import uuid from 'uuid';

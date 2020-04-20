@@ -1,7 +1,7 @@
 import React from 'react'
-import ObjectField from 'react-jsonschema-form/lib/components/fields/ObjectField'
-import { retrieveSchema } from 'react-jsonschema-form/lib/utils'
-import { Col } from 'react-bootstrap'
+import ObjectField from '@reactory/client-core/components/reactory/form/fields';
+import { retrieveSchema } from '@reactory/client-core/components/reactory/form/utils';
+import { Col } from 'react-bootstrap';
 
 export default class GridField extends ObjectField {
   state = { firstName: 'hasldf' }

@@ -1,6 +1,8 @@
+import materialFieldTemplate from './MaterialFieldTemplate';
+
 export default {
   MaterialObjectTemplate: require('./MaterialObjectTemplate'),
-  MaterialFieldTemplate: require('./MaterialFieldTemplate'),
+  MaterialFieldTemplate: materialFieldTemplate,
   MaterialArrayFieldTemplate: require('./MaterialArrayField'),
   MaterialErrorListTemplate: require('./MaterialFormErrorTemplate').MaterialFormTemplateComponent,
 }

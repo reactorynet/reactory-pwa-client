@@ -12,7 +12,7 @@ import {
 import PropTypes from "prop-types";
 import includes from "lodash/includes";
 
-import  { UnsupportedField } from "react-jsonschema-form";
+import  { UnsupportedField } from '@reactory/client-core/components/reactory/form/components/fields';
 
 import {
   getWidget,
@@ -26,7 +26,7 @@ import {
   retrieveSchema,
   toIdSchema,
   getDefaultRegistry,
-} from "react-jsonschema-form/lib/utils";
+} from "@reactory/client-core/components/reactory/form/utils";
 
 function ArrayFieldTitle({ TitleField, idSchema, title, required }) {
   if (!title) {

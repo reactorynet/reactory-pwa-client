@@ -358,6 +358,11 @@ class ApplicationHeader extends Component {
       }
     };
 
+
+    const toolbar = (
+      <div></div>
+    );
+
     /*
     const searchControl = (<div className={classes.grow}>
       <div className={classes.search}>
@@ -421,6 +426,7 @@ class ApplicationHeader extends Component {
                 className={this.props.classes.loggedInUserAvatar}
               />
             </Link>}
+            {toolbar}
           <Divider />
           <List className={this.props.classes.menuItems}>
             <Menus {...{ menus: menus, history: this.props.history, user, api, self, classes }} />

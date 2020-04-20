@@ -203,18 +203,28 @@ class MaterialTableWidget extends Component {
 
     if (uiOptions.remoteData === true) {
       data = async (query) => {
-        try {          
-          if(formContext.$formState.formDef.graphql && formContext.$formState.formDef.graphql.query) {
-            
-            const { refreshEvents } = formContext.$formState.formDef.graphql;             
+        try {       
+          
+          const graphqlDefinitions = formContext.$formState.formDef.graphql;
+          
+          if(graphqlDefinitions.query || graphqlDefinitions.queries) {
+
+            let queryDefinition = graphqlDefinitions.query;
+
+            if(typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {              
+              queryDefinition = graphqlDefinitions.queries[uiOptions.query];
+              api.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug')
+            }
+
+            const { refreshEvents } = queryDefinition;             
               
             api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables, query }, 'debug')            
-            let variables = api.utils.objectMapper(self, uiOptions.variables || formContext.$formState.formDef.graphql.query.variables);
+            let variables = api.utils.objectMapper(self, uiOptions.variables || queryDefinition.variables);
 
             variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
             api.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
-            const queryResult = await api.graphqlQuery(formContext.$formState.formDef.graphql.query.text, variables).then();
+            const queryResult = await api.graphqlQuery(queryDefinition.text, variables).then();
             if (queryResult.errors && queryResult.errors.length > 0) {
               //show a loader error
               api.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
@@ -224,9 +234,8 @@ class MaterialTableWidget extends Component {
                 totalCount: 0
               }
             } else {
-              let result = api.utils.objectMapper(queryResult.data[formContext.$formState.formDef.graphql.query.name], uiOptions.resultMap || formContext.$formState.formDef.graphql.query.resultMap);
+              let result = api.utils.objectMapper(queryResult.data[queryDefinition.name], uiOptions.resultMap || queryDefinition.resultMap);
               result.page = result.page - 1;
-
               return result;
             }
           } else {
@@ -282,17 +291,24 @@ class MaterialTableWidget extends Component {
             const mutationDefinition = formContext.formDef.graphql.mutation[action.mutation];
             
             api.graphqlMutation(mutationDefinition.text, api.utils.objectMapper({ ...self.props, selected }, mutationDefinition.variables)).then((mutationResult) => {
-              api.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult })
+              api.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
               
               if(uiOptions.remoteData === true) {
                 self.tableRef.current && self.tableRef.current.onQueryChange()
               } else {
                 self.forceUpdate();
-              }    
+              }
               
-            }).catch((rejectedError) => {
-              api.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' })              
+              if(mutationDefinition.onSuccessEvent) {
+                api.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
+                api.emit(mutationDefinition.onSuccessEvent, api.utils.objectMapper({ result: mutationResult }, mutationDefinition.onSuccessEvent.data || { '*': '*' }))
+              }
 
+              if(mutationDefinition.notification) {                
+                api.createNotification(api.createNotification(`${api.utils.template(action.successMessage)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: 'error' })   );
+              }              
+            }).catch((rejectedError) => {
+              api.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });
             });
           }
         };

@@ -9,7 +9,7 @@ import {
 	DefaultLinkModel
 } from "@projectstorm/react-diagrams";
 
-import '@projectstorm/react-diagrams/dist/style.min.css';
+import 'storm-react-diagrams/dist/style.min.css';
 
 import { withStyles, withTheme } from '@material-ui/styles';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
@@ -28,7 +28,7 @@ class ReactoryFormEditor extends Component<any,{}> {
   render(){
 
     const { uiSchema, schema, formData } = this.props;
-    debugger;
+    
     var engine = new DiagramEngine();
     engine.installDefaultFactories();
 

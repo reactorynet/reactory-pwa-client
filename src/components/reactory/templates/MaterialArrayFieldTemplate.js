@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import Draggable from 'react-draggable';
 import { pullAt } from 'lodash';
-import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from 'react-jsonschema-form/lib/utils'
+import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from '@reactory/client-core/components/reactory/form/utils';
 
 import {
   AppBar,

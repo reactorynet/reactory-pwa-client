@@ -2,7 +2,7 @@ import React, { Component, Fragment } from "react";
 import PropTypes from "prop-types";
 
 
-import  { UnsupportedField } from "react-jsonschema-form";
+import  { UnsupportedField } from "@reactory/client-core/components/reactory/form/components/fields";
 
 import {
   isMultiSelect,
@@ -15,7 +15,7 @@ import {
   deepEquals,
   getSchemaType,
   ADDITIONAL_PROPERTY_FLAG
-} from "react-jsonschema-form/lib/utils";
+} from "@reactory/client-core/components/reactory/form/utils";
 
 const REQUIRED_FIELD_SYMBOL = "*";
 const COMPONENT_TYPES = {

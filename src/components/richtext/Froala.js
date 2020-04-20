@@ -1,6 +1,5 @@
 import React, { Component, Fragment } from 'react'
 import PropTypes from 'prop-types'
-import Form from 'react-jsonschema-form'
 import { withRouter, Route, Switch } from 'react-router'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { find, template, templateSettings } from 'lodash';

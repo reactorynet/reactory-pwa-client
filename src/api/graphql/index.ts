@@ -429,7 +429,7 @@ const apiStatus = gql`
           }
         }
         
-      }
+      }     
       messages {
         id
         title
@@ -452,6 +452,13 @@ const apiStatus = gql`
           priority
         }
       }
+      navigationComponents {				
+				componentFqn
+				componentProps
+				componentPropertyMap
+				componentKey
+				componentContext
+			}
     }
   }
 

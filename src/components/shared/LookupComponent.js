@@ -26,25 +26,34 @@ class LookupWidget extends Component {
     const {
       uiSchema,
       componentFqn,
-      componentProps,
+      componentProps = {},
+      componentPropertyMap = {},
       classes,
-      api
+      api,
+      formData
     } = this.props;
     const self = this;
 
     let label = '';
-    let selectedValue = '';
+    let selectedValue = formData || '';
     let modalTitle = '';
 
     const FullScreenModal = api.getComponent('core.FullScreenModal');
     let ChildComponent = api.getComponent((componentFqn || uiSchema.props.componentFqn) || 'core.Loading');
     let componentFound = true;
     let childprops = {};
+    let modalProps = {
+      open: this.state.open === true,
+      title: 'Lookup',
+      slide: 'left',
+      onClose: this.onClick
+    };
 
     if (uiSchema) {
       const uiOptions = uiSchema['ui:options'];
       if (uiOptions && uiOptions.label) label = uiOptions.label;
-      if (uiOptions && uiOptions.title) modalTitle = uiOptions.title;
+      if (uiOptions && uiOptions.title) modalProps.title = uiOptions.title;
+      if (uiOptions && uiOptions.modalProps) modalProps = { ...modalProps, ...uiOptions.modalProps };
     }
 
     if (ChildComponent === null || ChildComponent === undefined) {
@@ -56,7 +65,7 @@ class LookupWidget extends Component {
     }
 
     if (componentProps && this.state.open === true && componentFound === true) {
-      childprops = api.utils.objectMapper(this.props, componentProps);
+      childprops = api.utils.objectMapper(this.props, componentPropertyMap);
     }
 
     return (
@@ -70,11 +79,8 @@ class LookupWidget extends Component {
           </div>
         </div>
         <FullScreenModal
-          open={this.state.open === true}
-          title={modalTitle}
-          slide="left"
-          onClose={this.onClick}>
-          {this.state.open === true ? <ChildComponent {...childprops} /> : null}
+          {...modalProps}>
+          {this.state.open === true ? <ChildComponent {...{...componentProps, ...childprops}} /> : null}
         </FullScreenModal>
       </Fragment>
     );

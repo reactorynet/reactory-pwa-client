@@ -20,7 +20,7 @@ import {
 
   getDefaultRegistry,
   getUiOptions,
-} from "react-jsonschema-form/lib/utils";
+} from "@reactory/client-core/components/reactory/form/utils";
 
 function DefaultObjectFieldTemplate(props) {
 

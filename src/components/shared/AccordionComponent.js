@@ -100,7 +100,7 @@ class AccordionWidget extends Component {
                     </ExpansionPanelSummary>
                     </Paper>
                   </StepLabel>
-                  <StepContent key={`label_${index}`}>                                        
+                  <StepContent key={`content_label_${index}`}>                                        
                     {
                       panel.Components.map(({ componentFqn, componentProps, componentPropsMap }, ComponentIndex) => {
                         

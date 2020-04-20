@@ -100,7 +100,7 @@ namespace Reactory {
       queryString: any;
       objectToQueryString: Function;
 
-      createNotification(NtoficationProperties)
+      createNotification(notificationProperties: NotificationProperties)
 
       goto(where, state): void;
 
@@ -214,7 +214,7 @@ namespace Reactory {
     }
 
     export interface IReactoryWiredComponent {
-      api: IReactoryApi
+      api: IReactoryApi,      
     }
 
     export interface IFrameProperties {
@@ -343,6 +343,12 @@ namespace Reactory {
     method: string
   }
 
+  export interface IReactoryEvent {
+    name: String,
+    data?: any | undefined,
+  }
+
+
   export interface IReactoryFormQuery {
     name: string,
     text: string,
@@ -358,7 +364,7 @@ namespace Reactory {
     interval?: number,
     useWebsocket?: boolean,
     onError?: IReactoryFormQueryErrorHandlerDefinition,
-    resultType?: string,
+    resultType?: string,    
   }
 
   export interface IReactoryFormMutation {
@@ -366,13 +372,17 @@ namespace Reactory {
     text: String,
     objectMap: boolean,
     updateMessage?: String,
+    resultMap?: Object,
+    resultType?: string,
     variables?: Object,
+    handledBy?: String | 'onChange' | 'onSubmit',
     onSuccessMethod?: String,
+    onSuccessEvent?: IReactoryEvent | undefined,
+    refreshEvents?: IReactoryEvent[] | undefined,
     onSuccessUrl?: String,
     onSuccessRedirectTimeout?: number,
     options?: any,
     onError?: IReactoryFormQueryErrorHandlerDefinition
-    resultType?: string,
   }
 
   export interface IReactoryFormMutations {
@@ -450,6 +460,8 @@ namespace Reactory {
     description: string,
     icon: string,
     uiSchema: any,
+    //used to override the graphql definitions for that view type
+    graphql?: IFormGraphDefinition
   }
 
   export interface IReactoryForm {

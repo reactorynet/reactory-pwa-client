@@ -52,11 +52,12 @@ class RadioGroupWidget extends Component {
           {
             <RadioGroup style={{ flexDirection: 'row' }} aria-label="gender" name="radio group" value={this.state.selectedValue} onChange={handleChange}>
               {
-                uiOptions.radioOptions.map(option => {
+                uiOptions.radioOptions.map((option, optionIndex) => {
                   return (
                     <FormControlLabel
                       control={<Radio color="primary" />}
                       label={option.label}
+                      key={optionIndex}
                       labelPlacement="left"
                       value={option.value}
                     />

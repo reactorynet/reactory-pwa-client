@@ -47,10 +47,14 @@ if (localStorage) {
   localStorage.setItem('REACT_APP_API_ENDPOINT', REACT_APP_API_ENDPOINT);
 }
 
+const anonToken = process.env.ANON_USER_TOKEN
+// get the authentication token from local storage if it exists
+const token = localStorage.getItem('auth_token') || anonToken;
+
 const authLink = setContext((_, { headers }) => {
-  const anonToken = process.env.ANON_USER_TOKEN
+  //const anonToken = process.env.ANON_USER_TOKEN
   // get the authentication token from local storage if it exists
-  const token = localStorage.getItem('auth_token') || anonToken;
+  //const token = localStorage.getItem('auth_token') || anonToken;
 
   // return the headers to the context so httpLink can read them
   return {
@@ -80,24 +84,34 @@ const client = new ApolloClient({
   link: authLink.concat(uploadLink),
   cache,
   defaultOptions: {
+
     watchQuery: {
       fetchPolicy: 'cache-and-network',
       errorPolicy: 'ignore',
     },
+
     query: {
-      fetchPolicy: 'network-only',
+      fetchPolicy: 'cache-first',
       errorPolicy: 'all',
     },
+
     mutate: {
+      fetchPolicy: 'cache-first',      
       errorPolicy: 'all',
     },
   },
 });
 
+
+
 const ws_client = new SubscriptionClient(`${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`.replace('http', 'ws'), {
   reconnect: true,
   reconnectionAttempts: 5,
-  timeout: 1000
+  timeout: 1000,  
+  connectionParams: {
+    Authorization: `Bearer ${token}`,
+    authToken: token
+  }
 });
 
 const ws_link = new WebSocketLink(ws_client);
