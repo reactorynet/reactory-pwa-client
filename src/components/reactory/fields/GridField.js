@@ -2,6 +2,7 @@ import React from 'react'
 import { compose } from 'redux';
 import { template } from 'lodash';
 import ObjectField from '../form/components/fields/ObjectField'
+import MaterialObjectField from '../fields/MaterialObjectField';
 import { retrieveSchema } from '../form/utils'
 import { Grid, Paper } from '@material-ui/core'
 import { Col } from 'react-bootstrap'
@@ -133,7 +134,7 @@ export class BootstrapGridField extends ObjectField {
   }
 };
 
-class MaterialGridField extends ObjectField {
+class MaterialGridField extends MaterialObjectField {
   
   static styles = theme => ({
     root: {

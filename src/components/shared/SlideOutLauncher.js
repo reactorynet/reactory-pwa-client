@@ -70,7 +70,8 @@ class SlideOutLauncher extends Component {
       buttonIcon,
       buttonProps = {},
       componentProps,
-      actions
+      actions,
+      childProps = {}
     } = _props;
 
 
@@ -94,7 +95,7 @@ class SlideOutLauncher extends Component {
     const FullScreenModal = api.getComponent('core.FullScreenModal');
     let ChildComponent = api.getComponent(componentFqn || 'core.Loading');
     let componentFound = true;
-    let childprops = {};
+    let childprops = { ...childProps };
 
     if(ChildComponent === null || ChildComponent === undefined) {
       componentFound = false;
@@ -105,7 +106,7 @@ class SlideOutLauncher extends Component {
     }
 
     if (componentProps && this.state.open === true && componentFound === true) {
-      childprops = api.utils.objectMapper(this.props, componentProps);
+      childprops = { ...childprops, ...api.utils.objectMapper(this.props, componentProps) };
     }
                 
     let LaunchButton = (

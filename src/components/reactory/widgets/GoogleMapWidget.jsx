@@ -518,7 +518,7 @@ class ReactoryGoogleMapWidget extends Component {
 
     children.push(this.getTextFieldWithSearch());
 
-    if (viewMode.indexOf(VIEWMODES.MAP_WITH_SEARCH, 0) >= 0) {
+    if (viewMode.indexOf(VIEWMODES.MAP_WITH_SEARCH, 0) >= 0) {  
       children.push(this.getMapModal(mapProps));
     }
 
@@ -535,8 +535,8 @@ class ReactoryGoogleMapWidget extends Component {
 
 const ReactoryGoogleMapWidgetComponent = compose(
   withApi,
-  withStyles(ReactoryGoogleMapWidget.Styles),
-  withTheme
+  withTheme,
+  withStyles(ReactoryGoogleMapWidget.Styles)
 )(ReactoryGoogleMapWidget);
 
 export default ReactoryGoogleMapWidgetComponent;
