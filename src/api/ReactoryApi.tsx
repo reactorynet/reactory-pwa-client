@@ -593,7 +593,7 @@ class ReactoryApi extends EventEmitter {
 
       if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined && bypassCache === false) {
 
-        if (moment(that.formSchemaLastFetch).add(60, 'seconds').isBefore(moment())) {
+        if (moment(that.formSchemaLastFetch).add(5, 'minutes').isBefore(moment())) {
           refresh();
         } else {
           resolve(that.formSchemas);

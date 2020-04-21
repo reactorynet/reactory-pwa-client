@@ -419,24 +419,3 @@ App.defaultProps = {
 
 export default App;
 
-/**
-* 
-* 
-  <PrivateRoute exact path="/" component={Home}/>                  
-  <PrivateRoute path="/admin" component={AdminDashboard} />              
-  <Route exact path="/login" component={Login} />
-  <Route exact path="/forgot" component={ForgotForm}/>
-  <Route exact path="/reset-password" component={ResetPasswordForm}/>    
-  <Route exact path="/register" component={Register } />
-  <PrivateRoute path="/assess/:assessmentId" component={Assessment} />
-  <PrivateRoute exact path="/inbox" component={UserInbox} />
-  <PrivateRoute exact path="/users" component={UserList} />
-  <PrivateRoute path="/profile" component={Profile}/>
-  <PrivateRoute path="/surveys" component={UserSurvey} />
-  <PrivateRoute path="/reports" component={Report} />
-  <PrivateRoute path="/tasks" component={ChatDashboard} />
-  <PrivateRoute path="/actions" component={TaskDashboard} />                    
-  <PrivateRoute exact path="/organizations" component={OrganizationTable} />             
- * 
- * 
- */

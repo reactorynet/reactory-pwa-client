@@ -100,7 +100,7 @@ namespace Reactory {
       queryString: any;
       objectToQueryString: Function;
 
-      createNotification(notificationProperties: NotificationProperties)
+      createNotification(title: string, notificationProperties: NotificationProperties);
 
       goto(where, state): void;
 

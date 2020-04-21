@@ -285,8 +285,7 @@ class MaterialTableWidget extends Component {
     if(uiOptions.actions && isArray(uiOptions.actions) === true) {
       actions = uiOptions.actions.map((action) => {
         
-        const actionClickHandler = (selected) => {          
-          // api.createNotification("row action click", { row  });          
+        const actionClickHandler = (selected) => {                    
           if(action.mutation) {            
             const mutationDefinition = formContext.formDef.graphql.mutation[action.mutation];
             
@@ -305,7 +304,7 @@ class MaterialTableWidget extends Component {
               }
 
               if(mutationDefinition.notification) {                
-                api.createNotification(api.createNotification(`${api.utils.template(action.successMessage)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: 'error' })   );
+                api.createNotification(`${api.utils.template(action.successMessage)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: 'error' })
               }              
             }).catch((rejectedError) => {
               api.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });

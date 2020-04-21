@@ -234,6 +234,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   plugins: {};
   api: any;
   instanceId: string;
+  isMounted: boolean;
 
   constructor(props: ReactoryFormProperties, context: any) {
     super(props, context);
@@ -308,7 +309,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.onPluginLoaded = this.onPluginLoaded.bind(this);
     this.getHelpScreen = this.getHelpScreen.bind(this);
     this.submit = this.submit.bind(this);
-    this.plugins = {};
+    this.plugins = {};    
   }
 
   submit(){
@@ -349,12 +350,24 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   componentWillReceiveProps(nextProps) {
     this.props.api.log('ReactoryForm.componentWillReceiveProps', { nextProps }, 'debug');
-    if (nextProps.formId !== this.props.formId || deepEquals(nextProps.formData, this.state.formData) === false) {
-      this.setState({ forms_loaded: false, formData: nextProps.formData, queryComplete: false }, this.forceUpdate)
+    const self = this;
+    if (nextProps.formId !== this.props.formId) {
+      this.setState({ forms_loaded: false, formData: nextProps.formData, queryComplete: false }, ()=>{
+        self.downloadForms();
+      });
+    } 
+
+    if(deepEquals(nextProps.formData, this.state.formData) === false) {
+      this.setState({ formData: nextProps.formData });
     }
   }
 
+  componentWillMount() {
+    this.downloadForms();
+  }
+
   componentWillUnmount() {
+    this.isMounted = false;
     this.$events.emit('componentWillUnmount', this);
     this.$events.removeAllListeners();
   }
@@ -365,6 +378,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   componentDidMount() {
     const { api } = this.props;
+    this.isMounted = true;
     api.trackFormInstance(this);
     api.log('ReactoryComponent.componentDidMount', { props: this.props, context: this.context }, 'debug');
     api.amq.onReactoryPluginLoaded('loaded', this.onPluginLoaded);
@@ -373,7 +387,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   formDef = (): Reactory.IReactoryForm | undefined => {
     if (this.state.formDef) return this.state.formDef;
 
-    return undefined
+    return simpleForm
   }
 
   goBack() {
@@ -561,7 +575,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     let _additionalButtons = [];
     if(buttons && buttons.length) {
-      _additionalButtons = buttons.map((button) => {
+      _additionalButtons = buttons.map((button, buttonIndex) => {
         const { buttonProps, iconProps, type, handler } = button;
 
         const onButtonClicked = () => {
@@ -579,7 +593,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         }
 
         return (
-        <Button {...buttonProps} onClick={onButtonClicked}>{iconProps.placement === 'left' && buttonIcon}{buttonProps.title}{iconProps.placement === 'right' && buttonIcon}</Button>
+        <Button {...buttonProps} key={buttonIndex} onClick={onButtonClicked}>{iconProps.placement === 'left' && buttonIcon}{buttonProps.title}{iconProps.placement === 'right' && buttonIcon}</Button>
         )
       });
     }
@@ -893,7 +907,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       } else {        
         
         const executeFormQuery = () => {
-          api.log(`Executing form auto form query`)
+          api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${that.instanceId} => Executing form auto form query`)
           const query_start = new Date().valueOf();
           api.graphqlQuery(gql(query.text), _variables).then((result: any) => {
             const query_end = new Date().valueOf();
@@ -921,41 +935,47 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                     _formData = { ...formData, ...data[query.name] };
                   }
                 }
-              }
+              }              
             }
 
-              //update component state with new form data
-          that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, () => {
-            that.$events.emit('onQueryComplete', { formData: _formData, form: that });
-            if (errors) {
-              api.log(`Error executing graphql query`, errors)
-              handleErrors(errors);
-            }
-          });
+            //update component state with new form data
+            if(that.isMounted === true) {
+              that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, () => {
+                that.$events.emit('onQueryComplete', { formData: _formData, form: that });
+                if (errors) {
+                  api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${that.instanceId} => Error executing graphql query`, errors)
+                  handleErrors(errors);
+                }
+              });  
+            }              
 
           }).catch((queryError) => {
-            that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false }, () => {
-              if (formDef.graphql.query.onError) {
-                handleErrors([queryError]);
-              }
-            });
+
+            if(that.isMounted === true) { 
+              that.setState({ queryComplete: true, dirty: false, allowRefresh: true, queryError, loading: false }, () => {
+                if (formDef.graphql.query.onError) {
+                  handleErrors([queryError]);
+                }
+              });
+            }            
           });
         }
         
-        if(formDef.graphql.query.interval) {
+        if(formDef.graphql.query.interval) {         
           setInterval(executeFormQuery, formDef.graphql.query.interval);
         }
 
-        executeFormQuery();
+        executeFormQuery();       
+        setTimeout(executeFormQuery, 2000) 
       }
 
 
 
       if (isEmpty(formDef.graphql.query.queryMessage) === false) {
-        return <Loading title={template(formDef.graphql.query.queryMessage)({ props: this.props, state: this.state })} />
+        return <Loading message={template(formDef.graphql.query.queryMessage)({ props: this.props, state: this.state })} />
       }
 
-      return <Loading title={`Fetching data for ${formDef.title}`} />
+      return <Loading message={`Fetching data for ${formDef.title}`} />
     }
 
     if (has.mutation === true) {
@@ -1339,7 +1359,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   onChange(data) {
     
-    const { formDef, queryComplete, queryError, dirty } = this.state;
+    const { formDef, queryComplete, queryError, dirty, _instance_id } = this.state;
 
     if (deepEquals(this.state.formData, data.formData) === false && queryComplete === true) {
       const { api, mode } = this.props;
@@ -1350,7 +1370,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       const fire = () => ($onChange(data, this, { before: changed, after: rchanged }))
       const changed = diff(data.formData, this.state.formData);
       const rchanged = diff(this.state.formData, data.formData);  
-      api.log(`${formDef.name}[${this.instanceId}].onChange`, { changed, rchanged }, 'debug');
+      api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { changed, rchanged }, 'debug');
 
       if(formDef.graphql && formDef.graphql.mutation && formDef.graphql.mutation['onChange']) {
         let onChangeMutation: Reactory.IReactoryFormMutation = formDef.graphql.mutation['onChange'];
@@ -1434,9 +1454,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
    */
   downloadForms() {
     const that = this;
+    let formDef = simpleForm;
+
     try {
       this.props.api.forms().then((forms: Reactory.IReactoryForm[]) => {
-        const formDef = find(forms, { id: that.props.formId }) || simpleForm;
+        formDef = find(forms, { id: that.props.formId }) || simpleForm;
         if (formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
         let _activeUiSchemaMenuItem = null;
         if (isArray(formDef.uiSchemas) === true && formDef.uiSchemas.length > 0) {
@@ -1445,61 +1467,54 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
         that.setState({ forms: forms, forms_loaded: true, loading: false, formDef, activeUiSchemaMenuItem: _activeUiSchemaMenuItem });
       }).catch((loadError) => {
-        console.error(`Error while downloading / setting forms info ${loadError.message}`, loadError);
-        that.setState({ forms: [], forms_loaded: true, loading: false, formDef: simpleForm, formError: { message: loadError.message } })
+        that.props.api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${that.instanceId} => Error while downloading / setting forms info ${loadError.message}`, loadError, 'error');
+        that.setState({ forms: [], forms_loaded: true, loading: false, formDef: simpleForm, formError: { message: loadError.message } });
       })
     } catch (formloadError) {
-      that.props.api.log(`Error loading forms`, { error: formloadError }, 'error');
+      that.props.api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${that.instanceId} => Error loading forms`, { error: formloadError }, 'error');
     }
   }
 
   render() {
-    const formDef = this.formDef();
-    const { Loading } = this.componentDefs;
-    const { api } = this.props;
-    const intersectionEnabled = true;
+    let loadingComponent = null;
+    if (this.state.forms_loaded === false) {
+      const { Loading } = this.componentDefs;
+      loadingComponent = (<Loading key={'loading'} message={`Loading Component ${this.props.formId}`} nologo={true} />)
+    } 
+
+    const formDef = this.formDef();    
+    const { api } = this.props;    
     const self = this;
 
-    let renderedComponent = null;
-
-    api.log(`ReactoryFormComponent.render() ${self.instanceId}`, { self }, 'debug')
-
-    if (this.state.forms_loaded === false) {
-      this.downloadForms();
-      renderedComponent = <Loading message={`Loading Form Definitions`} nologo={true} />
-    } else {
-     
-
-      if (intersectionEnabled === true) {
-
-        const intersectionProps: any = {
-          onShow: (entries) => {
-            api.log(`Component Visible ${self.instanceId}`, entries);
-          },
-          onHide: (entries) => {
-            api.log(`Component Hide ${self.instanceId}`, entries);
-          },
-          onIntersect: (entries) => {
-            api.log(`Component Intersect ${self.instanceId}`, entries);
-          }
-        }
-
-        return (
-          <IntersectionVisible  {...intersectionProps}>
-            { 
-              (formDef.graphql === null || formDef.graphql === undefined) ? 
-              renderedComponent = this.renderForm(this.getFormData()) : 
-              this.renderWithQuery()
-            }
-          </IntersectionVisible>
-        );
+    api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} =>  render()`, { self }, 'debug')
+    const intersectionProps: any = {
+      onShow: (entries) => {
+        api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} => Component Visible ${self.instanceId}`, entries, 'debug');        
+      },
+      onHide: (entries) => {
+        api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} => Component Hide ${self.instanceId}`, entries, 'debug');
+      },
+      onIntersect: (entries) => {
+        api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} => Component Intersect ${self.instanceId}`, entries, 'debug');
       }
     }
 
-    return renderedComponent;
+    return (
+      <IntersectionVisible  {...intersectionProps}>
+        {loadingComponent}
+        { 
+          (formDef.graphql === null || formDef.graphql === undefined) ? 
+          this.renderForm(this.getFormData()) : 
+          this.renderWithQuery()
+        }        
+      </IntersectionVisible>
+    );
   }
-}
 
+};
+/**
+ * Component Export
+ */
 export const ReactoryFormComponent: any = compose(
   withApi,
   withTheme,

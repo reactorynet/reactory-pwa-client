@@ -223,12 +223,15 @@ class ReactoryGoogleMapWidget extends Component {
     this.getSearchResults = this.getSearchResults.bind(this);
     this.getMarkers = this.getMarkers.bind(this);
     this.getMapModal = this.getMapModal.bind(this);
+    this.getMapProperties = this.getMapProperties.bind(this);
     this.getTextFieldWithSearch = this.getTextFieldWithSearch.bind(this);
+
     this.components = props.api.getComponents([
       "core.FullScreenModal",
       "core.Loading",
       "core.Label",
     ]);
+
   }
 
   updateFormData(address, place_id) {
@@ -412,24 +415,21 @@ class ReactoryGoogleMapWidget extends Component {
     );
   }
 
-  render() {
+  getMapProperties(){
+    const self = this;
+    const refs = {};
+    const { center } = this.state;     
+    //REACTORY DEVELOPMENT KEY
+    let apiKey = "GOOGLE-MAP-API-KEY";
     const {
-      formData,
-      uiSchema,
-      schema,
       api,
-      viewMode = "MAP_WITH_SEARCH",
-      onChange
+      onChange,
+      uiSchema
     } = this.props;
 
-    const refs = {};
-    const { center } = this.state;
+    
 
-    let apiKey = "GOOGLE-MAP-API-KEY"; //REACTORY DEVELOPMENT KEY
-    const { Loading, Label } = this.components;
-    const self = this;
-
-    let mapProps = {
+    let _mapProps = {
       ref: (mapRef) => {
         self.map = mapRef;
       },
@@ -488,17 +488,32 @@ class ReactoryGoogleMapWidget extends Component {
       }
     };
 
+
     if (uiSchema && uiSchema["ui:options"]) {
-      if (uiSchema["ui:options"].mapProps) {
-        // mapProps = { ...mapProps, ...uiSchema["ui:options"].mapProps };
-        mapProps = {
+      const uiOptions = uiSchema["ui:options"]
+      if (uiOptions.mapProps) {
+        _mapProps = {
           ...this.props,
-          ...mapProps,
-          ...uiSchema["ui:options"].mapProps,
-        }; // TODO - Did this so I can access onchanget to set formdata
+          ..._mapProps,
+          ...uiOptions.mapProps,
+        };
       }
     }
 
+    return _mapProps;
+  }
+
+  render() {
+    const {
+      viewMode = "MAP_WITH_SEARCH",      
+    } = this.props;
+
+    
+    const { Loading, Label } = this.components;
+    const self = this;
+
+    let mapProps = self.getMapProperties();
+    
     const children = [];
 
     children.push(this.getTextFieldWithSearch());
