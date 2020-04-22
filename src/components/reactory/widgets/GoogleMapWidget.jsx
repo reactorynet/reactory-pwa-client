@@ -509,7 +509,7 @@ class ReactoryGoogleMapWidget extends Component {
     } = this.props;
 
     
-    const { Loading, Label } = this.components;
+    const { Label } = this.components;
     const self = this;
 
     let mapProps = self.getMapProperties();
