@@ -13,25 +13,26 @@ import { Tooltip, Slider, Grid, Typography } from '@material-ui/core';
 class PricingLineChartWidget extends Component {
 
   static styles = theme => ({
-    root: {
-      width: '200px',
+    container: {
+      minWidth: '400px',
+      minHeight: '3px'
     },
-    landedCost: {
-      textAlign: 'left',
-      color: 'black'
+    topRow: {
+      width: '100%',
+
     },
-    whTenCost: {
-      color: 'green',
-      textAlign: 'center'
-    },
-    threeMonthAverage: {
-      color: 'green',
-      textAlign: 'center'
-    },
-    listPrice: {
-      color: 'red',
-      textAlign: 'right'
-    },
+    divider: {
+      width: '100%',
+      height: 0,
+      '&:before': {
+        content: '""',
+        position: 'absolute',
+        width: '100%',
+        borderBottom: 'solid 2px black',
+        display: 'block',
+        background: 'black'
+      }
+    }
   });
 
   constructor(props, context) {
@@ -54,30 +55,38 @@ class PricingLineChartWidget extends Component {
     // return `${new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(labelValue/100)} (WH10 Cost Price)`
 
     return (
-      <Fragment>
-        <Grid container spacing={0}>
-          <Grid item xs={12}>
-            <Grid item xs={6}>
-              <p>3 Month Average</p>
-            </Grid>
-            <Grid item xs={6}>
-              <p>3 Month Average</p>
-            </Grid>
-          </Grid>
-          <Grid xs={12}><p>Line goes here</p></Grid>
-          <Grid item xs={12}>
-            <Grid item xs={6}>
-              <p>Landed Cost</p>
-            </Grid>
-            <Grid item xs={6}>
-              <p>List Price</p>
-            </Grid>
-          </Grid>
-
-        </Grid>
-
-      </Fragment>
+      <div className={classes.container}>
+        <div className={classes.topRow}>
+          <div className={classes.topColumn}></div>
+        </div>
+        <div className={classes.divider}></div>
+        {/* <div className={bottom}></div> */}
+      </div>
     );
+
+    // <Fragment>
+    //     <Grid container spacing={0}>
+    //       <Grid item xs={12}>
+    //         <Grid item xs={6}>
+    //           <p>3 Month Average</p>
+    //         </Grid>
+    //         <Grid item xs={6}>
+    //           <p>3 Month Average</p>
+    //         </Grid>
+    //       </Grid>
+    //       <Grid xs={12}><p>Line goes here</p></Grid>
+    //       <Grid item xs={12}>
+    //         <Grid item xs={6}>
+    //           <p>Landed Cost</p>
+    //         </Grid>
+    //         <Grid item xs={6}>
+    //           <p>List Price</p>
+    //         </Grid>
+    //       </Grid>
+
+    //     </Grid>
+
+    //   </Fragment>
   }
 }
 
