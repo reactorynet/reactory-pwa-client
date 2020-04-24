@@ -1,5 +1,10 @@
-import React, { Component, Fragment } from 'react';
-import { Button, Typography, Icon } from '@material-ui/core';
+import React, { Component, useRef } from 'react';
+import {
+  Button,
+  Typography,
+  Icon,
+  Tooltip
+} from '@material-ui/core';
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/styles';
 import { template, isNil } from 'lodash';
@@ -22,13 +27,20 @@ function formatMoney(amount, decimalCount = 2, decimal = ".", thousands = ",") {
 
 class LabelWidget extends Component {
 
-  static rootStyle (theme) {
-    return {};
+  static rootStyle(theme) {
+    return {
+      copyIcon: {
+        marginLeft: '10px',
+        fontSize: '1rem'
+      }
+    }
   }
+
 
   render() {
 
     const { props } = this;
+    const { classes, api } = props;
 
     let labelText = props.formData ? template('${formData}')({ ...props }) : props.value;
     let labelTitle = props.uiSchema.title;
@@ -45,6 +57,7 @@ class LabelWidget extends Component {
     let labelBodyProps = {};
     let _renderHtml = false;
     let LabelBody = null;
+    let _copyToClip = false;
 
     let labelContainerProps = {
       id: `${props.idSchema && props.idSchema.$id ? props.idSchema.$id : undefined}`,
@@ -61,7 +74,7 @@ class LabelWidget extends Component {
         iconType,
         iconPosition,
         variant = "h6",
-        iconProps = {},        
+        iconProps = {},
         renderHtml,
         titleProps = {},
         bodyProps = {},
@@ -69,9 +82,10 @@ class LabelWidget extends Component {
         componentFqn = null,
         componentProps = {},
         componentPropsMap = {},
+        copyToClipboard = false
       } = props.uiSchema["ui:options"];
 
-      if(containerProps.style) {
+      if (containerProps.style) {
         labelContainerProps.style = { ...labelContainerProps.style, ...containerProps.style };
       }
 
@@ -81,14 +95,14 @@ class LabelWidget extends Component {
       if (format) {
         try {
           labelText = template(format)(props);
-        } catch(labelError) {
+        } catch (labelError) {
           labelText = 'bad template / props (' + format + ')';
         }
       }
       if (title) {
         try {
           labelTitle = template(title)(props);
-        } catch(labelError) {
+        } catch (labelError) {
           labelTitle = 'bad template / props (' + format + ')';
         }
       }
@@ -118,40 +132,60 @@ class LabelWidget extends Component {
 
       }
 
-      if(typeof componentFqn === 'string' && isNil(componentFqn) === false) {        
+      if (typeof componentFqn === 'string' && isNil(componentFqn) === false) {
         const LabelComponentToMount = this.props.api.getComponent(componentFqn);
-        
-        let $componentProps =  (componentProps && Object.keys(componentProps).length > 1) ? { ...componentProps } : {};
-        if(componentPropsMap) {
+
+        let $componentProps = (componentProps && Object.keys(componentProps).length > 1) ? { ...componentProps } : {};
+        if (componentPropsMap) {
           const $mappedProps = this.props.api.utils.objectMappper(this.props, componentPropsMap);
-          if(Object.keys($mappedProps).length > 0) {
-            $componentProps = {...$componentProps, ...$mappedProps};
+          if (Object.keys($mappedProps).length > 0) {
+            $componentProps = { ...$componentProps, ...$mappedProps };
           }
           try {
             LabelBody = (<LabelComponentToMount {...$componentProps} />);
-          } catch(componentErr) {
-            props.api.log('Error activating component for label value', {componentErr}, 'error');
+          } catch (componentErr) {
+            props.api.log('Error activating component for label value', { componentErr }, 'error');
             LabelBody = (<Typography>{componentErr.message}</Typography>)
-          }          
-        }        
+          }
+        }
       }
+
+      _copyToClip = copyToClipboard;
     }
 
-    
-    if (_renderHtml && LabelBody === null){
-      LabelBody = <Typography variant={_variant} dangerouslySetInnerHTML={{__html: labelText}}></Typography>
+    if (_renderHtml && LabelBody === null) {
+      LabelBody = <Typography variant={_variant} dangerouslySetInnerHTML={{ __html: labelText }}></Typography>
     } else {
       LabelBody = <Typography variant={_variant}>{labelText}</Typography>
-    }    
+    }
+
+    const copy = () => {
+      // EASY WAY, BUT LIMITED SUPPORT
+      // navigator.clipboard.writeText(labelText)
+
+      var tempInput = document.createElement('input');
+      tempInput.value = labelText;
+      document.body.appendChild(tempInput)
+      tempInput.select()
+      document.execCommand('copy');
+      tempInput.remove();
+
+      api.createNotification('Copied To Clipboard!', { body: `'${labelText}' successfully copied to your clipboard.`});
+    }
 
     return (
       <div {...labelContainerProps}>
         {_iconPosition === 'left' ? labelIcon : null}
         <div {...labelBodyProps}>
           {labelTitle != '' && <label {...labelTitleProps}>{labelTitle}</label>}
-          { LabelBody }
+          {LabelBody}
         </div>
         {_iconPosition === 'right' ? labelIcon : null}
+        {_copyToClip &&
+          <Tooltip title="Copy to clipboard" placement="right">
+            <Icon onClick={copy} className={classes.copyIcon}>assignment</Icon>
+          </Tooltip>
+        }
       </div>
     )
   }
