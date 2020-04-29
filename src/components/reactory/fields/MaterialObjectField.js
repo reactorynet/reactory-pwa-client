@@ -179,6 +179,7 @@ class ObjectField extends Component {
       onBlur,
       onFocus,
       registry = getDefaultRegistry(),
+      onChange
     } = this.props;
     const { definitions, fields, formContext } = registry;
     const { SchemaField, TitleField, DescriptionField } = fields;
@@ -254,6 +255,7 @@ class ObjectField extends Component {
       schema,
       formData,
       formContext,
+      onChange
     };
     return <Template {...templateProps} onAddClick={this.handleAddClick} />;
   }

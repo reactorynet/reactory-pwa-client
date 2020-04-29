@@ -364,7 +364,8 @@ namespace Reactory {
     interval?: number,
     useWebsocket?: boolean,
     onError?: IReactoryFormQueryErrorHandlerDefinition,
-    resultType?: string,    
+    resultType?: string, 
+    refreshEvents?: IReactoryEvent[]
   }
 
   export interface IReactoryFormMutation {

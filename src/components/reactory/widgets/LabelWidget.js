@@ -1,9 +1,10 @@
-import React, { Component, Fragment } from 'react';
+import React, { Component, Fragment, useState } from 'react';
 import { Button, Typography, Icon } from '@material-ui/core';
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/styles';
 import { template, isNil } from 'lodash';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
+
 function formatMoney(amount, decimalCount = 2, decimal = ".", thousands = ",") {
   try {
     decimalCount = Math.abs(decimalCount);
@@ -26,9 +27,23 @@ class LabelWidget extends Component {
     return {};
   }
 
+
+  constructor(props, context) {
+    super(props, context);
+
+    this.state = {
+      formData: props.formData,
+      lookupValue: null,
+      lookupComplete: false,
+    }
+  }
+
   render() {
 
     const { props } = this;
+    const self = this;
+
+    const { api } = props;
 
     let labelText = props.formData ? template('${formData}')({ ...props }) : props.value;
     let labelTitle = props.uiSchema.title;
@@ -75,10 +90,32 @@ class LabelWidget extends Component {
         labelContainerProps.style = { ...labelContainerProps.style, ...containerProps.style };
       }
 
+      if(props.uiSchema['ui:graphql'] && format === "$LOOKUP$") {
+
+        labelText = self.state.lookupValue && self.state.lookupComplete === true ? self.state.lookupValue : 'LOOKUP';        
+        const lookupGraphql = props.uiSchema['ui:graphql'];
+        const variables = api.utils.objectMapper( props, lookupGraphql.variables );
+        
+        if(self.state.lookupComplete === false) {
+          props.api.graphqlQuery(lookupGraphql.text, variables).then((lookupResult) => {
+            api.log(`Lookup result`, { lookupResult }, 'debug');            
+            if(lookupResult.data && lookupResult.data[lookupGraphql.name]) {
+              const lookupValue = lookupResult.data[lookupGraphql.name];
+              self.setState({ lookupValue: lookupValue[lookupGraphql.resultKey || "title"], lookupComplete: true, lookupError: false });
+            } else {
+              self.setState({ lookupValue: 'No Value', lookupComplete: true, lookupError: false });
+            }
+          }).catch(( lookupError ) => {
+            api.error(`Lookup Query Error`, { lookupError }, 'debug');
+            self.setState({ lookupValue: lookupError.message, lookupComplete: true, lookupError: true });
+          });
+        }        
+      }
+
       labelTitleProps = titleProps;
       labelBodyProps = bodyProps;
 
-      if (format) {
+      if (format && format !== '$LOOKUP$') {
         try {
           labelText = template(format)(props);
         } catch(labelError) {
@@ -118,12 +155,12 @@ class LabelWidget extends Component {
 
       }
 
-      if(typeof componentFqn === 'string' && isNil(componentFqn) === false) {        
+      if(typeof componentFqn === 'string' && isNil(componentFqn) === false) {                
         const LabelComponentToMount = this.props.api.getComponent(componentFqn);
         
         let $componentProps =  (componentProps && Object.keys(componentProps).length > 1) ? { ...componentProps } : {};
         if(componentPropsMap) {
-          const $mappedProps = this.props.api.utils.objectMappper(this.props, componentPropsMap);
+          const $mappedProps = this.props.api.utils.objectMapper({ props }, componentPropsMap);
           if(Object.keys($mappedProps).length > 0) {
             $componentProps = {...$componentProps, ...$mappedProps};
           }

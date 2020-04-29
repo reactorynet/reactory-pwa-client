@@ -55,28 +55,23 @@ const {
   MaterialErrorListTemplate
 } = MaterialTemplates;
 
-const simpleSchema = {
-  "title": "No form found",
-  "description": "No form for a given id",
-  "type": "object",
-  "properties": {
-    "message": {
-      "type": "string",
-      "title": "Message"
-    },
-  }
+const DefaultLoadingSchema = {
+  "title": "Starting",  
+  "type": "string",  
 };
 
 const simpleUiSchema = {
-  "message": {
-    "ui:autofocus": true,
-    "ui:emptyValue": "No form found with that id",
+  "ui:widget": "LabelWidget",
+  "ui:options": {
+    componentType: 'div',
+    showSubmit: false,
+    showRefresh: false
   },
 };
 
 const simpleForm: Reactory.IReactoryForm = {
   id: 'ReactoryFormNotFoundForm',
-  schema: simpleSchema,
+  schema: DefaultLoadingSchema,
   uiSchema: simpleUiSchema,
   name: 'FormNotFound',
   uiFramework: 'material',
@@ -349,8 +344,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 
   componentWillReceiveProps(nextProps) {
-    this.props.api.log('ReactoryForm.componentWillReceiveProps', { nextProps }, 'debug');
+    
     const self = this;
+    this.props.api.log('ReactoryForm.componentWillReceiveProps', { nextProps, currentProps: self.props }, 'debug');
     if (deepEquals(nextProps, this.props) === false) {
       this.setState({ forms_loaded: false, formData: nextProps.formData, queryComplete: false }, ()=>{
         self.downloadForms();
@@ -358,7 +354,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     } 
 
     if(deepEquals(nextProps.formData, this.state.formData) === false) {
-      this.setState({ formData: nextProps.formData });
+      this.setState({ formData: nextProps.formData, queryComplete: false });
     }
   }
 
@@ -979,6 +975,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           setInterval(executeFormQuery, formDef.graphql.query.interval);
         }
 
+        if(query.refreshEvents) {
+          query.refreshEvents.forEach((eventDefinition) => {
+           api.once(eventDefinition.name, ()=>{
+             setTimeout(executeFormQuery, 500)
+           });
+          });
+        }
+
         executeFormQuery();               
       }
 
@@ -1073,7 +1077,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     };
 
     if(_formDef.uiSchema && _formDef.uiSchema['ui:graphql']) {  
-      debugger  
       api.log(`ReactoryComponent => ${_formDef.nameSpace}${_formDef.name}@${_formDef.version} instanceId=${that.instanceId} => Updating graphql definition ${uiSchemaKey}`)  
       _formDef.graphql = { ..._formDef.uiSchema['ui:graphql'] };
     }
@@ -1382,10 +1385,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   onChange(data) {
     
+    const { api, mode } = this.props;    
     const { formDef, queryComplete, queryError, dirty, _instance_id } = this.state;
 
-    if (deepEquals(this.state.formData, data.formData) === false && queryComplete === true) {
-      const { api, mode } = this.props;
+    api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { data }, 'debug');
+
+
+    if (deepEquals(this.state.formData, data.formData) === false) {
+      
       const { formDef, queryComplete, queryError, dirty } = this.state;
       api.log(`${formDef.name}[${this.instanceId}].onChange`, { data }, 'debug');
       const $onChange = this.props.onChange;
@@ -1396,8 +1403,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { changed, rchanged }, 'debug');
 
       if(formDef.graphql && formDef.graphql.mutation && formDef.graphql.mutation['onChange']) {
+        
         let onChangeMutation: Reactory.IReactoryFormMutation = formDef.graphql.mutation['onChange'];
         let variables = api.utils.objectMapper({ eventData: data, form: this }, onChangeMutation.variables );
+        
         api.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
           api.log(`onChangeMutation result`, { mutationResult }, 'debug' );
         }).catch((mutationError) => {
@@ -1478,12 +1487,18 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   downloadForms() {
     const that = this;
     let formDef = simpleForm;
+    const { api } = this.props;
+    if(api.formSchemas) {
 
+    }
   
     try {
       this.props.api.forms().then((forms: Reactory.IReactoryForm[]) => {
         formDef = find(forms, { id: that.props.formId }) || simpleForm;
-        if (formDef.componentDefs) that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
+        if (formDef.componentDefs) { 
+          that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
+        }
+
         let _activeUiSchemaMenuItem = null;
         if (isArray(formDef.uiSchemas) === true && formDef.uiSchemas.length > 0 && (formDef.uiSchema === undefined || formDef.uiSchema === null)) {
           _activeUiSchemaMenuItem = formDef.uiSchemas[0];

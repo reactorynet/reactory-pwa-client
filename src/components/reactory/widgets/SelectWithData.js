@@ -85,7 +85,7 @@ class SelectWithDataWidget extends Component {
             let menuItems = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
             return (
               <FormControl className={classes.formControl}>
-              <InputLabel htmlFor={this.props.idSchema.$id}>{this.props.schema.title}</InputLabel>
+              <InputLabel htmlFor={this.props.idSchema.$id} required={required}>{this.props.schema.title}</InputLabel>
               <Select
                 multiple={multiSelect === true}
                 value={`${this.props.formData}`}

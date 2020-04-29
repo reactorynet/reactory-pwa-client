@@ -161,6 +161,10 @@ const MaterialFieldTemplateFunction = (props) => {
 
       let inputLabelProps = {
         htmlFor: id,
+        required,
+        color: uiOptions && uiOptions.labelProps && uiOptions.labelProps.color ? uiOptions.labelProps.color : 'primary',
+        error: errors && errors.length > 0,
+        disabled: readonly === true
       }
 
       if(isNil(formData) === false && isEmpty(formData) === true) {
@@ -169,7 +173,7 @@ const MaterialFieldTemplateFunction = (props) => {
         inputLabelProps.shrink = true;
       }
 
-      let labelComponent = isObject === false || isBoolean === true ? <InputLabel {...inputLabelProps}  >{label}</InputLabel> : null;
+    let labelComponent = isObject === false || isBoolean === true ? <InputLabel {...inputLabelProps}  >{label}</InputLabel> : null;
 
       return (
         <FormControl {...formControlProps}>
