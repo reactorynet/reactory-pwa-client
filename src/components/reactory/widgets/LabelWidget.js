@@ -32,6 +32,13 @@ class LabelWidget extends Component {
       copyIcon: {
         marginLeft: '10px',
         fontSize: '1rem'
+      },
+      inlineDiv: {
+        display: 'flex',
+        '& span': {
+          fontSize: '1.4em'
+        }
+
       }
     }
   }
@@ -58,6 +65,7 @@ class LabelWidget extends Component {
     let _renderHtml = false;
     let LabelBody = null;
     let _copyToClip = false;
+
 
     let labelContainerProps = {
       id: `${props.idSchema && props.idSchema.$id ? props.idSchema.$id : undefined}`,
@@ -156,7 +164,12 @@ class LabelWidget extends Component {
     if (_renderHtml && LabelBody === null) {
       LabelBody = <Typography variant={_variant} dangerouslySetInnerHTML={{ __html: labelText }}></Typography>
     } else {
-      LabelBody = <Typography variant={_variant}>{labelText}</Typography>
+
+      if(_iconPosition == 'inline') {
+        LabelBody = <div className={classes.inlineDiv}>{labelIcon}<Typography variant={_variant}>{labelText}</Typography></div>
+      } else {
+        LabelBody = <Typography variant={_variant}>{labelText}</Typography>
+      }
     }
 
     const copy = () => {

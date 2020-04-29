@@ -6,9 +6,9 @@ import { withTheme, withStyles } from '@material-ui/styles';
 class ImageWidget extends Component {
 
   render() {
-    const { value, theme } = this.props
+    const { value, theme, formData } = this.props
 
-    let url = value;
+    let url = value ? value : formData;
     let variant = 'rounded';
 
     let avatarProps = {
