@@ -59,6 +59,7 @@ import AccordionComponent from './shared/AccordionComponent';
 import RadioGroupComponent from './shared/RadioGroupComponent';
 import LookupComponent from './shared/LookupComponent';
 import NotificationComponent from './shared/NotificationWidget';
+import GridLayoutComponent from './shared/GridLayoutComponent';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -176,6 +177,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'NotificationComponent',
     component: NotificationComponent,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'GridLayoutComponent',
+    component: GridLayoutComponent,
     version: '1.0.0',
   },
   {
