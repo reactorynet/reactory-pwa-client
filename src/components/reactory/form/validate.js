@@ -69,10 +69,11 @@ function toErrorSchema(errors) {
   }, {});
 }
 
-export function toErrorList(errorSchema, fieldName = "root") {
+export function toErrorList(errorSchema, fieldName = "root", formData, schema) {
   // XXX: We should transform fieldName as a full field path string.
+  debugger
   let errorList = [];
-  if ("__errors" in errorSchema) {
+  if ("__errors" in errorSchema) {    
     errorList = errorList.concat(
       errorSchema.__errors.map(stack => {
         return {
@@ -158,6 +159,7 @@ export default function validateFormData(
   customValidate,
   transformErrors
 ) {
+  
   try {
     ajv.validate(schema, formData);
   } catch (e) {
@@ -166,7 +168,7 @@ export default function validateFormData(
   }
 
   let errors = transformAjvErrors(ajv.errors);
-
+  
   if (typeof transformErrors === "function") {
     errors = transformErrors(errors);
   }
@@ -182,7 +184,7 @@ export default function validateFormData(
   // XXX: The errors list produced is not fully compliant with the format
   // exposed by the jsonschema lib, which contains full field paths and other
   // properties.
-  const newErrors = toErrorList(newErrorSchema);
+  const newErrors = toErrorList(newErrorSchema, formData, schema);
 
   return { errors: newErrors, errorSchema: newErrorSchema };
 }
