@@ -158,7 +158,6 @@ const MapHOC = compose(
             onMapMarkerClicked(address, place_id);
             setDisplayMarkerInfo(!displayMarkerInfo);
             if(onAddressSelected && typeof onAddressSelected === "function") {
-              debugger;
               api.log(`LasecMarker => acceptAddress `, {address, place_id}, 'debug');
               onAddressSelected(address, place_id)
             }
@@ -218,7 +217,6 @@ class ReactoryGoogleMapWidget extends Component {
       searchText: null,
     };
 
-    this.updateFormData = this.updateFormData.bind(this);
 
     this.getSearchResults = this.getSearchResults.bind(this);
     this.getMarkers = this.getMarkers.bind(this);
@@ -233,19 +231,7 @@ class ReactoryGoogleMapWidget extends Component {
     ]);
 
   }
-
-  updateFormData(address, place_id) {
-    debugger;
-    this.props.formData.fullAddress = address; // not right, but shows in text box
-
-    const newFormData = {
-      fullAddress: address,
-      placeId: place_id
-    }
-
-    // props.onChange(newFormData);
-  }
-
+  
   getSearchResults() {
     const { places } = this.state;
     const { api } = this.props;
@@ -322,8 +308,7 @@ class ReactoryGoogleMapWidget extends Component {
 
       const onMapMarkerClicked = (address, place_id) => {
         console.log(`ON MAP MARKER CLICKED:: ${address} ${place_id}`,{ self: this });
-        this.setState({ isDialogOpen: false });
-        this.updateFormData(address, place_id);
+        this.setState({ isDialogOpen: false });        
       };
 
       const onEditClicked = (place) => {
@@ -426,9 +411,7 @@ class ReactoryGoogleMapWidget extends Component {
       onChange,
       uiSchema
     } = this.props;
-
     
-
     let _mapProps = {
       ref: (mapRef) => {
         self.map = mapRef;
@@ -479,12 +462,26 @@ class ReactoryGoogleMapWidget extends Component {
       onSearchBoxMounted: (searchBoxRef) => {
         self.searchBox = searchBoxRef;
       },
-      onAddressSelected: (address) => {        
-        api.log(`Address ${address.fullAddressSelected}`, address, 'debug');
-        debugger;
-        if(onChange && typeof onChange === 'function' ) {
-          onChange(address);
-        }
+      onAddressSelected: (address, placeId) => {        
+        api.log(`Address ${address} ${placeId}`, { address }, 'debug');
+        
+        if( uiSchema['ui:options'] && uiSchema['ui:options'].props) {          
+          const mutationDefinition = uiSchema['ui:options'].props.onAddressSelected;
+          const objectMap = uiSchema['ui:options'].props.objectMap;
+
+          if(mutationDefinition) {
+            api.graphqlMutation(mutationDefinition.text, api.utils.objectMapper({ address, self, placeId }, mutationDefinition.variables )).then((mutationResult) => {
+              api.log(`GoogleMapWidget.MapHOC.onAddressSelected`, { mutationResult }, 'debug');              
+            }).catch((mutationError) => {
+              api.log(`GoogleMapWidget.MapHOC.onAddressSelected`, { mutationError }, 'error');              
+            });
+          }
+          
+          if(onChange && typeof onChange === 'function' ) {        
+            let addressData = api.utils.objectMapper({ address, self, placeId }, objectMap); 
+            onChange(addressData);
+          }
+        }       
       }
     };
 
@@ -508,7 +505,6 @@ class ReactoryGoogleMapWidget extends Component {
       viewMode = "MAP_WITH_SEARCH",      
     } = this.props;
 
-    
     const { Label } = this.components;
     const self = this;
 

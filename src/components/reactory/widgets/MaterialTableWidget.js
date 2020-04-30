@@ -109,7 +109,7 @@ class MaterialTableWidget extends Component {
         
     const MaterialTableHOC = (props, context) => {
 
-      const { api, theme } = self.props;
+      const { api, theme, schema, idSchema } = self.props;
       const uiOptions = this.props.uiSchema['ui:options'] || {};
       const { formData, formContext } = this.props;
       let columns = [];
@@ -319,10 +319,38 @@ class MaterialTableWidget extends Component {
   
                 if(mutationDefinition.notification) {                
                   api.createNotification(`${api.utils.template(action.successMessage)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: 'error' })
-                }              
+                }
+
+                if(mutationDefinition.refreshEvents) {
+                  mutationDefinition.refreshEvents.forEach((eventDefinition) => {
+                   api.emit(eventDefinition.name, selected);
+                  });
+                }
+                
+                
               }).catch((rejectedError) => {
                 api.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });
               });
+            }
+
+            if(action.event) {
+              let __formData = { 
+                ...formContext.$formData, 
+                ...api.utils.objectMapper( { selected }, action.event.paramsMap || {} ),
+                ...(action.event.params ? action.event.params : {})
+              };
+
+
+              if(action.event.via === 'form') {
+                debugger;
+                let handler = formContext.$ref.onChange;
+                
+                if( typeof formContext.$ref[action.event.name] === 'function') {
+                  handler = formContext.$ref[action.event.name];
+                }
+
+                handler(__formData);
+              };              
             }
           };
   

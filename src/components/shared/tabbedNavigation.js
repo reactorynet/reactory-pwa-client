@@ -52,27 +52,31 @@ class TabbedNavComponent extends Component {
   constructor(props, context) {
     super(props, context);
 
-    this.state = {
-      value: 0,
-      anchorEl: null
+
+
+    const { api, formContext, uiSchema } = props;
+
+    let options = getUiOptions(uiSchema);
+    let activeTab = null;
+
+    if(options.activeTab && typeof options.activeTab === "string") {
+      try {
+        activeTab = api.utils.template(options.activeTab)({...this.props});        
+      } catch (templateError) {
+        api.log(`Error parsing template`)
+      }
     }
 
+    this.state = {
+      value: 0,
+      anchorEl: null,
+      activeTab,
+    }
     props.api.log(`TabbedNavComponent.constructor(props, context)`, { props, context });
   }
 
   componentDidMount(){
-    //sync root path with selected item index
-    const { api, formContext, uiSchema } = this.props;
-
-    let options = getUiOptions(uiSchema);
-    if(options.activeTab && typeof options.activeTab === "string") {
-      try {
-        let activeTab = api.utils.template(options.activeTab)({...this.props});
-      } catch (templateError) {
-        api.log(`Error parsing template`)
-      }
-
-    }
+    //sync root path with selected item index   
   }
 
   componentWillReceiveProps(nextProps) {
@@ -109,27 +113,27 @@ class TabbedNavComponent extends Component {
       return <Typography>NO TAB FOR {tab.componentFqn}</Typography>;
     }
 
-    const handleChange = (event, newValue) => {
-      this.setState({ value: newValue });
+    const handleChange = (event, activeTab) => {
+      that.setState({ activeTab });
     };
 
     const showMenu = (event) => {
       event.stopPropagation();
-      this.setState({
+      that.setState({
         anchorEl: event.currentTarget
       });
     }
 
     const closeMenu = () => {
-      this.setState({
+      that.setState({
         anchorEl: null
       });
     }
 
-    const handleMenuItemClick = (index) => {
+    const handleMenuItemClick = (menuItem) => {
       closeMenu();
-      this.setState({
-        value: index
+      (menuItem.tab && menuItem.tab.route) ? that.props.history.push(menuItem.tab.route) : that.setState({
+        activeTab: menuItem.tab.id
       });
     }
 
@@ -143,7 +147,7 @@ class TabbedNavComponent extends Component {
           MainComponentToMount = api.getComponent("core.NotFound");
         }
 
-        let mainComponentProps = { key: index };
+        let mainComponentProps = { key: tab.id || index };
 
         if (componentFound === true) {
           mainComponentProps = { ...tab.componentProps };
@@ -172,42 +176,29 @@ class TabbedNavComponent extends Component {
             mergedProperties = api.utils.objectMapper(props, componentPropsMap)
           }
 
-
           if (additionalComponentFound === true) return <ComponentToMount {...{ ...componentProps, ...mergedProperties, key: additionalComponentIndex }} />
           else return <ComponentToMount message={`Could not load component ${componentFqn}, please check your registry loaders and namings`} key={additionalComponentIndex} />
         });
 
-        let newPanel = index === state.value ? (
-          <TabPanel value={state.value} index={index} key={`panel_${index}`}>
+        let newPanel = (tab.id || index) === state.activeTab ? (
+          <TabPanel value={state.activeTab} index={(tab.id || index)} key={`panel_${(tab.id || index)}`}>
             <MainComponentToMount {...mainComponentProps} />
             {additionalComponentsToMount}
           </TabPanel>) : (
-            <TabPanel value={state.value} index={index} key={`panel_${index}`}>
+            <TabPanel value={state.activeTab} index={(tab.id || index)} key={`panel_${(tab.id || index)}`}>
               <Typography>Not Visible Yet</Typography>
             </TabPanel>);
 
         _tabPannels.push(newPanel);
 
-        if (index <= 2) {
-          // Only add 3 tab items
-          // return <Tab
-          //   label={tab.title}
-          //   {...a11yProps(index)}
-          //   value={index}
-          //   key={index}
-          //   onClick={() => this.setState({ content: "Two" })}
-          // />
-
-          return <Tab label={tab.title} {...a11yProps(index)} key={index} value={index} onClick={() => this.setState({ value: index })} />
-
-          // BU
-          // return <Tab label={tab.title} {...a11yProps(index)} key={index} />
+        if (index <= 2) {          
+          return <Tab label={tab.title} {...a11yProps(index)} key={(tab.id || index)} value={(tab.id || index)} onClick={() => (tab.route ? that.props.history.push(tab.route) : that.setState({ activeTab: (tab.id || index) })) } />
         } else {
           if (index == 3) {
-            _additionalMenuItems.push({ index, title: tab.title });
-            return <Tab icon={<Icon onClick={showMenu}>more_vert</Icon>} {...a11yProps(index)} key={index} />
+            _additionalMenuItems.push({ index: (tab.id || index), title: tab.title, tab });
+            return <Tab icon={<Icon onClick={showMenu}>more_vert</Icon>} {...a11yProps(index)} key={"more_vert"} />
           }
-          _additionalMenuItems.push({ index, title: tab.title });
+          _additionalMenuItems.push({ index: (tab.id || index), title: tab.title, tab });
         }
       });
     }
@@ -221,7 +212,7 @@ class TabbedNavComponent extends Component {
     return (
       <div className={classes.root}>
         <AppBar position="static">
-          <Tabs value={this.state.value} onChange={handleChange} aria-label="simple tabs example">
+          <Tabs value={this.state.activeTab} onChange={handleChange} aria-label="simple tabs example">
             {_tabComponents}
           </Tabs>
         </AppBar>
@@ -243,7 +234,7 @@ class TabbedNavComponent extends Component {
         >
           {
             _additionalMenuItems.map(menuItem => {
-              return <MenuItem onClick={() => handleMenuItemClick(menuItem.index)}>{menuItem.title}</MenuItem>
+              return <MenuItem onClick={() => handleMenuItemClick(menuItem)}>{menuItem.title}</MenuItem>
             })
           }
 

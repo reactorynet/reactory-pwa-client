@@ -13,17 +13,57 @@ class LookupWidget extends Component {
 
     this.state = {
       open: false,
+      value: props.formData,
     };
 
     this.onClick = this.onClick.bind(this);
+    this.onChange = this.onChange.bind(this);
+    this.onFormSubmit = this.onFormSubmit.bind(this);
   }
 
   onClick() {
     this.setState({ open: !this.state.open });
   }
 
+  onChange(value){    
+    const { api, uiSchema, formContext } = this.props;
+    const self = this;
+
+    let _value = value.formData && value.schema && value.idSchema ? value.formData : value;
+
+    
+    api.log(`LookupWidget.onChange(value)`, { _value, self }, 'debug');
+    if(uiSchema && uiSchema.props && uiSchema.props.eventMaps && uiSchema.props.eventMaps.onChange) {
+      _value = api.utils.objectMapper({ evt: value }, uiSchema.props.eventMaps.onChange);
+    }
+
+    formContext.refresh();
+        
+    //this.setState({ value: _value}, ()=>{
+      
+
+      //if(self.props.onChange && typeof self.props.onChange === 'function'){
+        //self.props.onChange(_value);
+      //}
+    //});
+  }
+
+  /**
+   * 
+   * @param {This is used a bridge between a component that has  onSubmit requirement to gather data } formData 
+   */
+  onFormSubmit(formData) {
+    const { api } = this.props;
+    const self = this;
+    debugger
+    api.log(`LookupWidget.onFormSubmit(formData)`, {formData}, 'debug');
+  }
+
   render() {
-    const {
+
+
+
+    let {
       uiSchema,
       componentFqn,
       componentProps = {},
@@ -34,14 +74,14 @@ class LookupWidget extends Component {
     } = this.props;
     const self = this;
 
+    api.log(`LookupWidget.render()`, {self}, 'debug');
+
     let label = '';
     let selectedValue = formData || '';
     let modalTitle = '';
-
+    
     const FullScreenModal = api.getComponent('core.FullScreenModal');
-    let ChildComponent = api.getComponent((componentFqn || uiSchema.props.componentFqn) || 'core.Loading');
-    let componentFound = true;
-    let childprops = {};
+
     let modalProps = {
       open: this.state.open === true,
       title: 'Lookup',
@@ -49,13 +89,25 @@ class LookupWidget extends Component {
       onClose: this.onClick
     };
 
+
     if (uiSchema) {
       const uiOptions = uiSchema['ui:options'];
       if (uiOptions && uiOptions.label) label = uiOptions.label;
       if (uiOptions && uiOptions.title) modalProps.title = uiOptions.title;
       if (uiOptions && uiOptions.modalProps) modalProps = { ...modalProps, ...uiOptions.modalProps };
+
+      if(uiSchema.props) {
+        if(uiSchema.props.componentFqn) componentFqn = uiSchema.props.componentFqn;
+        if(uiSchema.props.componentProps) componentProps = uiSchema.props.componentProps;
+        if(uiSchema.props.componentPropertyMap) componentPropertyMap = uiSchema.props.componentPropertyMap;
+      }
     }
 
+
+    let ChildComponent = api.getComponent(componentFqn);
+    let componentFound = true;
+    let childprops = {};
+    
     if (ChildComponent === null || ChildComponent === undefined) {
       componentFound = false;
       ChildComponent = api.getComponent("core.NotFound");
@@ -64,8 +116,8 @@ class LookupWidget extends Component {
       };
     }
 
-    if (componentProps && this.state.open === true && componentFound === true) {
-      childprops = api.utils.objectMapper(this.props, componentPropertyMap);
+    if (componentPropertyMap && this.state.open === true && componentFound === true) {
+      childprops = api.utils.objectMapper({ LookupComponent: this }, componentPropertyMap);      
     }
 
     return (

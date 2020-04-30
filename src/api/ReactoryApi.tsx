@@ -261,7 +261,7 @@ class ReactoryApi extends EventEmitter {
     this.getUserLoginCredentials = this.getUserLoginCredentials.bind(this);
     this.setAuthToken = this.setAuthToken.bind(this);
     this.getAuthToken = this.getAuthToken.bind(this);
-    this.forms().then();
+    this.forms(true).then();
     this.assets = {
       logo: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/logo.png`,
       avatar: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/avatar.png`,
@@ -514,8 +514,13 @@ class ReactoryApi extends EventEmitter {
     });
   }
 
-  graphqlQuery(query, variables, options: any = { fetchPolicy: 'network-only' }) {
+  graphqlQuery(query, 
+    variables, 
+    options: any = { fetchPolicy: 'network-only' }, 
+    queryDefinition: Reactory.IReactoryFormQuery = null) {
+    
     const that = this;
+    
     if (typeof query === 'string')
       query = gql(query);
     return new Promise((resolve, reject) => {

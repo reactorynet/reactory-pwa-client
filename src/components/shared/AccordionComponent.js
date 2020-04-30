@@ -125,7 +125,7 @@ class AccordionWidget extends Component {
                     }
                     { index > 0 && <Button type="button" onClick={onBackClick} color="default">BACK</Button> }
                     { index !== _panels.length - 1 && <Button type="button" onClick={onNextClick} color="primary">NEXT</Button> }
-                    { index === _panels.length - 1 && <Button type="button" onClick={onDoneClick} color="primary">DONE</Button> }
+                    { index === _panels.length - 1 && <Button type="button" color={panel.nextButtonProps && panel.nextButtonProps.color || 'primary'} onClick={onDoneClick} color="primary">{panel.nextButtonProps && panel.nextButtonProps.title ? panel.nextButtonProps.title  :'DONE' }</Button> }
                   </StepContent>
                 </Step>
               )

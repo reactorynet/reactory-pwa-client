@@ -96,7 +96,7 @@ class SelectWidget extends Component {
 
     return (
       <FormControl className={this.props.classes.formControl} {...controlProps}>
-          <InputLabel htmlFor={self.props.idSchema.$id}>{self.props.schema.title}</InputLabel>
+          <InputLabel htmlFor={self.props.idSchema.$id} required={required}>{self.props.schema.title}</InputLabel>
           <Select
             value={self.props.formData || ""}
             onChange={onSelectChanged}

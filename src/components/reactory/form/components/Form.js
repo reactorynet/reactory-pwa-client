@@ -189,8 +189,8 @@ export default class Form extends Component {
 
     if(this.props.formContext) {
       registery.formContext.$formElement = this.formElement;
-      registery.formContext.$submit = this.submit;
-      registery.formContext.$formData = this.state.formData;
+      registery.formContext.$submit = this.submit;      
+      registery.formContext.$formData = this.state && this.state.formData ? this.state.formData : {};
     }
 
     return registery;

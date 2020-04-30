@@ -95,7 +95,7 @@ export default (props) => {
       };
 
       if(uiOptions.inputProps) {
-        inputProps = { ...inputProps, ...uiOptions.nputProps };
+        inputProps = { ...inputProps, ...uiOptions.inputProps };
       };
 
       if(args.type === 'search') {

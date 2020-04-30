@@ -1,5 +1,5 @@
 import React, { Component, Fragment } from 'react';
-import { isNil, isEmpty } from 'lodash';
+import { isNil, isEmpty, isArray } from 'lodash';
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
 import { withStyles, withTheme } from '@material-ui/core/styles';
@@ -22,7 +22,7 @@ import { withApi } from '../../../api/ApiProvider'
 
 
 const MaterialFieldStyles = (theme) => {
-  return { }
+  return {}
 };
 
 
@@ -56,7 +56,7 @@ const MaterialFieldTemplateFunction = (props) => {
   } = props;
 
   // api.log(`MaterialFieldTemplate Rendering field ${id}`, props);
-  
+
   const isObject = schema.type === 'object'
   const isBoolean = schema.type === 'boolean'
 
@@ -64,53 +64,52 @@ const MaterialFieldTemplateFunction = (props) => {
   const uiWidget = uiSchema['ui:widget'] || null
   const uiToolbar = uiSchema['ui:toolbar'] || null;
   let Widget = null;
-  let showLabel = true;  
+  let showLabel = true;
 
-  
-  if(uiOptions !== null)
-  {
+
+  if (uiOptions !== null) {
     showLabel = uiOptions.showLabel ? uiOptions.showLabel === true : true;
 
-    if(hidden === true || uiWidget === "HiddenWidget") {
+    if (hidden === true || uiWidget === "HiddenWidget") {
       return <Fragment>{children}</Fragment>
     }
-    if(uiOptions.componentFqn)  {
+    if (uiOptions.componentFqn) {
       Widget = api.getComponent(uiOptions.componentFqn);
       let _props = { ...props };
-      if(typeof uiOptions.componentProps === 'object') {
-        _props = { ..._props, ...uiOptions.componentProps}
+      if (typeof uiOptions.componentProps === 'object') {
+        _props = { ..._props, ...uiOptions.componentProps }
       }
 
-      if(uiOptions.componentPropsMap) {
+      if (uiOptions.componentPropsMap) {
         let mappedProps = api.utils.objectMapper(props, uiOptions.componentPropsMap);
-        if(mappedProps) {
-          _props = {..._props, ...mappedProps}
+        if (mappedProps) {
+          _props = { ..._props, ...mappedProps }
         }
       }
 
-      if(uiOptions.propsMap) {
-        let mappedProps = api.utils.objectMapper(props, uiOptions.propsMap);        
-        if(mappedProps) {
-          _props = {..._props, ...mappedProps}
+      if (uiOptions.propsMap) {
+        let mappedProps = api.utils.objectMapper(props, uiOptions.propsMap);
+        if (mappedProps) {
+          _props = { ..._props, ...mappedProps }
         }
       }
 
-      if(Widget) {
-        return (<Widget {..._props } />)
+      if (Widget) {
+        return (<Widget {..._props} />)
       }
     }
   }
   let toolbar = null;
 
-  if(uiToolbar) {
+  if (uiToolbar) {
     //console.log('Generating toolbar with formState', { props });
     const buttons = uiSchema['ui:toolbar'].buttons.map((button) => {
       const api = formContext.api
-      const onRaiseCommand = ( evt ) => {
+      const onRaiseCommand = (evt) => {
         //console.log('Raising Toolbar Command', { evt, api });
-        if(api){
+        if (api) {
           api.raiseFormCommand(button.command, button, { formData: formData, formContext: formContext });
-        } 
+        }
         else {
           //console.log('No API to handle form command', {api, evt });
         }
@@ -125,14 +124,20 @@ const MaterialFieldTemplateFunction = (props) => {
     )
   }
 
-  
+  let allowsNull = false;
+  let schemaType = schema.type;
 
-  switch(schema.type) {
+  if (isArray(schemaType) === true) {
+    allowsNull = true;
+    schemaType = schemaType[0];
+  }
+
+  switch (schemaType) {
     case 'array':
     case 'boolean': {
       return (
         <FormControl className={classes.formControl} fullWidth>
-          { children }
+          {children}
         </FormControl>
       )
     }
@@ -140,7 +145,7 @@ const MaterialFieldTemplateFunction = (props) => {
       return (
         <Fragment>
           {toolbar}
-          { children }
+          {children}
         </Fragment>
       )
     }
@@ -155,15 +160,19 @@ const MaterialFieldTemplateFunction = (props) => {
         fullWidth: 'fullWidth'
       }
 
-      if(uiOptions && uiOptions.fullWidth === false) {
+      if (uiOptions && uiOptions.fullWidth === false) {
         delete formControlProps.fullWidth;
       }
 
       let inputLabelProps = {
         htmlFor: id,
+        required,
+        color: uiOptions && uiOptions.labelProps && uiOptions.labelProps.color ? uiOptions.labelProps.color : 'primary',
+        error: errors && errors.length > 0,
+        disabled: readonly === true
       }
 
-      if(isNil(formData) === false && isEmpty(formData) === true) {
+      if (isNil(formData) === false && isEmpty(formData) === true) {
         inputLabelProps.shrink = false;
       } else {
         inputLabelProps.shrink = true;
@@ -173,15 +182,16 @@ const MaterialFieldTemplateFunction = (props) => {
 
       return (
         <FormControl {...formControlProps}>
-          { uiWidget === null && showLabel !== false ? labelComponent : null }
-          { children }
-          { isNil(rawHelp) === false ? <FormHelperText id={`${id}_helper`}>{rawHelp}</FormHelperText> : null }
-          { errors }
-          { rawHelp }
+          {uiWidget === null && showLabel !== false ? labelComponent : null}
+          {children}
+          {isNil(rawDescription) === false ? <FormHelperText id={`${id}_helper`}>{rawDescription}</FormHelperText> : null}
+          {errors}
+          {rawHelp}
         </FormControl>
       );
     }
   }
+
 };
 
 const MaterialFieldTemplateComponent = compose(withApi, withTheme, withStyles(MaterialFieldStyles))(MaterialFieldTemplateFunction);
