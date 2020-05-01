@@ -3,35 +3,13 @@ import { compose } from 'recompose';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { withStyles } from '@material-ui/core/styles';
 import PropTypes from 'prop-types';
-import {
-  Grid,
-  Avatar,
-  Card,
-  CardHeader,
-  CardContent,
-  Typography,
-  Divider,
-  Icon,
-  Fab,
-  Tooltip
-} from '@material-ui/core';
-
-const CutomTooltip = withStyles((theme) => ({
-  tooltip: {
-    backgroundColor: 'transparent',
-    color: theme.palette.primary.main,
-    fontSize: theme.spacing(1.8)
-  },
-}))(Tooltip);
+import { Grid } from '@material-ui/core';
+import IntersectionVisible from 'react-intersection-visible';
 
 class GridLayoutWidget extends Component {
 
   static styles = (theme) => {
-    return {
-      tooltip: {
-        backgroundColor: 'transparent'
-      }
-    }
+    return {}
   }
 
   state = {
@@ -44,6 +22,8 @@ class GridLayoutWidget extends Component {
 
   constructor(props, context) {
     super(props, context);
+
+    this.componentDefs = props.api.getComponents(['core.Loading'])
   }
 
   getData = async () => {
@@ -76,13 +56,12 @@ class GridLayoutWidget extends Component {
         this.setState({ data: [], page: 0, totalCount: 0, loadingData: false });
       }
     } else {
-
-      // TODO IMPLEMENT THIS
-
+      let data = [];
       if (formData && formData.length) {
         formData.forEach(row => {
           data.push({ ...row })
-        })
+        });
+        this.setState({ data: data, page: 0, totalCount: 0, loadingData: false });
       }
     }
 
@@ -92,50 +71,42 @@ class GridLayoutWidget extends Component {
     this.getData();
   }
 
+  onShow = (event) => {
+    console.log('______ONSHOW_____');
+  }
+  onHide = (event) => {
+    console.log('______ONHIDE_____');
+  }
+  onIntersect = (event) => {
+    console.log('______ONINTERSECT_____');
+  }
+
   render() {
     const { props, state } = this;
-    const { api, classes } = props;
+    const { api, classes, formData, formContext, uiSchema } = props;
+    const uiOptions = uiSchema["ui:options"] || {};
+    const { Loading } = this.componentDefs;
 
-    api.log('GRID COMPONENT: RENDER');
+    const loadingMessage = uiOptions.leadingMessage ? uiOptions.leadingMessage : 'Loading Product Dimensions, please wait a moment';
+
+    let ChildComponent = api.getComponent(uiOptions.component);
+    let componentProps = {};
 
     return (
-      <Grid container spacing={2} >
-        <h1>{state.loadingData ? '   LOADING......' : ''}</h1>
-        {
-          state.data.map(item => <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardHeader
-                avatar={
-                  <Avatar src={item.image} className={classes.avatar}></Avatar>
-                }
-                title={item.code}
-                subheader={item.name} />
-              <CardContent>
-
-                <Grid container>
-                  <Grid item xs={10}>
-                    <CutomTooltip title="Add To Quote" aria-label="add to quote" placement="right" open>
-                      <Fab size="medium" color="primary" className={classes.fab}>
-                        <Icon>add</Icon>
-                      </Fab>
-                    </CutomTooltip>
-                  </Grid>
-                  <Grid item xs={2}>
-                    <Icon>info</Icon>
-                  </Grid>
-                </Grid>
-
-                <Divider />
-                <Typography variant="body2"><strong>Packed Length</strong>: {item.packedLength} cm</Typography>
-                <Typography variant="body2"><strong>Packed Width</strong>: {item.packedWidth} cm</Typography>
-                <Typography variant="body2"><strong>Packed Height</strong>: {item.packedHeight} cm</Typography>
-                <Typography variant="body2"><strong>Packed Volume</strong>: {item.packedVolume} m3</Typography>
-                <Typography variant="body2"><strong>Packed Weight</strong>: {item.packedWeight} kg</Typography>
-              </CardContent>
-            </Card>
-          </Grid>)
-        }
-      </Grid>
+      <>
+        <Grid container spacing={2} >
+          {state.loadingData && <Loading message={loadingMessage} />}
+          {
+            state.data.map(itemData => {
+              componentProps = { data: itemData }
+              return (<Grid item xs={12} sm={6} md={3} ><ChildComponent {...componentProps} /></Grid>)
+            })
+          }
+        </Grid>
+        {!state.loadingData && state.data.length > 0 && <IntersectionVisible onIntersect={this.onIntersect} onHide={this.onHide} onShow={this.onShow}>
+          <p>Loading more...</p>
+        </IntersectionVisible>}
+      </>
     );
   }
 };

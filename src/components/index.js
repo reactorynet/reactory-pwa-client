@@ -60,6 +60,7 @@ import RadioGroupComponent from './shared/RadioGroupComponent';
 import LookupComponent from './shared/LookupComponent';
 import NotificationComponent from './shared/NotificationWidget';
 import GridLayoutComponent from './shared/GridLayoutComponent';
+import ProductDimensionCard from './shared/ProductDimensionCard';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -183,6 +184,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'GridLayoutComponent',
     component: GridLayoutComponent,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'lasec',
+    name: 'ProductDimensionCard',
+    component: ProductDimensionCard,
     version: '1.0.0',
   },
   {
