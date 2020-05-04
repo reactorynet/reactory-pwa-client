@@ -73,12 +73,21 @@ class GridLayoutWidget extends Component {
 
   onShow = (event) => {
     console.log('______ONSHOW_____');
+
+    // load more data
+
   }
+
   onHide = (event) => {
     console.log('______ONHIDE_____');
+
+    // not in use
+
   }
   onIntersect = (event) => {
     console.log('______ONINTERSECT_____');
+
+    //
   }
 
   render() {
