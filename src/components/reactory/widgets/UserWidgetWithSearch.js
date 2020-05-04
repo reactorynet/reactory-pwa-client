@@ -1,4 +1,5 @@
-import React, { Fragment, Component } from 'react'
+import React, { Fragment, Component } from 'react';
+import om from 'object-mapper';
 import PropTypes from 'prop-types'
 import objectMapper from 'object-mapper'
 import { pullAt, find, isString, isObject } from 'lodash'
@@ -64,11 +65,12 @@ class UserWidgetWithSearch extends Component {
     const that = this;
     const { FullScreenModal, UserListWithSearch, BasicDialog, CreateProfile } = this.componentDefs;
     const { showNewUser } = this.state;
+    const { formContext, formData, onChange, uiSchema } = this.props;
+
     const closeModal = () => { 
       this.setState({modal: false});
       this.forceUpdate();
-    }
-    const { formContext, formData, onChange, uiSchema } = this.props;
+    }    
 
     const userSelected = (user) => {
       this.setState({ user }, ()=>{
@@ -89,16 +91,26 @@ class UserWidgetWithSearch extends Component {
       </BasicDialog>)
     }
 
+    let userlistProps = {
+      organizationId: formContext.organizationId,
+      multiSelect: false,
+      onUserSelect,
+      onNewUserClick: newUserClicked,
+      selected: formData ? [formData.id]:[],
+      businessUnitFilter: false,
+      showFilters: false,
+    };
+
+    if(uiSchema['ui:graphql']) {
+      userlistProps.graphql = uiSchema['ui:graphql'];
+      userlistProps.formContext = formContext;
+      userlistProps.uiSchema = uiSchema;
+      userlistProps.formData = formData;
+    }
+
     return (
       <FullScreenModal open={this.state.modal === true} onClose={closeModal} title="Employees">
-        <UserListWithSearch 
-          organizationId={formContext.organizationId}
-          multiSelect={false}
-          onUserSelect={userSelected}
-          onNewUserClick={newUserClicked}
-          selected={formData ? [formData.id]:[]}
-          businessUnitFilter={false}
-          showFilters={false} />
+        <UserListWithSearch { ...userlistProps } />
       </FullScreenModal>
     )
   }

@@ -69,13 +69,16 @@ class CustomInfoWindow extends Component {
       this.props.editAddress(this.props.marker.place);
     };
 
+    /**
+     * WW - REMOVED EDIT BUTTON, MUST ADD ADDITIONAL ADDRESS INFO
+     * <IconButton variant="contained" color="default" onClick={editHandler}><Icon>edit</Icon></IconButton>
+     */
     return (
       <InfoWindow onCloseClick={onCloseHandler}>
         <Paper>
           <Typography variant='caption'>{formatted_address}</Typography>
           <div className={classes.buttonContainer}>
-            <IconButton variant="contained" color="primary" onClick={acceptHandler}><Icon>check</Icon></IconButton>            
-            <IconButton variant="contained" color="default" onClick={editHandler}><Icon>edit</Icon></IconButton>
+            <IconButton variant="contained" color="primary" onClick={editHandler}><Icon>check</Icon></IconButton>            
             <IconButton variant="contained" color="default"onClick={onCloseHandler}><Icon>close</Icon></IconButton>
           </div>
         </Paper>
@@ -319,6 +322,18 @@ class ReactoryGoogleMapWidget extends Component {
         this.setState({ isNewAddress: false });
       }
       
+      const onMutationComplete = (formData, formContext, mutationResult) => {
+        debugger;
+        api.log(`Address Mutation Complete`,  { formData, formContext, mutationResult }), 'debug';
+
+        this.setState({ isNewAddress: false });
+      }
+
+      const validateAddress = ( formData, errors ) => {
+        api.log(`Validate Address`,  { formData }), 'debug';        
+        
+        return errors;
+      };
 
       return (
         <FullScreenModal {...fullScreenProps}>
@@ -326,6 +341,8 @@ class ReactoryGoogleMapWidget extends Component {
             <NewAddressForm
               place_id={this.state.selectedPlace.place_id}
               onCancel={onCancelEdit}
+              onMutatateComplete={onMutationComplete}
+              validate={validateAddress}
             ></NewAddressForm>
           )}
           {!this.state.isNewAddress && (

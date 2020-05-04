@@ -218,56 +218,65 @@ class MaterialGridField extends MaterialObjectField {
             formContext={formContext}/> : null}
         {
           layout.map((row, index) => {
+            let numberOfVisibleItems = 0;
+            let items = Object.keys(row).map((name, index) => {
+              const { doShow, ...rowProps } = row[name]
+              let style = {}
+              let hide = false;
+              if (doShow && !doShow({ formData })) {
+                style = { display: 'none' }
+                hide = true;
+              } 
+              if (schema.properties[name]) {                      
+                return (
+                    <Grid {...rowProps} item key={index} style={style}>
+                      <SchemaField
+                         name={name}
+                         required={this.isRequired(name)}
+                         schema={schema.properties[name]}
+                         uiSchema={uiSchema[name]}
+                         errorSchema={errorSchema[name]}
+                         idSchema={idSchema[name]}
+                         formData={formData[name]}
+                         onChange={this.onPropertyChange(name)}
+                         onBlur={onBlur}
+                         registry={this.props.registry}
+                         disabled={disabled}
+                         readonly={readonly}/>
+                    </Grid>
+                )
+              } else {
+                const { render, ...rowProps } = row[name]
+                let UIComponent = () => null
+
+                if (render) {
+                  UIComponent = render
+                } else {
+                  hide = true;
+                }
+
+                if(hide === false) {
+                  numberOfVisibleItems += 1;
+                  return (
+                    <Grid {...rowProps} item key={index} style={style}>
+                      <UIComponent
+                        name={name}
+                        formData={formData}
+                        errorSchema={errorSchema}
+                        uiSchema={uiSchema}
+                        schema={schema}
+                        registry={this.props.registry}
+                      />
+                    </Grid>)
+                }
+                
+                return null;
+              }
+            });
+
             return (
               <Grid container spacing={gridOptions.spacing} key={index}>
-                {
-                  Object.keys(row).map((name, index) => {
-                    const { doShow, ...rowProps } = row[name]
-                    let style = {}
-                    if (doShow && !doShow({ formData })) {
-                      style = { display: 'none' }
-                    } 
-                    if (schema.properties[name]) {                      
-                      return (
-                          <Grid {...rowProps} item key={index} style={style}>
-                            <SchemaField
-                               name={name}
-                               required={this.isRequired(name)}
-                               schema={schema.properties[name]}
-                               uiSchema={uiSchema[name]}
-                               errorSchema={errorSchema[name]}
-                               idSchema={idSchema[name]}
-                               formData={formData[name]}
-                               onChange={this.onPropertyChange(name)}
-                               onBlur={onBlur}
-                               registry={this.props.registry}
-                               disabled={disabled}
-                               readonly={readonly}/>
-                          </Grid>
-                      )
-                    } else {
-                      const { render, ...rowProps } = row[name]
-                      let UIComponent = () => null
-
-                      if (render) {
-                        UIComponent = render
-                      }
-
-                      return (
-                            <Grid {...rowProps} item key={index} style={style}>
-                              <UIComponent
-                                name={name}
-                                formData={formData}
-                                errorSchema={errorSchema}
-                                uiSchema={uiSchema}
-                                schema={schema}
-                                registry={this.props.registry}
-                              />
-                            </Grid>
-                      )
-                    }
-                  })
-                }
+                {items}
               </Grid>
             )
           })

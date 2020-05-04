@@ -299,6 +299,7 @@ function SchemaFieldRender(props) {
     fields,
     schema,
     uiSchema,
+    formData
   };
 
   return <FieldTemplate {...fieldProps}>{field}</FieldTemplate>;

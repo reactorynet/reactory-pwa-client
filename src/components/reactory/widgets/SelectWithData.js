@@ -1,6 +1,6 @@
 import React, { Fragment, Component } from 'react'
 import PropTypes from 'prop-types'
-import { pullAt, find } from 'lodash'
+import { pullAt, find, isNil, isEmpty } from 'lodash'
 import objectMapper from 'object-mapper'
 import {
   Chip,
@@ -13,14 +13,16 @@ import {
   Typography,
   Tooltip,
   Select,
+  FilledInput,
   FormHelperText,
+  OutlinedInput,
 } from '@material-ui/core';
 
 import { Query } from 'react-apollo';
 import gql from 'graphql-tag';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
-
+import { withApi } from '@reactory/client-core/api/ApiProvider';
 class SelectWithDataWidget extends Component {
 
   static styles = (theme) => ({
@@ -59,14 +61,46 @@ class SelectWithDataWidget extends Component {
 
   render(){
     const self = this
-    const { classes, formContext, formData, required } = this.props;
-    //console.log('Rendering Select With Data', { formContext, formData });
+    const { classes, formContext, formData, required, api, theme } = this.props;
+    api.log('Rendering SelectWithData', { formContext, formData }, 'debug');
+
+    let variant = 'standard'
+    if(theme.MaterialInput) {
+      variant = theme.MaterialInput.variant || variant;
+    }
+
+
+    let InputComponent = Input;
+    let inputLabelProps = {};    
+    switch(variant) {
+      case 'outlined': {
+        InputComponent = OutlinedInput;
+        if(isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
+          inputLabelProps.shrink = false;
+        } else {
+          inputLabelProps.shrink = true;
+          inputLabelProps.style = {
+            backgroundColor: 'white',
+            padding: '3px'
+          };
+        }
+        break;
+      }
+      case 'filled': {
+        InputComponent = FilledInput;
+      }
+    }
+
+
+    
+
     if(this.props.uiSchema['ui:options']){
 
       const { query, propertyMap, resultsMap, resultItem, multiSelect } = this.props.uiSchema['ui:options'];
       const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
       const onSelectChanged = (evt) => {
-        //console.log('Raising onChange for data select', {v: evt.target.value})
+        api.log('Raising onChange for data select', {v: evt.target.value})
+
         self.props.onChange(evt.target.value)
       }
 
@@ -84,24 +118,25 @@ class SelectWithDataWidget extends Component {
           if(data && data[resultItem]) {
             let menuItems = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
             return (
-              <FormControl className={classes.formControl}>
-              <InputLabel htmlFor={this.props.idSchema.$id} required={required}>{this.props.schema.title}</InputLabel>
-              <Select
-                multiple={multiSelect === true}
-                value={`${this.props.formData}`}
-                onChange={onSelectChanged}
-                name={this.props.name}
-                input={<Input id={this.props.idSchema.$id} value={`${this.props.formData}`.trim() || ""}/>}>                
-                { emptySelect }
-                { menuItems.map((option, index) => {
-                  return (
-                    <MenuItem key={option.key || index} value={`${option.value}`}>
-                      { option.icon ? <Icon>{option.icon}</Icon> : null }
-                      { option.label }
-                    </MenuItem>)
-                }) }
-              </Select>
-            </FormControl>)
+              <FormControl variant={variant}>
+                <InputLabel {...inputLabelProps} htmlFor={this.props.idSchema.$id} required={required}>{this.props.schema.title}</InputLabel>
+                <Select
+                  multiple={multiSelect === true}
+                  value={multiSelect === true ? this.props.formData : `${this.props.formData}`}
+                  onChange={onSelectChanged}
+                  name={this.props.name}
+                  variant={variant}
+                  input={<InputComponent id={this.props.idSchema.$id} value={`${this.props.formData}`.trim() || ""}/>}>                
+                  { emptySelect }
+                  { menuItems.map((option, index) => {
+                    return (
+                      <MenuItem key={option.key || index} value={`${option.value}`}>
+                        { option.icon ? <Icon>{option.icon}</Icon> : null }
+                        { option.label }
+                      </MenuItem>)
+                  }) }
+                </Select>
+              </FormControl>)
           } else {
             return <p>No Data Result</p>
           }
@@ -110,7 +145,7 @@ class SelectWithDataWidget extends Component {
       )
 
     } else {
-      return <FormControl className={this.props.classes.formControl}>
+      return <React.Fragment>
       <InputLabel htmlFor={this.props.idSchema.$id}>{this.props.schema.title}</InputLabel>
       <Select
         value={""}
@@ -121,9 +156,9 @@ class SelectWithDataWidget extends Component {
           <em>No Query For Select Defined</em>
         </MenuItem>
       </Select>
-    </FormControl>
+      </React.Fragment>
     }
   }
 }
-const SelectWithDataWidgetComponent = compose(withTheme, withStyles(SelectWithDataWidget.styles))(SelectWithDataWidget)
+const SelectWithDataWidgetComponent = compose(withApi, withTheme, withStyles(SelectWithDataWidget.styles))(SelectWithDataWidget)
 export default SelectWithDataWidgetComponent

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import om from 'object-mapper';
 import { withRouter } from 'react-router';
 import classnames from 'classnames';
 import gql from 'graphql-tag';
@@ -189,7 +190,8 @@ class UserTable extends Component {
           </TableRow>
         </TableFooter>
       </Table>);
-  }  
+  }
+
 };
 
 export const CreateProfile = compose(
@@ -366,7 +368,7 @@ export const UserWithQuery = compose(
 
 
 export const UserListItem = (props) => {
-  const { user, selected, key, onClick, message, withTheme } = props
+  const { user, selected, key, onClick, message, withTheme } = props;
   if(!user) {
     return (<ListItem button onClick={onClick} key={key}>
       <Avatar alt={"No user avaialble"} src={getAvatar(user)} style={{marginRight: '8px'}}/>
@@ -374,8 +376,8 @@ export const UserListItem = (props) => {
     </ListItem>)
   }
   
-  const displayText = `${user.firstName} ${user.lastName}`
-  const hasMessage = typeof message === 'string'
+  const displayText = `${user.firstName} ${user.lastName}`;
+  const hasMessage = typeof message === 'string';
   return (
     <ListItem selected={selected} onClick={onClick} key={key}>
       <Avatar alt={displayText} src={getAvatar(user)} style={{marginRight: '8px'}} />
@@ -498,9 +500,13 @@ export const UserInbox = compose(withApi)(({ api, via = 'local', display = 'defa
   </Query>));
 
 
-const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null, classes }) => {  
+const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null, classes, graphql = null, formContext }) => {  
+  debugger;
+  const queryText = graphql && graphql.text ? graphql.text : api.queries.Users.usersForOrganization;
+  const variables = graphql && graphql.variables ? om(formContext, graphql.variables) : { id: organizationId, searchString };
+
   return (
-    <Query query={api.queries.Users.usersForOrganization} variables={{ id: organizationId, searchString }}>
+    <Query query={queryText} variables={{ id: organizationId, searchString }}>
       {({ loading, error, data } ) => {
         if(loading === true) return "Loading"
         if(error) return error.message

@@ -53,6 +53,7 @@ const MaterialFieldTemplateFunction = (props) => {
     registry,
     formData,
     classes,
+    theme
   } = props;
 
   // api.log(`MaterialFieldTemplate Rendering field ${id}`, props);
@@ -154,27 +155,44 @@ const MaterialFieldTemplateFunction = (props) => {
     case 'file':
     default: {
 
+      
+      let themeVariant = "standard";
+      if(theme.MaterialInput) {
+        themeVariant = theme.MaterialInput.variant || themeVariant;
+      }
+
+
       let formControlProps = {
         className: classes.formControl,
         style: uiOptions ? uiOptions.style : {},
-        fullWidth: 'fullWidth'
+        fullWidth: 'fullWidth',
+        variant: themeVariant,
       }
 
       if (uiOptions && uiOptions.fullWidth === false) {
         delete formControlProps.fullWidth;
       }
-
+      const labelRef = React.useRef(null);
       let inputLabelProps = {
         htmlFor: id,
         required,
         color: uiOptions && uiOptions.labelProps && uiOptions.labelProps.color ? uiOptions.labelProps.color : 'primary',
         error: errors && errors.length > 0,
-        disabled: readonly === true
+        disabled: readonly === true,
+        ref: labelRef,        
       }
 
-      if (isNil(formData) === false && isEmpty(formData) === true) {
-        inputLabelProps.shrink = false;
+      if(uiOptions && uiOptions.labelProps) {
+        inputLabelProps = { ...inputLabelProps, ...uiOptions.labelProps };
+      }
+
+      if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
+        inputLabelProps.shrink = false;        
       } else {
+        inputLabelProps.style = {
+          backgroundColor: 'white',
+          padding: '3px'
+        };
         inputLabelProps.shrink = true;
       }
 

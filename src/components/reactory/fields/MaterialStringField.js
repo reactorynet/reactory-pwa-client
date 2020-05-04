@@ -11,15 +11,18 @@ import {
   InputLabel,
   Icon,
   Input,
+  OutlinedInput,
+  FilledInput,
   InputAdornment,
   TextField,
 } from '@material-ui/core';
 
-//import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withTheme } from '@material-ui/styles';
 
-//export default withApi( (props) => {
-export default (props) => {
+
+export default withTheme((props) => {
   const {
+    id,
     autofocus,
     disabled,
     errorSchema,
@@ -37,7 +40,8 @@ export default (props) => {
     required,
     schema,
     uiSchema,
-    hidden,    
+    hidden,
+    theme    
   } = props;
 
   const inputProps = {
@@ -95,7 +99,7 @@ export default (props) => {
       };
 
       if(uiOptions.inputProps) {
-        inputProps = { ...inputProps, ...uiOptions.inputProps };
+        inputProps = { ...inputProps, ...uiOptions.inputProps, id: idSchema.$id };
       };
 
       if(args.type === 'search') {
@@ -106,10 +110,16 @@ export default (props) => {
         )
       }
 
+      let themeDefaults = {};
+      if(theme.MaterialTextField) {
+        themeDefaults = theme.MaterialTextField;
+      }
+      
+      
       let componentProps = {
-        defaultValue:`${formData || schema.default}`.replace("undefined", ""),
-        variant: uiOptions.variant || "standard",
-        InputProps: inputProps        
+        defaultValue:`${formData || schema.default}`.replace("undefined", ""),        
+        variant: themeDefaults.variant || uiOptions.variant || "standard",
+        InputProps: inputProps,              
       }
 
       if(uiOptions.componentProps) {
@@ -118,8 +128,28 @@ export default (props) => {
       
       return ( <TextField {...componentProps} /> );
     } else {
-      return (<Input {...args} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />)
+      let themeDefaults = {};
+      if(theme.MaterialInput) {
+        themeDefaults = theme.MaterialInput;
+      }
+
+      let COMPONENT = Input;
+
+      switch(themeDefaults.variant){
+        case "outlined":
+        case "outline":{
+          COMPONENT = OutlinedInput;
+          break;
+        }
+        case "filled": 
+        case "fill": {
+          COMPONENT = FilledInput;
+          break;          
+        }        
+      }
+
+      return (<COMPONENT {...args} id={idSchema.$id}  readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />)
     }    
   }
-}
-//);
+});
+

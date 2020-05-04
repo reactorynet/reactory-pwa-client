@@ -26,6 +26,7 @@ import {
   Icon,
   Input,
   Toolbar,
+  LinearProgress
 } from '@material-ui/core';
 
 import Fields from './fields';
@@ -142,9 +143,11 @@ export interface ReactoryFormProperties {
   onSubmit?: Function,
   onError?: Function,
   onCommand?: Function,
+  onMutateComplete?: Function,
   before?: Component | undefined,
   children?: ReactNodeArray,
   $route?: string,
+  validate?: Function,
   autoQueryDisabled?: boolean
 }
 
@@ -468,6 +471,18 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     if (forms.length === 0) return (<p>no forms defined</p>);
 
+    
+    
+    function transformErrors(errors) {
+      return errors.map(error => {
+        if (error.name === "minimum" && error.property === "instance.age") {
+          return Object.assign({}, error, {
+            message: "You need to be 18 because of some legal thing",
+          });
+        }
+        return error;
+      });
+    }
 
     const formDef = this.form();
     const formProps = {
@@ -482,7 +497,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         let validationResult = [];
         let validationFunction = null;
         let selectedKey = validationFunctionKey;
-        //($formData, $errors, formDef);          
 
         if (typeof api.$func[`${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`] === 'function') {
           validationFunction = api.$func[`${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`];
@@ -499,16 +513,20 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           validationFunction = api.$func[validationFunctionKey];
         }
 
-        if (typeof validationFunction === 'function') {
-          validationFunction.bind(self);
+        if(typeof self.props.validate === 'function') {
+          validationFunction = self.props.validate;
+        }
 
+        if (typeof validationFunction === 'function') {          
           try {
-            validationResult = validationFunction({ $formData, $errors });
+            validationResult = validationFunction($formData, $errors, formDef, api);
           } catch (ex) {
             api.log(`Error While Executing Custom Validation`, { ex }, 'error');
           }
         }
-        return validationResult;
+        
+
+        return $errors;
       },
       onChange: this.onChange,
       formData: formData,
@@ -608,11 +626,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         const { buttonProps, iconProps, type, handler } = button;
 
         const onButtonClicked = () => {
-          api.log(`OnClickButtonFor Additional Buttons`);
-          if (type === 'callback' && self.props[handler] && typeof self.props[handler] === 'function') {
+          api.log(`OnClickButtonFor Additional Buttons`);          
+          if (self.props[handler] && typeof self.props[handler] === 'function') {
             self.props[handler]({ reactoryForm: self, button })
           } else {
-            api.createNotification('No handler for this button is available', { showInAppNotification: true, type: 'error' })
+            api.createNotification(`No handler '${handler}' for ${buttonProps.title} button`, { showInAppNotification: true, type: 'error' })
           }
         }
 
@@ -796,24 +814,26 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       exportButton = (<DropDownMenu menus={exportMenus} onSelect={onDropDownSelect} icon={"import_export"} />)
     }
 
-    let formtoolbar = (<Toolbar>
-      {formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}
-      {this.props.children && this.props.children.length > 0 ? this.props.children : null}
-      {showSubmit === true && submitButton}
-      {_additionalButtons}
-      {self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
-      {formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button>}
-      {formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button>}
-
-      {reportButton}
-      {exportButton}
-    </Toolbar>);
+    let formtoolbar = (
+      <Toolbar>
+        { formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null }
+        { this.props.children && this.props.children.length > 0 ? this.props.children : null }
+        { showSubmit === true && submitButton }
+        { _additionalButtons }
+        { self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button> }
+        { formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button> }
+        { formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button> }
+        { reportButton }
+        { exportButton }
+      </Toolbar>
+    );
 
 
 
     return (
       <Fragment>
-        {this.props.before}
+        {formDef.graphql && formDef.graphql.query && self.state.queryComplete === false && <LinearProgress />}
+        {self.props.before}
         <Form {...{ ...formProps, toolbarPosition: toolbarposition }}>
           {formtoolbar}
         </Form>
@@ -844,28 +864,41 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     //returns a form wrapped with a mutation handler
     const getMutationForm = (_formData) => {
-      const mutation = formDef.graphql.mutation[mode];
+      const mutation: any = formDef.graphql.mutation[mode];
+
       return (
         <Mutation mutation={gql(mutation.text)}>
           {(mutateFunction: Function, mutationResult: MutationResult) => {
-            const { loading, error, data } = mutationResult
+            const { loading, error, data } = mutationResult;
+            let exectuting = false;
+            
             const onFormSubmit = (formSchema) => {
               api.log(`Form Submitting, post via graphql`, formSchema, 'debug');
+              exectuting = true;
               const _variables = objectMapper({ ...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
               mutateFunction({
                 variables: api.utils.omitDeep({ ..._variables }),
                 refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
               });
-            };
+            };            
 
             let loadingWidget = null;
             let errorWidget = null;
 
-            if (loading === true) loadingWidget = (<Loading message={"Updating... please wait."} />);
+            // if (loading === true) loadingWidget = (<Loading message={"Updating... please wait."} />);
             if (error) {
-              errorWidget = (<p>{error.message}</p>);
+              // errorWidget = (<p>{error.message}</p>);
+
+              api.createNotification(
+                `Error ${mutation.name} Failed`,
+                {
+                  showInAppNotification: true,
+                  type: 'error',                  
+                });
             }
+
             if (data && data[mutation.name]) {
+
               if (mutation.onSuccessMethod === "route") {
                 const inputObj = {
                   formData,
@@ -886,27 +919,31 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                       ...dataObject,
                       ...mutation.notification.props
                     }
-                  });
+                  }
+                );
+              }
+
+              if(that.props.onMutateComplete) {
+                that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
               }
 
               if (mutation.onSuccessMethod.indexOf('event:') === 1) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];
                 api.amq.raiseFormCommand(eventName, { form: that, result: data[mutation.name] }),
-                  that.$events.emit(eventName, data[mutation.name]);
+                that.$events.emit(eventName, data[mutation.name]);
               }
 
               that.$events.emit('onMutateComplete', {
                 result: data[mutation.name],
                 errors: error,
                 error: error
-              });
+              });              
             }
-
+                     
             return (
               <Fragment>
                 {errorWidget}
-                {that.renderForm(_formData, onFormSubmit)}
-                {loadingWidget}
+                {that.renderForm(_formData, onFormSubmit)}                
               </Fragment>
             )
           }}
@@ -982,7 +1019,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             }
 
             //update component state with new form data
-            if (that.isMounted === true) {
+            if (that.isMounted === true) {              
               that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, () => {
                 that.$events.emit('onQueryComplete', { formData: _formData, form: that });
                 if (errors) {
@@ -1016,20 +1053,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           });
         }
 
-        executeFormQuery();
-      }
-
-
-      let loadingWidget = <Loading message={`Fetching data for ${formDef.title}`} />;
-
-      if (isEmpty(formDef.graphql.query.queryMessage) === false) {
-        loadingWidget = <Loading message={template(formDef.graphql.query.queryMessage)({ props: this.props, state: this.state })} />
-      }
+        executeFormQuery();        
+      }      
 
       return (
         <Fragment>
-          {that.renderForm(formData)}
-          {loadingWidget}
+          {that.renderForm(formData)}      
         </Fragment>
       )
     }

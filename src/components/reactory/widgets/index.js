@@ -19,9 +19,15 @@ export const DateSelectorWidget = require('../../dates/DateTimePicker');
 export const CompanyLogoWidget = require('./CompanyLogo');
 export const UserWidgetWithSearch = require('./UserWidgetWithSearch');
 export const UserSelectorWidget = require('./UserSelectorWidget');
+
+/**
+ * Chart Widgets
+ */
 export const PieChartWidget = require('./ChartWidget').default.PieChartWidgetComponent;
 export const FunnelChartWidget = require('./ChartWidget').default.FunnelChartWidgetComponent;
 export const ComposedChartWidget = require('./ChartWidget').default.ComposedChartWidgetComponent;
+export { default as LineChartWidget} from './Charts/LineChartWidget';
+
 //export const LineChartWidget = require('./ChartWidget').default.LineChartWidgetComponent;
 export const ToolbarWidget = require('./ToolbarWidget');
 export const ProgressWidget = require('./ProgressWidget').ProgressWidgetComponent;

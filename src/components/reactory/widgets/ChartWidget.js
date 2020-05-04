@@ -100,29 +100,6 @@ const renderNoDataPie = (cx, cy, innerRadius, outerRadius) => (
   />
 );
 
-class LineChartWidget extends PureComponent {  
-
-  render() {
-    return (
-      <LineChart
-        width={500}
-        height={300}
-        data={data}
-        margin={{
-          top: 5, right: 30, left: 20, bottom: 5,
-        }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <Line type="monotone" dataKey="pv" stroke="#8884d8" activeDot={{ r: 8 }} />
-        <Line type="monotone" dataKey="uv" stroke="#82ca9d" />
-      </LineChart>
-    );
-  }
-}
 
 
 class PieChartWidget extends Component {  
@@ -402,12 +379,10 @@ class BarChartWidget extends Component {
 }
 
 export const PieChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(PieChartWidget)
-export const LineChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(LineChartWidget)
 export const FunnelChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(FunnelChartWidget);
 export const ComposedChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(ComposedChartWidget);
 export default { 
   PieChartWidgetComponent,
-  LineChartWidgetComponent,
   FunnelChartWidgetComponent,
   ComposedChartWidgetComponent
 }

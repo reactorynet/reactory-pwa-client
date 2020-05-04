@@ -12,7 +12,7 @@ class CurrencyLabel extends Component {
 
     let isCents = true;
     let _value = value;
-
+    
     if(uiSchema) {
       isCents = uiSchema['ui:options'] && uiSchema['ui:options'].isCents === false ? false : isCents; 
       _value = uiSchema['ui:options']  ? 
