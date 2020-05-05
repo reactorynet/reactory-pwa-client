@@ -105,6 +105,7 @@ class PricingLineChartWidget extends Component {
 
   render() {
     const { classes, uiSchema, formData } = this.props;
+    debugger;
     const { landedPrice, threeMonthAvePrice, wh10CostPrice, listPrice } = formData;
 
     let _region = 'en-ZA';

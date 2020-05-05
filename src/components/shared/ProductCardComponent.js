@@ -13,7 +13,7 @@ import {
   Divider,
   Icon,
   Fab,
-  Tooltip
+  Tooltip,
 } from '@material-ui/core';
 
 const CutomTooltip = withStyles((theme) => ({
@@ -24,7 +24,7 @@ const CutomTooltip = withStyles((theme) => ({
   },
 }))(Tooltip);
 
-class ProductDimensionsWidget extends Component {
+class ProductCardWidget extends Component {
 
   static styles = (theme) => {
     const textDark = 'rgba(0,0,0,0.87)';
@@ -44,17 +44,32 @@ class ProductDimensionsWidget extends Component {
       },
       contentContainer: {
         paddingLeft: theme.spacing(1.5)
+      },
+      fieldLabel: {
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: theme.spacing(1)
+      },
+      fieldLabelIcon: {
+        marginRight: theme.spacing(1)
       }
     }
   }
 
   constructor(props, context) {
     super(props, context);
+
+    this.componentDefs = props.api.getComponents(['core.PricingLineChartComponent']);
   }
 
   render() {
+
     const { props } = this;
-    const { classes, data } = props;
+    const { classes, data, cardContent } = props;
+    const { PricingLineChartComponent } = this.componentDefs;
+    const formData = {...data};
+
+    debugger;
 
     let sysProIconColor = '';
     switch (data.onSyspro) {
@@ -94,25 +109,29 @@ class ProductDimensionsWidget extends Component {
             </Grid>
             {
               data.onSyspro != '' && sysProIconColor != '' && <Grid item xs={2}>
-                <Icon style={{color: sysProIconColor}}>info</Icon>
+                <Icon style={{ color: sysProIconColor }}>info</Icon>
               </Grid>
             }
           </Grid>
-
           <Divider classes={{ root: classes.divider }} />
-
-          <div className={classes.contentContainer}>
-            <Typography variant="body2"><strong>Packed Length</strong>: {data.packedLength} cm</Typography>
-            <Typography variant="body2"><strong>Packed Width</strong>: {data.packedWidth} cm</Typography>
-            <Typography variant="body2"><strong>Packed Height</strong>: {data.packedHeight} cm</Typography>
-            <Typography variant="body2"><strong>Packed Volume</strong>: {data.packedVolume} m3</Typography>
-            <Typography variant="body2"><strong>Packed Weight</strong>: {data.packedWeight} kg</Typography>
-          </div>
+          {
+            cardContent && cardContent.fields &&
+            <div className={classes.contentContainer}>
+              {
+                cardContent.fields.map(field =>
+                  <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
+                    {field.icon && field.icon != '' && <Icon classes={{ root: classes.fieldLabelIcon }}>{field.icon}</Icon>}
+                    <strong>{field.label}</strong>&nbsp;{data[field.value]} {field.unit}
+                  </Typography>)
+              }
+            </div>
+          }
+          <PricingLineChartComponent formData={formData} />
         </CardContent>
       </Card>
     );
   }
 };
 
-const ProductDimensionsComponent = compose(withApi, withStyles(ProductDimensionsWidget.styles))(ProductDimensionsWidget);
-export default ProductDimensionsComponent;
+const ProductCardComponent = compose(withApi, withStyles(ProductCardWidget.styles))(ProductCardWidget);
+export default ProductCardComponent;
