@@ -163,6 +163,7 @@ class App extends Component<any, AppState> {
 
   componentRefs: any
   router: any
+  statusInterval: any
   static propTypes: { appTitle: PropTypes.Validator<string>; appTheme: PropTypes.Requireable<object>; };
   static defaultProps: { appTitle: string; appTheme: {}; };
 
@@ -222,12 +223,22 @@ class App extends Component<any, AppState> {
     api.log('App.onApiStatusUpdate(status)', [status], status.offline === true ? 'error' : 'debug');
     let isOffline = status.offline === true;
     let user = api.getUser();
+    let self = this;
     delete user.when;
     let _user = this.state.user;
     delete _user.when;
 
     if (deepEquals(user, _user) === false || isOffline !== this.state.offline) {
-      this.setState({ user, offline: isOffline });
+                                
+      this.setState({ user, offline: isOffline }, ()=>{
+        if(status.offline === true) {
+          self.statusInterval = setInterval(api.status, 2500);;
+        }        
+
+        if(status.offline !== true) {
+          clearInterval(self.statusInterval);
+        }
+      });
     }
 
   }
@@ -393,6 +404,7 @@ class App extends Component<any, AppState> {
                           routes :
                           <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}
                       </div>
+                      {modal}
                     </React.Fragment>
                   </MuiPickersUtilsProvider>
                 </ThemeProvider>
