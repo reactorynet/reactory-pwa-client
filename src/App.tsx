@@ -163,7 +163,7 @@ class App extends Component<any, AppState> {
 
   componentRefs: any
   router: any
-  statusInterval: any
+  statusInterval: any = null;
   static propTypes: { appTitle: PropTypes.Validator<string>; appTheme: PropTypes.Requireable<object>; };
   static defaultProps: { appTitle: string; appTheme: {}; };
 
@@ -222,24 +222,35 @@ class App extends Component<any, AppState> {
   onApiStatusUpdate(status) {
     api.log('App.onApiStatusUpdate(status)', [status], status.offline === true ? 'error' : 'debug');
     let isOffline = status.offline === true;
-    let user = api.getUser();
     let self = this;
-    delete user.when;
-    let _user = this.state.user;
-    delete _user.when;
 
-    if (deepEquals(user, _user) === false || isOffline !== this.state.offline) {
-                                
-      this.setState({ user, offline: isOffline }, ()=>{
-        if(status.offline === true) {
+    if(isOffline === true && self.state.offline === false) {
+      self.setState({ 
+        offline: true
+      }, () => {
+        if(status.offline === true && isOffline === true && self.statusInterval === null) {
           self.statusInterval = setInterval(api.status, 2500);;
-        }        
+        }          
+      })
+      
+    } else {
 
-        if(status.offline !== true) {
-          clearInterval(self.statusInterval);
-        }
-      });
+      if(status.offline !== true && self.statusInterval) {
+        clearInterval(self.statusInterval);
+      }
+      
+      let user = api.getUser();            
+      delete user.when;
+      let _user = this.state.user;
+      delete _user.when;
+      
+      if (deepEquals(user, _user) === false || status.offline !== self.state.offline) {                                  
+        this.setState({ user, offline: status.offline ===true });
+      } 
+
     }
+
+    
 
   }
 

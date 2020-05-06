@@ -109,7 +109,7 @@ class SelectWithDataWidget extends Component {
       </MenuItem> : null;
 
       return (
-        <Query query={gql`${query}`} variables={variables}>
+        <Query query={gql`${query}`} variables={variables} >
         {(props, context)=> {
           const { data, loading, error } = props;
           if(loading === true) return (<p>Loading lookups</p>)
