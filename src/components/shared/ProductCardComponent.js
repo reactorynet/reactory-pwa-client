@@ -52,7 +52,7 @@ class ProductCardWidget extends Component {
       },
       fieldLabelIcon: {
         marginRight: theme.spacing(1)
-      }
+      },
     }
   }
 
@@ -67,7 +67,7 @@ class ProductCardWidget extends Component {
     const { props } = this;
     const { classes, data, cardContent } = props;
     const { PricingLineChartComponent } = this.componentDefs;
-    const formData = {...data};
+    const formData = { ...data };
 
     debugger;
 
@@ -126,7 +126,13 @@ class ProductCardWidget extends Component {
               }
             </div>
           }
-          <PricingLineChartComponent formData={formData} />
+          {
+            cardContent && cardContent.hasPricingChart && <>
+              <div style={{ height: '1rem' }}></div>
+              <PricingLineChartComponent formData={formData} />
+            </>
+          }
+
         </CardContent>
       </Card>
     );

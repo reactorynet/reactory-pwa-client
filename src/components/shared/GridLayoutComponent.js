@@ -50,11 +50,7 @@ class GridLayoutWidget extends Component {
 
     if (uiOptions.remoteData === true) {
       try {
-
-        console.log(this.state.page, '   ', this.state.pageSize, '   ', this.state.totalCount);
-
         this.setState({ loadingData: true });
-
         const graphqlDefinitions = formContext.$formState.formDef.graphql;
         if (graphqlDefinitions.query || graphqlDefinitions.queries) {
           let queryDefinition = graphqlDefinitions.query;
@@ -127,7 +123,7 @@ class GridLayoutWidget extends Component {
           {
             state.data.map((itemData, index) => {
               componentProps = { ...componentProps, data: itemData }
-              return (<Grid item xs={12} sm={6} md={3} key={index} ><ChildComponent {...componentProps} /></Grid>)
+              return (<Grid item xs={12} sm={6} md={4} key={index} ><ChildComponent {...componentProps} /></Grid>)
             })
           }
         </Grid>
@@ -136,7 +132,7 @@ class GridLayoutWidget extends Component {
           state.loadingData && state.data.length > 0 &&
           <Typography classes={{ root: classes.loading }} variant={'h6'} align="center">Loading more &nbsp;<Icon className={classes.spinning} color="primary">autorenew</Icon></Typography>
         }
-        {!state.loadingData && state.data.length > 0 && <IntersectionVisible onShow={this.onShow}>
+        {!state.loadingData && state.data.length > 0 && state.data.length < state.totalCount && <IntersectionVisible onShow={this.onShow}>
           <Typography classes={{ root: classes.loading }} variant={'h6'}>Load More</Typography>
         </IntersectionVisible>}
       </>
