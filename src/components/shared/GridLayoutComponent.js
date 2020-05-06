@@ -117,6 +117,8 @@ class GridLayoutWidget extends Component {
 
     let ChildComponent = api.getComponent(uiOptions.component);
     let componentProps = {};
+    if (uiOptions.componentProps)
+      componentProps = { ...uiOptions.componentProps };
 
     return (
       <>
@@ -124,7 +126,7 @@ class GridLayoutWidget extends Component {
           {state.loadingData && state.data.length == 0 && <Loading message={loadingMessage} />}
           {
             state.data.map((itemData, index) => {
-              componentProps = { data: itemData }
+              componentProps = { ...componentProps, data: itemData }
               return (<Grid item xs={12} sm={6} md={3} key={index} ><ChildComponent {...componentProps} /></Grid>)
             })
           }
