@@ -994,17 +994,16 @@ class ReactoryApi extends EventEmitter {
           that.setUser({ ...result.data.apiStatus });
           that.lastValidation = moment().valueOf();
           that.tokenValidated = true;
+
           if (options.emitLogin === true)
-            that.emit(ReactoryApiEventNames.onLogin, that.getUser());
-
-          that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result });
-
+            that.emit(ReactoryApiEventNames.onLogin, that.getUser());          
           if(result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
             result.data.apiStatus.messages.forEach((message) => {
               that.createNotification(message.title, message);
             });
           }
 
+          that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: false });
           resolve(that.getUser());
         } else {
           that.logout(false);

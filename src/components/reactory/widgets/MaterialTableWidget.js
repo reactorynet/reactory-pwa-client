@@ -342,13 +342,10 @@ class MaterialTableWidget extends Component {
 
 
               if(action.event.via === 'form') {
-                debugger;
-                let handler = formContext.$ref.onChange;
-                
+                let handler = formContext.$ref.onChange;                
                 if( typeof formContext.$ref[action.event.name] === 'function') {
                   handler = formContext.$ref[action.event.name];
                 }
-
                 handler(__formData);
               };              
             }
