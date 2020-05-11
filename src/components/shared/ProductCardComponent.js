@@ -65,11 +65,10 @@ class ProductCardWidget extends Component {
   render() {
 
     const { props } = this;
-    const { classes, data, cardContent } = props;
+    const { classes, data, cardContent, currency, symbol, api, region, } = props;
+    debugger;
     const { PricingLineChartComponent } = this.componentDefs;
     const formData = { ...data };
-
-    debugger;
 
     let sysProIconColor = '';
     switch (data.onSyspro) {
@@ -118,11 +117,21 @@ class ProductCardWidget extends Component {
             cardContent && cardContent.fields &&
             <div className={classes.contentContainer}>
               {
-                cardContent.fields.map(field =>
-                  <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
-                    {field.icon && field.icon != '' && <Icon classes={{ root: classes.fieldLabelIcon }}>{field.icon}</Icon>}
-                    <strong>{field.label}</strong>&nbsp;{data[field.value]} {field.unit}
-                  </Typography>)
+                cardContent.fields.map(field => {
+
+                  return (
+                    <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
+                      {
+                        field.icon && field.icon != '' && <Icon classes={{ root: classes.fieldLabelIcon }}>{field.icon}</Icon>
+                      }
+                      <strong>{field.label}</strong>&nbsp;{
+                        field.isCents ?
+                          new Intl.NumberFormat((field.region || region), { style: 'currency', currency: (field.currency || currency) }).format(field.isCents ? (data[field.value] / 100) : data[field.value]) :
+                          data[field.value]
+                      } {field.unit}
+                    </Typography>
+                  )
+                })
               }
             </div>
           }
@@ -137,6 +146,18 @@ class ProductCardWidget extends Component {
       </Card>
     );
   }
+};
+
+ProductCardWidget.propTypes = {
+  currency: PropTypes.string,
+  symbol: PropTypes.string,
+  region: PropTypes.string
+};
+
+ProductCardWidget.defaultProps = {
+  currency: 'ZAR',
+  symbol: 'R',
+  region: 'en-ZA'
 };
 
 const ProductCardComponent = compose(withApi, withStyles(ProductCardWidget.styles))(ProductCardWidget);
