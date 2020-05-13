@@ -471,8 +471,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     if (forms.length === 0) return (<p>no forms defined</p>);
 
-    
-    
+
+
     function transformErrors(errors) {
       return errors.map(error => {
         if (error.name === "minimum" && error.property === "instance.age") {
@@ -490,7 +490,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       ...this.props,
       ...formDef,
       validate: ($formData, $errors) => {
-        
+
         let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
         api.log(`Executing custom validations for ${formfqn}`, { $formData, $errors }, 'debug');
         let validationFunctionKey = `${formfqn}_validate`;
@@ -513,18 +513,18 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           validationFunction = api.$func[validationFunctionKey];
         }
 
-        if(typeof self.props.validate === 'function') {
+        if (typeof self.props.validate === 'function') {
           validationFunction = self.props.validate;
         }
 
-        if (typeof validationFunction === 'function') {          
+        if (typeof validationFunction === 'function') {
           try {
             validationResult = validationFunction($formData, $errors, formDef, api);
           } catch (ex) {
             api.log(`Error While Executing Custom Validation`, { ex }, 'error');
           }
         }
-        
+
 
         return $errors;
       },
@@ -626,7 +626,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         const { buttonProps, iconProps, type, handler } = button;
 
         const onButtonClicked = () => {
-          api.log(`OnClickButtonFor Additional Buttons`);          
+          api.log(`OnClickButtonFor Additional Buttons`);
           if (self.props[handler] && typeof self.props[handler] === 'function') {
             self.props[handler]({ reactoryForm: self, button })
           } else {
@@ -736,8 +736,15 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             })
           };
 
+          // let defaultStyle =
+          let schemaStyle = { position: 'absolute', top: '10px', right: '10px'};
+          if (formUiOptions.schemaSelector.style) {
+            schemaStyle = formUiOptions.schemaSelector.style;
+          }
+          debugger;
           uiSchemaSelector = (
-            <div style={{ position: "absolute", top: "10px", right: "10px" }}>
+            //@ts-ignore
+            <div style={schemaStyle}>
               {
                 formUiOptions.schemaSelector.buttonVariant && formUiOptions.schemaSelector.buttonVariant == 'contained' ?
                   <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} variant="contained">{formUiOptions.schemaSelector.buttonTitle}</Button> :
@@ -816,15 +823,15 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     let formtoolbar = (
       <Toolbar>
-        { formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null }
-        { this.props.children && this.props.children.length > 0 ? this.props.children : null }
-        { showSubmit === true && submitButton }
-        { _additionalButtons }
-        { self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button> }
-        { formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button> }
-        { formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button> }
-        { reportButton }
-        { exportButton }
+        {formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}
+        {this.props.children && this.props.children.length > 0 ? this.props.children : null}
+        {showSubmit === true && submitButton}
+        {_additionalButtons}
+        {self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
+        {formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button>}
+        {formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button>}
+        {reportButton}
+        {exportButton}
       </Toolbar>
     );
 
@@ -871,7 +878,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           {(mutateFunction: Function, mutationResult: MutationResult) => {
             const { loading, error, data } = mutationResult;
             let exectuting = false;
-            
+
             const onFormSubmit = (formSchema) => {
               api.log(`Form Submitting, post via graphql`, formSchema, 'debug');
               exectuting = true;
@@ -880,7 +887,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 variables: api.utils.omitDeep({ ..._variables }),
                 refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
               });
-            };            
+            };
 
             let loadingWidget = null;
             let errorWidget = null;
@@ -893,7 +900,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 `Error ${mutation.name} Failed`,
                 {
                   showInAppNotification: true,
-                  type: 'error',                  
+                  type: 'error',
                 });
             }
 
@@ -923,27 +930,27 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 );
               }
 
-              if(that.props.onMutateComplete) {
+              if (that.props.onMutateComplete) {
                 that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
               }
 
               if (mutation.onSuccessMethod.indexOf('event:') === 1) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];
                 api.amq.raiseFormCommand(eventName, { form: that, result: data[mutation.name] }),
-                that.$events.emit(eventName, data[mutation.name]);
+                  that.$events.emit(eventName, data[mutation.name]);
               }
 
               that.$events.emit('onMutateComplete', {
                 result: data[mutation.name],
                 errors: error,
                 error: error
-              });              
+              });
             }
-                     
+
             return (
               <Fragment>
                 {errorWidget}
-                {that.renderForm(_formData, onFormSubmit)}                
+                {that.renderForm(_formData, onFormSubmit)}
               </Fragment>
             )
           }}
@@ -1019,7 +1026,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             }
 
             //update component state with new form data
-            if (that.isMounted === true) {              
+            if (that.isMounted === true) {
               that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, () => {
                 that.$events.emit('onQueryComplete', { formData: _formData, form: that });
                 if (errors) {
@@ -1053,12 +1060,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           });
         }
 
-        executeFormQuery();        
-      }      
+        executeFormQuery();
+      }
 
       return (
         <Fragment>
-          {that.renderForm(formData)}      
+          {that.renderForm(formData)}
         </Fragment>
       )
     }

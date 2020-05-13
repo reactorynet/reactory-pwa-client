@@ -54,11 +54,15 @@ class StyledCurrencyLabel extends Component {
     let _tooltipBackgroundColor = '';
     let _tooltipTextColor = '#fff';
     let _tooltipPlacement = 'left-start';
+    let _label = '';
 
     let defaultStyle = {}
 
     if (uiSchema) {
       const uiOptions = uiSchema['ui:options'];
+
+      if (uiOptions.label && uiOptions.label != '')
+        _label = uiOptions.label;
 
       isCents = uiOptions && uiOptions.isCents === false ? false : isCents;
       _value = uiOptions && (uiOptions.valueProp || this.props.formData) ? this.props[uiOptions.valueProp || 'formData'] : value;
@@ -122,12 +126,15 @@ class StyledCurrencyLabel extends Component {
     // _tooltipBackgroundColor = '#5ec621';
 
     return (
-      <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
-        <div>
-          {displayPrimaryCurrency === true ? primaryCurrency : null}
-          {displayAdditionalCurrencies === true ? otherCurrencies : null}
-        </div>
-      </ToolTipHOC>
+      <>
+        { _label != '' && <label className={classes.label}>{_label}</label>}
+        <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
+          <div>
+            {displayPrimaryCurrency === true ? primaryCurrency : null}
+            {displayAdditionalCurrencies === true ? otherCurrencies : null}
+          </div>
+        </ToolTipHOC>
+      </>
     );
   }
 }
@@ -148,8 +155,15 @@ StyledCurrencyLabel.defaultProps = {
 
 StyledCurrencyLabel.styles = (theme) => {
   return {
+    label: {
+      fontSize: '0.9em',
+      color: 'rgba(0, 0, 0, 0.54)',
+      display: 'block'
+    },
     currency: {
-      margin: theme.spacing(1),
+      marginTop: theme.spacing(1),
+      marginBottom: theme.spacing(1),
+      marginRight: theme.spacing(1),
       whiteSpace: 'nowrap'
     },
     currencyValue: {},

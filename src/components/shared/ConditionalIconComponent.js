@@ -6,10 +6,22 @@ import DeleteIcon from '@material-ui/icons/Delete';
 
 class ConditionalIconWidget extends Component {
 
+  static styles = (theme) => {
+    return {
+      label: {
+        fontSize: '0.9em',
+        color: 'rgba(0, 0, 0, 0.54)',
+        marginBottom: '0.5em',
+        display: 'block'
+      }
+    }
+  }
+
   render() {
-    const { value, theme, conditions = [], style = {} } = this.props
+
+    const { value, theme, conditions = [], style = {}, classes, label } = this.props
     let ComponentToRender = null;
-    let iconProps = {style};
+    let iconProps = { style };
     let matchingCondition = conditions.find(c => c.key == value);
 
     if (matchingCondition) {
@@ -19,7 +31,10 @@ class ConditionalIconWidget extends Component {
 
       if (matchingCondition.tooltip) {
         // ComponentToRender = <Tooltip title={matchingCondition.tooltip} classes={{ tooltip: { backgroundColor: "red" } }} placement="right-end"><Icon {...iconProps}>{matchingCondition.icon}</Icon></Tooltip>
-        ComponentToRender = <Tooltip title={matchingCondition.tooltip} placement="right-end"><Icon {...iconProps}>{matchingCondition.icon}</Icon></Tooltip>
+        ComponentToRender = <div>
+          {label && <label className={classes.label}>{label}</label>}
+          <Tooltip title={matchingCondition.tooltip} placement="right-end"><Icon {...iconProps}>{matchingCondition.icon}</Icon></Tooltip>
+        </div>
       } else {
         ComponentToRender = <Icon {...iconProps}>{matchingCondition.icon}</Icon>;
       }
@@ -29,5 +44,5 @@ class ConditionalIconWidget extends Component {
   }
 }
 
-const ConditionalIconComponent = compose(withTheme)(ConditionalIconWidget)
+const ConditionalIconComponent = compose(withTheme, withStyles(ConditionalIconWidget.styles))(ConditionalIconWidget)
 export default ConditionalIconComponent;
