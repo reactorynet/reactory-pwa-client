@@ -1,6 +1,7 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'recompose';
+import { isEqual } from 'lodash';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import Dialog from '@material-ui/core/Dialog';
 import AppBar from '@material-ui/core/AppBar';
@@ -57,6 +58,18 @@ class FullScreenDialog extends Component {
     const { closeOnEvents = [], api } = this.props;
 
     closeOnEvents.map((eventName) => api.removeListener(eventName, this.handleClose))
+  }
+
+  shouldComponentUpdate(nextProps, nextState){
+
+    const _nextProps = {...nextProps};
+    const _props = {...this.props}; 
+
+    delete _nextProps.children;
+    delete _props.children;
+
+
+    return isEqual(nextState, this.state) === false || isEqual(_nextProps, _props) === false;
   }
 
   render() {

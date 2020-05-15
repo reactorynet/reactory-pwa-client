@@ -30,8 +30,8 @@ class SlideOutLauncher extends Component {
     };
 
     this.onClick = this.onClick.bind(this);
-
     this.componentDefs = props.api.getComponents(['core.SpeedDial']);
+    
   }
 
   onClick() {

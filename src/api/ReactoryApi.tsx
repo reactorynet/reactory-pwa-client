@@ -152,7 +152,10 @@ class ReactoryApi extends EventEmitter {
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
   CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
   formSchemas: Reactory.IReactoryForm[]
+  formValidationMaps: any;
+  formTranslationMaps: any;
   formSchemaLastFetch: moment.Moment = null;
+
   assets: Object = null;
   amq: any = null;
   statistics: any = null;
@@ -165,6 +168,7 @@ class ReactoryApi extends EventEmitter {
   queryObject: any;
   queryString: any;
   objectToQueryString: Function;
+
 
   constructor(client, props) {
     super();
@@ -248,6 +252,8 @@ class ReactoryApi extends EventEmitter {
     this.CLIENT_KEY = process.env.REACT_APP_CLIENT_KEY;
     this.CLIENT_PWD = process.env.REACT_APP_CLIENT_PASSWORD;
     this.formSchemas = [];
+    this.formValidationMaps = {};
+    this.formTranslationMaps = {};
     this.formSchemaLastFetch = null;
     this.amq = amq;
     this.loadComponentWithFQN = this.loadComponentWithFQN.bind(this);
@@ -297,9 +303,18 @@ class ReactoryApi extends EventEmitter {
     this.getThemeResource = ThemeResource;
     this.getUser = this.getUser.bind(this);
     this.extendClientResolver = this.extendClientResolver.bind(this);
+    this.setFormTranslationMaps = this.setFormTranslationMaps.bind(this);
+    this.setFormValidationMaps = this.setFormValidationMaps.bind(this);
   }
 
+  setFormTranslationMaps(maps: any){
+    this.formTranslationMaps = { ...this.formTranslationMaps, ...maps };
+  }
 
+  setFormValidationMaps(maps: any){
+    this.formValidationMaps = { ...this.formValidationMaps, ...maps };
+  }
+  
   extendClientResolver( resolvers: Resolvers) {
     const { client } = this;
     if(client && resolvers) {       

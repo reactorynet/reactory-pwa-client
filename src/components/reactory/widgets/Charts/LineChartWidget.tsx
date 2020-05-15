@@ -49,8 +49,10 @@ class LineChartWidget extends PureComponent<any> {
     if(isNull(formData.options) === true || formData.options === undefined) return <Typography>[Composed Chart] - NO OPTIONS</Typography> 
     else {
       let { 
-        line, 
-        xAxis 
+        line,
+        series = [], 
+        xAxis, 
+        yAxis = {}
       } = formData.options;
 
       const { data = [] } = formData;
@@ -59,11 +61,12 @@ class LineChartWidget extends PureComponent<any> {
         <ResponsiveContainer height={contentRect.bounds.height || 400} width="95%">
             <ComposedChart width={contentRect.bounds.width || 640} height={contentRect.bounds.height || 400} data={data}>
               <XAxis {...xAxis} />
-              <YAxis />
+              <YAxis {...yAxis} />
               <Tooltip />
               <Legend />
               <CartesianGrid stroke="#f5f5f5" />
-              <Line {...line} />
+              {series.length === 0 && <Line {...line} />}
+              {series.length > 0 && series.map((l,k) => <Line {...l} key={k} />)}
             </ComposedChart>    
           </ResponsiveContainer>  
       );

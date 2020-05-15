@@ -100,11 +100,14 @@ class CompanyLogoWidget extends Component {
           id        
           logo
         }
-      }`, variables ).then((result) => {
+      }`, variables, {  } ).then((result) => {
         //console.log('Query result', result);
         const { data, errors } = result;
-        const { organizationWithId = { logo: 'default'} } = data;
-        that.setState({ logo: organizationWithId.logo || 'default', loaded: true, errors })
+        if(data && data.organizationWithId) {
+          const { organizationWithId } = data;
+          that.setState({ logo: organizationWithId.logo || 'default', loaded: true, errors })
+        }
+        
       }).catch((apiError) => {
         console.error('Shit dawg, look here homie!', apiError)
         that.setState({ logo: '', errors: apiError, loaded: true });

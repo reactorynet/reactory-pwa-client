@@ -197,9 +197,18 @@ export default class Form extends Component {
   }
 
   submit() {
+    let submitted = false;
     if (this.formElement) {
       this.formElement.dispatchEvent(new Event("submit", { cancelable: true }));
+      submitted = true;
     }
+
+    if (this.$formElement && submitted === false) {
+      this.$formElement.dispatchEvent(new Event("submit", { cancelable: true }));
+      submitted = true;
+    }
+
+    return submitted;
   }
 
   render() {

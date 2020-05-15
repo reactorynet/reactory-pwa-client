@@ -471,18 +471,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     if (forms.length === 0) return (<p>no forms defined</p>);
 
-    
-    
-    function transformErrors(errors) {
-      return errors.map(error => {
-        if (error.name === "minimum" && error.property === "instance.age") {
-          return Object.assign({}, error, {
-            message: "You need to be 18 because of some legal thing",
-          });
-        }
-        return error;
-      });
-    }
+            
 
     const formDef = this.form();
     const formProps = {
@@ -498,6 +487,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         let validationFunction = null;
         let selectedKey = validationFunctionKey;
 
+
+        if(api.formValidationMaps && api.formValidationMaps[formfqn]) {          
+          validationFunction = api.formValidationMaps[formfqn];
+        }
+        
+        /*
         if (typeof api.$func[`${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`] === 'function') {
           validationFunction = api.$func[`${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`];
           selectedKey = `${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`;
@@ -512,14 +507,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         if (typeof api.$func[validationFunctionKey] === 'function' && validationFunction === null) {
           validationFunction = api.$func[validationFunctionKey];
         }
-
+        */       
         if(typeof self.props.validate === 'function') {
           validationFunction = self.props.validate;
         }
 
         if (typeof validationFunction === 'function') {          
           try {
-            validationResult = validationFunction($formData, $errors, formDef, api);
+            validationResult = validationFunction($formData, $errors, self);
           } catch (ex) {
             api.log(`Error While Executing Custom Validation`, { ex }, 'error');
           }
@@ -532,7 +527,17 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       formData: formData,
       ErrorList: (props) => (<MaterialErrorListTemplate {...props} />),
       onSubmit: onSubmit || this.onSubmit,
-      ref: (form) => { this.formRef = form }
+      ref: (form) => { this.formRef = form },
+      transformErrors: (errors) => {
+        api.log(`Transforming error message`, { errors }, 'debug');
+        let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
+
+        if(api.formTranslationMaps && api.formTranslationMaps[formfqn]) {
+           return api.formTranslationMaps[formfqn](errors, self);        
+        }
+  
+        return errors;
+      }
     };
 
     /**
@@ -914,7 +919,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                   mutation.notification.title,
                   {
                     showInAppNotification: mutation.notification.inAppNotification === true,
-                    type: 'success',
+                    type: 'success',                    
                     props: {
                       ...dataObject,
                       ...mutation.notification.props

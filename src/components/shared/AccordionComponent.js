@@ -83,8 +83,15 @@ class AccordionWidget extends Component {
               }
 
               const onDoneClick = () => {
-                if(formContext && formContext.$ref.submit)
-                  formContext.$ref.submit();
+                debugger
+                if(formContext.$submit) {
+                  try {
+                    let done = formContext.$submit();
+                    api.log(`Form submitted: ${done}`, {} ,'debug')
+                  } catch (submitError) {
+                    self.props.api.log(`Could not submit the form`, submitError, 'error')
+                  }  
+                } 
               } 
 
               const onStepLabelHeaderClick = (evt) => {
@@ -125,7 +132,7 @@ class AccordionWidget extends Component {
                     }
                     { index > 0 && <Button type="button" onClick={onBackClick} color="default">BACK</Button> }
                     { index !== _panels.length - 1 && <Button type="button" onClick={onNextClick} color="primary">NEXT</Button> }
-                    { index === _panels.length - 1 && <Button type="button" color={panel.nextButtonProps && panel.nextButtonProps.color || 'primary'} onClick={onDoneClick} color="primary">{panel.nextButtonProps && panel.nextButtonProps.title ? panel.nextButtonProps.title  :'DONE' }</Button> }
+                    { index === _panels.length - 1 && <Button type="button" color={panel.nextButtonProps && panel.nextButtonProps.color || 'primary'} onClick={onDoneClick} color="primary" style={panel.nextButtonProps && panel.nextButtonProps.style ? panel.nextButtonProps.style : {} }>{panel.nextButtonProps && panel.nextButtonProps.title ? panel.nextButtonProps.title  :'DONE' }</Button> }
                   </StepContent>
                 </Step>
               )

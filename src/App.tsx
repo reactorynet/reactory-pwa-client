@@ -229,7 +229,7 @@ class App extends Component<any, AppState> {
         offline: true
       }, () => {
         if(status.offline === true && isOffline === true && self.statusInterval === null) {
-          self.statusInterval = setInterval(api.status, 2500);;
+          self.statusInterval = setInterval(api.status, 1000);;
         }          
       })
       
@@ -386,7 +386,7 @@ class App extends Component<any, AppState> {
 
     let modal = null;
 
-    if (offline === true) {
+    if (offline === true && auth_validated === true) {
       modal = (
         <FullScreenModal open={true} title={'Server is offline, stand by'}>
           <p style={{ margin: 'auto', fontSize: '20px' }}>We apologise for the inconvenience, but it seems like the reactory server offline. This notification will close automatically when the server is available again.</p>
@@ -409,13 +409,8 @@ class App extends Component<any, AppState> {
                   <MuiPickersUtilsProvider utils={MomentUtils}>
                     <React.Fragment>
                       <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
-                      <NotificationComponent></NotificationComponent>
-                      <div>
-                        {auth_validated === true && routes.length > 0 ?
-                          routes :
-                          <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}
-                      </div>
-                      {modal}
+                      <NotificationComponent></NotificationComponent>                      
+                      {auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}                      
                     </React.Fragment>
                   </MuiPickersUtilsProvider>
                 </ThemeProvider>

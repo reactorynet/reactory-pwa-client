@@ -479,7 +479,7 @@ class DefaultView extends Component {
         <Paper className={classes.welcomeContainer}>
           <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
             5 - 7 minutes to complete.<br />
-            You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? ' well the Five Essentials of Purposeful Leadership are displayed:' : ` we live the organisation's leadership brand:`} 
+            You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? `well the ${survey.leadershipBrand.title} are displayed:` : ` we live the organisation's leadership brand:`} 
           </Typography>
           <componentDefs.StaticContent 
             slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}-content`} 

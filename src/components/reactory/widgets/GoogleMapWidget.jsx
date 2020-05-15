@@ -382,7 +382,7 @@ class ReactoryGoogleMapWidget extends Component {
     const { schema, idSchema, title, formData, uiSchema, uiOptions } = self.props;
     const { isDialogOpen } = self.state;
 
-    const { fullAddress } = formData;
+    const { fullAddress, id } = formData;
 
     const handleChange = (e) => {
       self.setState({ searchText: e.target.value });
@@ -391,6 +391,7 @@ class ReactoryGoogleMapWidget extends Component {
     const searchClicked = () => {
       this.setState({ isDialogOpen: true });
     };
+
     const controlId = `${idSchema.$id}_AddressLabel`;
     return (
       <div style={{ display: "flex" }}>

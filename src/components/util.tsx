@@ -134,7 +134,8 @@ export  const CenteredContainer = ( props ) => {
 
   export const CDNOrganizationResource = (organizationId, file) => {
     if(organizationId === null || file.startsWith('data:image')) return file;
-    return CDNResource(`organization/${organizationId}/${file}`);
+    const seconds = Math.floor(new Date().valueOf() / 7777); 
+    return CDNResource(`organization/${organizationId}/${file}?t=${seconds}`);
   };
 
   export const CDNProfileResource = (profileId = 'default', file = 'default.png') => {
