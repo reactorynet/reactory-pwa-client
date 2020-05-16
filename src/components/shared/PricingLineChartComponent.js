@@ -12,7 +12,7 @@ class PricingLineChartWidget extends Component {
 
   static styles = theme => ({
     container: {
-      minWidth: '450px',
+      // minWidth: '450px',
       minHeight: '3px'
     },
     row: {
