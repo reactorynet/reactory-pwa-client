@@ -66,7 +66,6 @@ class ProductCardWidget extends Component {
 
     const { props } = this;
     const { classes, data, cardContent, currency, symbol, api, region, } = props;
-    debugger;
     const { PricingLineChartComponent } = this.componentDefs;
     const formData = { ...data };
 

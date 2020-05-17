@@ -83,7 +83,6 @@ class AccordionWidget extends Component {
               }
 
               const onDoneClick = () => {
-                debugger
                 if(formContext.$submit) {
                   try {
                     let done = formContext.$submit();

@@ -745,7 +745,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           if (formUiOptions.schemaSelector.style) {
             schemaStyle = formUiOptions.schemaSelector.style;
           }
-          debugger;
           uiSchemaSelector = (
             //@ts-ignore
             <div style={schemaStyle}>
@@ -938,7 +937,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
               }
 
-              if (mutation.onSuccessMethod.indexOf('event:') === 1) {
+              if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event:') === 1) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];
                 api.amq.raiseFormCommand(eventName, { form: that, result: data[mutation.name] }),
                   that.$events.emit(eventName, data[mutation.name]);

@@ -501,7 +501,6 @@ export const UserInbox = compose(withApi)(({ api, via = 'local', display = 'defa
 
 
 const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null, classes, graphql = null, formContext }) => {  
-  debugger;
   const queryText = graphql && graphql.text ? graphql.text : api.queries.Users.usersForOrganization;
   const variables = graphql && graphql.variables ? om(formContext, graphql.variables) : { id: organizationId, searchString };
 

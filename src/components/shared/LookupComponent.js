@@ -55,7 +55,6 @@ class LookupWidget extends Component {
   onFormSubmit(formData) {
     const { api } = this.props;
     const self = this;
-    debugger
     api.log(`LookupWidget.onFormSubmit(formData)`, {formData}, 'debug');
   }
 
