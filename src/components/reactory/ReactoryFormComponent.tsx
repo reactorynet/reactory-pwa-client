@@ -1,4 +1,4 @@
-import React, { Component, Fragment, ReactNode, DOMElement } from 'react';
+import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties } from 'react';
 import PropTypes, { ReactNodeArray } from 'prop-types';
 import IntersectionVisible from 'react-intersection-visible';
 import Form from './form/components/Form';
@@ -691,7 +691,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       if (formUiOptions && formUiOptions.schemaSelector && activeUiSchemaModel) {
         if (formUiOptions.schemaSelector.variant === "icon-button") {
-          let schemaStyle = { position: 'absolute', top: '10px', right: '10px'};
+          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px'};
           if (formUiOptions.schemaSelector.style) {
             schemaStyle = formUiOptions.schemaSelector.style;
           }
@@ -745,13 +745,18 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           };
 
           // let defaultStyle =
-          let schemaStyle = { position: 'absolute', top: '10px', right: '10px'};
+          let schemaStyle: CSSProperties = { position: "absolute", top: '10px', right: '10px'};
           if (formUiOptions.schemaSelector.style) {
             schemaStyle = formUiOptions.schemaSelector.style;
           }
-          uiSchemaSelector = (
+
+          let p = {
+            style: schemaStyle
+          }
+          
+          uiSchemaSelector = (    
             //@ts-ignore
-            <div style={schemaStyle}>
+            <div {...p}>
               {
                 formUiOptions.schemaSelector.buttonVariant && formUiOptions.schemaSelector.buttonVariant == 'contained' ?
                   <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} variant="contained">{formUiOptions.schemaSelector.buttonTitle}</Button> :
