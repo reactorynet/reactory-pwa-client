@@ -691,8 +691,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       if (formUiOptions && formUiOptions.schemaSelector && activeUiSchemaModel) {
         if (formUiOptions.schemaSelector.variant === "icon-button") {
+          let schemaStyle = { position: 'absolute', top: '10px', right: '10px'};
+          if (formUiOptions.schemaSelector.style) {
+            schemaStyle = formUiOptions.schemaSelector.style;
+          }
           uiSchemaSelector = (
-            <div>
+            <div style={schemaStyle}>
               {
                 formUiOptions.schemaSelector &&
                   formUiOptions.schemaSelector.showTitle === false ? null : (<span>
