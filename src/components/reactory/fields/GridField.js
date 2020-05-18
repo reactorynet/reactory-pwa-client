@@ -7,9 +7,10 @@ import { retrieveSchema } from '../form/utils'
 import { Grid, Paper } from '@material-ui/core'
 import { Col } from 'react-bootstrap'
 
-import {  Button,
+import {
+  Button,
   Fab,
-  FormControl, 
+  FormControl,
   Icon,
   InputLabel,
   Typography,
@@ -64,18 +65,18 @@ export class BootstrapGridField extends ObjectField {
     return (
       <fieldset>
         {title ? <TitleField
-            id={`${idSchema.$id}__title`}
-            title={title}
-            required={required}
-            formContext={formContext}/> : null}
+          id={`${idSchema.$id}__title`}
+          title={title}
+          required={required}
+          formContext={formContext} /> : null}
         {schema.description ?
           <DescriptionField
             id={`${idSchema.$id}__description`}
             description={schema.description}
-            formContext={formContext}/> : null}
+            formContext={formContext} /> : null}
         {
           layout.map((row, index) => {
-            
+
             return (
               <div className="row" key={index}>
                 {
@@ -84,24 +85,24 @@ export class BootstrapGridField extends ObjectField {
                     let style = {}
                     if (doShow && !doShow({ formData })) {
                       style = { display: 'none' }
-                    }                    
+                    }
                     if (schema.properties[name]) {
                       return (
-                          <Col {...rowProps} key={index} style={style}>
-                            <SchemaField
-                               name={name}
-                               required={this.isRequired(name)}
-                               schema={schema.properties[name]}
-                               uiSchema={uiSchema[name]}
-                               errorSchema={errorSchema[name]}
-                               idSchema={idSchema[name]}
-                               formData={formData[name]}
-                               onChange={this.onPropertyChange(name)}
-                               onBlur={onBlur}
-                               registry={this.props.registry}
-                               disabled={disabled}
-                               readonly={readonly}/>
-                          </Col>
+                        <Col {...rowProps} key={index} style={style}>
+                          <SchemaField
+                            name={name}
+                            required={this.isRequired(name)}
+                            schema={schema.properties[name]}
+                            uiSchema={uiSchema[name]}
+                            errorSchema={errorSchema[name]}
+                            idSchema={idSchema[name]}
+                            formData={formData[name]}
+                            onChange={this.onPropertyChange(name)}
+                            onBlur={onBlur}
+                            registry={this.props.registry}
+                            disabled={disabled}
+                            readonly={readonly} />
+                        </Col>
                       )
                     } else {
                       const { render, ...rowProps } = row[name]
@@ -112,16 +113,16 @@ export class BootstrapGridField extends ObjectField {
                       }
 
                       return (
-                            <Grid {...rowProps} key={index} style={style}>
-                              <UIComponent
-                                name={name}
-                                formData={formData}
-                                errorSchema={errorSchema}
-                                uiSchema={uiSchema}
-                                schema={schema}
-                                registry={this.props.registry}
-                              />
-                            </Grid>
+                        <Grid {...rowProps} key={index} style={style}>
+                          <UIComponent
+                            name={name}
+                            formData={formData}
+                            errorSchema={errorSchema}
+                            uiSchema={uiSchema}
+                            schema={schema}
+                            registry={this.props.registry}
+                          />
+                        </Grid>
                       )
                     }
                   })
@@ -135,7 +136,7 @@ export class BootstrapGridField extends ObjectField {
 };
 
 class MaterialGridField extends MaterialObjectField {
-  
+
   static styles = theme => ({
     root: {
       ...theme.mixins.gutters(),
@@ -162,32 +163,33 @@ class MaterialGridField extends MaterialObjectField {
     const title = (schema.title === undefined) ? '' : schema.title
 
     const layout = uiSchema['ui:grid-layout']
+
     let gridOptions = {
       spacing: 8,
       container: 'Paper',
       containerStyles: {
-        
+
       }
     };
 
     let uiOptions = {
       container: 'Paper',
       containerStyles: {
-        
+
       }
     };
 
-    if(uiSchema["ui:options"]) {
-      uiOptions = {...uiOptions, ...(uiSchema["ui:options"] || uiOptions) };
+    if (uiSchema["ui:options"]) {
+      uiOptions = { ...uiOptions, ...(uiSchema["ui:options"] || uiOptions) };
     }
 
-    if(uiSchema['ui:grid-options']) {
-      gridOptions = { ...gridOptions, ...uiSchema['ui:grid-options']};
+    if (uiSchema['ui:grid-options']) {
+      gridOptions = { ...gridOptions, ...uiSchema['ui:grid-options'] };
     }
 
     let Container = null
-    switch(gridOptions.container) {
-      case "div" : {
+    switch (gridOptions.container) {
+      case "div": {
         Container = (props) => {
           return (<div className={props.className} style={props.style}>
             {props.children}
@@ -207,43 +209,47 @@ class MaterialGridField extends MaterialObjectField {
     return (
       <Container className={classes.root} style={gridOptions.containerStyles}>
         {title ? <TitleField
-            id={`${idSchema.$id}__title`}
-            title={title}
-            required={required}
-            formContext={formContext}/> : null}
+          id={`${idSchema.$id}__title`}
+          title={title}
+          required={required}
+          formContext={formContext} /> : null}
         {schema.description ?
           <DescriptionField
             id={`${idSchema.$id}__description`}
             description={schema.description}
-            formContext={formContext}/> : null}
+            formContext={formContext} /> : null}
         {
           layout.map((row, index) => {
             let numberOfVisibleItems = 0;
             let items = Object.keys(row).map((name, index) => {
               const { doShow, ...rowProps } = row[name]
               let style = {}
+              if (row.style)
+                style = { ...row.style };
+
               let hide = false;
+
               if (doShow && !doShow({ formData })) {
                 style = { display: 'none' }
                 hide = true;
-              } 
-              if (schema.properties[name]) {                      
+              }
+              if (schema.properties[name]) {
                 return (
-                    <Grid {...rowProps} item key={index} style={style}>
-                      <SchemaField
-                         name={name}
-                         required={this.isRequired(name)}
-                         schema={schema.properties[name]}
-                         uiSchema={uiSchema[name]}
-                         errorSchema={errorSchema[name]}
-                         idSchema={idSchema[name]}
-                         formData={formData[name]}
-                         onChange={this.onPropertyChange(name)}
-                         onBlur={onBlur}
-                         registry={this.props.registry}
-                         disabled={disabled}
-                         readonly={readonly}/>
-                    </Grid>
+                  <Grid {...rowProps} item key={index} style={style}>
+                    <SchemaField
+                      name={name}
+                      required={this.isRequired(name)}
+                      schema={schema.properties[name]}
+                      uiSchema={uiSchema[name]}
+                      errorSchema={errorSchema[name]}
+                      idSchema={idSchema[name]}
+                      formData={formData[name]}
+                      onChange={this.onPropertyChange(name)}
+                      onBlur={onBlur}
+                      registry={this.props.registry}
+                      disabled={disabled}
+                      readonly={readonly} />
+                  </Grid>
                 )
               } else {
                 const { render, ...rowProps } = row[name]
@@ -255,7 +261,7 @@ class MaterialGridField extends MaterialObjectField {
                   hide = true;
                 }
 
-                if(hide === false) {
+                if (hide === false) {
                   numberOfVisibleItems += 1;
                   return (
                     <Grid {...rowProps} item key={index} style={style}>
@@ -269,7 +275,7 @@ class MaterialGridField extends MaterialObjectField {
                       />
                     </Grid>)
                 }
-                
+
                 return null;
               }
             });
@@ -285,7 +291,7 @@ class MaterialGridField extends MaterialObjectField {
   }
 }
 
-export const MaterialGridFieldComponent =  compose(withApi, withStyles(MaterialGridField.styles), withTheme)(MaterialGridField);
+export const MaterialGridFieldComponent = compose(withApi, withStyles(MaterialGridField.styles), withTheme)(MaterialGridField);
 
 export default {
   BootstrapGridField,

@@ -109,7 +109,7 @@ class GridLayoutWidget extends Component {
     const uiOptions = uiSchema["ui:options"] || {};
     const { Loading } = this.componentDefs;
 
-    const loadingMessage = uiOptions.loadingMessage ? uiOptions.loadingMessage : 'Loading Product Dimensions, please wait a moment';
+    const loadingMessage = uiOptions.loadingMessage ? uiOptions.loadingMessage : 'Loading product dimensions, please wait a moment';
 
     let ChildComponent = api.getComponent(uiOptions.component);
     let componentProps = {};

@@ -105,7 +105,6 @@ class PricingLineChartWidget extends Component {
 
   render() {
     const { classes, uiSchema, formData } = this.props;
-    debugger;
     const { landedPrice, threeMonthAvePrice, wh10CostPrice, listPrice } = formData;
 
     let _region = 'en-ZA';
@@ -116,10 +115,13 @@ class PricingLineChartWidget extends Component {
     let _threeMonthAveSellingPrice = threeMonthAvePrice;
     let _listPrice = listPrice;
 
+    let containerStyle = {};
+
     if (uiSchema && uiSchema['ui:options']) {
       const uiOptions = uiSchema['ui:options'];
       if (uiOptions.currencySymbol) _currencySymbol = uiOptions.currencySymbol;
       if (uiOptions.region) _region = uiOptions.region;
+      if (uiOptions.containerStyles) containerStyle = uiOptions.containerStyles;
     }
 
     const getFormattedValue = (value, append) => {
@@ -127,7 +129,7 @@ class PricingLineChartWidget extends Component {
     }
 
     return (
-      <div className={classes.container}>
+      <div className={classes.container} style={containerStyle}>
         <div className={classes.row}>
           <div className={classNames(classes.topColumn, classes.green)}>{getFormattedValue(_wh10Cost, '(WH10 Cost)')}</div>
           <div className={classNames(classes.topColumn, classes.green)}>{getFormattedValue(_threeMonthAveSellingPrice, '(3 month ave. Selling Price)')}</div>
