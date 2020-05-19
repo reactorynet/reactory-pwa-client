@@ -13,8 +13,8 @@ class ImageWidget extends Component {
 
     let avatarProps = {
       style: {
-        height: theme.spacing(7),
-        width: theme.spacing(7)
+        height: theme.spacing(5),
+        width: theme.spacing(5)
       }
     }
 
