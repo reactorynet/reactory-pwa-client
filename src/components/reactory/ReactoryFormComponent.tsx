@@ -917,7 +917,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             }
 
             if (data && data[mutation.name]) {
-
+              debugger;
               if (mutation.onSuccessMethod === "route") {
                 const inputObj = {
                   formData,
@@ -942,14 +942,20 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 );
               }
 
+              debugger;
               if (that.props.onMutateComplete) {
                 that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
               }
 
-              if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event:') === 1) {
+              if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event:') >= 0) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];
-                api.amq.raiseFormCommand(eventName, { form: that, result: data[mutation.name] }),
-                  that.$events.emit(eventName, data[mutation.name]);
+                
+                api.amq.raiseFormCommand(eventName, { 
+                  form: that, 
+                  result: data[mutation.name] 
+                });
+
+                that.$events.emit(eventName, data[mutation.name]);
               }
 
               that.$events.emit('onMutateComplete', {

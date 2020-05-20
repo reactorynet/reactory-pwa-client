@@ -594,10 +594,12 @@ class ReactoryApi extends EventEmitter {
           formsResult.forEach((formDef) => {
             if (formDef.registerAsComponent) {
               const FormComponent = (props, context) => {
-                return that.renderForm(<ReactoryFormComponent {...props} formId={formDef.id} key={props.key || 0}
+                return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={props.key || 0}
                   onSubmit={props.onSubmit} onChange={props.onChange}
                   formData={formDef.defaultFormData || props.formData || props.data}
-                  before={props.before}>{props.children}
+                  before={props.before}
+                  {...props}
+                  >{props.children}
                 </ReactoryFormComponent>);
               };
               that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent);

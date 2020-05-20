@@ -231,9 +231,9 @@ class MaterialTableWidget extends Component {
               }
   
               const { refreshEvents } = queryDefinition;             
-                
+              
               api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables, query }, 'debug')            
-              let variables = api.utils.objectMapper(self, uiOptions.variables || queryDefinition.variables);
+              let variables = api.utils.objectMapper({ ...self, formContext }, uiOptions.variables || queryDefinition.variables);
   
               variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
               api.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
