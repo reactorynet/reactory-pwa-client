@@ -41,7 +41,7 @@ export default withTheme((props) => {
     schema,
     uiSchema,
     hidden,
-    theme    
+    theme
   } = props;
 
   const inputProps = {
@@ -55,16 +55,16 @@ export default withTheme((props) => {
   const uiOptions = uiSchema['ui:options'] || { readOnly: false }
 
   if (uiSchema["ui:widget"]) {
-    
+
     const Widget = registry.widgets[uiSchema["ui:widget"]]
     let args = { ...props };
-    if(uiOptions.props) {
-      args = {...args, ...uiOptions.props}
+    if (uiOptions.props) {
+      args = { ...args, ...uiOptions.props }
     }
 
-    if(uiOptions.propsMap) {
+    if (uiOptions.propsMap) {
       let margs = om(props, uiOptions.propsMap);
-      args = {...args, ...margs};
+      args = { ...args, ...margs };
     }
 
     if (Widget) return (<Widget {...args} />)
@@ -77,32 +77,39 @@ export default withTheme((props) => {
       default: args.type = schema.format || "text"; break;
     }
 
-    if(uiOptions && uiOptions.props) {            
+    if (uiOptions && uiOptions.props) {
       args = { ...args, ...uiOptions.props };
     }
 
-    if(uiOptions.propsMap) {
+    if (uiOptions.propsMap) {
       let margs = om(props, uiOptions.propsMap);
-      args = {...args, ...margs};
+      args = { ...args, ...margs };
     }
-        
+
     const onInputChanged = (evt) => {
-      evt.persist(); 
+      evt.persist();
       onChange(evt.target.value);
     }
-    
-    if(uiOptions.component === "TextField") {
-      
+
+    const onKeyDown = evt => {
+      if (evt.keyCode == 13 && uiOptions.componentProps.submitOnEnter) {
+        props.formContext.$ref.submit();
+      }
+    }
+
+    if (uiOptions.component === "TextField") {
+
       let inputProps = {
         onChange: onInputChanged,
-        readOnly: disabled === true,              
+        onKeyDown: onKeyDown,
+        readOnly: disabled === true,
       };
 
-      if(uiOptions.inputProps) {
+      if (uiOptions.inputProps) {
         inputProps = { ...inputProps, ...uiOptions.inputProps, id: idSchema.$id };
       };
 
-      if(args.type === 'search') {
+      if (args.type === 'search') {
         inputProps.endAdornment = (
           <InputAdornment position="end">
             <Icon>search</Icon>
@@ -111,45 +118,45 @@ export default withTheme((props) => {
       }
 
       let themeDefaults = {};
-      if(theme.MaterialTextField) {
+      if (theme.MaterialTextField) {
         themeDefaults = theme.MaterialTextField;
       }
-      
-      
+
+
       let componentProps = {
-        defaultValue:`${formData || schema.default}`.replace("undefined", ""),        
+        defaultValue: `${formData || schema.default}`.replace("undefined", ""),
         variant: themeDefaults.variant || uiOptions.variant || "standard",
-        InputProps: inputProps,              
+        InputProps: inputProps,
       }
 
-      if(uiOptions.componentProps) {
+      if (uiOptions.componentProps) {
         componentProps = { ...componentProps, ...uiOptions.componentProps };
       }
-      
-      return ( <TextField {...componentProps} /> );
+
+      return (<TextField {...componentProps} />);
     } else {
       let themeDefaults = {};
-      if(theme.MaterialInput) {
+      if (theme.MaterialInput) {
         themeDefaults = theme.MaterialInput;
       }
 
       let COMPONENT = Input;
 
-      switch(themeDefaults.variant){
+      switch (themeDefaults.variant) {
         case "outlined":
-        case "outline":{
+        case "outline": {
           COMPONENT = OutlinedInput;
           break;
         }
-        case "filled": 
+        case "filled":
         case "fill": {
           COMPONENT = FilledInput;
-          break;          
-        }        
+          break;
+        }
       }
 
-      return (<COMPONENT {...args} id={idSchema.$id}  readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />)
-    }    
+      return (<COMPONENT {...args} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />)
+    }
   }
 });
 

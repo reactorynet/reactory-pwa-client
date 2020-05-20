@@ -471,7 +471,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     if (forms.length === 0) return (<p>no forms defined</p>);
 
-        
+
     const formDef = this.form();
     const formProps = {
       id: _instance_id,
@@ -487,10 +487,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         let selectedKey = validationFunctionKey;
 
 
-        if(api.formValidationMaps && api.formValidationMaps[formfqn]) {          
+        if (api.formValidationMaps && api.formValidationMaps[formfqn]) {
           validationFunction = api.formValidationMaps[formfqn];
         }
-        
+
         /*
         if (typeof api.$func[`${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`] === 'function') {
           validationFunction = api.$func[`${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`];
@@ -506,8 +506,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         if (typeof api.$func[validationFunctionKey] === 'function' && validationFunction === null) {
           validationFunction = api.$func[validationFunctionKey];
         }
-        */       
-        if(typeof self.props.validate === 'function') {
+        */
+        if (typeof self.props.validate === 'function') {
           validationFunction = self.props.validate;
         }
 
@@ -531,10 +531,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         api.log(`Transforming error message`, { errors }, 'debug');
         let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
 
-        if(api.formTranslationMaps && api.formTranslationMaps[formfqn]) {
-           return api.formTranslationMaps[formfqn](errors, self);        
+        if (api.formTranslationMaps && api.formTranslationMaps[formfqn]) {
+          return api.formTranslationMaps[formfqn](errors, self);
         }
-  
+
         return errors;
       }
     };
@@ -691,7 +691,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       if (formUiOptions && formUiOptions.schemaSelector && activeUiSchemaModel) {
         if (formUiOptions.schemaSelector.variant === "icon-button") {
-          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px'};
+          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px' };
           if (formUiOptions.schemaSelector.style) {
             schemaStyle = formUiOptions.schemaSelector.style;
           }
@@ -745,7 +745,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           };
 
           // let defaultStyle =
-          let schemaStyle: CSSProperties = { position: "absolute", top: '10px', right: '10px'};
+          let schemaStyle: CSSProperties = { position: "absolute", top: '10px', right: '10px' };
           if (formUiOptions.schemaSelector.style) {
             schemaStyle = formUiOptions.schemaSelector.style;
           }
@@ -753,8 +753,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           let p = {
             style: schemaStyle
           }
-          
-          uiSchemaSelector = (    
+
+          uiSchemaSelector = (
             //@ts-ignore
             <div {...p}>
               {
@@ -933,7 +933,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                   mutation.notification.title,
                   {
                     showInAppNotification: mutation.notification.inAppNotification === true,
-                    type: 'success',                    
+                    type: 'success',
                     props: {
                       ...dataObject,
                       ...mutation.notification.props
@@ -951,6 +951,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 api.amq.raiseFormCommand(eventName, { form: that, result: data[mutation.name] }),
                   that.$events.emit(eventName, data[mutation.name]);
               }
+
+              // TODO - check if this is acceptable
+              if (mutation.onSuccessMethod === "refresh") {
+                const formContext = that.getFormContext();
+                formContext.$ref.refreshForm();
+              }
+
 
               that.$events.emit('onMutateComplete', {
                 result: data[mutation.name],
