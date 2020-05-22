@@ -55,6 +55,7 @@ class StyledCurrencyLabel extends Component {
     let _tooltipTextColor = '#fff';
     let _tooltipPlacement = 'left-start';
     let _label = '';
+    let inlineLabel = false;
 
     let defaultStyle = {}
 
@@ -87,6 +88,9 @@ class StyledCurrencyLabel extends Component {
           }
         }
       }
+
+      if (uiOptions.inlineLabel)
+        inlineLabel = uiOptions.inlineLabel;
     }
 
     let otherCurrencies = [];
@@ -121,13 +125,27 @@ class StyledCurrencyLabel extends Component {
     </div>);
 
 
-    // TESTING PURPOSED
-    // _tooltip = 'This is a test';
-    // _tooltipBackgroundColor = '#5ec621';
+    if (inlineLabel) {
+      return (
+        <div className={classes.inlineContainer}>
+          <div>
+            {_label != '' && <label className={classes.label}>{_label}</label>}
+          </div>
+          <div>
+            <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
+              <div>
+                {displayPrimaryCurrency === true ? primaryCurrency : null}
+                {displayAdditionalCurrencies === true ? otherCurrencies : null}
+              </div>
+            </ToolTipHOC>
+          </div>
+        </div>
+      )
+    }
 
     return (
       <>
-        { _label != '' && <label className={classes.label}>{_label}</label>}
+        {_label != '' && <label className={classes.label}>{_label}</label>}
         <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
           <div>
             {displayPrimaryCurrency === true ? primaryCurrency : null}
@@ -167,6 +185,17 @@ StyledCurrencyLabel.styles = (theme) => {
       whiteSpace: 'nowrap'
     },
     currencyValue: {},
+    inlineContainer: {
+      display: 'flex',
+      '& div': {
+        display: 'flex',
+        alignItems: 'center',
+        '& label': {
+          marginRight: theme.spacing(3),
+          fontSize: '1em'
+        }
+      },
+    }
   }
 };
 
