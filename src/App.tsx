@@ -229,7 +229,7 @@ class App extends Component<any, AppState> {
         offline: true
       }, () => {
         if(status.offline === true && isOffline === true && self.statusInterval === null) {
-          self.statusInterval = setInterval(api.status, 1000);;
+          self.statusInterval = setInterval(api.status, 3000);;
         }          
       })
       

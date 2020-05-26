@@ -6,7 +6,10 @@ import {
   Icon,
   InputLabel,
   Input,
-  Typography,  
+  Paper,
+  Tooltip as MaterialTooltip,
+  Typography,
+  Theme,  
 } from '@material-ui/core';
 import uuid from 'uuid';
 import { compose } from 'recompose';
@@ -26,7 +29,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip,  
   Legend,
   PieChart,
   Pie,
@@ -36,15 +39,43 @@ import {
 
 
 
+const HtmlTooltip = withStyles((theme: Theme) => ({
+  tooltip: {
+    backgroundColor: '#f5f5f9',
+    color: 'rgba(0, 0, 0, 0.87)',
+    maxWidth: 220,
+    fontSize: theme.typography.pxToRem(12),
+    border: '1px solid #dadde9',
+  },
+}))(MaterialTooltip);
+
+
+
+
+
 class LineChartWidget extends PureComponent<any> {  
 
   render() {
 
-    const { formData, uiSchema, contentRect } = this.props;
+    const { formData, uiSchema, contentRect, api } = this.props;
 
     if(isNull(formData) === true || formData === undefined) {
       return <Typography>NO DATA</Typography> 
     }
+
+    const CustomTooltip = (props: any) => {
+
+      const { active, payload, label } = props;      
+      if (active) {
+        return (
+          <Paper square={true} variant={'outlined'} style={{ padding: '8px' }}>
+            {payload.map((item) => <Typography>{`${item.name} : ${api.utils.humanNumber(item.value)}`}</Typography>)}                    
+          </Paper>
+        );
+      }
+    
+      return null;
+    };
 
     if(isNull(formData.options) === true || formData.options === undefined) return <Typography>[Composed Chart] - NO OPTIONS</Typography> 
     else {
@@ -55,14 +86,13 @@ class LineChartWidget extends PureComponent<any> {
         yAxis = {}
       } = formData.options;
 
-      const { data = [] } = formData;
-
+      const { data = [] } = formData;            
       return (
         <ResponsiveContainer height={contentRect.bounds.height || 400} width="95%">
             <ComposedChart width={contentRect.bounds.width || 640} height={contentRect.bounds.height || 400} data={data}>
               <XAxis {...xAxis} />
               <YAxis {...yAxis} />
-              <Tooltip />
+              <Tooltip content={<CustomTooltip />}/>
               <Legend />
               <CartesianGrid stroke="#f5f5f5" />
               {series.length === 0 && <Line {...line} />}

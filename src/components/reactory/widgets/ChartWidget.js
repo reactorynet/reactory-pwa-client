@@ -6,6 +6,7 @@ import {
   Icon,
   InputLabel,
   Input,
+  Paper,
   Typography,  
 } from '@material-ui/core';
 import uuid from 'uuid';
@@ -340,11 +341,25 @@ class ComposedChartWidget extends Component {
   
 
   render() {
-    let { formData, contentRect } = this.props;
+    let { formData, contentRect, api } = this.props;
 
     if(isNull(formData) === true || formData === undefined) {
       return <Typography>[Composed Chart] - NO DATA</Typography> 
     }
+
+    const CustomTooltip = (props) => {
+
+      const { active, payload, label } = props;      
+      if (active) {
+        return (
+          <Paper square={true} variant={'outlined'} style={{ padding: '8px' }}>
+            {payload.map((item) => <Typography>{`${item.name} : ${api.utils.humanNumber(item.value)}`}</Typography>)}                    
+          </Paper>
+        );
+      }
+    
+      return null;
+    };
 
     if(isNull(formData.options) === true || formData.options === undefined) return <Typography>[Composed Chart] - NO OPTIONS</Typography> 
     else {
@@ -361,7 +376,7 @@ class ComposedChartWidget extends Component {
           <ComposedChart width={contentRect.bounds.width || 640} height={contentRect.bounds.height || 400} data={data}>
             <XAxis {...xAxis} />
             <YAxis />
-            <Tooltip />
+            <Tooltip content={CustomTooltip} />
             <Legend />
             <CartesianGrid stroke="#f5f5f5" />
             <Area {...area} />

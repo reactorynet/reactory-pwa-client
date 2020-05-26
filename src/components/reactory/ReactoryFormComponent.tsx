@@ -854,7 +854,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         {formDef.graphql && formDef.graphql.query && self.state.queryComplete === false && <LinearProgress />}
         {self.props.before}
         <Form {...{ ...formProps, toolbarPosition: toolbarposition }}>
-          {formtoolbar}
+          {toolbarposition !== 'none' ? formtoolbar : null }
         </Form>
         {this.getHelpScreen()}
         {this.getReportWidget()}
@@ -942,7 +942,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 );
               }
 
-              debugger;
               if (that.props.onMutateComplete) {
                 that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
               }

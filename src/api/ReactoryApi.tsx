@@ -29,6 +29,7 @@ import { Typography } from "@material-ui/core";
 import icons from '../assets/icons';
 import queryString from '../query-string';
 import humanNumber from 'human-number';
+import humanDate from 'human-date';
 import ApiProvider, { withApi } from './ApiProvider';
 
 import Reactory from '../types/reactory';
@@ -205,7 +206,8 @@ class ReactoryApi extends EventEmitter {
       template,
       humanNumber,
       inspector,
-      gql
+      gql,
+      humanDate,
     };
     this.$func = {
       'core.NullFunction': (params) => {

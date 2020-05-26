@@ -10,6 +10,7 @@ import {
   FilledInput,
   MenuItem,
   Select,
+  Typography,
   FormHelperText,
 } from '@material-ui/core';
 
@@ -123,6 +124,11 @@ class SelectWidget extends Component {
     const onSelectChanged = (evt) => {
       this.props.onChange(evt.target.value)
     }
+
+    const renderSelectedValue = ( value ) => {
+      let option = matchOption(value);
+      return (<>{option.icon ? <Icon {...(option.iconProps || { style: { margin: '0px' }})}>{option.icon}</Icon> : null}<Typography variant="label">{option.label}</Typography></>)
+    };
     
 
     return (
@@ -132,7 +138,7 @@ class SelectWidget extends Component {
           value={self.props.formData || ""}
           onChange={onSelectChanged}
           name={self.props.name}          
-          renderValue={value => `${matchOption(value).label}`}
+          renderValue={renderSelectedValue}
           input={<InputComponent id={self.props.idSchema.$id} value={self.props.formData || ""} />}>
           {required === false ? <MenuItem value="">
             <em>None</em>
