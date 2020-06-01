@@ -238,6 +238,7 @@ class ReactoryApi extends EventEmitter {
     this.mountComponent = this.mountComponent.bind(this);
     this.showModalWithComponent = this.showModalWithComponent.bind(this);
     this.getComponents = this.getComponents.bind(this);
+    this.getGlobalComponents = this.getGlobalComponents.bind(this);
     this.status = this.status.bind(this);
     this.getAvatar = getAvatar;
     this.getOrganizationLogo = getOrganizationLogo;
@@ -601,6 +602,7 @@ class ReactoryApi extends EventEmitter {
                   formData={formDef.defaultFormData || props.formData || props.data}
                   before={props.before}
                   {...props}
+                  context={context}
                   >{props.children}
                 </ReactoryFormComponent>);
               };
@@ -793,7 +795,7 @@ class ReactoryApi extends EventEmitter {
     localStorage.getItem(storageKeys.LastLoggedInEmail);
   }
 
-  registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false) {
+  registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false, connectors = []) {
     const fqn = `${nameSpace}.${name}@${version}`;
     if (isEmpty(nameSpace))
       throw new Error('nameSpace is required for component registration');
@@ -807,7 +809,8 @@ class ReactoryApi extends EventEmitter {
       version,
       component: wrapWithApi === false ? component : withApi(component),
       tags,
-      roles
+      roles,
+      connectors
     };
     this.emit('componentRegistered', fqn);
   }
@@ -847,7 +850,7 @@ class ReactoryApi extends EventEmitter {
     });
     return componentMap;
   }
-
+  
   getComponent(fqn) {
     if (fqn === undefined)
       throw new Error('NO NULL FQN');
@@ -862,6 +865,25 @@ class ReactoryApi extends EventEmitter {
         return this.getNotFoundComponent();
       }
     }
+  }
+
+  getGlobalComponents() {
+    const components = [];
+    const that = this;
+    const { componentRegister } = this;
+    const GLOBAL_REGEX_PATTERN = /.\$GLOBAL\$/;
+    Object.keys(componentRegister).forEach((componentKey) => {
+      if(GLOBAL_REGEX_PATTERN.test(componentKey) === true) {
+        const { roles, component } = componentRegister[componentKey];
+        if(isArray(roles) === true) {
+          if(that.hasRole(roles) === true) components.push(component) 
+        } else {
+          components.push(component);
+        }
+      }
+    });
+
+    return components;
   }
 
   getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0') {

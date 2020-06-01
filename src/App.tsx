@@ -314,7 +314,6 @@ class App extends Component<any, AppState> {
     return routes
   }
 
-
   componentDidMount() {
     const that = this;
     if (window && !window.reactory) {
@@ -382,6 +381,19 @@ class App extends Component<any, AppState> {
       }
     }
 
+
+    
+
+    const Globals = (props, context) => {              
+      let globalForms =  api.getGlobalComponents();
+      return (
+      <React.Fragment>
+        { globalForms.map((GLOBALFORM, gidx) => <GLOBALFORM key={gidx}></GLOBALFORM>) }
+      </React.Fragment>
+      )
+
+    };
+
     api.muiTheme = muiTheme;
 
     let modal = null;
@@ -407,10 +419,11 @@ class App extends Component<any, AppState> {
               <ApiProvider api={api} history={this.props.history}>
                 <ThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
-                    <React.Fragment>
+                    <React.Fragment>                      
+                      { auth_validated === true && routes.length > 0 ? <Globals /> : null }
                       <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
-                      <NotificationComponent></NotificationComponent>                      
-                      {auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}                      
+                      <NotificationComponent></NotificationComponent>                                            
+                      { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}                                                                  
                     </React.Fragment>
                   </MuiPickersUtilsProvider>
                 </ThemeProvider>
