@@ -71,15 +71,28 @@ class UserSurvey extends Component {
         const { classes, surveys, history, api, minimal, showComplete, theme } = this.props;
         const { UserListItem, OwlyListItem, Logo, ApplicationUserListItem } = this.componentDefs;
         const surveyCount = this.totalSurveys();
-
+        
         let SystemUserListItem = OwlyListItem;
-        if(theme.key === 'plc'){
+        switch(theme.key) {
+            case 'plc': {
+                SystemUserListItem = ( props ) => { 
+                    const p = {...props, firstName: 'The Purposeful Leadership', lastName: 'Company' };
+                    return (<ApplicationUserListItem {...p} ></ApplicationUserListItem>);
+                };   
+                break;             
+            }
+            case 'mores': {
+                SystemUserListItem = ( props ) => { 
+                    const p = {...props, firstName: 'Mores', lastName: 'Assessments' };
+                    return (<ApplicationUserListItem {...p} ></ApplicationUserListItem>);
+                }
+                break;
+            }
+            default: {
 
-         SystemUserListItem = ( props ) => { 
-                const p = {...props, firstName: 'The Purposeful Leadership', lastName: 'Company' };
-                return (<ApplicationUserListItem {...p} />);
             }
         }
+                
 
         const AssessmentListItem = (props) => {
             const { assessment } = props;          
