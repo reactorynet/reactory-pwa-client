@@ -4,7 +4,7 @@ import { template } from 'lodash';
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { Link, withRouter } from 'react-router-dom';
-
+import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
@@ -21,7 +21,20 @@ import { getUiOptions } from '../reactory/form/utils';
 const useStyles = makeStyles((theme) => ({
 
   selectedMenuLabel: {
-    color: theme.palette.primary.main
+    color: theme.palette.primary.main,
+    paddingRight: theme.spacing(1.5),
+    paddingLeft: theme.spacing(1)
+  },
+  prepend: {
+    color: 'rgb(34, 39, 50)',
+    opacity: 0.7,
+    paddingLeft: theme.spacing(1.5),
+    paddingRight: theme.spacing(1)
+  },
+  selected: {
+    color: 'rgb(34, 39, 50)',
+    opacity: 1,
+    paddingLeft: theme.spacing(1)
   }
 
 }));
@@ -51,7 +64,7 @@ const CustomTab = (props) => {
 
   let menuPrepend = null;
   if (props.prepend)
-    menuPrepend = (<span>{props.prepend}</span>)
+    menuPrepend = (<span className={(SelectedItem ? classNames(classes.prepend, classes.selected) : classes.prepend)}>{props.prepend}</span>)
 
   return (
     <>
@@ -59,8 +72,8 @@ const CustomTab = (props) => {
         open={anchorElm != null}
         anchorEl={anchorElm}
         onClose={closeMenu}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        transformOrigin={{ vertical: "top", horizontal: "center" }}
       >
         {
           props.menuItems.map(menuItem => {
