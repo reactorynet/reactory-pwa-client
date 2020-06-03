@@ -1,21 +1,95 @@
-import React, { Component } from 'react';
+import React, { Component, useState } from 'react';
 import { Icon, Popover, MenuItem } from '@material-ui/core';
 import { template, find } from 'lodash';
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { Link, withRouter } from 'react-router-dom';
-
+import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
+import { Button } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import ApiProvider, { withApi } from '@reactory/client-core/api/ApiProvider';
 import { isArray } from 'util';
 import { getUiOptions } from '../reactory/form/utils';
 
+
+const useStyles = makeStyles((theme) => ({
+
+  selectedMenuLabel: {
+    color: theme.palette.primary.main,
+    paddingRight: theme.spacing(1.5),
+    paddingLeft: theme.spacing(1)
+  },
+  prepend: {
+    color: 'rgb(34, 39, 50)',
+    opacity: 0.7,
+    paddingLeft: theme.spacing(1.5),
+    paddingRight: theme.spacing(1)
+  },
+  selected: {
+    color: 'rgb(34, 39, 50)',
+    opacity: 1,
+    paddingLeft: theme.spacing(1)
+  }
+
+}));
+
+const CustomTab = (props) => {
+  const classes = useStyles();
+  const [anchorElm, setAnchorElm] = useState(null);
+
+  const tabButtonClickHandler = (event) => {
+    event.stopPropagation();
+    setAnchorElm(event.currentTarget);
+  }
+
+  const closeMenu = () => {
+    setAnchorElm(null);
+  }
+
+  const menuItemSelectedHandler = (menuItem) => {
+    closeMenu();
+    props.menuItemSelected(menuItem)
+  }
+
+  let SelectedItem = null;
+  const selectedMenuItem = props.menuItems.find(mi => mi.index == props.selectedItem);
+  if (selectedMenuItem)
+    SelectedItem = (<span className={classes.selectedMenuLabel}>{selectedMenuItem.title}</span>)
+
+  let menuPrepend = null;
+  if (props.prepend)
+    menuPrepend = (<span className={(SelectedItem ? classNames(classes.prepend, classes.selected) : classes.prepend)}>{props.prepend}</span>)
+
+  return (
+    <>
+      <Popover
+        open={anchorElm != null}
+        anchorEl={anchorElm}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        transformOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        {
+          props.menuItems.map(menuItem => {
+            return <MenuItem onClick={() => menuItemSelectedHandler(menuItem)}>{menuItem.title}</MenuItem>
+          })
+        }
+      </Popover>
+
+      <Button onClick={tabButtonClickHandler}>
+        {menuPrepend}
+        <Icon color="primary">more_vert</Icon>
+        {SelectedItem}
+      </Button>
+    </>
+  )
+}
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -51,17 +125,13 @@ class TabbedNavComponent extends Component {
 
   constructor(props, context) {
     super(props, context);
-
-
-
     const { api, formContext, uiSchema } = props;
-
     let options = getUiOptions(uiSchema);
     let activeTab = null;
 
-    if(options.activeTab && typeof options.activeTab === "string") {
+    if (options.activeTab && typeof options.activeTab === "string") {
       try {
-        activeTab = api.utils.template(options.activeTab)({...this.props});        
+        activeTab = api.utils.template(options.activeTab)({ ...this.props });
       } catch (templateError) {
         api.log(`Error parsing template`)
       }
@@ -71,12 +141,13 @@ class TabbedNavComponent extends Component {
       value: 0,
       anchorEl: null,
       activeTab,
+      activeSubTab: '',
     }
     props.api.log(`TabbedNavComponent.constructor(props, context)`, { props, context });
   }
 
-  componentDidMount(){
-    //sync root path with selected item index   
+  componentDidMount() {
+    //sync root path with selected item index
   }
 
   componentWillReceiveProps(nextProps) {
@@ -98,6 +169,9 @@ class TabbedNavComponent extends Component {
     let _tabPannels = [];
     let _additionalMenuItems = [];
 
+    let _visibleTabCount = 3;
+    let _menuLabelText = '';
+
     api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext, uiOptions });
     const theme = api.muiTheme;
 
@@ -110,26 +184,19 @@ class TabbedNavComponent extends Component {
       _tabs = [..._tabs, ...uiOptions.tabs];
     }
 
+    if (uiOptions.numberOfVisibleTabs)
+      _visibleTabCount = uiOptions.numberOfVisibleTabs;
+
+    if (uiOptions.tabMenuLabel)
+      _menuLabelText = uiOptions.tabMenuLabel;
+
     const EmptyTab = (tab) => {
       return <Typography>NO TAB FOR {tab.componentFqn}</Typography>;
     }
 
     const handleChange = (event, activeTab) => {
-      that.setState({ activeTab });
+      that.setState({ activeTab, activeSubTab: '' });
     };
-
-    const showMenu = (event) => {
-      event.stopPropagation();
-      that.setState({
-        anchorEl: event.currentTarget
-      });
-    }
-
-    const closeMenu = () => {
-      that.setState({
-        anchorEl: null
-      });
-    }
 
     const handleMenuItemClick = (menuItem) => {
       closeMenu();      
@@ -222,53 +289,52 @@ class TabbedNavComponent extends Component {
 
           }
           _additionalMenuItems.push({ index: (tab.id || index), title: tab.title, tab });
+          if (index == _visibleTabCount) {
+
+            return <Tab
+              {...a11yProps(index)}
+              key={"more_vert"}
+              value={state.activeSubTab}
+              component={() => {
+                return <CustomTab
+                  menuItemSelected={handleMenuItemClick}
+                  menuItems={_additionalMenuItems}
+                  selectedItem={state.activeTab}
+                  prepend={_menuLabelText}
+                />
+              }}
+            />
+          }
         }
       });
     }
 
-
     const open = Boolean(this.state.anchorEl);
 
     let _components = [];
-    
 
     return (
       <div className={classes.root}>
         <AppBar position="static">
-          <Tabs value={this.state.activeTab} onChange={handleChange} aria-label="simple tabs example">
+          <Tabs classes={{ indicator: classes.indicator }} value={this.state.activeTab} onChange={handleChange} aria-label="simple tabs example">
             {_tabComponents}
           </Tabs>
          
         </AppBar>
 
         {_tabPannels}
-
-        <Popover
-          open={open}
-          anchorEl={state.anchorEl}
-          onClose={closeMenu}
-          anchorOrigin={{
-            vertical: "bottom",
-            horizontal: "left"
-          }}
-          transformOrigin={{
-            vertical: "top",
-            horizontal: "right"
-          }}
-        >
-          {
-            _additionalMenuItems.map(menuItem => {
-              return <MenuItem onClick={() => handleMenuItemClick(menuItem)}>{menuItem.title}</MenuItem>
-            })
-          }
-
-        </Popover>
-        { _components }
+        {_components}
       </div>
     );
   }
 
-  static styles = (theme) => ({})
+  static styles = (theme) => {
+    return {
+      indicator: {
+        backgroundColor: theme.palette.primary.main,
+      }
+    }
+  }
 };
 
 const TabbedNavigationComponent = compose(withApi, withRouter, withTheme, withStyles(TabbedNavComponent.styles))(TabbedNavComponent);
