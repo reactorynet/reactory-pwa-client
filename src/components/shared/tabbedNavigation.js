@@ -1,6 +1,6 @@
 import React, { Component, useState } from 'react';
 import { Icon, Popover, MenuItem } from '@material-ui/core';
-import { template, find } from 'lodash';
+import { template } from 'lodash';
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { Link, withRouter } from 'react-router-dom';
@@ -159,7 +159,7 @@ class TabbedNavComponent extends Component {
   }
 
   render() {
-    const { props, state } = this;
+    const { props, theme, state } = this;
     const { formData, uiSchema, api, formContext } = props;
     const that = this;
     const uiOptions = uiSchema["ui:options"] || {};
@@ -169,11 +169,10 @@ class TabbedNavComponent extends Component {
     let _tabPannels = [];
     let _additionalMenuItems = [];
 
-    let _visibleTabCount = 3;
+    let _visibleTabCount = 10;
     let _menuLabelText = '';
 
     api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext, uiOptions });
-    const theme = api.muiTheme;
 
     if (isArray(formData) === true) {
       //making the assumption the data array contains the tabs definition
@@ -199,17 +198,13 @@ class TabbedNavComponent extends Component {
     };
 
     const handleMenuItemClick = (menuItem) => {
-      closeMenu();      
-      that.setState({
-        activeTab: menuItem.tab.id
-      }, () => {
-        if(menuItem.tab && menuItem.tab.route) {
-          that.props.history.push(menuItem.tab.route);
-        }
-      });       
+
+      (menuItem.tab && menuItem.tab.route) ? that.props.history.push(menuItem.tab.route) : that.setState({
+        activeTab: menuItem.tab.id,
+        activeSubTab: menuItem.tab.id
+      });
     }
-    
-    let activeTabTitleText = ''
+
     if (_tabs.length > 0) {
       _tabComponents = _tabs.map((tab, index) => {
         api.log('TabbedNavigationComponent: TAB', tab, 'debug');
@@ -253,8 +248,6 @@ class TabbedNavComponent extends Component {
           else return <ComponentToMount message={`Could not load component ${componentFqn}, please check your registry loaders and namings`} key={additionalComponentIndex} />
         });
 
-        activeTabTitleText = (tab.id || index) === state.activeTab ? tab.title : 'Not Set';
-
         let newPanel = (tab.id || index) === state.activeTab ? (
           <TabPanel value={state.activeTab} index={(tab.id || index)} key={`panel_${(tab.id || index)}`}>
             <MainComponentToMount {...mainComponentProps} />
@@ -267,27 +260,9 @@ class TabbedNavComponent extends Component {
         _tabPannels.push(newPanel);
 
 
-
-        if (index <= 2) {          
-          return <Tab label={tab.title} {...a11yProps(index)} key={(tab.id || index)} value={(tab.id || index)} onClick={() => (tab.route ? that.props.history.push(tab.route) : that.setState({ activeTab: (tab.id || index) })) } />
+        if (index <= _visibleTabCount - 1) {
+          return <Tab label={tab.title} {...a11yProps(index)} key={(tab.id || index)} value={(tab.id || index)} onClick={() => (tab.route ? that.props.history.push(tab.route) : that.setState({ activeTab: (tab.id || index) }))} />
         } else {
-
-          let selectedTabItem = find(_tabs, { id: state.activeTab });
-
-          if (index === 3) {
-            _additionalMenuItems.push({ index: (tab.id || index), title: tab.title, tab });
-
-          return (<Tab icon={
-            <div style={{display: 'flex', justifyContent: 'flex-end'}}>
-              <Icon onClick={showMenu}>more_vert</Icon>    
-              <Typography variant="button" style={{ color: theme.palette.primary.dark  }}>
-                { selectedTabItem && selectedTabItem.title ? selectedTabItem.title : state.activeTab }
-              </Typography>          
-            </div>
-            } {...a11yProps(index)} 
-            key={"more_vert"} />)
-
-          }
           _additionalMenuItems.push({ index: (tab.id || index), title: tab.title, tab });
           if (index == _visibleTabCount) {
 
@@ -319,7 +294,6 @@ class TabbedNavComponent extends Component {
           <Tabs classes={{ indicator: classes.indicator }} value={this.state.activeTab} onChange={handleChange} aria-label="simple tabs example">
             {_tabComponents}
           </Tabs>
-         
         </AppBar>
 
         {_tabPannels}
