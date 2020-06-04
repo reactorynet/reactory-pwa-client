@@ -48,7 +48,7 @@ class ErrorPopover extends React.Component<any, any> {
           aria-owns={open ? 'mouse-over-popover' : undefined}
           aria-haspopup="true"
           onClick={handlePopoverOpen}
-         
+
           color={'secondary'}
         >
           <Icon>error</Icon>
@@ -68,7 +68,7 @@ class ErrorPopover extends React.Component<any, any> {
           transformOrigin={{
             vertical: 'top',
             horizontal: 'left',
-          }}          
+          }}
           disableRestoreFocus
         >
           <IconButton size="small" onClick={handlePopoverClose}><Icon>close</Icon></IconButton>
@@ -92,6 +92,8 @@ class MaterialFormErrorTemplate extends Component<any, any> {
     };
   }
 
+  debugger;
+
   static ErrorStyles = (theme) => {
     return {
       errorForm: {
@@ -102,6 +104,8 @@ class MaterialFormErrorTemplate extends Component<any, any> {
 
   renderSingleError() {
     const { errors } = this.props;
+
+    debugger;
 
     const errorComponent = (
       <React.Fragment>
@@ -122,8 +126,10 @@ class MaterialFormErrorTemplate extends Component<any, any> {
   renderMultipleErrors() {
     const { errors } = this.props;
 
+    debugger;
+
     const errorComponent = (
-      <React.Fragment>        
+      <React.Fragment>
         <List>
           {errors.map((error) => {
             return (

@@ -854,7 +854,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         {formDef.graphql && formDef.graphql.query && self.state.queryComplete === false && <LinearProgress />}
         {self.props.before}
         <Form {...{ ...formProps, toolbarPosition: toolbarposition }}>
-          {toolbarposition !== 'none' ? formtoolbar : null }
+          {toolbarposition !== 'none' ? formtoolbar : null}
         </Form>
         {this.getHelpScreen()}
         {this.getReportWidget()}
@@ -904,20 +904,39 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             let loadingWidget = null;
             let errorWidget = null;
 
-            // if (loading === true) loadingWidget = (<Loading message={"Updating... please wait."} />);
             if (error) {
-              // errorWidget = (<p>{error.message}</p>);
 
-              api.createNotification(
-                `Error ${mutation.name} Failed`,
-                {
-                  showInAppNotification: true,
-                  type: 'error',
-                });
+              // ADDED: DREW
+              // Show message returned from resolver
+              if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+                error.graphQLErrors.forEach(gqlError => {
+                  api.createNotification(
+                    `${gqlError.message}`,
+                    {
+                      showInAppNotification: true,
+                      type: 'error',
+                    });
+                })
+              } else {
+                api.createNotification(
+                  `Error ${mutation.name} Failed`,
+                  {
+                    showInAppNotification: true,
+                    type: 'error',
+                  });
+              }
+
+              // OLD VERSION
+              // api.createNotification(
+              //   `Error ${mutation.name} Failed`,
+              //   {
+              //     showInAppNotification: true,
+              //     type: 'error',
+              //   });
+
             }
 
             if (data && data[mutation.name]) {
-              debugger;
               if (mutation.onSuccessMethod === "route") {
                 const inputObj = {
                   formData,
@@ -948,10 +967,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
               if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event:') >= 0) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];
-                
-                api.amq.raiseFormCommand(eventName, { 
-                  form: that, 
-                  result: data[mutation.name] 
+
+                api.amq.raiseFormCommand(eventName, {
+                  form: that,
+                  result: data[mutation.name]
                 });
 
                 that.$events.emit(eventName, data[mutation.name]);
@@ -996,6 +1015,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       //error handler function
       const handleErrors = (errors) => {
+
         if (formDef.graphql.query.onError) {
           const componentToCall = api.getComponent(formDef.graphql.query.onError.componentRef);
           if (componentToCall && typeof componentToCall === 'function') {
