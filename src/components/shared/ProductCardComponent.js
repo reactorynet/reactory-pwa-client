@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { compose } from 'recompose';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
-import { withStyles } from '@material-ui/core/styles';
+import { withStyles, makeStyles } from '@material-ui/core/styles';
 import PropTypes from 'prop-types';
 import {
   Grid,
@@ -24,20 +24,61 @@ const CutomTooltip = withStyles((theme) => ({
   },
 }))(Tooltip);
 
+const headerStyles = makeStyles((theme) => ({
+  headerContainer: {
+    display: 'flex',
+    padding: theme.spacing(2),
+    paddingBottom: 0
+  },
+  avatarContainer: {
+    flex: '0 0 auto',
+    marginRight: '16px'
+  },
+  titleContainer: {
+    flex: '1 1 auto'
+  },
+  title: {
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: '1rem',
+    fontWeight: 'bold',
+    marginBottom: theme.spacing(0.5)
+  },
+  copyIcon: {
+    fontSize: '1rem',
+    marginLeft: theme.spacing(1)
+  },
+  subtitle: {
+    fontSize: '0.9rem',
+    lineHeight: '1rem'
+  }
+
+}));
+
+const CustomHeader = props => {
+  const classes = headerStyles();
+
+  return (
+    <div className={classes.headerContainer}>
+      <div className={classes.avatarContainer}><Avatar variant="rounded" src={props.image} /></div>
+      <div className={classes.titleContainer}>
+        <Typography variant="h4" classes={{ root: classes.title }} onClick={() => props.copyClick(props.title)}>
+          {props.title}
+          <Tooltip title="Copy to clipboard" placement="right">
+            <Icon color="primary" className={classes.copyIcon}>assignment</Icon>
+          </Tooltip>
+        </Typography>
+        <Typography variant="h6" classes={{ root: classes.subtitle }}>{props.subtitle}</Typography>
+      </div>
+    </div>
+  )
+}
+
 class ProductCardWidget extends Component {
 
   static styles = (theme) => {
     const textDark = 'rgba(0,0,0,0.87)';
     return {
-      headerTitle: {
-        fontSize: '1rem',
-        fontWeight: 'bold',
-        color: textDark
-      },
-      headerSubTitle: {
-        fontSize: '0.8rem',
-        color: textDark
-      },
       divider: {
         marginTop: '10px',
         marginBottom: '10px'
@@ -58,16 +99,25 @@ class ProductCardWidget extends Component {
 
   constructor(props, context) {
     super(props, context);
-
     this.componentDefs = props.api.getComponents(['core.PricingLineChartComponent']);
   }
 
   render() {
-
     const { props } = this;
     const { classes, data, cardContent, currency, symbol, api, region, } = props;
     const { PricingLineChartComponent } = this.componentDefs;
     const formData = { ...data };
+
+    const copyClickHandler = (labelText) => {
+      var tempInput = document.createElement('input');
+      tempInput.value = labelText;
+      document.body.appendChild(tempInput)
+      tempInput.select()
+      document.execCommand('copy');
+      tempInput.remove();
+
+      api.createNotification('Copied To Clipboard!', { body: `'${labelText}' successfully copied to your clipboard.`, showInAppNotification: true, type: 'success' });
+    }
 
     let sysProIconColor = '';
     switch (data.onSyspro) {
@@ -90,12 +140,7 @@ class ProductCardWidget extends Component {
 
     return (
       <Card>
-        <CardHeader
-          classes={{ title: classes.headerTitle, subheader: classes.headerSubTitle }}
-          avatar={<Avatar variant="rounded" src={data.image} className={classes.avatar}></Avatar>}
-          title={data.code}
-          subheader={data.name}
-        />
+        <CardHeader component={() => <CustomHeader title={data.code} subtitle={data.name} image={data.image} copyClick={copyClickHandler} />} />
         <CardContent>
           <Grid container direction="row" alignItems="center" >
             <Grid item xs={10}>

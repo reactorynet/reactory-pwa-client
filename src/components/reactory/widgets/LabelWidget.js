@@ -1,5 +1,5 @@
 import React, { Component, Fragment, useState } from 'react';
-import { Button, Typography, Icon } from '@material-ui/core';
+import { Button, Typography, Icon, Tooltip } from '@material-ui/core';
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/styles';
 import { template, isNil } from 'lodash';
@@ -25,6 +25,9 @@ class LabelWidget extends Component {
 
   static rootStyle(theme) {
     return {
+      labelText: {
+        wordBreak: 'break-all'
+      },
       copyIcon: {
         marginLeft: '10px',
         fontSize: '1rem'
@@ -106,13 +109,13 @@ class LabelWidget extends Component {
 
       if(props.uiSchema['ui:graphql'] && format === "$LOOKUP$") {
 
-        labelText = self.state.lookupValue && self.state.lookupComplete === true ? self.state.lookupValue : 'LOOKUP';        
+        labelText = self.state.lookupValue && self.state.lookupComplete === true ? self.state.lookupValue : 'LOOKUP';
         const lookupGraphql = props.uiSchema['ui:graphql'];
         const variables = api.utils.objectMapper( props, lookupGraphql.variables );
-        
+
         if(self.state.lookupComplete === false) {
           props.api.graphqlQuery(lookupGraphql.text, variables).then((lookupResult) => {
-            api.log(`Lookup result`, { lookupResult }, 'debug');            
+            api.log(`Lookup result`, { lookupResult }, 'debug');
             if(lookupResult.data && lookupResult.data[lookupGraphql.name]) {
               const lookupValue = lookupResult.data[lookupGraphql.name];
               self.setState({ lookupValue: lookupValue[lookupGraphql.resultKey || "title"], lookupComplete: true, lookupError: false });
@@ -123,7 +126,7 @@ class LabelWidget extends Component {
             api.error(`Lookup Query Error`, { lookupError }, 'debug');
             self.setState({ lookupValue: lookupError.message, lookupComplete: true, lookupError: true });
           });
-        }        
+        }
       }
 
       labelTitleProps = titleProps;
@@ -195,16 +198,13 @@ class LabelWidget extends Component {
     } else {
 
       if(_iconPosition == 'inline') {
-        LabelBody = <div className={classes.inlineDiv}>{labelIcon}<Typography variant={_variant}>{labelText}</Typography></div>
+        LabelBody = <div className={classes.inlineDiv}>{labelIcon}<Typography classes={{root: classes.labelText}} variant={_variant}>{labelText}</Typography></div>
       } else {
-        LabelBody = <Typography variant={_variant}>{labelText}</Typography>
+        LabelBody = <Typography variant={_variant} classes={{root: classes.labelText}}>{labelText}</Typography>
       }
     }
 
     const copy = () => {
-      // EASY WAY, BUT LIMITED SUPPORT
-      // navigator.clipboard.writeText(labelText)
-
       var tempInput = document.createElement('input');
       tempInput.value = labelText;
       document.body.appendChild(tempInput)
@@ -212,7 +212,7 @@ class LabelWidget extends Component {
       document.execCommand('copy');
       tempInput.remove();
 
-      api.createNotification('Copied To Clipboard!', { body: `'${labelText}' successfully copied to your clipboard.`});
+      api.createNotification('Copied To Clipboard!', { body: `'${labelText}' successfully copied to your clipboard.`, showInAppNotification: true, type: 'success'});
     }
 
     return (
@@ -225,7 +225,7 @@ class LabelWidget extends Component {
         {_iconPosition === 'right' ? labelIcon : null}
         {_copyToClip &&
           <Tooltip title="Copy to clipboard" placement="right">
-            <Icon onClick={copy} className={classes.copyIcon}>assignment</Icon>
+            <Icon color="primary" onClick={copy} className={classes.copyIcon}>assignment</Icon>
           </Tooltip>
         }
       </div>
