@@ -169,7 +169,7 @@ class TabbedNavComponent extends Component {
     let _tabPannels = [];
     let _additionalMenuItems = [];
 
-    let _visibleTabCount = 3;
+    let _visibleTabCount = 10;
     let _menuLabelText = '';
 
     api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext, uiOptions });

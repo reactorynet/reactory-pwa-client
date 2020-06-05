@@ -69,7 +69,8 @@ class LineChartWidget extends PureComponent<any> {
       if (active) {
         return (
           <Paper square={true} variant={'outlined'} style={{ padding: '8px' }}>
-            {payload.map((item) => <Typography>{`${item.name} : ${api.utils.humanNumber(item.value)}`}</Typography>)}                    
+            <Typography>{label}</Typography>
+            {payload && payload.map((item) => <Typography>{`${item.name} : ${api.utils.humanNumber(item.value)}`}</Typography>)}                    
           </Paper>
         );
       }
