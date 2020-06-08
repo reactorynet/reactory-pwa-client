@@ -56,6 +56,8 @@ class StyledCurrencyLabel extends Component {
     let _tooltipPlacement = 'left-start';
     let _label = '';
     let inlineLabel = false;
+    let _additionalCurrencyMapField = 'list_price_cents';
+    let _showZeroValues = true;
 
     let defaultStyle = {}
 
@@ -91,6 +93,12 @@ class StyledCurrencyLabel extends Component {
 
       if (uiOptions.inlineLabel)
         inlineLabel = uiOptions.inlineLabel;
+
+      if (uiOptions.additionalCurrencyMapField && uiOptions.additionalCurrencyMapField != '')
+        _additionalCurrencyMapField = uiOptions.additionalCurrencyMapField;
+
+      if (uiOptions.showZeroValues != undefined)
+        _showZeroValues = uiOptions.showZeroValues;
     }
 
     let otherCurrencies = [];
@@ -108,7 +116,14 @@ class StyledCurrencyLabel extends Component {
             <div className={classes.currency} {..._containerProps}>
               <span style={{ fontWeight: "bold" }}>({currency.currency_code})&nbsp;</span>
               <span className={classes.currencyValue}>
-                {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency.list_price_cents / 100) : currency.list_price_cents)}
+                {/* {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency.list_price_cents / 100) : currency.list_price_cents)} */}
+                {/* {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency[additionalCurrencyMapField] / 100) : currency[additionalCurrencyMapField])} */}
+                {
+                  !_showZeroValues && currency[_additionalCurrencyMapField] == 0 ?
+                    <span>   -   </span>
+                    :
+                    new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency[_additionalCurrencyMapField] / 100) : currency[_additionalCurrencyMapField])
+                }
               </span>
             </div>
           ))

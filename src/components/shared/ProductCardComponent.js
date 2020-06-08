@@ -79,6 +79,7 @@ class ProductCardWidget extends Component {
   static styles = (theme) => {
     const textDark = 'rgba(0,0,0,0.87)';
     return {
+      root: { height: '100%' },
       divider: {
         marginTop: '10px',
         marginBottom: '10px'
@@ -89,11 +90,30 @@ class ProductCardWidget extends Component {
       fieldLabel: {
         display: 'flex',
         alignItems: 'center',
-        marginBottom: theme.spacing(1)
+        // marginBottom: theme.spacing(1)
       },
       fieldLabelIcon: {
         marginRight: theme.spacing(1)
       },
+      specialBubble: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#770F99',
+        color: '#fff',
+        marginTop: theme.spacing(1.3),
+        paddingTop: theme.spacing(0.5),
+        paddingBottom: theme.spacing(0.5),
+        paddingLeft: theme.spacing(1.5),
+        paddingRight: theme.spacing(1.5),
+        borderRadius: '15px',
+        fontSize: theme.spacing(1.5),
+        textAlign: 'center',
+      },
+      bubbleIcon: {
+        fontSize: '1rem',
+        marginRight: theme.spacing(0.5),
+      }
     }
   }
 
@@ -108,6 +128,8 @@ class ProductCardWidget extends Component {
     const { PricingLineChartComponent } = this.componentDefs;
     const formData = { ...data };
 
+    debugger;
+
     const copyClickHandler = (labelText) => {
       var tempInput = document.createElement('input');
       tempInput.value = labelText;
@@ -117,6 +139,21 @@ class ProductCardWidget extends Component {
       tempInput.remove();
 
       api.createNotification('Copied To Clipboard!', { body: `'${labelText}' successfully copied to your clipboard.`, showInAppNotification: true, type: 'success' });
+    }
+
+    const tooltipTitle = (tip) => {
+      switch (tip) {
+        case 'on_syspro':
+          return 'ON SYSPRO'
+        case 'not_on_syspro':
+          return 'NOT ON SYSPRO'
+        case 'on_hold':
+          return 'ON HOLD'
+        case 'on_partial_hold':
+          return 'ON PARTIAL HOLD'
+        default:
+          '';
+      }
     }
 
     let sysProIconColor = '';
@@ -139,7 +176,7 @@ class ProductCardWidget extends Component {
     }
 
     return (
-      <Card>
+      <Card classes={{ root: classes.root }}>
         <CardHeader component={() => <CustomHeader title={data.code} subtitle={data.name} image={data.image} copyClick={copyClickHandler} />} />
         <CardContent>
           <Grid container direction="row" alignItems="center" >
@@ -152,7 +189,16 @@ class ProductCardWidget extends Component {
             </Grid>
             {
               data.onSyspro != '' && sysProIconColor != '' && <Grid item xs={2}>
-                <Icon style={{ color: sysProIconColor }}>info</Icon>
+                <Tooltip placement="right-start" title={tooltipTitle(data.onSyspro)}>
+                  <Icon style={{ color: sysProIconColor }}>info</Icon>
+                </Tooltip>
+              </ Grid>
+            }
+            {
+              formData.onSpecial && <Grid item xs={12}>
+                <div className={classes.specialBubble}>
+                  <Icon classes={{ root: classes.bubbleIcon }}>attach_money</Icon>
+                  On Special From:&nbsp;{new Intl.NumberFormat(region, { style: 'currency', currency: formData.currencyCode }).format((formData.specialPrice / 100))}</div>
               </Grid>
             }
           </Grid>
@@ -160,23 +206,55 @@ class ProductCardWidget extends Component {
           {
             cardContent && cardContent.fields &&
             <div className={classes.contentContainer}>
-              {
-                cardContent.fields.map(field => {
+              <Grid container spacing={1}>
+                {
+                  cardContent.fields.map(field => {
 
-                  return (
-                    <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
+                    return (<>
+                      <Grid xs={7}>
+                        <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
+                          {
+                            field.icon && field.icon != '' && <Icon classes={{ root: classes.fieldLabelIcon }}>{field.icon}</Icon>
+                          }
+                          <strong>{field.label}</strong>
+                        </Typography>
+
+                      </Grid>
+                      <Grid xs={4}>
+                        <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
+                          {
+                            field.isCents ?
+                              new Intl.NumberFormat((field.region || region), { style: 'currency', currency: (field.currency || currency) }).format(field.isCents ? (data[field.value] / 100) : data[field.value]) :
+                              data[field.value]
+                          } {field.unit}
+                        </Typography>
+                      </Grid>
+                    </>
+                    )
+                  })
+                }
+                {
+                  formData.onSpecial && <>
+                    <Grid item xs={7}>
+                      <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
+                        <Icon classes={{ root: classes.fieldLabelIcon }}>attach_money</Icon> <strong>Special Price</strong>
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={4}>
                       {
-                        field.icon && field.icon != '' && <Icon classes={{ root: classes.fieldLabelIcon }}>{field.icon}</Icon>
+                        formData.productPricing.filter(item => ['USD', 'EUR', 'GBP', 'ZAR'].includes(item.currency_code)).map(currency => (
+                          <Typography variant="body2">
+                            <strong>{currency.currency_code}: </strong>
+                            {
+                              new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format((currency.special_price_cents / 100))
+                            }
+                          </Typography>
+                        ))
                       }
-                      <strong>{field.label}</strong>&nbsp;{
-                        field.isCents ?
-                          new Intl.NumberFormat((field.region || region), { style: 'currency', currency: (field.currency || currency) }).format(field.isCents ? (data[field.value] / 100) : data[field.value]) :
-                          data[field.value]
-                      } {field.unit}
-                    </Typography>
-                  )
-                })
-              }
+                    </Grid>
+                  </>
+                }
+              </Grid>
             </div>
           }
           {
@@ -195,13 +273,15 @@ class ProductCardWidget extends Component {
 ProductCardWidget.propTypes = {
   currency: PropTypes.string,
   symbol: PropTypes.string,
-  region: PropTypes.string
+  region: PropTypes.string,
+  currenciesDisplayed: PropTypes.array,
 };
 
 ProductCardWidget.defaultProps = {
   currency: 'ZAR',
   symbol: 'R',
-  region: 'en-ZA'
+  region: 'en-ZA',
+  currenciesDisplayed: ['USD', 'EUR', 'GBP', 'ZAR'],
 };
 
 const ProductCardComponent = compose(withApi, withStyles(ProductCardWidget.styles))(ProductCardWidget);
