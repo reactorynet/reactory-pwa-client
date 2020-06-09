@@ -22,7 +22,7 @@ class ConditionalIconWidget extends Component {
     const { value, theme, conditions = [], style = {}, classes, label } = this.props
     let ComponentToRender = null;
     let iconProps = { style };
-    let matchingCondition = conditions.find(c => c.key == value.toString());
+    let matchingCondition = conditions.find(c => `${c.key}` === `${value}`);
 
     if (matchingCondition) {
       if (matchingCondition.style) {
