@@ -81,8 +81,8 @@ class ProductCardWidget extends Component {
     return {
       root: { height: '100%' },
       divider: {
-        marginTop: '10px',
-        marginBottom: '10px'
+        marginTop: theme.spacing(2),
+        marginBottom: theme.spacing(2)
       },
       contentContainer: {
         paddingLeft: theme.spacing(1.5)
@@ -90,7 +90,6 @@ class ProductCardWidget extends Component {
       fieldLabel: {
         display: 'flex',
         alignItems: 'center',
-        // marginBottom: theme.spacing(1)
       },
       fieldLabelIcon: {
         marginRight: theme.spacing(1)
@@ -128,7 +127,11 @@ class ProductCardWidget extends Component {
     const { PricingLineChartComponent } = this.componentDefs;
     const formData = { ...data };
 
-    debugger;
+    let _currenciesDisplayed = ['USD', 'EUR', 'GBP', 'ZAR'];
+    let _showSpecialPricing = false;
+
+    if (cardContent.showSpecialPricing != undefined) _showSpecialPricing = cardContent.showSpecialPricing;
+    if (cardContent.currenciesDisplayed != undefined) _currenciesDisplayed = cardContent.currenciesDisplayed;
 
     const copyClickHandler = (labelText) => {
       var tempInput = document.createElement('input');
@@ -211,7 +214,7 @@ class ProductCardWidget extends Component {
                   cardContent.fields.map(field => {
 
                     return (<>
-                      <Grid xs={7}>
+                      <Grid item xs={7}>
                         <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
                           {
                             field.icon && field.icon != '' && <Icon classes={{ root: classes.fieldLabelIcon }}>{field.icon}</Icon>
@@ -220,7 +223,7 @@ class ProductCardWidget extends Component {
                         </Typography>
 
                       </Grid>
-                      <Grid xs={4}>
+                      <Grid item xs={4}>
                         <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
                           {
                             field.isCents ?
@@ -234,7 +237,7 @@ class ProductCardWidget extends Component {
                   })
                 }
                 {
-                  formData.onSpecial && <>
+                  _showSpecialPricing && formData.onSpecial && <>
                     <Grid item xs={7}>
                       <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
                         <Icon classes={{ root: classes.fieldLabelIcon }}>attach_money</Icon> <strong>Special Price</strong>
@@ -242,7 +245,7 @@ class ProductCardWidget extends Component {
                     </Grid>
                     <Grid item xs={4}>
                       {
-                        formData.productPricing.filter(item => ['USD', 'EUR', 'GBP', 'ZAR'].includes(item.currency_code)).map(currency => (
+                        formData.productPricing.filter(item => _currenciesDisplayed.includes(item.currency_code)).map(currency => (
                           <Typography variant="body2">
                             <strong>{currency.currency_code}: </strong>
                             {
@@ -259,7 +262,7 @@ class ProductCardWidget extends Component {
           }
           {
             cardContent && cardContent.hasPricingChart && <>
-              <div style={{ height: '1rem' }}></div>
+              <div style={{ height: '2rem' }}></div>
               <PricingLineChartComponent formData={formData} />
             </>
           }
@@ -273,15 +276,13 @@ class ProductCardWidget extends Component {
 ProductCardWidget.propTypes = {
   currency: PropTypes.string,
   symbol: PropTypes.string,
-  region: PropTypes.string,
-  currenciesDisplayed: PropTypes.array,
+  region: PropTypes.string
 };
 
 ProductCardWidget.defaultProps = {
   currency: 'ZAR',
   symbol: 'R',
-  region: 'en-ZA',
-  currenciesDisplayed: ['USD', 'EUR', 'GBP', 'ZAR'],
+  region: 'en-ZA'
 };
 
 const ProductCardComponent = compose(withApi, withStyles(ProductCardWidget.styles))(ProductCardWidget);
