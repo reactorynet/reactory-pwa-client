@@ -38,12 +38,46 @@ class LoginCard extends Component {
     this.updateUsername = this.updateUsername.bind(this);
     this.updatePassword = this.updatePassword.bind(this);
     this.keyPressPassword = this.keyPressPassword.bind(this);
-    this.componentRefs = props.api.getComponents([
+    this.mountComponents = this.mountComponents.bind(this);
+    this.componentRefs = {
+      Logo: (props, context) => (<span>...</span>),
+      Loading: (props, context) => (<span>...</span>),
+      BasicModal: (props, context) => (<span>x</span>),
+      MicrosoftLogin: (props, context) => (<span>...</span>),
+    }
+  }
+
+  mountComponents(){
+    this.componentRefs = this.props.api.getComponents([
       'core.Logo@1.0.0',
       'core.Loading@1.0.0',
       'core.BasicModal@1.0.0',
       'microsoft.MicrosoftLogin@1.0.0'
     ]);
+    this.forceUpdate();
+  }
+
+  componentDidMount(){
+    const that = this;
+    const { api } = that.props;
+    let checked = 0;
+    if(api.formSchemaLastFetch !== null) {
+      that.mountComponents();
+    } else {
+      const checkWait = () => {        
+        if(api.formSchemaLastFetch === null) {
+          if(checked >= 5) { 
+            api.forms();
+            checked = 0;
+          }
+          setTimeout(checkWait, 300);
+        } else {
+          that.mountComponents();
+        }
+      } 
+
+      setTimeout(checkWait, 300);
+    }
   }
 
 

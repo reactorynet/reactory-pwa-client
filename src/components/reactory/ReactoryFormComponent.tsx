@@ -376,11 +376,31 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 
   componentDidMount() {
+    const that = this;
     const { api } = this.props;
     this.isMounted = true;
     api.trackFormInstance(this);
     api.log('ReactoryComponent.componentDidMount', { props: this.props, context: this.context }, 'debug');
     api.amq.onReactoryPluginLoaded('loaded', this.onPluginLoaded);
+
+
+    let checked = 0;
+    if(api.formSchemaLastFetch !== null) {
+      that.downloadForms();
+    } else {
+      const checkWait = () => {        
+        if(api.formSchemaLastFetch === null) {
+          if(checked >= 5) { 
+            api.forms();
+            checked = 0;
+          }
+          setTimeout(checkWait, 300);
+        } else {
+          that.downloadForms();
+        }
+      }
+      setTimeout(checkWait, 300);
+    }
   }
 
   formDef = (): Reactory.IReactoryForm | undefined => {
@@ -1601,9 +1621,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     const that = this;
     let formDef = simpleForm;
     const { api } = this.props;
-    if (api.formSchemas) {
+    
 
-    }
 
     try {
       this.props.api.forms().then((forms: Reactory.IReactoryForm[]) => {
