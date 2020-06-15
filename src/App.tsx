@@ -201,7 +201,8 @@ class App extends Component<any, AppState> {
       'core.Loading@1.0.0',
       'core.Login@1.0.0',
       'core.FullScreenModal@1.0.0',
-      'core.NotificationComponent@1.0.0'
+      'core.NotificationComponent@1.0.0',
+      'core.NotFound',
     ]);
   }  
 
@@ -256,7 +257,7 @@ class App extends Component<any, AppState> {
 
   configureRouting() {
     const { auth_validated, user } = this.state;
-    const { Loading } = this.componentRefs;
+    const { NotFound } = this.componentRefs;
     const routes = [];
     let loginRouteDef = null;
     let homeRouteDef = null;
@@ -286,14 +287,16 @@ class App extends Component<any, AppState> {
 
           if (routeDef.public === true) {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)
-            else return (<p>No Component for {routeDef.componentFqn}</p>)
+            else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
           }
 
           const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
 
+          if(hasRolesForRoute === false) return <NotFound message={`You do not appear to have the correct permissions to access ${routeDef.title || routeDef.path} or component ${routeDef.componentFqn}`} />
+
           if (auth_validated === true && hasRolesForRoute === true) {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)
-            else return (<p>No Component for {routeDef.componentFqn}</p>)
+            else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`}  waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
           }
 
           if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
@@ -420,7 +423,7 @@ class App extends Component<any, AppState> {
                 <ThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
                     <React.Fragment>                      
-                      { auth_validated === true && routes.length > 0 ? <Globals /> : null }
+                      <Globals />
                       <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
                       <NotificationComponent></NotificationComponent>                                            
                       { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}                                                                  

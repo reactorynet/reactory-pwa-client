@@ -1091,13 +1091,17 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
             //update component state with new form data
             if (that.isMounted === true) {
-              that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, () => {
-                that.$events.emit('onQueryComplete', { formData: _formData, form: that });
-                if (errors) {
-                  api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${that.instanceId} => Error executing graphql query`, errors)
-                  handleErrors(errors);
-                }
-              });
+              try {
+                that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, () => {
+                  that.$events.emit('onQueryComplete', { formData: _formData, form: that });
+                  if (errors) {
+                    api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${that.instanceId} => Error executing graphql query`, errors)
+                    handleErrors(errors);
+                  }
+                });
+              } catch (unhandledErr) {
+                api.log(`ReactoryComponent -> Error on setting state`, unhandledErr, 'error')
+              }              
             }
 
           }).catch((queryError) => {

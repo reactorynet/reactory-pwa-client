@@ -61,6 +61,7 @@ import LookupComponent from './shared/LookupComponent';
 import NotificationComponent from './shared/NotificationWidget';
 import GridLayoutComponent from './shared/GridLayoutComponent';
 import ProductCardComponent from './shared/ProductCardComponent';
+import NotFoundComponent from './shared/NotFoundComponent';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -340,10 +341,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'NotFound',
-    component: compose(withRouter)(({ message = 'Could not load your component. Please check component registry', location }) => {
-      const { UserListItem } = UserComponents;
-      return (<UserListItem user={{ firstName: 'Reactory', lastName: 'Bot', id: 'reactory', avatar: 'reactory_bot.png' }} message={message} />)
-    }),
+    component: NotFoundComponent,
     version: '1.0.0'
   },
   {

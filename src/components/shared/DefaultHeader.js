@@ -255,12 +255,18 @@ class ApplicationHeader extends Component {
     //console.log('Need to redirect', where);
     const { history } = this.props;
 
-    if (toggleDrawer === true) {
-      this.setState({ ...this.state, drawerOpen: !this.state.drawerOpen }, () => {
+    const nav = () => {
+      if(where.trim().indexOf('http') === 0) {
+        window.open(where, '_new');
+      } else {
         history.push(where);
-      });
+      }
+    }
+
+    if (toggleDrawer === true) {
+      this.setState({ ...this.state, drawerOpen: !this.state.drawerOpen }, nav);
     } else {
-      history.push(where);
+      nav();
     }
   }
 

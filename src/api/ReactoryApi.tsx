@@ -270,7 +270,7 @@ class ReactoryApi extends EventEmitter {
     this.getUserLoginCredentials = this.getUserLoginCredentials.bind(this);
     this.setAuthToken = this.setAuthToken.bind(this);
     this.getAuthToken = this.getAuthToken.bind(this);
-    this.forms(true).then();
+    
     this.assets = {
       logo: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/logo.png`,
       avatar: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/avatar.png`,
@@ -871,9 +871,9 @@ class ReactoryApi extends EventEmitter {
     const components = [];
     const that = this;
     const { componentRegister } = this;
-    const GLOBAL_REGEX_PATTERN = /.\$GLOBAL\$/;
-    Object.keys(componentRegister).forEach((componentKey) => {
-      if(GLOBAL_REGEX_PATTERN.test(componentKey) === true) {
+    const GLOBAL_REGEX_PATTERN = /.\$GLOBAL\$/;    
+    Object.keys(componentRegister).forEach((componentKey) => {      
+      if(GLOBAL_REGEX_PATTERN.test(componentKey) === true) {                
         const { roles, component } = componentRegister[componentKey];
         if(isArray(roles) === true) {
           if(that.hasRole(roles) === true) components.push(component) 
@@ -1030,33 +1030,39 @@ class ReactoryApi extends EventEmitter {
   status(options = { emitLogin: false }) {
     const that = this;
     return new Promise((resolve, reject) => {
-      that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
-        if (result.data.apiStatus.status === "API OK") {
-          that.setUser({ ...result.data.apiStatus });
-          that.lastValidation = moment().valueOf();
-          that.tokenValidated = true;
+      this.forms(true).then(()=>{
+        
 
-          if (options.emitLogin === true)
-            that.emit(ReactoryApiEventNames.onLogin, that.getUser());          
-          if(result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
-            result.data.apiStatus.messages.forEach((message) => {
-              that.createNotification(message.title, message);
-            });
+        that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
+          if (result.data.apiStatus.status === "API OK") {
+            that.setUser({ ...result.data.apiStatus });
+            that.lastValidation = moment().valueOf();
+            that.tokenValidated = true;
+  
+            if (options.emitLogin === true)
+              that.emit(ReactoryApiEventNames.onLogin, that.getUser());          
+            if(result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
+              result.data.apiStatus.messages.forEach((message) => {
+                that.createNotification(message.title, message);
+              });
+            }
+  
+            that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: false });
+            resolve(that.getUser());
+          } else {
+            that.logout(false);
+            that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: true });
+            that.setUser(anonUser);
+            resolve(anonUser);
           }
-
-          that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: false });
-          resolve(that.getUser());
-        } else {
+        }).catch((clientErr) => {
           that.logout(false);
-          that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: true });
-          that.setUser(anonUser);
-          resolve(anonUser);
-        }
-      }).catch((clientErr) => {
-        that.logout(false);
-        that.emit(ReactoryApiEventNames.onApiStatusUpdate, { offline: true, clientError: clientErr });
-        resolve({ ...anonUser, offline: true, offlineError: true });
+          that.emit(ReactoryApiEventNames.onApiStatusUpdate, { offline: true, clientError: clientErr });
+          resolve({ ...anonUser, offline: true, offlineError: true });
+        });
+
       });
+      
     });
   }
 
