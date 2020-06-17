@@ -92,7 +92,6 @@ class MaterialFormErrorTemplate extends Component<any, any> {
     };
   }
 
-  debugger;
 
   static ErrorStyles = (theme) => {
     return {
@@ -104,8 +103,6 @@ class MaterialFormErrorTemplate extends Component<any, any> {
 
   renderSingleError() {
     const { errors } = this.props;
-
-    debugger;
 
     const errorComponent = (
       <React.Fragment>
@@ -125,9 +122,7 @@ class MaterialFormErrorTemplate extends Component<any, any> {
 
   renderMultipleErrors() {
     const { errors } = this.props;
-
-    debugger;
-
+    
     const errorComponent = (
       <React.Fragment>
         <List>

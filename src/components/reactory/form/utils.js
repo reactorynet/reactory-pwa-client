@@ -717,13 +717,18 @@ export function toIdSchema(
   for (const name in schema.properties || {}) {
     const field = schema.properties[name];
     const fieldId = idSchema.$id + "_" + name;
-    idSchema[name] = toIdSchema(
-      field,
-      fieldId,
-      definitions,
-      formData[name],
-      idPrefix
-    );
+    try {
+        idSchema[name] = toIdSchema(
+        field,
+        fieldId,
+        definitions,
+        formData[name],
+        idPrefix
+      );
+    } catch (e) {
+       console.error('Error Processing toIdSchema: \n' + e.message, e);
+    }
+    
   }
   return idSchema;
 }

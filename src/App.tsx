@@ -292,7 +292,11 @@ class App extends Component<any, AppState> {
 
           const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
 
-          if(hasRolesForRoute === false) return <NotFound message={`You do not appear to have the correct permissions to access ${routeDef.title || routeDef.path} or component ${routeDef.componentFqn}`} />
+          if(hasRolesForRoute === false) { 
+            api.createNotification(`Please login in order to access ${routeDef.path}`, {
+              showInAppNotification: true,
+            });
+          }
 
           if (auth_validated === true && hasRolesForRoute === true) {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)

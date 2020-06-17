@@ -14,6 +14,7 @@ import { compose } from 'redux'
 import lodash, { isNull, isArray } from 'lodash';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withContentRect } from 'react-measure';
+import { withApi } from '@reactory/client-core/api';
 import {
   Area,
   Bar,
@@ -393,9 +394,9 @@ class BarChartWidget extends Component {
   
 }
 
-export const PieChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(PieChartWidget)
-export const FunnelChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(FunnelChartWidget);
-export const ComposedChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(ComposedChartWidget);
+export const PieChartWidgetComponent = compose(withTheme, withApi, withContentRect('bounds'))(PieChartWidget)
+export const FunnelChartWidgetComponent = compose(withTheme, withApi, withContentRect('bounds'))(FunnelChartWidget);
+export const ComposedChartWidgetComponent = compose(withTheme, withApi, withContentRect('bounds'))(ComposedChartWidget);
 export default { 
   PieChartWidgetComponent,
   FunnelChartWidgetComponent,

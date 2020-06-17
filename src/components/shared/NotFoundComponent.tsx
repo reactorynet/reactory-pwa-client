@@ -3,14 +3,17 @@ import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/styles';
 import ReactoryApi, { withApi } from '@reactory/client-core/api';
 import { UserListItem } from '../user'
+import { withRouter } from 'react-router';
 
 interface NotFoundProps {
   message?: string,
   waitingFor?: string,
   wait?: number,
   args?: any,
+  link?: string,
   api: ReactoryApi,
-  theme: any  
+  theme: any,
+  location: any  
 };
 
 interface NotFoundState {
@@ -58,9 +61,14 @@ class NotFound extends Component<NotFoundProps, NotFoundState> {
     const { found, waitingFor, mustCheck } = this.state;    
     if(found === false) {
       let message = this.props.message;
+      const onUserItemClicked = () => {
+        if(this.props.link) {
+          this.props.location.push(this.props.link);
+        }
+      }
       if(mustCheck === true) message = `Waiting for component ${waitingFor} to load.`
       return (      
-        <UserListItem user={{ firstName: 'Reactory', lastName: 'Bot', id: 'reactory', avatar: 'reactory_bot.png' }} message={this.props.message } />
+        <UserListItem user={{ firstName: 'Reactory', lastName: 'Bot', id: 'reactory', avatar: 'reactory_bot.png' }} message={this.props.message } onClick={onUserItemClicked} />
       )
     } else {
       const { ComponentToMount } = this;
@@ -74,5 +82,5 @@ const NotFoundStyles = (theme: any) => {
   return {};
 };
 
-export default compose(withTheme, withStyles(NotFoundStyles), withApi)(NotFound);
+export default compose(withRouter, withTheme, withStyles(NotFoundStyles), withApi)(NotFound);
 

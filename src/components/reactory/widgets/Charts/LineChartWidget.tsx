@@ -16,6 +16,7 @@ import { compose } from 'recompose';
 import lodash, { isNull, isArray } from 'lodash';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withContentRect } from 'react-measure';
+import { withApi } from '@reactory/client-core/api';
 import {
   Area,
   Bar,
@@ -106,6 +107,6 @@ class LineChartWidget extends PureComponent<any> {
 };
 
 
-const LineChartWidgetComponent = compose(withTheme, withContentRect('bounds'))(LineChartWidget);
+const LineChartWidgetComponent = compose(withTheme, withApi, withContentRect('bounds'))(LineChartWidget);
 
 export default LineChartWidgetComponent;

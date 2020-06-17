@@ -58,8 +58,6 @@ class PricingSliderWidget extends Component {
     defaultValues.push(_wh10Cost);
     defaultValues.push(_threeMonthAveSellingPrice);
 
-    // debugger;
-
     let options = { min: 0, max: 100, step: 1, }
     if (uiSchema && uiSchema['ui:options']) options = { ...options, ...uiSchema['ui:options'] }
 
@@ -99,8 +97,6 @@ class PricingSliderWidget extends Component {
       if (index == 1)
         placement = 'top-start'
 
-        // debugger;
-
       return (
         <Tooltip open={open} enterTouchDelay={0} placement={placement} title={value}>
           {children}
@@ -111,11 +107,9 @@ class PricingSliderWidget extends Component {
     const valueLabelFormat = (labelValue, index) => {
       if (index == 0) {
         // return `R${value} (WH10 Cost Price)`
-        // debugger
         return `${new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(labelValue/100)} (WH10 Cost Price)`
       }
       if (index == 1) {
-      // debugger
         return `${new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(labelValue/100)} (3 Month ave. Selling Price)`
       }
     }

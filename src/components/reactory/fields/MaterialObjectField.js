@@ -221,7 +221,7 @@ class ObjectField extends Component {
       description,
       TitleField,
       DescriptionField,
-      properties: orderedProperties.map(name => {
+      properties: orderedProperties.map(name => {      
         return {
           content: (
             <SchemaField

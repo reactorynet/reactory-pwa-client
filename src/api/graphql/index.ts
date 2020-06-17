@@ -558,8 +558,8 @@ query assesmentWithId($id: String) {
 ` 
 
 const surveysForUser = gql`
-query UserSurveys($id: String) {
-  userSurveys(id: $id) {
+query MoresUserSurvey($id: String) {
+  MoresUserSurvey(id: $id) {
     id
     updatedAt
 		createdAt

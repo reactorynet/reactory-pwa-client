@@ -75,8 +75,10 @@ class FroalaWidget extends Component {
       blockContent: "<p>Build a template and upload it on step 1!</p>",
       externals: [],
       showTemplateConfig: false,
-      showComponentSelector: false,      
+      showComponentSelector: false,    
+      touched: false,  
     }
+
     this.componentDefs = props.api.getComponents([
       'core.FullScreenModal', 
       'core.SpeedDial',
@@ -100,15 +102,12 @@ class FroalaWidget extends Component {
     //console.log('froala editor widget mounted', {p: this.props, ref: this.contentRef});
     this.froalaCheck();
   }
-
+  
 
   componentWillUpdate(nextProps, nextState){
-    //console.log('componentWillUpdate For Editor', {nextProps, nextState, formRef: this.formRef});
-    if(this.state.editor === null) {
-      nextState.model = nextProps.data;    
-    }    
+        
   }
-  
+    
   onTabChanged(evt, value){
     this.setState({ blockStep: value })
   }
@@ -425,13 +424,13 @@ class FroalaWidget extends Component {
       zIndex: 101,
       fontFamilyDefaultSelection: 'Roboto',
       fontFamily: {
+        "Roboto,Helvetica,Arial,sans-serif": "Roboto",        
         'Arial,Helvetica,sans-serif': 'Arial',
         'Georgia,serif': 'Georgia',
         'Impact,Charcoal,sans-serif': 'Impact',
         'Tahoma,Geneva,sans-serif': 'Tahoma',
         "'Times New Roman',Times,serif": 'Times New Roman',
-        'Verdana,Geneva,sans-serif': 'Verdana',
-        "Roboto,Helvetica,Arial,sans-serif": "Roboto"        
+        'Verdana,Geneva,sans-serif': 'Verdana',        
       },
 
       //htmlAllowedTags: ['.*'],
@@ -445,7 +444,7 @@ class FroalaWidget extends Component {
       linkAttributes: {
         clicktracking: "Click Tracking"
       },
-      fullPage: true,
+      fullPage: false,
       events: {
         'froalaEditor.initialized': this.onEditorInitialized
       },

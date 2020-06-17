@@ -158,7 +158,7 @@ class UserSurvey extends Component {
                     </Paper>
                 </Grid>
 
-                <Grid item sm={12} xs={12} md={12} offset={4}>
+                { this.props.showComplete && <Grid item sm={12} xs={12} md={12} offset={4}>
                 <Typography variant='caption' color='primary'>Completed Surveys</Typography>
                     <Paper className={classes.general}>                    
                         {
@@ -171,7 +171,7 @@ class UserSurvey extends Component {
                                 </Fragment> : <SystemUserListItem message={"You don't have any assessment results available yet"} />
                         }                        
                     </Paper>
-                </Grid>
+                    </Grid> }
             </Grid>
         );
     }
@@ -187,9 +187,9 @@ const ThemedSurveyComponent = compose(
 )(UserSurvey);
 
 const UserSurveyComponent = ({ userId, api, onSurveySelect, minimal = true, showComplete = true }) => {
-
+    const user = api.getUser();    
     return (
-        <Query query={api.queries.Surveys.surveysForUser} variables={{ id: api.getUser().id }}>
+        <Query query={api.queries.Surveys.surveysForUser} variables={{ id: user.id }} options={{fetchPolicy: 'network-only'}}>
             {({ loading, error, data }) => {
                 if (loading === true) return (<p>Loading survey data...</p>);
                 if (isNil(error) === false) return (<p>Error during load...</p>);
@@ -200,12 +200,12 @@ const UserSurveyComponent = ({ userId, api, onSurveySelect, minimal = true, show
                     complete: [],
                 };
 
-                data.userSurveys.forEach((assessment) => {
-                    ;
+                data.MoresUserSurvey.forEach((assessment) => {
+                    
                     if(assessment) {
                         if (assessment.complete === true && showComplete === true) surveys.complete.push(assessment)
                         else {
-                            if(assessment.overdue && assessment.overdue === true) surveys.overdue.push(assessment);                                                    
+                            if(assessment.overdue === true) surveys.overdue.push(assessment);                                                    
                             else surveys.current.push(assessment);
                         }
                     }

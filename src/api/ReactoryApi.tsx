@@ -123,9 +123,24 @@ export const componentPartsFromFqn = (fqn) => {
   }
   throw new Error('Component FQN not valid, must have at least nameSpace.name with version being options i.e. nameSpace.name@version')
 }
-
+export interface ReactoryApiUtils {
+  omitDeep: Function,
+  queryString: Function,
+  hashCode: Function,
+  injectResources: Function,
+  componentFqn: Function,  
+  pluginDefinitionValid: Function,
+  moment: Function,
+  objectMapper: Function,
+  template : Function,
+  humanNumber: Function,
+  inspector: Function,
+  gql: Function,
+  humanDate: Function
+}
 
 class ReactoryApi extends EventEmitter {
+  $user: any;
 
   history: any;
   queries: any;
@@ -137,7 +152,7 @@ class ReactoryApi extends EventEmitter {
   register: Function = null;
   reset: Function = null;
   forgot: Function = null;
-  utils: Object = {};
+  utils: ReactoryApiUtils = null;
   companyWithId: Function = null;
   $func: Object;
   rest: Object = null;
@@ -776,6 +791,7 @@ class ReactoryApi extends EventEmitter {
   }
 
   setUser(user) {
+    this.$user = user;
     localStorage.setItem(storageKeys.LoggedInUser, JSON.stringify(user));
   }
 
@@ -981,10 +997,13 @@ class ReactoryApi extends EventEmitter {
   }
 
   getUser() {
+    if(this.$user) return this.$user;
+
     const userString = localStorage.getItem(storageKeys.LoggedInUser);
     if (userString){
       try {
         let parsedUser = JSON.parse(userString);
+        this.$user = parsedUser;
         return parsedUser;
       } catch(parseError) {
         this.log('Could not parse the logged in user data', parseError, 'error');
