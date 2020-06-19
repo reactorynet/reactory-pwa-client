@@ -216,13 +216,7 @@ class App extends Component<any, AppState> {
             else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
           }
 
-          const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
-
-          if(hasRolesForRoute === false) { 
-            api.createNotification(`Please login in order to access ${routeDef.path}`, {
-              showInAppNotification: true,
-            });
-          }
+          const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;          
 
           if (auth_validated === true && hasRolesForRoute === true) {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)
@@ -236,7 +230,11 @@ class App extends Component<any, AppState> {
             return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
           }
 
-          return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
+          if(api.isAnon() === false && hasRolesForRoute === false) {
+            return <NotFound message="You don't have sufficient permissions to access this route" />
+          }
+          
+          return (<p> ... </p>);
         }
       }
 

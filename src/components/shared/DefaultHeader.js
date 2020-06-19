@@ -118,8 +118,9 @@ const Menus = (props) => {
         menu.entries.map((menuItem) => {
           let subnav = null;
           let expandButton = null;
-          let allow = true;
-          if (isArray(menuItem.roles) && isArray(user.roles)) {
+          let allow = false;
+          debugger
+          if (isArray(menuItem.roles) && isArray(user.roles) === true) {
             allow = api.hasRole(menuItem.roles, user.roles);
           }
           if (allow === true) {

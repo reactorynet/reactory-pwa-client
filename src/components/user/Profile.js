@@ -1011,7 +1011,7 @@ class Profile extends Component {
         const that = this;
         const { Cropper, FullScreenModal } = this.componentDefs;
         const onModalClose = () => {
-            this.setStatea({ imageMustCrop : false })
+            this.setState({ imageMustCrop : false })
         };
 
         const onCropAccept = (avatar) => {
@@ -1038,7 +1038,7 @@ class Profile extends Component {
             <FullScreenModal title="Adjust your profile image" open={this.state.imageMustCrop} onClose={onModalClose}>
                 <Cropper src={this.state.profile.avatar} onCancelCrop={onModalClose} onAccept={onCropAccept} crop={{ unit: '%', aspect: 1, width: '%' }}></Cropper>
             </FullScreenModal>
-        )
+        );
     }
 
     render() {
