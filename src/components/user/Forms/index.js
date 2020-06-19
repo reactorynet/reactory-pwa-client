@@ -61,13 +61,19 @@ class Forgot extends Component {
 
   constructor(props, context) {
     super(props, context)
+
+    let lastEmail = '';
+    if(localStorage && localStorage.getItem) {
+      lastEmail = localStorage.getItem('$reactory$last_logged_in_user');
+    }
+
     this.state = {
-      formData: { email: '' },
+      formData: { email: lastEmail },
       mailSent: false,
       message: '',
       hasError: false,
       displayModal: false,
-      email: '',
+      email: lastEmail,
     }
 
     this.onSubmit = this.onSubmit.bind(this);
@@ -85,7 +91,7 @@ class Forgot extends Component {
       that.setState({ mailSent: true })
     }).catch((error) => {
       that.setState({ hasError: true, message: 'Could not send an email. If this problem persists please contact our helpdesk.' })
-    })
+    });
   }
   
   goBack() {
@@ -223,7 +229,7 @@ class ResetPassword extends Component {
       that.setState({ passwordUpdated: true, message: 'Your password has been updated, you will be redirected to the dashboard momentarily' }, ()=>{
         setTimeout(()=>{
           that.props.history.push('/')
-        }, 1500)
+        }, 2500)
       });
 
     }).catch((error) => {

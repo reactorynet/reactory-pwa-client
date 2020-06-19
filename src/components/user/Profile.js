@@ -15,10 +15,11 @@ import {
     Container,
     CircularProgress , List, ListItem, 
     ListItemSecondaryAction, ListItemText, 
+    Paper,
     InputAdornment, Icon, IconButton,
     ExpansionPanel, ExpansionPanelActions,
     ExpansionPanelDetails, ExpansionPanelSummary,    
-    Toolbar,
+    Toolbar, Tooltip
 } from '@material-ui/core';
 
 import Button from '@material-ui/core/Button';
@@ -27,9 +28,6 @@ import SaveIcon from '@material-ui/icons/Save';
 import PhotoCamera from '@material-ui/icons/PhotoCamera';
 import Avatar from '@material-ui/core/Avatar';
 import TextField from '@material-ui/core/TextField';
-import Paper from '@material-ui/core/Paper';
-
-import Tooltip from '@material-ui/core/Tooltip';
 
 import { withApi } from '../../api/ApiProvider';
 import { ReactoryApi } from "../../api/ReactoryApi";
@@ -820,12 +818,12 @@ class Profile extends Component {
         }        
     }
 
-
     renderGeneral() {
         const that = this
-        const { profile, avatarUpdated, emailValid } = this.state;
+        const { profile, avatarUpdated, emailValid, imageMustCrop } = this.state;
         const { firstName, lastName, businessUnit, email, avatar, peers, surveys, teams, __isnew, id, deleted } = profile;
-        const { mode, classes, history, profileTitle } = this.props;
+        const { mode, classes, history, profileTitle, api } = this.props;
+        const { Cropper } = this.componentDefs;
         const defaultFieldProps = {
             margin: "normal",
             fullWidth: true,
@@ -861,11 +859,11 @@ class Profile extends Component {
         const onFileClick = () => {
             const that = this;
             let preview = null;
-            let file = that.userProfileImageFile.files[0];
+            let file = that.userProfileImageFile.files[0];                        
             let reader = new FileReader();
             reader.addEventListener("load", function () {
-                preview = reader.result;
-                that.setState({ profile: { ...that.state.profile, avatar: preview }, avatarUpdated: true });
+                preview = reader.result;                               
+                that.setState({ profile: { ...that.state.profile, avatar: preview },  imageMustCrop: true, avatarUpdated: true });
             }, false);
 
             if (file) {
@@ -897,18 +895,23 @@ class Profile extends Component {
 
         let avatarComponent = null;
         avatarComponent = (
-            <div className={classes.avatarContainer}>
-                <Avatar
-                    src={getAvatar(profile)} alt={`${firstName} ${lastName}`}
-                    className={classNames(classes.avatar, classes.bigAvatar, avatarMouseOver === true ? classes.avatarHover : '')}
-                    onMouseOver={this.onAvatarMouseOver}
-                    onMouseOut={this.onAvatarMouseOut} />
-                <input accept="image/*" className={classes.hiddenInput} onChange={onFileClick} id="icon-button-file" type="file" ref={(n) => that.userProfileImageFile = n} />
-                <label htmlFor="icon-button-file">
-                    <IconButton color="primary" className={classes.button} component="span">
-                        <PhotoCamera />
-                    </IconButton>
-                </label>
+            <div className={classes.avatarContainer}>                
+                    <Tooltip title={`Click on the camera icon to upload / add a new picture`}>
+                    <Avatar
+                        src={that.state.avatarUpdated === false ? getAvatar(profile) : that.state.profile.avatar } alt={`${firstName} ${lastName}`}
+                        className={classNames(classes.avatar, classes.bigAvatar, avatarMouseOver === true ? classes.avatarHover : '')}
+                        onMouseOver={this.onAvatarMouseOver}
+                        onMouseOut={this.onAvatarMouseOut} />
+                    </Tooltip>
+                    
+                    <input accept="image/*" className={classes.hiddenInput} onChange={onFileClick} id="icon-button-file" type="file" ref={(n) => that.userProfileImageFile = n} />
+                    <label htmlFor="icon-button-file">
+                        <Tooltip title={`Select a png or jpeg image that is less than 350kb in size.`}>
+                            <IconButton color="primary" className={classes.button} component="span">
+                                <PhotoCamera />
+                            </IconButton>
+                        </Tooltip>
+                    </label>                    
             </div>);
 
 
@@ -922,7 +925,7 @@ class Profile extends Component {
                         <TextField {...defaultFieldProps} label='Name' value={firstName} helperText={this.props.firstNameHelperText || 'Please use your first name'} onChange={updateFirstname} />
                         <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} onKeyPressCapture={onSurnameKeyPress}/>                        
                     </form>
-
+                
                     <div className={classes.avatarContainer} style={{ justifyContent: 'flex-end', marginTop: '5px' }}>
                         {this.props.withBackButton && <Button onClick={back}><CloseIcon />&nbsp;BACK</Button> }
                         {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ saveDisabled }><SaveIcon />&nbsp;SAVE</Button>}                        
@@ -1004,16 +1007,51 @@ class Profile extends Component {
 
     }
 
+    renderCropper(){
+        const that = this;
+        const { Cropper, FullScreenModal } = this.componentDefs;
+        const onModalClose = () => {
+            this.setStatea({ imageMustCrop : false })
+        };
+
+        const onCropAccept = (avatar) => {
+            //debugger;
+            let preview = '';
+            let reader = new FileReader();
+        
+            reader.addEventListener("load", function () {
+                preview = reader.result;                               
+                that.setState({ profile: { ...that.state.profile, avatar: preview },  imageMustCrop: false, imageCropped: true, avatarUpdated: true });
+            }, false);
+
+            let xhr = new XMLHttpRequest(); 
+            xhr.open("GET", avatar); 
+            xhr.responseType = "blob";//force the HTTP response, response-type header to be blob
+            xhr.onload = function() 
+            {
+                reader.readAsDataURL(xhr.response);//xhr.response is now a blob object
+            }
+            xhr.send();      
+        }
+
+        return (
+            <FullScreenModal title="Adjust your profile image" open={this.state.imageMustCrop} onClose={onModalClose}>
+                <Cropper src={this.state.profile.avatar} onCancelCrop={onModalClose} onAccept={onCropAccept} crop={{ unit: '%', aspect: 1, width: '%' }}></Cropper>
+            </FullScreenModal>
+        )
+    }
+
     render() {
         const { classes } = this.props;
         return (
-            <Container md="6" sm="12" xs="12">
-                <Grid container spacing={3}>
+            <Container sm="12" xs="12" md="6" lg="4" >
+                <Grid container spacing={2}>
                 {this.renderHeader()}
                 {this.renderGeneral()}
                 {this.renderMemberships()}
                 {this.renderPeers()}
-                {this.renderFooter()}                
+                {this.renderFooter()}
+                {this.renderCropper()}                
                 </Grid>
             </Container>            
         );
@@ -1036,15 +1074,18 @@ class Profile extends Component {
         this.renderHeader = this.renderHeader.bind(this);
         this.renderFooter = this.renderFooter.bind(this);
         this.renderMemberships = this.renderMemberships.bind(this);
+        this.renderCropper = this.renderCropper.bind(this);
         this.inviteUserByEmail = this.inviteUserByEmail.bind(this);
 
         this.state = {
             avatarMouseOver: false,
             profile: { ...props.profile },
             avatarUpdated: false,
+            imageCropped: false,
+            imageMustCrop: false,
             showPeerSelection: false,
-            selectedMembership: null,
-            emailValid: false,
+            selectedMembership: null,            
+            emailValid: props.profile.email && isEmail(props.profile.email) === true,
             help: props.api.queryObject.help === "true",
             helpTopic: props.api.queryObject.helptopics,
             highlight: props.api.queryObject.peerconfig === "true" ? "peers" : null,
@@ -1056,7 +1097,8 @@ class Profile extends Component {
             'core.Loading',
             'core.FullScreenModal',
             'core.CreateProfile',
-            'core.UserListItem'
+            'core.UserListItem',
+            'core.Cropper'
         ];
                 
         this.componentDefs = props.api.getComponents(components);

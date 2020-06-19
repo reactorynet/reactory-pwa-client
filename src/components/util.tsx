@@ -152,11 +152,11 @@ export  const CenteredContainer = ( props ) => {
     return `${partnerThemeRoute}${path}`;
   }
 
-  export const getAvatar = (profile) => {
+  export const getAvatar = (profile, alt) => {
     if(nil(profile)) return CDNProfileResource();
     if(nil(profile.avatar)) return CDNProfileResource();
     if(profile.anon === true) return CDNProfileResource();
-    return CDNProfileResource(profile.id, profile.avatar);    
+    return alt || CDNProfileResource(profile.id, profile.avatar);    
     //return profile.avatar
   };
 

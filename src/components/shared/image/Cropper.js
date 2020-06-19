@@ -18,7 +18,7 @@ export class Cropper extends Component {
     super(props, context)
     this.state = {
       src: props.src || null,
-      crop: {
+      crop: props.crop || {
         unit: "%",
         width: 30,
         aspect: 16 / 9
@@ -119,7 +119,7 @@ export class Cropper extends Component {
               </ButtonGroup>                
             </Toolbar>          
             {this.props.src && (
-              <div style={{display: 'flex', justifyContent: 'center'}}>
+              <div style={{display: 'flex', justifyContent: 'center', height: '370px', width: '370px'}}>
                 <ReactCrop
                   src={this.props.src}
                   crop={crop}
