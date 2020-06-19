@@ -364,6 +364,10 @@ const apiStatus = gql`
         avatar
       }
       memberships {
+        client {
+          id          
+          name
+        }
         organization {
           id
           name

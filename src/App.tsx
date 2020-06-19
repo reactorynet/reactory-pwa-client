@@ -32,6 +32,7 @@ import {
 import ReactoryApi, { ApiProvider, ReactoryApiEventNames } from './api'
 import { fetch } from "whatwg-fetch";
 import { deepEquals } from './components/reactory/form/utils';
+import ReactoryApolloClient from './api/ReactoryApolloClient';
 
 const packageInfo = require('../package.json');
 
@@ -47,76 +48,6 @@ if (localStorage) {
   localStorage.setItem('REACT_APP_API_ENDPOINT', REACT_APP_API_ENDPOINT);
 }
 
-const anonToken = process.env.ANON_USER_TOKEN
-// get the authentication token from local storage if it exists
-const token = localStorage.getItem('auth_token') || anonToken;
-
-const authLink = setContext((_, { headers }) => {
-  //const anonToken = process.env.ANON_USER_TOKEN
-  // get the authentication token from local storage if it exists
-  //const token = localStorage.getItem('auth_token') || anonToken;
-
-  // return the headers to the context so httpLink can read them
-  return {
-    headers: {
-      ...headers,
-      authorization: token ? `Bearer ${token}` : "",
-      'x-client-key': `${process.env.REACT_APP_CLIENT_KEY}`,
-      'x-client-pwd': `${process.env.REACT_APP_CLIENT_PASSWORD}`
-    }
-  }
-});
-
-/*
-const httpLink = createHttpLink({
-  uri: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`,
-  fetch: fetch
-});
-*/
-const uploadLink = createUploadLink({
-  uri: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`,
-  fetch: fetch
-});
-
-const cache = new InMemoryCache();
-
-const client = new ApolloClient({
-  link: authLink.concat(uploadLink),
-  cache,
-  defaultOptions: {
-
-    watchQuery: {
-      fetchPolicy: 'cache-and-network',
-      errorPolicy: 'ignore',
-    },
-
-    query: {
-      fetchPolicy: 'cache-first',
-      errorPolicy: 'all',
-    },
-
-    mutate: {
-      fetchPolicy: 'cache-first',      
-      errorPolicy: 'all',
-    },
-  },
-});
-
-
-
-const ws_client = new SubscriptionClient(`${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`.replace('http', 'ws'), {
-  reconnect: true,
-  reconnectionAttempts: 5,
-  timeout: 1000,  
-  connectionParams: {
-    Authorization: `Bearer ${token}`,
-    authToken: token
-  }
-});
-
-const ws_link = new WebSocketLink(ws_client);
-
-
 const setTheme = (theme) => {
   localStorage.setItem('theme', theme)
 };
@@ -125,11 +56,10 @@ const getTheme = () => {
   return localStorage.getItem('theme')
 }
 
-const api = new ReactoryApi(client, {
+const api = new ReactoryApi({
   clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
   clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
   $version: packageInfo.version,
-  $ws_link: ws_link,
 });
 
 //register built-in components
@@ -170,11 +100,7 @@ class App extends Component<any, AppState> {
   constructor(props, context) {
     super(props, context);
 
-    const query = queryString.parse(window.location.search)
-    if (query.auth_token) localStorage.setItem('auth_token', query.auth_token);
-    api.queryObject = query;
-    api.queryString = window.location.search;
-    api.objectToQueryString = queryString.stringify;
+   
 
     this.state = {
       drawerOpen: false,
@@ -323,6 +249,16 @@ class App extends Component<any, AppState> {
 
   componentDidMount() {
     const that = this;
+
+    const query = queryString.parse(window.location.search)
+    if (query.auth_token) { 
+      localStorage.setItem('auth_token', query.auth_token);
+      api.client = ReactoryApolloClient().client;
+    }
+    api.queryObject = query;
+    api.queryString = window.location.search;
+    api.objectToQueryString = queryString.stringify;
+
     if (window && !window.reactory) {
       window.reactory = {
         api,
@@ -422,7 +358,7 @@ class App extends Component<any, AppState> {
         <React.Fragment>
           <CssBaseline />
           <Provider store={store}>
-            <ApolloProvider client={client}>
+            <ApolloProvider client={api.client}>
               <ApiProvider api={api} history={this.props.history}>
                 <ThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>

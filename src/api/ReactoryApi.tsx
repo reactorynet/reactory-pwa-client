@@ -31,6 +31,7 @@ import queryString from '../query-string';
 import humanNumber from 'human-number';
 import humanDate from 'human-date';
 import ApiProvider, { withApi } from './ApiProvider';
+import ReactoryApolloClient from './ReactoryApolloClient';
 
 import Reactory from '../types/reactory';
 
@@ -186,13 +187,19 @@ class ReactoryApi extends EventEmitter {
   objectToQueryString: Function;
 
 
-  constructor(client, props) {
+  constructor(props) {
     super();
+
+    const {
+      client,
+      ws_link
+    } = ReactoryApolloClient();
 
     this.history = null;
     this.props = props;
     this.componentRegister = {};
     this.client = client;
+    //this.$ws_link = ws_link;
     this.queries = GraphQL.queries;
     this.mutations = GraphQL.mutations;
     this.login = RestApi.login.bind(this);
@@ -566,9 +573,12 @@ class ReactoryApi extends EventEmitter {
   }
 
   afterLogin(user) {
-    this.setUser(user);
+    //this.setUser(user);
     this.setAuthToken(user.token);
-    this.forms(true).then();
+    const { client, ws_link } = ReactoryApolloClient();
+    this.client = client;
+    //this.$ws_link = ws_link;
+    //this.forms(true).then();
     return this.status({ emitLogin: true });
   }
 
@@ -978,9 +988,11 @@ class ReactoryApi extends EventEmitter {
   logout(refreshStatus = true) {
     const user = this.getUser();
     localStorage.removeItem(storageKeys.AuthToken);
+    const { client, ws_link } = ReactoryApolloClient();
+    this.client = client;
     this.setUser({ ...user, ...anonUser });
     if (refreshStatus === true) {
-      this.status({ emitLogin: false }).then((done) => {
+      this.status({ emitLogin: false }).then((apiStatus) => {        
         this.emit(ReactoryApiEventNames.onLogout);
       });
     } else {
@@ -1049,9 +1061,7 @@ class ReactoryApi extends EventEmitter {
   status(options = { emitLogin: false }) {
     const that = this;
     return new Promise((resolve, reject) => {
-      this.forms(true).then(()=>{
-        
-
+      this.forms(true).then(()=>{      
         that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
           if (result.data.apiStatus.status === "API OK") {
             that.setUser({ ...result.data.apiStatus });
