@@ -2,7 +2,7 @@
   "name": "@reactory/client",
   "displayName": "Reactory Client",
   "browser": "index.js",
-  "version": "0.8.6-RC1",
+  "version": "0.8.6-RC2",
   "private": true,
   "homepage": ".",
   "author": {

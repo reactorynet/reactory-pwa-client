@@ -229,7 +229,7 @@ class ResetPassword extends Component {
     }).catch((error) => {
       console.error('Error sending forgot password email to user', error);
       //that.setState({ hasError: true, message: 'Could not send an email. If this problem persists please contact our helpdesk.' })
-      that.setState({ passwordUpdated: false, message: 'Your could not be updated, please try again. If this problem persists please contact the administrator', hasError: true });
+      that.setState({ passwordUpdated: false, message: 'Your password could not be updated, please try again. If this problem persists please contact the administrator', hasError: true });
     });
   }
 
