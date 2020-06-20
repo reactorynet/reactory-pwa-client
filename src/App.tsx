@@ -33,6 +33,7 @@ import ReactoryApi, { ApiProvider, ReactoryApiEventNames } from './api'
 import { fetch } from "whatwg-fetch";
 import { deepEquals } from './components/reactory/form/utils';
 import ReactoryApolloClient from './api/ReactoryApolloClient';
+import { Typography, Icon } from '@material-ui/core';
 
 const packageInfo = require('../package.json');
 
@@ -130,7 +131,9 @@ class App extends Component<any, AppState> {
       'core.NotificationComponent@1.0.0',
       'core.NotFound',
     ]);
-  }  
+  }
+  
+  
 
   onRouteChanged(path, state) {
     api.log(`onRouteChange Handler`, [path, state], 'debug');
@@ -161,7 +164,7 @@ class App extends Component<any, AppState> {
       })
       
     } else {
-
+      
       if(status.offline !== true && self.statusInterval) {
         clearInterval(self.statusInterval);
       }
@@ -176,9 +179,6 @@ class App extends Component<any, AppState> {
       } 
 
     }
-
-    
-
   }
 
   configureRouting() {
@@ -321,10 +321,7 @@ class App extends Component<any, AppState> {
         }
       }
     }
-
-
     
-
     const Globals = (props, context) => {              
       let globalForms =  api.getGlobalComponents();
       return (
@@ -332,7 +329,6 @@ class App extends Component<any, AppState> {
         { globalForms.map((GLOBALFORM, gidx) => <GLOBALFORM key={gidx}></GLOBALFORM>) }
       </React.Fragment>
       )
-
     };
 
     api.muiTheme = muiTheme;
@@ -341,16 +337,14 @@ class App extends Component<any, AppState> {
 
     if (offline === true && auth_validated === true) {
       modal = (
-        <FullScreenModal open={true} title={'Server is offline, stand by'}>
-          <p style={{ margin: 'auto', fontSize: '20px' }}>We apologise for the inconvenience, but it seems like the reactory server offline. This notification will close automatically when the server is available again.</p>
+        <FullScreenModal open={true} title={'Server is offline, stand by'}>          
+          <Typography style={{ margin: 'auto', fontSize: '20px', padding: '8px' }} variant="body1"><Icon>report_problem</Icon>We apologise for the inconvenience, but it seems like the reactory server available yet. This notification will close automatically when the server is available again.</Typography>
         </FullScreenModal>
       )
     }
 
     const routes = this.configureRouting();
-
-    // {this.state.notifications && this.state.notifications.length > 0 && <NotificationComponent notifications={ this.state.notifications } deleteNotification={this.deleteNotification}></NotificationComponent>}
-
+  
     return (
       <Router ref={this.router}>
         <React.Fragment>
@@ -364,7 +358,8 @@ class App extends Component<any, AppState> {
                       <Globals />
                       <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
                       <NotificationComponent></NotificationComponent>                                            
-                      { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}                                                                  
+                      { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}  
+                      { modal }                                                                
                     </React.Fragment>
                   </MuiPickersUtilsProvider>
                 </ThemeProvider>

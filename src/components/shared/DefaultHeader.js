@@ -119,10 +119,11 @@ const Menus = (props) => {
           let subnav = null;
           let expandButton = null;
           let allow = false;
-          debugger
+          
           if (isArray(menuItem.roles) && isArray(user.roles) === true) {
             allow = api.hasRole(menuItem.roles, user.roles);
           }
+          
           if (allow === true) {
             const goto = () => {
               self.navigateTo(menuItem.link, true);

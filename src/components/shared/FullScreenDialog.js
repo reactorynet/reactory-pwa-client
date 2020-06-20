@@ -11,6 +11,7 @@ import Typography from '@material-ui/core/Typography';
 import CloseIcon from '@material-ui/icons/Close';
 import Slide from '@material-ui/core/Slide';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { deepEquals } from '../reactory/form/utils';
 import {
   useMediaQuery
 } from '@material-ui/core';
@@ -61,15 +62,11 @@ class FullScreenDialog extends Component {
   }
 
   shouldComponentUpdate(nextProps, nextState){
-
-    const _nextProps = {...nextProps};
-    const _props = {...this.props}; 
-
-    delete _nextProps.children;
-    delete _props.children;
-
-
-    return isEqual(nextState, this.state) === false || isEqual(_nextProps, _props) === false;
+    const _nextProps = { open: nextProps.open, title: nextProps.title };
+    const _props = { open: this.props.open, title: this.props.title }; 
+        
+    const shouldUpdate =  deepEquals(nextState, this.state) === false || deepEquals(_nextProps, _props) === false;
+    return shouldUpdate;
   }
 
   render() {
