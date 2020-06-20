@@ -1,0 +1,1022 @@
+[
+    {
+      "id": "b347cf79-17f8-43b5-86b3-412e36f55ce4",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "General Manager",
+      "reportDate": "2017-10-01",
+      "score": 64,
+      "ratings": [
+        {
+          "id": "9344b54f-7357-4593-8f85-cbec289388fb",
+          "quality": {
+            "id": "3c173880-0806-46f1-b5bc-bb87685f2044",
+            "title": "Integrity",
+            "score": 3
+          }
+        },
+        {
+          "id": "0018654a-9420-47d1-92ec-efca724a60e2",
+          "quality": {
+            "id": "6a887b4d-a1da-4d42-adf3-8aa506eb0779",
+            "title": "Professionalism",
+            "score": 3.8
+          }
+        },
+        {
+          "id": "9ad80e66-5a84-4bd8-8b71-8fff8f3abd3e",
+          "quality": {
+            "id": "d4b4dbbd-3a15-4558-b9e5-db38c0552894",
+            "title": "Passion",
+            "score": 1.4
+          }
+        },
+        {
+          "id": "82c41f57-7e12-415b-b4b0-7634ba8f70fd",
+          "quality": {
+            "id": "073bc17e-392d-4fce-87b4-b544f1403200",
+            "title": "Humility",
+            "score": 3.5
+          }
+        },
+        {
+          "id": "80f4219a-da25-4576-a595-4a8b089ffc92",
+          "quality": {
+            "id": "00b72d30-77ab-4da2-8cd5-f6280066d67f",
+            "title": "Care",
+            "score": 1.3
+          }
+        }
+      ]
+    },
+    {
+      "id": "971ffe46-bc05-40c5-acbc-f7522b00e40b",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Senior Cost Accountant",
+      "reportDate": "2017-09-15",
+      "score": 78,
+      "ratings": [
+        {
+          "id": "adea3057-fe04-4c75-9042-9824a2b85963",
+          "quality": {
+            "id": "3a70004a-5946-4b08-a72f-530df2e5869a",
+            "title": "Integrity",
+            "score": 4.3
+          }
+        },
+        {
+          "id": "1a997ace-fa26-4229-bf55-4e593df4543d",
+          "quality": {
+            "id": "3bf517cd-69b6-44aa-b795-0553d0661d04",
+            "title": "Professionalism",
+            "score": 4.7
+          }
+        },
+        {
+          "id": "2c47e16d-305f-4b9c-affd-dc25bd9e5b01",
+          "quality": {
+            "id": "a998b1a5-7ada-4735-9a81-67ad1072a7ec",
+            "title": "Passion",
+            "score": 1.1
+          }
+        },
+        {
+          "id": "7925b4bf-c58e-42e8-a8d3-28548a7537bb",
+          "quality": {
+            "id": "ef9f58cb-9b01-4f83-a83e-eb55861aad07",
+            "title": "Humility",
+            "score": 4.3
+          }
+        },
+        {
+          "id": "40d98000-aa5d-4d33-987a-d6d7143b0466",
+          "quality": {
+            "id": "194f03cc-7327-47e7-9baf-6bca40ae12c5",
+            "title": "Care",
+            "score": 1.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "6edbdaa3-0c34-4c7f-814b-20fc93a0e290",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Dental Hygienist",
+      "reportDate": "2018-02-16",
+      "score": 78,
+      "ratings": [
+        {
+          "id": "22b148a8-32cf-4322-a40d-3d70bc2bfe18",
+          "quality": {
+            "id": "6775bd59-e1f4-49da-ba56-31b1e4cbd4d8",
+            "title": "Integrity",
+            "score": 4.6
+          }
+        },
+        {
+          "id": "03f603d5-785c-4d9e-a7bc-ed24e7be7a24",
+          "quality": {
+            "id": "5f9c527c-7506-49ca-bce8-e468870766e6",
+            "title": "Professionalism",
+            "score": 2
+          }
+        },
+        {
+          "id": "d5aad114-600f-4b63-93e5-c003860139e2",
+          "quality": {
+            "id": "9c661da1-d0d2-4a04-9a25-d0f554279c28",
+            "title": "Passion",
+            "score": 3.9
+          }
+        },
+        {
+          "id": "de01cac2-72ef-4edc-b627-8c21d66cafb9",
+          "quality": {
+            "id": "98e69890-5bf3-4bfe-a8ed-aaeb296b9096",
+            "title": "Humility",
+            "score": 4
+          }
+        },
+        {
+          "id": "5e93404f-51b9-46e8-b41f-67fa2107c1ea",
+          "quality": {
+            "id": "32fc0894-d868-4b17-97b8-045bffdb6e18",
+            "title": "Care",
+            "score": 4.3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ececce47-16f7-4fd8-ab8f-1d900f73d141",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Structural Analysis Engineer",
+      "reportDate": "2018-03-06",
+      "score": 71,
+      "ratings": [
+        {
+          "id": "343b043f-6313-4419-9a70-67a5c3235ad7",
+          "quality": {
+            "id": "953febf5-ba70-434b-b30c-9dd4582bda50",
+            "title": "Integrity",
+            "score": 4.2
+          }
+        },
+        {
+          "id": "d381b5c1-cf63-468f-8995-fb6f23e5c923",
+          "quality": {
+            "id": "7624988d-1cb9-4098-bd57-9fa7e0f4de1e",
+            "title": "Professionalism",
+            "score": 2.4
+          }
+        },
+        {
+          "id": "29848560-3b7b-4f45-9144-c3fd26e109c0",
+          "quality": {
+            "id": "e833b740-a46a-445e-b6ab-11d77349844d",
+            "title": "Passion",
+            "score": 1.8
+          }
+        },
+        {
+          "id": "39a73667-bd19-4e1f-9bbf-53111916764b",
+          "quality": {
+            "id": "8afa838a-14da-4a7b-af3d-07976a9950c5",
+            "title": "Humility",
+            "score": 2.5
+          }
+        },
+        {
+          "id": "be4b0dc2-6090-4048-adc5-a75f86d9b9a9",
+          "quality": {
+            "id": "5893d4fe-86a6-48f6-8ddc-cc3025465cd5",
+            "title": "Care",
+            "score": 1.1
+          }
+        }
+      ]
+    },
+    {
+      "id": "e6a134d8-2de6-4e5b-ab89-ce6ed30760c6",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Speech Pathologist",
+      "reportDate": "2017-12-04",
+      "score": 80,
+      "ratings": [
+        {
+          "id": "945952db-6956-4943-8db0-0e83b4aad7da",
+          "quality": {
+            "id": "d3705b34-71a1-4405-aefb-cd32ac198128",
+            "title": "Integrity",
+            "score": 1.6
+          }
+        },
+        {
+          "id": "b396ac09-091a-462c-b5fd-0ee4d79e7aa8",
+          "quality": {
+            "id": "fbf6a0d4-893e-4ca8-86c2-c71f57d29073",
+            "title": "Professionalism",
+            "score": 4.2
+          }
+        },
+        {
+          "id": "35eb46b2-5e5a-4994-82a5-b6fca54253ce",
+          "quality": {
+            "id": "8e3656c8-825b-40c8-a0fb-08082fe5ded1",
+            "title": "Passion",
+            "score": 2.3
+          }
+        },
+        {
+          "id": "6808c735-1e33-46f0-adac-220aa2523f34",
+          "quality": {
+            "id": "07eaca80-aa36-4975-ab0a-d7918be75816",
+            "title": "Humility",
+            "score": 1.2
+          }
+        },
+        {
+          "id": "81ff8713-e3c1-490a-82f7-8c7453eed971",
+          "quality": {
+            "id": "0f5c8ab5-809e-413f-a0c2-8dcc7cc02bb6",
+            "title": "Care",
+            "score": 3.8
+          }
+        }
+      ]
+    },
+    {
+      "id": "e4981736-8b80-4a1a-9bbf-4916812ccaee",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Help Desk Technician",
+      "reportDate": "2017-12-28",
+      "score": 83,
+      "ratings": [
+        {
+          "id": "f58936d2-6600-4333-b143-dd265b19ad56",
+          "quality": {
+            "id": "1051be98-5da4-4ab3-9884-8c966b21db5c",
+            "title": "Integrity",
+            "score": 3
+          }
+        },
+        {
+          "id": "2dd3582f-67f6-4562-a7fd-05115bc22703",
+          "quality": {
+            "id": "91c8d357-2034-4d93-b7ab-a6d8950181cc",
+            "title": "Professionalism",
+            "score": 3.1
+          }
+        },
+        {
+          "id": "6a184b28-821d-4132-862e-fceb00d45596",
+          "quality": {
+            "id": "aee6d3b6-3cfb-487f-b89c-1b28c589b46a",
+            "title": "Passion",
+            "score": 3.8
+          }
+        },
+        {
+          "id": "16e467be-cbda-4829-8ca9-ef53ee7c3f7a",
+          "quality": {
+            "id": "ba16b85f-6b20-4cc4-876c-e9c6d7c9d7f3",
+            "title": "Humility",
+            "score": 4.7
+          }
+        },
+        {
+          "id": "f8d7fcfb-42a0-495d-af97-113859114f64",
+          "quality": {
+            "id": "585f281a-8867-4aeb-b99e-999decafad75",
+            "title": "Care",
+            "score": 4.6
+          }
+        }
+      ]
+    },
+    {
+      "id": "a9420bab-2734-4574-aeb4-77ddb7516562",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Assistant Manager",
+      "reportDate": "2017-07-06",
+      "score": 91,
+      "ratings": [
+        {
+          "id": "a6038b29-1586-45df-b297-a48e6bc70ef5",
+          "quality": {
+            "id": "483188be-7754-4694-8825-0f1f6ef654b0",
+            "title": "Integrity",
+            "score": 2
+          }
+        },
+        {
+          "id": "70c2df98-6a94-42ba-890b-471b131a8c09",
+          "quality": {
+            "id": "176b92c8-7a9f-46d0-82fe-c53b03f01d96",
+            "title": "Professionalism",
+            "score": 1.5
+          }
+        },
+        {
+          "id": "60ef7d84-c587-40d2-8199-c2d0775fe996",
+          "quality": {
+            "id": "3a1a0b0a-a559-443c-893b-8a8d747e8c8e",
+            "title": "Passion",
+            "score": 4
+          }
+        },
+        {
+          "id": "6abbdf97-c1fe-4e74-9660-02c1aaa0c965",
+          "quality": {
+            "id": "3db8b790-c4cf-4135-afb8-876282ff0edb",
+            "title": "Humility",
+            "score": 3.5
+          }
+        },
+        {
+          "id": "42c49a5e-bdb8-4801-ac39-76c5b3788d65",
+          "quality": {
+            "id": "82a93453-72b8-43de-a87f-2d53394900d7",
+            "title": "Care",
+            "score": 4.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "d4fcdc37-5fb9-492b-91fd-48de108e163f",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Web Developer I",
+      "reportDate": "2018-03-20",
+      "score": 78,
+      "ratings": [
+        {
+          "id": "d7d29410-bf08-4e5d-bb36-d48fe02d9c26",
+          "quality": {
+            "id": "65c270ca-fa12-4ff2-b769-ab0646b9d8e8",
+            "title": "Integrity",
+            "score": 2.6
+          }
+        },
+        {
+          "id": "3ecf4e57-30b8-4040-aa35-1c601664a378",
+          "quality": {
+            "id": "c312aa26-4a6e-4ea0-bfe7-c858e7352e35",
+            "title": "Professionalism",
+            "score": 2.6
+          }
+        },
+        {
+          "id": "54020754-a8ec-474b-9b47-0f02b9bf35c7",
+          "quality": {
+            "id": "d8cb0f8c-eb36-4a4e-a752-52bbb1751bef",
+            "title": "Passion",
+            "score": 3.4
+          }
+        },
+        {
+          "id": "a487ed20-6fb1-432e-8f0a-1f54ffd4e7bd",
+          "quality": {
+            "id": "8c70af48-29ed-4957-ad0c-d03dc7af2ebe",
+            "title": "Humility",
+            "score": 4.4
+          }
+        },
+        {
+          "id": "04a234e7-cd2f-45d0-812f-a853295a56d7",
+          "quality": {
+            "id": "81cdcd7f-7c03-4650-a584-d84777e6b869",
+            "title": "Care",
+            "score": 3.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "29c5139f-c0f8-4c77-805d-f527b50f4de6",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Quality Control Specialist",
+      "reportDate": "2018-03-05",
+      "score": 90,
+      "ratings": [
+        {
+          "id": "bc7bee44-38b2-4377-94fe-43f691b2a3db",
+          "quality": {
+            "id": "df532dcd-6d4b-4e15-93f0-b7520f163c22",
+            "title": "Integrity",
+            "score": 3.9
+          }
+        },
+        {
+          "id": "d425a15b-1b50-4a62-9821-5a9f3226c466",
+          "quality": {
+            "id": "5e07ecfd-f68a-4bd7-88ff-c55844ae3f0c",
+            "title": "Professionalism",
+            "score": 1.9
+          }
+        },
+        {
+          "id": "9d8abcb7-7116-48dd-bfed-ca29d04a544e",
+          "quality": {
+            "id": "e80da35d-cd90-4805-8e93-8a86129ab1b6",
+            "title": "Passion",
+            "score": 4.4
+          }
+        },
+        {
+          "id": "c6ea7059-6370-4ba4-ba3b-9abadc6d9fb7",
+          "quality": {
+            "id": "b011ec99-ef54-4d2b-a759-a5ec141215bf",
+            "title": "Humility",
+            "score": 2.7
+          }
+        },
+        {
+          "id": "188e75ab-6736-40e1-83c2-912da033ba08",
+          "quality": {
+            "id": "9175be61-b2b0-44fd-ac44-97d0c33f6381",
+            "title": "Care",
+            "score": 3.8
+          }
+        }
+      ]
+    },
+    {
+      "id": "3f6f40e4-c487-42e6-9018-01cdfdd37dbe",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Electrical Engineer",
+      "reportDate": "2017-12-28",
+      "score": 67,
+      "ratings": [
+        {
+          "id": "120613bd-c785-449a-b823-d6d35aa5fdbe",
+          "quality": {
+            "id": "63ca24e0-35a5-430e-91aa-bb94e0750399",
+            "title": "Integrity",
+            "score": 1.8
+          }
+        },
+        {
+          "id": "82327e04-12af-4890-837a-3ebe0ab4e242",
+          "quality": {
+            "id": "c00774bb-fc46-46f2-8d96-fc2825ff45ff",
+            "title": "Professionalism",
+            "score": 4.6
+          }
+        },
+        {
+          "id": "5918ee6c-b0d0-4aa0-997f-99e13200fdad",
+          "quality": {
+            "id": "06674469-e4c2-488a-b50f-5f647bb7d73e",
+            "title": "Passion",
+            "score": 1.8
+          }
+        },
+        {
+          "id": "b7802255-fce3-4cc6-825e-25695c04ea69",
+          "quality": {
+            "id": "afcd16cd-8e8b-4a7e-be0f-68d30a8ac241",
+            "title": "Humility",
+            "score": 1.3
+          }
+        },
+        {
+          "id": "2360e1e3-d8c3-4130-8346-7c4e395f7829",
+          "quality": {
+            "id": "9415dc59-5139-4c49-9145-590e5bd678e8",
+            "title": "Care",
+            "score": 2.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "a4a411dd-d9d1-443d-8837-762391598634",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "GIS Technical Architect",
+      "reportDate": "2018-03-14",
+      "score": 60,
+      "ratings": [
+        {
+          "id": "3e207232-033f-42e9-8639-7d3a69844428",
+          "quality": {
+            "id": "9ec3bc83-e3cd-493a-8c2d-f4895f2f8b21",
+            "title": "Integrity",
+            "score": 4
+          }
+        },
+        {
+          "id": "4244f6f1-4b88-40a1-9d89-b0796e67790e",
+          "quality": {
+            "id": "a77f34a6-4235-4ffa-b15a-6321ad268de6",
+            "title": "Professionalism",
+            "score": 1.6
+          }
+        },
+        {
+          "id": "36d06958-215d-488d-bd3b-55a07e184f0d",
+          "quality": {
+            "id": "c0284616-e581-4a14-ab97-3f23cf3cfe41",
+            "title": "Passion",
+            "score": 3.5
+          }
+        },
+        {
+          "id": "5b60f7d7-ba2d-4ffe-92bb-f5d3ae1fd1fe",
+          "quality": {
+            "id": "af7293b8-c02f-4ef7-bfc8-deb32b0cf8e6",
+            "title": "Humility",
+            "score": 2.7
+          }
+        },
+        {
+          "id": "5e334c37-0957-4a96-bcf1-f986f48008f2",
+          "quality": {
+            "id": "21d1998c-3b03-40e4-b807-12dd29b1453d",
+            "title": "Care",
+            "score": 1.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "8beaf14e-16cc-462f-915c-cd467e10d752",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Help Desk Technician",
+      "reportDate": "2017-11-06",
+      "score": 56,
+      "ratings": [
+        {
+          "id": "2dff2f7d-b7e0-4175-8f80-79622540da1e",
+          "quality": {
+            "id": "841ebc9b-9613-480d-bb8a-3c1bca52bcbd",
+            "title": "Integrity",
+            "score": 1.6
+          }
+        },
+        {
+          "id": "d69b43f3-2a9f-44c5-8290-9b932b3e7aeb",
+          "quality": {
+            "id": "2af27537-c108-4608-a4b9-968a8524a7c0",
+            "title": "Professionalism",
+            "score": 1.7
+          }
+        },
+        {
+          "id": "2e8fcc5d-6673-451c-8401-b090361ca853",
+          "quality": {
+            "id": "1fbe427d-29aa-43c3-8384-7b2253fa34b0",
+            "title": "Passion",
+            "score": 2.7
+          }
+        },
+        {
+          "id": "d48be6b7-3ab4-4f1e-9a22-6d970362fead",
+          "quality": {
+            "id": "93bb7631-e8c8-4d4e-a583-b301eddecd2a",
+            "title": "Humility",
+            "score": 4
+          }
+        },
+        {
+          "id": "dfa6e6f7-6635-4619-9482-e86438df4807",
+          "quality": {
+            "id": "a4fe5386-3ddf-4524-96ec-e2dfd953db1f",
+            "title": "Care",
+            "score": 2.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "1eea28cf-c57b-48ac-b44a-90635e667ce6",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Quality Control Specialist",
+      "reportDate": "2018-01-10",
+      "score": 60,
+      "ratings": [
+        {
+          "id": "c817fa24-926e-486f-80f1-c6c15c44ef60",
+          "quality": {
+            "id": "5b37dc58-f85d-426e-af9d-752e6ca4c5bd",
+            "title": "Integrity",
+            "score": 3.6
+          }
+        },
+        {
+          "id": "afa09754-28a9-4d2a-8560-0fc2e3523eec",
+          "quality": {
+            "id": "b58681ba-b1fe-476d-9fe6-0a02387498a9",
+            "title": "Professionalism",
+            "score": 4.6
+          }
+        },
+        {
+          "id": "573729e0-a9e1-454a-83be-a6216bb1e2bf",
+          "quality": {
+            "id": "6c51a0cb-6a46-42bf-9ab3-d7601c4f9349",
+            "title": "Passion",
+            "score": 2.5
+          }
+        },
+        {
+          "id": "ce9d805c-b1d6-479a-8835-0a378967b245",
+          "quality": {
+            "id": "f78723a7-7e2c-469b-920d-8cb08718408b",
+            "title": "Humility",
+            "score": 4.1
+          }
+        },
+        {
+          "id": "f02fb304-c73a-454a-bce5-796c4ad96a2d",
+          "quality": {
+            "id": "c205491c-53b4-42c6-b380-9a825a89efa3",
+            "title": "Care",
+            "score": 4.6
+          }
+        }
+      ]
+    },
+    {
+      "id": "995e5538-303a-4856-89f6-1e9af33ff2c9",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Community Outreach Specialist",
+      "reportDate": "2018-02-01",
+      "score": 95,
+      "ratings": [
+        {
+          "id": "938c9f76-b5d7-4ad7-9fe0-57cb2e588653",
+          "quality": {
+            "id": "6b1a0f50-3a43-45cc-a643-d189672ff64d",
+            "title": "Integrity",
+            "score": 3.2
+          }
+        },
+        {
+          "id": "fc5c70e0-30ad-48fe-a097-e4ea5ea2029c",
+          "quality": {
+            "id": "b7ac4d84-e7f5-4a53-a1e7-15bfb6ee9bcf",
+            "title": "Professionalism",
+            "score": 2.2
+          }
+        },
+        {
+          "id": "6a30318f-4563-4c07-bfcd-af6d113bd4e3",
+          "quality": {
+            "id": "740c3d2f-6ddd-4ad0-920c-adc2a19ca09f",
+            "title": "Passion",
+            "score": 1.9
+          }
+        },
+        {
+          "id": "def97602-a737-423d-8447-d4c32997d693",
+          "quality": {
+            "id": "9a398771-070f-4211-ab0f-69cf69aa1690",
+            "title": "Humility",
+            "score": 2.3
+          }
+        },
+        {
+          "id": "e405b61d-5a51-4bea-92bd-13c3589193f8",
+          "quality": {
+            "id": "f5731880-6882-44f9-8d0a-1b39e17d264c",
+            "title": "Care",
+            "score": 3.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "08b81dd8-62c3-4b8b-b151-bdd91340a5e0",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Marketing Manager",
+      "reportDate": "2018-01-17",
+      "score": 89,
+      "ratings": [
+        {
+          "id": "13c6b68e-2b43-49c7-8f78-754cc0598086",
+          "quality": {
+            "id": "c9d0f025-1337-4e5c-b15a-8c792c735c3d",
+            "title": "Integrity",
+            "score": 3.8
+          }
+        },
+        {
+          "id": "a26529cb-d3c8-42d3-abc7-bf2d9749d97e",
+          "quality": {
+            "id": "01e6d09b-edcd-4183-a501-5df41fad66b8",
+            "title": "Professionalism",
+            "score": 4
+          }
+        },
+        {
+          "id": "02b3069a-f6ec-4774-8fb5-689f10d15538",
+          "quality": {
+            "id": "a9b94698-0fe3-48fb-a062-58521c3caeb6",
+            "title": "Passion",
+            "score": 1
+          }
+        },
+        {
+          "id": "89f8923a-65e0-4e64-b8d7-0b7bbe236132",
+          "quality": {
+            "id": "c8529ad9-d102-43da-bf12-cc73967bcbc4",
+            "title": "Humility",
+            "score": 3.8
+          }
+        },
+        {
+          "id": "6d8ece43-dd7b-4a1d-bac6-a90c2af872a9",
+          "quality": {
+            "id": "6272b33c-481a-4108-84e6-a78dccaa13fd",
+            "title": "Care",
+            "score": 3.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "013d4bc9-cc1d-4ee3-8a63-f92028738337",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Pharmacist",
+      "reportDate": "2017-10-15",
+      "score": 93,
+      "ratings": [
+        {
+          "id": "c556df81-43f4-4384-8ba7-fe85eabd666a",
+          "quality": {
+            "id": "0a9b7233-13b8-4fd9-8e10-036ef2168201",
+            "title": "Integrity",
+            "score": 1.2
+          }
+        },
+        {
+          "id": "2eb4f009-40d3-42f9-8c30-839e06185ae8",
+          "quality": {
+            "id": "ffc1f24b-fc70-4387-a5c9-be766ad6bbe2",
+            "title": "Professionalism",
+            "score": 3
+          }
+        },
+        {
+          "id": "ff55ce70-7ffe-41a6-a5c0-e7d6f096fa07",
+          "quality": {
+            "id": "a8f78fba-c7d8-416e-a083-cd94ae69699a",
+            "title": "Passion",
+            "score": 2.1
+          }
+        },
+        {
+          "id": "923f5bca-e71f-4da5-935e-945face8443f",
+          "quality": {
+            "id": "d8df3ed7-6495-4e30-b8b2-5561a0f08130",
+            "title": "Humility",
+            "score": 2
+          }
+        },
+        {
+          "id": "50bfc70e-313f-4f39-a209-ea6b18e99510",
+          "quality": {
+            "id": "25f80a41-7a1d-42c9-9a03-26b48ca0a911",
+            "title": "Care",
+            "score": 1.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "e125aa17-df06-4bba-a4c3-0710d5437643",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Engineer II",
+      "reportDate": "2017-03-26",
+      "score": 63,
+      "ratings": [
+        {
+          "id": "909d7a0b-8ecd-48bf-963c-850f00418b73",
+          "quality": {
+            "id": "44218c9f-366d-4b8e-a20d-34e80effcf26",
+            "title": "Integrity",
+            "score": 1.5
+          }
+        },
+        {
+          "id": "7100296e-3973-4fe5-b405-525e799054c8",
+          "quality": {
+            "id": "91c6a654-2e8a-405a-a243-ee3370357078",
+            "title": "Professionalism",
+            "score": 4.1
+          }
+        },
+        {
+          "id": "a7e04570-b186-40d8-88fd-3fcb348e9565",
+          "quality": {
+            "id": "807aae90-db3e-49fe-916e-b5999602e887",
+            "title": "Passion",
+            "score": 2.8
+          }
+        },
+        {
+          "id": "ff5d2d5b-7c3b-428c-b1eb-f88db46766e8",
+          "quality": {
+            "id": "a978018d-93a3-4376-ba70-732881507481",
+            "title": "Humility",
+            "score": 3
+          }
+        },
+        {
+          "id": "7d4f7791-5d5a-46fd-a332-15de7d4e3aca",
+          "quality": {
+            "id": "43a86e29-6994-44d3-bd1c-b3c3a7c35fe0",
+            "title": "Care",
+            "score": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "dc96ee8c-7314-4459-848a-ec45038e0995",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Social Worker",
+      "reportDate": "2017-10-08",
+      "score": 78,
+      "ratings": [
+        {
+          "id": "a278d485-4ced-4d10-8367-9f9a3f65574a",
+          "quality": {
+            "id": "9760c8fd-e9ac-487d-ab52-59b4a124bcbb",
+            "title": "Integrity",
+            "score": 2.9
+          }
+        },
+        {
+          "id": "091cfcfe-f758-44d5-aedd-153ad0db5782",
+          "quality": {
+            "id": "15a8cfd3-02dd-495d-8579-556c586142d0",
+            "title": "Professionalism",
+            "score": 1.8
+          }
+        },
+        {
+          "id": "f9604384-84e8-456c-b592-4c4992ef399e",
+          "quality": {
+            "id": "87c90949-5047-4468-988b-d2918052e5c3",
+            "title": "Passion",
+            "score": 1.7
+          }
+        },
+        {
+          "id": "853e5d06-7235-4609-bb1d-9eec8cbf249d",
+          "quality": {
+            "id": "27a86ebf-5d21-4001-bbca-9422ec210755",
+            "title": "Humility",
+            "score": 3.1
+          }
+        },
+        {
+          "id": "5dd13f03-07a7-49ed-a668-cf4ba9984f83",
+          "quality": {
+            "id": "d40b63e7-56a8-4ca9-9263-5460e7738c9f",
+            "title": "Care",
+            "score": 1.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "47458a2a-3227-460a-8f23-1df1a14f9ab8",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Media Manager III",
+      "reportDate": "2018-01-05",
+      "score": 83,
+      "ratings": [
+        {
+          "id": "78927bde-346d-46bb-9214-a1bc3c76e07d",
+          "quality": {
+            "id": "158b510a-b6e7-4a34-81c3-66f033d7f3b8",
+            "title": "Integrity",
+            "score": 1.8
+          }
+        },
+        {
+          "id": "cf64ee6d-35e9-4255-a0f5-5eff934a21d4",
+          "quality": {
+            "id": "9e43efd1-0ea8-4afc-ad1d-153337b31a3f",
+            "title": "Professionalism",
+            "score": 1.1
+          }
+        },
+        {
+          "id": "808a18ed-216a-4ed3-942f-afc11d4ef182",
+          "quality": {
+            "id": "708f5507-cd10-4d28-9175-e0dab34d638a",
+            "title": "Passion",
+            "score": 2.6
+          }
+        },
+        {
+          "id": "7872378c-5491-46ae-8dd1-9405ca9bdd18",
+          "quality": {
+            "id": "712e4160-9459-4c8f-9f02-c6ffe8c7832d",
+            "title": "Humility",
+            "score": 4.7
+          }
+        },
+        {
+          "id": "5f3456d1-4ad2-46a3-bbe5-935181e58133",
+          "quality": {
+            "id": "31b74d0c-181b-42a3-9c0b-6bb6b50ea683",
+            "title": "Care",
+            "score": 3.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "e74d9b1d-1f8b-49c9-970d-9a6daba64fff",
+      "firstName": "Werner",
+      "lastName": "Weber",
+      "businessUnit": "Development",
+      "assessmentTitle": "Staff Scientist",
+      "reportDate": "2017-05-07",
+      "score": 69,
+      "ratings": [
+        {
+          "id": "47354941-d778-42f2-899e-55d0de9af409",
+          "quality": {
+            "id": "73f247bc-8e57-4280-bac7-b8735bfce3b5",
+            "title": "Integrity",
+            "score": 2.7
+          }
+        },
+        {
+          "id": "e8513871-5249-47ac-b637-1c8c347d05ec",
+          "quality": {
+            "id": "173a9910-a16d-4fc3-97d2-f4503f97c700",
+            "title": "Professionalism",
+            "score": 1.9
+          }
+        },
+        {
+          "id": "d720a174-0d60-4cb6-b27a-14408505fed9",
+          "quality": {
+            "id": "4b6bc870-1249-4718-bbcb-85c59c482374",
+            "title": "Passion",
+            "score": 2.1
+          }
+        },
+        {
+          "id": "8de19046-0028-4ca6-bb1b-59efc046df07",
+          "quality": {
+            "id": "6dd34396-0a89-4ed9-87eb-3af606c55b4d",
+            "title": "Humility",
+            "score": 1.7
+          }
+        },
+        {
+          "id": "99931d8c-29ae-4e8d-9c40-6490e9c4490e",
+          "quality": {
+            "id": "28f70384-d653-430f-b33d-8be5e8636823",
+            "title": "Care",
+            "score": 1.7
+          }
+        }
+      ]
+    }
+  ]

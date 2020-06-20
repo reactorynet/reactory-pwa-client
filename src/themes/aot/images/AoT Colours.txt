@@ -1,0 +1,10 @@
+Age of Teams Logo Colours:
+
+Purple: #4b3658
+Blue: #5da3be
+
+Additional Colours:
+
+White: #ffffff
+Light Blue: #84b8d9
+Cream: #f2d9d0

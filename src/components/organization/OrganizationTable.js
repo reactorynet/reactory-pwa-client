@@ -1,32 +1,31 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import gql from 'graphql-tag';
 import { graphql } from 'react-apollo';
 import {
   Table,
   TableBody,
-  TableHeader,
-  TableHeaderColumn,
+  TableHead,
   TableRow,
-  TableRowColumn,
-} from 'material-ui/Table';
+  TableCell,
+} from '@material-ui/core';
 
 /**
  * List component for user entries
  * @param {*} param0 
  */
-class OrganizationList extends Component {
+class OrganizationTable extends Component {
 
   constructor(props, context){
     super(props, context);
     this.state = {
-      selected: []  
+      selected: [],      
     }
   }
-
-
+ 
   render(){
     const that = this;
-    const { loading, error, allUsers } = this.props.data;
+    const { loading, error, allOrganizations } = this.props.data;
 
     if (loading === true) {
       return <p>Loading ...</p>;
@@ -48,38 +47,37 @@ class OrganizationList extends Component {
 
     return (
       <Table onRowSelection={handleRowSelection}>
-        <TableHeader>
+        <TableHead>
           <TableRow>
-            <TableHeaderColumn>Email</TableHeaderColumn>
-            <TableHeaderColumn>Firstname</TableHeaderColumn>
-            <TableHeaderColumn>Lastname</TableHeaderColumn>
+            <TableCell>Code</TableCell>
+            <TableCell>Name</TableCell>
+            <TableCell>Logo</TableCell>
           </TableRow>
-        </TableHeader>
+        </TableHead>
         <TableBody>
-        {allUsers.map( (user, index) => {    
+        {allOrganizations.map( (organization, index) => {    
           return (
             <TableRow selected={isSelected(index)}>
-            <TableRowColumn>{user.email}</TableRowColumn>
-            <TableRowColumn>{user.firstName}</TableRowColumn>
-            <TableRowColumn>{user.lastName}</TableRowColumn>
+            <TableCell>{organization.code}</TableCell>
+            <TableCell>{organization.name}</TableCell>
+            <TableCell>{organization.logo}</TableCell>
           </TableRow>)}) }        
         </TableBody>
       </Table>);
   }  
 };
 
-
-const userListQuery = gql`
-query UserListQuery {
-    allUsers {
+const organizationQuery = gql`
+query OrganizationQuery {
+    allOrganizations {
       id
-      username
-      email
-      firstName
-      lastName
+      code
+      name
       legacyId
+      createdAt
+      updatedAt
     }
 }
 `;
 
-export const UserListWithData = graphql(userListQuery)(UserList);
+export default graphql(organizationQuery)(OrganizationTable);
