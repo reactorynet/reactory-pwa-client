@@ -62,6 +62,7 @@ import NotificationComponent from './shared/NotificationWidget';
 import GridLayoutComponent from './shared/GridLayoutComponent';
 import ProductCardComponent from './shared/ProductCardComponent';
 import NotFoundComponent from './shared/NotFoundComponent';
+import DocumentListComponent from './shared/DocumentListComponent';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -342,6 +343,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'NotFound',
     component: NotFoundComponent,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'core',
+    name: 'DocumentListComponent',
+    component: DocumentListComponent,
     version: '1.0.0'
   },
   {
