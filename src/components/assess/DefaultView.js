@@ -210,11 +210,20 @@ class RatingControl extends Component {
       }     
     }
 
+    let $ratingContent = 'processing';
+    try {
+      $ratingContent = template(behaviour.title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || {}, assessment, survey: assessment.survey, api: this.props.api })
+    } catch(templateErr) {
+      self.props.api.log(`Behaviour Template Error`, { template: behaviour.title, templateErr }, 'error');
+
+      $ratingContent = `Error Processing behaviour template text. See logs for details`
+    }
+
     const ratingComponent = (
       <Fragment>        
         <Badge>{ratingTooltip}</Badge> 
         <Typography variant="body1" className={classes.behaviourTitle}>
-          {template(behaviour.title)({ employee: assessment.delegate, assessment, survey: assessment.survey, api: this.props.api })}
+          {$ratingContent}
         </Typography>
         <Stepper alternativeLabel nonLinear activeStep={rating.rating - 1}>
           {steps}
@@ -453,7 +462,8 @@ class DefaultView extends Component {
       'core.Loading',
       'core.Logo',
       'core.FullScreenModal',
-      'core.StaticContent'
+      'core.StaticContent',
+      'mores.MoresMyPersonalDemographics',
     ]);
   }
   // #endregion 
@@ -481,6 +491,9 @@ class DefaultView extends Component {
             5 - 7 minutes to complete.<br />
             You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? `well the ${survey.leadershipBrand.title} are displayed:` : ` we live the organisation's leadership brand:`} 
           </Typography>
+
+          
+
           <componentDefs.StaticContent 
             slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}-content`} 
             defaultValue={<Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>} />           
@@ -493,10 +506,14 @@ class DefaultView extends Component {
     } else {
       return (
         <Paper className={classes.welcomeContainer}>
+          
           <Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
             5 - 7 minutes.<br />
             You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
           </Typography>
+
+          
+
           <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <img src={theme.assets.logo} className={classes.logo} alt={theme} />

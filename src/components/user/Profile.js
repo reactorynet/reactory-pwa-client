@@ -13,6 +13,7 @@ import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import { 
     Container,
+    Badge,
     CircularProgress , List, ListItem, 
     ListItemSecondaryAction, ListItemText, 
     Paper,
@@ -28,7 +29,7 @@ import SaveIcon from '@material-ui/icons/Save';
 import PhotoCamera from '@material-ui/icons/PhotoCamera';
 import Avatar from '@material-ui/core/Avatar';
 import TextField from '@material-ui/core/TextField';
-
+import MyOrganigram from './Widgets/MyOrganigram';
 import { withApi } from '../../api/ApiProvider';
 import { ReactoryApi } from "../../api/ReactoryApi";
 import DefaultAvatar from '../../assets/images/profile/default.png';
@@ -693,13 +694,7 @@ class Profile extends Component {
                                     }                                    
                                 };
 
-                                const selectorWidget = (
-                                    <div style={{width:"100%"}}>                                        
-                                        <List dense component="nav">
-                                            <ListItem key={0}>
-                                                <Avatar><Icon>mail</Icon></Avatar>
-                                                <ListItemText primary={usr.inviteSent ===  true ? 'Confirmation sent' : 'Confirmation not sent'} secondary={usr.inviteSent ===  true ? moment(usr.confirmedAt).format('YYYY-MM-DD') : 'Wil be confirmed with next confirmation'}/>
-                                            </ListItem>
+                                /*
 
                                             <ListItem key={1} selected={usr.relationship === 'manager'} onClick={ usr.relationship !== 'manager' ? makeSupervisor : nilf}>
                                                 <Avatar><Icon>supervisor_account</Icon></Avatar>
@@ -720,7 +715,51 @@ class Profile extends Component {
                                                 <Avatar><Icon>delete_outline</Icon></Avatar>
                                                 <ListItemText primary={`Remove ${usr.firstName} ${usr.lastName} as nominee`} />
                                             </ListItem>                                                                                 
-                                        </List>                                        
+
+
+                                */
+
+
+                                const selectorWidget = (
+                                    <div style={{width:"100%"}}>                                        
+                                            <Tooltip title={`${usr.inviteSent ===  true ? 'Confirmation sent ' + moment(usr.confirmedAt).format('YYYY-MM-DD') : 'Confirmation not sent'}`}>
+                                                <Typography key={0} variant="caption">
+                                                    <Badge badgeContent={ usr.inviteSent ===  true ? <Icon color={'action'} fontSize='small'>check</Icon> : <Icon color={'error'} fontSize='small'>close</Icon> }><Icon>mail</Icon></Badge>
+                                                    {usr.inviteSent ===  true ? 'CONFIRMATION SENT AT' + moment(usr.confirmedAt).format('YYYY-MM-DD') : 'CONFIRMATION NOT SENT'}                                                    
+                                                </Typography>
+                                            </Tooltip>
+                                        <Toolbar>                                            
+
+                                            <Tooltip title={`${usr.relationship === 'manager' ? `${usr.firstName} ${usr.lastName} is flagged as a leader` : `Click / Press set ${usr.firstName} ${usr.lastName} as your leader / supervisor`}`}>
+                                                <IconButton key={0} size="small"  onClick={ usr.relationship !== 'manager' ? makeSupervisor : nilf}>
+                                                    <Badge badgeContent={ usr.relationship === 'manager' ? <Icon color={'success'} fontSize='small'>check</Icon> : '' }>
+                                                        <Icon>supervisor_account</Icon>
+                                                    </Badge>                                                    
+                                                </IconButton>
+                                            </Tooltip>
+
+                                            <Tooltip title={`${usr.relationship !== 'peer' ? `Click to make ${usr.firstName} a peer` : `${usr.firstName} ${usr.lastName} is set as a peer`}`}>
+                                                <IconButton key={0} size="small" selected={usr.relationship === 'peer'} onClick={ usr.relationship !== 'peer' ? makePeer : nilf}>
+                                                <Badge badgeContent={ usr.relationship === 'peer' ? <Icon color={'success'} fontSize='small'>check</Icon> : '' }>
+                                                        <Icon>account_box</Icon>
+                                                    </Badge>                                                                                                                                                    
+                                                </IconButton>
+                                            </Tooltip>
+
+                                            <Tooltip title={`${usr.relationship !== 'report' ? `Click / press to set ${usr.firstName} as a report` : `${usr.firstName} ${usr.lastName} is set as a report` }`}>
+                                                <IconButton key={0} size="small"  onClick={ usr.relationship !== 'report' ? makeDirectReport : nilf}>
+                                                <Badge badgeContent={ usr.relationship === 'report' ? <Icon color={'success'} fontSize='small'>check</Icon> : '' }>
+                                                        <Icon>account_circle</Icon>
+                                                    </Badge>   
+                                                </IconButton>
+                                            </Tooltip>
+
+                                            <Tooltip title={`Click to remove ${usr.firstName} as a colleague`}>
+                                                <IconButton key={0} size="small" onClick={deletePeer}>
+                                                    <Icon>delete_outline</Icon>                                                    
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Toolbar>                                        
                                     </div>
                                 );
 
@@ -800,22 +839,7 @@ class Profile extends Component {
             </Fragment>
         )
 
-        if(highlight === "peers"){
-            const closePeersHighlight = () => {
-                this.setState({ highlight: null });
-            }
-                        
-            return (<FullScreenDialog title="Select your peers" open={true} onClose={closePeersHighlight}>
-                        <Paper style={{margin:'16px', padding: '8px'}}>
-                            <Typography variant="h5" color="primary">
-                                Colleagues / Peer management
-                            </Typography>                            
-                            {peersComponent}
-                        </Paper>                                            
-            </FullScreenDialog>)
-        } else {
-            return peersComponent;
-        }        
+        return peersComponent;        
     }
 
     renderGeneral() {
@@ -1042,19 +1066,35 @@ class Profile extends Component {
     }
 
     render() {
-        const { classes } = this.props;
-        return (
-            <Container sm="12" xs="12" md="6" lg="4" >
-                <Grid container spacing={2}>
-                {this.renderHeader()}
-                {this.renderGeneral()}
-                {this.renderMemberships()}
-                {this.renderPeers()}
-                {this.renderFooter()}
-                {this.renderCropper()}                
-                </Grid>
-            </Container>            
+        const { classes, nocontainer = false } = this.props;
+        const containerProps = {
+            xs: 12,
+            sm: 12,
+            md: 6,
+            lg: 4
+        };
+
+        const ProfileInGrid = (
+            <Grid container spacing={2}>
+            {this.renderHeader()}
+            {this.renderGeneral()}
+
+            {this.props.memberships ? this.renderMemberships() : null}
+            {this.renderPeers()}
+            {this.renderFooter()}
+            {this.renderCropper()}
+            </Grid>
         );
+
+        if(nocontainer === false) {
+            return (
+                <Container {...containerProps} >
+                    {ProfileInGrid}
+                </Container>            
+            );
+        } else {
+            return ProfileInGrid        
+        }
     }
 
     windowResize() {

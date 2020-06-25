@@ -499,6 +499,11 @@ query assesmentWithId($id: String) {
 			endDate
       surveyType
       status
+      organization {
+        id
+        name
+        logo
+      }
       delegateTeamName
       assessorTeamName
       delegates {

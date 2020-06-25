@@ -214,27 +214,27 @@ class App extends Component<any, AppState> {
           if (routeDef.public === true) {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)
             else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
-          }
+          } else {
+              const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;          
 
-          const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;          
-
-          if (auth_validated === true && hasRolesForRoute === true) {
-            if (ApiComponent) return (<ApiComponent {...componentArgs} />)
-            else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`}  waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
-          }
-
-          if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
-            if(localStorage) {            
-              localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
+            if (auth_validated === true && hasRolesForRoute === true) {
+              if (ApiComponent) return (<ApiComponent {...componentArgs} />)
+              else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`}  waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
             }
-            return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
-          }
 
-          if(api.isAnon() === false && hasRolesForRoute === false) {
-            return <NotFound message="You don't have sufficient permissions to access this route" />
-          }
-          
-          return (<p> ... </p>);
+            if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
+              if(localStorage) {            
+                localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
+              }
+              return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
+            }
+
+            if(api.isAnon() === false && hasRolesForRoute === false) {
+              return <NotFound message="You don't have sufficient permissions to access this route" />
+            }
+            
+            return (<p> ... </p>);
+          }          
         }
       }
 
@@ -298,6 +298,18 @@ class App extends Component<any, AppState> {
         location.assign(lastRoute);
       }
     }
+
+    window.matchMedia("(prefers-color-scheme: dark)").addListener((evt)=>{
+      if(evt.matches) {
+        localStorage.setItem('$reactory$theme_mode', 'dark');
+      } else {
+        localStorage.setItem('$reactory$theme_mode', 'light');
+      }
+    });
+        
+    api.on('theme_changed', ()=> {
+      that.forceUpdate()
+    });
   }
 
   render() {
@@ -305,6 +317,7 @@ class App extends Component<any, AppState> {
     const { Loading, FullScreenModal, NotificationComponent } = this.componentRefs;
 
     let themeOptions = api.getTheme();
+
     if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
 
@@ -338,7 +351,8 @@ class App extends Component<any, AppState> {
     if (offline === true && auth_validated === true) {
       modal = (
         <FullScreenModal open={true} title={'Server is offline, stand by'}>          
-          <Typography style={{ margin: 'auto', fontSize: '20px', padding: '8px' }} variant="body1"><Icon>report_problem</Icon>We apologise for the inconvenience, but it seems like the reactory server available yet. This notification will close automatically when the server is available again.</Typography>
+          <Typography style={{ margin: 'auto', fontSize: '20px', padding: '8px' }} variant="body1"><Icon>report_problem</Icon>We apologise for the inconvenience but the server is not available at the moment.</Typography>
+          <Typography></Typography>
         </FullScreenModal>
       )
     }

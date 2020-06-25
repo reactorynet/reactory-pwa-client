@@ -10,9 +10,25 @@ import {
   Popover,
   IconButton,
   FormHelperText,
+  Theme,
 } from '@material-ui/core';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withStyles, withTheme, styled } from '@material-ui/core/styles';
+
+const ErrorStyles = (theme: Theme ): any => {
+        
+  return { 
+    errorButton: 
+      {
+        position: "relative",
+        top: '36px',
+        left: '-12px',
+        color: theme.palette.error.main
+      }
+    }
+};
+
+
 
 class ErrorPopover extends React.Component<any, any> {
 
@@ -23,12 +39,11 @@ class ErrorPopover extends React.Component<any, any> {
     };
   }
 
-  static Styles = (theme) => ({})
 
 
   render() {
 
-    const { children, classes, color = 'inherit' } = this.props;
+    const { children, classes, color = 'inherit', theme } = this.props;
 
     const self = this;
 
@@ -48,8 +63,9 @@ class ErrorPopover extends React.Component<any, any> {
           aria-owns={open ? 'mouse-over-popover' : undefined}
           aria-haspopup="true"
           onClick={handlePopoverOpen}
-
-          color={'secondary'}
+          color={"primary"}
+          className={this.props.classes.errorButton}
+          
         >
           <Icon>error</Icon>
         </IconButton>
@@ -80,7 +96,8 @@ class ErrorPopover extends React.Component<any, any> {
   }
 };
 
-const ThemedErrorPopover = compose(withTheme, withStyles(ErrorPopover.Styles))(ErrorPopover);
+const ThemedErrorPopover = compose(withTheme, withStyles(ErrorStyles))(ErrorPopover);
+
 
 class MaterialFormErrorTemplate extends Component<any, any> {
 

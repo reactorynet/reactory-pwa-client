@@ -311,17 +311,18 @@ export const UserProfile = compose(
     let pid = null;
     pid = isNil(profileId) === false ? profileId : match.params.profileId;
     if (isNil(pid) === true) pid = api.getUser() ? api.getUser().id : null;
-    if (isNil(pid) === true) return <Typography variant="h6" value="No profile id" />
-
+    if (isNil(pid) === true) return <Typography variant="h6" value="No profile id" />  
+    
     return (
     <Query query={api.queries.Users.userProfile} variables={{profileId: pid}} >
-      {(props, context)=>{
-        const { loading, error, data } = props;
+      {(queryProps, context)=>{
+        const { loading, error, data } = queryProps;
         if(loading) return <p>Loading User Profile, please wait...</p>
         if(error) return <p>{error.message}</p>
 
         if(data.userWithId) {          
-          return <EditProfile organizationId={organizationId} profile={data.userWithId} withPeers={withPeers} profileTitle={profileTitle} mode={mode} />
+          let profileProps = {...props, profile: { ...data.userWithId }}
+          return <EditProfile  {...profileProps } />
         } else {
           return <p>No user data available</p>
         }

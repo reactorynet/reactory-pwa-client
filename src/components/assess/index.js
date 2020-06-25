@@ -71,11 +71,15 @@ class AssessmentWrapper extends Component {
                     const { TowerStone180Assessment, TowerStone360Assessment, PlcDefaultAssessment } = this.componentDefs;
                     let AssessmentComponent = null;                
                     switch(assessment.survey.surveyType){
-                        case Survey.SurveyTypes.TowerStone180: {
+                        case Survey.SurveyTypes.TowerStone180: 
+                        case 'team180':
+                        case 'culture': {
                             AssessmentComponent = TowerStone180Assessment;
                             break;                                
                         }
-                        case Survey.SurveyTypes.TowerStone360: {
+                        case Survey.SurveyTypes.TowerStone360:
+                        case 'i360':
+                        case 'l360': {
                             AssessmentComponent = TowerStone360Assessment;
                             break;
                         }

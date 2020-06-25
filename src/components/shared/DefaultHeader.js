@@ -366,6 +366,17 @@ class ApplicationHeader extends Component {
       }
     };
 
+    const toggleDarkMode = () => {
+      
+      if(theme.palette.type === 'dark') {
+        localStorage.setItem("$reactory$theme_mode", 'light');        
+      } else {
+        localStorage.setItem("$reactory$theme_mode", 'dark');
+      }
+
+      api.emit('theme_changed');
+    }
+ 
 
     const toolbar = (
       <div></div>
@@ -423,7 +434,13 @@ class ApplicationHeader extends Component {
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <BackIcon />
             </IconButton>
+            
+            <IconButton onClick={toggleDarkMode}>
+              <Icon>{theme.palette.type === 'dark' ? 'visibility_off' : 'visibility'}</Icon>
+            </IconButton>
+
             <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />
+            
           </div>
           <Divider />
           <Typography variant="subtitle1" color="secondary"

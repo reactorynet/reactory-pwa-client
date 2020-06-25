@@ -10,6 +10,7 @@ import { ApolloClient, gql, Resolvers } from 'apollo-client-preset';
 import { ApolloProvider } from 'react-apollo';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
+import useMediaQuery from '@material-ui/core/useMediaQuery';
 import { intersection, isArray, isEmpty, isNil, template } from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
@@ -759,7 +760,7 @@ class ReactoryApi extends EventEmitter {
   }
 
   isAnon() {
-    return this.hasRole(['ANON']) === true;
+    return this.hasRole(['ANON'], this.$user.roles) === true;
   }
 
   addRole(user, organization, role = 'USER') {
@@ -785,7 +786,25 @@ class ReactoryApi extends EventEmitter {
         icons
       }
     };
-    return { ...themeOptions, extensions };
+    
+
+    let paletteType = 'light';
+
+    const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
+    const isLightMode = window.matchMedia("(prefers-color-scheme: light)").matches
+    const isNotSpecified = window.matchMedia("(prefers-color-scheme: no-preference)").matches
+      
+    if(localStorage) {
+      paletteType = localStorage.getItem("$reactory$theme_mode")
+      if(!paletteType) {
+        paletteType = isDarkMode === true ? 'dark' : 'light'
+      }
+    }
+
+    const theme = { ...themeOptions, extensions };
+    theme.palette.type = paletteType;
+
+    return theme;
   }
 
   getRoutes() {
