@@ -3,9 +3,9 @@ import PropTypes from 'prop-types'
 import { pullAt, find, isNil, isEmpty } from 'lodash'
 import objectMapper from 'object-mapper'
 import {
-  Chip,
   Icon,
-  Typography
+  Typography,
+  CircularProgress
 } from '@material-ui/core';
 
 import { Query } from 'react-apollo';
@@ -28,19 +28,32 @@ class DocumentListWidget extends Component {
       display: 'block'
     },
     docContainer: {
-      paddingLeft: theme.spacing(3),
       paddingTop: theme.spacing(1)
     },
     doc: {
       display: 'flex',
-      alignItems: 'centre',
+      alignItems: 'center',
       textDecoration: 'none',
       color: 'rgba(0, 0, 0, 0.87)',
-      marginBottom: theme.spacing(0.5)
+      marginBottom: theme.spacing(0.5),
+      borderBottom: '1px solid #ded8d8',
+      marginLeft: theme.spacing(3),
+      padding: theme.spacing(1)
+    },
+    docName: {
+      flex: 1,
+      color: 'black',
+      textDecoration: 'none',
     },
     icon: {
       color: theme.palette.primary.main,
       marginRight: theme.spacing(1)
+    },
+    deleteButton: {
+      color: '#f24646',
+      fontWeight: 'bold',
+      border: 'none',
+      backgroundColor: 'transparent'
     }
   });
 
@@ -51,6 +64,10 @@ class DocumentListWidget extends Component {
 
   static defaultProps = {}
 
+  state = {
+    isDeleting: false
+  }
+
   constructor(props, context) {
     super(props, context);
   }
@@ -59,12 +76,33 @@ class DocumentListWidget extends Component {
     const self = this
     const { classes, formContext, formData, required, api, theme } = this.props;
 
-
     api.log('RENDERING DOCUMENTS LIST COMPONENT', { formContext, formData }, 'debug');
 
-    const { query, propertyMap, resultsMap, resultItem, multiSelect, label } = this.props.uiSchema['ui:options'];
+    const { query, mutation, propertyMap, resultsMap, resultItem, multiSelect, label } = this.props.uiSchema['ui:options'];
     const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
     let _label = label || 'Documents';
+
+
+    const deleteDocument = (_id) => {
+
+      this.setState({ isDeleting: true });
+
+      api.graphqlMutation(gql(mutation), { id: _id }).then((deleteResult) => {
+
+        console.log('DOCUMENT DELETE RESULT', deleteResult)
+
+        this.setState({ isDeleting: false });
+
+       // NEED TO REFRESH PAGE - REMOVE DELETED ITEM
+
+      }).catch((error) => {
+
+        console.error('ERROR DELETING DOCUMENT', error)
+        this.setState({ isDeleting: false });
+
+      })
+
+    }
 
     return (
       <Query query={gql`${query}`} variables={variables} >
@@ -82,10 +120,17 @@ class DocumentListWidget extends Component {
                   documents.length > 0 ?
                     documents.map(doc => {
                       return (
-                        <a href={doc.url} target="_blank" className={classes.doc}>
+                        <div key={doc.id} className={classes.doc}>
                           <Icon fontSize="30" classes={{ root: classes.icon }}>description</Icon>
-                          <Typography style={{ color: 'black' }} variant="subtitle1">{doc.id} {doc.name}</Typography>
-                        </a>
+                          <a className={classes.docName} href={doc.url} target="_blank" >
+                            <Typography variant="subtitle1">{doc.name}</Typography>
+                          </a>
+                          {
+                            !this.state.isDeleting ? <button className={classes.deleteButton} onClick={() => deleteDocument(doc.id)}>Remove</button> :
+                              <CircularProgress style={{color: '#f24646', height: '1rem', width: '1rem', marginRight: '1rem'}} />
+                          }
+
+                        </div>
                       )
                     }) : <p style={{ margin: 0 }}>No Documents Available</p>
                 }
