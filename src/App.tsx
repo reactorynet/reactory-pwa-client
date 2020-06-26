@@ -230,7 +230,8 @@ class App extends Component<any, AppState> {
             }
 
             if(api.isAnon() === false && hasRolesForRoute === false) {
-              return <NotFound message="You don't have sufficient permissions to access this route" />
+              //we may waiting 
+              return <NotFound message="You don't have sufficient permissions to access this route yet... (we may be fetching your permissions)" link={routeDef.path } wait={500} />
             }
             
             return (<p> ... </p>);

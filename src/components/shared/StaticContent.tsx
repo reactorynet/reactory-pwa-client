@@ -157,7 +157,7 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
     const contentComponent = found === true && content.published === true ? (<div {...containerProps} dangerouslySetInnerHTML={{__html: this.state.content.content}}></div>) : defaultValue;    
 
       return (
-        <div className={`${classes.staticContentContainer} ${isDeveloper ? classes.staticContainerDeveloper: ''}`} onClick={edit}>
+        <div className={`${classes.staticContentContainer} ${isDeveloper ? classes.staticContainerDeveloper: ''}`}>
           {isDeveloper === true ? 
           <div className={classes.developerTools}>            
             <IconButton onClick={edit} color="primary" size={'small'}>

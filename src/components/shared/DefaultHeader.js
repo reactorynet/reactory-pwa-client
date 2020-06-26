@@ -461,7 +461,7 @@ class ApplicationHeader extends Component {
                   <Icon color="primary">rss_feed</Icon>
                 </Tooltip>
               </ListItemIcon>
-            <ListItemText primary="Refresh API Status" secondary={<span className={classes.version}>Client: {api.props.$version}</span>}/>
+          <ListItemText primary={<span className={classes.versionPrimary}>Client ver: {api.props.$version}</span>} secondary={<span className={classes.version}>Server ver: {api.$user && api.$user.server ? api.$user.server.version : 'waiting' } </span>}/>
             </ListItem>
           </List>
         </Drawer>

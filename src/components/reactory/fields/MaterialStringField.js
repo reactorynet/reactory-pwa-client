@@ -92,7 +92,7 @@ export default withTheme((props) => {
     }
 
     const onKeyDown = evt => {
-      if (evt.keyCode == 13 && uiOptions.componentProps.submitOnEnter) {
+      if (evt.keyCode === 13 && uiOptions && uiOptions.componentProps && uiOptions.componentProps.submitOnEnter ) {
         evt.preventDefault();
         props.formContext.$ref.submit();
       }

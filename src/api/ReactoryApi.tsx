@@ -802,7 +802,12 @@ class ReactoryApi extends EventEmitter {
     }
 
     const theme = { ...themeOptions, extensions };
-    theme.palette.type = paletteType;
+    if(theme.palette) theme.palette.type = paletteType; 
+    else {
+      theme.palette = {
+        type: paletteType
+      }
+    }     
 
     return theme;
   }

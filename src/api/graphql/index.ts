@@ -383,6 +383,17 @@ const apiStatus = gql`
       id
       theme
       themeOptions
+      themes
+      server {
+        version,
+        started,
+        clients {
+          id
+          clientKey
+          name
+          siteUrl
+        }
+      }
       colorSchemes
       routes {
         id
