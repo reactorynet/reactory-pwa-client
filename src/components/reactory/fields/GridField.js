@@ -61,7 +61,10 @@ export class BootstrapGridField extends ObjectField {
     const schema = retrieveSchema(this.props.schema, definitions)
     const title = (schema.title === undefined) ? '' : schema.title
 
-    const layout = uiSchema['ui:grid-layout']
+    const layout = uiSchema['ui:grid-layout'];
+
+    debugger;
+
     return (
       <fieldset>
         {title ? <TitleField
@@ -162,7 +165,7 @@ class MaterialGridField extends MaterialObjectField {
     const schema = retrieveSchema(this.props.schema, definitions)
     const title = (schema.title === undefined) ? '' : schema.title
 
-    const layout = uiSchema['ui:grid-layout']
+    const layout = uiSchema['ui:grid-layout'];
 
     let gridOptions = {
       spacing: 8,
@@ -212,7 +215,8 @@ class MaterialGridField extends MaterialObjectField {
           id={`${idSchema.$id}__title`}
           title={title}
           required={required}
-          formContext={formContext} /> : null}
+          formContext={formContext}
+          style={uiSchema["ui:titleStyle"] || {}} /> : null}
         {schema.description ?
           <DescriptionField
             id={`${idSchema.$id}__description`}
