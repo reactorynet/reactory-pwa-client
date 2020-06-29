@@ -11,7 +11,7 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
 import Dropzone, { DropzoneState } from 'react-dropzone';
-import { Query, Mutation, QueryProps, QueryResult, MutationResult } from 'react-apollo';
+import { Query, Mutation, QueryResult, MutationResult } from 'react-apollo';
 import { nil } from '@reactory/client-core/components/util';
 import queryString from '@reactory/client-core/query-string';
 import ReactoryApi from '../../api/ReactoryApi';
@@ -95,7 +95,7 @@ TabContainer.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
-
+/*
 const FormWithQuery = (props) => {
 
   return (
@@ -121,16 +121,18 @@ FormWithQuery.propTypes = {
 FormWithQuery.defaultProps = {
   data: {}
 };
-
+*/
 
 export interface ReactoryFormProperties {
-  uiSchemaKey?: string;
+  uiSchemaKey: string;
+  uiSchemaId?: string;
   data: any;
   formData: any;
   location: any;
   api: any;
   formId: string,
-  uiSchemaId: string,
+  helpTopics?: string[],
+  helpTitle?: string,
   uiFramework: string,
   mode: string,
   history: History,
@@ -416,10 +418,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   getHelpScreen() {
     const { HelpMe } = this.componentDefs;
     const formDef = this.formDef();
-
+    let topics = [];
+    if(formDef.helpTopics) topics = [...formDef.helpTopics]
+    if(this.props.helpTopics) topics = [...this.props.helpTopics, ...topics];
     const closeHelp = e => this.setState({ showHelp: false });
     return (
-      <HelpMe topics={formDef.helpTopics} tags={formDef.tags} title={formDef.title} open={this.state.showHelp === true} onClose={closeHelp}>
+      <HelpMe topics={topics} tags={formDef.tags} title={this.props.helpTitle || formDef.title } open={this.state.showHelp === true} onClose={closeHelp}>
       </HelpMe>
     )
   }
@@ -1062,7 +1066,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           const query_start = new Date().valueOf();
           api.graphqlQuery(gql(query.text), _variables).then((result: any) => {
             const query_end = new Date().valueOf();
-            api.stat(`${formDef.nameSpace}.${formDef.name}@${formDef.version}:query:execution-length`, { query_start, query_end, diff: query_end - query_start, unit: 'utc-date' });
+            api.stat(`${formDef.nameSpace}.${formDef.name}@${formDef.version}:query_execution_length`, { query_start, query_end, diff: query_end - query_start, unit: 'utc-date' });
             const { data, loading, errors } = result;
             let _formData = formData;
             if (data && data[query.name]) {

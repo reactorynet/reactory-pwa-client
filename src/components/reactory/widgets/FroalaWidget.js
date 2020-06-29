@@ -445,6 +445,7 @@ class FroalaWidget extends Component {
         clicktracking: "Click Tracking"
       },
       fullPage: false,
+      
       events: {
         'froalaEditor.initialized': this.onEditorInitialized
       },
@@ -475,12 +476,20 @@ class FroalaWidget extends Component {
       })
     }
 
+    let showLabel = true;
+    if(uiSchema && uiSchema['ui:options'] && uiSchema['ui:options'].showLabel === false ) showLabel = false
+
     //console.log('>> FROALA CONFIG', config);
-    
+    let placeHolder = 'Click here and start typing';
+    if(this.props.formContext && this.props.formContext.$ref.props.placeHolder) {
+      config.placeholderText = this.props.formContext.$ref.props.placeHolder;
+    }
+
     return (
       <FormControl>
-        <Typography variant="caption" gutterBottom>{this.props.schema.title}</Typography>
+        {showLabel && <Typography variant="caption" gutterBottom>{this.props.schema.title}</Typography>}
         <FroalaEditor
+          
           id={this.props.idSchema.$id || this.state._id}        
           config={config}
           model={this.state.model}

@@ -21,7 +21,9 @@ import {
   getUserFullName,
   ThemeResource,
   injectResources,
-  omitDeep
+  omitDeep,
+  makeSlug,
+  deepEquals
 } from '../components/util';
 import amq from '../amq';
 import * as RestApi from './RestApi';
@@ -138,7 +140,9 @@ export interface ReactoryApiUtils {
   humanNumber: Function,
   inspector: Function,
   gql: Function,
-  humanDate: Function
+  humanDate: Function,
+  slugify: Function,
+  deepEquals: Function
 }
 
 class ReactoryApi extends EventEmitter {
@@ -231,6 +235,8 @@ class ReactoryApi extends EventEmitter {
       inspector,
       gql,
       humanDate,
+      slugify: makeSlug,
+      deepEquals
     };
     this.$func = {
       'core.NullFunction': (params) => {
@@ -523,13 +529,20 @@ class ReactoryApi extends EventEmitter {
   };
 
   stat(key, statistic) {
-    if (this.statistics.items[key]) {
-      this.statistics.items[key] = { ...this.statistics.item[key], ...statistic };
-      this.statistics.__keys.push(key);
-    } else {
-      this.statistics.items[key] = statistic;
+    
+    try {
+      if (this.statistics && this.statistics.items && this.statistics.items[key]) {
+        this.statistics.items[key] = { ...this.statistics.items[key], ...statistic };        
+      } else {
+  
+        this.statistics.items[key] = statistic;
+        this.statistics.__keys.push(key);
+      }
+      this.statistics.__delta += 1;
+    } catch (statisticsCollectionError) {
+      this.log(`Error capturing statistic`, { key, statistic, statisticsCollectionError }, 'error');
     }
-    this.statistics.__delta += 1;
+    
   };
 
   trackFormInstance(formInstance) {

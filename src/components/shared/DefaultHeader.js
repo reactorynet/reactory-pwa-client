@@ -513,6 +513,9 @@ ApplicationHeader.styles = theme => ({
   version: {
     fontSize: '10px',
   },
+  versionPrimary: {
+    fontSize: '12px',
+  },
   root: {
     width: '100%',
   },

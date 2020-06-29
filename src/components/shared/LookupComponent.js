@@ -37,15 +37,7 @@ class LookupWidget extends Component {
       _value = api.utils.objectMapper({ evt: value }, uiSchema.props.eventMaps.onChange);
     }
 
-    formContext.refresh();
-        
-    //this.setState({ value: _value}, ()=>{
-      
-
-      //if(self.props.onChange && typeof self.props.onChange === 'function'){
-        //self.props.onChange(_value);
-      //}
-    //});
+    formContext.refresh();            
   }
 
   /**
@@ -59,9 +51,6 @@ class LookupWidget extends Component {
   }
 
   render() {
-
-
-
     let {
       uiSchema,
       componentFqn,

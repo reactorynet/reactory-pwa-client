@@ -55,11 +55,21 @@ class RatingControl extends Component {
         marginLeft: '10px',
         marginRight: '10px'
       },
+
+      behaviourSubTitle: {
+        color: theme.palette.secondary.main,
+        textAlign: 'center',
+        fontSize: '20px',
+        paddingTop: '15px',
+        marginLeft: '10px',
+        marginRight: '10px'
+      },
+      
       textField: {
         backgroundColor: 'unset'
       },
       textFieldGood: {
-        
+
       },
       textFieldWarn: {
         backgroundColor: primaryColorLight
@@ -104,17 +114,17 @@ class RatingControl extends Component {
     const data = {
       behaviour,
       rating,
-      score  
+      score
     };
     this.props.onRatingChange(data);
   }
 
-  notifyChange(){
-    
+  notifyChange() {
+
     const { behaviour, rating } = this.props;
     const data = {
       behaviour,
-      rating,      
+      rating,
       comment: this.state.comment,
       persist: true
     };
@@ -127,17 +137,17 @@ class RatingControl extends Component {
     const that = this
     const data = {
       behaviour,
-      rating,      
+      rating,
       comment: evt.target.value,
       persist: false,
     };
 
-    this.setState({ comment:data.comment }, ()=> {      
+    this.setState({ comment: data.comment }, () => {
       that.props.onCommentChange(data);
     });
   }
 
-  confirmCustomDelete(){
+  confirmCustomDelete() {
     this.setState({ confirmDelete: true });
   }
 
@@ -152,7 +162,7 @@ class RatingControl extends Component {
       steps.push((
         <Step key={stepId}>
           <StepButton
-            onClick={assessment.complete === false ? doRatingClick : () => {} }
+            onClick={assessment.complete === false ? doRatingClick : () => { }}
             completed={false}
             active={(rating.rating - 1) === stepId}
           >
@@ -161,21 +171,31 @@ class RatingControl extends Component {
       ));
     }
 
+    let commentAllowed = true;
+    switch (assessment.survey.surveyType) {
+      case "culture":
+      case "i360":
+      case "l360":
+      case "team180": {
+        commentAllowed = false;
+      }
+    }
+
     let commentControl = null;
     //if ((rating.rating > 0 && rating.rating < 3 || behaviour.custom === true)) {
-     //const controlClasses = classNames( this.state.comment.split(' ').length < 10 ? classes.)
-    const hasError = this.state.comment.split(' ').length < self.minWordCount && rating.rating <= 2;   
-    const wordCount = this.state.comment.split(' ').length;               
+    //const controlClasses = classNames( this.state.comment.split(' ').length < 10 ? classes.)
+    const hasError = this.state.comment.split(' ').length < self.minWordCount && rating.rating <= 2;
+    const wordCount = this.state.comment.split(' ').length;
     let wordsLeft = ''
 
-    if(wordCount === 0){
+    if (wordCount === 0) {
       wordsLeft = ` (at least 10 words ${rating.rating <= 2 ? 'required!' : 'optional'})`;
     }
 
-    if(wordCount > 0 && wordCount < this.minWordCount && this.state.comment.length > 1) {
+    if (wordCount > 0 && wordCount < this.minWordCount && this.state.comment.length > 1) {
       wordsLeft = ` (${this.minWordCount - wordCount} words left)`;
     }
-    
+
     commentControl = (<TextField
       id="multiline-flexible"
       label={this.state.comment.split(' ').length < self.minWordCount && rating.rating <= 2 ? "How does this impact you? - * required" : "How does this impact you?"}
@@ -186,57 +206,74 @@ class RatingControl extends Component {
       error={hasError}
       maxLength={5000}
       value={this.state.comment}
-      onChange={assessment.complete === false ? this.commentChanged : () => {}}
-      onBlur={assessment.complete === false ? this.notifyChange : ()=> {}}
+      onChange={assessment.complete === false ? this.commentChanged : () => { }}
+      onBlur={assessment.complete === false ? this.notifyChange : () => { }}
       autoFocus={this.state.comment.split(' ').length < 10}
       className={classes.textField}
       disabled={assessment.complete === true}
-      margin="normal"        
+      margin="normal"
       helperText={`Provide some ${rating.rating <= 2 ? 'required' : 'optional'} context as to how this affects you personally or your ability to perform your duties${wordsLeft}.`}
     />);
-    
+
 
     let selectedLabel = find(behaviour.scale.entries, (entry) => {
       return entry.rating === rating.rating
-    }) ||  { description: 'Please make a selection' };
+    }) || { description: 'Please make a selection' };
 
-    let ratingTooltip = rating.rating === 0 ? 
-      <Tooltip title="Requires a rating selection"><Icon color="secondary">info</Icon></Tooltip> : 
+    let ratingTooltip = rating.rating === 0 ?
+      <Tooltip title="Requires a rating selection"><Icon color="secondary">info</Icon></Tooltip> :
       <Tooltip title={`You provide a score of ${rating.rating}`}><Icon color="action">check_circle</Icon></Tooltip>;
 
-    if(rating.rating > 0 && rating.rating <= 2) {
-      if(this.state.comment.length < 50) {
+    if (commentAllowed === true && rating.rating > 0 && rating.rating <= 2) {
+      if (this.state.comment.length < 50) {
         ratingTooltip = (<Tooltip title="You have give a score lower than 3 which requires you to provide some further input that is longer than 50 characters in length"><Icon color="secondary">info</Icon></Tooltip>)
-      }     
+      }
     }
 
     let $ratingContent = 'processing';
+    let $ratingSubContent = 'processing'
     try {
       $ratingContent = template(behaviour.title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || {}, assessment, survey: assessment.survey, api: this.props.api })
-    } catch(templateErr) {
+     
+    } catch (templateErr) {
       self.props.api.log(`Behaviour Template Error`, { template: behaviour.title, templateErr }, 'error');
 
       $ratingContent = `Error Processing behaviour template text. See logs for details`
     }
 
+    try {
+      $ratingSubContent = template(behaviour.description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || {}, assessment, survey: assessment.survey, api: this.props.api })
+    }catch(e){
+      self.props.api.log(`Behaviour Template Error`, { template: behaviour.description, templateErr }, 'error');
+
+      $ratingContent = `Error Processing behaviour template text. See logs for details`
+    }
+    
+
     const ratingComponent = (
-      <Fragment>        
-        <Badge>{ratingTooltip}</Badge> 
+      <Fragment>
+        <Badge>{ratingTooltip}</Badge>
         <Typography variant="body1" className={classes.behaviourTitle}>
           {$ratingContent}
         </Typography>
+
+        <Typography variant="body2" className={classes.behaviourSubTitle}>
+          {$ratingSubContent}
+        </Typography>
+
+
         <Stepper alternativeLabel nonLinear activeStep={rating.rating - 1}>
           {steps}
         </Stepper>
         <p className={`${classes.behaviourSelection}`}>{selectedLabel.description}</p>
-          {commentControl}
-          {this.props.rating.custom === true ? 
-            <Tooltip title="Click to delete this custom behaviour"><IconButton onClick={self.confirmCustomDelete}><Icon>delete</Icon></IconButton></Tooltip> : null }
+        {commentAllowed == true && commentControl}
+        {this.props.rating.custom === true ?
+          <Tooltip title="Click to delete this custom behaviour"><IconButton onClick={self.confirmCustomDelete}><Icon>delete</Icon></IconButton></Tooltip> : null}
       </Fragment>
     )
 
     const onDelete = () => {
-      if(lodash.isFunction(this.props.onDelete)) this.props.onDelete(this.props.rating);
+      if (lodash.isFunction(this.props.onDelete)) this.props.onDelete(this.props.rating);
     }
 
     const cancelDelete = e => {
@@ -245,18 +282,18 @@ class RatingControl extends Component {
 
     const confirmComponent = (
       <Fragment>
-        <div className={this.props.classes.confirmDeleteContainer}>        
-          <Typography style={{margin: '0 16px 0 8px'}}>Are you sure you want to delete this custom behaviour?</Typography>
+        <div className={this.props.classes.confirmDeleteContainer}>
+          <Typography style={{ margin: '0 16px 0 8px' }}>Are you sure you want to delete this custom behaviour?</Typography>
           <Fab color="primary" onClick={onDelete}><Icon>check</Icon></Fab>
-          <Button onClick={cancelDelete}>CANCEL</Button>        
+          <Button onClick={cancelDelete}>CANCEL</Button>
         </div>
       </Fragment>
     );
 
     return (
       <Grid item sm={12} xs={12}>
-        <Paper className={classes.ratingContainer}>          
-          {this.state.confirmDelete === true ? confirmComponent : ratingComponent }          
+        <Paper className={classes.ratingContainer}>
+          {this.state.confirmDelete === true ? confirmComponent : ratingComponent}
         </Paper>
       </Grid>
     )
@@ -279,12 +316,12 @@ class RatingControl extends Component {
       rating: 0,
     },
     comment: '',
-    onRatingChange: (rating) => {  },
-    onCommentChange: (comment) => {  },
-    onDelete: (rating) => {  }
+    onRatingChange: (rating) => { },
+    onCommentChange: (comment) => { },
+    onDelete: (rating) => { }
   };
 
- 
+
 }
 
 export const RatingComponent = compose(withApi, withTheme, withStyles(RatingControl.styles))(RatingControl);
@@ -323,7 +360,7 @@ class DefaultView extends Component {
         width: '100%',
         maxWidth: '1024px',
         marginLeft: 'auto',
-        marginRight: 'auto',        
+        marginRight: 'auto',
         color: primaryColorLight,
       },
       media: {
@@ -440,7 +477,7 @@ class DefaultView extends Component {
       assessment: props.assessment,
       showMenu: false,
       showTeamMembers: false,
-      showHelp: false      
+      showHelp: false
     };
     this.welcomeScreen = this.welcomeScreen.bind(this);
     this.thankYouScreen = this.thankYouScreen.bind(this);
@@ -472,7 +509,7 @@ class DefaultView extends Component {
   }
 
   is180(survey) {
-    if(survey && survey.surveyType === '180') return true;
+    if (survey && survey.surveyType === '180') return true;
 
     return false;
   }
@@ -484,43 +521,47 @@ class DefaultView extends Component {
 
     const is180 = this.is180(survey);
     const isPLC = survey.surveyType === 'plc';
-    if(!is180) {
+
+    const defaultWelcomeMessage = (
+      <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
+      5 - 7 minutes to complete.<br />
+      You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? `well the ${survey.leadershipBrand.title} are displayed:` : ` we live the organisation's leadership brand:`}
+      </Typography>
+    )
+
+    if (!is180) {
       return (
         <Paper className={classes.welcomeContainer}>
-          <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
-            5 - 7 minutes to complete.<br />
-            You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? `well the ${survey.leadershipBrand.title} are displayed:` : ` we live the organisation's leadership brand:`} 
-          </Typography>
+          <componentDefs.StaticContent
+            slug={`mores-assessments-${survey.surveyType}_${survey.leadershipBrand.id}-welcome-screen`.toLowerCase()}
+            title={`Welcome Screen: ${survey.surveyType}`}
+            propertyBag={this.props}
+            defaultValue={<Typography gutterBottom variant="body1">Thank you for taking the time to complete this {assessment.survey.leadershipBrand.title} survey</Typography>}>
+          </componentDefs.StaticContent>
 
-          
-
-          <componentDefs.StaticContent 
-            slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}-content`} 
-            defaultValue={<Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>} />           
-          
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <componentDefs.StaticContent slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo}  alt={theme} />} />            
+            <componentDefs.StaticContent slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
           </div>
-        </Paper>  
+        </Paper>
       )
     } else {
       return (
         <Paper className={classes.welcomeContainer}>
-          
+
           <Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
             5 - 7 minutes.<br />
             You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
           </Typography>
 
-          
+
 
           <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <img src={theme.assets.logo} className={classes.logo} alt={theme} />
           </div>
-        </Paper>  
+        </Paper>
       )
-    }    
+    }
   }
 
   thankYouScreen() {
@@ -530,7 +571,7 @@ class DefaultView extends Component {
     const gotoDashboard = () => {
       history.push("/");
     }
-    
+
     const completeAssessment = () => {
 
       that.setState({ completing: true }, () => {
@@ -541,30 +582,30 @@ class DefaultView extends Component {
           }
         }`, {
           id: assessment.id
-        }).then(response => {          
+        }).then(response => {
           let isComplete = false;
-          if(response.data.setAssessmentComplete && response.data.setAssessmentComplete) isComplete = response.data.setAssessmentComplete.complete === true;
-          that.setState({ completing: false, complete: isComplete, assessment: {...lodash.cloneDeep(that.state.assessment), complete: isComplete }});
-        }).catch( mutateError => {
+          if (response.data.setAssessmentComplete && response.data.setAssessmentComplete) isComplete = response.data.setAssessmentComplete.complete === true;
+          that.setState({ completing: false, complete: isComplete, assessment: { ...lodash.cloneDeep(that.state.assessment), complete: isComplete } });
+        }).catch(mutateError => {
           that.setState({ completing: false, completeError: 'Could not update the assessment status' });
         })
-      });      
+      });
     }
 
     return (
       <Paper className={classes.thankYouScreen}>
-        {assessment.complete === false && 
+        {assessment.complete === false &&
           <Fragment>
             <Typography gutterBottom variant="body1">Thank you for taking the time to complete the assessment. If you are comfortable with the ratings and input that you have provided, please click the complete button below.</Typography>
             <Typography variant="body1">If you want to come back later and review your answers, simply click back to Dashboard and return later.</Typography>
-            <Button onClick={completeAssessment} color="primary" style={{marginRight: '4px'}}><Icon>save</Icon>&nbsp;Complete</Button>
-            <Button onClick={gotoDashboard}><Icon>dashboard</Icon>Dashboard</Button>        
+            <Button onClick={completeAssessment} color="primary" style={{ marginRight: '4px' }}><Icon>save</Icon>&nbsp;Complete</Button>
+            <Button onClick={gotoDashboard}><Icon>dashboard</Icon>Dashboard</Button>
           </Fragment>}
-        {assessment.complete === true && 
+        {assessment.complete === true &&
           <Fragment>
             <Typography gutterBottom variant="body1">You've completed this assessment.</Typography>
-            <Button onClick={gotoDashboard}><Icon>dashboard</Icon>Dashboard</Button>        
-          </Fragment> }
+            <Button onClick={gotoDashboard}><Icon>dashboard</Icon>Dashboard</Button>
+          </Fragment>}
       </Paper>
     );
   }
@@ -601,39 +642,39 @@ class DefaultView extends Component {
           updatedAt        
       }
     }`, {
-        id: assessment.id,
-        ratingId: ratingEntry.id,
-        rating: parseInt(ratingEntry.rating, 10),
-        comment: ratingEntry.comment || '',
-        qualityId: ratingEntry.quality ? ratingEntry.quality.id : null,
-        behaviourId: ratingEntry.behaviour ? ratingEntry.behaviour.id: null,        
-        custom: ratingEntry.custom === true,
-        behaviourText: ratingEntry.behaviourText,
-        deleteRating: deleteRating,
-      }, { 'fetch-policy': 'network-only'}).then(response => {
-                
-        if(ratingIndex === -1) {  
-          const assessmentState = lodash.cloneDeep(assessment);
-          assessmentState.ratings.push({...response.data.setRatingForAssessment});
-          that.setState({ assessment: assessmentState })
-        }
-        
-        if(deleteRating === true) {
-          const assessmentState = lodash.cloneDeep(assessment);
-          lodash.pullAt(assessmentState.ratings, [ratingIndex]);
-          that.setState({ assessment: assessmentState })
-        }
-      }).catch((persistRatingError) => {
-        console.error('Error saving rating value', persistRatingError)
-      })
+      id: assessment.id,
+      ratingId: ratingEntry.id,
+      rating: parseInt(ratingEntry.rating, 10),
+      comment: ratingEntry.comment || '',
+      qualityId: ratingEntry.quality ? ratingEntry.quality.id : null,
+      behaviourId: ratingEntry.behaviour ? ratingEntry.behaviour.id : null,
+      custom: ratingEntry.custom === true,
+      behaviourText: ratingEntry.behaviourText,
+      deleteRating: deleteRating,
+    }, { 'fetch-policy': 'network-only' }).then(response => {
+
+      if (ratingIndex === -1) {
+        const assessmentState = lodash.cloneDeep(assessment);
+        assessmentState.ratings.push({ ...response.data.setRatingForAssessment });
+        that.setState({ assessment: assessmentState })
+      }
+
+      if (deleteRating === true) {
+        const assessmentState = lodash.cloneDeep(assessment);
+        lodash.pullAt(assessmentState.ratings, [ratingIndex]);
+        that.setState({ assessment: assessmentState })
+      }
+    }).catch((persistRatingError) => {
+      console.error('Error saving rating value', persistRatingError)
+    })
   }
 
   onBehaviourRatingChanged(data) {
     const { assessment } = this.state;
     const { behaviour, rating, score } = data
     const that = this;
-    const { api } = this.props; 
-    if(lodash.isNil(rating)) return;      
+    const { api } = this.props;
+    if (lodash.isNil(rating)) return;
     let ratingIndex = lodash.findIndex(assessment.ratings, { 'id': rating.id });
     if (ratingIndex === -1) ratingIndex = lodash.findIndex(assessment.ratings, { 'behaviour.id': behaviour.id });
 
@@ -691,10 +732,10 @@ class DefaultView extends Component {
       behaviourText: behaviour,
       comment: '',
       custom: true
-    }, -1);    
+    }, -1);
   }
 
-  getDelegateTeamList(){
+  getDelegateTeamList() {
     const { FullScreenModal, StaticContent } = this.componentDefs;
     const closeDelegateTeamList = () => {
       this.setState({ showTeamMembers: !this.state.showTeamMembers })
@@ -702,17 +743,19 @@ class DefaultView extends Component {
 
     return (
       <FullScreenModal open={this.state.showTeamMembers === true} onClose={closeDelegateTeamList} title={"Team Details"}>
-        <StaticContent slug={`towerstone-team-members-${this.props.assessment.survey.id}`}/>        
-      </FullScreenModal> 
+        <StaticContent slug={`towerstone-team-members-${this.props.assessment.survey.id}`} />
+      </FullScreenModal>
     );
   }
 
   ratingScreen() {
     const that = this;
-    const { classes } = this.props;
+    const { classes, api } = this.props;
     const { step, assessment, newBehaviourText } = this.state;
-    const { delegate, ratings } = assessment;
+    const { delegate, ratings, survey } = assessment;
+    const { StaticContent } = this.componentDefs;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
+    const { slugify } = api.utils;
     const behaviours = quality.behaviours.map((behaviour) => {
 
       let ratingIndex = lodash.findIndex(ratings, (r) => { return behaviour.id === r.behaviour.id && quality.id === r.quality.id });
@@ -735,14 +778,14 @@ class DefaultView extends Component {
         assessment={assessment}
         ratingIndex={ratingIndex}
         onRatingChange={this.onBehaviourRatingChanged}
-        onCommentChange={this.onBehaviourCommentChanged}        
+        onCommentChange={this.onBehaviourCommentChanged}
         onBlur={commentBlurred}
-        />
+      />
       );
     });
 
     const customBehaviours = lodash.filter(ratings, r => { return r.quality.id === quality.id && r.custom === true }).map((rating) => {
-      
+
       const ratingIndex = lodash.findIndex(ratings, r => r.id === rating.id);
 
       const commentBlurred = () => {
@@ -755,11 +798,11 @@ class DefaultView extends Component {
 
       return (<RatingComponent
         key={`custom.${ratingIndex}`}
-        behaviour={{ 
-          ...rating.behaviour, 
-          qualityId: rating.quality.id, 
-          quality: rating.quality, 
-          scale: assessment.survey.leadershipBrand.scale 
+        behaviour={{
+          ...rating.behaviour,
+          qualityId: rating.quality.id,
+          quality: rating.quality,
+          scale: assessment.survey.leadershipBrand.scale
         }}
         rating={rating}
         comment={rating.comment}
@@ -778,10 +821,10 @@ class DefaultView extends Component {
 
     const onNewBehaviourClicked = (evt) => {
       const newBehaviourTextToCreate = newBehaviourText;
-      that.setState({ newBehaviourText: ""}, ()=>{
+      that.setState({ newBehaviourText: "" }, () => {
         that.onNewBehaviour(quality, newBehaviourTextToCreate);
       })
-      
+
     };
 
     const toggleShowTeam = () => {
@@ -790,48 +833,88 @@ class DefaultView extends Component {
 
     const onClearCustomText = evt => that.setState({ newBehaviourText: '' });
     
+    let CustomFeedbackComponent = (
+      <Grid item sm={12} xs={12}>
+        <Paper style={{ padding: '5px' }}>
+          <Typography>
+            If you want to provide a customised behaviour that {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName} exhibits that relates to {quality.title}, type it in the box below and then click the add <Icon>add</Icon> button and provide your rating and feedback.<br /><br />
+            Please note, these custom ratings will not affect the calculation of {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName}'s overall rating for this assessment.
+         </Typography>
+          <Paper className={classes.root} elevation={1}>
+            <InputBase
+              className={classes.input}
+              placeholder={"Please provide a custom behaviour description"}
+              onChange={setNewBehaviourText}
+              fullWidth={true}
+              value={newBehaviourText} />
+            <IconButton onClick={onNewBehaviourClicked} className={classes.iconButton} aria-label="Search">
+              <Icon>add</Icon>
+            </IconButton>
+            <Divider className={classes.divider} />
+            <IconButton onClick={onClearCustomText} color="primary" className={classes.iconButton} aria-label="Directions">
+              <Icon>close</Icon>
+            </IconButton>
+          </Paper>
+        </Paper>
+      </Grid>
+    );
+
+
+    switch(assessment.survey.surveyType) {
+      case "i360":
+      case "l360":
+      case "culture":
+      case "team180": {
+
+        const enableComment = () => {
+          that.setState({ comment_for_section: quality.id });
+        };
+        
+        const staticContentProps = {
+          canEdit:["owner"],
+          editRoles: ['USER', 'DEVELOPER'],
+          viewMode: "minimal",          
+          autoSave: ['onChange'],
+          throttle: 500,
+          isEditing: true,
+          showEditIcon: false,
+          helpTopics: [`mores-assessment-help-personalized-comment-${api.utils.slugify(quality.title)}`],
+          helpTitle: `Adding a comment to ${quality.title}`,
+          mode: that.state.comment_for_section === quality.id ? "edit" : "view",
+          title: `Section ${quality.title} Comment by ${assessment.assessor.firstName} ${assessment.assessor.lastName} on ${assessment.survey.title}`,
+          slug: `mores-survey-${assessment.survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`,
+          placeHolder: `Add a customized comment for ${assessment.delegate.firstName} as it relates to ${quality.description}`,
+        };
+
+        CustomFeedbackComponent = (
+        <Paper>
+          <StaticContent {...staticContentProps} />
+        </Paper>
+        )
+      }
+    }
+
     return (
       <Grid container spacing={8}>
         <Grid item sm={12} xs={12}>
-          <Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed.</Typography>
-          { this.is180(assessment.survey) === true ? <Typography variant="caption" color="primary">&nbsp;Please provide ratings in context of the entire team <IconButton onClick={toggleShowTeam}><Icon>supervised_user_circle</Icon></IconButton></Typography> : null }
-          { this.is180(assessment.survey) === true ? this.getDelegateTeamList() : null }
-          { behaviours }          
-          { customBehaviours.length > 0 ? 
+          <StaticContent slug={`mores-assessments-instructions-${slugify(quality.title)}-survey-${survey.id}`} defaultValue={<Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed.</Typography>} />
+          {this.is180(assessment.survey) === true ? <Typography variant="caption" color="primary">&nbsp;Please provide ratings in context of the entire team <IconButton onClick={toggleShowTeam}><Icon>supervised_user_circle</Icon></IconButton></Typography> : null}
+          {this.is180(assessment.survey) === true ? this.getDelegateTeamList() : null}
+          {behaviours}
+          {customBehaviours.length > 0 ?
             <Fragment>
-              <hr style={{  marginBottom: `${this.props.theme.spacing(1)}px`, 
-                          marginTop: `${this.props.theme.spacing(1)}px` }} />
+              <hr style={{
+                marginBottom: `${this.props.theme.spacing(1)}px`,
+                marginTop: `${this.props.theme.spacing(1)}px`
+              }} />
               <Typography variant="caption" color="primary">Custom Behaviours for {quality.title} added by you</Typography>
               {customBehaviours}
-            </Fragment> : null }
-          
-        </Grid>
-        {assessment.complete === false ? (
-          <Grid item sm={12} xs={12}>
-            <Paper style={{ padding: '5px' }}>
-              <Typography>
-                If you want to provide a customised behaviour that {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName} exhibits that relates to {quality.title}, type it in the box below and then click the add <Icon>add</Icon> button and provide your rating and feedback.<br /><br />
-                Please note, these custom ratings will not affect the calculation of {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName}'s overall rating for this assessment.
-             </Typography>
-             <Paper className={classes.root} elevation={1}>              
-              <InputBase 
-                className={classes.input} 
-                placeholder={"Please provide a custom behaviour description"}  
-                onChange={setNewBehaviourText}
-                fullWidth={true}
-                value={newBehaviourText} />
-              <IconButton onClick={onNewBehaviourClicked} className={classes.iconButton} aria-label="Search">
-                <Icon>add</Icon>
-              </IconButton>
-              <Divider className={classes.divider} />
-              <IconButton onClick={onClearCustomText} color="primary" className={classes.iconButton} aria-label="Directions">
-                <Icon>close</Icon>
-              </IconButton>
-            </Paper>                            
-            </Paper>
-          </Grid>
-        ) : null}
+            </Fragment> : null}
 
+        </Grid>
+        {CustomFeedbackComponent && <Grid item sm={12} xs={12}>
+          {CustomFeedbackComponent}
+        </Grid>}
       </Grid>
     );
   }
@@ -844,7 +927,7 @@ class DefaultView extends Component {
   nextStep() {
     let maxSteps = this.props.assessment.survey.leadershipBrand.qualities.length + 2;
     if (this.state.step < maxSteps)
-      this.setState({ step: this.state.step + 1 }, ()=>{
+      this.setState({ step: this.state.step + 1 }, () => {
         window.scrollTo({ top: 0 })
       });
   }
@@ -895,7 +978,7 @@ class DefaultView extends Component {
       this.props.history.push('/survey')
     };
 
-    const viewReport = () => this.props.history.push(`/report/${assessment._id}`)    
+    const viewReport = () => this.props.history.push(`/report/${assessment._id}`)
 
     const options = (props) => (
       <Menu
@@ -913,7 +996,7 @@ class DefaultView extends Component {
         <MenuItem onClick={props.cancelClicked}>
           <ListItemIcon><CancelIcon /></ListItemIcon>
           Close
-        </MenuItem>      
+        </MenuItem>
       </Menu>);
 
     options.muiName = 'IconMenu';
@@ -925,22 +1008,36 @@ class DefaultView extends Component {
     this.setState({ showMenu: !this.state.showMenu, anchorEl: evt.currentTarget })
   }
 
-  currentStepValid(){    
+  currentStepValid() {
     const { assessment, step } = this.state;
-    if(step === 0) return true;
-    
+    if (step === 0) return true;
+
     let maxSteps = assessment.survey.leadershipBrand.qualities.length + 2;
-    if(step === maxSteps - 1) return false;
+    if (step === maxSteps - 1) return false;
 
     const { ratings } = assessment;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
 
-    
-    const invalidRatings = lodash.find(ratings, r => {
-      return (r.quality.id === quality.id && r.rating <= 2) && (lodash.isEmpty(r.comment) === true || r.comment.length < 50);
-    }) || [];
 
-    if(invalidRatings.length === 0) return true;
+    const invalidRatings = lodash.find(ratings, r => {
+
+      let commentRequired = true;
+      
+      switch(assessment.survey.surveyType) {
+        case "i360":
+        case "l360":
+        case "culture": 
+        case "team180": {
+          commentRequired = false; 
+          break;
+        }
+      }
+
+      if(commentRequired === true) return (r.quality.id === quality.id && r.rating <= 2) && (lodash.isEmpty(r.comment) === true || r.comment.length < 50);
+      return  (r.quality.id === quality.id && r.rating === 0)
+    }) || [];
+    
+    if (invalidRatings.length === 0) return true;
     else return false;
   }
 
@@ -960,9 +1057,9 @@ class DefaultView extends Component {
     const daysLeft = moment(survey.endDate).diff(moment(), 'days');
 
     const is180 = this.is180(survey);
-    
+
     let headerTitle = assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.surveyType} ${survey.title} ${selfAssessment === true ? ' [Self Assessment]' : ''}` : `Unknown`;
-    if(is180  === true) {
+    if (is180 === true) {
       headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName} team`;
     }
 
@@ -973,9 +1070,9 @@ class DefaultView extends Component {
             <Grid container spacing={8}>
               <Grid item xs={12} sm={12}>
                 <CardHeader
-                  avatar={<Badge color={"primary"} badgeContent={ assessment.overdue === true ? "!" : assessment.complete === true ? 'C' : `${daysLeft}` }>
-                            <Avatar src={api.getAvatar(delegate)} className={classNames(classes.delegateAvatar)} alt={assessment.delegateTitle}></Avatar>
-                          </Badge>}
+                  avatar={<Badge color={"primary"} badgeContent={assessment.overdue === true ? "!" : assessment.complete === true ? 'C' : `${daysLeft}`}>
+                    <Avatar src={api.getAvatar(delegate)} className={classNames(classes.delegateAvatar)} alt={assessment.delegateTitle}></Avatar>
+                  </Badge>}
                   title={headerTitle}
                   subheader={`Survey valid from ${moment(survey.startDate).format('DD MMMM YYYY')} till ${moment(survey.endDate).format('DD MMMM YYYY')} - ${assessment.complete === true ? 'Completed - Review Only' : 'In progress'}`}
                   action={
@@ -996,15 +1093,15 @@ class DefaultView extends Component {
         <Grid item xs={12} sm={12}>
           {toolbar()}
         </Grid>
-        <Grid item xs={12} sm={12} style={{marginBottom: '16px'}}>
+        <Grid item xs={12} sm={12} style={{ marginBottom: '16px' }}>
           {wizardControl}
         </Grid>
         <Grid item xs={12} sm={12}>
-          <Typography variant="body1" color={isCurrentStepValid === true ? "primary" : "secondary" } style={{textAlign: 'right', minHeight: '100px', display: "block" }}>
-            {isCurrentStepValid ? 'Click next to proceed' : 'Ensure that you have completed all ratings and comments in full before proceeding.'}
+          <Typography variant="body1" color={isCurrentStepValid === true ? "success" : "error"} style={{ textAlign: 'right', minHeight: '100px', display: "block" }}>
+            {isCurrentStepValid ? 'Click  next below to proceed' : 'Ensure that you have completed all ratings and comments in full before proceeding.'}
           </Typography>
           <MobileStepper
-            style={{              
+            style={{
               background: '#fff',
               borderTop: `1px solid ${theme.palette.primary.main}`,
             }}
@@ -1013,9 +1110,14 @@ class DefaultView extends Component {
             position="bottom"
             activeStep={step}
             nextButton={
-              <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Please ensure you have completed each rating in full'}><Button size="small" onClick={nextStep} disabled={isCurrentStepValid === false}>
-                Next{theme.direction === 'rtl' ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
-              </Button></Tooltip>
+              <>
+                <Typography variant="caption" color={isCurrentStepValid === true ? "success" : "error"} style={{ position: 'fixed', right: '100px' }}>
+                  {isCurrentStepValid ? 'Click next to proceed' : 'Form is incomplete'}
+                </Typography>
+                <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Please ensure you have completed each rating in full'}><Button size="small" color={isCurrentStepValid === true ? "success" : "danger" } onClick={nextStep} disabled={isCurrentStepValid === false}>
+                  Next{theme.direction === 'rtl' ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
+                </Button></Tooltip>
+              </>
             }
             backButton={
               <Button size="small" onClick={prevStep} disabled={step === 0}>
@@ -1023,7 +1125,7 @@ class DefaultView extends Component {
                 Back
                 </Button>
             }
-          />          
+          />
         </Grid>
       </Grid>
     );
@@ -1032,7 +1134,7 @@ class DefaultView extends Component {
   static propTypes = {
     assessment: PropTypes.object,
     api: PropTypes.instanceOf(ReactoryApi),
-    mode: PropTypes.objectOf([ 'assessor', 'delegate', 'admin' ])
+    mode: PropTypes.objectOf(['assessor', 'delegate', 'admin'])
   };
 
   static defaultProps = {
@@ -1040,7 +1142,7 @@ class DefaultView extends Component {
     mode: 'assessor'
   };
 
-  
+
 };
 
 const DefaultViewComponent = compose(

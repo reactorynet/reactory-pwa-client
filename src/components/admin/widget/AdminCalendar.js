@@ -4,7 +4,7 @@ import { withRouter } from 'react-router';
 import { compose } from 'redux';
 import { isNil, isArray } from 'lodash';
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import BigCalendar from 'react-big-calendar';
+import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import {
   AppBar,
@@ -20,9 +20,12 @@ import {
   Typography,
   Avatar,
   Button,
-  Card, CardActions,
-  CardHeader, CardContent,
-  Collapse, IconButton,
+  Card, 
+  CardActions,
+  CardHeader, 
+  CardContent,
+  Collapse, 
+  IconButton,
   Paper,
   Grid,
   List,
@@ -71,7 +74,7 @@ import { flattenSelections } from 'apollo-utilities';
 // to the correct localizer.
 
 
-const localizer = BigCalendar.momentLocalizer(moment); // or globalizeLocalizer
+const localizer = momentLocalizer(moment); // or globalizeLocalizer
 
 
 
@@ -88,7 +91,7 @@ const newSurvey = {
   status: 'new',
   startDate: moment().startOf('day').format('YYYY-MM-DD'),
   endDate: moment().add(7,'days').endOf('day').format('YYYY-MM-DD')
-}
+};
 
 
 const newDelegate = {
@@ -110,7 +113,7 @@ const newDelegate = {
   complete: false,
   launched: false,
   removed: false
-}
+};
 
 function TabContainer(props) {
   return (
@@ -118,7 +121,7 @@ function TabContainer(props) {
       {props.children}
     </Typography>
   );
-}
+};
 
 TabContainer.propTypes = {
   children: PropTypes.node.isRequired,
@@ -507,12 +510,16 @@ class AdminCalendar extends Component {
       <Grid container spacing={0}>
         <Grid item xs={12} sm={12} md={info ? 8 : 12}>
           <Paper className={this.props.classes.Container}>
-            <BigCalendar
+          <BigCalendar
               popup
               localizer={localizer}
               onSelectEvent={this.onSelectEvent}
               onDoubleClickEvent={this.onDoubleClick}
-              events={surveys || []}
+              events={surveys.map((entry) => ({
+                ...entry,
+                startDate: entry.startDate || moment().startOf('day').toDate(),
+                endDate: entry.endDate || moment().startOf('day').toDate()
+              })) || []}
               startAccessor='startDate'
               endAccessor='endDate'
               defaultDate={new Date()}

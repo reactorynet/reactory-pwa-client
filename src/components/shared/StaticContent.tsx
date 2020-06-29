@@ -6,20 +6,34 @@ import { Button, Icon, IconButton } from '@material-ui/core';
 import { withStyles, withTheme,  } from '@material-ui/core/styles';
 import moment, { Moment } from 'moment';
 import ReactoryApi, { withApi } from '@reactory/client-core/api';
+import FroalaWidget from '@reactory/client-core/components/reactory/widgets/FroalaWidget';
 
 interface ReactoryStaticContentProps {
   api: ReactoryApi,
   classes?: any,
   showTitle: boolean,
+  title: string,
   slug: string,
   slugSource?: string,
   slugSourceProps?: any,
   defaultValue?: any,
-  propertyBag?: any,  
+  placeHolder?: string, 
+  propertyBag?: any,
+  viewMode?: string,
+  formFqn?: string,  
+  mode?: string | "edit" | "view",
   templateEngine: 'lodash',
   match: match,
   location: any,
-  history: any
+  history: any,  
+  editRoles?: string[],
+  viewRoles?: string[],
+  autoSave?: string[],
+  helpTopics?: string[],
+  helpTitle?: string,
+  throttle?: number,
+  showEditIcon?: boolean
+
 }
 
 interface ReactoryStaticContent {
@@ -62,7 +76,7 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
         topics: [],
         published: false,
       },
-      editing: false,
+      editing: props.isEditing === true,
       original: null,
       found: false,      
     };
@@ -115,8 +129,10 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
           }
         }
 
-        that.setState({ content: { ...staticContent, content: $content }, found: true, original: staticContent.content });
-
+        try {
+          that.setState({ content: { ...staticContent, content: $content }, found: true, original: staticContent.content });
+        } catch (err) {}
+        
       } else {
         const user = that.props.api.getUser();
 
@@ -140,36 +156,55 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
   componentDidMount(){
     this.getContent(); 
   }
+
+  componentDidUpdate(nextProps, nextState){
+    if(this.props.slug !== nextProps.slug) {
+      this.getContent()      
+    }
+  }
+
+  componentDidCatch(err) {
+    this.props.api.log(`StaticContent Handled Error`, {err}, 'error');
+  }
     
   render(){
     const containerProps = {};  
-    const { api, classes } = this.props;
+    const { api, classes, viewRoles, editRoles = ['DEVELOPER'], formFqn = 'static.ContentCapture', viewMode } = this.props;
     const { getContent } = this;
-    let isDeveloper = this.props.api.hasRole(['DEVELOPER']);
-    
-    const edit = () => {
-      if(isDeveloper === true) this.setState({ editing: !this.state.editing });
-    };
-
     const { editing, found, content } = this.state;
     const { defaultValue = "" } = this.props;
-    const ContentCapture = this.props.api.getComponent('static.ContentCapture');
-    const contentComponent = found === true && content.published === true ? (<div {...containerProps} dangerouslySetInnerHTML={{__html: this.state.content.content}}></div>) : defaultValue;    
+    
+    let isDeveloper = this.props.api.hasRole(['DEVELOPER']);
+    let canEdit = this.props.api.hasRole(editRoles);
 
-      return (
-        <div className={`${classes.staticContentContainer} ${isDeveloper ? classes.staticContainerDeveloper: ''}`}>
-          {isDeveloper === true ? 
-          <div className={classes.developerTools}>            
-            <IconButton onClick={edit} color="primary" size={'small'}>
-              <Icon>{editing === false ? 'edit' : 'check' }</Icon>
-            </IconButton>
-          </div> : null }
-          {editing === true ? 
-            <ContentCapture slug={this.props.slug} formData={{ slug: this.props.slug }} mode="edit" onMutateComplete={getContent} /> : 
-            contentComponent                        
-          }
-        </div>
-      )        
+    canEdit = canEdit === false && isDeveloper === true ? true  : canEdit;
+    const edit = () => {
+      this.setState({ editing: !this.state.editing });
+    };
+
+    let editWidget = (<IconButton onClick={edit} color="primary" size={'small'} className={classes.editIcon}>
+        <Icon>{editing === false ? 'edit' : 'check' }</Icon>
+      </IconButton>)
+  
+
+    let contentComponent = found === true && content.published === true ? (<div {...containerProps} dangerouslySetInnerHTML={{__html: this.state.content.content}}></div>) : defaultValue;            
+    let ContentCaptureComponent = this.props.api.getComponent( formFqn );
+    let contentCaptureProps: any = {      
+      formData: { slug: this.props.slug, title: this.props.title, published: true, content: this.props.defaultValue },
+      mode:"edit", 
+      uiSchemaKey: viewMode || 'default',
+      onMutateComplete:getContent, 
+      helpTopics: this.props.helpTopics,
+      helpTitle: this.props.helpTitle,
+      placeHolder: this.props.placeHolder,     
+    };
+
+    return (
+      <div className={`${classes.staticContentContainer} ${isDeveloper ? classes.staticContainerDeveloper: ''}`}>
+        {canEdit === true && this.props.showEditIcon === true && editWidget }
+        {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent }        
+      </div>
+    )        
   }
 }
 
@@ -181,28 +216,30 @@ StaticContent.propTypes = {
   slugSourceProps: PropTypes.any,
   defaultContent: PropTypes.any,
   propertyBag: PropTypes.any,
+  showEditIcon: PropTypes.bool,
   history: PropTypes.any,
   match: PropTypes.any,
   location: PropTypes.any,
 };
 
 StaticContent.defaultProps = {
-  slugSource: 'property' // can be route
+  slugSource: 'property', // can be route,
+  showEditIcon: true
 };
 
 StaticContent.styles = (theme) => {
   const { palette } = theme;
 
   return {
-    developerTools: {
+    editIcon: {
       float: 'right',
     },
     staticContentContainer: {
-  
+      padding: theme.spacing(2)
     },
     staticContainerDeveloper: {
       '&:hover': {
-        outline: `1px dotted ${palette.primary.main}`,
+        outline: `1px solid ${palette.primary.main}`,
         cursor: 'pointer'
       }
     },

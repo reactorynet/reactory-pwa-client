@@ -18,8 +18,8 @@ class LinkFieldWidget extends Component {
     let theme = props.theme;
     let variant = "text";
     let _component = 'button';
-
-    if(props.uiSchema && props.uiSchema["ui:options"]){
+    let uioptions = props.uiSchema && props.uiSchema["ui:options"] ? props.uiSchema["ui:options"] : null;    
+    if(uioptions){
       const { 
         format, 
         title, 
@@ -28,8 +28,8 @@ class LinkFieldWidget extends Component {
         iconPosition, 
         variant, 
         iconProps = { },
-        component = 'button'
-       } = props.uiSchema["ui:options"];
+        component = 'button',        
+       } = uioptions;
       if(format) linkText = template(format)(props)      
       if(title) linkTitle = template(title)(props)
       if(variant) _variant = variant
@@ -55,20 +55,29 @@ class LinkFieldWidget extends Component {
       }                
     }
 
+    if(uioptions === null) {
+      uioptions = {
+        name: props.name,
+        id: props.idSchema.$id
+      }
+    }
+
     const goto = () => { 
       if(props.uiSchema["ui:options"].userouter === false) window.location.assign(linkText);
       else props.history.push(linkText); 
     };
 
+    debugger;
+
     let $component = null;
     switch(_component.toLowerCase()){
       case 'fab': {
-        $component = (<Fragment><Fab onClick={goto}>{linkIcon}</Fab></Fragment>);
+        $component = (<Fragment><Fab  id={uioptions.id} name={uioptions.name} onClick={goto}>{linkIcon}</Fab></Fragment>);
         break;
       }
       case 'button':
       default: {
-        $component=(<Fragment><Button onClick={goto} variant={variant}>{_iconPosition === 'left' ? linkIcon : null}{linkTitle}{_iconPosition === 'right' ? linkIcon : null}</Button></Fragment>)
+        $component=(<Fragment><Button id={uioptions.id} name={uioptions.name} onClick={goto} variant={variant}>{_iconPosition === 'left' ? linkIcon : null}{linkTitle}{_iconPosition === 'right' ? linkIcon : null}</Button></Fragment>)
         break;
       }
     }

@@ -142,6 +142,8 @@ class LoginCard extends Component {
                 value={this.state.username}
                 onChange={this.updateUsername}
                 disabled={busy}
+                name='reactory-security::standard-login-email'
+                id='reactory-security::standard-login-email'
                 autoFocus={true}
               />
 
@@ -152,22 +154,25 @@ class LoginCard extends Component {
                 value={this.state.password}
                 onChange={this.updatePassword}
                 onKeyPress={this.keyPressPassword}
+                name='reactory-security::standard-login-password'
+                id='reactory-security::standard-login-password'
                 disabled={busy}
               />
 
               <Fab
-                id="doLoginButton"
+                id="reactory-security::standard-login-button"
+                name="reactory-security::standard-login-button"
                 onClick={doLogin} color="primary" raised="true" disabled={enableLogin === false || busy === true}
                 style={{ marginTop: '20px' }}>
                 <Icon>lock_open</Icon>
               </Fab> <br />
 
-              <Button onClick={this.doForgot} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
+              <Button onClick={this.doForgot} color='secondary' id="reactory-security::standard-forgot-password-button" name="reactory-security::standard-forgot-password-button" disabled={busy} style={{ marginTop: '20px' }}>
                 Forgot Password
               </Button>
               {this.props.magicLink === true && <Fragment>
                   <br/>
-                  <Button onClick={this.doEmailLogin} color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
+                  <Button onClick={this.doEmailLogin} id="reactory-security::standard-send-link-button" name="reactory-security::standard-send-link-button" color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
                     Send Magic Link
                   </Button>
                 </Fragment>}                    

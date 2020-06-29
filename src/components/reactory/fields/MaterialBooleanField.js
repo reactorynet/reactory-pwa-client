@@ -50,6 +50,10 @@ export default (props) => {
      if(uiSchema['ui:options'].yesLabel) yesLabel = uiSchema['ui:options'].yesLabel;
      if(uiSchema['ui:options'].noLabel) yesLabel = uiSchema['ui:options'].noLabel;
   }
+
+  if(uiSchema && uiSchema.hidden) {
+    return (<input type="hidden" value={formData} />)
+  } 
      
   return (
   <FormControlLabel

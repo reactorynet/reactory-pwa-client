@@ -18,7 +18,6 @@ import ActivityIcon from '@material-ui/icons/LocalActivity';
 import moment from 'moment';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import { LineChart, PieChart } from 'react-easy-chart';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
 import { withApi } from '../../api/ApiProvider';
