@@ -42,6 +42,7 @@ function DefaultObjectFieldTemplate(props) {
   };
 
   const { TitleField, DescriptionField } = props;
+
   return (
     <fieldset>
       {(props.uiSchema["ui:title"] || props.title) && (
@@ -60,7 +61,7 @@ function DefaultObjectFieldTemplate(props) {
           formContext={props.formContext}
           style={props.uiSchema["ui:descriptionStyle"] || {}}
         />
-      )}      
+      )}
       {props.properties.map(prop => prop.content)}
       {canExpand() && (
         <IconButton
@@ -221,7 +222,7 @@ class ObjectField extends Component {
       description,
       TitleField,
       DescriptionField,
-      properties: orderedProperties.map(name => {      
+      properties: orderedProperties.map(name => {
         return {
           content: (
             <SchemaField
