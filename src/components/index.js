@@ -63,6 +63,7 @@ import GridLayoutComponent from './shared/GridLayoutComponent';
 import ProductCardComponent from './shared/ProductCardComponent';
 import NotFoundComponent from './shared/NotFoundComponent';
 import DocumentListComponent from './shared/DocumentListComponent';
+import DocumentUploadComponent from './shared/DocumentUploadComponents';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -349,6 +350,12 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'DocumentListComponent',
     component: DocumentListComponent,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'core',
+    name: 'DocumentUploadComponent',
+    component: DocumentUploadComponent,
     version: '1.0.0'
   },
   {
