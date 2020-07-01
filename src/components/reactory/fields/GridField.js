@@ -63,8 +63,6 @@ export class BootstrapGridField extends ObjectField {
 
     const layout = uiSchema['ui:grid-layout'];
 
-    debugger;
-
     return (
       <fieldset>
         {title ? <TitleField

@@ -80,7 +80,7 @@ class DocumentListWidget extends Component {
 
     const { query, mutation, propertyMap, resultsMap, resultItem, multiSelect, label } = this.props.uiSchema['ui:options'];
     const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
-    let _label = label || 'Documents';
+    let _label = label || '';
 
 
     const deleteDocument = (_id) => {
@@ -114,7 +114,7 @@ class DocumentListWidget extends Component {
           if (data && data[resultItem]) documents = resultsMap ? objectMapper(data, resultsMap) : data[resultItem];
           return (
             <>
-              <label className={classes.label}>{_label}</label>
+              { label != '' && <label className={classes.label}>{_label}</label> }
               <div className={classes.docContainer}>
                 {
                   documents.length > 0 ?
