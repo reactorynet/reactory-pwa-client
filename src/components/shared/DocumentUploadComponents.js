@@ -7,6 +7,7 @@ import {
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { template } from 'lodash';
 
 class DocumentUploadWidget extends Component {
 
@@ -26,12 +27,24 @@ class DocumentUploadWidget extends Component {
   render() {
     const self = this
     const { StaticContent } = this.componentDefs;
-    const { classes, theme, api } = this.props;
+    const { classes, theme, api, uiSchema } = this.props;
+
+    let _slug = '';
+    let _title = '';
+    let _helpTopics = [];
+    let _helpTitle = '';
+    let _placeHolder = 'Add a customized comment.';
 
     api.log('RENDERING DOCUMENTS UPLOAD COMPONENT');
 
-    let slug = 'fileuploadtest';
-    let title = 'Title Will Be Dynamic';
+    const uiOptions = uiSchema['ui:options'];
+    const mappedProperties = uiOptions.propertyMap ? api.utils.objectMapper(this.props, uiOptions.propertyMap) : {};
+    const { slug, title, mode = 'editing', helpTitle, helpTopics, placeHolder } = uiOptions.props;
+    if (slug) _slug = template(slug)(mappedProperties);
+    if (title) _title = template(title)(mappedProperties);
+    if (helpTitle) _helpTitle = template(helpTitle)(mappedProperties);
+    if (helpTopics) _helpTopics = helpTopics;
+    if (helpTitle) _placeHolder = template(placeHolder)(mappedProperties);
 
     const staticContentProps = {
       canEdit: ["owner"],
@@ -41,12 +54,12 @@ class DocumentUploadWidget extends Component {
       throttle: 500,
       isEditing: true,
       showEditIcon: false,
-      helpTopics: [`mores-assessment-help-personalized-comment-relpacewithsug`],
-      helpTitle: `Adding a comment to Replace with Title`,
-      mode: 'edit',
-      title: `Section TITLEGOESHERE Comment by...`,
-      slug: `mores-survey-SLUGGOESHERE-assessment`,
-      placeHolder: `Add a customized comment for`,
+      helpTopics: _helpTopics,
+      helpTitle: _helpTitle,
+      mode: mode,
+      title: _title,
+      slug: _slug,
+      placeHolder: _placeHolder,
     };
 
     return (
