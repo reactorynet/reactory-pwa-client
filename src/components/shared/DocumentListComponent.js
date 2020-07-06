@@ -65,85 +65,100 @@ class DocumentListWidget extends Component {
   static defaultProps = {}
 
   state = {
-    isDeleting: false
+    documents: [],
+    isLoading: true,
+    isDeleting: false,
   }
 
   constructor(props, context) {
     super(props, context);
+    this.getDocuments = this.getDocuments.bind(this);
+  }
+
+  componentDidMount = () => {
+    this.getDocuments();
+  }
+
+  getDocuments = () => {
+    const { query, propertyMap } = this.props.uiSchema['ui:options'];
+    const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
+    this.setState({ isLoading: true });
+
+    this.props.api.graphqlQuery(query.text, variables).then((result) => {
+      if (result && result.data && result.data[query.name]) {
+        this.setState({
+          documents: result.data[query.name],
+          isLoading: false,
+          error: null,
+        })
+      } else {
+        this.setState({
+          documents: [],
+          isLoading: false,
+          error: null,
+        })
+      }
+    }).catch((error) => {
+      this.setState({ isLoading: false, documents: [] });
+      this.props.api.createNotification(`Error ${query.name} Failed!`, { showInAppNotification: true, type: 'error' });
+    });
+
+  }
+
+  deleteDocument = (_id) => {
+    const { mutation } = this.props.uiSchema['ui:options'];
+    this.setState({ isDeleting: true });
+    this.props.api.graphqlMutation(gql(mutation.text), { id: _id })
+      .then((deleteResult) => {
+        if (deleteResult && deleteResult.data && deleteResult.data[mutation.name]) {
+          let updatedDocuments = [...this.state.documents];
+          updatedDocuments = updatedDocuments.filter(doc => doc.id != _id);
+          this.setState({ isDeleting: false, documents: updatedDocuments });
+          this.props.api.createNotification(`Document successfully deleted`, { showInAppNotification: true, type: 'success' });
+        } else {
+          console.log('COULD NOT DELETE DOCUMENT');
+          this.setState({ isDeleting: false });
+        }
+      }).catch((error) => {
+        this.setState({ isDeleting: false });
+        this.props.api.createNotification(`Error ${mutation.name} Failed!`, { showInAppNotification: true, type: 'error' });
+      });
   }
 
   render() {
     const self = this
-    const { classes, formContext, formData, required, api, theme } = this.props;
-
-    api.log('RENDERING DOCUMENTS LIST COMPONENT', { formContext, formData }, 'debug');
-
-    const { query, mutation, propertyMap, resultsMap, resultItem, multiSelect, label } = this.props.uiSchema['ui:options'];
-    const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
+    const { classes, api } = this.props;
+    const { label } = this.props.uiSchema['ui:options'];
     let _label = label || '';
 
-
-    const deleteDocument = (_id) => {
-
-      this.setState({ isDeleting: true });
-
-      api.graphqlMutation(gql(mutation), { id: _id }).then((deleteResult) => {
-
-        console.log('DOCUMENT DELETE RESULT', deleteResult)
-
-        this.setState({ isDeleting: false });
-
-       // NEED TO REFRESH PAGE - REMOVE DELETED ITEM
-
-      }).catch((error) => {
-
-        console.error('ERROR DELETING DOCUMENT', error)
-        this.setState({ isDeleting: false });
-
-      })
-
-    }
+    this.props.api.log('RENDERING DOCUMENTS LIST COMPONENT', {}, 'debug');
 
     return (
-      <Query query={gql`${query}`} variables={variables} >
-        {(props, context) => {
-          const { data, loading, error } = props;
-          if (loading === true) return (<p>Loading documents</p>)
-          if (error) return (<p>Error Loading documents: {error}</p>)
-          let documents = [];
-          if (data && data[resultItem]) documents = resultsMap ? objectMapper(data, resultsMap) : data[resultItem];
-          return (
-            <>
-              { label != '' && <label className={classes.label}>{_label}</label> }
-              <div className={classes.docContainer}>
-                {
-                  documents.length > 0 ?
-                    documents.map(doc => {
-                      return (
-                        <div key={doc.id} className={classes.doc}>
-                          <Icon fontSize="30" classes={{ root: classes.icon }}>description</Icon>
-                          <a className={classes.docName} href={doc.url} target="_blank" >
-                            <Typography variant="subtitle1">{doc.name}</Typography>
-                          </a>
-                          {
-                            !this.state.isDeleting ? <button className={classes.deleteButton} onClick={() => deleteDocument(doc.id)}>Remove</button> :
-                              <CircularProgress style={{color: '#f24646', height: '1rem', width: '1rem', marginRight: '1rem'}} />
-                          }
-
-                        </div>
-                      )
-                    }) : <p style={{ margin: 0 }}>No Documents Available</p>
-                }
-              </div>
-            </>
-          )
-        }}
-      </Query>
+      <>
+        {_label != '' && <label className={classes.label}>{_label}</label>}
+        <div className={classes.docContainer}>
+          {
+            this.state.documents.length > 0 ?
+              this.state.documents.map(doc => {
+                return (
+                  <div key={doc.id} className={classes.doc}>
+            <Icon fontSize="30" classes={{ root: classes.icon }}>description</Icon>
+            <a className={classes.docName} href={doc.url} target="_blank" >
+              <Typography variant="subtitle1">{doc.name}</Typography>
+            </a>
+            {
+              !this.state.isDeleting ? <button className={classes.deleteButton} onClick={() => this.deleteDocument(doc.id)}>Remove</button> :
+                <CircularProgress style={{ color: '#f24646', height: '1rem', width: '1rem', marginRight: '1rem' }} />
+            }
+          </div>
+                )
+              }) : <p style={{ margin: '0 0 0 16px' }}>{ this.state.loading ? 'Loading... ' : 'No Documents Available'}</p>
+          }
+        </div>
+      </>
     )
   }
 }
 const DocumentListComponent = compose(withApi, withTheme, withStyles(DocumentListWidget.styles))(DocumentListWidget)
 export default DocumentListComponent;
-
-
 
