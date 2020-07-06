@@ -67,6 +67,7 @@ class LinkFieldWidget extends Component {
       else props.history.push(linkText);
     };
 
+
     let $component = null;
     switch(_component.toLowerCase()){
       case 'fab': {
