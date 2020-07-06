@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 // import PropTypes from 'prop-types'
-import { withRouter, Route, Switch } from 'react-router'
+import { withRouter, Route, Switch, RouteComponentProps } from 'react-router'
 import { Link } from "react-router-dom";
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles'
@@ -12,47 +12,55 @@ import { OrganizationList, Forms } from '../organization';
 //import schemas, { FieldTemplate } from './schemas';
 import Dashboards from '../dashboards';
 import { withApi } from '../../api/ApiProvider'
-import { ReactoryApi } from "../../api/ReactoryApi";
+import ReactoryApi from "../../api/ReactoryApi";
+import Reactory from '@reactory/client-core/types/reactory';
 
-class AdminDashboard extends Component {
+interface IReactoryDashboardProperties extends RouteComponentProps {
+  organization?: Reactory.IOrganization,
+  rootPath?: string, 
+  classes?: any,
+}
+
+class AdminDashboard extends Component<IReactoryDashboardProperties, any> {
+
+
+  constructor(props, context){
+    super(props, context);   
+  }
 
   static styles = theme => ({
     dashboardRoot: {
-      backgroundColor: theme.palette.primary.light
+      marginTop: theme.spacing(1)
     }
   })
 
-  static propTypes = {
-
+  static defaultProps = {
+    organization: null,
+    rootPath: 'admin',
   }
 
-  handleOrganizationSelect = (organization) => {
-    this.props.history.push(`/admin/org/${organization.id}/general`)  
+  handleOrganizationSelect(organization){
+    this.props.history.push(`/${this.props.rootPath}/org/${organization.id}/general`)  
   } 
 
   render(){
-    const { classes } = this.props;
+
+    const { rootPath, classes } = this.props;
+
     return(
-      <Grid container spacing={8}>
-        <Grid item xs={12}>
-          <Toolbar>
-            <Link to="/admin/">
-              <Typography variant="h6">Dashboard</Typography>
-            </Link>            
-          </Toolbar>
-        </Grid>
-        <Grid item md={3} xs={12}>
+      <Grid container spacing={8} className={classes.dashboardRoot}>        
+        <Grid item xs={12} sm={12} md={3} lg={2}>            
           <OrganizationList admin={true} newOrganizationLink={true}/>                    
         </Grid>
-        <Grid item md={9} xs={12}>        
+        <Grid item xs={12} sm={12} md={9} lg={10} >        
           <Switch>
-            <Route exact path='/admin/'>
+            <Route exact path={`/${rootPath}/`}>
               <Dashboards.DefaultAdminDashboard />
             </Route>
-            <Route exact path='/admin/org/new/general'>
+            <Route exact path={`/${rootPath}/org/new/general`}>
               <Forms.Default mode={'new'} tab={'general'} />
             </Route>
-            <Route path='/admin/org/:organizationId/:tab' render={ props =>
+            <Route path={`/${rootPath}/org/:organizationId/:tab`} render={ props =>
               <Forms.Default organizationId={props.match.params.organizationId} tab={props.match.params.tab} mode={'edit'} {...props} />              
             } />                        
           </Switch> 
@@ -61,11 +69,7 @@ class AdminDashboard extends Component {
     )
   }
 
-  constructor(props, context){
-    super(props, context);
-    this.handleOrganizationSelect = this.handleOrganizationSelect.bind(this);
-   
-  }
+ 
 }
 
 export default compose(

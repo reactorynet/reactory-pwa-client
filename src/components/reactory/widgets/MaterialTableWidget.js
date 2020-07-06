@@ -248,6 +248,7 @@ class MaterialTableWidget extends Component {
                   totalCount: 0
                 }
               } else {
+                
                 let result = api.utils.objectMapper(queryResult.data[queryDefinition.name], uiOptions.resultMap || queryDefinition.resultMap);
                 result.page = result.page - 1;
                 return result;

@@ -202,7 +202,7 @@ class Profile extends Component {
 
         const variables = {
             id: profile.id,
-            organizationId: selectedMembership.organization.id
+            organizationId: selectedMembership && selectedMembership.organization && selectedMembership.organization.id ? selectedMembership.organization.id : '*'
         }
 
         api.graphqlQuery(query, variables).then((result) => {
@@ -269,30 +269,43 @@ class Profile extends Component {
 
     renderMemberships() {
         const { memberships } = this.state.profile
-        const { withMembership, classes } = this.props;
+        const { withMembership, classes, api } = this.props;
+        const Content = api.getComponent('core.StaticContent');
+
+        
         
         if(withMembership === false) return null;
 
         const data = [];
         const self = this
+        
         if (memberships && memberships.length) {
-            memberships.map(m => data.push({ ...m }))
-        }
+            memberships.forEach(m => data.push({ ...m }))
+        }        
+
+        const defaultMembershipContent = (
+            <>
+                <Typography variant="h6">Organisation Membership(s)</Typography>                    
+                <Typography variant="body2">
+                    If you are registered to participate in other organizations, all your memberships will appear here. <br /> 
+                    Selecting a membership will load your organisation structure, for that organisation or particular business unit. <br />                                        
+                </Typography>
+                <Typography>
+                    * Most users will only have one membership. These memberships are managed by the administrators for your organisation.
+                </Typography>
+            </>
+        )
+
         const membershipList = (
             <Grid item sm={12} xs={12} offset={4}>
                 <Paper className={classes.general}>
-                    <Typography variant="h6">Organization Membership(s)</Typography>
-                    <Typography variant="body2">
-                        If you are registered to participate in other organizations, your memberships will appear here. <br /> 
-                        Selecting a membership will load your peer nominations, for that organization or business unit. <br />
-                        Most users will only have one membership. <br />These memberships are managed by the administrators of the system.
-                    </Typography>
+                    <Content slug={'core-user-profile-memebership-intro'} editRoles={['DEVELOPER', 'ADMIN']} defaultValue={defaultMembershipContent}></Content>                                        
                     <List>
                         {data.map( (membership, index) => (
-                            membership.organization && 
+                            
                             <ListItem key={index}>
-                                <Avatar>{membership.organization.name.substring(0,2)}</Avatar>
-                                <ListItemText secondary={`${membership.client.name}`} primary={!isNil(membership.organization) ? membership.organization.name : 'No organization'}></ListItemText>
+                                <Avatar style={{marginRight: `8px`}}>{membership && membership.organization && membership.organization.name ? membership.organization.name.substring(0,2) : membership.client.name.substring(0,2)}</Avatar>
+                                <ListItemText secondary={`${membership.client.name}`} primary={isNil(membership.organization) === false ? membership.organization.name : 'No organization'}></ListItemText>
                                 <ListItemSecondaryAction>
                                     <IconButton onClick={() => {self.onMembershipSelectionChanged(membership)}}><Icon>more</Icon></IconButton>
                                 </ListItemSecondaryAction>
@@ -645,15 +658,8 @@ class Profile extends Component {
             />);
 
             
-
-            materialTable = (
-                <Paper className={classes.general}>
-                    <Typography variant="h6">Nominees for {this.state.selectedMembership.organization.name}</Typography>
-                    <Toolbar>
-                        <IconButton onClick={editUserSelection}><Icon>edit</Icon></IconButton>
-                        <IconButton disabled={data.length < 5} onClick={e => confirmPeers(false) }><Icon>check_circle</Icon></IconButton>
-                    </Toolbar>
-                    <Paper className={classes.peerToolHeader} elevation={2}>
+            const defaultInstructions = (
+                <>
                     <Typography variant="body1">
                         Use the list below to manage your nominees.  Click on the <Icon>edit</Icon> above to add a new colleague to your list.
                     </Typography>
@@ -670,6 +676,32 @@ class Profile extends Component {
                         variant={"body1"}>
                         {moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }
                     </Typography>
+                </>
+            );
+
+            const Content = api.getComponent('core.StaticContent');
+            const contentProps = {
+                defaultValue: defaultInstructions,
+                slug: `core-peers-nomination-instructions-${selectedMembership.client.id}-${selectedMembership.organization && selectedMembership.organization.id ? selectedMembership.organization.id : 'general' }`,
+            }
+
+            materialTable = (
+                <Paper className={classes.general}>
+                    <Typography variant="h6">My organisation structure - {this.state.selectedMembership.organization.name}</Typography>
+                    <Toolbar>
+                        <Tooltip title="Click here to add a new employee to your organisation structure">
+                            <IconButton onClick={editUserSelection} color="primary">
+                                <Icon>add</Icon>
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title={moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once you have selected all your organisation peers, please confirm by clicking here.'}>
+                            <IconButton onClick={e => confirmPeers(false) } color="secondary">
+                                <Icon>check_circle</Icon>
+                            </IconButton>
+                        </Tooltip>
+                    </Toolbar>
+                    <Paper className={classes.peerToolHeader} elevation={2}>                        
+                        <Content {...contentProps} />                                                                           
                     </Paper>
                     <div>
                         {
@@ -692,33 +724,7 @@ class Profile extends Component {
                                             expanded: usr.id,
                                         });
                                     }                                    
-                                };
-
-                                /*
-
-                                            <ListItem key={1} selected={usr.relationship === 'manager'} onClick={ usr.relationship !== 'manager' ? makeSupervisor : nilf}>
-                                                <Avatar><Icon>supervisor_account</Icon></Avatar>
-                                                <ListItemText primary={usr.relationship !== 'manager' ? 'Select As Leader' : `${usr.firstName} ${usr.lastName} is flagged as a leader`} />                                                                                                
-                                            </ListItem>
-
-                                            <ListItem key={2} selected={usr.relationship === 'peer'} onClick={ usr.relationship !== 'peer' ? makePeer : nilf}>
-                                                <Avatar><Icon>account_box</Icon></Avatar>
-                                                <ListItemText primary={usr.relationship !== 'peer' ? 'Select As Peer' : `${usr.firstName} ${usr.lastName} is flagged as a peer`} />
-                                            </ListItem>
-                                            
-                                            <ListItem key={3} selected={usr.relationship === 'report'} onClick={ usr.relationship !== 'report' ? makeDirectReport : nilf}>
-                                                <Avatar><Icon>account_circle</Icon></Avatar>
-                                                <ListItemText primary={usr.relationship !== 'report' ? 'Select As Report' : `${usr.firstName} ${usr.lastName} is flagged as a report`} />                                                
-                                            </ListItem>
-
-                                            <ListItem key={4} onClick={deletePeer}>
-                                                <Avatar><Icon>delete_outline</Icon></Avatar>
-                                                <ListItemText primary={`Remove ${usr.firstName} ${usr.lastName} as nominee`} />
-                                            </ListItem>                                                                                 
-
-
-                                */
-
+                                };                                
 
                                 const selectorWidget = (
                                     <div style={{width:"100%"}}>                                        
@@ -1076,13 +1082,12 @@ class Profile extends Component {
 
         const ProfileInGrid = (
             <Grid container spacing={2}>
-            {this.renderHeader()}
-            {this.renderGeneral()}
-
-            {this.props.memberships ? this.renderMemberships() : null}
-            {this.renderPeers()}
-            {this.renderFooter()}
-            {this.renderCropper()}
+                {this.renderHeader()}
+                {this.renderGeneral()}
+                {this.props.withMembership === true ? this.renderMemberships() : null}
+                {this.renderPeers()}
+                {this.renderFooter()}
+                {this.renderCropper()}
             </Grid>
         );
 

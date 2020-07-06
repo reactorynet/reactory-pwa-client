@@ -17,12 +17,9 @@ class DefaultAdminDashboard extends Component {
 
   render(){
     return (
-      <Grid container>
-        <Grid item xs={12} md={12}>
-          <Typography variant="h6">Dashboard</Typography>
-        </Grid>                
+      <Grid container>        
         <Grid item xs={12} md={12} lg={12}>
-          <Typography variant="caption">Calendar</Typography>
+          <Typography variant="h5">Overview Calendar</Typography>
           <AdminCalendar />
         </Grid>
       </Grid>

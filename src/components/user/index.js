@@ -623,11 +623,7 @@ class Logout extends Component {
       //console.log('error logging out', e)
       this.props.history.push('/login')
     })
-  }
-
-  componentDidUpdate(){
-
-  }
+  }  
 
   render(){
     if(this.state.done === false) return <Typography>Signing out...</Typography>
