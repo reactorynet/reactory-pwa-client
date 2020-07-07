@@ -152,7 +152,7 @@ class RatingControl extends Component {
   }
 
   render() {
-    const { behaviour, classes, rating, assessment } = this.props;
+    const { behaviour, classes, rating, assessment, theme } = this.props;
     const self = this;
     let steps = [];
     let needsAttention = false;
@@ -221,8 +221,8 @@ class RatingControl extends Component {
     }) || { description: 'Please make a selection' };
 
     let ratingTooltip = rating.rating === 0 ?
-      <Tooltip title="Requires a rating selection"><Icon color="secondary">info</Icon></Tooltip> :
-      <Tooltip title={`You provide a score of ${rating.rating}`}><Icon color="action">check_circle</Icon></Tooltip>;
+      <Tooltip title="Requires a rating selection"><Icon color="error">info</Icon></Tooltip> :
+      <Tooltip title={`You provide a score of ${rating.rating}`}><Icon style={{ color: theme.palette.success.main }}>check_circle</Icon></Tooltip>;
 
     if (commentAllowed === true && rating.rating > 0 && rating.rating <= 2) {
       if (this.state.comment.length < 50) {
@@ -509,9 +509,18 @@ class DefaultView extends Component {
   }
 
   is180(survey) {
-    if (survey && survey.surveyType === '180') return true;
+    if(!survey) return false;
+    if(!survey.surveyType) return false;
 
-    return false;
+    switch(survey.surveyType) {
+      case 'team180':
+      case '180': {
+        return true;
+      }
+      default: {
+        return false;
+      }
+    }    
   }
 
   welcomeScreen() {
@@ -897,7 +906,7 @@ class DefaultView extends Component {
     return (
       <Grid container spacing={8}>
         <Grid item sm={12} xs={12}>
-          <StaticContent slug={`mores-assessments-instructions-${slugify(quality.title)}-survey-${survey.id}`} defaultValue={<Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed.</Typography>} />
+          <StaticContent slug={`mores-assessments-instructions-${slugify(quality.id)}-survey-${survey.id}`} defaultValue={<Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed.</Typography>} />
           {this.is180(assessment.survey) === true ? <Typography variant="caption" color="primary">&nbsp;Please provide ratings in context of the entire team <IconButton onClick={toggleShowTeam}><Icon>supervised_user_circle</Icon></IconButton></Typography> : null}
           {this.is180(assessment.survey) === true ? this.getDelegateTeamList() : null}
           {behaviours}
@@ -939,7 +948,7 @@ class DefaultView extends Component {
 
   toolbar(content) {
     let tabs = [(<Tab key={'w'} label="Welcome" />)];
-    this.props.assessment.survey.leadershipBrand.qualities.map((quality, kidx) => tabs.push(<Tab key={kidx} label={`${tabs.length}. ${quality.title}`} />));
+    this.props.assessment.survey.leadershipBrand.qualities.map((quality, kidx) => tabs.push(<Tab key={kidx} label={`${tabs.length}. ${quality.title}`} style={{ cursor: 'default' }} />));
     tabs.push(<Tab key={'c'} label="Complete" />);
     return (
       <AppBar position="static" color="default">
@@ -1058,7 +1067,7 @@ class DefaultView extends Component {
 
     const is180 = this.is180(survey);
 
-    let headerTitle = assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.surveyType} ${survey.title} ${selfAssessment === true ? ' [Self Assessment]' : ''}` : `Unknown`;
+    let headerTitle = assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.title} ${selfAssessment === true ? ' [Self Assessment]' : ''}` : `Unknown`;
     if (is180 === true) {
       headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName} team`;
     }
@@ -1070,9 +1079,7 @@ class DefaultView extends Component {
             <Grid container spacing={8}>
               <Grid item xs={12} sm={12}>
                 <CardHeader
-                  avatar={<Badge color={"primary"} badgeContent={assessment.overdue === true ? "!" : assessment.complete === true ? 'C' : `${daysLeft}`}>
-                    <Avatar src={api.getAvatar(delegate)} className={classNames(classes.delegateAvatar)} alt={assessment.delegateTitle}></Avatar>
-                  </Badge>}
+                  avatar={<Avatar src={api.getAvatar(delegate)} className={classNames(classes.delegateAvatar)} alt={assessment.delegateTitle}></Avatar>}
                   title={headerTitle}
                   subheader={`Survey valid from ${moment(survey.startDate).format('DD MMMM YYYY')} till ${moment(survey.endDate).format('DD MMMM YYYY')} - ${assessment.complete === true ? 'Completed - Review Only' : 'In progress'}`}
                   action={

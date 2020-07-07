@@ -85,11 +85,12 @@ class LoginCard extends Component {
     const { history, api } = this.props;
     const { redirectOnLogin } = this.state;
     const that = this;
+
     that.setState({ busy: true }, () => {
       api.setLastUserEmail(this.state.username);
       api.login(this.state.username, this.state.password).then(({ user }) => {        
         api.afterLogin(user).then(status => {
-          that.setState({ loginError: null, loggedIn: true }, () => {
+          that.setState({ loginError: `Welcome ${user.firstName}`, loggedIn: true }, () => {
             setTimeout(() => {
               history.push(redirectOnLogin);
             }, 1000);

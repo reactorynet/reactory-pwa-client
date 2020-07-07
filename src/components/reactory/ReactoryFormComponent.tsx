@@ -596,94 +596,17 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     let toolbarposition = 'bottom'
     let showToolbar = true;
 
+
+    
+
+
     const formUiOptions = formDef.uiSchema['ui:options'] || {
       showSchemaSelectorInToolbar: true,
     };
 
-    const $submitForm = () => {
-      if (isNil(self.formRef) === false && self.formRef) {
-        try {
-          self.formRef.onSubmit();
-        } catch (submitError) {
-          self.props.api.log(`Could not submit the form`, submitError, 'error')
-        }
-      }
-    }
-
-    if (formUiOptions && isNil(formUiOptions.showSubmit) === false) {
-      showSubmit = formUiOptions.showSubmit === true;
-    }
-
-    if (formUiOptions && isNil(formUiOptions.showHelp) === false) {
-      showHelp = formUiOptions.showHelp === true;
-    }
-
-    if (formUiOptions && isNil(formUiOptions.showRefresh) === false) {
-      showRefresh = formUiOptions.showRefresh === true;
-    }
-
-    if (formUiOptions && isNil(formUiOptions.toolbarPosition) === false) {
-      toolbarposition = formUiOptions.toolbarPosition
-    }
-
-    const { submitProps, buttons } = formUiOptions;
-    if (typeof submitProps === 'object' && showSubmit === true) {
-      const { variant = 'fab', iconAlign = 'left' } = submitProps;
-      const _props = { ...submitProps };
-      delete _props.variant;
-      delete _props.iconAlign;
-      _props.onClick = $submitForm;
-
-      if (variant && typeof variant === 'string' && showSubmit === true) {
-        switch (variant) {
-          case 'button': {
-            submitButton = (<Button {..._props}>{iconAlign === 'left' && iconWidget}{template(_props.text)({ props: self.props, this: self })}{iconAlign === 'right' && iconWidget}</Button>);
-            break;
-          }
-          case 'fab':
-          default: {
-            submitButton = (<Fab {..._props}>{iconWidget}</Fab>);
-          }
-        }
-      }
-    }
-
-    let _additionalButtons = [];
-    if (buttons && buttons.length) {
-      _additionalButtons = buttons.map((button, buttonIndex) => {
-        const { buttonProps, iconProps, type, handler } = button;
-
-        const onButtonClicked = () => {
-          api.log(`OnClickButtonFor Additional Buttons`);
-          if (self.props[handler] && typeof self.props[handler] === 'function') {
-            self.props[handler]({ reactoryForm: self, button })
-          } else {
-            api.createNotification(`No handler '${handler}' for ${buttonProps.title} button`, { showInAppNotification: true, type: 'error' })
-          }
-        }
-
-        let buttonIcon = null;
-        if (iconProps) {
-          buttonIcon = <Icon {...iconProps}>{iconProps.icon}</Icon>
-        }
-
-        return (
-          <Button {...buttonProps} key={buttonIndex} onClick={onButtonClicked}>{iconProps.placement === 'left' && buttonIcon}{buttonProps.title}{iconProps.placement === 'right' && buttonIcon}</Button>
-        )
-      });
-    }
-
-    /**
-     * options for submit buttons
-     * variant = 'fab' / 'button'
-     *
-     */
-
-    if (showSubmit === true && submitButton === null) {
-      submitButton = (<Fab onClick={$submitForm} color="primary">{iconWidget}</Fab>);
-    }
-
     let uiSchemaSelector = null;
+    let activeUiSchemaItem = null;
+    let activeUiSchemaModel = null;
 
     if (formDef.uiSchemas) {
       const { DropDownMenu } = this.componentDefs;
@@ -694,8 +617,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       const { activeUiSchemaMenuItem } = self.state;
       //set default selected
-      let activeUiSchemaItem = null;
-      let activeUiSchemaModel = null;
 
       if (activeUiSchemaMenuItem) {
         activeUiSchemaModel = activeUiSchemaMenuItem;
@@ -795,6 +716,91 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       formProps.formContext.$schemaSelector = uiSchemaSelector;
     }
 
+
+    const $submitForm = () => {
+      if (isNil(self.formRef) === false && self.formRef) {
+        try {
+          self.formRef.onSubmit();
+        } catch (submitError) {
+          self.props.api.log(`Could not submit the form`, submitError, 'error')
+        }
+      }
+    }
+
+    if (formUiOptions && isNil(formUiOptions.showSubmit) === false) {
+      showSubmit = formUiOptions.showSubmit === true;
+    }
+
+    if (formUiOptions && isNil(formUiOptions.showHelp) === false) {
+      showHelp = formUiOptions.showHelp === true;
+    }
+
+    if (formUiOptions && isNil(formUiOptions.showRefresh) === false) {
+      showRefresh = formUiOptions.showRefresh === true;
+    }
+
+    if (formUiOptions && isNil(formUiOptions.toolbarPosition) === false) {
+      toolbarposition = formUiOptions.toolbarPosition
+    }
+
+    const { submitProps, buttons } = formUiOptions;
+    if (typeof submitProps === 'object' && showSubmit === true) {
+      const { variant = 'fab', iconAlign = 'left' } = submitProps;
+      const _props = { ...submitProps };
+      delete _props.variant;
+      delete _props.iconAlign;
+      _props.onClick = $submitForm;
+
+      if (variant && typeof variant === 'string' && showSubmit === true) {
+        switch (variant) {
+          case 'button': {
+            submitButton = (<Button {..._props}>{iconAlign === 'left' && iconWidget}{template(_props.text)({ props: self.props, this: self })}{iconAlign === 'right' && iconWidget}</Button>);
+            break;
+          }
+          case 'fab':
+          default: {
+            submitButton = (<Fab {..._props}>{iconWidget}</Fab>);
+          }
+        }
+      }
+    }
+
+    let _additionalButtons = [];
+    if (buttons && buttons.length) {
+      _additionalButtons = buttons.map((button, buttonIndex) => {
+        const { buttonProps, iconProps, type, handler } = button;
+
+        const onButtonClicked = () => {
+          api.log(`OnClickButtonFor Additional Buttons`);
+          if (self.props[handler] && typeof self.props[handler] === 'function') {
+            self.props[handler]({ reactoryForm: self, button })
+          } else {
+            api.createNotification(`No handler '${handler}' for ${buttonProps.title} button`, { showInAppNotification: true, type: 'error' })
+          }
+        }
+
+        let buttonIcon = null;
+        if (iconProps) {
+          buttonIcon = <Icon {...iconProps}>{iconProps.icon}</Icon>
+        }
+
+        return (
+          <Button {...buttonProps} key={buttonIndex} onClick={onButtonClicked}>{iconProps.placement === 'left' && buttonIcon}{buttonProps.title}{iconProps.placement === 'right' && buttonIcon}</Button>
+        )
+      });
+    }
+
+    /**
+     * options for submit buttons
+     * variant = 'fab' / 'button'
+     *
+     */
+
+    if (showSubmit === true && submitButton === null) {
+      submitButton = (<Fab onClick={$submitForm} color="primary">{iconWidget}</Fab>);
+    }
+
+ 
     const refreshClick = evt => self.setState({ queryComplete: false, dirty: false });
 
 
@@ -857,6 +863,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       exportButton = (<DropDownMenu menus={exportMenus} onSelect={onDropDownSelect} icon={"import_export"} />)
     }
 
+    
+    if(activeUiSchemaModel && activeUiSchemaModel['ui:options']) {
+
+    }
+
     let formtoolbar = (
       <Toolbar>
         {formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}
@@ -865,7 +876,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         {_additionalButtons}
         {self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
         {formDef.backButton && <Button variant="text" onClick={this.goBack} color="secondary"><Icon>keyboard_arrow_left</Icon></Button>}
-        {formDef.helpTopics && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button>}
+        {formDef.helpTopics && showHelp === true && <Button variant="text" onClick={this.showHelp} color="secondary"><Icon>help</Icon></Button>}
         {reportButton}
         {exportButton}
       </Toolbar>

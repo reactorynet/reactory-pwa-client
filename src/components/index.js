@@ -14,6 +14,8 @@ import {
 import * as MaterialCore from '@material-ui/core'
 import * as MaterialIcons from '@material-ui/icons'
 import * as MaterialLab from '@material-ui/lab'
+import * as MaterialStyles from '@material-ui/core/styles';
+import * as MaterialPickers from '@material-ui/pickers';
 import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
 import LoginPage, { RegisterPage } from './auth';
@@ -651,6 +653,30 @@ export const componentRegistery = [
     name: 'MaterialLab',
     version: '1.0.0',
     component: MaterialLab,
+  },
+  {
+    nameSpace: 'material-ui',
+    name: 'MaterialStyles',
+    version: '1.0.0',
+    component: MaterialStyles,
+  },
+  {
+    nameSpace: 'material-ui',
+    name: 'MaterialPickers',
+    version: '1.0.0',
+    component: MaterialPickers,
+  },
+  {
+    nameSpace: 'material-ui',
+    name: 'Material',
+    version: '1.0.0',
+    component: {
+      MaterialCore,
+      MaterialIcons,
+      MaterialLab,
+      MaterialStyles,
+      MaterialPickers,
+    },
   },
   {
     nameSpace: 'core',

@@ -6,7 +6,7 @@ import gql from 'graphql-tag';
 import { graphql, Query, Mutation } from 'react-apollo';
 import Paper from '@material-ui/core/Paper';
 import { intersection, remove } from 'lodash'
-import { List, ListItem, ListItemText, Typography } from '@material-ui/core';
+import { List, ListItem, ListItemText, Typography, Button, Icon, Tooltip } from '@material-ui/core';
 import { withApi } from '../../api/ApiProvider';
 
 /**
@@ -66,18 +66,18 @@ class OrganizationList extends Component {
         
     let newOrganizationLink = null;
     if(this.props.newOrganizationLink === true){
-      const selectNewLinkClick = () => { that.handleOrganizationSelect({id: 'new', name: 'NEW'}) };
-      newOrganizationLink = (
-        <ListItem key={-1} dense button onClick={selectNewLinkClick}>              
-            <ListItemText primary={'NEW ORGANIZATION'} secondary='Click here to create a new organization' />
-        </ListItem>)
+      const selectNewLinkClick = () => { that.handleOrganizationSelect({id: 'new', name: 'NEW ORGANIZATION'}) };
+      newOrganizationLink = (<Button key={-1} color="primary" onClick={selectNewLinkClick}><Icon>add</Icon>NEW</Button>)
     }
 
+    
+
     const list = (
-      <List>
-        {newOrganizationLink}
-        {allOrganizations.map( (organization, index) => {
-            
+      <>
+      <Button key={-1} color="secondary" onClick={()=>{this.props.history.push(`${this.props.rootPath || '/admin/'}`)}}><Icon>date_range</Icon>CALENDAR</Button>
+      {newOrganizationLink}
+      <List>        
+        {allOrganizations.map( (organization, index) => {            
             if(organization) {
             
             const selectOrganization = () => {
@@ -94,7 +94,9 @@ class OrganizationList extends Component {
               return null;
             }
           })}        
-      </List>);
+      </List>
+      </>
+      );
 
     let component = null;
     if(this.props.wrapper === true) {
