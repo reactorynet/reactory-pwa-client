@@ -114,7 +114,7 @@ class FroalaWidget extends Component {
 
   componentDidCatch(error, info) {
     // You can also log the error to an error reporting service
-    console.error('Froala.js [error-boundary]', { error, info })
+    this.props.api.log('Froala.js [error-boundary]', { error, info }, 'debug')
   }
 
   froalaCheck(){
@@ -410,7 +410,9 @@ class FroalaWidget extends Component {
   }
     
   onModelChange(model){
+    
     this.setState({ model }, ()=>{
+    
       if(this.props.onChange) this.props.onChange(model);
     });
   }

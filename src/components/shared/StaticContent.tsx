@@ -9,10 +9,12 @@ import ReactoryApi, { withApi } from '@reactory/client-core/api';
 import FroalaWidget from '@reactory/client-core/components/reactory/widgets/FroalaWidget';
 
 interface ReactoryStaticContentProps {
+  id: string,
   api: ReactoryApi,
   classes?: any,
   showTitle: boolean,
   title: string,
+  published?: boolean,
   slug: string,
   slugSource?: string,
   slugSourceProps?: any,
@@ -26,6 +28,8 @@ interface ReactoryStaticContentProps {
   match: match,
   location: any,
   history: any,  
+  editAction?: string | "inline" | "link",
+  editLink?: string,
   editRoles?: string[],
   viewRoles?: string[],
   autoSave?: string[],
@@ -169,7 +173,7 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
     
   render(){
     const containerProps = {};  
-    const { api, classes, viewRoles, editRoles = ['DEVELOPER'], formFqn = 'static.ContentCapture', viewMode } = this.props;
+    const { api, classes, viewRoles, editRoles = ['DEVELOPER'], formFqn = 'static.ContentCapture', viewMode, editLink = '/reactory/ContentCapture/edit/', slug, title, published } = this.props;
     const { getContent } = this;
     const { editing, found, content } = this.state;
     const { defaultValue = "" } = this.props;
@@ -179,7 +183,12 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
 
     canEdit = canEdit === false && isDeveloper === true ? true  : canEdit;
     const edit = () => {
-      this.setState({ editing: !this.state.editing });
+      if(this.props.editAction && this.props.editAction === "link") {
+        window.open(`${editLink}?slug=${slug}&title=${title}&published=${published === true}`, '_new');
+      } else {
+        this.setState({ editing: !this.state.editing });
+      }
+      
     };
 
     let editWidget = (<IconButton onClick={edit} color="primary" size={'small'} className={classes.editIcon}>
@@ -192,6 +201,7 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
     let contentCaptureProps: any = {      
       formData: { slug: this.props.slug, title: this.props.title, published: true, content: this.props.defaultValue },
       mode:"edit", 
+      id: this.props.id,
       uiSchemaKey: viewMode || 'default',
       onMutateComplete:getContent, 
       helpTopics: this.props.helpTopics,
