@@ -21,7 +21,9 @@ import { withTheme, withStyles } from '@material-ui/core/styles';
 import { withApi} from '@reactory/client-core/api/ApiProvider';
 import styles from '@reactory/client-core/components/shared/styles';
 
-export class UserListWithSearch extends Component {
+export class UserListWithSearch extends Component<any, any> {
+
+  componentDefs: any
 
     static Styles = theme => {
     return styles(theme, {
@@ -169,9 +171,11 @@ export class UserListWithSearch extends Component {
       searchString: '',
       inputText: '',
       skip: false,
+      includeDeleted: false,
       selected: [],
       businessUnitFilter: null,
       showBusinessUnitFilter: false,
+      paging: null
     }
 
     this.doSearch = this.doSearch.bind(this);
@@ -265,7 +269,7 @@ export class UserListWithSearch extends Component {
                 <Icon>add_circle_outline</Icon>
               </IconButton>
             </Tooltip>
-            { this.businessUnitFilter ? <Tooltip title={`Filter By Business Unit`}>
+            { this.state.businessUnitFilter ? <Tooltip title={`Filter By Business Unit`}>
               <IconButton color="inherit" onClick={this.onShowBusinessUnitFilter}>
                 <Icon>filter</Icon>
               </IconButton>
@@ -278,6 +282,8 @@ export class UserListWithSearch extends Component {
               </IconButton>
             </Tooltip>
             }
+
+
           </Toolbar>
         </AppBar>
 

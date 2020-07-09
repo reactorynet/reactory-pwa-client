@@ -114,7 +114,7 @@ const updateBrandMutation = gql`
 
 const usersForOrganization = gql`
 query UserListQuery($id: String!, $searchString: String) {
-  usersForOrganizationWithId(id: $id, searchString: $searchString) {
+  CoreUsersForOrganization(id: $id, searchString: $searchString) {
       id      
       email
       firstName

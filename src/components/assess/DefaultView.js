@@ -233,7 +233,7 @@ class RatingControl extends Component {
     let $ratingContent = 'processing';
     let $ratingSubContent = 'processing'
     try {
-      $ratingContent = template(behaviour.title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || {}, assessment, survey: assessment.survey, api: this.props.api })
+      $ratingContent = template(behaviour.title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her'}, assessment, survey: assessment.survey, api: this.props.api })
      
     } catch (templateErr) {
       self.props.api.log(`Behaviour Template Error`, { template: behaviour.title, templateErr }, 'error');
@@ -242,12 +242,14 @@ class RatingControl extends Component {
     }
 
     try {
-      $ratingSubContent = template(behaviour.description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || {}, assessment, survey: assessment.survey, api: this.props.api })
+      $ratingSubContent = template(behaviour.description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her'}, assessment, survey: assessment.survey, api: this.props.api })
     }catch(e){
       self.props.api.log(`Behaviour Template Error`, { template: behaviour.description, templateErr }, 'error');
 
       $ratingContent = `Error Processing behaviour template text. See logs for details`
     }
+
+    const contentsDiffer = $ratingContent !== $ratingSubContent
     
 
     const ratingComponent = (
@@ -256,11 +258,7 @@ class RatingControl extends Component {
         <Typography variant="body1" className={classes.behaviourTitle}>
           {$ratingContent}
         </Typography>
-
-        <Typography variant="body2" className={classes.behaviourSubTitle}>
-          {$ratingSubContent}
-        </Typography>
-
+        { contentsDiffer && (<Typography variant="body2" className={classes.behaviourSubTitle}>{$ratingSubContent}</Typography>) }
 
         <Stepper alternativeLabel nonLinear activeStep={rating.rating - 1}>
           {steps}
@@ -577,6 +575,7 @@ class DefaultView extends Component {
     const { classes, history, api } = this.props;
     const { completing, assessment } = this.state;
     const { StaticContent } = this.componentDefs;
+    const { survey } = assessment;
     const that = this;
     const gotoDashboard = () => {
       history.push("/");
@@ -606,7 +605,7 @@ class DefaultView extends Component {
       <Paper className={classes.thankYouScreen}>
         {assessment.complete === false &&
           <Fragment>
-            <StaticContent slug={`mores-assessments-instructions-survey-${survey.id}`} propertyBag={{assessment, props: this.props }} defaultValue={<> 
+            <StaticContent slug={`mores-assessments-survey-${survey.id}-thank-you`} propertyBag={{assessment, survey }} editAction={'link'} defaultValue={<> 
             <Typography gutterBottom variant="body1">Thank you for taking the time to complete the assessment. If you are comfortable with the ratings and input that you have provided, please click the complete button below.</Typography> 
             <Typography variant="body1">If you want to come back later and review your answers, simply click back to Dashboard and return later.</Typography>
             </>}/>                        
@@ -964,8 +963,10 @@ class DefaultView extends Component {
   }
 
   toolbar(content) {
+    const alphaindex = 'A,B,C,D,E,F,G,H,I,J,K,L'.split(',');
+    
     let tabs = [(<Tab key={'w'} label="Welcome" />)];
-    this.props.assessment.survey.leadershipBrand.qualities.map((quality, kidx) => tabs.push(<Tab key={kidx} label={`${tabs.length}. ${quality.title}`} style={{ cursor: 'default' }} />));
+    this.props.assessment.survey.leadershipBrand.qualities.map((quality, kidx) => tabs.push(<Tab key={kidx} label={`${alphaindex[kidx]}. ${quality.title}`} style={{ cursor: 'default' }} />));
     tabs.push(<Tab key={'c'} label="Complete" />);
     return (
       <AppBar position="static" color="default">
@@ -1089,6 +1090,9 @@ class DefaultView extends Component {
       headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName} team`;
     }
 
+    const isThankYou = step === maxSteps - 1;
+    
+
     return (
       <Grid container spacing={1} className={classes.card}>
         <Grid item xs={12} sm={12}>
@@ -1122,7 +1126,7 @@ class DefaultView extends Component {
         </Grid>
         <Grid item xs={12} sm={12}>
           <Typography variant="body1" color={isCurrentStepValid === true ? "success" : "error"} style={{ textAlign: 'right', minHeight: '100px', display: "block" }}>
-            {isCurrentStepValid ? 'Click  next below to proceed' : 'Ensure that you have completed all ratings and comments in full before proceeding.'}
+            {isCurrentStepValid === true || isThankYou === true ? isThankYou === true ? 'Complete' : 'Click  next below to proceed' : 'Complete all ratings and comments in full before proceeding.'}
           </Typography>
           <MobileStepper
             style={{
@@ -1135,7 +1139,7 @@ class DefaultView extends Component {
             activeStep={step}
             nextButton={
               
-                <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Ensure you have completed each rating in full'}><Button size="small" color={isCurrentStepValid === true ? "success" : "danger" } onClick={nextStep} disabled={isCurrentStepValid === false}>
+                <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Complete all ratings and comments in full before proceeeding.'}><Button size="small" color={isCurrentStepValid === true || isThankYou === true  ? "success" : "danger" } onClick={nextStep} disabled={isCurrentStepValid === false}>
                   Next{theme.direction === 'rtl' ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
                 </Button></Tooltip>              
             }

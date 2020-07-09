@@ -561,6 +561,24 @@ namespace Reactory {
   export namespace Service {
         
   }
+
+  export interface IPagingRequest {
+    page: number
+    pageSize: number 
+  }
+  
+  export interface  IPagingResult {
+    total: number
+    page: number
+    hasNext: boolean
+    pageSize: number
+  }
+
+  export interface IPagedResponse<T> {
+    paging: IPagingResult,
+    items: T[]
+    [key: string]: any
+  }
 }
 
 export default Reactory

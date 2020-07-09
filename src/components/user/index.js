@@ -213,11 +213,11 @@ export const CreateProfile = compose(
     
     
     try {
-      const { usersForOrganizationWithId } = cache.readQuery({ query: api.queries.Users.usersForOrganization, variables: { id: organizationId } })
+      const { CoreUsersForOrganization } = cache.readQuery({ query: api.queries.Users.usersForOrganization, variables: { id: organizationId } })
 
       cache.writeQuery({
         query: api.queries.Users.usersForOrganization,
-        data: { usersForOrganizationWithId: [...usersForOrganizationWithId, data.createUser ] },
+        data: { CoreUsersForOrganization: [...CoreUsersForOrganization, data.createUser ] },
         variables: { id: organizationId }
       });
     } catch (cacheError) {
@@ -522,7 +522,7 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
           teams: [],
           __isnew: true
         }
-        const users = data.usersForOrganizationWithId || []
+        const users = data.CoreUsersForOrganization || []
         const availableAlphabet = uniq(sortedUniqBy(users, u => u.firstName.substring(0,1).toUpperCase()).map( user => user.firstName.substring(0,1).toUpperCase()));
         //console.log("Available Alphabet is", {availableAlphabet});
         return (
@@ -591,7 +591,7 @@ UserList.defaultProps = {
   data: {
     loading: true,
     error: null,
-    usersForOrganizationWithId: []
+    CoreUsersForOrganization: []
   }
 };
 
