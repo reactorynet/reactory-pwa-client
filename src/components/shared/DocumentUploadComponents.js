@@ -12,6 +12,7 @@ import { template } from 'lodash';
 class DocumentUploadWidget extends Component {
 
   state = {
+    uploadedDocuments: [],
     isDeleting: false
   }
 
@@ -22,6 +23,61 @@ class DocumentUploadWidget extends Component {
       'core.Loading',
       'core.StaticContent',
     ]);
+
+    this.getUploadedDocuments = this.getUploadedDocuments.bind(this);
+  }
+
+  componentDidMount = () => {
+      this.getUploadedDocuments();
+  }
+
+  getUploadedDocuments = () => {
+
+    console.log('Get docs from ');
+
+    this.props.api.graphqlQuery(`
+    query ReactoryGetContentBySlug($slug: String!) {
+      ReactoryGetContentBySlug(slug: $slug) {
+        id
+        slug
+        title
+        content
+        topics
+        published
+        createdBy {
+          id
+          fullName
+        }
+        createdAt
+      }
+    }
+    `, { slug: this.props.slug }).then((result) => {
+
+      console.log('GET DOCS RESULT:: ', result);
+
+      if (result.data && result.data.ReactoryGetContentBySlug) {
+        // const staticContent: ReactoryStaticContent = result.data.ReactoryGetContentBySlug;
+        // let $content = staticContent.content;
+
+        // if (this.props.propertyBag) {
+        //   try {
+        //     $content = api.utils.template($content)({ self: that, props: { ...that.props.propertyBag } });
+        //   } catch (templateError) {
+        //     $content = `Could not process template ${templateError}`;
+        //   }
+        // }
+
+        // try {
+        //   that.setState({ content: { ...staticContent, content: $content }, found: true, original: staticContent.content });
+        // } catch (err) { }
+
+      } else {
+        that.setState({ uploadedDocuments: [] });
+      }
+    }).catch((err) => {
+      console.log('ERROR GETTING UPLOADED DOCUMENTS::  ', error);
+      that.setState({ uploadedDocuments: [] });
+    });
   }
 
   render() {
@@ -39,7 +95,7 @@ class DocumentUploadWidget extends Component {
 
     const uiOptions = uiSchema['ui:options'];
     const mappedProperties = uiOptions.propertyMap ? api.utils.objectMapper(this.props, uiOptions.propertyMap) : {};
-    const { slug, title, mode = 'editing', helpTitle, helpTopics, placeHolder } = uiOptions.props;
+    const { slug, title, mode = 'editing', helpTitle, helpTopics, placeHolder, form } = uiOptions.props;
     if (slug) _slug = template(slug)(mappedProperties);
     if (title) _title = template(title)(mappedProperties);
     if (helpTitle) _helpTitle = template(helpTitle)(mappedProperties);
@@ -60,10 +116,13 @@ class DocumentUploadWidget extends Component {
       title: _title,
       slug: _slug,
       placeHolder: _placeHolder,
+      onMutationCompleteHandler: this.getUploadedDocuments
     };
 
     return (
-      <StaticContent {...staticContentProps} ></StaticContent>
+      <>
+        <StaticContent {...staticContentProps} ></StaticContent>
+      </>
     )
   }
 }
