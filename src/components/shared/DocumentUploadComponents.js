@@ -24,60 +24,6 @@ class DocumentUploadWidget extends Component {
       'core.StaticContent',
     ]);
 
-    this.getUploadedDocuments = this.getUploadedDocuments.bind(this);
-  }
-
-  componentDidMount = () => {
-      this.getUploadedDocuments();
-  }
-
-  getUploadedDocuments = () => {
-
-    console.log('Get docs from ');
-
-    this.props.api.graphqlQuery(`
-    query ReactoryGetContentBySlug($slug: String!) {
-      ReactoryGetContentBySlug(slug: $slug) {
-        id
-        slug
-        title
-        content
-        topics
-        published
-        createdBy {
-          id
-          fullName
-        }
-        createdAt
-      }
-    }
-    `, { slug: this.props.slug }).then((result) => {
-
-      console.log('GET DOCS RESULT:: ', result);
-
-      if (result.data && result.data.ReactoryGetContentBySlug) {
-        // const staticContent: ReactoryStaticContent = result.data.ReactoryGetContentBySlug;
-        // let $content = staticContent.content;
-
-        // if (this.props.propertyBag) {
-        //   try {
-        //     $content = api.utils.template($content)({ self: that, props: { ...that.props.propertyBag } });
-        //   } catch (templateError) {
-        //     $content = `Could not process template ${templateError}`;
-        //   }
-        // }
-
-        // try {
-        //   that.setState({ content: { ...staticContent, content: $content }, found: true, original: staticContent.content });
-        // } catch (err) { }
-
-      } else {
-        that.setState({ uploadedDocuments: [] });
-      }
-    }).catch((err) => {
-      console.log('ERROR GETTING UPLOADED DOCUMENTS::  ', error);
-      that.setState({ uploadedDocuments: [] });
-    });
   }
 
   render() {
@@ -105,11 +51,11 @@ class DocumentUploadWidget extends Component {
     const staticContentProps = {
       canEdit: ["owner"],
       editRoles: ['USER', 'DEVELOPER'],
-      viewMode: "minimal",
+      viewMode: "minimalExtended",
       autoSave: ['onChange'],
       throttle: 500,
-      isEditing: true,
-      showEditIcon: false,
+      isEditing: false,
+      showEditIcon: true,
       helpTopics: _helpTopics,
       helpTitle: _helpTitle,
       mode: mode,
