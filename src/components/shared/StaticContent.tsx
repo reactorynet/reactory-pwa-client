@@ -1,39 +1,43 @@
-import React, { Component, Fragment } from 'react';
+import React, { Component,Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'recompose';
-import { withRouter, match } from 'react-router-dom';
+import { withRouter, match  } from 'react-router-dom';
 import { Button, Icon, IconButton } from '@material-ui/core';
-import { withStyles, withTheme, } from '@material-ui/core/styles';
+import { withStyles, withTheme,  } from '@material-ui/core/styles';
 import moment, { Moment } from 'moment';
 import ReactoryApi, { withApi } from '@reactory/client-core/api';
 import FroalaWidget from '@reactory/client-core/components/reactory/widgets/FroalaWidget';
 
 interface ReactoryStaticContentProps {
+  id: string,
   api: ReactoryApi,
   classes?: any,
   showTitle: boolean,
   title: string,
+  published?: boolean,
   slug: string,
   slugSource?: string,
   slugSourceProps?: any,
   defaultValue?: any,
-  placeHolder?: string,
+  placeHolder?: string, 
   propertyBag?: any,
   viewMode?: string,
-  formFqn?: string,
+  formFqn?: string,  
   mode?: string | "edit" | "view",
   templateEngine: 'lodash',
   match: match,
   location: any,
-  history: any,
+  history: any,  
+  editAction?: string | "inline" | "link",
+  editLink?: string,
   editRoles?: string[],
   viewRoles?: string[],
   autoSave?: string[],
   helpTopics?: string[],
   helpTitle?: string,
   throttle?: number,
-  showEditIcon?: boolean,
-  onMutationCompleteHandler: any
+  showEditIcon?: boolean
+
 }
 
 interface ReactoryStaticContent {
@@ -61,7 +65,7 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
   static propTypes: any;
   static defaultProps: any;
   static styles: any
-  constructor(props, context) {
+  constructor(props, context){
     super(props, context);
     const { api } = props;
     this.state = {
@@ -78,21 +82,21 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
       },
       editing: props.isEditing === true,
       original: null,
-      found: false,
+      found: false,      
     };
 
-    this.getContent = this.getContent.bind(this);
+    this.getContent = this.getContent.bind(this);    
     this.components = api.getComponents(['material-ui.MaterialCore']);
   }
 
-  getContent(formData = undefined) {
+  getContent(formData = undefined){
     const that = this;
     const { api } = this.props;
 
     const getSlug = () => {
-      if (that.props.slugSource === 'property') return that.props.slug;
+      if(that.props.slugSource === 'property') return that.props.slug;
 
-      if (that.props.slugSource === 'route' && typeof that.props.slugSourceProps === 'object') {
+      if(that.props.slugSource === 'route' && typeof that.props.slugSourceProps === 'object') {      
         const { paramId } = that.props.slugSourceProps;
         return that.props.match.params[paramId];
       }
@@ -116,108 +120,101 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
       }
     }
     `, { slug: this.props.slug }).then((result: any) => {
-      if (result.data && result.data.ReactoryGetContentBySlug) {
-        const staticContent: ReactoryStaticContent = result.data.ReactoryGetContentBySlug;
+      if(result.data && result.data.ReactoryGetContentBySlug) {
+        const staticContent: ReactoryStaticContent  = result.data.ReactoryGetContentBySlug;
 
         let $content = staticContent.content;
-
-        if (this.props.propertyBag) {
+        
+        if(this.props.propertyBag) {
           try {
             $content = api.utils.template($content)({ self: that, props: { ...that.props.propertyBag } });
-          } catch (templateError) {
+          } catch (templateError) {            
             $content = `Could not process template ${templateError}`;
           }
         }
 
         try {
           that.setState({ content: { ...staticContent, content: $content }, found: true, original: staticContent.content });
-        } catch (err) { }
-
+        } catch (err) {}
+        
       } else {
         const user = that.props.api.getUser();
 
-        that.setState({
-          content: {
-            content: `Content for content: "${this.props.slug}" does not exists, please create it.`, title: "Not Found", createdBy: { id: user.id, fullName: user.fullName }, createdAt: moment()
-          }, found: false
-        });
+        that.setState({ 
+          content: { 
+            content: `Content for content: "${this.props.slug}" does not exists, please create it.`, title: "Not Found", createdBy: { id: user.id, fullName: user.fullName}, createdAt: moment() }, found: false });
       }
     }).catch((err) => {
-      that.setState({
-        content: {
-          title: 'Error',
-          content: `Error Loading Content: ${err.message}`,
-          createdBy: {
-            id: null,
-            fullName: 'Bugsly',
-          },
-          createdAt: moment()
-        }
-      });
+      that.setState({ content: {
+        title: 'Error',
+        content: `Error Loading Content: ${err.message}`,
+        createdBy: {
+          id: null,
+          fullName: 'Bugsly',
+        },
+        createdAt: moment()
+      } });
     });
   }
 
-  componentDidMount() {
-    this.getContent();
+  componentDidMount(){
+    this.getContent(); 
   }
 
-  componentDidUpdate(nextProps, nextState) {
-    if (this.props.slug !== nextProps.slug) {
-      this.getContent()
+  componentDidUpdate(nextProps, nextState){
+    if(this.props.slug !== nextProps.slug) {
+      this.getContent()      
     }
   }
 
   componentDidCatch(err) {
-    this.props.api.log(`StaticContent Handled Error`, { err }, 'error');
+    this.props.api.log(`StaticContent Handled Error`, {err}, 'error');
   }
-
-  render() {
-    const containerProps = {};
-    const { api, classes, viewRoles, editRoles = ['DEVELOPER'], formFqn = 'static.ContentCapture', viewMode } = this.props;
+    
+  render(){
+    const containerProps = {};  
+    const { api, classes, viewRoles, editRoles = ['DEVELOPER'], formFqn = 'static.ContentCapture', viewMode, editLink = '/reactory/ContentCapture/edit/', slug, title, published } = this.props;
     const { getContent } = this;
     const { editing, found, content } = this.state;
     const { defaultValue = "" } = this.props;
-
+    
     let isDeveloper = this.props.api.hasRole(['DEVELOPER']);
     let canEdit = this.props.api.hasRole(editRoles);
 
-    canEdit = canEdit === false && isDeveloper === true ? true : canEdit;
+    canEdit = canEdit === false && isDeveloper === true ? true  : canEdit;
     const edit = () => {
-      this.setState({ editing: !this.state.editing });
+      if(this.props.editAction && this.props.editAction === "link") {
+        window.open(`${editLink}?slug=${slug}&title=${title}&published=${published === true}`, '_new');
+      } else {
+        this.setState({ editing: !this.state.editing });
+      }
+      
     };
 
-    const mutationCompleteHandler = () => {
-
-      if (this.props.onMutationCompleteHandler) {
-        this.props.onMutationCompleteHandler();
-      }
-
-      getContent();
-    }
-
     let editWidget = (<IconButton onClick={edit} color="primary" size={'small'} className={classes.editIcon}>
-      <Icon>{editing === false ? 'edit' : 'check'}</Icon>
-    </IconButton>)
+        <Icon>{editing === false ? 'edit' : 'check' }</Icon>
+      </IconButton>)
+  
 
-
-    let contentComponent = found === true && content.published === true ? (<div {...containerProps} dangerouslySetInnerHTML={{ __html: this.state.content.content }}></div>) : defaultValue;
-    let ContentCaptureComponent = this.props.api.getComponent(formFqn);
-    let contentCaptureProps: any = {
+    let contentComponent = found === true && content.published === true ? (<div {...containerProps} dangerouslySetInnerHTML={{__html: this.state.content.content}}></div>) : defaultValue;            
+    let ContentCaptureComponent = this.props.api.getComponent( formFqn );
+    let contentCaptureProps: any = {      
       formData: { slug: this.props.slug, title: this.props.title, published: true, content: this.props.defaultValue },
-      mode: "edit",
+      mode:"edit", 
+      id: this.props.id,
       uiSchemaKey: viewMode || 'default',
-      onMutateComplete: mutationCompleteHandler,
+      onMutateComplete:getContent, 
       helpTopics: this.props.helpTopics,
       helpTitle: this.props.helpTitle,
-      placeHolder: this.props.placeHolder,
+      placeHolder: this.props.placeHolder,     
     };
 
     return (
-      <div className={`${classes.staticContentContainer} ${isDeveloper ? classes.staticContainerDeveloper : ''}`}>
-        {canEdit === true && this.props.showEditIcon === true && editWidget}
-        {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}
+      <div className={`${classes.staticContentContainer} ${isDeveloper ? classes.staticContainerDeveloper: ''}`}>
+        {canEdit === true && this.props.showEditIcon === true && editWidget }
+        {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent }        
       </div>
-    )
+    )        
   }
 }
 
@@ -256,7 +253,7 @@ StaticContent.styles = (theme) => {
         cursor: 'pointer'
       }
     },
-  }
+  }    
 };
 
 const StaticContentComponent = compose(withApi, withRouter, withTheme, withStyles(StaticContent.styles))(StaticContent);
@@ -267,7 +264,7 @@ StaticContentComponent.meta = {
   version: '1.0.0',
   component: StaticContentComponent,
   tags: ['static content', 'html'],
-  description: 'A simple html container component',
+  description: 'A simple html container component',  
 };
 
 export default StaticContentComponent;

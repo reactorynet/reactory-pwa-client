@@ -1617,8 +1617,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           ? { ...defaultFormValue, ...this.state.formData }
           : formData = { ...defaultFormValue };
 
-        Object.keys(this.state.query).forEach(property => {
-          if (isNil(formData[property]) === true && isNil(self.state.query[property]) === false) {
+        Object.keys(self.state.query).forEach(property => {          
+          if (isNil(formData[property]) === true || isEmpty(formData[property]) && isNil(self.state.query[property]) === false) {
             formData[property] = self.state.query[property];
           }
         });

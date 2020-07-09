@@ -218,7 +218,7 @@ class RatingControl extends Component {
 
     let selectedLabel = find(behaviour.scale.entries, (entry) => {
       return entry.rating === rating.rating
-    }) || { description: 'Please make a selection' };
+    }) || { description: 'Make a selection' };
 
     let ratingTooltip = rating.rating === 0 ?
       <Tooltip title="Requires a rating selection"><Icon color="error">info</Icon></Tooltip> :
@@ -576,6 +576,7 @@ class DefaultView extends Component {
   thankYouScreen() {
     const { classes, history, api } = this.props;
     const { completing, assessment } = this.state;
+    const { StaticContent } = this.componentDefs;
     const that = this;
     const gotoDashboard = () => {
       history.push("/");
@@ -605,8 +606,10 @@ class DefaultView extends Component {
       <Paper className={classes.thankYouScreen}>
         {assessment.complete === false &&
           <Fragment>
-            <Typography gutterBottom variant="body1">Thank you for taking the time to complete the assessment. If you are comfortable with the ratings and input that you have provided, please click the complete button below.</Typography>
+            <StaticContent slug={`mores-assessments-instructions-survey-${survey.id}`} propertyBag={{assessment, props: this.props }} defaultValue={<> 
+            <Typography gutterBottom variant="body1">Thank you for taking the time to complete the assessment. If you are comfortable with the ratings and input that you have provided, please click the complete button below.</Typography> 
             <Typography variant="body1">If you want to come back later and review your answers, simply click back to Dashboard and return later.</Typography>
+            </>}/>                        
             <Button onClick={completeAssessment} color="primary" style={{ marginRight: '4px' }}><Icon>save</Icon>&nbsp;Complete</Button>
             <Button onClick={gotoDashboard}><Icon>dashboard</Icon>Dashboard</Button>
           </Fragment>}
@@ -765,6 +768,7 @@ class DefaultView extends Component {
     const { StaticContent } = this.componentDefs;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
     const { slugify } = api.utils;
+    
     const behaviours = quality.behaviours.map((behaviour) => {
 
       let ratingIndex = lodash.findIndex(ratings, (r) => { return behaviour.id === r.behaviour.id && quality.id === r.quality.id });
@@ -847,12 +851,12 @@ class DefaultView extends Component {
         <Paper style={{ padding: '5px' }}>
           <Typography>
             If you want to provide a customised behaviour that {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName} exhibits that relates to {quality.title}, type it in the box below and then click the add <Icon>add</Icon> button and provide your rating and feedback.<br /><br />
-            Please note, these custom ratings will not affect the calculation of {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName}'s overall rating for this assessment.
+            Note, these custom ratings will not affect the calculation of {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName}'s overall rating for this assessment.
          </Typography>
           <Paper className={classes.root} elevation={1}>
             <InputBase
               className={classes.input}
-              placeholder={"Please provide a custom behaviour description"}
+              placeholder={"Provide a custom behaviour description"}
               onChange={setNewBehaviourText}
               fullWidth={true}
               value={newBehaviourText} />
@@ -892,7 +896,7 @@ class DefaultView extends Component {
           mode: that.state.comment_for_section === quality.id ? "edit" : "view",
           title: `Section ${quality.title} Comment by ${assessment.assessor.firstName} ${assessment.assessor.lastName} on ${assessment.survey.title}`,
           slug: `mores-survey-${assessment.survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`,
-          placeHolder: `Add a customized comment for ${assessment.delegate.firstName} as it relates to ${quality.description}`,
+          placeHolder: `Type here if you want add a comment for this section: ${quality.title}`,
         };
 
         CustomFeedbackComponent = (
@@ -903,11 +907,24 @@ class DefaultView extends Component {
       }
     }
 
+    const assessmetnInstructionsDefaultContent  =(<Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed.
+    </Typography>)
+
+    const contentId = `mores-assessments-instructions-${slugify(quality.id)}-survey-${survey.id}`;
+
     return (
       <Grid container spacing={8}>
         <Grid item sm={12} xs={12}>
-          <StaticContent slug={`mores-assessments-instructions-${slugify(quality.id)}-survey-${survey.id}`} defaultValue={<Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed.</Typography>} />
-          {this.is180(assessment.survey) === true ? <Typography variant="caption" color="primary">&nbsp;Please provide ratings in context of the entire team <IconButton onClick={toggleShowTeam}><Icon>supervised_user_circle</Icon></IconButton></Typography> : null}
+          <StaticContent
+            id={contentId}
+            slug={contentId} 
+            title={`Mores Assessment Survey Instruction Header - ${survey.title} [${quality.title}]`}
+            defaultValue={assessmetnInstructionsDefaultContent}
+            propertyBag={{ assessment, quality, survey }}
+            viewMode='default'
+            editAction='link' 
+            />
+          {this.is180(assessment.survey) === true ? (<Typography variant="caption" color="primary">&nbsp;Provide ratings in context of the entire team <IconButton onClick={toggleShowTeam}><Icon>supervised_user_circle</Icon></IconButton></Typography>) : null}
           {this.is180(assessment.survey) === true ? this.getDelegateTeamList() : null}
           {behaviours}
           {customBehaviours.length > 0 ?
@@ -1117,14 +1134,10 @@ class DefaultView extends Component {
             position="bottom"
             activeStep={step}
             nextButton={
-              <>
-                <Typography variant="caption" color={isCurrentStepValid === true ? "success" : "error"} style={{ position: 'fixed', right: '100px' }}>
-                  {isCurrentStepValid ? 'Click next to proceed' : 'Form is incomplete'}
-                </Typography>
-                <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Please ensure you have completed each rating in full'}><Button size="small" color={isCurrentStepValid === true ? "success" : "danger" } onClick={nextStep} disabled={isCurrentStepValid === false}>
+              
+                <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Ensure you have completed each rating in full'}><Button size="small" color={isCurrentStepValid === true ? "success" : "danger" } onClick={nextStep} disabled={isCurrentStepValid === false}>
                   Next{theme.direction === 'rtl' ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
-                </Button></Tooltip>
-              </>
+                </Button></Tooltip>              
             }
             backButton={
               <Button size="small" onClick={prevStep} disabled={step === 0}>
