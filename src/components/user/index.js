@@ -544,7 +544,7 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
                     }
 
 
-                    const nilf = () => {};
+                    const nilf = () => {};                    
                     const isSelected = intersection(selected, [user.id]).length === 1;
                     const exclude = intersection(excluded, [user.id]).length === 1;
                     const displayText = `${user.firstName} ${user.lastName}`;

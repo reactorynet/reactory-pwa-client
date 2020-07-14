@@ -101,7 +101,7 @@ class UserSurvey extends Component {
             let listTitle = selfAssessment === true ? 'Self assessment' : `${delegate.firstName} ${delegate.lastName}`
 
             if(is180 === true) {
-                listTitle = `Assessing Team ${survey.delegateTeamName}`
+                listTitle = `Team being assessed: ${survey.delegateTeamName}`
             }
 
             const goAssessment = () => {
@@ -115,9 +115,9 @@ class UserSurvey extends Component {
                         secondary={`Valid from ${moment(survey.startDate).format('DD MMMM YYYY')} till ${moment(survey.endDate).format('DD MMMM YYYY')}`} />
                     <ListItemSecondaryAction>
                         <IconButton onClick={goAssessment}>
-                            <Tooltip title={assessment.complete === false ? 'Click here to complete this assessment' : 'Click here to view your input into this assessment'}>
+                            <Tooltip title={assessment.complete === false ? 'Click here to complete this assessment' : 'Your input is complete.'}>
                                 <Icon>
-                                    {assessment.complete === false ?'play_circle_filled' : 'search'}
+                                    {assessment.complete === false ?'play_circle_filled' : 'assignment_turned_in'}
                                 </Icon>
                             </Tooltip>
                         </IconButton>
@@ -140,7 +140,7 @@ class UserSurvey extends Component {
                                     <SystemUserListItem message={"The surveys listed below are already past the official cut-off date for completion and should be attended to first."} />
                                     {surveys.overdue.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                 </List>
-                            </Fragment> : <SystemUserListItem message={"There are no overdue assessments here"} />
+                            </Fragment> : <SystemUserListItem message={"There are no overdue assessments here."} />
                         }
                     </Paper>
                 </Grid>
@@ -151,10 +151,10 @@ class UserSurvey extends Component {
                         {surveys.current.length > 0 && surveyCount > 0 ?
                             <Fragment>
                                 <List>
-                                    <SystemUserListItem message={"The surveys listed below are surveys which are currently awaiting your feedback.  These are sorted by order of their closing date."} />
+                                    <SystemUserListItem message={"The surveys below are currently open."} />
                                     {surveys.current.map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                 </List>
-                            </Fragment> : <SystemUserListItem message={"There are no assessments here"} />}
+                            </Fragment> : <SystemUserListItem message={"There are no assessments here."} />}
                     </Paper>
                 </Grid>
 

@@ -32,6 +32,64 @@ import { nil } from '../../util';
 import moment from 'moment';
 import hdate from 'human-date';
 
+
+
+const getSurveyType = (props) => {
+  const { formContext } = props;
+  let surveyType = '360';
+  
+  if(formContext.$formData && formContext.$formData.surveyType) surveyType = formContext.$formData.surveyType;
+  
+  return surveyType.toLowerCase();
+}
+
+
+const getSurveyProps = (props) => {
+
+  const surveyType = getSurveyType(props);
+
+  let is180 = false;
+  let is360 = false;
+  let isPLC = false;
+  let isCulture = false;
+  let isCustom = false;
+
+  switch(surveyType){
+    case "180":
+    case "team180": {
+      is180 = true;
+      break;
+    }
+    case "culture": {
+      isCulture = true;
+      break;
+    }
+    case "360": 
+    case "l360":
+    case "i360": {
+      is360 = true;
+    }
+    case "plc": {
+      isPLC = true;
+      break;
+    }
+    default: {
+      isCustom = true;
+      break;
+    }
+  }
+
+  return {
+    is180,
+    is360,
+    isPLC,
+    isCulture,
+    isCustom,
+    surveyType,
+  }
+
+};
+
 class SurveyDelegate extends Component {
   
   static styles = theme => {
@@ -105,12 +163,9 @@ class SurveyDelegates extends Component {
       selected: {
 
       },
-      surveyType: '360',      
-    };
-
-    if(props.formContext && props.formContext.formData && props.formContext.formData.surveyType)
-      state.surveyType = props.formContext.formData.surveyType;
-
+      surveyProps: getSurveyProps(props)
+    };           
+    
     this.state = state;
 
     this.componentDefs = props.api.getComponents([
@@ -136,24 +191,25 @@ class SurveyDelegates extends Component {
     this.launchSurveyForDelegate = this.launchSurveyForDelegate.bind(this)
     this.removeDelegateFromSurvey = this.removeDelegateFromSurvey.bind(this);
     this.getBasicModalView = this.getBasicModalView.bind(this);
-    this.getSurveyType = this.getSurveyType.bind(this);
     this.removeAssessorForDelegate = this.removeAssessorForDelegate.bind(this);
     this.doAction = this.doAction.bind(this);
     this.addAssessorClicked = this.addAssessorClicked.bind(this);
   }
-
+ 
   componentDidCatch(error, info){
-    console.error('Error in SurveyDelegateWidget', {error, info})
+    const { api } = this.props;
+    api.log(`SurveyDelegateWidget Caught Error`, { error, info }, 'error');    
   }
 
   getSecondaryAction(delegateEntry){
     const { DropDownMenu } = this.componentDefs;
-    const self = this;
-    const { formData } = this.props.formContext;
-    const { surveyType } = formData;
+    const { api } = this.props;
+    api.log(`SurveyDelegateWidget getSecondaryAction`, { delegateEntry }, 'debug');    
+    const self = this;        
+    const { surveyProps } = this.state;
 
     const onMenuItemSelect = (evt, menuItem) => {
-      console.log('trigger menu item', {menuItem, delegateEntry})
+      api.log('trigger menu item', {menuItem, delegateEntry}, 'debug')
       switch(menuItem.id){
         case 'sendinvite': {
           self.sendCommunicationToDelegate(delegateEntry);
@@ -161,7 +217,8 @@ class SurveyDelegates extends Component {
           break;
         }
         case 'relaunch': {
-          self.launchSurveyForDelegate(delegateEntry, true);
+          //self.launchSurveyForDelegate(delegateEntry, true);
+          self.sendCommunicationToDelegate(delegateEntry, 'launch');
           break;
         }
         case 'launch': {
@@ -173,9 +230,8 @@ class SurveyDelegates extends Component {
           self.sendCommunicationToDelegate(delegateEntry, 'send-reminder');
           break;
         }
-        case 'stop': {
-          
-          //this.stopSurvey(delegateEntry)
+        case 'stop': {          
+          this.stopSurvey(delegateEntry)
           break;
         }
         case 'view-assessments': {          
@@ -208,6 +264,8 @@ class SurveyDelegates extends Component {
       { title: 'Remove from Survey', icon: 'delete_outline', id: 'remove', key:'remove' },
     ];
 
+    let requiresInviteMail = false;
+        
     switch(delegateEntry.status.toLowerCase()){
       case 'invite-sent': {
         menus.push({ title: 'Launch for delegate', icon: 'flight_takeoff', id: 'launch', key:'launch' });
@@ -219,7 +277,10 @@ class SurveyDelegates extends Component {
         break;
       }
       case 'new': {
-        menus.push({ title: 'Send Invite', icon: 'mail', id: 'sendinvite', key:'send-invite' });
+        if(surveyProps.is360) menus.push({ title: 'Send Invite', icon: 'mail', id: 'sendinvite', key:'send-invite' });
+        if(surveyProps.isCulture === true || surveyProps.is180 === true) {
+          menus.push({ title: 'Launch for delegate', icon: 'flight_takeoff', id: 'launch', key:'launch' });
+        }
         break;
       }
       case 'launched':
@@ -239,9 +300,6 @@ class SurveyDelegates extends Component {
         
     return (<DropDownMenu menus={menus} onSelect={onMenuItemSelect} />)    
   }
-
-
-
 
   generateReport(reportType = 'survey-status-delegates'){
     console.log('Generate Report');
@@ -385,7 +443,7 @@ class SurveyDelegates extends Component {
 
   getActiveModalView(){
     const { FullScreenModal, UserListWithSearch } = this.componentDefs;
-    const { activeEntry, modal, modalType, formData, basicModalViewMode, userAddType } = this.state;    
+    const { activeEntry, modal, modalType, basicModalViewMode, userAddType, formData } = this.state;    
     const { formContext, onChange, api } = this.props;
     const self = this;
     
@@ -398,7 +456,7 @@ class SurveyDelegates extends Component {
     const userSelected = (userToAdd ) => {
       //console.log('Add user to delegates', { userToAdd, p: this.props });
 
-      self.doAction({ id: "", delegate: userToAdd}, "add", { userAddType: userAddType }); 
+      self.doAction({ id: "", delegate: userToAdd}, "add", { userAddType: userAddType }, 'Adding delegate to survey', false, false);
     };
 
     let component = null;
@@ -430,9 +488,7 @@ class SurveyDelegates extends Component {
           modalTitle  = 'Select Delegates For Survey'
         } else {
           modalTitle  = 'Select Assessors For Survey'
-        }
-
-        
+        }        
         break;
       }
       case 'basic' : {
@@ -472,9 +528,10 @@ class SurveyDelegates extends Component {
     this.setState({ modal: true, modalType: 'add', userAddType: 'assessor' })
   }
 
-  doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...', batch = false){
-    console.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', {delegateEntry, action, inputData, busyMessage, batch});
+  doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...', batch = false, refresh = true, done = ()=>{}){
     const { api, formContext } = this.props;
+    api.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', {delegateEntry, action, inputData, busyMessage, batch}, 'debug');
+    
     const self = this;    
     const doMutation = () => {      
 
@@ -535,12 +592,12 @@ class SurveyDelegates extends Component {
             }
           });
         }).catch((promiseError) => {
-          console.log('Error processing batch', promiseError);
+          api.log('Error processing batch', promiseError, 'error');
           self.setState({ displayError: true, message: 'An error occured doing a batch update', busy: false });
         });
 
       } else {
-        console.log('Single use action');
+        api.log('Single use action');
         const variables = {
           survey: this.props.formContext.surveyId,
           entryId: delegateEntry.id,
@@ -555,16 +612,22 @@ class SurveyDelegates extends Component {
         api.graphqlMutation(mutation, variables).then((mutationResult) => {
           //console.log('DelegateEntry Result From Mutation', mutationResult)
           if(mutationResult.data && mutationResult.data.surveyDelegateAction) {
-            ;
+            debugger
             let formData = [...self.state.formData]  
             if(action === "add") {
               formData.push({...mutationResult.data.surveyDelegateAction});
+              api.createNotification(`Added`, { 
+                body: `User ${mutationResult.data.surveyDelegateAction.delegate.firstName} added to survey`, showInAppNotification: true, type: 'success' });
             } else {
               const indexToUpdate = findIndex(self.state.formData, {'id': delegateEntry.id });          
               formData[indexToUpdate] = {...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction };
             }
             
-            self.setState({ displayError: false, message: '', busy: false, formData });
+            self.setState({ displayError: false, message: '', busy: false, formData }, ()=> {
+              if(self.props.formContext && isFunction(self.props.formContext.refresh && refresh === true) === true){
+                self.props.formContext.refresh();
+              }
+            });
           }
         }).catch((mutationError) => {
           self.setState({ displayError: true, message: 'An error occured while ....', busy: false })
@@ -586,7 +649,7 @@ class SurveyDelegates extends Component {
   }
 
   removeDelegateFromSurvey(delegateEntry, permanent){    
-    this.doAction(delegateEntry, 'remove', { permanent }, `Removing delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} from survey`);
+    this.doAction(delegateEntry, 'remove', { permanent }, `Removing delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} from survey`, false, true);
   }
 
   enabledDelegateForSurvey(delegateEntry){
@@ -600,30 +663,34 @@ class SurveyDelegates extends Component {
     }
   }
 
-  getSurveyType(){
-    const { formContext } = this.props;
-    if(formContext.formData && formContext.formData.surveyType) return formContext.formData.surveyType;
-    return '360'
-  }
+ 
 
   render(){
     const { classes, api, formContext } = this.props;
     const { ErrorMessage, AssessmentTable, SpeedDial } = this.componentDefs;
-    const { formData, selected } = this.state;
+    const { formData, selected, surveyProps } = this.state;
     const self = this;
+    
     let data = [];
+
     formData.map((entry) => { 
       if(entry.delegate && entry.delegate.id) data.push({...entry}) 
     }); 
-
-    
-    
-          
+                      
     if(isArray(data) === true){
-      data = sortBy(data, (delegateEntry) => { return `${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}` })
-     
-  
-      const secondaryAction = (<IconButton></IconButton>);
+
+      
+
+      data = sortBy(data, (delegateEntry) => { return `${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}` })            
+            
+      const { 
+        is360,
+        isPLC,
+        is180,
+        isCulture,
+        surveyType
+      } = surveyProps;
+
       /**
 
         {
@@ -719,11 +786,8 @@ class SurveyDelegates extends Component {
         },
       ]
       //new, invite-sent, launched, 
-      const surveyType = this.getSurveyType();
-      const is180 = surveyType === '180';
-      const is360 = surveyType === '360';
-      const isPLC = surveyType === 'plc';
-
+     
+      
       const selectedDelegates = filter(data, (delegateEntry) => { return self.state.selected.hasOwnProperty(delegateEntry.delegate.id) === true });
 
       let statusList = [];
@@ -823,16 +887,49 @@ class SurveyDelegates extends Component {
         }];       
       }
 
+      if(isCulture) {
+        statusList = [{
+          key: 'new',
+          title: 'Added to survey',
+          icon: 'new_releases',          
+        },      
+        {
+          key: 'launched',
+          title: 'Launched',
+          icon: 'flight_takeoff'
+        },              
+        {
+          key: 'closed',
+          title: 'Closed',
+          icon: 'not_interested'
+        },
+        {
+          key: 'feedback-complete',
+          title: 'Feedback Completed',
+          icon: 'comment'
+        },
+        {
+          key: 'removed',
+          title: 'Removed / Disabled for Survey',
+          icon: 'delete_outline'
+        }];       
+      }
+
       if(is180 === true) {        
-        statusList = [
+        statusList = [ 
+          {
+            key: 'new',
+            title: 'Added to survey',
+            icon: 'new_releases',          
+          },                   
           {
             key: 'new-delegate',
-            title: `Added to ${formContext.formData.delegateTeamName || 'Delegates'}`,
+            title: `Added to ${formContext.$formData.delegateTeamName || 'Delegates'}`,
             icon: 'new_releases',          
           },
           {
             key: 'new-assessor',
-            title: `Added to ${formContext.formData.assessorTeamName || 'Assessors'}`,
+            title: `Added to ${formContext.$formData.assessorTeamName || 'Assessors'}`,
             icon: 'new_releases',          
           },
           {
@@ -881,6 +978,7 @@ class SurveyDelegates extends Component {
                                                           
         let secondaryItem = (<IconButton onClick={itemDetailClicked}><Icon>more_vert</Icon></IconButton>);
         secondaryItem = self.getSecondaryAction(delegateEntry);
+
         const selectUser = e => {
           console.log(`User select clicked ${delegateEntry.delegate.firstName}`);
           const _selected = {...this.state.selected};
@@ -945,7 +1043,7 @@ class SurveyDelegates extends Component {
           case 'invite-sent':
           case 'new':
           default: {
-            if(!is180) {
+            if(!is180 && !isCulture) {
               let peersConfirmed = false;
               let hasPeers = false;
               console.log('Rendering for delegate Entry', delegateEntry);

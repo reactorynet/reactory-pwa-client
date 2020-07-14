@@ -300,12 +300,13 @@ class App extends Component<any, AppState> {
       }
     }
 
-    window.matchMedia("(prefers-color-scheme: dark)").addListener((evt)=>{
-      if(evt.matches) {
+    window.matchMedia("(prefers-color-scheme: dark)").addListener((evt)=>{      
+      if(evt.matches === true) {
         localStorage.setItem('$reactory$theme_mode', 'dark');
       } else {
         localStorage.setItem('$reactory$theme_mode', 'light');
       }
+      that.forceUpdate()
     });
         
     api.on('theme_changed', ()=> {
@@ -351,8 +352,11 @@ class App extends Component<any, AppState> {
 
     if (offline === true && auth_validated === true) {
       modal = (
-        <FullScreenModal open={true} title={'Server is offline, stand by'}>          
-          <Typography style={{ margin: 'auto', fontSize: '20px', padding: '8px' }} variant="body1"><Icon>report_problem</Icon>We apologise for the inconvenience but the server is not available at the moment.</Typography>
+        <FullScreenModal open={true} title={'Waiting for initial server response'}>          
+          <Typography style={{ margin: 'auto', fontSize: '20px', padding: '8px' }} variant="body1">
+            <Icon>cached</Icon>
+            Stand by, waiting for server response...
+          </Typography>
           <Typography></Typography>
         </FullScreenModal>
       )

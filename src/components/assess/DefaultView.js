@@ -1125,8 +1125,8 @@ class DefaultView extends Component {
           {wizardControl}
         </Grid>
         <Grid item xs={12} sm={12}>
-          <Typography variant="body1" color={isCurrentStepValid === true ? "success" : "error"} style={{ textAlign: 'right', minHeight: '100px', display: "block" }}>
-            {isCurrentStepValid === true || isThankYou === true ? isThankYou === true ? 'Complete' : 'Click  next below to proceed' : 'Complete all ratings and comments in full before proceeding.'}
+          <Typography variant="body1" color={isCurrentStepValid === true || isThankYou === true  ? "success" : "error"} style={{ textAlign: 'right', minHeight: '100px', display: "block" }}>
+            {isCurrentStepValid === true || isThankYou === true ? isThankYou === true ? 'Thank you.' : 'Click  next below to proceed.' : 'Complete all ratings and comments in full before proceeding.'}
           </Typography>
           <MobileStepper
             style={{

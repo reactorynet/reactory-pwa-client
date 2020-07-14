@@ -661,7 +661,7 @@ class Profile extends Component {
             const defaultInstructions = (
                 <>
                     <Typography variant="body1">
-                        Use the list below to manage your nominees.  Click on the <Icon>edit</Icon> above to add a new colleague to your list.
+                        Use the list below to manage your nominees.  Click on the <Icon>add_circle_outline</Icon> above to add a new colleague to your list.
                     </Typography>
                     <Typography variant="body1">
                         If you need to edit the details of an existing colleague you nominated previously, click on their name or the <Icon>expand</Icon> icon. This will enable you to change
@@ -687,11 +687,11 @@ class Profile extends Component {
 
             materialTable = (
                 <Paper className={classes.general}>
-                    <Typography variant="h6">My organisation structure - {this.state.selectedMembership.organization.name}</Typography>
+                    <Typography variant="h6">My nominees - {this.state.selectedMembership.organization.name}</Typography>
                     <Toolbar>
                         <Tooltip title="Click here to add a new employee to your organisation structure">
-                            <IconButton onClick={editUserSelection} color="primary">
-                                <Icon>add</Icon>
+                            <IconButton onClick={editUserSelection} color="secondary">
+                                <Icon>add_circle_outline</Icon>
                             </IconButton>
                         </Tooltip>
                         <Tooltip title={moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once you have selected all your organisation peers, please confirm by clicking here.'}>
@@ -1084,8 +1084,8 @@ class Profile extends Component {
             <Grid container spacing={2}>
                 {this.renderHeader()}
                 {this.renderGeneral()}
-                {this.props.withMembership === true ? this.renderMemberships() : null}
                 {this.renderPeers()}
+                {this.props.withMembership === true ? this.renderMemberships() : null}
                 {this.renderFooter()}
                 {this.renderCropper()}
             </Grid>
