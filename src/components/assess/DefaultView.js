@@ -555,17 +555,21 @@ class DefaultView extends Component {
       return (
         <Paper className={classes.welcomeContainer}>
 
-          <Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
+            <componentDefs.StaticContent
+            slug={`mores-assessments-${survey.surveyType}_${survey.leadershipBrand.id}-welcome-screen`.toLowerCase()}
+            title={`Welcome Screen: ${survey.surveyType}`}
+            propertyBag={this.props}
+            defaultValue={ <Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
             5 - 7 minutes.<br />
             You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
-          </Typography>
+          </Typography>}>
+          </componentDefs.StaticContent>
 
-
-
-          <Typography className={`${classes.brandStatement} ${classes.paragraph}`} gutterBottom variant="h6">"{assessment.survey.leadershipBrand.description}"</Typography>
+         
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <img src={theme.assets.logo} className={classes.logo} alt={theme} />
+            <componentDefs.StaticContent slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
           </div>
+
         </Paper>
       )
     }
@@ -1088,6 +1092,10 @@ class DefaultView extends Component {
     let headerTitle = assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.title} ${selfAssessment === true ? ' [Self Assessment]' : ''}` : `Unknown`;
     if (is180 === true) {
       headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName} team`;
+    }
+
+    if(survey.surveyType === 'culture') {
+      headerTitle = `${survey.title}`;
     }
 
     const isThankYou = step === maxSteps - 1;

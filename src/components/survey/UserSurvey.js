@@ -97,11 +97,16 @@ class UserSurvey extends Component {
         const AssessmentListItem = (props) => {
             const { assessment } = props;          
             const { survey, delegate, assessor, selfAssessment, assessmentType } = assessment;
-            let is180 = survey.surveyType === '180';            
-            let listTitle = selfAssessment === true ? 'Self assessment' : `${delegate.firstName} ${delegate.lastName}`
+            let is180 = survey.surveyType === '180' || survey.surveyType === 'team180';
+            let isCulture = survey.surveyType === 'culture';
+            let listTitle = selfAssessment === true ? '- Self assessment' : `- ${delegate.firstName} ${delegate.lastName}`
 
             if(is180 === true) {
-                listTitle = `Team being assessed: ${survey.delegateTeamName}`
+                listTitle = `- Team being assessed: ${survey.delegateTeamName}`
+            }
+
+            if(isCulture === true) {
+                listTitle = '';
             }
 
             const goAssessment = () => {
@@ -111,7 +116,7 @@ class UserSurvey extends Component {
                 <ListItem key={assessment.id} dense button className={classes.listItem} onClick={goAssessment}>
                     <Avatar alt={`${survey.title}`} src={api.getAvatar(delegate)} style={{marginRight: '8px'}}></Avatar>
                     <ListItemText
-                        primary={`${survey.title} - ${listTitle}`}
+                        primary={`${survey.title} ${listTitle}`}
                         secondary={`Valid from ${moment(survey.startDate).format('DD MMMM YYYY')} till ${moment(survey.endDate).format('DD MMMM YYYY')}`} />
                     <ListItemSecondaryAction>
                         <IconButton onClick={goAssessment}>
