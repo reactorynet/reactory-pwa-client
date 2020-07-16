@@ -170,7 +170,7 @@ class UserSurvey extends Component {
                             surveys.complete.length > 0 && surveyCount > 0 ?
                                 <Fragment>                                                                        
                                     <List>
-                                        <SystemUserListItem message={"The surveys below are completed and are for review only. Survey results will only appear here once the results have been released and shared with you by one of our facilitators."} />
+                                        <SystemUserListItem message={"The assessments below are complete and are for review only. Results will be released and shared with you by your administrator."} />
                                         {reverse(sortBy(surveys.complete, [(assessment)=>{ return moment(assessment.survey.startDate || '2010-01-01').valueOf() }])).map((assessment, sid) => <AssessmentListItem assessment={assessment} key={sid} />)}
                                     </List>
                                 </Fragment> : <SystemUserListItem message={"You don't have any assessment results available yet"} />

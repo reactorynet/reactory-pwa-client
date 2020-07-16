@@ -158,12 +158,12 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
   }
 
   componentDidMount(){
-    this.getContent(); 
+    setTimeout(this.getContent, 555); 
   }
 
   componentDidUpdate(nextProps, nextState){
     if(this.props.slug !== nextProps.slug) {
-      this.getContent()      
+      setTimeout(this.getContent, 100); 
     }
   }
 

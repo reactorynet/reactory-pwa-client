@@ -377,7 +377,7 @@ class App extends Component<any, AppState> {
                       <Globals />
                       <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
                       <NotificationComponent></NotificationComponent>                                            
-                      { auth_validated === true && routes.length > 0 ? routes : <Loading message="Configuring Application. Please wait" icon="security" spinIcon={false} />}  
+                      { auth_validated === true && routes.length > 0 ? routes : <Loading message="Loading Application. Please wait" icon="security" spinIcon={false} />}  
                       { modal }                                                                
                     </React.Fragment>
                   </MuiPickersUtilsProvider>
