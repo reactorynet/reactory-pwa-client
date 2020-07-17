@@ -1,36 +1,44 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { Icon, Typography, Fab } from '@material-ui/core';
+import {
+  AppBar,
+  Tabs,
+  Tab,
+  Typography,
+  Box
+} from '@material-ui/core';
 import { compose } from 'recompose';
-import { withTheme } from '@material-ui/styles';
+import { withTheme, withStyles } from '@material-ui/styles';
 import { withApi } from '../../api/ApiProvider';
-import { ReactoryApi } from "../../api/ReactoryApi";
+
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <Typography
+      component="div"
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      <Box p={3}>{children}</Box>
+    </Typography>
+  );
+}
 
 class FreightRequestQuoteWidget extends Component {
 
-  constructor(props, context) {
-    super(props, context);
+  state = {
+    value: 0,
+  }
 
-    this.state = {
-      open: false,
-    };
+  handleChange = (event, value) => {
+    this.setState({ value });
   }
 
   render() {
-    let _props = { ...this.props };
-    let { formData, uiSchema } = _props;
-    let isFormWidget = false;
-
-    if (formData && uiSchema) { isFormWidget = true; }
-
-    if (isFormWidget && uiSchema["ui:options"]) {
-      const uiOptions = uiSchema["ui:options"];
-      if (uiOptions.props) {
-        _props = { ..._props, ...uiOptions.props }
-      }
-    };
-
-
     let {
       api,
       componentFqn,
@@ -41,51 +49,57 @@ class FreightRequestQuoteWidget extends Component {
       buttonProps = {},
       componentProps,
       actions,
-      childProps = {}
-    } = _props;
-
-
-    const tpl = (format) => {
-      try {
-        return api.utils.template(format)(this.props);
-      }
-      catch (templateError) {
-        return `Bad Template ${templateError.message}`;
-      }
-    }
+      childProps = {},
+      formData,
+      uiSchema,
+      classes
+    } = this.props;
 
     let ChildComponent = api.getComponent(componentFqn || 'core.Loading');
-    let componentFound = true;
-    let childprops = { ...childProps };
 
-    if (ChildComponent === null || ChildComponent === undefined) {
-      componentFound = false;
-      ChildComponent = api.getComponent("core.NotFound");
-      childprops = {
-        message: `The component you specified ${componentFqn} could not be found`,
+    let _panels = formData.options.map((option, index) => {
+      let _componentProps = {
+        formData: option
+      }
+      return (
+        <TabPanel value={this.state.value} index={index}>
+          <ChildComponent {..._componentProps} />
+        </TabPanel>
+      )
+    });
+
+    function a11yProps(index) {
+      return {
+        id: `simple-tab-${index}`,
+        'aria-controls': `simple-tabpanel-${index}`,
       };
     }
 
-    if (componentProps && this.state.open === true && componentFound === true) {
-      childprops = { ...childprops, ...api.utils.objectMapper(this.props, componentProps) };
-    }
-
     return (
-      <Fragment>
-        <h1>THIS IS THE FREIGHT REQUEST COMPONENT</h1>
-      </Fragment>
+      <div>
+        <AppBar position="static">
+          <Tabs value={this.state.value} onChange={this.handleChange} aria-label="simple tabs example">
+            <Tab label="Option 1" {...a11yProps(0)} />
+            <Tab label="Option 2" {...a11yProps(1)} />
+          </Tabs>
+        </AppBar>
+        {_panels}
+      </div>
     )
+  }
+
+  // <TabPanel value={this.state.value} index={0}>
+  //   <ChildComponent {..._componentProps} />
+  // </TabPanel>
+  static styles = (theme) => {
+    return {
+      indicator: {
+        backgroundColor: theme.palette.primary.main,
+      }
+    }
   }
 }
 
-const FreightRequestQuoteComponent = compose(withTheme, withApi)(FreightRequestQuoteWidget);
-
-FreightRequestQuoteComponent.propTypes = {
-  api: PropTypes.instanceOf(ReactoryApi).isRequired,
-  componentFqn: PropTypes.string,
-  componentProps: PropTypes.object,
-};
-
-FreightRequestQuoteComponent.defaultProps = {};
+const FreightRequestQuoteComponent = compose(withTheme, withApi, withTheme, withStyles(FreightRequestQuoteWidget.styles))(FreightRequestQuoteWidget);
 
 export default FreightRequestQuoteComponent;
