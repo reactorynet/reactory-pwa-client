@@ -55,17 +55,21 @@ class FreightRequestQuoteWidget extends Component {
       classes
     } = this.props;
 
+    let _tabs = [];
+    let _panels = [];
+
     let ChildComponent = api.getComponent(componentFqn || 'core.Loading');
 
-    let _panels = formData.options.map((option, index) => {
+
+    formData.options.forEach((option, index) => {
+      _tabs.push(<Tab label={option.title} {...a11yProps(index)} />)
+
       let _componentProps = {
         formData: option
       }
-      return (
-        <TabPanel value={this.state.value} index={index}>
-          <ChildComponent {..._componentProps} />
-        </TabPanel>
-      )
+      _panels.push(<TabPanel value={this.state.value} index={index}>
+        <ChildComponent {..._componentProps} />
+      </TabPanel>);
     });
 
     function a11yProps(index) {
@@ -79,8 +83,7 @@ class FreightRequestQuoteWidget extends Component {
       <div>
         <AppBar position="static">
           <Tabs value={this.state.value} onChange={this.handleChange} aria-label="simple tabs example">
-            <Tab label="Option 1" {...a11yProps(0)} />
-            <Tab label="Option 2" {...a11yProps(1)} />
+            {_tabs}
           </Tabs>
         </AppBar>
         {_panels}
@@ -88,9 +91,6 @@ class FreightRequestQuoteWidget extends Component {
     )
   }
 
-  // <TabPanel value={this.state.value} index={0}>
-  //   <ChildComponent {..._componentProps} />
-  // </TabPanel>
   static styles = (theme) => {
     return {
       indicator: {
