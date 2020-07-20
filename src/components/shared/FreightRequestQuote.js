@@ -5,7 +5,8 @@ import {
   Tabs,
   Tab,
   Typography,
-  Box
+  Box,
+  Button
 } from '@material-ui/core';
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/styles';
@@ -42,6 +43,7 @@ class FreightRequestQuoteWidget extends Component {
     let {
       api,
       componentFqn,
+      components,
       buttonTitle,
       windowTitle,
       buttonVariant,
@@ -58,18 +60,22 @@ class FreightRequestQuoteWidget extends Component {
     let _tabs = [];
     let _panels = [];
 
-    let ChildComponent = api.getComponent(componentFqn || 'core.Loading');
-
-
     formData.options.forEach((option, index) => {
-      _tabs.push(<Tab label={option.title} {...a11yProps(index)} />)
+      // _tabs.push(<Tab label={option.title} {...a11yProps(index)} />)
+      _tabs.push(<Tab label={`Option ${index + 1}`} {...a11yProps(index)} />)
 
-      let _componentProps = {
-        formData: option
-      }
-      _panels.push(<TabPanel value={this.state.value} index={index}>
-        <ChildComponent {..._componentProps} />
-      </TabPanel>);
+      let _componentForms = [];
+      let _componentProps = { formData: option }
+
+      components.map(component => {
+        let ChildForm = api.getComponent(component.componentFqn || 'core.Loading');
+        _componentForms.push(<ChildForm {..._componentProps} />)
+      });
+
+      _panels.push(
+        <TabPanel value={this.state.value} index={index}>
+          {_componentForms}
+        </TabPanel>);
     });
 
     function a11yProps(index) {
@@ -87,14 +93,27 @@ class FreightRequestQuoteWidget extends Component {
           </Tabs>
         </AppBar>
         {_panels}
+
+        <div className={classes.buttonContainer}>
+          <Button variant="contained" classes={{root: classes.button}}>CANCEL</Button>
+          <Button color="primary" variant="contained"  classes={{root: classes.button}}>REQUEST FREIGHT</Button>
+        </div>
       </div>
     )
   }
 
   static styles = (theme) => {
     return {
-      indicator: {
-        backgroundColor: theme.palette.primary.main,
+      buttonContainer: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+        marginTop: theme.spacing(3),
+        '& button': {
+          marginLeft: theme.spacing(1)
+        }
+      },
+      button: {
+        color: '#fff'
       }
     }
   }
