@@ -629,7 +629,7 @@ class DefaultView extends Component {
     const that = this;
     const { api } = this.props;
     const { assessment } = this.state;
-    ;
+    
     api.graphqlMutation(gql`mutation SetRatingForAssessment(
         $id: String, $ratingId: String, 
         $rating: Int, $comment: String, 
@@ -751,14 +751,18 @@ class DefaultView extends Component {
   }
 
   getDelegateTeamList() {
+
     const { FullScreenModal, StaticContent } = this.componentDefs;
+    const { assessment } = this.props;
+    const { survey } = assessment;
+    
     const closeDelegateTeamList = () => {
       this.setState({ showTeamMembers: !this.state.showTeamMembers })
     };
 
     return (
       <FullScreenModal open={this.state.showTeamMembers === true} onClose={closeDelegateTeamList} title={"Team Details"}>
-        <StaticContent slug={`towerstone-team-members-${this.props.assessment.survey.id}`} />
+        <StaticContent slug={`towerstone-team-members-${survey.id}`}  editAction='link' />
       </FullScreenModal>
     );
   }
@@ -1091,7 +1095,7 @@ class DefaultView extends Component {
 
     let headerTitle = assessment.delegate ? `${api.getUserFullName(delegate)} - ${survey.title} ${selfAssessment === true ? ' [Self Assessment]' : ''}` : `Unknown`;
     if (is180 === true) {
-      headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName} team`;
+      headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName}`;
     }
 
     if(survey.surveyType === 'culture') {
@@ -1100,7 +1104,6 @@ class DefaultView extends Component {
 
     const isThankYou = step === maxSteps - 1;
     
-
     return (
       <Grid container spacing={1} className={classes.card}>
         <Grid item xs={12} sm={12}>
@@ -1145,8 +1148,7 @@ class DefaultView extends Component {
             steps={maxSteps}
             position="bottom"
             activeStep={step}
-            nextButton={
-              
+            nextButton={              
                 <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Complete all ratings and comments in full before proceeeding.'}><Button size="small" color={isCurrentStepValid === true || isThankYou === true  ? "success" : "danger" } onClick={nextStep} disabled={isCurrentStepValid === false}>
                   Next{theme.direction === 'rtl' ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
                 </Button></Tooltip>              

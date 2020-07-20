@@ -666,7 +666,7 @@ class Profile extends Component {
                     <Typography variant="body1">
                         If you need to edit the details of an existing colleague you nominated previously, click on their name or the <Icon>expand</Icon> icon. This will enable you to change
                         the relationship type (LEADER, PEER, DIRECT REPORT) or remove the peer by clicking the <Icon>delete_outline</Icon> button.<br/>
-                        Once you have selected seven colleagues (a minimum of five if you don't have seven),  please click the <Icon>check_circle</Icon> button to confirm your peer selection.<br />
+                        Once you have selected a minimum of six assessors (a maximum of 10),  please click the <Icon>check_circle</Icon> button to confirm your peer selection.<br />
                         Your nominees will only be notified of their nomination a maximum of once every 30 days.
                     </Typography>
                     <hr/>
