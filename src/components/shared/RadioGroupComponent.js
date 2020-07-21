@@ -18,7 +18,6 @@ class RadioGroupWidget extends Component {
   }
 
   componentDidMount() {
-    debugger;
     if (this.props.formData && this.props.formData != '')
       this.setState({ selectedValue: this.props.formData });
   }

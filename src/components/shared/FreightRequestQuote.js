@@ -39,16 +39,22 @@ class FreightRequestQuoteWidget extends Component {
     this.setState({ value });
   }
 
+  submitRequest = () => {
+    const { formContext, api } = this.props;
+    try {
+      debugger;
+      // let done = formContext.$submit();
+      let done = formContext.$ref.submit();
+      api.log(`Freight Request Form submitted: ${done}`, {}, 'debug')
+    } catch (error){
+      api.log(`Freight Request Form Submission Failed: ${error}`, {}, 'debug')
+    }
+  }
+
   render() {
     let {
       api,
       componentFqn,
-      components,
-      buttonTitle,
-      windowTitle,
-      buttonVariant,
-      buttonIcon,
-      buttonProps = {},
       componentProps,
       actions,
       childProps = {},
@@ -57,11 +63,14 @@ class FreightRequestQuoteWidget extends Component {
       classes
     } = this.props;
 
+    const uiOptions = uiSchema['ui:options'];
+    const { components } = uiOptions.props;
+
     let _tabs = [];
     let _panels = [];
 
-    formData.options.forEach((option, index) => {
-      // _tabs.push(<Tab label={option.title} {...a11yProps(index)} />)
+    // formData.options.forEach((option, index) => {
+    formData.forEach((option, index) => {
       _tabs.push(<Tab label={`Option ${index + 1}`} {...a11yProps(index)} />)
 
       let _componentForms = [];
@@ -95,8 +104,8 @@ class FreightRequestQuoteWidget extends Component {
         {_panels}
 
         <div className={classes.buttonContainer}>
-          <Button variant="contained" classes={{root: classes.button}}>CANCEL</Button>
-          <Button color="primary" variant="contained"  classes={{root: classes.button}}>REQUEST FREIGHT</Button>
+          <Button variant="contained" classes={{ root: classes.button }}>CANCEL</Button>
+          <Button color="primary" variant="contained" classes={{ root: classes.button }} onClick={this.submitRequest}>REQUEST FREIGHT</Button>
         </div>
       </div>
     )

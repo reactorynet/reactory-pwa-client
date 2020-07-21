@@ -67,6 +67,7 @@ import NotFoundComponent from './shared/NotFoundComponent';
 import DocumentListComponent from './shared/DocumentListComponent';
 import DocumentUploadComponent from './shared/DocumentUploadComponents';
 import FreightRequestQuoteComponent from './shared/FreightRequestQuote';
+import FreightRequestProductDetailComponent from './shared/FreightRequestProductDetail';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -108,6 +109,12 @@ export const componentRegistery = [
     nameSpace: 'lasec',
     name: 'FreightRequestQuoteComponent',
     component: FreightRequestQuoteComponent,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'lasec',
+    name: 'FreightRequestProductDetailComponent',
+    component: FreightRequestProductDetailComponent,
     version: '1.0.0'
   },
 
