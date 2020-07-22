@@ -42,11 +42,9 @@ class FreightRequestQuoteWidget extends Component {
   submitRequest = () => {
     const { formContext, api } = this.props;
     try {
-      debugger;
-      // let done = formContext.$submit();
       let done = formContext.$ref.submit();
       api.log(`Freight Request Form submitted: ${done}`, {}, 'debug')
-    } catch (error){
+    } catch (error) {
       api.log(`Freight Request Form Submission Failed: ${error}`, {}, 'debug')
     }
   }
@@ -54,29 +52,22 @@ class FreightRequestQuoteWidget extends Component {
   render() {
     let {
       api,
-      componentFqn,
-      componentProps,
-      actions,
-      childProps = {},
+      optionsComponents,
+      productComponent,
       formData,
-      uiSchema,
       classes
     } = this.props;
-
-    const uiOptions = uiSchema['ui:options'];
-    const { components } = uiOptions.props;
 
     let _tabs = [];
     let _panels = [];
 
-    // formData.options.forEach((option, index) => {
-    formData.forEach((option, index) => {
+    formData.options.forEach((option, index) => {
       _tabs.push(<Tab label={`Option ${index + 1}`} {...a11yProps(index)} />)
 
       let _componentForms = [];
       let _componentProps = { formData: option }
 
-      components.map(component => {
+      optionsComponents.map(component => {
         let ChildForm = api.getComponent(component.componentFqn || 'core.Loading');
         _componentForms.push(<ChildForm {..._componentProps} />)
       });
@@ -86,6 +77,9 @@ class FreightRequestQuoteWidget extends Component {
           {_componentForms}
         </TabPanel>);
     });
+
+    const ProductComponent = api.getComponent(productComponent.componentFqn || 'core.Loading');
+    let _componentProps = { formData: formData }
 
     function a11yProps(index) {
       return {
@@ -102,6 +96,7 @@ class FreightRequestQuoteWidget extends Component {
           </Tabs>
         </AppBar>
         {_panels}
+        <ProductComponent {..._componentProps} />
 
         <div className={classes.buttonContainer}>
           <Button variant="contained" classes={{ root: classes.button }}>CANCEL</Button>

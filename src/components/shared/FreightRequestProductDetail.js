@@ -6,34 +6,68 @@ import {
 import { compose } from 'recompose';
 import { withTheme, withStyles } from '@material-ui/styles';
 import { withApi } from '../../api/ApiProvider';
+import MaterialTable, { MTableToolbar } from 'material-table';
 
 class FreightRequestProductDetailsWidget extends Component {
 
   render() {
-
-    debugger;
-
     let {
       api,
-      componentFqn,
-      componentProps,
-      actions,
-      childProps = {},
       formData,
-      uiSchema,
       classes
     } = this.props;
+    let columns = [];
+    let data = [];
+
+    const inputChangeHandler = (event, rowData) => {
+      const row = formData.find(r => r.code === rowData.code);
+      row.qty = +event.target.value;
+      this.props.onChange(formData);
+      this.forceUpdate();
+    }
+
+    columns = [
+      { title: 'Stockcode', field: 'code' },
+      { title: 'Description', field: 'description' },
+      { title: 'Unit of Measure', field: 'unitOfMeasure' },
+      { title: 'Selling Price (DDP)', field: 'sellingPrice' },
+      { title: 'Quantity', field: 'qty', render: rowData => <input className={classes.input} type="number" value={rowData.qty} onChange={(event) => inputChangeHandler(event, rowData)} /> },
+      { title: 'Length (cm)', field: 'length' },
+      { title: 'Width (cm)', field: 'height' },
+      { title: 'Volume (cm3)', field: 'volume' },
+    ];
+
+    if (formData && formData.length > 0) {
+      formData.forEach(row => {
+        data.push({ ...row })
+      })
+    }
+
+    let options = {
+      toolbar: false,
+      showTitle: false,
+      search: false
+    }
 
     return (
-      <div>
-        <h1>THIS IS THE PRODUCT DETAIL COMPONENT</h1>
-      </div>
+      <MaterialTable
+        columns={columns}
+        data={data}
+        options={options} />
     )
   }
 
   static styles = (theme) => {
-    return {}
+    return {
+      input: {
+        width: '70px',
+        outline: 'none',
+        padding: theme.spacing(1),
+        border: 'solid 1px #cccccc',
+        borderRadius: '5px'
+    }
   }
+}
 }
 
 const FreightRequestProductDetailsComponent = compose(withTheme, withApi, withStyles(FreightRequestProductDetailsWidget.styles))(FreightRequestProductDetailsWidget);
