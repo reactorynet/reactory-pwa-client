@@ -31,6 +31,13 @@ function TabPanel(props) {
 
 class FreightRequestQuoteWidget extends Component {
 
+  constructor(props, context) {
+    super(props, context);
+    this.componentRefs = props.api.getComponents([
+      'core.Loading@1.0.0',
+    ]);
+  }
+
   state = {
     value: 0,
   }
@@ -42,6 +49,7 @@ class FreightRequestQuoteWidget extends Component {
   submitRequest = () => {
     const { formContext, api } = this.props;
     try {
+      debugger;
       let done = formContext.$ref.submit();
       api.log(`Freight Request Form submitted: ${done}`, {}, 'debug')
     } catch (error) {
@@ -50,6 +58,7 @@ class FreightRequestQuoteWidget extends Component {
   }
 
   render() {
+    const { Loading } = this.componentRefs;
     let {
       api,
       optionsComponents,
@@ -60,9 +69,10 @@ class FreightRequestQuoteWidget extends Component {
 
     let _tabs = [];
     let _panels = [];
+    let LoadingComponent = (<Loading message={'Please wait. Loading options'} />);
 
     formData.options.forEach((option, index) => {
-      _tabs.push(<Tab label={`Option ${index + 1}`} {...a11yProps(index)} />)
+      _tabs.push(<Tab label={option.name} {...a11yProps(index)} />)
 
       let _componentForms = [];
       let _componentProps = { formData: option }
@@ -78,9 +88,6 @@ class FreightRequestQuoteWidget extends Component {
         </TabPanel>);
     });
 
-    const ProductComponent = api.getComponent(productComponent.componentFqn || 'core.Loading');
-    let _componentProps = { formData: formData }
-
     function a11yProps(index) {
       return {
         id: `simple-tab-${index}`,
@@ -88,16 +95,23 @@ class FreightRequestQuoteWidget extends Component {
       };
     }
 
+    const ProductComponent = api.getComponent(productComponent.componentFqn); // product list
+    let _componentProps = { formData: formData }
+
     return (
       <div>
-        <AppBar position="static">
-          <Tabs value={this.state.value} onChange={this.handleChange} aria-label="simple tabs example">
-            {_tabs}
-          </Tabs>
-        </AppBar>
-        {_panels}
+        {
+          _tabs.length > 0 && _panels.length > 0 ? <>
+            <AppBar position="static">
+              <Tabs value={this.state.value} onChange={this.handleChange} aria-label="simple tabs example">
+                {_tabs}
+              </Tabs>
+            </AppBar>
+            {_panels}
+          </> :
+            <Loading message={'Please wait. Loading options.'} />
+        }
         <ProductComponent {..._componentProps} />
-
         <div className={classes.buttonContainer}>
           <Button variant="contained" classes={{ root: classes.button }}>CANCEL</Button>
           <Button color="primary" variant="contained" classes={{ root: classes.button }} onClick={this.submitRequest}>REQUEST FREIGHT</Button>
