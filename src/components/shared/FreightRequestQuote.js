@@ -58,6 +58,8 @@ class FreightRequestQuoteWidget extends Component {
     }
   }
 
+
+
   render() {
     const { Loading } = this.componentRefs;
     let {
@@ -65,32 +67,50 @@ class FreightRequestQuoteWidget extends Component {
       optionsComponents,
       productComponent,
       formData,
-      classes
+      classes,
+      onChange
     } = this.props;
+
+    debugger;
 
     let _tabs = [];
     let _panels = [];
     let LoadingComponent = (<Loading message={'Please wait. Loading options'} />);
 
-    formData.options.forEach((option, index) => {
-      _tabs.push(<Tab label={option.name} {...a11yProps(index)} />)
+    const formfieldChangeHandler = (optionName, fieldData) => {
+      const option = formData.options.find(op => op.name == fieldData.formData.name)
+      if (option != fieldData.formData) {
+        debugger;
+        this.props.onChange(fieldData.formData);
+      }
+    }
 
-      let _componentForms = [];
-      let _componentProps = { formData: option, onChange: (formDataFromFormField) => {
+    let self = this;
+    if (formData.options && formData.options.length > 0) {
+      formData.options.forEach((option, index) => {
+        _tabs.push(<Tab label={option.name} {...a11yProps(index)} />)
 
-        api.log(`Received data from child form ${option.name}`, {formDataFromFormField}, 'debug' );
-      } }
+        let _componentForms = [];
+        let _componentProps = {
+          formData: option,
+          onChange: (formDataFromFormField) => {
+            api.log(`Received data from child form ${option.name}`, { formDataFromFormField }, 'debug');
+            // onChange(formDataFromFormField.formData);
+            formfieldChangeHandler(option.name, formDataFromFormField);
+          }
+        }
 
-      optionsComponents.map(component => {
-        let ChildForm = api.getComponent(component.componentFqn || 'core.Loading');
-        _componentForms.push(<ChildForm {..._componentProps} />)
+        optionsComponents.map(component => {
+          let ChildForm = api.getComponent(component.componentFqn || 'core.Loading');
+          _componentForms.push(<ChildForm {..._componentProps} />)
+        });
+
+        _panels.push(
+          <TabPanel value={this.state.value} index={index}>
+            {_componentForms}
+          </TabPanel>);
       });
-
-      _panels.push(
-        <TabPanel value={this.state.value} index={index}>
-          {_componentForms}
-        </TabPanel>);
-    });
+    }
 
     function a11yProps(index) {
       return {
