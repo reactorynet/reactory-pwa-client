@@ -23,7 +23,6 @@ class RadioGroupWidget extends Component {
   }
 
   render() {
-
     const {
       api,
       formData,
@@ -31,6 +30,11 @@ class RadioGroupWidget extends Component {
       classes,
       onChange
     } = this.props;
+    const { selectedValue } = this.state;
+    let _selectedValue = selectedValue;
+
+    if (formData && formData != '')
+      _selectedValue = formData;
 
     const uiOptions = uiSchema['ui:options'];
     let labelTitle = uiOptions.label || '';
@@ -50,14 +54,14 @@ class RadioGroupWidget extends Component {
         {labelTitle != '' && <label className={classes.label}>{labelTitle}</label>}
         <div>
           {
-            <RadioGroup style={{ flexDirection: 'row' }} aria-label="gender" name="radio group" value={this.state.selectedValue} onChange={handleChange}>
+            <RadioGroup style={{ flexDirection: 'row' }} aria-label="gender" name="radio group" value={_selectedValue} onChange={handleChange}>
               {
                 uiOptions.radioOptions.map((option, optionIndex) => {
                   return (
                     <FormControlLabel
                       control={<Radio color="primary" />}
                       label={option.label}
-                      key={optionIndex}
+                      key={option.value}
                       labelPlacement="left"
                       value={option.value}
                     />

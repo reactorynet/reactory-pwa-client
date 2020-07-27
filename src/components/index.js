@@ -66,6 +66,8 @@ import ProductCardComponent from './shared/ProductCardComponent';
 import NotFoundComponent from './shared/NotFoundComponent';
 import DocumentListComponent from './shared/DocumentListComponent';
 import DocumentUploadComponent from './shared/DocumentUploadComponents';
+import FreightRequestQuoteComponent from './shared/FreightRequestQuote';
+import FreightRequestProductDetailComponent from './shared/FreightRequestProductDetail';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -101,6 +103,22 @@ export const CompanyLogo = (props) => {
 
 
 export const componentRegistery = [
+
+  // TO IMPLEMENT IN LASEC PLUGINS
+  {
+    nameSpace: 'lasec',
+    name: 'FreightRequestQuoteComponent',
+    component: FreightRequestQuoteComponent,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'lasec',
+    name: 'FreightRequestProductDetailComponent',
+    component: FreightRequestProductDetailComponent,
+    version: '1.0.0'
+  },
+
+
   {
     nameSpace: 'core',
     name: 'ChipLabel',
