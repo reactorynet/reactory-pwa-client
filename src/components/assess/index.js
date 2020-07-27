@@ -101,7 +101,6 @@ class AssessmentWrapper extends Component {
     }
 
     render(){
-
         try {
             return this.renderQuery();
         } catch (exc) {

@@ -10,7 +10,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
-import { Button } from '@material-ui/core';
+import { Button, Toolbar } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import ApiProvider, { withApi } from '@reactory/client-core/api/ApiProvider';
@@ -146,17 +146,13 @@ class TabbedNavComponent extends Component {
     props.api.log(`TabbedNavComponent.constructor(props, context)`, { props, context });
   }
 
-  componentDidMount() {
-    //sync root path with selected item index
+  componentDidCatch(error) {
+    this.props.api.log(`Caught out of boundary error TabbedNavigation Component`, {error}, 'error')
   }
 
   componentWillReceiveProps(nextProps) {
     this.props.api.log(`TabbedNavComponent.componentWillReceiveProps(nextProps)`, { nextProps });
-  }
-
-  componentDidUpdate() {
-    this.props.api.log(`TabbedNavComponent.componentDidUpdate(nextProps)`, { props: this.props });
-  }
+  }  
 
   render() {
     const { props, theme, state } = this;
@@ -172,7 +168,16 @@ class TabbedNavComponent extends Component {
     let _visibleTabCount = 10;
     let _menuLabelText = '';
 
-    api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext, uiOptions });
+    let _components = [];
+    let _buttons = [];
+
+    if(uiOptions.buttons) {
+      uiOptions.buttons.forEach((fqn) => { 
+        const ButtonComponent = api.getComponent(fqn); 
+        if(ButtonComponent) _buttons.push(<ButtonComponent {...this.props} />) })
+    }
+  
+    api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext, uiOptions, _buttons });
 
     if (isArray(formData) === true) {
       //making the assumption the data array contains the tabs definition
@@ -261,7 +266,17 @@ class TabbedNavComponent extends Component {
 
 
         if (index <= _visibleTabCount - 1) {
-          return <Tab label={tab.title} {...a11yProps(index)} key={(tab.id || index)} value={(tab.id || index)} onClick={() => (tab.route ? that.props.history.push(tab.route) : that.setState({ activeTab: (tab.id || index) }))} />
+
+        
+
+          const onTabClicked = () => {
+            that.setState({ activeTab: (tab.id || index) }, ()=>{
+              
+              if(tab.route) that.props.history.push(tab.route);
+            });
+          }
+
+          return <Tab label={tab.title} {...a11yProps(index)} key={(tab.id || index)} value={(tab.id || index)} onClick={ onTabClicked } />
         } else {
           _additionalMenuItems.push({ index: (tab.id || index), title: tab.title, tab });
           if (index == _visibleTabCount) {
@@ -286,14 +301,17 @@ class TabbedNavComponent extends Component {
 
     const open = Boolean(this.state.anchorEl);
 
-    let _components = [];
+
 
     return (
       <div className={classes.root}>
         <AppBar position="static">
-          <Tabs classes={{ indicator: classes.indicator }} value={this.state.activeTab} onChange={handleChange} aria-label="simple tabs example">
-            {_tabComponents}
-          </Tabs>
+          <Toolbar>
+            <Tabs classes={{ indicator: classes.indicator }} value={this.state.activeTab} onChange={handleChange} aria-label="simple tabs example">
+              {_tabComponents}
+            </Tabs>
+            {_buttons}
+          </Toolbar>
         </AppBar>
 
         {_tabPannels}

@@ -74,7 +74,7 @@ class OrganizationList extends Component {
 
     const list = (
       <>
-      <Button key={-1} color="secondary" onClick={()=>{this.props.history.push(`${this.props.rootPath || '/admin/'}`)}}><Icon>date_range</Icon>CALENDAR</Button>
+      <Button key={-2} color="secondary" onClick={()=>{this.props.history.push(`${this.props.rootPath || '/admin/'}`)}}><Icon>date_range</Icon>CALENDAR</Button>
       {newOrganizationLink}
       <List>        
         {allOrganizations.map( (organization, index) => {            

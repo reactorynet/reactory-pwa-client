@@ -473,6 +473,7 @@ class DefaultView extends Component {
       valid: true,
       step: 0,
       assessment: props.assessment,
+      qualityCustomComment: null,
       showMenu: false,
       showTeamMembers: false,
       showHelp: false
@@ -482,6 +483,7 @@ class DefaultView extends Component {
     this.nextStep = this.nextStep.bind(this);
     this.prevStep = this.prevStep.bind(this);
     this.ratingScreen = this.ratingScreen.bind(this);
+    this.loadCustomQualityComment = this.loadCustomQualityComment.bind(this);
     this.toolbar = this.toolbar.bind(this);
     this.setStep = this.setStep.bind(this);
     this.stopActivities = this.stopActivities.bind(this);
@@ -767,10 +769,49 @@ class DefaultView extends Component {
     );
   }
 
+  loadCustomQualityComment(){
+    const that = this;
+    const { classes, api } = this.props;
+    const { step, assessment, newBehaviourText, qualityCustomComment } = this.state;
+    const { delegate, ratings, survey } = assessment;
+    const { StaticContent } = this.componentDefs;
+    const quality = assessment.survey.leadershipBrand.qualities[step - 1];
+    const { slugify } = api.utils;
+
+
+    const commentSlug = `mores-survey-${survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`;
+    debugger;
+    api.graphqlQuery(`
+      query ReactoryGetContentBySlug($slug: String!) {
+        ReactoryGetContentBySlug(slug: $slug){
+          slug,
+          title,
+          content
+        }
+      }
+    `, { 
+      slug: commentSlug
+    }).then(( result ) => {
+      const { data, errors } = result;
+      api.log(`Results from fetching custom comment`, { data, errors }, 'error');
+      
+      if(data.ReactoryGetContentBySlug) {
+        that.setState({ qualityCustomComment: data.ReactoryGetContentBySlug.content });
+      } else {
+        that.setState({ qualityCustomComment: '' });
+      }
+
+    }).catch((graphError) => {
+      api.log(``, { graphError }, 'error')
+    });
+
+
+  }
+
   ratingScreen() {
     const that = this;
     const { classes, api } = this.props;
-    const { step, assessment, newBehaviourText } = this.state;
+    const { step, assessment, newBehaviourText, qualityCustomComment } = this.state;
     const { delegate, ratings, survey } = assessment;
     const { StaticContent } = this.componentDefs;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
@@ -906,9 +947,66 @@ class DefaultView extends Component {
           placeHolder: `Type here if you want add a comment for this section: ${quality.title}`,
         };
 
+        /**
+         * <StaticContent {...staticContentProps} />
+         */
+
+        const updateCustomContent = (evt) => {
+          const content = evt.target.value;
+          api.log(`Update Content For Custom Comment`, {content}, 'debug');
+          debugger
+          api.graphqlMutation(gql`
+            mutation ReactoryCreateContent($createInput: CreateContentInput!){
+              ReactoryCreateContent(createInput: $createInput){
+                id
+                slug
+                title
+                content
+                topics
+                published
+                createdBy {
+                  id
+                  fullName
+                }
+                createdAt
+              }
+            }
+          `, { 
+            createInput: {
+              slug: `mores-survey-${assessment.survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`,              
+              title: `Section ${quality.title} Comment by ${assessment.assessor.firstName} ${assessment.assessor.lastName} on ${assessment.survey.title}`,
+              content: content,
+              updatedAt: new Date().valueOf(),                           
+              published: true
+            }
+          }).then((contentUpdateResult) => {
+            api.log(`Result from Content Create Update`, { contentUpdateResult }, 'debug')
+            const { data, errors } = contentUpdateResult;
+
+          }).catch((exc) => {
+            api.log(`Error Updating Custom Comment `, { exc }, 'error');
+          });
+        };
+
+        const patchCustomContentState = evt => {
+          that.setState({ qualityCustomComment: evt.target.value })
+        }
+
+
         CustomFeedbackComponent = (
         <Paper>
-          <StaticContent {...staticContentProps} />
+          <TextField            
+            label={`Provide a custom comment for: ${quality.title}`}           
+            multiline
+            InputLabelProps={{ shrink: true }}
+            rows={4}            
+            onBlur={updateCustomContent}
+            fullWidth={true}
+            placeholder={`Type here if you want add a comment for this section: ${quality.title}`}
+            value={qualityCustomComment}
+            onChange={patchCustomContentState}
+            variant="outlined"
+             />          
         </Paper>
         )
       }
@@ -953,16 +1051,29 @@ class DefaultView extends Component {
   }
 
   prevStep() {
-    if (this.state.step > 0)
-      this.setState({ step: this.state.step - 1 });
+    const that = this;
+    if (that.state.step > 0) {
+      const nextStepIndex = this.state.step - 1;
+      this.setState({ step: nextStepIndex }, ()=>{
+        if(nextStepIndex > 0) {
+          that.loadCustomQualityComment();
+        }
+      });
+    }
+      
   }
 
   nextStep() {
     let maxSteps = this.props.assessment.survey.leadershipBrand.qualities.length + 2;
-    if (this.state.step < maxSteps)
-      this.setState({ step: this.state.step + 1 }, () => {
+    if (this.state.step < maxSteps) {
+      const nextStepIndex = this.state.step + 1;
+      this.setState({ step: nextStepIndex }, () => {
         window.scrollTo({ top: 0 })
+        if(nextStepIndex < maxSteps -1 ) {
+          this.loadCustomQualityComment();
+        }        
       });
+    }
   }
 
   setStep(event, step) {
@@ -1132,13 +1243,11 @@ class DefaultView extends Component {
         <Grid item xs={12} sm={12}>
           {toolbar()}
         </Grid>
-        <Grid item xs={12} sm={12} style={{ marginBottom: '16px' }}>
+        <Grid item xs={12} sm={12} style={{ marginBottom: '48px' }}>
           {wizardControl}
         </Grid>
-        <Grid item xs={12} sm={12}>
-          <Typography variant="body1" color={isCurrentStepValid === true || isThankYou === true  ? "success" : "error"} style={{ textAlign: 'right', minHeight: '100px', display: "block" }}>
-            {isCurrentStepValid === true || isThankYou === true ? isThankYou === true ? 'Thank you.' : 'Click  next below to proceed.' : 'Complete all ratings and comments in full before proceeding.'}
-          </Typography>
+        <Grid item xs={12} sm={12} md={12} lg={12}>
+         
           <MobileStepper
             style={{
               background: '#fff',
