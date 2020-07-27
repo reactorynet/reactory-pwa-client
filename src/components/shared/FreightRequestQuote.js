@@ -48,6 +48,7 @@ class FreightRequestQuoteWidget extends Component {
 
   submitRequest = () => {
     const { formContext, api } = this.props;
+    const props = this.props;
     try {
       debugger;
       let done = formContext.$ref.submit();
