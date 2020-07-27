@@ -148,7 +148,8 @@ export interface ReactoryFormProperties {
   onMutateComplete?: Function,
   before?: Component | undefined,
   children?: ReactNodeArray,
-  $route?: string,
+  $route?: any,
+  $App?: any,
   validate?: Function,
   autoQueryDisabled?: boolean
 }
@@ -235,6 +236,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   api: any;
   instanceId: string;
   isMounted: boolean;
+  unlisten: any;
 
   constructor(props: ReactoryFormProperties, context: any) {
     super(props, context);
@@ -368,11 +370,19 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 
   componentWillMount() {
+    const { api, history, $App } = this.props;    
+    const that = this;
+    this.unlisten = history.listen((location, action) => {
+      api.log("REACT ROUTER On Route Changed Detected", {location, action}, 'debug' );
+     //$App.forceUpdate()
+    });
     this.downloadForms();
+
   }
 
   componentWillUnmount() {
     this.isMounted = false;
+    this.unlisten();
     this.$events.emit('componentWillUnmount', this);
     this.$events.removeAllListeners();
   }

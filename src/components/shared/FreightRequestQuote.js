@@ -75,7 +75,10 @@ class FreightRequestQuoteWidget extends Component {
       _tabs.push(<Tab label={option.name} {...a11yProps(index)} />)
 
       let _componentForms = [];
-      let _componentProps = { formData: option }
+      let _componentProps = { formData: option, onChange: (formDataFromFormField) => {
+
+        api.log(`Received data from child form ${option.name}`, {formDataFromFormField}, 'debug' );
+      } }
 
       optionsComponents.map(component => {
         let ChildForm = api.getComponent(component.componentFqn || 'core.Loading');

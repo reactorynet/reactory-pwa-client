@@ -95,6 +95,7 @@ class App extends Component<any, AppState> {
   componentRefs: any
   router: any
   statusInterval: any = null;
+  unlisten: any;
   static propTypes: { appTitle: PropTypes.Validator<string>; appTheme: PropTypes.Requireable<object>; };
   static defaultProps: { appTitle: string; appTheme: {}; };
 
@@ -132,8 +133,6 @@ class App extends Component<any, AppState> {
       'core.NotFound',
     ]);
   }
-  
-  
 
   onRouteChanged(path, state) {
     api.log(`onRouteChange Handler`, [path, state], 'debug');
@@ -198,9 +197,11 @@ class App extends Component<any, AppState> {
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (props) => {
-          api.log(`Rendering Route ${routeDef.path}`, [routeDef], 'debug');
+          api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');                    
+
           const componentArgs = {
-            $route: props.match
+            $route: props.match,
+            $App: that
           };
 
           if (isArray(routeDef.args)) {

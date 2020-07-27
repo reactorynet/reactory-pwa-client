@@ -266,7 +266,17 @@ class TabbedNavComponent extends Component {
 
 
         if (index <= _visibleTabCount - 1) {
-          return <Tab label={tab.title} {...a11yProps(index)} key={(tab.id || index)} value={(tab.id || index)} onClick={() => (tab.route ? that.props.history.push(tab.route) : that.setState({ activeTab: (tab.id || index) }))} />
+
+        
+
+          const onTabClicked = () => {
+            that.setState({ activeTab: (tab.id || index) }, ()=>{
+              
+              if(tab.route) that.props.history.push(tab.route);
+            });
+          }
+
+          return <Tab label={tab.title} {...a11yProps(index)} key={(tab.id || index)} value={(tab.id || index)} onClick={ onTabClicked } />
         } else {
           _additionalMenuItems.push({ index: (tab.id || index), title: tab.title, tab });
           if (index == _visibleTabCount) {
