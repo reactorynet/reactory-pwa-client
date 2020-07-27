@@ -348,8 +348,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     }
   }
 
+
+
   componentWillReceiveProps(nextProps) {
 
+    
     const self = this;
     this.props.api.log('ReactoryForm.componentWillReceiveProps', { nextProps, currentProps: self.props }, 'debug');
     if (deepEquals(nextProps, this.props) === false) {
@@ -361,6 +364,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     if (deepEquals(nextProps.formData, this.state.formData) === false) {
       this.setState({ formData: nextProps.formData, queryComplete: false });
     }
+    
   }
 
   componentWillMount() {

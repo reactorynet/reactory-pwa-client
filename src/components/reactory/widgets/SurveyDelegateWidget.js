@@ -7,6 +7,7 @@ import MaterialTable, { MTableToolbar } from 'material-table';
 import { isArray, isFunction, sort, findIndex, countBy, isNil, filter, sortBy } from 'lodash';
 import {
   Avatar,
+  Button,
   Paper,
   Typography,
   Toolbar,
@@ -31,6 +32,55 @@ import { ReactoryApi } from "../../../api/ReactoryApi";
 import { nil } from '../../util';
 import moment from 'moment';
 import hdate from 'human-date';
+
+
+import { Reactory } from '@reactory/server-core/types/reactory';
+import { ENVIRONMENT } from '@reactory/server-core/types/constants';
+import { isThrowStatement } from 'typescript';
+
+const assessmentExportOptions =  {
+  filename: 'Assessment Report - ${formData.assessment.delegate.firstName} ${formData.assessment.delegate.lastName}.xlsx',
+  sheets: [
+    {
+      name: 'Assessments',
+      index: 0,
+      arrayField: 'assessments',
+      startRow: 1,
+      columns: [        
+        {
+          title: 'delegate', 
+          propertyField: 'delegate',
+          format: '',
+          width: 30,
+          type: 'string',
+          required: true,
+          style: {}
+        },
+      ]
+    },
+  ]             
+};
+
+const assessmentExcelExport = {
+  title: 'Excel Export',
+  frameProps: {
+    height: '100%',
+    width: '100%',
+    styles: {
+      height: '100%',
+      width: '100%',
+    },
+    url: `blob`,
+    method: 'get'      
+  },
+  engine: 'excel',    
+  useClient: true,
+  mappingType: 'om',
+  mapping: {
+    'formData.assessments': 'sheets.Assessments',    
+  },
+  exportOptions: assessmentExportOptions
+};
 
 
 
@@ -163,6 +213,9 @@ class SurveyDelegates extends Component {
       selected: {
 
       },
+      deleteConfirm: {
+
+      },      
       surveyProps: getSurveyProps(props)
     };           
     
@@ -192,6 +245,7 @@ class SurveyDelegates extends Component {
     this.removeDelegateFromSurvey = this.removeDelegateFromSurvey.bind(this);
     this.getBasicModalView = this.getBasicModalView.bind(this);
     this.removeAssessorForDelegate = this.removeAssessorForDelegate.bind(this);
+    this.renderDelegateItem = this.renderDelegateItem.bind(this);
     this.doAction = this.doAction.bind(this);
     this.addAssessorClicked = this.addAssessorClicked.bind(this);
   }
@@ -235,7 +289,7 @@ class SurveyDelegates extends Component {
           break;
         }
         case 'view-assessments': {          
-          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'assessments' });
+          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'assessments', assessment: null });
           break;
         }
         case 'view-details': {
@@ -243,7 +297,7 @@ class SurveyDelegates extends Component {
           break;
         }
         
-        case 'remove': {          
+        case 'remove': {  
           this.removeDelegateFromSurvey(delegateEntry, delegateEntry.removed === true);
           break;
         }
@@ -310,8 +364,9 @@ class SurveyDelegates extends Component {
 
   getBasicModalView( ) {
     const self = this;
-    const { activeEntry, assessment, basicModalViewMode, reportType } = this.state;
-    const { DropDownMenu, Assessment, ReportViewer, FullScreenModal } = this.componentDefs;
+    const { activeEntry, assessment, basicModalViewMode, reportType } = self.state;
+    const { DropDownMenu, Assessment, ReportViewer, FullScreenModal } = self.componentDefs;
+    const { api } = this.props;
     
     //src: http://localhost:4000/pdf/towerstone/delegate-360-assessment?x-client-key=${this.props.api.CLIENT_KEY}&x-client-pwd=${this.props.api.CLIENT_PWD}
 
@@ -346,18 +401,77 @@ class SurveyDelegates extends Component {
           data={reportData} />)
         break;
       }
+      case 'assessments':
+      case 'assessment-details':
       default: {
+
+        const closeAssessmentModal = () => { self.setState({ assessment: null,  basicModalViewMode: 'assessments'}) };
+        let detailAssessmentComponent = <Typography> Select an assessment to view the details </Typography>;
+        
+        if(assessment && (assessment.id || assessment._id)) {
+          detailAssessmentComponent = (
+            <FullScreenModal open={true} title={`Assessment Details as Admin`} onClose={closeAssessmentModal}>
+            <Assessment assessmentId={assessment.id || assessment._id}  mode="admin" />
+            </FullScreenModal>
+          )
+        }
+
+        let reportViewer = null;
+
+        const closeExcelReport = (evt) => {
+          self.setState({ showExcelReport: false });
+        };
+
+        if(self.state.showExcelReport === true) {
+          reportViewer = (<ReportViewer
+            engine={'excel'}          
+            exportDefinition={assessmentExcelExport}
+            useClient={true}
+            data={{formData: self.state.excelReportData }}
+            onClose={closeExcelReport}
+          />);
+        }
+        
+        const downloadExcelReport = () => {
+
+          debugger
+
+          const surveyId = self.props.formContext.$formData.id;
+          const delegateId = activeEntry.id
+
+          api.graphqlQuery(`query ReactoryGetCachedItem($key: String!){
+            ReactoryGetCachedItem(key: $key) {
+              key
+              ttl
+              item
+            }
+          }`, { key: `towerstone.survey@${surveyId}/${delegateId}` } ).then((response) => {
+            api.log(`Cache data response`, {response}, 'debug');
+
+            if(response && response.data && response.data.ReactoryCacheGetItem) {
+              self.setState({ excelReportData: response.data.ReactoryGetCachedItem.item, showExcelReport: true })
+            } else {
+              api.createNotification(`Could not fetch report data, please generate PDF report first, before downloading excel`, { showInAppNotification: true, canDismiss: true, type: 'warning'})
+            }           
+          }).catch((err) => {
+            api.createNotification(`Could not fetch report data, check code ${err.message}`, { showInAppNotification: true, canDismiss: true, type: 'warning'})
+          })
+          
+        };
+
         modalviewComponent = (
           <Paper className={this.props.classes.root} elevation={2}>
             <UserListItem key={activeEntry.id} user={activeEntry.delegate} />
+            <Toolbar><Button onClick={downloadExcelReport}><Icon>functions</Icon> Download Excel Report</Button></Toolbar>
             <hr/>
             <Typography variant="caption">Assessments</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} md={3}>
                 <List>
                 {
-                  activeEntry.assessments.map( ( _assessment ) => {
+                  activeEntry.assessments.map( ( _assessment, aidx ) => {
                     const onMenuItemSelect = (evt, menuItem) => {
+                      
                       switch(menuItem.id){
                         case "send-reminder": {          
                           break;
@@ -367,7 +481,35 @@ class SurveyDelegates extends Component {
                           break;
                         }
                         case "details": {
-                          self.setState({ assessment: _assessment })
+                          self.setState({ assessment: _assessment, basicModalViewMode: 'assessment-details' })
+                          break;
+                        }
+                        case "unlock_assessment": {                                                    
+                            api.graphqlMutation(gql`mutation SetAssessmentComplete($id: String!, $complete: Boolean){
+                              setAssessmentComplete(id: $id, complete: $complete) {
+                                complete
+                                updatedAt
+                              }
+                            }`, {
+                              id: _assessment.id,
+                              complete: false
+                            }).then(response => {
+                              let isOpen = false;
+                              if (response.data.setAssessmentComplete && response.data.setAssessmentComplete) isOpen = response.data.setAssessmentComplete.complete === false;
+
+                              if(isOpen === true) {
+                                api.createNotification(`Assessment has been re-opened`, { 
+                                  showInAppNotification: true,
+                                  type: 'success',
+                                  canDissmiss: true,
+                                  timeout: 2000
+                                 })
+                              }
+                            }).catch(mutateError => {
+                              api.log(`Could not execute the mutation`, {mutateError}, 'error' );
+                              self.setState({ completing: false, completeError: 'Could not update the assessment status' });
+                            })                          
+
                           break;
                         }
                         default: {
@@ -398,6 +540,13 @@ class SurveyDelegates extends Component {
                         id: 'send-reminder', 
                         key:'reminder'
                       });
+                    } else {
+                      menus.push({
+                        title: 'Open Assessment', 
+                        icon: 'lock_open', 
+                        id: 'unlock_assessment', 
+                        key:'unlock_assessment'
+                      });
                     }
                                                       
                     const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
@@ -405,29 +554,24 @@ class SurveyDelegates extends Component {
                     const { assessor } = _assessment;
                     return (
                     <UserListItem 
-                      key={ assessor.id || assessor._id } 
+                      key={ aidx } 
                       user={ assessor } 
                       message={ _assessment.complete === true ? 'Assessment complete' : 'Pending' } 
-                      secondaryAction={ dropdown } />
-                    );
+                      secondaryAction={ dropdown } />);
                   })
                 }
               </List>
-              </Grid>
+              </Grid>              
               <Grid item sm={12} md={9}>
-                <Typography>Overview</Typography>
+              <Typography variant="caption">Details</Typography>
+                {detailAssessmentComponent}
               </Grid>
-              { assessment && 
-                <FullScreenModal 
-                open={ assessment !== null } 
-                onClose={()=> { this.setState({ assessment: null }) }} 
-                title={ `Viewing ${assessment.assessor.firstName} ${assessment.assessor.lastName} assessment for ${activeEntry.delegate.firstName} ${activeEntry.delegate.lastName}` }>
-                <Assessment assessmentId={assessment.id || assessment._id}  mode="admin" />
-              </FullScreenModal>
-              } 
             </Grid>                                               
+            {reportViewer}
           </Paper>
         );
+
+        break;
       }
     }
 
@@ -497,13 +641,13 @@ class SurveyDelegates extends Component {
           case BasicModalViewModes.ReportPreview:  modalTitle = 'Survey Status Report Preview'; break;          
         }
         
-        component = this.getBasicModalView();
+        component = self.getBasicModalView();
         break;        
       }
       case 'detail':
       default: {
         if(activeEntry === null) return null;
-        component = this.getDetailView();
+        component = self.getDetailView();
         break;
       }
     }
@@ -657,12 +801,141 @@ class SurveyDelegates extends Component {
   }
 
   removeAssessorForDelegate(delegateEntry, assessment) {
-    console.log('SurveyDelegateWidget.removeAssessorForDelegate(delegateEntry, assessment)', { delegateEntry, assessment });
+    this.props.api.log('SurveyDelegateWidget.removeAssessorForDelegate(delegateEntry, assessment)', { delegateEntry, assessment });
     if(delegateEntry && assessment) {
       this.doAction(delegateEntry, 'remove-assessor', { assessmentId: assessment.id  || assessment._id }, `Removing Assessor From Survey`)
     }
   }
 
+  renderDelegateItem(delegateEntry, status) {
+    const { classes, api, formContext } = this.props;
+    const { ErrorMessage, AssessmentTable, SpeedDial } = this.componentDefs;
+    const { formData, selected, surveyProps } = this.state;
+    const self = this;
+
+    const { 
+      is360,
+      isPLC,
+      is180,
+      isCulture,
+      surveyType
+    } = surveyProps;
+
+
+    let backgroundColor = null;
+
+    const itemDetailClicked = (e) => {
+      api.log('Item detail clicked', e, 'debug');
+      self.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic' });
+    };
+                                                      
+    let secondaryItem = (<IconButton onClick={itemDetailClicked}><Icon>more_vert</Icon></IconButton>);
+    secondaryItem = self.getSecondaryAction(delegateEntry);
+
+    const selectUser = e => {
+      console.log(`User select clicked ${delegateEntry.delegate.firstName}`);
+      const _selected = {...this.state.selected};
+      if(_selected.hasOwnProperty(delegateEntry.delegate.id)) {
+        _selected[delegateEntry.delegate.id].selected = !_selected[delegateEntry.delegate.id].selected;                  
+      } else {
+        _selected[delegateEntry.delegate.id] = {
+          selected: true
+        }
+      }
+
+      self.setState({selected: _selected});
+    }
+
+    const isSelected = this.state.selected.hasOwnProperty(delegateEntry.delegate.id) === true ? this.state.selected[delegateEntry.delegate.id].selected === true : false;
+    let userMessage = null;
+    
+
+    let statusCount = { true: 0, false: 0 };// 
+    let allComplete = false;
+    if(delegateEntry.assessments && isArray(delegateEntry.assessments) === true) {
+      statusCount = countBy(delegateEntry.assessments, 'complete');
+      allComplete = statusCount.true === delegateEntry.assessments.length && delegateEntry.assessments.length > 0;
+    } 
+
+    if(allComplete === true) {
+      backgroundColor = "darkseagreen";
+    }
+     
+
+    api.log(`(${statusCount.true}) assessments complete for ${delegateEntry.delegate.firstName}`, delegateEntry, 'debug')
+    switch(status.key){                        
+      case 'launched': {
+        //console.log('Status Count', statusCount);
+        userMessage = (
+        <span>{delegateEntry.message}<br/>
+        {statusCount.true || 0} / {delegateEntry.assessments.length} assessment(s) complete.
+        </span>);
+        break;
+      }
+      case 'closed': {
+        userMessage = (<span>{delegateEntry.message}</span>)
+        break;
+      }
+      case 'feedback-complete': {
+        userMessage = (<span>{delegateEntry.message}</span>)
+        break;
+      }
+      case 'launched-assessor':          
+      {
+        if(is180) {
+          userMessage = `Launched as team assessor ${allComplete === true ? 'and completed assessement' : 'and has not completed assessment'}`                        
+        }
+        break;
+      }  
+      case 'launched-delegate': {
+        if(is180) {
+          userMessage = `Launched as team delegate ${allComplete === true ? 'and completed assessement' : 'and has not completed assessment'}`              
+        }
+        break;
+      }
+      case 'invite-sent':
+      case 'new':
+      default: {
+        if(!is180 && !isCulture) {
+          let peersConfirmed = false;
+          let hasPeers = false;
+          console.log('Rendering for delegate Entry', delegateEntry);
+          if(nil(delegateEntry.peers) === false) {
+            hasPeers = true;
+            peersConfirmed = moment(delegateEntry.peers.confirmedAt).isValid() === true              
+          } 
+
+          if(hasPeers === false) {
+            userMessage = (<span>{delegateEntry.message}<br/>No peers available for user</span>);              
+            backgroundColor = "gold";
+          } else {
+            if(peersConfirmed === false) {
+              userMessage = (<span>{delegateEntry.message}<br/>User has peers but has not confimed them yet</span>);
+              backgroundColor = "antiquewhite";
+            }                              
+            else {                                
+              userMessage = (<span>{delegateEntry.message}<br/>Peers confirmed {delegateEntry.peers.confirmedAt} ({hdate.relativeTime(delegateEntry.peers.confirmedAt)})</span>);
+              backgroundColor = "darkseagreen";
+            }                              
+          }
+        }                                             
+        break;
+      }
+    }
+    return (
+      <UserListItem
+        key={delegateEntry.id || delegateEntry._id}
+        user={delegateEntry.delegate}
+        primaryText={`${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} [${delegateEntry.delegate.email}]`} 
+        message={userMessage} 
+        secondaryAction={secondaryItem}  
+        checkbox={true}
+        selected={isSelected}
+        onSelectChanged={selectUser}
+        style={{ padding: '0px', backgroundColor }}            
+         />
+    );
+  }
  
 
   render(){
@@ -670,7 +943,7 @@ class SurveyDelegates extends Component {
     const { ErrorMessage, AssessmentTable, SpeedDial } = this.componentDefs;
     const { formData, selected, surveyProps } = this.state;
     const self = this;
-    
+    const { renderDelegateItem } = self;
     let data = [];
 
     formData.map((entry) => { 
@@ -967,122 +1240,7 @@ class SurveyDelegates extends Component {
 
       }              
 
-      const renderDelegateItem = (delegateEntry, status) => {
-        
-        let backgroundColor = null;
-
-        const itemDetailClicked = (e) => {
-          console.log('Item detail clicked', e);
-          self.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic' });
-        };
-                                                          
-        let secondaryItem = (<IconButton onClick={itemDetailClicked}><Icon>more_vert</Icon></IconButton>);
-        secondaryItem = self.getSecondaryAction(delegateEntry);
-
-        const selectUser = e => {
-          console.log(`User select clicked ${delegateEntry.delegate.firstName}`);
-          const _selected = {...this.state.selected};
-          if(_selected.hasOwnProperty(delegateEntry.delegate.id)) {
-            _selected[delegateEntry.delegate.id].selected = !_selected[delegateEntry.delegate.id].selected;                  
-          } else {
-            _selected[delegateEntry.delegate.id] = {
-              selected: true
-            }
-          }
-
-          self.setState({selected: _selected});
-        }
-
-        const isSelected = this.state.selected.hasOwnProperty(delegateEntry.delegate.id) === true ? this.state.selected[delegateEntry.delegate.id].selected === true : false;
-        let userMessage = null;
-        
-
-        let statusCount = { true: 0, false: 0 };// 
-        let allComplete = false;
-        if(delegateEntry.assessments && isArray(delegateEntry.assessments) === true) {
-          statusCount = countBy(delegateEntry.assessments, 'complete');
-          allComplete = statusCount.true === delegateEntry.assessments.length && delegateEntry.assessments.length > 0;
-        } 
-
-        if(allComplete === true) {
-          backgroundColor = "darkseagreen";
-        }
-         
-
-        api.log(`(${statusCount.true}) assessments complete for ${delegateEntry.delegate.firstName}`, delegateEntry, 'debug')
-        switch(status.key){                        
-          case 'launched': {
-            //console.log('Status Count', statusCount);
-            userMessage = (
-            <span>{delegateEntry.message}<br/>
-            {statusCount.true || 0} / {delegateEntry.assessments.length} assessment(s) complete.
-            </span>);
-            break;
-          }
-          case 'closed': {
-            userMessage = (<span>{delegateEntry.message}</span>)
-            break;
-          }
-          case 'feedback-complete': {
-            userMessage = (<span>{delegateEntry.message}</span>)
-            break;
-          }
-          case 'launched-assessor':          
-          {
-            if(is180) {
-              userMessage = `Launched as team assessor ${allComplete === true ? 'and completed assessement' : 'and has not completed assessment'}`                        
-            }
-            break;
-          }  
-          case 'launched-delegate': {
-            if(is180) {
-              userMessage = `Launched as team delegate ${allComplete === true ? 'and completed assessement' : 'and has not completed assessment'}`              
-            }
-            break;
-          }
-          case 'invite-sent':
-          case 'new':
-          default: {
-            if(!is180 && !isCulture) {
-              let peersConfirmed = false;
-              let hasPeers = false;
-              console.log('Rendering for delegate Entry', delegateEntry);
-              if(nil(delegateEntry.peers) === false) {
-                hasPeers = true;
-                peersConfirmed = moment(delegateEntry.peers.confirmedAt).isValid() === true              
-              } 
-
-              if(hasPeers === false) {
-                userMessage = (<span>{delegateEntry.message}<br/>No peers available for user</span>);              
-                backgroundColor = "gold";
-              } else {
-                if(peersConfirmed === false) {
-                  userMessage = (<span>{delegateEntry.message}<br/>User has peers but has not confimed them yet</span>);
-                  backgroundColor = "antiquewhite";
-                }                              
-                else {                                
-                  userMessage = (<span>{delegateEntry.message}<br/>Peers confirmed {delegateEntry.peers.confirmedAt} ({hdate.relativeTime(delegateEntry.peers.confirmedAt)})</span>);
-                  backgroundColor = "darkseagreen";
-                }                              
-              }
-            }                                             
-            break;
-          }
-        }
-        return (
-          <UserListItem
-            key={delegateEntry.id}
-            user={delegateEntry.delegate}
-            primaryText={`${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} [${delegateEntry.delegate.email}]`} 
-            message={userMessage} 
-            secondaryAction={secondaryItem}  
-            checkbox={true}
-            selected={isSelected}
-            onSelectChanged={selectUser}
-            style={{ padding: '0px', backgroundColor }}            
-             />
-        );
-      }
+     
       
       const list = (        
         <List subheader={ <li /> }>                    

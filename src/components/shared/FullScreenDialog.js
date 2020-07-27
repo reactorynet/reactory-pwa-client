@@ -61,14 +61,15 @@ class FullScreenDialog extends Component {
     closeOnEvents.map((eventName) => api.removeListener(eventName, this.handleClose))
   }
 
+  /*
   shouldComponentUpdate(nextProps, nextState){
-    const _nextProps = { open: nextProps.open, title: nextProps.title };
-    const _props = { open: this.props.open, title: this.props.title }; 
+    const _nextProps = { open: nextProps.open, title: nextProps.title, children: nextProps.children };
+    const _props = { open: this.props.open, title: this.props.title, children: this.props.children }; 
         
     const shouldUpdate =  deepEquals(nextState, this.state) === false || deepEquals(_nextProps, _props) === false;
     return shouldUpdate;
   }
-
+  */
   render() {
     const { open,
       classes, 
@@ -87,7 +88,7 @@ class FullScreenDialog extends Component {
     const DialogueHOC = (props, context) => {
       const shouldBreak = useMediaQuery(theme.breakpoints.down(breakpoint));
       let dialogProps = {
-        fullScreen: fullScreen === true ? 'fullScreen' : shouldBreak === true,
+        fullScreen: fullScreen === true ? true : shouldBreak === true,
         fullWidth,
         maxWidth,
         open,        
