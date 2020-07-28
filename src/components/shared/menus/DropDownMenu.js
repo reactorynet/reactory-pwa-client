@@ -96,7 +96,8 @@ export class DropDownMenu extends Component {
         aria-haspopup="true"
         onClick={this.handleMenu}
         color={this.props.color || "primary"}
-        style={this.props.style}>
+        style={this.props.style}
+        size={this.props.size || "medium"}>
         <Icon>{props.icon || 'keyboard_arrow_down'}</Icon>
         <Menu
             open={this.state.open === true}

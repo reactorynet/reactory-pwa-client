@@ -319,6 +319,7 @@ class DefaultFormContainer extends Component {
       'towerstone.TowerStoneSurveyDelegateConfig',
       'towerstone.TowerStoneSurveyCalendarConfig',
       'towerstone.TowerStoneSurveyTemplatesForm',
+      'mores.LeadershipBrandFactoryWidget',
       'towerstone.TemplateEditor',
     ])
   }
@@ -464,6 +465,7 @@ class DefaultFormContainer extends Component {
       TemplateEditor,
       TowerStoneSurveySettings,
       TowerStoneSurveyTemplatesForm,
+      LeadershipBrandFactoryWidget,
       BasicModal
      } = that.componentDefs;
     const isNew = mode === 'new';
@@ -549,6 +551,7 @@ class DefaultFormContainer extends Component {
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/brands'}>
                   <BrandListWithData organizationId={organizationId} onSelect={this.onBrandSelected} onNewSelected={this.onNewBrand} />
+                  <LeadershipBrandFactoryWidget organization_id={organizationId} onUpdated={()=>{that.forceUpdate()}}  />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/brands/new'}>
                   <TowerStoneLeadershipBrandConfig mode="new" formContext={{mode: 'new'}} />

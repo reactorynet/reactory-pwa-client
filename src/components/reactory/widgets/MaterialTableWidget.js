@@ -90,6 +90,10 @@ class MaterialTableWidget extends Component {
     };
   }
 
+  componentDidCatch(err) {
+    this.props.api.log(`MaterialWidgetError out of componentBoundary error`, { err }, 'error');
+  }
+
   refreshHandler(eventName, eventData ) {         
     
     const uiOptions = this.props.uiSchema['ui:options'] || {};

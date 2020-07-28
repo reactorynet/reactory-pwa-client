@@ -36,12 +36,22 @@ export const ApiProviderComponent = compose(
     withRouter,
 )(ApiProvider);
 
-export const withApi = (ComponentToWrap) => {
-    return class ApiWrappedComponent extends Component {
+export const withApi = (ComponentToWrap, id='not-set') => {
+    return class ApiWrappedComponent extends Component<any, any> {
 
         static contextTypes = {
             api: PropTypes.instanceOf(ReactoryApi).isRequired,
         };
+
+        constructor(props, context) {
+            super(props, context);
+            this.state = {}
+        }
+
+        componentDidCatch(error) {
+            this.context.api.log(`Error in component ${id}`, { error, ComponentToWrap, id }, 'error');
+            this.setState({ error });
+        }
 
         render() {
             //TODO: NEW Client Feature: Add Security Filter For Each Component Here
@@ -64,8 +74,13 @@ export const withApi = (ComponentToWrap) => {
              * If not we display a security block widget, small with a hover / popup that 
              * allows the user to request permission to that specific element / data owner
              */
-            const { api } = this.context;
-            return <ComponentToWrap {...this.props} api={api} />            
+            if(this.state && this.state.error) {
+            return <span>COMPONENT ERROR</span>
+            } else {
+                const { api } = this.context;
+                return <ComponentToWrap {...this.props} api={api} />
+            }
+           
         }
     }
 };
