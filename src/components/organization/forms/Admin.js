@@ -31,6 +31,7 @@ import { withApi } from '../../../api/ApiProvider'
 import { ReactoryApi } from "../../../api/ReactoryApi";
 import { CDNOrganizationResource, CenteredContainer } from '../../util';
 import { styles } from '../../shared'
+import { ThumbUpSharp } from '@material-ui/icons';
 
 const { EmailTemplateEditorComponent, TemplateListComponent } = Templates;
 
@@ -130,6 +131,9 @@ class OrganizationForm extends Component {
   updateOrganizationCode = (evt) => (this.setState({ organization: { ...this.state.organization, code: evt.target.value }, pristine: false }));
   updateOrganizationPicture = (picture) => (this.setState({ organization: { ...this.state.organization, logo: picture }, pristine: false }));
   updateOrganization = (evt) => {
+
+    this.props.api.log(`Admin.updateOrganization (evt) `, { evt }, 'debugger') 
+    debugger
     const { client } = this.props;
     const { organization } = this.state;
     const that = this;

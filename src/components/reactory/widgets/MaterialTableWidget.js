@@ -346,20 +346,29 @@ class MaterialTableWidget extends Component {
               };
 
 
-              if(action.event.via === 'form') {
+              if(action.event.via === 'form') {                
                 let handler = formContext.$ref.onChange;                
                 if( typeof formContext.$ref[action.event.name] === 'function') {
                   handler = formContext.$ref[action.event.name];
                 }
                 handler(__formData);
-              };              
+              };
+              
+              if(action.event.via === 'api') {
+                
+                let handler = () => {
+                  api.emit(action.event.name, __formData);
+                }
+
+                handler();
+              }
             }
           };
   
           return {
             icon: action.icon,
             iconProps: action.iconProps || {},
-            tooltip: action.tooltip || 'No tooltip',
+            tooltip: action.tooltip || '',
             onClick: (evt, selected) => {
               actionClickHandler(selected);
             }
@@ -374,7 +383,9 @@ class MaterialTableWidget extends Component {
             data={data}            
             title={props.title || uiOptions.title || "no title"}
             options={options}
-            actions={actions} />
+            actions={actions}
+            onRowSelected={self.props.onRowSelected}
+             />
       )
 
     };

@@ -49,8 +49,15 @@ export const withApi = (ComponentToWrap, id='not-set') => {
         }
 
         componentDidCatch(error) {
-            this.context.api.log(`Error in component ${id}`, { error, ComponentToWrap, id }, 'error');
-            this.setState({ error });
+            let resolved_id = id;
+
+            if(this.props.uiSchema && this.props.schema) {
+                if(this.props.uiSchema['ui:widget']) {
+                    resolved_id = this.props.uiSchema['ui:widget'];
+                }
+            }
+            this.context.api.log(`REACTORY Wrapped Component: Error in component ${resolved_id}`, { error, ComponentToWrap, id, props: this.props }, 'error');
+            this.setState({ error, resolved_id });
         }
 
         render() {
@@ -75,7 +82,8 @@ export const withApi = (ComponentToWrap, id='not-set') => {
              * allows the user to request permission to that specific element / data owner
              */
             if(this.state && this.state.error) {
-            return <span>COMPONENT ERROR</span>
+
+            return <span>COMPONENT ERROR ({this.state.resolved_id})</span>
             } else {
                 const { api } = this.context;
                 return <ComponentToWrap {...this.props} api={api} />

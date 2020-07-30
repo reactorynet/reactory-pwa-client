@@ -1248,22 +1248,20 @@ class DefaultView extends Component {
         </Grid>
         <Grid item xs={12} sm={12} md={12} lg={12}>
          
-          <MobileStepper
-            style={{
-              background: '#fff',
-              borderTop: `1px solid ${theme.palette.primary.main}`,
-            }}
+          <MobileStepper                       
             variant="dots"
             steps={maxSteps}
             position="bottom"
             activeStep={step}
             nextButton={              
-                <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Complete all ratings and comments in full before proceeeding.'}><Button size="small" color={isCurrentStepValid === true || isThankYou === true  ? "success" : "danger" } onClick={nextStep} disabled={isCurrentStepValid === false}>
+                <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Complete all ratings and comments in full before proceeeding.'}>
+                  <Button size="large" color={isCurrentStepValid === true || isThankYou === true  ? "success" : "danger" }
+                   onClick={nextStep} disabled={isCurrentStepValid === false}>
                   Next{theme.direction === 'rtl' ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
                 </Button></Tooltip>              
             }
             backButton={
-              <Button size="small" onClick={prevStep} disabled={step === 0}>
+              <Button size="large" onClick={prevStep} disabled={step === 0}>
                 {theme.direction === 'rtl' ? <KeyboardArrowRight /> : <KeyboardArrowLeft />}
                 Back
                 </Button>
