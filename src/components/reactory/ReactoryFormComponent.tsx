@@ -884,8 +884,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     let formtoolbar = (
       <Toolbar>
-        {formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}
-        {this.props.children && this.props.children.length > 0 ? this.props.children : null}
+        {formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}        
         {showSubmit === true && submitButton}
         {_additionalButtons}
         {self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
@@ -903,11 +902,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         {formDef.graphql && formDef.graphql.query && self.state.queryComplete === false && <LinearProgress />}
         {self.props.before}
         <Form {...{ ...formProps, toolbarPosition: toolbarposition }}>
-          {toolbarposition !== 'none' ? formtoolbar : null}
+          {toolbarposition !== 'none' ? formtoolbar : null}          
         </Form>
+        {this.props.children}
         {this.getHelpScreen()}
         {this.getReportWidget()}
-        {this.getExcelWidget()}
+        {this.getExcelWidget()}        
       </Fragment>
     )
   }

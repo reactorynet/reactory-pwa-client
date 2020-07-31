@@ -299,6 +299,14 @@ class MaterialTableWidget extends Component {
   
       if (uiOptions.options) {
         options = { ...options, ...uiOptions.options }
+
+        if(options.searchText && options.searchText.indexOf('${') >= 0){
+          try {
+            options.searchText = api.util.template(options.searchText)({...this.props})
+          } catch (tErr) {
+            api.log(`core.MaterialTableWidget template render failed for search input`, { searchText: options.searchText, error: tErr }, 'error');
+          }
+        }
       }
   
       if(uiOptions.actions && isArray(uiOptions.actions) === true) {
