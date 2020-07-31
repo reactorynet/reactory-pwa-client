@@ -96,7 +96,7 @@ class FreightRequestQuoteWidget extends Component {
           onChange: (formDataFromFormField) => {
             api.log(`Received data from child form ${option.name}`, { formDataFromFormField }, 'debug');
             // onChange(formDataFromFormField.formData);
-            formfieldChangeHandler(option.name, formDataFromFormField);
+            // formfieldChangeHandler(option.name, formDataFromFormField);
           }
         }
 
