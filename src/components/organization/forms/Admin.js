@@ -31,6 +31,7 @@ import { withApi } from '../../../api/ApiProvider'
 import { ReactoryApi } from "../../../api/ReactoryApi";
 import { CDNOrganizationResource, CenteredContainer } from '../../util';
 import { styles } from '../../shared'
+import { ThumbUpSharp } from '@material-ui/icons';
 
 const { EmailTemplateEditorComponent, TemplateListComponent } = Templates;
 
@@ -130,6 +131,9 @@ class OrganizationForm extends Component {
   updateOrganizationCode = (evt) => (this.setState({ organization: { ...this.state.organization, code: evt.target.value }, pristine: false }));
   updateOrganizationPicture = (picture) => (this.setState({ organization: { ...this.state.organization, logo: picture }, pristine: false }));
   updateOrganization = (evt) => {
+
+    this.props.api.log(`Admin.updateOrganization (evt) `, { evt }, 'debugger') 
+    debugger
     const { client } = this.props;
     const { organization } = this.state;
     const that = this;
@@ -319,6 +323,7 @@ class DefaultFormContainer extends Component {
       'towerstone.TowerStoneSurveyDelegateConfig',
       'towerstone.TowerStoneSurveyCalendarConfig',
       'towerstone.TowerStoneSurveyTemplatesForm',
+      'mores.LeadershipBrandFactoryWidget',
       'towerstone.TemplateEditor',
     ])
   }
@@ -464,6 +469,7 @@ class DefaultFormContainer extends Component {
       TemplateEditor,
       TowerStoneSurveySettings,
       TowerStoneSurveyTemplatesForm,
+      LeadershipBrandFactoryWidget,
       BasicModal
      } = that.componentDefs;
     const isNew = mode === 'new';
@@ -549,6 +555,7 @@ class DefaultFormContainer extends Component {
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/brands'}>
                   <BrandListWithData organizationId={organizationId} onSelect={this.onBrandSelected} onNewSelected={this.onNewBrand} />
+                  <LeadershipBrandFactoryWidget organization_id={organizationId} onUpdated={()=>{that.forceUpdate()}}  />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/brands/new'}>
                   <TowerStoneLeadershipBrandConfig mode="new" formContext={{mode: 'new'}} />

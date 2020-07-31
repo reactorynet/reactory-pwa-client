@@ -172,9 +172,9 @@ class TabbedNavComponent extends Component {
     let _buttons = [];
 
     if(uiOptions.buttons) {
-      uiOptions.buttons.forEach((fqn) => { 
+      uiOptions.buttons.forEach((fqn, bIdx) => { 
         const ButtonComponent = api.getComponent(fqn); 
-        if(ButtonComponent) _buttons.push(<ButtonComponent {...this.props} />) })
+        if(ButtonComponent) _buttons.push(<ButtonComponent {...this.props} key={bIdx} />) })
     }
   
     api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext, uiOptions, _buttons });
