@@ -18,6 +18,7 @@ class FreightRequestProductDetailsWidget extends Component {
     } = this.props;
     let columns = [];
     let data = [];
+    let _isLoading = true;
 
     const inputChangeHandler = (event, rowData) => {
       const row = formData.find(r => r.code === rowData.code);
@@ -37,11 +38,14 @@ class FreightRequestProductDetailsWidget extends Component {
       { title: 'Volume (cm3)', field: 'volume' },
     ];
 
+
     if (formData && formData.length > 0) {
       formData.forEach(row => {
         data.push({ ...row })
       })
     }
+
+    _isLoading = false
 
     let options = {
       toolbar: false,
@@ -53,7 +57,8 @@ class FreightRequestProductDetailsWidget extends Component {
       <MaterialTable
         columns={columns}
         data={data}
-        options={options} />
+        options={options}
+        isLoading={_isLoading} />
     )
   }
 
