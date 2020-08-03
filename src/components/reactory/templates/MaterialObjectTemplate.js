@@ -107,12 +107,19 @@ class ObjectTemplate extends Component {
       Widget = Widgets[uiWidget];
      
     let _props = {...this.props};
+    
+    if(uiOptions.props) {
+      _props = {..._props, ...uiOptions.props };
+    }
+    
     if(uiOptions && uiOptions.componentPropsMap) {
       let mappedProps = api.utils.objectMapper(_props, uiOptions.componentPropsMap);
       if(mappedProps) {
         _props = {..._props, ...mappedProps}
       }
     }
+
+    
 
     if(uiOptions &&  uiOptions.propsMap) {
       let mappedProps = api.utils.objectMapper(_props, uiOptions.propsMap);
