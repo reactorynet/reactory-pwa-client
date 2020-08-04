@@ -2,7 +2,7 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { Link, withRouter } from 'react-router-dom';
 import { compose } from 'redux';
-import { isArray } from 'lodash';
+import { isArray, find } from 'lodash';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import {
   Tooltip,
@@ -381,6 +381,29 @@ class ApplicationHeader extends Component {
     const toolbar = (
       <div></div>
     );
+
+    const getNavivationComponents = () => {      
+      if(user) {        
+        return user.navigationComponents || [];
+      }
+      return [];
+    }
+
+    const avatarComponent = (user) => { 
+      let AavtarComponentDef = find( getNavivationComponents(), { contextType : 'DEFAULT_HEADER_AVATAR' });
+      let AvatarComponent = null;
+      if(AavtarComponentDef.componentFqn) {
+        AvatarComponent = api.getComponent(AavtarComponentDef.componentFqn);
+        if( AvatarComponent  ) {
+          return (<AvatarComponent />)
+        }                      
+      }
+
+      return <Avatar src={} />
+      
+    }
+
+
 
     /*
     const searchControl = (<div className={classes.grow}>

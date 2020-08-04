@@ -108,7 +108,7 @@ class ObjectTemplate extends Component {
      
     let _props = {...this.props};
     
-    if(uiOptions.props) {
+    if(uiOptions && uiOptions.props) {
       _props = {..._props, ...uiOptions.props };
     }
     

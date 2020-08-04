@@ -152,7 +152,7 @@ export interface ReactoryFormProperties {
   $App?: any,
   validate?: Function,
   autoQueryDisabled?: boolean,
-  ref?: Function
+  refCallback?: Function
 }
 
 export interface ReactoryFormState {
@@ -314,10 +314,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.submit = this.submit.bind(this);
     this.plugins = {};
 
-    if(props.ref && typeof (props.ref) === 'function') props.ref(this); 
+    if(props.refCallback) {
+      props.refCallback(this); 
+    }
   }
 
-  submit() {
+  submit() {    
     if (isNil(this.formRef) === false && this.formRef) {
       try {
         this.formRef.onSubmit();
