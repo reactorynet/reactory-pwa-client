@@ -1214,7 +1214,38 @@ class DefaultView extends Component {
     }
 
     const isThankYou = step === maxSteps - 1;
-    
+    const { palette } = theme;
+
+    const nextButtonStyle = {
+      backgroundColor: isCurrentStepValid === true || isThankYou === true ? palette.secondary.main : palette.warning.main,
+      color: '#FFFFFF'
+    };
+
+    let nextText = 'NEXT';
+    let showNext = true;
+    let nextIcon = (<Icon>keyboard_arrow_right</Icon>)
+
+    if(step > 0 && isCurrentStepValid === false && isThankYou === false) { 
+      nextText = 'NOT DONE YET';
+      nextIcon = (<Icon>priority_high</Icon>)
+    }
+
+    if(step > 0 && isThankYou) {
+      nextText = 'DONE'
+      showNext = false;
+      nextIcon = (<Icon>block</Icon>)
+    }
+
+  
+  let nextButton = (<Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Complete all ratings and comments in full before proceeeding.'}>
+    <Button variant="outlined" size="large" color={isCurrentStepValid === true || isThankYou === true  ? "success" : "danger" }
+     onClick={nextStep} disabled={isCurrentStepValid === false || isThankYou === true}
+     style={nextButtonStyle}     
+     >
+    { nextText }{nextIcon}
+  </Button></Tooltip>);
+
+  
     return (
       <Grid container spacing={1} className={classes.card}>
         <Grid item xs={12} sm={12}>
@@ -1254,14 +1285,9 @@ class DefaultView extends Component {
             position="bottom"
             activeStep={step}
             nextButton={              
-                <Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Complete all ratings and comments in full before proceeeding.'}>
-                  <Button size="large" color={isCurrentStepValid === true || isThankYou === true  ? "success" : "danger" }
-                   onClick={nextStep} disabled={isCurrentStepValid === false}>
-                  Next{theme.direction === 'rtl' ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
-                </Button></Tooltip>              
-            }
+                nextButton     }
             backButton={
-              <Button size="large" onClick={prevStep} disabled={step === 0}>
+              <Button  variant="outlined" size="large" onClick={prevStep} disabled={step === 0}>
                 {theme.direction === 'rtl' ? <KeyboardArrowRight /> : <KeyboardArrowLeft />}
                 Back
                 </Button>

@@ -9,7 +9,7 @@ import {
   Avatar,
   Button,
   Paper,
-  Typography,
+  Typography, 
   Toolbar,
   Icon, 
   IconButton,
@@ -271,8 +271,8 @@ class SurveyDelegates extends Component {
           break;
         }
         case 'relaunch': {
-          //self.launchSurveyForDelegate(delegateEntry, true);
-          self.sendCommunicationToDelegate(delegateEntry, 'launch');
+          self.launchSurveyForDelegate(delegateEntry, true);
+          //self.sendCommunicationToDelegate(delegateEntry, 'launch');
           break;
         }
         case 'launch': {
@@ -539,6 +539,13 @@ class SurveyDelegates extends Component {
                         icon: 'mail_outline', 
                         id: 'send-reminder', 
                         key:'reminder'
+                      });
+
+                      menus.push({
+                        title: 'Send Launch', 
+                        icon: 'take_off', 
+                        id: 'launch', 
+                        key:'launch'
                       });
                     } else {
                       menus.push({

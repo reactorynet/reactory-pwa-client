@@ -383,27 +383,50 @@ class ApplicationHeader extends Component {
     );
 
     const getNavivationComponents = () => {      
+      debugger;
       if(user) {        
         return user.navigationComponents || [];
       }
       return [];
     }
 
-    const avatarComponent = (user) => { 
-      let AavtarComponentDef = find( getNavivationComponents(), { contextType : 'DEFAULT_HEADER_AVATAR' });
+    const avatarComponent = () => { 
+      let AvatarComponentDef = find( getNavivationComponents(), { contextType : 'DEFAULT_HEADER_AVATAR' });
       let AvatarComponent = null;
-      if(AavtarComponentDef.componentFqn) {
-        AvatarComponent = api.getComponent(AavtarComponentDef.componentFqn);
+      
+      if( AvatarComponentDef && AvatarComponentDef.componentFqn) {        
+        AvatarComponent = api.getComponent(AvatarComponentDef.componentFqn);
         if( AvatarComponent  ) {
-          return (<AvatarComponent />)
+          return (<AvatarComponent {...{api, user, ...AvatarComponentDef.componentProps}} />)
         }                      
       }
 
-      return <Avatar src={} />
-      
+      return  (<Avatar src={getAvatar(user)} className={this.props.classes.loggedInUserAvatar} />);
     }
 
+    const avatarTitle = () => {
+      debugger;
+      let TitleComponentDef = find( getNavivationComponents(), { contextType : 'DEFAULT_HEADER_TITLE' });
+      let TitleComponent = null;
+      
+      if( TitleComponentDef && TitleComponentDef.componentFqn) {
+        TitleComponent = api.getComponent(TitleComponentDef.componentFqn);
+        if( TitleComponent  ) {
+          return (<TitleComponent {...{api, user, ...TitleComponentDef.componentProps}} />);
+        }        
+      }
 
+      return (
+        <Typography 
+          variant="subtitle1" 
+          color="secondary" 
+          style={{ 
+            textAlign: 'center', 
+            marginTop: '20px' 
+          }}>{api.getUserFullName(user)}
+        </Typography>
+      );
+    };
 
     /*
     const searchControl = (<div className={classes.grow}>
@@ -462,17 +485,13 @@ class ApplicationHeader extends Component {
               <Icon>{theme.palette.type === 'dark' ? 'visibility_off' : 'visibility'}</Icon>
             </IconButton>
 
-            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />
-            
+            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />            
           </div>
           <Divider />
-          <Typography variant="subtitle1" color="secondary"
-            style={{ textAlign: 'center', marginTop: '20px' }}>{api.getUserFullName(user)}</Typography>
+          { avatarTitle() }
           {user.anon ? null :
             <Link to="/profile/">
-              <Avatar src={getAvatar(user)}
-                className={this.props.classes.loggedInUserAvatar}
-              />
+              { avatarComponent() }              
             </Link>}
             {toolbar}
           <Divider />

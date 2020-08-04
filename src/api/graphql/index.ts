@@ -473,6 +473,7 @@ const apiStatus = gql`
 				componentPropertyMap
 				componentKey
 				componentContext
+        contextType
 			}
     }
   }
