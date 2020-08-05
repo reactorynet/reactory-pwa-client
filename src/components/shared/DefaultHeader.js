@@ -382,8 +382,7 @@ class ApplicationHeader extends Component {
       <div></div>
     );
 
-    const getNavivationComponents = () => {      
-      debugger;
+    const getNavigationComponents = () => {      
       if(user) {        
         return user.navigationComponents || [];
       }
@@ -391,7 +390,7 @@ class ApplicationHeader extends Component {
     }
 
     const avatarComponent = () => { 
-      let AvatarComponentDef = find( getNavivationComponents(), { contextType : 'DEFAULT_HEADER_AVATAR' });
+      let AvatarComponentDef = find( getNavigationComponents(), { contextType : 'DEFAULT_HEADER_AVATAR' });
       let AvatarComponent = null;
       
       if( AvatarComponentDef && AvatarComponentDef.componentFqn) {        
@@ -405,8 +404,7 @@ class ApplicationHeader extends Component {
     }
 
     const avatarTitle = () => {
-      debugger;
-      let TitleComponentDef = find( getNavivationComponents(), { contextType : 'DEFAULT_HEADER_TITLE' });
+      let TitleComponentDef = find( getNavigationComponents(), { contextType : 'DEFAULT_HEADER_TITLE' });
       let TitleComponent = null;
       
       if( TitleComponentDef && TitleComponentDef.componentFqn) {

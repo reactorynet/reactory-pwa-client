@@ -1217,17 +1217,18 @@ class DefaultView extends Component {
     const { palette } = theme;
 
     const nextButtonStyle = {
-      backgroundColor: isCurrentStepValid === true || isThankYou === true ? palette.secondary.main : palette.warning.main,
-      color: '#FFFFFF'
+      // backgroundColor: (step > 0 && isCurrentStepValid === false && isThankYou === false) ? 'unset' : palette.secondary.main,      
     };
+
+    let buttonColor = (step > 0 && isCurrentStepValid === false && isThankYou === false) ? "default" : "secondary";
 
     let nextText = 'NEXT';
     let showNext = true;
     let nextIcon = (<Icon>keyboard_arrow_right</Icon>)
 
-    if(step > 0 && isCurrentStepValid === false && isThankYou === false) { 
-      nextText = 'NOT DONE YET';
-      nextIcon = (<Icon>priority_high</Icon>)
+    if(step > 0 && isCurrentStepValid === false && isThankYou === false) {
+      nextText = 'INCOMPLETE';       
+      nextIcon = (<Icon>priority_high</Icon>);      
     }
 
     if(step > 0 && isThankYou) {
@@ -1238,7 +1239,11 @@ class DefaultView extends Component {
 
   
   let nextButton = (<Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Complete all ratings and comments in full before proceeeding.'}>
-    <Button variant="outlined" size="large" color={isCurrentStepValid === true || isThankYou === true  ? "success" : "danger" }
+    <Button 
+      size="large" 
+     variant={"contained"}
+     size="small"
+     color="secondary"
      onClick={nextStep} disabled={isCurrentStepValid === false || isThankYou === true}
      style={nextButtonStyle}     
      >
@@ -1287,7 +1292,7 @@ class DefaultView extends Component {
             nextButton={              
                 nextButton     }
             backButton={
-              <Button  variant="outlined" size="large" onClick={prevStep} disabled={step === 0}>
+              <Button  variant="outlined" size="small" onClick={prevStep} disabled={step === 0}>
                 {theme.direction === 'rtl' ? <KeyboardArrowRight /> : <KeyboardArrowLeft />}
                 Back
                 </Button>
