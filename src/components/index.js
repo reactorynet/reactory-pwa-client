@@ -732,6 +732,7 @@ export const componentRegistery = [
   require('./shared/DateLabel'),
   require('./shared/StaticContent').meta,
   require('./shared/Label'),
+  require('./shared/AlertDialog')
   // require('./reactory/widgets/LabelWidget'),
   // require('./shared/MaterialInput')
 ];

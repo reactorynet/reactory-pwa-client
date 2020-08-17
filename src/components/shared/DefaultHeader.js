@@ -378,9 +378,7 @@ class ApplicationHeader extends Component {
     }
  
 
-    const toolbar = (
-      <div></div>
-    );
+    
 
     const getNavigationComponents = () => {      
       if(user) {        
@@ -389,18 +387,18 @@ class ApplicationHeader extends Component {
       return [];
     }
 
-    const avatarComponent = () => { 
+    const avatarComponent = (profileLink) => { 
       let AvatarComponentDef = find( getNavigationComponents(), { contextType : 'DEFAULT_HEADER_AVATAR' });
       let AvatarComponent = null;
-      
+            
       if( AvatarComponentDef && AvatarComponentDef.componentFqn) {        
         AvatarComponent = api.getComponent(AvatarComponentDef.componentFqn);
         if( AvatarComponent  ) {
-          return (<AvatarComponent {...{api, user, ...AvatarComponentDef.componentProps}} />)
+          return (<AvatarComponent {...{user, profileLink, ...AvatarComponentDef.componentProps}} />)
         }                      
       }
 
-      return  (<Avatar src={getAvatar(user)} className={this.props.classes.loggedInUserAvatar} />);
+      return  (<Avatar src={getAvatar(user)} className={self.props.classes.loggedInUserAvatar} />);
     }
 
     const avatarTitle = () => {
@@ -410,7 +408,7 @@ class ApplicationHeader extends Component {
       if( TitleComponentDef && TitleComponentDef.componentFqn) {
         TitleComponent = api.getComponent(TitleComponentDef.componentFqn);
         if( TitleComponent  ) {
-          return (<TitleComponent {...{api, user, ...TitleComponentDef.componentProps}} />);
+          return (<TitleComponent {...{user, ...TitleComponentDef.componentProps}} />);
         }        
       }
 
@@ -487,11 +485,7 @@ class ApplicationHeader extends Component {
           </div>
           <Divider />
           { avatarTitle() }
-          {user.anon ? null :
-            <Link to="/profile/">
-              { avatarComponent() }              
-            </Link>}
-            {toolbar}
+          {user.anon ? null : avatarComponent("/profile/")}          
           <Divider />
           <List className={this.props.classes.menuItems}>
             <Menus {...{ menus: menus, history: this.props.history, user, api, self, classes }} />
@@ -501,7 +495,10 @@ class ApplicationHeader extends Component {
                   <Icon color="primary">rss_feed</Icon>
                 </Tooltip>
               </ListItemIcon>
-          <ListItemText primary={<span className={classes.versionPrimary}>Client ver: {api.props.$version}</span>} secondary={<span className={classes.version}>Server ver: {api.$user && api.$user.server ? api.$user.server.version : 'waiting' } </span>}/>
+              <ListItemText 
+                primary={<span className={classes.versionPrimary}>Client ver: {api.props.$version}</span>} 
+                secondary={<span className={classes.version}>Server ver: {api.$user && api.$user.server ? api.$user.server.version : 'waiting' } </span>}
+                />
             </ListItem>
           </List>
         </Drawer>

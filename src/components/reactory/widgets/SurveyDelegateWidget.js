@@ -103,27 +103,46 @@ const getSurveyProps = (props) => {
   let isPLC = false;
   let isCulture = false;
   let isCustom = false;
+  let delegateReportName = "towerstone.TowerStone360"
 
   switch(surveyType){
-    case "180":
+    case "180":{
+      is180 = true;
+      delegateReportName = "towerstone.TowerStoneTeam180"
+      break;
+    }
     case "team180": {
       is180 = true;
+      delegateReportName = "mores.MoresTeam180"
       break;
     }
     case "culture": {
+      delegateReportName = "mores.MoresCultureSurvey"
       isCulture = true;
       break;
     }
-    case "360": 
-    case "l360":
-    case "i360": {
+    case "360": {
+      delegateReportName = "mores.MoresCultureSurvey"
       is360 = true;
+      break;
+    }
+    case "l360": {
+      delegateReportName = "mores.MoresLeadership360"
+      is360 = true;
+      break;
+    }
+    case "i360": {
+      delegateReportName = "mores.MoresIndividual360"
+      is360 = true;
+      break;
     }
     case "plc": {
+      delegateReportName = "towerstone.TowerStone360"
       isPLC = true;
       break;
     }
     default: {
+      delegateReportName = "towerstone.TowerStone360"
       isCustom = true;
       break;
     }
@@ -136,6 +155,7 @@ const getSurveyProps = (props) => {
     isCulture,
     isCustom,
     surveyType,
+    delegateReportName
   }
 
 };
@@ -177,8 +197,12 @@ TabContainer.propTypes = {
 };
 
 const ReportTypes = {
-  DelegateReport: "delegate-360-assessment",
-  SurveyStatusReport: "survey-status-report"
+  DelegateReport: "towerstone.TowerStone360",
+  MoresIndividual360: "mores.MoresIndividual360",
+  MoresLeader360: "mores.MoresLeadership360",
+  MoresCulture: "mores.MoresCultureSurvey",
+  MoresTeam180: "mores.MoresTeam180",
+  SurveyStatusReport: "towerstone.SurveyStatus"
 };
 
 const BasicModalViewModes = {
@@ -218,6 +242,8 @@ class SurveyDelegates extends Component {
       },      
       surveyProps: getSurveyProps(props)
     };           
+
+    state.reportType = state.surveyProps.delegateReportName;
     
     this.state = state;
 
@@ -301,13 +327,14 @@ class SurveyDelegates extends Component {
           this.removeDelegateFromSurvey(delegateEntry, delegateEntry.removed === true);
           break;
         }
-        case 'report_preview': {
-          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report_preview', });
+        case 'report_preview': {         
+          debugger 
+          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report_preview', reportType: surveyProps.delegateReportName });
           break;
         }
         case 'report': 
         default: {
-          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report_download' });
+          this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report_download', reportType: surveyProps.delegateReportName });
           break;
         }
       }
@@ -355,7 +382,7 @@ class SurveyDelegates extends Component {
     return (<DropDownMenu menus={menus} onSelect={onMenuItemSelect} />)    
   }
 
-  generateReport(reportType = 'survey-status-delegates'){
+  generateReport(reportType = ReportTypes.SurveyStatusReport){
     console.log('Generate Report');
     if(this.props.formData.length === 0) return;
     
@@ -364,7 +391,7 @@ class SurveyDelegates extends Component {
 
   getBasicModalView( ) {
     const self = this;
-    const { activeEntry, assessment, basicModalViewMode, reportType } = self.state;
+    const { activeEntry, assessment, basicModalViewMode, reportType, surveyProps } = self.state;
     const { DropDownMenu, Assessment, ReportViewer, FullScreenModal } = self.componentDefs;
     const { api } = this.props;
     
@@ -380,11 +407,13 @@ class SurveyDelegates extends Component {
       case ReportTypes.SurveyStatusReport: delete reportData.delegateId; break;            
     }
 
+    const [ nameSpace, name ] = reportType.split(".");
+
     switch(basicModalViewMode) {
       case 'report_preview': {
         modalviewComponent = (<ReportViewer 
-          folder="towerstone" 
-          report={reportType || "delegate-360-assessment"} 
+          folder={nameSpace} 
+          report={name || ReportTypes.DelegateReport} 
           method="get" 
           delivery="inline"           
           waitingText="Loading Report Data, please wait." 
@@ -393,8 +422,8 @@ class SurveyDelegates extends Component {
       }
       case 'report_download': {
         modalviewComponent = (<ReportViewer 
-          folder="towerstone" 
-          report={reportType || "delegate-360-assessment"} 
+          folder={nameSpace} 
+          report={name || ReportTypes.DelegateReport} 
           method="get" 
           delivery="download"           
           waitingText="Loading Report Data, please wait." 
@@ -1304,12 +1333,12 @@ class SurveyDelegates extends Component {
       )
          
       return (
-        <Paper className={this.props.classes.root}>
+        <React.Fragment className={this.props.classes.root}>
           {list}
           {self.state.busy && self.state.message && <Typography variant="caption" color="secondary"><Icon>info</Icon>{self.state.message}</Typography>} 
           {<SpeedDial actions={sortBy(speedDialActions, e => e.ordinal )} icon={<Icon>golf_course</Icon>} />}
           {self.getActiveModalView()}
-        </Paper>
+        </React.Fragment>
       )
     } else {
       return <ErrorMessage message="Expecting array data" />

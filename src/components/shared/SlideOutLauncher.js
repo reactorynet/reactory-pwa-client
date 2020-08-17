@@ -106,7 +106,7 @@ class SlideOutLauncher extends Component {
     }
 
     if (componentProps && this.state.open === true && componentFound === true) {
-      childprops = { ...childprops, ...api.utils.objectMapper(this.props, componentProps) };
+      childprops = { ...childprops, ...api.utils.objectMapper(this.props, componentProps), onClose: onClick };
     }
                 
     let LaunchButton = (

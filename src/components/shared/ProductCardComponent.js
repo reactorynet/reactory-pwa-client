@@ -61,6 +61,9 @@ const CustomHeader = props => {
   return (
     <div className={classes.headerContainer}>
       <div className={classes.avatarContainer}><Avatar variant="rounded" src={props.image} /></div>
+      <div>
+        {props.launcher}
+      </div>
       <div className={classes.titleContainer}>
         <Typography variant="h4" classes={{ root: classes.title }} onClick={() => props.copyClick(props.title)}>
           {props.title}
@@ -118,13 +121,13 @@ class ProductCardWidget extends Component {
 
   constructor(props, context) {
     super(props, context);
-    this.componentDefs = props.api.getComponents(['core.PricingLineChartComponent']);
+    this.componentDefs = props.api.getComponents(['core.PricingLineChartComponent', 'core.SlideOutLauncher']);
   }
 
   render() {
     const { props } = this;
     const { classes, data, cardContent, currency, symbol, api, region, } = props;
-    const { PricingLineChartComponent } = this.componentDefs;
+    const { PricingLineChartComponent, SlideOutLauncher } = this.componentDefs;
     const formData = { ...data };
 
     let _currenciesDisplayed = ['USD', 'EUR', 'GBP', 'ZAR'];
@@ -178,13 +181,28 @@ class ProductCardWidget extends Component {
         break;
     }
 
+    const slideoutprops = {
+        data,
+        componentFqn: 'lasec-crm.LasecProductDetails@1.0.0',
+        componentProps: {
+          'data': 'formData',                  
+        },
+        slideDirection: 'left',
+        buttonVariant: 'button',
+        buttonProps: {                  
+          size: 'small',                  
+        },
+        buttonIcon: 'launch',
+        windowTitle: '${data.code} ${data.name}',
+      };
+
     return (
       <Card classes={{ root: classes.root }}>
-        <CardHeader component={() => <CustomHeader title={data.code} subtitle={data.name} image={data.image} copyClick={copyClickHandler} />} />
+        <CardHeader component={() => <CustomHeader launcher={(<SlideOutLauncher {...slideoutprops} />)} title={data.code} subtitle={data.name} image={data.image} copyClick={copyClickHandler} />} />
         <CardContent>
           <Grid container direction="row" alignItems="center" >
             <Grid item xs={10}>
-              <CutomTooltip title="Add To Quote" aria-label="add to quote" placement="right" open>
+              <CutomTooltip title="Add To Quote" aria-label="add to quote" placement="right">
                 <Fab size="medium" color="primary" className={classes.fab}>
                   <Icon>add</Icon>
                 </Fab>

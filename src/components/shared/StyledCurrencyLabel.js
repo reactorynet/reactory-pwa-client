@@ -30,145 +30,163 @@ class ToolTipHOC extends Component {
 
 class StyledCurrencyLabel extends Component {
 
+  constructor(props, context){
+    super(props, context);
+
+    this.state = {};
+  }
+
+  componentDidCatch(error){
+    this.setState({ error })
+  }
+
   render() {
-    const {
-      value,
-      condition,
-      currency,
-      region,
-      classes,
-      uiSchema,
-      currencies,
-      displayAdditionalCurrencies = false,
-      displayPrimaryCurrency = true,
-      currenciesDisplayed = null,
-      options = null,
-    } = this.props;
 
-    let isCents = true;
-    let _value = value;
-    let _prependText = '';
-    let _postpendText = '';
-    let _containerProps = {};
-    let _tooltip = '';
-    let _tooltipBackgroundColor = '';
-    let _tooltipTextColor = '#fff';
-    let _tooltipPlacement = 'left-start';
-    let _label = '';
-    let inlineLabel = false;
-    let _additionalCurrencyMapField = 'list_price_cents';
-    let _showZeroValues = true;
+    if(this.state.error) return (<span>{this.state.error.message}</span>)
 
-    let defaultStyle = {}
+    try {
 
-    if (uiSchema) {
-      const uiOptions = uiSchema['ui:options'];
-
-      if (uiOptions.label && uiOptions.label != '')
-        _label = uiOptions.label;
-
-      isCents = uiOptions && uiOptions.isCents === false ? false : isCents;
-      _value = uiOptions && (uiOptions.valueProp || this.props.formData) ? this.props[uiOptions.valueProp || 'formData'] : value;
-
-      if (uiOptions.defaultStyle) defaultStyle = { ...uiOptions.defaultStyle };
-
-      _containerProps.style = { ...defaultStyle };
-
-      if (uiOptions.prependText && uiOptions.prependText != '')
-        _prependText = uiOptions.prependText;
-
-      if (uiOptions.postpendText && uiOptions.postpendText != '')
-        _postpendText = uiOptions.postpendText;
-
-      if (uiOptions.conditionalStyles && condition) {
-        const matchingCondition = uiOptions.conditionalStyles.find(option => option.key === condition);
-        if (matchingCondition) {
-          _containerProps.style = { ...defaultStyle, ...matchingCondition.style };
-          if (matchingCondition.tooltip) {
-            _tooltip = matchingCondition.tooltip;
-            _tooltipBackgroundColor = matchingCondition.style.color
+      const {
+        value,
+        condition,
+        currency,
+        region,
+        classes,
+        uiSchema,
+        currencies,
+        displayAdditionalCurrencies = false,
+        displayPrimaryCurrency = true,
+        currenciesDisplayed = null,
+        options = null,
+      } = this.props;
+  
+      let isCents = true;
+      let _value = value;
+      let _prependText = this.props.prependText || '';
+      let _postpendText = this.props.postpendText || '';
+      let _containerProps = this.props.containerProps || {};
+      let _tooltip = this.props.tooltip || '';
+      let _tooltipBackgroundColor = this.props.tooltipBackgroundColor || '';
+      let _tooltipTextColor = this.props.tooltipTextColor || '#fff';
+      let _tooltipPlacement = this.props.tooltipPlacement || 'left-start';
+      let _label = this.props.label || '';
+      let inlineLabel = this.props.inlineLabel || false;
+      let _additionalCurrencyMapField = this.additionalCurrencyMapField || 'list_price_cents';
+      let _showZeroValues = this.props.showZeroValues || true;
+  
+      let defaultStyle = {}
+  
+      if (uiSchema) {
+        const uiOptions = uiSchema['ui:options'];
+  
+        if (uiOptions.label && uiOptions.label != '')
+          _label = uiOptions.label;
+  
+        isCents = uiOptions && uiOptions.isCents === false ? false : isCents;
+        _value = uiOptions && (uiOptions.valueProp || this.props.formData) ? this.props[uiOptions.valueProp || 'formData'] : value;
+  
+        if (uiOptions.defaultStyle) defaultStyle = { ...uiOptions.defaultStyle };
+  
+        _containerProps.style = { ...defaultStyle };
+  
+        if (uiOptions.prependText && uiOptions.prependText != '')
+          _prependText = uiOptions.prependText;
+  
+        if (uiOptions.postpendText && uiOptions.postpendText != '')
+          _postpendText = uiOptions.postpendText;
+  
+        if (uiOptions.conditionalStyles && condition) {
+          const matchingCondition = uiOptions.conditionalStyles.find(option => option.key === condition);
+          if (matchingCondition) {
+            _containerProps.style = { ...defaultStyle, ...matchingCondition.style };
+            if (matchingCondition.tooltip) {
+              _tooltip = matchingCondition.tooltip;
+              _tooltipBackgroundColor = matchingCondition.style.color
+            }
           }
         }
+  
+        if (uiOptions.inlineLabel)
+          inlineLabel = uiOptions.inlineLabel;
+  
+        if (uiOptions.additionalCurrencyMapField && uiOptions.additionalCurrencyMapField != '')
+          _additionalCurrencyMapField = uiOptions.additionalCurrencyMapField;
+  
+        if (uiOptions.showZeroValues != undefined)
+          _showZeroValues = uiOptions.showZeroValues;
       }
-
-      if (uiOptions.inlineLabel)
-        inlineLabel = uiOptions.inlineLabel;
-
-      if (uiOptions.additionalCurrencyMapField && uiOptions.additionalCurrencyMapField != '')
-        _additionalCurrencyMapField = uiOptions.additionalCurrencyMapField;
-
-      if (uiOptions.showZeroValues != undefined)
-        _showZeroValues = uiOptions.showZeroValues;
-    }
-
-    let otherCurrencies = [];
-
-    if (currencies && isArray(currencies) && displayAdditionalCurrencies === true) {
-      currencies.forEach((currency) => {
-        let $add = true;
-        if (isArray(currenciesDisplayed) === true) {
-
-          $add = indexOf(currenciesDisplayed, currency.currency_code) >= 0;
-        }
-
-        if ($add === true) {
-          otherCurrencies.push((
-            <div className={classes.currency} {..._containerProps}>
-              <span style={{ fontWeight: "bold" }}>({currency.currency_code})&nbsp;</span>
-              <span className={classes.currencyValue}>
-                {/* {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency.list_price_cents / 100) : currency.list_price_cents)} */}
-                {/* {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency[additionalCurrencyMapField] / 100) : currency[additionalCurrencyMapField])} */}
-                {
-                  !_showZeroValues && currency[_additionalCurrencyMapField] == 0 ?
-                    <span>   -   </span>
-                    :
-                    new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency[_additionalCurrencyMapField] / 100) : currency[_additionalCurrencyMapField])
-                }
-              </span>
-            </div>
-          ))
-        }
-      });
-    }
-
-    let primaryCurrency = (<div className={classes.currency} {..._containerProps}>
-      {_prependText != '' && <span style="font-weight: bold">{_prependText}</span>}
-      <span className={classes.currencyValue}>
-        {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
-      </span>
-      {_postpendText != '' && <span>{_postpendText}</span>}
-    </div>);
-
-
-    if (inlineLabel) {
-      return (
-        <div className={classes.inlineContainer}>
-          <div>
-            {_label != '' && <label className={classes.label}>{_label}</label>}
-          </div>
-          <div>
-            <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
-              <div>
-                {displayPrimaryCurrency === true ? primaryCurrency : null}
-                {displayAdditionalCurrencies === true ? otherCurrencies : null}
+  
+      let otherCurrencies = [];
+  
+      if (currencies && isArray(currencies) && displayAdditionalCurrencies === true) {
+        currencies.forEach((currency) => {
+          let $add = true;
+          if (isArray(currenciesDisplayed) === true) {
+  
+            $add = indexOf(currenciesDisplayed, currency.currency_code) >= 0;
+          }
+  
+          if ($add === true) {
+            otherCurrencies.push((
+              <div className={classes.currency} {..._containerProps}>
+                <span style={{ fontWeight: "bold" }}>({currency.currency_code})&nbsp;</span>
+                <span className={classes.currencyValue}>
+                  {/* {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency.list_price_cents / 100) : currency.list_price_cents)} */}
+                  {/* {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency[additionalCurrencyMapField] / 100) : currency[additionalCurrencyMapField])} */}
+                  {
+                    !_showZeroValues && currency[_additionalCurrencyMapField] == 0 ?
+                      <span>   -   </span>
+                      :
+                      new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency[_additionalCurrencyMapField] / 100) : currency[_additionalCurrencyMapField])
+                  }
+                </span>
               </div>
-            </ToolTipHOC>
+            ))
+          }
+        });
+      }
+  
+      let primaryCurrency = (<div className={classes.currency} {..._containerProps}>
+        {_prependText != '' && <span style="font-weight: bold">{_prependText}</span>}
+        <span className={classes.currencyValue}>
+          {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
+        </span>
+        {_postpendText != '' && <span>{_postpendText}</span>}
+      </div>);
+  
+  
+      if (inlineLabel) {
+        return (
+          <div className={classes.inlineContainer}>
+            <div>
+              {_label != '' && <label className={classes.label}>{_label}</label>}
+            </div>
+            <div>
+              <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
+                <div>
+                  {displayPrimaryCurrency === true ? primaryCurrency : null}
+                  {displayAdditionalCurrencies === true ? otherCurrencies : null}
+                </div>
+              </ToolTipHOC>
+            </div>
           </div>
-        </div>
-      )
+        )
+      }
+  
+      return (
+        <>
+          {_label != '' && <label className={classes.label}>{_label}</label>}
+          <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
+            <div>
+              {displayPrimaryCurrency === true ? primaryCurrency : null}
+              {displayAdditionalCurrencies === true ? otherCurrencies : null}
+            </div>
+          </ToolTipHOC>
+        </>
+      );
+    } catch(error) {
+      return <span>Err > {error.message}</span>
     }
-
-    return (
-      <>
-        {_label != '' && <label className={classes.label}>{_label}</label>}
-        <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
-          <div>
-            {displayPrimaryCurrency === true ? primaryCurrency : null}
-            {displayAdditionalCurrencies === true ? otherCurrencies : null}
-          </div>
-        </ToolTipHOC>
-      </>
-    );
   }
 }
 

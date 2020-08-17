@@ -74,7 +74,8 @@ class FullScreenDialog extends Component {
     const { open,
       classes, 
       title, 
-      containerProps = {}, 
+      containerProps = {        
+      }, 
       slide = 'up', 
       fullScreen = true, 
       fullWidth = true, 

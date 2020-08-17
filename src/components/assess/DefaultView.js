@@ -474,6 +474,7 @@ class DefaultView extends Component {
       step: 0,
       assessment: props.assessment,
       qualityCustomComment: null,
+      qualityAction: null,
       showMenu: false,
       showTeamMembers: false,
       showHelp: false
@@ -780,38 +781,49 @@ class DefaultView extends Component {
 
 
     const commentSlug = `mores-survey-${survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`;
-    debugger;
-    api.graphqlQuery(`
-      query ReactoryGetContentBySlug($slug: String!) {
-        ReactoryGetContentBySlug(slug: $slug){
-          slug,
-          title,
-          content
-        }
+    const adminCommentSlug = `mores-survey-${survey.id}-section_${quality.id}-AdminCustomAction`;
+    
+    const contentQuery = `
+    query ReactoryGetContentBySlug($slug: String!) {
+      ReactoryGetContentBySlug(slug: $slug){
+        slug,
+        title,
+        content
       }
-    `, { 
-      slug: commentSlug
-    }).then(( result ) => {
+    }
+  `;
+
+    api.graphqlQuery(contentQuery, { slug: commentSlug }).then(( result ) => {
       const { data, errors } = result;
+      let qualityCustomComment = ''
+      let qualityAction = ''
+
       api.log(`Results from fetching custom comment`, { data, errors }, 'error');
       
       if(data.ReactoryGetContentBySlug) {
-        that.setState({ qualityCustomComment: data.ReactoryGetContentBySlug.content });
-      } else {
-        that.setState({ qualityCustomComment: '' });
+        qualityCustomComment = data.ReactoryGetContentBySlug.content;
       }
 
+      api.graphqlQuery(contentQuery, { slug: adminCommentSlug }).then((adminCommentResult) => {
+        let adminComment = adminCommentResult.data.ReactoryGetContentBySlug;
+        qualityAction = adminComment ? adminComment.content : '';        
+        that.setState({ qualityCustomComment, qualityAction });
+      }).catch((adminCommentGetError) => {
+
+        api.log(`Could not load the admin action ${adminCommentGetError.message}`)
+        that.setState({ qualityCustomComment, qualityAction });
+      });        
+                 
     }).catch((graphError) => {
-      api.log(``, { graphError }, 'error')
+        api.log(`Could not load Custom comment`, { graphError }, 'error')
+        that.setState({ qualityCustomComment, qualityAction });
     });
-
-
   }
 
   ratingScreen() {
     const that = this;
     const { classes, api } = this.props;
-    const { step, assessment, newBehaviourText, qualityCustomComment } = this.state;
+    const { step, assessment, newBehaviourText, qualityCustomComment, qualityAction } = this.state;
     const { delegate, ratings, survey } = assessment;
     const { StaticContent } = this.componentDefs;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
@@ -921,11 +933,73 @@ class DefaultView extends Component {
     );
 
 
+    const updateAdminActionContent = (evt) => {
+      const content = evt.target.value;
+      api.log(`Update Content For Custom Comment`, {content}, 'debug');
+      
+      api.graphqlMutation(gql`
+        mutation ReactoryCreateContent($createInput: CreateContentInput!){
+          ReactoryCreateContent(createInput: $createInput){
+            id
+            slug
+            title
+            content
+            topics
+            published
+            createdBy {
+              id
+              fullName
+            }
+            createdAt
+          }
+        }
+      `, { 
+        createInput: {
+          slug: `mores-survey-${survey.id}-section_${quality.id}-AdminCustomAction`,              
+          title: `Section ${quality.title} Action by ${api.$user.firstName} ${api.$user.lastName} on ${assessment.survey.title}`,
+          content: content,
+          updatedAt: new Date().valueOf(),                           
+          published: true
+        }
+      }).then((contentUpdateResult) => {
+        api.log(`Result from Content Create Update`, { contentUpdateResult }, 'debug')
+        const { data, errors } = contentUpdateResult;
+
+      }).catch((exc) => {
+        api.log(`Error Updating Custom Comment `, { exc }, 'error');
+      });
+    };
+
+    const patchCustomActionState = evt => {
+      that.setState({ qualityAction: evt.target.value })
+    }
+
+    let AdminActionInputComponent = (
+      <Paper>
+        <TextField            
+          label={`Provide custom action content for: ${quality.title}`}           
+          multiline
+          InputLabelProps={{ shrink: true }}
+          rows={4}            
+          onBlur={updateAdminActionContent}
+          fullWidth={true}
+          placeholder={`Type here if you want add a admin for this section: ${quality.title}`}
+          value={qualityAction}
+          onChange={patchCustomActionState}
+          variant="outlined"
+          />          
+      </Paper>
+    )
+
+    let includeAdminComment = false;
+
     switch(assessment.survey.surveyType) {
       case "i360":
       case "l360":
       case "culture":
       case "team180": {
+
+        includeAdminComment = true && this.props.mode === 'admin';
 
         const enableComment = () => {
           that.setState({ comment_for_section: quality.id });
@@ -954,7 +1028,7 @@ class DefaultView extends Component {
         const updateCustomContent = (evt) => {
           const content = evt.target.value;
           api.log(`Update Content For Custom Comment`, {content}, 'debug');
-          debugger
+          
           api.graphqlMutation(gql`
             mutation ReactoryCreateContent($createInput: CreateContentInput!){
               ReactoryCreateContent(createInput: $createInput){
@@ -1045,6 +1119,10 @@ class DefaultView extends Component {
         </Grid>
         {CustomFeedbackComponent && <Grid item sm={12} xs={12}>
           {CustomFeedbackComponent}
+        </Grid>}
+
+        {includeAdminComment === true && <Grid item sm={12} xs={12}>
+          {AdminActionInputComponent}
         </Grid>}
       </Grid>
     );

@@ -50,7 +50,12 @@ class LabelWidget extends Component {
       formData: props.formData,
       lookupValue: null,
       lookupComplete: false,
+      showModal: false,
     }
+
+    this.componentDefs = props.api.getComponents([
+      'core.FullScreenModal'
+    ])
   }
 
   render() {
@@ -75,7 +80,7 @@ class LabelWidget extends Component {
     let _renderHtml = false;
     let LabelBody = null;
     let _copyToClip = false;
-
+    let _launchProps = null;
 
     let labelContainerProps = {
       id: `${props.idSchema && props.idSchema.$id ? props.idSchema.$id : undefined}`,
@@ -83,6 +88,8 @@ class LabelWidget extends Component {
         ...labelContainerStyles
       },
     };
+
+    const { FullScreenModal } = this.componentDefs;
 
     if (props.uiSchema && props.uiSchema["ui:options"]) {
       const {
@@ -100,6 +107,7 @@ class LabelWidget extends Component {
         componentFqn = null,
         componentProps = {},
         componentPropsMap = {},
+        launchProps = null,
         copyToClipboard = false
       } = props.uiSchema["ui:options"];
 
@@ -128,6 +136,8 @@ class LabelWidget extends Component {
           });
         }
       }
+
+      _launchProps = launchProps;
 
       labelTitleProps = titleProps;
       labelBodyProps = bodyProps;
@@ -190,7 +200,7 @@ class LabelWidget extends Component {
         }
       }
 
-      _copyToClip = copyToClipboard;
+      _copyToClip = copyToClipboard === true;
     }
 
     if (_renderHtml && LabelBody === null) {
@@ -213,7 +223,7 @@ class LabelWidget extends Component {
       tempInput.remove();
 
       api.createNotification('Copied To Clipboard!', { body: `'${labelText}' successfully copied to your clipboard.`, showInAppNotification: true, type: 'success'});
-    }
+    }    
 
     return (
       <div {...labelContainerProps}>
