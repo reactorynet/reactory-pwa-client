@@ -119,8 +119,8 @@ class FreightRequestQuoteWidget extends Component {
       };
     }
 
-    const ProductComponent = api.getComponent(productComponent.componentFqn); // product list
-    let _componentProps = { formData: formData }
+    // const ProductComponent = api.getComponent(productComponent.componentFqn); // product list
+    // let _componentProps = { formData: formData }
 
     return (
       <div>
@@ -135,7 +135,7 @@ class FreightRequestQuoteWidget extends Component {
           </> :
             <Loading message={'Please wait. Loading options.'} />
         }
-        <ProductComponent {..._componentProps} />
+        {/* <ProductComponent {..._componentProps} /> */}
         <div className={classes.buttonContainer}>
           <Button variant="contained" classes={{ root: classes.button }}>CANCEL</Button>
           <Button color="primary" variant="contained" classes={{ root: classes.button }} onClick={this.submitRequest}>REQUEST FREIGHT</Button>
