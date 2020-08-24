@@ -1,4 +1,4 @@
-import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
+import { ApolloClient, InMemoryCache, Resolver, Resolvers } from 'apollo-client-preset';
 import { createHttpLink } from 'apollo-link-http';
 import { WebSocketLink } from "apollo-link-ws";
 import { SubscriptionClient } from "subscriptions-transport-ws";
@@ -48,6 +48,9 @@ const uploadLink = createUploadLink({
 
 const cache = new InMemoryCache();
 
+let clientTypeDefs: string[] = [];
+let resolvers: Resolvers[] = [];
+
 const client = new ApolloClient({
   link: authLink.concat(uploadLink),
   cache,
@@ -68,6 +71,8 @@ const client = new ApolloClient({
       errorPolicy: 'all',
     },
   },
+  typeDefs: clientTypeDefs,
+  resolvers: resolvers
 });
 
 

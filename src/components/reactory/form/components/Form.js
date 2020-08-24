@@ -124,11 +124,14 @@ export default class Form extends Component {
       const { errors, errorSchema } = this.validate(formData);
       state = { ...state, errors, errorSchema };
     } else if (!this.props.noValidate && newErrorSchema) {
+          
       state = {
         ...state,
-        errorSchema: newErrorSchema,
+        errorSchema: newErrorSchema,        
         errors: toErrorList(newErrorSchema),
       };
+
+
     }
     setState(this, state, () => {
       if (this.props.onChange) {

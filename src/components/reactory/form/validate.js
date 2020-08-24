@@ -70,7 +70,7 @@ function toErrorSchema(errors) {
 }
 
 export function toErrorList(errorSchema, fieldName = "root", formData, schema) {
-  // TODO: We should transform fieldName as a full field path string.
+  // TODO: We should transform fieldName as a full field path string.  
   let errorList = [];
   if ("__errors" in errorSchema) {    
     errorList = errorList.concat(

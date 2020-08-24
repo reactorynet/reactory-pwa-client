@@ -980,7 +980,7 @@ class DefaultView extends Component {
           label={`Provide custom action content for: ${quality.title}`}           
           multiline
           InputLabelProps={{ shrink: true }}
-          rows={4}            
+          rows={8}            
           onBlur={updateAdminActionContent}
           fullWidth={true}
           placeholder={`Type here if you want add a admin for this section: ${quality.title}`}

@@ -1,4 +1,4 @@
-import React, { Fragment, Component } from 'react'
+import React, { Fragment, Component, useState } from 'react'
 import PropTypes from 'prop-types'
 import { pullAt, isNil, remove, filter, isArray } from 'lodash'
 import {
@@ -17,6 +17,7 @@ import {
 import { withApi } from '../../../api/ApiProvider';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
+import { find } from 'lodash';
 
 class MaterialTableWidget extends Component {
 
@@ -51,13 +52,18 @@ class MaterialTableWidget extends Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
-      newChipLabelText: ""
+      newChipLabelText: "",
+      currentAction: null,
+      displayActionConfirm: false,
+      selected: [],
+      confirmedCallback: null
     };
 
     this.refreshHandler = this.refreshHandler.bind(this);
-
+    this.confirmAction = this.confirmAction.bind(this);
     this.tableRef = React.createRef();
 
+    this.components = props.api.getComponents(['core.AlertDialog'])
   }
 
   componentWillUnmount(){
@@ -90,6 +96,12 @@ class MaterialTableWidget extends Component {
     };
   }
 
+  confirmAction(action, confirmedCallback) {
+
+    this.setState({ currentAction: action, displayActionConfirm: true, confirmedCallback  })
+
+  }
+
   componentDidCatch(err) {
     this.props.api.log(`MaterialWidgetError out of componentBoundary error`, { err }, 'error');
   }
@@ -110,7 +122,11 @@ class MaterialTableWidget extends Component {
 
   render() {
     const self = this;
-        
+    
+    const { 
+      AlertDialog
+    }  = self.components;
+
     const MaterialTableHOC = (props, context) => {
 
       const { api, theme, schema, idSchema } = self.props;
@@ -118,7 +134,15 @@ class MaterialTableWidget extends Component {
       const { formData, formContext } = this.props;
       let columns = [];
       let actions = [];
-     
+      
+      const [ activeAction, setActiveAction ] = useState({ 
+        show: false, 
+        action: null,         
+      });
+           
+
+      const [ selectedRows, setSelectedRows ] = useState([]);
+
       if(uiOptions.columns && uiOptions.columns.length) {
         let _columnRef = [];
         let _mergeColumns = false;
@@ -287,18 +311,32 @@ class MaterialTableWidget extends Component {
       }
   
       let options = {
-        rowStyle: (rowData, index) => {        
-          let style = {};
-  
+        rowStyle: (rowData, index) => {       
+          api.log(' 🎨 MaterialTableWidget.rowStyle', {rowData, index}, 'debug') 
+          let style = {};  
+          let selectedStyle = {};
+
           if(theme.MaterialTableWidget) {
+            if(theme.MaterialTableWidget.selectedRowStyle) selectedStyle = theme.MaterialTableWidget.selectedRowStyle;
             if(theme.MaterialTableWidget.rowStyle) style = { ...theme.MaterialTableWidget.rowStyle };
             if(theme.MaterialTableWidget.altRowStyle && index % 2 === 0) style = { ...style, ...theme.MaterialTableWidget.altRowStyle };  
           }
   
           if(uiOptions.rowStyle) style = { ...uiOptions.rowStyle };
           if(uiOptions.altRowStyle && index % 2 === 0) style = { ...style, ...uiOptions.altRowStyle };
-  
-          //TODO CONDITIONAL STYLING
+          
+          if(uiOptions.selectedRowStyle) {
+            selectedStyle = uiOptions.selectedRowStyle;
+          }
+
+          if(find(selectedRows, ( row ) => row.tableData.id === rowData.tableData.id)) {
+
+            style = {
+              ...style,
+              ...selectedStyle,
+            }
+          }
+
           return style;
         }
       };
@@ -318,93 +356,151 @@ class MaterialTableWidget extends Component {
       if(uiOptions.actions && isArray(uiOptions.actions) === true) {
         actions = uiOptions.actions.map((action) => {
           
-          const actionClickHandler = (selected) => {                    
-            if(action.mutation) {            
-              const mutationDefinition = formContext.formDef.graphql.mutation[action.mutation];
-              
-              api.graphqlMutation(mutationDefinition.text, api.utils.objectMapper({ ...self.props, selected }, mutationDefinition.variables)).then((mutationResult) => {
-                api.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
+          const actionClickHandler = (selected) => {  
+            
+
+            const process = () => {             
+              if(action.mutation) {            
+                const mutationDefinition = formContext.formDef.graphql.mutation[action.mutation];
                 
-                if(uiOptions.remoteData === true) {
-                  self.tableRef.current && self.tableRef.current.onQueryChange()
-                } else {
-                  self.forceUpdate();
-                }
-                
-                if(mutationDefinition.onSuccessEvent) {
-                  api.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
-                  api.emit(mutationDefinition.onSuccessEvent, api.utils.objectMapper({ result: mutationResult }, mutationDefinition.onSuccessEvent.data || { '*': '*' }))
-                }
+                api.graphqlMutation(mutationDefinition.text, api.utils.objectMapper({ ...self.props, selected }, mutationDefinition.variables)).then((mutationResult) => {
+                  api.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
+                  
+                  if(uiOptions.remoteData === true) {
+                    self.tableRef.current && self.tableRef.current.onQueryChange()
+                  } else {
+                    self.forceUpdate();
+                  }
+                  
+                  if(mutationDefinition.onSuccessEvent) {
+                    api.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
+                    api.emit(mutationDefinition.onSuccessEvent, api.utils.objectMapper({ result: mutationResult }, mutationDefinition.onSuccessEvent.data || { '*': '*' }))
+                  }
+    
+                  if(mutationDefinition.notification) {                
+                    api.createNotification(`${api.utils.template(mutationDefinition.notification.title)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: 'success' })
+                  }
   
-                if(mutationDefinition.notification) {                
-                  api.createNotification(`${api.utils.template(action.successMessage)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: 'error' })
-                }
-
-                if(mutationDefinition.refreshEvents) {
-                  mutationDefinition.refreshEvents.forEach((eventDefinition) => {
-                   api.emit(eventDefinition.name, selected);
-                  });
-                }
-                
-                
-              }).catch((rejectedError) => {
-                api.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });
-              });
-            }
-
-            if(action.event) {
-              let __formData = { 
-                ...formContext.$formData, 
-                ...api.utils.objectMapper( { selected }, action.event.paramsMap || {} ),
-                ...(action.event.params ? action.event.params : {})
-              };
-
-
-              if(action.event.via === 'form') {                
-                let handler = formContext.$ref.onChange;                
-                if( typeof formContext.$ref[action.event.name] === 'function') {
-                  handler = formContext.$ref[action.event.name];
-                }
-                handler(__formData);
-              };
-              
-              if(action.event.via === 'api') {
-                
-                let handler = () => {
-                  api.emit(action.event.name, __formData);
-                }
-
-                handler();
+                  if(mutationDefinition.refreshEvents) {
+                    mutationDefinition.refreshEvents.forEach((eventDefinition) => {
+                     api.emit(eventDefinition.name, selected);
+                    });
+                  }
+                                                      
+                }).catch((rejectedError) => {
+                  api.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });
+                });
               }
-            }
+
+
+              if(action.event) {
+                let __formData = { 
+                  ...formContext.$formData, 
+                  ...api.utils.objectMapper( { selected }, action.event.paramsMap || {} ),
+                  ...(action.event.params ? action.event.params : {})
+                };
+  
+  
+                if(action.event.via === 'form') {                
+                  let handler = formContext.$ref.onChange;                
+                  if( typeof formContext.$ref[action.event.name] === 'function') {
+                    handler = formContext.$ref[action.event.name];
+                  }
+                  handler(__formData);
+                };
+                
+                if(action.event.via === 'api') {
+                  
+                  let handler = () => {
+                    api.emit(action.event.name, __formData);
+                  }
+  
+                  handler();
+                }
+              } 
+              
+              setActiveAction({ show: false, action: null });
+            };            
+
+            if(action.confirmation) {
+              setActiveAction({ 
+                show: true,
+                rowsSelected: selected,  
+                action: { ...action, 
+                  confirmation: { 
+                    ...action.confirmation, 
+                    onAccept: () => { 
+                      process();
+                      setActiveAction({ 
+                        show: false, 
+                        action: null 
+                      }); 
+                    }, 
+                    onClose: () => { 
+                      setActiveAction({ 
+                        show: false, 
+                        action: null 
+                      }) 
+                    }} 
+                  },  
+                });
+            } else {
+              setActiveAction({ action, show: false, rowsSelected: [] })
+              process();
+            }                        
           };
   
           return {
             icon: action.icon,
             iconProps: action.iconProps || {},
             tooltip: action.tooltip || '',
-            onClick: (evt, selected) => {
-              actionClickHandler(selected);
+            onClick: (evt, selected_rows) => {
+              actionClickHandler(selected_rows);
             }
           };
         });
+      }    
+
+      let confirmDialog = null;
+      if(activeAction.show === true) {       
+
+        confirmDialog = (
+        <AlertDialog 
+          open={true}
+          title={api.utils.template(activeAction.action.confirmation.message)({ selected: activeAction.rowsSelected })}
+          onAccept={activeAction.action.confirmation.onAccept}
+          onClose={activeAction.action.confirmation.onClose}
+          cancelTitle={activeAction.action.confirmation.cancelTitle}
+          acceptTitle={activeAction.action.confirmation.acceptTitle}          
+          />);
+      }
+
+      const onSelectionChange = (rows) => {
+        setSelectedRows(rows);
       }
 
       return (
-        <MaterialTable
-            columns={columns}
-            tableRef={self.tableRef}                    
-            data={data}            
-            title={props.title || uiOptions.title || "no title"}
-            options={options}
-            actions={actions}
-            onRowSelected={self.props.onRowSelected}
-             />
+        <React.Fragment>
+          <MaterialTable
+              columns={columns}
+              tableRef={self.tableRef}                    
+              data={data}            
+              title={props.title || uiOptions.title || "no title"}
+              options={options}
+              actions={actions}
+              onSelectionChange={onSelectionChange}            
+              />
+             {confirmDialog}
+        </React.Fragment>
       )
 
     };
+
+    const close_dialog = (evt) => {
+      self.setState({ displayActionConfirm: false, currentAction: null, confirmedCallback: null })
+    };
   
-    return <MaterialTableHOC props={this.props} context={this.context} />
+    return (<MaterialTableHOC props={{...this.props}} context={this.context} />)
   }
 }
 const MaterialTableWidgetComponent = compose(withApi, withTheme, withStyles(MaterialTableWidget.styles))(MaterialTableWidget)

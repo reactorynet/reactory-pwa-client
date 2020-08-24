@@ -258,7 +258,8 @@ class SurveyDelegates extends Component {
       'core.AssessmentList',
       'core.AssessmentTable',
       'core.SpeedDial',
-      'core.ReportViewer'
+      'core.ReportViewer',
+      'mores.DelegateOneViewChart'
     ]);
     this.getSecondaryAction = this.getSecondaryAction.bind(this)
     this.generateReport = this.generateReport.bind(this)
@@ -392,7 +393,7 @@ class SurveyDelegates extends Component {
   getBasicModalView( ) {
     const self = this;
     const { activeEntry, assessment, basicModalViewMode, reportType, surveyProps } = self.state;
-    const { DropDownMenu, Assessment, ReportViewer, FullScreenModal } = self.componentDefs;
+    const { DropDownMenu, Assessment, ReportViewer, FullScreenModal, DelegateOneViewChart } = self.componentDefs;
     const { api } = this.props;
     
     //src: http://localhost:4000/pdf/towerstone/delegate-360-assessment?x-client-key=${this.props.api.CLIENT_KEY}&x-client-pwd=${this.props.api.CLIENT_PWD}
@@ -435,7 +436,7 @@ class SurveyDelegates extends Component {
       default: {
 
         const closeAssessmentModal = () => { self.setState({ assessment: null,  basicModalViewMode: 'assessments'}) };
-        let detailAssessmentComponent = <Typography> Select an assessment to view the details </Typography>;
+        let detailAssessmentComponent = (<DelegateOneViewChart {...reportData} />);
         
         if(assessment && (assessment.id || assessment._id)) {
           detailAssessmentComponent = (

@@ -182,6 +182,7 @@ export interface ReactoryFormState {
   message?: string,
   formError?: any,
   autoQueryDisabled?: boolean,
+  boundaryError?: Error
 }
 
 
@@ -394,6 +395,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   componentDidCatch(error: Error) {
     this.props.api.log(`An error occured outside of form boundary`, error, 'error');
+    this.setState({ boundaryError: error })
   }
 
   componentDidMount() {
@@ -529,27 +531,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         let validationFunction = null;
         let selectedKey = validationFunctionKey;
 
-
         if (api.formValidationMaps && api.formValidationMaps[formfqn]) {
           validationFunction = api.formValidationMaps[formfqn];
         }
 
-        /*
-        if (typeof api.$func[`${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`] === 'function') {
-          validationFunction = api.$func[`${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`];
-          selectedKey = `${validationFunctionKey}_${self.props.mode}_${self.props.uiSchemaId}`;
-        }
-
-        if (typeof api.$func[`${validationFunctionKey}_${self.props.mode}`] === 'function' && validationFunction === null) {
-          validationFunction = api.$func[`${validationFunctionKey}_${self.props.mode}`];
-          selectedKey = `${validationFunctionKey}_${self.props.mode}`;
-        }
-
-
-        if (typeof api.$func[validationFunctionKey] === 'function' && validationFunction === null) {
-          validationFunction = api.$func[validationFunctionKey];
-        }
-        */
         if (typeof self.props.validate === 'function') {
           validationFunction = self.props.validate;
         }
@@ -562,10 +547,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           }
         }
 
-
         return $errors;
       },
-      onChange: this.onChange,
+      onChange: self.onChange,
       formData: formData,
       ErrorList: (props) => (<MaterialErrorListTemplate {...props} />),
       onSubmit: onSubmit || this.onSubmit,
@@ -1157,6 +1141,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         if (query.refreshEvents) {
           query.refreshEvents.forEach((eventDefinition) => {
             api.once(eventDefinition.name, () => {
+              api.log(`🔔 Refresh of query triggred via refresh event`, {eventDefinition}, 'debug')
               setTimeout(executeFormQuery, 500)
             });
           });
@@ -1554,34 +1539,38 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     });
   }
 
-  onChange(data) {
+  onChange(data, errorSchema) {
 
     const { api, mode } = this.props;
     const { formDef, queryComplete, queryError, dirty, _instance_id } = this.state;
-
+    const self = this;
     api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { data }, 'debug');
-
 
     if (deepEquals(this.state.formData, data.formData) === false) {
 
       const { formDef, queryComplete, queryError, dirty } = this.state;
       api.log(`${formDef.name}[${this.instanceId}].onChange`, { data }, 'debug');
+      
       const $onChange = this.props.onChange;
+
       const trigger_onChange = $onChange && typeof $onChange === 'function';
-      const fire = () => ($onChange(data, this, { before: changed, after: rchanged }))
+      
+      const fire = () => { 
+        $onChange(data.formData, data.errorSChema, { before: changed, after: rchanged, self });
+      }
+
       const changed = diff(data.formData, this.state.formData);
       const rchanged = diff(this.state.formData, data.formData);
-      api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { changed, rchanged }, 'debug');
+      api.log(`ReactoryComponent => ${formDef.nameSpace}.${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { changed, rchanged }, 'debug');
 
       if (formDef.graphql && formDef.graphql.mutation && formDef.graphql.mutation['onChange']) {
-
         let onChangeMutation: Reactory.IReactoryFormMutation = formDef.graphql.mutation['onChange'];
         let variables = api.utils.objectMapper({ eventData: data, form: this }, onChangeMutation.variables);
 
         api.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
-          api.log(`onChangeMutation result`, { mutationResult }, 'debug');
+          api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation result`, { mutationResult }, 'debug');
         }).catch((mutationError) => {
-          api.log(`onChangeMutation result`, { mutationError }, 'error');
+          api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation error`, { mutationError }, 'error');
         });
       }
 
@@ -1686,6 +1675,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   render() {
     let loadingComponent = null;
+  if(this.state.boundaryError && this.state.boundaryError) return <div><Icon>bug</Icon>{this.state.boundaryError.message} @ {this.props.formId}</div>
     if (this.state.forms_loaded === false) {
       const { Loading } = this.componentDefs;
       loadingComponent = (<Loading key={'loading'} message={`Loading Component ${this.props.formId}`} nologo={true} />)

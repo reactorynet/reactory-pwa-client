@@ -100,6 +100,7 @@ class LabelWidget extends Component {
         iconPosition,
         variant = "h6",
         iconProps = {},
+        $iconProps = null,
         renderHtml,
         titleProps = {},
         bodyProps = {},
@@ -162,7 +163,7 @@ class LabelWidget extends Component {
       if (renderHtml) _renderHtml = renderHtml;
 
       if (icon) {
-        const _iconProps = {
+        let _iconProps = {
           style:
           {
             marginLeft: _iconPosition === 'right' ? theme.spacing(1) : 'unset',
@@ -172,8 +173,17 @@ class LabelWidget extends Component {
           ...iconProps
         };
 
+        if(typeof $iconProps === 'string' && api.$func[$iconProps]) {
+          let patched = api.$func[$iconProps](labelText, self);
+          _iconProps = {
+            ..._iconProps,
+            ...patched
+          } 
+        }
+
         const _custom = iconType
         let IconComponent = _custom !== undefined ? theme.extensions[_custom].icons[icon] : null;
+        
         if (IconComponent) {
           labelIcon = <IconComponent {..._iconProps} />
         } else {
@@ -226,13 +236,13 @@ class LabelWidget extends Component {
     }    
 
     return (
-      <div {...labelContainerProps}>
-        {_iconPosition === 'left' ? labelIcon : null}
+      <div {...labelContainerProps}>        
+          {_iconPosition === 'left' ? labelIcon : null}
         <div {...labelBodyProps}>
           {labelTitle != '' && <label {...labelTitleProps}>{labelTitle}</label>}
           {LabelBody}
         </div>
-        {_iconPosition === 'right' ? labelIcon : null}
+          {_iconPosition === 'right' ? labelIcon : null}
         {_copyToClip &&
           <Tooltip title="Copy to clipboard" placement="right">
             <Icon color="primary" onClick={copy} className={classes.copyIcon}>assignment</Icon>

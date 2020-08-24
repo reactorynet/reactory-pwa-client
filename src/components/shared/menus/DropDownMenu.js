@@ -81,10 +81,13 @@ export class DropDownMenu extends Component {
                 disabled = true;
               } 
 
+              let selected = menu.selected === true;
+
               menuItems.push((
                 <MenuItem key={menu.id} onClick={ onMenuItemSelect } disabled={  disabled }> 
                     { menu.icon ? <ListItemIcon><Icon color="primary" style={menu.iconProps && menu.iconProps.style ? menu.iconProps.style : {}}>{menu.icon}</Icon></ListItemIcon> : null }                      
                     { menu.title }
+                    { selected === true ? <Icon>check</Icon> : null }
                 </MenuItem>
               ));
             });
