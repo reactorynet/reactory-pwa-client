@@ -71,14 +71,15 @@ class FreightRequestQuoteWidget extends Component {
       onChange
     } = this.props;
 
-    debugger;
-
     let _tabs = [];
     let _panels = [];
     let LoadingComponent = (<Loading message={'Please wait. Loading options'} />);
 
     const formfieldChangeHandler = (optionName, fieldData) => {
-      const option = formData.options.find(op => op.name == fieldData.formData.name)
+
+      const option = formData.options.find(op => op.name == fieldData.formData.name);
+      debugger;
+
       if (option != fieldData.formData) {
         debugger;
         this.props.onChange(fieldData.formData);
@@ -94,8 +95,8 @@ class FreightRequestQuoteWidget extends Component {
         let _componentProps = {
           formData: option,
           onChange: (formDataFromFormField) => {
-            api.log(`Received data from child form ${option.name}`, { formDataFromFormField }, 'debug');
-            // onChange(formDataFromFormField.formData);
+
+            // api.log(`Received data from child form ${option.name}`, { formDataFromFormField }, 'debug');
             // formfieldChangeHandler(option.name, formDataFromFormField);
           }
         }
@@ -119,8 +120,8 @@ class FreightRequestQuoteWidget extends Component {
       };
     }
 
-    const ProductComponent = api.getComponent(productComponent.componentFqn); // product list
-    let _componentProps = { formData: formData }
+    // const ProductComponent = api.getComponent(productComponent.componentFqn); // product list
+    // let _componentProps = { formData: formData }
 
     return (
       <div>
@@ -135,7 +136,6 @@ class FreightRequestQuoteWidget extends Component {
           </> :
             <Loading message={'Please wait. Loading options.'} />
         }
-        <ProductComponent {..._componentProps} />
         <div className={classes.buttonContainer}>
           <Button variant="contained" classes={{ root: classes.button }}>CANCEL</Button>
           <Button color="primary" variant="contained" classes={{ root: classes.button }} onClick={this.submitRequest}>REQUEST FREIGHT</Button>
