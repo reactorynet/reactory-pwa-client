@@ -55,13 +55,22 @@ class SelectWithDataWidget extends Component {
   constructor(props, context){
     super(props, context)
     this.state = {
-
+      error: undefined
     };
+  }
+
+  componentDidCatch(error) {
+    this.setState({ error })
   }
 
   render(){
     const self = this
     const { classes, formContext, formData, required, api, theme } = this.props;
+    if(self.state.error !== undefined && self.state.error !== null) {
+      api.log('🚩 core.SelecteWithData Error', { self, error: self.state.error }, 'error')
+      return <Typography>🚩 core.SelectWithData Error - see log</Typography>
+    }
+
     api.log('Rendering SelectWithData', { formContext, formData }, 'debug');
 
     let variant = 'standard'
@@ -80,8 +89,9 @@ class SelectWithDataWidget extends Component {
         } else {
           inputLabelProps.shrink = true;
           inputLabelProps.style = {
-            backgroundColor: 'white',
-            padding: '3px'
+            backgroundColor: theme.palette.background.paper,                        
+            // marginTop: '4px',
+            padding: '4px'
           };
         }
         break;
@@ -96,7 +106,15 @@ class SelectWithDataWidget extends Component {
 
     if(this.props.uiSchema['ui:options']){
 
-      const { query, propertyMap, resultsMap, resultItem, multiSelect } = this.props.uiSchema['ui:options'];
+      const { 
+        query, 
+        propertyMap, 
+        resultsMap, 
+        resultItem, 
+        multiSelect,
+        selectProps = {},
+        formControlProps = {}
+      } = this.props.uiSchema['ui:options'];
       const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
       const onSelectChanged = (evt) => {
         api.log('Raising onChange for data select', {v: evt.target.value})
@@ -109,7 +127,7 @@ class SelectWithDataWidget extends Component {
       </MenuItem> : null;
 
       return (
-        <Query query={gql`${query}`} variables={variables} fetchPolicy="network-only" >
+        <Query query={gql`${query}`} variables={variables} fetchPolicy="cache-and-network" >
         {(props, context)=> {
           const { data, loading, error } = props;
           if(loading === true) return (<p>Loading lookups</p>)
@@ -118,13 +136,14 @@ class SelectWithDataWidget extends Component {
           if(data && data[resultItem]) {
             let menuItems = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
             return (
-              <FormControl variant={variant}>
+              <FormControl {...formControlProps} variant={variant}>
                 <InputLabel {...inputLabelProps} htmlFor={this.props.idSchema.$id} required={required}>{this.props.schema.title}</InputLabel>
                 <Select
+                  {...selectProps}
                   multiple={multiSelect === true}
                   value={multiSelect === true ? this.props.formData : `${this.props.formData}`}
                   onChange={onSelectChanged}
-                  name={this.props.name}
+                  name={this.props.name}                  
                   variant={variant}
                   input={<InputComponent id={this.props.idSchema.$id} value={`${this.props.formData}`.trim() || ""}/>}>                
                   { emptySelect }
@@ -147,7 +166,7 @@ class SelectWithDataWidget extends Component {
     } else {
       return <React.Fragment>
       <InputLabel htmlFor={this.props.idSchema.$id}>{this.props.schema.title}</InputLabel>
-      <Select
+      <Select        
         value={""}
         readOnly={true}
         name={this.props.name}

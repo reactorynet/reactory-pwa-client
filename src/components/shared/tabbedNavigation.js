@@ -300,14 +300,11 @@ class TabbedNavComponent extends Component {
     }
 
     const open = Boolean(this.state.anchorEl);
-
-
-
     return (
       <div className={classes.root}>
         <AppBar position="static">
           <Toolbar>
-            <Tabs classes={{ indicator: classes.indicator }} value={this.state.activeTab} onChange={handleChange} aria-label="simple tabs example">
+            <Tabs classes={{ indicator: classes.indicator }} value={this.state.activeTab} onChange={handleChange} aria-label="">
               {_tabComponents}
             </Tabs>
             {_buttons}

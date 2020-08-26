@@ -174,7 +174,7 @@ class LabelWidget extends Component {
         };
 
         if(typeof $iconProps === 'string' && api.$func[$iconProps]) {
-          let patched = api.$func[$iconProps](labelText, self);
+          let patched = api.$func[$iconProps]({label: labelText, widget: self, iconProps: _iconProps});
           _iconProps = {
             ..._iconProps,
             ...patched

@@ -134,13 +134,26 @@ class MaterialTableWidget extends Component {
       const { formData, formContext } = this.props;
       let columns = [];
       let actions = [];
+      let components = {};
+
+      if(uiOptions.componentMap) {
+        if(uiOptions.componentMap.Toolbar) {          
+          const ToolbarComponent = api.getComponent(uiOptions.componentMap.Toolbar);
+          if(ToolbarComponent) {
+            components.Toolbar = (props, context) =>  {
+              return <ToolbarComponent {...props} formContext={formContext} />
+            }
+          } else {
+            setTimeout(() => self.forceUpdate(), 500)            
+          }          
+        }
+      }
       
       const [ activeAction, setActiveAction ] = useState({ 
         show: false, 
         action: null,         
       });
            
-
       const [ selectedRows, setSelectedRows ] = useState([]);
 
       if(uiOptions.columns && uiOptions.columns.length) {
@@ -247,6 +260,8 @@ class MaterialTableWidget extends Component {
         data = async (query) => {
           try {       
             
+            api.log('🥽 core.MaterialTable data query', {query}, 'debug')
+
             const graphqlDefinitions = formContext.$formState.formDef.graphql;
             
             if(graphqlDefinitions.query || graphqlDefinitions.queries) {
@@ -261,7 +276,7 @@ class MaterialTableWidget extends Component {
               const { refreshEvents } = queryDefinition;             
               
               api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables, query }, 'debug')            
-              let variables = api.utils.objectMapper({ ...self, formContext }, uiOptions.variables || queryDefinition.variables);
+              let variables = api.utils.objectMapper({ ...self, formContext, query }, uiOptions.variables || queryDefinition.variables);
   
               variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
               api.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
@@ -454,6 +469,7 @@ class MaterialTableWidget extends Component {
             icon: action.icon,
             iconProps: action.iconProps || {},
             tooltip: action.tooltip || '',
+            key: action.key || action.icon,
             onClick: (evt, selected_rows) => {
               actionClickHandler(selected_rows);
             }
@@ -467,18 +483,23 @@ class MaterialTableWidget extends Component {
         confirmDialog = (
         <AlertDialog 
           open={true}
-          title={api.utils.template(activeAction.action.confirmation.message)({ selected: activeAction.rowsSelected })}
+          title={api.utils.template(activeAction.action.confirmation.title)({ selected: activeAction.rowsSelected })}
+          content={api.utils.template(activeAction.action.confirmation.content)({ selected: activeAction.rowsSelected })}
           onAccept={activeAction.action.confirmation.onAccept}
           onClose={activeAction.action.confirmation.onClose}
           cancelTitle={activeAction.action.confirmation.cancelTitle}
           acceptTitle={activeAction.action.confirmation.acceptTitle}          
+          titleProps={activeAction.action.confirmation.titleProps}
+          contentProps={activeAction.action.confirmation.contentProps}
+          cancelProps={activeAction.action.confirmation.cancelProps}
+          confirmProps={activeAction.action.confirmation.confirmProps}
           />);
       }
 
       const onSelectionChange = (rows) => {
         setSelectedRows(rows);
       }
-
+      
       return (
         <React.Fragment>
           <MaterialTable
@@ -488,8 +509,8 @@ class MaterialTableWidget extends Component {
               title={props.title || uiOptions.title || "no title"}
               options={options}
               actions={actions}
-              onSelectionChange={onSelectionChange}            
-              />
+              onSelectionChange={onSelectionChange}
+              components={components}/>
              {confirmDialog}
         </React.Fragment>
       )

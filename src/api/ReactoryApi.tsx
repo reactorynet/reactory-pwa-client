@@ -439,7 +439,7 @@ class ReactoryApi extends EventEmitter {
     if (typeof functionReference === 'function') {
       if (requiresApi === true) {
         this.$func[fqn] = (props) => {
-          functionReference({ ...props, api: this });
+          return functionReference({ ...props, api: this });
         };
       } else {
         this.$func[fqn] = functionReference;

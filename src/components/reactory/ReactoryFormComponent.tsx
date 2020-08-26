@@ -5,7 +5,7 @@ import Form from './form/components/Form';
 import EventEmitter, { ListenerFn } from 'eventemitter3';
 import objectMapper from 'object-mapper';
 import { diff } from 'deep-object-diff';
-import { find, template, isArray, isNil, isString, isEmpty } from 'lodash';
+import { find, template, isArray, isNil, isString, isEmpty, throttle } from 'lodash';
 import { withRouter, Route, Switch } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
@@ -1565,13 +1565,18 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       if (formDef.graphql && formDef.graphql.mutation && formDef.graphql.mutation['onChange']) {
         let onChangeMutation: Reactory.IReactoryFormMutation = formDef.graphql.mutation['onChange'];
+        let throttleDelay: number = formDef.graphql.mutation['onChange'].throttle || 300;
         let variables = api.utils.objectMapper({ eventData: data, form: this }, onChangeMutation.variables);
 
-        api.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
-          api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation result`, { mutationResult }, 'debug');
-        }).catch((mutationError) => {
-          api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation error`, { mutationError }, 'error');
-        });
+        let throttledCall = throttle(()=>{
+          api.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
+            api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation result`, { mutationResult }, 'debug');
+          }).catch((mutationError) => {
+            api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation error`, { mutationError }, 'error');
+          });
+        }, throttleDelay)   
+        
+        throttledCall();
       }
 
       if (this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {
