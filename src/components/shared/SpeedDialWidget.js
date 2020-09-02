@@ -92,7 +92,7 @@ class SpeedDials extends React.Component {
   };
 
   render() {
-    const { classes, icon, actions } = this.props;
+    const { classes, icon, actions, style = {}, buttonStyle = {} } = this.props;
     const { direction, hidden, open } = this.state;
 
     const speedDialClassName = classNames(
@@ -102,7 +102,7 @@ class SpeedDials extends React.Component {
 
     return (
       <Fragment>        
-        <div className={classes.exampleWrapper}>
+        <div className={classes.exampleWrapper} style={style}>
           <SpeedDial
             ariaLabel="QuickPick"
             className={speedDialClassName}
@@ -116,6 +116,7 @@ class SpeedDials extends React.Component {
             onMouseLeave={this.handleClose}
             open={open}
             direction={direction}
+            style={buttonStyle}
           >
             {actions.map(action => (
               <SpeedDialAction

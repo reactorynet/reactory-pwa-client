@@ -11,7 +11,7 @@ import { ApolloProvider } from 'react-apollo';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
-import { intersection, isArray, isEmpty, isNil, template } from 'lodash';
+import lodash, { intersection, isArray, isEmpty, isNil, template } from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
 import {
@@ -142,7 +142,8 @@ export interface ReactoryApiUtils {
   gql: Function,
   humanDate: Function,
   slugify: Function,
-  deepEquals: Function
+  deepEquals: Function,
+  lodash: any
 }
 
 class ReactoryApi extends EventEmitter {
@@ -228,6 +229,7 @@ class ReactoryApi extends EventEmitter {
       componentFqn,
       //componentDefinitionFromFqn,
       pluginDefinitionValid,
+      lodash,
       moment,
       objectMapper,
       template,
