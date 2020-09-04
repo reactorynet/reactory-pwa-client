@@ -1,6 +1,6 @@
 
 import React from 'react';
-import  { compose } from 'redux';
+import { compose } from 'redux';
 import { withRouter } from 'react-router'
 import Loadable from 'react-loadable';
 import {
@@ -70,6 +70,8 @@ import DocumentUploadComponent from './shared/DocumentUploadComponents';
 import FreightRequestQuoteComponent from './shared/FreightRequestQuote';
 import FreightRequestProductDetailComponent from './shared/FreightRequestProductDetail';
 
+import lodash from 'lodash';
+
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
 export const UserList = UserComponents.UserListWithData;
@@ -104,6 +106,14 @@ export const CompanyLogo = (props) => {
 
 
 export const componentRegistery = [
+
+
+  {
+    nameSpace: 'lodash',
+    name: 'lodash',
+    version: '1.0.0',
+    component: lodash
+  },
 
   // TO IMPLEMENT IN LASEC PLUGINS
   {
@@ -229,7 +239,7 @@ export const componentRegistery = [
     version: '1.0.0',
   },
   {
-    nameSpace:'core',
+    nameSpace: 'core',
     name: 'DataTable',
     component: (props) => (<span>core.DataTable deprecated -> use MuiDataTables instead.</span>),
     version: '1.0.0',
@@ -335,7 +345,7 @@ export const componentRegistery = [
     name: 'ApplicationUserListItem',
     component: withTheme((props) => {
       const { UserListItem } = UserComponents;
-      if(props.theme && props.theme.key) {
+      if (props.theme && props.theme.key) {
         return <UserListItem user={{ firstName: props.firstName || 'Reactory', lastName: props.lastName || 'System', id: props.id || `${props.theme.key}_app`, avatar: 'avatar.png' }} message={props.message} />
       }
 
