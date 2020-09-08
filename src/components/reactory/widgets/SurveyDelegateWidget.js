@@ -33,17 +33,15 @@ import { ReactoryApi } from "../../../api/ReactoryApi";
 import { nil } from '../../util';
 import moment from 'moment';
 import hdate from 'human-date';
-
-
 import { Reactory } from '@reactory/server-core/types/reactory';
 import { ENVIRONMENT } from '@reactory/server-core/types/constants';
 import { isThrowStatement } from 'typescript';
 
 /***
- * 
+ *
  *  SAMPLE DELEGATE OBJECT
- * 
- *  
+ *
+ *
 
   {
       "id": "5ca572e75cde0605aff9e697",
@@ -80,7 +78,7 @@ import { isThrowStatement } from 'typescript';
       "lastAction": "send-invite",
       "nextAction": "close",
       "assessments": [
-        
+
       ],
       "__typename": "DelegateEntry"
     }
@@ -130,17 +128,15 @@ const assessmentExcelExport = {
   exportOptions: assessmentExportOptions
 };
 
-
-
 const getSurveyType = (props) => {
   const { formContext } = props;
   let surveyType = '360';
 
-  if (formContext.$formData && formContext.$formData.surveyType) surveyType = formContext.$formData.surveyType;
+  if (formContext.$formData && formContext.$formData.surveyType)
+    surveyType = formContext.$formData.surveyType;
 
   return surveyType.toLowerCase();
 }
-
 
 const getSurvey = (props) => {
   const { formContext } = props;
@@ -159,14 +155,11 @@ const getSurvey = (props) => {
     survey = formContext.$formData;
   }
 
-
   return survey;
 }
 
 const getSurveyProps = (props) => {
-
   const surveyType = getSurveyType(props);
-
   let is180 = false;
   let is360 = false;
   let isPLC = false;
@@ -227,21 +220,17 @@ const getSurveyProps = (props) => {
     delegateReportName,
     survey: getSurvey(props)
   }
-
 };
 
 class SurveyDelegate extends Component {
 
   static styles = theme => {
-    return {
-
-    }
+    return {}
   }
 
   constructor(props, context) {
     super(props, context);
     this.componentDefs = props.api.getComponents(['core.Loading', 'towerstone.SurveyDelegateWidget'])
-
   }
 
   render() {
@@ -365,7 +354,7 @@ class SurveyDelegates extends Component {
       switch (menuItem.id) {
         case 'sendinvite': {
           self.sendCommunicationToDelegate(delegateEntry);
-          //this.sendInviteEmails(delegateEntry)          
+          //this.sendInviteEmails(delegateEntry)
           break;
         }
         case 'relaunch': {
@@ -453,7 +442,7 @@ class SurveyDelegates extends Component {
     return (<DropDownMenu menus={menus} onSelect={onMenuItemSelect} />)
   }
 
-  generateReport(reportType = ReportTypes.SurveyStatusReport) {    
+  generateReport(reportType = ReportTypes.SurveyStatusReport) {
     if (this.props.formData.length === 0) return;
 
     this.setState({ basicModalViewMode: 'report_preview', reportType, modal: true, modalType: 'basic', activeEntry: this.props.formData[0] });
@@ -475,7 +464,7 @@ class SurveyDelegates extends Component {
 
     switch (reportType) {
       case ReportTypes.SurveyStatusReport: delete reportData.delegateId; break;
-      case ReportTypes.MoresCulture: { 
+      case ReportTypes.MoresCulture: {
         reportData.delegateIds = selected ? Object.keys(selected).map(k => k) : surveyProps.survey.delegates.map(delegate => delegate.id);
         reportData.selectionTitle = selectionTitle;
         reportData.selectionDescription = selectionDescription;
@@ -800,29 +789,27 @@ class SurveyDelegates extends Component {
             firstName
             lastName
             email
-            avatar 
+            avatar
           }
           team
           peers {
             id
-          }        
+          }
           notifications {
             id
           }
           assessments {
-            id          
+            id
           }
           status
-          launched 
+          launched
           complete
           removed
           message
-          updatedAt        
+          updatedAt
           lastAction
         }
       }`;
-
-
 
       if (batch === true && isArray(delegateEntry)) {
 
@@ -954,7 +941,7 @@ class SurveyDelegates extends Component {
         if (_selected[delegateEntry.delegate.id].selected === true) {
           delete _selected[delegateEntry.delegate.id]
         }
-        //_selected[delegateEntry.delegate.id].selected = !_selected[delegateEntry.delegate.id].selected;                  
+        //_selected[delegateEntry.delegate.id].selected = !_selected[delegateEntry.delegate.id].selected;
       } else {
         _selected[delegateEntry.delegate.id] = {
           selected: true
@@ -968,7 +955,7 @@ class SurveyDelegates extends Component {
     let userMessage = null;
 
 
-    let statusCount = { true: 0, false: 0 };// 
+    let statusCount = { true: 0, false: 0 };//
     let allComplete = false;
     if (delegateEntry.assessments && isArray(delegateEntry.assessments) === true) {
       statusCount = countBy(delegateEntry.assessments, 'complete');
@@ -978,7 +965,6 @@ class SurveyDelegates extends Component {
     if (allComplete === true) {
       backgroundColor = "darkseagreen";
     }
-
 
     api.log(`(${statusCount.true}) assessments complete for ${delegateEntry.delegate.firstName}`, delegateEntry, 'debug')
     switch (status.key) {
@@ -1100,7 +1086,7 @@ class SurveyDelegates extends Component {
 
     if (selectedDelegates.length > 0) {
 
-      if(is360 === true)  {
+      if (is360 === true) {
         speedDialActions.push({
           key: 'send-invites',
           title: 'Send Invites',
@@ -1113,7 +1099,7 @@ class SurveyDelegates extends Component {
         });
       }
 
-      if(survey.status === "launched") {
+      if (survey.status === "launched") {
         speedDialActions.push({
           key: 'launch',
           title: 'Launch for delegates',
@@ -1124,7 +1110,7 @@ class SurveyDelegates extends Component {
           enabled: selectedDelegates.length > 0,
           ordinal: 2,
         });
-        
+
         speedDialActions.push({
           key: 'send-reminder',
           title: 'Send reminders',
@@ -1146,17 +1132,17 @@ class SurveyDelegates extends Component {
           enabled: selectedDelegates.length > 0,
           ordinal: 4,
         });
-      }                  
+      }
     }
 
 
-    if(isCulture === true) {
-      
+    if (isCulture === true) {
+
       speedDialActions.push({
         key: 'culture-status-report',
         title: 'Culture Report',
         clickHandler: evt => {
-          self.generateReport( ReportTypes.MoresCulture );
+          self.generateReport(ReportTypes.MoresCulture);
         },
         icon: <Icon>multiline_chart</Icon>,
         enabled: true,
@@ -1167,24 +1153,24 @@ class SurveyDelegates extends Component {
         key: 'individual360-report-status',
         title: 'Survey Status',
         clickHandler: evt => {
-          self.generateReport(  ReportTypes.MoresSurveyStatus  );
+          self.generateReport(ReportTypes.MoresSurveyStatus);
         },
         icon: <Icon>pie_chart</Icon>,
         enabled: true,
         ordinal: 5,
       });
-      
-    }
-    
-    if(is360 === true) {
 
-      switch(survey.surveyType) {
+    }
+
+    if (is360 === true) {
+
+      switch (survey.surveyType) {
         case "i360": {
           speedDialActions.push({
             key: 'individual360-report',
             title: 'Individual 360 reports',
             clickHandler: evt => {
-              self.generateReport(  ReportTypes.MoresIndividual360  );
+              self.generateReport(ReportTypes.MoresIndividual360);
             },
             icon: <Icon>score</Icon>,
             enabled: true,
@@ -1195,7 +1181,7 @@ class SurveyDelegates extends Component {
             key: 'individual360-report-status',
             title: 'Survey Status',
             clickHandler: evt => {
-              self.generateReport(  ReportTypes.MoresSurveyStatus  );
+              self.generateReport(ReportTypes.MoresSurveyStatus);
             },
             icon: <Icon>pie_chart</Icon>,
             enabled: true,
@@ -1209,7 +1195,7 @@ class SurveyDelegates extends Component {
             key: 'mores-survey-status-report',
             title: 'Survey Status Report',
             clickHandler: evt => {
-              self.generateReport(  ReportTypes.MoresLeader360  );
+              self.generateReport(ReportTypes.MoresLeader360);
             },
             icon: <Icon>score</Icon>,
             enabled: true,
@@ -1220,7 +1206,7 @@ class SurveyDelegates extends Component {
             key: 'mores-survey-status-report',
             title: 'Survey Status Report',
             clickHandler: evt => {
-              self.generateReport(  ReportTypes.MoresSurveyStatus  );
+              self.generateReport(ReportTypes.MoresSurveyStatus);
             },
             icon: <Icon>pie_chart</Icon>,
             enabled: true,
@@ -1234,7 +1220,7 @@ class SurveyDelegates extends Component {
             key: 'plc360-report',
             title: 'Purposeful Leadership 360 reports',
             clickHandler: evt => {
-              self.generateReport(  ReportTypes.DelegateReport  );
+              self.generateReport(ReportTypes.DelegateReport);
             },
             icon: <Icon>score</Icon>,
             enabled: true,
@@ -1245,7 +1231,7 @@ class SurveyDelegates extends Component {
             key: 'mores-survey-status-report',
             title: 'Survey Status Report',
             clickHandler: evt => {
-              self.generateReport(  ReportTypes.SurveyStatusReport  );
+              self.generateReport(ReportTypes.SurveyStatusReport);
             },
             icon: <Icon>pie_chart</Icon>,
             enabled: true,
@@ -1259,7 +1245,7 @@ class SurveyDelegates extends Component {
             key: 'delegate360-report',
             title: 'Purposeful Leadership 360 reports',
             clickHandler: evt => {
-              self.generateReport(  ReportTypes.DelegateReport  );
+              self.generateReport(ReportTypes.DelegateReport);
             },
             icon: <Icon>score</Icon>,
             enabled: true,
@@ -1270,7 +1256,7 @@ class SurveyDelegates extends Component {
             key: 'mores-survey-status-report',
             title: 'Survey Status Report',
             clickHandler: evt => {
-              self.generateReport(  ReportTypes.SurveyStatusReport  );
+              self.generateReport(ReportTypes.SurveyStatusReport);
             },
             icon: <Icon>pie_chart</Icon>,
             enabled: true,
@@ -1281,12 +1267,11 @@ class SurveyDelegates extends Component {
         }
       }
 
-      
+
     }
-       
+
     return speedDialActions;
   }
-
 
   render() {
     const { classes, api, formContext } = this.props;
@@ -1301,9 +1286,6 @@ class SurveyDelegates extends Component {
     });
 
     if (isArray(data) === true) {
-
-
-
       data = sortBy(data, (delegateEntry) => { return `${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}` })
 
       const {
@@ -1364,7 +1346,7 @@ class SurveyDelegates extends Component {
           icon: ''
         },
       ]
-      //new, invite-sent, launched, 
+      //new, invite-sent, launched,
       let statusList = [];
       let speedDialActions = this.getAvaibleActions();
 
@@ -1466,11 +1448,9 @@ class SurveyDelegates extends Component {
             title: 'Removed / Disabled for Survey',
             icon: 'delete_outline'
           }
-        ];        
+        ];
 
       }
-
-
 
       const list = (
         <List subheader={<li />}>
@@ -1526,8 +1506,8 @@ class SurveyDelegates extends Component {
         </List>
       )
 
-      let reportTitleComponent = (<TextField label="Title" onChange={ evt => self.setState({ selectionTitle: evt.target.value })} value={self.state.selectionTitle}></TextField>)
-      let reportDescriptionCompnonent = (<TextField label="Description" onChange={ evt => self.setState({ selectionDescription: evt.target.value })  } value={self.state.selectionDescription}></TextField>)
+      let reportTitleComponent = (<TextField label="Title" onChange={evt => self.setState({ selectionTitle: evt.target.value })} value={self.state.selectionTitle}></TextField>)
+      let reportDescriptionCompnonent = (<TextField label="Description" onChange={evt => self.setState({ selectionDescription: evt.target.value })} value={self.state.selectionDescription}></TextField>)
       return (
         <React.Fragment className={this.props.classes.root}>
           {reportTitleComponent}
@@ -1544,7 +1524,6 @@ class SurveyDelegates extends Component {
 
   }
 }
-
 
 SurveyDelegates.styles = (theme) => {
   return {
@@ -1571,9 +1550,7 @@ SurveyDelegates.styles = (theme) => {
   }
 };
 
-
 export const SurveyDelegatesComponent = compose(withApi, withTheme, withStyles(SurveyDelegates.styles))(SurveyDelegates)
-
 
 export default {
   SurveyDelegatesComponent,
