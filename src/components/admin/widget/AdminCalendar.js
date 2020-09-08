@@ -20,11 +20,11 @@ import {
   Typography,
   Avatar,
   Button,
-  Card, 
+  Card,
   CardActions,
-  CardHeader, 
+  CardHeader,
   CardContent,
-  Collapse, 
+  Collapse,
   IconButton,
   Paper,
   Grid,
@@ -90,7 +90,7 @@ const newSurvey = {
   mode: 'test',
   status: 'new',
   startDate: moment().startOf('day').format('YYYY-MM-DD'),
-  endDate: moment().add(7,'days').endOf('day').format('YYYY-MM-DD')
+  endDate: moment().add(7, 'days').endOf('day').format('YYYY-MM-DD')
 };
 
 
@@ -183,7 +183,7 @@ const DelegateGeneral = ({ delegate }) => {
 }
 
 /**
- * Class that will display an asssessment interface 
+ * Class that will display an asssessment interface
  */
 class DelegateAssessments extends Component {
 
@@ -283,10 +283,10 @@ class SurveyAdmin extends Component {
     super(props, context)
     this.state = {
       expanded: null,
-      survey: props.survey || newSurvey,      
+      survey: props.survey || newSurvey,
       focusInput: null,
       busy: false,
-      dirty: false,    
+      dirty: false,
     }
     this.onSurveyGeneralSubmit = this.onSurveyGeneralSubmit.bind(this)
     this.handleChange = this.handleChange.bind(this)
@@ -342,7 +342,8 @@ class SurveyAdmin extends Component {
   }
 
   onDateRangeChanged(startDate, endDate) {
-    const updates = { survey: {
+    const updates = {
+      survey: {
         ...this.state.survey,
         startDate: startDate || moment(this.state.survey.startDate),
         endDate: endDate || moment(this.state.survey.endDate),
@@ -356,7 +357,7 @@ class SurveyAdmin extends Component {
     this.setState({ focusInput });
   }
 
-  onSurveyGeneralSubmit(formData){
+  onSurveyGeneralSubmit(formData) {
     //console.log('Submit the form data for survey', formData)
   }
 
@@ -370,7 +371,7 @@ class SurveyAdmin extends Component {
     let delegateComponents = []
 
     if (isArray(delegates) && survey.id !== null) {
-      
+
     }
 
     return (
@@ -382,13 +383,13 @@ class SurveyAdmin extends Component {
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
             <SingleColumnLayout>
-              <TowerStoneSurveyConfig data={survey} onSubmit={this.onSurveyGeneralSubmit}> 
+              <TowerStoneSurveyConfig data={survey} onSubmit={this.onSurveyGeneralSubmit}>
                 <Fab type="submit" color="primary"><Icon>save</Icon></Fab>
               </TowerStoneSurveyConfig>
             </SingleColumnLayout>
           </ExpansionPanelDetails>
         </ExpansionPanel>
-        { survey && survey.id ? <ExpansionPanel expanded={expanded === 'panel2'} onChange={this.handleChange('panel2')}>
+        {survey && survey.id ? <ExpansionPanel expanded={expanded === 'panel2'} onChange={this.handleChange('panel2')}>
           <ExpansionPanelSummary expandIcon={<ExpandMore />}>
             <Typography className={classes.heading}>Delegates</Typography>
             <Typography className={classes.secondaryHeading}>
@@ -398,14 +399,14 @@ class SurveyAdmin extends Component {
           <ExpansionPanelDetails>
             <Grid container>
               <Grid xs={12} item>
-        
+
               </Grid>
               <Grid xs={12} item>
                 <Button variant={'fab'} color={'primary'} onClick={this.addNewDelegate}><AddIcon /></Button>
               </Grid>
             </Grid>
           </ExpansionPanelDetails>
-        </ExpansionPanel> : null }        
+        </ExpansionPanel> : null}
       </SingleColumnLayout>
     )
   }
@@ -474,6 +475,24 @@ class AdminCalendar extends Component {
     this.props.history.push(`/admin/org/${this.props.organizationId}/surveys/new`);
   }
 
+  deleteSurvey = (selectedSurvey) => {
+    const { api, onDeleteSuccess } = this.props;
+    api.graphqlMutation(api.mutations.Surveys.deleteSurvey, { id: selectedSurvey.id })
+      .then(result => {
+        const { data, errors } = result;
+        if (errors)
+          api.createNotification(`Error deleting survey. ${errors[0].message}`, { showInAppNotification: true, type: 'error' });
+
+          if (data && data['deleteSurvey']) {
+            api.createNotification(`Survey successfully deleted.`, { showInAppNotification: true, type: 'success' });
+            onDeleteSuccess();
+          }
+        })
+        .catch(error => {
+          api.createNotification(`Error deleting survey. ${error}`, { showInAppNotification: true, type: 'error' });
+      });
+  }
+
   render() {
     const { surveys, classes } = this.props;
     const { selected } = this.state;
@@ -499,7 +518,7 @@ class AdminCalendar extends Component {
               </CardContent>
               <CardActions>
                 <Button size="small" onClick={this.learnMore}><Icon>find_in_page</Icon>MORE</Button>
-                <Button size="small" onClick={this.deleteSurvey}><Icon>delete_forever</Icon>DELETE SURVEY</Button>
+                <Button size="small" onClick={() => { this.deleteSurvey(selected) }}><Icon>delete_forever</Icon>DELETE SURVEY</Button>
               </CardActions>
             </Card>
           </Paper>
@@ -510,7 +529,7 @@ class AdminCalendar extends Component {
       <Grid container spacing={0}>
         <Grid item xs={12} sm={12} md={info ? 8 : 12}>
           <Paper className={this.props.classes.Container}>
-          <BigCalendar
+            <BigCalendar
               popup
               localizer={localizer}
               onSelectEvent={this.onSelectEvent}
@@ -528,7 +547,7 @@ class AdminCalendar extends Component {
               this.props.byOrganization === true ? (
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Tooltip title={'Click to add a new survey'}>
-                    <Fab  color='primary' onClick={this.newSurvey} style={{ marginTop: '25px', marginBottom: '25px' }}><AddIcon /></Fab>
+                    <Fab color='primary' onClick={this.newSurvey} style={{ marginTop: '25px', marginBottom: '25px' }}><AddIcon /></Fab>
                   </Tooltip>
                 </div>
               ) : null}
@@ -610,8 +629,8 @@ export const NewSurveyEntryForOrganization = compose(withApi)(({
 
         let surveyAdminProps = {
           survey: { ...newSurvey, organization: organizationId },
-          onSave: (survey) => {            
-            let newSurvey =  { ...survey };
+          onSave: (survey) => {
+            let newSurvey = { ...survey };
             delete newSurvey.delegates;
             delete newSurvey.active;
             delete newSurvey.events;
@@ -633,13 +652,12 @@ export const NewSurveyEntryForOrganization = compose(withApi)(({
 export const SurveyCalendarForOrganization = compose(withApi)(({ organizationId = null, api }) => {
   const byOrg = isNil(organizationId) === false;
   const query = byOrg === false ? api.queries.Surveys.surveysList : api.queries.Surveys.surveysForOrganization;
+  debugger;
   const variables = byOrg === false ? {} : { organizationId };
   const dataEl = byOrg === false ? 'surveysList' : 'surveysForOrganization';
-
-
   return (
     <Query query={query} variables={variables}>
-      {({ loading, error, data }) => {
+      {({ loading, error, data, refetch }) => {
         if (loading) return <p>Loading Calendar, please wait.</p>
         if (error) return <p>{error.message}</p>
         const calendarProps = {
@@ -647,7 +665,7 @@ export const SurveyCalendarForOrganization = compose(withApi)(({ organizationId 
           byOrganization: byOrg,
           surveys: data[dataEl] || []
         }
-        return (<ThemedCalendar {...calendarProps} />)
+        return (<ThemedCalendar onDeleteSuccess={() => {refetch()}} {...calendarProps} />)
       }}
     </Query>
   )

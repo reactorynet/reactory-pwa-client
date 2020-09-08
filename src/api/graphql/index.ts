@@ -5,8 +5,8 @@ const allScales = gql`
     allScales {
       id
       title
-      key 
-      entries {        
+      key
+      entries {
         description
         rating
       }
@@ -31,20 +31,20 @@ const allOrganizations = gql`
 const leadershipBrandsForOrganization = gql`
 query brandListForOrganizationQuery($organizationId: String!) {
     brandListForOrganization(organizationId: $organizationId) {
-      id      
+      id
       title
       description
       scale {
         id
         key
-        title 
-        entries {          
+        title
+        entries {
           rating
           description
         }
       }
       qualities {
-        id        
+        id
         title
         description
         ordinal
@@ -53,7 +53,7 @@ query brandListForOrganizationQuery($organizationId: String!) {
           title
           description
           ordinal
-        }      
+        }
       }
     }
 }
@@ -64,7 +64,7 @@ const createBrandMutation = gql`
     createBrandForOrganization(brandInput: $brandInput, organizationId: $organizationId){
       id
       title
-      description      
+      description
       scale {
         key
         title
@@ -72,17 +72,17 @@ const createBrandMutation = gql`
           rating
           description
         }
-      }      
+      }
       qualities {
-        ordinal        
+        ordinal
         title
         description
         behaviours {
           ordinal
           description
-        }      
+        }
       }
-    } 
+    }
   }
 `;
 
@@ -98,24 +98,24 @@ const updateBrandMutation = gql`
           description
         }
       }
-      description      
+      description
       qualities {
-        ordinal        
+        ordinal
         title
         description
         behaviours {
           ordinal
           description
-        }      
+        }
       }
-    } 
+    }
   }
 `;
 
 const usersForOrganization = gql`
 query UserListQuery($id: String!, $searchString: String) {
   CoreUsersForOrganization(id: $id, searchString: $searchString) {
-      id      
+      id
       email
       firstName
       lastName
@@ -133,7 +133,7 @@ const createUserMutation = gql`
       lastName
       avatar
       lastLogin
-    } 
+    }
   }
 `;
 
@@ -145,7 +145,7 @@ const updateUserMutation = gql`
       lastName
       email
       avatar
-    } 
+    }
   }
 `;
 
@@ -181,7 +181,7 @@ const surveyDetail = gql`
         qualities {
           id
           title
-          behaviours {            
+          behaviours {
             ordinal
             description
           }
@@ -191,7 +191,7 @@ const surveyDetail = gql`
         id
         name
         logo
-      }		
+      }
       title
       startDate
       endDate
@@ -215,7 +215,7 @@ const surveyDetail = gql`
 				}
 				complete
 				launched
-				removed			
+				removed
 			}
       calendar {
         entryType
@@ -224,7 +224,7 @@ const surveyDetail = gql`
         end
         hasTask
         taskResult
-        taskError        
+        taskError
       }
       timeline {
         when
@@ -248,20 +248,19 @@ const surveysForOrganization = gql`
         id
         name
         logo
-      }      
+      }
       leadershipBrand {
         id
         title
-        description                
-      }      
+        description
+      }
       title
       startDate
       endDate
-      mode            
+      mode
     }
   }
 `;
-
 
 const surveysList = gql`
   query SurveysList{
@@ -271,16 +270,16 @@ const surveysList = gql`
         id
         name
         logo
-      }      
+      }
       leadershipBrand {
         id
         title
         description
-      }            
+      }
       title
       startDate
       endDate
-      mode            
+      mode
     }
   }
 `;
@@ -288,7 +287,7 @@ const surveysList = gql`
 const userProfile = gql`
   query userProfile($profileId: String!){
     userWithId(id: $profileId){
-      id      
+      id
       email
       firstName
       lastName
@@ -335,9 +334,9 @@ const userProfile = gql`
           relationship
           isInternal
         }
-        allowEdit      		
+        allowEdit
       }
-    }    
+    }
   }
 `;
 
@@ -365,7 +364,7 @@ const apiStatus = gql`
       }
       memberships {
         client {
-          id          
+          id
           name
         }
         organization {
@@ -440,11 +439,11 @@ const apiStatus = gql`
             link
             external
             icon
-            roles            
+            roles
           }
         }
-        
-      }     
+
+      }
       messages {
         id
         title
@@ -467,7 +466,7 @@ const apiStatus = gql`
           priority
         }
       }
-      navigationComponents {				
+      navigationComponents {
 				componentFqn
 				componentProps
 				componentPropertyMap
@@ -519,7 +518,7 @@ query assesmentWithId($id: String) {
       delegateTeamName
       assessorTeamName
       delegates {
-        id          
+        id
         delegate {
           id
           email
@@ -554,7 +553,7 @@ query assesmentWithId($id: String) {
 						description
 						ordinal
 					}
-				}			
+				}
 			}
 		}
 		ratings {
@@ -576,7 +575,7 @@ query assesmentWithId($id: String) {
 		}
 	}
 }
-` 
+`
 
 const surveysForUser = gql`
 query MoresUserSurvey($id: String) {
@@ -631,7 +630,7 @@ query MoresUserSurvey($id: String) {
 						description
 						ordinal
 					}
-				}			
+				}
 			}
 		}
 		ratings {
@@ -674,7 +673,7 @@ const userInbox = gql`
         firstName
         lastName
         email
-      }      
+      }
       survey {
         id
         title
@@ -686,7 +685,7 @@ const userInbox = gql`
 
 const reportDetailForUser = gql`
 query ReportDetailForUser($userId: String, $surveyId: String){
-  reportDetailForUser(userId: $userId, surveyId: $surveyId){    
+  reportDetailForUser(userId: $userId, surveyId: $surveyId){
     overall
 		status
 		survey {
@@ -699,7 +698,7 @@ query ReportDetailForUser($userId: String, $surveyId: String){
       organization {
         id
         name
-        logo        
+        logo
       }
 			leadershipBrand {
 				title
@@ -724,7 +723,7 @@ query ReportDetailForUser($userId: String, $surveyId: String){
 						rating
 						description
 					}
-				}				
+				}
 			}
 		}
 		user {
@@ -742,12 +741,12 @@ query ReportDetailForUser($userId: String, $surveyId: String){
 				email
 			}
 			assessmentType
-			ratings {				
+			ratings {
 				quality {
 					id
 					title
 					description
-					ordinal					
+					ordinal
 				}
 				behaviour {
 					title
@@ -757,14 +756,14 @@ query ReportDetailForUser($userId: String, $surveyId: String){
 				rating
 				comment
 			}
-			
+
 		}
 	}
 }`;
 
 const reportsForUser = gql`
 query UserReports($id: String) {
-  userReports(id: $id) {		
+  userReports(id: $id) {
 		overall
 		status
 		survey {
@@ -784,7 +783,7 @@ query UserReports($id: String) {
 						rating
 						description
 					}
-				}				
+				}
 			}
 		}
 		user {
@@ -796,12 +795,12 @@ query UserReports($id: String) {
 		}
 		assessments {
 			assessmentType
-			ratings {				
+			ratings {
 				quality {
 					id
 					title
 					description
-					ordinal					
+					ordinal
 				}
 				behaviour {
 					title
@@ -811,7 +810,7 @@ query UserReports($id: String) {
 				rating
 				comment
 			}
-			
+
 		}
 	}
 }`;
@@ -826,7 +825,7 @@ const graphql = {
     Users: {
       usersForOrganization,
       userProfile,
-      userInbox,      
+      userInbox,
       userLogs: null,
       userPeers: null,
       searchUser: gql`
@@ -837,9 +836,9 @@ const graphql = {
             firstName
             lastName
             avatar
-          } 
+          }
         }
-      `      
+      `
     },
     Templates: {
       templateForOrganization: null,
@@ -853,7 +852,7 @@ const graphql = {
       surveysList,
       calendarForSurvey: null,
       reportsForUser,
-      reportDetailForUser      
+      reportDetailForUser
     },
     Assessments: {
       assessmentsForSurvey: null,
@@ -861,7 +860,7 @@ const graphql = {
       assessmentWithId: assessmentWithId
     },
     Notifications: {
-      notificationsForUser: null,      
+      notificationsForUser: null,
     },
     Tasks: {
       userTasks: gql`
@@ -883,7 +882,7 @@ const graphql = {
               when
             }
             createdAt
-            updatedAt            
+            updatedAt
           }
         }
       `,
@@ -896,13 +895,13 @@ const graphql = {
               title
               description
             }
-            
+
             title
             status
             percentComplete
             startDate
             dueDate
-            shortCodeId            
+            shortCodeId
             user {
               id
               firstName
@@ -920,7 +919,7 @@ const graphql = {
               when
             }
             createdAt
-            updatedAt            
+            updatedAt
           }
         }
       `
@@ -942,7 +941,7 @@ const graphql = {
           setActiveOrganization(organizationId: $organizationId){
             id,
             name
-            logo            
+            logo
           }
         }
       `,
@@ -952,8 +951,8 @@ const graphql = {
       invitePeer: null,
       removePeer: null,
       updatePeer: null,
-      confirmPeers: null,      
-    },  
+      confirmPeers: null,
+    },
     Templates: {
       createTemplate: null,
       updateTemplate: null,
@@ -963,7 +962,7 @@ const graphql = {
       mutation CreateSurveyMutation($id: String!, $surveyData: SurveyInput!){
         createSurvey(id: $id, surveyData: $surveyData){
           id
-        } 
+        }
       }
       `,
       updateSurvey: gql`
@@ -971,8 +970,8 @@ const graphql = {
         updateSurvey(id: $id, surveyData: $surveyData){
           id
           errors
-          updated          
-        } 
+          updated
+        }
       }
     `,
       launchSurvey: gql`
@@ -980,7 +979,7 @@ const graphql = {
           launchSurvey(id: $id, options: $options){
             id
             errors
-          }          
+          }
       }
       `,
       linkDelegate: gql`
@@ -991,11 +990,11 @@ const graphql = {
             user {
               id
               firstName
-            }            
+            }
           }
         }
       `,
-      unlinkDelegate:  gql`
+      unlinkDelegate: gql`
       mutation removeDelegateFromSurvey($surveyId: String!, $delegateId: String){
         removeDelegateFromSurvey(surveyId: $surveyId, delegateId: $delegateId){
           id
@@ -1003,7 +1002,7 @@ const graphql = {
           user {
             id
             firstName
-          }            
+          }
         }
       }
     `,
@@ -1011,7 +1010,16 @@ const graphql = {
         mutation postReminders($surveyId: String, $options: ReminderOptions){
           postReminders(surveyId: $surveyId, options: $options){
             id
-            errors             
+            errors
+          }
+        }
+      `,
+      deleteSurvey: gql`
+        mutation deleteSurvey($id: String!){
+          deleteSurvey(id: $id){
+            id
+            errors
+            updated
           }
         }
       `
@@ -1024,9 +1032,9 @@ const graphql = {
             title
             description
             percentComplete
-          }                              
+          }
         }
-      `,      
+      `,
       updateTask: null,
       archive: null
     },
