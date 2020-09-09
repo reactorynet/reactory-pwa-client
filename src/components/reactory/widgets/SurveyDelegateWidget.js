@@ -234,6 +234,7 @@ class SurveyDelegate extends Component {
   }
 
   render() {
+    debugger;
     const { SurveyDelegateWidget } = this.componentDefs;
     const { props } = this;
     //console.log('Rendering Survey Delegate Widget', { SurveyDelegateWidget, props });
@@ -271,6 +272,14 @@ const BasicModalViewModes = {
   AddDelegates: "add_delegates"
 };
 
+const delegateActionType = {
+  addDelegate: 'add',
+  removeDelegate: 'remove',
+  sendInvite: 'send-invite',
+  launch: 'launch',
+
+}
+
 class SurveyDelegates extends Component {
 
   static propTypes = {
@@ -285,6 +294,7 @@ class SurveyDelegates extends Component {
 
   constructor(props, context) {
     super(props, context)
+
     const state = {
       activeEntry: null,
       modal: false,
@@ -774,10 +784,40 @@ class SurveyDelegates extends Component {
     this.setState({ modal: true, modalType: 'add', userAddType: 'assessor' })
   }
 
+  handleDelegteActionResponse = (actionType, mutationResponse) => {
+    const { api } = this.props;
+    switch (actionType) {
+      case delegateActionType.addDelegate:
+        api.createNotification(`Delegate Added`, {
+          body: `Delegate ${mutationResponse.delegate.firstName} added to survey`, showInAppNotification: true, type: 'success'
+        });
+        break;
+      case delegateActionType.removeDelegate:
+        if (mutationResponse.status == 'deleted')
+          api.createNotification(`Delegate Deleted`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
+        else
+          api.createNotification(`Delegate Removed`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
+        break;
+      case delegateActionType.sendInvite:
+        api.createNotification(`Invite Sent`, { body: `Invite sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        break;
+      case delegateActionType.launch:
+        api.createNotification(`Delegate launched`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
+        break;
+
+      default:
+        api.createNotification(`Success`, { body: `Action succesfully complete`, showInAppNotification: true, type: 'success' });
+        break;
+    }
+  }
+
+  handleDelegateActionErrorResponse = (action, errors) => {
+
+  }
+
   doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...', batch = false, refresh = true, done = () => { }) {
     const { api, formContext } = this.props;
     api.log('SurveyDelegateWidget.doAction(delegateEntry, action, inputData, busyMessage)', { delegateEntry, action, inputData, busyMessage, batch }, 'debug');
-
     const self = this;
     const doMutation = () => {
 
@@ -854,27 +894,38 @@ class SurveyDelegates extends Component {
         };
 
         api.graphqlMutation(mutation, variables).then((mutationResult) => {
-          //console.log('DelegateEntry Result From Mutation', mutationResult)
+          const { data, errors } = mutationResult;
+          // debugger;
+
+          if (errors) {
+            api.createNotification(`Error Performing Action!`, { body: `Could not complete this action. (Errro: ${errors[0]})`, showInAppNotification: true, type: 'error' });
+          }
+
           if (mutationResult.data && mutationResult.data.surveyDelegateAction) {
-            debugger
+
             let formData = [...self.state.formData]
+
             if (action === "add") {
               formData.push({ ...mutationResult.data.surveyDelegateAction });
-              api.createNotification(`Added`, {
-                body: `User ${mutationResult.data.surveyDelegateAction.delegate.firstName} added to survey`, showInAppNotification: true, type: 'success'
-              });
+
+              debugger;
+
+              // api.createNotification(`Added`, { body: `User ${mutationResult.data.surveyDelegateAction.delegate.firstName} added to survey`, showInAppNotification: true, type: 'success' });
             } else {
               const indexToUpdate = findIndex(self.state.formData, { 'id': delegateEntry.id });
-              formData[indexToUpdate] = { ...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction };
+              formData[indexToUpdate] = { ...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction }; // find and spread in new values
             }
 
+            debugger;
+
             self.setState({ displayError: false, message: '', busy: false, formData }, () => {
-              if (self.props.formContext && isFunction(self.props.formContext.refresh && refresh === true) === true) {
-                self.props.formContext.refresh();
-              }
+              this.handleDelegteActionResponse(action, mutationResult.data.surveyDelegateAction);
+              // OLD METHOD FOR REFRESH // if (self.props.formContext && isFunction(self.props.formContext.refresh && refresh === true) === true)  self.props.formContext.refresh();
             });
           }
+
         }).catch((mutationError) => {
+          api.createNotification(`Error!`, { body: `Could not perform this action, please try again.`, showInAppNotification: true, type: 'success' });
           self.setState({ displayError: true, message: 'An error occured while ....', busy: false })
         });
       }
@@ -1459,7 +1510,7 @@ class SurveyDelegates extends Component {
               let removedItems = null;
 
               if (status.key === "removed") {
-                removedItems = sortBy(filter(data, (elem) => { return elem.removed === true }), (delegateEntry) => { return `${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}` }).map((delegateEntry, index) => {
+                removedItems = sortBy(filter(data, (elem) => { return elem.removed === true && elem.status != 'deleted' }), (delegateEntry) => { return `${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}` }).map((delegateEntry, index) => {
                   return renderDelegateItem(delegateEntry, status);
                 });
               }
