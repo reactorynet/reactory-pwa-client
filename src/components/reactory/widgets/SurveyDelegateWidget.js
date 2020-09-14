@@ -276,6 +276,7 @@ const delegateActionType = {
   addDelegate: 'add',
   removeDelegate: 'remove',
   sendInvite: 'send-invite',
+  sendReminder: 'send-reminder',
   launch: 'launch',
 
 }
@@ -800,6 +801,9 @@ class SurveyDelegates extends Component {
         break;
       case delegateActionType.sendInvite:
         api.createNotification(`Invite Sent`, { body: `Invite sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        break;
+      case delegateActionType.sendReminder:
+        api.createNotification(`Reminder Sent`, { body: `Reminder sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.launch:
         api.createNotification(`Delegate launched`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
