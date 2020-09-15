@@ -223,7 +223,6 @@ const getSurveyProps = (props) => {
 };
 
 class SurveyDelegate extends Component {
-
   static styles = theme => {
     return {}
   }
@@ -234,7 +233,6 @@ class SurveyDelegate extends Component {
   }
 
   render() {
-    debugger;
     const { SurveyDelegateWidget } = this.componentDefs;
     const { props } = this;
     //console.log('Rendering Survey Delegate Widget', { SurveyDelegateWidget, props });
@@ -278,6 +276,7 @@ const delegateActionType = {
   sendInvite: 'send-invite',
   sendReminder: 'send-reminder',
   launch: 'launch',
+  relaunch: 'relaunch',
 
 }
 
@@ -365,17 +364,14 @@ class SurveyDelegates extends Component {
       switch (menuItem.id) {
         case 'sendinvite': {
           self.sendCommunicationToDelegate(delegateEntry);
-          //this.sendInviteEmails(delegateEntry)
           break;
         }
         case 'relaunch': {
           self.launchSurveyForDelegate(delegateEntry, true);
-          //self.sendCommunicationToDelegate(delegateEntry, 'launch');
           break;
         }
         case 'launch': {
           self.launchSurveyForDelegate(delegateEntry);
-          //this.launchSurvey(delegateEntry)
           break;
         }
         case 'send-reminder': {
@@ -394,7 +390,6 @@ class SurveyDelegates extends Component {
           this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'details' });
           break;
         }
-
         case 'remove': {
           this.removeDelegateFromSurvey(delegateEntry, delegateEntry.removed === true);
           break;
@@ -470,7 +465,7 @@ class SurveyDelegates extends Component {
     let modalviewComponent = null;
     let reportData = {
       surveyId: self.props.formContext.surveyId,
-      delegateId: activeEntry.id
+      delegateId: activeEntry.id || ''
     };
 
     switch (reportType) {
@@ -539,9 +534,6 @@ class SurveyDelegates extends Component {
         }
 
         const downloadExcelReport = () => {
-
-          debugger
-
           const surveyId = self.props.formContext.$formData.id;
           const delegateId = activeEntry.id
 
@@ -711,8 +703,6 @@ class SurveyDelegates extends Component {
     }
 
     const userSelected = (userToAdd) => {
-      //console.log('Add user to delegates', { userToAdd, p: this.props });
-
       self.doAction({ id: "", delegate: userToAdd }, "add", { userAddType: userAddType }, 'Adding delegate to survey', false, false);
     };
 
@@ -794,6 +784,7 @@ class SurveyDelegates extends Component {
         });
         break;
       case delegateActionType.removeDelegate:
+        this.setState({ activeEntry: null });
         if (mutationResponse.status == 'deleted')
           api.createNotification(`Delegate Deleted`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
         else
@@ -808,15 +799,13 @@ class SurveyDelegates extends Component {
       case delegateActionType.launch:
         api.createNotification(`Delegate launched`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
         break;
-
+      case delegateActionType.relaunch:
+        api.createNotification(`Launch re-sent`, { body: `Launch resent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        break;
       default:
         api.createNotification(`Success`, { body: `Action succesfully complete`, showInAppNotification: true, type: 'success' });
         break;
     }
-  }
-
-  handleDelegateActionErrorResponse = (action, errors) => {
-
   }
 
   doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...', batch = false, refresh = true, done = () => { }) {
@@ -874,11 +863,22 @@ class SurveyDelegates extends Component {
 
         Promise.all(promises).then((promiseResults) => {
           api.log("Promises returned", promiseResults, 'debug');
-          self.setState({ displayError: false, message: '', busy: false }, () => {
-            if (self.props.formContext && isFunction(self.props.formContext.refresh) === true) {
-              self.props.formContext.refresh();
+
+          let formData = [...self.state.formData]
+          let invitedDelegates = [];
+          promiseResults.forEach(result => {
+            const { data, error } = result;
+            if (data && data['surveyDelegateAction']) {
+              invitedDelegates.push(data['surveyDelegateAction'].delegate.firstName)
+              const indexToUpdate = findIndex(self.state.formData, { 'id': data['surveyDelegateAction'].id });
+              formData[indexToUpdate] = { ...formData[indexToUpdate], ...data['surveyDelegateAction'] };
             }
+          })
+
+          self.setState({ displayError: false, message: '', busy: false, formData, selected: [] }, () => {
+            api.createNotification(`Invites Sent`, { body: `Invite sent to ${invitedDelegates.join(', ')}.`, showInAppNotification: true, type: 'success' });
           });
+
         }).catch((promiseError) => {
           api.log('Error processing batch', promiseError, 'error');
           self.setState({ displayError: true, message: 'An error occured doing a batch update', busy: false });
@@ -899,7 +899,6 @@ class SurveyDelegates extends Component {
 
         api.graphqlMutation(mutation, variables).then((mutationResult) => {
           const { data, errors } = mutationResult;
-          // debugger;
 
           if (errors) {
             api.createNotification(`Error Performing Action!`, { body: `Could not complete this action. (Errro: ${errors[0]})`, showInAppNotification: true, type: 'error' });
@@ -911,20 +910,23 @@ class SurveyDelegates extends Component {
 
             if (action === "add") {
               formData.push({ ...mutationResult.data.surveyDelegateAction });
-
-              debugger;
-
-              // api.createNotification(`Added`, { body: `User ${mutationResult.data.surveyDelegateAction.delegate.firstName} added to survey`, showInAppNotification: true, type: 'success' });
             } else {
               const indexToUpdate = findIndex(self.state.formData, { 'id': delegateEntry.id });
-              formData[indexToUpdate] = { ...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction }; // find and spread in new values
+
+              if (action == 'remove' && mutationResult.data.surveyDelegateAction.status == 'deleted') {
+                formData.splice(indexToUpdate, 1); // REMOVE - TO SHOW IN DELEGATE LIST AGAIN
+              }
+              else {
+                formData[indexToUpdate] = { ...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction };
+              }
             }
 
-            debugger;
-
             self.setState({ displayError: false, message: '', busy: false, formData }, () => {
+
+              if (action == 'launch' && delegateEntry.relaunch && delegateEntry.relaunch === true)
+                action = 'relaunch';
+
               this.handleDelegteActionResponse(action, mutationResult.data.surveyDelegateAction);
-              // OLD METHOD FOR REFRESH // if (self.props.formContext && isFunction(self.props.formContext.refresh && refresh === true) === true)  self.props.formContext.refresh();
             });
           }
 
