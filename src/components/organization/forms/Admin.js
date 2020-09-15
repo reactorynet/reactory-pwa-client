@@ -475,7 +475,7 @@ class DefaultFormContainer extends Component {
     const isNew = mode === 'new';
     return (
       <div className={classes.root}>
-        <Typography variant="caption" color="primary">{organization.name}</Typography>                              
+        <Typography variant="h4" color="primary">Active Organisation: {organization.name}</Typography>                              
         <AppBar position="static" color="default">
           <Tabs
             value={tab}
@@ -488,8 +488,7 @@ class DefaultFormContainer extends Component {
             <Tab label="Employees" value={'employees'} disabled={isNew === true} />
             <Tab label="Brands" value={'brands'} disabled={isNew === true} />
             <Tab label="Surveys" value={'surveys'} disabled={isNew === true} />
-            <Tab label="Templates" value={'templates'} disabled={isNew === true} />
-            <Tab label="Configuration" value={'configuration'} disabled={isNew === true} />
+            <Tab label="Templates" value={'templates'} disabled={isNew === true} />            
           </Tabs>
         </AppBar>
         <TabContainer>
@@ -523,28 +522,28 @@ class DefaultFormContainer extends Component {
                       onDeleteUsersClick={that.onDeleteSelectedEmployees}
                       allowDelete={true}
                       multiSelect={true}
-                      selected={this.state.selectedEmployees}
+                      selected={that.state.selectedEmployees}
                        />
                     
                     {
-                      this.state.showConfirmDelete === true && <BasicModal open={true} onClose={()=>{ that.setState({ showConfirmDelete: false}) }}>
-                      <Typography variant="body1">{this.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
-                      <Button variant="raised" color="primary" onClick={this.onConfirmDeleteEmployees}>Yes</Button>
-                      <Button variant="flat" onClick={this.onCancelDeleteEmployees}>No</Button>
+                      that.state.showConfirmDelete === true && <BasicModal open={true} onClose={()=>{ that.setState({ showConfirmDelete: false}) }}>
+                      <Typography variant="body1">{that.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
+                      <Button variant="raised" color="primary" onClick={that.onConfirmDeleteEmployees}>Yes</Button>
+                      <Button variant="flat" onClick={that.onCancelDeleteEmployees}>No</Button>
                     </BasicModal>
                     }
                     {
-                      isNil(this.state.message) === false && <BasicModal open={true} onClose={()=>{ that.setState({ message: null }) }}>
-                      <Typography variant="body1">{this.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
-                      <Button variant="raised" color="primary" onClick={this.onConfirmDeleteEmployees}>Yes</Button>
-                      <Button variant="flat" onClick={this.onCancelDeleteEmployees}>No</Button>
+                      isNil(that.state.message) === false && <BasicModal open={true} onClose={()=>{ that.setState({ message: null }) }}>
+                      <Typography variant="body1">{that.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
+                      <Button variant="raised" color="primary" onClick={that.onConfirmDeleteEmployees}>Yes</Button>
+                      <Button variant="flat" onClick={that.onCancelDeleteEmployees}>No</Button>
                       </BasicModal>
                     }
                     
                   </Fragment>
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/employees/new'}>
-                  <CreateProfile onCancel={this.onClearEmployeeSelection} mode="admin" organizationId={organizationId} profileTitle="New Employee" />
+                  <CreateProfile onCancel={that.onClearEmployeeSelection} mode="admin" organizationId={organizationId} profileTitle="New Employee" />
                 </Route>
               <Route exact path={'/admin/org/:organizationId/employees/:profileId'} >
                   <UserProfile organizationId={organizationId} mode="admin" profileTitle="Manage Employee" beforeComponents={ this.getAdminUserToolbar }/>
@@ -554,7 +553,7 @@ class DefaultFormContainer extends Component {
             <Route path={'/admin/org/:organizationId/brands'} >
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/brands'}>
-                  <BrandListWithData organizationId={organizationId} onSelect={this.onBrandSelected} onNewSelected={this.onNewBrand} />
+                  <BrandListWithData organizationId={organizationId} onSelect={that.onBrandSelected} onNewSelected={this.onNewBrand} />
                   <LeadershipBrandFactoryWidget organization_id={organizationId} onUpdated={()=>{that.forceUpdate()}}  />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/brands/new'}>
@@ -580,6 +579,8 @@ class DefaultFormContainer extends Component {
                 </Route>
                 <Route path={'/admin/org/:organizationId/surveys/:surveyId'} render={(props) => {
                   //console.log('Rendering via route render', props);
+
+                  debugger
                   return (
                     <Fragment>
                       <TowerStoneSurveyConfig 
@@ -623,10 +624,7 @@ class DefaultFormContainer extends Component {
             <Route path={'/admin/org/:organizationId/templates'} component={TemplateListComponent} />
             <Route path={'/admin/org/:organizationId/templates/:templateId'} render={(props) => {
               return (<TemplateEditor templateId={props.match.tempateId}/>)
-            }} />                            
-            <Route path={'/admin/org/:organizationId/configuration'} >
-              <Typography>Disabled</Typography>
-            </Route>
+            }} />                                        
           </Switch>
         </TabContainer>
       </div>

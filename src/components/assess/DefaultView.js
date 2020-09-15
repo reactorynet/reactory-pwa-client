@@ -543,7 +543,7 @@ class DefaultView extends Component {
       return (
         <Paper className={classes.welcomeContainer}>
           <componentDefs.StaticContent
-            slug={`mores-assessments-${survey.surveyType}_${survey.leadershipBrand.id}-welcome-screen`.toLowerCase()}
+            slug={`mores-assessments-${survey.surveyType}_${survey.id}-welcome-screen`.toLowerCase()}
             title={`Welcome Screen: ${survey.surveyType}`}
             propertyBag={this.props}
             defaultValue={<Typography gutterBottom variant="body1">Thank you for taking the time to complete this {assessment.survey.leadershipBrand.title} survey</Typography>}>
@@ -559,7 +559,7 @@ class DefaultView extends Component {
         <Paper className={classes.welcomeContainer}>
 
             <componentDefs.StaticContent
-            slug={`mores-assessments-${survey.surveyType}_${survey.leadershipBrand.id}-welcome-screen`.toLowerCase()}
+            slug={`mores-assessments-${survey.surveyType}_${survey.id}-welcome-screen`.toLowerCase()}
             title={`Welcome Screen: ${survey.surveyType}`}
             propertyBag={this.props}
             defaultValue={ <Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
