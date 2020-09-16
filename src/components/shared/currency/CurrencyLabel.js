@@ -20,11 +20,7 @@ class CurrencyLabel extends Component {
     }
 
     return (
-      <div className={classes.currency}>        
-        <span className={classes.currencyValue}>
-          {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
-        </span>
-      </div>
+      <React.Fragment>{new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}</React.Fragment>
     );
   }
 }

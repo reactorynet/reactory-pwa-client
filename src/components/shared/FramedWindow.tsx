@@ -225,7 +225,7 @@ class FramedWindow extends Component<any, any> {
       delete _fprops.styles;
       _fprops.src = _fprops.url;
       delete _fprops.url;
-
+      debugger
       return (
         <div { ..._cprops } >
             <iframe id={frameid} { ..._fprops } ref={ frame => this.targetWindow = frame } />
