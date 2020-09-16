@@ -449,12 +449,15 @@ class AdminCalendar extends Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
-      selected: null
+      selected: null,
+      showConfirmDelete: false
     };
     this.onDoubleClick = this.onDoubleClick.bind(this);
     this.onSelectEvent = this.onSelectEvent.bind(this);
     this.learnMore = this.learnMore.bind(this);
     this.newSurvey = this.newSurvey.bind(this);
+
+    this.components = props.api.getComponents(['core.AlertDialog'])
   }
 
   onDoubleClick(eventObj, e) {
@@ -483,20 +486,40 @@ class AdminCalendar extends Component {
         if (errors)
           api.createNotification(`Error deleting survey. ${errors[0].message}`, { showInAppNotification: true, type: 'error' });
 
-          if (data && data['deleteSurvey']) {
-            api.createNotification(`Survey successfully deleted.`, { showInAppNotification: true, type: 'success' });
-            onDeleteSuccess();
-          }
-        })
-        .catch(error => {
-          api.createNotification(`Error deleting survey. ${error}`, { showInAppNotification: true, type: 'error' });
+        if (data && data['deleteSurvey']) {
+          api.createNotification(`Survey successfully deleted.`, { showInAppNotification: true, type: 'success' });
+          onDeleteSuccess();
+        }
+      })
+      .catch(error => {
+        api.createNotification(`Error deleting survey. ${error}`, { showInAppNotification: true, type: 'error' });
       });
   }
 
   render() {
     const { surveys, classes } = this.props;
-    const { selected } = this.state;
+    const { AlertDialog } = this.components;
+    const { selected, showConfirmDelete } = this.state;
     let info = null
+
+    let confirmDialog = null;
+    if (showConfirmDelete === true) {
+
+      confirmDialog = (
+        <AlertDialog
+          open={true}
+          title={'Delete Survey?'}
+          content={`Are you sure you want to delete this survey?`}
+          onAccept={() => this.deleteSurvey(selected)}
+          onClose={() => this.setState({ showConfirmDelete: false })}
+          cancelTitle="Cancel"
+          acceptTitle="Yes"
+          cancelProps={{ variant: "text", color: "#00b100" }}
+          confirmProps={{ variant: "text", color: "#F50000" }}
+        />
+      );
+    }
+
     if (isNil(selected) === false) {
       info = (
         <Grid item xs={12} sm={12} md={4}>
@@ -518,7 +541,7 @@ class AdminCalendar extends Component {
               </CardContent>
               <CardActions>
                 <Button size="small" onClick={this.learnMore}><Icon>find_in_page</Icon>MORE</Button>
-                <Button size="small" onClick={() => { this.deleteSurvey(selected) }}><Icon>delete_forever</Icon>DELETE SURVEY</Button>
+                <Button size="small" onClick={() => { this.setState({ showConfirmDelete: true }) }}><Icon>delete_forever</Icon>DELETE SURVEY</Button>
               </CardActions>
             </Card>
           </Paper>
@@ -554,6 +577,7 @@ class AdminCalendar extends Component {
           </Paper>
         </Grid>
         {info}
+        {confirmDialog}
       </Grid>
     )
   }
@@ -664,7 +688,7 @@ export const SurveyCalendarForOrganization = compose(withApi)(({ organizationId 
           byOrganization: byOrg,
           surveys: data[dataEl] || []
         }
-        return (<ThemedCalendar onDeleteSuccess={() => {refetch()}} {...calendarProps} />)
+        return (<ThemedCalendar onDeleteSuccess={() => { refetch() }} {...calendarProps} />)
       }}
     </Query>
   )
