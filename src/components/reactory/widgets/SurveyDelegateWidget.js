@@ -275,7 +275,9 @@ const delegateActionType = {
   removeDelegate: 'remove',
   sendInvite: 'send-invite',
   sendReminder: 'send-reminder',
+  sendSingleReminder: 'send-single-reminder',
   launch: 'launch',
+  singleLaunch: 'send-single-launch',
   relaunch: 'relaunch',
 
 }
@@ -360,7 +362,9 @@ class SurveyDelegates extends Component {
     const { surveyProps } = this.state;
 
     const onMenuItemSelect = (evt, menuItem) => {
+
       api.log('trigger menu item', { menuItem, delegateEntry }, 'debug')
+
       switch (menuItem.id) {
         case 'sendinvite': {
           self.sendCommunicationToDelegate(delegateEntry);
@@ -569,9 +573,13 @@ class SurveyDelegates extends Component {
                   {
                     activeEntry.assessments.map((_assessment, aidx) => {
                       const onMenuItemSelect = (evt, menuItem) => {
-
                         switch (menuItem.id) {
                           case "send-reminder": {
+                            self.sendSingleCommunicationToDelegate(activeEntry, 'send-single-reminder', { assessment: _assessment });
+                            break;
+                          }
+                          case "launch": {
+                            self.sendSingleSurveyLaunchEmail(activeEntry, 'send-single-launch', { assessment: _assessment });
                             break;
                           }
                           case "remove-assessment": {
@@ -641,7 +649,7 @@ class SurveyDelegates extends Component {
 
                         menus.push({
                           title: 'Send Launch',
-                          icon: 'take_off',
+                          icon: 'flight_takeoff',
                           id: 'launch',
                           key: 'launch'
                         });
@@ -776,6 +784,7 @@ class SurveyDelegates extends Component {
   }
 
   handleDelegteActionResponse = (actionType, mutationResponse) => {
+
     const { api } = this.props;
     switch (actionType) {
       case delegateActionType.addDelegate:
@@ -796,8 +805,14 @@ class SurveyDelegates extends Component {
       case delegateActionType.sendReminder:
         api.createNotification(`Reminder Sent`, { body: `Reminder sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
         break;
+      case delegateActionType.sendSingleReminder:
+        api.createNotification(`Reminder sent`, { body: `Reminder sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        break;
       case delegateActionType.launch:
         api.createNotification(`Delegate launched`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
+        break;
+      case delegateActionType.singleLaunch:
+        api.createNotification(`Delegate launch mail sent.`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.relaunch:
         api.createNotification(`Launch re-sent`, { body: `Launch resent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
@@ -885,7 +900,9 @@ class SurveyDelegates extends Component {
         });
 
       } else {
+
         api.log('Single use action');
+
         const variables = {
           survey: this.props.formContext.surveyId,
           entryId: delegateEntry.id,
@@ -944,6 +961,14 @@ class SurveyDelegates extends Component {
 
   sendCommunicationToDelegate(delegateEntry, communication = 'send-invite') {
     this.doAction(delegateEntry, communication, {}, `Sending invite to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
+  }
+
+  sendSingleCommunicationToDelegate(delegateEntry, communication = 'send-single-reminder', inputData) {
+    this.doAction(delegateEntry, communication, inputData, `Sending reminder to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
+  }
+
+  sendSingleSurveyLaunchEmail(delegateEntry, communication = 'send-single-launch', inputData) {
+    this.doAction(delegateEntry, communication, inputData, `Sending reminder to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
   }
 
   launchSurveyForDelegate(delegateEntry, relaunch = false) {
