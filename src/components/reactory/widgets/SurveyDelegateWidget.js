@@ -795,15 +795,15 @@ class SurveyDelegates extends Component {
       case delegateActionType.removeDelegate:
         this.setState({ activeEntry: null });
         if (mutationResponse.status == 'deleted')
-          api.createNotification(`Delegate Deleted`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
+          api.createNotification(`Delegate deleted.`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
         else
-          api.createNotification(`Delegate Removed`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
+          api.createNotification(`Delegate removed.`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.sendInvite:
-        api.createNotification(`Invite Sent`, { body: `Invite sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        api.createNotification(`Invite sent.`, { body: `Invite sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.sendReminder:
-        api.createNotification(`Reminder Sent`, { body: `Reminder sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        api.createNotification(`Reminder sent.`, { body: `Reminder sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.sendSingleReminder:
         api.createNotification(`Reminder sent`, { body: `Reminder sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });

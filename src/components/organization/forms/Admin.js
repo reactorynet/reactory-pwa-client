@@ -9,10 +9,10 @@ import {
   Avatar,
   AppBar, Tabs, Tab,
   Button, Grid, Paper, Icon,
-  FormControl, FormHelperText, 
-  Input, InputLabel, 
+  FormControl, FormHelperText,
+  Input, InputLabel,
   TextField, Typography, Tooltip,
-  Toolbar,  
+  Toolbar,
 } from '@material-ui/core';
 
 import SaveIcon from '@material-ui/icons/Save'
@@ -132,7 +132,7 @@ class OrganizationForm extends Component {
   updateOrganizationPicture = (picture) => (this.setState({ organization: { ...this.state.organization, logo: picture }, pristine: false }));
   updateOrganization = (evt) => {
 
-    this.props.api.log(`Admin.updateOrganization (evt) `, { evt }, 'debugger') 
+    this.props.api.log(`Admin.updateOrganization (evt) `, { evt }, 'debugger')
     debugger
     const { client } = this.props;
     const { organization } = this.state;
@@ -169,59 +169,59 @@ class OrganizationForm extends Component {
       console.error('Mutation error', error);
       that.setState({ message: error, messageTitle: 'Error saving organization' });
     })
-  
-  /**
-   * <form>
-          <Grid container spacing={8}>
-            <Tooltip title="Drag and drop a file on the logo area.">
-              <Grid item xs={12}>
-                
+
+    /**
+     * <form>
+            <Grid container spacing={8}>
+              <Tooltip title="Drag and drop a file on the logo area.">
+                <Grid item xs={12}>
+
+                </Grid>
+              </Tooltip>
+              <Grid item xs={12} md={6}>
+                <Paper className={classes.root600}>
+                  <TextField
+                    id="full-width"
+                    label="Company Code"
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    placeholder="Shortcode"
+                    helperText="Please enter company shortcode"
+                    fullWidth
+                    margin="normal"
+                    onChange={this.updateOrganizationCode}
+                    value={organization.code} />
+
+                  <TextField
+                    id="full-width"
+                    label="Company Name"
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    placeholder="Company Name"
+                    helperText="Please enter a company name"
+                    fullWidth
+                    margin="normal"
+                    onChange={this.updateOrganizationName}
+                    value={organization.name} />
+                </Paper>
               </Grid>
-            </Tooltip>
-            <Grid item xs={12} md={6}>
-              <Paper className={classes.root600}>
-                <TextField
-                  id="full-width"
-                  label="Company Code"
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                  placeholder="Shortcode"
-                  helperText="Please enter company shortcode"
-                  fullWidth
-                  margin="normal"
-                  onChange={this.updateOrganizationCode}
-                  value={organization.code} />
+              <Grid item xs={12} md={6}>
+                <Paper>
 
-                <TextField
-                  id="full-width"
-                  label="Company Name"
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                  placeholder="Company Name"
-                  helperText="Please enter a company name"
-                  fullWidth
-                  margin="normal"
-                  onChange={this.updateOrganizationName}
-                  value={organization.name} />
-              </Paper>
+                </Paper>
+              </Grid>
+              <Grid item xs={12}>
+                <Button type="button" disabled={pristine || submitting || organization.name === ''} onClick={this.updateOrganization}>
+                  <SaveIcon />
+                  Save
+              </Button>
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={6}>
-              <Paper>
-
-              </Paper>
-            </Grid>
-            <Grid item xs={12}>
-              <Button type="button" disabled={pristine || submitting || organization.name === ''} onClick={this.updateOrganization}>
-                <SaveIcon />
-                Save
-            </Button>
-            </Grid>
-          </Grid>
-        </form>
-   * 
-   *  */
+          </form>
+     *
+     *  */
   }
 
 
@@ -236,10 +236,10 @@ class OrganizationForm extends Component {
     if (message) {
       modal = <BasicModal title={this.state.messageTitle || 'Note'}>{message}</BasicModal>
     }
-    
+
     return (
       <Paper className={classes.formContainer}>
-        <OrganizationForm formData={ organization } mode={ organization.id === null ? 'new' : 'edit' } />
+        <OrganizationForm formData={organization} mode={organization.id === null ? 'new' : 'edit'} />
       </Paper>);
   }
 };
@@ -359,20 +359,20 @@ class DefaultFormContainer extends Component {
   };
 
   onEmployeeSelected = (user, uid, options) => {
-    if(options && options.toggle) {
+    if (options && options.toggle) {
       //toggle selection
       const { selectedEmployees } = this.state;
-      if(indexOf(this.state.selectedEmployees, user.id) < 0) {
-        this.setState({ selectedEmployees: [...selectedEmployees, user.id ]});
+      if (indexOf(this.state.selectedEmployees, user.id) < 0) {
+        this.setState({ selectedEmployees: [...selectedEmployees, user.id] });
       } else {
-        let _employees = filter(this.state.selectedEmployees, (id) => {return id !== user.id });
-        this.setState({  selectedEmployees: _employees });
+        let _employees = filter(this.state.selectedEmployees, (id) => { return id !== user.id });
+        this.setState({ selectedEmployees: _employees });
       }
     } else {
       if (user.__isnew) this.props.history.push(`/admin/org/${this.props.organization.id}/employees/new`);
       else this.props.history.push(`/admin/org/${this.props.organization.id}/employees/${user.id}`);
     }
-    
+
   }
 
 
@@ -381,20 +381,20 @@ class DefaultFormContainer extends Component {
     const { api } = this.props;
     const that = this;
 
-    let promises = this.state.selectedEmployees.forEach( id => {
+    let promises = this.state.selectedEmployees.forEach(id => {
       return new Promise((resolve, reject) => {
         const mutation = gql` mutation DeleteUserMutation($id: String!){
             deleteUser(id: $id)
         }`;
 
-        api.graphqlMutation(mutation, { id }).then( result => {
-            if(result.errors) {
-              resolve(id);
-            } else {
-              reject(result.errors);
-            }
+        api.graphqlMutation(mutation, { id }).then(result => {
+          if (result.errors) {
+            resolve(id);
+          } else {
+            reject(result.errors);
+          }
         }).catch(error => {
-            reject(error);
+          reject(error);
         });
       });
     });
@@ -432,7 +432,7 @@ class DefaultFormContainer extends Component {
 
   }
 
-  getAdminUserToolbar(props){
+  getAdminUserToolbar(props) {
     const { profile } = props;
     return (
       <Toolbar>
@@ -454,13 +454,13 @@ class DefaultFormContainer extends Component {
     const that = this;
     const organizationId = organization.id;
 
-    const { 
-      UserListWithSearch, 
-      SpeedDial, 
-      ReactoryForm, 
-      BusinessUnitList, 
-      BusinessUnitForm, 
-      CompanyLogo, 
+    const {
+      UserListWithSearch,
+      SpeedDial,
+      ReactoryForm,
+      BusinessUnitList,
+      BusinessUnitForm,
+      CompanyLogo,
       BusinessUnitFormWithQuery,
       TowerStoneLeadershipBrandConfig,
       TowerStoneSurveyConfig,
@@ -471,11 +471,11 @@ class DefaultFormContainer extends Component {
       TowerStoneSurveyTemplatesForm,
       LeadershipBrandFactoryWidget,
       BasicModal
-     } = that.componentDefs;
+    } = that.componentDefs;
     const isNew = mode === 'new';
     return (
       <div className={classes.root}>
-        <Typography variant="h4" color="primary">Active Organisation: {organization.name}</Typography>                              
+        <Typography variant="h4" color="primary">Active Organisation: {organization.name}</Typography>
         <AppBar position="static" color="default">
           <Tabs
             value={tab}
@@ -488,7 +488,7 @@ class DefaultFormContainer extends Component {
             <Tab label="Employees" value={'employees'} disabled={isNew === true} />
             <Tab label="Brands" value={'brands'} disabled={isNew === true} />
             <Tab label="Surveys" value={'surveys'} disabled={isNew === true} />
-            <Tab label="Templates" value={'templates'} disabled={isNew === true} />            
+            <Tab label="Templates" value={'templates'} disabled={isNew === true} />
           </Tabs>
         </AppBar>
         <TabContainer>
@@ -496,7 +496,7 @@ class DefaultFormContainer extends Component {
             <Route exact path={'/admin/org/:organizationId'} component={DefaultFormComponent} />
             <Route path={'/admin/org/:organizationId/general'} >
               <Fragment>
-                <DefaultFormComponent organization={this.props.organization} onSaved={this.onOrganizationSaved} />                
+                <DefaultFormComponent organization={this.props.organization} onSaved={this.onOrganizationSaved} />
               </Fragment>
             </Route>
             <Route path={'/admin/org/:organizationId/business-units*'}>
@@ -508,7 +508,7 @@ class DefaultFormContainer extends Component {
                   <BusinessUnitForm mode={'new'} organization={organization} businessUnitId={'new'} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/business-units/:businessUnitId'}>
-                  <BusinessUnitFormWithQuery mode={'edit'} organization={organization} businessUnitId={match.params.businessUnitId}/>
+                  <BusinessUnitFormWithQuery mode={'edit'} organization={organization} businessUnitId={match.params.businessUnitId} />
                 </Route>
               </Switch>
             </Route>
@@ -516,37 +516,37 @@ class DefaultFormContainer extends Component {
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/employees'}>
                   <Fragment>
-                    <UserListWithSearch 
-                      organizationId={organizationId} 
+                    <UserListWithSearch
+                      organizationId={organizationId}
                       onUserSelect={that.onEmployeeSelected}
                       onDeleteUsersClick={that.onDeleteSelectedEmployees}
                       allowDelete={true}
                       multiSelect={true}
                       selected={that.state.selectedEmployees}
-                       />
-                    
+                    />
+
                     {
-                      that.state.showConfirmDelete === true && <BasicModal open={true} onClose={()=>{ that.setState({ showConfirmDelete: false}) }}>
-                      <Typography variant="body1">{that.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
-                      <Button variant="raised" color="primary" onClick={that.onConfirmDeleteEmployees}>Yes</Button>
-                      <Button variant="flat" onClick={that.onCancelDeleteEmployees}>No</Button>
-                    </BasicModal>
-                    }
-                    {
-                      isNil(that.state.message) === false && <BasicModal open={true} onClose={()=>{ that.setState({ message: null }) }}>
-                      <Typography variant="body1">{that.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
-                      <Button variant="raised" color="primary" onClick={that.onConfirmDeleteEmployees}>Yes</Button>
-                      <Button variant="flat" onClick={that.onCancelDeleteEmployees}>No</Button>
+                      that.state.showConfirmDelete === true && <BasicModal open={true} onClose={() => { that.setState({ showConfirmDelete: false }) }}>
+                        <Typography variant="body1">{that.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
+                        <Button variant="raised" color="primary" onClick={that.onConfirmDeleteEmployees}>Yes</Button>
+                        <Button variant="flat" onClick={that.onCancelDeleteEmployees}>No</Button>
                       </BasicModal>
                     }
-                    
+                    {
+                      isNil(that.state.message) === false && <BasicModal open={true} onClose={() => { that.setState({ message: null }) }}>
+                        <Typography variant="body1">{that.state.selectedEmployees.length > 1 ? "Are you sure you wish to delete these accounts" : "Delete this account"}</Typography>
+                        <Button variant="raised" color="primary" onClick={that.onConfirmDeleteEmployees}>Yes</Button>
+                        <Button variant="flat" onClick={that.onCancelDeleteEmployees}>No</Button>
+                      </BasicModal>
+                    }
+
                   </Fragment>
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/employees/new'}>
                   <CreateProfile onCancel={that.onClearEmployeeSelection} mode="admin" organizationId={organizationId} profileTitle="New Employee" />
                 </Route>
-              <Route exact path={'/admin/org/:organizationId/employees/:profileId'} >
-                  <UserProfile organizationId={organizationId} mode="admin" profileTitle="Manage Employee" beforeComponents={ this.getAdminUserToolbar }/>
+                <Route exact path={'/admin/org/:organizationId/employees/:profileId'} >
+                  <UserProfile organizationId={organizationId} mode="admin" profileTitle="Manage Employee" beforeComponents={this.getAdminUserToolbar} />
                 </Route>
               </Switch>
             </Route>
@@ -554,77 +554,75 @@ class DefaultFormContainer extends Component {
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/brands'}>
                   <BrandListWithData organizationId={organizationId} onSelect={that.onBrandSelected} onNewSelected={this.onNewBrand} />
-                  <LeadershipBrandFactoryWidget organization_id={organizationId} onUpdated={()=>{that.forceUpdate()}}  />
+                  <LeadershipBrandFactoryWidget organization_id={organizationId} onUpdated={() => { that.forceUpdate() }} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/brands/new'}>
-                  <TowerStoneLeadershipBrandConfig mode="new" formContext={{mode: 'new'}} />
+                  <TowerStoneLeadershipBrandConfig mode="new" formContext={{ mode: 'new' }} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/brands/:brandId'} render={(props) => {
-                  return (<TowerStoneLeadershipBrandConfig mode="edit" organizationId={props.match.params.organizationId} brandId={props.match.params.brandId} formContext={{mode: 'edit', brandId: props.match.params.brandId }} data={{id: props.match.params.brandId}}/>)
-                }} />                  
+                  return (<TowerStoneLeadershipBrandConfig mode="edit" organizationId={props.match.params.organizationId} brandId={props.match.params.brandId} formContext={{ mode: 'edit', brandId: props.match.params.brandId }} data={{ id: props.match.params.brandId }} />)
+                }} />
               </Switch>
             </Route>
             <Route path={'/admin/org/:organizationId/surveys'}>
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/surveys/new'}>
-                  <TowerStoneSurveyConfig 
-                    mode="new" 
-                    organizationId={organizationId} 
-                    formContext={{organizationId, match: this.props.match}} 
-                    formData={{organization: organization}}
-                    style={{maxWidth:'85%'}}/>                  
+                  <TowerStoneSurveyConfig
+                    mode="new"
+                    organizationId={organizationId}
+                    formContext={{ organizationId, match: this.props.match }}
+                    formData={{ organization: organization }}
+                    style={{ maxWidth: '85%' }} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/surveys'}>
                   <SurveyCalendarForOrganization {...this.props} organizationId={organizationId} />
                 </Route>
                 <Route path={'/admin/org/:organizationId/surveys/:surveyId'} render={(props) => {
-                  //console.log('Rendering via route render', props);
 
-                  debugger
                   return (
                     <Fragment>
-                      <TowerStoneSurveyConfig 
-                        mode="edit" 
-                        surveyId={props.match.params.surveyId} 
-                        organizationId={organizationId} 
-                        formContext={{organizationId, surveyId: props.match.params.surveyId}} 
-                        formData={{organization: organizationId, id: props.match.params.surveyId}} 
-                        style={{maxWidth:'85%'}} />
-                      
-                      <TowerStoneSurveyDelegateConfig 
-                        mode="edit"
-                        surveyId={props.match.params.surveyId} 
-                        organizationId={organizationId} 
-                        formContext={{organizationId, surveyId: props.match.params.surveyId}}
-                        data={[]} 
-                      />
-
-                      <TowerStoneSurveySettings 
-                        mode="edit"
-                        surveyId={props.match.params.surveyId} 
-                        organizationId={organizationId} 
-                        formContext={{organizationId, surveyId: props.match.params.surveyId}} 
-                        formData={{}} 
-                      />
-
-                      <TowerStoneSurveyTemplatesForm 
+                      <TowerStoneSurveyConfig
                         mode="edit"
                         surveyId={props.match.params.surveyId}
-                        organizationId={organizationId} 
-                        formContext={{organizationId, surveyId: props.match.params.surveyId}}
+                        organizationId={organizationId}
+                        formContext={{ organizationId, surveyId: props.match.params.surveyId }}
+                        formData={{ organization: organizationId, id: props.match.params.surveyId }}
+                        style={{ maxWidth: '85%' }} />
+
+                      <TowerStoneSurveyDelegateConfig
+                        mode="edit"
+                        surveyId={props.match.params.surveyId}
+                        organizationId={organizationId}
+                        formContext={{ organizationId, surveyId: props.match.params.surveyId }}
+                        data={[]}
                       />
-                      
+
+                      <TowerStoneSurveySettings
+                        mode="edit"
+                        surveyId={props.match.params.surveyId}
+                        organizationId={organizationId}
+                        formContext={{ organizationId, surveyId: props.match.params.surveyId }}
+                        formData={{}}
+                      />
+
+                      <TowerStoneSurveyTemplatesForm
+                        mode="edit"
+                        surveyId={props.match.params.surveyId}
+                        organizationId={organizationId}
+                        formContext={{ organizationId, surveyId: props.match.params.surveyId }}
+                      />
+
                     </Fragment>
                   )
-                }}>                  
-                    
-                </Route>                                  
+                }}>
+
+                </Route>
               </Switch>
             </Route>
             <Route path={'/admin/org/:organizationId/templates'} component={TemplateListComponent} />
             <Route path={'/admin/org/:organizationId/templates/:templateId'} render={(props) => {
-              return (<TemplateEditor templateId={props.match.tempateId}/>)
-            }} />                                        
+              return (<TemplateEditor templateId={props.match.tempateId} />)
+            }} />
           </Switch>
         </TabContainer>
       </div>
