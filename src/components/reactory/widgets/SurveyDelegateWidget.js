@@ -279,6 +279,8 @@ const delegateActionType = {
   launch: 'launch',
   singleLaunch: 'send-single-launch',
   relaunch: 'relaunch',
+  pause: 'pause-delegate',
+  restart: 'restart-delegate',
 
 }
 
@@ -398,6 +400,14 @@ class SurveyDelegates extends Component {
           this.removeDelegateFromSurvey(delegateEntry, delegateEntry.removed === true);
           break;
         }
+        case 'pause': {
+          this.pauseDelegate(delegateEntry, 'pause-delegate');
+          break;
+        }
+        case 'restart': {
+          this.restartDelegate(delegateEntry, 'restar-delegate');
+          break;
+        }
         case 'report_preview': {
           this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report_preview', reportType: surveyProps.delegateReportName });
           break;
@@ -437,11 +447,16 @@ class SurveyDelegates extends Component {
       case 'launched':
       case 'launched-assessor':
       case 'launched-delegate': {
+        menus.push({ title: 'Pause Delegate', icon: 'pause-circle', id: 'pause', key: 'pause' });
         menus.push({ title: 'Send Reminders', icon: 'mail_outline', id: 'send-reminder', key: 'reminder' });
         menus.push({ title: 'Re-send Launch', icon: 'flight_takeoff', id: 'relaunch', key: 'relaunch' });
         menus.push({ title: 'View Assessment Details', icon: 'assignment', id: 'view-assessments', key: 'view-assessments' });
         menus.push({ title: 'Download Report', icon: 'cloud_download', id: 'report', key: 'report' });
         menus.push({ title: 'Preview Report', icon: 'assessment', id: 'report_preview', key: 'report' })
+        break;
+      }
+      case 'paused': {
+        menus.push({ title: 'Restart Delegate', icon: 'play_circle_outline', id: 'restart', key: 'restart' });
         break;
       }
       default: {
@@ -815,7 +830,20 @@ class SurveyDelegates extends Component {
         api.createNotification(`Delegate launch mail sent.`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.relaunch:
-        api.createNotification(`Launch re-sent`, { body: `Launch resent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        api.createNotification(`Launch re-sentObservable.from(object)
+        .map(v => v)
+        .filter(v => true)
+        .subscribe(
+          v => { console.log( v) },
+          e => { console.log( e ) },
+          () => { console.log('complete') }
+        );`, { body: `Launch resent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        break;
+      case delegateActionType.pause:
+        api.createNotification(`Delegate paused.`, { body: `${mutationResponse.delegate.firstName} ${mutationResponse.delegate.lastName} paused.`, showInAppNotification: true, type: 'success' });
+        break;
+      case delegateActionType.restart:
+        api.createNotification(`Delegate restarted.`, { body: `${mutationResponse.delegate.firstName} ${mutationResponse.delegate.lastName} restarted.`, showInAppNotification: true, type: 'success' });
         break;
       default:
         api.createNotification(`Success`, { body: `Action succesfully complete`, showInAppNotification: true, type: 'success' });
@@ -988,6 +1016,14 @@ class SurveyDelegates extends Component {
     if (delegateEntry && assessment) {
       this.doAction(delegateEntry, 'remove-assessor', { assessmentId: assessment.id || assessment._id }, `Removing Assessor From Survey`)
     }
+  }
+
+  pauseDelegate(delegateEntry, communication = 'pause-delegate') {
+    this.doAction(delegateEntry, communication, {}, `Pause ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
+  }
+
+  restartDelegate(delegateEntry, communication = 'restart-delegate') {
+    this.doAction(delegateEntry, communication, {}, `Pause ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
   }
 
   renderDelegateItem(delegateEntry, status) {
