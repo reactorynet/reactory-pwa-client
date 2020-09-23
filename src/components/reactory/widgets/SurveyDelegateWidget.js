@@ -405,7 +405,7 @@ class SurveyDelegates extends Component {
           break;
         }
         case 'restart': {
-          this.restartDelegate(delegateEntry, 'restar-delegate');
+          this.restartDelegate(delegateEntry, 'restart-delegate');
           break;
         }
         case 'report_preview': {
@@ -469,7 +469,6 @@ class SurveyDelegates extends Component {
 
   generateReport(reportType = ReportTypes.SurveyStatusReport) {
     if (this.props.formData.length === 0) return;
-
     this.setState({ basicModalViewMode: 'report_preview', reportType, modal: true, modalType: 'basic', activeEntry: this.props.formData[0] });
   }
 
@@ -849,6 +848,9 @@ class SurveyDelegates extends Component {
         api.createNotification(`Success`, { body: `Action succesfully complete`, showInAppNotification: true, type: 'success' });
         break;
     }
+
+    api.emit('DelegateActionComplete');
+
   }
 
   doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...', batch = false, refresh = true, done = () => { }) {
@@ -1023,7 +1025,7 @@ class SurveyDelegates extends Component {
   }
 
   restartDelegate(delegateEntry, communication = 'restart-delegate') {
-    this.doAction(delegateEntry, communication, {}, `Pause ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
+    this.doAction(delegateEntry, communication, {}, `Restarted delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
   }
 
   renderDelegateItem(delegateEntry, status) {
@@ -1485,6 +1487,11 @@ class SurveyDelegates extends Component {
           icon: 'flight_takeoff'
         },
         {
+          key: 'paused',
+          title: 'Paused',
+          icon: 'pause'
+        },
+        {
           key: 'closed',
           title: 'Closed',
           icon: 'not_interested'
@@ -1511,6 +1518,11 @@ class SurveyDelegates extends Component {
           key: 'launched',
           title: 'Launched',
           icon: 'flight_takeoff'
+        },
+        {
+          key: 'paused',
+          title: 'Paused',
+          icon: 'pause'
         },
         {
           key: 'closed',
@@ -1560,6 +1572,11 @@ class SurveyDelegates extends Component {
             key: 'launched-delegate',
             title: `Launched for ${formContext.formData.assessorTeamName || 'Assessors'}`,
             icon: 'flight_takeoff'
+          },
+          {
+            key: 'paused',
+            title: 'Paused',
+            icon: 'pause'
           },
           {
             key: 'removed',

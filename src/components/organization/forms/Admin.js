@@ -262,6 +262,8 @@ function TabContainer({ children, dir }) {
 
 class DefaultFormContainer extends Component {
 
+  surveyComponent = null;
+
   static propTypes = {
     match: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,
@@ -375,8 +377,6 @@ class DefaultFormContainer extends Component {
 
   }
 
-
-
   onConfirmDeleteEmployees = () => {
     const { api } = this.props;
     const that = this;
@@ -439,6 +439,22 @@ class DefaultFormContainer extends Component {
         {profile.firstName} {profile.lastName} admin
       </Toolbar>
     )
+  }
+
+  componentDidMount() {
+    const self = this;
+    const { api } = self.props;
+    api.on('DelegateActionComplete', () => {
+      console.log('DELEGATE ACTION COMPLETE  -  EMIT CAUGHT DO SOMETHING!!!!!!!!!!');
+      // const comp = self.surveyComponent;
+      // comp.props.refresh();
+      // debugger;
+    });
+  }
+
+  componentWillUnmount() {
+    const { api } = this.props;
+    api.removeListener(eventName);
   }
 
   render() {
@@ -579,6 +595,16 @@ class DefaultFormContainer extends Component {
                 </Route>
                 <Route path={'/admin/org/:organizationId/surveys/:surveyId'} render={(props) => {
 
+
+                  this.surveyComponent = <TowerStoneSurveySettings
+                    mode="edit"
+                    surveyId={props.match.params.surveyId}
+                    organizationId={organizationId}
+                    formContext={{ organizationId, surveyId: props.match.params.surveyId }}
+                    formData={{}}
+                    {...this.props}
+                  />
+
                   return (
                     <Fragment>
                       <TowerStoneSurveyConfig
@@ -597,13 +623,7 @@ class DefaultFormContainer extends Component {
                         data={[]}
                       />
 
-                      <TowerStoneSurveySettings
-                        mode="edit"
-                        surveyId={props.match.params.surveyId}
-                        organizationId={organizationId}
-                        formContext={{ organizationId, surveyId: props.match.params.surveyId }}
-                        formData={{}}
-                      />
+                      {this.surveyComponent}
 
                       <TowerStoneSurveyTemplatesForm
                         mode="edit"
