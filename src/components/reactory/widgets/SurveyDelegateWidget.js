@@ -689,6 +689,54 @@ class SurveyDelegates extends Component {
                   }
                 </List>
               </Grid>
+              <Grid item xs={12} md={3}>
+                <Typography variant="caption">Newly Added Peers</Typography>
+                <List>
+                  {
+
+                    activeEntry.peers.peers.map((peer, ind) => {
+                      let peerHasAssessement = false;
+                      activeEntry.assessments.forEach(assessment => {
+                        debugger;
+                        peerHasAssessement = peer.user.id.toString() == assessment.assessor.id.toString()
+                      });
+
+                      if (!peerHasAssessement) {
+
+                        const onMenuItemSelect = (evt, menuItem) => {
+                          switch (menuItem.id) {
+                            case "launch": {
+                              self.sendSingleSurveyLaunchEmail(activeEntry, 'send-single-launch', { assessment: _assessment });
+                              break;
+                            }
+                            default: {
+                              break;
+                            }
+                          }
+                        };
+
+                        const menus = [
+                          {
+                            title: 'Launch',
+                            icon: 'flight_takeoff',
+                            id: 'launch',
+                            key: 'launch'
+                          }
+                        ]
+                        const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
+
+                        return (
+                          <UserListItem
+                            key={ind}
+                            user={peer.user}
+                            message={'Pending'}
+                            secondaryAction={dropdown} />);
+                      }
+
+                    })
+                  }
+                </List>
+              </Grid>
               <Grid item sm={12} md={9}>
                 <Typography variant="caption">Details</Typography>
                 {detailAssessmentComponent}
@@ -707,9 +755,11 @@ class SurveyDelegates extends Component {
 
   getDetailView() {
     const { Profile } = this.componentDefs
-    const { activeEntry } = this.state;
+    const { activeEntry, surveyProps } = this.state;
 
-    return (<Profile profileId={activeEntry.delegate.id} withPeers={true} mode="admin" />);
+    debugger;
+
+    return (<Profile profileId={activeEntry.delegate.id} withPeers={true} surveyId={surveyProps.survey.id} mode="admin" />);
   }
 
   getActiveModalView() {
@@ -886,6 +936,7 @@ class SurveyDelegates extends Component {
           message
           updatedAt
           lastAction
+          organigram
         }
       }`;
 

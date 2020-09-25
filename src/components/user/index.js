@@ -29,7 +29,7 @@ import {
   TextField,
   Table,
   TableBody,
-  TableHead,  
+  TableHead,
   TableRow,
   TableCell,
   Tooltip,
@@ -37,7 +37,7 @@ import {
 } from '@material-ui/core';
 
 import {
-  Visibility, 
+  Visibility,
   VisibilityOff,
   Search as SearchIcon
 } from '@material-ui/icons'
@@ -55,7 +55,7 @@ import DefaultAvatar from '../../assets/images/profile/default.png';
 import Profile from './Profile';
 import Message from '../message'
 import { omitDeep, getAvatar, CenteredContainer } from '../util';
-import styles from '../shared/styles' 
+import styles from '../shared/styles'
 const UserSearchInputStyles = theme => {
   return {
 
@@ -66,7 +66,7 @@ const UserSearchInput = (props, context) => {
 
   const { classes, value } = props;
   const nilf = () => ({});
-  
+
   return (
     <FormControl>
         <InputLabel htmlFor={props.id || 'user-search-control'}>Search User</InputLabel>
@@ -79,7 +79,7 @@ const UserSearchInput = (props, context) => {
             <InputAdornment position="end">
               <IconButton
                 aria-label="Search for user"
-                onClick={props.onSearch || nilf}                
+                onClick={props.onSearch || nilf}
               >
                 <SearchIcon />
               </IconButton>
@@ -97,7 +97,7 @@ export const UserSearchInputComponent = compose(
 
 /**
  * List component for user entries
- * @param {*} param0 
+ * @param {*} param0
  */
 class UserTable extends Component {
 
@@ -109,7 +109,7 @@ class UserTable extends Component {
         email: '',
         firstName: '',
         lastName: ''
-      }  
+      }
     }
 
     this.onEmailChanged = this.onEmailChanged.bind(this);
@@ -128,8 +128,8 @@ class UserTable extends Component {
   onLastNameChanged = (evt) => this.setState({ newUser: {...this.state.newUser, lastName: evt.target.value}})
   onCreateEmployee = (evt) => {
     const { client, organizationId } = this.props;
-    const { newUser } = this.state;    
-    
+    const { newUser } = this.state;
+
   }
 
   render(){
@@ -144,11 +144,11 @@ class UserTable extends Component {
     if (error) {
       return <p>{error.message}</p>;
     }
-  
+
     const isSelected = (index) => {
       return this.state.selected.indexOf(index) !== -1;
     }
-  
+
     const handleRowSelection = (selectedRows) => {
       this.setState({
         selected: selectedRows
@@ -179,7 +179,7 @@ class UserTable extends Component {
             <TableCell>{user.firstName}</TableCell>
             <TableCell>{user.lastName}</TableCell>
             <TableCell><Button onClick={selectUser}><DetailIcon /></Button></TableCell>
-          </TableRow>)}) }        
+          </TableRow>)}) }
         </TableBody>
         <TableFooter>
           <TableRow>
@@ -197,21 +197,21 @@ class UserTable extends Component {
 export const CreateProfile = compose(
   withApi
 )((props) => {
-  const { 
-    api, organizationId, 
-    profile, onCancel, 
-    onSave, profileTitle, 
-    withPeers = false, withAvatar = false, 
-    withMembership = false, onUserCreated = () => {}, 
-    firstNameHelperText, 
-    surnameHelperText, 
+  const {
+    api, organizationId,
+    profile, onCancel,
+    onSave, profileTitle,
+    withPeers = false, withAvatar = false,
+    withMembership = false, onUserCreated = () => {},
+    firstNameHelperText,
+    surnameHelperText,
     emailHelperText, formProps = {} } = props;
-  
+
     //we update the cache with the server response
-  const updateCache = (cache, { data }) => {        
+  const updateCache = (cache, { data }) => {
     //console.log('Updating cache with user create response', data);
-    
-    
+
+
     try {
       const { CoreUsersForOrganization } = cache.readQuery({ query: api.queries.Users.usersForOrganization, variables: { id: organizationId } })
 
@@ -223,7 +223,7 @@ export const CreateProfile = compose(
     } catch (cacheError) {
       console.error("Could not update cache.", cacheError)
     }
-    
+
 
     //console.log("Cache has been updaterated");
     onUserCreated(data.createUser);
@@ -247,7 +247,7 @@ export const CreateProfile = compose(
           surnameHelperText,
           emailHelperText,
           ...formProps,
-          onSave: (profileData) => {            
+          onSave: (profileData) => {
             createUser({
               variables: {input: omitDeep(profileData, '__isnew'), organizationId }
             });
@@ -255,7 +255,7 @@ export const CreateProfile = compose(
         }
 
         if(loading) return "Updating please wait"
-        if(error) return error.message        
+        if(error) return error.message
         return <Profile {...props}/>
       }}
     </Mutation>
@@ -265,8 +265,9 @@ export const CreateProfile = compose(
 
 export const EditProfile = compose(
   withApi
-)((props) => {  
-  const { api, organizationId, profile, onCancel, withPeers, profileTitle, mode, headerComponents, footerComponents } = props  
+)((props) => {
+  const { api, organizationId, profile, onCancel, withPeers, profileTitle, mode, headerComponents, footerComponents } = props;
+
   return (
     <Mutation mutation={api.mutations.Users.updateUser} >
       {(updateUser, { loading, error, data }) => {
@@ -286,7 +287,7 @@ export const EditProfile = compose(
             delete profileDataInput.peers
             updateUser({
               variables: {
-                id: profile.id, 
+                id: profile.id,
                 profileData: profileDataInput,
               },
               refetchQueries: [{ query: api.queries.System.apiStatus, options: { fetchPolicy: 'network-only' } }]
@@ -311,8 +312,8 @@ export const UserProfile = compose(
     let pid = null;
     pid = isNil(profileId) === false ? profileId : match.params.profileId;
     if (isNil(pid) === true) pid = api.getUser() ? api.getUser().id : null;
-    if (isNil(pid) === true) return <Typography variant="h6" value="No profile id" />  
-    
+    if (isNil(pid) === true) return <Typography variant="h6" value="No profile id" />
+
     return (
     <Query query={api.queries.Users.userProfile} variables={{profileId: pid}} >
       {(queryProps, context)=>{
@@ -320,7 +321,7 @@ export const UserProfile = compose(
         if(loading) return <p>Loading User Profile, please wait...</p>
         if(error) return <p>{error.message}</p>
 
-        if(data.userWithId) {          
+        if(data.userWithId) {
           let profileProps = {...props, profile: { ...data.userWithId }}
           return <EditProfile  {...profileProps } />
         } else {
@@ -334,7 +335,7 @@ export const UserWithQuery = compose(
   withApi,
   withRouter
   )((props) => {
-    const { api, location, userId, organizationId, match, componentFqn, UserWidget, onClick } = props    
+    const { api, location, userId, organizationId, match, componentFqn, UserWidget, onClick } = props
     let Component = UserListItem
     if(componentFqn) Component = api.getComponent(componentFqn);
     if(UserWidget) Component = UserWidget
@@ -348,11 +349,11 @@ export const UserWithQuery = compose(
         if(skip === false){
           if(loading) return <p>Fetching user details...</p>
           if(error) return <p>{error.message}</p>
-          if(data.userWithId) {          
+          if(data.userWithId) {
             const componentProps = {
               ...props,
               user: data.userWithId,
-              onClick            
+              onClick
             };
 
             return <Component { ...componentProps }  />
@@ -362,7 +363,7 @@ export const UserWithQuery = compose(
         } else {
           return <Component { ...props } onClick={onClick} />
         }
-        
+
       }}
     </Query>)
 });
@@ -376,7 +377,7 @@ export const UserListItem = (props) => {
       <ListItemText primary={"None"} secondary={ "User not set" }/>
     </ListItem>)
   }
-  
+
   const displayText = `${user.firstName} ${user.lastName}`;
   const hasMessage = typeof message === 'string';
   return (
@@ -413,8 +414,8 @@ class Inbox extends Component {
         outline: '1px solid black',
         display: 'block',
         width: '100%',
-        overflow: 'scroll',        
-      }      
+        overflow: 'scroll',
+      }
     };
   }
 
@@ -438,7 +439,7 @@ class Inbox extends Component {
       item: true,
       xs: 12,
       md: 9,
-      lg: 9    
+      lg: 9
     };
 
     let viewPane = null;
@@ -446,22 +447,22 @@ class Inbox extends Component {
       const message = this.props.messages[selected];
       viewPane = (
       <Grid {...viewProps}>
-        <Paper className={classes.PreviewPane}>                                                 
+        <Paper className={classes.PreviewPane}>
           <Typography variant="h6">{message.subject}</Typography><br/>
-          <Typography className={classes.PreviewBody} variant="body1" dangerouslySetInnerHTML={{__html: message.message}}></Typography>        
+          <Typography className={classes.PreviewBody} variant="body1" dangerouslySetInnerHTML={{__html: message.message}}></Typography>
         </Paper>
       </Grid>);
     } else {
       viewPane = (<Grid {...viewProps}>
-        <Paper className={classes.PreviewPane}>                                                 
-          <Typography variant="h6">Select a message to view</Typography>        
+        <Paper className={classes.PreviewPane}>
+          <Typography variant="h6">Select a message to view</Typography>
         </Paper>
       </Grid>);
     }
 
     return (
       <CenteredContainer>
-        <Grid container>          
+        <Grid container>
           <Grid {...listProps}>
             <List>
               {this.props.messages.map((message, index) => {
@@ -473,7 +474,7 @@ class Inbox extends Component {
                       <div>
                         <IconButton>
                           <Icon>delete</Icon>
-                        </IconButton>                                    
+                        </IconButton>
                       </div>
                     </ListItem>)}
                 }
@@ -481,7 +482,7 @@ class Inbox extends Component {
             </List>
           </Grid>
           {viewPane}
-        </Grid> 
+        </Grid>
       </CenteredContainer>
     );
   }
@@ -501,7 +502,7 @@ export const UserInbox = compose(withApi)(({ api, via = 'local', display = 'defa
   </Query>));
 
 
-const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null, classes, graphql = null, formContext }) => {  
+const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null, classes, graphql = null, formContext }) => {
   const queryText = graphql && graphql.text ? graphql.text : api.queries.Users.usersForOrganization;
   const variables = graphql && graphql.variables ? om(formContext, graphql.variables) : { id: organizationId, searchString };
 
@@ -510,7 +511,7 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
       {({ loading, error, data } ) => {
         if(loading === true) return "Loading"
         if(error) return error.message
-        
+
         const newUser = {
           firstName: '',
           lastName: '',
@@ -527,7 +528,7 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
         //console.log("Available Alphabet is", {availableAlphabet});
         return (
           <List subheader={ <li /> }>
-          { 
+          {
             availableAlphabet.map( ( letter, index ) => {
               return (
               <li key={letter} className={classes && classes.userListSubheader ? classes.userListSubheader : ''}>
@@ -538,45 +539,45 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
                     const raiseUserSelected = () => {
                       if(onUserSelect) onUserSelect(user, uid)
                     }
-                    
+
                     const raiseUserChecked = () => {
                       if(onUserSelect) onUserSelect(user, uid, { toggle: true })
                     }
 
 
-                    const nilf = () => {};                    
+                    const nilf = () => {};
                     const isSelected = intersection(selected, [user.id]).length === 1;
                     const exclude = intersection(excluded, [user.id]).length === 1;
                     const displayText = `${user.firstName} ${user.lastName}`;
 
                     if(exclude === true) return null;
-                                                          
+
                     return (
                       <ListItem selected={isSelected} onClick={ multiSelect === false ? raiseUserSelected : nilf  } dense button key={uid}>
                         <Avatar alt={displayText} src={getAvatar(user)} onClick={ raiseUserSelected } />
-                        <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>                  
-                        { multiSelect === true ? 
+                        <ListItemText primary={ user.__isnew ? 'NEW' : displayText} secondary={ user.__isnew ? 'Click here to add a new user / employee' : user.email}/>
+                        { multiSelect === true ?
                         <Checkbox
                           checked={isSelected}
                           tabIndex={-1}
                           disableRipple
                           onClick={raiseUserChecked}
                           /> : null }
-                        { isFunction(secondaryAction) === true ? 
-                          secondaryAction(user) : 
+                        { isFunction(secondaryAction) === true ?
+                          secondaryAction(user) :
                           secondaryAction }
                       </ListItem>
                     )
                   })
                 }
-                </ul>                  
+                </ul>
               </li>
-              );    
+              );
             })
-          }                
+          }
           </List>
         )
-      }}      
+      }}
     </Query>);
 }
 
@@ -595,7 +596,7 @@ UserList.defaultProps = {
   }
 };
 
- 
+
 export const UserListWithData = compose(
   withTheme,
   withApi
@@ -623,7 +624,7 @@ class Logout extends Component {
       //console.log('error logging out', e)
       this.props.history.push('/login')
     })
-  }  
+  }
 
   render(){
     if(this.state.done === false) return <Typography>Signing out...</Typography>
