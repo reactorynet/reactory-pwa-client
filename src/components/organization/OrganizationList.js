@@ -35,7 +35,7 @@ class OrganizationList extends Component {
     } else {
       this.setState({selected: [organization.id]}, ()=>{
         if(this.props.onOrganizationClick) this.props.onOrganizationClick(organization, 'select');
-        if(this.props.admin===true) this.props.history.push(`/admin/org/${organization.id}/general`);
+        if(this.props.admin===true) this.props.history.push(`/admin/org/${organization.id}/surveys`);
       });
     }    
   }
@@ -67,7 +67,7 @@ class OrganizationList extends Component {
     let newOrganizationLink = null;
     if(this.props.newOrganizationLink === true){
       const selectNewLinkClick = () => { that.handleOrganizationSelect({id: 'new', name: 'NEW ORGANIZATION'}) };
-      newOrganizationLink = (<Button key={-1} color="primary" onClick={selectNewLinkClick}><Icon>add</Icon>NEW</Button>)
+      newOrganizationLink = (<Button key={-1} color="primary" onClick={selectNewLinkClick}><Icon>add</Icon>NEW ORGANISATION</Button>)
     }
 
     
@@ -143,7 +143,7 @@ const organizationQuery = gql`
         id
         code
         name
-        logo
+        logoURL
         avatar
         createdAt
         updatedAt

@@ -305,7 +305,7 @@ class MaterialTableWidget extends Component {
 
                 if (uiOptions.disablePaging === true) {
                   result.page = 1,
-                    result.totalCount = result.data.length;
+                  result.totalCount = result.data.length;
                 }
 
                 result.page = result.page - 1;
@@ -522,7 +522,6 @@ class MaterialTableWidget extends Component {
             actions={actions}
             onSelectionChange={onSelectionChange}
             components={components}
-
             detailPanel={detailsPanel}
 
           />

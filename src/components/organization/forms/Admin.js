@@ -282,12 +282,11 @@ class DefaultFormContainer extends Component {
     super(props)
     this.state = {
       errors: [],
-      tab: 0,
+      tab: 'surveys',
       leadershipBrand: null,
       leadershipBrandMode: 'new',
       employee: null,
       employeeMode: 'list',
-      survey: null,
       surveyMode: 'calendar',
       selectedEmployees: [],
       showConfirmDelete: false,
@@ -483,12 +482,11 @@ class DefaultFormContainer extends Component {
             indicatorColor="primary"
             textColor="primary"
             variant="fullWidth">
-            <Tab label="General" value={'general'} />
+            <Tab label="Surveys" value={'surveys'} disabled={isNew === true} />
+            <Tab label="Organisation" value={'general'} />
             <Tab label="Business Units" value={'business-units'} disabled={isNew === true} />
             <Tab label="Employees" value={'employees'} disabled={isNew === true} />
-            <Tab label="Brands" value={'brands'} disabled={isNew === true} />
-            <Tab label="Surveys" value={'surveys'} disabled={isNew === true} />
-            <Tab label="Templates" value={'templates'} disabled={isNew === true} />            
+            <Tab label="Question Sets" value={'brands'} disabled={isNew === true} />            
           </Tabs>
         </AppBar>
         <TabContainer>
@@ -579,10 +577,9 @@ class DefaultFormContainer extends Component {
                 </Route>
                 <Route path={'/admin/org/:organizationId/surveys/:surveyId'} render={(props) => {
                   //console.log('Rendering via route render', props);
-
-                  debugger
                   return (
                     <Fragment>
+                      {props.match.params.surveyId}
                       <TowerStoneSurveyConfig 
                         mode="edit" 
                         surveyId={props.match.params.surveyId} 

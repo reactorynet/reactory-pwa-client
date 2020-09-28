@@ -609,8 +609,11 @@ class ReactoryApi extends EventEmitter {
     this.loadComponent(Component, props, target);
   }
 
-  renderForm(componentView) {
+  renderForm(componentView, wrap: boolean = true) {
     const that = this;
+
+    if(wrap === false) return (<React.Fragment>{componentView}</React.Fragment>)
+
     return (<React.Fragment>
       <CssBaseline />
       <Provider store={that.reduxStore}>
@@ -645,7 +648,7 @@ class ReactoryApi extends EventEmitter {
                   {...props}
                   context={context}
                   >{props.children}
-                </ReactoryFormComponent>);
+                </ReactoryFormComponent>, formDef.wrap === true);
               };
               that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent);
             }

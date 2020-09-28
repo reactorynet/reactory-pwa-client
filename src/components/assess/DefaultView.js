@@ -584,6 +584,9 @@ class DefaultView extends Component {
     const { StaticContent } = this.componentDefs;
     const { survey } = assessment;
     const that = this;
+
+    const { palette } = api.getTheme();
+
     const gotoDashboard = () => {
       history.push("/");
     }
@@ -601,7 +604,9 @@ class DefaultView extends Component {
         }).then(response => {
           let isComplete = false;
           if (response.data.setAssessmentComplete && response.data.setAssessmentComplete) isComplete = response.data.setAssessmentComplete.complete === true;
-          that.setState({ completing: false, complete: isComplete, assessment: { ...lodash.cloneDeep(that.state.assessment), complete: isComplete } });
+          that.setState({ completing: false, complete: isComplete, assessment: { ...lodash.cloneDeep(that.state.assessment), complete: isComplete } }, ()=>{
+            gotoDashboard()            
+          });
         }).catch(mutateError => {
           that.setState({ completing: false, completeError: 'Could not update the assessment status' });
         })
@@ -613,25 +618,19 @@ class DefaultView extends Component {
         {assessment.complete === false &&
           <Fragment>
             <StaticContent slug={`mores-assessments-survey-${survey.id}-thank-you`} propertyBag={{assessment, survey }} editAction={'link'} defaultValue={<> 
-            <Typography gutterBottom variant="body1">Thank you for taking the time to complete the assessment. If you are comfortable with the ratings and input that you have provided, please click the complete button below.</Typography> 
-            <Typography variant="body1">If you want to come back later and review your answers, simply click back to Dashboard and return later.</Typography>
+            <Typography gutterBottom variant="body1">Thank you for taking the time to provide your input. If you are comfortable with the ratings and input that you have provided, please click FINISH.</Typography> 
+            <Typography variant="body1">You may click BACK below to review your input, however once you click FINISH you will not be able to change your input.</Typography>
             </>}/>                        
-            <Button onClick={completeAssessment} color="primary" style={{ marginRight: '4px' }}><Icon>save</Icon>&nbsp;Complete</Button>
-            <Button onClick={gotoDashboard}><Icon>dashboard</Icon>Dashboard</Button>
-          </Fragment>}
-        {assessment.complete === true &&
-          <Fragment>
-            <Typography gutterBottom variant="body1">You've completed this assessment.</Typography>
-            <Button onClick={gotoDashboard}><Icon>dashboard</Icon>Dashboard</Button>
-          </Fragment>}
+            <Button onClick={completeAssessment} style={{ marginRight: '4px', color: palette.success.main }}><Icon>check_outline</Icon>&nbsp;Finish</Button>
+          </Fragment>}        
       </Paper>
     );
   }
 
-  persistRating(ratingEntry, ratingIndex, deleteRating = false) {
+  persistRating(ratingEntry, ratingIndex, deleteRating = false, iteration = 0) {
     const that = this;
     const { api } = this.props;
-    const { assessment } = this.state;
+    const { assessment, assessment_rollback } = this.state;
     
     api.graphqlMutation(gql`mutation SetRatingForAssessment(
         $id: String, $ratingId: String, 
@@ -682,8 +681,36 @@ class DefaultView extends Component {
         lodash.pullAt(assessmentState.ratings, [ratingIndex]);
         that.setState({ assessment: assessmentState })
       }
+
+      if(iteration > 0) {
+        const assessmentState = lodash.cloneDeep(assessment);
+        assessmentState.ratings[ratingIndex] = ratingEntry;
+        that.setState({ assessment: assessmentState })
+      }
+
     }).catch((persistRatingError) => {
-      console.error('Error saving rating value', persistRatingError)
+      api.log('Error saving rating value', persistRatingError, 'error')
+      
+      if(assessment_rollback) {
+        that.setState({ assessment: assessment_rollback }, () => {
+          if(iteration === 0) {
+            api.createNotification('Could not save your last score, the system will automatically retry in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'info'})
+            setTimeout(()=>{
+              that.persistRating(ratingEntry, ratingIndex, deleteRating, iteration+1)
+            }, 3000)
+          } else {
+              if(iteration < 3) {
+
+                setTimeout(()=>{
+                  that.persistRating(ratingEntry, ratingIndex, deleteRating, iteration+1)
+                }, 3000 * iteration)
+              } else {
+                api.createNotification('Could not save your last score, the system may be offline, please try again in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'error'})            
+              }              
+          }
+         
+        })
+      } 
     })
   }
 
@@ -702,8 +729,8 @@ class DefaultView extends Component {
       const assessmentState = lodash.cloneDeep(assessment);
       assessmentState.ratings[ratingIndex] = ratingEntry;
       assessmentState.dirty = true;
-      this.setState({ assessment: assessmentState }, () => {
-        that.persistRating(ratingEntry, ratingIndex);
+      this.setState({ assessment: assessmentState, assessment_rollback: lodash.cloneDeep(assessment) }, () => {
+        that.persistRating(ratingEntry, ratingIndex, false, 0);
       });
     } else {
       //console.log('Rating Index not found');
@@ -1233,7 +1260,11 @@ class DefaultView extends Component {
   }
 
   currentStepValid() {
+    const { mode } = this.props;
     const { assessment, step } = this.state;
+
+    if (mode === 'admin') return true;
+
     if (step === 0) return true;
 
     let maxSteps = assessment.survey.leadershipBrand.qualities.length + 2;

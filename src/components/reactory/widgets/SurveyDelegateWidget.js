@@ -478,6 +478,7 @@ class SurveyDelegates extends Component {
         reportData.delegateIds = selected ? Object.keys(selected).map(k => k) : surveyProps.survey.delegates.map(delegate => delegate.id);
         reportData.selectionTitle = selectionTitle;
         reportData.selectionDescription = selectionDescription;
+        reportData.reportType = reportType;
         delete reportData.delegateId;
         break;
       }
@@ -515,7 +516,7 @@ class SurveyDelegates extends Component {
 
         if (assessment && (assessment.id || assessment._id)) {
           detailAssessmentComponent = (
-            <FullScreenModal open={true} title={`Assessment Details as Admin`} onClose={closeAssessmentModal}>
+            <FullScreenModal open={true} title={`Assessment Details as Admin - assement id (${assessment.id || assessment._id})`} onClose={closeAssessmentModal}>
               <Assessment assessmentId={assessment.id || assessment._id} mode="admin" />
             </FullScreenModal>
           )

@@ -341,9 +341,9 @@ class App extends Component<any, AppState> {
     const Globals = (props, context) => {              
       let globalForms =  api.getGlobalComponents();
       return (
-      <React.Fragment>
-        { globalForms.map((GLOBALFORM, gidx) => <GLOBALFORM key={gidx}></GLOBALFORM>) }
-      </React.Fragment>
+      <div key={'$GLOBAL_FORMS$'}>
+        { globalForms.map((GLOBALFORM, gidx) => <GLOBALFORM key={`$GLOBAL_FORM_${gidx}$`}/>) }
+      </div>
       )
     };
 
