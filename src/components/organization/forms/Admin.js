@@ -444,17 +444,17 @@ class DefaultFormContainer extends Component {
   componentDidMount() {
     const self = this;
     const { api } = self.props;
-    api.on('DelegateActionComplete', () => {
-      console.log('DELEGATE ACTION COMPLETE  -  EMIT CAUGHT DO SOMETHING!!!!!!!!!!');
+    // api.on('DelegateActionComplete', () => {
+      // console.log('DELEGATE ACTION COMPLETE  -  EMIT CAUGHT DO SOMETHING!!!!!!!!!!');
       // const comp = self.surveyComponent;
       // comp.props.refresh();
       // debugger;
-    });
+    // });
   }
 
   componentWillUnmount() {
     const { api } = this.props;
-    api.removeListener(eventName);
+    // api.removeListener(eventName);
   }
 
   render() {

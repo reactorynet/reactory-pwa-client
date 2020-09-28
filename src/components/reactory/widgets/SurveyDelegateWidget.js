@@ -277,6 +277,7 @@ const delegateActionType = {
   sendReminder: 'send-reminder',
   sendSingleReminder: 'send-single-reminder',
   launch: 'launch',
+  launchSingleAssessor: 'launch-single-assessor',
   singleLaunch: 'send-single-launch',
   relaunch: 'relaunch',
   pause: 'pause-delegate',
@@ -693,20 +694,21 @@ class SurveyDelegates extends Component {
                 <Typography variant="caption">Newly Added Peers</Typography>
                 <List>
                   {
-
                     activeEntry.peers.peers.map((peer, ind) => {
                       let peerHasAssessement = false;
-                      activeEntry.assessments.forEach(assessment => {
-                        debugger;
-                        peerHasAssessement = peer.user.id.toString() == assessment.assessor.id.toString()
-                      });
+                      for (var assessement of activeEntry.assessments.filter(ass => ass.assessor.id != activeEntry.delegate.id)) {
+                        if (peer.user.id == assessement.assessor.id) {
+                          peerHasAssessement = true;
+                          break;
+                        }
+                      }
 
                       if (!peerHasAssessement) {
 
                         const onMenuItemSelect = (evt, menuItem) => {
                           switch (menuItem.id) {
                             case "launch": {
-                              self.sendSingleSurveyLaunchEmail(activeEntry, 'send-single-launch', { assessment: _assessment });
+                              self.launchSingleAssessore(activeEntry, 'launch-single-assessor', { peer: peer.user });
                               break;
                             }
                             default: {
@@ -756,8 +758,6 @@ class SurveyDelegates extends Component {
   getDetailView() {
     const { Profile } = this.componentDefs
     const { activeEntry, surveyProps } = this.state;
-
-    debugger;
 
     return (<Profile profileId={activeEntry.delegate.id} withPeers={true} surveyId={surveyProps.survey.id} mode="admin" />);
   }
@@ -875,18 +875,15 @@ class SurveyDelegates extends Component {
       case delegateActionType.launch:
         api.createNotification(`Delegate launched`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
         break;
+      case delegateActionType.launchSingleAssessor:
+        api.createNotification(`Assessor launched`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
+        this.setState({ activeEntry: mutationResponse });
+        break;
       case delegateActionType.singleLaunch:
         api.createNotification(`Delegate launch mail sent.`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.relaunch:
-        api.createNotification(`Launch re-sentObservable.from(object)
-        .map(v => v)
-        .filter(v => true)
-        .subscribe(
-          v => { console.log( v) },
-          e => { console.log( e ) },
-          () => { console.log('complete') }
-        );`, { body: `Launch resent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        api.createNotification(`Delegate Relaunch`, { body: `Launch resent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.pause:
         api.createNotification(`Delegate paused.`, { body: `${mutationResponse.delegate.firstName} ${mutationResponse.delegate.lastName} paused.`, showInAppNotification: true, type: 'success' });
@@ -922,6 +919,14 @@ class SurveyDelegates extends Component {
           team
           peers {
             id
+            peers{
+              user {
+                id
+                firstName
+                lastName
+              }
+            }
+
           }
           notifications {
             id
@@ -936,9 +941,9 @@ class SurveyDelegates extends Component {
           message
           updatedAt
           lastAction
-          organigram
         }
       }`;
+      // organigram
 
       if (batch === true && isArray(delegateEntry)) {
 
@@ -1050,6 +1055,12 @@ class SurveyDelegates extends Component {
 
   sendSingleSurveyLaunchEmail(delegateEntry, communication = 'send-single-launch', inputData) {
     this.doAction(delegateEntry, communication, inputData, `Sending reminder to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
+  }
+
+  // NEW
+  launchSingleAssessore(delegateEntry, communication = 'launch-single-assessor', inputData) {
+    debugger;
+    this.doAction(delegateEntry, communication, inputData, `Adding ${inputData.peer.firstName} ${inputData.peer.lastName} as an assessor for ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
   }
 
   launchSurveyForDelegate(delegateEntry, relaunch = false) {
