@@ -670,6 +670,10 @@ class DefaultView extends Component {
       deleteRating: deleteRating,
     }, { 'fetch-policy': 'network-only' }).then(response => {
 
+      if(response.errors && response.errors.length > 0) {
+        api.createNotification('Could not save your last score. The system may be offline, please try again in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'errors'})
+      }
+
       if (ratingIndex === -1) {
         const assessmentState = lodash.cloneDeep(assessment);
         assessmentState.ratings.push({ ...response.data.setRatingForAssessment });
