@@ -31,7 +31,7 @@ class SlideOutLauncher extends Component {
 
     this.onClick = this.onClick.bind(this);
     this.componentDefs = props.api.getComponents(['core.SpeedDial']);
-    
+
   }
 
   onClick() {
@@ -42,20 +42,20 @@ class SlideOutLauncher extends Component {
 
     let _props = { ...this.props };
 
-    let {      
+    let {
       formData,
-      uiSchema,     
+      uiSchema,
     } = _props;
 
     let isFormWidget = false;
 
-    if(formData && uiSchema) {
+    if (formData && uiSchema) {
       isFormWidget = true;
     }
 
-    if(isFormWidget && uiSchema["ui:options"]) {
+    if (isFormWidget && uiSchema["ui:options"]) {
       const uiOptions = uiSchema["ui:options"];
-      if(uiOptions.props) {
+      if (uiOptions.props) {
         _props = { ..._props, ...uiOptions.props }
       }
     };
@@ -77,13 +77,13 @@ class SlideOutLauncher extends Component {
 
     const { onClick } = this;
 
-    let icon = buttonIcon;    
-            
+    let icon = buttonIcon;
+
     const tpl = (format) => {
       try {
         return api.utils.template(format)(this.props);
       }
-      catch(templateError){
+      catch (templateError) {
         return `Bad Template ${templateError.message}`;
       }
     }
@@ -97,7 +97,7 @@ class SlideOutLauncher extends Component {
     let componentFound = true;
     let childprops = { ...childProps };
 
-    if(ChildComponent === null || ChildComponent === undefined) {
+    if (ChildComponent === null || ChildComponent === undefined) {
       componentFound = false;
       ChildComponent = api.getComponent("core.NotFound");
       childprops = {
@@ -108,17 +108,17 @@ class SlideOutLauncher extends Component {
     if (componentProps && this.state.open === true && componentFound === true) {
       childprops = { ...childprops, ...api.utils.objectMapper(this.props, componentProps), onClose: onClick };
     }
-                
+
     let LaunchButton = (
       <Button onClick={onClick}>
-        <Icon>{icon}</Icon>
-        {_buttonTitle}
+        { icon && <Icon>{icon}</Icon> }
+        { _buttonTitle }
       </Button>
     );
 
     const { SpeedDial } = this.componentDefs;
 
-    if(_buttonVariant === 'IconButton'){
+    if (_buttonVariant === 'IconButton') {
       LaunchButton = (
         <IconButton onClick={onClick} color={buttonProps.color || "primary"} style={buttonProps.style || {}}>
           <Icon>{icon}</Icon>
@@ -126,7 +126,7 @@ class SlideOutLauncher extends Component {
       )
     }
 
-    if(_buttonVariant === "Fab") {
+    if (_buttonVariant === "Fab") {
       LaunchButton = (
         <Fab size={buttonProps.size || "medium"} variant={buttonProps.variant || "round"} onClick={onClick} color={buttonProps.color || "primary"} style={buttonProps.style || {}}>
           <Icon>{icon}</Icon>
@@ -135,9 +135,9 @@ class SlideOutLauncher extends Component {
       )
     }
 
-    if(_buttonVariant === 'Typography') {
+    if (_buttonVariant === 'Typography') {
       LaunchButton = (
-        <Typography onClick={onClick} variant={buttonProps.variant || "body2"} color={buttonProps.color || 'primary' } style={buttonProps.style || {}}>
+        <Typography onClick={onClick} variant={buttonProps.variant || "body2"} color={buttonProps.color || 'primary'} style={buttonProps.style || {}}>
           {icon ? <Icon>{icon}</Icon> : null}
           {_buttonTitle}
         </Typography>
@@ -149,7 +149,7 @@ class SlideOutLauncher extends Component {
       actions.forEach((action) => {
         action.icon = (<Icon>{action.icon}</Icon>);
         action.clickHandler = () => {
-          if(action.clickAction && action.clickAction === 'navigate') {
+          if (action.clickAction && action.clickAction === 'navigate') {
             api.goto(action.link);
           }
           else if (action.clickAction && action.clickAction === 'launch-slideout') {
@@ -169,7 +169,7 @@ class SlideOutLauncher extends Component {
           title={_windowTitle}
           slide={this.props.slideDirection}
           onClose={onClick}>
-          { this.state.open === true ? <ChildComponent {...childprops} /> : null }
+          {this.state.open === true ? <ChildComponent {...childprops} /> : null}
         </FullScreenModal>
       </Fragment>
     )
