@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import { compose } from 'recompose';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
-import { withStyles, makeStyles } from '@material-ui/core/styles';
+import { withStyles, makeStyles, withTheme } from '@material-ui/core/styles';
+// import { withTheme } from '@material-ui/styles';
 import PropTypes from 'prop-types';
 import {
   Grid,
@@ -126,7 +127,7 @@ class ProductCardWidget extends Component {
 
   render() {
     const { props } = this;
-    const { classes, data, cardContent, currency, symbol, api, region, } = props;
+    const { classes, data, cardContent, currency, symbol, api, region, theme } = props;
     const { PricingLineChartComponent, SlideOutLauncher } = this.componentDefs;
     const formData = { ...data };
 
@@ -182,19 +183,22 @@ class ProductCardWidget extends Component {
     }
 
     const slideoutprops = {
-        data,
-        componentFqn: 'lasec-crm.LasecProductDetails@1.0.0',
-        componentProps: {
-          'data': 'formData',                  
-        },
-        slideDirection: 'left',
-        buttonVariant: 'button',
-        buttonProps: {                  
-          size: 'small',                  
-        },
-        buttonIcon: 'launch',
-        windowTitle: '${data.code} ${data.name}',
-      };
+      data,
+      componentFqn: 'lasec-crm.LasecProductDetails@1.0.0',
+      componentProps: {
+        'data': 'formData',
+      },
+      slideDirection: 'left',
+      buttonVariant: 'button',
+      buttonProps: {
+        size: 'small',
+      },
+      buttonIcon: 'launch',
+      windowTitle: '${data.code} ${data.name}',
+    };
+
+    let IconComponent = theme.extensions['reactory'].icons['OnSyspro'];
+    let iconProps = { style: { color: sysProIconColor } }
 
     return (
       <Card classes={{ root: classes.root }}>
@@ -211,7 +215,10 @@ class ProductCardWidget extends Component {
             {
               data.onSyspro != '' && sysProIconColor != '' && <Grid item xs={2}>
                 <Tooltip placement="right-start" title={tooltipTitle(data.onSyspro)}>
-                  <Icon style={{ color: sysProIconColor }}>info</Icon>
+                  {/* <Icon style={{ color: sysProIconColor }}>info</Icon> */}
+                  <div style={{ textAlign: "right"}}>
+                    <IconComponent {...iconProps} />
+                  </div>
                 </Tooltip>
               </ Grid>
             }
@@ -303,5 +310,5 @@ ProductCardWidget.defaultProps = {
   region: 'en-ZA'
 };
 
-const ProductCardComponent = compose(withApi, withStyles(ProductCardWidget.styles))(ProductCardWidget);
+const ProductCardComponent = compose(withTheme, withApi, withStyles(ProductCardWidget.styles))(ProductCardWidget);
 export default ProductCardComponent;
