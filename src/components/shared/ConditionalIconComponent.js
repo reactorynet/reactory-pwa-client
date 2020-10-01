@@ -39,7 +39,6 @@ class ConditionalIconWidget extends Component {
         iconToRender = <Icon {...iconProps}>{matchingCondition.icon}</Icon>
 
       if (matchingCondition.tooltip) {
-        debugger;
         ComponentToRender = <div>
           {label && <label className={classes.label}>{label}</label>}
           <Tooltip title={matchingCondition.tooltip} placement="right-end">
