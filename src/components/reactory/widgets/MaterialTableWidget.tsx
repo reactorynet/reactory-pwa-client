@@ -1,12 +1,12 @@
-import React, { Fragment, Component, useState } from 'react'
-import PropTypes from 'prop-types'
-import { pullAt, isNil, remove, filter, isArray } from 'lodash'
+import React, { Fragment, Component, useState, RefObject, PureComponent } from 'react'
+import PropTypes, { any } from 'prop-types'
+import { pullAt, isNil, remove, filter, isArray, throttle, ThrottleSettings } from 'lodash'
 import {
   Typography,
   Button,
   IconButton,
   Fab,
-  Icon
+  Icon, Theme
 } from '@material-ui/core'
 import MaterialTable, { MTableToolbar } from 'material-table';
 
@@ -18,10 +18,20 @@ import { withApi } from '../../../api/ApiProvider';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { find } from 'lodash';
+import { Styles } from '@material-ui/styles/withStyles/withStyles';
 
-class MaterialTableWidget extends Component {
+export interface MaterialTableRemoteDataReponse {
+  data: any[],
+  page: number,
+  totalCount: number,
+}
 
-  static styles = (theme) => ({
+class MaterialTableWidget extends Component<any, any> {
+
+  tableRef: RefObject<any>;
+  components: any
+
+  static styles: Styles<Theme, {}, "root" | "chip" | "newChipInput"> = (theme) => ({
     root: {
       display: 'flex',
       justifyContent: 'center',
@@ -51,6 +61,8 @@ class MaterialTableWidget extends Component {
 
   constructor(props, context) {
     super(props, context)
+    
+
     this.state = {
       newChipLabelText: "",
       currentAction: null,
@@ -134,7 +146,9 @@ class MaterialTableWidget extends Component {
       const { formData, formContext } = this.props;
       let columns = [];
       let actions = [];
-      let components = {};
+      let components: { [ key: string]: Component | PureComponent | Function } = {
+
+      };
       let detailsPanel = null;
 
       if (uiOptions.componentMap) {
@@ -160,6 +174,7 @@ class MaterialTableWidget extends Component {
 
       const [activeAction, setActiveAction] = useState({
         show: false,
+        rowsSelected: [],
         action: null,
       });
 
@@ -263,13 +278,18 @@ class MaterialTableWidget extends Component {
         });
       }
 
-      let data = [];
+      let data: any = [];
 
       if (uiOptions.remoteData === true) {
-        data = async (query) => {
-          try {
+        const remoteFetch = async (query: any) : Promise<any> => {
+          const response: MaterialTableRemoteDataReponse = {
+            data: [],
+            page: 0,
+            totalCount: 0,
+          }
 
-            api.log('🥽 core.MaterialTable data query', { query }, 'debug')
+          try {            
+            api.log('♻ core.MaterialTable data query', { query }, 'debug')
 
             const graphqlDefinitions = formContext.$formState.formDef.graphql;
 
@@ -294,11 +314,8 @@ class MaterialTableWidget extends Component {
               if (queryResult.errors && queryResult.errors.length > 0) {
                 //show a loader error
                 api.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
-                return {
-                  data: [],
-                  page: 0,
-                  totalCount: 0
-                }
+                api.createNotification(`Could not fetch the data for this query due to an error`, {showInAppNotification: true, type: 'warning'})
+                return response;
               } else {
 
                 let result = api.utils.objectMapper(queryResult.data[queryDefinition.name], uiOptions.resultMap || queryDefinition.resultMap);
@@ -309,23 +326,18 @@ class MaterialTableWidget extends Component {
                 }
 
                 result.page = result.page - 1;
-                return result;
+                return { ...response, ...result };
               }
             } else {
-              return {
-                data: [],
-                page: 0,
-                totalCount: 0
-              }
+              return response
             }
           } catch (remoteDataError) {
-            return {
-              data: [],
-              page: 0,
-              totalCount: 0
-            }
+            return response
           }
-        }
+        };
+
+        data = throttle(remoteFetch, 500, { leading: true });
+        
       } else {
         if (formData && formData.length) {
           formData.forEach(row => {
@@ -334,7 +346,7 @@ class MaterialTableWidget extends Component {
         }
       }
 
-      let options = {
+      let options: any = {
         rowStyle: (rowData, index) => {
           api.log(' 🎨 MaterialTableWidget.rowStyle', { rowData, index }, 'debug')
           let style = {};
@@ -443,7 +455,7 @@ class MaterialTableWidget extends Component {
                 }
               }
 
-              setActiveAction({ show: false, action: null });
+              setActiveAction({ show: false, action: null, rowsSelected: [] });
             };
 
             if (action.confirmation) {
@@ -458,13 +470,15 @@ class MaterialTableWidget extends Component {
                       process();
                       setActiveAction({
                         show: false,
-                        action: null
+                        action: null,
+                        rowsSelected: []
                       });
                     },
                     onClose: () => {
                       setActiveAction({
                         show: false,
-                        action: null
+                        action: null,
+                        rowsSelected: []
                       })
                     }
                   }

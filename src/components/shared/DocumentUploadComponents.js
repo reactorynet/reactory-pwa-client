@@ -42,11 +42,11 @@ class DocumentUploadWidget extends Component {
     const uiOptions = uiSchema['ui:options'];
     const mappedProperties = uiOptions.propertyMap ? api.utils.objectMapper(this.props, uiOptions.propertyMap) : {};
     const { slug, title, mode = 'editing', helpTitle, helpTopics, placeHolder, form } = uiOptions.props;
-    if (slug) _slug = template(slug)(mappedProperties);
-    if (title) _title = template(title)(mappedProperties);
-    if (helpTitle) _helpTitle = template(helpTitle)(mappedProperties);
+    if (slug) try { _slug =  template(slug)(mappedProperties) ; } catch (e) { _slug = e.message; } 
+    if (title) try { _title = template(title)(mappedProperties); } catch (e) { _title = e.message; } 
+    if (helpTitle) try { _helpTitle = template(helpTitle)(mappedProperties) ; } catch (e) { _helpTitle = e.message; } 
     if (helpTopics) _helpTopics = helpTopics;
-    if (helpTitle) _placeHolder = template(placeHolder)(mappedProperties);
+    if (helpTitle) try { _placeHolder = template(placeHolder)(mappedProperties); } catch ( e ) { _placeHolder = e.message;}
 
     const staticContentProps = {
       canEdit: ["owner"],
