@@ -24,19 +24,31 @@ class ConditionalIconWidget extends Component {
     let iconProps = { style };
     let matchingCondition = conditions.find(c => `${c.key}` === `${value}`);
 
+    let iconToRender = null;
+
     if (matchingCondition) {
       if (matchingCondition.style) {
         iconProps.style = { ...style, ...matchingCondition.style };
       }
 
+      const _custom = matchingCondition.iconType
+      let IconComponent = _custom !== undefined ? theme.extensions[_custom].icons[matchingCondition.icon] : null;
+      if (IconComponent)
+        iconToRender = <IconComponent {...iconProps} />
+      else
+        iconToRender = <Icon {...iconProps}>{matchingCondition.icon}</Icon>
+
       if (matchingCondition.tooltip) {
-        // ComponentToRender = <Tooltip title={matchingCondition.tooltip} classes={{ tooltip: { backgroundColor: "red" } }} placement="right-end"><Icon {...iconProps}>{matchingCondition.icon}</Icon></Tooltip>
         ComponentToRender = <div>
           {label && <label className={classes.label}>{label}</label>}
-          <Tooltip title={matchingCondition.tooltip} placement="right-end"><Icon {...iconProps}>{matchingCondition.icon}</Icon></Tooltip>
+          <Tooltip title={matchingCondition.tooltip} placement="right-end">
+            <div>
+              {iconToRender}
+            </div>
+          </Tooltip>
         </div>
       } else {
-        ComponentToRender = <Icon {...iconProps}>{matchingCondition.icon}</Icon>;
+        ComponentToRender = iconToRender
       }
     }
 

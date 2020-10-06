@@ -26,7 +26,8 @@ class LabelWidget extends Component {
   static rootStyle(theme) {
     return {
       labelText: {
-        wordBreak: 'break-all'
+        // wordBreak: 'break-all'
+        wordBreak: 'normal'
       },
       copyIcon: {
         marginLeft: '10px',
@@ -178,12 +179,12 @@ class LabelWidget extends Component {
           _iconProps = {
             ..._iconProps,
             ...patched
-          } 
+          }
         }
 
         const _custom = iconType
         let IconComponent = _custom !== undefined ? theme.extensions[_custom].icons[icon] : null;
-        
+
         if (IconComponent) {
           labelIcon = <IconComponent {..._iconProps} />
         } else {
@@ -216,7 +217,6 @@ class LabelWidget extends Component {
     if (_renderHtml && LabelBody === null) {
       LabelBody = <Typography variant={_variant} dangerouslySetInnerHTML={{ __html: labelText }}></Typography>
     } else {
-
       if(_iconPosition == 'inline') {
         LabelBody = <div className={classes.inlineDiv}>{labelIcon}<Typography classes={{root: classes.labelText}} variant={_variant}>{labelText}</Typography></div>
       } else {
@@ -233,10 +233,10 @@ class LabelWidget extends Component {
       tempInput.remove();
 
       api.createNotification('Copied To Clipboard!', { body: `'${labelText}' successfully copied to your clipboard.`, showInAppNotification: true, type: 'success'});
-    }    
+    }
 
     return (
-      <div {...labelContainerProps}>        
+      <div {...labelContainerProps}>
           {_iconPosition === 'left' ? labelIcon : null}
         <div {...labelBodyProps}>
           {labelTitle != '' && <label {...labelTitleProps}>{labelTitle}</label>}
