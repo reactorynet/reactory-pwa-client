@@ -5,6 +5,10 @@ import { isEqual } from 'lodash';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import Dialog from '@material-ui/core/Dialog';
 import AppBar from '@material-ui/core/AppBar';
+import {
+  Grid,
+  Icon
+} from '@material-ui/core';
 import Toolbar from '@material-ui/core/Toolbar';
 import IconButton from '@material-ui/core/IconButton';
 import Typography from '@material-ui/core/Typography';
@@ -16,13 +20,37 @@ import {
   useMediaQuery
 } from '@material-ui/core';
 
-const styles = {
-  appBar: {
-    position: 'relative',
-  },
-  flex: {
-    flex: 1,
-  },
+const styles = (theme) => {
+  return {
+    appBar: {
+      position: 'relative',
+    },
+    flex: {
+      flex: 1,
+    },
+    backNavContainer: {
+      display: 'flex',
+      margin: '32px 32px 6px',
+    },
+    backButtonText: {
+      fontWeight: 600,
+      lineHeight: '1.8'
+    },
+    linkContainer: {
+      display: 'flex',
+      paddingLeft: theme.spacing(4),
+    },
+    linkText: {
+      lineHeight: '1.8',
+      fontWeight: 400,
+    },
+    linkTextLast: {
+      lineHeight: '1.8',
+      fontWeight: 400,
+      color: theme.palette.primary.main,
+      paddingLeft: '5px'
+    },
+  }
 };
 
 
@@ -49,42 +77,57 @@ class FullScreenDialog extends Component {
     }
   };
 
-  componentDidMount(){
+  componentDidMount() {
     const { closeOnEvents = [], api } = this.props;
-
     closeOnEvents.map((eventName) => api.on(eventName, this.handleClose))
   }
 
-  componentWillUnmount(){
+  componentWillUnmount() {
     const { closeOnEvents = [], api } = this.props;
-
     closeOnEvents.map((eventName) => api.removeListener(eventName, this.handleClose))
   }
 
-  /*
-  shouldComponentUpdate(nextProps, nextState){
-    const _nextProps = { open: nextProps.open, title: nextProps.title, children: nextProps.children };
-    const _props = { open: this.props.open, title: this.props.title, children: this.props.children }; 
-        
-    const shouldUpdate =  deepEquals(nextState, this.state) === false || deepEquals(_nextProps, _props) === false;
-    return shouldUpdate;
-  }
-  */
   render() {
     const { open,
-      classes, 
-      title, 
-      containerProps = {        
-      }, 
-      slide = 'up', 
-      fullScreen = true, 
-      fullWidth = true, 
-      maxWidth = false, 
-      theme, 
-      breakpoint = 'sm', 
+      classes,
+      title,
+      showAppBar = true,
+      containerProps = {},
+      slide = 'up',
+      fullScreen = true,
+      fullWidth = true,
+      backNavigationItems = [],
+      maxWidth = false,
+      theme,
+      breakpoint = 'sm',
       api
-      
+
     } = this.props;
+
+    let BackNavigation = null;
+
+    if (backNavigationItems && backNavigationItems.length > 0) {
+      BackNavigation = (props) => {
+        return (
+          <div className={classes.backNavContainer}>
+            <div style={{ display: 'flex', cursor: 'pointer' }} onClick={this.handleClose}>
+              <Icon style={{ fontSize: 30 }}>chevron_left</Icon>
+              <Typography variant="h6" classes={{ root: classes.backButtonText }}>Back</Typography>
+            </div>
+            <div className={classes.linkContainer}>
+              {
+                backNavigationItems.map((navItem, ind) => {
+                  if ((ind + 1) < backNavigationItems.length)
+                    return <Typography variant="h6" classes={{ root: classes.linkText }}>{navItem} /</Typography>
+
+                  return <Typography variant="h6" classes={{ root: classes.linkTextLast }}>{navItem}</Typography>
+                })
+              }
+            </div>
+          </div>
+        )
+      };
+    }
 
     const DialogueHOC = (props, context) => {
       const shouldBreak = useMediaQuery(theme.breakpoints.down(breakpoint));
@@ -92,28 +135,28 @@ class FullScreenDialog extends Component {
         fullScreen: fullScreen === true ? true : shouldBreak === true,
         fullWidth,
         maxWidth,
-        open,        
+        open,
         onClose: this.handleClose,
-        TransitionComponent: Transition,      
-        ...containerProps
+        TransitionComponent: Transition,
+        ...containerProps,
       };
-
-
-
 
       return (
         <Fragment>
-          <Dialog
-            {...dialogProps}
-          >
-            <AppBar className={classes.appBar}>
-              <Toolbar>
-                <IconButton color="inherit" onClick={this.handleClose} aria-label="Close">
-                  <CloseIcon />
-                </IconButton>
-                {title ? <Typography variant="h6" color="inherit">{title}</Typography> : null}
-              </Toolbar>
-            </AppBar>
+          <Dialog {...dialogProps} >
+            {
+              showAppBar && <AppBar className={classes.appBar}>
+                <Toolbar>
+                  <IconButton color="inherit" onClick={this.handleClose} aria-label="Close">
+                    <CloseIcon />
+                  </IconButton>
+                  {title ? <Typography variant="h6" color="inherit">{title}</Typography> : null}
+                </Toolbar>
+              </AppBar>
+            }
+            {
+              backNavigationItems && backNavigationItems.length > 0 && <BackNavigation />
+            }
             {this.props.children}
           </Dialog>
         </Fragment>
@@ -121,7 +164,6 @@ class FullScreenDialog extends Component {
     }
 
     return (<DialogueHOC />)
-    
   }
 }
 
