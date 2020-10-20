@@ -13,6 +13,7 @@ import {
 
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withApi } from '@reactory/client-core/api/ApiProvider';
 
 class ChipArray extends Component {
   
@@ -78,34 +79,91 @@ class ChipArray extends Component {
 
   render(){
     const self = this
-    const chips = this.props.formData.map((label, index) => { 
+    const { uiSchema, api } = self.props;
+    let options = {
+      labelFormat: '${item}'
+    };
+
+    if (uiSchema['ui:options']) {
+      options = { ...options, ...uiSchema['ui:options'] };
+    }
+
+    const chips = this.props.formData.map((item, index) => { 
       const handleDelete = () => {
-        self.onHandleChipLabelDelete(label, index);
+        self.onHandleChipLabelDelete(item, index);      
       }
 
-      return (<Chip key={index} onDelete={handleDelete} variant="outlined" label={label}/>); 
-    });
+      let labelText = `${item}`;
 
-    const clearAll = () => this.props.onChange([])
+      try {
+        labelText = api.utils.template(options.labelFormat)({ item, index });
+      } catch ( templateErr )
+      {
+        labelText = `💥 ${templateErr.message}`
+      }
+      
+      return (<Chip key={index} onDelete={handleDelete} variant="outlined" label={labelText}/>); 
+    });
+    
+
+    const AddItemComponentWrapper = (props) => {
+
+      if (options.addComponentFqn) {
+        
+        let AddItemComponent = api.getComponent(options.addComponentFqn);  
+        
+        if (AddItemComponent !== null && AddItemComponent !== undefined) {  
+          const onAddItemHandler = (item) => {
+            if (self.props.onChange) {
+              self.props.onChange([...self.props.formData, { ...item.formData }]);
+            }
+          }; 
+          
+          let addItemProps = {};
+          if (options.onAddHandler) {
+            addItemProps[options.onAddHandler] = onAddItemHandler;
+          } else {
+            addItemsProps.onSubmit = onAddItemHandler;
+          }
+
+          
+          if (options.addComponentProps) {
+            
+            addItemProps = {
+              ...api.utils.templateObject(options.addComponentProps, self),
+              ...addItemProps
+            };
+            
+          }
+          
+          return (<AddItemComponent {...addItemProps} />);
+        }
+      }
+
+      return (<Input
+        type="text"
+        value={self.state.newChipLabelText}
+        onChange={self.onNewChipLabelTextChange}
+        onKeyPress={self.onNewChipLabelTextKeyPress}
+        className={self.props.classes.newChipInput}
+      />)
+
+    };
+    
+    const clearAll = () => this.props.onChange([]);
 
     return (
       <Fragment>
-        { chips }
-        {this.props.readOnly === false ? <Input 
-          type="text" 
-          value={this.state.newChipLabelText} 
-          onChange={this.onNewChipLabelTextChange} 
-          onKeyPress={this.onNewChipLabelTextKeyPress}
-          className={this.props.classes.newChipInput}
-          /> : null }
+        { chips }        
         {this.props.formData.length > 0 ? <Tooltip title="Remove all">
           <IconButton onClick={clearAll}>
             <Icon>delete_outline</Icon>
           </IconButton>
         </Tooltip> : null}
+        <AddItemComponentWrapper />
       </Fragment>
     )
   }
 }
-const ChipArrayComponent = compose(withTheme, withStyles(ChipArray.styles))(ChipArray)
+const ChipArrayComponent = compose(withApi, withTheme, withStyles(ChipArray.styles))(ChipArray)
 export default ChipArrayComponent

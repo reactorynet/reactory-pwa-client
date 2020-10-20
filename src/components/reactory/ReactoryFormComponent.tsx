@@ -128,6 +128,7 @@ export interface ReactoryFormProperties {
   uiSchemaId?: string;
   data: any;
   formData: any;
+  formDef?: any;
   location: any;
   api: any;
   formId: string,
@@ -146,6 +147,7 @@ export interface ReactoryFormProperties {
   onError?: Function,
   onCommand?: Function,
   onMutateComplete?: Function,
+  onQueryComplete?: Function,
   before?: Component | undefined,
   children?: ReactNodeArray,
   $route?: any,
@@ -182,7 +184,8 @@ export interface ReactoryFormState {
   message?: string,
   formError?: any,
   autoQueryDisabled?: boolean,
-  boundaryError?: Error
+  boundaryError?: Error,
+  notificationComplete: boolean
 }
 
 
@@ -257,7 +260,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     let _state = {
       loading: true,
       forms_loaded: false,
-      formDef: null,
+      formDef: props.formDef || null,
       forms: [],
       uiFramework: props.uiFramework,
       uiSchemaKey: props.uiSchemaKey || 'default',
@@ -275,6 +278,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       pendingResources: {},
       _instance_id,
       autoQueryDisabled: props.autoQueryDisabled || false,
+      notificationComplete: true,
     };
 
     if (_state.query.uiFramework) {
@@ -315,12 +319,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.submit = this.submit.bind(this);
     this.plugins = {};
 
-    if(props.refCallback) {
-      props.refCallback(this); 
+    if (props.refCallback) {
+      props.refCallback(this);
     }
   }
 
-  submit() {    
+  submit() {
     if (isNil(this.formRef) === false && this.formRef) {
       try {
         this.formRef.onSubmit();
@@ -360,7 +364,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   componentWillReceiveProps(nextProps) {
 
-    
+
     const self = this;
     this.props.api.log('ReactoryForm.componentWillReceiveProps', { nextProps, currentProps: self.props }, 'debug');
     if (deepEquals(nextProps, this.props) === false) {
@@ -372,15 +376,15 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     if (deepEquals(nextProps.formData, this.state.formData) === false) {
       this.setState({ formData: nextProps.formData, queryComplete: false });
     }
-    
+
   }
 
   componentWillMount() {
-    const { api, history, $App } = this.props;    
+    const { api, history, $App } = this.props;
     const that = this;
     this.unlisten = history.listen((location, action) => {
-      api.log("REACT ROUTER On Route Changed Detected", {location, action}, 'debug' );
-     //$App.forceUpdate()
+      api.log("REACT ROUTER On Route Changed Detected", { location, action }, 'debug');
+      //$App.forceUpdate()
     });
     this.downloadForms();
 
@@ -408,12 +412,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
 
     let checked = 0;
-    if(api.formSchemaLastFetch !== null) {
+    if (api.formSchemaLastFetch !== null) {
       that.downloadForms();
     } else {
-      const checkWait = () => {        
-        if(api.formSchemaLastFetch === null) {
-          if(checked >= 5) { 
+      const checkWait = () => {
+        if (api.formSchemaLastFetch === null) {
+          if (checked >= 5) {
             api.forms();
             checked = 0;
           }
@@ -440,11 +444,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     const { HelpMe } = this.componentDefs;
     const formDef = this.formDef();
     let topics = [];
-    if(formDef.helpTopics) topics = [...formDef.helpTopics]
-    if(this.props.helpTopics) topics = [...this.props.helpTopics, ...topics];
+    if (formDef.helpTopics) topics = [...formDef.helpTopics]
+    if (this.props.helpTopics) topics = [...this.props.helpTopics, ...topics];
     const closeHelp = e => this.setState({ showHelp: false });
     return (
-      <HelpMe topics={topics} tags={formDef.tags} title={this.props.helpTitle || formDef.title } open={this.state.showHelp === true} onClose={closeHelp}>
+      <HelpMe topics={topics} tags={formDef.tags} title={this.props.helpTitle || formDef.title} open={this.state.showHelp === true} onClose={closeHelp}>
       </HelpMe>
     )
   }
@@ -599,13 +603,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     let toolbarposition = 'bottom'
     let showToolbar = true;
 
-
-    
-
-
-    const formUiOptions = formDef.uiSchema['ui:options'] || {
-      showSchemaSelectorInToolbar: true,
-    };
+    const formUiOptions = formDef.uiSchema && formDef.uiSchema['ui:options'] ? formDef.uiSchema['ui:options'] : { showSchemaSelectorInToolbar: true };
 
     let uiSchemaSelector = null;
     let activeUiSchemaItem = null;
@@ -803,7 +801,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       submitButton = (<Fab onClick={$submitForm} color="primary">{iconWidget}</Fab>);
     }
 
- 
+
     const refreshClick = evt => self.setState({ queryComplete: false, dirty: false });
 
 
@@ -866,14 +864,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       exportButton = (<DropDownMenu menus={exportMenus} onSelect={onDropDownSelect} icon={"import_export"} />)
     }
 
-    
-    if(activeUiSchemaModel && activeUiSchemaModel['ui:options']) {
+
+    if (activeUiSchemaModel && activeUiSchemaModel['ui:options']) {
 
     }
 
     let formtoolbar = (
       <Toolbar>
-        {formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}        
+        {formUiOptions.showSchemaSelectorInToolbar && formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}
         {showSubmit === true && submitButton}
         {_additionalButtons}
         {self.state.allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
@@ -891,12 +889,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         {formDef.graphql && formDef.graphql.query && self.state.queryComplete === false && <LinearProgress />}
         {self.props.before}
         <Form {...{ ...formProps, toolbarPosition: toolbarposition }}>
-          {toolbarposition !== 'none' ? formtoolbar : null}          
+          {toolbarposition !== 'none' ? formtoolbar : null}
         </Form>
         {this.props.children}
         {this.getHelpScreen()}
         {this.getReportWidget()}
-        {this.getExcelWidget()}        
+        {this.getExcelWidget()}
       </Fragment>
     )
   }
@@ -927,16 +925,22 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         <Mutation mutation={gql(mutation.text)}>
           {(mutateFunction: Function, mutationResult: MutationResult) => {
             const { loading, error, data } = mutationResult;
+            
+            api.log(`MutationFormComponent 👀🟠`, {loading, error, data}, 'debug');
+
             let exectuting = false;
 
             const onFormSubmit = (formSchema) => {
               api.log(`Form Submitting, post via graphql`, formSchema, 'debug');
               exectuting = true;
               const _variables = objectMapper({ ...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
-              mutateFunction({
-                variables: api.utils.omitDeep({ ..._variables }),
-                refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
-              });
+              
+              that.setState({ notificationComplete: false }, () => {
+                mutateFunction({
+                  variables: api.utils.omitDeep({ ..._variables }),
+                  refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
+                });
+              });              
             };
 
             let loadingWidget = null;
@@ -984,7 +988,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 that.props.api.goto(linkText)
               }
 
-              if (mutation.onSuccessMethod === "notification") {
+              if (mutation.onSuccessMethod === "notification"  && !that.state.notificationComplete ) {
                 const dataObject = { formData, resultData: data[mutation.name], formContext: that.getFormContext() };
                 api.createNotification(
                   mutation.notification.title,
@@ -997,6 +1001,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                     }
                   }
                 );
+
+                that.setState({ notificationComplete: true })
               }
 
               if (that.props.onMutateComplete) {
@@ -1111,6 +1117,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             if (that.isMounted === true) {
               try {
                 that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, () => {
+
+                  if (that.props.onQueryComplete) {
+                    that.props.onQueryComplete({ formData: _formData, formContext: that.getFormContext(), result, errors });
+                  }
                   that.$events.emit('onQueryComplete', { formData: _formData, form: that });
                   if (errors) {
                     api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${that.instanceId} => Error executing graphql query`, errors)
@@ -1119,7 +1129,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 });
               } catch (unhandledErr) {
                 api.log(`ReactoryComponent -> Error on setting state`, unhandledErr, 'error')
-              }              
+              }
             }
 
           }).catch((queryError) => {
@@ -1141,7 +1151,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         if (query.refreshEvents) {
           query.refreshEvents.forEach((eventDefinition) => {
             api.once(eventDefinition.name, () => {
-              api.log(`🔔 Refresh of query triggred via refresh event`, {eventDefinition}, 'debug')
+              api.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition }, 'debug')
               setTimeout(executeFormQuery, 500)
             });
           });
@@ -1550,12 +1560,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       const { formDef, queryComplete, queryError, dirty } = this.state;
       api.log(`${formDef.name}[${this.instanceId}].onChange`, { data }, 'debug');
-      
+
       const $onChange = this.props.onChange;
 
       const trigger_onChange = $onChange && typeof $onChange === 'function';
-      
-      const fire = () => { 
+
+      const fire = () => {
         $onChange(data.formData, data.errorSChema, { before: changed, after: rchanged, self });
       }
 
@@ -1568,14 +1578,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         let throttleDelay: number = formDef.graphql.mutation['onChange'].throttle || 300;
         let variables = api.utils.objectMapper({ eventData: data, form: this }, onChangeMutation.variables);
 
-        let throttledCall = throttle(()=>{
+        let throttledCall = throttle(() => {
           api.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
             api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation result`, { mutationResult }, 'debug');
           }).catch((mutationError) => {
             api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation error`, { mutationError }, 'error');
           });
-        }, throttleDelay)   
-        
+        }, throttleDelay)
+
         throttledCall();
       }
 
@@ -1630,12 +1640,18 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           ? { ...defaultFormValue, ...this.state.formData }
           : formData = { ...defaultFormValue };
 
-        Object.keys(self.state.query).forEach(property => {          
-          if (isNil(formData[property]) === true || isEmpty(formData[property]) && isNil(self.state.query[property]) === false) {
-            formData[property] = self.state.query[property];
-          }
-        });
+        if (formDef.queryStringMap) {
+          let $mappedFromQS = self.props.api.utils.objectMapper(self.state.query, formDef.queryStringMap);
+          formData = { ...formData, ...$mappedFromQS }
+        } else {
 
+          Object.keys(self.state.query).forEach(property => {
+            if (isNil(formData[property]) === true || isEmpty(formData[property]) && isNil(self.state.query[property]) === false) {
+              formData[property] = self.state.query[property];
+            }
+          });
+
+        }
         break;
       }
       default: {
@@ -1653,12 +1669,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     const that = this;
     let formDef = simpleForm;
     const { api } = this.props;
-    
+
 
 
     try {
       this.props.api.forms().then((forms: Reactory.IReactoryForm[]) => {
-        formDef = find(forms, { id: that.props.formId }) || simpleForm;
+        formDef = this.props.formDef || find(forms, { id: that.props.formId }) || simpleForm;
         if (formDef.componentDefs) {
           that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
         }
@@ -1680,10 +1696,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   render() {
     let loadingComponent = null;
-  if(this.state.boundaryError && this.state.boundaryError) return <div><Icon>bug</Icon>{this.state.boundaryError.message} @ {this.props.formId}</div>
+    if (this.state.boundaryError && this.state.boundaryError) return <div><Icon>bug</Icon>{this.state.boundaryError.message} @ {this.props.formId}</div>
     if (this.state.forms_loaded === false) {
-      const { Loading } = this.componentDefs;
-      loadingComponent = (<Loading key={'loading'} message={`Loading Component ${this.props.formId}`} nologo={true} />)
+      //const { Loading } = this.componentDefs;
+      loadingComponent = (<>.</>)
     }
 
     const formDef = this.formDef();

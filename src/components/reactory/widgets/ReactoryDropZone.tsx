@@ -93,7 +93,7 @@ class ReactoryDropZone extends Component<any, any> {
 
   render() {
     const self = this;
-    const { uiSchema, schema, formData, classes, api } = this.props;
+    const { uiSchema, schema, formData, classes, api, formContext } = this.props;
 
     let widgetProps = {
       className: classes.ReactoryDropZoneRoot,
@@ -135,8 +135,12 @@ class ReactoryDropZone extends Component<any, any> {
           if (ReactoryDropZoneProps.mutation) {          
             const mutation = gql(ReactoryDropZoneProps.mutation.text);
 
+            debugger
+            
+            let _v = api.utils.templateObject(ReactoryDropZoneProps.mutation.variables, self);
+
             const variables = {
-              ...ReactoryDropZoneProps.mutation.variables,
+              ..._v,
               file: acceptedFiles[0],              
             };
             api.graphqlMutation(mutation, variables).then((docResult) => {
@@ -154,8 +158,15 @@ class ReactoryDropZone extends Component<any, any> {
                   }
                 });
 
-                if(ReactoryDropZoneProps.mutation.onSuccessEvent && ReactoryDropZoneProps.mutation.onSuccessEvent.name)  {                  
-                  api.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, { filename, link, id, size, mimetype  });
+                if (ReactoryDropZoneProps.mutation.onSuccessEvent && ReactoryDropZoneProps.mutation.onSuccessEvent.name) {                  
+                  if (ReactoryDropZoneProps.mutation.onSuccessEvent.via && ReactoryDropZoneProps.mutation.via === 'form') {
+                    if (formContext.$ref[ReactoryDropZoneProps.mutation.onSuccessEvent.name]) {
+                      //execute the function on the form with the reference
+                      formContext.$ref[ReactoryDropZoneProps.mutation.onSuccessEvent.name](docResult.data[ReactoryDropZoneProps.mutation.name])
+                    }
+                  } else {
+                    api.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, { filename, link, id, size, mimetype  });
+                  }
                 }
               });   
               
