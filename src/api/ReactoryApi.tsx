@@ -592,12 +592,20 @@ class ReactoryApi extends EventEmitter {
 
   graphqlMutation(mutation, variables, options: any = { fetchPolicy: "network-only" }) {
     const that = this;
-    if (typeof mutation === 'string')
-      mutation = gql(mutation);
+    let $mutation = null;
+    if (typeof mutation === 'string') {
+      try {
+        $mutation = gql(mutation);
+      } catch (gqlError) {
+        that.log(`Error occurred while creating the mutation document from input`, { mutation }, 'error');
+      }
+    } else $mutation = mutation;
+      
     return new Promise((resolve, reject) => {
-      that.client.mutate({ mutation: mutation, variables, fetchPolicy: "no-cache" }).then((result) => {
+      that.client.mutate({ mutation: $mutation, variables, fetchPolicy: "no-cache" }).then((result) => {
         resolve(result);
       }).catch((clientErr) => {
+        that.log(`Error occured executing the mutation: ${clientErr.message}`, { $mutation, clientErr }, 'error')
         reject(clientErr);
       });
     });
@@ -610,12 +618,20 @@ class ReactoryApi extends EventEmitter {
 
     const that = this;
 
-    if (typeof query === 'string')
-      query = gql(query);
+    let $query = null;
+    if (typeof query === 'string') {
+      try {
+        $query = gql(query);
+      } catch (gqlError) {
+        that.log(`Error occurred while creating the query document from input`, { query }, 'error');
+      }
+    } else $query = query;
+
     return new Promise((resolve, reject) => {
-      that.client.query({ query, variables, fetchPolicy: options.fetchPolicy || "network-only" }).then((result) => {
+      that.client.query({ query: $query, variables, fetchPolicy: options.fetchPolicy || "network-only" }).then((result) => {
         resolve(result);
       }).catch((clientErr) => {
+        that.log(`Error occurred while executing the query ${clientErr.message}`, { query, clientErr }, 'error');
         resolve({ data: null, loading: false, errors: [clientErr] });
       });
     });
