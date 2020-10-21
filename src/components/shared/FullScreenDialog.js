@@ -7,7 +7,8 @@ import Dialog from '@material-ui/core/Dialog';
 import AppBar from '@material-ui/core/AppBar';
 import {
   Grid,
-  Icon
+  Icon,
+  Button
 } from '@material-ui/core';
 import Toolbar from '@material-ui/core/Toolbar';
 import IconButton from '@material-ui/core/IconButton';
@@ -50,6 +51,13 @@ const styles = (theme) => {
       color: theme.palette.primary.main,
       paddingLeft: '5px'
     },
+    backNavComponent: {
+      flex: 1,
+      display: 'flex',
+      justifyContent: 'flex-end',
+      alignItems: 'flex-end',
+      paddingRight: '5px'
+    }
   }
 };
 
@@ -97,6 +105,7 @@ class FullScreenDialog extends Component {
       fullScreen = true,
       fullWidth = true,
       backNavigationItems = [],
+      backNavComponent = null,
       maxWidth = false,
       theme,
       breakpoint = 'sm',
@@ -124,6 +133,11 @@ class FullScreenDialog extends Component {
                 })
               }
             </div>
+            {
+              backNavComponent && <div className={classes.backNavComponent}>
+                {backNavComponent}
+              </div>
+            }
           </div>
         )
       };
@@ -154,6 +168,7 @@ class FullScreenDialog extends Component {
                 </Toolbar>
               </AppBar>
             }
+
             {
               backNavigationItems && backNavigationItems.length > 0 && <BackNavigation />
             }
