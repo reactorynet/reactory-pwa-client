@@ -504,6 +504,10 @@ namespace Reactory {
      * components to mount in the componentDef propertie
      */
     componentDefs?: String[]
+    /**
+     * object map to use for mapping querystring
+     */
+    queryStringMap?: any,
   }
 
   export interface IGraphShape {

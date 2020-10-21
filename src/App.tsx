@@ -338,12 +338,12 @@ class App extends Component<any, AppState> {
       }
     }
     
-    const Globals = (props, context) => {              
+    const Globals = (props) => {              
       let globalForms =  api.getGlobalComponents();
       return (
-      <div key={'$GLOBAL_FORMS$'}>
-        { globalForms.map((GLOBALFORM, gidx) => <GLOBALFORM key={`$GLOBAL_FORM_${gidx}$`}/>) }
-      </div>
+        <div style={{ display: 'none' }}>
+          { globalForms.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) }) }
+        </div>
       )
     };
 
@@ -375,7 +375,7 @@ class App extends Component<any, AppState> {
                 <ThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
                     <React.Fragment>                      
-                      <Globals />
+                      <Globals/>
                       <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
                       <NotificationComponent></NotificationComponent>                                            
                       { auth_validated === true && routes.length > 0 ? routes : <Loading message="Loading Application. Please wait" icon="security" spinIcon={false} />}  

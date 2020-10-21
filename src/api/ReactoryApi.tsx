@@ -97,6 +97,38 @@ export const reactoryDomNode = () => {
   return domNode;
 }
 
+export const parseTemplateObject = (templateObject: Object, props: any): Object => {
+
+  debugger
+
+  if (templateObject === null || templateObject === undefined) return templateObject;
+
+  let _$ret: Object = {};
+
+  Object.keys(templateObject).forEach((ep) => {
+    let toep = typeof templateObject[ep];
+    switch (toep) {
+      case "string": {
+        if (templateObject[ep].indexOf("${") >= 0) {
+          _$ret[ep] = template(templateObject[ep])(props);
+        } else {
+          _$ret[ep] = templateObject[ep];
+        }        
+        break;
+      }
+      case "object": {
+        _$ret[ep] = parseTemplateObject(templateObject[ep], props);
+        break;
+      }
+      default: {
+        _$ret[ep] = templateObject[ep];
+      }
+    }
+  });
+
+  return _$ret;
+}
+
 
 export const componentPartsFromFqn = (fqn) => {
   if (typeof fqn === 'string' && fqn.length > 0) {
@@ -132,11 +164,12 @@ export interface ReactoryApiUtils {
   queryString: Function,
   hashCode: Function,
   injectResources: Function,
-  componentFqn: Function,  
+  componentFqn: Function,
   pluginDefinitionValid: Function,
   moment: Function,
   objectMapper: Function,
-  template : Function,
+  template: Function,
+  templateObject(item: Object, props: any): Object,
   humanNumber: Function,
   inspector: Function,
   gql: Function,
@@ -169,7 +202,7 @@ class ReactoryApi extends EventEmitter {
   getAvatar: Function;
   getOrganizationLogo: Function;
   getUserFullName: Function;
-  getThemeResource: Function;  
+  getThemeResource: Function;
   CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
@@ -238,7 +271,8 @@ class ReactoryApi extends EventEmitter {
       gql,
       humanDate,
       slugify: makeSlug,
-      deepEquals
+      deepEquals,
+      templateObject: parseTemplateObject
     };
     this.$func = {
       'core.NullFunction': (params) => {
@@ -301,7 +335,7 @@ class ReactoryApi extends EventEmitter {
     this.getUserLoginCredentials = this.getUserLoginCredentials.bind(this);
     this.setAuthToken = this.setAuthToken.bind(this);
     this.getAuthToken = this.getAuthToken.bind(this);
-    
+
     this.assets = {
       logo: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/logo.png`,
       avatar: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/avatar.png`,
@@ -341,22 +375,22 @@ class ReactoryApi extends EventEmitter {
     this.setFormValidationMaps = this.setFormValidationMaps.bind(this);
   }
 
-  setFormTranslationMaps(maps: any){
+  setFormTranslationMaps(maps: any) {
     this.formTranslationMaps = { ...this.formTranslationMaps, ...maps };
   }
 
-  setFormValidationMaps(maps: any){
+  setFormValidationMaps(maps: any) {
     this.formValidationMaps = { ...this.formValidationMaps, ...maps };
   }
-  
-  extendClientResolver( resolvers: Resolvers) {
+
+  extendClientResolver(resolvers: Resolvers) {
     const { client } = this;
-    if(client && resolvers) {       
-      client.addResolvers(resolvers);      
+    if (client && resolvers) {
+      client.addResolvers(resolvers);
     }
   }
 
-  createNotification(title: string, options: NotificationOptions | any = {} ){
+  createNotification(title: string, options: NotificationOptions | any = {}) {
     this.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
 
     if (options.showInAppNotification) {
@@ -374,43 +408,42 @@ class ReactoryApi extends EventEmitter {
     const checkNotificationPromise = () => {
       try {
         Notification.requestPermission().then();
-      } catch(e) {
+      } catch (e) {
         return false;
       }
       return true;
     }
 
     const requestPermission = () => {
-      if(checkNotificationPromise() === true) {
+      if (checkNotificationPromise() === true) {
         Notification.requestPermission()
-        .then((permission) => {
-          if(permission === "granted") {
-            this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
-          }
-        })
+          .then((permission) => {
+            if (permission === "granted") {
+              this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
+            }
+          })
       } else {
-        Notification.requestPermission(function(permission) {
-          if(permission === "granted") {
+        Notification.requestPermission(function (permission) {
+          if (permission === "granted") {
             this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
           }
         });
       }
     };
 
-    if(window && window.Notification) {
+    if (window && window.Notification) {
 
-      switch(Notification.permission)
-      {
+      switch (Notification.permission) {
         case "denied": {
           //denied notificaitons, use fallback
           this.amq.raiseFormCommand("reactory.core.display.notification",
-          {
-            title: title,
-            options: {
-              ...defaultNotificationProperties,
-              ...options
-            }
-          });
+            {
+              title: title,
+              options: {
+                ...defaultNotificationProperties,
+                ...options
+              }
+            });
           return;
         }
         case "granted": {
@@ -458,7 +491,7 @@ class ReactoryApi extends EventEmitter {
           break;
         case 'error':
           formatting = "color: red; font-weight: bold;"
-          break;        
+          break;
         case 'warn':
           {
             formatting = "color: yellow, font-weight: bold;"
@@ -531,12 +564,12 @@ class ReactoryApi extends EventEmitter {
   };
 
   stat(key, statistic) {
-    
+
     try {
       if (this.statistics && this.statistics.items && this.statistics.items[key]) {
-        this.statistics.items[key] = { ...this.statistics.items[key], ...statistic };        
+        this.statistics.items[key] = { ...this.statistics.items[key], ...statistic };
       } else {
-  
+
         this.statistics.items[key] = statistic;
         this.statistics.__keys.push(key);
       }
@@ -544,7 +577,7 @@ class ReactoryApi extends EventEmitter {
     } catch (statisticsCollectionError) {
       this.log(`Error capturing statistic`, { key, statistic, statisticsCollectionError }, 'error');
     }
-    
+
   };
 
   trackFormInstance(formInstance) {
@@ -570,13 +603,13 @@ class ReactoryApi extends EventEmitter {
     });
   }
 
-  graphqlQuery(query, 
-    variables, 
-    options: any = { fetchPolicy: 'network-only' }, 
+  graphqlQuery(query,
+    variables,
+    options: any = { fetchPolicy: 'network-only' },
     queryDefinition: Reactory.IReactoryFormQuery = null) {
-    
+
     const that = this;
-    
+
     if (typeof query === 'string')
       query = gql(query);
     return new Promise((resolve, reject) => {
@@ -612,7 +645,7 @@ class ReactoryApi extends EventEmitter {
   renderForm(componentView, wrap: boolean = true) {
     const that = this;
 
-    if(wrap === false) return (<React.Fragment>{componentView}</React.Fragment>)
+    if (wrap === false) return (<React.Fragment>{componentView}</React.Fragment>)
 
     return (<React.Fragment>
       <CssBaseline />
@@ -647,7 +680,7 @@ class ReactoryApi extends EventEmitter {
                   before={props.before}
                   {...props}
                   context={context}
-                  >{props.children}
+                >{props.children}
                 </ReactoryFormComponent>, formDef.wrap === true);
               };
               that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent);
@@ -712,7 +745,7 @@ class ReactoryApi extends EventEmitter {
 
             self.log(`______ MUTATION NOTIFICATION _______`);
 
-            const resultMap = commandDef.graphql.mutation.resultMap || {'*': '*'};
+            const resultMap = commandDef.graphql.mutation.resultMap || { '*': '*' };
             let notificationProperties = {
               ...(commandDef.graphql.mutation.notificationProperties || {}),
               ...(objectMapper(mutationResult, resultMap))
@@ -768,7 +801,7 @@ class ReactoryApi extends EventEmitter {
     if (itemRoles.length === 1 && itemRoles[0] === '*')
       return true;
 
-      if (userRoles === null) {
+    if (userRoles === null) {
       const loggedInUser = this.getUser();
       comparedRoles = loggedInUser.roles;
     }
@@ -804,28 +837,28 @@ class ReactoryApi extends EventEmitter {
         icons
       }
     };
-    
+
 
     let paletteType = 'light';
 
     const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
     const isLightMode = window.matchMedia("(prefers-color-scheme: light)").matches
     const isNotSpecified = window.matchMedia("(prefers-color-scheme: no-preference)").matches
-      
-    if(localStorage) {
+
+    if (localStorage) {
       paletteType = localStorage.getItem("$reactory$theme_mode")
-      if(!paletteType) {
+      if (!paletteType) {
         paletteType = isDarkMode === true ? 'dark' : 'light'
       }
     }
 
     const theme = { ...themeOptions, extensions };
-    if(theme.palette) theme.palette.type = paletteType; 
+    if (theme.palette) theme.palette.type = paletteType;
     else {
       theme.palette = {
         type: paletteType
       }
-    }     
+    }
 
     return theme;
   }
@@ -918,7 +951,7 @@ class ReactoryApi extends EventEmitter {
     });
     return componentMap;
   }
-  
+
   getComponent(fqn) {
     if (fqn === undefined)
       throw new Error('NO NULL FQN');
@@ -939,12 +972,12 @@ class ReactoryApi extends EventEmitter {
     const components = [];
     const that = this;
     const { componentRegister } = this;
-    const GLOBAL_REGEX_PATTERN = /.\$GLOBAL\$/;    
-    Object.keys(componentRegister).forEach((componentKey) => {      
-      if(GLOBAL_REGEX_PATTERN.test(componentKey) === true) {                
+    const GLOBAL_REGEX_PATTERN = /.\$GLOBAL\$/;
+    Object.keys(componentRegister).forEach((componentKey) => {
+      if (GLOBAL_REGEX_PATTERN.test(componentKey) === true) {
         const { roles, component } = componentRegister[componentKey];
-        if(isArray(roles) === true) {
-          if(that.hasRole(roles) === true) components.push(component) 
+        if (isArray(roles) === true) {
+          if (that.hasRole(roles) === true) components.push(component)
         } else {
           components.push(component);
         }
@@ -1001,8 +1034,8 @@ class ReactoryApi extends EventEmitter {
   showModalWithComponent(title = '', ComponentToMount, props, modalProps: any = {}, domNode = null, theme = true, callback) {
     const that = this;
     const FullScreenModal = that.getComponent('core.FullScreenModal');
-    const _modalProps: any = {...modalProps};
-    if(modalProps.open === null || modalProps.open === undefined) _modalProps.open = true;
+    const _modalProps: any = { ...modalProps };
+    if (modalProps.open === null || modalProps.open === undefined) _modalProps.open = true;
     else _modalProps.open = modalProps.open === true;
     _modalProps.title = title;
     let _domNode = domNode || reactoryDomNode();
@@ -1034,7 +1067,7 @@ class ReactoryApi extends EventEmitter {
     this.client = client;
     this.setUser({ ...user, ...anonUser });
     if (refreshStatus === true) {
-      this.status({ emitLogin: false }).then((apiStatus) => {        
+      this.status({ emitLogin: false }).then((apiStatus) => {
         this.emit(ReactoryApiEventNames.onLogout);
       });
     } else {
@@ -1051,15 +1084,15 @@ class ReactoryApi extends EventEmitter {
   }
 
   getUser() {
-    if(this.$user) return this.$user;
+    if (this.$user) return this.$user;
 
     const userString = localStorage.getItem(storageKeys.LoggedInUser);
-    if (userString){
+    if (userString) {
       try {
         let parsedUser = JSON.parse(userString);
         this.$user = parsedUser;
         return parsedUser;
-      } catch(parseError) {
+      } catch (parseError) {
         this.log('Could not parse the logged in user data', parseError, 'error');
         return anonUser;
       }
@@ -1103,21 +1136,21 @@ class ReactoryApi extends EventEmitter {
   status(options = { emitLogin: false }) {
     const that = this;
     return new Promise((resolve, reject) => {
-      this.forms(true).then(()=>{      
+      this.forms(true).then(() => {
         that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
           if (result.data.apiStatus.status === "API OK") {
             that.setUser({ ...result.data.apiStatus });
             that.lastValidation = moment().valueOf();
             that.tokenValidated = true;
-  
+
             if (options.emitLogin === true)
-              that.emit(ReactoryApiEventNames.onLogin, that.getUser());          
-            if(result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
+              that.emit(ReactoryApiEventNames.onLogin, that.getUser());
+            if (result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
               result.data.apiStatus.messages.forEach((message) => {
                 that.createNotification(message.title, message);
               });
             }
-  
+
             that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: false });
             resolve(that.getUser());
           } else {
@@ -1133,7 +1166,7 @@ class ReactoryApi extends EventEmitter {
         });
 
       });
-      
+
     });
   }
 

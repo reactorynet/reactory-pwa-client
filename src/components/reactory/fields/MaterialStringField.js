@@ -1,6 +1,9 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { throttle } from 'lodash'
+import { compose } from 'recompose';
+import { withApi } from '@reactory/client-core/api/ApiProvider';
+
 import om from 'object-mapper';
 
 import {
@@ -20,7 +23,7 @@ import {
 import { withTheme } from '@material-ui/styles';
 
 
-export default withTheme((props) => {
+const MaterialStringFieldWidget = (props) => {
   const {
     id,
     autofocus,
@@ -41,35 +44,34 @@ export default withTheme((props) => {
     schema,
     uiSchema,
     hidden,
-    theme
+    theme,
+    api
   } = props;
 
-  const inputProps = {
-    value: '',
-    name,
-    required,
-    disabled,
-    autofocus
-  }
-
-  const uiOptions = uiSchema['ui:options'] || { readOnly: false }
-
-  if (uiSchema["ui:widget"]) {
-
-    const Widget = registry.widgets[uiSchema["ui:widget"]]
-    let args = { ...props };
-    if (uiOptions.props) {
-      args = { ...args, ...uiOptions.props }
+  try {
+    const inputProps = {
+      value: '',
+      name,
+      required,
+      disabled,
+      autofocus
     }
-
+    
+    const uiOptions = uiSchema['ui:options'] || { readOnly: false, props: {} };
+    let args = uiOptions && uiOptions.props ? { ...uiOptions.props } : {};      
+  
     if (uiOptions.propsMap) {
       let margs = om(props, uiOptions.propsMap);
       args = { ...args, ...margs };
+    } else {
+      args = { ...args, ...props };
     }
 
-    if (Widget) return (<Widget {...args} />)
-  } else {
-    let args = {}
+    if (uiSchema["ui:widget"]) {
+      const Widget = registry.widgets[uiSchema["ui:widget"]]   
+      if (Widget) return (<Widget {...args} />)
+    }
+
 
     switch (schema.format) {
       case "password": args.type = "password"; break;
@@ -77,18 +79,13 @@ export default withTheme((props) => {
       default: args.type = schema.format || "text"; break;
     }
 
-    if (uiOptions && uiOptions.props) {
-      args = { ...args, ...uiOptions.props };
-    }
-
-    if (uiOptions.propsMap) {
-      let margs = om(props, uiOptions.propsMap);
-      args = { ...args, ...margs };
-    }
-
     const onInputChanged = (evt) => {
       evt.persist();
-      onChange(evt.target.value);
+      let _v = `${evt.target.value}`;
+      if (args.toLowerCase === true) {
+        _v = _v.toLowerCase();
+      }
+      onChange(_v);
     }
 
     const onKeyDown = evt => {
@@ -99,7 +96,7 @@ export default withTheme((props) => {
     }
 
     if (uiOptions.component === "TextField") {
-
+    
       let inputProps = {
         onChange: onInputChanged,
         onKeyDown: onKeyDown,
@@ -134,6 +131,7 @@ export default withTheme((props) => {
         componentProps = { ...componentProps, ...uiOptions.componentProps };
       }
 
+
       return (<TextField {...componentProps} />);
     } else {
       let themeDefaults = {};
@@ -156,8 +154,19 @@ export default withTheme((props) => {
         }
       }
 
-      return (<COMPONENT {...args} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />)
+
+      return (<COMPONENT {...args} onKeyDown={onKeyDown} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />)
     }
+
+  } catch (renderError) {
+    if (api) {
+      api.log(`💥 MaterialString Field Error`, { renderError }, 'error')
+    }
+    return <>💥 Could not render field</>
   }
-});
+
+};
+
+const MaterialStringApiFieldWidget = compose(withApi, withTheme)(MaterialStringFieldWidget)
+export default MaterialStringApiFieldWidget;
 

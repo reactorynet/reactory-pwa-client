@@ -467,10 +467,25 @@ class SurveyDelegates extends Component {
     //src: http://localhost:4000/pdf/towerstone/delegate-360-assessment?x-client-key=${this.props.api.CLIENT_KEY}&x-client-pwd=${this.props.api.CLIENT_PWD}
 
     let modalviewComponent = null;
-    let reportData = {
-      surveyId: self.props.formContext.surveyId,
-      delegateId: activeEntry.id || ''
-    };
+
+    
+    let reportData = {};
+
+    if(basicModalViewMode !== 'one_view_chart') {      
+      reportData = {
+        surveyId: self.props.formContext.surveyId,
+        delegateId: activeEntry.id || '',
+        surveyType: surveyProps.surveyType,
+        scale: 1
+      };
+    } else {
+      reportData = {
+        surveyId: self.props.formContext.surveyId,
+        delegateIds: self.state.selected,
+        surveyType: surveyProps.surveyType,
+        scale: 1
+      }
+    }
 
     switch (reportType) {
       case ReportTypes.SurveyStatusReport: delete reportData.delegateId; break;
@@ -488,6 +503,8 @@ class SurveyDelegates extends Component {
 
     switch (basicModalViewMode) {
       case 'report_preview': {
+        delete reportData.scale
+        delete reportData.surveyType
         modalviewComponent = (<ReportViewer
           folder={nameSpace}
           report={name || ReportTypes.DelegateReport}
@@ -498,6 +515,8 @@ class SurveyDelegates extends Component {
         break;
       }
       case 'report_download': {
+        delete reportData.scale
+        delete reportData.surveyType
         modalviewComponent = (<ReportViewer
           folder={nameSpace}
           report={name || ReportTypes.DelegateReport}
@@ -505,6 +524,10 @@ class SurveyDelegates extends Component {
           delivery="download"
           waitingText="Loading Report Data, please wait."
           data={reportData} />)
+        break;
+      }
+      case 'one_view_chart': {
+        modalviewComponent = (<DelegateOneViewChart {...reportData} />);
         break;
       }
       case 'assessments':
@@ -700,7 +723,7 @@ class SurveyDelegates extends Component {
   }
 
   getActiveModalView() {
-    const { FullScreenModal, UserListWithSearch } = this.componentDefs;
+    const { FullScreenModal, UserListWithSearch, DelegateOneViewChart } = this.componentDefs;
     const { activeEntry, modal, modalType, basicModalViewMode, userAddType, formData } = this.state;
     const { formContext, onChange, api } = this.props;
     const self = this;
@@ -756,6 +779,10 @@ class SurveyDelegates extends Component {
         component = self.getBasicModalView();
         break;
       }
+      case 'one_view_chart': {
+        component = self.getBasicModalView();
+        break;
+      }  
       case 'detail':
       default: {
         if (activeEntry === null) return null;
@@ -1228,6 +1255,18 @@ class SurveyDelegates extends Component {
           self.generateReport(ReportTypes.MoresCulture);
         },
         icon: <Icon>multiline_chart</Icon>,
+        enabled: true,
+        ordinal: 5,
+      });
+
+      speedDialActions.push({
+        key: 'culture-survey-view-graph',
+        title: 'Display One View Chart',
+        clickHandler: evt => {
+          self.setState({ basicModalViewMode: 'one_view_chart', modal: true, modalType: 'basic', delegateIds: selected, selectionTitle: self.state.selectionTitle });
+            
+        },
+        icon: <Icon>donut_large</Icon>,
         enabled: true,
         ordinal: 5,
       });
