@@ -115,10 +115,11 @@ class FullScreenDialog extends Component {
 
     let BackNavigation = null;
 
+    // NOTE - THIS NEEDS TO BE RESTRUCTURED TO USE A GRID LAYOUT - MOBILE FRIENDLY
     if (backNavigationItems && backNavigationItems.length > 0) {
       BackNavigation = (props) => {
         return (
-          <div className={classes.backNavContainer}>
+          <div className={classes.backNavContainer} style={ containerProps.navContainerStyle ? { ...containerProps.navContainerStyle } : {} }>
             <div style={{ display: 'flex', cursor: 'pointer' }} onClick={this.handleClose}>
               <Icon style={{ fontSize: 30 }}>chevron_left</Icon>
               <Typography variant="h6" classes={{ root: classes.backButtonText }}>Back</Typography>
