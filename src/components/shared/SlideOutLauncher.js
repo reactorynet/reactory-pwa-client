@@ -9,18 +9,6 @@ import { ReactoryApi } from "../../api/ReactoryApi";
 
 class SlideOutLauncher extends Component {
 
-  // CONFIRGURATION OPTIONS
-  // buttonVariant - Static | SpeedDial
-
-  // Click Actions:
-  // Launch
-  // Navigate
-  // Emit
-  // MountComponent
-
-  // TO ADD
-  // SpeedDial needs actions
-
   constructor(props, context) {
     super(props, context);
 
@@ -44,8 +32,11 @@ class SlideOutLauncher extends Component {
 
     let {
       formData,
+      rowData,
       uiSchema,
     } = _props;
+
+    debugger;
 
     let isFormWidget = false;
 
@@ -71,7 +62,7 @@ class SlideOutLauncher extends Component {
       buttonProps = {},
       componentProps,
       actions,
-      childProps = {}
+      childProps = {},
     } = _props;
 
 
@@ -92,6 +83,17 @@ class SlideOutLauncher extends Component {
     let _windowTitle = windowTitle ? tpl(windowTitle) : '';
     let _buttonVariant = buttonVariant ? tpl(buttonVariant) : '';
 
+    let _showAppBar = true;
+    _showAppBar = this.props.backNavigationConfig ? false : true;
+    let _backNavigationItems = [];
+    if (this.props.backNavigationConfig) {
+      _backNavigationItems = this.props.backNavigationConfig.backNavigationItems.map(item => {
+        return tpl(item);
+      });
+    }
+    let _containerProps = {};
+    _containerProps = this.props.backNavigationConfig ? this.props.backNavigationConfig.containerProps : {};
+
     const FullScreenModal = api.getComponent('core.FullScreenModal');
     let ChildComponent = api.getComponent(componentFqn || 'core.Loading');
     let componentFound = true;
@@ -111,8 +113,8 @@ class SlideOutLauncher extends Component {
 
     let LaunchButton = (
       <Button onClick={onClick}>
-        { icon && <Icon>{icon}</Icon> }
-        { _buttonTitle }
+        { icon && <Icon>{icon}</Icon>}
+        { _buttonTitle}
       </Button>
     );
 
@@ -168,7 +170,11 @@ class SlideOutLauncher extends Component {
           open={this.state.open === true}
           title={_windowTitle}
           slide={this.props.slideDirection}
-          onClose={onClick}>
+          onClose={onClick}
+          showAppBar={_showAppBar}
+          backNavigationItems={_backNavigationItems}
+          containerProps={_containerProps}
+        >
           {this.state.open === true ? <ChildComponent {...childprops} /> : null}
         </FullScreenModal>
       </Fragment>
