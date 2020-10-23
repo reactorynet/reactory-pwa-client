@@ -64,7 +64,7 @@ class StyledCurrencyLabel extends Component {
       let _value = value;
       let _prependText = this.props.prependText || '';
       let _postpendText = this.props.postpendText || '';
-      let _containerProps = this.props.containerProps || {};
+      let _containerProps = this.props.containerProps || {  };
       let _tooltip = this.props.tooltip || '';
       let _tooltipBackgroundColor = this.props.tooltipBackgroundColor || '';
       let _tooltipTextColor = this.props.tooltipTextColor || '#fff';
@@ -76,6 +76,8 @@ class StyledCurrencyLabel extends Component {
   
       let defaultStyle = {}
   
+      if (!_containerProps.style) _containerProps.style = {};
+
       if (uiSchema) {
         const uiOptions = uiSchema['ui:options'];
   
@@ -87,7 +89,7 @@ class StyledCurrencyLabel extends Component {
   
         if (uiOptions.defaultStyle) defaultStyle = { ...uiOptions.defaultStyle };
   
-        _containerProps.style = { ...defaultStyle };
+        _containerProps.style = { ...defaultStyle, ..._containerProps.style };
   
         if (uiOptions.prependText && uiOptions.prependText != '')
           _prependText = uiOptions.prependText;
@@ -98,7 +100,7 @@ class StyledCurrencyLabel extends Component {
         if (uiOptions.conditionalStyles && condition) {
           const matchingCondition = uiOptions.conditionalStyles.find(option => option.key === condition);
           if (matchingCondition) {
-            _containerProps.style = { ...defaultStyle, ...matchingCondition.style };
+            _containerProps.style = { ..._containerProps.style, ...defaultStyle, ...matchingCondition.style };
             if (matchingCondition.tooltip) {
               _tooltip = matchingCondition.tooltip;
               _tooltipBackgroundColor = matchingCondition.style.color
@@ -130,9 +132,7 @@ class StyledCurrencyLabel extends Component {
             otherCurrencies.push((
               <div className={classes.currency} {..._containerProps}>
                 <span style={{ fontWeight: "bold" }}>({currency.currency_code})&nbsp;</span>
-                <span className={classes.currencyValue}>
-                  {/* {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency.list_price_cents / 100) : currency.list_price_cents)} */}
-                  {/* {new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency[additionalCurrencyMapField] / 100) : currency[additionalCurrencyMapField])} */}
+                <span className={classes.currencyValue}>                  
                   {
                     !_showZeroValues && currency[_additionalCurrencyMapField] == 0 ?
                       <span>   -   </span>
@@ -185,7 +185,7 @@ class StyledCurrencyLabel extends Component {
         </>
       );
     } catch(error) {
-      return <span>Err > {error.message}</span>
+      return <span>💥{error.message}</span>
     }
   }
 }

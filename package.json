@@ -70,6 +70,7 @@
     "react-dates": "20.2.0",
     "react-dom": "^16.13.1",
     "react-draggable": "^4.4.3",
+    "react-beautiful-dnd": "^13.0.0",
     "react-dropzone": "^10.1.5",
     "react-froala-wysiwyg": "3.0.0-rc.1",
     "react-google-maps": "9.4.5",

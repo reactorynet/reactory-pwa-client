@@ -10,7 +10,7 @@ import {
   Button,
   Icon,
 } from '@material-ui/core';
-
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import * as MaterialCore from '@material-ui/core'
 import * as MaterialIcons from '@material-ui/icons'
 import * as MaterialLab from '@material-ui/lab'
@@ -18,6 +18,8 @@ import * as MaterialStyles from '@material-ui/core/styles';
 import * as MaterialPickers from '@material-ui/pickers';
 import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
+
+
 import LoginPage, { RegisterPage } from './auth';
 import Main from './home/index';
 import AssessmentView from './assess/index';
@@ -710,7 +712,7 @@ export const componentRegistery = [
       MaterialIcons,
       MaterialLab,
       MaterialStyles,
-      MaterialPickers,
+      MaterialPickers,      
     },
   },
   {
@@ -742,14 +744,22 @@ export const componentRegistery = [
     name: 'MaterialFormWidgets',
     version: '1.0.0',
     component: require('./reactory/widgets')
-  },
+  }, 
   GraphiqlWindow.meta,
   SlideOutLauncher.meta,
   require('./shared/currency/CurrencyLabel'),
   require('./shared/DateLabel'),
   require('./shared/StaticContent').meta,
   require('./shared/Label'),
-  require('./shared/AlertDialog')
+  require('./shared/AlertDialog'),
   // require('./reactory/widgets/LabelWidget'),
   // require('./shared/MaterialInput')
+  {
+    nameSpace: 'reactory-core',
+    name: 'ReactBeautifulDnD',
+    version: '1.0.0',
+    component: {
+        DragDropContext, Droppable, Draggable
+    },
+  }
 ];

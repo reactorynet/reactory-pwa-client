@@ -390,8 +390,21 @@ class ReactoryApi extends EventEmitter {
     }
   }
 
-  createNotification(title: string, options: NotificationOptions | any = {}) {
+  createNotification(title: string, options: NotificationOptions | any = { }) {
     this.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
+
+    let defaultNotificationProps = {
+      title,
+      type: options.type || "info",
+      config: {
+        canDismiss: true,
+        timeOut: 2500,        
+      }
+    }
+
+    if (options.props) {
+      defaultNotificationProps.config = { ...defaultNotificationProps.config, ...options.config }
+    }
 
     if (options.showInAppNotification) {
       this.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: options.props });

@@ -57,16 +57,18 @@ class NotificationHOC extends Component {
           marginLeft: '1rem'
         },
       },
+      info: {
+        backgroundColor: theme.palette.info.main,
+      },
       success: {
-        backgroundColor: '#4fbc4f',
+        backgroundColor: theme.palette.success.main,
       },
       error: {
-        backgroundColor: '#e04a47',
+        backgroundColor: theme.palette.error.main,
       },
       warning: {
-        backgroundColor: '#f9cd2c',
+        backgroundColor: theme.palette.warning.main,
       },
-
     }
   }
 
@@ -119,7 +121,7 @@ class NotificationHOC extends Component {
     }
 
     return (
-      <div onClick={this.clickHandler} className={classNames(classes.notification, (type == 'success' ? classes.success : classes.error ? classes.error : classes.warning))}>
+      <div onClick={this.clickHandler} className={classNames(classes.notification, classes[type] )}>
         <Grid container className={classes.root} spacing={2}>
           <Grid item className={classes.messageColumn}>
             <Icon>done</Icon>
