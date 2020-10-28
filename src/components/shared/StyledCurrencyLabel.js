@@ -30,19 +30,19 @@ class ToolTipHOC extends Component {
 
 class StyledCurrencyLabel extends Component {
 
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context);
 
     this.state = {};
   }
 
-  componentDidCatch(error){
+  componentDidCatch(error) {
     this.setState({ error })
   }
 
   render() {
 
-    if(this.state.error) return (<span>{this.state.error.message}</span>)
+    if (this.state.error) return (<span>{this.state.error.message}</span>)
 
     try {
 
@@ -58,8 +58,9 @@ class StyledCurrencyLabel extends Component {
         displayPrimaryCurrency = true,
         currenciesDisplayed = null,
         options = null,
+        style = {}
       } = this.props;
-  
+
       let isCents = true;
       let _value = value;
       let _prependText = this.props.prependText || '';
@@ -73,66 +74,66 @@ class StyledCurrencyLabel extends Component {
       let inlineLabel = this.props.inlineLabel || false;
       let _additionalCurrencyMapField = this.additionalCurrencyMapField || 'list_price_cents';
       let _showZeroValues = this.props.showZeroValues || true;
-  
-      let defaultStyle = {}
-  
-      if (!_containerProps.style) _containerProps.style = {};
+
+      let defaultStyle = {...style}
+
+      if (!_containerProps.style) _containerProps.style = style;
 
       if (uiSchema) {
         const uiOptions = uiSchema['ui:options'];
-  
+
         if (uiOptions.label && uiOptions.label != '')
           _label = uiOptions.label;
-  
+
         isCents = uiOptions && uiOptions.isCents === false ? false : isCents;
         _value = uiOptions && (uiOptions.valueProp || this.props.formData) ? this.props[uiOptions.valueProp || 'formData'] : value;
-  
+
         if (uiOptions.defaultStyle) defaultStyle = { ...uiOptions.defaultStyle };
-  
+
         _containerProps.style = { ...defaultStyle, ..._containerProps.style };
-  
+
         if (uiOptions.prependText && uiOptions.prependText != '')
           _prependText = uiOptions.prependText;
-  
+
         if (uiOptions.postpendText && uiOptions.postpendText != '')
           _postpendText = uiOptions.postpendText;
-  
+
         if (uiOptions.conditionalStyles && condition) {
           const matchingCondition = uiOptions.conditionalStyles.find(option => option.key === condition);
           if (matchingCondition) {
-            _containerProps.style = { ..._containerProps.style, ...defaultStyle, ...matchingCondition.style };
+            _containerProps.style = { ...style, ..._containerProps.style, ...defaultStyle, ...matchingCondition.style,  };
             if (matchingCondition.tooltip) {
               _tooltip = matchingCondition.tooltip;
               _tooltipBackgroundColor = matchingCondition.style.color
             }
           }
         }
-  
+
         if (uiOptions.inlineLabel)
           inlineLabel = uiOptions.inlineLabel;
-  
+
         if (uiOptions.additionalCurrencyMapField && uiOptions.additionalCurrencyMapField != '')
           _additionalCurrencyMapField = uiOptions.additionalCurrencyMapField;
-  
+
         if (uiOptions.showZeroValues != undefined)
           _showZeroValues = uiOptions.showZeroValues;
       }
-  
+
       let otherCurrencies = [];
-  
+
       if (currencies && isArray(currencies) && displayAdditionalCurrencies === true) {
         currencies.forEach((currency) => {
           let $add = true;
           if (isArray(currenciesDisplayed) === true) {
-  
+
             $add = indexOf(currenciesDisplayed, currency.currency_code) >= 0;
           }
-  
+
           if ($add === true) {
             otherCurrencies.push((
               <div className={classes.currency} {..._containerProps}>
                 <span style={{ fontWeight: "bold" }}>({currency.currency_code})&nbsp;</span>
-                <span className={classes.currencyValue}>                  
+                <span className={classes.currencyValue}>
                   {
                     !_showZeroValues && currency[_additionalCurrencyMapField] == 0 ?
                       <span>   -   </span>
@@ -145,17 +146,19 @@ class StyledCurrencyLabel extends Component {
           }
         });
       }
-  
-      let primaryCurrency = (<div className={classes.currency} {..._containerProps}>
-        {_prependText != '' && <span style="font-weight: bold">{_prependText}</span>}
-        <span className={classes.currencyValue}>
-          {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
-        </span>
-        {_postpendText != '' && <span>{_postpendText}</span>}
-      </div>);
-  
-  
-      if (inlineLabel) {
+
+      let primaryCurrency = (
+        <div className={classes.currency} {..._containerProps}>
+          {_prependText != '' && <span style="font-weight: bold">{_prependText}</span>}
+          <span className={classes.currencyValue}>
+            {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
+          </span>
+          {_postpendText != '' && <span>{_postpendText}</span>}
+        </div>
+      );
+
+
+      if (inlineLabel === true) {
         return (
           <div className={classes.inlineContainer}>
             <div>
@@ -172,19 +175,19 @@ class StyledCurrencyLabel extends Component {
           </div>
         )
       }
-  
+
       return (
         <>
           {_label != '' && <label className={classes.label}>{_label}</label>}
           <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
-            <div>
+            <>
               {displayPrimaryCurrency === true ? primaryCurrency : null}
               {displayAdditionalCurrencies === true ? otherCurrencies : null}
-            </div>
+            </>
           </ToolTipHOC>
         </>
       );
-    } catch(error) {
+    } catch (error) {
       return <span>💥{error.message}</span>
     }
   }
