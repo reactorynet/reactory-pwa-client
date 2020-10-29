@@ -26,7 +26,7 @@ class LabelWidget extends Component {
   static rootStyle(theme) {
     return {
       labelText: {
-        // wordBreak: 'break-all'
+        marginLeft: theme.spacing(1),
         wordBreak: 'normal'
       },
       copyIcon: {
@@ -35,10 +35,8 @@ class LabelWidget extends Component {
       },
       inlineDiv: {
         display: 'flex',
-        '& span': {
-          fontSize: '1.4em'
-        }
-
+        alignItems: 'center',
+        '& span': {}
       }
     }
   }

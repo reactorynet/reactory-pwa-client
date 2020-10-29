@@ -705,8 +705,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             <div {...p}>
               {
                 formUiOptions.schemaSelector.buttonVariant && formUiOptions.schemaSelector.buttonVariant == 'contained' ?
-                  <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} variant="contained">{formUiOptions.schemaSelector.buttonTitle}</Button> :
-                  <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} >{formUiOptions.schemaSelector.buttonTitle}</Button>
+                  <Button id="schemaButton"  onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} variant="contained">{formUiOptions.schemaSelector.buttonTitle}</Button> :
+                  <Button id="schemaButton" style={{ fontWeight: 'bold', fontSize: '1rem'}} onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} >{formUiOptions.schemaSelector.buttonTitle}</Button>
               }
             </div>
           )
@@ -925,7 +925,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         <Mutation mutation={gql(mutation.text)}>
           {(mutateFunction: Function, mutationResult: MutationResult) => {
             const { loading, error, data } = mutationResult;
-            
+
             api.log(`MutationFormComponent 👀🟠`, {loading, error, data}, 'debug');
 
             let exectuting = false;
@@ -934,13 +934,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
               api.log(`Form Submitting, post via graphql`, formSchema, 'debug');
               exectuting = true;
               const _variables = objectMapper({ ...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
-              
+
               that.setState({ notificationComplete: false }, () => {
                 mutateFunction({
                   variables: api.utils.omitDeep({ ..._variables }),
                   refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
                 });
-              });              
+              });
             };
 
             let loadingWidget = null;
