@@ -63,7 +63,7 @@ const styles = (theme) => {
 
 
 const Transition = React.forwardRef(function Transition(props, ref) {
-  return <Slide direction="up" ref={ref} {...props} />;
+  return <Slide direction={props.direction || "up"} ref={ref} {...props} />;
 });
 
 
@@ -84,6 +84,14 @@ class FullScreenDialog extends Component {
       this.setState({ open: false });
     }
   };
+
+  componentDidUpdate(prevProps, prevState) {
+    const { api } = this.props;
+
+    api.log('FullScreenDialog.js componentDidUpdate(prevProps, prevState)', { prevProps, prevState }, 'debug');
+
+
+  }
 
   componentDidMount() {
     const { closeOnEvents = [], api } = this.props;

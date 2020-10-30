@@ -153,6 +153,7 @@ export interface ReactoryFormProperties {
   $route?: any,
   $App?: any,
   validate?: Function,
+  transformErrors?: Function,
   autoQueryDisabled?: boolean,
   refCallback?: Function
 }
@@ -561,6 +562,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       transformErrors: (errors) => {
         api.log(`Transforming error message`, { errors }, 'debug');
         let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
+
+        if (self.props.transformErrors && typeof self.props.transformErrors === 'function') {
+          self.props.transformErrors(errors, self);
+        }
 
         if (api.formTranslationMaps && api.formTranslationMaps[formfqn]) {
           return api.formTranslationMaps[formfqn](errors, self);
@@ -1576,12 +1581,16 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       if (formDef.graphql && formDef.graphql.mutation && formDef.graphql.mutation['onChange']) {
         let onChangeMutation: Reactory.IReactoryFormMutation = formDef.graphql.mutation['onChange'];
         let throttleDelay: number = formDef.graphql.mutation['onChange'].throttle || 300;
-        let variables = api.utils.objectMapper({ eventData: data, form: this }, onChangeMutation.variables);
+        let variables = api.utils.objectMapper({ eventData: data, form: self }, onChangeMutation.variables);
 
         let throttledCall = throttle(() => {
           api.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
             api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation result`, { mutationResult }, 'debug');
+            
+            if (self.props.onMutateComplete) self.props.onMutateComplete(data.formData, self.getFormContext(), mutationResult);
           }).catch((mutationError) => {
+
+            if (self.props.onMutateComplete) self.props.onMutateComplete(data.formData, self.getFormContext(), null, mutationError);
             api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation error`, { mutationError }, 'error');
           });
         }, throttleDelay)

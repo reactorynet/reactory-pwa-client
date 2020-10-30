@@ -1,8 +1,10 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { throttle } from 'lodash';
-import { withStyles } from '@material-ui/core/styles';
+import { compose } from 'recompose';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 import { Tooltip, Slider, Grid, Typography } from '@material-ui/core';
+import { withApi } from '@reactory/client-core/api/ApiProvider';
 
 // REQUIREMENTS
 // 1. Slider
@@ -46,7 +48,7 @@ class PricingSliderWidget extends Component {
   };
 
   render() {
-    const { classes, uiSchema, landedPrice, threeMonthAvePrice, wh10CostPrice, listPrice } = this.props;
+    const { classes, uiSchema, landedPrice, threeMonthAvePrice, wh10CostPrice, listPrice, theme, auth_price = 10, max_percentage_increase = 100, disabled = false } = this.props;
     let defaultRegion = 'af';
     let defaultCurrencyOptions = { style: 'currency', currency: 'ZAR', currencyDisplay: 'symbol' };
     let _landedCost = landedPrice;
@@ -54,25 +56,57 @@ class PricingSliderWidget extends Component {
     let _threeMonthAveSellingPrice = threeMonthAvePrice;
     let _listPrice = listPrice;
 
-    let defaultValues = [];
-    defaultValues.push(_wh10Cost);
-    defaultValues.push(_threeMonthAveSellingPrice);
 
-    let options = { min: 0, max: 100, step: 1, }
+
+    let defaultValues = [];
+    defaultValues.push(_listPrice);
+
+    let options = { min: 1, max: (_listPrice || threeMonthAvePrice) * 3, step: 1, }
     if (uiSchema && uiSchema['ui:options']) options = { ...options, ...uiSchema['ui:options'] }
+
+    const CustomThumbComponent = (props) => {
+      return (
+        <span {...props}>
+          <span className="bar" />
+        </span>
+      );
+    }
+
+    const { palette } = theme;
+
+    const box_shadow = '0 3px 1px rgba(0,0,0,0.1),0 4px 8px rgba(0,0,0,0.13),0 0 0 1px rgba(0,0,0,0.02)';
 
     const CustomSlider = withStyles({
       root: {
-        height: 2,
+        height: '10px',
         padding: '15px 0',
-        width: '400px',
+        width: '95%',
+        margin: '16px'
       },
       thumb: {
-        height: 10,
-        width: 10,
-        backgroundColor: '#000',
-        marginTop: -4,
-        marginLeft: -4,
+        height: '28px',
+        width: '28px',
+        backgroundColor: '#fff',
+        marginTop: -9,
+        marginLeft: -14,
+        boxShadow: box_shadow,
+        '&:focus, &:hover, &$active': {
+          boxShadow: '0 0 8px 5px rgba(0,0,0,0.1),0 4px 8px rgba(0,0,0,0.13),0 0 0 1px rgba(0,0,0,0.02)',
+          // Reset on touch devices, it doesn't add specificity
+          '@media (hover: none)': {
+            boxShadow: box_shadow,
+          },
+        },
+        '& .bar': {
+          // display: inline-block !important;
+          height: '10px',
+          width: '10px',
+          border: `1px solid #4A8FC7`,
+          borderRadius: 5,
+          backgroundColor: '#4A8FC7',
+          marginLeft: 1,
+          marginRight: 1,
+        },
       },
       active: {},
       valueLabel: {
@@ -84,11 +118,27 @@ class PricingSliderWidget extends Component {
         },
       },
       track: {
-        height: 2,
+        height: '16px',
+        marginTop: '-2px',
+        background: 'linear-gradient(0deg, #4A8FC7 90%, rgba(190,190,190,1) 96%)'
       },
-      rail: {},
-      mark: {},
-      markActive: {},
+      rail: {
+        height: '10px',
+        border: 'solid 1px',
+        borderRadius: '5px',
+        width: '100%',
+        background: 'linear-gradient(0deg, rgba(247,247,247,1) 90%, rgba(190,190,190,1) 96%)'
+      },
+      mark: {
+        backgroundColor: '#bfbfbf',
+        height: '24px',
+        width: 1,
+        marginTop: '-6px',
+      },
+      markActive: {
+        opacity: 1,
+        backgroundColor: 'currentColor',
+      },
     })(Slider);
 
     const ValueLabelComponent = (props) => {
@@ -106,35 +156,33 @@ class PricingSliderWidget extends Component {
 
     const valueLabelFormat = (labelValue, index) => {
       if (index == 0) {
-        // return `R${value} (WH10 Cost Price)`
-        return `${new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(labelValue/100)} (WH10 Cost Price)`
-      }
-      if (index == 1) {
-        return `${new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(labelValue/100)} (3 Month ave. Selling Price)`
+        return `${new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(labelValue / 100)}`
       }
     }
 
-    return (
-      <Fragment>
-        <Grid container spacing={0}>
-          <Grid item xs={12}>
-            <CustomSlider
-              valueLabelFormat={valueLabelFormat}
-              defaultValue={defaultValues}
-              valueLabelDisplay="on"
-              ValueLabelComponent={ValueLabelComponent}
-              disabled
-            />
-          </Grid>
-          <Grid item xs={6} justify="flex-start">
-            <p className="label2">{new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(_landedCost/100)} (Landed Cost)</p>
-          </Grid>
-          <Grid item xs={6} justify="flex-end">
-            <p className="label2">{new Intl.NumberFormat(defaultRegion, defaultCurrencyOptions).format(_listPrice/100)} (List Price)</p>
-          </Grid>
-        </Grid>
+    let marks = [
+      { value: 0 },
+      { value: auth_price, label: 'Auth' },
+      { value: _landedCost, label: 'Landed' },
+      { value: _threeMonthAveSellingPrice, label: 'Avg' },
+      { value: options.max },
+    ];
 
-      </Fragment>
+    return (
+
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <CustomSlider
+            ThumbComponent={CustomThumbComponent}
+            valueLabelFormat={valueLabelFormat}
+            defaultValue={listPrice}
+            valueLabelDisplay="on"
+            ValueLabelComponent={ValueLabelComponent}
+            marks={marks}
+            {...options}
+          />
+        </Grid>
+      </Grid>
     );
   }
 }
@@ -143,5 +191,5 @@ PricingSliderWidget.propTypes = {
   classes: PropTypes.object,
 };
 
-export const PricingSliderComponent = withStyles(PricingSliderWidget.styles)(PricingSliderWidget);
+export const PricingSliderComponent = compose(withApi, withTheme, withStyles(PricingSliderWidget.styles))(PricingSliderWidget);
 export default PricingSliderComponent
