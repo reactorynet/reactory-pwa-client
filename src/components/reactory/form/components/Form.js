@@ -230,7 +230,7 @@ export default class Form extends Component {
       acceptcharset,
       noHtml5Validate,
       disabled,
-      toolbarPosition = 'bottom',           
+      toolbarPosition = 'bottom',    
     } = this.props;
 
     const { schema, uiSchema, formData, errorSchema, idSchema } = this.state;
@@ -239,12 +239,12 @@ export default class Form extends Component {
 
     let componentType = 'form';
     let formUiOptions = {};
-    let style = {} 
+    let style = this.props.style || {} 
 
     if(uiSchema['ui:options']) {
       formUiOptions = uiSchema['ui:options'];
       componentType = formUiOptions.componentType || componentType;
-      style = formUiOptions.style || style;
+      style = formUiOptions.style ? {...style, ...formUiOptions.style } : style;
     }
 
     if(componentType === 'form') {

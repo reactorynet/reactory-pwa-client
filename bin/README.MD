@@ -7,7 +7,7 @@ The server is currently being maintained on Node 10.16.3 and can be run on Windo
 
 Checkout the source code
 
-`> git clone git@bitbucket.org:WernerWeber/reactory-server.git`
+`> git clone git@bitbucket.org:reactory/reactory-server.git`
 
 ## Dependencies
 The PDF rendering require some specific configuration and has a requirement on build-essential and libss1-dev and is installed using 
@@ -23,7 +23,7 @@ You need to have a mongodb instance the server can connect to.  MongoDB is curre
 ## Install nvm (optional)
 You can install nvm using the curl command below:
 
-`> curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.0/install.sh | bash`
+`> curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.36.0/install.sh | bash`
 
 Latest releases of nvm can be found on [github](
 https://github.com/nvm-sh/nvm/releases)

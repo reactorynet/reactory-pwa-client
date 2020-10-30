@@ -36,8 +36,6 @@ class SlideOutLauncher extends Component {
       uiSchema,
     } = _props;
 
-    debugger;
-
     let isFormWidget = false;
 
     if (formData && uiSchema) {
