@@ -9,23 +9,27 @@ import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 
-const ThemedAlertDialog = compose(withTheme, withApi)(( props: any ) => {
-    
-    const { 
-        open, 
-        onClose, 
-        onAccept, 
-        id, 
-        theme, 
-        confirmProps = {}, 
+const ThemedAlertDialog = compose(withTheme, withApi)((props: any) => {
+
+    const {
+        open,
+        onClose,
+        onAccept,
+        id,
+        theme,
+        confirmProps = {},
         cancelProps = {},
         contentProps = {},
         titleProps = {},
         style = {},
         maxWidth = 'md',
-        dividers = false
-     } = props;
-    
+        dividers = false,
+        showCancel = true,
+        showAccept = true,
+        showActions = true,
+        actions = []
+    } = props;
+
     return (
         <Dialog
             open={open}
@@ -36,29 +40,30 @@ const ThemedAlertDialog = compose(withTheme, withApi)(( props: any ) => {
         >
             {props.title && <DialogTitle id={`alert-dialog-title-${id}`} {...titleProps}>
                 {props.title}
-            </DialogTitle> }
+            </DialogTitle>}
             <DialogContent style={style} dividers={dividers}>
                 <DialogContentText id={`alert-dialog-description-${id}`} {...contentProps}>
                     {props.content}
                 </DialogContentText>
                 {props.children}
-            </DialogContent>
-            <DialogActions>
-                <Button 
+            </DialogContent>            
+            { showActions === true && <DialogActions>
+                {actions}
+                {showCancel === true && < Button
                     variant={cancelProps.variant || "text"}
-                    onClick={onClose}                    
+                    onClick={onClose}
                     {...cancelProps}>
-                    { props.cancelTitle ? props.cancelTitle : 'Cancel' }
-                </Button>
-                <Button onClick={onAccept} 
-                    variant={confirmProps.variant || 'outlined'}                     
+                    {props.cancelTitle ? props.cancelTitle : 'Cancel'}
+                </Button>}
+                {showAccept === true && <Button onClick={onAccept}
+                    variant={confirmProps.variant || 'outlined'}
                     style={{ color: theme.palette.error.main }}
-                    autoFocus 
+                    autoFocus
                     {...confirmProps}>
-                    { props.acceptTitle ? props.acceptTitle : 'Yes' }
-          </Button>
-            </DialogActions>
-        </Dialog>
+                    {props.acceptTitle ? props.acceptTitle : 'Yes'}
+                </Button>}                
+            </DialogActions>}
+        </Dialog >
     );
 });
 

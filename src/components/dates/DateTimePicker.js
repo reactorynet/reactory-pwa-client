@@ -3,8 +3,11 @@ import PropTypes from 'prop-types';
 import moment from 'moment';
 import { FormControl, Typography } from '@material-ui/core';
 import { DatePicker, DateTimePicker } from '@material-ui/pickers';
+import { withApi } from "@reactory/client-core/api/ApiProvider";
+import { compose } from 'redux';
 
-export default class DateTimePickerWidget extends PureComponent {
+class DateTimePickerWidget extends PureComponent {
+
   
   static propTypes = {
     formData: PropTypes.any,
@@ -22,21 +25,40 @@ export default class DateTimePickerWidget extends PureComponent {
   };
 
   render() {
+
+    const { api, formData, uiSchema } = this.props;
+
+    const theme = api.getTheme();
+
     let _pickerProps = {
       variant: 'inline',
-      value: this.props.formData
-
+      value: this.props.formData,
+      onChange: this.handleDateChange,
     };
-    if(this.props.uiSchema && this.props.uiSchema['ui:options'] && this.props.uiSchema['ui:options'].picker) {
+
+    let opts = uiSchema && uiSchema["ui:options"] || {}
+  
+
+
+    if(opts.picker) {
       _pickerProps = {
-        ..._pickerProps, ...this.props.uiSchema['ui:options'].picker
-      };
+        ..._pickerProps, ...opts.picker
+      };    
     }
+
+    let formControlProps = opts.formControl || {}
+    let typographyProps = opts.typography || { variant: "caption", gutterBottom: true };
+
+
     return (
-      <FormControl>
-        <Typography variant="caption" gutterBottom>{this.props.schema.title || 'Select Time'}</Typography>
-        <DateTimePicker variant="inline" value={this.props.formData} onChange={this.handleDateChange} />
+      <FormControl {...formControlProps}>
+        <Typography {...typographyProps}>{this.props.schema.title || 'Select Time'}</Typography>
+        <DateTimePicker {..._pickerProps} />
       </FormControl>
     );
   }
 }
+
+const DateTimePickerWithApi = compose(withApi)(DateTimePickerWidget);
+
+export default DateTimePickerWithApi;

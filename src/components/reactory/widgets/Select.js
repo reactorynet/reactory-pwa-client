@@ -132,7 +132,7 @@ class SelectWidget extends Component {
     
 
     return (
-      <FormControl variant={variant}>
+      <FormControl variant={variant} size={uiOptions.size || "medium"}>
         <InputLabel {...inputLabelProps} htmlFor={self.props.idSchema.$id} required={required}>{self.props.schema.title}</InputLabel>
         <Select
           value={self.props.formData || ""}
