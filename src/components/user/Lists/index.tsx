@@ -19,7 +19,7 @@ export const UserListItem = (props) => {
   
   if(!user) {
     return (<ListItem button onClick={onClick} key={key}>
-      <Avatar alt={"No user avaialble"} src={getAvatar(user)} />
+      <Avatar alt={"No user avaialble"} src={getAvatar(user, `No user available`)} />
       <ListItemText primary={"None"} secondary={ "User not set" }/>
     </ListItem>)
   }
@@ -40,7 +40,7 @@ export const UserListItem = (props) => {
   return (
     <ListItem selected={user.isSelected} onClick={onClick} key={key || user.id} className={props.className} style={style}>
       {checkboxComponent}
-      <Avatar alt={displayText} src={getAvatar(user)} />
+      <Avatar alt={displayText} src={getAvatar(user, `${user.firstName} ${user.lastName}`)} />
       <ListItemText primary={ displayText } secondary={ hasMessage === true ? message : user.email } style={{marginLeft: '8px'}}/>
       { secondaryAction }
     </ListItem>

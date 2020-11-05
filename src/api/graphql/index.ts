@@ -113,14 +113,21 @@ const updateBrandMutation = gql`
 `;
 
 const usersForOrganization = gql`
-query UserListQuery($id: String!, $searchString: String) {
-  CoreUsersForOrganization(id: $id, searchString: $searchString) {
-      id
-      email
-      firstName
-      lastName
-      avatar
-      lastLogin
+query UserListQuery($id: String!, $searchString: String, $paging: PagingRequest) {
+  CoreUsersForOrganization(id: $id, searchString: $searchString, paging: $paging) {
+      paging {
+        hasNext
+        total
+        page
+      }
+      users {
+        id
+        email
+        firstName
+        lastName
+        avatar
+        lastLogin
+      }      
     }
 }
 `;

@@ -700,10 +700,10 @@ class ReactoryApi extends EventEmitter {
         RestApi.forms().then((formsResult) => {
           that.formSchemas = formsResult;
           const ReactoryFormComponent = that.getComponent('core.ReactoryForm');
-          formsResult.forEach((formDef) => {
-            if (formDef.registerAsComponent) {
-              const FormComponent = (props, context) => {
-                return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={props.key || 0}
+          formsResult.forEach((formDef, formDefIndex) => {
+            if (formDef.registerAsComponent === true) {
+              const FormComponent = (props: any, context: any) => {
+                return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={`${formDefIndex}`}
                   onSubmit={props.onSubmit} onChange={props.onChange}
                   formData={formDef.defaultFormData || props.formData || props.data}
                   before={props.before}

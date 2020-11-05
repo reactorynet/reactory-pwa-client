@@ -462,7 +462,10 @@ namespace Reactory {
     icon: string,
     uiSchema: any,
     //used to override the graphql definitions for that view type
-    graphql?: IFormGraphDefinition
+    graphql?: IFormGraphDefinition,
+    modes?: string
+    sizes?: string
+    minWidth?: number
   }
 
   export interface IReactoryForm {

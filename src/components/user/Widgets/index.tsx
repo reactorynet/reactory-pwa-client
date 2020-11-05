@@ -228,7 +228,11 @@ export class UserListWithSearch extends Component<any, any> {
   render() {
     const { SingleColumnLayout, UserList } = this.componentDefs;
     const { classes } = this.props;
-    const { skip } = this.state;
+    const { skip, page = 1, pageSize = 25 } = this.state;
+    const that = this;
+    const onPageChange = (page) => { 
+      that.setState({ current_page: page });
+    }
 
     return (
       <SingleColumnLayout style={{ maxWidth: 900, margin: 'auto' }}>
@@ -288,13 +292,17 @@ export class UserListWithSearch extends Component<any, any> {
         </AppBar>
 
         <UserList 
-          onUserSelect={this.props.onUserSelect} 
-          organizationId={this.props.organizationId} 
-          searchString={this.state.searchString} 
+          onUserSelect={this.props.onUserSelect}
+          organizationId={this.props.organizationId}
+          searchString={this.state.searchString}
           skip={skip === true}
           selected={this.props.selected}
           excluded={this.props.excluded}
-          multiSelect={this.props.multiSelect === true || false} />
+          multiSelect={this.props.multiSelect === true || false}
+          page={this.state.current_page || 1}
+          pageSize={this.state.page_size || 25}
+          onPageChange={onPageChange}
+          />
       </SingleColumnLayout>
     )
   }

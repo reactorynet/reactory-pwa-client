@@ -127,12 +127,12 @@ class FullScreenDialog extends Component {
     if (backNavigationItems && backNavigationItems.length > 0) {
       BackNavigation = (props) => {
         return (
-          <div className={classes.backNavContainer} style={ containerProps.navContainerStyle ? { ...containerProps.navContainerStyle } : {} }>
-            <div style={{ display: 'flex', cursor: 'pointer' }} onClick={this.handleClose}>
+          <div className={classes.backNavContainer} style={containerProps.navContainerStyle ? { ...containerProps.navContainerStyle } : {}} key={'back-nav'}>
+            <div style={{ display: 'flex', cursor: 'pointer' }} onClick={this.handleClose} key={'chevron'}>
               <Icon style={{ fontSize: 30 }}>chevron_left</Icon>
               <Typography variant="h6" classes={{ root: classes.backButtonText }}>Back</Typography>
             </div>
-            <div className={classes.linkContainer}>
+            <div className={classes.linkContainer} key={'container'}>
               {
                 backNavigationItems.map((navItem, ind) => {
                   if ((ind + 1) < backNavigationItems.length)
@@ -143,7 +143,7 @@ class FullScreenDialog extends Component {
               }
             </div>
             {
-              backNavComponent && <div className={classes.backNavComponent}>
+              backNavComponent && <div className={classes.backNavComponent} key={'component'}>
                 {backNavComponent}
               </div>
             }

@@ -23,6 +23,7 @@ const ThemedAlertDialog = compose(withTheme, withApi)((props: any) => {
         titleProps = {},
         style = {},
         maxWidth = 'md',
+        fullWidth = true,
         dividers = false,
         showCancel = true,
         showAccept = true,
@@ -37,6 +38,7 @@ const ThemedAlertDialog = compose(withTheme, withApi)((props: any) => {
             aria-labelledby={`alert-dialog-title-${id}`}
             aria-describedby={`alert-dialog-description-${id}`}
             maxWidth={maxWidth}
+            fullWidth={fullWidth}
         >
             {props.title && <DialogTitle id={`alert-dialog-title-${id}`} {...titleProps}>
                 {props.title}

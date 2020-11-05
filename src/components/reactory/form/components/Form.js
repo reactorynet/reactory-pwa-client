@@ -44,6 +44,7 @@ export default class Form extends Component {
     if (
       !deepEquals(nextState.formData, nextProps.formData) &&
       !deepEquals(nextState.formData, this.state.formData) &&
+      !deepEquals(nextProps.formContext, this.props.formContext) &&
       this.props.onChange
     ) {
       this.props.onChange(nextState);
