@@ -17,7 +17,7 @@ import {
 import { withApi } from '../../../api/ApiProvider';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
-import { find } from 'lodash';
+import { find, template } from 'lodash';
 import { Styles } from '@material-ui/styles/withStyles/withStyles';
 
 export interface MaterialTableRemoteDataReponse {
@@ -61,7 +61,7 @@ class MaterialTableWidget extends Component<any, any> {
 
   constructor(props, context) {
     super(props, context)
-    
+
 
     this.state = {
       newChipLabelText: "",
@@ -146,14 +146,15 @@ class MaterialTableWidget extends Component<any, any> {
       const { formData, formContext } = this.props;
       let columns = [];
       let actions = [];
-      let components: { [ key: string]: Component | PureComponent | Function } = {
+      let ToolbarComponent = null;
+      let components: { [key: string]: Component | PureComponent | Function } = {
 
       };
       let detailsPanel = null;
 
       if (uiOptions.componentMap) {
         if (uiOptions.componentMap.Toolbar) {
-          const ToolbarComponent = api.getComponent(uiOptions.componentMap.Toolbar);
+          ToolbarComponent = api.getComponent(uiOptions.componentMap.Toolbar);
           if (ToolbarComponent) {
             components.Toolbar = (props, context) => {
               return <ToolbarComponent {...props} formContext={formContext} />
@@ -281,14 +282,14 @@ class MaterialTableWidget extends Component<any, any> {
       let data: any = [];
 
       if (uiOptions.remoteData === true) {
-        const remoteFetch = async (query: any) : Promise<any> => {
+        const remoteFetch = async (query: any): Promise<any> => {
           const response: MaterialTableRemoteDataReponse = {
             data: [],
             page: 0,
             totalCount: 0,
           }
 
-          try {            
+          try {
             api.log('♻ core.MaterialTable data query', { query }, 'debug')
 
             const graphqlDefinitions = formContext.$formState.formDef.graphql;
@@ -314,7 +315,7 @@ class MaterialTableWidget extends Component<any, any> {
               if (queryResult.errors && queryResult.errors.length > 0) {
                 //show a loader error
                 api.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
-                api.createNotification(`Could not fetch the data for this query due to an error`, {showInAppNotification: true, type: 'warning'})
+                api.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })
                 return response;
               } else {
 
@@ -322,10 +323,46 @@ class MaterialTableWidget extends Component<any, any> {
 
                 if (uiOptions.disablePaging === true) {
                   result.page = 1,
-                  result.totalCount = result.data.length;
+                    result.totalCount = result.data.length;
                 }
 
                 result.page = result.page - 1;
+
+                if (uiOptions.footerColumns && uiOptions.footerColumns.length > 0) {
+
+                  const footerObject = {};
+                  uiOptions.footerColumns.forEach(fcol => {
+                    footerObject[fcol.field] = fcol.text && fcol.text != '' ? fcol.text : fcol.value ? template(fcol.value)(queryResult.data[queryDefinition.name]) : null
+                  });
+                  debugger;
+                  result.data.push(footerObject);
+
+
+                  // components.Toolbar = (props, context) => {
+                  //   return <div>
+                  //     <table>
+                  //       <tr>
+                  //         {
+                  //           uiOptions.footerColumns.map(fc => {
+
+                  //             return <td>{fc.field}</td>
+
+                  //           })
+                  //         }
+                  //       </tr>
+                  //     </table>
+                  //     {
+                  //       ToolbarComponent && <ToolbarComponent {...props} formContext={formContext} />
+                  //     }
+                  //   </div>
+
+                  // }
+
+
+                  debugger;
+
+                }
+
                 return { ...response, ...result };
               }
             } else {
@@ -337,7 +374,7 @@ class MaterialTableWidget extends Component<any, any> {
         };
 
         data = throttle(remoteFetch, 500, { leading: true });
-        
+
       } else {
         if (formData && formData.length) {
           formData.forEach(row => {
@@ -536,9 +573,7 @@ class MaterialTableWidget extends Component<any, any> {
             actions={actions}
             onSelectionChange={onSelectionChange}
             components={components}
-            detailPanel={detailsPanel}
-
-          />
+            detailPanel={detailsPanel} />
           {confirmDialog}
         </React.Fragment>
       )

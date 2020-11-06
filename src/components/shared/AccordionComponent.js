@@ -30,8 +30,6 @@ class AccordionWidget extends Component {
     };
   }
 
-
-
   render() {
     const { props, theme, state } = this;
     const { formData, uiSchema, api, formContext, classes } = props;
@@ -40,6 +38,7 @@ class AccordionWidget extends Component {
     let _panelComponents = [];
     let headerProps = {};
     let displayStepper = uiOptions.displayStepper || true;
+    let _componentStyle = {};
 
     if (isArray(formData) === true) {
       _panels = [...formData];
@@ -49,9 +48,13 @@ class AccordionWidget extends Component {
       _panels = [..._panels, ...uiOptions.panels];
     }
 
-    
+
     if(uiOptions.Header) {
       headerProps = {...headerProps, ...uiOptions.Header}
+    }
+
+    if(uiOptions.style) {
+      _componentStyle = {...uiOptions.style}
     }
 
     const that = this;
@@ -59,9 +62,9 @@ class AccordionWidget extends Component {
     if(displayStepper === true) {
       return (
         <div>
-          <Stepper activeStep={this.state.activeStep || 0} orientation="vertical">
-          {          
-            _panels.map((panel, index) => 
+          <Stepper style={_componentStyle} activeStep={this.state.activeStep || 0} orientation="vertical">
+          {
+            _panels.map((panel, index) =>
             {
 
               const panelSummary = (
@@ -69,11 +72,11 @@ class AccordionWidget extends Component {
                   <Typography>{`${index + 1}. ${panel.title}`}</Typography>
                 </ExpansionPanelSummary>
               );
-              
+
               const onNextClick = () => {
                 if(that.state.activeStep < _panels.length - 1) {
                   that.setState({ activeStep: that.state.activeStep + 1 });
-                }                
+                }
               }
 
               const onBackClick = () => {
@@ -89,16 +92,16 @@ class AccordionWidget extends Component {
                     api.log(`Form submitted: ${done}`, {} ,'debug')
                   } catch (submitError) {
                     self.props.api.log(`Could not submit the form`, submitError, 'error')
-                  }  
-                } 
-              } 
+                  }
+                }
+              }
 
               const onStepLabelHeaderClick = (evt) => {
                 that.setState({ activeStep:  index });
               }
 
               return (
-                <Step key={`step_${index}`}>                
+                <Step key={`step_${index}`}>
                   <StepLabel key={`label_${index}`} onClick={onStepLabelHeaderClick}>
                     <Paper elevation={2}>
                     <ExpansionPanelSummary key={`header_${index}`} className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
@@ -106,10 +109,10 @@ class AccordionWidget extends Component {
                     </ExpansionPanelSummary>
                     </Paper>
                   </StepLabel>
-                  <StepContent key={`content_label_${index}`}>                                        
+                  <StepContent key={`content_label_${index}`}>
                     {
                       panel.Components.map(({ componentFqn, componentProps, componentPropsMap }, ComponentIndex) => {
-                        
+
                         let ComponentToMount = api.getComponent(componentFqn);
                         let ComponentFound = true;
                         if (ComponentToMount === null || ComponentToMount === undefined) {
@@ -140,10 +143,10 @@ class AccordionWidget extends Component {
           </Stepper>
         </div>
       )
-    } else {   
+    } else {
       return (
-        <div>        
-          {          
+        <div>
+          {
             _panels.map((panel, index) => {
               return (
                 <ExpansionPanel key={index}>
