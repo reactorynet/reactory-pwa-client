@@ -252,6 +252,7 @@ namespace Reactory {
     props: any
     lastLogin: Date
   }
+  
 
   export interface ITemplateParam {
     name: string
