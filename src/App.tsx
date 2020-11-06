@@ -90,6 +90,36 @@ export interface AppState {
   currentRoute: any
 }
 
+class Globals extends React.Component<any, any> {
+
+  constructor(props) {
+    super(props);
+
+    const { api } = props;
+    const that = this;
+    this.state = {
+      v: 0  
+    }
+    
+    api.on('onPluginLoaded', () => {
+      this.setState({ v: this.state.v + 1 });
+    });
+
+  }  
+
+  render() {
+    
+    const globals = this.props.api.getGlobalComponents();
+
+    return (
+      <div data-v={`${this.state.v}`} data-globals-container="true">
+        { globals.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) })}
+      </div>
+    )
+  }
+
+};
+
 class App extends Component<any, AppState> {
 
   componentRefs: any
@@ -102,7 +132,7 @@ class App extends Component<any, AppState> {
   constructor(props, context) {
     super(props, context);
 
-   
+
 
     this.state = {
       drawerOpen: false,
@@ -153,29 +183,29 @@ class App extends Component<any, AppState> {
     let isOffline = status.offline === true;
     let self = this;
 
-    if(isOffline === true && self.state.offline === false) {
-      self.setState({ 
+    if (isOffline === true && self.state.offline === false) {
+      self.setState({
         offline: true
       }, () => {
-        if(status.offline === true && isOffline === true && self.statusInterval === null) {
+        if (status.offline === true && isOffline === true && self.statusInterval === null) {
           self.statusInterval = setInterval(api.status, 3000);;
-        }          
+        }
       })
-      
+
     } else {
-      
-      if(status.offline !== true && self.statusInterval) {
+
+      if (status.offline !== true && self.statusInterval) {
         clearInterval(self.statusInterval);
       }
-      
-      let user = api.getUser();            
+
+      let user = api.getUser();
       delete user.when;
       let _user = this.state.user;
       delete _user.when;
-      
-      if (deepEquals(user, _user) === false || status.offline !== self.state.offline) {                                  
-        this.setState({ user, offline: status.offline ===true });
-      } 
+
+      if (deepEquals(user, _user) === false || status.offline !== self.state.offline) {
+        this.setState({ user, offline: status.offline === true });
+      }
 
     }
   }
@@ -197,7 +227,7 @@ class App extends Component<any, AppState> {
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (props) => {
-          api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');                    
+          api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
 
           const componentArgs = {
             $route: props.match,
@@ -216,27 +246,27 @@ class App extends Component<any, AppState> {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)
             else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
           } else {
-              const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;          
+            const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
 
             if (auth_validated === true && hasRolesForRoute === true) {
               if (ApiComponent) return (<ApiComponent {...componentArgs} />)
-              else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`}  waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
+              else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
             }
 
             if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
-              if(localStorage) {            
+              if (localStorage) {
                 localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
               }
               return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
             }
 
-            if(api.isAnon() === false && hasRolesForRoute === false) {
+            if (api.isAnon() === false && hasRolesForRoute === false) {
               //we may waiting 
-              return <NotFound message="You don't have sufficient permissions to access this route yet... (we may be fetching your permissions)" link={routeDef.path } wait={500} />
+              return <NotFound message="You don't have sufficient permissions to access this route yet... (we may be fetching your permissions)" link={routeDef.path} wait={500} />
             }
-            
+
             return (<p> ... </p>);
-          }          
+          }
         }
       }
 
@@ -251,7 +281,7 @@ class App extends Component<any, AppState> {
     const that = this;
 
     const query = queryString.parse(window.location.search)
-    if (query.auth_token) { 
+    if (query.auth_token) {
       localStorage.setItem('auth_token', query.auth_token);
       api.client = ReactoryApolloClient().client;
     }
@@ -289,28 +319,28 @@ class App extends Component<any, AppState> {
 
       if (innerWidth >= 2560) size = 'lg',
         api.log('Window resize', [innerHeight, innerWidth, outerHeight, outerWidth, size, view]);
-        api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
+      api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
     });
 
-    if(localStorage) {
+    if (localStorage) {
       let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
-      if(lastRoute !== null ) {
-        lastRoute = lastRoute.trim();        
+      if (lastRoute !== null) {
+        lastRoute = lastRoute.trim();
         localStorage.removeItem('$reactory.last.attempted.route$');
         location.assign(lastRoute);
       }
     }
 
-    window.matchMedia("(prefers-color-scheme: dark)").addListener((evt)=>{      
-      if(evt.matches === true) {
+    window.matchMedia("(prefers-color-scheme: dark)").addListener((evt) => {
+      if (evt.matches === true) {
         localStorage.setItem('$reactory$theme_mode', 'dark');
       } else {
         localStorage.setItem('$reactory$theme_mode', 'light');
       }
       that.forceUpdate()
     });
-        
-    api.on('theme_changed', ()=> {
+
+    api.on('theme_changed', () => {
       that.forceUpdate()
     });
   }
@@ -337,15 +367,8 @@ class App extends Component<any, AppState> {
         }
       }
     }
-    
-    const Globals = (props) => {              
-      let globalForms =  api.getGlobalComponents();
-      return (
-        <div style={{ display: 'none' }}>
-          { globalForms.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) }) }
-        </div>
-      )
-    };
+
+
 
     api.muiTheme = muiTheme;
 
@@ -353,7 +376,7 @@ class App extends Component<any, AppState> {
 
     if (offline === true && auth_validated === true) {
       modal = (
-        <FullScreenModal open={true} title={'Waiting for initial server response'}>          
+        <FullScreenModal open={true} title={'Waiting for initial server response'}>
           <Typography style={{ margin: 'auto', fontSize: '20px', padding: '8px' }} variant="body1">
             <Icon>cached</Icon>
             Stand by, waiting for server response...
@@ -364,7 +387,7 @@ class App extends Component<any, AppState> {
     }
 
     const routes = this.configureRouting();
-  
+
     return (
       <Router ref={this.router}>
         <React.Fragment>
@@ -374,12 +397,12 @@ class App extends Component<any, AppState> {
               <ApiProvider api={api} history={this.props.history}>
                 <ThemeProvider theme={muiTheme}>
                   <MuiPickersUtilsProvider utils={MomentUtils}>
-                    <React.Fragment>                      
-                      <Globals/>
+                    <React.Fragment>
+                      <Globals api={api} />
                       <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
-                      <NotificationComponent></NotificationComponent>                                            
-                      { auth_validated === true && routes.length > 0 ? routes : <Loading message="Loading Application. Please wait" icon="security" spinIcon={false} />}  
-                      { modal }                                                                
+                      <NotificationComponent></NotificationComponent>
+                      {auth_validated === true && routes.length > 0 ? routes : <Loading message="Loading Application. Please wait" icon="security" spinIcon={false} />}
+                      {modal}
                     </React.Fragment>
                   </MuiPickersUtilsProvider>
                 </ThemeProvider>

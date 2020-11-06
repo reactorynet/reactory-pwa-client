@@ -282,10 +282,31 @@ const delegateActionType = {
 
 }
 
+const initialState = (props) => {
+  return {
+    activeEntry: null,
+    modal: false,
+    modalType: 'add',
+    busy: false,
+    message: '',
+    activeTab: 'assessments',
+    formData: props.formData || [],
+    groupBy: 'status', //status, last-action, next-action
+    selected: {
+
+    },
+    deleteConfirm: {
+
+    },
+    surveyProps: getSurveyProps(props)
+  }
+}
+
 class SurveyDelegates extends Component {
 
   static propTypes = {
     formData: PropTypes.array.isRequired,
+    formContext: PropTypes.any,
     api: PropTypes.instanceOf(ReactoryApi),
     onChange: PropTypes.func
   };
@@ -294,27 +315,12 @@ class SurveyDelegates extends Component {
     formData: [],
   };
 
+  
+
   constructor(props, context) {
     super(props, context)
 
-    const state = {
-      activeEntry: null,
-      modal: false,
-      modalType: 'add',
-      busy: false,
-      message: '',
-      activeTab: 'assessments',
-      formData: props.formData || [],
-      groupBy: 'status', //status, last-action, next-action
-      selected: {
-
-      },
-      deleteConfirm: {
-
-      },
-      surveyProps: getSurveyProps(props)
-    };
-
+    const state = initialState(props);  
     state.reportType = state.surveyProps.delegateReportName;
 
     this.state = state;
@@ -348,6 +354,20 @@ class SurveyDelegates extends Component {
     this.doAction = this.doAction.bind(this);
     this.addAssessorClicked = this.addAssessorClicked.bind(this);
     this.getAvaibleActions = this.getAvaibleActions.bind(this);
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    const { api } = this.props;    
+    this.props.api.log(`👁‍🗨👁‍🗨👁‍🗨👁‍🗨 SurveyDelegateWidget componentDidUpdate`, { props: this.props, prevProps, prevState });
+    if (api.utils.deepEquals(prevProps, this.props) === false) {
+      let state = initialState(this.props);  
+      state.reportType = state.surveyProps.delegateReportName;
+      this.setState(state);
+    }
+  }
+
+  componentDidMount() {
+    this.props.api.log(`👁‍🗨👁‍🗨👁‍🗨👁‍🗨 SurveyDelegateWidget componentDidMount`, { props: this.props });
   }
 
   componentDidCatch(error, info) {
@@ -539,7 +559,7 @@ class SurveyDelegates extends Component {
 
         if (assessment && (assessment.id || assessment._id)) {
           detailAssessmentComponent = (
-            <FullScreenModal open={true} title={`Assessment Details as Admin - assement id (${assessment.id || assessment._id})`} onClose={closeAssessmentModal}>
+            <FullScreenModal open={true} title={`Assessment Details as Admin - assement id (${assessment._id})`} onClose={closeAssessmentModal}>
               <Assessment assessmentId={assessment.id || assessment._id} mode="admin" />
             </FullScreenModal>
           )
@@ -931,8 +951,9 @@ class SurveyDelegates extends Component {
 
         api.log('Single use action');
 
+        debugger
         const variables = {
-          survey: this.props.formContext.surveyId,
+          survey: self.props.formContext.surveyId,
           entryId: delegateEntry.id,
           delegate: delegateEntry.delegate.id,
           action,
@@ -1399,8 +1420,8 @@ class SurveyDelegates extends Component {
     const { classes, api, formContext } = this.props;
     const { ErrorMessage, AssessmentTable, SpeedDial } = this.componentDefs;
     const { formData, selected, surveyProps } = this.state;
-    const self = this;
-    const { renderDelegateItem } = self;
+    const that = this;
+    const { renderDelegateItem } = that;
     let data = [];
 
     formData.forEach((entry) => {
@@ -1598,7 +1619,7 @@ class SurveyDelegates extends Component {
                       selected: true
                     }
                   }
-                  self.setState({ selected: { ...selected, ..._selectedPatch } });
+                  that.setState({ selected: { ...selected, ..._selectedPatch } });
                 });
               };
 
@@ -1607,11 +1628,11 @@ class SurveyDelegates extends Component {
                   <ListSubheader style={{ padding: "0px" }}>
                     <Paper style={{ display: 'flex', justifyContent: 'flex-start' }}>
                       <Tooltip title="Click to toggle the select status">
-                        <IconButton color="primary" onClick={toggleWithStatus} style={{ marginRight: self.props.theme.spacing(2) }}>
+                        <IconButton color="primary" onClick={toggleWithStatus} style={{ marginRight: that.props.theme.spacing(2) }}>
                           <Icon>{status.icon}</Icon>
                         </IconButton>
                       </Tooltip>
-                      <Typography color="primary" variant="caption" style={{ marginLeft: 'auto', marginRight: self.props.theme.spacing(1), paddingTop: self.props.theme.spacing(1) }}>{status.title}</Typography>
+                      <Typography color="primary" variant="caption" style={{ marginLeft: 'auto', marginRight: that.props.theme.spacing(1), paddingTop: that.props.theme.spacing(1) }}>{status.title}</Typography>
                     </Paper>
                   </ListSubheader>
                   {
@@ -1628,17 +1649,18 @@ class SurveyDelegates extends Component {
         </List>
       )
 
-      let reportTitleComponent = (<TextField label="Title" onChange={evt => self.setState({ selectionTitle: evt.target.value })} value={self.state.selectionTitle}></TextField>)
-      let reportDescriptionCompnonent = (<TextField label="Description" onChange={evt => self.setState({ selectionDescription: evt.target.value })} value={self.state.selectionDescription}></TextField>)
+      let reportTitleComponent = (<TextField label="Title" onChange={evt => that.setState({ selectionTitle: evt.target.value })} value={that.state.selectionTitle}></TextField>)
+      let reportDescriptionCompnonent = (<TextField label="Description" onChange={evt => that.setState({ selectionDescription: evt.target.value })} value={that.state.selectionDescription}></TextField>)
       return (
-        <React.Fragment className={this.props.classes.root}>
+        <div className={this.props.classes.root}>
+          {formContext.surveyId}
           {reportTitleComponent}
           {reportDescriptionCompnonent}
           {list}
-          {self.state.busy && self.state.message && <Typography variant="caption" color="secondary"><Icon>info</Icon>{self.state.message}</Typography>}
+          {that.state.busy && that.state.message && <Typography variant="caption" color="secondary"><Icon>info</Icon>{that.state.message}</Typography>}
           {<SpeedDial buttonStyle={{ position: 'fixed' }} actions={sortBy(speedDialActions, e => e.ordinal)} icon={<Icon>engineering</Icon>} />}
-          {self.getActiveModalView()}
-        </React.Fragment>
+          {that.getActiveModalView()}
+        </div>
       )
     } else {
       return <ErrorMessage message="Expecting array data" />
@@ -1655,7 +1677,6 @@ SurveyDelegates.styles = (theme) => {
     container: {
       margin: 'auto',
       minWidth: '320px',
-      maxWidth: '100%'
     },
     delegateStatusNew: {
       backgroundColor: 'cadetblue'

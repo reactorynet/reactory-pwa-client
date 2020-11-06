@@ -71,7 +71,7 @@ export class DropDownMenu extends Component {
       
       if(_menus && _menus.length) {
           _menus.map(
-            (menu) => {
+            (menu, mindex) => {
               const onMenuItemSelect = (evt) => {
                 props.onSelect(evt, menu);
               };
@@ -84,7 +84,7 @@ export class DropDownMenu extends Component {
               let selected = menu.selected === true;
 
               menuItems.push((
-                <MenuItem key={menu.id} onClick={ onMenuItemSelect } disabled={  disabled } style={ menu.style || {}}> 
+                <MenuItem key={menu.id || mindex} onClick={ onMenuItemSelect } disabled={  disabled } style={ menu.style || {}}> 
                     { menu.icon ? <ListItemIcon><Icon color="primary" style={menu.iconProps && menu.iconProps.style ? menu.iconProps.style : {}}>{menu.icon}</Icon></ListItemIcon> : null }                      
                     { menu.title }
                     { selected === true ? <Icon>check</Icon> : null }

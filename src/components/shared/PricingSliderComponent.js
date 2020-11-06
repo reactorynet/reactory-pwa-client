@@ -61,7 +61,7 @@ class PricingSliderWidget extends Component {
     let defaultValues = [];
     defaultValues.push(_listPrice);
 
-    let options = { min: 1, max: (_listPrice || threeMonthAvePrice) * 3, step: 1, }
+    let options = { min: 1, max: (_listPrice || threeMonthAvePrice) * 3, step: 100, }
     if (uiSchema && uiSchema['ui:options']) options = { ...options, ...uiSchema['ui:options'] }
 
     const CustomThumbComponent = (props) => {
@@ -161,11 +161,11 @@ class PricingSliderWidget extends Component {
     }
 
     let marks = [
-      { value: 0 },
-      { value: auth_price, label: 'Auth' },
-      { value: _landedCost, label: 'Landed' },
-      { value: _threeMonthAveSellingPrice, label: 'Avg' },
-      { value: options.max },
+      { value: 0, key: '0', },
+      { value: auth_price, label: 'Auth', key: '1' },
+      { value: _landedCost, label: 'Landed', key: '2' },
+      { value: _threeMonthAveSellingPrice, label: 'Avg', key: '3' },
+      { value: options.max, key: '4' },
     ];
 
     return (
@@ -179,6 +179,7 @@ class PricingSliderWidget extends Component {
             valueLabelDisplay="on"
             ValueLabelComponent={ValueLabelComponent}
             marks={marks}
+            onChange={this.props.onChange}
             {...options}
           />
         </Grid>

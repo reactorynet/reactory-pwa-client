@@ -45,8 +45,7 @@ class SliderWidget extends Component {
     return (
       <FormControl className={classes.root} fullWidth>
         <Typography id={this.props.idSchema.$id || 'Label'}>{this.props.schema.title} - {this.state.value}</Typography>
-        <Slider
-          classes={{ container: classes.slider }}
+        <Slider          
           value={this.state.value || 0}
           min={options.min}
           step={1}

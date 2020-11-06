@@ -297,7 +297,18 @@ class SurveyAdmin extends Component {
     this.leadershipBrandSelected = this.leadershipBrandSelected.bind(this);
     this.onDateRangeChanged = this.onDateRangeChanged.bind(this);
     this.onDateFocusChanged = this.onDateFocusChanged.bind(this);
-    this.componentDefs = this.props.api.getComponents(['core.DateSelector', 'core.SingleColumnLayout', 'forms.TowerStoneSurveyConfig'])
+    this.componentDefs = this.props.api.getComponents(['core.DateSelector', 'core.SingleColumnLayout', 'forms.TowerStoneSurveyConfig', 'core.TabbedNavigation'])
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    const { api, survey } = this.props;
+    const { deepEquals } = api.utils;
+
+    if (deepEquals(prevProps.survey, survey) === false || deepEquals(this.state.survey, survey) === false) {
+      api.log(`Survey Admin componentDidUpdate(prevProps, prevState) 🚨🚨`, { prevProps, prevState }, 'debug')
+      this.setState({ survey: this.props.sruvey });
+    }
+
   }
 
   static styles = theme => ({
@@ -448,6 +459,9 @@ class AdminCalendar extends Component {
 
   constructor(props, context) {
     super(props, context)
+    
+    const { api } = props;
+    
     this.state = {
       selected: null,
       showConfirmDelete: false
@@ -457,7 +471,9 @@ class AdminCalendar extends Component {
     this.learnMore = this.learnMore.bind(this);
     this.newSurvey = this.newSurvey.bind(this);
 
-    this.components = props.api.getComponents(['core.AlertDialog'])
+    this.components = props.api.getComponents(['core.AlertDialog']);
+    
+    api.log(`AdminCalendar `, { props }, 'debug');
   }
 
   onDoubleClick(eventObj, e) {
