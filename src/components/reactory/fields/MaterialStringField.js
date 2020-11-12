@@ -56,10 +56,10 @@ const MaterialStringFieldWidget = (props) => {
       disabled,
       autofocus
     }
-    
+
     const uiOptions = uiSchema['ui:options'] || { readOnly: false, props: {} };
-    let args = uiOptions && uiOptions.props ? { ...uiOptions.props } : {};      
-  
+    let args = uiOptions && uiOptions.props ? { ...uiOptions.props } : {};
+
     if (uiOptions.propsMap) {
       let margs = om(props, uiOptions.propsMap);
       args = { ...args, ...margs };
@@ -68,7 +68,7 @@ const MaterialStringFieldWidget = (props) => {
     }
 
     if (uiSchema["ui:widget"]) {
-      const Widget = registry.widgets[uiSchema["ui:widget"]]   
+      const Widget = registry.widgets[uiSchema["ui:widget"]]
       if (Widget) return (<Widget {...args} />)
     }
 
@@ -89,14 +89,14 @@ const MaterialStringFieldWidget = (props) => {
     }
 
     const onKeyDown = evt => {
-      if (evt.keyCode === 13 && uiOptions && uiOptions.componentProps && uiOptions.componentProps.submitOnEnter ) {
+      if (evt.keyCode === 13 && uiOptions && uiOptions.componentProps && uiOptions.componentProps.submitOnEnter) {
         evt.preventDefault();
         props.formContext.$ref.submit();
       }
     }
 
     if (uiOptions.component === "TextField") {
-    
+
       let inputProps = {
         onChange: onInputChanged,
         onKeyDown: onKeyDown,
@@ -131,8 +131,8 @@ const MaterialStringFieldWidget = (props) => {
         componentProps = { ...componentProps, ...uiOptions.componentProps };
       }
 
-
       return (<TextField {...componentProps} />);
+
     } else {
       let themeDefaults = {};
       if (theme.MaterialInput) {

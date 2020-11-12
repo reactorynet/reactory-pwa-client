@@ -34,6 +34,7 @@ function getValue(event, multiple) {
 }
 
 function SelectWidget(props) {
+
   const {
     schema,
     id,
