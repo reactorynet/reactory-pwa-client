@@ -11,15 +11,15 @@ import { isNil, isArray, isString } from 'lodash';
 import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import { 
+import {
     Container,
     Badge,
-    CircularProgress , List, ListItem, 
-    ListItemSecondaryAction, ListItemText, 
+    CircularProgress , List, ListItem,
+    ListItemSecondaryAction, ListItemText,
     Paper,
     InputAdornment, Icon, IconButton,
     ExpansionPanel, ExpansionPanelActions,
-    ExpansionPanelDetails, ExpansionPanelSummary,    
+    ExpansionPanelDetails, ExpansionPanelSummary,
     Toolbar, Tooltip
 } from '@material-ui/core';
 
@@ -54,7 +54,7 @@ const defaultProfile = {
     avatar: null,
 };
 
-const userPeersQueryFragment = ` 
+const userPeersQueryFragment = `
 user {
     id
     firstName
@@ -63,7 +63,7 @@ user {
 organization {
     id
     name
-    avatar                        
+    avatar
 },
 peers {
     user {
@@ -77,7 +77,7 @@ peers {
     inviteSent
     confirmed
     confirmedAt
-    relationship                        
+    relationship
 }
 allowEdit
 confirmedAt
@@ -99,7 +99,7 @@ class Profile extends Component {
         margin: {
             margin: theme.spacing(1),
         },
-        confirmed: {            
+        confirmed: {
             color: '#02603B'
         },
         notConfirmed: {
@@ -111,7 +111,7 @@ class Profile extends Component {
         confirmedLabel: {
             margin: theme.spacing(1),
             marginLeft: theme.spacing(2)
-        },        
+        },
         avatarContainer: {
             width: '100%',
             display: 'flex',
@@ -210,30 +210,30 @@ class Profile extends Component {
             if(result && result.data && result.data.userPeers)
                 self.setState({ profile: {...profile, peers: { ...result.data.userPeers } }, loadingPeers: false })
             else {
-                self.setState({ 
-                    profile: 
+                self.setState({
+                    profile:
                     {
-                        ...profile, 
+                        ...profile,
                         peers: {
-                            user: profile.id, 
+                            user: profile.id,
                             organization: selectedMembership.organization.id,
-                            allowEdit: true, 
+                            allowEdit: true,
                             confirmedAt: null,
                             confirmed: false,
-                            inviteSent: false, 
+                            inviteSent: false,
                             peers: [],
-                        } 
-                    }, 
-                    loadingPeers: false 
+                        }
+                    },
+                    loadingPeers: false
                 });
-            } 
+            }
         }).catch((queryError) => {
             console.error('Error querying user peers', queryError)
-            self.setState({ showError: true, message: 'Could not load the user peers due to an error', loadingPeers: false })            
+            self.setState({ showError: true, message: 'Could not load the user peers due to an error', loadingPeers: false })
         });
     }
 
-    onMembershipSelectionChanged(membership){        
+    onMembershipSelectionChanged(membership){
         this.setState({ selectedMembership: membership, loadingPeers: true }, () => {
             this.refreshPeers()
         });
@@ -243,7 +243,7 @@ class Profile extends Component {
         const { UserListItem } = this.componentDefs;
         return <UserListItem user={this.state.profile} />
     }
-    
+
     inviteUserByEmail() {
         //console.log('Inviting user', this.state.inviteEmail);
         const { api } = this.props;
@@ -272,23 +272,23 @@ class Profile extends Component {
         const { withMembership, classes, api } = this.props;
         const Content = api.getComponent('core.StaticContent');
 
-        
-        
+
+
         if(withMembership === false) return null;
 
         const data = [];
         const self = this
-        
+
         if (memberships && memberships.length) {
             memberships.forEach(m => data.push({ ...m }))
-        }        
+        }
 
         const defaultMembershipContent = (
             <>
-                <Typography variant="h6">Organisation Membership(s)</Typography>                    
+                <Typography variant="h6">Organisation Membership(s)</Typography>
                 <Typography variant="body2">
-                    If you are registered to participate in other organizations, all your memberships will appear here. <br /> 
-                    Selecting a membership will load your organisation structure, for that organisation or particular business unit. <br />                                        
+                    If you are registered to participate in other organizations, all your memberships will appear here. <br />
+                    Selecting a membership will load your organisation structure, for that organisation or particular business unit. <br />
                 </Typography>
                 <Typography>
                     * Most users will only have one membership. These memberships are managed by the administrators for your organisation.
@@ -299,10 +299,10 @@ class Profile extends Component {
         const membershipList = (
             <Grid item sm={12} xs={12} offset={4}>
                 <Paper className={classes.general}>
-                    <Content slug={'core-user-profile-memebership-intro'} editRoles={['DEVELOPER', 'ADMIN']} defaultValue={defaultMembershipContent}></Content>                                        
+                    <Content slug={'core-user-profile-memebership-intro'} editRoles={['DEVELOPER', 'ADMIN']} defaultValue={defaultMembershipContent}></Content>
                     <List>
                         {data.map( (membership, index) => (
-                            
+
                             <ListItem key={index}>
                                 <Avatar style={{marginRight: `8px`}}>{membership && membership.organization && membership.organization.name ? membership.organization.name.substring(0,2) : membership.client.name.substring(0,2)}</Avatar>
                                 <ListItemText secondary={`${membership.client.name}`} primary={isNil(membership.organization) === false ? membership.organization.name : 'No organization'}></ListItemText>
@@ -312,11 +312,11 @@ class Profile extends Component {
                             </ListItem>))}
                     </List>
                 </Paper>
-            </Grid>            
+            </Grid>
         );
 
         return membershipList;
-       
+
         /*
         const membersGrid = (
             <Grid item sm={12} xs={12} offset={4}>
@@ -342,7 +342,7 @@ class Profile extends Component {
                                 return rowData && rowData.roles ? rowData.roles.map(r => `${r} `) : 'No Roles'
                             }
                         },
-                    ]}                    
+                    ]}
                     data={data}
                     title="Memberships"
                     actions={[
@@ -361,38 +361,38 @@ class Profile extends Component {
 
         )
         */
-        
+
     }
 
     renderPeers() {
         const { classes, history, api, withPeers } = this.props;
         if (withPeers === false) return null
 
-        const { 
-            profile, 
-            selectedMembership, 
-            loadingPeers, 
-            highlight,             
+        const {
+            profile,
+            selectedMembership,
+            loadingPeers,
+            highlight,
             showConfirmPeersDialog,
             showAddUserDialog
          } = this.state
         const { peers, __isnew } = profile;
-        const { 
-            BasicModal, 
-            Loading, 
-            CreateProfile, 
+        const {
+            BasicModal,
+            Loading,
+            CreateProfile,
             FullScreenModal,
-            UserListItem, 
-        } = this.componentDefs        
+            UserListItem,
+        } = this.componentDefs
 
         const that = this;
         let content = null
 
         if(loadingPeers === true) return (<Loading title="Looking for peers" />)
-               
+
         //data field for table
         const data = [];
-        
+
         if (peers && peers.peers) {
             peers.peers.map((entry, index) => {
                 data.push({
@@ -407,12 +407,12 @@ class Profile extends Component {
             });
         }
 
-        
-        if (__isnew) return null
-        
 
-        const setInviteEmail = evt => { 
-            this.setState({ inviteEmail: evt.target.value }) 
+        if (__isnew) return null
+
+
+        const setInviteEmail = evt => {
+            this.setState({ inviteEmail: evt.target.value })
         };
 
         const setPeerRelationShip = (peer, relationship, cb = nilf) => {
@@ -422,26 +422,26 @@ class Profile extends Component {
                 }
             }`);
 
-            const variables = { 
+            const variables = {
                 id: this.state.profile.id,
-                peer: peer.id, 
+                peer: peer.id,
                 organization: this.state.selectedMembership.organization.id,
-                relationship 
+                relationship
             };
 
             api.graphqlMutation(mutation, variables).then((peerResult) => {
                 //console.log('Set the user peer relationship', peerResult)
-                if(cb && peerResult.setPeerRelationShip) {                    
+                if(cb && peerResult.setPeerRelationShip) {
                     cb(peerResult.setPeerRelationShip)
                 } else {
                     that.refreshPeers()
-                } 
+                }
             }).catch((peerSetError) => {
                 console.error('Error setting peer relationship', peerSetError)
                 that.refreshPeers()
-            })  
+            })
         };
- 
+
 
         const removePeer = (peer) => {
 
@@ -451,9 +451,9 @@ class Profile extends Component {
                 }
             }`);
 
-            const variables = { 
+            const variables = {
                 id: that.state.profile.id,
-                peer: peer.id, 
+                peer: peer.id,
                 organization: that.state.selectedMembership.organization.id,
             };
 
@@ -464,8 +464,8 @@ class Profile extends Component {
             }).catch((peerSetError) => {
                 console.error('Error removing peer from member', peerSetError)
                 that.refreshPeers()
-            })  
-        }        
+            })
+        }
 
         const confirmPeers = (confirmed) => {
             ////console.log('Confirming peers for user', this.props, this.state)
@@ -475,13 +475,13 @@ class Profile extends Component {
                         ${userPeersQueryFragment}
                     }
                 }`;
-        
+
                 const variables = {
                     id: profile.id,
                     organization: selectedMembership.organization.id,
                     surveyId: api.queryObject.survey
                 };
-        
+
                 api.graphqlMutation(mutation, variables).then( result => {
                     if(result && result.data && result.data.confirmPeers) {
                         that.setState({ showConfirmPeersDialog: false, profile: { ...profile, peers: {...profile.peers, ...result.data.confirmPeers } }}, that.refreshPeers)
@@ -492,13 +492,13 @@ class Profile extends Component {
                     that.setState({ showConfirmPeersDialog: false, showMessage: true, message: 'An error occured confirming peer settings' })
                 });
             } else {
-              that.setState({ showConfirmPeersDialog: true })  
+              that.setState({ showConfirmPeersDialog: true })
             }
-            
+
         };
 
         const setUserPeerSelection = (selection) => {
-            //console.log('Set the user peer selection', selection);                        
+            //console.log('Set the user peer selection', selection);
             setPeerRelationShip(selection, 'peer', (result) => {
                 // that.setState({ profile: { ...profile, peers: { ...result }  } })
                 that.refreshPeers()
@@ -513,9 +513,9 @@ class Profile extends Component {
             that.setState({ showAddUserDialog: true });
         }
 
-        const membershipSelected = selectedMembership && 
-        selectedMembership.organization && 
-        selectedMembership.organization.id;                         
+        const membershipSelected = selectedMembership &&
+        selectedMembership.organization &&
+        selectedMembership.organization.id;
 
         const closeSelection = () => {
             that.setState({ showPeerSelection: false });
@@ -526,7 +526,7 @@ class Profile extends Component {
         };
 
         let excludedUsers = [profile.id]
-        
+
         if(peers && peers.peers ) peers.peers.forEach( p => (excludedUsers.push(p.user.id)))
         let confirmPeersDialog = null
         if(showConfirmPeersDialog === true) {
@@ -560,7 +560,7 @@ class Profile extends Component {
             setUserPeerSelection(user);
         };
 
-        let materialTable = null;        
+        let materialTable = null;
         if(isNil(membershipSelected) === false) {
             materialTable = (<MaterialTable
                 options={{pageSize: 10}}
@@ -570,13 +570,13 @@ class Profile extends Component {
                             <div>
                                 <MTableToolbar {...props}/>
                                 <hr/>
-                                <Typography className={peers.confirmedAt ? 
-                                    classNames([classes.confirmedLabel, classes.notConfirmed]) : 
-                                    classNames([classes.confirmedLabel, classes.confirmed]) } 
+                                <Typography className={peers.confirmedAt ?
+                                    classNames([classes.confirmedLabel, classes.notConfirmed]) :
+                                    classNames([classes.confirmedLabel, classes.confirmed]) }
                                     variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }</Typography>
                             </div>
                         )
-                    } 
+                    }
                 }}
                 columns={[
                     { title: 'Delegate', field: 'fullName' },
@@ -584,7 +584,7 @@ class Profile extends Component {
                     {
                         title: 'Relationship',
                         field: 'relationship',
-                        render: (rowData) => { 
+                        render: (rowData) => {
                             switch(rowData.relationship.toLowerCase()) {
                                 case 'manager': {
                                     return 'LEADER'
@@ -592,7 +592,7 @@ class Profile extends Component {
                                 default: {
                                     return rowData.relationship.toUpperCase()
                                 }
-                            }                            
+                            }
                         }
                     },
                 ]}
@@ -657,7 +657,7 @@ class Profile extends Component {
                 ]}
             />);
 
-            
+
             const defaultInstructions = (
                 <>
                     <Typography variant="body1">
@@ -670,9 +670,9 @@ class Profile extends Component {
                         Your nominees will only be notified of their nomination a maximum of once every 30 days.
                     </Typography>
                     <hr/>
-                    <Typography className={peers.confirmedAt ? 
-                        classNames([classes.confirmedLabel, classes.notConfirmed]) : 
-                        classNames([classes.confirmedLabel, classes.confirmed]) } 
+                    <Typography className={peers.confirmedAt ?
+                        classNames([classes.confirmedLabel, classes.notConfirmed]) :
+                        classNames([classes.confirmedLabel, classes.confirmed]) }
                         variant={"body1"}>
                         {moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers' }
                     </Typography>
@@ -700,8 +700,8 @@ class Profile extends Component {
                             </IconButton>
                         </Tooltip>
                     </Toolbar>
-                    <Paper className={classes.peerToolHeader} elevation={2}>                        
-                        <Content {...contentProps} />                                                                           
+                    <Paper className={classes.peerToolHeader} elevation={2}>
+                        <Content {...contentProps} />
                     </Paper>
                     <div>
                         {
@@ -718,29 +718,29 @@ class Profile extends Component {
                                             expanded: null,
                                         });
                                     }
-                                    else 
+                                    else
                                     {
                                         this.setState({
                                             expanded: usr.id,
                                         });
-                                    }                                    
-                                };                                
+                                    }
+                                };
 
                                 const selectorWidget = (
-                                    <div style={{width:"100%"}}>                                        
+                                    <div style={{width:"100%"}}>
                                             <Tooltip title={`${usr.inviteSent ===  true ? 'Confirmation sent ' + moment(usr.confirmedAt).format('YYYY-MM-DD') : 'Confirmation not sent'}`}>
                                                 <Typography key={0} variant="caption">
                                                     <Badge badgeContent={ usr.inviteSent ===  true ? <Icon color={'action'} fontSize='small'>check</Icon> : <Icon color={'error'} fontSize='small'>close</Icon> }><Icon>mail</Icon></Badge>
-                                                    {usr.inviteSent ===  true ? 'CONFIRMATION SENT AT' + moment(usr.confirmedAt).format('YYYY-MM-DD') : 'CONFIRMATION NOT SENT'}                                                    
+                                                    {usr.inviteSent ===  true ? 'CONFIRMATION SENT AT' + moment(usr.confirmedAt).format('YYYY-MM-DD') : 'CONFIRMATION NOT SENT'}
                                                 </Typography>
                                             </Tooltip>
-                                        <Toolbar>                                            
+                                        <Toolbar>
 
                                             <Tooltip title={`${usr.relationship === 'manager' ? `${usr.firstName} ${usr.lastName} is flagged as a leader` : `Click / Press set ${usr.firstName} ${usr.lastName} as your leader / supervisor`}`}>
                                                 <IconButton key={0} size="small"  onClick={ usr.relationship !== 'manager' ? makeSupervisor : nilf}>
                                                     <Badge badgeContent={ usr.relationship === 'manager' ? <Icon color={'success'} fontSize='small'>check</Icon> : '' }>
                                                         <Icon>supervisor_account</Icon>
-                                                    </Badge>                                                    
+                                                    </Badge>
                                                 </IconButton>
                                             </Tooltip>
 
@@ -748,7 +748,7 @@ class Profile extends Component {
                                                 <IconButton key={0} size="small" selected={usr.relationship === 'peer'} onClick={ usr.relationship !== 'peer' ? makePeer : nilf}>
                                                 <Badge badgeContent={ usr.relationship === 'peer' ? <Icon color={'success'} fontSize='small'>check</Icon> : '' }>
                                                         <Icon>account_box</Icon>
-                                                    </Badge>                                                                                                                                                    
+                                                    </Badge>
                                                 </IconButton>
                                             </Tooltip>
 
@@ -756,16 +756,16 @@ class Profile extends Component {
                                                 <IconButton key={0} size="small"  onClick={ usr.relationship !== 'report' ? makeDirectReport : nilf}>
                                                 <Badge badgeContent={ usr.relationship === 'report' ? <Icon color={'success'} fontSize='small'>check</Icon> : '' }>
                                                         <Icon>account_circle</Icon>
-                                                    </Badge>   
+                                                    </Badge>
                                                 </IconButton>
                                             </Tooltip>
 
                                             <Tooltip title={`Click to remove ${usr.firstName} as a colleague`}>
                                                 <IconButton key={0} size="small" onClick={deletePeer}>
-                                                    <Icon>delete_outline</Icon>                                                    
+                                                    <Icon>delete_outline</Icon>
                                                 </IconButton>
                                             </Tooltip>
-                                        </Toolbar>                                        
+                                        </Toolbar>
                                     </div>
                                 );
 
@@ -779,8 +779,8 @@ class Profile extends Component {
                                         relationshipBadge = usr.relationship.toUpperCase();
                                         break;
                                     }
-                                }                            
-                        
+                                }
+
                                 return (<ExpansionPanel
                                         key={usr.id}
                                         square
@@ -789,7 +789,7 @@ class Profile extends Component {
                                         <ExpansionPanelSummary expandIcon={<Icon>expand</Icon>}>
                                             <UserListItem user={usr} message={`${usr.firstName} (${usr.email}) is set as a ${relationshipBadge}`} />
                                         </ExpansionPanelSummary>
-                                        <ExpansionPanelDetails>                                            
+                                        <ExpansionPanelDetails>
                                             {selectorWidget}
                                         </ExpansionPanelDetails>
                                         </ExpansionPanel>)
@@ -804,8 +804,8 @@ class Profile extends Component {
             addUserDialog = (
                 <FullScreenModal open={showAddUserDialog === true} title="Add / Find a new peer" onClose={closeAddUserDialog}>
                     <Typography variant="h3" style={{margin: "25px auto"}}>Add / Find a new peer</Typography>
-                    <CreateProfile 
-                        onUserCreated={onUserCreated} profileTitle="Invite new peer / colleague"                        
+                    <CreateProfile
+                        onUserCreated={onUserCreated} profileTitle="Invite new peer / colleague"
                         formProps={{ withBackButton: false, withAvatar: false, withPeers: false, withMembership: false, mode: 'peer'  }}
                         firstNameHelperText="Firstname for your colleague / peer"
                         surnameHelperText="Surname for your colleague / peer"
@@ -816,36 +816,36 @@ class Profile extends Component {
         }
 
         /**
-            membershipSelected && this.state.showPeerSelection &&                        
-            <UserListWithSearchComponent 
+            membershipSelected && this.state.showPeerSelection &&
+            <UserListWithSearchComponent
                 onUserSelect={setUserPeerSelection}
                 onAcceptSelection={acceptUserSelection}
                 organizationId={this.state.selectedMembership.organization.id}
-                onNewUserClick={onNewPeerClicked}                                
+                onNewUserClick={onNewPeerClicked}
                 multiSelect={false}
                 selected={excludedUsers}
-                excluded={excludedUsers} />                        
+                excluded={excludedUsers} />
          */
-        
+
         const peersComponent = (
-            <Fragment>                
+            <Fragment>
                 <Grid item sm={12} xs={12} offset={4}>
                     { confirmPeersDialog }
-                    { addUserDialog }                                   
+                    { addUserDialog }
                     {
-                        !membershipSelected && 
-                        <Paper className={this.props.classes.general}><Typography variant="body2">Select a membership with an organization organization to load peers</Typography></Paper> 
+                        !membershipSelected &&
+                        <Paper className={this.props.classes.general}><Typography variant="body2">Select a membership with an organization organization to load peers</Typography></Paper>
                     }
                     {
                         membershipSelected &&
-                        !this.state.showPeerSelection && materialTable                        
-                    }                    
+                        !this.state.showPeerSelection && materialTable
+                    }
                 </Grid>
 
             </Fragment>
         )
 
-        return peersComponent;        
+        return peersComponent;
     }
 
     renderGeneral() {
@@ -863,7 +863,7 @@ class Profile extends Component {
             className: classes.textFieldBase
         };
 
-        const saveDisabled =  (emailValid === false || 
+        const saveDisabled =  (emailValid === false ||
         ( (firstName) || isNil(lastName) ) === true ||
         ( (firstName.length < 2 || lastName.length < 2 ) ));
 
@@ -889,10 +889,10 @@ class Profile extends Component {
         const onFileClick = () => {
             const that = this;
             let preview = null;
-            let file = that.userProfileImageFile.files[0];                        
+            let file = that.userProfileImageFile.files[0];
             let reader = new FileReader();
             reader.addEventListener("load", function () {
-                preview = reader.result;                               
+                preview = reader.result;
                 that.setState({ profile: { ...that.state.profile, avatar: preview },  imageMustCrop: true, avatarUpdated: true });
             }, false);
 
@@ -925,7 +925,7 @@ class Profile extends Component {
 
         let avatarComponent = null;
         avatarComponent = (
-            <div className={classes.avatarContainer}>                
+            <div className={classes.avatarContainer}>
                     <Tooltip title={`Click on the camera icon to upload / add a new picture`}>
                     <Avatar
                         src={that.state.avatarUpdated === false ? getAvatar(profile) : that.state.profile.avatar } alt={`${firstName} ${lastName}`}
@@ -933,7 +933,7 @@ class Profile extends Component {
                         onMouseOver={this.onAvatarMouseOver}
                         onMouseOut={this.onAvatarMouseOut} />
                     </Tooltip>
-                    
+
                     <input accept="image/*" className={classes.hiddenInput} onChange={onFileClick} id="icon-button-file" type="file" ref={(n) => that.userProfileImageFile = n} />
                     <label htmlFor="icon-button-file">
                         <Tooltip title={`Select a png or jpeg image that is less than 350kb in size.`}>
@@ -941,7 +941,7 @@ class Profile extends Component {
                                 <PhotoCamera />
                             </IconButton>
                         </Tooltip>
-                    </label>                    
+                    </label>
             </div>);
 
 
@@ -953,17 +953,17 @@ class Profile extends Component {
                         { this.props.withAvatar === true ? avatarComponent : null }
                         <TextField {...defaultFieldProps} label={emailValid === true ? 'Email' : 'Email!'} value={email} helperText={this.props.emailHelperText || 'Please use your work email address, unless you are an outside provider'} onChange={updateEmail} />
                         <TextField {...defaultFieldProps} label='Name' value={firstName} helperText={this.props.firstNameHelperText || 'Please use your first name'} onChange={updateFirstname} />
-                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} onKeyPressCapture={onSurnameKeyPress}/>                        
+                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} onKeyPressCapture={onSurnameKeyPress}/>
                     </form>
-                
+
                     <div className={classes.avatarContainer} style={{ justifyContent: 'flex-end', marginTop: '5px' }}>
                         {this.props.withBackButton && <Button onClick={back}><CloseIcon />&nbsp;BACK</Button> }
-                        {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ saveDisabled }><SaveIcon />&nbsp;SAVE</Button>}                        
+                        {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ saveDisabled }><SaveIcon />&nbsp;SAVE</Button>}
                     </div>
                 </Paper>
             </Grid>)
     }
-     
+
     renderHeader(){
         const { profile, showConfirmDeleteUser = false } = this.state;
         const { api } = this.props;
@@ -1014,14 +1014,14 @@ class Profile extends Component {
                         <Typography>{this.state.userDeleteMessage}</Typography>
                         <Button type="button" variant="link" onClick={ cancelProfileDelete }>Ok</Button>
                     </BasicModal>
-                );  
+                );
             }
         }
 
         return (
             <Fragment>
                 <Toolbar>
-                    <Typography variant="caption">Admin: {profile.firstName} {profile.lastName} { profile.deleted === true ? "[ User Deleted ]" : "" }</Typography>                    
+                    <Typography variant="caption">Admin: {profile.firstName} {profile.lastName} { profile.deleted === true ? "[ User Deleted ]" : "" }</Typography>
                     {profile.deleted === true  ? null : <Tooltip title="Click here to delete the user">
                         <IconButton onClick={onDeleteClick}>
                             <Icon>delete_outline</Icon>
@@ -1048,20 +1048,20 @@ class Profile extends Component {
             //debugger;
             let preview = '';
             let reader = new FileReader();
-        
+
             reader.addEventListener("load", function () {
-                preview = reader.result;                               
+                preview = reader.result;
                 that.setState({ profile: { ...that.state.profile, avatar: preview },  imageMustCrop: false, imageCropped: true, avatarUpdated: true });
             }, false);
 
-            let xhr = new XMLHttpRequest(); 
-            xhr.open("GET", avatar); 
+            let xhr = new XMLHttpRequest();
+            xhr.open("GET", avatar);
             xhr.responseType = "blob";//force the HTTP response, response-type header to be blob
-            xhr.onload = function() 
+            xhr.onload = function()
             {
                 reader.readAsDataURL(xhr.response);//xhr.response is now a blob object
             }
-            xhr.send();      
+            xhr.send();
         }
 
         return (
@@ -1073,6 +1073,7 @@ class Profile extends Component {
 
     render() {
         const { classes, nocontainer = false } = this.props;
+
         const containerProps = {
             xs: 12,
             sm: 12,
@@ -1095,10 +1096,10 @@ class Profile extends Component {
             return (
                 <Container {...containerProps} >
                     {ProfileInGrid}
-                </Container>            
+                </Container>
             );
         } else {
-            return ProfileInGrid        
+            return ProfileInGrid
         }
     }
 
@@ -1129,23 +1130,23 @@ class Profile extends Component {
             imageCropped: false,
             imageMustCrop: false,
             showPeerSelection: false,
-            selectedMembership: null,            
+            selectedMembership: null,
             emailValid: props.profile.email && isEmail(props.profile.email) === true,
             help: props.api.queryObject.help === "true",
             helpTopic: props.api.queryObject.helptopics,
             highlight: props.api.queryObject.peerconfig === "true" ? "peers" : null,
 
         };
-                
+
         const components = [
-            'core.BasicModal', 
+            'core.BasicModal',
             'core.Loading',
             'core.FullScreenModal',
             'core.CreateProfile',
             'core.UserListItem',
             'core.Cropper'
         ];
-                
+
         this.componentDefs = props.api.getComponents(components);
         window.addEventListener('resize', this.windowResize);
     }
@@ -1158,7 +1159,7 @@ class Profile extends Component {
                     if(membership.organization.name){
                         membershipWithOrganization = membership;
                     }
-                }                
+                }
             });
 
             if(membershipWithOrganization !== null) this.onMembershipSelectionChanged(membershipWithOrganization);
@@ -1173,3 +1174,4 @@ const ProfileViewComponent = compose(
     withTheme
 )(Profile);
 export default ProfileViewComponent;
+

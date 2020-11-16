@@ -64,7 +64,7 @@ class RatingControl extends Component {
         marginLeft: '10px',
         marginRight: '10px'
       },
-      
+
       textField: {
         backgroundColor: 'unset'
       },
@@ -233,8 +233,8 @@ class RatingControl extends Component {
     let $ratingContent = 'processing';
     let $ratingSubContent = 'processing'
     try {
-      $ratingContent = template(behaviour.title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her'}, assessment, survey: assessment.survey, api: this.props.api })
-     
+      $ratingContent = template(behaviour.title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
+
     } catch (templateErr) {
       self.props.api.log(`Behaviour Template Error`, { template: behaviour.title, templateErr }, 'error');
 
@@ -242,15 +242,15 @@ class RatingControl extends Component {
     }
 
     try {
-      $ratingSubContent = template(behaviour.description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her'}, assessment, survey: assessment.survey, api: this.props.api })
-    }catch(e){
+      $ratingSubContent = template(behaviour.description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
+    } catch (e) {
       self.props.api.log(`Behaviour Template Error`, { template: behaviour.description, templateErr }, 'error');
 
       $ratingContent = `Error Processing behaviour template text. See logs for details`
     }
 
     const contentsDiffer = $ratingContent !== $ratingSubContent
-    
+
 
     const ratingComponent = (
       <Fragment>
@@ -258,7 +258,7 @@ class RatingControl extends Component {
         <Typography variant="body1" className={classes.behaviourTitle}>
           {$ratingContent}
         </Typography>
-        { contentsDiffer && (<Typography variant="body2" className={classes.behaviourSubTitle}>{$ratingSubContent}</Typography>) }
+        { contentsDiffer && (<Typography variant="body2" className={classes.behaviourSubTitle}>{$ratingSubContent}</Typography>)}
 
         <Stepper alternativeLabel nonLinear activeStep={rating.rating - 1}>
           {steps}
@@ -504,16 +504,16 @@ class DefaultView extends Component {
       'mores.MoresMyPersonalDemographics',
     ]);
   }
-  // #endregion 
+  // #endregion
   componentDidCatch(e) {
     console.error('error defaultview', e);
   }
 
   is180(survey) {
-    if(!survey) return false;
-    if(!survey.surveyType) return false;
+    if (!survey) return false;
+    if (!survey.surveyType) return false;
 
-    switch(survey.surveyType) {
+    switch (survey.surveyType) {
       case 'team180':
       case '180': {
         return true;
@@ -521,7 +521,7 @@ class DefaultView extends Component {
       default: {
         return false;
       }
-    }    
+    }
   }
 
   welcomeScreen() {
@@ -558,17 +558,17 @@ class DefaultView extends Component {
       return (
         <Paper className={classes.welcomeContainer}>
 
-            <componentDefs.StaticContent
+          <componentDefs.StaticContent
             slug={`mores-assessments-${survey.surveyType}_${survey.id}-welcome-screen`.toLowerCase()}
             title={`Welcome Screen: ${survey.surveyType}`}
             propertyBag={this.props}
-            defaultValue={ <Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
+            defaultValue={<Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
             5 - 7 minutes.<br />
             You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
           </Typography>}>
           </componentDefs.StaticContent>
 
-         
+
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <componentDefs.StaticContent slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
           </div>
@@ -626,37 +626,52 @@ class DefaultView extends Component {
       </Paper>
     );
   }
+      
+  startAssessment = () => {
+    // SAVES A TIMELINE ENTY ON SURVEY - SURVEY STARTED
+    const { api } = this.props;
+    const { assessment } = this.state;
+    api.graphqlMutation(gql`mutation assessmentStarted($id: String!){
+      assessmentStarted(id: $id)
+    }`, {
+      id: assessment.id
+    }).then(response => {
+      api.log(`ASSESSMENT STARTED TIMELINE SAVED`);
+    }).catch(mutateError => {
+      console.log(`ASSESSMENT STARTED TIMELINE SAVED - ERROR`);
+    })
+  }
 
   persistRating(ratingEntry, ratingIndex, deleteRating = false, iteration = 0) {
     const that = this;
     const { api } = this.props;
     const { assessment, assessment_rollback } = this.state;
-    
+
     api.graphqlMutation(gql`mutation SetRatingForAssessment(
-        $id: String, $ratingId: String, 
-        $rating: Int, $comment: String, 
+        $id: String, $ratingId: String,
+        $rating: Int, $comment: String,
         $qualityId: String, $behaviourId: String,
         $custom: Boolean, $behaviourText: String,
         $deleteRating: Boolean
         ){
       setRatingForAssessment(id: $id, ratingId: $ratingId,
-        rating: $rating, comment: $comment, 
+        rating: $rating, comment: $comment,
         qualityId: $qualityId, behaviourId: $behaviourId,
-        custom: $custom, behaviourText: $behaviourText, 
+        custom: $custom, behaviourText: $behaviourText,
         deleteRating: $deleteRating){
-          id        
+          id
           behaviour {
             id
-            title  
+            title
           }
           quality {
             id
             title
           }
           rating
-          comment          
+          comment
           custom
-          updatedAt        
+          updatedAt
       }
     }`, {
       id: assessment.id,
@@ -767,7 +782,7 @@ class DefaultView extends Component {
   }
 
   onNewBehaviour(quality, behaviour) {
-    //console.log('Adding a new Quality', { quality, behaviour });  
+    //console.log('Adding a new Quality', { quality, behaviour });
     this.persistRating({
       id: 'NEW',
       rating: 0,
@@ -789,19 +804,19 @@ class DefaultView extends Component {
     const { FullScreenModal, StaticContent } = this.componentDefs;
     const { assessment } = this.props;
     const { survey } = assessment;
-    
+
     const closeDelegateTeamList = () => {
       this.setState({ showTeamMembers: !this.state.showTeamMembers })
     };
 
     return (
       <FullScreenModal open={this.state.showTeamMembers === true} onClose={closeDelegateTeamList} title={"Team Details"}>
-        <StaticContent slug={`towerstone-team-members-${survey.id}`}  editAction='link' />
+        <StaticContent slug={`towerstone-team-members-${survey.id}`} editAction='link' />
       </FullScreenModal>
     );
   }
 
-  loadCustomQualityComment(){
+  loadCustomQualityComment() {
     const that = this;
     const { classes, api } = this.props;
     const { step, assessment, newBehaviourText, qualityCustomComment } = this.state;
@@ -813,7 +828,7 @@ class DefaultView extends Component {
 
     const commentSlug = `mores-survey-${survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`;
     const adminCommentSlug = `mores-survey-${survey.id}-section_${quality.id}-AdminCustomAction`;
-    
+
     const contentQuery = `
     query ReactoryGetContentBySlug($slug: String!) {
       ReactoryGetContentBySlug(slug: $slug){
@@ -824,30 +839,30 @@ class DefaultView extends Component {
     }
   `;
 
-    api.graphqlQuery(contentQuery, { slug: commentSlug }).then(( result ) => {
+    api.graphqlQuery(contentQuery, { slug: commentSlug }).then((result) => {
       const { data, errors } = result;
       let qualityCustomComment = ''
       let qualityAction = ''
 
       api.log(`Results from fetching custom comment`, { data, errors }, 'error');
-      
-      if(data.ReactoryGetContentBySlug) {
+
+      if (data.ReactoryGetContentBySlug) {
         qualityCustomComment = data.ReactoryGetContentBySlug.content;
       }
 
       api.graphqlQuery(contentQuery, { slug: adminCommentSlug }).then((adminCommentResult) => {
         let adminComment = adminCommentResult.data.ReactoryGetContentBySlug;
-        qualityAction = adminComment ? adminComment.content : '';        
+        qualityAction = adminComment ? adminComment.content : '';
         that.setState({ qualityCustomComment, qualityAction });
       }).catch((adminCommentGetError) => {
 
         api.log(`Could not load the admin action ${adminCommentGetError.message}`)
         that.setState({ qualityCustomComment, qualityAction });
-      });        
-                 
+      });
+
     }).catch((graphError) => {
-        api.log(`Could not load Custom comment`, { graphError }, 'error')
-        that.setState({ qualityCustomComment, qualityAction });
+      api.log(`Could not load Custom comment`, { graphError }, 'error')
+      that.setState({ qualityCustomComment, qualityAction });
     });
   }
 
@@ -859,7 +874,7 @@ class DefaultView extends Component {
     const { StaticContent } = this.componentDefs;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
     const { slugify } = api.utils;
-    
+
     const behaviours = quality.behaviours.map((behaviour) => {
 
       let ratingIndex = lodash.findIndex(ratings, (r) => { return behaviour.id === r.behaviour.id && quality.id === r.quality.id });
@@ -936,7 +951,7 @@ class DefaultView extends Component {
     }
 
     const onClearCustomText = evt => that.setState({ newBehaviourText: '' });
-    
+
     let CustomFeedbackComponent = (
       <Grid item sm={12} xs={12}>
         <Paper style={{ padding: '5px' }}>
@@ -966,8 +981,8 @@ class DefaultView extends Component {
 
     const updateAdminActionContent = (evt) => {
       const content = evt.target.value;
-      api.log(`Update Content For Custom Comment`, {content}, 'debug');
-      
+      api.log(`Update Content For Custom Comment`, { content }, 'debug');
+
       api.graphqlMutation(gql`
         mutation ReactoryCreateContent($createInput: CreateContentInput!){
           ReactoryCreateContent(createInput: $createInput){
@@ -984,12 +999,12 @@ class DefaultView extends Component {
             createdAt
           }
         }
-      `, { 
+      `, {
         createInput: {
-          slug: `mores-survey-${survey.id}-section_${quality.id}-AdminCustomAction`,              
+          slug: `mores-survey-${survey.id}-section_${quality.id}-AdminCustomAction`,
           title: `Section ${quality.title} Action by ${api.$user.firstName} ${api.$user.lastName} on ${assessment.survey.title}`,
           content: content,
-          updatedAt: new Date().valueOf(),                           
+          updatedAt: new Date().valueOf(),
           published: true
         }
       }).then((contentUpdateResult) => {
@@ -1007,24 +1022,24 @@ class DefaultView extends Component {
 
     let AdminActionInputComponent = (
       <Paper>
-        <TextField            
-          label={`Provide custom action content for: ${quality.title}`}           
+        <TextField
+          label={`Provide custom action content for: ${quality.title}`}
           multiline
           InputLabelProps={{ shrink: true }}
-          rows={8}            
+          rows={8}
           onBlur={updateAdminActionContent}
           fullWidth={true}
           placeholder={`Type here if you want add a admin for this section: ${quality.title}`}
           value={qualityAction}
           onChange={patchCustomActionState}
           variant="outlined"
-          />          
+        />
       </Paper>
     )
 
     let includeAdminComment = false;
 
-    switch(assessment.survey.surveyType) {
+    switch (assessment.survey.surveyType) {
       case "i360":
       case "l360":
       case "culture":
@@ -1035,11 +1050,11 @@ class DefaultView extends Component {
         const enableComment = () => {
           that.setState({ comment_for_section: quality.id });
         };
-        
+
         const staticContentProps = {
-          canEdit:["owner"],
+          canEdit: ["owner"],
           editRoles: ['USER', 'DEVELOPER'],
-          viewMode: "minimal",          
+          viewMode: "minimal",
           autoSave: ['onChange'],
           throttle: 500,
           isEditing: true,
@@ -1058,8 +1073,8 @@ class DefaultView extends Component {
 
         const updateCustomContent = (evt) => {
           const content = evt.target.value;
-          api.log(`Update Content For Custom Comment`, {content}, 'debug');
-          
+          api.log(`Update Content For Custom Comment`, { content }, 'debug');
+
           api.graphqlMutation(gql`
             mutation ReactoryCreateContent($createInput: CreateContentInput!){
               ReactoryCreateContent(createInput: $createInput){
@@ -1076,12 +1091,12 @@ class DefaultView extends Component {
                 createdAt
               }
             }
-          `, { 
+          `, {
             createInput: {
-              slug: `mores-survey-${assessment.survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`,              
+              slug: `mores-survey-${assessment.survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`,
               title: `Section ${quality.title} Comment by ${assessment.assessor.firstName} ${assessment.assessor.lastName} on ${assessment.survey.title}`,
               content: content,
-              updatedAt: new Date().valueOf(),                           
+              updatedAt: new Date().valueOf(),
               published: true
             }
           }).then((contentUpdateResult) => {
@@ -1099,25 +1114,25 @@ class DefaultView extends Component {
 
 
         CustomFeedbackComponent = (
-        <Paper>
-          <TextField            
-            label={`Provide a custom comment for: ${quality.title}`}           
-            multiline
-            InputLabelProps={{ shrink: true }}
-            rows={4}            
-            onBlur={updateCustomContent}
-            fullWidth={true}
-            placeholder={`Type here if you want add a comment for this section: ${quality.title}`}
-            value={qualityCustomComment}
-            onChange={patchCustomContentState}
-            variant="outlined"
-             />          
-        </Paper>
+          <Paper>
+            <TextField
+              label={`Provide a custom comment for: ${quality.title}`}
+              multiline
+              InputLabelProps={{ shrink: true }}
+              rows={4}
+              onBlur={updateCustomContent}
+              fullWidth={true}
+              placeholder={`Type here if you want add a comment for this section: ${quality.title}`}
+              value={qualityCustomComment}
+              onChange={patchCustomContentState}
+              variant="outlined"
+            />
+          </Paper>
         )
       }
     }
 
-    const assessmetnInstructionsDefaultContent  =(<Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed.
+    const assessmetnInstructionsDefaultContent = (<Typography variant="caption" color="primary">*System Defined Behaviours for {quality.title} - These are mandatory and have to be completed.
     </Typography>)
 
     const contentId = `mores-assessments-instructions-${slugify(quality.id)}-survey-${survey.id}`;
@@ -1127,13 +1142,13 @@ class DefaultView extends Component {
         <Grid item sm={12} xs={12}>
           <StaticContent
             id={contentId}
-            slug={contentId} 
+            slug={contentId}
             title={`Mores Assessment Survey Instruction Header - ${survey.title} [${quality.title}]`}
             defaultValue={assessmetnInstructionsDefaultContent}
             propertyBag={{ assessment, quality, survey }}
             viewMode='default'
-            editAction='link' 
-            />
+            editAction='link'
+          />
           {this.is180(assessment.survey) === true ? (<Typography variant="caption" color="primary">&nbsp;Provide ratings in context of the entire team <IconButton onClick={toggleShowTeam}><Icon>supervised_user_circle</Icon></IconButton></Typography>) : null}
           {this.is180(assessment.survey) === true ? this.getDelegateTeamList() : null}
           {behaviours}
@@ -1163,24 +1178,25 @@ class DefaultView extends Component {
     const that = this;
     if (that.state.step > 0) {
       const nextStepIndex = this.state.step - 1;
-      this.setState({ step: nextStepIndex }, ()=>{
-        if(nextStepIndex > 0) {
+      this.setState({ step: nextStepIndex }, () => {
+        if (nextStepIndex > 0) {
           that.loadCustomQualityComment();
         }
       });
     }
-      
+
   }
 
   nextStep() {
     let maxSteps = this.props.assessment.survey.leadershipBrand.qualities.length + 2;
     if (this.state.step < maxSteps) {
+      if (this.state.step == 0) this.startAssessment(); // TIMELINE ENTRY - ASSESSMENT STARTED
       const nextStepIndex = this.state.step + 1;
       this.setState({ step: nextStepIndex }, () => {
         window.scrollTo({ top: 0 })
-        if(nextStepIndex < maxSteps -1 ) {
+        if (nextStepIndex < maxSteps - 1) {
           this.loadCustomQualityComment();
-        }        
+        }
       });
     }
   }
@@ -1192,7 +1208,7 @@ class DefaultView extends Component {
 
   toolbar(content) {
     const alphaindex = 'A,B,C,D,E,F,G,H,I,J,K,L'.split(',');
-    
+
     let tabs = [(<Tab key={'w'} label="Welcome" />)];
     this.props.assessment.survey.leadershipBrand.qualities.map((quality, kidx) => tabs.push(<Tab key={kidx} label={`${alphaindex[kidx]}. ${quality.title}`} style={{ cursor: 'default' }} />));
     tabs.push(<Tab key={'c'} label="Complete" />);
@@ -1281,21 +1297,21 @@ class DefaultView extends Component {
     const invalidRatings = lodash.find(ratings, r => {
 
       let commentRequired = true;
-      
-      switch(assessment.survey.surveyType) {
+
+      switch (assessment.survey.surveyType) {
         case "i360":
         case "l360":
-        case "culture": 
+        case "culture":
         case "team180": {
-          commentRequired = false; 
+          commentRequired = false;
           break;
         }
       }
 
-      if(commentRequired === true) return (r.quality.id === quality.id && r.rating <= 2) && (lodash.isEmpty(r.comment) === true || r.comment.length < 50);
-      return  (r.quality.id === quality.id && r.rating === 0)
+      if (commentRequired === true) return (r.quality.id === quality.id && r.rating <= 2) && (lodash.isEmpty(r.comment) === true || r.comment.length < 50);
+      return (r.quality.id === quality.id && r.rating === 0)
     }) || [];
-    
+
     if (invalidRatings.length === 0) return true;
     else return false;
   }
@@ -1322,7 +1338,7 @@ class DefaultView extends Component {
       headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName}`;
     }
 
-    if(survey.surveyType === 'culture') {
+    if (survey.surveyType === 'culture') {
       headerTitle = `${survey.title}`;
     }
 
@@ -1330,7 +1346,7 @@ class DefaultView extends Component {
     const { palette } = theme;
 
     const nextButtonStyle = {
-      // backgroundColor: (step > 0 && isCurrentStepValid === false && isThankYou === false) ? 'unset' : palette.secondary.main,      
+      // backgroundColor: (step > 0 && isCurrentStepValid === false && isThankYou === false) ? 'unset' : palette.secondary.main,
     };
 
     let buttonColor = (step > 0 && isCurrentStepValid === false && isThankYou === false) ? "default" : "secondary";
@@ -1339,31 +1355,31 @@ class DefaultView extends Component {
     let showNext = true;
     let nextIcon = (<Icon>keyboard_arrow_right</Icon>)
 
-    if(step > 0 && isCurrentStepValid === false && isThankYou === false) {
-      nextText = 'INCOMPLETE';       
-      nextIcon = (<Icon>priority_high</Icon>);      
+    if (step > 0 && isCurrentStepValid === false && isThankYou === false) {
+      nextText = 'INCOMPLETE';
+      nextIcon = (<Icon>priority_high</Icon>);
     }
 
-    if(step > 0 && isThankYou) {
+    if (step > 0 && isThankYou) {
       nextText = 'DONE'
       showNext = false;
       nextIcon = (<Icon>block</Icon>)
     }
 
-  
-  let nextButton = (<Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Complete all ratings and comments in full before proceeeding.'}>
-    <Button 
-      size="large" 
-     variant={"contained"}
-     size="small"
-     color="secondary"
-     onClick={nextStep} disabled={isCurrentStepValid === false || isThankYou === true}
-     style={nextButtonStyle}     
-     >
-    { nextText }{nextIcon}
-  </Button></Tooltip>);
 
-  
+    let nextButton = (<Tooltip title={isCurrentStepValid ? 'Click to proceed to the next section' : 'Complete all ratings and comments in full before proceeeding.'}>
+      <Button
+        size="large"
+        variant={"contained"}
+        size="small"
+        color="secondary"
+        onClick={nextStep} disabled={isCurrentStepValid === false || isThankYou === true}
+        style={nextButtonStyle}
+      >
+        {nextText}{nextIcon}
+      </Button></Tooltip>);
+
+
     return (
       <Grid container spacing={1} className={classes.card}>
         <Grid item xs={12} sm={12}>
@@ -1396,16 +1412,16 @@ class DefaultView extends Component {
           {wizardControl}
         </Grid>
         <Grid item xs={12} sm={12} md={12} lg={12}>
-         
-          <MobileStepper                       
+
+          <MobileStepper
             variant="dots"
             steps={maxSteps}
             position="bottom"
             activeStep={step}
-            nextButton={              
-                nextButton     }
+            nextButton={
+              nextButton}
             backButton={
-              <Button  variant="outlined" size="small" onClick={prevStep} disabled={step === 0}>
+              <Button variant="outlined" size="small" onClick={prevStep} disabled={step === 0}>
                 {theme.direction === 'rtl' ? <KeyboardArrowRight /> : <KeyboardArrowLeft />}
                 Back
                 </Button>

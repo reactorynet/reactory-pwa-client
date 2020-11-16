@@ -97,7 +97,7 @@ export const UserSearchInputComponent = compose(
 
 /**
  * List component for user entries
- * @param {*} param0 
+ * @param {*} param0
  */
 class UserTable extends Component {
 
@@ -504,7 +504,7 @@ export const UserInbox = compose(withApi)(({ api, via = 'local', display = 'defa
   </Query>));
 
 
-const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null, classes, graphql = null, formContext, page = 1, pageSize = 25, onPageChange = null }) => {
+const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null, classes, graphql = null, formContext }) => {
   const queryText = graphql && graphql.text ? graphql.text : api.queries.Users.usersForOrganization;
   const variables = graphql && graphql.variables ? om(formContext, graphql.variables) : { id: organizationId, searchString };
   const Components = api.getComponents(['material-ui.Material']);
@@ -512,91 +512,95 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
   const { MaterialLab } = Components.Material;
 
   return (
-    <Query query={queryText} variables={{ id: organizationId, searchString, paging: { page, pageSize } }}>
+    <Query query={queryText} variables={{ id: organizationId, searchString }}>
       {({ loading, error, data }) => {
-        if (loading === true) return "Loading"
-        if (error) return error.message
 
-        const newUser = {
-          firstName: '',
-          lastName: '',
-          email: '',
-          avatar: DefaultAvatar,
-          businessUnit: null,
-          peers: [],
-          surveys: [],
-          teams: [],
-          __isnew: true
-        }
+        try {
+          if (loading === true) return "Loading"
+          if (error) return error.message
 
-
-
-        if (data && data.CoreUsersForOrganization) {
-          const { users, paging } = data.CoreUsersForOrganization;
-          const availableAlphabet = uniq(sortedUniqBy(users, u => u.firstName.substring(0, 1).toUpperCase()).map(user => user.firstName.substring(0, 1).toUpperCase()));
-
-          const onPageChanged = (evt, page) => {
-            if (onPageChange) {
-              onPageChange(page);
-            }
+          const newUser = {
+            firstName: '',
+            lastName: '',
+            email: '',
+            avatar: DefaultAvatar,
+            businessUnit: null,
+            peers: [],
+            surveys: [],
+            teams: [],
+            __isnew: true
           }
 
-          return (
-            <React.Fragment>
-              <List subheader={<li />}>
-                {
-                  availableAlphabet.map((letter, index) => {
-                    return (
-                      <li key={letter} className={classes && classes.userListSubheader ? classes.userListSubheader : ''}>
-                        <ul>
-                          <ListSubheader>{letter}</ListSubheader>
-                          {
-                            filter(users, user => user.firstName.substring(0, 1).toUpperCase() === letter).map((user, uid) => {
-                              const raiseUserSelected = () => {
-                                if (onUserSelect) onUserSelect(user, uid)
-                              }
+          if (data && data.CoreUsersForOrganization) {
+            const { users, paging } = data.CoreUsersForOrganization;
+            const availableAlphabet = uniq(sortedUniqBy(users, u => u.firstName.substring(0, 1).toUpperCase()).map(user => user.firstName.substring(0, 1).toUpperCase()));
 
-                              const raiseUserChecked = () => {
-                                if (onUserSelect) onUserSelect(user, uid, { toggle: true })
-                              }
+            const onPageChanged = (evt, page) => {
+              if (onPageChange) {
+                onPageChange(page);
+              }
+            }
+
+            return (
+              <React.Fragment>
+                <List subheader={<li />}>
+                  {
+                    availableAlphabet.map((letter, index) => {
+                      return (
+                        <li key={letter} className={classes && classes.userListSubheader ? classes.userListSubheader : ''}>
+                          <ul>
+                            <ListSubheader>{letter}</ListSubheader>
+                            {
+                              filter(users, user => user.firstName.substring(0, 1).toUpperCase() === letter).map((user, uid) => {
+                                const raiseUserSelected = () => {
+                                  if (onUserSelect) onUserSelect(user, uid)
+                                }
+
+                                const raiseUserChecked = () => {
+                                  if (onUserSelect) onUserSelect(user, uid, { toggle: true })
+                                }
 
 
-                              const nilf = () => { };
-                              const isSelected = intersection(selected, [user.id]).length === 1;
-                              const exclude = intersection(excluded, [user.id]).length === 1;
-                              const displayText = `${user.firstName} ${user.lastName}`;
+                                const nilf = () => { };
+                                const isSelected = intersection(selected, [user.id]).length === 1;
+                                const exclude = intersection(excluded, [user.id]).length === 1;
+                                const displayText = `${user.firstName} ${user.lastName}`;
 
-                              if (exclude === true) return null;
+                                if (exclude === true) return null;
 
-                              return (
-                                <ListItem selected={isSelected} onClick={multiSelect === false ? raiseUserSelected : nilf} dense button key={uid}>
-                                  <Avatar alt={displayText} src={getAvatar(user)} onClick={raiseUserSelected} />
-                                  <ListItemText primary={user.__isnew ? 'NEW' : displayText} secondary={user.__isnew ? 'Click here to add a new user / employee' : user.email} />
-                                  { multiSelect === true ?
-                                    <Checkbox
-                                      checked={isSelected}
-                                      tabIndex={-1}
-                                      disableRipple
-                                      onClick={raiseUserChecked}
-                                    /> : null}
-                                  { isFunction(secondaryAction) === true ?
-                                    secondaryAction(user) :
-                                    secondaryAction}
-                                </ListItem>
-                              )
-                            })
-                          }
-                        </ul>
-                      </li>
-                    );
-                  })
-                }
-              </List>
-              <div style={{  display: 'flex', justifyContent: 'center' }}>
-                    <MaterialLab.Pagination count={Math.floor(paging.total / (paging.pageSize || 25))} page={paging.page} onChange={onPageChanged} shape="rounded" />
-              </div>
-            </React.Fragment>
-          )
+                                return (
+                                  <ListItem selected={isSelected} onClick={multiSelect === false ? raiseUserSelected : nilf} dense button key={uid}>
+                                    <Avatar alt={displayText} src={getAvatar(user)} onClick={raiseUserSelected} />
+                                    <ListItemText primary={user.__isnew ? 'NEW' : displayText} secondary={user.__isnew ? 'Click here to add a new user / employee' : user.email} />
+                                    { multiSelect === true ?
+                                      <Checkbox
+                                        checked={isSelected}
+                                        tabIndex={-1}
+                                        disableRipple
+                                        onClick={raiseUserChecked}
+                                      /> : null}
+                                    { isFunction(secondaryAction) === true ?
+                                      secondaryAction(user) :
+                                      secondaryAction}
+                                  </ListItem>
+                                )
+                              })
+                            }
+                          </ul>
+                        </li>
+                      );
+                    })
+                  }
+                </List>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <MaterialLab.Pagination count={Math.floor(paging.total / (paging.pageSize || 25))} page={paging.page} onChange={onPageChanged} shape="rounded" />
+                </div>
+              </React.Fragment>
+            )
+          }
+        } catch (err) {
+          
+          return (<div>{err.message}</div>)
         }
       }}
     </Query>);

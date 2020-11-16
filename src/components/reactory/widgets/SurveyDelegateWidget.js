@@ -277,8 +277,11 @@ const delegateActionType = {
   sendReminder: 'send-reminder',
   sendSingleReminder: 'send-single-reminder',
   launch: 'launch',
+  launchSingleAssessor: 'launch-single-assessor',
   singleLaunch: 'send-single-launch',
   relaunch: 'relaunch',
+  pause: 'pause-delegate',
+  restart: 'restart-delegate',
 
 }
 
@@ -418,6 +421,14 @@ class SurveyDelegates extends Component {
           this.removeDelegateFromSurvey(delegateEntry, delegateEntry.removed === true);
           break;
         }
+        case 'pause': {
+          this.pauseDelegate(delegateEntry, 'pause-delegate');
+          break;
+        }
+        case 'restart': {
+          this.restartDelegate(delegateEntry, 'restart-delegate');
+          break;
+        }
         case 'report_preview': {
           this.setState({ activeEntry: delegateEntry, modal: true, modalType: 'basic', basicModalViewMode: 'report_preview', reportType: surveyProps.delegateReportName });
           break;
@@ -457,11 +468,16 @@ class SurveyDelegates extends Component {
       case 'launched':
       case 'launched-assessor':
       case 'launched-delegate': {
+        menus.push({ title: 'Pause Delegate', icon: 'pause-circle', id: 'pause', key: 'pause' });
         menus.push({ title: 'Send Reminders', icon: 'mail_outline', id: 'send-reminder', key: 'reminder' });
         menus.push({ title: 'Re-send Launch', icon: 'flight_takeoff', id: 'relaunch', key: 'relaunch' });
         menus.push({ title: 'View Assessment Details', icon: 'assignment', id: 'view-assessments', key: 'view-assessments' });
         menus.push({ title: 'Download Report', icon: 'cloud_download', id: 'report', key: 'report' });
         menus.push({ title: 'Preview Report', icon: 'assessment', id: 'report_preview', key: 'report' })
+        break;
+      }
+      case 'paused': {
+        menus.push({ title: 'Restart Delegate', icon: 'play_circle_outline', id: 'restart', key: 'restart' });
         break;
       }
       default: {
@@ -474,7 +490,6 @@ class SurveyDelegates extends Component {
 
   generateReport(reportType = ReportTypes.SurveyStatusReport) {
     if (this.props.formData.length === 0) return;
-
     this.setState({ basicModalViewMode: 'report_preview', reportType, modal: true, modalType: 'basic', activeEntry: this.props.formData[0] });
   }
 
@@ -719,6 +734,55 @@ class SurveyDelegates extends Component {
                   }
                 </List>
               </Grid>
+              <Grid item xs={12} md={3}>
+                <Typography variant="caption">Newly Added Peers</Typography>
+                <List>
+                  {
+                    activeEntry.peers.peers.map((peer, ind) => {
+                      let peerHasAssessement = false;
+                      for (var assessement of activeEntry.assessments.filter(ass => ass.assessor.id != activeEntry.delegate.id)) {
+                        if (peer.user.id == assessement.assessor.id) {
+                          peerHasAssessement = true;
+                          break;
+                        }
+                      }
+
+                      if (!peerHasAssessement) {
+
+                        const onMenuItemSelect = (evt, menuItem) => {
+                          switch (menuItem.id) {
+                            case "launch": {
+                              self.launchSingleAssessore(activeEntry, 'launch-single-assessor', { peer: peer.user });
+                              break;
+                            }
+                            default: {
+                              break;
+                            }
+                          }
+                        };
+
+                        const menus = [
+                          {
+                            title: 'Launch',
+                            icon: 'flight_takeoff',
+                            id: 'launch',
+                            key: 'launch'
+                          }
+                        ]
+                        const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
+
+                        return (
+                          <UserListItem
+                            key={ind}
+                            user={peer.user}
+                            message={'Pending'}
+                            secondaryAction={dropdown} />);
+                      }
+
+                    })
+                  }
+                </List>
+              </Grid>
               <Grid item sm={12} md={9}>
                 <Typography variant="caption">Details</Typography>
                 {detailAssessmentComponent}
@@ -737,9 +801,9 @@ class SurveyDelegates extends Component {
 
   getDetailView() {
     const { Profile } = this.componentDefs
-    const { activeEntry } = this.state;
+    const { activeEntry, surveyProps } = this.state;
 
-    return (<Profile profileId={activeEntry.delegate.id} withPeers={true} mode="admin" />);
+    return (<Profile profileId={activeEntry.delegate.id} withPeers={true} surveyId={surveyProps.survey.id} mode="admin" />);
   }
 
   getActiveModalView() {
@@ -843,15 +907,15 @@ class SurveyDelegates extends Component {
       case delegateActionType.removeDelegate:
         this.setState({ activeEntry: null });
         if (mutationResponse.status == 'deleted')
-          api.createNotification(`Delegate Deleted`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
+          api.createNotification(`Delegate deleted.`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
         else
-          api.createNotification(`Delegate Removed`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
+          api.createNotification(`Delegate removed.`, { body: `Delegate ${mutationResponse.delegate.firstName} deleted from survey`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.sendInvite:
-        api.createNotification(`Invite Sent`, { body: `Invite sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        api.createNotification(`Invite sent.`, { body: `Invite sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.sendReminder:
-        api.createNotification(`Reminder Sent`, { body: `Reminder sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        api.createNotification(`Reminder sent.`, { body: `Reminder sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.sendSingleReminder:
         api.createNotification(`Reminder sent`, { body: `Reminder sent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
@@ -859,16 +923,29 @@ class SurveyDelegates extends Component {
       case delegateActionType.launch:
         api.createNotification(`Delegate launched`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
         break;
+      case delegateActionType.launchSingleAssessor:
+        api.createNotification(`Assessor launched`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
+        this.setState({ activeEntry: mutationResponse });
+        break;
       case delegateActionType.singleLaunch:
         api.createNotification(`Delegate launch mail sent.`, { body: `${mutationResponse.delegate.firstName} launched.`, showInAppNotification: true, type: 'success' });
         break;
       case delegateActionType.relaunch:
-        api.createNotification(`Launch re-sent`, { body: `Launch resent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        api.createNotification(`Delegate Relaunch`, { body: `Launch resent to ${mutationResponse.delegate.firstName}.`, showInAppNotification: true, type: 'success' });
+        break;
+      case delegateActionType.pause:
+        api.createNotification(`Delegate paused.`, { body: `${mutationResponse.delegate.firstName} ${mutationResponse.delegate.lastName} paused.`, showInAppNotification: true, type: 'success' });
+        break;
+      case delegateActionType.restart:
+        api.createNotification(`Delegate restarted.`, { body: `${mutationResponse.delegate.firstName} ${mutationResponse.delegate.lastName} restarted.`, showInAppNotification: true, type: 'success' });
         break;
       default:
         api.createNotification(`Success`, { body: `Action succesfully complete`, showInAppNotification: true, type: 'success' });
         break;
     }
+
+    api.emit('DelegateActionComplete');
+
   }
 
   doAction(delegateEntry, action = 'send-invite', inputData = {}, busyMessage = 'Working...', batch = false, refresh = true, done = () => { }) {
@@ -890,6 +967,14 @@ class SurveyDelegates extends Component {
           team
           peers {
             id
+            peers{
+              user {
+                id
+                firstName
+                lastName
+              }
+            }
+
           }
           notifications {
             id
@@ -906,6 +991,7 @@ class SurveyDelegates extends Component {
           lastAction
         }
       }`;
+      // organigram
 
       if (batch === true && isArray(delegateEntry)) {
 
@@ -1020,6 +1106,12 @@ class SurveyDelegates extends Component {
     this.doAction(delegateEntry, communication, inputData, `Sending reminder to ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName} for participation`);
   }
 
+  // NEW
+  launchSingleAssessore(delegateEntry, communication = 'launch-single-assessor', inputData) {
+    debugger;
+    this.doAction(delegateEntry, communication, inputData, `Adding ${inputData.peer.firstName} ${inputData.peer.lastName} as an assessor for ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
+  }
+
   launchSurveyForDelegate(delegateEntry, relaunch = false) {
     this.doAction({ ...delegateEntry, relaunch }, 'launch', {}, `Launching surveys for delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}`);
   }
@@ -1037,6 +1129,14 @@ class SurveyDelegates extends Component {
     if (delegateEntry && assessment) {
       this.doAction(delegateEntry, 'remove-assessor', { assessmentId: assessment.id || assessment._id }, `Removing Assessor From Survey`)
     }
+  }
+
+  pauseDelegate(delegateEntry, communication = 'pause-delegate') {
+    this.doAction(delegateEntry, communication, {}, `Pause ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
+  }
+
+  restartDelegate(delegateEntry, communication = 'restart-delegate') {
+    this.doAction(delegateEntry, communication, {}, `Restarted delegate ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
   }
 
   renderDelegateItem(delegateEntry, status) {
@@ -1510,6 +1610,11 @@ class SurveyDelegates extends Component {
           icon: 'flight_takeoff'
         },
         {
+          key: 'paused',
+          title: 'Paused',
+          icon: 'pause'
+        },
+        {
           key: 'closed',
           title: 'Closed',
           icon: 'not_interested'
@@ -1536,6 +1641,11 @@ class SurveyDelegates extends Component {
           key: 'launched',
           title: 'Launched',
           icon: 'flight_takeoff'
+        },
+        {
+          key: 'paused',
+          title: 'Paused',
+          icon: 'pause'
         },
         {
           key: 'closed',
@@ -1585,6 +1695,11 @@ class SurveyDelegates extends Component {
             key: 'launched-delegate',
             title: `Launched for ${formContext.formData.assessorTeamName || 'Assessors'}`,
             icon: 'flight_takeoff'
+          },
+          {
+            key: 'paused',
+            title: 'Paused',
+            icon: 'pause'
           },
           {
             key: 'removed',

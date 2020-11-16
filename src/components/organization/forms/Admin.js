@@ -262,6 +262,8 @@ function TabContainer({ children, dir }) {
 
 class DefaultFormContainer extends Component {
 
+  surveyComponent = null;
+
   static propTypes = {
     match: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,
@@ -376,8 +378,6 @@ class DefaultFormContainer extends Component {
 
   }
 
-
-
   onConfirmDeleteEmployees = () => {
     const { api } = this.props;
     const that = this;
@@ -433,13 +433,29 @@ class DefaultFormContainer extends Component {
 
   }
 
-  getAdminUserToolbar(props) {
+  getAdminUserToolbar = (props) => {
     const { profile } = props;
     return (
       <Toolbar>
         {profile.firstName} {profile.lastName} admin
       </Toolbar>
     )
+  }
+
+  componentDidMount() {
+    const self = this;
+    const { api } = self.props;
+    // api.on('DelegateActionComplete', () => {
+      // console.log('DELEGATE ACTION COMPLETE  -  EMIT CAUGHT DO SOMETHING!!!!!!!!!!');
+      // const comp = self.surveyComponent;
+      // comp.props.refresh();
+      // debugger;
+    // });
+  }
+
+  componentWillUnmount() {
+    const { api } = this.props;
+    // api.removeListener(eventName);
   }
 
   render() {
