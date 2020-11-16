@@ -19,6 +19,7 @@ import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { find, template } from 'lodash';
 import { Styles } from '@material-ui/styles/withStyles/withStyles';
+import Reactory from '@reactory/client-core/types/reactory';
 
 export interface MaterialTableRemoteDataReponse {
   data: any[],
@@ -63,12 +64,23 @@ class MaterialTableWidget extends Component<any, any> {
     super(props, context)
 
 
+    let remoteData = false;
+
+    if (props.uiSchema) {      
+      const { uiSchema, idSchema } = props;
+      const uiOptions = uiSchema['ui-options'] || { remoteData: false };      
+        remoteData = uiOptions.remoteData
+    }
+    
+
     this.state = {
       newChipLabelText: "",
       currentAction: null,
       displayActionConfirm: false,
       selected: [],
-      confirmedCallback: null
+      confirmedCallback: null,
+      data_loaded: remoteData === false,
+      data_load_required: remoteData === true,
     };
 
     this.refreshHandler = this.refreshHandler.bind(this);
@@ -141,7 +153,7 @@ class MaterialTableWidget extends Component<any, any> {
 
     const MaterialTableHOC = (props, context) => {
 
-      const { api, theme, schema, idSchema } = self.props;
+      const { api, theme, schema, idSchema, onChange } = self.props;
       const uiOptions = this.props.uiSchema['ui:options'] || {};
       const { formData, formContext } = this.props;
       let columns = [];
@@ -296,7 +308,7 @@ class MaterialTableWidget extends Component<any, any> {
 
             if (graphqlDefinitions.query || graphqlDefinitions.queries) {
 
-              let queryDefinition = graphqlDefinitions.query;
+              let queryDefinition: Reactory.IReactoryFormQuery = graphqlDefinitions.query;
 
               if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
                 queryDefinition = graphqlDefinitions.queries[uiOptions.query];
@@ -323,7 +335,7 @@ class MaterialTableWidget extends Component<any, any> {
 
                 if (uiOptions.disablePaging === true) {
                   result.page = 1,
-                    result.totalCount = result.data.length;
+                  result.totalCount = result.data.length;
                 }
 
                 result.page = result.page - 1;
@@ -334,35 +346,10 @@ class MaterialTableWidget extends Component<any, any> {
                   uiOptions.footerColumns.forEach(fcol => {
                     footerObject[fcol.field] = fcol.text && fcol.text != '' ? fcol.text : fcol.value ? template(fcol.value)(queryResult.data[queryDefinition.name]) : null
                   });
-                  debugger;
-                  result.data.push(footerObject);
-
-
-                  // components.Toolbar = (props, context) => {
-                  //   return <div>
-                  //     <table>
-                  //       <tr>
-                  //         {
-                  //           uiOptions.footerColumns.map(fc => {
-
-                  //             return <td>{fc.field}</td>
-
-                  //           })
-                  //         }
-                  //       </tr>
-                  //     </table>
-                  //     {
-                  //       ToolbarComponent && <ToolbarComponent {...props} formContext={formContext} />
-                  //     }
-                  //   </div>
-
-                  // }
-
-
-                  debugger;
-
+                  
+                  result.data.push(footerObject);                  
                 }
-
+                              
                 return { ...response, ...result };
               }
             } else {

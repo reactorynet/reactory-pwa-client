@@ -272,7 +272,7 @@ class App extends Component<any, AppState> {
 
       routes.push(<Route {...routeProps} />)
     });
-
+    
     //this.setState({ routes });
     return routes
   }

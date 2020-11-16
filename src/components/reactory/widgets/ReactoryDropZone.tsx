@@ -134,9 +134,7 @@ class ReactoryDropZone extends Component<any, any> {
   
           if (ReactoryDropZoneProps.mutation) {          
             const mutation = gql(ReactoryDropZoneProps.mutation.text);
-
-            debugger
-            
+                        
             let _v = api.utils.templateObject(ReactoryDropZoneProps.mutation.variables, self);
 
             const variables = {

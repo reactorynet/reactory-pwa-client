@@ -48,7 +48,7 @@ export default (props) => {
 
   if(uiSchema && uiSchema['ui:options']){
      if(uiSchema['ui:options'].yesLabel) yesLabel = uiSchema['ui:options'].yesLabel;
-     if(uiSchema['ui:options'].noLabel) yesLabel = uiSchema['ui:options'].noLabel;
+     if(uiSchema['ui:options'].noLabel) noLabel = uiSchema['ui:options'].noLabel;
   }
 
   if(uiSchema && uiSchema.hidden) {
