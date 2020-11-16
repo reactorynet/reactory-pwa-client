@@ -18,6 +18,9 @@ import { withStyles, withTheme, styled } from '@material-ui/core/styles';
 const ErrorStyles = (theme: Theme ): any => {
         
   return { 
+    errorForm: {
+      padding: theme.spacing(1)
+    },
     errorButton: 
       {
         position: "relative",
