@@ -173,9 +173,6 @@ const MaterialFieldTemplateFunction = (props) => {
 
 
 
-
-
-
       const labelRef = React.useRef(null);
       let inputLabelProps = {
         htmlFor: id,
@@ -193,11 +190,17 @@ const MaterialFieldTemplateFunction = (props) => {
       if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
         inputLabelProps.shrink = false;
       } else {
-        inputLabelProps.style = {
-          backgroundColor: 'white',
-          padding: '3px'
-        };
-        inputLabelProps.shrink = true;
+
+        if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink) {
+          inputLabelProps.shrink = false;
+        } else {
+          inputLabelProps.style = {
+            backgroundColor: 'white',
+            padding: '3px'
+          };
+          inputLabelProps.shrink = true;
+        }
+
       }
 
       let labelComponent = isObject === false || isBoolean === true ? <InputLabel {...inputLabelProps}  >{label}</InputLabel> : null;

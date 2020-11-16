@@ -76,10 +76,22 @@ class CustomInfoWindow extends Component {
     return (
       <InfoWindow onCloseClick={onCloseHandler}>
         <Paper>
-          <Typography variant='caption'>{formatted_address}</Typography>
+          <Typography variant="caption">{formatted_address}</Typography>
           <div className={classes.buttonContainer}>
-            <IconButton variant="contained" color="primary" onClick={editHandler}><Icon>check</Icon></IconButton>
-            <IconButton variant="contained" color="default"onClick={onCloseHandler}><Icon>close</Icon></IconButton>
+            <IconButton
+              variant="contained"
+              color="primary"
+              onClick={editHandler}
+            >
+              <Icon>check</Icon>
+            </IconButton>
+            <IconButton
+              variant="contained"
+              color="default"
+              onClick={onCloseHandler}
+            >
+              <Icon>close</Icon>
+            </IconButton>
           </div>
         </Paper>
       </InfoWindow>
@@ -107,7 +119,12 @@ const MapHOC = compose(
   withGoogleMap
 )((props) => {
   const $mapProps = props;
-  const { api, onMapMarkerClicked, onEditClicked, onAddressSelected } = $mapProps;
+  const {
+    api,
+    onMapMarkerClicked,
+    onEditClicked,
+    onAddressSelected,
+  } = $mapProps;
 
   return (
     <GoogleMap
@@ -160,9 +177,13 @@ const MapHOC = compose(
           const acceptAddress = (address, place_id) => {
             onMapMarkerClicked(address, place_id);
             setDisplayMarkerInfo(!displayMarkerInfo);
-            if(onAddressSelected && typeof onAddressSelected === "function") {
-              api.log(`LasecMarker => acceptAddress `, {address, place_id}, 'debug');
-              onAddressSelected(address, place_id)
+            if (onAddressSelected && typeof onAddressSelected === "function") {
+              api.log(
+                `LasecMarker => acceptAddress `,
+                { address, place_id },
+                "debug"
+              );
+              onAddressSelected(address, place_id);
             }
           };
 
@@ -206,10 +227,9 @@ const VIEWMODES = {
 };
 
 class ReactoryGoogleMapWidget extends Component {
-
   static propsTypes = {
-    api: PropTypes.instanceOf(ReactoryApi).isRequired
-  }
+    api: PropTypes.instanceOf(ReactoryApi).isRequired,
+  };
 
   constructor(props, context) {
     super(props, context);
@@ -219,7 +239,6 @@ class ReactoryGoogleMapWidget extends Component {
       center: null,
       searchText: null,
     };
-
 
     this.getSearchResults = this.getSearchResults.bind(this);
     this.getMarkers = this.getMarkers.bind(this);
@@ -232,7 +251,6 @@ class ReactoryGoogleMapWidget extends Component {
       "core.Loading",
       "core.Label",
     ]);
-
   }
 
   getSearchResults() {
@@ -290,7 +308,9 @@ class ReactoryGoogleMapWidget extends Component {
     const { isDialogOpen, isNewAddress } = self.state;
 
     // FORM TO CREATE NEW ADDRESS
-    const NewAddressForm = api.getComponent("lasec-crm.LasecCRMNewCustomerAddress@1.0.0");
+    const NewAddressForm = api.getComponent(
+      "lasec-crm.LasecCRMNewCustomerAddress@1.0.0"
+    );
     let NewAddressFormProps = {};
 
     const MapModel = (props) => {
@@ -310,7 +330,9 @@ class ReactoryGoogleMapWidget extends Component {
       };
 
       const onMapMarkerClicked = (address, place_id) => {
-        console.log(`ON MAP MARKER CLICKED:: ${address} ${place_id}`,{ self: this });
+        console.log(`ON MAP MARKER CLICKED:: ${address} ${place_id}`, {
+          self: this,
+        });
         this.setState({ isDialogOpen: false });
       };
 
@@ -320,24 +342,34 @@ class ReactoryGoogleMapWidget extends Component {
 
       const onCancelEdit = () => {
         this.setState({ isNewAddress: false });
-      }
+      };
 
       const onMutationComplete = (formData, formContext, mutationResult) => {
-        api.log(`Address Mutation Complete`,  { formData, formContext, mutationResult }), 'debug';
+        api.log(`Address Mutation Complete`, {
+          formData,
+          formContext,
+          mutationResult,
+        }),
+          "debug";
         const mutationName = formContext.formDef.graphql.mutation.new.name; // "LasecCreateNewAddress"
         const mutationResultData = mutationResult.data[mutationName];
-        if (mutationResultData && mutationResultData.success){
-          self.props.onChange({ id: mutationResultData.id, fullAddress: mutationResultData.fullAddress })
+        if (mutationResultData && mutationResultData.success) {
+          self.props.onChange({
+            id: mutationResultData.id,
+            fullAddress: mutationResultData.fullAddress,
+          });
           this.setState({ isNewAddress: false, isDialogOpen: false });
         } else {
           // show error message
-          api.createNotification(`Error creating new address: ${mutationResultData.message}`, { showInAppNotification: true, type: 'error' })
+          api.createNotification(
+            `Error creating new address: ${mutationResultData.message}`,
+            { showInAppNotification: true, type: "error" }
+          );
         }
+      };
 
-      }
-
-      const validateAddress = ( formData, errors ) => {
-        api.log(`Validate Address`,  { formData }), 'debug';
+      const validateAddress = (formData, errors) => {
+        api.log(`Validate Address`, { formData }), "debug";
 
         return errors;
       };
@@ -379,10 +411,23 @@ class ReactoryGoogleMapWidget extends Component {
 
   getTextFieldWithSearch() {
     const self = this;
-    const { schema, idSchema, title, formData, uiSchema, uiOptions } = self.props;
-    const { isDialogOpen } = self.state;
+    const {
+      schema,
+      idSchema,
+      title,
+      formData,
+      uiSchema,
+      classes,
+      // uiOptions,
+    } = self.props;
 
+    debugger;
+
+    const uiOptions = uiSchema["ui:options"];
+    const { isDialogOpen } = self.state;
     const { fullAddress, id } = formData;
+    let _labelProps = {};
+    let _inputProps = {};
 
     const handleChange = (e) => {
       self.setState({ searchText: e.target.value });
@@ -393,49 +438,78 @@ class ReactoryGoogleMapWidget extends Component {
     };
 
     const controlId = `${idSchema.$id}_AddressLabel`;
+
+    if (uiOptions) {
+      if (uiOptions.labelProps && uiOptions.labelProps.style) {
+        _labelProps.shink = false;
+        _labelProps.style = { ...uiOptions.labelProps.style };
+      }
+
+      if (uiOptions.inputProps && uiOptions.inputProps.style) {
+        _inputProps.placeholder = "Search";
+        _inputProps.style = { ...uiOptions.inputProps.style };
+      }
+    }
+
+    debugger;
+
     return (
-      <div style={{ display: "flex" }}>
-        <FormControl variant="outlined" fullWidth={true}>
-          {fullAddress == undefined || fullAddress == "" ?
-            <InputLabel htmlFor={`${controlId}`}>
-              {title || schema.title}
-            </InputLabel> : null
-          }
-          <OutlinedInput
-            id={`${controlId}`}
-            type={"text"}
-            value={fullAddress}
-            readOnly
-            fullWidth={true}
-            endAdornment={
-              <InputAdornment position="end">
-                <IconButton
-                  aria-label="Find Address"
-                  onClick={searchClicked}
-                  edge="end"
-                >
-                  <Icon>search</Icon>
-                </IconButton>
-              </InputAdornment>
-            }
-            labelWidth={70}
-          />
-        </FormControl>
-      </div>
+      <Fragment>
+        <div>
+          <label className={classes.label}>{title || schema.title}</label>
+          <div className={classes.container}>
+            { (!fullAddress || fullAddress == "") ? <p className={classes.placeholder}>Search</p> : null }
+            { fullAddress && fullAddress != "" && (<p className={classes.value}>{fullAddress}</p>)}
+            <Icon color="primary" onClick={searchClicked} style={{ marginLeft: '10px'}}>
+              search
+            </Icon>
+          </div>
+        </div>
+      </Fragment>
     );
+
+    // return (
+    //   <div style={{ display: "flex" }}>
+    //     <FormControl variant="outlined" fullWidth={true}>
+    //       {fullAddress == undefined || fullAddress == "" ? (
+    //         <InputLabel htmlFor={`${controlId}`} {..._labelProps}>
+    //           {title || schema.title}
+    //         </InputLabel>
+    //       ) : null}
+    //       <OutlinedInput
+    //         {..._inputProps}
+    //         classes={classes}
+    //         id={`${controlId}`}
+    //         placeholder="Search"
+    //         type={"text"}
+    //         value={fullAddress}
+    //         readOnly
+    //         fullWidth={true}
+    //         multiline={false}
+    //         endAdornment={
+    //           <InputAdornment position="end">
+    //             <IconButton
+    //               aria-label="Find Address"
+    //               onClick={searchClicked}
+    //               edge="end"
+    //             >
+    //               <Icon>search</Icon>
+    //             </IconButton>
+    //           </InputAdornment>
+    //         }
+    //       />
+    //     </FormControl>
+    //   </div>
+    // );
   }
 
-  getMapProperties(){
+  getMapProperties() {
     const self = this;
     const refs = {};
     const { center } = this.state;
     //REACTORY DEVELOPMENT KEY
     let apiKey = "GOOGLE-MAP-API-KEY";
-    const {
-      api,
-      onChange,
-      uiSchema
-    } = this.props;
+    const { api, onChange, uiSchema } = this.props;
 
     let _mapProps = {
       ref: (mapRef) => {
@@ -488,31 +562,51 @@ class ReactoryGoogleMapWidget extends Component {
         self.searchBox = searchBoxRef;
       },
       onAddressSelected: (address, placeId) => {
-        api.log(`Address ${address} ${placeId}`, { address }, 'debug');
+        api.log(`Address ${address} ${placeId}`, { address }, "debug");
 
-        if( uiSchema['ui:options'] && uiSchema['ui:options'].props) {
-          const mutationDefinition = uiSchema['ui:options'].props.onAddressSelected;
-          const objectMap = uiSchema['ui:options'].props.objectMap;
+        if (uiSchema["ui:options"] && uiSchema["ui:options"].props) {
+          const mutationDefinition =
+            uiSchema["ui:options"].props.onAddressSelected;
+          const objectMap = uiSchema["ui:options"].props.objectMap;
 
-          if(mutationDefinition) {
-            api.graphqlMutation(mutationDefinition.text, api.utils.objectMapper({ address, self, placeId }, mutationDefinition.variables )).then((mutationResult) => {
-              api.log(`GoogleMapWidget.MapHOC.onAddressSelected`, { mutationResult }, 'debug');
-            }).catch((mutationError) => {
-              api.log(`GoogleMapWidget.MapHOC.onAddressSelected`, { mutationError }, 'error');
-            });
+          if (mutationDefinition) {
+            api
+              .graphqlMutation(
+                mutationDefinition.text,
+                api.utils.objectMapper(
+                  { address, self, placeId },
+                  mutationDefinition.variables
+                )
+              )
+              .then((mutationResult) => {
+                api.log(
+                  `GoogleMapWidget.MapHOC.onAddressSelected`,
+                  { mutationResult },
+                  "debug"
+                );
+              })
+              .catch((mutationError) => {
+                api.log(
+                  `GoogleMapWidget.MapHOC.onAddressSelected`,
+                  { mutationError },
+                  "error"
+                );
+              });
           }
 
-          if(onChange && typeof onChange === 'function' ) {
-            let addressData = api.utils.objectMapper({ address, self, placeId }, objectMap);
+          if (onChange && typeof onChange === "function") {
+            let addressData = api.utils.objectMapper(
+              { address, self, placeId },
+              objectMap
+            );
             onChange(addressData);
           }
         }
-      }
+      },
     };
 
-
     if (uiSchema && uiSchema["ui:options"]) {
-      const uiOptions = uiSchema["ui:options"]
+      const uiOptions = uiSchema["ui:options"];
       if (uiOptions.mapProps) {
         _mapProps = {
           ...this.props,
@@ -526,9 +620,7 @@ class ReactoryGoogleMapWidget extends Component {
   }
 
   render() {
-    const {
-      viewMode = "MAP_WITH_SEARCH",
-    } = this.props;
+    const { viewMode = "MAP_WITH_SEARCH" } = this.props;
 
     const { Label } = this.components;
     const self = this;
@@ -551,7 +643,44 @@ class ReactoryGoogleMapWidget extends Component {
     return <Fragment>{children}</Fragment>;
   }
 
-  static Styles = (theme) => ({});
+  static Styles = (theme) => {
+    return {
+      container: {
+        border: "solid 1px #e2e0e0",
+        borderRadius: "5px",
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "10px",
+      },
+      label: {
+        display: "block",
+        color: "rgba(0, 0, 0, 0.8)",
+        fontSize: "13px",
+        paddingBottom: "5px",
+        fontWeight: "bold",
+      },
+      placeholder: {
+        color: "#bababa",
+        margin: 0,
+        fontSize: "16px",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      },
+      value: {
+        color: "black",
+        margin: 0,
+        textTransform: "uppercase",
+        fontSize: "16px",
+        fontSize: "16px",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      },
+    };
+  };
 }
 
 const ReactoryGoogleMapWidgetComponent = compose(

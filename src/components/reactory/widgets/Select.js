@@ -70,18 +70,23 @@ class SelectWidget extends Component {
 
     let uiOptions = this.props.uiSchema['ui:options'] || {};
 
+    const {
+      labelStyle = {},
+      selectProps = {}
+    } = uiOptions;
+
     let variant = 'standard'
-    if(theme.MaterialInput) {
+    if (theme.MaterialInput) {
       variant = theme.MaterialInput.variant || variant;
     }
 
 
     let InputComponent = Input;
-    let inputLabelProps = {};    
-    switch(variant) {
+    let inputLabelProps = {};
+    switch (variant) {
       case 'outlined': {
         InputComponent = OutlinedInput;
-        if(isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
+        if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
           inputLabelProps.shrink = false;
         } else {
           inputLabelProps.shrink = true;
@@ -96,8 +101,6 @@ class SelectWidget extends Component {
         InputComponent = FilledInput;
       }
     }
-
-
 
     if (uiOptions.selectOptions && isArray(uiOptions.selectOptions) === true) {
       elements = uiOptions.selectOptions.map((option, index) => {
@@ -122,27 +125,42 @@ class SelectWidget extends Component {
     }
 
     const onSelectChanged = (evt) => {
+
+      debugger;
+
       this.props.onChange(evt.target.value)
     }
 
-    const renderSelectedValue = ( value ) => {
+    const renderSelectedValue = (value) => {
+      if (value.length == 0)
+        return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Select</span>;
+
       let option = matchOption(value);
-      return (<>{option.icon ? <Icon {...(option.iconProps || { style: { margin: '0px' }})}>{option.icon}</Icon> : null}<Typography variant="label">{option.label}</Typography></>)
+      return (
+        <>
+          {option.icon ? <Icon {...(option.iconProps || { style: { margin: '0px', verticalAlign: 'middle' } })}>{option.icon}</Icon> : null}
+          <Typography variant="label">{option.label}</Typography>
+        </>
+      )
     };
-    
+
+
+    inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
+
+    debugger;
 
     return (
       <FormControl variant={variant} size={uiOptions.size || "medium"}>
         <InputLabel {...inputLabelProps} htmlFor={self.props.idSchema.$id} required={required}>{self.props.schema.title}</InputLabel>
         <Select
+          {...selectProps}
           value={self.props.formData || ""}
           onChange={onSelectChanged}
-          name={self.props.name}          
+          name={self.props.name}
+          displayEmpty={true}
           renderValue={renderSelectedValue}
           input={<InputComponent id={self.props.idSchema.$id} value={self.props.formData || ""} />}>
-          {required === false ? <MenuItem value="">
-            <em>None</em>
-          </MenuItem> : null}
+          {required === false ? <MenuItem value=""><em>None</em></MenuItem> : null}
           {elements}
         </Select>
       </FormControl>
