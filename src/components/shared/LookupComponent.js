@@ -62,6 +62,8 @@ class LookupWidget extends Component {
     } = this.props;
     const self = this;
 
+    let _labelProps = {};
+
     api.log(`LookupWidget.render()`, { self }, 'debug');
 
     let label = '';
@@ -85,6 +87,8 @@ class LookupWidget extends Component {
       if (uiOptions && uiOptions.placeHolder) placeholder = uiOptions.placeholder;
       if (uiOptions && uiOptions.title) modalProps.title = uiOptions.title;
       if (uiOptions && uiOptions.modalProps) modalProps = { ...modalProps, ...uiOptions.modalProps };
+
+      if (uiOptions && uiOptions.labelProps) _labelProps = { ...uiOptions.labelProps };
 
       if (uiSchema.props) {
         if (uiSchema.props.componentFqn) componentFqn = uiSchema.props.componentFqn;
@@ -112,8 +116,8 @@ class LookupWidget extends Component {
 
     return (
       <Fragment>
-        <div onClick={this.onClick}>
-          {label != '' && <label className={classes.label}>{label}</label>}
+        <div onClick={this.onClick} style={{ marginTop: '0.5em'}}>
+          {label != '' && <label className={classes.label} {..._labelProps}>{label}</label>}
           <div className={classes.container}>
             {selectedValue == '' && <p className={classes.placeholder}>{placeHolder}</p>}
             {selectedValue != '' && <p className={classes.value}>{selectedValue}</p>}
@@ -145,7 +149,8 @@ LookupWidget.styles = (theme) => {
       padding: '10px'
     },
     label: {
-      color: 'rgba(0, 0, 0, 0.54)',
+      display: 'block',
+      color: 'rgba(0, 0, 0, 0.55)',
       fontSize: '13px',
       paddingBottom: '3px'
     },

@@ -125,12 +125,15 @@ class SelectWidget extends Component {
     }
 
     const onSelectChanged = (evt) => {
+
+      debugger;
+
       this.props.onChange(evt.target.value)
     }
 
     const renderSelectedValue = (value) => {
-
-      debugger;
+      if (value.length == 0)
+        return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Select</span>;
 
       let option = matchOption(value);
       return (
@@ -144,6 +147,8 @@ class SelectWidget extends Component {
 
     inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
 
+    debugger;
+
     return (
       <FormControl variant={variant} size={uiOptions.size || "medium"}>
         <InputLabel {...inputLabelProps} htmlFor={self.props.idSchema.$id} required={required}>{self.props.schema.title}</InputLabel>
@@ -152,6 +157,7 @@ class SelectWidget extends Component {
           value={self.props.formData || ""}
           onChange={onSelectChanged}
           name={self.props.name}
+          displayEmpty={true}
           renderValue={renderSelectedValue}
           input={<InputComponent id={self.props.idSchema.$id} value={self.props.formData || ""} />}>
           {required === false ? <MenuItem value=""><em>None</em></MenuItem> : null}

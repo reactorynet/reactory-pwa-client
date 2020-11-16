@@ -191,15 +191,14 @@ const MaterialFieldTemplateFunction = (props) => {
         inputLabelProps.shrink = false;
       } else {
 
-        inputLabelProps.style = {
-          backgroundColor: 'white',
-          padding: '3px'
-        };
-        inputLabelProps.shrink = true;
-
-        if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink != undefined && uiOptions.labelProps.dontShrink) {
-          inputLabelProps.style = {};
+        if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink) {
           inputLabelProps.shrink = false;
+        } else {
+          inputLabelProps.style = {
+            backgroundColor: 'white',
+            padding: '3px'
+          };
+          inputLabelProps.shrink = true;
         }
 
       }
