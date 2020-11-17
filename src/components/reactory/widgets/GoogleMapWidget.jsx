@@ -11,6 +11,7 @@ import {
 } from "react-google-maps";
 
 import { SearchBox } from "react-google-maps/lib/components/places/SearchBox";
+import Autocomplete from "react-google-autocomplete";
 
 import { withStyles, withTheme } from "@material-ui/core/styles";
 import { withApi } from "@reactory/client-core/api/ApiProvider";
@@ -121,11 +122,15 @@ const MapHOC = compose(
   const $mapProps = props;
   const {
     api,
+    classes,
     onMapMarkerClicked,
     onEditClicked,
     onAddressSelected,
   } = $mapProps;
 
+  debugger;
+
+  // value={$mapProps.searchTerm ? $mapProps.searchTerm : ""}
   return (
     <GoogleMap
       defaultZoom={8}
@@ -141,9 +146,11 @@ const MapHOC = compose(
         onPlacesChanged={props.onPlacesChanged}
       >
         <TextField
+          ref={$mapProps.onSearchInputMounted}
           type="text"
           placeholder="Search Address"
           autoFocus={true}
+          onChange={props.onSearchValueChange}
           inputProps={{
             style: {
               boxSizing: `border-box`,
@@ -162,6 +169,7 @@ const MapHOC = compose(
           }}
         />
       </SearchBox>
+
       {$mapProps.markers.map((marker, index) => {
         const LasecMarker = (props) => {
           const $LasecMarkerProps = props;
@@ -421,8 +429,6 @@ class ReactoryGoogleMapWidget extends Component {
       // uiOptions,
     } = self.props;
 
-    debugger;
-
     const uiOptions = uiSchema["ui:options"];
     const { isDialogOpen } = self.state;
     const { fullAddress, id } = formData;
@@ -451,16 +457,18 @@ class ReactoryGoogleMapWidget extends Component {
       }
     }
 
-    debugger;
-
     return (
       <Fragment>
-        <div>
+        <div onClick={searchClicked} style={{ cursor: "pointer" }}>
           <label className={classes.label}>{title || schema.title}</label>
           <div className={classes.container}>
-            { (!fullAddress || fullAddress == "") ? <p className={classes.placeholder}>Search</p> : null }
-            { fullAddress && fullAddress != "" && (<p className={classes.value}>{fullAddress}</p>)}
-            <Icon color="primary" onClick={searchClicked} style={{ marginLeft: '10px'}}>
+            {!fullAddress || fullAddress == "" ? (
+              <p className={classes.placeholder}>Search</p>
+            ) : null}
+            {fullAddress && fullAddress != "" && (
+              <p className={classes.value}>{fullAddress}</p>
+            )}
+            <Icon color="primary" style={{ marginLeft: "10px" }}>
               search
             </Icon>
           </div>
@@ -506,7 +514,7 @@ class ReactoryGoogleMapWidget extends Component {
   getMapProperties() {
     const self = this;
     const refs = {};
-    const { center } = this.state;
+    const { center, searchTerm } = this.state;
     //REACTORY DEVELOPMENT KEY
     let apiKey = "GOOGLE-MAP-API-KEY";
     const { api, onChange, uiSchema } = this.props;
@@ -521,7 +529,8 @@ class ReactoryGoogleMapWidget extends Component {
       defaultZoom: 8,
       defaultCenter: self.state.center || { lat: -34.397, lng: 150.644 },
       center,
-      onPlacesChanged: () => {
+      searchTerm,
+      onPlacesChanged: (event) => {
         const places = self.searchBox.getPlaces();
         const bounds = new google.maps.LatLngBounds();
 
@@ -544,11 +553,14 @@ class ReactoryGoogleMapWidget extends Component {
           this.state.center
         );
 
+        const searchInputValue = self.searchInput.children[0].children[0].value;
+
         self.setState(
           {
             center: nextCenter,
             markers: nextMarkers,
             places: places,
+            searchTerm: searchInputValue,
           },
           () => {
             if (self && self.map) self.map.fitBounds(bounds);
@@ -560,6 +572,9 @@ class ReactoryGoogleMapWidget extends Component {
       },
       onSearchBoxMounted: (searchBoxRef) => {
         self.searchBox = searchBoxRef;
+      },
+      onSearchInputMounted: (searchInputRef) => {
+        self.searchInput = searchInputRef;
       },
       onAddressSelected: (address, placeId) => {
         api.log(`Address ${address} ${placeId}`, { address }, "debug");
