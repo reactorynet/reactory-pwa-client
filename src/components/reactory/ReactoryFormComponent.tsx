@@ -402,8 +402,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     if (this.props.queryOnFormDataChange !== false) {
       if (deepEquals(nextProps.formData, this.state.formData) === false) {
         this.setState({ formData: nextProps.formData, queryComplete: false });
-      }  
-    }     
+      }
+    }
   }
 
   componentWillMount() {
@@ -433,11 +433,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     if (deepEquals(prevProps, this.props) === false) {
       let form_data = {};
       const that = this;
-      if (that.props.formData) form_data = that.props.api.utils.lodash.cloneDeep(that.props.formData);      
+      if (that.props.formData) form_data = that.props.api.utils.lodash.cloneDeep(that.props.formData);
       that.setState({ forms_loaded: false, formData: form_data, queryComplete: false, activeUiSchemaMenuItem: undefined }, () => {
         that.downloadForms();
       });
-    }    
+    }
   }
 
   componentDidMount() {
@@ -610,7 +610,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
         return _errors;
       }
-    };   
+    };
 
     let icon = 'save';
     if (formDef.uiSchema && formDef.uiSchema.submitIcon) {
@@ -641,7 +641,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     if (formDef.uiSchemas) {
       const { DropDownMenu } = this.componentDefs;
-    
+
 
       const onSchemaSelect = (evt, menuItem) => {
         // console.log('Schema Ui Change', {evt, menuItem});
@@ -659,7 +659,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         activeUiSchemaModel = find(formDef.uiSchemas, { key: _reactoryFormComponent.props.uiSchemaKey });
       }
 
-      if (activeUiSchemaModel) {        
+      if (activeUiSchemaModel) {
         uiSchemaSelector = (
           <Fragment>
             {activeUiSchemaModel.title}
@@ -675,7 +675,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           }
 
           const GetSchemaSelectorMenus = () => {
-            
+
             const allowed_schema = AllowedSchemas(formDef.uiSchemas, _reactoryFormComponent.props.mode, null)
 
             allowed_schema.forEach((uiSchemaItem, index) => {
@@ -903,7 +903,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         }
       });
       exportButton = (<DropDownMenu menus={exportMenus} onSelect={onDropDownSelect} icon={"import_export"} />)
-    }    
+    }
 
     let formtoolbar = (
       <Toolbar>
@@ -1008,10 +1008,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                     showInAppNotification: true,
                     type: 'error',
                   });
-              }           
+              }
             }
 
-           
+
 
             if (data && data[mutation.name]) {
 
@@ -1022,14 +1022,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 mutation_result: data[mutation.name],
               };
 
-              if (typeof mutation.onSuccessUrl === 'string') {                
+              if (typeof mutation.onSuccessUrl === 'string') {
                 let linkText = template(mutation.onSuccessUrl)(templateProps);
                 that.props.api.goto(linkText)
               }
 
               if (mutation.onSuccessMethod === "notification"  && !that.state.notificationComplete ) {
                 const dataObject = { formData, resultData: data[mutation.name], formContext: that.getFormContext() };
-                                                
+
                 api.createNotification(
                   template(mutation.notification.title)(templateProps),
                   {
@@ -1045,11 +1045,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 that.setState({ notificationComplete: true })
               }
 
-              if (that.props.onMutateComplete && that.state.mutate_complete_handler_called) {                
-                that.setState({ mutate_complete_handler_called: true }, () => { 
-                  that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
-                })
-              }
+              // REMOVED BLOCK TEMPORARLY
+              // if (that.props.onMutateComplete && that.state.mutate_complete_handler_called) {
+              //   that.setState({ mutate_complete_handler_called: true }, () => {
+              //     that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
+              //   })
+              // }
+              that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
 
               if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event:') >= 0) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];
@@ -1200,7 +1202,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             });
           });
         }
-        
+
         executeFormQuery();
       }
 
@@ -1220,7 +1222,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   getFormContext() {
     const that = this;
-    const { api } = this.props;    
+    const { api } = this.props;
     const cloned_props = {...that.props};
     let inputContext = {}
     if (cloned_props.formContext) {
@@ -1228,7 +1230,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       delete cloned_props.formContext;
     }
     let _context = {
-      ...cloned_props,      
+      ...cloned_props,
       formDef: { ...that.state.formDef },
       formData: { ...that.state.formData },
       $formState: that.state,
@@ -1284,7 +1286,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         _formDef.uiSchema = find(_formDef.uiSchemas, { key: uiSchemaKey }).uiSchema;
       }
     }
-    
+
     if (activeUiSchemaMenuItem && activeUiSchemaMenuItem.uiSchema) {
       api.log(`ReactoryComponent => ${_formDef.nameSpace}${_formDef.name}@${_formDef.version} instanceId=${that.instanceId} => Setting activeUiSchemaMenuItem ${activeUiSchemaMenuItem.title}`, { activeUiSchemaMenuItem }, 'debug');
       _formDef.uiSchema = activeUiSchemaMenuItem.uiSchema;
@@ -1294,7 +1296,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
     const setFormContext = () => {
       if (!_formDef.formContext) _formDef.formContext = {};
-      
+
       _formDef.formContext = { ...that.getFormContext(), ..._formDef.formContext };
     };
 
@@ -1637,7 +1639,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         let throttledCall = throttle(() => {
           api.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
             api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation result`, { mutationResult }, 'debug');
-            
+
             if (self.props.onMutateComplete) self.props.onMutateComplete(data.formData, self.getFormContext(), mutationResult);
           }).catch((mutationError) => {
 
@@ -1740,10 +1742,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         let _activeUiSchemaMenuItem = null;
         if (isArray(formDef.uiSchemas) === true && formDef.uiSchemas.length > 0) {
 
-          
+
 
           if (formDef.uiSchema === undefined || formDef.uiSchema === null) {
-            _activeUiSchemaMenuItem = formDef.uiSchemas[0];  
+            _activeUiSchemaMenuItem = formDef.uiSchemas[0];
           } else {
             _activeUiSchemaMenuItem = {
               id: 'default',
@@ -1751,7 +1753,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
               title: 'Default',
               uiSchema: formDef.uiSchema,
             }
-          }          
+          }
         }
 
         that.setState({ forms: forms, forms_loaded: true, loading: false, formDef, activeUiSchemaMenuItem: _activeUiSchemaMenuItem });

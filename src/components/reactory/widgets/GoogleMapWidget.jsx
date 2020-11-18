@@ -119,6 +119,9 @@ const MapHOC = compose(
   withScriptjs,
   withGoogleMap
 )((props) => {
+
+  const [searchTerm, setSearchTerm] = useState(props.searchTerm ? props.searchTerm : "");
+
   const $mapProps = props;
   const {
     api,
@@ -128,9 +131,10 @@ const MapHOC = compose(
     onAddressSelected,
   } = $mapProps;
 
-  debugger;
+  const searchttermChangeHandler = (event) => {
+    setSearchTerm(event.target.value);
+  };
 
-  // value={$mapProps.searchTerm ? $mapProps.searchTerm : ""}
   return (
     <GoogleMap
       defaultZoom={8}
@@ -146,11 +150,12 @@ const MapHOC = compose(
         onPlacesChanged={props.onPlacesChanged}
       >
         <TextField
+          value={searchTerm}
+          onChange={searchttermChangeHandler}
           ref={$mapProps.onSearchInputMounted}
           type="text"
           placeholder="Search Address"
           autoFocus={true}
-          onChange={props.onSearchValueChange}
           inputProps={{
             style: {
               boxSizing: `border-box`,
@@ -361,11 +366,13 @@ class ReactoryGoogleMapWidget extends Component {
           "debug";
         const mutationName = formContext.formDef.graphql.mutation.new.name; // "LasecCreateNewAddress"
         const mutationResultData = mutationResult.data[mutationName];
+
         if (mutationResultData && mutationResultData.success) {
           self.props.onChange({
             id: mutationResultData.id,
             fullAddress: mutationResultData.fullAddress,
           });
+
           this.setState({ isNewAddress: false, isDialogOpen: false });
         } else {
           // show error message
