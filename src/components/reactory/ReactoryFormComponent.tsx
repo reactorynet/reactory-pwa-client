@@ -403,8 +403,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     if (this.props.queryOnFormDataChange !== false) {
       if (deepEquals(nextProps.formData, this.state.formData) === false) {
         this.setState({ formData: nextProps.formData, queryComplete: false });
-      }  
-    }     
+      }
+    }
   }
 
   componentWillMount() {
@@ -614,7 +614,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
         return _errors;
       }
-    };   
+    };
 
     let icon = 'save';
     if (formDef.uiSchema && formDef.uiSchema.submitIcon) {
@@ -679,7 +679,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           }
 
           const GetSchemaSelectorMenus = () => {
-            
             const allowed_schema = AllowedSchemas(formDef.uiSchemas, _reactoryFormComponent.props.mode, null)
 
             allowed_schema.forEach((uiSchemaItem, index) => {
@@ -1031,7 +1030,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 that.props.api.goto(linkText)
               }
 
-              if ((mutation.onSuccessMethod === "notification" || mutation.notification)  && !that.state.notificationComplete ) {
+              if (mutation.onSuccessMethod === "notification"  && !that.state.notificationComplete ) {
                 const dataObject = { formData, resultData: data[mutation.name], formContext: that.getFormContext() };
 
                 api.createNotification(
@@ -1049,11 +1048,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 that.setState({ notificationComplete: true })
               }
 
-              //if (that.props.onMutateComplete && that.state.mutate_complete_handler_called) {                
-              //  that.setState({ mutate_complete_handler_called: true }, () => { 
-                  that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
-              //  })
-              //}
+              // REMOVED BLOCK TEMPORARLY
+              // if (that.props.onMutateComplete && that.state.mutate_complete_handler_called) {
+              //   that.setState({ mutate_complete_handler_called: true }, () => {
+              //     that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
+              //   })
+              // }
+              that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
 
               if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event:') >= 0) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];

@@ -11,6 +11,7 @@ import {
 } from "react-google-maps";
 
 import { SearchBox } from "react-google-maps/lib/components/places/SearchBox";
+import Autocomplete from "react-google-autocomplete";
 
 import { withStyles, withTheme } from "@material-ui/core/styles";
 import { withApi } from "@reactory/client-core/api/ApiProvider";
@@ -118,13 +119,21 @@ const MapHOC = compose(
   withScriptjs,
   withGoogleMap
 )((props) => {
+
+  const [searchTerm, setSearchTerm] = useState(props.searchTerm ? props.searchTerm : "");
+
   const $mapProps = props;
   const {
     api,
+    classes,
     onMapMarkerClicked,
     onEditClicked,
     onAddressSelected,
   } = $mapProps;
+
+  const searchttermChangeHandler = (event) => {
+    setSearchTerm(event.target.value);
+  };
 
   return (
     <GoogleMap
@@ -141,6 +150,9 @@ const MapHOC = compose(
         onPlacesChanged={props.onPlacesChanged}
       >
         <TextField
+          value={searchTerm}
+          onChange={searchttermChangeHandler}
+          ref={$mapProps.onSearchInputMounted}
           type="text"
           placeholder="Search Address"
           autoFocus={true}
@@ -162,6 +174,7 @@ const MapHOC = compose(
           }}
         />
       </SearchBox>
+
       {$mapProps.markers.map((marker, index) => {
         const LasecMarker = (props) => {
           const $LasecMarkerProps = props;
@@ -353,11 +366,13 @@ class ReactoryGoogleMapWidget extends Component {
           "debug";
         const mutationName = formContext.formDef.graphql.mutation.new.name; // "LasecCreateNewAddress"
         const mutationResultData = mutationResult.data[mutationName];
+
         if (mutationResultData && mutationResultData.success) {
           self.props.onChange({
             id: mutationResultData.id,
             fullAddress: mutationResultData.fullAddress,
           });
+
           this.setState({ isNewAddress: false, isDialogOpen: false });
         } else {
           // show error message
@@ -421,7 +436,6 @@ class ReactoryGoogleMapWidget extends Component {
       // uiOptions,
     } = self.props;
 
-
     const uiOptions = uiSchema["ui:options"];
     const { isDialogOpen } = self.state;
     const { fullAddress, id } = formData;
@@ -449,15 +463,18 @@ class ReactoryGoogleMapWidget extends Component {
         _inputProps.style = { ...uiOptions.inputProps.style };
       }
     }
-    
     return (
       <Fragment>
-        <div>
+        <div onClick={searchClicked} style={{ cursor: "pointer" }}>
           <label className={classes.label}>{title || schema.title}</label>
           <div className={classes.container}>
-            { (!fullAddress || fullAddress == "") ? <p className={classes.placeholder}>Search</p> : null }
-            { fullAddress && fullAddress != "" && (<p className={classes.value}>{fullAddress}</p>)}
-            <Icon color="primary" onClick={searchClicked} style={{ marginLeft: '10px'}}>
+            {!fullAddress || fullAddress == "" ? (
+              <p className={classes.placeholder}>Search</p>
+            ) : null}
+            {fullAddress && fullAddress != "" && (
+              <p className={classes.value}>{fullAddress}</p>
+            )}
+            <Icon color="primary" style={{ marginLeft: "10px" }}>
               search
             </Icon>
           </div>
@@ -503,7 +520,7 @@ class ReactoryGoogleMapWidget extends Component {
   getMapProperties() {
     const self = this;
     const refs = {};
-    const { center } = this.state;
+    const { center, searchTerm } = this.state;
     //REACTORY DEVELOPMENT KEY
     let apiKey = "GOOGLE-MAP-API-KEY";
     const { api, onChange, uiSchema } = this.props;
@@ -518,7 +535,8 @@ class ReactoryGoogleMapWidget extends Component {
       defaultZoom: 8,
       defaultCenter: self.state.center || { lat: -34.397, lng: 150.644 },
       center,
-      onPlacesChanged: () => {
+      searchTerm,
+      onPlacesChanged: (event) => {
         const places = self.searchBox.getPlaces();
         const bounds = new google.maps.LatLngBounds();
 
@@ -541,11 +559,14 @@ class ReactoryGoogleMapWidget extends Component {
           this.state.center
         );
 
+        const searchInputValue = self.searchInput.children[0].children[0].value;
+
         self.setState(
           {
             center: nextCenter,
             markers: nextMarkers,
             places: places,
+            searchTerm: searchInputValue,
           },
           () => {
             if (self && self.map) self.map.fitBounds(bounds);
@@ -557,6 +578,9 @@ class ReactoryGoogleMapWidget extends Component {
       },
       onSearchBoxMounted: (searchBoxRef) => {
         self.searchBox = searchBoxRef;
+      },
+      onSearchInputMounted: (searchInputRef) => {
+        self.searchInput = searchInputRef;
       },
       onAddressSelected: (address, placeId) => {
         api.log(`Address ${address} ${placeId}`, { address }, "debug");
