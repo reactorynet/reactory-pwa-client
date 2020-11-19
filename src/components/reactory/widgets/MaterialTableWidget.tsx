@@ -331,7 +331,7 @@ class MaterialTableWidget extends Component<any, any> {
                 return response;
               } else {
 
-                let result = api.utils.objectMapper(queryResult.data[queryDefinition.name], uiOptions.resultMap || queryDefinition.resultMap);
+                let result = api.utils.objectMapper(api.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
 
                 if (uiOptions.disablePaging === true) {
                   result.page = 1,
