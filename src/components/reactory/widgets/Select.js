@@ -126,7 +126,6 @@ class SelectWidget extends Component {
 
     const onSelectChanged = (evt) => {
 
-      debugger;
 
       this.props.onChange(evt.target.value)
     }
@@ -147,7 +146,6 @@ class SelectWidget extends Component {
 
     inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
 
-    debugger;
 
     return (
       <FormControl variant={variant} size={uiOptions.size || "medium"}>

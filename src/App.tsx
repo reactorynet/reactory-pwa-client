@@ -2,6 +2,7 @@ import React, { Component, LegacyRef } from 'react';
 import PropTypes from 'prop-types';
 import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import MomentUtils from '@date-io/moment';
+import { ApolloProvider } from '@apollo/client';
 import {
   BrowserRouter as Router,
   Route,
@@ -12,13 +13,6 @@ import {
 import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
-import { ApolloClient, InMemoryCache } from 'apollo-client-preset';
-import { ApolloProvider, Query, Mutation, Subscription } from 'react-apollo';
-import { createHttpLink } from 'apollo-link-http';
-import { WebSocketLink } from "apollo-link-ws";
-import { SubscriptionClient } from "subscriptions-transport-ws";
-import { createUploadLink } from 'apollo-upload-client';
-import { setContext } from 'apollo-link-context';
 import { ThemeProvider, Theme } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { createMuiTheme } from '@material-ui/core/styles';

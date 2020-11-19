@@ -11,7 +11,8 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
 import Dropzone, { DropzoneState } from 'react-dropzone';
-import { Query, Mutation, QueryResult, MutationResult } from 'react-apollo';
+import { MutationResult } from '@apollo/client'
+import { Mutation } from '@apollo/client/react/components';
 import { nil } from '@reactory/client-core/components/util';
 import queryString from '@reactory/client-core/query-string';
 import ReactoryApi from '../../api/ReactoryApi';
@@ -36,7 +37,6 @@ import gql from 'graphql-tag';
 import { deepEquals } from './form/utils';
 import Reactory from '../../types/reactory';
 import { History } from 'history';
-import { LocationDisabledSharp } from '@material-ui/icons';
 
 const {
   MaterialArrayField,
@@ -269,6 +269,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   instanceId: string;
   isMounted: boolean;
   unlisten: any;
+  refresh_interval: any;
 
   constructor(props: ReactoryFormProperties, context: any) {
     super(props, context);
@@ -419,6 +420,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
   componentWillUnmount() {
     this.isMounted = false;
+    if (this.refresh_interval) {
+      clearTimeout(this.refresh_interval);
+    }
     this.unlisten();
     this.$events.emit('componentWillUnmount', this);
     this.$events.removeAllListeners();
@@ -977,7 +981,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
               exectuting = true;
               const _variables = objectMapper({ ...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
 
-              that.setState({ notificationComplete: false }, () => {
+              that.setState({ notificationComplete: false, mutate_complete_handler_called: false }, () => {
                 mutateFunction({
                   variables: api.utils.omitDeep({ ..._variables }),
                   refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
@@ -1045,11 +1049,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 that.setState({ notificationComplete: true })
               }
 
-              if (that.props.onMutateComplete && that.state.mutate_complete_handler_called) {                
-                that.setState({ mutate_complete_handler_called: true }, () => { 
+              //if (that.props.onMutateComplete && that.state.mutate_complete_handler_called) {                
+              //  that.setState({ mutate_complete_handler_called: true }, () => { 
                   that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
-                })
-              }
+              //  })
+              //}
 
               if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event:') >= 0) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];
@@ -1189,7 +1193,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         }
 
         if (formDef.graphql.query.interval) {
-          setInterval(executeFormQuery, formDef.graphql.query.interval);
+          if (that.refresh_interval === null || that.refresh_interval === undefined) {
+            that.refresh_interval = setInterval(executeFormQuery, formDef.graphql.query.interval);  
+          }
+          
         }
 
         if (query.refreshEvents) {

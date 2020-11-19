@@ -421,7 +421,6 @@ class ReactoryGoogleMapWidget extends Component {
       // uiOptions,
     } = self.props;
 
-    debugger;
 
     const uiOptions = uiSchema["ui:options"];
     const { isDialogOpen } = self.state;
@@ -450,9 +449,7 @@ class ReactoryGoogleMapWidget extends Component {
         _inputProps.style = { ...uiOptions.inputProps.style };
       }
     }
-
-    debugger;
-
+    
     return (
       <Fragment>
         <div>

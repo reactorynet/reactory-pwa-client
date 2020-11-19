@@ -6,8 +6,7 @@ import inspector from 'schema-inspector';
 import uuid from 'uuid';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql, Resolvers } from 'apollo-client-preset';
-import { ApolloProvider } from 'react-apollo';
+import { ApolloClient, gql, Resolvers, ApolloProvider, NormalizedCacheObject } from '@apollo/client';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
@@ -34,6 +33,7 @@ import queryString from '../query-string';
 import humanNumber from 'human-number';
 import humanDate from 'human-date';
 import ApiProvider, { withApi } from './ApiProvider';
+import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
 
 import Reactory from '../types/reactory';
@@ -57,21 +57,6 @@ const pluginDefinitionValid = (definition) => {
   return pass.nameSpace && pass.name && pass.component && pass.version;
 };
 
-export const storageKeys = {
-  LoggedInUser: 'loggedInUser',
-  AuthToken: 'auth_token',
-  LastLoggedInEmail: '$reactory$last_logged_in_user',
-  viewContext: '$rectory$viewContext',
-};
-
-export const anonUser = {
-  id: '',
-  firstName: '',
-  lastName: '',
-  avatar: '',
-  anon: true,
-  roles: ['ANON']
-};
 
 export const ReactoryApiEventNames = {
   onLogout: 'loggedOut',
@@ -187,7 +172,7 @@ class ReactoryApi extends EventEmitter {
   mutations: any;
   props: Object;
   componentRegister: Object;
-  client: ApolloClient<any>;
+  client: ApolloClient<NormalizedCacheObject>;
   login: Function = null;
   register: Function = null;
   reset: Function = null;
@@ -881,15 +866,17 @@ class ReactoryApi extends EventEmitter {
       }
     }
 
-    const theme = { ...themeOptions, extensions };
-    if (theme.palette) theme.palette.type = paletteType;
+    let $theme = lodash.cloneDeep(themeOptions);
+    $theme.extensions = extensions;
+    
+    if ($theme.palette) $theme.palette.type = paletteType;
     else {
-      theme.palette = {
+      $theme.palette = {
         type: paletteType
       }
     }
 
-    return theme;
+    return $theme;
   }
 
   getRoutes() {
@@ -1113,21 +1100,8 @@ class ReactoryApi extends EventEmitter {
   }
 
   getUser() {
-    if (this.$user) return this.$user;
-
-    const userString = localStorage.getItem(storageKeys.LoggedInUser);
-    if (userString) {
-      try {
-        let parsedUser = JSON.parse(userString);
-        this.$user = parsedUser;
-        return parsedUser;
-      } catch (parseError) {
-        this.log('Could not parse the logged in user data', parseError, 'error');
-        return anonUser;
-      }
-    }
-
-    return anonUser;
+    if (!this.$user) this.$user = ReactoryLoggedInUser();
+    return this.$user;
   }
 
   saveUserLoginCredentials(provider, props) {

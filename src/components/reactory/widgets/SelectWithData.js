@@ -125,6 +125,10 @@ class SelectWithDataWidget extends Component {
       </MenuItem> : null;
 
       inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
+      
+      if (formData !== null && formData !== undefined && formData !== '') {
+        inputLabelProps.shrink = true;
+      }
 
       return (
         <Query query={gql`${query}`} variables={variables} fetchPolicy="cache-and-network" >
@@ -141,11 +145,11 @@ class SelectWithDataWidget extends Component {
                   <Select
                     {...selectProps}
                     multiple={multiSelect === true}
-                    value={multiSelect === true ? this.props.formData : `${this.props.formData}`}
+                    value={ this.props.formData }
                     onChange={onSelectChanged}
                     name={this.props.name}
                     variant={variant}
-                    input={<InputComponent id={this.props.idSchema.$id} value={`${this.props.formData}`.trim() || ""} />}
+                    input={<InputComponent id={this.props.idSchema.$id} value={this.props.formData ? this.props.formData.trim() : ""} />}
                     renderValue={(selected) => {
 
                       if (!selected || selected == 'undefined' || selected.length === 0) {
