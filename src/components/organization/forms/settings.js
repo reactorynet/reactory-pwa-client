@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { withRouter } from 'react-router-dom';
-import { Query, Mutation } from 'react-apollo';
+import { Query, Mutation } from '@apollo/client';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import {
   ExpansionPanel, 

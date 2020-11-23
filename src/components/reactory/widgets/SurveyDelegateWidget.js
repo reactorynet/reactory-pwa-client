@@ -293,7 +293,7 @@ const initialState = (props) => {
     busy: false,
     message: '',
     activeTab: 'assessments',
-    formData: props.formData || [],
+    formData: props.api.utils.lodash.cloneDeep(props.formData || []),
     groupBy: 'status', //status, last-action, next-action
     selected: {
 
@@ -1764,18 +1764,26 @@ class SurveyDelegates extends Component {
         </List>
       )
 
-      let reportTitleComponent = (<TextField label="Title" onChange={evt => that.setState({ selectionTitle: evt.target.value })} value={that.state.selectionTitle}></TextField>)
-      let reportDescriptionCompnonent = (<TextField label="Description" onChange={evt => that.setState({ selectionDescription: evt.target.value })} value={that.state.selectionDescription}></TextField>)
+      let reportTitleComponent = (<TextField label="Title" fullWidth onChange={evt => that.setState({ selectionTitle: evt.target.value })} value={that.state.selectionTitle}></TextField>)
+      let reportDescriptionCompnonent = (<TextField label="Description" fullWidth onChange={evt => that.setState({ selectionDescription: evt.target.value })} value={that.state.selectionDescription}></TextField>)
       return (
-        <div className={this.props.classes.root}>
-          {formContext.surveyId}
-          {reportTitleComponent}
-          {reportDescriptionCompnonent}
-          {list}
-          {that.state.busy && that.state.message && <Typography variant="caption" color="secondary"><Icon>info</Icon>{that.state.message}</Typography>}
+        <Grid container className={this.props.classes.root} direction="column">
+          <Grid>
+            {that.state.busy && that.state.message && <Typography variant="caption" color="secondary"><Icon>info</Icon>{that.state.message}</Typography>}
+            {formContext.surveyId}
+          </Grid>
+          <Grid container direction="row">
+            <Grid item md={ 6 }>{reportTitleComponent}</Grid>
+            <Grid item md={ 6 }>{reportDescriptionCompnonent}</Grid>
+          </Grid> 
+          <Grid item>
+            {list}
+          </Grid>
+          
+          
           {<SpeedDial buttonStyle={{ position: 'fixed' }} actions={sortBy(speedDialActions, e => e.ordinal)} icon={<Icon>engineering</Icon>} />}
           {that.getActiveModalView()}
-        </div>
+        </Grid>
       )
     } else {
       return <ErrorMessage message="Expecting array data" />

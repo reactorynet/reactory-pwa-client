@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
-import { graphql, withApollo } from 'react-apollo';
-import gql from 'graphql-tag';
+import { withApollo } from '@apollo/client/react/hoc';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 
 import {

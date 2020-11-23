@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import gql from 'graphql-tag';
 import { compose } from 'redux';
-import { graphql, withApollo, ApolloClient, Query, Mutation } from 'react-apollo';
+import { Query, Mutation } from '@apollo/client/react/components';
+import { withApollo } from '@apollo/client/react/hoc';
 import {
   Avatar,
   Button,

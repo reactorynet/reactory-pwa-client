@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
-import { Query } from 'react-apollo';
+import { Query } from '@apollo/client/react/components';
 import { Survey } from './Assessment';
 import { Typography } from '@material-ui/core';
 import { withStyles, withTheme} from '@material-ui/core/styles';

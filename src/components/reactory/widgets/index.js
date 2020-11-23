@@ -1,5 +1,5 @@
 import React from 'react';
-import { Query, graphql } from 'react-apollo';
+import { Query, graphql } from '@apollo/client';
 import { compose } from 'redux';
 import { withApi } from '../../../api/ApiProvider';
 import * as utils from '../../util';

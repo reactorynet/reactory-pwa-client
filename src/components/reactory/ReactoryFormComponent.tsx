@@ -157,7 +157,8 @@ export interface ReactoryFormProperties {
   transformErrors?: Function,
   autoQueryDisabled?: boolean,
   refCallback?: Function,
-  queryOnFormDataChange?: boolean
+  queryOnFormDataChange?: boolean,
+  onBeforeMutation?: Function
 }
 
 export interface ReactoryFormState {
@@ -258,6 +259,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     uiSchemaKey: 'default',
     autoQueryDisabled: false,
     queryOnFormDataChange: true,
+    onBeforeMutation: () => { return true }
   };
 
   $events: EventEmitter = new EventEmitter();
@@ -560,7 +562,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     const { DropDownMenu } = this.componentDefs;
     const _reactoryFormComponent = this;
 
-    if (forms.length === 0) return (<p>no forms defined</p>);
+    if (forms.length === 0) return (<span>♻</span>);
 
 
     const formDef = this.form();
@@ -970,21 +972,27 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         <Mutation mutation={gql(mutation.text)}>
           {(mutateFunction: Function, mutationResult: MutationResult) => {
             const { loading, error, data } = mutationResult;
-
             api.log(`MutationFormComponent 👀🟠`, {loading, error, data}, 'debug');
-
-            let exectuting = false;
-
+            let executing = false;
             const onFormSubmit = (formSchema) => {
               api.log(`Form Submitting, post via graphql`, formSchema, 'debug');
-              exectuting = true;
+              executing = true;
               const _variables = objectMapper({ ...formSchema, formContext: that.getFormContext(), $route: that.props.$route }, mutation.variables);
 
               that.setState({ notificationComplete: false, mutate_complete_handler_called: false }, () => {
-                mutateFunction({
+                let do_mutation = true;
+                let mutation_props: any = {
                   variables: api.utils.omitDeep({ ..._variables }),
                   refetchQueries: mutation.options && mutation.options.refetchQueries ? mutation.options.refetchQueries : [],
-                });
+                };
+
+                if (that.props.onBeforeMutation) {
+                  do_mutation = that.props.onBeforeMutation(mutation_props, formSchema);
+                }
+
+                if (do_mutation) {
+                  mutateFunction(mutation_props);  
+                }                
               });
             };
 
@@ -1049,12 +1057,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
               }
 
               // REMOVED BLOCK TEMPORARLY
-              // if (that.props.onMutateComplete && that.state.mutate_complete_handler_called) {
-              //   that.setState({ mutate_complete_handler_called: true }, () => {
-              //     that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
-              //   })
-              // }
-              that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
+              /*
+              if (that.props.onMutateComplete && that.state.mutate_complete_handler_called) {
+                 that.setState({ mutate_complete_handler_called: true }, () => {
+                   that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
+                 })
+               }
+               */
+              if(that.props.onMutateComplete) that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
 
               if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event:') >= 0) {
                 let eventName = mutation.onSuccessMethod.split(':')[1];

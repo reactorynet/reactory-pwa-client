@@ -443,6 +443,9 @@ class ApplicationHeader extends Component {
       </div>
     </div>);
           */
+    
+    const { server } = api.$user;
+
     return (
       <Fragment>
         <AppBar position="static" color="primary">
@@ -497,7 +500,7 @@ class ApplicationHeader extends Component {
               </ListItemIcon>
               <ListItemText 
                 primary={<span className={classes.versionPrimary}>Client ver: {api.props.$version}</span>} 
-                secondary={<span className={classes.version}>Server ver: {api.$user && api.$user.server ? api.$user.server.version : 'waiting' } </span>}
+                secondary={<span className={classes.version}>📡{ server.id || 'development' } ver: { server.version || 'waiting' } </span>}
                 />
             </ListItem>
           </List>

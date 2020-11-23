@@ -2,8 +2,9 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { withRouter, Route, Switch } from 'react-router'
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
+import { Query, Mutation } from '@apollo/client/react/components';
+import { withApollo } from '@apollo/client/react/hoc';
 
 import {
   Avatar,
@@ -25,8 +26,7 @@ import { isNil, isEmpty, indexOf, remove, filter } from 'lodash';
 import { UserListWithData, EditProfile, CreateProfile, UserProfile } from '../../user/index'
 import { BrandListWithData, EditBrand, newBrand, CreateBrand } from '../../brands'
 import Templates from '../../template'
-import AdminCalendar, { SurveyCalendarForOrganization, EditSurveyEntryForOrganization, NewSurveyEntryForOrganization } from '../../admin/widget/AdminCalendar'
-import Settings from './settings'
+import { SurveyCalendarForOrganization } from '../../admin/widget/AdminCalendar'
 import { withApi } from '../../../api/ApiProvider'
 import { ReactoryApi } from "../../../api/ReactoryApi";
 import { CDNOrganizationResource, CenteredContainer } from '../../util';

@@ -188,6 +188,11 @@ class ProductCardWidget extends Component {
       componentProps: {
         'data': 'formData',
       },
+      childProps: {
+        style: {
+          
+        }
+      },
       slideDirection: 'left',
       buttonVariant: 'button',
       buttonProps: {

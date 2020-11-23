@@ -1,7 +1,7 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter, Route, Switch } from 'react-router';
-import { Query, Mutation } from 'react-apollo';
+import { Query, Mutation } from '@apollo/client';
 import classnames from 'classnames';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';

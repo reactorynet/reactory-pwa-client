@@ -63,7 +63,8 @@ import {
 import { DateHelpers } from '../../util';
 
 import 'react-big-calendar/lib/css/react-big-calendar.css'
-import { withApollo, Query, Mutation } from 'react-apollo';
+import { Query, Mutation } from '@apollo/client/react/components';
+import { withApollo } from '@apollo/client/react/hoc'
 import { UserSearchInputComponent, UserProfile } from '../../user';
 import { BrandListWithData } from '../../brands';
 import { withApi } from '../../../api/ApiProvider';

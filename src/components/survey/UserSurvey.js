@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { Query } from '@apollo/client/react/components';
 import { isNil, sortBy, reverse } from 'lodash';
 import moment from 'moment';
 import {
@@ -69,7 +69,7 @@ class UserSurvey extends Component {
 
     render() {
         const { classes, surveys, history, api, minimal, showComplete, theme } = this.props;
-        const { UserListItem, OwlyListItem, Logo, ApplicationUserListItem } = this.componentDefs;
+        const { OwlyListItem, Logo, ApplicationUserListItem } = this.componentDefs;
         const surveyCount = this.totalSurveys();
         
         let SystemUserListItem = OwlyListItem;
@@ -193,9 +193,11 @@ const ThemedSurveyComponent = compose(
 
 const UserSurveyComponent = ({ userId, api, onSurveySelect, minimal = true, showComplete = true }) => {
     const user = api.getUser();    
+    debugger
     return (
         <Query query={api.queries.Surveys.surveysForUser} variables={{ id: user.id }} options={{fetchPolicy: 'network-only'}}>
             {({ loading, error, data }) => {
+                debugger
                 if (loading === true) return (<p>Loading survey data...</p>);
                 if (isNil(error) === false) return (<p>Error during load...</p>);
 

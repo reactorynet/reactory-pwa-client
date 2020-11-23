@@ -1,6 +1,6 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { Query, Mutation } from 'react-apollo';
+import { Query, Mutation } from '@apollo/client';
 import { compose } from 'redux';
 import { withRouter } from 'react-router';
 import {

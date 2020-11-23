@@ -39,8 +39,9 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import { fade } from '@material-ui/core/styles/colorManipulator';
 import SearchIcon from '@material-ui/icons/Search';
 import CachedIcon from '@material-ui/icons/Cached';
-import gql from 'graphql-tag';
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { gql } from '@apollo/client';
+import { Query, Mutation } from '@apollo/client/react/components';
+import { withApollo } from '@apollo/client/react/hoc';
 import { compose } from 'redux';
 import { withApi } from '../../../api/ApiProvider'
 import { styles } from '../../shared/styles'

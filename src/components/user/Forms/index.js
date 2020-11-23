@@ -4,7 +4,8 @@ import { withRouter } from 'react-router';
 import classnames from 'classnames';
 import gql from 'graphql-tag';
 import { compose } from 'redux';
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { graphql, Query, Mutation } from '@apollo/client';
+import { withApollo } from '@apollo/client/react/hoc';
 import {
   Avatar,
   Chip,

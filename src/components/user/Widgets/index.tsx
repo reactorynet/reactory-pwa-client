@@ -18,14 +18,14 @@ import {
 } from '@material-ui/icons'
 import { fade } from '@material-ui/core/styles/colorManipulator';
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import { withApi} from '@reactory/client-core/api/ApiProvider';
+import { withApi } from '@reactory/client-core/api/ApiProvider';
 import styles from '@reactory/client-core/components/shared/styles';
 
 export class UserListWithSearch extends Component<any, any> {
 
   componentDefs: any
 
-    static Styles = theme => {
+  static Styles = theme => {
     return styles(theme, {
       mainContainer: {
         padding: '5px',
@@ -154,7 +154,7 @@ export class UserListWithSearch extends Component<any, any> {
 
   static defaultProps = {
     businessUnitFilter: true,
-    onAcceptSelection: (evt) => { 
+    onAcceptSelection: (evt) => {
       //console.log('No selection accept handler');
     },
     onDeleteUsersClick: (evt) => {
@@ -179,7 +179,7 @@ export class UserListWithSearch extends Component<any, any> {
     }
 
     this.doSearch = this.doSearch.bind(this);
-    this.doRefresh = this.doRefresh.bind(this);    
+    this.doRefresh = this.doRefresh.bind(this);
     this.searchStringChanged = this.searchStringChanged.bind(this);
     this.searchStringOnKeyPress = this.searchStringOnKeyPress.bind(this);
     this.onNewUserClick = this.onNewUserClick.bind(this);
@@ -187,7 +187,7 @@ export class UserListWithSearch extends Component<any, any> {
     this.componentDefs = this.props.api.getComponents(['core.SingleColumnLayout', 'core.UserSearch', 'core.UserList'])
   }
 
-  doRefresh(){
+  doRefresh() {
     this.setState({ skip: false, searchString: this.state.inputText });
   }
 
@@ -204,22 +204,22 @@ export class UserListWithSearch extends Component<any, any> {
     this.setState({ searchString: this.state.inputText })
   }
 
-  onUserSelect(user, index){
+  onUserSelect(user, index) {
     //console.log(`User selected ${user.id} ${index}`, {user, index});
 
-    if(this.props.onUserSelect) this.props.onUserSelect(user, index);
+    if (this.props.onUserSelect) this.props.onUserSelect(user, index);
 
   }
 
-  
-  onShowBusinessUnitFilter(){
+
+  onShowBusinessUnitFilter() {
     this.setState({ showBusinessUnitFilter: !this.state.showBusinessUnitFilter })
   }
 
-  onNewUserClick(){
+  onNewUserClick() {
     //console.log("New User Clicked", {onNewUserClick: this.props.onNewUserClick});
-    if(typeof this.props.onNewUserClick === 'function') {
-      this.props.onNewUserClick()      
+    if (typeof this.props.onNewUserClick === 'function') {
+      this.props.onNewUserClick()
     } else {
       this.props.history.push(`/admin/org/${this.props.organizationId}/employees/new`)
     }
@@ -230,7 +230,7 @@ export class UserListWithSearch extends Component<any, any> {
     const { classes } = this.props;
     const { skip, page = 1, pageSize = 25 } = this.state;
     const that = this;
-    const onPageChange = (page) => { 
+    const onPageChange = (page) => {
       that.setState({ current_page: page });
     }
 
@@ -259,13 +259,13 @@ export class UserListWithSearch extends Component<any, any> {
                 <Badge badgeContent={skip ? '!' : ''} hidden={skip === false} color="secondary">
                   <Icon>cached</Icon>
                 </Badge>
-              </IconButton>              
+              </IconButton>
             </Tooltip>
 
             <Tooltip title={'Click to accept your selection'}>
               <IconButton color="inherit" onClick={this.props.onAcceptSelection}>
                 <Icon>check</Icon>
-              </IconButton>              
+              </IconButton>
             </Tooltip>
 
             <Tooltip title={`Click to add new employee`}>
@@ -273,25 +273,23 @@ export class UserListWithSearch extends Component<any, any> {
                 <Icon>add_circle_outline</Icon>
               </IconButton>
             </Tooltip>
-            { this.state.businessUnitFilter ? <Tooltip title={`Filter By Business Unit`}>
+            {this.state.businessUnitFilter ? <Tooltip title={`Filter By Business Unit`}>
               <IconButton color="inherit" onClick={this.onShowBusinessUnitFilter}>
                 <Icon>filter</Icon>
               </IconButton>
-            </Tooltip> : null }
+            </Tooltip> : null}
 
-            { this.props.allowDelete === true && this.props.selected.length > 0 &&
-            <Tooltip title={`Click here to delete the ${this.props.selected.length > 1 ? `${this.props.selected.length} employees` : 'employee' } selected`}>
+            {this.props.allowDelete === true && this.props.selected.length > 0 &&
+              <Tooltip title={`Click here to delete the ${this.props.selected.length > 1 ? `${this.props.selected.length} employees` : 'employee'} selected`}>
                 <IconButton color="inherit" onClick={this.props.onDeleteUsersClick}>
-                <Icon>delete</Icon>
-              </IconButton>
-            </Tooltip>
+                  <Icon>delete</Icon>
+                </IconButton>
+              </Tooltip>
             }
-
-
           </Toolbar>
         </AppBar>
 
-        <UserList 
+        <UserList
           onUserSelect={this.props.onUserSelect}
           organizationId={this.props.organizationId}
           searchString={this.state.searchString}
@@ -301,8 +299,7 @@ export class UserListWithSearch extends Component<any, any> {
           multiSelect={this.props.multiSelect === true || false}
           page={this.state.current_page || 1}
           pageSize={this.state.page_size || 25}
-          onPageChange={onPageChange}
-          />
+          onPageChange={onPageChange} />
       </SingleColumnLayout>
     )
   }
@@ -311,7 +308,7 @@ export class UserListWithSearch extends Component<any, any> {
 
 export const UserListWithSearchComponent = compose(
   withStyles(UserListWithSearch.Styles),
-  withTheme, 
+  withTheme,
   withApi,
   withRouter)(UserListWithSearch);
 

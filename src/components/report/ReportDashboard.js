@@ -16,7 +16,9 @@ import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import Chip from '@material-ui/core/Chip';
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { graphql } from '@apollo/client';
+import { Query, Mutation } from '@apollo/client/react/components';
+import { withApollo } from '@apollo/client/react/hoc';
 import {
     Card, CardHeader, CardMedia, CardContent, CardActions,
     Icon,

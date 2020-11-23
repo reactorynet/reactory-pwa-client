@@ -5,7 +5,9 @@ import { withRouter } from 'react-router';
 import classnames from 'classnames';
 import gql from 'graphql-tag';
 import { compose } from 'redux';
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { graphql } from '@apollo/client';
+import { Query, Mutation } from '@apollo/client/react/components';
+import { withApollo } from '@apollo/client/react/hoc';
 import { intersection } from 'lodash';
 import {
   Avatar,
@@ -504,7 +506,13 @@ export const UserInbox = compose(withApi)(({ api, via = 'local', display = 'defa
   </Query>));
 
 
-const UserList = ({ organizationId, api, onUserSelect, searchString, selected, multiSelect, excluded = [], secondaryAction = null, classes, graphql = null, formContext }) => {
+const UserList = ({
+  organizationId,
+  api, onUserSelect, searchString,
+  selected, multiSelect, excluded = [],
+  secondaryAction = null,
+  classes, graphql = null,
+  formContext, page = 1, pageSize = 25,  onPageChange = () => { } }) => {
   const queryText = graphql && graphql.text ? graphql.text : api.queries.Users.usersForOrganization;
   const variables = graphql && graphql.variables ? om(formContext, graphql.variables) : { id: organizationId, searchString };
   const Components = api.getComponents(['material-ui.Material']);
@@ -512,12 +520,16 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
   const { MaterialLab } = Components.Material;
 
   return (
-    <Query query={queryText} variables={{ id: organizationId, searchString }}>
-      {({ loading, error, data }) => {
+    <Query query={queryText} variables={{ id: organizationId, searchString, paging: { page, pageSize } }}>
+      {(result, info) => {
+        const { loading, errors, data, called } = result;                        
+        
 
         try {
-          if (loading === true) return "Loading"
-          if (error) return error.message
+
+          if (called === false) return (<Typography>💤</Typography>)
+          if (loading === true) return (<Typography>Loading</Typography>)
+          if (errors && errors.length > 0) return (<Typography>The api server reported an error. 💥</Typography>)
 
           const newUser = {
             firstName: '',
@@ -598,6 +610,8 @@ const UserList = ({ organizationId, api, onUserSelect, searchString, selected, m
               </React.Fragment>
             )
           }
+
+          return <div>No users</div>
         } catch (err) {
           
           return (<div>{err.message}</div>)

@@ -2,7 +2,8 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { withRouter, Route, Switch } from 'react-router'
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { graphql, Query, Mutation } from '@apollo/client';
+import { withApollo } from '@apollo/client/react/hoc';
 import gql from 'graphql-tag';
 
 import classNames from 'classnames';

@@ -5,7 +5,8 @@ import { compose } from 'redux';
 import moment from 'moment';
 import lodash, { isNil, find, isEmpty, template } from 'lodash';
 import classNames from 'classnames';
-import { graphql, withApollo, Query, Mutation } from 'react-apollo';
+import { graphql, Query, Mutation } from '@apollo/client';
+import { withApollo } from '@apollo/client/react/hoc';
 import gql from 'graphql-tag';
 import MobileStepper from '@material-ui/core/MobileStepper';
 import {

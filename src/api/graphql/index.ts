@@ -1,4 +1,4 @@
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 
 const allScales = gql`
   query ScalesQuery {
@@ -391,6 +391,7 @@ const apiStatus = gql`
       themeOptions
       themes
       server {
+        id
         version,
         started,
         clients {

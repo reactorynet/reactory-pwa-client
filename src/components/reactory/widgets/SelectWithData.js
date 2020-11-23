@@ -18,7 +18,7 @@ import {
   OutlinedInput,
 } from '@material-ui/core';
 
-import { Query } from 'react-apollo';
+import { Query } from '@apollo/client/react/components';
 import gql from 'graphql-tag';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
