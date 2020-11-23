@@ -500,7 +500,7 @@ class ApplicationHeader extends Component {
               </ListItemIcon>
               <ListItemText 
                 primary={<span className={classes.versionPrimary}>Client ver: {api.props.$version}</span>} 
-                secondary={<span className={classes.version}>📡{ server.id || 'development' } ver: { server.version || 'waiting' } </span>}
+                secondary={<span className={classes.version}>📡&nbsp;{ server.id || 'development' } ver: { server.version || 'waiting' } </span>}
                 />
             </ListItem>
           </List>
