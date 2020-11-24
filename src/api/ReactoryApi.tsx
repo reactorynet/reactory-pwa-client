@@ -6,7 +6,9 @@ import inspector from 'schema-inspector';
 import uuid from 'uuid';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql, Resolvers, ApolloProvider, NormalizedCacheObject } from '@apollo/client';
+import { ApolloClient, gql,  ApolloProvider, NormalizedCacheObject, Resolvers  } from '@apollo/client';
+import { Mutation, Query  } from '@apollo/client/react/components';
+
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
@@ -37,8 +39,6 @@ import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
 
 import Reactory from '../types/reactory';
-
-
 
 const pluginDefinitionValid = (definition) => {
   const pass = {

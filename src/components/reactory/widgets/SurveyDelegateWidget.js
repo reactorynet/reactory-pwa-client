@@ -974,7 +974,6 @@ class SurveyDelegates extends Component {
                 lastName
               }
             }
-
           }
           notifications {
             id
@@ -1037,7 +1036,6 @@ class SurveyDelegates extends Component {
 
         api.log('Single use action');
 
-        debugger
         const variables = {
           survey: self.props.formContext.surveyId,
           entryId: delegateEntry.id,
@@ -1069,7 +1067,8 @@ class SurveyDelegates extends Component {
                 formData.splice(indexToUpdate, 1); // REMOVE - TO SHOW IN DELEGATE LIST AGAIN
               }
               else {
-                formData[indexToUpdate] = { ...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction };
+                //formData[indexToUpdate] = { ...formData[indexToUpdate], ...mutationResult.data.surveyDelegateAction };
+                formContext.refresh()
               }
             }
 
@@ -1107,8 +1106,7 @@ class SurveyDelegates extends Component {
   }
 
   // NEW
-  launchSingleAssessore(delegateEntry, communication = 'launch-single-assessor', inputData) {
-    debugger;
+  launchSingleAssessore(delegateEntry, communication = 'launch-single-assessor', inputData) {    
     this.doAction(delegateEntry, communication, inputData, `Adding ${inputData.peer.firstName} ${inputData.peer.lastName} as an assessor for ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
   }
 

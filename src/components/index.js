@@ -20,6 +20,8 @@ import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
 
 
+
+
 import LoginPage, { RegisterPage } from './auth';
 import Main from './home/index';
 import AssessmentView from './assess/index';
@@ -761,5 +763,17 @@ export const componentRegistery = [
     component: {
         DragDropContext, Droppable, Draggable
     },
+  },
+
+  {
+    nameSpace: 'apollo-client',
+    name: 'ApolloClient',
+    version: '3.2.7',
+    component: {
+      core: require('@apollo/client'),
+      react: require('@apollo/client/react'),
+      hoc: require('@apollo/client/react/hoc'),
+      components: require('@apollo/client/react/components'),
+    }
   }
 ];
