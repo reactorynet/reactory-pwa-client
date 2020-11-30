@@ -196,14 +196,14 @@ class SlideOutLauncher extends Component {
             maxWidth="lg"
             classes={{ paper: classes.compactRoot }}
           >
-            <DialogTitle style={{ padding: '24px'}}>
+            <DialogTitle style={{ padding: '16px 24px', borderBottom: 'solid 1px #e0e0e0'}}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" style={{ fontWeight: "bold" }}>More Details</Typography>
                 <Icon onClick={onClick}>close</Icon>
               </div>
             </DialogTitle>
             {/* <DialogContent style={{ paddingTop: 0, paddingRight: '32px', paddingLeft: '32px' }} > */}
-            <DialogContent style={{ paddingTop: 0 }} >
+            <DialogContent style={{ paddingTop: '16px' }} >
               {this.state.open === true ? <ChildComponent {...childprops} /> : null}
             </DialogContent>
           </Dialog>
