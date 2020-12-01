@@ -1,11 +1,35 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { Button, IconButton, Icon, Typography, Fab } from '@material-ui/core';
+import {
+  Button,
+  IconButton,
+  Icon,
+  Typography,
+  Fab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+} from '@material-ui/core';
 import { isArray } from 'lodash';
 import { compose } from 'recompose';
-import { withTheme } from '@material-ui/styles';
+import { withTheme, withStyles } from '@material-ui/styles';
 import { withApi } from '../../api/ApiProvider';
 import { ReactoryApi } from "../../api/ReactoryApi";
+
+const styles = (theme) => {
+  return {
+    compactRoot: {
+      height: '90%'
+    },
+    closeButton: {
+      position: 'absolute',
+      right: theme.spacing(1),
+      top: theme.spacing(1),
+      color: theme.palette.grey[500],
+    },
+
+  }
+};
 
 class SlideOutLauncher extends Component {
 
@@ -52,17 +76,18 @@ class SlideOutLauncher extends Component {
 
     let {
       api,
+      classes,
       componentFqn,
       buttonTitle,
       windowTitle,
       buttonVariant,
       buttonIcon,
+      dialogVariant = 'fullscreen',
       buttonProps = {},
       componentProps,
       actions,
       childProps = {},
     } = _props;
-
 
     const { onClick } = this;
 
@@ -161,6 +186,31 @@ class SlideOutLauncher extends Component {
       LaunchButton = (<SpeedDial actions={actions} icon={<Icon>{icon}</Icon>} />)
     }
 
+    if (dialogVariant == 'compact') {
+      return (
+        <>
+          {LaunchButton}
+          <Dialog
+            open={this.state.open === true}
+            fullWidth={true}
+            maxWidth="lg"
+            classes={{ paper: classes.compactRoot }}
+          >
+            <DialogTitle style={{ padding: '16px 24px', borderBottom: 'solid 1px #e0e0e0'}}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6" style={{ fontWeight: "bold" }}>More Details</Typography>
+                <Icon onClick={onClick}>close</Icon>
+              </div>
+            </DialogTitle>
+            {/* <DialogContent style={{ paddingTop: 0, paddingRight: '32px', paddingLeft: '32px' }} > */}
+            <DialogContent style={{ paddingTop: '16px' }} >
+              {this.state.open === true ? <ChildComponent {...childprops} /> : null}
+            </DialogContent>
+          </Dialog>
+        </>
+      );
+    }
+
     return (
       <Fragment>
         {LaunchButton}
@@ -180,7 +230,7 @@ class SlideOutLauncher extends Component {
   }
 }
 
-const SlideOutLauncherComponent = compose(withTheme, withApi)(SlideOutLauncher);
+const SlideOutLauncherComponent = compose(withTheme, withApi, withStyles(styles))(SlideOutLauncher);
 
 SlideOutLauncherComponent.propTypes = {
   api: PropTypes.instanceOf(ReactoryApi).isRequired,
