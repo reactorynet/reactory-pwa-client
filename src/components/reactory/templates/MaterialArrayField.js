@@ -382,6 +382,7 @@ class ArrayField extends Component {
       const uiOptions = uiSchema['ui:options'];
       let componentProps = {}
       ArrayFieldTemplate = registry.widgets[uiSchema['ui:widget']]
+      
       if(!ArrayFieldTemplate && formContext.api) {
         ArrayFieldTemplate = formContext.api.getComponent(uiSchema['ui:widget']);
       }
@@ -466,7 +467,7 @@ class ArrayField extends Component {
     return (
       <Fragment>
         {toolbar}
-        <Component {...arrayProps} />
+        <Component { ...arrayProps } />
       </Fragment>);
   }
 

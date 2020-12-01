@@ -94,7 +94,7 @@ class ArrayTemplate extends Component {
   }
 
   onChangeForIndex(value, index, errorSchema){
-    console.info('index item change', { index, value, errorSchema })
+    //console.info('index item change', { index, value, errorSchema })
     //this.props.onChange(formData.map())
     const newData = this.props.formData.map((item, idx) => { 
       if(idx === index) return {...item, ...value};
@@ -338,12 +338,8 @@ class ArrayTemplate extends Component {
             </Tooltip>
         </Paper>
       );
-    }
-
-    ////console.log('schema and uiSchema', { schema, uiSchema, ArrayComponent, formData, onAddClick });
-    
+    }        
   }
-
 
   render() {
     return this.renderNormalArray();

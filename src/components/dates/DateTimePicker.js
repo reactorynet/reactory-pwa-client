@@ -48,11 +48,11 @@ class DateTimePickerWidget extends PureComponent {
 
     let formControlProps = opts.formControl || {}
     let typographyProps = opts.typography || { variant: "caption", gutterBottom: true };
-
+    let hide_label = opts.show_label === false;
 
     return (
       <FormControl {...formControlProps}>
-        <Typography {...typographyProps}>{this.props.schema.title || 'Select Time'}</Typography>
+        { hide_label === false ? <Typography {...typographyProps}>{this.props.schema.title || 'Select Time'}</Typography> : null }
         <DateTimePicker {..._pickerProps} />
       </FormControl>
     );
