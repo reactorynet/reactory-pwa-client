@@ -469,6 +469,12 @@ namespace Reactory {
     minWidth?: number
   }
 
+  
+  export interface IEventBubbleAction {
+    eventName: string,
+    action: string | "bubble" | "swallow" | "function",
+    functionFqn?: string,
+  }
   export interface IReactoryForm {
     id: String,
     uiFramework: String,
@@ -502,6 +508,9 @@ namespace Reactory {
     formContext?: any,
     fields?: any,
     widgets?: any,
+
+    eventBubbles?: IEventBubbleAction[],
+
     FieldTemplate?: Function,
     ObjectFieldTemplate?: Function,
     /**

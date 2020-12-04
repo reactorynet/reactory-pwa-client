@@ -1628,7 +1628,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     const { api, mode } = this.props;
     const { formDef, queryComplete, queryError, dirty, _instance_id } = this.state;
     const self = this;
-    api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { data }, 'debug');
+    api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { data, formDef }, 'debug');
 
     if (deepEquals(this.state.formData, data.formData) === false) {
 
@@ -1638,9 +1638,25 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       const $onChange = this.props.onChange;
 
       const trigger_onChange = $onChange && typeof $onChange === 'function';
+      
+      
+      let cancelEvent = false;
 
       const fire = () => {
-        $onChange(data.formData, data.errorSChema, { before: changed, after: rchanged, self });
+        
+        if (formDef.eventBubbles) {
+          formDef.eventBubbles.forEach((eventAction) => {
+            if (eventAction.eventName === "onChange") {
+              if (eventAction.action === "swallow") {
+                cancelEvent = true;
+              }
+            }
+          });
+        }
+        
+        if (cancelEvent === true) return;
+        
+        $onChange(data.formData, data.errorSChema, { before: changed, after: rchanged, self });      
       }
 
       const changed = diff(data.formData, this.state.formData);

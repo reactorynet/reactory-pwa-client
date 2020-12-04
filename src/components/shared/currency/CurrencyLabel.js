@@ -8,19 +8,30 @@ class CurrencyLabel extends Component {
 
 
   render(){
-    const { value, currency, symbol, api, region, classes, uiSchema } = this.props;    
+    const { value, currency, symbol, api, region, classes, uiSchema, formData } = this.props;    
 
     let isCents = true;
     let _value = value;
-    
-    if(uiSchema) {
-      isCents = uiSchema['ui:options'] && uiSchema['ui:options'].isCents === false ? false : isCents; 
-      _value = uiSchema['ui:options']  ? 
-          this.props[uiSchema['ui:options'].valueProp || 'formData'] : value;
+
+    const { MaterialCore } = api.getComponents(['material-ui.MaterialCore']);
+
+
+    let variant = this.props.variant || 'body1';
+
+    if (uiSchema) {
+      let options = uiSchema['ui:options'];
+
+      if (options) {
+        isCents = options.isCents === true ? false : isCents; 
+        _value = options.valueProp === true ? this.props[options.valueProps] : formData;
+        variant = options.variant || variant;
+      }
     }
 
     return (
-      <React.Fragment>{new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}</React.Fragment>
+      <React.Fragment>
+        <MaterialCore.Typography variant={ variant }>{new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}</MaterialCore.Typography>
+      </React.Fragment>
     );
   }
 }

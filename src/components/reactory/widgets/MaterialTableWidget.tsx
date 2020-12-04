@@ -312,7 +312,7 @@ class MaterialTableWidget extends Component<any, any> {
 
               if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
                 queryDefinition = graphqlDefinitions.queries[uiOptions.query];
-                api.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug')
+                api.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
               }
 
               const { refreshEvents } = queryDefinition;

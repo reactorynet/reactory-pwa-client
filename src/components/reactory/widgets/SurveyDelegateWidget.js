@@ -620,6 +620,55 @@ class SurveyDelegates extends Component {
 
         };
 
+
+        let peer_list_items = null;
+
+        if (activeEntry.peers && activeEntry.peers.peers) {
+          peer_list_items = activeEntry.peers.peers.map((peer, ind) => {
+            let peerHasAssessement = false;
+            for (var assessement of activeEntry.assessments.filter(ass => ass.assessor.id != activeEntry.delegate.id)) {
+              if (peer.user.id == assessement.assessor.id) {
+                peerHasAssessement = true;
+                break;
+              }
+            }
+  
+            if (!peerHasAssessement) {
+  
+              const onMenuItemSelect = (evt, menuItem) => {
+                switch (menuItem.id) {
+                  case "launch": {
+                    self.launchSingleAssessore(activeEntry, 'launch-single-assessor', { peer: peer.user });
+                    break;
+                  }
+                  default: {
+                    break;
+                  }
+                }
+              };
+  
+              const menus = [
+                {
+                  title: 'Launch',
+                  icon: 'flight_takeoff',
+                  id: 'launch',
+                  key: 'launch'
+                }
+              ]
+              const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
+  
+              return (
+                <UserListItem
+                  key={ind}
+                  user={peer.user}
+                  message={'Pending'}
+                  secondaryAction={dropdown} />);
+            }
+  
+          })
+        } 
+        
+
         modalviewComponent = (
           <Paper className={this.props.classes.root} elevation={2}>
             <UserListItem key={activeEntry.id} user={activeEntry.delegate} />
@@ -737,50 +786,7 @@ class SurveyDelegates extends Component {
               <Grid item xs={12} md={3}>
                 <Typography variant="caption">Newly Added Peers</Typography>
                 <List>
-                  {
-                    activeEntry.peers.peers.map((peer, ind) => {
-                      let peerHasAssessement = false;
-                      for (var assessement of activeEntry.assessments.filter(ass => ass.assessor.id != activeEntry.delegate.id)) {
-                        if (peer.user.id == assessement.assessor.id) {
-                          peerHasAssessement = true;
-                          break;
-                        }
-                      }
-
-                      if (!peerHasAssessement) {
-
-                        const onMenuItemSelect = (evt, menuItem) => {
-                          switch (menuItem.id) {
-                            case "launch": {
-                              self.launchSingleAssessore(activeEntry, 'launch-single-assessor', { peer: peer.user });
-                              break;
-                            }
-                            default: {
-                              break;
-                            }
-                          }
-                        };
-
-                        const menus = [
-                          {
-                            title: 'Launch',
-                            icon: 'flight_takeoff',
-                            id: 'launch',
-                            key: 'launch'
-                          }
-                        ]
-                        const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
-
-                        return (
-                          <UserListItem
-                            key={ind}
-                            user={peer.user}
-                            message={'Pending'}
-                            secondaryAction={dropdown} />);
-                      }
-
-                    })
-                  }
+                  {peer_list_items}
                 </List>
               </Grid>
               <Grid item sm={12} md={9}>

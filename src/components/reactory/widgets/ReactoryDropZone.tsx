@@ -81,7 +81,7 @@ class ReactoryDropZone extends Component<any, any> {
     }
   }
 
-  constructor(props, context) {
+  constructor(props: any, context: any) {
     super(props, context);
 
     this.state = {
@@ -125,7 +125,7 @@ class ReactoryDropZone extends Component<any, any> {
     }
 
     const dropHandler = (acceptedFiles) => {
-      console.log('FILE DROPPED:: ', acceptedFiles);
+      
       self.setState({ uploading: true }, ()=> {
 
         if (uiSchema && uiSchema['ui:options']) {
@@ -134,17 +134,23 @@ class ReactoryDropZone extends Component<any, any> {
   
           if (ReactoryDropZoneProps.mutation) {          
             const mutation = gql(ReactoryDropZoneProps.mutation.text);
-                        
-            let _v = api.utils.templateObject(ReactoryDropZoneProps.mutation.variables, self);
-
+              
+            let _v = {};
+            try {
+              _v = api.utils.templateObject(ReactoryDropZoneProps.mutation.variables, self);
+            } catch (templateErr) {
+              api.log(`Error processing mapping`, { templateErr }, 'error');
+            }
+            
             const variables = {
               ..._v,
               file: acceptedFiles[0],              
             };
+
             api.graphqlMutation(mutation, variables).then((docResult) => {
-              console.log('RESULT RECEIVER:: ', docResult);
+
               self.setState({ uploading: false }, ()=>{
-                const { filename, size, id, link, mimetype } = docResult.data[ReactoryDropZoneProps.mutation.name]
+                const { filename, size, id, link, mimetype } = docResult.data[ReactoryDropZoneProps.mutation.name];
                 
                 api.createNotification(`File ${filename} has been uploaded`, {
                   showInAppNotification: true,
@@ -169,7 +175,7 @@ class ReactoryDropZone extends Component<any, any> {
               });   
               
             }).catch((docError) => {
-              console.log('ERROR:: ', docError);
+              
             });
           }
         }
