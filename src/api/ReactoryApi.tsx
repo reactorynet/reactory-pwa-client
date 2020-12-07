@@ -82,9 +82,17 @@ export const reactoryDomNode = () => {
   return domNode;
 }
 
-export const parseTemplateObject = (templateObject: Object, props: any): Object => {
-
-  debugger
+/**
+ * This function allows you to pass in a templated object definition.
+ * The function iterates over every propery of the object and then 
+ * checks the value of that property.
+ * 
+ * If the property is a string, we check for a template pattern ${...}
+ * and then parse the template against the input propety bag data.
+ * @param templateObject 
+ * @param props 
+ */
+export const parseTemplateObject = (templateObject: Object, props: any): Object => {  
 
   if (templateObject === null || templateObject === undefined) return templateObject;
 

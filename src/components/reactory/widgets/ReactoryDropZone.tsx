@@ -149,8 +149,27 @@ class ReactoryDropZone extends Component<any, any> {
 
             api.graphqlMutation(mutation, variables).then((docResult) => {
 
-              self.setState({ uploading: false }, ()=>{
-                const { filename, size, id, link, mimetype } = docResult.data[ReactoryDropZoneProps.mutation.name];
+              self.setState({ uploading: false }, () => {
+                
+                const { data, errors } = docResult;
+
+                if (errors && errors.length > 0 ) {
+                  api.createNotification(`File ${acceptedFiles[0].filename} could not be uploaded.`, {
+                    showInAppNotification: true,
+                    type: 'warning',
+                    props: {
+                      timeout: 2500,
+                      canDismiss: true,
+                      components: []
+                    }
+                  });
+                  
+                  api.log(`Could not upload document`, { errors }, 'error')
+
+                  return;
+                }
+
+                const { filename, size, id, link, mimetype } = data[ReactoryDropZoneProps.mutation.name];
                 
                 api.createNotification(`File ${filename} has been uploaded`, {
                   showInAppNotification: true,
@@ -176,6 +195,21 @@ class ReactoryDropZone extends Component<any, any> {
               
             }).catch((docError) => {
               
+              self.setState({ uploading: false }, () => {
+                api.createNotification(`File ${acceptedFiles[0].filename} could not be uploaded`, {
+                  showInAppNotification: true,
+                  type: 'warning',
+                  props: {
+                    timeout: 2500,
+                    canDismiss: true,
+                    components: []
+                  }
+                });
+                
+              })
+
+              api.log(`Could not upload document`, { docError }, 'error')
+
             });
           }
         }
