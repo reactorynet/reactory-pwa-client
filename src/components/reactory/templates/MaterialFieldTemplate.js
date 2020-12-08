@@ -74,6 +74,7 @@ const MaterialFieldTemplateFunction = (props) => {
     if (hidden === true || uiWidget === "HiddenWidget") {
       return <Fragment>{children}</Fragment>
     }
+    
     if (uiOptions.componentFqn) {
       Widget = api.getComponent(uiOptions.componentFqn);
       let _props = { ...props };

@@ -54,7 +54,7 @@ class SelectWithDataWidget extends Component {
   }
 
   constructor(props, context) {
-    super(props, context)
+    super()
     this.state = {
       error: undefined
     };
@@ -66,7 +66,7 @@ class SelectWithDataWidget extends Component {
 
   render() {
     const self = this
-    const { classes, formContext, formData, required, api, theme } = this.props;
+    const { classes, formContext, formData, required, api, theme, schema, idSchema } = this.props;
     if (self.state.error !== undefined && self.state.error !== null) {
       api.log('🚩 core.SelecteWithData Error', { self, error: self.state.error }, 'error')
       return <Typography>🚩 core.SelectWithData Error - see log</Typography>
@@ -81,6 +81,7 @@ class SelectWithDataWidget extends Component {
 
     let InputComponent = Input;
     let inputLabelProps = {};
+    
     switch (variant) {
       case 'outlined': {
         InputComponent = OutlinedInput;
@@ -125,56 +126,97 @@ class SelectWithDataWidget extends Component {
       </MenuItem> : null;
 
       inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
-      
+
       if (formData !== null && formData !== undefined && formData !== '') {
         inputLabelProps.shrink = true;
       }
 
       return (
         <Query query={gql`${query}`} variables={variables} fetchPolicy="cache-and-network" >
-          {(props, context) => {
+          {(props) => {
             const { data, loading, error } = props;
+
+            let menuItems = [{
+              id: 'loading',
+              label: `Loading - ${schema.title}`,
+              icon: 'hour_glass'
+            }];
+
             if (loading === true) return (<p>Loading lookups</p>)
             if (error) return (<p>Error Loading lookup: {error}</p>)
+            let key_map = {
+              'loading': menuItems[0]
+            };
+
+            let select_control = (<Typography variant="body2">Loading {schema.title}</Typography>);
 
             if (data && data[resultItem]) {
-              let menuItems = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
-              return (
-                <FormControl {...formControlProps} variant={variant}>
-                  <InputLabel {...inputLabelProps} htmlFor={this.props.idSchema.$id} required={required}>{this.props.schema.title}</InputLabel>
-                  <Select
-                    {...selectProps}
-                    multiple={multiSelect === true}
-                    value={ this.props.formData }
-                    onChange={onSelectChanged}
-                    name={this.props.name}
-                    variant={variant}
-                    input={<InputComponent id={this.props.idSchema.$id} value={this.props.formData ? this.props.formData.trim() : ""} />}
-                    renderValue={(selected) => {
+              menuItems = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
+              menuItems.forEach((menu_item) => {
+                /**
+                 * 
+                 */
+                if (menu_item.key) {
+                  key_map[menu_item.key] = menu_item;
+                }
+              });
 
-                      if (!selected || selected == 'undefined' || selected.length === 0) {
-                        return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Select</span>;
-                      }
+              select_control = (<Select
+                {...selectProps}
+                multiple={multiSelect === true}
+                value={this.props.formData}
+                onChange={onSelectChanged}
+                name={this.props.idSchema.$id}
+                variant={variant}
+                input={<InputComponent id={this.props.idSchema.$id} value={this.props.formData ? this.props.formData.trim() : ""} />}
+                renderValue={(selected) => {
 
-                      if (Array.isArray(selected))
-                        return selected.join(', ');
-                      else
-                        return selected;
+                  if (!selected || selected == 'undefined' || selected.length === 0) {
+                    return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Select</span>;
+                  }
 
-                    }}>
-                    {emptySelect}
-                    {menuItems.map((option, index) => {
-                      return (
-                        <MenuItem key={option.key || index} value={`${option.value}`}>
-                          { option.icon ? <Icon>{option.icon}</Icon> : null}
-                          { option.label}
-                        </MenuItem>)
-                    })}
-                  </Select>
-                </FormControl>)
+                  if (Array.isArray(selected))
+                    return selected.join(', ');
+                  else {
+                    if (key_map[selected]) return key_map[selected].label;
+
+                    return selected;
+                  }
+
+
+                }}>
+                
+                {menuItems.map((option, index) => {
+                  return (
+                    <MenuItem key={option.key || index} value={`${option.value}`}>
+                      { option.icon ? <Icon>{option.icon}</Icon> : null}
+                      { option.label}
+                    </MenuItem>)
+                })}
+              </Select>)
             } else {
-              return <p>No Data Result</p>
+
+              select_control = (<Select
+                {...selectProps}
+                multiple={multiSelect === true}
+                value={"loading"}
+                name={this.props.idSchema.$id}
+                variant={variant}
+                input={<InputComponent id={this.props.idSchema.$id} value={"loading"} />}>
+                
+                <MenuItem key={'loading'} value={"loading"}>
+                  <Icon>hour_glass</Icon>
+                  Loading { schema.title }
+                </MenuItem>)
+                
+              </Select>)
             }
+
+            return (
+              <FormControl {...formControlProps} variant={variant}>
+                <InputLabel {...inputLabelProps} htmlFor={this.props.idSchema.$id} required={required}>{this.props.schema.title}</InputLabel>
+                {select_control}
+              </FormControl>)
           }}
         </Query>
       )

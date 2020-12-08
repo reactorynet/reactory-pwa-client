@@ -10,7 +10,7 @@ import {
   Fab,
   ExpansionPanel,
   ExpansionPanelDetails,
-  ExpansionPanelSummary,
+  AccordionSummary,
   Button,
   MenuItem,
   FormGroup,
@@ -161,10 +161,10 @@ const itemsList = (items,
 
 /*
 <ExpansionPanel expanded={expanded === 'panel1'} onChange={this.handleChange('panel1')}>
-          <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography className={classes.heading}>General settings</Typography>
             <Typography className={classes.secondaryHeading}>I am an expansion panel</Typography>
-          </ExpansionPanelSummary>
+          </AccordionSummary>
           <ExpansionPanelDetails>
             <Typography>
               Nulla facilisi. Phasellus sollicitudin nulla et quam mattis feugiat. Aliquam eget

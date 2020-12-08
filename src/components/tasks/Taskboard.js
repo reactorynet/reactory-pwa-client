@@ -17,7 +17,7 @@ import Toolbar from '@material-ui/core/Toolbar';
 import {
     Button, Chip, Fab,
     Card, CardHeader, CardMedia, CardContent, CardActions,
-    ExpansionPanel, ExpansionPanelDetails, ExpansionPanelSummary, Icon,
+    ExpansionPanel, ExpansionPanelDetails, AccordionSummary, Icon,
     List, ListItem, ListItemSecondaryAction, ListItemText, Popover, TextField
 } from '@material-ui/core';
 import Collapse from '@material-ui/core/Collapse';
@@ -541,10 +541,10 @@ class TaskList extends Component {
 
             return (
                 <ExpansionPanel expanded={expanded === group.id} onChange={toggleExpand}>
-                    <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                         <Typography className={classes.heading}>{group.title}</Typography>
                         <Typography className={classes.secondaryHeading}>{group.subTitle}</Typography>
-                    </ExpansionPanelSummary>
+                    </AccordionSummary>
                     <ExpansionPanelDetails>
                         <List>
                             {this.props.tasks.map((task) => {

@@ -11,7 +11,7 @@ import {
   Fab,
   ExpansionPanel,
   ExpansionPanelDetails,
-  ExpansionPanelSummary,
+  AccordionSummary,
   FormControlLabel,
   FormLabel,
   RadioGroup,
@@ -389,10 +389,10 @@ class SurveyAdmin extends Component {
     return (
       <SingleColumnLayout>
         <ExpansionPanel expanded={expanded === 'panel1'} onChange={this.handleChange('panel1')}>
-          <ExpansionPanelSummary expandIcon={<ExpandMore />}>
+          <AccordionSummary expandIcon={<ExpandMore />}>
             <Typography className={classes.heading}>General</Typography>
             <Typography className={classes.secondaryHeading}>Configure basic settings for selected survey</Typography>
-          </ExpansionPanelSummary>
+          </AccordionSummary>
           <ExpansionPanelDetails>
             <SingleColumnLayout>
               <TowerStoneSurveyConfig data={survey} onSubmit={this.onSurveyGeneralSubmit}>
@@ -402,12 +402,12 @@ class SurveyAdmin extends Component {
           </ExpansionPanelDetails>
         </ExpansionPanel>
         {survey && survey.id ? <ExpansionPanel expanded={expanded === 'panel2'} onChange={this.handleChange('panel2')}>
-          <ExpansionPanelSummary expandIcon={<ExpandMore />}>
+          <AccordionSummary expandIcon={<ExpandMore />}>
             <Typography className={classes.heading}>Delegates</Typography>
             <Typography className={classes.secondaryHeading}>
               Manage delegates for this survey
             </Typography>
-          </ExpansionPanelSummary>
+          </AccordionSummary>
           <ExpansionPanelDetails>
             <Grid container>
               <Grid xs={12} item>

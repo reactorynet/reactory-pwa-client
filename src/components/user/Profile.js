@@ -19,7 +19,7 @@ import {
     Paper,
     InputAdornment, Icon, IconButton,
     ExpansionPanel, ExpansionPanelActions,
-    ExpansionPanelDetails, ExpansionPanelSummary,
+    ExpansionPanelDetails, AccordionSummary,
     Toolbar, Tooltip
 } from '@material-ui/core';
 
@@ -786,9 +786,9 @@ class Profile extends Component {
                                         square
                                         expanded={this.state.expanded === usr.id}
                                         onChange={handleChange}>
-                                        <ExpansionPanelSummary expandIcon={<Icon>expand</Icon>}>
+                                        <AccordionSummary expandIcon={<Icon>expand</Icon>}>
                                             <UserListItem user={usr} message={`${usr.firstName} (${usr.email}) is set as a ${relationshipBadge}`} />
-                                        </ExpansionPanelSummary>
+                                        </AccordionSummary>
                                         <ExpansionPanelDetails>
                                             {selectorWidget}
                                         </ExpansionPanelDetails>

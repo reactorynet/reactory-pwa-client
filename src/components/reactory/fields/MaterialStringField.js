@@ -125,6 +125,7 @@ const MaterialStringFieldWidget = (props) => {
         defaultValue: `${formData || schema.default}`.replace("undefined", ""),
         variant: themeDefaults.variant || uiOptions.variant || "standard",
         InputProps: inputProps,
+        value: `${formData || schema.default}`.replace("undefined", "")
       }
 
       if (uiOptions.componentProps) {

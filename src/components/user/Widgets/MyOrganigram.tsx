@@ -25,7 +25,7 @@ import {
     ExpansionPanel, 
     ExpansionPanelActions,
     ExpansionPanelDetails, 
-    ExpansionPanelSummary,    
+    AccordionSummary,    
     Toolbar, 
     Tooltip, 
     Theme
@@ -582,9 +582,9 @@ class MyOrganigram extends Component<any, any> {
                                     square
                                     expanded={this.state.expanded === usr.id}
                                     onChange={handleChange}>
-                                    <ExpansionPanelSummary expandIcon={<Icon>expand</Icon>}>
+                                    <AccordionSummary expandIcon={<Icon>expand</Icon>}>
                                         <UserListItem user={usr} message={`${usr.firstName} (${usr.email}) is set as a ${relationshipBadge}`} />
-                                    </ExpansionPanelSummary>
+                                    </AccordionSummary>
                                     <ExpansionPanelDetails>                                            
                                         {selectorWidget}
                                     </ExpansionPanelDetails>

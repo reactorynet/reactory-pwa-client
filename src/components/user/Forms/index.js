@@ -435,7 +435,7 @@ class RememberCredentials extends Component {
     const fixSchema = ( formSchema) => {
       //we remove baseUrl and client Id
       
-      const { schema, uiSchema }  = formSchema
+      const { schema, uiSchema } = formSchema
       delete schema.properties.baseUrl;
       delete schema.properties.clientId;
       schema.properties.email.title = 'Please use your email or 360 username'

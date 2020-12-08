@@ -7,7 +7,7 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import {
   ExpansionPanel, 
   ExpansionPanelDetails,
-  ExpansionPanelSummary,
+  AccordionSummary,
 } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
@@ -65,17 +65,17 @@ class ControlledExpansionPanels extends React.Component {
     return (
       <div className={classes.root}>
         <ExpansionPanel expanded={expanded === 'panel1'} onChange={this.handleChange('panel1')}>
-          <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography className={classes.heading}>Survey settings</Typography>            
-          </ExpansionPanelSummary>
+          </AccordionSummary>
           <ExpansionPanelDetails>
             <SurveySettingsForm formContext={{organizationId: this.props.organizationId}}/>
           </ExpansionPanelDetails>
         </ExpansionPanel>        
         <ExpansionPanel expanded={expanded === 'panel3'} onChange={this.handleChange('panel3')}>
-          <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography className={classes.heading}>Advanced settings</Typography>            
-          </ExpansionPanelSummary>
+          </AccordionSummary>
           <ExpansionPanelDetails>
             
           </ExpansionPanelDetails>

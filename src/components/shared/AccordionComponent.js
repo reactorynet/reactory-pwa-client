@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import {
   Button,
   ExpansionPanel,
-  ExpansionPanelSummary,
+  AccordionSummary,
   ExpansionPanelDetails,
   Typography,
   Paper,
@@ -68,9 +68,9 @@ class AccordionWidget extends Component {
             {
 
               const panelSummary = (
-                <ExpansionPanelSummary key={`header_${index}`} className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
+                <AccordionSummary key={`header_${index}`} className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
                   <Typography>{`${index + 1}. ${panel.title}`}</Typography>
-                </ExpansionPanelSummary>
+                </AccordionSummary>
               );
 
               const onNextClick = () => {
@@ -104,9 +104,9 @@ class AccordionWidget extends Component {
                 <Step key={`step_${index}`}>
                   <StepLabel key={`label_${index}`} onClick={onStepLabelHeaderClick}>
                     <Paper elevation={2}>
-                    <ExpansionPanelSummary key={`header_${index}`} className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
+                    <AccordionSummary key={`header_${index}`} className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
                       <Typography>{`${index + 1}. ${panel.title}`}</Typography>
-                    </ExpansionPanelSummary>
+                    </AccordionSummary>
                     </Paper>
                   </StepLabel>
                   <StepContent key={`content_label_${index}`}>
@@ -150,9 +150,9 @@ class AccordionWidget extends Component {
             _panels.map((panel, index) => {
               return (
                 <ExpansionPanel key={index}>
-                  <ExpansionPanelSummary key={`header_${index}`} className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
+                  <AccordionSummary key={`header_${index}`} className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
                     <Typography>{`${index + 1}. ${panel.title}`}</Typography>
-                  </ExpansionPanelSummary>
+                  </AccordionSummary>
                   <ExpansionPanelDetails key={`details_${index}`} className={classes.panelBody}>
                   {
                     panel.Components.map(({ componentFqn, componentProps, componentPropsMap }, ComponentIndex) => {

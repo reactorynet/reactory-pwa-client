@@ -136,9 +136,9 @@ class FullScreenDialog extends Component {
               {
                 backNavigationItems.map((navItem, ind) => {
                   if ((ind + 1) < backNavigationItems.length)
-                    return <Typography variant="h6" classes={{ root: classes.linkText }}>{navItem} /</Typography>
+                    return <Typography variant="h6" classes={{ root: classes.linkText }} key={ ind }>{navItem} /</Typography>
 
-                  return <Typography variant="h6" classes={{ root: classes.linkTextLast }}>{navItem}</Typography>
+                  return <Typography variant="h6" classes={{ root: classes.linkTextLast }} key={ ind }>{navItem}</Typography>
                 })
               }
             </div>
