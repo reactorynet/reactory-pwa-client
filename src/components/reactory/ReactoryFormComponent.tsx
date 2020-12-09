@@ -1635,10 +1635,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       if (formDef.graphql && formDef.graphql.mutation && formDef.graphql.mutation['onChange']) {
         let onChangeMutation: Reactory.IReactoryFormMutation = formDef.graphql.mutation['onChange'];
-        let throttleDelay: number = formDef.graphql.mutation['onChange'].throttle || 300;
+        let throttleDelay: number = formDef.graphql.mutation['onChange'].throttle || 500;
         let variables = api.utils.objectMapper({ eventData: data, form: self }, onChangeMutation.variables);
 
-        let throttledCall = throttle(() => {
+        throttle(() => {
           api.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
             api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation result`, { mutationResult }, 'debug');
 
@@ -1648,9 +1648,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             if (self.props.onMutateComplete) self.props.onMutateComplete(data.formData, self.getFormContext(), null, mutationError);
             api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation error`, { mutationError }, 'error');
           });
-        }, throttleDelay)
-
-        throttledCall();
+        }, throttleDelay)();        
       }
 
       if (this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {
