@@ -1253,12 +1253,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           query.refreshEvents.forEach((eventDefinition) => {
             api.once(eventDefinition.name, ( evt ) => {
               api.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
-              setTimeout(executeFormQuery, 500)
+              setTimeout(executeFormQuery, query.autoQueryDelay || 500)
             });
           });
         }
 
-        setTimeout(executeFormQuery, query.autoQueryDelay | 0);
+        setTimeout(executeFormQuery, query.autoQueryDelay || 0);
         
       }
 
