@@ -190,7 +190,8 @@ export interface ReactoryFormState {
   autoQueryDisabled?: boolean,
   boundaryError?: Error,
   notificationComplete: boolean,
-  mutate_complete_handler_called: boolean
+  mutate_complete_handler_called: boolean,
+  last_query_exec?: number
 }
 
 const AllowedSchemas = (uiSchemaItems: Reactory.IUISchemaMenuItem[], mode = 'view', size='md') => {
@@ -238,7 +239,8 @@ const initialState = (props) => ({
   _instance_id: uuid(),
   autoQueryDisabled: props.autoQueryDisabled || false,
   notificationComplete: true,
-  mutate_complete_handler_called: false
+  mutate_complete_handler_called: false,
+  last_query_exec: null
 })
 
 class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormState> {
@@ -429,10 +431,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   componentWillMount() {
     const { api, history, $App } = this.props;
     const that = this;
-    this.unlisten = history.listen((location, action) => {
-      api.log("REACT ROUTER On Route Changed Detected", { location, action }, 'debug');
-      //$App.forceUpdate()
-    });
+    //this.unlisten = history.listen((location, action) => {
+    //  api.log("REACT ROUTER On Route Changed Detected", { location, action }, 'debug');
+    //$App.forceUpdate()
+    //});
     this.downloadForms();
 
   }
@@ -442,7 +444,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     if (this.refresh_interval) {
       clearTimeout(this.refresh_interval);
     }
-    this.unlisten();
+    // this.unlisten();
     this.$events.emit('componentWillUnmount', this);
     this.$events.removeAllListeners();
   }
@@ -1212,7 +1214,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             //update component state with new form data
             if (that.isMounted === true) {
               try {
-                that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading }, () => {
+                that.setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading, last_query_exec: new Date().valueOf() }, () => {
 
                   if (that.props.onQueryComplete) {
                     that.props.onQueryComplete({ formData: _formData, formContext: that.getFormContext(), result, errors });
@@ -1249,14 +1251,15 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
         if (query.refreshEvents) {
           query.refreshEvents.forEach((eventDefinition) => {
-            api.once(eventDefinition.name, () => {
-              api.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition }, 'debug')
+            api.once(eventDefinition.name, ( evt ) => {
+              api.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
               setTimeout(executeFormQuery, 500)
             });
           });
         }
 
-        executeFormQuery();
+        setTimeout(executeFormQuery, query.autoQueryDelay | 0);
+        
       }
 
       return (
@@ -1638,7 +1641,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         let throttleDelay: number = formDef.graphql.mutation['onChange'].throttle || 500;
         let variables = api.utils.objectMapper({ eventData: data, form: self }, onChangeMutation.variables);
 
-        throttle(() => {
+        let throttled_call = throttle(() => {
           api.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
             api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation result`, { mutationResult }, 'debug');
 
@@ -1648,7 +1651,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             if (self.props.onMutateComplete) self.props.onMutateComplete(data.formData, self.getFormContext(), null, mutationError);
             api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} onChangeMutation error`, { mutationError }, 'error');
           });
-        }, throttleDelay)();        
+        }, throttleDelay);
+
+        if (this.state.last_query_exec) {
+          if(new Date().valueOf() - this.state.last_query_exec > 1500 ) throttled_call()
+        }
       }
 
       if (this.state.formDef && this.state.formDef.refresh && this.state.formDef.refresh.onChange) {

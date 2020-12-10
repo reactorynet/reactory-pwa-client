@@ -362,6 +362,7 @@ namespace Reactory {
     delete?: boolean,
     options?: any,
     autoQuery?: boolean,
+    autoQueryDelay?: number,
     interval?: number,
     useWebsocket?: boolean,
     onError?: IReactoryFormQueryErrorHandlerDefinition,
