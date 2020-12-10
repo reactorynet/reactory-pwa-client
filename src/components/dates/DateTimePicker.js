@@ -20,14 +20,13 @@ class DateTimePickerWidget extends PureComponent {
 
   handleDateChange = date => {
 
-    let _outputformat = 'DD-MM-YYYY';
+    let _outputformat = 'YYYY-MM-DD';
     if (this.props.outputFormat) {
       _outputformat = this.props.outputFormat;
     }
 
     if (date.target) {
-      debugger;
-      if (this.props.onChange) this.props.onChange(moment(date.target.value, "YYYY-MM-D").format(_outputformat));
+      if (this.props.onChange) this.props.onChange(moment(date.target.value, "YYYY-MM-DD").format(_outputformat));
       return;
     }
 
@@ -59,11 +58,9 @@ class DateTimePickerWidget extends PureComponent {
     if (opts.variant == 'outlined') {
       _pickerProps.variant = opts.variant;
 
-      const date = moment(this.props.formData, 'DD-MM-YYYY').format('YYYY-MM-DD');
+      const date = moment(this.props.formData, 'YYYY-MM-DD').format('YYYY-MM-DD');
       _pickerProps.defaultValue = date;
       delete _pickerProps.value;
-
-      debugger;
 
       return (
         <FormControl {...formControlProps}>

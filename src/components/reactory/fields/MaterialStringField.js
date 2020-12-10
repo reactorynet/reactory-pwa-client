@@ -132,6 +132,8 @@ const MaterialStringFieldWidget = (props) => {
         componentProps = { ...componentProps, ...uiOptions.componentProps };
       }
 
+      debugger;
+
       return (<TextField {...componentProps} />);
 
     } else {

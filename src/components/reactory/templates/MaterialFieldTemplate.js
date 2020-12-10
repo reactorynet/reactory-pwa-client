@@ -74,7 +74,7 @@ const MaterialFieldTemplateFunction = (props) => {
     if (hidden === true || uiWidget === "HiddenWidget") {
       return <Fragment>{children}</Fragment>
     }
-    
+
     if (uiOptions.componentFqn) {
       Widget = api.getComponent(uiOptions.componentFqn);
       let _props = { ...props };
@@ -172,7 +172,7 @@ const MaterialFieldTemplateFunction = (props) => {
     case 'file':
     default: {
 
-
+      debugger;
 
       const labelRef = React.useRef(null);
       let inputLabelProps = {
@@ -191,7 +191,6 @@ const MaterialFieldTemplateFunction = (props) => {
       if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
         inputLabelProps.shrink = false;
       } else {
-
         if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink) {
           inputLabelProps.shrink = false;
         } else {
