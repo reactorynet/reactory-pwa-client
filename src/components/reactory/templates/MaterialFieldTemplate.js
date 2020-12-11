@@ -172,8 +172,6 @@ const MaterialFieldTemplateFunction = (props) => {
     case 'file':
     default: {
 
-      debugger;
-
       const labelRef = React.useRef(null);
       let inputLabelProps = {
         htmlFor: id,

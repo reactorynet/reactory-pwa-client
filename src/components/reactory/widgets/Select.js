@@ -129,7 +129,10 @@ class SelectWidget extends Component {
     }
 
     const renderSelectedValue = (value) => {
-      if (value.length == 0)
+
+
+
+      if (value == null || value.length == 0)
         return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Select</span>;
 
       let option = matchOption(value);
