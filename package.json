@@ -192,7 +192,7 @@
     "@typescript-eslint/eslint-plugin": "2.27.0",
     "@typescript-eslint/parser": "2.27.0",
     "@types/markerclustererplus": "^2.1.29",
-    "@types/googlemaps": "^3.39.3",
+    "@types/googlemaps": "3.40.5",
     "acorn": "6.1.1",
     "archiver": "^3.0.0",
     "awesome-typescript-loader": "^5.2.1",
