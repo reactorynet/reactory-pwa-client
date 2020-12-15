@@ -1655,6 +1655,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
         if (this.state.last_query_exec) {
           if(new Date().valueOf() - this.state.last_query_exec > 1500 ) throttled_call()
+        } else {
+          if (!formDef.graphql.query) throttled_call();
         }
       }
 
