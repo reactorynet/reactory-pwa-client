@@ -1,4 +1,4 @@
-import React, { Component, LegacyRef } from 'react';
+import React, { Component, LegacyRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import MomentUtils from '@date-io/moment';
@@ -28,6 +28,10 @@ import { fetch } from "whatwg-fetch";
 import { deepEquals } from './components/reactory/form/utils';
 import ReactoryApolloClient from './api/ReactoryApolloClient';
 import { Typography, Icon } from '@material-ui/core';
+import license from './license';
+import { ReactoryProvider } from './api/ApiProvider';
+import Reactory from '@reactory/client-core/types/reactory';
+import { anonUser } from 'api/local';
 
 const packageInfo = require('../package.json');
 
@@ -54,7 +58,7 @@ const getTheme = () => {
 const api = new ReactoryApi({
   clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
   clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
-  $version: packageInfo.version,
+  $version: `${packageInfo.version}-${license.version}`,
 });
 
 //register built-in components
@@ -84,6 +88,7 @@ export interface AppState {
   currentRoute: any
 }
 
+/*
 class Globals extends React.Component<any, any> {
 
   constructor(props) {
@@ -92,26 +97,352 @@ class Globals extends React.Component<any, any> {
     const { api } = props;
     const that = this;
     this.state = {
-      v: 0  
+      v: 0
     }
-    
+
     api.on('onPluginLoaded', () => {
       this.setState({ v: this.state.v + 1 });
     });
 
-  }  
+  }
 
   render() {
-    
-    const globals = this.props.api.getGlobalComponents();
 
+    const globals = this.props.api.getGlobalComponents();
+    //
     return (
       <div data-v={`${this.state.v}`} data-globals-container="true">
-        { globals.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) })}
+        { globals.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) })}  
       </div>
     )
   }
 
+};
+*/
+
+const Globals = ({ api }) => {
+
+  const [v, setVersion] = React.useState<number>(0);
+  const [plugins_loaded, setPluginsLoaded] = React.useState<any>([])
+  const globals = api.getGlobalComponents();
+
+  api.on('onPluginLoaded', (plugin) => {
+    setVersion(v + 1);
+    setPluginsLoaded([...plugins_loaded, plugin]);
+  });
+
+  return (
+    <div data-v={`${v}`} data-globals-container="true">
+      { globals.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) })}
+    </div>
+  );
+
+};
+
+interface ReactoryHOCProps {
+  [key: string]: any,
+};
+
+const dependcies = [
+  'core.Loading@1.0.0',
+  'core.Login@1.0.0',
+  'core.FullScreenModal@1.0.0',
+  'core.NotificationComponent@1.0.0',
+  'core.NotFound@1.0.0',
+];
+
+
+interface ReactoryRouterProps {
+  api: ReactoryApi,
+  auth_validated: boolean,
+  user: Reactory.IUser
+};
+
+const ReactoryRouter = (props: ReactoryRouterProps) => {
+
+  const { auth_validated, user, api } = props;
+  const [routes, setRoutes] = React.useState<Reactory.IRouteDefinition[]>([]);
+  const NotFound = api.getComponent("core.NotFound");
+
+  const configureRouting = () => {
+    let loginRouteDef = null;
+    let homeRouteDef = null;
+
+    api.log('Configuring Routing', { auth_validated, user }, 'debug');
+    let $routes = [];
+    api.getRoutes().forEach((routeDef) => {
+
+
+      const routeProps: Reactory.IRouteDefinition = {
+        key: routeDef.id,
+        componentFqn: routeDef.componentFqn,
+        path: routeDef.path,
+        exact: routeDef.exact === true,
+        render: (props) => {
+          api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
+
+          const componentArgs = {
+            $route: props.match,
+          };
+
+          if (isArray(routeDef.args)) {
+            routeDef.args.forEach((arg) => {
+              componentArgs[arg.key] = arg.value[arg.key];
+            })
+          }
+
+          const ApiComponent = api.getComponent(routeDef.componentFqn)
+
+          if (routeDef.public === true) {
+            if (ApiComponent) return (<ApiComponent {...componentArgs} />)
+            else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
+          } else {
+            const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
+
+            if (auth_validated === true && hasRolesForRoute === true) {
+              if (ApiComponent) return (<ApiComponent {...componentArgs} />)
+              else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
+            }
+
+            if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
+              if (localStorage) {
+                localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
+              }
+              return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
+            }
+
+            if (api.isAnon() === false && hasRolesForRoute === false) {
+              //we may waiting 
+              return <NotFound message="You don't have sufficient permissions to access this route yet... (we may be fetching your permissions)" link={routeDef.path} wait={500} />
+            }
+
+            return (<p> ... </p>);
+          }
+        }
+      }
+
+      $routes.push(routeProps);
+    });
+
+    setRoutes($routes);
+  }
+
+  useEffect(() => {
+    configureRouting();
+  }, []);
+
+  return (
+    <React.Fragment>
+      {routes.map((route) => (<Route {...route} />))}
+    </React.Fragment>
+  )
+}
+
+export const ReactoryHOC = (props: ReactoryHOCProps) => {
+
+
+  const [isReady, setIsReady] = React.useState<boolean>(false);
+  const [auth_validated, setIsValidated] = React.useState<boolean>(false);
+  const [user, setUser] = React.useState<any | Reactory.IUser>(null);
+  const [error, setError] = React.useState<Error>(null);
+  const [apiStatus, setApiStatus] = React.useState<any>(null);
+  const [offline, setOfflineStatus] = React.useState<boolean>(false);
+  const [theme, setTheme] = React.useState<any>(createMuiTheme(props.appTheme));
+  const [statusInterval, setStatusInterval] = React.useState<NodeJS.Timeout>(null);
+  const [current_route, setCurrentRoute] = React.useState<string>("/");
+
+  const components: any = api.getComponents(dependcies);
+  const { Loading, Login, FullScreenModal, NotificationComponent, NotFound } = components;
+
+  const onRouteChanged = (path: string) => {
+    setCurrentRoute(path)
+  }
+
+  const onLogin = () => {
+    setUser(api.getUser());
+  };
+
+  const onLogout = () => {
+    setUser(api.getUser());
+  };
+
+  const onApiStatusUpdate = (status) => {
+    api.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
+    let isOffline = status.offline === true;
+
+    if (offline !== isOffline) {
+      setOfflineStatus(isOffline);
+    }
+
+    if (isOffline === true && !statusInterval) {
+      setStatusInterval(setInterval(api.status, 3000))
+    } else {
+
+      if (isOffline === false && statusInterval) {
+        clearInterval(statusInterval);
+        let user = api.utils.lodash.cloneDeep(api.getUser());
+        delete user.when;
+        let _user = api.utils.lodash.cloneDeep(user);
+        delete _user.when;
+
+        if (deepEquals(user, _user) === false || status.offline !== offline) {
+          setUser(user)
+          setOfflineStatus(status.offline === true);
+        }
+      }
+    }
+  }
+
+
+  const onWindowResize = () => {
+    const query = queryString.parse(window.location.search)
+    if (query.auth_token) {
+      localStorage.setItem('auth_token', query.auth_token);
+      api.client = ReactoryApolloClient().client;
+    }
+    api.queryObject = query;
+    api.queryString = window.location.search;
+    api.objectToQueryString = queryString.stringify;
+
+    if (window && !window.reactory) {
+      window.reactory = {
+        api,
+      };
+    }
+
+    const {
+      innerHeight,
+      outerHeight,
+      innerWidth,
+      outerWidth,
+    } = window;
+
+    let view = 'landscape';
+    let size = 'lg';
+
+    if (window.innerHeight > window.innerWidth) {
+      view = 'portrait';
+    }
+
+    if (innerWidth >= 2560) size = 'lg';
+
+    api.log('ReactoryHOC Resize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
+    api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
+  };
+
+
+  const willUnmount = () => { };
+  const willMount = () => {
+
+    window.addEventListener('resize', onWindowResize);
+
+
+    window.matchMedia("(prefers-color-scheme: dark)").addListener((evt) => {
+      if (evt.matches === true) {
+        localStorage.setItem('$reactory$theme_mode', 'dark');
+      } else {
+        localStorage.setItem('$reactory$theme_mode', 'light');
+      }
+    });
+
+    if (localStorage) {
+      let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
+      if (lastRoute !== null) {
+        lastRoute = lastRoute.trim();
+        localStorage.removeItem('$reactory.last.attempted.route$');
+        location.assign(lastRoute);
+      }
+    }
+
+    if (auth_validated === false) {
+      api.status({ emitLogin: true }).then((user) => {
+        setIsValidated(true);
+        setUser(user);
+        setOfflineStatus(false);
+        setIsReady(true);
+
+        let themeOptions = api.getTheme();
+        if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
+        if (Object.keys(themeOptions).length === 0) themeOptions = { ...props.appTheme };
+
+        let muiTheme: Theme & any = createMuiTheme(themeOptions);
+
+        if (themeOptions.provider && typeof themeOptions.type === 'string') {
+          if (themeOptions.provider[themeOptions.type]) {
+            //using new mechanism.
+            switch (themeOptions.type) {
+              case 'material':
+              default: {
+                muiTheme = createMuiTheme(themeOptions);
+              }
+            }
+          }
+        }
+
+        api.muiTheme = muiTheme;
+        setTheme(muiTheme);
+      }).catch((validationError) => {
+        setIsValidated(true);
+        setUser(null);
+        setOfflineStatus(true);
+        setError(validationError);
+        setIsReady(false);
+      });
+    }
+
+    api.on(ReactoryApiEventNames.onLogout, onLogout)
+    api.on(ReactoryApiEventNames.onLogin, onLogin)
+    api.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
+    api.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+
+    const query = queryString.parse(window.location.search);
+    if (query.auth_token) {
+      localStorage.setItem('auth_token', query.auth_token);
+      api.client = ReactoryApolloClient().client;
+    }
+    api.queryObject = query;
+    api.queryString = window.location.search;
+    api.objectToQueryString = queryString.stringify;
+
+    if (window && !window.reactory) {
+      window.reactory = {
+        api,
+      };
+    }
+
+
+    return willUnmount;
+  };
+
+  useEffect(willMount, []);
+
+ 
+
+  return (
+    <Router>
+      <React.Fragment>
+        <CssBaseline />
+        <ThemeProvider theme={theme}>
+          <Provider store={store}>
+            <ApolloProvider client={api.client}>
+            <MuiPickersUtilsProvider utils={MomentUtils}>
+              <ReactoryProvider api={api}>              
+                <React.Fragment>                  
+                    {isReady === true &&  <Globals api={api} />}
+                    {isReady === true &&  <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
+                    {isReady === true &&  <NotificationComponent />}
+                    {isReady === false && <Loading message={`Loading ${props.appTitle || 'application'}. Please wait`} icon="security" spinIcon={false} />}
+                    {isReady === true &&  <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}                  
+                  </React.Fragment>                  
+              </ReactoryProvider>
+              </MuiPickersUtilsProvider>
+            </ApolloProvider>
+          </Provider>
+        </ThemeProvider>
+      </React.Fragment>
+    </Router>
+
+  );
 };
 
 class App extends Component<any, AppState> {
@@ -266,7 +597,7 @@ class App extends Component<any, AppState> {
 
       routes.push(<Route {...routeProps} />)
     });
-    
+
     //this.setState({ routes });
     return routes
   }
@@ -389,17 +720,19 @@ class App extends Component<any, AppState> {
           <Provider store={store}>
             <ApolloProvider client={api.client}>
               <ApiProvider api={api} history={this.props.history}>
-                <ThemeProvider theme={muiTheme}>
-                  <MuiPickersUtilsProvider utils={MomentUtils}>
-                    <React.Fragment>
-                      <Globals api={api} />
-                      <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
-                      <NotificationComponent></NotificationComponent>
-                      {auth_validated === true && routes.length > 0 ? routes : <Loading message="Loading Application. Please wait" icon="security" spinIcon={false} />}
-                      {modal}
-                    </React.Fragment>
-                  </MuiPickersUtilsProvider>
-                </ThemeProvider>
+                <ReactoryProvider api={api}>
+                  <ThemeProvider theme={muiTheme}>
+                    <MuiPickersUtilsProvider utils={MomentUtils}>
+                      <React.Fragment>
+                        <Globals api={api} />
+                        <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
+                        <NotificationComponent></NotificationComponent>
+                        {auth_validated === true && routes.length > 0 ? routes : <Loading message="Loading Application. Please wait" icon="security" spinIcon={false} />}
+                        {modal}
+                      </React.Fragment>
+                    </MuiPickersUtilsProvider>
+                  </ThemeProvider>
+                </ReactoryProvider>
               </ApiProvider>
             </ApolloProvider>
           </Provider>

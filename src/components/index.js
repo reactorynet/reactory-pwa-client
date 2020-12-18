@@ -73,6 +73,7 @@ import DocumentListComponent from './shared/DocumentListComponent';
 import DocumentUploadComponent from './shared/DocumentUploadComponents';
 import FreightRequestQuoteComponent from './shared/FreightRequestQuote';
 import FreightRequestProductDetailComponent from './shared/FreightRequestProductDetail';
+import ReactoryFormEditor from './shared/FormEditor';
 
 import lodash from 'lodash';
 
@@ -110,8 +111,21 @@ export const CompanyLogo = (props) => {
 
 
 export const componentRegistery = [
+  {
+    nameSpace: 'react',
+    name: 'React',
+    version: '1.0.0',
+    component: React
+  },
 
-
+  /*
+  {
+    nameSpace: 'reactory',
+    name: 'FormEditor',
+    component: ReactoryFormEditor,
+    version: '1.0.0'
+  },
+  */
   {
     nameSpace: 'lodash',
     name: 'lodash',

@@ -133,7 +133,7 @@ class OrganizationForm extends Component {
   updateOrganization = (evt) => {
 
     this.props.api.log(`Admin.updateOrganization (evt) `, { evt }, 'debugger')
-    debugger
+    
     const { client } = this.props;
     const { organization } = this.state;
     const that = this;
@@ -449,7 +449,7 @@ class DefaultFormContainer extends Component {
       // console.log('DELEGATE ACTION COMPLETE  -  EMIT CAUGHT DO SOMETHING!!!!!!!!!!');
       // const comp = self.surveyComponent;
       // comp.props.refresh();
-      // debugger;
+      // ;
     // });
   }
 

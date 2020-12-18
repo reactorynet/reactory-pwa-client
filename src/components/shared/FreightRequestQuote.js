@@ -36,21 +36,22 @@ class FreightRequestQuoteWidget extends Component {
     this.componentRefs = props.api.getComponents([
       'core.Loading@1.0.0',
     ]);
+    
   }
 
   state = {
     value: 0,
   }
 
-  handleChange = (event, value) => {
+  handleChange (event, value) {
     this.setState({ value });
   }
 
-  submitRequest = () => {
+  submitRequest () {
     const { formContext, api } = this.props;
     const props = this.props;
     try {
-      debugger;
+      ;
       let done = formContext.$ref.submit();
       api.log(`Freight Request Form submitted: ${done}`, {}, 'debug')
     } catch (error) {
@@ -78,10 +79,9 @@ class FreightRequestQuoteWidget extends Component {
     const formfieldChangeHandler = (optionName, fieldData) => {
 
       const option = formData.options.find(op => op.name == fieldData.formData.name);
-      debugger;
+    
 
       if (option != fieldData.formData) {
-        debugger;
         this.props.onChange(fieldData.formData);
       }
     }

@@ -193,11 +193,11 @@ const ThemedSurveyComponent = compose(
 
 const UserSurveyComponent = ({ userId, api, onSurveySelect, minimal = true, showComplete = true }) => {
     const user = api.getUser();    
-    debugger
+    
     return (
         <Query query={api.queries.Surveys.surveysForUser} variables={{ id: user.id }} options={{fetchPolicy: 'network-only'}}>
             {({ loading, error, data }) => {
-                debugger
+                
                 if (loading === true) return (<p>Loading survey data...</p>);
                 if (isNil(error) === false) return (<p>Error during load...</p>);
 

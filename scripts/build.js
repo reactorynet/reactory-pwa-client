@@ -108,7 +108,7 @@ checkBrowsers(paths.appPath, isInteractive)
         useYarn
       );
 
-      const instructions = `run: curl ${process.env.PUBLIC_URL}/index.html -s -I -H "secret-header:true" to invalidate nginx file cache` 
+      const instructions = `run: curl ${process.env.PUBLIC_URL}index.html -s -I -H "secret-header:true" to invalidate nginx file cache` 
       console.log(instructions);
     },
     err => {

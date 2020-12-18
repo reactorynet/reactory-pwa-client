@@ -32,6 +32,14 @@ namespace Reactory {
     palette: IThemePalette
   }
 
+  export interface IRouteDefinition {
+    [key: string]: any
+    key: string,
+    componentFqn: string,
+    path: string,
+    exact: boolean
+    render: (props) => React.ReactElement
+  }
   export namespace Client {
 
     export interface LoadashTemplateExecutor {
@@ -217,6 +225,8 @@ namespace Reactory {
     export interface IReactoryWiredComponent {
       api: IReactoryApi,      
     }
+
+    
 
     export interface IFrameProperties {
       url: string

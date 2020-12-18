@@ -29,6 +29,7 @@ import PowerSettingIcon from '@material-ui/icons/PowerSettingsNew';
 import { getAvatar } from '../util';
 import moment from 'moment';
 import { withApi, ReactoryApi, ReactoryApiEventNames } from '@reactory/client-core/api';
+import license from '@reactory/client-core/license';
 
 export class ISearchConfig {
   

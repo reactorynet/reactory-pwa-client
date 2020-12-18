@@ -1045,7 +1045,7 @@ class Profile extends Component {
         };
 
         const onCropAccept = (avatar) => {
-            //debugger;
+            //;
             let preview = '';
             let reader = new FileReader();
 

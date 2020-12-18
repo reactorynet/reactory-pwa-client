@@ -1,4 +1,5 @@
 import React, { Component, Fragment, useState } from "react";
+import { createPortal } from 'react-dom'
 import PropTypes from "prop-types";
 import { compose, withProps } from "recompose";
 import {
@@ -9,6 +10,9 @@ import {
   InfoWindow,
   MarkerProps,
 } from "react-google-maps";
+import { MAP } from 'react-google-maps/lib/constants'
+import { MarkerWithLabel } from 'react-google-maps/lib/components/addons/MarkerWithLabel';
+
 
 import "googlemaps";
 
@@ -17,12 +21,15 @@ import { withStyles, withTheme } from "@material-ui/core/styles";
 import { withApi } from "@reactory/client-core/api/ApiProvider";
 import {
   Avatar,
+  ButtonGroup,
   Dialog,
   FormControl,
+  FormControlLabel,
   List,
   ListItem,
   ListItemText,
   ListItemAvatar,
+  ListItemSecondaryAction,
   Icon,
   Paper,
   Grid,
@@ -38,11 +45,20 @@ import {
   Theme,
   StyledComponentProps,
   StyleRulesCallback,
+  Checkbox,
 } from "@material-ui/core";
+
+import Pagination from '@material-ui/lab/Pagination';
 
 import lodash from "lodash";
 
 import Reactory from "@reactory/client-core/types/reactory";
+import { makeStyles } from "@material-ui/styles";
+import { checkDocument } from "@apollo/client/utilities";
+import ReactoryApi from "api";
+import { QueryResult } from "react-apollo";
+import { Address } from "cluster";
+import { MutationResult } from "@apollo/client";
 
 const DefaultCenter = { lat: -33.93264, lng: 18.4911213 };
 
@@ -190,7 +206,7 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
 
   if (display_edit === true) {
 
-    const Dialog = api.getComponent("core.AlertDialog@1.0.0");    
+    const Dialog = api.getComponent("core.AlertDialog@1.0.0");
     const EditingForm = api.getComponent(isExisting === false ? new_address_form : edit_address_form);
 
     const dialog_props = {
@@ -212,10 +228,10 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
       formData: {
         placeId: marker.place.place_id,
         ...marker.address
-      },      
+      },
       onMutationComplete: (result) => {
         api.log('Mutation Complete For Address Editing', { result }, 'debug');
-        
+
         let address_result = result.formData;
         onAddressEdited(address_result);
       },
@@ -313,7 +329,7 @@ interface IReactoryMarkerData {
 
 const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
 
-  const { marker, onClose, onSelectAddress, onRemoved, onPositionChanged, api } = props
+  const { marker, onClose, onSelectAddress, onRemoved, onPositionChanged, api, icon } = props
 
   const [displayMarkerInfo, setDisplayMarkerInfo] = useState(false);
   const [position, setPosition] = useState({ lat: props.marker.place.geometry.location.lat(), lng: props.marker.place.geometry.location.lng() });
@@ -326,7 +342,7 @@ const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
   const onAddressSelected = () => {
     setDisplayMarkerInfo(!displayMarkerInfo);
     if (onSelectAddress) {
-      debugger
+
       api.log(`LasecMarker => acceptAddress `, { marker }, "debug");
       onSelectAddress(marker);
     }
@@ -337,21 +353,23 @@ const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
     if (onPositionChanged) onPositionChanged(true);
   };
 
-  const onAddressDeleted = ( ) => {
+  const onAddressDeleted = () => {
     setDeleted(true);
     if (props.onAddressDeleted) props.onAddressDeleted();
   }
 
   const onAddressEdited = (edited_address) => {
-    if(props.onAddressEdited) props.onAddressEdited(edited_address)
+    if (props.onAddressEdited) props.onAddressEdited(edited_address)
   }
 
   const google_marker_properties: MarkerProps = {
     position,
+    icon,
+
     onClick: () => { setDisplayMarkerInfo(!displayMarkerInfo); },
   };
 
- 
+
   if (isDeleted === true) {
     return null;
   }
@@ -363,7 +381,7 @@ const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
           onAddressSelected={onAddressSelected}
           onAddressDeleted={onAddressDeleted}
           onAddressPositionChanged={onAddressPositionChanged}
-          onAddressEdited={ onAddressEdited }
+          onAddressEdited={onAddressEdited}
           onClose={() => { setDisplayMarkerInfo(!displayMarkerInfo); }}
           marker={marker}
         />
@@ -372,6 +390,171 @@ const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
   );
 });
 
+
+class MapControl extends Component<any, any> {
+
+  static contextTypes = { [MAP]: PropTypes.object }
+  map: any;
+  controlDiv: any;
+  divIndex: any;
+
+  componentWillMount() {
+    this.map = this.context[MAP];
+    this.controlDiv = document.createElement('div');
+    this.divIndex = this.map.controls[this.props.position].push(this.controlDiv)
+  }
+  componentWillUnmount() {
+    this.map.controls[this.props.position].removeAt(this.divIndex)
+  }
+  render() {
+    return createPortal(this.props.children, this.controlDiv)
+  }
+}
+
+interface AddressListProps {
+  /**
+   * Array of address items. 
+   * Object needs to have a title, lat & lng and type
+   */
+  items: any[],
+  primaryTextField: string | Function,
+  secondaryTextField: string | Function,
+  avatarField?: string | Function,
+  map?: google.maps.Map,
+  show_avatar?: boolean,
+  onSelectionChanged?: (items: any[]) => void,
+  [key: string]: any
+}
+
+const AddressStyles = makeStyles((theme: Theme) => ({
+  root: {
+    width: '100%',
+    maxWidth: '360px',
+    maxHeight: '400px',
+    overflow: 'scroll',
+    backgroundColor: theme.palette.background.paper,
+  },
+  inline: {
+    display: 'inline',
+  },
+  small: {
+    width: theme.spacing(3),
+    height: theme.spacing(3),
+  },
+  list_item: {
+    cursor: "pointer",
+  }
+}))
+
+const AddressList = compose(
+  withApi
+)((props: AddressListProps) => {
+  const classes = AddressStyles();
+
+  const { api, items, primaryTextField, secondaryTextField, map, show_avatar, avatarField, avatar, searching_remote, onSelectionChanged } = props;
+  const [checked, setChecked] = React.useState([]);
+
+  const onItemCheckStateChange = (value: number) => () => {
+    const currentIndex = checked.indexOf(value);
+    const newChecked = [...checked];
+
+    if (currentIndex === -1) {
+      newChecked.push(value);
+    } else {
+      newChecked.splice(currentIndex, 1);
+    }
+
+    setChecked(newChecked);
+    if (onSelectionChanged) {
+      onSelectionChanged(newChecked);
+    }
+  };
+
+  return (
+    <React.Fragment>
+      <List className={classes.root}>
+        {items.map((address_item: any, index: number) => {
+
+          if (address_item === null || address_item === undefined) {
+            api.log("GoogleMapWidget.tsx => AddressList: Cannot render null address item", {}, "warning");
+            return null;
+          }
+
+          let primaryText = '';
+          let secondaryText = '';
+          let avatarAlt = ''
+
+          const labelId = `checkbox-list-secondary-label-${index}`;
+
+          if (typeof primaryTextField === "function") {
+            try { primaryText = primaryTextField(address_item); } catch (e) { api.log(`GoogleMapWidget.tsx => AddressList(props), item error getting primary text from function`, { address_item }, 'error'); }
+          } else {
+            primaryText = address_item[primaryTextField];
+          }
+
+          if (typeof secondaryTextField === "function") {
+            try { secondaryText = secondaryTextField(address_item); } catch (e) { api.log(`GoogleMapWidget.tsx => AddressList(props), item error getting secondary text from function`, { address_item }, 'error'); }
+          } else {
+            secondaryText = address_item[secondaryTextField];
+          }
+
+          let $avatar = avatar;
+
+          if (typeof avatarField === "function") {
+            try { $avatar = avatarField(address_item); } catch (e) { api.log(`GoogleMapWidget.tsx => AddressList(props), item error getting avatar from function`, { address_item }, 'error'); }
+          } else {
+            $avatar = address_item[avatarField];
+          }
+
+          if ($avatar === null || $avatar === undefined) {
+            $avatar = avatar;
+          }
+
+          if (searching_remote === true) {
+            return (
+              <ListItem className={classes.list_item}>
+                <ListItemAvatar>
+                  {show_avatar === true && <Avatar className={classes.small}
+                    alt={"S"}>🕜</Avatar>}
+                </ListItemAvatar>
+                <ListItemText primary={"Searching..."} secondary={"Searching..."} onClick={address_item.onClick} />
+              </ListItem>
+            )
+          } else {
+            return (
+              <ListItem className={classes.list_item}>
+                <ListItemAvatar>
+                  {show_avatar === true && <Avatar className={classes.small}
+                    alt={avatarAlt || primaryText}
+                    src={avatar}></Avatar>}
+                </ListItemAvatar>
+                <ListItemText primary={primaryText} secondary={secondaryText} onClick={address_item.onClick} />
+                <ListItemSecondaryAction>
+                  <Checkbox edge="end" checked={checked.indexOf(index) !== -1} onChange={onItemCheckStateChange(index)} inputProps={{ "aria-labelledby": labelId }} />
+                </ListItemSecondaryAction>
+              </ListItem>
+            );
+          }
+
+
+        })}
+
+      </List>
+    </React.Fragment>);
+})
+
+
+const ReactoryMapStyles = makeStyles((theme: Theme) => ({
+  top_toolbar: {
+    padding: theme.spacing(1),
+  }
+}));
+
+interface ReactoryMapProps {
+  api?: ReactoryApi,
+  searchTerm: string,
+  [key: string]: any
+}
 
 const ReactoryMap = compose(
   withProps({
@@ -386,65 +569,99 @@ const ReactoryMap = compose(
   withScriptjs,
   withGoogleMap,
   withApi
-)((props) => {
+)((props: ReactoryMapProps) => {
 
   const [searchTerm, setSearchTerm] = useState(props.searchTerm ? props.searchTerm : "");
   const [existing_addresses, setExistingAddresses] = useState<IReactoryMarkerData[]>([]);
   const [google_markers, setGoogleMarkers] = useState<IReactoryMarkerData[]>([])
   const [search_box, setSearchBoxRef] = useState(null);
+  const [map, setMap] = useState<GoogleMap>(null);
   const [bounds, setMapBounds] = useState(new google.maps.LatLngBounds());
   const [map_center, setMapCenter] = useState(DefaultCenter);
+  const [searching_remote, setSearchingRemote] = useState(false);
+  const [remote_page, setRemoteSearchPage] = useState(1);
+  const [remote_page_count, setRemotePageSize] = useState(10);
+  const [remote_search_error, setRemoteSearchError] = useState<any>(null);
+  const [show_remote_results, setShowRemoteResults] = useState<boolean>(true);
+  const [show_google_results, setShowGoogleResults] = useState<boolean>(false);
+  const [selected_existing_addresses, setSelectedExistingAddress] = useState<any[]>([]);
 
   const {
     api,
-    classes,
     onMapMarkerClicked,
     onEditClicked,
     onAddressSelected,
     onSearchInputChanged
   } = props;
 
+
+
+  const onMapMounted = (map_ref: GoogleMap) => {
+    setMap(map_ref);
+  };
+
+
+  const that = this;
+
+  const classes = ReactoryMapStyles();
+
+  const theme = api.getTheme();
+  const { palette } = theme;
+
   /**
    * Function to search for existing / catalogued addresses
    * 
    * @param {searh_term} - string value to use for remote searching 
    */
-  const search_remote = (search_term) => {
+  const search_remote = (search_term, page = remote_page) => {
 
-    const query = `query LasecGetAddress( $searchTerm: String! ) {
-      LasecGetAddress(searchTerm: $searchTerm) {
-        id
-        fullAddress
-        formatted_address
-        building_description_id
-        building_floor_number_id
-
-        province_id
-
-        country_id
-
-        lat
-        lng
-
-        created_by
-        last_edited_by              
-        
-        linked_clients_count
-        linked_sales_orders_count
+    const query = `query LasecGetAddress( $searchTerm: String!, $paging: PagingRequest ) {
+      LasecGetAddress(searchTerm: $searchTerm, paging: $paging) {
+        paging {
+          total
+          page
+          hasNext
+          pageSize
+        }
+        addresses {
+          id
+          fullAddress
+          formatted_address
+          building_description_id
+          building_floor_number_id
+  
+          province_id
+  
+          country_id
+  
+          lat
+          lng
+  
+          created_by
+          last_edited_by              
+          
+          linked_clients_count
+          linked_sales_orders_count
+        }
       }
     }`;
 
-    api.graphqlQuery(query, { searchTerm: search_term }).then((search_result) => {
-      const { errors, data } = search_result;
+    setSearchingRemote(true);
 
-      if (errors && errors.length) {
+    api.graphqlQuery(query, { searchTerm: search_term, paging: { page, pageSize: 10 } }).then((search_result: QueryResult<any>) => {
+      const { error, data } = search_result;
+
+      if (error) {
         setExistingAddresses([]);
+        setSearchingRemote(false);
+        setRemoteSearchError(error);
       } else {
         if (data && data.LasecGetAddress) {
 
           let $existing_address_markers: IReactoryMarkerData[] = [];
-          if (data.LasecGetAddress.length > 0) {
-            $existing_address_markers = data.LasecGetAddress.map((address) => {
+          let { paging = null, addresses = [] } = data.LasecGetAddress;
+          if (addresses.length > 0) {
+            $existing_address_markers = data.LasecGetAddress.addresses.map((address) => {
 
               let existing_address = api.utils.lodash.cloneDeep(address);
 
@@ -484,16 +701,25 @@ const ReactoryMap = compose(
 
               return marker_data;
             });
+          } else {
+            setExistingAddresses([])
+          }
+
+          if (paging && paging.total) {
+            setRemotePageSize(paging.total);
           }
 
           setExistingAddresses($existing_address_markers);
+          setSearchingRemote(false);
+          setRemoteSearchError(null);
+
         }
       }
     }).catch((error) => {
       api.log(`Could not get search the remote addresses`, { error }), 'error';
       api.createNotification("Could not execute a query against the local address database", { type: "warning" })
-      
       setExistingAddresses([]);
+      setSearchingRemote(false);
     });
   }
 
@@ -540,15 +766,218 @@ const ReactoryMap = compose(
 
   const searchttermChangeHandler = (event) => {
     let search_term = event.target.value;
-    setSearchTerm(search_term);     
+    setSearchTerm(search_term);
   };
+
+  const remote_search_page_change = (evt, value) => {
+    setRemoteSearchPage(value);
+    setExistingAddresses([]);
+    search_remote(searchTerm, value);
+  }
+
+  const address_list_props: AddressListProps = {
+    items: existing_addresses,
+    searching_remote: searching_remote,
+    primaryTextField: (address: any) => {
+      let text = address.title;
+      if (text === null || text === undefined || text === "") {
+        return "No Address Title";
+      }
+
+      if (text.length > 75) {
+        return text.substring(0, 75) + '...';
+      }
+
+      return text;
+    },
+    secondaryTextField: (address: any) => {
+      let templateString = 'lat ${address.place.geometry.location.lat()}, lng: ${address.place.geometry.location.lng()}';
+      return lodash.template(templateString)({ address });
+    },
+    lat: (address: any) => {
+
+      try {
+        return address.place.geometry.location.lat()
+      } catch (e) {
+        return 0.0
+      }
+
+    },
+    lng: (address: any) => {
+      try {
+        return address.place.geometry.location.lng()
+      } catch (e) {
+        return 0.0
+      }
+    },
+    avatar: api.getThemeResource('images/avatar.png'),
+    avatarField: 'avatar',
+    show_avatar: true,
+    //handler when clicking on the address item
+    onClick: (evt: Event, address: any) => {
+      let lat, lng = 0;
+      if (address.lat) lat = address.lat();
+      if (address.lng) lng = address.lng();
+      setMapCenter({ lat, lng });
+    },
+    onSelectionChanged: (items: any[]): void => {
+      setSelectedExistingAddress(items);
+    },
+    api
+  };
+
+
+  let google_markers_components = [];
+  let existing_marker_components = [];
+
+  if (show_remote_results === true) {
+    existing_marker_components = existing_addresses.map((marker: IReactoryMarkerData, index: number) => {
+
+      const markerProps: ReactoryMarkerProps = {
+        key: index,
+        title: marker.title,
+        icon: {
+          url: api.getThemeResource('images/favicon.ico'),
+          //size: new google.maps.Size(20, 32),
+          // The origin for this image is (0, 0).
+
+        },
+        onSelectAddress: onAddressSelected,
+        onAddressEdited: (address) => {
+
+          //pull from google markers and 
+          //place into existing addresses
+          const { cloneDeep, pullAt } = api.utils.lodash;
+          const new_markers_data: IReactoryMarkerData[] = cloneDeep(existing_addresses);
+
+          let _new_marker = cloneDeep(marker);
+          _new_marker.address = address;
+          _new_marker.type = "existing";
+
+          new_markers_data[index] = _new_marker;
+
+          setExistingAddresses(new_markers_data);
+        },
+        onAddressDeleted: () => {
+          const { pullAt, cloneDeep } = api.utils.lodash;
+          const new_markers_data: IReactoryMarkerData[] = cloneDeep(existing_addresses);
+          pullAt(new_markers_data, [index]);
+          setExistingAddresses(new_markers_data);
+        },
+        marker,
+      };
+
+      return <ReactoryMarker {...markerProps} />;
+    });
+  }
+
+  if (show_google_results === true) {
+    google_markers_components = google_markers.map((marker: IReactoryMarkerData, index: number) => {
+
+      const markerProps: ReactoryMarkerProps = {
+        key: index,
+        title: marker.title,
+        onSelectAddress: onAddressSelected,
+        onAddressEdited: (address) => {
+
+          //pull from google markers and 
+          //place into existing addresses
+          const { cloneDeep, pullAt } = api.utils.lodash;
+          const new_markers_data: IReactoryMarkerData[] = cloneDeep(google_markers);
+          let _new_marker = cloneDeep(marker);
+          _new_marker.address = address;
+          _new_marker.type = "existing";
+
+          pullAt(new_markers_data, [index]);
+          setGoogleMarkers(new_markers_data);
+          setExistingAddresses([...existing_addresses, _new_marker]);
+        },
+        onAddressDeleted: () => {
+          const { pullAt, cloneDeep } = api.utils.lodash;
+          const new_markers_data: IReactoryMarkerData[] = cloneDeep(google_markers);
+          pullAt(new_markers_data, [index]);
+          setExistingAddresses(new_markers_data);
+        },
+        marker,
+      };
+
+      return <ReactoryMarker {...markerProps} />;
+    });
+  }
+
+  let toolbar = null;
+  if (selected_existing_addresses.length > 0) {
+
+    const setLatLongForSelectedExistingAddresses = () => {
+
+      const mutation_text = `mutation LasecEditAddress($address_input: EditAddressInput){ 
+        LasecEditAddress(address_input: $address_input) {
+          success
+          message
+          address {
+
+            lat
+            lng
+          }
+        }
+      }`
+
+      selected_existing_addresses.forEach((selected_index: number) => {
+        const address_to_update = existing_addresses[selected_index];
+
+        address_to_update.address.lat = map_center.lat;
+        address_to_update.address.lng = map_center.lng;
+
+        const variables = {
+          address_input: {
+            id: address_to_update.id,
+            lat: map_center.lat,
+            lng: map_center.lng
+          }
+        }
+
+        api.graphqlMutation(mutation_text, variables).then((mutation_result: MutationResult) => {
+          const { error, data, called, loading } = mutation_result;
+
+          if (called === true && data) {
+            data.LasecUpdateAddressPosition
+          }
+
+          if (!error) {
+            api.log(`Could not update the address position`, { error }, "error");
+            api.createNotification(`Could not update the address ${address_to_update.title}`, { type: "error", canDismiss: true, timeout: 2500 });
+          }
+        })
+      })
+    };
+
+    toolbar = (<ButtonGroup>
+      <Tooltip title={"Click apply the lat and long to the selected addresses"}><Button onClick={setLatLongForSelectedExistingAddresses}><Icon>track_changes</Icon></Button></Tooltip>
+      <Tooltip title={`Click to delete the selected address${selected_existing_addresses.length > 1 ? 'es' : ''}`}><Button><Icon style={{ color: palette.error.main }}>delete</Icon></Button></Tooltip>
+    </ButtonGroup>)
+  }
+
+  let center_label = `lat: ${map_center.lat} lng: ${map_center.lng}`
 
   return (
     <GoogleMap
+      ref={onMapMounted}
       defaultZoom={8}
       defaultCenter={DefaultCenter}
       center={map_center}
+      onCenterChanged={() => {
+        let new_center = map.getCenter();
+        setMapCenter({ lat: new_center.lat(), lng: new_center.lng() });
+      }}
     >
+
+      <MapControl position={google.maps.ControlPosition.TOP_CENTER}>
+        <Paper className={classes.top_toolbar}>
+          <FormControlLabel control={<Checkbox checked={show_remote_results === true} onChange={(evt, checked) => setShowRemoteResults(checked)} icon={<Icon>radio_button_unchecked</Icon>} checkedIcon={<Icon>radio_button_checked</Icon>} />} label="Existing Addresses" />
+          <FormControlLabel control={<Checkbox checked={show_google_results === true} onChange={(evt, checked) => setShowGoogleResults(checked)} icon={<Icon>radio_button_unchecked</Icon>} checkedIcon={<Icon>radio_button_checked</Icon>} />} label="Google Results" />
+        </Paper>
+      </MapControl>
+
       <SearchBox
         ref={(ref) => { setSearchBoxRef(ref) }}
         bounds={bounds}
@@ -559,7 +988,10 @@ const ReactoryMap = compose(
           value={searchTerm}
           onChange={searchttermChangeHandler}
           onKeyPress={(evt) => {
-            if (evt.charCode === 13) search_remote(searchTerm);
+            if (evt.charCode === 13) {
+              setRemoteSearchPage(1);
+              search_remote(searchTerm, 1);
+            }
           }}
           ref={props.onSearchInputMounted}
           type="text"
@@ -583,72 +1015,35 @@ const ReactoryMap = compose(
           }}
         />
       </SearchBox>
-
-      {google_markers.map((marker: IReactoryMarkerData, index: number) => {
-
-        const markerProps: ReactoryMarkerProps = {
-          key: index,
-          title: marker.title,
-          onSelectAddress: onAddressSelected,
-          onAddressEdited: (address) => {
-            debugger
-            //pull from google markers and 
-            //place into existing addresses
-            const { cloneDeep, pullAt } = api.utils.lodash;
-            const new_markers_data: IReactoryMarkerData[] = cloneDeep(google_markers);
-            let _new_marker = cloneDeep(marker);
-            _new_marker.address = address;
-            _new_marker.type = "existing";
-
-            pullAt(new_markers_data, [index]);            
-            setGoogleMarkers(new_markers_data);
-            setExistingAddresses([...existing_addresses, _new_marker]);
-          },
-          onAddressDeleted: () => {
-            const { pullAt, cloneDeep } = api.utils.lodash;
-            const new_markers_data: IReactoryMarkerData[] = cloneDeep(google_markers);
-            pullAt(new_markers_data, [index]);
-            setExistingAddresses(new_markers_data);
-          },
-          marker,
-        };
-
-        return <ReactoryMarker {...markerProps} />;
-      })}
-
-
-      {existing_addresses.map((marker: IReactoryMarkerData, index: number) => {
-
-        const markerProps: ReactoryMarkerProps = {
-          key: index,
-          title: marker.title,
-          onSelectAddress: onAddressSelected,
-          onAddressEdited: (address) => {
-            debugger
-            //pull from google markers and 
-            //place into existing addresses
-            const { cloneDeep, pullAt } = api.utils.lodash;
-            const new_markers_data: IReactoryMarkerData[] = cloneDeep(existing_addresses);
-            
-            let _new_marker = cloneDeep(marker);
-            _new_marker.address = address;
-            _new_marker.type = "existing";
-
-            new_markers_data[index] = _new_marker;
-
-            setExistingAddresses(new_markers_data);
-          },
-          onAddressDeleted: () => {
-            const { pullAt, cloneDeep } = api.utils.lodash;
-            const new_markers_data: IReactoryMarkerData[] = cloneDeep(existing_addresses);
-            pullAt(new_markers_data, [index]);
-            setExistingAddresses(new_markers_data);
-          },          
-          marker,
-        };
-
-        return <ReactoryMarker {...markerProps} />;
-      })}
+      {google_markers_components}
+      {existing_marker_components}
+      <MapControl position={google.maps.ControlPosition.LEFT_TOP}>
+        <Paper style={{ marginLeft: '16px', padding: '8px' }}>
+          <React.Fragment>
+            <Grid container spacing={ 1 }>
+              <Grid item container direction="row">
+                <Grid item sm={12}>Existing Addresses</Grid>
+              </Grid>
+            </Grid>
+            <Grid item>
+              <Grid item container direction="row">
+                <Grid item sm={12}>
+                  <Typography variant="caption"><Icon>gps_fixed</Icon>{ center_label }</Typography>
+                </Grid>
+              </Grid>              
+            </Grid>
+            <Grid>
+              <Grid item container direction="row">
+                <Grid item sm={12}>
+                  {toolbar}
+                </Grid>
+              </Grid>
+            </Grid>            
+            <AddressList {...address_list_props} ></AddressList>
+            <Pagination count={remote_page_count} page={remote_page} variant="outlined" color="secondary" onChange={remote_search_page_change} />
+          </React.Fragment>
+        </Paper>
+      </MapControl>
     </GoogleMap>
   );
 });
@@ -671,7 +1066,7 @@ class ReactoryGoogleMapWidget extends Component<any, any> {
     super(props);
 
     const { formData, schema, uiSchema } = props;
-    
+
     const state = {
       markers: [],
       places: [],
@@ -682,7 +1077,7 @@ class ReactoryGoogleMapWidget extends Component<any, any> {
 
 
     if (formData) {
-      if (schema.type === "string") {        
+      if (schema.type === "string") {
         state.searchTerm = formData;
       }
 
@@ -690,8 +1085,8 @@ class ReactoryGoogleMapWidget extends Component<any, any> {
         let field: string = 'fullAddress';
         if (uiSchema["ui:options"] && uiSchema["ui:options"].searchTextProperty)
           field = uiSchema["ui:options"].searchTextProperty;
-                
-        state.searchTerm = formData[field];        
+
+        state.searchTerm = formData[field];
       }
     }
 
@@ -891,7 +1286,7 @@ class ReactoryGoogleMapWidget extends Component<any, any> {
               { address, self },
               objectMap
             );
-            
+
             onChange(addressData);
             self.setState({ isDialogOpen: false });
           }
