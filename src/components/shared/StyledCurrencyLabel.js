@@ -1,6 +1,6 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { isArray, indexOf } from 'lodash';
+import { isArray, template, indexOf } from 'lodash';
 import { compose } from 'recompose';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { Tooltip } from '@material-ui/core';
@@ -65,7 +65,7 @@ class StyledCurrencyLabel extends Component {
       let _value = value;
       let _prependText = this.props.prependText || '';
       let _postpendText = this.props.postpendText || '';
-      let _containerProps = this.props.containerProps || {  };
+      let _containerProps = this.props.containerProps || {};
       let _tooltip = this.props.tooltip || '';
       let _tooltipBackgroundColor = this.props.tooltipBackgroundColor || '';
       let _tooltipTextColor = this.props.tooltipTextColor || '#fff';
@@ -75,7 +75,7 @@ class StyledCurrencyLabel extends Component {
       let _additionalCurrencyMapField = this.additionalCurrencyMapField || 'list_price_cents';
       let _showZeroValues = this.props.showZeroValues || true;
 
-      let defaultStyle = {...style}
+      let defaultStyle = { ...style }
 
       if (!_containerProps.style) _containerProps.style = style;
 
@@ -101,7 +101,7 @@ class StyledCurrencyLabel extends Component {
         if (uiOptions.conditionalStyles && condition) {
           const matchingCondition = uiOptions.conditionalStyles.find(option => option.key === condition);
           if (matchingCondition) {
-            _containerProps.style = { ...style, ..._containerProps.style, ...defaultStyle, ...matchingCondition.style,  };
+            _containerProps.style = { ...style, ..._containerProps.style, ...defaultStyle, ...matchingCondition.style, };
             if (matchingCondition.tooltip) {
               _tooltip = matchingCondition.tooltip;
               _tooltipBackgroundColor = matchingCondition.style.color
@@ -122,10 +122,18 @@ class StyledCurrencyLabel extends Component {
       let otherCurrencies = [];
 
       if (currencies && isArray(currencies) && displayAdditionalCurrencies === true) {
+
+        let that = this;
+
         currencies.forEach((currency) => {
           let $add = true;
-          if (isArray(currenciesDisplayed) === true) {
 
+          if (!isArray(currenciesDisplayed)) {
+            let currenciesArray = template(currenciesDisplayed)(that.props).split(',') ;
+            $add = indexOf(currenciesArray, currency.currency_code) >= 0;
+          }
+
+          if (isArray(currenciesDisplayed) === true) {
             $add = indexOf(currenciesDisplayed, currency.currency_code) >= 0;
           }
 
