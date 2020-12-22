@@ -665,22 +665,22 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     let activeUiSchemaModel = null;
 
     /**
-     * If the form supports multiple schemas, 
-     * we need to determine which is the preffered, currently 
+     * If the form supports multiple schemas,
+     * we need to determine which is the preffered, currently
      * active one.
      */
     if (formDef.uiSchemas) {
       const { DropDownMenu } = this.componentDefs;
 
-      // Even handler for the schema selector menu 
-      const onSchemaSelect = (evt: Event, menuItem: Reactory.IUISchemaMenuItem) => {     
+      // Even handler for the schema selector menu
+      const onSchemaSelect = (evt: Event, menuItem: Reactory.IUISchemaMenuItem) => {
         api.log(`UI Schema Selector onSchemaSelect "${menuItem.title}" selected`, {evt, menuItem})
         _reactoryFormComponent.setState({ activeUiSchemaMenuItem: menuItem })
       };
 
       //get active based on selected
       const { activeUiSchemaMenuItem } = _reactoryFormComponent.state;
-      // if there is an active with a key      
+      // if there is an active with a key
       if (activeUiSchemaMenuItem !== null && activeUiSchemaMenuItem.key) {
         activeUiSchemaModel = activeUiSchemaMenuItem;
       }
@@ -700,7 +700,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       if (formUiOptions && formUiOptions.schemaSelector && activeUiSchemaModel) {
         if (formUiOptions.schemaSelector.variant === "icon-button") {
-          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px' };
+          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px', zIndex: 1000 };
           if (formUiOptions.schemaSelector.style) {
             schemaStyle = formUiOptions.schemaSelector.style;
           }
@@ -710,9 +710,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             api.log('ReactoryFormComponent:: GetSchemaSelectorMenus', { allowed_schema }, 'debug');
 
             allowed_schema.forEach((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
-              
+
               /**
-               * We hook uip the event handler for each of the schema selection options.               
+               * We hook uip the event handler for each of the schema selection options.
                */
               const onSelectUiSchema = () => {
                 // self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
@@ -760,7 +760,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           };
 
           // let defaultStyle =
-          let schemaStyle: CSSProperties = { position: "absolute", top: '10px', right: '10px' };
+          let schemaStyle: CSSProperties = { position: "absolute", top: '10px', right: '10px', zIndex: 1000 };
           if (formUiOptions.schemaSelector.style) {
             schemaStyle = formUiOptions.schemaSelector.style;
           }
@@ -985,7 +985,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       api.log('ReactoryFormComponent.renderWithQuery() => getMutationForm()', {_formData}, 'debug')
 
       let mutation: any = formDef.graphql.mutation[mode];
-      
+
       if (that.state.activeUiSchemaMenuItem && that.state.activeUiSchemaMenuItem.graphql) {
         if (that.state.activeUiSchemaMenuItem.graphql.mutation && that.state.activeUiSchemaMenuItem.graphql.mutation[mode]) {
           mutation = that.state.activeUiSchemaMenuItem.graphql.mutation[mode]
@@ -1024,8 +1024,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 }
 
                 if (do_mutation) {
-                  mutateFunction(mutation_props);  
-                }                
+                  mutateFunction(mutation_props);
+                }
               });
             };
 
@@ -1196,14 +1196,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 }
                 default: {
                   if (query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
-                    
-                    try { 
+
+                    try {
                       _formData = objectMapper({ ...api.utils.lodash.cloneDeep(formData), ...api.utils.lodash.cloneDeep(data[query.name]) }, query.resultMap);
                     } catch (mappError) {
 
                       api.log("Could not map the object data", {mappError}, 'error')
                     }
-                    
+
                   } else {
                     _formData = { ...formData, ...data[query.name] };
                   }
@@ -1244,9 +1244,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
         if (formDef.graphql.query.interval) {
           if (that.refresh_interval === null || that.refresh_interval === undefined) {
-            that.refresh_interval = setInterval(executeFormQuery, formDef.graphql.query.interval);  
+            that.refresh_interval = setInterval(executeFormQuery, formDef.graphql.query.interval);
           }
-          
+
         }
 
         if (query.refreshEvents) {
@@ -1259,7 +1259,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         }
 
         setTimeout(executeFormQuery, query.autoQueryDelay || 0);
-        
+
       }
 
       return (
@@ -1312,7 +1312,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
    */
   form() {
     const that = this;
-    
+
     const { api, mode, extendSchema, uiSchemaKey, uiSchemaId } = this.props;
     const { uiFramework, forms, formData, pendingResources, activeUiSchemaMenuItem } = that.state;
     let _formDef = this.formDef();
@@ -1346,7 +1346,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     }
 
     //state selected option must override the property set item
-    //as the user can change the current active item either programmatically 
+    //as the user can change the current active item either programmatically
     //or via UX element.
     if (activeUiSchemaMenuItem && activeUiSchemaMenuItem.uiSchema) {
       api.log(`ReactoryComponent => ${_formDef.nameSpace}${_formDef.name}@${_formDef.version} instanceId=${that.instanceId} => Setting activeUiSchemaMenuItem ${activeUiSchemaMenuItem.title}`, { activeUiSchemaMenuItem }, 'debug');
@@ -1356,7 +1356,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     // #region setup functions
     const setFormContext = () => {
       if (!_formDef.formContext) _formDef.formContext = {};
-      //we combine the form context from the getter function, with the formContext property / object on the _formDef 
+      //we combine the form context from the getter function, with the formContext property / object on the _formDef
       _formDef.formContext = { ...that.getFormContext(), ..._formDef.formContext };
     };
 
@@ -1430,7 +1430,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             ...WidgetPresets,
             DateWidget: WidgetPresets.DateSelectorWidget,
             EmailWidget: (props, context) => (<Input {...props} type="email" />),
-            RangeWidget: WidgetPresets.SliderWidget,            
+            RangeWidget: WidgetPresets.SliderWidget,
             LogoWidget: (props) => {
               const { formData } = props
               if (formData === undefined || formData === null) return <Typography>Logo loading...</Typography>
@@ -1611,12 +1611,12 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       const $onChange = this.props.onChange;
 
       const trigger_onChange = $onChange && typeof $onChange === 'function';
-      
-      
+
+
       let cancelEvent = false;
 
       const fire = () => {
-        
+
         if (formDef.eventBubbles) {
           formDef.eventBubbles.forEach((eventAction) => {
             if (eventAction.eventName === "onChange") {
@@ -1626,10 +1626,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             }
           });
         }
-        
+
         if (cancelEvent === true) return;
-        
-        $onChange(data.formData, data.errorSChema, { before: changed, after: rchanged, self });      
+
+        $onChange(data.formData, data.errorSChema, { before: changed, after: rchanged, self });
       }
 
       const changed = diff(data.formData, this.state.formData);
