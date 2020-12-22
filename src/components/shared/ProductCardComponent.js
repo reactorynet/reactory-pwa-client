@@ -18,6 +18,8 @@ import {
   Tooltip,
 } from '@material-ui/core';
 
+import StyledCurrencyWidget from './StyledCurrencyLabel';
+
 const CutomTooltip = withStyles((theme) => ({
   tooltip: {
     backgroundColor: 'transparent',
@@ -216,6 +218,24 @@ class ProductCardWidget extends Component {
     let IconComponent = theme.extensions['reactory'].icons['OnSyspro'];
     let iconProps = { style: { color: sysProIconColor } }
 
+    const pricingProps = {
+      currencies: formData.productPricing ? formData.productPricing.filter(item => _currenciesDisplayed.includes(item.currency_code)) : [],
+      value: formData.price,
+      displayAdditionalCurrencies: true,
+      displayPrimaryCurrency: false,
+      currenciesDisplayed: _currenciesDisplayed,
+      region: 'en-IN',
+      uiSchema: {
+        'ui:options': {
+          prependText: '(ZAR)',
+          defaultStyle: {
+            fontSize: '0.9em',
+            margin: 0
+          },
+        }
+      }
+    }
+
     return (
       <Card classes={{ root: classes.root }}>
         <CardHeader component={() => <CustomHeader launcher={(<SlideOutLauncher {...slideoutprops} />)} title={data.code} subtitle={data.name} image={data.image} copyClick={copyClickHandler} />} />
@@ -287,17 +307,7 @@ class ProductCardWidget extends Component {
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
-                    <Typography variant="body2" classes={{ root: classes.fieldLabel }}>WILL GO HERE</Typography>
-                      {/* {
-                        formData.productPricing.filter(item => _currenciesDisplayed.includes(item.currency_code)).map(currency => (
-                          <Typography variant="body2">
-                            <strong>{currency.currency_code}: </strong>
-                            {
-                              new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format((currency.special_price_cents / 100))
-                            }
-                          </Typography>
-                        ))
-                      } */}
+                      <StyledCurrencyWidget {...pricingProps} />
                     </Grid>
                   </>
                 }

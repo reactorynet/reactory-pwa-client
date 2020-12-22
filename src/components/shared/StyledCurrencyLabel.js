@@ -157,7 +157,7 @@ class StyledCurrencyLabel extends Component {
 
       let primaryCurrency = (
         <div className={classes.currency} {..._containerProps}>
-          {_prependText != '' && <span style="font-weight: bold">{_prependText}</span>}
+          {_prependText != '' && <span style={{ fontWeight: "bold" }}>{_prependText}</span>}
           <span className={classes.currencyValue}>
             {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
           </span>
@@ -242,7 +242,6 @@ StyledCurrencyLabel.styles = (theme) => {
     }
   }
 };
-
 
 const StyledCurrencyLabelComponent = compose(withApi, withTheme, withStyles(StyledCurrencyLabel.styles))(StyledCurrencyLabel);
 export default StyledCurrencyLabelComponent;
