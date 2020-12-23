@@ -45,12 +45,14 @@ export const ReactoryProvider = ({ children, api }) => {
 
 export const ReactoryContext = createContext<ReactoryApi>(null);
 
-export const withApi = (ComponentToWrap: any, id = 'not-set') => {
+export const withApi = (ComponentToWrap: any | React.Component | Function, id = 'not-set') => {
+
+
 
     return (props: any) => { 
         const reactory = useContext(ReactoryContext)
         try {
-            return <ComponentToWrap {...props} api={reactory} />
+            return <ComponentToWrap {...props} api={reactory} reactory={reactory} />
         } catch (error) {
             return <span>Component: {id}: error: { error.message }</span>
         }

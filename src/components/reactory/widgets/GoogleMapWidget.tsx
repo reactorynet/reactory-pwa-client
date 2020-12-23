@@ -46,6 +46,7 @@ import {
   StyledComponentProps,
   StyleRulesCallback,
   Checkbox,
+  Badge,
 } from "@material-ui/core";
 
 import Pagination from '@material-ui/lab/Pagination';
@@ -65,7 +66,7 @@ const DefaultCenter = { lat: -33.93264, lng: 18.4911213 };
 
 interface ReactoryCustomWindowProps {
   api?: Reactory.Client.IReactoryApi,
-  marker: any,
+  marker: IReactoryMarkerData,
   classes?: any,
   new_address_form?: string,
 
@@ -120,7 +121,38 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
   };
 
   const onDeleteAddressConfirmed = () => {
-    api.createNotification(`The address will be delete once this feature is complete`, { type: 'success', canDimiss: true })
+
+    const mutation_text = `mutation LasecDeleteAddress($address_input: EditAddressInput){ 
+      LasecDeleteAddress(address_input: $address_input) {
+        success
+        message          
+      }
+    }`;
+
+    const variables = {
+      address_input: {
+        id: marker.address.id
+      }
+    };
+
+    api.graphqlMutation(mutation_text, variables, {}).then((mutation_result: MutationResult) => {
+      const { error, data, called, loading } = mutation_result;
+
+      if (called === true && data) {
+        if (data.LasecDeleteAddress && data.LasecDeleteAddress.success === true) {
+          if (props.onAddressDeleted) props.onAddressDeleted();
+        }
+      }
+
+      if (!error) {
+        api.log(`Could not update the address position`, { error }, "error");
+        api.createNotification(`Could not update the address ${marker.title}`, { type: "error", canDismiss: true, timeout: 2500 });
+      }
+    }).catch((update_error) => {
+      api.log(`Could not update the address position`, { update_error }, "error");
+      api.createNotification(`Could not update the address ${marker.title}`, { type: "error", canDismiss: true, timeout: 2500 });
+    });
+
     setConfirmDeleteAddress(false);
     if (onAddressDeleted) {
       onAddressDeleted()
@@ -162,13 +194,7 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
           </IconButton>
         </Tooltip>
         }
-
-        {isExisting === true && <Tooltip title="Click here to view details for this address">
-          <IconButton size="small" onClick={() => { setShowDetails(true); }}>
-            <Icon>search</Icon>
-          </IconButton>
-        </Tooltip>}
-
+       
 
         {isExisting === true && <Tooltip title="Click here to delete this address">
           <IconButton className={classes.dangerButton} size="small" onClick={() => { setConfirmDeleteAddress(true) }}>
@@ -227,7 +253,10 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
       place_id: marker.place.place_id,
       formData: {
         placeId: marker.place.place_id,
-        ...marker.address
+        ...marker.address,
+        buildingType: "6",
+        lat: marker.place.geometry.location.lat(),
+        lng: marker.place.geometry.location.lng()
       },
       onMutationComplete: (result) => {
         api.log('Mutation Complete For Address Editing', { result }, 'debug');
@@ -247,26 +276,34 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
     )
   }
 
+
+
   return (
     <InfoWindow onCloseClick={onCloseHandler}>
       <Paper elevation={0}>
         <Grid container direction="column">
           <Grid item container direction="row">
             <Grid item sm={12}>
-              <Typography variant="caption">{isExisting === true ? "Existing Address" : "Add Address"}</Typography>
+              <Typography variant="h6">{isExisting === true ? "Existing Address" : "Add Address"}</Typography>
             </Grid>
             <Grid item sm={12}>
-              <Typography variant="body2">{formatted_address}</Typography>
+              <Typography variant="body1">{formatted_address}</Typography>
             </Grid>
 
             <Grid item container direction="row">
-              <Grid item sm={12}>
-                <Typography variant="body2">Linked Clients: {linked_clients_count || 0}</Typography>
-              </Grid>
+              <Grid item sm={12} style={{ marginTop: '8px' }}>
+                <Tooltip title={linked_clients_count > 0 ? `There are ${linked_clients_count} clients linked to this address` : 'There are no client associated with this address'}>
+                  <Badge badgeContent={linked_clients_count || 0} color="secondary" showZero>
+                    <Icon>support_agent</Icon>
+                  </Badge>
+                </Tooltip>
 
-              <Grid item sm={12}>
-                <Typography variant="body2">Linked Sales Orders {linked_sales_orders_count || 0} </Typography>
-              </Grid>
+                <Tooltip title={linked_sales_orders_count > 0 ? `There are ${linked_sales_orders_count} sales orders linked to this address` : 'There are no sales orders associated with this address'}>
+                  <Badge badgeContent={linked_sales_orders_count || 0} color="secondary" showZero style={{ marginLeft: '8px' }}>
+                    <Icon>request_quote</Icon>
+                  </Badge>
+                </Tooltip>
+              </Grid>              
             </Grid>
           </Grid>
         </Grid>
@@ -275,7 +312,6 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
       </Paper>
     </InfoWindow>
   );
-
 }
 
 const CustomInfoWindowStyles = (theme: Theme, props: ReactoryCustomWindowProps): any => {
@@ -306,12 +342,15 @@ const CustomInfoWindowComponent = compose(
  * Properties inferface for the ReactoryMarker component
  */
 interface ReactoryMarkerProps {
+  index?: number,
   api?: Reactory.Client.IReactoryApi,
   onAddressDeleted?: Function,
   onAddressEdited?: Function,
   onAddressSelected?: Function,
   classes?: any,
   marker: IReactoryMarkerData,
+  onMarkerClicked?: (marker: IReactoryMarkerData, index: number) => void,
+  onToggleShowDetail?: () => void,
   [property: string]: any;
 };
 
@@ -322,16 +361,28 @@ interface IReactoryMarkerData {
   id: string,
   type: string | "existing" | "google",
   title: string,
+
   address?: any,
-  allow_move?: boolean,
   place?: google.maps.places.PlaceResult,
-}
+
+  allow_move?: boolean,
+  is_updating?: boolean,
+  selected?: boolean,
+  show_detail?: boolean,
+
+  componentFqn?: string,
+  componentProps?: any,
+  propertyMap?: {
+    [key: string]: string,
+  },
+
+  [property: string]: any
+};
 
 const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
 
-  const { marker, onClose, onSelectAddress, onRemoved, onPositionChanged, api, icon } = props
+  const { marker, onClose, onSelectAddress, onRemoved, onPositionChanged, api, icon, onMarkerClicked, index = -1 } = props
 
-  const [displayMarkerInfo, setDisplayMarkerInfo] = useState(false);
   const [position, setPosition] = useState({ lat: props.marker.place.geometry.location.lat(), lng: props.marker.place.geometry.location.lng() });
   const [isDeleted, setDeleted] = useState<boolean>(false);
 
@@ -340,7 +391,6 @@ const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
    * Triggered when the address is selected, passing it to the map component.
    */
   const onAddressSelected = () => {
-    setDisplayMarkerInfo(!displayMarkerInfo);
     if (onSelectAddress) {
 
       api.log(`LasecMarker => acceptAddress `, { marker }, "debug");
@@ -365,8 +415,9 @@ const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
   const google_marker_properties: MarkerProps = {
     position,
     icon,
-
-    onClick: () => { setDisplayMarkerInfo(!displayMarkerInfo); },
+    onClick: () => {
+      if (onMarkerClicked) onMarkerClicked(marker, index);
+    }
   };
 
 
@@ -376,13 +427,15 @@ const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
 
   return (
     <Marker {...google_marker_properties}>
-      {displayMarkerInfo && (
+      {marker.show_detail == true && (
         <CustomInfoWindowComponent
           onAddressSelected={onAddressSelected}
           onAddressDeleted={onAddressDeleted}
           onAddressPositionChanged={onAddressPositionChanged}
           onAddressEdited={onAddressEdited}
-          onClose={() => { setDisplayMarkerInfo(!displayMarkerInfo); }}
+          onClose={() => {
+            if (onMarkerClicked) onMarkerClicked(marker, index);
+          }}
           marker={marker}
         />
       )}
@@ -404,7 +457,12 @@ class MapControl extends Component<any, any> {
     this.divIndex = this.map.controls[this.props.position].push(this.controlDiv)
   }
   componentWillUnmount() {
-    this.map.controls[this.props.position].removeAt(this.divIndex)
+    try {
+      this.map.controls[this.props.position].removeAt(this.divIndex)
+    } catch (e) {
+
+    }
+
   }
   render() {
     return createPortal(this.props.children, this.controlDiv)
@@ -416,13 +474,14 @@ interface AddressListProps {
    * Array of address items. 
    * Object needs to have a title, lat & lng and type
    */
-  items: any[],
+  items: IReactoryMarkerData[],
   primaryTextField: string | Function,
   secondaryTextField: string | Function,
   avatarField?: string | Function,
   map?: google.maps.Map,
   show_avatar?: boolean,
   onSelectionChanged?: (items: any[]) => void,
+  onListItemClicked?: (item: IReactoryMarkerData, index) => void,
   [key: string]: any
 }
 
@@ -451,7 +510,7 @@ const AddressList = compose(
 )((props: AddressListProps) => {
   const classes = AddressStyles();
 
-  const { api, items, primaryTextField, secondaryTextField, map, show_avatar, avatarField, avatar, searching_remote, onSelectionChanged } = props;
+  const { api, items, primaryTextField, secondaryTextField, map, show_avatar, avatarField, avatar, searching_remote, onSelectionChanged, onListItemClicked } = props;
   const [checked, setChecked] = React.useState([]);
 
   const onItemCheckStateChange = (value: number) => () => {
@@ -510,6 +569,20 @@ const AddressList = compose(
             $avatar = avatar;
           }
 
+
+
+          if (address_item.is_updating === true) {
+            <ListItem className={classes.list_item}>
+              <ListItemAvatar>
+                {show_avatar === true && <Avatar className={classes.small}
+                  alt={"Saving"}><Icon>publish</Icon></Avatar>}
+              </ListItemAvatar>
+              <ListItemText primary={primaryText} secondary={secondaryText} />
+            </ListItem>
+          }
+
+
+
           if (searching_remote === true) {
             return (
               <ListItem className={classes.list_item}>
@@ -517,7 +590,7 @@ const AddressList = compose(
                   {show_avatar === true && <Avatar className={classes.small}
                     alt={"S"}>🕜</Avatar>}
                 </ListItemAvatar>
-                <ListItemText primary={"Searching..."} secondary={"Searching..."} onClick={address_item.onClick} />
+                <ListItemText primary={"Searching..."} secondary={"Searching..."} onClick={() => { onListItemClicked(address_item, index); }} />
               </ListItem>
             )
           } else {
@@ -528,7 +601,7 @@ const AddressList = compose(
                     alt={avatarAlt || primaryText}
                     src={avatar}></Avatar>}
                 </ListItemAvatar>
-                <ListItemText primary={primaryText} secondary={secondaryText} onClick={address_item.onClick} />
+                <ListItemText primary={primaryText} secondary={secondaryText} onClick={() => { onListItemClicked(address_item, index); }} />
                 <ListItemSecondaryAction>
                   <Checkbox edge="end" checked={checked.indexOf(index) !== -1} onChange={onItemCheckStateChange(index)} inputProps={{ "aria-labelledby": labelId }} />
                 </ListItemSecondaryAction>
@@ -571,6 +644,7 @@ const ReactoryMap = compose(
   withApi
 )((props: ReactoryMapProps) => {
 
+  const [_v, setV] = useState<number>(-1);
   const [searchTerm, setSearchTerm] = useState(props.searchTerm ? props.searchTerm : "");
   const [existing_addresses, setExistingAddresses] = useState<IReactoryMarkerData[]>([]);
   const [google_markers, setGoogleMarkers] = useState<IReactoryMarkerData[]>([])
@@ -584,6 +658,7 @@ const ReactoryMap = compose(
   const [remote_search_error, setRemoteSearchError] = useState<any>(null);
   const [show_remote_results, setShowRemoteResults] = useState<boolean>(true);
   const [show_google_results, setShowGoogleResults] = useState<boolean>(false);
+  const [show_confirm_deledte, setShowConfirmDelete] = useState<boolean>(false);
   const [selected_existing_addresses, setSelectedExistingAddress] = useState<any[]>([]);
 
   const {
@@ -823,6 +898,25 @@ const ReactoryMap = compose(
     onSelectionChanged: (items: any[]): void => {
       setSelectedExistingAddress(items);
     },
+    onListItemClicked: (item: IReactoryMarkerData, index: number) => {
+      const { cloneDeep } = api.utils.lodash;
+
+      const new_markers_data: IReactoryMarkerData[] = cloneDeep(existing_addresses);
+
+      if (item.show_detail === undefined || item.show_detail === null) {
+        new_markers_data[index].show_detail = true;
+      }
+      else {
+        new_markers_data[index].show_detail = !item.show_detail;
+      }
+
+      setMapCenter({
+        lat: item.place.geometry.location.lat(),
+        lng: item.place.geometry.location.lng()
+      });
+
+      setExistingAddresses(new_markers_data);
+    },
     api
   };
 
@@ -834,15 +928,17 @@ const ReactoryMap = compose(
     existing_marker_components = existing_addresses.map((marker: IReactoryMarkerData, index: number) => {
 
       const markerProps: ReactoryMarkerProps = {
+        index,
         key: index,
         title: marker.title,
         icon: {
           url: api.getThemeResource('images/favicon.ico'),
-          //size: new google.maps.Size(20, 32),
-          // The origin for this image is (0, 0).
-
         },
-        onSelectAddress: onAddressSelected,
+        onSelectAddress: (marker: IReactoryMarkerData) => {
+          if (props.onAddressSelected) {
+            props.onAddressSelected(marker);
+          }
+        },
         onAddressEdited: (address) => {
 
           //pull from google markers and 
@@ -864,6 +960,21 @@ const ReactoryMap = compose(
           pullAt(new_markers_data, [index]);
           setExistingAddresses(new_markers_data);
         },
+        onMarkerClicked: ($marker: IReactoryMarkerData, $index: number) => {
+
+          const { cloneDeep } = api.utils.lodash;
+
+          const new_markers_data: IReactoryMarkerData[] = cloneDeep(existing_addresses);
+
+          if ($marker.show_detail === undefined || $marker.show_detail === null) {
+            new_markers_data[$index].show_detail = true;
+          }
+          else {
+            new_markers_data[$index].show_detail = !$marker.show_detail;
+          }
+
+          setExistingAddresses(new_markers_data);
+        },
         marker,
       };
 
@@ -875,6 +986,7 @@ const ReactoryMap = compose(
     google_markers_components = google_markers.map((marker: IReactoryMarkerData, index: number) => {
 
       const markerProps: ReactoryMarkerProps = {
+        index,
         key: index,
         title: marker.title,
         onSelectAddress: onAddressSelected,
@@ -898,6 +1010,21 @@ const ReactoryMap = compose(
           pullAt(new_markers_data, [index]);
           setExistingAddresses(new_markers_data);
         },
+        onMarkerClicked: ($marker: IReactoryMarkerData, $index: number) => {
+
+          const { cloneDeep } = api.utils.lodash;
+
+          const new_markers_data: IReactoryMarkerData[] = cloneDeep(google_markers);
+
+          if ($marker.show_detail === undefined || $marker.show_detail === null) {
+            new_markers_data[$index].show_detail = true;
+          }
+          else {
+            new_markers_data[$index].show_detail = !$marker.show_detail;
+          }
+
+          setGoogleMarkers(new_markers_data);
+        },
         marker,
       };
 
@@ -906,6 +1033,8 @@ const ReactoryMap = compose(
   }
 
   let toolbar = null;
+  let dialog = null;
+
   if (selected_existing_addresses.length > 0) {
 
     const setLatLongForSelectedExistingAddresses = () => {
@@ -923,45 +1052,173 @@ const ReactoryMap = compose(
       }`
 
       selected_existing_addresses.forEach((selected_index: number) => {
-        const address_to_update = existing_addresses[selected_index];
+        const address_to_update: IReactoryMarkerData = existing_addresses[selected_index];
 
         address_to_update.address.lat = map_center.lat;
         address_to_update.address.lng = map_center.lng;
+        address_to_update.is_updating = true;
+        address_to_update.place.geometry.location = new google.maps.LatLng(map_center.lat, map_center.lng);
 
         const variables = {
           address_input: {
             id: address_to_update.id,
             lat: map_center.lat,
             lng: map_center.lng
-          }
+          },
         }
+
+        let $new_address_list = [...existing_addresses];
+        $new_address_list[selected_index] = address_to_update;
+
+        setExistingAddresses($new_address_list);
 
         api.graphqlMutation(mutation_text, variables).then((mutation_result: MutationResult) => {
           const { error, data, called, loading } = mutation_result;
 
           if (called === true && data) {
             data.LasecUpdateAddressPosition
+            address_to_update.is_updating = false
+            $new_address_list[selected_index] = address_to_update;
+            setExistingAddresses($new_address_list);
           }
 
           if (!error) {
             api.log(`Could not update the address position`, { error }, "error");
             api.createNotification(`Could not update the address ${address_to_update.title}`, { type: "error", canDismiss: true, timeout: 2500 });
           }
+        }).catch((update_error) => {
+          api.log(`Could not update the address position`, { update_error }, "error");
+          api.createNotification(`Could not update the address ${address_to_update.title}`, { type: "error", canDismiss: true, timeout: 2500 });
         })
       })
     };
 
+    const showConfirmDeleteAddress = () => {
+
+      setShowConfirmDelete(true);
+
+    };
+
+    const cancelDeleteAddress = () => {
+      setShowConfirmDelete(false);
+    };
+
+    const deleteSelectedAddresses = () => {
+      const mutation_text = `mutation LasecDeleteAddress($address_input: EditAddressInput){ 
+        LasecDelete(address_input: $address_input) {
+          success
+          message          
+        }
+      }`
+
+      selected_existing_addresses.forEach((selected_index: number) => {
+        const address_to_update = existing_addresses[selected_index];
+
+        address_to_update.is_updating = true;
+
+        const variables = {
+          address_input: {
+            id: address_to_update.id
+          }
+        }
+
+        let $new_address_list = [...existing_addresses];
+        $new_address_list[selected_index] = address_to_update;
+
+        setExistingAddresses($new_address_list);
+
+        api.graphqlMutation(mutation_text, variables).then((mutation_result: MutationResult) => {
+          const { error, data, called, loading } = mutation_result;
+
+          if (called === true && data) {
+            data.LasecUpdateAddressPosition
+            address_to_update.is_updating = false
+            api.utils.lodash.pullAt(selected_index);
+          }
+
+          if (!error) {
+            api.log(`Could not update the address position`, { error }, "error");
+            api.createNotification(`Could not update the address ${address_to_update.title}`, { type: "error", canDismiss: true, timeout: 2500 });
+          }
+        }).catch((update_error) => {
+          api.log(`Could not update the address position`, { update_error }, "error");
+          api.createNotification(`Could not update the address ${address_to_update.title}`, { type: "error", canDismiss: true, timeout: 2500 });
+        })
+      })
+    };
+
+    // <Tooltip title={`Click to delete the selected address${selected_existing_addresses.length > 1 ? 'es' : ''}`}><Button onClick={showConfirmDeleteAddress}><Icon style={{ color: palette.error.main }}>delete</Icon></Button></Tooltip>
+
     toolbar = (<ButtonGroup>
       <Tooltip title={"Click apply the lat and long to the selected addresses"}><Button onClick={setLatLongForSelectedExistingAddresses}><Icon>track_changes</Icon></Button></Tooltip>
-      <Tooltip title={`Click to delete the selected address${selected_existing_addresses.length > 1 ? 'es' : ''}`}><Button><Icon style={{ color: palette.error.main }}>delete</Icon></Button></Tooltip>
     </ButtonGroup>)
+
+    if (show_confirm_deledte === true) {
+      const Dialog = api.getComponent("core.AlertDialog@1.0.0");
+      const dialog_props = {
+        open: true,
+        onAccept: () => {
+          setShowConfirmDelete(false);
+          deleteSelectedAddresses();
+        },
+        cancelTitle: "Cancel",
+        acceptTitle: `Delete (${selected_existing_addresses.length})`,
+        showAccept: true,
+        cancelProps: { variant: "text", color: "#00b100" },
+        confirmProps: { variant: "text", color: palette.error.main },
+        onClose: () => { cancelDeleteAddress() },
+        fullWidth: true,
+        maxWidth: 'xl',
+        style: { height: `${Math.floor(window.innerHeight * 0.9)}px` },
+        title: `Confirm Delete Action`,
+      };
+      dialog = (
+        <Dialog {...dialog_props}>
+          <Typography variant="body2"> Please confirm you want to delete {selected_existing_addresses.length} address. </Typography>
+        </Dialog>
+      );
+    }
+
   }
 
   let center_label = `lat: ${map_center.lat} lng: ${map_center.lng}`
 
+  let existing_address_component = null;
+
+  existing_address_component = (
+    <MapControl position={google.maps.ControlPosition.LEFT_TOP}>
+      <Paper style={{ marginLeft: '16px', padding: '8px' }}>
+        <React.Fragment>
+          <Grid container spacing={1}>
+            <Grid item container direction="row">
+              <Grid item sm={12}>Existing Addresses</Grid>
+            </Grid>
+          </Grid>
+          <Grid item>
+            <Grid item container direction="row">
+              <Grid item sm={12}>
+                <Typography variant="caption"><Icon>gps_fixed</Icon>{center_label}</Typography>
+              </Grid>
+            </Grid>
+          </Grid>
+          <Grid>
+            <Grid item container direction="row">
+              <Grid item sm={12}>
+                {toolbar}
+              </Grid>
+            </Grid>
+          </Grid>
+          <AddressList {...address_list_props} ></AddressList>
+          <Pagination count={remote_page_count} page={remote_page} variant="outlined" color="secondary" onChange={remote_search_page_change} />
+        </React.Fragment>
+      </Paper>
+    </MapControl>
+  );
+
   return (
     <GoogleMap
       ref={onMapMounted}
+      data-v={_v}
       defaultZoom={8}
       defaultCenter={DefaultCenter}
       center={map_center}
@@ -1017,33 +1274,7 @@ const ReactoryMap = compose(
       </SearchBox>
       {google_markers_components}
       {existing_marker_components}
-      <MapControl position={google.maps.ControlPosition.LEFT_TOP}>
-        <Paper style={{ marginLeft: '16px', padding: '8px' }}>
-          <React.Fragment>
-            <Grid container spacing={ 1 }>
-              <Grid item container direction="row">
-                <Grid item sm={12}>Existing Addresses</Grid>
-              </Grid>
-            </Grid>
-            <Grid item>
-              <Grid item container direction="row">
-                <Grid item sm={12}>
-                  <Typography variant="caption"><Icon>gps_fixed</Icon>{ center_label }</Typography>
-                </Grid>
-              </Grid>              
-            </Grid>
-            <Grid>
-              <Grid item container direction="row">
-                <Grid item sm={12}>
-                  {toolbar}
-                </Grid>
-              </Grid>
-            </Grid>            
-            <AddressList {...address_list_props} ></AddressList>
-            <Pagination count={remote_page_count} page={remote_page} variant="outlined" color="secondary" onChange={remote_search_page_change} />
-          </React.Fragment>
-        </Paper>
-      </MapControl>
+      { show_remote_results === true && existing_address_component}
     </GoogleMap>
   );
 });
