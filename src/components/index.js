@@ -71,8 +71,8 @@ import ProductCardComponent from './shared/ProductCardComponent';
 import NotFoundComponent from './shared/NotFoundComponent';
 import DocumentListComponent from './shared/DocumentListComponent';
 import DocumentUploadComponent from './shared/DocumentUploadComponents';
-import FreightRequestQuoteComponent from './shared/FreightRequestQuote';
-import FreightRequestProductDetailComponent from './shared/FreightRequestProductDetail';
+import * as MaterialTable from 'material-table';
+
 import ReactoryFormEditor from './shared/FormEditor';
 
 import lodash from 'lodash';
@@ -110,6 +110,7 @@ export const CompanyLogo = (props) => {
 };
 
 
+
 export const componentRegistery = [
   {
     nameSpace: 'react',
@@ -132,22 +133,6 @@ export const componentRegistery = [
     version: '1.0.0',
     component: lodash
   },
-
-  // TO IMPLEMENT IN LASEC PLUGINS
-  {
-    nameSpace: 'lasec',
-    name: 'FreightRequestQuoteComponent',
-    component: FreightRequestQuoteComponent,
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'lasec',
-    name: 'FreightRequestProductDetailComponent',
-    component: FreightRequestProductDetailComponent,
-    version: '1.0.0'
-  },
-
-
   {
     nameSpace: 'core',
     name: 'ChipLabel',
@@ -728,7 +713,8 @@ export const componentRegistery = [
       MaterialIcons,
       MaterialLab,
       MaterialStyles,
-      MaterialPickers,      
+      MaterialPickers,
+      MaterialTable
     },
   },
   {
