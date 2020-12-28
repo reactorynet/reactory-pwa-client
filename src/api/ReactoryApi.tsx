@@ -1147,7 +1147,7 @@ class ReactoryApi extends EventEmitter {
   status(options = { emitLogin: false }) {
     const that = this;
     return new Promise((resolve, reject) => {
-      this.forms(true).then(() => {
+      that.forms(true).then(() => {
         that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
           if (result.data.apiStatus.status === "API OK") {
             that.setUser({ ...result.data.apiStatus });

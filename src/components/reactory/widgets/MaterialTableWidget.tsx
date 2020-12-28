@@ -128,6 +128,7 @@ class MaterialTableWidget extends Component<any, any> {
 
   componentDidCatch(err) {
     this.props.api.log(`MaterialWidgetError out of componentBoundary error`, { err }, 'error');
+    throw err
   }
 
   refreshHandler(eventName, eventData) {

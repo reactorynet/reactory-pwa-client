@@ -168,7 +168,9 @@ class SelectWithDataWidget extends Component {
                 onChange={onSelectChanged}
                 name={this.props.idSchema.$id}
                 variant={variant}
-                input={<InputComponent id={this.props.idSchema.$id} value={this.props.formData ? this.props.formData.trim() : ""} />}
+                input={
+                  <InputComponent id={this.props.idSchema.$id} value={ typeof this.props.formData === 'string' ? this.props.formData.trim() : ""} />
+                }
                 renderValue={(selected) => {
 
                   if (!selected || selected == 'undefined' || selected.length === 0) {

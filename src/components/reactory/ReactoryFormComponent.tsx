@@ -1396,7 +1396,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             NumberField: (props: any, context: any) => {
               const nilf = () => ({});
               const { uiSchema, registry, onChange } = props;
-              const uiOptions = uiSchema['ui:options'] || { readOnly: false };
+              const uiOptions = uiSchema['ui:options'] || { readOnly: false, format: 'int', precision: 8 };
 
               if (uiSchema["ui:widget"]) {
                 const Widget = registry.widgets[uiSchema["ui:widget"]];
@@ -1406,7 +1406,21 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                 let args = {};
                 const onInputChanged = (evt) => {
                   evt.persist();
-                  onChange(evt.target.value);
+
+                  let value: number = 0;
+
+                  switch (uiOptions.format) {
+                    case 'float': {
+                      value = parseFloat(evt.target.value);
+                      break;
+                    }
+                    case 'int':
+                    default: {
+                      value = parseInt(evt.target.value);
+                    }
+                  }
+                  
+                  onChange(value);
                 };
 
                 return (<Input

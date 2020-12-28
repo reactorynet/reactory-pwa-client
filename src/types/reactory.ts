@@ -1,9 +1,12 @@
 
 import moment from 'moment';
 import { TemplateOptions } from 'lodash';
-import ApolloClient from 'apollo-client';
 import { TemplateType, UIFrameWork } from './constants';
-
+import {
+  ApolloClient,
+  MutationResult,
+  QueryResult
+} from "@apollo/client";
 
 namespace Reactory {
 
@@ -125,9 +128,9 @@ namespace Reactory {
 
       trackFormInstance(formInstance): void;
 
-      graphqlMutation(mutation, variables, options: any): void;
+      graphqlMutation(mutation, variables, options: any): Promise<MutationResult>;
 
-      graphqlQuery(query, variables, options: any): void;
+      graphqlQuery(query, variables, options: any): Promise<QueryResult>;
 
       afterLogin(user): any;
 
