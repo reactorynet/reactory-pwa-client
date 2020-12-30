@@ -13,4 +13,4 @@ declare global {
 }
 
 declare module 'object-mapper';
-declare module 'googlemaps';
+// declare module 'googlemaps';

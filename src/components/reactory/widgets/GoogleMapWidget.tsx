@@ -12,10 +12,6 @@ import {
 } from "react-google-maps";
 import { MAP } from 'react-google-maps/lib/constants'
 import { MarkerWithLabel } from 'react-google-maps/lib/components/addons/MarkerWithLabel';
-
-
-import "googlemaps";
-
 import SearchBox from "react-google-maps/lib/components/places/SearchBox";
 import { withStyles, withTheme } from "@material-ui/core/styles";
 import { withApi } from "@reactory/client-core/api/ApiProvider";
@@ -60,6 +56,7 @@ import ReactoryApi from "api";
 import { QueryResult } from "react-apollo";
 import { Address } from "cluster";
 import { MutationResult } from "@apollo/client";
+
 
 const DefaultCenter = { lat: -33.93264, lng: 18.4911213 };
 
