@@ -316,10 +316,27 @@ class MaterialTableWidget extends Component<any, any> {
                 api.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
               }
 
-              const { refreshEvents } = queryDefinition;
+              const { refreshEvents, waitUntil, waitTimeout = 3000 } = queryDefinition;
 
               api.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables, query }, 'debug')
               let variables = api.utils.objectMapper({ ...self, formContext, query }, uiOptions.variables || queryDefinition.variables);
+
+              if (waitUntil && waitUntil !== "") {
+                
+                let must_wait = true;
+                let wait_start = new Date().valueOf();
+
+                const do_wait = () => {
+                  must_wait = api.utils.template(waitUntil)({ formContext, api }) !== "true";
+                  if(must_wait === true)
+                    if (new Date().valueOf() - wait_start > waitTimeout) must_wait = false;
+                  
+                  if (must_wait === true) do_wait();
+                }
+
+                do_wait();
+                
+              }
 
               variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
               api.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
