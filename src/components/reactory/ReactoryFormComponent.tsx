@@ -665,14 +665,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     let activeUiSchemaModel = null;
 
     /**
-     * If the form supports multiple schemas,
-     * we need to determine which is the preffered, currently
+     * If the form supports multiple schemas, 
+     * we need to determine which is the preffered, currently 
      * active one.
      */
     if (formDef.uiSchemas) {
       const { DropDownMenu } = this.componentDefs;
 
-      // Even handler for the schema selector menu
+      // Even handler for the schema selector menu 
       const onSchemaSelect = (evt: Event, menuItem: Reactory.IUISchemaMenuItem) => {
         api.log(`UI Schema Selector onSchemaSelect "${menuItem.title}" selected`, { evt, menuItem })
         _reactoryFormComponent.setState({ activeUiSchemaMenuItem: menuItem })
@@ -680,7 +680,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       //get active based on selected
       const { activeUiSchemaMenuItem } = _reactoryFormComponent.state;
-      // if there is an active with a key
+      // if there is an active with a key      
       if (activeUiSchemaMenuItem !== null && activeUiSchemaMenuItem.key) {
         activeUiSchemaModel = activeUiSchemaMenuItem;
       }
@@ -700,7 +700,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       if (formUiOptions && formUiOptions.schemaSelector && activeUiSchemaModel) {
         if (formUiOptions.schemaSelector.variant === "icon-button") {
-          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px', zIndex: 1000 };
+          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px' };
           if (formUiOptions.schemaSelector.style) {
             schemaStyle = formUiOptions.schemaSelector.style;
           }
@@ -712,7 +712,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             allowed_schema.forEach((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
 
               /**
-               * We hook uip the event handler for each of the schema selection options.
+               * We hook uip the event handler for each of the schema selection options.               
                */
               const onSelectUiSchema = () => {
                 // self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
@@ -760,17 +760,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           };
 
           // let defaultStyle =
-          let schemaStyle: CSSProperties = { position: "absolute", top: '10px', right: '10px', zIndex: 1000 };
+          let schemaStyle: CSSProperties = { position: "absolute", top: '10px', right: '10px' };
           if (formUiOptions.schemaSelector.style) {
-            schemaStyle = {
-              ...schemaStyle,
-              ...formUiOptions.schemaSelector.style
-            }
+            schemaStyle = formUiOptions.schemaSelector.style;
           }
-
-          let buttonStyle = {
-            ...formUiOptions.schemaSelector.buttonStyle
-          };
 
           let p = {
             style: schemaStyle
@@ -780,21 +773,9 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             //@ts-ignore
             <div {...p}>
               {
-                // formUiOptions.schemaSelector.buttonVariant && formUiOptions.schemaSelector.buttonVariant == 'contained' ?
-                formUiOptions.schemaSelector.buttonVariant ?
-                  <Button
-                    id="schemaButton"
-                    onClick={onSelectUiSchema}
-                    color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"}
-                    variant={formUiOptions.schemaSelector.buttonVariant}
-                    style={buttonStyle}
-                  >{formUiOptions.schemaSelector.buttonTitle}</Button> :
-                  <Button
-                    id="schemaButton"
-                    style={{ fontWeight: 'bold', fontSize: '1rem' }}
-                    onClick={onSelectUiSchema}
-                    color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"}
-                  >{formUiOptions.schemaSelector.buttonTitle}</Button>
+                formUiOptions.schemaSelector.buttonVariant && formUiOptions.schemaSelector.buttonVariant == 'contained' ?
+                  <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} variant="contained">{formUiOptions.schemaSelector.buttonTitle}</Button> :
+                  <Button id="schemaButton" style={{ fontWeight: 'bold', fontSize: '1rem' }} onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} >{formUiOptions.schemaSelector.buttonTitle}</Button>
               }
             </div>
           )
@@ -1189,9 +1170,10 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
       //TODO: Updated / fix types so that errors is available on result
       if (query.autoQuery === false && that.state.autoQueryDisabled === false) {
         that.setState({ queryComplete: true, dirty: false, allowRefresh: true, loading: false });
-      } else {
+      } else {        
 
         const executeFormQuery = () => {
+         
           api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${that.instanceId} => Executing form auto form query`)
           const query_start = new Date().valueOf();
           api.graphqlQuery(gql(query.text), _variables).then((result: any) => {
@@ -1365,7 +1347,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     }
 
     //state selected option must override the property set item
-    //as the user can change the current active item either programmatically
+    //as the user can change the current active item either programmatically 
     //or via UX element.
     if (activeUiSchemaMenuItem && activeUiSchemaMenuItem.uiSchema) {
       api.log(`ReactoryComponent => ${_formDef.nameSpace}${_formDef.name}@${_formDef.version} instanceId=${that.instanceId} => Setting activeUiSchemaMenuItem ${activeUiSchemaMenuItem.title}`, { activeUiSchemaMenuItem }, 'debug');
@@ -1375,7 +1357,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     // #region setup functions
     const setFormContext = () => {
       if (!_formDef.formContext) _formDef.formContext = {};
-      //we combine the form context from the getter function, with the formContext property / object on the _formDef
+      //we combine the form context from the getter function, with the formContext property / object on the _formDef 
       _formDef.formContext = { ...that.getFormContext(), ..._formDef.formContext };
     };
 
@@ -1419,7 +1401,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
                       value = parseInt(evt.target.value);
                     }
                   }
-                  
+
                   onChange(value);
                 };
 
@@ -1629,22 +1611,23 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     });
   }
 
-  onChange(data, errorSchema) {
+  onChange(data: any, errorSchema: any) {
 
     const { api, mode } = this.props;
     const { formDef, queryComplete, queryError, dirty, _instance_id } = this.state;
     const self = this;
-    api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { data, formDef }, 'debug');
+    api.log(`ReactoryComponent => ${formDef.nameSpace}.${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { data, formDef }, 'debug');
 
-    if (deepEquals(this.state.formData, data.formData) === false) {
+    if (deepEquals(self.state.formData, data.formData) === false) {
 
-      const { formDef, queryComplete, queryError, dirty } = this.state;
-      api.log(`${formDef.name}[${this.instanceId}].onChange`, { data }, 'debug');
+      api.log(`${formDef.name}[${self.instanceId}].onChange`, { data }, 'debug');
 
-      const $onChange = this.props.onChange;
+      const $onChange = self.props.onChange;
 
       const trigger_onChange = $onChange && typeof $onChange === 'function';
 
+      const changed = diff(data.formData, this.state.formData);
+      const rchanged = diff(this.state.formData, data.formData);
 
       let cancelEvent = false;
 
@@ -1665,8 +1648,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         $onChange(data.formData, data.errorSChema, { before: changed, after: rchanged, self });
       }
 
-      const changed = diff(data.formData, this.state.formData);
-      const rchanged = diff(this.state.formData, data.formData);
+      
       api.log(`ReactoryComponent => ${formDef.nameSpace}.${formDef.name}@${formDef.version} instanceId=${_instance_id} => onChange`, { changed, rchanged }, 'debug');
 
       if (formDef.graphql && formDef.graphql.mutation && formDef.graphql.mutation['onChange']) {
@@ -1824,13 +1806,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} =>  render()`, { self }, 'debug')
     const intersectionProps: any = {
       onShow: (entries) => {
-        api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} => Component Visible ${self.instanceId}`, entries, 'debug');
+        //api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} => Component Visible ${self.instanceId}`, entries, 'debug');
       },
       onHide: (entries) => {
-        api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} => Component Hide ${self.instanceId}`, entries, 'debug');
+        //api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} => Component Hide ${self.instanceId}`, entries, 'debug');
       },
       onIntersect: (entries) => {
-        api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} => Component Intersect ${self.instanceId}`, entries, 'debug');
+        //api.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${self.instanceId} => Component Intersect ${self.instanceId}`, entries, 'debug');
       }
     }
 

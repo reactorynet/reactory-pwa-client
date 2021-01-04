@@ -84,15 +84,7 @@ class FullScreenDialog extends Component {
       this.setState({ open: false });
     }
   };
-
-  componentDidUpdate(prevProps, prevState) {
-    const { api } = this.props;
-
-    api.log('FullScreenDialog.js componentDidUpdate(prevProps, prevState)', { prevProps, prevState }, 'debug');
-
-
-  }
-
+  
   componentDidMount() {
     const { closeOnEvents = [], api } = this.props;
     closeOnEvents.map((eventName) => api.on(eventName, this.handleClose))

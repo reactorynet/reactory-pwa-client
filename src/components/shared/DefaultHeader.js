@@ -536,7 +536,6 @@ ApplicationHeader.styles = theme => ({
     justifyContent: 'space-between',
     minWidth: '260px',
     padding: `0 ${theme.spacing(1)}px`,
-    //height: theme.spacing.
   },
   nested: {
     paddingLeft: theme.spacing(4),

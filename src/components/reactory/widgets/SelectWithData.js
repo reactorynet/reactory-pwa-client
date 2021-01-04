@@ -110,8 +110,9 @@ class SelectWithDataWidget extends Component {
         resultsMap,
         resultItem,
         multiSelect,
-        selectProps = {},
-        labelStyle = {},
+        selectProps = { },
+        labelStyle = { },
+        labelProps = { visible: true },
         formControlProps = {}
       } = this.props.uiSchema['ui:options'];
       const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
@@ -132,7 +133,7 @@ class SelectWithDataWidget extends Component {
       }
 
       return (
-        <Query query={gql`${query}`} variables={variables} fetchPolicy="cache-and-network" >
+        <Query query={gql`${query}`} variables={variables} fetchPolicy="cache-first" >
           {(props) => {
             const { data, loading, error } = props;
 
@@ -143,7 +144,7 @@ class SelectWithDataWidget extends Component {
             }];
 
             if (loading === true) return (<p>Loading lookups</p>)
-            if (error) return (<p>Error Loading lookup: {error}</p>)
+            if (error) return (<p>Error Loading lookup: {error.message}</p>)
             let key_map = {
               'loading': menuItems[0]
             };
@@ -216,7 +217,7 @@ class SelectWithDataWidget extends Component {
 
             return (
               <FormControl {...formControlProps} variant={variant}>
-                <InputLabel {...inputLabelProps} htmlFor={this.props.idSchema.$id} required={required}>{this.props.schema.title}</InputLabel>
+                {labelProps.visible === true && <InputLabel {...inputLabelProps} htmlFor={this.props.idSchema.$id} required={required}>{this.props.schema.title}</InputLabel>}
                 {select_control}
               </FormControl>)
           }}
