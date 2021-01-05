@@ -665,8 +665,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     let activeUiSchemaModel = null;
 
     /**
-     * If the form supports multiple schemas, 
-     * we need to determine which is the preffered, currently 
+     * If the form supports multiple schemas,
+     * we need to determine which is the preffered, currently
      * active one.
      */
     if (formDef.uiSchemas) {
@@ -680,7 +680,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       //get active based on selected
       const { activeUiSchemaMenuItem } = _reactoryFormComponent.state;
-      // if there is an active with a key      
+      // if there is an active with a key
       if (activeUiSchemaMenuItem !== null && activeUiSchemaMenuItem.key) {
         activeUiSchemaModel = activeUiSchemaMenuItem;
       }
@@ -700,7 +700,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
       if (formUiOptions && formUiOptions.schemaSelector && activeUiSchemaModel) {
         if (formUiOptions.schemaSelector.variant === "icon-button") {
-          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px' };
+          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px', zIndex: 1000 };
           if (formUiOptions.schemaSelector.style) {
             schemaStyle = formUiOptions.schemaSelector.style;
           }
@@ -712,7 +712,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             allowed_schema.forEach((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
 
               /**
-               * We hook uip the event handler for each of the schema selection options.               
+               * We hook uip the event handler for each of the schema selection options.
                */
               const onSelectUiSchema = () => {
                 // self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
@@ -760,10 +760,17 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           };
 
           // let defaultStyle =
-          let schemaStyle: CSSProperties = { position: "absolute", top: '10px', right: '10px' };
+          let schemaStyle: CSSProperties = { position: "absolute", top: '10px', right: '10px', zIndex: 1000 };
           if (formUiOptions.schemaSelector.style) {
-            schemaStyle = formUiOptions.schemaSelector.style;
+            schemaStyle = {
+              ...schemaStyle,
+              ...formUiOptions.schemaSelector.style
+            }
           }
+
+          let buttonStyle = {
+            ...formUiOptions.schemaSelector.buttonStyle
+          };
 
           let p = {
             style: schemaStyle
@@ -773,9 +780,21 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
             //@ts-ignore
             <div {...p}>
               {
-                formUiOptions.schemaSelector.buttonVariant && formUiOptions.schemaSelector.buttonVariant == 'contained' ?
-                  <Button id="schemaButton" onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} variant="contained">{formUiOptions.schemaSelector.buttonTitle}</Button> :
-                  <Button id="schemaButton" style={{ fontWeight: 'bold', fontSize: '1rem' }} onClick={onSelectUiSchema} color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"} >{formUiOptions.schemaSelector.buttonTitle}</Button>
+                // formUiOptions.schemaSelector.buttonVariant && formUiOptions.schemaSelector.buttonVariant == 'contained' ?
+                formUiOptions.schemaSelector.buttonVariant ?
+                  <Button
+                    id="schemaButton"
+                    onClick={onSelectUiSchema}
+                    color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"}
+                    variant={formUiOptions.schemaSelector.buttonVariant}
+                    style={buttonStyle}
+                  >{formUiOptions.schemaSelector.buttonTitle}</Button> :
+                  <Button
+                    id="schemaButton"
+                    style={{ fontWeight: 'bold', fontSize: '1rem' }}
+                    onClick={onSelectUiSchema}
+                    color={formUiOptions.schemaSelector.activeColor ? formUiOptions.schemaSelector.activeColor : "primary"}
+                  >{formUiOptions.schemaSelector.buttonTitle}</Button>
               }
             </div>
           )
@@ -1347,7 +1366,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     }
 
     //state selected option must override the property set item
-    //as the user can change the current active item either programmatically 
+    //as the user can change the current active item either programmatically
     //or via UX element.
     if (activeUiSchemaMenuItem && activeUiSchemaMenuItem.uiSchema) {
       api.log(`ReactoryComponent => ${_formDef.nameSpace}${_formDef.name}@${_formDef.version} instanceId=${that.instanceId} => Setting activeUiSchemaMenuItem ${activeUiSchemaMenuItem.title}`, { activeUiSchemaMenuItem }, 'debug');
@@ -1357,7 +1376,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     // #region setup functions
     const setFormContext = () => {
       if (!_formDef.formContext) _formDef.formContext = {};
-      //we combine the form context from the getter function, with the formContext property / object on the _formDef 
+      //we combine the form context from the getter function, with the formContext property / object on the _formDef
       _formDef.formContext = { ...that.getFormContext(), ..._formDef.formContext };
     };
 
