@@ -12,7 +12,7 @@ import { Mutation, Query  } from '@apollo/client/react/components';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
-import lodash, { intersection, isArray, isEmpty, isNil, template } from 'lodash';
+import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic } from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
 import {
@@ -940,7 +940,7 @@ class ReactoryApi extends EventEmitter {
     this.emit('componentRegistered', fqn);
   }
 
-  getComponents(componentFqns = []) {
+  getComponents(componentFqns = []): any {
     let componentMap = {};
     componentFqns.forEach(fqn => {
       let component = null;

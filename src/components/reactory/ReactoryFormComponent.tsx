@@ -131,7 +131,8 @@ export interface ReactoryFormProperties {
   formData: any;
   formDef?: any;
   location: any;
-  api: any;
+  api: ReactoryApi;
+  reactory: ReactoryApi,
   formId: string,
   helpTopics?: string[],
   helpTitle?: string,
@@ -191,7 +192,8 @@ export interface ReactoryFormState {
   boundaryError?: Error,
   notificationComplete: boolean,
   mutate_complete_handler_called: boolean,
-  last_query_exec?: number
+  last_query_exec?: number,
+  form_created: number
 }
 
 const AllowedSchemas = (uiSchemaItems: Reactory.IUISchemaMenuItem[], mode = 'view', size = 'md') => {
@@ -240,8 +242,20 @@ const initialState = (props) => ({
   autoQueryDisabled: props.autoQueryDisabled || false,
   notificationComplete: true,
   mutate_complete_handler_called: false,
-  last_query_exec: null
-})
+  last_query_exec: null,
+  form_created: new Date().valueOf()
+});
+
+const default_dependencies = () => {
+  return [
+    'core.Loading',
+    'core.Logo',
+    'core.FullScreenModal',
+    'core.DropDownMenu',
+    'core.HelpMe',
+    'core.ReportViewer'
+  ];
+};
 
 class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormState> {
 
@@ -265,6 +279,8 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   };
 
   static defaultProps: ReactoryFormProperties = {
+    api: null,
+    reactory: null,
     formId: 'default',
     uiSchemaId: 'default',
     uiFramework: 'schema',
@@ -278,7 +294,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     query: {
 
     },
-    api: null,
     data: null,
     formData: null,
     history: null,
@@ -302,7 +317,14 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
 
 
   constructor(props: ReactoryFormProperties, context: any) {
-    super(props, context);
+    super(props);
+
+    // if there are event handlers defined for the form
+    // bind them here.  This allows properties to be passed
+    // in that binds event handlers raised by other components 
+    // in the form child tree.
+
+    const { reactory } = props;
 
     if (props.events) {
       Object.getOwnPropertyNames(props.events).map((eventName) => {
@@ -310,17 +332,19 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
           this.$events.on(eventName, props.events[eventName]);
         }
       });
-    }
-    this.on = this.on.bind(this);
+    };
 
-    const _instance_id = uuid();
-    let _state = { ...initialState(props) };
-    this.instanceId = _state._instance_id;
-
+    const _state = { ...initialState(props) };
+    
     if (_state.query.uiFramework) {
       _state.uiFramework = _state.query.uiFramework
     }
-
+    
+    this.state = _state;
+    
+    
+    this.instanceId = _state._instance_id;
+    this.on = this.on.bind(this);    
     this.onSubmit = this.onSubmit.bind(this);
     this.onChange = this.onChange.bind(this);
     this.onCommand = this.onCommand.bind(this);
@@ -328,16 +352,11 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     this.formDef = this.formDef.bind(this);
     this.renderForm = this.renderForm.bind(this);
     this.renderWithQuery = this.renderWithQuery.bind(this);
-    this.state = _state;
-    this.defaultComponents = [
-      'core.Loading',
-      'core.Logo',
-      'core.FullScreenModal',
-      'core.DropDownMenu',
-      'core.HelpMe',
-      'core.ReportViewer'
-    ];
-    this.componentDefs = props.api.getComponents(this.defaultComponents);
+
+    
+
+    this.componentDefs = props.api.getComponents(default_dependencies());
+
     this.getFormContext = this.getFormContext.bind(this);
     this.getFormData = this.getFormData.bind(this);
     this.getReportWidget = this.getReportWidget.bind(this);
@@ -397,7 +416,6 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
   }
 
   componentWillReceiveProps(nextProps: any) {
-
 
     const self = this;
     this.props.api.log('ReactoryForm.componentWillReceiveProps', { nextProps, currentProps: self.props }, 'debug');
@@ -1630,6 +1648,13 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
     });
   }
 
+  /**
+   * The Form onChange handler.
+   * This event will fire when the data is set either via a graphql query
+   * or when the data is set the first time.
+   * @param data 
+   * @param errorSchema 
+   */
   onChange(data: any, errorSchema: any) {
 
     const { api, mode } = this.props;
@@ -1781,23 +1806,7 @@ class ReactoryComponent extends Component<ReactoryFormProperties, ReactoryFormSt
         if (formDef.componentDefs) {
           that.componentDefs = that.props.api.getComponents([...that.defaultComponents, ...formDef.componentDefs]);
         }
-
-        /*
-        let _activeUiSchemaMenuItem = null;
-        if (isArray(formDef.uiSchemas) === true && formDef.uiSchemas.length > 0) {
-
-          if (formDef.uiSchema === undefined || formDef.uiSchema === null) {
-            _activeUiSchemaMenuItem = formDef.uiSchemas[0];
-          } else {
-            _activeUiSchemaMenuItem = {
-              id: 'default',
-              key: 'default',
-              title: 'Default',
-              uiSchema: formDef.uiSchema,
-            }
-          }
-        }
-        */
+        
         //TODO: WW check why we needed to set the activeUISchemaMenuItem after downloading the forms.
         //that should be set by the ovveriding uiSchemaKey
         that.setState({ forms: forms, forms_loaded: true, loading: false, formDef });
