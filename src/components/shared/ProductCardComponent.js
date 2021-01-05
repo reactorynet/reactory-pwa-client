@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { compose } from 'recompose';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { withStyles, makeStyles, withTheme } from '@material-ui/core/styles';
+import { isArray, template, indexOf } from 'lodash';
 // import { withTheme } from '@material-ui/styles';
 import PropTypes from 'prop-types';
 import {
@@ -16,6 +17,8 @@ import {
   Fab,
   Tooltip,
 } from '@material-ui/core';
+
+import StyledCurrencyWidget from './StyledCurrencyLabel';
 
 const CutomTooltip = withStyles((theme) => ({
   tooltip: {
@@ -133,9 +136,19 @@ class ProductCardWidget extends Component {
 
     let _currenciesDisplayed = ['USD', 'EUR', 'GBP', 'ZAR'];
     let _showSpecialPricing = false;
+    let _showPricing = false;
 
     if (cardContent.showSpecialPricing != undefined) _showSpecialPricing = cardContent.showSpecialPricing;
-    if (cardContent.currenciesDisplayed != undefined) _currenciesDisplayed = cardContent.currenciesDisplayed;
+    if (cardContent.showPricing != undefined) _showPricing = cardContent.showPricing;
+
+    if (cardContent.currenciesDisplayed != undefined) {
+      if (!isArray(cardContent.currenciesDisplayed)) {
+        let currenciesArray = template(cardContent.currenciesDisplayed)(props).split(',');
+        _currenciesDisplayed = currenciesArray;
+      } else {
+        _currenciesDisplayed = cardContent.currenciesDisplayed;
+      }
+    }
 
     const copyClickHandler = (labelText) => {
       var tempInput = document.createElement('input');
@@ -190,7 +203,7 @@ class ProductCardWidget extends Component {
       },
       childProps: {
         style: {
-          
+
         }
       },
       slideDirection: 'left',
@@ -204,6 +217,24 @@ class ProductCardWidget extends Component {
 
     let IconComponent = theme.extensions['reactory'].icons['OnSyspro'];
     let iconProps = { style: { color: sysProIconColor } }
+
+    const pricingProps = {
+      currencies: formData.productPricing ? formData.productPricing.filter(item => _currenciesDisplayed.includes(item.currency_code)) : [],
+      value: formData.price,
+      displayAdditionalCurrencies: true,
+      displayPrimaryCurrency: false,
+      currenciesDisplayed: _currenciesDisplayed,
+      region: 'en-IN',
+      uiSchema: {
+        'ui:options': {
+          prependText: '(ZAR)',
+          defaultStyle: {
+            fontSize: '0.9em',
+            margin: 0
+          },
+        }
+      }
+    }
 
     return (
       <Card classes={{ root: classes.root }}>
@@ -221,7 +252,7 @@ class ProductCardWidget extends Component {
               data.onSyspro != '' && sysProIconColor != '' && <Grid item xs={2}>
                 <Tooltip placement="right-start" title={tooltipTitle(data.onSyspro)}>
                   {/* <Icon style={{ color: sysProIconColor }}>info</Icon> */}
-                  <div style={{ textAlign: "right"}}>
+                  <div style={{ textAlign: "right" }}>
                     <IconComponent {...iconProps} />
                   </div>
                 </Tooltip>
@@ -266,6 +297,21 @@ class ProductCardWidget extends Component {
                     )
                   })
                 }
+
+                {
+                  _showPricing &&
+                  <>
+                    <Grid item xs={7}>
+                      <Typography variant="body2" classes={{ root: classes.fieldLabel }}>
+                        <Icon classes={{ root: classes.fieldLabelIcon }}>attach_money</Icon> <strong>Price</strong>
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <StyledCurrencyWidget {...pricingProps} />
+                    </Grid>
+                  </>
+                }
+
                 {
                   _showSpecialPricing && formData.onSpecial && <>
                     <Grid item xs={7}>
