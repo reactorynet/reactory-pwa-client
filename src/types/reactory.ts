@@ -359,7 +359,7 @@ namespace Reactory {
   }
 
   export interface IReactoryEvent {
-    name: String,
+    name: string,
     data?: any | undefined,
   }
 
