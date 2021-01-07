@@ -109,8 +109,6 @@ export const CompanyLogo = (props) => {
   return <Logo {...logoProps} />
 };
 
-
-
 export const componentRegistery = [
   {
     nameSpace: 'react',
@@ -768,12 +766,19 @@ export const componentRegistery = [
   {
     nameSpace: 'apollo-client',
     name: 'ApolloClient',
-    version: '3.2.7',
+    version: '3.2.7',    
     component: {
       core: require('@apollo/client'),
       react: require('@apollo/client/react'),
       hoc: require('@apollo/client/react/hoc'),
       components: require('@apollo/client/react/components'),
     }
+  },
+  
+  {
+    nameSpace: 'exceljs',
+    name: 'ExcelJS',
+    version: '3.4.0',
+    component: require('exceljs'),    
   }
 ];
