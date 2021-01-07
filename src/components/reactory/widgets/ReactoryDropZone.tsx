@@ -125,35 +125,35 @@ class ReactoryDropZone extends Component<any, any> {
     }
 
     const dropHandler = (acceptedFiles) => {
-      
-      self.setState({ uploading: true }, ()=> {
+
+      self.setState({ uploading: true }, () => {
 
         if (uiSchema && uiSchema['ui:options']) {
           const uiOptions = uiSchema['ui:options'];
           const { ReactoryDropZoneProps } = uiOptions;
-  
-          if (ReactoryDropZoneProps.mutation) {          
+
+          if (ReactoryDropZoneProps.mutation) {
             const mutation = gql(ReactoryDropZoneProps.mutation.text);
-              
+
             let _v = {};
             try {
               _v = api.utils.templateObject(ReactoryDropZoneProps.mutation.variables, self);
             } catch (templateErr) {
               api.log(`Error processing mapping`, { templateErr }, 'error');
             }
-            
+
             const variables = {
               ..._v,
-              file: acceptedFiles[0],              
+              file: acceptedFiles[0],
             };
 
             api.graphqlMutation(mutation, variables).then((docResult) => {
 
               self.setState({ uploading: false }, () => {
-                
+
                 const { data, errors } = docResult;
 
-                if (errors && errors.length > 0 ) {
+                if (errors && errors.length > 0) {
                   api.createNotification(`File ${acceptedFiles[0].filename} could not be uploaded.`, {
                     showInAppNotification: true,
                     type: 'warning',
@@ -163,14 +163,14 @@ class ReactoryDropZone extends Component<any, any> {
                       components: []
                     }
                   });
-                  
+
                   api.log(`Could not upload document`, { errors }, 'error')
 
                   return;
                 }
 
                 const { filename, size, id, link, mimetype } = data[ReactoryDropZoneProps.mutation.name];
-                
+
                 api.createNotification(`File ${filename} has been uploaded`, {
                   showInAppNotification: true,
                   type: 'success',
@@ -181,20 +181,24 @@ class ReactoryDropZone extends Component<any, any> {
                   }
                 });
 
-                if (ReactoryDropZoneProps.mutation.onSuccessEvent && ReactoryDropZoneProps.mutation.onSuccessEvent.name) {                  
+                if (ReactoryDropZoneProps.mutation.onSuccessMethod && ReactoryDropZoneProps.mutation.onSuccessMethod == 'refresh') {
+                  formContext.refresh();
+                }
+
+                if (ReactoryDropZoneProps.mutation.onSuccessEvent && ReactoryDropZoneProps.mutation.onSuccessEvent.name) {
                   if (ReactoryDropZoneProps.mutation.onSuccessEvent.via && ReactoryDropZoneProps.mutation.via === 'form') {
                     if (formContext.$ref[ReactoryDropZoneProps.mutation.onSuccessEvent.name]) {
                       //execute the function on the form with the reference
                       formContext.$ref[ReactoryDropZoneProps.mutation.onSuccessEvent.name](docResult.data[ReactoryDropZoneProps.mutation.name])
                     }
                   } else {
-                    api.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, { filename, link, id, size, mimetype  });
+                    api.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, { filename, link, id, size, mimetype });
                   }
                 }
-              });   
-              
+              });
+
             }).catch((docError) => {
-              
+
               self.setState({ uploading: false }, () => {
                 api.createNotification(`File ${acceptedFiles[0].filename} could not be uploaded`, {
                   showInAppNotification: true,
@@ -205,7 +209,7 @@ class ReactoryDropZone extends Component<any, any> {
                     components: []
                   }
                 });
-                
+
               })
 
               api.log(`Could not upload document`, { docError }, 'error')
@@ -215,14 +219,14 @@ class ReactoryDropZone extends Component<any, any> {
         }
 
       });
-      
+
     }
 
     const { Loading } = this.components;
 
     return (
       <div {...widgetProps}>
-        {this.state.uploading === false ? <DropZoneReactoryFormWidget fileDropped={dropHandler} {...dropZoneProps} /> : <Loading title="Uploading file, please wait" icon={'cloud_upload'} spinIcon={false} />  }        
+        {this.state.uploading === false ? <DropZoneReactoryFormWidget fileDropped={dropHandler} {...dropZoneProps} /> : <Loading title="Uploading file, please wait" icon={'cloud_upload'} spinIcon={false} />}
       </div>
     );
   }
