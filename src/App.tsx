@@ -63,8 +63,8 @@ const api = new ReactoryApi({
 
 //register built-in components
 componentRegistery.forEach((componentDef) => {
-  const { nameSpace, name, version, component } = componentDef
-  api.registerComponent(nameSpace, name, version, component);
+  const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false,  } = componentDef
+  api.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
 });
 
 const store = configureStore();
