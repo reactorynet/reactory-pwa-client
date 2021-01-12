@@ -57,6 +57,7 @@ import FormSubmissionComponent from './shared/FormSubmissionComponent';
 import ImageComponent from './shared/ImageComponent';
 import ConditionalIconComponent from './shared/ConditionalIconComponent';
 import LabelComponent from './reactory/widgets/LabelWidget';
+import ReactoryDropZone from './reactory/widgets/ReactoryDropZone';
 
 import StyledCurrencyLabel from './shared/StyledCurrencyLabel';
 import PricingSliderComponent from './shared/PricingSliderComponent';
@@ -116,20 +117,17 @@ export const componentRegistery = [
     version: '1.0.0',
     component: React
   },
-
-  /*
-  {
-    nameSpace: 'reactory',
-    name: 'FormEditor',
-    component: ReactoryFormEditor,
-    version: '1.0.0'
-  },
-  */
   {
     nameSpace: 'lodash',
     name: 'lodash',
     version: '1.0.0',
     component: lodash
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactoryDropZone',
+    version: '1.0.0',
+    component: ReactoryDropZone
   },
   {
     nameSpace: 'core',
@@ -744,7 +742,7 @@ export const componentRegistery = [
     name: 'MaterialFormWidgets',
     version: '1.0.0',
     component: require('./reactory/widgets')
-  }, 
+  },
   GraphiqlWindow.meta,
   SlideOutLauncher.meta,
   require('./shared/currency/CurrencyLabel'),
