@@ -63,7 +63,7 @@ const api = new ReactoryApi({
 
 //register built-in components
 componentRegistery.forEach((componentDef) => {
-  const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false,  } = componentDef
+  const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
   api.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
 });
 
@@ -416,7 +416,31 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   useEffect(willMount, []);
 
- 
+
+  const AppLoading = () => {
+    return (
+      <div className="loader">
+        <div className="loader-inner">
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
 
   return (
     <Router>
@@ -425,16 +449,16 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         <ThemeProvider theme={theme}>
           <Provider store={store}>
             <ApolloProvider client={api.client}>
-            <MuiPickersUtilsProvider utils={MomentUtils}>
-              <ReactoryProvider api={api}>              
-                <React.Fragment>                  
-                    {isReady === true &&  <Globals api={api} />}
-                    {isReady === true &&  <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
-                    {isReady === true &&  <NotificationComponent />}
-                    {isReady === false && <Loading message={`Loading ${props.appTitle || 'application'}. Please wait`} icon="security" spinIcon={false} />}
-                    {isReady === true &&  <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}                  
-                  </React.Fragment>                  
-              </ReactoryProvider>
+              <MuiPickersUtilsProvider utils={MomentUtils}>
+                <ReactoryProvider api={api}>
+                  <React.Fragment>
+                    {isReady === true && <Globals api={api} />}
+                    {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
+                    {isReady === true && <NotificationComponent />}
+                    {isReady === false && <AppLoading />}
+                    {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
+                  </React.Fragment>
+                </ReactoryProvider>
               </MuiPickersUtilsProvider>
             </ApolloProvider>
           </Provider>

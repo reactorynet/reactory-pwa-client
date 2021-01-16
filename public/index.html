@@ -1,65 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="theme-color" content="#000000">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <style type="text/css">
-      .loading {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;                
-        min-height: 100%;
-        height: 100%;        
-        min-width: 100%;
-        width: 100%;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;                
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#000000">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <style type="text/css">
+    .loading {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      min-height: 100%;
+      height: 100%;
+      min-width: 100%;
+      width: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .loading-text-header {
+      position: relative;
+      top: 30%;
+      text-align: center;
+      font-size: 29px;
+      max-width: 500px;
+      margin: auto;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .loading-text-waiting {
+      position: relative;
+      top: 40%;
+      text-align: center;
+      font-size: 18px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .loading-logo {
+      position: relative;
+      top: 10%;
+      text-align: center;
+    }
+
+    .loader {
+      background: rgb(255, 255, 255);
+      bottom: 0;
+      left: 0;
+      overflow: hidden;
+      position: fixed;
+      right: 0;
+      top: 0;
+      z-index: 99999;
+    }
+
+    .loader-inner {
+      bottom: 0;
+      height: 60px;
+      left: 0;
+      margin: auto;
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 100px;
+    }
+
+    .loader-line-wrap {
+      animation:
+        spin 2000ms cubic-bezier(.175, .885, .32, 1.275) infinite;
+      box-sizing: border-box;
+      height: 50px;
+      left: 0;
+      overflow: hidden;
+      position: absolute;
+      top: 0;
+      transform-origin: 50% 100%;
+      width: 100px;
+    }
+
+    .loader-line {
+      border: 4px solid transparent;
+      border-radius: 100%;
+      box-sizing: border-box;
+      height: 100px;
+      left: 0;
+      margin: 0 auto;
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 100px;
+    }
+
+    .loader-line-wrap:nth-child(1) {
+      animation-delay: -50ms;
+    }
+
+    .loader-line-wrap:nth-child(2) {
+      animation-delay: -100ms;
+    }
+
+    .loader-line-wrap:nth-child(3) {
+      animation-delay: -150ms;
+    }
+
+    .loader-line-wrap:nth-child(4) {
+      animation-delay: -200ms;
+    }
+
+    .loader-line-wrap:nth-child(5) {
+      animation-delay: -250ms;
+    }
+
+    .loader-line-wrap:nth-child(1) .loader-line {
+      border-color: hsl(0, 80%, 60%);
+      height: 90px;
+      width: 90px;
+      top: 7px;
+    }
+
+    .loader-line-wrap:nth-child(2) .loader-line {
+      border-color: hsl(60, 80%, 60%);
+      height: 76px;
+      width: 76px;
+      top: 14px;
+    }
+
+    .loader-line-wrap:nth-child(3) .loader-line {
+      border-color: hsl(120, 80%, 60%);
+      height: 62px;
+      width: 62px;
+      top: 21px;
+    }
+
+    .loader-line-wrap:nth-child(4) .loader-line {
+      border-color: hsl(180, 80%, 60%);
+      height: 48px;
+      width: 48px;
+      top: 28px;
+    }
+
+    .loader-line-wrap:nth-child(5) .loader-line {
+      border-color: hsl(240, 80%, 60%);
+      height: 34px;
+      width: 34px;
+      top: 35px;
+    }
+
+    @keyframes spin {
+
+      0%,
+      15% {
+        transform: rotate(0);
       }
 
-      .loading-text-header {
-        position: relative;
-        top: 30%;
-        text-align: center; 
-        font-size: 29px;
-        max-width: 500px;
-        margin: auto;
-        margin-left: auto;
-        margin-right: auto;
+      100% {
+        transform: rotate(360deg);
       }
-
-      .loading-text-waiting {
-        position: relative;
-        top: 40%;
-        text-align: center; 
-        font-size: 18px;
-        max-width: 500px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .loading-logo {
-        position: relative;
-        top: 10%;
-        text-align: center;
-      }
-    </style>
-    <link rel="stylesheet" href="%REACT_APP_CDN%/themes/%REACT_APP_THEME%/styles.css" type="text/css" /> 
-    <!--
+    }
+  </style>
+  <link rel="stylesheet" href="%REACT_APP_CDN%/themes/%REACT_APP_THEME%/styles.css" type="text/css" />
+  <!--
       manifest.json provides metadata used when your web app is added to the
       homescreen on Android. See https://developers.google.com/web/fundamentals/engage-and-retain/web-app-manifest/
     -->
-    
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json">
-    <link id="favicon_link" rel="shortcut icon" href="%REACT_APP_CDN%/themes/%REACT_APP_THEME%/images/favicon.ico" rel="media">    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0/codemirror.min.css">
-    <style>
-      @import url('https://fonts.googleapis.com/css?family=Lato|Roboto');
-    </style>
-    <!--
+
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json">
+  <link id="favicon_link" rel="shortcut icon" href="%REACT_APP_CDN%/themes/%REACT_APP_THEME%/images/favicon.ico"
+    rel="media">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0/codemirror.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css?family=Lato|Roboto');
+  </style>
+  <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
       Only files inside the `public` folder can be referenced from the HTML.
@@ -67,21 +184,43 @@
       Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
-    -->        
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0/codemirror.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0/mode/xml/xml.min.js"></script>    
-    
-        
-    <title>%REACT_APP_TITLE%</title>
-  </head>
-  <body>
-    <noscript>
-      You need to enable JavaScript to run this app.
-    </noscript>
-    <div id="root" class="loading">
-      <div class="loading-logo"><img src="%REACT_APP_CDN%/themes/%REACT_APP_THEME%/images/icons-192.png" /></div>
-      <h1 class="loading-text-header"><i class="fa fa-refresh fa-spin"></i>&nbsp;Downloading ... </h1>     
-    </div>    
-  </body>
+    -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+  <script type="text/javascript"
+    src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0/codemirror.min.js"></script>
+  <script type="text/javascript"
+    src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0/mode/xml/xml.min.js"></script>
+
+
+  <title>%REACT_APP_TITLE%</title>
+</head>
+
+<body>
+  <noscript>
+    You need to enable JavaScript to run this app.
+  </noscript>
+  <div id="root" class="loading">
+    <div class="loading-logo"><img src="%REACT_APP_CDN%/themes/%REACT_APP_THEME%/images/icons-192.png" /></div>
+    <div class="loader">
+      <div class="loader-inner">
+        <div class="loader-line-wrap">
+          <div class="loader-line"></div>
+        </div>
+        <div class="loader-line-wrap">
+          <div class="loader-line"></div>
+        </div>
+        <div class="loader-line-wrap">
+          <div class="loader-line"></div>
+        </div>
+        <div class="loader-line-wrap">
+          <div class="loader-line"></div>
+        </div>
+        <div class="loader-line-wrap">
+          <div class="loader-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
 </html>

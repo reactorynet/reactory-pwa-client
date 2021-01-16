@@ -111,12 +111,12 @@ const SubMenus = (props) => {
 };
 
 const Menus = (props) => {
-  const { menus = [], target = 'left-nav', history, user, api, self, classes } = props;
+  const { menus = [], target = 'left-nav', history, user, api, self, classes, append } = props;
   let menuItems = [];
   if (menus && menus.length) {
     menus.map((menu) => {
       if (menu.target === target) {
-        menu.entries.map((menuItem) => {
+        menu.entries.map((menuItem, mid) => {
           let subnav = null;
           let expandButton = null;
           let allow = false;
@@ -133,7 +133,7 @@ const Menus = (props) => {
             if (isArray(menuItem.items) === true && menuItem.items.length > 0) {
               const isExpanded = self.state.expanded[menuItem.id] && self.state.expanded[menuItem.id].value === true;
               subnav = (
-                <Collapse in={isExpanded === true} timeout="auto" unmountOnExit>
+                <Collapse in={isExpanded === true} timeout="auto" unmountOnExit key={`${menuItem.id || mid}-collapse`} >
                   <List component="div" disablePadding>
                     {menuItem.items.map((submenu, subindex) => {
                       const submenuGoto = () => {
@@ -176,7 +176,7 @@ const Menus = (props) => {
             }
 
             menuItems.push(
-              <ListItem key={menuItem.id} onClick={goto} button>
+              <ListItem key={menuItem.id || mid} onClick={goto} button>
                 <ListItemIcon>
                   <Icon color="primary">{menuItem.icon}</Icon>
                 </ListItemIcon>
@@ -194,6 +194,8 @@ const Menus = (props) => {
       }
     });
   }
+
+  if(append) menuItems.push(append);
 
   return menuItems;
 };
@@ -492,8 +494,7 @@ class ApplicationHeader extends Component {
           {user.anon ? null : avatarComponent("/profile/")}          
           <Divider />
           <List className={this.props.classes.menuItems}>
-            <Menus {...{ menus: menus, history: this.props.history, user, api, self, classes }} />
-            <ListItem onClick={this.statusRefresh} button>
+            <Menus {...{ menus: menus, history: this.props.history, user, api, self, classes }} append={(<ListItem key={'reactory.status'} onClick={this.statusRefresh} button>
               <ListItemIcon>
                 <Tooltip title={`Api Available @ ${moment(api.getUser().when).format('HH:mm:ss')} click to refresh`}>
                   <Icon color="primary">rss_feed</Icon>
@@ -503,7 +504,8 @@ class ApplicationHeader extends Component {
                 primary={<span className={classes.versionPrimary}>Client ver: {api.props.$version}</span>} 
                 secondary={<span className={classes.version}>📡&nbsp;{ server.id || 'development' } ver: { server.version || 'waiting' } </span>}
                 />
-            </ListItem>
+            </ListItem>)} />
+            
           </List>
         </Drawer>
         {this.renderHelpInterface()}

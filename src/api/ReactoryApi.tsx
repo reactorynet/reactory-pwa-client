@@ -164,7 +164,10 @@ export interface ReactoryApiUtils {
   template: Function,
   templateObject(item: Object, props: any): Object,
   humanNumber: Function,
-  inspector: Function,
+  inspector: {
+    sanitize: (sanitizeSchema: any, data: any) => void,
+    validate: (validationSchema: any, data: any) => any
+  },
   gql: Function,
   humanDate: Function,
   slugify: Function,
@@ -240,6 +243,8 @@ class ReactoryApi extends EventEmitter {
     this.reset = RestApi.reset;
     this.forgot = RestApi.forgot;
     this.forms = this.forms.bind(this);
+    this.form = this.form.bind(this);
+    
     this.utils = {
       omitDeep,
       queryString,
@@ -589,7 +594,7 @@ class ReactoryApi extends EventEmitter {
   trackFormInstance(formInstance) {
     const self = this;
     self.log('ApiProvider.trackingFormInstance(formInstance)', [formInstance], 'debug');
-    this.__form_instances[formInstance.state._instance_id] = formInstance;
+    this.__form_instances[formInstance.instance_id] = formInstance;
     formInstance.on('componentWillUnmount', (instance) => {
       self.log('ApiProvider.trackingFormInstance(formInstance).on("componentWillUnmount")', [formInstance], 'debug');
       delete self.__form_instances[formInstance.state._instance_id];
@@ -619,7 +624,7 @@ class ReactoryApi extends EventEmitter {
 
   graphqlQuery(query,
     variables,
-    options: any = { fetchPolicy: 'network-only' },
+    options: any = { fetchPolicy: 'cache-and-network' },
     queryDefinition: Reactory.IReactoryFormQuery = null) {
 
     const that = this;
@@ -634,11 +639,12 @@ class ReactoryApi extends EventEmitter {
     } else $query = query;
 
     return new Promise((resolve, reject) => {
-      that.client.query({ query: $query, variables, fetchPolicy: options.fetchPolicy || "network-only" }).then((result) => {
+      that.client.query({ query: $query, variables}).then((result) => {
         resolve(result);
       }).catch((clientErr) => {
         that.log(`Error occurred while executing the query ${clientErr.message}`, { query, clientErr }, 'error');
-        resolve({ data: null, loading: false, errors: [clientErr] });
+        reject(clientErr)
+        // resolve({ data: null, loading: false, errors: [clientErr] });
       });
     });
   }
@@ -725,6 +731,11 @@ class ReactoryApi extends EventEmitter {
         }
       } else refresh();
     });
+  }
+
+  form(id: string) {
+    const { formSchemas } = this;
+    return lodash.find(formSchemas, { id });
   }
 
   async raiseFormCommand(commandId, commandDef, formProps) {
