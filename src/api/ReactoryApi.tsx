@@ -6,7 +6,7 @@ import inspector from 'schema-inspector';
 import uuid from 'uuid';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql,  ApolloProvider, NormalizedCacheObject, Resolvers  } from '@apollo/client';
+import { ApolloClient, gql,  ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions  } from '@apollo/client';
 import { Mutation, Query  } from '@apollo/client/react/components';
 
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -39,6 +39,8 @@ import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
 
 import Reactory from '../types/reactory';
+import { MutationResult, QueryOptions } from "react-apollo";
+import { RefetchQueryDescription } from "@apollo/client/core/watchQueryOptions";
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -164,7 +166,10 @@ export interface ReactoryApiUtils {
   template: Function,
   templateObject(item: Object, props: any): Object,
   humanNumber: Function,
-  inspector: Function,
+  inspector: {
+    sanitize: (sanitizeSchema: any, data: any) => void,
+    validate: (validationSchema: any, data: any) => any
+  },
   gql: Function,
   humanDate: Function,
   slugify: Function,
@@ -217,21 +222,15 @@ class ReactoryApi extends EventEmitter {
   queryObject: any;
   queryString: any;
   objectToQueryString: Function;
-
+  clearCache: () => void;
+  ws_link: any;
 
   constructor(props) {
     super();
 
-    const {
-      client,
-      ws_link
-    } = ReactoryApolloClient();
-
     this.history = null;
     this.props = props;
-    this.componentRegister = {};
-    this.client = client;
-    //this.$ws_link = ws_link;
+    this.componentRegister = {};        
     this.queries = GraphQL.queries;
     this.mutations = GraphQL.mutations;
     this.login = RestApi.login.bind(this);
@@ -240,6 +239,8 @@ class ReactoryApi extends EventEmitter {
     this.reset = RestApi.reset;
     this.forgot = RestApi.forgot;
     this.forms = this.forms.bind(this);
+    this.form = this.form.bind(this);
+    
     this.utils = {
       omitDeep,
       queryString,
@@ -366,7 +367,21 @@ class ReactoryApi extends EventEmitter {
     this.extendClientResolver = this.extendClientResolver.bind(this);
     this.setFormTranslationMaps = this.setFormTranslationMaps.bind(this);
     this.setFormValidationMaps = this.setFormValidationMaps.bind(this);
+    this.init = this.init.bind(this);    
   }
+
+  async init() {
+    const {
+      client,
+      ws_link,
+      clearCache
+    } = await ReactoryApolloClient();
+
+    this.clearCache = clearCache;
+    this.client = client;
+    this.ws_link = ws_link;
+  }
+
 
   setFormTranslationMaps(maps: any) {
     this.formTranslationMaps = { ...this.formTranslationMaps, ...maps };
@@ -589,14 +604,14 @@ class ReactoryApi extends EventEmitter {
   trackFormInstance(formInstance) {
     const self = this;
     self.log('ApiProvider.trackingFormInstance(formInstance)', [formInstance], 'debug');
-    this.__form_instances[formInstance.state._instance_id] = formInstance;
+    this.__form_instances[formInstance.instance_id] = formInstance;
     formInstance.on('componentWillUnmount', (instance) => {
       self.log('ApiProvider.trackingFormInstance(formInstance).on("componentWillUnmount")', [formInstance], 'debug');
       delete self.__form_instances[formInstance.state._instance_id];
     });
   }
 
-  graphqlMutation(mutation, variables, options: any = { fetchPolicy: "network-only" }) {
+  graphqlMutation(mutation, variables, options: any = { fetchPolicy: "no-cache" }, refetchQueries: RefetchQueryDescription = []) {
     const that = this;
     let $mutation = null;
     if (typeof mutation === 'string') {
@@ -608,7 +623,9 @@ class ReactoryApi extends EventEmitter {
     } else $mutation = mutation;
       
     return new Promise((resolve, reject) => {
-      that.client.mutate({ mutation: $mutation, variables, fetchPolicy: "no-cache" }).then((result) => {
+      let mutation_options: MutationOptions<any, any> = { mutation: $mutation, variables };      
+      mutation_options.refetchQueries = refetchQueries;
+      that.client.mutate(mutation_options).then((result) => {        
         resolve(result);
       }).catch((clientErr) => {
         that.log(`Error occured executing the mutation: ${clientErr.message}`, { $mutation, clientErr }, 'error')
@@ -619,7 +636,7 @@ class ReactoryApi extends EventEmitter {
 
   graphqlQuery(query,
     variables,
-    options: any = { fetchPolicy: 'network-only' },
+    options: any = { fetchPolicy: 'network-only'  },
     queryDefinition: Reactory.IReactoryFormQuery = null) {
 
     const that = this;
@@ -631,23 +648,29 @@ class ReactoryApi extends EventEmitter {
       } catch (gqlError) {
         that.log(`Error occurred while creating the query document from input`, { query }, 'error');
       }
-    } else $query = query;
+    } else $query = query; 
 
     return new Promise((resolve, reject) => {
-      that.client.query({ query: $query, variables, fetchPolicy: options.fetchPolicy || "network-only" }).then((result) => {
+      that.client.query({ 
+        query: $query, 
+        variables, 
+        fetchPolicy: options.fetchPolicy || 'network-only',        
+      }).then((result) => {
         resolve(result);
       }).catch((clientErr) => {
         that.log(`Error occurred while executing the query ${clientErr.message}`, { query, clientErr }, 'error');
-        resolve({ data: null, loading: false, errors: [clientErr] });
+        reject(clientErr)
+        // resolve({ data: null, loading: false, errors: [clientErr] });
       });
     });
   }
 
-  afterLogin(user) {
+  async afterLogin(user) {
     //this.setUser(user);
     this.setAuthToken(user.token);
-    const { client, ws_link } = ReactoryApolloClient();
+    const { client, ws_link, clearCache } = await ReactoryApolloClient();
     this.client = client;
+    this.clearCache = clearCache;
     //this.$ws_link = ws_link;
     //this.forms(true).then();
     return this.status({ emitLogin: true });
@@ -725,6 +748,11 @@ class ReactoryApi extends EventEmitter {
         }
       } else refresh();
     });
+  }
+
+  form(id: string) {
+    const { formSchemas } = this;
+    return lodash.find(formSchemas, { id });
   }
 
   async raiseFormCommand(commandId, commandDef, formProps) {
@@ -1084,12 +1112,14 @@ class ReactoryApi extends EventEmitter {
     return ReactDOM.unmountComponentAtNode(node);
   }
 
-  logout(refreshStatus = true) {
+  async logout(refreshStatus = true) {
     const user = this.getUser();
     localStorage.removeItem(storageKeys.AuthToken);
-    const { client, ws_link } = ReactoryApolloClient();
+    const { client, ws_link, clearCache } = await ReactoryApolloClient();
     this.client = client;
     this.setUser({ ...user, ...anonUser });
+    clearCache();
+
     if (refreshStatus === true) {
       this.status({ emitLogin: false }).then((apiStatus) => {
         this.emit(ReactoryApiEventNames.onLogout);

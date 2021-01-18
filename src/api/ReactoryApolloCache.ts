@@ -1,4 +1,5 @@
 import { InMemoryCache, InMemoryCacheConfig, makeVar } from '@apollo/client';
+import { CachePersistor, LocalStorageWrapper } from 'apollo3-cache-persist';
 import { ReactoryLoggedInUser } from './local';
 
 
@@ -11,12 +12,35 @@ const config: InMemoryCacheConfig = {
             fields: {
                 isLoggedIn() {
                     return isLoggedInVar()
+                },
+                serverStatus() {
+                    return apiStatusVar();
                 }
             }
         }
     },
 }
 
+
 export const cache: InMemoryCache = new InMemoryCache(config);
 
+export const getCache = async (debug: boolean = true) => {
+
+    let reactory_persistor = new CachePersistor({
+        cache,
+        storage: new LocalStorageWrapper(window.localStorage),
+        debug,
+        trigger: 'write',
+        key: 'reactory_cache',
+        maxSize: false
+    });
+
+    await reactory_persistor.restore();
+
+    return {
+        cache,
+        persistor: reactory_persistor
+    }
+
+};
 

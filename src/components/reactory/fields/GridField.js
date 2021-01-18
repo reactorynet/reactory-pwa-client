@@ -140,9 +140,7 @@ class MaterialGridField extends MaterialObjectField {
 
   static styles = theme => ({
     root: {
-      ...theme.mixins.gutters(),
-      paddingTop: theme.spacing(2),
-      paddingBottom: theme.spacing(2),
+      padding: theme.spacing(1)
     }
   });
 

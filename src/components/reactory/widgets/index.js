@@ -8,7 +8,7 @@ import UserLists  from '../../user/Lists/index';
 export const ChipArrayWidget = require('./ChipArray');
 export const SelectWidget = require('./Select');
 export const SelectWithDataWidget = require('./SelectWithData');
-export const HiddenWidget = (props, context) => (<input type="hidden" id={props.idSchema.$id} name={props.name} value={props.formData} />);
+export const HiddenWidget = (props, context) => (<input type="hidden" name={props.name} value={props.formData} />);
 export const RecordLookupWidget = require('./RecordLookup');
 export const SliderWidget = require('./SliderWidget').SliderWidgetComponent;
 export const FroalaWidget = require('./FroalaWidget');

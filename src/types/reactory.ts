@@ -370,7 +370,7 @@ namespace Reactory {
     resultMap?: Object,
     queryMessage?: string,
     variables: Object,
-    formData?: Object,
+    formData?: any,
     edit?: boolean,
     new?: boolean,
     delete?: boolean,
@@ -387,21 +387,23 @@ namespace Reactory {
   }
 
   export interface IReactoryFormMutation {
-    name: String,
-    text: String,
+    name: string,
+    text: string,
     objectMap: boolean,
-    updateMessage?: String,
+    updateMessage?: string,
     resultMap?: Object,
     resultType?: string,
     variables?: Object,
-    handledBy?: String | 'onChange' | 'onSubmit',
-    onSuccessMethod?: String,
+    formData?: Object,
+    onSuccessMethod?: string | "redirect" | "notification" | "function",
     onSuccessEvent?: IReactoryEvent | undefined,
-    refreshEvents?: IReactoryEvent[] | undefined,
-    onSuccessUrl?: String,
+    refreshEvents?: IReactoryEvent[] | undefined
+    onSuccessUrl?: string,
     onSuccessRedirectTimeout?: number,
+    onError?: IReactoryFormQueryErrorHandlerDefinition,
     options?: any,
-    onError?: IReactoryFormQueryErrorHandlerDefinition
+    notification?: any,
+    handledBy?:string | 'onChange' | 'onSubmit'
   }
 
   export interface IReactoryFormMutations {

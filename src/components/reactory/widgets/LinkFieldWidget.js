@@ -46,7 +46,8 @@ class LinkFieldWidget extends Component {
         };
 
         const _custom = iconType
-        let IconComponent = _custom !== undefined ? theme.extensions[_custom].icons[icon] : null;
+
+        let IconComponent = _custom !== undefined && theme.extensions ? theme.extensions[_custom].icons[icon] : null;
         if(IconComponent) {
           linkIcon = <IconComponent {...iconProps} />
         } else {

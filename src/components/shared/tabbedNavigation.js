@@ -179,7 +179,7 @@ class TabbedNavComponent extends Component {
   
     api.log('TabbedNavigationComponent: RENDER', { uiSchema, formContext, uiOptions, _buttons });
 
-    if (isArray(formData) === true) {
+    if (Array.isArray(formData) === true) {
       //making the assumption the data array contains the tabs definition
       _tabs = [...formData];
     }

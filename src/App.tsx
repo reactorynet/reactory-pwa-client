@@ -60,10 +60,10 @@ const api = new ReactoryApi({
   clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
   $version: `${packageInfo.version}-${license.version}`,
 });
-
+api.init().then();
 //register built-in components
 componentRegistery.forEach((componentDef) => {
-  const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false,  } = componentDef
+  const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
   api.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
 });
 
@@ -87,38 +87,6 @@ export interface AppState {
   offline: boolean,
   currentRoute: any
 }
-
-/*
-class Globals extends React.Component<any, any> {
-
-  constructor(props) {
-    super(props);
-
-    const { api } = props;
-    const that = this;
-    this.state = {
-      v: 0
-    }
-
-    api.on('onPluginLoaded', () => {
-      this.setState({ v: this.state.v + 1 });
-    });
-
-  }
-
-  render() {
-
-    const globals = this.props.api.getGlobalComponents();
-    //
-    return (
-      <div data-v={`${this.state.v}`} data-globals-container="true">
-        { globals.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) })}  
-      </div>
-    )
-  }
-
-};
-*/
 
 const Globals = ({ api }) => {
 
@@ -294,11 +262,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   }
 
 
-  const onWindowResize = () => {
+  const onWindowResize = async () => {
     const query = queryString.parse(window.location.search)
     if (query.auth_token) {
       localStorage.setItem('auth_token', query.auth_token);
-      api.client = ReactoryApolloClient().client;
+      const cli = await ReactoryApolloClient();
+      api.client = cli.client;
+      api.ws_link = cli.ws_link;
     }
     api.queryObject = query;
     api.queryString = window.location.search;
@@ -354,52 +324,69 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       }
     }
 
-    if (auth_validated === false) {
-      api.status({ emitLogin: true }).then((user) => {
-        setIsValidated(true);
-        setUser(user);
-        setOfflineStatus(false);
-        setIsReady(true);
-
-        let themeOptions = api.getTheme();
-        if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
-        if (Object.keys(themeOptions).length === 0) themeOptions = { ...props.appTheme };
-
-        let muiTheme: Theme & any = createMuiTheme(themeOptions);
-
-        if (themeOptions.provider && typeof themeOptions.type === 'string') {
-          if (themeOptions.provider[themeOptions.type]) {
-            //using new mechanism.
-            switch (themeOptions.type) {
-              case 'material':
-              default: {
-                muiTheme = createMuiTheme(themeOptions);
+    const getApiStatus = () => {
+      if (auth_validated === false) {
+        api.status({ emitLogin: true }).then((user) => {
+          setIsValidated(true);
+          setUser(user);
+          setOfflineStatus(false);
+          setIsReady(true);
+  
+          let themeOptions = api.getTheme();
+          if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
+          if (Object.keys(themeOptions).length === 0) themeOptions = { ...props.appTheme };
+  
+          let muiTheme: Theme & any = createMuiTheme(themeOptions);
+  
+          if (themeOptions.provider && typeof themeOptions.type === 'string') {
+            if (themeOptions.provider[themeOptions.type]) {
+              //using new mechanism.
+              switch (themeOptions.type) {
+                case 'material':
+                default: {
+                  muiTheme = createMuiTheme(themeOptions);
+                }
               }
             }
           }
-        }
+  
+          api.muiTheme = muiTheme;
+          setTheme(muiTheme);
+        }).catch((validationError) => {
+          setIsValidated(true);
+          setUser(null);
+          setOfflineStatus(true);
+          setError(validationError);
+          setIsReady(false);
+        });
+      }
 
-        api.muiTheme = muiTheme;
-        setTheme(muiTheme);
-      }).catch((validationError) => {
-        setIsValidated(true);
-        setUser(null);
-        setOfflineStatus(true);
-        setError(validationError);
-        setIsReady(false);
-      });
+    };
+
+    const waitForClient = () => {
+
+      if(api.client === null || api.client === undefined) {
+        setTimeout(waitForClient, 777);
+      } else {
+        getApiStatus();
+      }
     }
 
     api.on(ReactoryApiEventNames.onLogout, onLogout)
     api.on(ReactoryApiEventNames.onLogin, onLogin)
     api.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
     api.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
-
+        
     const query = queryString.parse(window.location.search);
     if (query.auth_token) {
       localStorage.setItem('auth_token', query.auth_token);
-      api.client = ReactoryApolloClient().client;
+      ReactoryApolloClient().then((cli) => {
+        api.client = cli.client;
+        api.ws_link = cli.ws_link;
+        cli.clearCache();
+      });
     }
+
     api.queryObject = query;
     api.queryString = window.location.search;
     api.objectToQueryString = queryString.stringify;
@@ -410,13 +397,40 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       };
     }
 
+    waitForClient();
+
 
     return willUnmount;
   };
 
   useEffect(willMount, []);
 
- 
+
+  const AppLoading = () => {
+    return (
+      <div className="loader">
+        <div className="loader-inner">
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if(isReady === false) return <AppLoading />;
 
   return (
     <Router>
@@ -425,16 +439,15 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         <ThemeProvider theme={theme}>
           <Provider store={store}>
             <ApolloProvider client={api.client}>
-            <MuiPickersUtilsProvider utils={MomentUtils}>
-              <ReactoryProvider api={api}>              
-                <React.Fragment>                  
-                    {isReady === true &&  <Globals api={api} />}
-                    {isReady === true &&  <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
-                    {isReady === true &&  <NotificationComponent />}
-                    {isReady === false && <Loading message={`Loading ${props.appTitle || 'application'}. Please wait`} icon="security" spinIcon={false} />}
-                    {isReady === true &&  <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}                  
-                  </React.Fragment>                  
-              </ReactoryProvider>
+              <MuiPickersUtilsProvider utils={MomentUtils}>
+                <ReactoryProvider api={api}>
+                  <React.Fragment>
+                    {isReady === true && <Globals api={api} />}
+                    {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
+                    {isReady === true && <NotificationComponent />}
+                    {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
+                  </React.Fragment>
+                </ReactoryProvider>
               </MuiPickersUtilsProvider>
             </ApolloProvider>
           </Provider>
@@ -445,314 +458,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   );
 };
 
-class App extends Component<any, AppState> {
 
-  componentRefs: any
-  router: any
-  statusInterval: any = null;
-  unlisten: any;
-  static propTypes: { appTitle: PropTypes.Validator<string>; appTheme: PropTypes.Requireable<object>; };
-  static defaultProps: { appTitle: string; appTheme: {}; };
-
-  constructor(props, context) {
-    super(props, context);
-
-
-
-    this.state = {
-      drawerOpen: false,
-      auth_valid: false,
-      auth_validated: false,
-      theme: props.appTheme,
-      user: api.getUser(),
-      routes: [],
-      validationError: null,
-      offline: false,
-      currentRoute: null,
-    };
-
-    this.onLogout = this.onLogout.bind(this);
-    this.onLogin = this.onLogin.bind(this);
-    this.onApiStatusUpdate = this.onApiStatusUpdate.bind(this);
-    this.onRouteChanged = this.onRouteChanged.bind(this);
-    this.configureRouting = this.configureRouting.bind(this);
-    api.on(ReactoryApiEventNames.onLogout, this.onLogout)
-    api.on(ReactoryApiEventNames.onLogin, this.onLogin)
-    api.on(ReactoryApiEventNames.onApiStatusUpdate, this.onApiStatusUpdate);
-    api.on(ReactoryApiEventNames.onRouteChanged, this.onRouteChanged);
-    this.componentRefs = api.getComponents([
-      'core.Loading@1.0.0',
-      'core.Login@1.0.0',
-      'core.FullScreenModal@1.0.0',
-      'core.NotificationComponent@1.0.0',
-      'core.NotFound',
-    ]);
-  }
-
-  onRouteChanged(path, state) {
-    api.log(`onRouteChange Handler`, [path, state], 'debug');
-    this.setState({ currentRoute: path }, this.configureRouting);
-  }
-
-  onLogin() {
-    const loggedInUser = api.getUser();
-    this.setState({ user: loggedInUser });
-  }
-
-  onLogout() {
-    this.setState({ user: api.getUser() });
-  }
-
-  onApiStatusUpdate(status) {
-    api.log('App.onApiStatusUpdate(status)', [status], status.offline === true ? 'error' : 'debug');
-    let isOffline = status.offline === true;
-    let self = this;
-
-    if (isOffline === true && self.state.offline === false) {
-      self.setState({
-        offline: true
-      }, () => {
-        if (status.offline === true && isOffline === true && self.statusInterval === null) {
-          self.statusInterval = setInterval(api.status, 3000);;
-        }
-      })
-
-    } else {
-
-      if (status.offline !== true && self.statusInterval) {
-        clearInterval(self.statusInterval);
-      }
-
-      let user = api.getUser();
-      delete user.when;
-      let _user = this.state.user;
-      delete _user.when;
-
-      if (deepEquals(user, _user) === false || status.offline !== self.state.offline) {
-        this.setState({ user, offline: status.offline === true });
-      }
-
-    }
-  }
-
-  configureRouting() {
-    const { auth_validated, user } = this.state;
-    const { NotFound } = this.componentRefs;
-    const routes = [];
-    let loginRouteDef = null;
-    let homeRouteDef = null;
-    const that = this;
-
-    api.log('Configuring Routing', [auth_validated, user], 'debug');
-
-    api.getRoutes().forEach((routeDef) => {
-      const routeProps = {
-        key: routeDef.id,
-        componentFqn: routeDef.componentFqn,
-        path: routeDef.path,
-        exact: routeDef.exact === true,
-        render: (props) => {
-          api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
-
-          const componentArgs = {
-            $route: props.match,
-            $App: that
-          };
-
-          if (isArray(routeDef.args)) {
-            routeDef.args.forEach((arg) => {
-              componentArgs[arg.key] = arg.value[arg.key];
-            })
-          }
-
-          const ApiComponent = api.getComponent(routeDef.componentFqn)
-
-          if (routeDef.public === true) {
-            if (ApiComponent) return (<ApiComponent {...componentArgs} />)
-            else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
-          } else {
-            const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
-
-            if (auth_validated === true && hasRolesForRoute === true) {
-              if (ApiComponent) return (<ApiComponent {...componentArgs} />)
-              else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
-            }
-
-            if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
-              if (localStorage) {
-                localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
-              }
-              return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
-            }
-
-            if (api.isAnon() === false && hasRolesForRoute === false) {
-              //we may waiting 
-              return <NotFound message="You don't have sufficient permissions to access this route yet... (we may be fetching your permissions)" link={routeDef.path} wait={500} />
-            }
-
-            return (<p> ... </p>);
-          }
-        }
-      }
-
-      routes.push(<Route {...routeProps} />)
-    });
-
-    //this.setState({ routes });
-    return routes
-  }
-
-  componentDidMount() {
-    const that = this;
-
-    const query = queryString.parse(window.location.search)
-    if (query.auth_token) {
-      localStorage.setItem('auth_token', query.auth_token);
-      api.client = ReactoryApolloClient().client;
-    }
-    api.queryObject = query;
-    api.queryString = window.location.search;
-    api.objectToQueryString = queryString.stringify;
-
-    if (window && !window.reactory) {
-      window.reactory = {
-        api,
-      };
-    }
-
-    if (this.state.auth_validated === false) {
-      api.status({ emitLogin: true }).then((user) => {
-        that.setState({ auth_validated: true, user }, that.configureRouting)
-      }).catch((validationError) => {
-        that.setState({ auth_validated: false, validationError })
-      });
-    }
-
-    window.addEventListener('resize', () => {
-      const {
-        innerHeight,
-        outerHeight,
-        innerWidth,
-        outerWidth,
-      } = window;
-
-      let view = 'landscape';
-      let size = 'lg';
-      if (window.innerHeight > window.innerWidth) {
-        view = 'portrait';
-      }
-
-      if (innerWidth >= 2560) size = 'lg',
-        api.log('Window resize', [innerHeight, innerWidth, outerHeight, outerWidth, size, view]);
-      api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
-    });
-
-    if (localStorage) {
-      let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
-      if (lastRoute !== null) {
-        lastRoute = lastRoute.trim();
-        localStorage.removeItem('$reactory.last.attempted.route$');
-        location.assign(lastRoute);
-      }
-    }
-
-    window.matchMedia("(prefers-color-scheme: dark)").addListener((evt) => {
-      if (evt.matches === true) {
-        localStorage.setItem('$reactory$theme_mode', 'dark');
-      } else {
-        localStorage.setItem('$reactory$theme_mode', 'light');
-      }
-      that.forceUpdate()
-    });
-
-    api.on('theme_changed', () => {
-      that.forceUpdate()
-    });
-  }
-
-  render() {
-    const { auth_validated, user, offline } = this.state;
-    const { Loading, FullScreenModal, NotificationComponent } = this.componentRefs;
-
-    let themeOptions = api.getTheme();
-
-    if (isNil(themeOptions)) themeOptions = { ...this.props.appTheme };
-    if (Object.keys(themeOptions).length === 0) themeOptions = { ...this.props.appTheme };
-
-    let muiTheme: Theme & any = createMuiTheme(themeOptions);
-
-    if (themeOptions.provider && typeof themeOptions.type === 'string') {
-      if (themeOptions.provider[themeOptions.type]) {
-        //using new mechanism.
-        switch (themeOptions.type) {
-          case 'material':
-          default: {
-            muiTheme = createMuiTheme(themeOptions);
-          }
-        }
-      }
-    }
-
-
-
-    api.muiTheme = muiTheme;
-
-    let modal = null;
-
-    if (offline === true && auth_validated === true) {
-      modal = (
-        <FullScreenModal open={true} title={'Waiting for initial server response'}>
-          <Typography style={{ margin: 'auto', fontSize: '20px', padding: '8px' }} variant="body1">
-            <Icon>cached</Icon>
-            Stand by, waiting for server response...
-          </Typography>
-          <Typography></Typography>
-        </FullScreenModal>
-      )
-    }
-
-    const routes = this.configureRouting();
-
-    return (
-      <Router ref={this.router}>
-        <React.Fragment>
-          <CssBaseline />
-          <Provider store={store}>
-            <ApolloProvider client={api.client}>
-              <ApiProvider api={api} history={this.props.history}>
-                <ReactoryProvider api={api}>
-                  <ThemeProvider theme={muiTheme}>
-                    <MuiPickersUtilsProvider utils={MomentUtils}>
-                      <React.Fragment>
-                        <Globals api={api} />
-                        <Header title={muiTheme && muiTheme.content && auth_validated ? muiTheme.content.appTitle : 'Starting'} />
-                        <NotificationComponent></NotificationComponent>
-                        {auth_validated === true && routes.length > 0 ? routes : <Loading message="Loading Application. Please wait" icon="security" spinIcon={false} />}
-                        {modal}
-                      </React.Fragment>
-                    </MuiPickersUtilsProvider>
-                  </ThemeProvider>
-                </ReactoryProvider>
-              </ApiProvider>
-            </ApolloProvider>
-          </Provider>
-        </React.Fragment>
-      </Router>
-    );
-  }
-}
-
-App.propTypes = {
-  appTitle: PropTypes.string.isRequired,
-  appTheme: PropTypes.object
-};
-
-
-
-App.defaultProps = {
-  appTitle: "Reactory",
-  appTheme: {}
-};
-
-export default App;
+export default ReactoryHOC
 
