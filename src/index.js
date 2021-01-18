@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import * as themes from './themes';
 import './index.css';
-import App, { ReactoryHOC } from './App';
+import { ReactoryHOC } from './App';
 import stringify from 'json-stringify-safe'
 import registerServiceWorker from './registerServiceWorker';
 import * as ReactoryTypes from './types/reactory';
@@ -22,4 +22,4 @@ ReactDOM.render(<ReactoryHOC {...props} />, rootElement);
 registerServiceWorker();
 document.title = process.env.REACT_APP_TITLE || 'Reactory Client';
 
-export default App;
+export default ReactoryHOC;

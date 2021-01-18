@@ -11,7 +11,7 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { SubscriptionClient } from "subscriptions-transport-ws";
 import { createUploadLink } from 'apollo-upload-client';
 import { fetch } from "whatwg-fetch";
-import { cache } from './ReactoryApolloCache';
+import { getCache } from './ReactoryApolloCache';
 
 
 const packageInfo: any = require('../../package.json');
@@ -31,9 +31,19 @@ if (localStorage) {
   localStorage.setItem('REACT_APP_API_ENDPOINT', REACT_APP_API_ENDPOINT);
 }
 
-export default () => {  
+
+
+export default async () => {  
   // get the authentication token from local storage if it exists
   const token = localStorage.getItem('auth_token') || anonToken;
+
+  const _cache = await getCache(true);
+  const { cache, persistor } = _cache;
+
+  const clearCache = () => {
+    if(!persistor) return;
+    persistor.purge();
+  }
 
   const authLink = setContext((_, { headers }) => {                
     return {
@@ -106,6 +116,7 @@ export default () => {
 
   return {
     client,
-    ws_link
+    ws_link,
+    clearCache
   }
 };
