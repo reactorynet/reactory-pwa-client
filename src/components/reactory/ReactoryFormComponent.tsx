@@ -200,6 +200,7 @@ const AllowedSchemas = (uiSchemaItems: Reactory.IUISchemaMenuItem[], mode = 'vie
   });
 };
 
+
 const initialState = (props) => ({
   loading: true,
   forms_loaded: false,
@@ -268,11 +269,15 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return _response;
   };
 
+
   //get initial data
   const initialData = () => {
+
+    
+
     switch (formDef.schema.type) {
       case "string": {
-        return `${props.data || props.formData || formDef.defaultFormValue}`
+        return `${props.location.search || props.data || props.formData || formDef.defaultFormValue}`
       }
       case "number": {
         if (typeof props.data === 'number') return props.data;
@@ -283,12 +288,16 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         return null
       }
-      case "object": {
-        let _obj = {};
+      case "object": {        
+        let _obj = {  };
         if (typeof formDef.schema.default === 'object') _obj = { ...formDef.schema.default };
         if (typeof formDef.defaultFormValue === 'object') _obj = { ..._obj, ...formDef.defaultFormValue };
         if (typeof props.data === 'object') _obj = { ..._obj, ...props.data };
         if (typeof props.formData === 'object') _obj = { ..._obj, ...props.formData };
+
+        let queryData = reactory.utils.queryString.parse(window.location.search) || {};
+
+        if (typeof queryData === 'object') _obj = { ..._obj, ...queryData };
 
         return _obj
       }

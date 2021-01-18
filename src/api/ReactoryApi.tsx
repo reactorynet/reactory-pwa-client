@@ -156,7 +156,9 @@ export const componentPartsFromFqn = (fqn) => {
 }
 export interface ReactoryApiUtils {
   omitDeep: Function,
-  queryString: Function,
+  queryString: {
+    parse: (queryString: string) => object
+  },
   hashCode: Function,
   injectResources: Function,
   componentFqn: Function,
@@ -179,7 +181,6 @@ export interface ReactoryApiUtils {
 
 class ReactoryApi extends EventEmitter {
   $user: any;
-
   history: any;
   queries: any;
   mutations: any;

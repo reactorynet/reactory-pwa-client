@@ -15,7 +15,7 @@ import {
 import { getAvatar } from '../../util';
 
 export const UserListItem = (props) => {
-  const { user, selected, key, onClick, message, secondaryAction, checkbox, onSelectChanged, primaryText, style = {}} = props
+  const { user, selected, key, onClick, onSecondaryClick, message, secondaryAction, checkbox, onSelectChanged, primaryText, style = {}} = props
   
   if(!user) {
     return (<ListItem button onClick={onClick} key={key}>
@@ -29,7 +29,7 @@ export const UserListItem = (props) => {
 
   let secondaryComponent = null;
   if(secondaryAction) {
-    secondaryComponent = (<ListItemSecondaryAction>{secondaryAction}</ListItemSecondaryAction>);
+    secondaryComponent = (<ListItemSecondaryAction onClick={onSecondaryClick}>{secondaryAction}</ListItemSecondaryAction>);
   }
 
   let checkboxComponent = null;

@@ -317,51 +317,6 @@ class Profile extends Component {
 
         return membershipList;
 
-        /*
-        const membersGrid = (
-            <Grid item sm={12} xs={12} offset={4}>
-                <MaterialTable
-                    columns={[
-                        {
-                            title: 'Client', render: (rowData) => {
-                                return rowData && rowData.client ? rowData.client.name : 'No Client'
-                            }
-                        },
-                        {
-                            title: 'Organisation', render: (rowData) => {
-                                return rowData && rowData.organization ? rowData.organization.name : 'No Organisation'
-                            }
-                        },
-                        {
-                            title: 'Business Unit', render: (rowData) => {
-                                return rowData && rowData.businessUnit ? rowData.businessUnit.name : 'No Business Unit'
-                            }
-                        },
-                        {
-                            title: 'Roles', render: (rowData) => {
-                                return rowData && rowData.roles ? rowData.roles.map(r => `${r} `) : 'No Roles'
-                            }
-                        },
-                    ]}
-                    data={data}
-                    title="Memberships"
-                    actions={[
-                        rowData =>({
-                            icon: 'repeat',
-                            tooltip: 'Click to load the organigram for this membership',
-                            disabled: rowData.organization === null,
-                            onClick: (event, rowData) => {
-                                self.onMembershipSelectionChanged(rowData)
-                            },
-
-                        })
-                    ]}
-                     />
-            </Grid>
-
-        )
-        */
-
     }
 
     renderPeers() {
@@ -685,6 +640,8 @@ class Profile extends Component {
                 slug: `core-peers-nomination-instructions-${selectedMembership.client.id}-${selectedMembership.organization && selectedMembership.organization.id ? selectedMembership.organization.id : 'general' }`,
             }
 
+
+
             materialTable = (
                 <Paper className={classes.general}>
                     <Typography variant="h6">My nominees - {this.state.selectedMembership.organization.name}</Typography>
@@ -713,14 +670,15 @@ class Profile extends Component {
                                 const deletePeer = e => removePeer(usr);
 
                                 const handleChange = event => {
-                                    if(this.state.expanded === usr.id) {
-                                        this.setState({
+                                    debugger
+                                    if(that.state.expanded === usr.id) {
+                                        that.setState({
                                             expanded: null,
                                         });
                                     }
                                     else
                                     {
-                                        this.setState({
+                                        that.setState({
                                             expanded: usr.id,
                                         });
                                     }
@@ -784,10 +742,10 @@ class Profile extends Component {
                                 return (<ExpansionPanel
                                         key={usr.id}
                                         square
-                                        expanded={this.state.expanded === usr.id}
-                                        onChange={handleChange}>
-                                        <AccordionSummary expandIcon={<Icon>expand</Icon>}>
-                                            <UserListItem user={usr} message={`${usr.firstName} (${usr.email}) is set as a ${relationshipBadge}`} />
+                                        expanded={that.state.expanded === usr.id}
+                                        >
+                                        <AccordionSummary onClick={handleChange} expandIcon={ that.state.expanded === usr.id ? <Icon>collapse</Icon>  : <Icon>expand</Icon> }>
+                                            <UserListItem user={usr} message={`${usr.firstName} (${usr.email}) is set as a ${relationshipBadge}`} onSecondaryClick={handleChange} onClick={handleChange}/>
                                         </AccordionSummary>
                                         <ExpansionPanelDetails>
                                             {selectorWidget}
