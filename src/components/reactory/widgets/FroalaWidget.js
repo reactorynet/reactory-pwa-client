@@ -2,9 +2,10 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { template } from 'lodash';
-import {  Button,
+import {
+  Button,
   Fab,
-  FormControl, 
+  FormControl,
   Icon,
   InputLabel,
   Typography,
@@ -58,116 +59,126 @@ import 'froala-editor/css/plugins/code_view.min.css';
 // Require Font Awesome.
 import 'font-awesome/css/font-awesome.css';
 
-import  FroalaEditor from 'react-froala-wysiwyg/lib/FroalaEditor';
+import FroalaEditor from 'react-froala-wysiwyg/lib/FroalaEditor';
 
-class FroalaWidget extends Component {
+const FroalaWidget = (props) => {
+  /*
+    constructor(props, context){
+      super(props, context)
+      state = {
+        model: props.formData,
+        _id: uuid(),
+        editor: null,
+        scopedStyles: "background-color: pink;",
+        showBlocks: true,
+        blockStep: 0,
+        popupComponent: 'core.FileSelector',
+        blockContent: "<p>Build a template and upload it on step 1!</p>",
+        externals: [],
+        showTemplateConfig: false,
+        showComponentSelector: false,    
+        touched: false,  
+      }
+  */
 
-  constructor(props, context){
-    super(props, context)
-    this.state = {
-      model: props.formData,
-      _id: uuid(),
-      editor: null,
-      scopedStyles: "background-color: pink;",
-      showBlocks: true,
-      blockStep: 0,
-      popupComponent: 'core.FileSelector',
-      blockContent: "<p>Build a template and upload it on step 1!</p>",
-      externals: [],
-      showTemplateConfig: false,
-      showComponentSelector: false,    
-      touched: false,  
-    }
+  const { reactory, formData, uiSchema, schema, formContext } = props;
+  const [model, setModel] = React.useState(formData || "");
+  const [scopedStyles, setScopedStyles] = React.useState('');
+  const [editor, setEditor] = React.useState(null);
+  const [touched, setTouched] = React.useState(false);
+  const [blockContent, setBlockContent] = React.useState(null);
+  const [blockStep, setBlockStep] = React.useState(0);
+  const [showBlocks, setShowBlocks] = React.useState(false);
+  const [externarls, setExternals] = React.useState([]);
+  const [showTemplateConfig, setShowTemplateConfig] = React.useState(false);
+  const [showComponentSelector, setShowComponentSelector] = React.useState(false);
+  const [version, setVersion] = React.useState(0)
 
-    this.componentDefs = props.api.getComponents([
-      'core.FullScreenModal', 
-      'core.SpeedDial',
-      'core.ReactoryFormComponent', 
-      'forms.PageTemplateConfig', 
-      'forms.FileLoader',
-      'forms.ComponentSelector'
-    ])
 
-    this.froalaCheck = this.froalaCheck.bind(this);
-    this.getBlockBuilder = this.getBlockBuilder.bind(this);
-    this.getTemplatePreview = this.getTemplatePreview.bind(this);
-    this.getTemplateConfig = this.getTemplateConfig.bind(this);
-    this.getHtmlContent = this.getHtmlContent.bind(this);
-    this.onTabChanged = this.onTabChanged.bind(this);
-    this.onModelChange = this.onModelChange.bind(this);
-    this.onEditorInitialized = this.onEditorInitialized.bind(this);
+  const _id = uuid();
+
+
+  const componentDefs = reactory.getComponents([
+    'core.FullScreenModal',
+    'core.SpeedDial',
+    'core.ReactoryFormComponent',
+    'forms.PageTemplateConfig',
+    'forms.FileLoader',
+    'forms.ComponentSelector'
+  ]);
+
+  // froalaCheck = froalaCheck.bind(this);
+  // getBlockBuilder = getBlockBuilder.bind(this);
+  // getTemplatePreview = getTemplatePreview.bind(this);
+  // getTemplateConfig = getTemplateConfig.bind(this);
+  // getHtmlContent = getHtmlContent.bind(this);
+  // onTabChanged = onTabChanged.bind(this);
+  // onModelChange = onModelChange.bind(this);
+  // onEditorInitialized = onEditorInitialized.bind(this);
+  //}
+
+  const mount = () => {
+    //console.log('froala editor widget mounted', {p: props, ref: contentRef});
+    froalaCheck();
   }
 
-  componentDidMount(){
-    //console.log('froala editor widget mounted', {p: this.props, ref: this.contentRef});
-    this.froalaCheck();
-  }
-  
 
-  componentWillUpdate(nextProps, nextState){
-        
-  }
-    
-  onTabChanged(evt, value){
-    this.setState({ blockStep: value })
-  }
 
-  componentDidCatch(error, info) {
-    // You can also log the error to an error reporting service
-    this.props.api.log('Froala.js [error-boundary]', { error, info }, 'debug')
-  }
+  const onTabChanged = (evt, value) => {
+    setBlockStep(value)
+  };
 
-  froalaCheck(){
+  const froalaCheck = () => {
     //console.log('Running Froala Check');
-    try{
+    try {
       const { jQuery } = window;
-      if(jQuery) {
-        const $ = jQuery;   
+      if (jQuery) {
+        const $ = jQuery;
         const that = this;
-        const { api } = that.props;
+        const { reactory } = that.props;
 
         FroalaEditor.DefineIcon('blocks', { NAME: 'th' });
         FroalaEditor.RegisterCommand('blocks', {
-            title: 'Create a new page using block builder',
-            focus: true,
-            undo: true,
-            refreshAfterCallback: true,
-            plugin: 'customPlugin',
-            callback: function (command) {                  
-              //console.log('Using block builder', {command})
-              that.setState({ showBlocks: true, showTemplateConfig: false, showComponentSelector: false }, ()=>{
-                //editor.customPlugin.showPopup()
-                that.forceUpdate();
-              })
-            },
+          title: 'Create a new page using block builder',
+          focus: true,
+          undo: true,
+          refreshAfterCallback: true,
+          plugin: 'customPlugin',
+          callback: function (command) {
+            //console.log('Using block builder', {command})
+            that.setState({ showBlocks: true, showTemplateConfig: false, showComponentSelector: false }, () => {
+              //editor.customPlugin.showPopup()
+              that.forceUpdate();
+            })
+          },
         });
-            
-        FroalaEditor.DefineIcon('templateConfig', { NAME: 'wrench'});
+
+        FroalaEditor.DefineIcon('templateConfig', { NAME: 'wrench' });
         FroalaEditor.RegisterCommand('templateConfig', {
           title: 'Configure Template Blocks',
           focus: true,
           undo: true,
           refreshAfterCallback: true,
           plugin: 'customPlugin',
-          callback: (command)=>{            
+          callback: (command) => {
             //console.log('Using template builder', {command})
-            that.setState({ showBlocks: false, showTemplateConfig: true, showComponentSelector: false }, () => {              
+            that.setState({ showBlocks: false, showTemplateConfig: true, showComponentSelector: false }, () => {
               that.forceUpdate();
             });
           }
         });
 
         //connectdevelop
-        FroalaEditor.DefineIcon('reactoryComponents', { NAME: 'connectdevelop'});
+        FroalaEditor.DefineIcon('reactoryComponents', { NAME: 'connectdevelop' });
         FroalaEditor.RegisterCommand('reactoryComponents', {
           title: 'Configure Template Blocks',
           focus: true,
           undo: true,
           refreshAfterCallback: true,
           plugin: 'customPlugin',
-          callback: (command)=>{            
-            
-            that.setState({ showBlocks: false, showTemplateConfig: false, showComponentSelector: true }, ()=>{              
+          callback: (command) => {
+
+            that.setState({ showBlocks: false, showTemplateConfig: false, showComponentSelector: true }, () => {
               that.forceUpdate()
             });
           }
@@ -176,62 +187,62 @@ class FroalaWidget extends Component {
         $.extend(FroalaEditor.POPUP_TEMPLATES, {
           "customPlugin.popup": '[_BUTTONS_][_CUSTOM_LAYER_]'
         });
-       
+
         // Define popup buttons.
         $.extend(FroalaEditor.DEFAULTS, {
           popupButtons: ['popupClose', '|', 'blocks', 'templateConfig', 'reactoryComponents'],
         });
-       
+
         // The custom popup is defined inside a plugin (new or existing).
         FroalaEditor.PLUGINS.customPlugin = function (editor) {
           // Create custom popup.
-          function initPopup () {
+          function initPopup() {
             // Popup buttons.
             var popup_buttons = '';
-       
+
             // Create the list of buttons.
             if (editor.opts.popupButtons.length > 1) {
               popup_buttons += '<div class="fr-buttons">';
               popup_buttons += editor.button.buildList(editor.opts.popupButtons);
               popup_buttons += '</div>';
             }
-       
+
             // Load popup template.
             var template = {
               buttons: popup_buttons,
               custom_layer: `<div class="${that.props.classes.popupContainer}" id="${that.props.idSchema.$id}_popup">Loading Designer... <i class="fa fa-spin fa-gear"></i></div>`
             };
-       
+
             // Create popup.
             var $popup = editor.popups.create('customPlugin.popup', template);
             //console.log('custom plugin popup created', $popup)
             return $popup;
           }
-       
+
           // Show the popup
-          function showPopup () {
+          function showPopup() {
             // Get the popup object defined above.
             var $popup = editor.popups.get('customPlugin.popup');
-       
+
             // If popup doesn't exist then create it.
             // To improve performance it is best to create the popup when it is first needed
             // and not when the editor is initialized.
             if (!$popup) $popup = initPopup();
-       
+
             // Set the editor toolbar as the popup's container.
             editor.popups.setContainer('customPlugin.popup', editor.$tb);
-       
+
             // This will trigger the refresh event assigned to the popup.
             // editor.popups.refresh('customPlugin.popup');
-       
+
             // This custom popup is opened by pressing a button from the editor's toolbar.
             // Get the button's object in order to place the popup relative to it.
             var $btn = editor.$tb.find('.fr-command[data-cmd="reactoryDesigner"]');
-       
+
             // Set the popup's position.
             var left = $btn.offset().left + $btn.outerWidth() / 2;
             var top = $btn.offset().top + (editor.opts.toolbarBottom ? 10 : $btn.outerHeight() - 10);
-       
+
             // Show the custom popup.
             // The button's outerHeight is required in case the popup needs to be displayed above it.
             editor.popups.show('customPlugin.popup', left, top, $btn.outerHeight());
@@ -240,18 +251,18 @@ class FroalaWidget extends Component {
             const { showTemplateConfig, showBlocks, showComponentSelector } = that.state
             const elem = document.querySelector(`#${that.props.idSchema.$id}_popup`);
 
-            if(showBlocks === true) {
-              
+            if (showBlocks === true) {
+
               const { FileLoader } = that.componentDefs
               const onSubmit = (fileData) => {
                 //console.log('Files To Be Processed', fileData)
                 const editorTarget = $(`#${that.props.idSchema.$id}`)
-                editorTarget.froalaEditor('html.set', fileData.formData.content);                
+                editorTarget.froalaEditor('html.set', fileData.formData.content);
               };
 
               const beforeComponents = (<Fragment>
                 <Typography variant="h6">Build a fresh page using <a href="https://www.froala.com/design-blocks/webpage-builder" target="_blank">Block Builder</a></Typography>
-                <Typography variant="subtitle1">When you are done designing the page, drag it to the surface below to update your page</Typography>                
+                <Typography variant="subtitle1">When you are done designing the page, drag it to the surface below to update your page</Typography>
               </Fragment>)
 
               const FileUpload = () => {
@@ -260,31 +271,31 @@ class FroalaWidget extends Component {
                 </FileLoader>)
               }
 
-              api.loadComponent(FileUpload, {}, elem);
+              reactory.loadComponent(FileUpload, {}, elem);
             }
 
-            if(showTemplateConfig === true) {
+            if (showTemplateConfig === true) {
               const { PageTemplateConfig } = that.componentDefs
               const onConfigSubmit = (configData) => {
                 //console.log('Config Submit', configData);
               }
               const beforeComponents = (<Fragment>
                 <Typography variant="subtitle1">Configure your template</Typography>
-                <Typography variant="subtitle1">Once you've set the config, click the process button</Typography>                
+                <Typography variant="subtitle1">Once you've set the config, click the process button</Typography>
               </Fragment>)
 
               const PageConfig = () => {
                 return (
-                <PageTemplateConfig onSubmit={onConfigSubmit} before={beforeComponents}>
-                  <Fab type="submit" color="primary"><Icon>build</Icon></Fab>
-                </PageTemplateConfig>)
+                  <PageTemplateConfig onSubmit={onConfigSubmit} before={beforeComponents}>
+                    <Fab type="submit" color="primary"><Icon>build</Icon></Fab>
+                  </PageTemplateConfig>)
               }
 
-              api.loadComponent(PageConfig, {}, elem);
+              reactory.loadComponent(PageConfig, {}, elem);
 
             }
 
-            if(showComponentSelector === true) {
+            if (showComponentSelector === true) {
               const { ComponentSelector } = that.componentDefs
               const onComponentSelected = (configData) => {
                 //console.log('ComponentSelection', configData);
@@ -292,34 +303,34 @@ class FroalaWidget extends Component {
               }
               const beforeComponents = (<Fragment>
                 <Typography variant="subtitle1">Select A Component</Typography>
-                <Typography variant="subtitle1">Once you've selected the component, drag it to a placeholder</Typography>                
+                <Typography variant="subtitle1">Once you've selected the component, drag it to a placeholder</Typography>
               </Fragment>)
-              
+
               const ComponentSelect = () => {
                 return (<ComponentSelector onSubmit={onComponentSelected} before={beforeComponents}>
                   <Fab type="submit" color="primary"><Icon>done</Icon></Fab>
                 </ComponentSelector>)
               }
 
-              api.loadComponent(ComponentSelect, {}, elem);
+              reactory.loadComponent(ComponentSelect, {}, elem);
             }
           }
-       
+
           // Hide the custom popup.
-          function hidePopup () {
+          function hidePopup() {
             editor.popups.hide('customPlugin.popup');
             //console.log('popup closed');
           }
-       
+
           // Methods visible outside the plugin.
           return {
             showPopup: showPopup,
             hidePopup: hidePopup
           }
         }
-       
+
         // Define an icon and command for the button that opens the custom popup.
-        FroalaEditor.DefineIcon('reactoryDesigner', { NAME: 'connectdevelop'})
+        FroalaEditor.DefineIcon('reactoryDesigner', { NAME: 'connectdevelop' })
         FroalaEditor.RegisterCommand('reactoryDesigner', {
           title: 'Designer',
           icon: 'reactoryDesigner',
@@ -330,7 +341,7 @@ class FroalaWidget extends Component {
             this.customPlugin.showPopup();
           }
         });
-       
+
         // Define custom popup close button icon and command.
         FroalaEditor.DefineIcon('popupClose', { NAME: 'times' });
         FroalaEditor.RegisterCommand('popupClose', {
@@ -341,56 +352,56 @@ class FroalaWidget extends Component {
             this.customPlugin.hidePopup();
           }
         });
-               
-        clearInterval(this.froalaInterval);                          
+
+        clearInterval(froalaInterval);
       }
     } catch (err) {
       console.warn('Froala not available', err)
     }
-  }
+  };
 
-  getTemplatePreview(){
-    return this.state.blockContent;
-  }
+  const getTemplatePreview = () => {
+    return blockContent;
+  };
 
-  getHtmlContent(){
+  const getHtmlContent = () => {
     //let editorHtml = 
 
-  }
+  };
 
-  getBlockBuilder(){
-    const { FullScreenModal, ReactoryFormComponent } = this.componentDefs;
-    const close = () => this.setState({ showBlocks: false })
-    const select = () => { this.setState({ showBlocks: false, })}
+  const getBlockBuilder = () => {
+    const { FullScreenModal, ReactoryFormComponent } = componentDefs;
+    const close = () => { setShowBlock(false) };
+    const select = () => { setShowBlock(false) }
     const processFiles = (fileData) => {
-      //console.log('Files To Be Processed', fileData)
-      const editorTarget = window.jQuery(`#${this.props.idSchema.$id}`)
+      const editorTarget = window.jQuery(`#${props.idSchema.$id}`)
       editorTarget.froalaEditor('html.set', fileData.formData.content);
-      this.setState({ blockStep: 1, blockContent: fileData.formData.content })
+      setBlockStep(1);
+      setBlockContent(fileData.formData.content);
     };
-      
+
     return (
-      <FullScreenModal open={this.state.showBlocks === true} onClose={close}>                
-          <Typography variant="subtitle1">Build a fresh page using <a href="https://www.froala.com/design-blocks/webpage-builder" target="_blank">Block Builder</a></Typography>
-          <Typography variant="subtitle1">When you are done designing the page, click the download and upload the file using the upload below.</Typography>
-          <ReactoryFormComponent formId={"FileLoader"} onSubmit={processFiles}>
-            <Fab type="submit"><Icon>cloud_upload</Icon></Fab>  
-          </ReactoryFormComponent>        
+      <FullScreenModal open={this.state.showBlocks === true} onClose={close}>
+        <Typography variant="subtitle1">Build a fresh page using <a href="https://www.froala.com/design-blocks/webpage-builder" target="_blank">Block Builder</a></Typography>
+        <Typography variant="subtitle1">When you are done designing the page, click the download and upload the file using the upload below.</Typography>
+        <ReactoryFormComponent formId={"FileLoader"} onSubmit={processFiles}>
+          <Fab type="submit"><Icon>cloud_upload</Icon></Fab>
+        </ReactoryFormComponent>
       </FullScreenModal>
     )
-  }
+  };
 
-  getTemplateConfig(){
-    const { FullScreenModal, ReactoryFormComponent } = this.componentDefs;    
-    const close = () => this.setState({ showTemplateConfig: false })            
+  const getTemplateConfig = () => {
+    const { FullScreenModal, ReactoryFormComponent } = this.componentDefs;
+    const close = () => this.setState({ showTemplateConfig: false })
 
-    const resetConfig = ( ) => {
+    const resetConfig = () => {
       this.setState({ templateConfig: null });
     }
 
-    const updateTemplateConfig = ( formResponse ) => {
-      this.setState({ templateConfig: formResponse.formData, showTemplateConfig: false }, ()=>{
-        
+    const updateTemplateConfig = (formResponse) => {
+      this.setState({ templateConfig: formResponse.formData, showTemplateConfig: false }, () => {
+
       });
     }
 
@@ -399,111 +410,120 @@ class FroalaWidget extends Component {
         <ReactoryFormComponent formId={"PageTemplateConfig"} onSubmit={updateTemplateConfig} data={this.state.templateConfig}>
           <Button variant="link" type="button" onClick={resetConfig}><Icon>delete</Icon></Button>
           <Button variant="raised" type="submit"><Icon>cached</Icon></Button>
-        </ReactoryFormComponent>        
+        </ReactoryFormComponent>
       </FullScreenModal>
     )
-  }
-  
-  onEditorInitialized(jqEvt, editor) {
+  };
+
+  const onEditorInitialized = (jqEvt, editor) => {
     //console.log('editor initialized', { jqEvt, editor });
-    this.setState({ editor })    
+    setEditor(editor);
+  };
+
+  const onModelChange = (model) => {
+    debugger
+    setModel(model)
+    if (props.onChange) props.onChange(model);
+  };
+
+
+  let config = {
+    id: props.idSchema.id || _id,
+    key: 'SDB17hB8E7F6D3eMRPYa1c1REe1BGQOQIc1CDBREJImD6F5E4G3E1A9D7C3B4B4==',
+    imageDefaultWidth: 300,
+    imageDefaultDisplay: 'inline',
+    zIndex: 101,
+    fontFamilyDefaultSelection: 'Roboto',
+    fontFamily: {
+      "Roboto,Helvetica,Arial,sans-serif": "Roboto",
+      'Arial,Helvetica,sans-serif': 'Arial',
+      'Georgia,serif': 'Georgia',
+      'Impact,Charcoal,sans-serif': 'Impact',
+      'Tahoma,Geneva,sans-serif': 'Tahoma',
+      "'Times New Roman',Times,serif": 'Times New Roman',
+      'Verdana,Geneva,sans-serif': 'Verdana',
+    },
+
+    //htmlAllowedTags: ['.*'],
+    //htmlAllowedAttrs: ['.*'],
+    //htmlRemoveTags: [''],
+    //lineBreakerTags: [''],
+    lineBreakerOffset: 0,
+    linkAlwaysBlank: true,
+    linkText: true,
+    linkAutoPrefix: '',
+    linkAttributes: {
+      clicktracking: "Click Tracking"
+    },
+    fullPage: false,
+
+    events: {
+      'froalaEditor.initialized': onEditorInitialized
+    },
+  };
+
+  if (uiSchema['ui:options'] && uiSchema['ui:options'].froalaOptions) {
+    config = { ...config, ...uiSchema['ui:options'].froalaOptions };
   }
-    
-  onModelChange(model){
-    
-    this.setState({ model }, ()=>{
-    
-      if(this.props.onChange) this.props.onChange(model);
-    });
+
+  if (config.imageUploadURL && config.imageUploadURL.indexOf("${") >= 0) {
+    config.imageUploadURL = template(config.imageUploadURL)({ ...props })
   }
 
-  render(){
-    let config = {
-      id: this.props.idSchema.id || this.state._id,
-      key: 'SDB17hB8E7F6D3eMRPYa1c1REe1BGQOQIc1CDBREJImD6F5E4G3E1A9D7C3B4B4==',                  
-      imageDefaultWidth: 300,
-      imageDefaultDisplay: 'inline',
-      zIndex: 101,
-      fontFamilyDefaultSelection: 'Roboto',
-      fontFamily: {
-        "Roboto,Helvetica,Arial,sans-serif": "Roboto",        
-        'Arial,Helvetica,sans-serif': 'Arial',
-        'Georgia,serif': 'Georgia',
-        'Impact,Charcoal,sans-serif': 'Impact',
-        'Tahoma,Geneva,sans-serif': 'Tahoma',
-        "'Times New Roman',Times,serif": 'Times New Roman',
-        'Verdana,Geneva,sans-serif': 'Verdana',        
-      },
+  if (config.videoUploadURL && config.videoUploadURL.indexOf("${") >= 0) {
+    config.videoUploadURL = template(config.videoUploadURL)({ ...props })
+  }
 
-      //htmlAllowedTags: ['.*'],
-      //htmlAllowedAttrs: ['.*'],
-      //htmlRemoveTags: [''],
-      //lineBreakerTags: [''],
-      lineBreakerOffset: 0,
-      linkAlwaysBlank: true,
-      linkText: true,
-      linkAutoPrefix: '',
-      linkAttributes: {
-        clicktracking: "Click Tracking"
-      },
-      fullPage: false,
-      
-      events: {
-        'froalaEditor.initialized': this.onEditorInitialized
-      },
-    };
-    const { uiSchema } = this.props;    
+  if (config.fileUploadURL && config.fileUploadURL.indexOf("${") >= 0) {
+    config.fileUploadURL = template(config.fileUploadURL)({ ...props })
+  }
 
-    if(uiSchema['ui:options'] && uiSchema['ui:options'].froalaOptions){
-      config = { ...config, ...uiSchema['ui:options'].froalaOptions };      
-    }
+  if (config.requestHeaders) {
+    Object.keys(config.requestHeaders).map(pn => {
+      if (config.requestHeaders[pn].indexOf('${') >= 0) {
+        config.requestHeaders[pn] = template(config.requestHeaders[pn])({ ...props })
+      }
+    })
+  }
 
-    if(config.imageUploadURL && config.imageUploadURL.indexOf("${") >= 0) {
-      config.imageUploadURL = template(config.imageUploadURL)({...this.props})
-    }
+  let showLabel = true;
+  if (uiSchema && uiSchema['ui:options'] && uiSchema['ui:options'].showLabel === false) showLabel = false
 
-    if(config.videoUploadURL && config.videoUploadURL.indexOf("${") >= 0) {
-      config.videoUploadURL = template(config.videoUploadURL)({...this.props})
-    }
+  //console.log('>> FROALA CONFIG', config);
+  let placeHolder = 'Click here and start typing';
+  if (props.formContext && props.formContext.$ref.props.placeHolder) {
+    config.placeholderText = props.formContext.$ref.props.placeHolder;
+  }
 
-    if(config.fileUploadURL && config.fileUploadURL.indexOf("${") >= 0) {
-      config.fileUploadURL = template(config.fileUploadURL)({...this.props})
-    }
+  React.useEffect(()=> {
+    mount()
+  },[])
 
-    if(config.requestHeaders) {
-      Object.keys(config.requestHeaders).map(pn => {
-        if(config.requestHeaders[pn].indexOf('${') >= 0) {
-          config.requestHeaders[pn] = template(config.requestHeaders[pn])({...this.props})
-        }
-      })
-    }
-
-    let showLabel = true;
-    if(uiSchema && uiSchema['ui:options'] && uiSchema['ui:options'].showLabel === false ) showLabel = false
-
-    //console.log('>> FROALA CONFIG', config);
-    let placeHolder = 'Click here and start typing';
-    if(this.props.formContext && this.props.formContext.$ref.props.placeHolder) {
-      config.placeholderText = this.props.formContext.$ref.props.placeHolder;
-    }
-
+  try {
     return (
       <FormControl>
-        {showLabel && <Typography variant="caption" gutterBottom>{this.props.schema.title}</Typography>}
+        {showLabel && <Typography variant="caption" gutterBottom>{props.schema.title}</Typography>}
         <FroalaEditor
-          
-          id={this.props.idSchema.$id || this.state._id}        
+          id={props.idSchema.$id || _id}
           config={config}
-          model={this.state.model}
-          onModelChange={this.onModelChange}
+          model={model}
+          onModelChange={onModelChange}
         />
+      </FormControl>
+    )
+  } catch ( render_error ) {
+    
+    setTimeout(()=>{
+      setVersion(version + 1);
+    }, 777);
+    return (
+      <FormControl>
+        {showLabel && <Typography variant="caption" gutterBottom>{props.schema.title}</Typography>}
+        <p>Waiting for editor ({version})</p>
       </FormControl>
     )
   }
   
-  static FroalaStyles = (theme) => {
-    return {}
-  }
 }
 
-export default compose(withApi, withStyles(FroalaWidget.FroalaStyles), withTheme)(FroalaWidget)
+export default compose(withApi, withTheme)(FroalaWidget)

@@ -105,8 +105,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const getData = (query: MaterialTableQuery): Promise<MaterialTableRemoteDataReponse> => {
 
-    debugger;
-
     return new Promise((resolve, reject) => {
       reactory.log('♻ core.ReactoryMaterialTable data query', { query }, 'debug')
 
@@ -117,7 +115,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       }
 
       try {
-        const graphqlDefinitions = formContext.formDef.graphql;
+        const graphqlDefinitions = formContext.graphql;
 
         if (graphqlDefinitions.query || graphqlDefinitions.queries) {
 
@@ -335,7 +333,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
         const process = () => {
           if (action.mutation) {
-            const mutationDefinition = formContext.formDef.graphql.mutation[action.mutation];
+            const mutationDefinition = formContext.graphql.mutation[action.mutation];
 
             reactory.graphqlMutation(mutationDefinition.text, reactory.utils.objectMapper({ ...props, selected }, mutationDefinition.variables)).then((mutationResult) => {
               reactory.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
@@ -434,6 +432,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         icon: action.icon,
         iconProps: action.iconProps || {},
         tooltip: action.tooltip || '',
+        isFreeAction: action.isFreeAction === true,
         key: action.key || action.icon,
         onClick: (evt, selected_rows) => {
           actionClickHandler(selected_rows);

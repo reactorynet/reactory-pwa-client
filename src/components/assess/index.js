@@ -62,7 +62,7 @@ class AssessmentWrapper extends Component {
         };
                                                         
         return (
-        <Query query={api.queries.Assessments.assessmentWithId} variables={{ id: useUri ? match.params[0] : assessmentId }} >
+        <Query query={api.queries.Assessments.assessmentWithId} variables={{ id: useUri ? match.params[0] : assessmentId }} fetchPolicy="network-only" >
             {({ loading, error, data}) => {                            
                 if(loading === true) return (<Loading title="Loading assessment data, please wait"/>);
                 if(nil(error) === false) return (<p>Error while loading assessment ${error.message}</p>);

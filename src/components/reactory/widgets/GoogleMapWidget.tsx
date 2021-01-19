@@ -1580,7 +1580,7 @@ class ReactoryGoogleMapWidget extends Component<any, any> {
           mutationResult,
         }),
           "debug";
-        const mutationName = formContext.formDef.graphql.mutation.new.name; // "LasecCreateNewAddress"
+        const mutationName = formContext.graphql.mutation.new.name; // "LasecCreateNewAddress"
         const mutationResultData = mutationResult.data[mutationName];
 
         if (mutationResultData && mutationResultData.success) {

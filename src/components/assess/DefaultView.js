@@ -110,6 +110,7 @@ class RatingControl extends Component {
   }
 
   ratingClick(score) {
+    debugger
     const { behaviour, rating } = this.props;
 
     const data = {
@@ -154,11 +155,14 @@ class RatingControl extends Component {
 
   render() {
     const { behaviour, classes, rating, assessment, theme } = this.props;
-    const self = this;
+    const that = this;
     let steps = [];
     let needsAttention = false;
     for (let stepId = behaviour.scale.min; stepId < behaviour.scale.max; stepId++) {
-      const doRatingClick = () => (self.ratingClick(stepId));
+      const doRatingClick = ( evt ) => {  
+        evt.stopPropagation();
+        that.ratingClick(stepId ); 
+      };
 
       steps.push((
         <Step key={stepId}>
@@ -185,7 +189,7 @@ class RatingControl extends Component {
     let commentControl = null;
     //if ((rating.rating > 0 && rating.rating < 3 || behaviour.custom === true)) {
     //const controlClasses = classNames( this.state.comment.split(' ').length < 10 ? classes.)
-    const hasError = this.state.comment.split(' ').length < self.minWordCount && rating.rating <= 2;
+    const hasError = this.state.comment.split(' ').length < that.minWordCount && rating.rating <= 2;
     const wordCount = this.state.comment.split(' ').length;
     let wordsLeft = ''
 
@@ -199,7 +203,7 @@ class RatingControl extends Component {
 
     commentControl = (<TextField
       id="multiline-flexible"
-      label={this.state.comment.split(' ').length < self.minWordCount && rating.rating <= 2 ? "How does this impact you? - * required" : "How does this impact you?"}
+      label={this.state.comment.split(' ').length < that.minWordCount && rating.rating <= 2 ? "How does this impact you? - * required" : "How does this impact you?"}
       multiline
       fullWidth
       rowsMax="4"
@@ -237,7 +241,7 @@ class RatingControl extends Component {
       $ratingContent = template(behaviour.title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
 
     } catch (templateErr) {
-      self.props.api.log(`Behaviour Template Error`, { template: behaviour.title, templateErr }, 'error');
+      that.props.api.log(`Behaviour Template Error`, { template: behaviour.title, templateErr }, 'error');
 
       $ratingContent = `Error Processing behaviour template text. See logs for details`
     }
@@ -245,7 +249,7 @@ class RatingControl extends Component {
     try {
       $ratingSubContent = template(behaviour.description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
     } catch (e) {
-      self.props.api.log(`Behaviour Template Error`, { template: behaviour.description, templateErr }, 'error');
+      that.props.api.log(`Behaviour Template Error`, { template: behaviour.description, templateErr }, 'error');
 
       $ratingContent = `Error Processing behaviour template text. See logs for details`
     }
@@ -267,7 +271,7 @@ class RatingControl extends Component {
         <p className={`${classes.behaviourSelection}`}>{selectedLabel.description}</p>
         {commentAllowed == true && commentControl}
         {this.props.rating.custom === true ?
-          <Tooltip title="Click to delete this custom behaviour"><IconButton onClick={self.confirmCustomDelete}><Icon>delete</Icon></IconButton></Tooltip> : null}
+          <Tooltip title="Click to delete this custom behaviour"><IconButton onClick={that.confirmCustomDelete}><Icon>delete</Icon></IconButton></Tooltip> : null}
       </Fragment>
     )
 
@@ -276,7 +280,7 @@ class RatingControl extends Component {
     }
 
     const cancelDelete = e => {
-      self.setState({ confirmDelete: false });
+      that.setState({ confirmDelete: false });
     }
 
     const confirmComponent = (
@@ -469,7 +473,7 @@ class DefaultView extends Component {
 
 
   constructor(props, context) {
-    super(props, context);
+    super(props);
     this.state = {
       valid: true,
       step: 0,
@@ -684,8 +688,9 @@ class DefaultView extends Component {
       custom: ratingEntry.custom === true,
       behaviourText: ratingEntry.behaviourText,
       deleteRating: deleteRating,
-    }, { 'fetch-policy': 'network-only' }).then(response => {
+  }, { 'fetch-policy': 'cache-and-network' } ).then(response => {
 
+      debugger
       if(response.errors && response.errors.length > 0) {
         api.createNotification('Could not save your last score. The system may be offline, please try again in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'errors'})
       }
@@ -749,13 +754,10 @@ class DefaultView extends Component {
       const assessmentState = lodash.cloneDeep(assessment);
       assessmentState.ratings[ratingIndex] = ratingEntry;
       assessmentState.dirty = true;
-      this.setState({ assessment: assessmentState, assessment_rollback: lodash.cloneDeep(assessment) }, () => {
+      that.setState({ assessment: assessmentState, assessment_rollback: lodash.cloneDeep(assessment) }, () => {
         that.persistRating(ratingEntry, ratingIndex, false, 0);
       });
-    } else {
-      //console.log('Rating Index not found');
     }
-
   }
 
   onBehaviourCommentChanged(data) {
@@ -771,7 +773,7 @@ class DefaultView extends Component {
       const assessmentState = lodash.cloneDeep(assessment);
       assessmentState.ratings[ratingIndex] = ratingEntry;
       assessmentState.dirty = true;
-      this.setState({ assessment: assessmentState }, () => {
+      that.setState({ assessment: assessmentState }, () => {
         if (persist === true) {
           that.persistRating(ratingEntry, ratingIndex);
         }
@@ -845,7 +847,7 @@ class DefaultView extends Component {
       let qualityCustomComment = ''
       let qualityAction = ''
 
-      api.log(`Results from fetching custom comment`, { data, errors }, 'error');
+      api.log(`Results from fetching custom comment`, { data, errors }, 'debug');
 
       if (data.ReactoryGetContentBySlug) {
         qualityCustomComment = data.ReactoryGetContentBySlug.content;

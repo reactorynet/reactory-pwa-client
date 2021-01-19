@@ -414,6 +414,9 @@ namespace Reactory {
 
   export interface IFormGraphDefinition {    
     query?: IReactoryFormQuery,
+    queries?: {
+      [key: string]: IReactoryFormQuery
+    },
     mutation?: IReactoryFormMutations,
   }
   

@@ -34,12 +34,12 @@ export const getCache = async (debug: boolean = true) => {
         key: 'reactory_cache',
         maxSize: false
     });
-
+    
     await reactory_persistor.restore();
 
     return {
         cache,
-        persistor: reactory_persistor
+        persistor: null
     }
 
 };

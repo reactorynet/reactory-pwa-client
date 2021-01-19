@@ -240,7 +240,7 @@ const default_dependencies = () => {
 };
 
 interface ReactoryComponentMap {
-  [key: string]: any  
+  [key: string]: any
 }
 
 interface ReactoryComponentError {
@@ -254,26 +254,24 @@ const available_sizes: ScreenSizeKey[] = ["xl", "lg", "md", "sm", "xs"];
 
 const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
-  const { reactory, mode, theme } = props;
+  const { reactory, mode = 'view', theme } = props;
   const instance_id = uuid();
+  const created = new Date().valueOf();
 
-  let formDef = reactory.form(props.formId);
-  if (!formDef) formDef = props.formDef || ReactoryDefaultForm;
+  const [formDef, setFormDefinition] = React.useState<Reactory.IReactoryForm>(props.formDef || reactory.form(props.formId) || ReactoryDefaultForm);
+
   const fqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
   const signature = `<${fqn} instance={${instance_id} />`;
-  
+  const queryData: any = reactory.utils.queryString.parse(window.location.search) || {};
 
   const getScreenSize = () => {
-    let _response: ScreenSizeKey = "md";    
-
+    let _response: ScreenSizeKey = "md";
     return _response;
   };
 
 
   //get initial data
   const initialData = () => {
-
-    
 
     switch (formDef.schema.type) {
       case "string": {
@@ -288,15 +286,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         return null
       }
-      case "object": {        
-        let _obj = {  };
+      case "object": {
+        let _obj = {};
         if (typeof formDef.schema.default === 'object') _obj = { ...formDef.schema.default };
         if (typeof formDef.defaultFormValue === 'object') _obj = { ..._obj, ...formDef.defaultFormValue };
         if (typeof props.data === 'object') _obj = { ..._obj, ...props.data };
         if (typeof props.formData === 'object') _obj = { ..._obj, ...props.formData };
-
-        let queryData = reactory.utils.queryString.parse(window.location.search) || {};
-
         if (typeof queryData === 'object') _obj = { ..._obj, ...queryData };
 
         return _obj
@@ -305,7 +300,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         if (reactory.utils.lodash.isArray(props.data) === true) return props.data;
         if (reactory.utils.lodash.isArray(props.formData) === true) return props.formData;
         if (reactory.utils.lodash.isArray(formDef.defaultFormValue) === true) return formDef.defaultFormValue;
-
         if (reactory.utils.lodash.isArray(formDef.schema.default) === true) return formDef.schema.default;
 
         return [];
@@ -316,11 +310,32 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
   };
 
+  const getInitialUiSchemaKey = () => {
+    return queryData.uiSchemaKey || props.uiSchemaKey || 'default';
+  };
+
+  const getInitialActiveMenuItem = () => {
+    const key = getInitialUiSchemaKey();
+
+    let allowed_schemas = AllowedSchemas(formDef.uiSchemas, mode, getScreenSize());
+
+    let matched_schema = allowed_schemas.find((menu_item) => {
+      return menu_item.key === key
+    });
+
+    if (matched_schema) return matched_schema;
+
+    return null;
+  };
+
+
+
   const [componentDefs, setComponents] = React.useState<ReactoryComponentMap>(reactory.getComponents(default_dependencies()));
   const [formData, setFormData] = React.useState<any>(initialData());
   const [formData_history, setHistory] = React.useState<any[]>([props.data || props.formData]);
   const [loading, setLoading] = React.useState<boolean>(false);
-  const [activeUiSchemaMenuItem, setActiveUiSchemaMenuItem] = React.useState<Reactory.IUISchemaMenuItem>(null);
+  const [activeUiSchemaKey, setActiveUiSchemaKey] = React.useState<string>(getInitialUiSchemaKey());
+  const [activeUiSchemaMenuItem, setActiveUiSchemaMenuItem] = React.useState<Reactory.IUISchemaMenuItem>(getInitialActiveMenuItem());
   const [queryComplete, setQueryComplete] = React.useState<boolean>(false);
   const [allowRefresh, setAllowRefresh] = React.useState<boolean>(false);
   const [showReportModal, setShowReportModal] = React.useState<boolean>(false);
@@ -363,7 +378,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return formDef.uiSchema;
   }
 
-  const getActiveUiOptions = () => {    
+  const getActiveUiOptions = () => {
     const _baseOptions = formDef.uiSchema && formDef.uiSchema['ui:options'] ? formDef.uiSchema['ui:options'] : { showSchemaSelectorInToolbar: true };
     let _uiSchema = getActiveUiSchema();
     let _options = { ..._baseOptions, ..._uiSchema["ui:options"] };
@@ -371,38 +386,17 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return _options;
   }
 
+  const getActiveGraphDefinitions = (): Reactory.IFormGraphDefinition => {
+    let _grahDefinitions: Reactory.IFormGraphDefinition = formDef.graphql;
 
-  /*
-     forms_loaded: boolean,
-    forms: Reactory.IReactoryForm[],
-    uiFramework: string,
-    uiSchemaKey: string,
-    activeUiSchemaMenuItem?: Reactory.IUISchemaMenuItem,
-    formDef?: Reactory.IReactoryForm,
-    formData?: any,
-    dirty: boolean,
-    queryComplete: boolean,
-    showHelp: boolean,
-    showReportModal: boolean,
-    showExportWindow: boolean,
-    activeExportDefinition?: Reactory.IExport,
-    activeReportDefinition?: Reactory.IReactoryPdfReport,
-    query?: any,
-    busy: boolean,
-    liveUpdate: boolean,
-    pendingResources: any,
-    _instance_id: string,
-    plugins?: any,
-    queryError?: any,
-    message?: string,
-    formError?: any,
-    autoQueryDisabled?: boolean,
-    boundaryError?: Error,
-    notificationComplete: boolean,
-    mutate_complete_handler_called: boolean,
-    last_query_exec?: number,
-    form_created: number
-    */
+    const _uiSchema = getActiveUiSchema();
+    if (_uiSchema["ui:graphql"]) {
+      _grahDefinitions = _uiSchema["ui:graphql"];
+    }
+
+    return _grahDefinitions;
+  };
+
 
   const onPluginLoaded = (plugin: any) => {
     reactory.log(`${signature} Plugin loaded, activating component`, { plugin }, 'debug');
@@ -425,7 +419,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       </HelpMe>
     )
   };
-  
+
   const onSubmit = (form: any) => {
     reactory.log(`${signature} ↩ onSubmit`, { form }, 'debug');
     let cancel: boolean = false;
@@ -435,21 +429,27 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     if (cancel === true) return;
 
-    if (formDef.graphql) {
+    const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
+    if (_graphql) {
 
-      if (formDef.graphql.mutation) {
+      if (_graphql.mutation) {
 
-        let mutation: Reactory.IReactoryFormMutation = formDef.graphql.mutation[mode];
+        let mutation: Reactory.IReactoryFormMutation = _graphql.mutation[mode];
 
+        /*
         if (activeUiSchemaMenuItem && activeUiSchemaMenuItem.graphql) {
           if (activeUiSchemaMenuItem.graphql.mutation && activeUiSchemaMenuItem.graphql.mutation[mode]) {
             reactory.log(`<${fqn} instance={${instance_id} />`)
             mutation = activeUiSchemaMenuItem.graphql.mutation[mode];
           }
         }
+        */
 
-        if (mutation === null && mutation !== undefined) {
-          reactory.createNotification(`Could not save / process form data, form has no mutation definition for mode ${mode}`, { type: 'warning', canDismiss: true })
+
+
+        if (mutation === null || mutation === undefined) {
+          //check if we need to rerun the query with the updated formData.
+          reactory.log(`No mutations available for configured mode`)
           return;
         }
 
@@ -591,12 +591,13 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           });
         }
 
-      } else {
-        //no mutation
-        //check if need to refresh on submit
-        setFormData(form.formData);
-        setQueryComplete(false);
       }
+
+      //no mutation
+      //check if need to refresh on submit    
+      getData(form.formData);
+      setQueryComplete(false);
+
     }
 
   }
@@ -604,74 +605,79 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const onChange = (form: any, errorSchema: any) => {
 
+    reactory.log(`${signature} => onChange`, { form, errorSchema }, 'debug');
 
-    reactory.log(`ReactoryComponent => ${formDef.nameSpace}.${formDef.name}@${formDef.version} instanceId=${instance_id} => onChange`, { form, errorSchema }, 'debug');
+    if ((new Date().valueOf() - created) < 777) return;
 
-    if (deepEquals(formData, form.formData) === false) {
+    const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
 
-      reactory.log(`${formDef.name}[${instance_id}].onChange`, { data: form.formData }, 'debug');
 
-      const $onChange = props.onChange;
+    if (_graphql.query)
 
-      const trigger_onChange = $onChange && typeof $onChange === 'function';
 
-      const changed = diff(form.formData, formData);
-      const rchanged = diff(formData, form.formData);
+      if (deepEquals(formData, form.formData) === false) {
 
-      let cancelEvent = false;
+        reactory.log(`${formDef.name}[${instance_id}].onChange`, { data: form.formData }, 'debug');
 
-      const fire = () => {
+        const $onChange = props.onChange;
 
-        if (formDef.eventBubbles) {
-          formDef.eventBubbles.forEach((eventAction) => {
-            if (eventAction.eventName === "onChange") {
-              if (eventAction.action === "swallow") {
-                cancelEvent = true;
+        const trigger_onChange = $onChange && typeof $onChange === 'function';
+
+        const changed = diff(form.formData, formData);
+        const rchanged = diff(formData, form.formData);
+
+        let cancelEvent = false;
+
+        const fire = () => {
+
+          if (formDef.eventBubbles) {
+            formDef.eventBubbles.forEach((eventAction) => {
+              if (eventAction.eventName === "onChange") {
+                if (eventAction.action === "swallow") {
+                  cancelEvent = true;
+                }
               }
-            }
-          });
+            });
+          }
+
+          if (cancelEvent === true) return;
+
+          $onChange(form.formData, form.errorSchema, { before: changed, after: rchanged, self });
         }
 
-        if (cancelEvent === true) return;
 
-        $onChange(form.formData, form.errorSchema, { before: changed, after: rchanged, self });
-      }
+        reactory.log(`${signature} => onChange DELTA =>`, { changed, rchanged }, 'debug');
 
 
-      reactory.log(`ReactoryComponent => ${formDef.nameSpace}.${formDef.name}@${formDef.version} instanceId=${instance_id} => onChange`, { changed, rchanged }, 'debug');
 
-      if (formDef.graphql && formDef.graphql.mutation && formDef.graphql.mutation['onChange']) {
-        debugger;
-        let onChangeMutation: Reactory.IReactoryFormMutation = formDef.graphql.mutation['onChange'];
-        let throttleDelay: number = formDef.graphql.mutation['onChange'].throttle || 500;
-        let variables = reactory.utils.objectMapper({ eventData: form, form: { formData, formContext: getFormContext() } }, onChangeMutation.variables);
+        if (_graphql && _graphql.mutation && _graphql.mutation['onChange']) {
+          //debugger;
+          let onChangeMutation: Reactory.IReactoryFormMutation = _graphql.mutation['onChange'];
+          let throttleDelay: number = _graphql.mutation['onChange'].throttle || 250;
+          let variables = reactory.utils.objectMapper({ eventData: form, form: { formData, formContext: getFormContext() } }, onChangeMutation.variables);
 
-        let throttled_call = throttle(() => {
+          //let throttled_call = throttle(() => {
           reactory.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
-            reactory.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${instance_id} onChangeMutation result`, { mutationResult }, 'debug');
+            reactory.log(`${signature} => onChange => onChangeMutation result`, { mutationResult }, 'debug');
 
             if (props.onMutateComplete) props.onMutateComplete(form.formData, getFormContext(), mutationResult);
           }).catch((mutationError) => {
 
             if (props.onMutateComplete) props.onMutateComplete(form.formData, getFormContext(), null, mutationError);
-            reactory.log(`ReactoryComponent => ${formDef.nameSpace}${formDef.name}@${formDef.version} instanceId=${instance_id} onChangeMutation error`, { mutationError }, 'error');
-            setLastQueryExecution(new Date().valueOf());
+            reactory.log(`${signature} => onChange => onChangeMutation error`, { mutationError }, 'error');
           });
-        }, throttleDelay);
 
-        if (last_query_exec) {
-          if (new Date().valueOf() - last_query_exec > 1500) throttled_call()
+
+          //throttled_call();        
+        }
+
+        if (formDef && formDef.refresh && formDef.refresh.onChange) {
+          debugger
+          if (trigger_onChange === true) fire();
         } else {
-          if (!formDef.graphql.query) throttled_call();
+          setFormData(form.formData);
         }
       }
-
-      if (formDef && formDef.refresh && formDef.refresh.onChange) {
-        if (trigger_onChange === true) fire();
-      } else {
-        setFormData(form.formData);
-      }
-    }
   }
 
   const setState = ($state: any, callback = () => { }) => {
@@ -716,8 +722,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         setState,
         forceUpdate: () => { setVersion(version + 1) },
         props,
-        submit: formRef ? formRef.onSubmit : () => {},
-        state: getState()
+        submit: formRef ? formRef.onSubmit : () => { },
+        state: getState(),
+        onChange
       },
       refresh: (args = { autoQueryDisabled: true }) => {
         setQueryComplete(false);
@@ -728,7 +735,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       setFormData: (formData: any, callback = () => { }) => {
         setFormData(formData);
         callback();
-      },
+      },      
+      graphql: getActiveGraphDefinitions(),
       getData,
       screenBreakPoint: getScreenSize(),
       ...inputContext,
@@ -760,30 +768,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     // set noHtml5Validation if not set by schema
     if (nil(_formDef.noHtml5Validate)) _formDef.noHtml5Validate = true;
 
-    if (uiSchemaId) {
-      if (uiSchemaId !== 'default' && find(_formDef.uiSchemas, { key: uiSchemaKey })) {
-        _formDef.uiSchema = find(_formDef.uiSchemas, { id: uiSchemaId }).uiSchema;
-      }
-    }
-
-    if (uiSchemaKey) {
-      if (uiSchemaKey !== 'default' && find(_formDef.uiSchemas, { key: uiSchemaKey })) {
-        _formDef.uiSchema = find(_formDef.uiSchemas, { key: uiSchemaKey }).uiSchema;
-      }
-    }
-
     //state selected option must override the property set item
     //as the user can change the current active item either programmatically
     //or via UX element.
-    if (activeUiSchemaMenuItem && activeUiSchemaMenuItem.uiSchema) {
-      reactory.log(`ReactoryComponent => ${_formDef.nameSpace}${_formDef.name}@${_formDef.version} instanceId=${instance_id} => Setting activeUiSchemaMenuItem ${activeUiSchemaMenuItem.title}`, { activeUiSchemaMenuItem }, 'debug');
-      _formDef.uiSchema = activeUiSchemaMenuItem.uiSchema;
-    }
-
-    if (_formDef.uiSchema && _formDef.uiSchema['ui:graphql']) {
-      reactory.log(`ReactoryComponent => ${_formDef.nameSpace}${_formDef.name}@${_formDef.version} instanceId=${instance_id} => Updating graphql definition ${uiSchemaKey}`)
-      _formDef.graphql = { ..._formDef.uiSchema['ui:graphql'] };
-    }
+    _formDef.uiSchema = getActiveUiSchema();
+    _formDef.graphql = getActiveGraphDefinitions();
 
     // #region setup functions
     const setFormContext = () => {
@@ -1048,9 +1037,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     const formDef = formDefinition();
     let _activeReportDefinition = activeReportDefinition || formDef.defaultPdfReport;
 
-    if(_activeReportDefinition === null || _activeReportDefinition === undefined) return null;
+    if (_activeReportDefinition === null || _activeReportDefinition === undefined) return null;
 
-    const closeReport = () =>  {
+    const closeReport = () => {
       setShowReportModal(false);
       setActiveReportDefinition(null);
     }
@@ -1075,7 +1064,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     const { ReportViewer, FullScreenModal } = componentDefs;
     const formDef: Reactory.IReactoryForm = formDefinition();
     if (formDef !== undefined) {
-      const closeReport = (e: React.SyntheticEvent): void => { setShowExportModal( false ); }
+      const closeReport = (e: React.SyntheticEvent): void => { setShowExportModal(false); }
       return (
         <FullScreenModal open={showExportModal === true} onClose={closeReport}>
           <ReportViewer
@@ -1092,19 +1081,38 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const getData = (defaultInputData?: any) => {
     reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData }, 'debug');
-    if (formDef.graphql) {
+    const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
+    
+    let _formData = null;
+
+    switch (formDef.schema.type) {
+      case "object": {
+        _formData = { ...formDef.defaultFormValue,  ...formData };
+        if (defaultInputData && typeof defaultInputData === 'object') _formData = { ..._formData, ...defaultInputData }
+        break;
+      }
+      case "array": {
+        _formData = [...formDef.defaultFormValue,  ...formData];
+        if (defaultInputData && Array.isArray(defaultInputData) === true) _formData = [..._formData, ...defaultInputData]
+        break;
+      }
+      default: {
+        _formData = formData;
+        break;
+      }
+    }
+
+    if (_graphql) {
 
       const has = {
-        query: isNil(formDef.graphql.query) === false && isString(formDef.graphql.query.text) === true,
+        query: isNil(_graphql.query) === false && isString(_graphql.query.text) === true,
       };
 
       if (has.query === true) {
 
-        const query = formDef.graphql.query;
+        const query = _graphql.query;
         const formContext = getFormContext();
         const __staticFormData = query.formData;
-
-        let _formData = null;
 
         switch (formDef.schema.type) {
           case "object": {
@@ -1124,6 +1132,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
 
+
         const _variables = reactory.utils.omitDeep(objectMapper({
           formContext,
           formData: _formData,
@@ -1137,13 +1146,13 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         //error handler function
         const handleErrors = (errors) => {
 
-          if (formDef.graphql.query.onError) {
-            const componentToCall = reactory.getComponent(formDef.graphql.query.onError.componentRef);
+          if (_graphql.query.onError) {
+            const componentToCall = reactory.getComponent(_graphql.query.onError.componentRef);
             if (componentToCall && typeof componentToCall === 'function') {
               const componentInstance = componentToCall(props)
-              if (typeof componentInstance[formDef.graphql.query.onError.method] === 'function') {
+              if (typeof componentInstance[_graphql.query.onError.method] === 'function') {
                 try {
-                  componentInstance[formDef.graphql.query.onError.method](errors);
+                  componentInstance[_graphql.query.onError.method](errors);
                 } catch (err) {
                   reactory.log(err.message, err, 'error');
                 }
@@ -1245,9 +1254,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           });
         }
 
-        if (formDef.graphql.query.interval) {
+        if (_graphql.query.interval) {
           if (refreshInterval === null || refreshInterval === undefined) {
-            setRefreshInterval(setInterval(executeFormQuery, formDef.graphql.query.interval));
+            setRefreshInterval(setInterval(executeFormQuery, _graphql.query.interval));
           }
 
         }
@@ -1262,8 +1271,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
         setTimeout(executeFormQuery, query.autoQueryDelay || 0);
-      }
-    }
+      } else setFormData(_formData);
+
+
+    } else setFormData(_formData);
+    
   };
 
   const renderForm = () => {
@@ -1271,7 +1283,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     reactory.log(`Rendering <${formDef.nameSpace}.${formDef.name}@${formDef.version} />`, { props: props, formData }, 'debug');
 
     const filter_props = () => {
-      return props;    
+      return props;
     };
 
     const _formUiOptions = getActiveUiOptions();
@@ -1335,7 +1347,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
       }
     }
-    
+
     const { submitProps, buttons } = _formUiOptions;
     if (typeof submitProps === 'object' && showSubmit === true) {
       const { variant = 'fab', iconAlign = 'left' } = submitProps;
@@ -1346,15 +1358,15 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       if (variant && typeof variant === 'string' && showSubmit === true) {
         switch (variant) {
           case 'fab':
-          {
-            delete _props.variant;
-            submitButton = (<Fab {..._props}>{iconWidget}</Fab>);
-            break;
-          }          
-          default:  {
+            {
+              delete _props.variant;
+              submitButton = (<Fab {..._props}>{iconWidget}</Fab>);
+              break;
+            }
+          default: {
             submitButton = (<Button {..._props}>{iconAlign === 'left' && iconWidget}{template(_props.text)({ props: props, formData, formDef, reactory })}{iconAlign === 'right' && iconWidget}</Button>);
             break;
-          }          
+          }
         }
       }
     }
@@ -1432,7 +1444,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             <div style={schemaStyle}>
               {
                 _formUiOptions.schemaSelector &&
-                _formUiOptions.schemaSelector.showTitle === false ? null : (<span>
+                  _formUiOptions.schemaSelector.showTitle === false ? null : (<span>
                     {activeUiSchemaModel.title}
                   </span>)
               }
@@ -1447,7 +1459,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
             reactory.log(`<${fqn} /> UI Schema Selector onSchemaSelect "${selectedSchema.title}" selected`, { selectedSchema });
             // TODO - this needs to be tested
-            setActiveUiSchemaMenuItem(selectedSchema);            
+            setActiveUiSchemaMenuItem(selectedSchema);
           };
 
           // let defaultStyle =
@@ -1470,16 +1482,16 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           let _before = [];
           let _after = []
 
-          if(_formUiOptions.schemaSelector.components) {
+          if (_formUiOptions.schemaSelector.components) {
             _formUiOptions.schemaSelector.components.forEach((componentRef: string | object) => {
-              if(typeof componentRef === 'string') {
-                if(componentRef.indexOf(".") > 0 ) {
+              if (typeof componentRef === 'string') {
+                if (componentRef.indexOf(".") > 0) {
                   const ComponentInSchemaSelector = reactory.getComponent(componentRef);
-                  if(ComponentInSchemaSelector) {
+                  if (ComponentInSchemaSelector) {
                     _after.push(<ComponentInSchemaSelector formData={formData} formContext={formProps.formContext} uiSchema={formProps.uiSchema} schema={formProps.schema} />)
                   }
                 } else {
-                  switch(componentRef) {
+                  switch (componentRef) {
                     case "submit": {
                       _after.push(submitButton)
                       break;
@@ -1499,7 +1511,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                     case "import": {
 
                       break;
-                    }                    
+                    }
                   }
                 }
               }
@@ -1508,10 +1520,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
           uiSchemaSelector = (
             //@ts-ignore
-            <div {...p}>                            
+            <div {...p}>
               {_before}
-              {  
-              _formUiOptions.schemaSelector.buttonVariant ?
+              {
+                _formUiOptions.schemaSelector.buttonVariant ?
                   <Button
                     id="schemaButton"
                     onClick={onSelectUiSchema}
@@ -1537,7 +1549,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
 
 
-    
+
 
     if (_formUiOptions && isNil(_formUiOptions.showSubmit) === false) {
       showSubmit = _formUiOptions.showSubmit === true;
@@ -1552,7 +1564,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
 
 
-    
+
 
     let _additionalButtons = [];
     if (buttons && buttons.length) {
@@ -1579,7 +1591,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       });
     }
 
-    
+
 
 
     const refreshClick = (evt) => {
@@ -1661,9 +1673,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     let toolbarPosition = _formUiOptions.toolbarPosition || 'bottom'
 
+    const _graphql = getActiveGraphDefinitions();
+
     return (
       <>
-        {formDef.graphql && formDef.graphql.query && queryComplete === false && <LinearProgress />}
+        {_graphql && _graphql.query && queryComplete === false && <LinearProgress />}
         {props.before}
         <Form {...{ ...formProps, toolbarPosition: toolbarPosition }}>
           {toolbarPosition.indexOf('bottom') >= 0 && toolbarPosition !== 'none' ? formtoolbar : null}
@@ -1722,7 +1736,7 @@ const styles = (theme: Object) => {
  */
 export const ReactoryFormComponent: any = compose(
   withApi,
-  withTheme,  
+  withTheme,
   withRouter
 )(ReactoryComponentHOC);
 

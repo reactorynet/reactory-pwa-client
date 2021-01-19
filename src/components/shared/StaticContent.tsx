@@ -7,6 +7,7 @@ import { withStyles, withTheme,  } from '@material-ui/core/styles';
 import moment, { Moment } from 'moment';
 import ReactoryApi, { withApi } from '@reactory/client-core/api';
 import FroalaWidget from '@reactory/client-core/components/reactory/widgets/FroalaWidget';
+import { getContent } from 'api/RestApi';
 
 interface ReactoryStaticContentProps {
   id: string,
@@ -158,12 +159,12 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
   }
 
   componentDidMount(){
-    setTimeout(this.getContent, 555); 
+    this.getContent(); 
   }
 
   componentDidUpdate(nextProps, nextState){
     if(this.props.slug !== nextProps.slug) {
-      setTimeout(this.getContent, 100); 
+     this.getContent();
     }
   }
 
@@ -199,11 +200,13 @@ class StaticContent extends Component<ReactoryStaticContentProps, ReactoryStatic
     let contentComponent = found === true && content.published === true ? (<div {...containerProps} dangerouslySetInnerHTML={{__html: this.state.content.content}}></div>) : defaultValue;            
     let ContentCaptureComponent = this.props.api.getComponent( formFqn );
     let contentCaptureProps: any = {      
-      formData: { slug: this.props.slug, title: this.props.title, published: true, content: this.props.defaultValue },
+      formData: { slug: this.props.slug, title: this.props.title, published: true, content: this.state.found === true ? content.content : this.props.defaultValue },
       mode:"edit", 
       id: this.props.id,
       uiSchemaKey: viewMode || 'default',
-      onMutateComplete:getContent, 
+      onMutateComplete: (_newData) => {
+        getContent(_newData)
+      }, 
       helpTopics: this.props.helpTopics,
       helpTitle: this.props.helpTitle,
       placeHolder: this.props.placeHolder,     

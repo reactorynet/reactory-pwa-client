@@ -57,6 +57,10 @@ class LabelWidget extends Component {
     ])
   }
 
+  componentDidUpdate() {
+    
+  }
+
   render() {
 
     const { props } = this;
@@ -116,7 +120,7 @@ class LabelWidget extends Component {
       }
 
       if(props.uiSchema['ui:graphql'] && format === "$LOOKUP$") {
-
+        debugger
         labelText = self.state.lookupValue && self.state.lookupComplete === true ? self.state.lookupValue : 'LOOKUP';
         const lookupGraphql = props.uiSchema['ui:graphql'];
         const variables = api.utils.objectMapper( props, lookupGraphql.variables );

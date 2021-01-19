@@ -27,7 +27,7 @@ import ReactoryApi, { ApiProvider, ReactoryApiEventNames } from './api'
 import { fetch } from "whatwg-fetch";
 import { deepEquals } from './components/reactory/form/utils';
 import ReactoryApolloClient from './api/ReactoryApolloClient';
-import { Typography, Icon } from '@material-ui/core';
+import { Typography, Icon, Paper } from '@material-ui/core';
 import license from './license';
 import { ReactoryProvider } from './api/ApiProvider';
 import Reactory from '@reactory/client-core/types/reactory';
@@ -331,13 +331,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           setUser(user);
           setOfflineStatus(false);
           setIsReady(true);
-  
+
           let themeOptions = api.getTheme();
           if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
           if (Object.keys(themeOptions).length === 0) themeOptions = { ...props.appTheme };
-  
+
           let muiTheme: Theme & any = createMuiTheme(themeOptions);
-  
+
           if (themeOptions.provider && typeof themeOptions.type === 'string') {
             if (themeOptions.provider[themeOptions.type]) {
               //using new mechanism.
@@ -349,7 +349,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
               }
             }
           }
-  
+
           api.muiTheme = muiTheme;
           setTheme(muiTheme);
         }).catch((validationError) => {
@@ -365,7 +365,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
     const waitForClient = () => {
 
-      if(api.client === null || api.client === undefined) {
+      if (api.client === null || api.client === undefined) {
         setTimeout(waitForClient, 777);
       } else {
         getApiStatus();
@@ -376,7 +376,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     api.on(ReactoryApiEventNames.onLogin, onLogin)
     api.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
     api.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
-        
+
     const query = queryString.parse(window.location.search);
     if (query.auth_token) {
       localStorage.setItem('auth_token', query.auth_token);
@@ -430,7 +430,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     )
   }
 
-  if(isReady === false) return <AppLoading />;
+  if (isReady === false) return <AppLoading />;
 
   return (
     <Router>
@@ -441,12 +441,14 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             <ApolloProvider client={api.client}>
               <MuiPickersUtilsProvider utils={MomentUtils}>
                 <ReactoryProvider api={api}>
-                  <React.Fragment>
-                    {isReady === true && <Globals api={api} />}
-                    {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
-                    {isReady === true && <NotificationComponent />}
-                    {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
-                  </React.Fragment>
+                  
+                    <React.Fragment>
+                      {isReady === true && <Globals api={api} />}
+                      {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
+                      {isReady === true && <NotificationComponent />}
+                      {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
+                    </React.Fragment>
+                  
                 </ReactoryProvider>
               </MuiPickersUtilsProvider>
             </ApolloProvider>
