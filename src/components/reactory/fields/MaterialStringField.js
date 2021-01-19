@@ -45,7 +45,8 @@ const MaterialStringFieldWidget = (props) => {
     uiSchema,
     hidden,
     theme,
-    api
+    api,
+    reactory
   } = props;
 
   try {
@@ -72,7 +73,6 @@ const MaterialStringFieldWidget = (props) => {
       if (Widget) return (<Widget {...args} />)
     }
 
-
     switch (schema.format) {
       case "password": args.type = "password"; break;
       case "email": args.type = "email"; break;
@@ -89,9 +89,23 @@ const MaterialStringFieldWidget = (props) => {
     }
 
     const onKeyDown = evt => {
+      const { reactory } = props;
+
       if (evt.keyCode === 13 && uiOptions && uiOptions.componentProps && uiOptions.componentProps.submitOnEnter) {
         evt.preventDefault();
-        props.formContext.$ref.submit();
+        debugger;
+
+        if (uiOptions.componentProps.refreshEvents && uiOptions.componentProps.refreshEvents.length > 0) {
+          uiOptions.componentProps.refreshEvents.forEach((refreshEvent) => {
+            debugger;
+            // props.formContext.$ref.submit();
+            props.onChange(evt.target.value);
+            // props.formContext.$ref.forceUpdate();
+            reactory.emit(refreshEvent, props.formContext.$formData);
+          });
+        } else {
+          props.formContext.$ref.submit();
+        }
       }
     }
 

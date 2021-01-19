@@ -56,6 +56,8 @@ export interface MaterialTableResult<T> {
   totalCount: number
 }
 
+const tableRef: any = React.createRef();
+
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], paging } = props;
@@ -73,7 +75,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [last_queried, setLastQueried] = useState(null);
   const [last_result, setLastResult] = useState(formData);
 
-  const tableRef: any = React.createRef();
+  // const tableRef: any = React.createRef();
+  // let tableRef: any = React.createRef();
 
   let columns = [];
   let actions = [];
@@ -114,6 +117,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         totalCount: 0,
       }
 
+      debugger;
+
       try {
         const graphqlDefinitions = formContext.graphql;
 
@@ -137,30 +142,30 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           reactory.graphqlQuery(queryDefinition.text, variables).then((queryResult: any) => {
             reactory.log(`Result From Query`, { queryResult  })
             if (queryResult.errors && queryResult.errors.length > 0) {
-              //show a loader error              
+              //show a loader error
               reactory.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
-              reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })                
+              reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })
             } else {
-  
+
               response = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
-  
+
               if (uiOptions.disablePaging === true) {
                 response.page = 1,
                 response.totalCount = response.data.length;
               }
-  
-              
+
+
               response.page = response.page - 1;
-              
+
               if (uiOptions.footerColumns && uiOptions.footerColumns.length > 0) {
-  
+
                 const footerObject = {};
                 uiOptions.footerColumns.forEach(fcol => {
                   footerObject[fcol.field] = fcol.text && fcol.text != '' ? fcol.text : fcol.value ? template(fcol.value)(queryResult.data[queryDefinition.name]) : null
                 });
-  
+
                 response.data.push(footerObject);
-              }                
+              }
             }
 
             resolve(response);
@@ -168,7 +173,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             reactory.log(`Error getting remote data`, { queryError }, 'error');
             //reject(queryError);
             resolve(response);
-          });          
+          });
         }
 
       } catch (remoteDataError) {
@@ -281,7 +286,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         columns.push(def)
       }
     });
-  }  
+  }
 
   let options: any = {
     rowStyle: (rowData, index) => {
@@ -441,8 +446,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     });
   }
 
-
-
   let confirmDialog = null;
   if (activeAction.show === true) {
 
@@ -462,9 +465,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       />);
   }
 
-
   const refreshHandler = (eventName: string, eventData: any) => {
-    debugger
+    debugger;
     const uiOptions = uiSchema['ui:options'] || {};
     reactory.log(`MaterialTableWidget - Handled ${eventName}`, eventData, 'debug');
     if (uiOptions.remoteData === true) {
@@ -479,8 +481,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const onSelectionChange = (selected_rows) => {
     setSelectedRows(selected_rows);
   }
-
-
 
   const willUnmount = () => {
     const uiOptions = uiSchema['ui:options'] || {};

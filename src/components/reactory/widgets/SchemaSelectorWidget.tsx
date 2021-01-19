@@ -25,7 +25,6 @@ class SchemaSelectorWidget extends Component<any,any> {
 
   render(){
     const { formContext, uiSchema } = this.props;
-    debugger
     let ComponentToRender = null;
 
     if(uiSchema ) {
