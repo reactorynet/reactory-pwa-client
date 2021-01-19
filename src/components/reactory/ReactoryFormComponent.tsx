@@ -596,8 +596,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       //no mutation
       //check if need to refresh on submit    
       getData(form.formData);
+      setVersion(version + 1);
       setQueryComplete(false);
 
+    } else {
+      setFormData(form.formData);
+      setVersion(version + 1);
     }
 
   }
@@ -612,9 +616,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
 
 
-    if (_graphql.query)
-
-
+    if (_graphql && _graphql.query) {
       if (deepEquals(formData, form.formData) === false) {
 
         reactory.log(`${formDef.name}[${instance_id}].onChange`, { data: form.formData }, 'debug');
@@ -678,6 +680,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           setFormData(form.formData);
         }
       }
+    }
+        
   }
 
   const setState = ($state: any, callback = () => { }) => {
@@ -708,6 +712,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
     let _context = {
       ...cloned_props,
+      signature,
+      version,
       formDef: { ...formDef },
       formData: nextData || formData,
       $formData: nextData || formData,
@@ -1716,7 +1722,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         setInterval(null);
       }
     }
-  }, [])
+  }, []);
+
+  React.useEffect(() => {        
+    getData(props.formData);
+  }, [props.formData])
 
   return (
     <IntersectionVisible>{renderForm()}</IntersectionVisible>

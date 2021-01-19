@@ -40,6 +40,7 @@ export interface ReactoryMaterialTableProps {
   formData: any[],
   formContext: any,
   paging: any,
+  searchText: any,
   onChange: (formData: any[]) => void
 }
 
@@ -56,9 +57,11 @@ export interface MaterialTableResult<T> {
   totalCount: number
 }
 
+const tableRef: any = React.createRef();
+
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
-  const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], paging } = props;
+  const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], searchText="" } = props;
   const uiOptions = uiSchema['ui:options'] || {};
 
   const AlertDialog = reactory.getComponent('core.AlertDialog@1.0.0');
@@ -71,9 +74,10 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
   const [last_queried, setLastQueried] = useState(null);
-  const [last_result, setLastResult] = useState(formData);
+  const [last_result, setLastResult] = useState(formData);  
 
-  const tableRef: any = React.createRef();
+  // const tableRef: any = React.createRef();
+  // let tableRef: any = React.createRef();
 
   let columns = [];
   let actions = [];
@@ -112,7 +116,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         data: [],
         page: 0,
         totalCount: 0,
-      }
+      }      
 
       try {
         const graphqlDefinitions = formContext.graphql;
@@ -137,30 +141,30 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           reactory.graphqlQuery(queryDefinition.text, variables).then((queryResult: any) => {
             reactory.log(`Result From Query`, { queryResult  })
             if (queryResult.errors && queryResult.errors.length > 0) {
-              //show a loader error              
+              //show a loader error
               reactory.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
-              reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })                
+              reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })
             } else {
-  
+
               response = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
-  
+
               if (uiOptions.disablePaging === true) {
                 response.page = 1,
                 response.totalCount = response.data.length;
               }
-  
-              
+
+
               response.page = response.page - 1;
-              
+
               if (uiOptions.footerColumns && uiOptions.footerColumns.length > 0) {
-  
+
                 const footerObject = {};
                 uiOptions.footerColumns.forEach(fcol => {
                   footerObject[fcol.field] = fcol.text && fcol.text != '' ? fcol.text : fcol.value ? template(fcol.value)(queryResult.data[queryDefinition.name]) : null
                 });
-  
+
                 response.data.push(footerObject);
-              }                
+              }
             }
 
             resolve(response);
@@ -168,7 +172,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             reactory.log(`Error getting remote data`, { queryError }, 'error');
             //reject(queryError);
             resolve(response);
-          });          
+          });
         }
 
       } catch (remoteDataError) {
@@ -281,7 +285,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         columns.push(def)
       }
     });
-  }  
+  }
 
   let options: any = {
     rowStyle: (rowData, index) => {
@@ -320,6 +324,13 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     if (options.searchText && options.searchText.indexOf('${') >= 0) {
       try {
         options.searchText = reactory.utils.template(options.searchText)({ ...props })
+        if(tableRef && tableRef.current) {
+          debugger
+          if(tableRef.current.state.searchText !== options.searchText) {
+            tableRef.current.onQueryChange({ search: options.searchText })
+            tableRef.current.setState({ searchText: options.searchText })
+          }
+        }
       } catch (tErr) {
         reactory.log(`core.MaterialTableWidget template render failed for search input`, { searchText: options.searchText, error: tErr }, 'error');
       }
@@ -441,8 +452,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     });
   }
 
-
-
   let confirmDialog = null;
   if (activeAction.show === true) {
 
@@ -462,9 +471,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       />);
   }
 
-
   const refreshHandler = (eventName: string, eventData: any) => {
-    debugger
     const uiOptions = uiSchema['ui:options'] || {};
     reactory.log(`MaterialTableWidget - Handled ${eventName}`, eventData, 'debug');
     if (uiOptions.remoteData === true) {
@@ -480,8 +487,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     setSelectedRows(selected_rows);
   }
 
-
-
   const willUnmount = () => {
     const uiOptions = uiSchema['ui:options'] || {};
     if (uiOptions.refreshEvents) {
@@ -493,7 +498,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       });
     };
   }
-
+  
   React.useEffect(() => {
     const uiOptions = uiSchema['ui:options'] || {};
     if (uiOptions.refreshEvents) {
@@ -507,7 +512,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     };
 
     return willUnmount;
-  }, []);
+  }, []);  
+
+  
 
 
   return (
@@ -515,7 +522,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       <MaterialTable
         columns={columns}
         tableRef={tableRef}
-        data={rows}
+        data={rows}        
         title={schema.title || uiOptions.title || "no title"}
         options={options}
         actions={actions}

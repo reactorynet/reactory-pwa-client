@@ -69,7 +69,7 @@ const MaterialFieldTemplateFunction = (props) => {
 
 
   if (uiOptions !== null) {
-    showLabel = uiOptions.showLabel ? uiOptions.showLabel === true : true;
+    showLabel = uiOptions.showLabel ? uiOptions.showLabel === true : false;
 
     if (hidden === true || uiWidget === "HiddenWidget") {
       return <Fragment>{children}</Fragment>
@@ -87,7 +87,7 @@ const MaterialFieldTemplateFunction = (props) => {
         if (mappedProps) {
           _props = { ..._props, ...mappedProps }
         }
-      }
+      }      
 
       if (uiOptions.propsMap) {
         let mappedProps = api.utils.objectMapper(props, uiOptions.propsMap);
