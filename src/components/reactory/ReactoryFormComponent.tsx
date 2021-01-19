@@ -1702,7 +1702,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         setInterval(null);
       }
     }
-  }, [])
+  }, []);
+
+  React.useEffect(() => {        
+    getData(props.formData);
+  }, [props.formData])
 
   return (
     <IntersectionVisible>{renderForm()}</IntersectionVisible>
