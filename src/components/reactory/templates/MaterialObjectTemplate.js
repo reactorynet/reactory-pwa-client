@@ -25,25 +25,19 @@ import {
   Tooltip,
   Paper,
 } from '@material-ui/core';
+import { sign } from 'crypto';
 
-class ObjectTemplate extends Component {
-
-  static styles = (theme) => ({
+const MaterialObjectTemplateStyles = (theme) => ({
     root: {
       padding: theme.spacing(1),
       margin: theme.spacing(1)
     }
   })
 
-  constructor(props, context) {
-    super(props, context)
-    this.state = {
-      expanded: props.expanded === true
-    }
-  }
+const MaterialObjectTemplateHOC = (props) => {
 
+      
   
-  render() {
     const { 
       title, 
       description, 
@@ -57,13 +51,13 @@ class ObjectTemplate extends Component {
       hidden,
       idSchema,
       uiSchema, 
-      api, 
+      reactory, 
       formData, 
       formContext 
-    } = this.props;
-    if(formContext.api) {
-      formContext.api.log('MaterialObjectTemplate rendering', {props: this.props}, 'debug');
-    }
+    } = props;
+
+    
+    
     // //console.log('Object template field', { props: this.props, uiSchema });
     let titleText = title && title.indexOf("$") >= 0 ? template(title)({formData: this.props.formData}) : title;    
     const toggleExpand = () => { 
@@ -78,6 +72,9 @@ class ObjectTemplate extends Component {
     const uiWidget = uiSchema['ui:widget'] || null;
     const uiToolbar = uiSchema['ui:toolbar'] || null;    
 
+    let _componentName = 'default';
+
+
     let Widget = null;
     let toolbar = null;
 
@@ -86,7 +83,7 @@ class ObjectTemplate extends Component {
           const buttons = uiToolbar.buttons.map((button) => {
             const api = formContext.api
             const onRaiseCommand = ( evt ) => {                      
-              if(api) api.raiseFormCommand(button.command,  { formData: formData, formContext: formContext });              
+              if(api) reactory.raiseFormCommand(button.command,  { formData: formData, formContext: formContext });              
             };            
             return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
           });
@@ -98,32 +95,36 @@ class ObjectTemplate extends Component {
       return <Fragment>{children}</Fragment>
     }
     
-    if(uiOptions && uiOptions.componentFqn && typeof uiOptions.componentFqn === 'string') 
-      Widget = api.getComponent(uiOptions.componentFqn);          
+    if(uiOptions && uiOptions.componentFqn && typeof uiOptions.componentFqn === 'string')  {
+      Widget = reactory.getComponent(uiOptions.componentFqn);
+      _componentName = uiOptions.componentFqn;
+    }
         
-    if(typeof uiWidget === 'string' && Widget === null) 
-      Widget = api.getComponent(uiWidget);
+    if(typeof uiWidget === 'string' && Widget === null)  {
+      Widget = reactory.getComponent(uiWidget);
+      _componentName = uiOptions.componentFqn;
+    }
 
-    if(typeof uiWidget === 'string' && Widget === null && Widgets[uiWidget] !== null ) 
+    if(typeof uiWidget === 'string' && Widget === null && Widgets[uiWidget] !== null ) {
       Widget = Widgets[uiWidget];
+      _componentName = uiWidget;
+    }
      
-    let _props = {...this.props};
+    let _props = {...props};
     
     if(uiOptions && uiOptions.props) {
       _props = {..._props, ...uiOptions.props };
     }
     
     if(uiOptions && uiOptions.componentPropsMap) {
-      let mappedProps = api.utils.objectMapper(_props, uiOptions.componentPropsMap);
+      let mappedProps = reactory.utils.objectMapper(_props, uiOptions.componentPropsMap);
       if(mappedProps) {
         _props = {..._props, ...mappedProps}
       }
     }
 
-    
-
     if(uiOptions &&  uiOptions.propsMap) {
-      let mappedProps = api.utils.objectMapper(_props, uiOptions.propsMap);
+      let mappedProps = reactory.utils.objectMapper(_props, uiOptions.propsMap);
       if(mappedProps) {
         _props = {..._props, ...mappedProps}
       }
@@ -132,6 +133,11 @@ class ObjectTemplate extends Component {
     if(Widget) {
       return (<Widget {..._props} />)
     }
+
+    let signature = `${formContext.signature}\n\t<${_componentName} id=${idSchema.$id} />`;
+
+    
+    reactory.log(`MaterialObjectTemplate ${signature}`, { props }, 'debug');
 
     let ContainerComponent = Paper;
     let ContainerStyles = {};
@@ -154,7 +160,7 @@ class ObjectTemplate extends Component {
           break;
         }
         case "Custom" : {
-          ContainerComponent = api.getComponent(uiOptions.componentFqn);
+          ContainerComponent = reactory.getComponent(uiOptions.componentFqn);
           break;
         }
         case "Paper": 
@@ -172,16 +178,15 @@ class ObjectTemplate extends Component {
         {toolbar}
         {properties.map(element => element.content)}
       </ContainerComponent>
-    );
-  }
+    );  
 }
 
 const MaterialObjectTemplate = compose(
   withApi,
-  withStyles(ObjectTemplate.styles),
-  withTheme)(ObjectTemplate)
+  withStyles(MaterialObjectTemplateStyles),
+  withTheme)(MaterialObjectTemplateHOC)
 
 const MaterialObjectTemplateFunction = (props) => {
   return (<MaterialObjectTemplate {...props} />)
-}
+};
 export default MaterialObjectTemplateFunction

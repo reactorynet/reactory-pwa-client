@@ -40,6 +40,7 @@ export interface ReactoryMaterialTableProps {
   formData: any[],
   formContext: any,
   paging: any,
+  searchText: any,
   onChange: (formData: any[]) => void
 }
 
@@ -60,7 +61,7 @@ const tableRef: any = React.createRef();
 
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
-  const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], paging } = props;
+  const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], searchText="" } = props;
   const uiOptions = uiSchema['ui:options'] || {};
 
   const AlertDialog = reactory.getComponent('core.AlertDialog@1.0.0');
@@ -73,7 +74,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
   const [last_queried, setLastQueried] = useState(null);
-  const [last_result, setLastResult] = useState(formData);
+  const [last_result, setLastResult] = useState(formData);  
 
   // const tableRef: any = React.createRef();
   // let tableRef: any = React.createRef();
@@ -115,9 +116,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         data: [],
         page: 0,
         totalCount: 0,
-      }
-
-      debugger;
+      }      
 
       try {
         const graphqlDefinitions = formContext.graphql;
@@ -325,6 +324,13 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     if (options.searchText && options.searchText.indexOf('${') >= 0) {
       try {
         options.searchText = reactory.utils.template(options.searchText)({ ...props })
+        if(tableRef && tableRef.current) {
+          debugger
+          if(tableRef.current.state.searchText !== options.searchText) {
+            tableRef.current.onQueryChange({ search: options.searchText })
+            tableRef.current.setState({ searchText: options.searchText })
+          }
+        }
       } catch (tErr) {
         reactory.log(`core.MaterialTableWidget template render failed for search input`, { searchText: options.searchText, error: tErr }, 'error');
       }
@@ -466,7 +472,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   const refreshHandler = (eventName: string, eventData: any) => {
-    debugger;
     const uiOptions = uiSchema['ui:options'] || {};
     reactory.log(`MaterialTableWidget - Handled ${eventName}`, eventData, 'debug');
     if (uiOptions.remoteData === true) {
@@ -493,7 +498,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       });
     };
   }
-
+  
   React.useEffect(() => {
     const uiOptions = uiSchema['ui:options'] || {};
     if (uiOptions.refreshEvents) {
@@ -507,7 +512,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     };
 
     return willUnmount;
-  }, []);
+  }, []);  
+
+  
 
 
   return (
@@ -515,7 +522,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       <MaterialTable
         columns={columns}
         tableRef={tableRef}
-        data={rows}
+        data={rows}        
         title={schema.title || uiOptions.title || "no title"}
         options={options}
         actions={actions}

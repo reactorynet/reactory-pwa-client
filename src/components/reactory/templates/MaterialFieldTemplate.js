@@ -87,7 +87,7 @@ const MaterialFieldTemplateFunction = (props) => {
         if (mappedProps) {
           _props = { ..._props, ...mappedProps }
         }
-      }
+      }      
 
       if (uiOptions.propsMap) {
         let mappedProps = api.utils.objectMapper(props, uiOptions.propsMap);
