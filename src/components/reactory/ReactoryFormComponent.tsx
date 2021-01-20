@@ -706,6 +706,28 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
   }
 
+  const $submitForm = () => {
+    if (isNil(formRef) === false && formRef) {
+      try {
+        formRef.onSubmit();
+      } catch (submitError) {
+        reactory.createNotification(`The Form ${signature} could not submit`, { type: "warning", showInAppNotification: true, canDismis: true });
+        reactory.log(`Could not submit the form`, submitError, 'error')
+      }
+    }
+  }
+
+  const getFormReference = () => {
+    return {
+      setState,
+      forceUpdate: () => { setVersion(version + 1) },
+      props,
+      submit: $submitForm,
+      state: getState(),
+      onChange
+    }
+  }
+
 
   const getFormContext = (nextData?: any) => {
     const cloned_props = { ...props };
@@ -728,14 +750,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       },
       query: { ...props.query },
       formInstanceId: instance_id,
-      $ref: {
-        setState,
-        forceUpdate: () => { setVersion(version + 1) },
-        props,
-        submit: formRef ? formRef.onSubmit : () => { },
-        state: getState(),
-        onChange
-      },
+      $ref: getFormReference(),
       refresh: (args = { autoQueryDisabled: true }) => {
         setQueryComplete(false);
         setAutoQueryDisabled(args.autoQueryDisabled);
@@ -1042,6 +1057,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return $errors;
   };
 
+  
+
   const getPdfWidget = () => {
     const { ReportViewer, FullScreenModal } = componentDefs;
     const formDef = formDefinition();
@@ -1090,7 +1107,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   };
 
   const getData = (defaultInputData?: any) => {
-    reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData }, 'debug');
+    reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
     
     let _formData = null;
@@ -1102,7 +1119,13 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         break;
       }
       case "array": {
-        _formData = [...formDef.defaultFormValue,  ...formData];
+        _formData = [];              
+        if(formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === true) _formData = [...formDef.defaultFormValue];
+        if(formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === false) reactory.log(`🚨 ${signature} Schema type and Default Form Value do not match.`, { formDef }, 'error');        
+        if(formData && Array.isArray(formData) === true) {
+          _formData = [ ...formData];
+        }
+
         if (defaultInputData && Array.isArray(defaultInputData) === true) _formData = [..._formData, ...defaultInputData]
         break;
       }
@@ -1179,7 +1202,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         const executeFormQuery = () => {
 
-          reactory.log(`<${formDef.nameSpace}.${formDef.name}@${formDef.version} instanceId=${instance_id} />  executeFormQuery()`)
+          reactory.log(`${signature}  executeFormQuery()`)
           const query_start = new Date().valueOf();
           reactory.graphqlQuery(gql(query.text), _variables, query.options).then((result: any) => {
             const query_end = new Date().valueOf();
@@ -1308,7 +1331,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       formData,
       ErrorList: (error_props) => (<MaterialErrorListTemplate {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,
-      ref: (form: any) => { setFormRef(form) },
+      ref: (form: any) => { 
+        setFormRef(form);
+        if(props.refCallback) props.refCallback(getFormReference())
+      },
       transformErrors: (errors = []) => {
         reactory.log(`Transforming error message`, { errors }, 'debug');
         let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
@@ -1347,16 +1373,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     let activeUiSchemaModel = null;
 
 
-    const $submitForm = () => {
-      if (isNil(formRef) === false && formRef) {
-        try {
-          formRef.onSubmit();
-        } catch (submitError) {
-          reactory.createNotification(`The Form ${signature} could not submit`, { type: "warning", showInAppNotification: true, canDismis: true });
-          reactory.log(`Could not submit the form`, submitError, 'error')
-        }
-      }
-    }
+    
 
     const { submitProps, buttons } = _formUiOptions;
     if (typeof submitProps === 'object' && showSubmit === true) {
@@ -1712,13 +1729,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     getData();
 
-    if (props.refCallback) props.refCallback({
-      state: {
-        formData,
-        instance_id
-      },
-      props
-    });
+    if (props.refCallback) props.refCallback(getFormReference());
 
     return () => {
       if (refreshInterval) {

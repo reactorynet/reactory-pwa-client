@@ -176,7 +176,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       return (<Select
         {...selectProps}
         multiple={multiSelect === true}
-        value={formData || '🔄'}
+        value={formData || ''}
         onChange={onSelectChanged}
         name={idSchema.$id}
         variant={variant}
@@ -186,8 +186,8 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         }
         renderValue={(_value: any) => {
           reactory.log(`Rendering value for ${_value}`, {formData, key_map, menuItems})
-          if (!_value || _value == 'undefined' || _value.length === 0) {
-            return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Select</span>;
+          if (_value === null || _value === undefined || _value.length === 0) {
+            return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{menuItems[0].id === 'loading' ? 'Loading' : 'Select' }</span>;
           }
 
           if (Array.isArray(_value))
