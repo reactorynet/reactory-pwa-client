@@ -389,6 +389,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const getActiveGraphDefinitions = (): Reactory.IFormGraphDefinition => {
     let _grahDefinitions: Reactory.IFormGraphDefinition = formDef.graphql;
 
+    if (activeUiSchemaMenuItem !== null) {
+      if(activeUiSchemaMenuItem.graphql) _grahDefinitions = activeUiSchemaMenuItem.graphql;
+    }
+
     const _uiSchema = getActiveUiSchema();
     if (_uiSchema["ui:graphql"]) {
       _grahDefinitions = _uiSchema["ui:graphql"];

@@ -102,7 +102,7 @@ const MaterialObjectTemplateHOC = (props) => {
         
     if(typeof uiWidget === 'string' && Widget === null)  {
       Widget = reactory.getComponent(uiWidget);
-      _componentName = uiOptions.componentFqn;
+      _componentName = uiWidget;
     }
 
     if(typeof uiWidget === 'string' && Widget === null && Widgets[uiWidget] !== null ) {

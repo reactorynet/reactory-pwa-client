@@ -59,6 +59,20 @@ export interface MaterialTableResult<T> {
 
 const tableRef: any = React.createRef();
 
+const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipInput"> = (theme) => ({
+  root: {
+    display: 'flex',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  chip: {
+    margin: theme.spacing(1),
+  },
+  newChipInput: {
+    margin: theme.spacing(1)
+  }
+});
+
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], searchText="" } = props;
@@ -129,8 +143,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             queryDefinition = graphqlDefinitions.queries[uiOptions.query];
             reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
           }
-
-          const { refreshEvents, waitUntil, waitTimeout = 3000 } = queryDefinition;
 
           reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables, query }, 'debug')
           let variables = reactory.utils.objectMapper({ ...self, formContext, query }, uiOptions.variables || queryDefinition.variables);
@@ -535,138 +547,5 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 };
 
-class MaterialTableWidget extends Component<any, any> {
-
-  tableRef: RefObject<any>;
-  components: any
-
-  static styles: Styles<Theme, {}, "root" | "chip" | "newChipInput"> = (theme) => ({
-    root: {
-      display: 'flex',
-      justifyContent: 'center',
-      flexWrap: 'wrap',
-    },
-    chip: {
-      margin: theme.spacing(1),
-    },
-    newChipInput: {
-      margin: theme.spacing(1)
-    }
-  });
-
-  static propTypes = {
-    formData: PropTypes.array,
-    onChange: PropTypes.func,
-    onSubmit: PropTypes.func,
-    readOnly: PropTypes.bool,
-    schema: PropTypes.object,
-    uiSchema: PropTypes.object
-  }
-
-  static defaultProps = {
-    formData: [],
-    readOnly: false
-  }
-
-  constructor(props, context) {
-    super(props, context)
-
-
-    let remoteData = false;
-
-    if (props.uiSchema) {
-      const { uiSchema, idSchema } = props;
-      const uiOptions = uiSchema['ui-options'] || { remoteData: false };
-      remoteData = uiOptions.remoteData
-    }
-
-
-    this.state = {
-      newChipLabelText: "",
-      currentAction: null,
-      displayActionConfirm: false,
-      selected: [],
-      confirmedCallback: null,
-      data_loaded: remoteData === false,
-      data_load_required: remoteData === true,
-    };
-
-    this.refreshHandler = this.refreshHandler.bind(this);
-    this.confirmAction = this.confirmAction.bind(this);
-    this.tableRef = React.createRef();
-
-    this.components = props.api.getComponents(['core.AlertDialog'])
-  }
-
-  componentWillUnmount() {
-    const uiOptions = this.props.uiSchema['ui:options'] || {};
-    const { api } = this.props;
-    const self = this;
-    if (uiOptions.refreshEvents) {
-      //itterate through list of event names,
-      //for now we just do a force refresh which will trigger re-rendering
-      //logic in the widget.
-      uiOptions.refreshEvents.forEach((reactoryEvent) => {
-        api.log(`MaterialTableWidget - Reming Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
-        api.removeListener(reactoryEvent.name, self.refreshHandler);
-      });
-    };
-  }
-
-  componentDidMount() {
-    const uiOptions = this.props.uiSchema['ui:options'] || {};
-    const { api } = this.props;
-    const self = this;
-    if (uiOptions.refreshEvents) {
-      //itterate through list of event names,
-      //for now we just do a force refresh which will trigger re-rendering
-      //logic in the widget.
-      uiOptions.refreshEvents.forEach((reactoryEvent) => {
-        api.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
-        api.on(reactoryEvent.name, self.refreshHandler.bind(self, reactoryEvent.name));
-      });
-    };
-  }
-
-  confirmAction(action, confirmedCallback) {
-
-    this.setState({ currentAction: action, displayActionConfirm: true, confirmedCallback })
-
-  }
-
-  componentDidCatch(err) {
-    this.props.api.log(`MaterialWidgetError out of componentBoundary error`, { err }, 'error');
-    throw err
-  }
-
-  refreshHandler(eventName, eventData) {
-
-    const uiOptions = this.props.uiSchema['ui:options'] || {};
-    const { api } = this.props;
-    const self = this;
-
-    this.props.api.log(`MaterialTableWidget - Handled ${eventName}`, eventData, 'debug');
-    if (uiOptions.remoteData === true) {
-      self.tableRef.current && self.tableRef.current.onQueryChange()
-    } else {
-      self.forceUpdate();
-    }
-  };
-
-  render() {
-    const self = this;
-
-    const {
-      AlertDialog
-    } = self.components;
-
-
-    const close_dialog = (evt) => {
-      self.setState({ displayActionConfirm: false, currentAction: null, confirmedCallback: null })
-    };
-
-    return (<p>No more</p>)
-  }
-}
-const MaterialTableWidgetComponent = compose(withApi, withTheme, withStyles(MaterialTableWidget.styles))(ReactoryMaterialTable)
+const MaterialTableWidgetComponent = compose(withApi, withTheme, withStyles(ReactoryMaterialTableStyles))(ReactoryMaterialTable)
 export default MaterialTableWidgetComponent
