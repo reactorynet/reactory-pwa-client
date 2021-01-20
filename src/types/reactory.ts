@@ -382,7 +382,9 @@ namespace Reactory {
     waitTimeout?: number,
     useWebsocket?: boolean,
     onError?: IReactoryFormQueryErrorHandlerDefinition,
-    resultType?: string, 
+    resultType?: string,
+    //used where want to extract a single element from an object
+    resultKey?: string, 
     refreshEvents?: IReactoryEvent[]
   }
 
