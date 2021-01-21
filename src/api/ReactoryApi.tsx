@@ -368,6 +368,7 @@ class ReactoryApi extends EventEmitter {
     this.extendClientResolver = this.extendClientResolver.bind(this);
     this.setFormTranslationMaps = this.setFormTranslationMaps.bind(this);
     this.setFormValidationMaps = this.setFormValidationMaps.bind(this);
+    this.clearStoreAndCache = this.clearStoreAndCache.bind(this);
     this.init = this.init.bind(this);    
   }
 
@@ -377,10 +378,15 @@ class ReactoryApi extends EventEmitter {
       ws_link,
       clearCache
     } = await ReactoryApolloClient();
-
+    
     this.clearCache = clearCache;
     this.client = client;
     this.ws_link = ws_link;
+  }
+
+  clearStoreAndCache(){
+    if(this.client) this.client.resetStore();
+    if(this.clearCache) this.clearCache();
   }
 
 
@@ -1116,10 +1122,11 @@ class ReactoryApi extends EventEmitter {
   async logout(refreshStatus = true) {
     const user = this.getUser();
     localStorage.removeItem(storageKeys.AuthToken);
-    const { client, ws_link, clearCache } = await ReactoryApolloClient();
+    this.clearStoreAndCache();
+
+    const { client } = await ReactoryApolloClient();
     this.client = client;
-    this.setUser({ ...user, ...anonUser });
-    clearCache();
+    this.setUser({ ...user, ...anonUser });    
 
     if (refreshStatus === true) {
       this.status({ emitLogin: false }).then((apiStatus) => {

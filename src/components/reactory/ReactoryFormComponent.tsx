@@ -446,7 +446,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
   const onPluginLoaded = (plugin: any) => {
-    debugger
     reactory.log(`${signature} Plugin loaded, activating component`, { plugin }, 'debug');
     try {      
       
@@ -459,7 +458,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       }
       setVersion(version + 1);
     } catch (pluginFailure) {
-      reactory.log(`${signature} An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure });
+      reactory.log(`${signature} An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure }, 'error');
     }
   }
 
