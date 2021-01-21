@@ -332,6 +332,43 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return null;
   };
 
+  const getInitialDepencyState = () => {
+    let _dependency_state = { passed: true, dependencies: {} }
+
+    let _all_dependencies = [];
+    if(formDef.widgetMap) {
+      formDef.widgetMap.forEach((map) => {
+        if(map.componentFqn) {
+          if(_all_dependencies.indexOf(map.componentFqn) < 0) _all_dependencies.push(map.componentFqn);
+        }
+      })
+    }
+
+    if(formDef.components) {
+      formDef.components.forEach(( component ) => {
+        if(component.indexOf("@") > 1 && component.indexOf(".") > 0) {
+          if(_all_dependencies.indexOf(component) < 0) _all_dependencies.push(component);
+        }
+      })
+    }
+
+    if(formDef.dependencies && formDef.dependencies.length > 0) {
+      formDef.dependencies.forEach((_dep: Reactory.IReactoryComponentDefinition) => {
+        _dependency_state.dependencies[_dep.fqn] = {
+          available: reactory.componentRegister[_dep.fqn] !== null && reactory.componentRegister[_dep.fqn] !== undefined,
+          component: null
+        };
+
+        if(_dependency_state.dependencies[_dep.fqn].available === true) {
+          _dependency_state.dependencies[_dep.fqn].component = reactory.componentRegister[_dep.fqn].component
+        } else {
+          _dependency_state.passed = false;
+        }                
+      })
+    }
+
+    return _dependency_state;
+  };
 
 
   const [componentDefs, setComponents] = React.useState<ReactoryComponentMap>(reactory.getComponents(default_dependencies()));
@@ -360,6 +397,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const [version, setVersion] = React.useState<number>(0);
   const [last_query_exec, setLastQueryExecution] = React.useState(null);
   const [formRef, setFormRef] = React.useState<Form>(React.createRef());
+  const [dependencies, setDepencies] = React.useState<any>(getInitialDepencyState().dependencies);
+  const [dependenciesPassed, setDepenciesPassed] = React.useState<boolean>(getInitialDepencyState().passed);
   //const $events = new EventEmitter();
 
   const getActiveUiSchema = () => {
@@ -407,10 +446,18 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
   const onPluginLoaded = (plugin: any) => {
+    debugger
     reactory.log(`${signature} Plugin loaded, activating component`, { plugin }, 'debug');
-    try {
-      plugins[plugin.componentFqn] = plugin.component(props, getFormContext());
-      setPlugins({ plugins: plugins });
+    try {      
+      
+      let _component = plugin.component(props, getFormContext());
+      if(dependencies[plugin.componentFqn]) {
+        let _depends = { ...dependencies };
+        _depends[plugin.componentFqn].available = true;
+        _depends[plugin.componentFqn].component = _component;
+        setDepencies(_depends);        
+      }
+      setVersion(version + 1);
     } catch (pluginFailure) {
       reactory.log(`${signature} An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure });
     }

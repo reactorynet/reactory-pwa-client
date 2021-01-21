@@ -495,6 +495,15 @@ namespace Reactory {
     minWidth?: number
   }
 
+  export interface IReactoryComponentDefinition {
+    fqn?: string,
+    dependencies?: IReactoryComponentDefinition[]
+    props?: any,
+    propsMap?: any,
+    componentType: string | "component" | "object" | "function" | "module" | "plugin"
+  }
+
+
   
   export interface IEventBubbleAction {
     eventName: string,
@@ -548,6 +557,12 @@ namespace Reactory {
      * object map to use for mapping querystring
      */
     queryStringMap?: any,
+
+    /**
+     * Array of dependencies this form or it's children 
+     * may relay on in order to successfully load.
+     */
+    dependencies?: IReactoryComponentDefinition[]
   }
 
   export interface IGraphShape {
