@@ -106,16 +106,16 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       if (ToolbarComponent) {
         components.Toolbar = (toolbar_props) => {
           let _toolbar_props = {...toolbar_props};
-        
+
           if(uiOptions.toolbarProps) {
             _toolbar_props = { ..._toolbar_props, ...uiOptions.toolbarProps };
           }
 
           if(uiOptions.toolbarPropsMap) {
-            _toolbar_props = reactory.utils.objectMapper({ 
-              toolbarProps: uiOptions.toolbarProps || {}, 
-              table_props: props, 
-              props: toolbar_props, 
+            _toolbar_props = reactory.utils.objectMapper({
+              toolbarProps: uiOptions.toolbarProps || {},
+              table_props: props,
+              props: toolbar_props,
               formContext,
               schema,
               uiSchema,
@@ -544,9 +544,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     return willUnmount;
   }, []);
-
-
-
 
   return (
     <React.Fragment>
