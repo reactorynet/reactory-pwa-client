@@ -104,8 +104,28 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     if (uiOptions.componentMap.Toolbar) {
       ToolbarComponent = reactory.getComponent(uiOptions.componentMap.Toolbar);
       if (ToolbarComponent) {
-        components.Toolbar = (toolbar_props, context) => {
-          return <ToolbarComponent {...toolbar_props} formContext={formContext} tableRef={tableRef} />
+        components.Toolbar = (toolbar_props) => {
+          let _toolbar_props = {...toolbar_props};
+        
+          if(uiOptions.toolbarProps) {
+            _toolbar_props = { ..._toolbar_props, ...uiOptions.toolbarProps };
+          }
+
+          if(uiOptions.toolbarPropsMap) {
+            _toolbar_props = reactory.utils.objectMapper({ 
+              toolbarProps: uiOptions.toolbarProps || {}, 
+              table_props: props, 
+              props: toolbar_props, 
+              formContext,
+              schema,
+              uiSchema,
+              idSchema,
+              selectedRows }, uiOptions.toolbarPropsMap)
+
+            _toolbar_props = { ...toolbar_props, ..._toolbar_props };
+          }
+
+          return <ToolbarComponent {..._toolbar_props} formContext={formContext} tableRef={tableRef} />
         }
       } else {
         setTimeout(() => { setVersion(version + 1) }, 777);
@@ -150,7 +170,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
           reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
-          reactory.graphqlQuery(queryDefinition.text, variables).then((queryResult: any) => {
+          reactory.graphqlQuery(queryDefinition.text, variables, queryDefinition.options).then((queryResult: any) => {
             reactory.log(`Result From Query`, { queryResult  })
             if (queryResult.errors && queryResult.errors.length > 0) {
               //show a loader error

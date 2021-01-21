@@ -427,11 +427,16 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const onSubmit = (form: any) => {
     reactory.log(`${signature} ↩ onSubmit`, { form }, 'debug');
     let cancel: boolean = false;
+    
     if (props.onSubmit) {
       cancel = props.onSubmit(form) || false;
     }
 
     if (cancel === true) return;
+
+    getData(form.formData);
+    setQueryComplete(false);
+    setVersion(version + 1);
 
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
     if (_graphql) {
@@ -596,18 +601,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
       }
-
-      //no mutation
-      //check if need to refresh on submit    
-      getData(form.formData);
-      setVersion(version + 1);
-      setQueryComplete(false);
-
-    } else {
-      setFormData(form.formData);
-      setVersion(version + 1);
+     
     }
-
   }
 
 
@@ -690,11 +685,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const setState = ($state: any, callback = () => { }) => {
 
-    if ($state.formData) setFormData($state.formData);
-    if ($state.queryComplete) setQueryComplete($state.queryComplete);
-
+    if ($state.formData) getData($state.formData);
+    
     callback();
-    getData();
+    
   };
 
   const getState = () => {
@@ -752,9 +746,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       formInstanceId: instance_id,
       $ref: getFormReference(),
       refresh: (args = { autoQueryDisabled: true }) => {
-        setQueryComplete(false);
         setAutoQueryDisabled(args.autoQueryDisabled);
-        getData();
+        getData(formData);
 
       },
       setFormData: (formData: any, callback = () => { }) => {
@@ -1109,18 +1102,24 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const getData = (defaultInputData?: any) => {
     reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
-    
+    if(_graphql && _graphql.debug) {
+      debugger;
+    }
     let _formData = null;
 
     switch (formDef.schema.type) {
       case "object": {
-        _formData = { ...formDef.defaultFormValue,  ...formData };
+
+        _formData = {  ...formData };
+        if (version === 0 && formDef.defaultFormValue) {
+          _formData = { ...formDef.defaultFormValue, ...formData };
+        }
         if (defaultInputData && typeof defaultInputData === 'object') _formData = { ..._formData, ...defaultInputData }
         break;
       }
       case "array": {
         _formData = [];              
-        if(formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === true) _formData = [...formDef.defaultFormValue];
+        if(formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === true && version === 0) _formData = [...formDef.defaultFormValue];
         if(formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === false) reactory.log(`🚨 ${signature} Schema type and Default Form Value do not match.`, { formDef }, 'error');        
         if(formData && Array.isArray(formData) === true) {
           _formData = [ ...formData];
@@ -1149,17 +1148,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         switch (formDef.schema.type) {
           case "object": {
-            _formData = { ...formDef.defaultFormValue, ...__staticFormData, ...formData };
-            if (defaultInputData && typeof defaultInputData === 'object') _formData = { ..._formData, ...defaultInputData }
+            _formData = { ...__staticFormData, ..._formData };
             break;
           }
           case "array": {
-            _formData = [...formDef.defaultFormValue, ...__staticFormData, ...formData];
-            if (defaultInputData && Array.isArray(defaultInputData) === true) _formData = [..._formData, ...defaultInputData]
+            _formData = [...__staticFormData, ...formData];
             break;
           }
           default: {
-            _formData = formData;
             break;
           }
         }
@@ -1208,15 +1204,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             const query_end = new Date().valueOf();
 
             reactory.stat(`${formDef.nameSpace}.${formDef.name}@${formDef.version}:query_execution_length`, { query_start, query_end, diff: query_end - query_start, unit: 'utc-date' });
-            const { data, errors } = result;
-            let _formData = formData;
+            const { data, errors } = result;            
 
             if (data && data[query.name]) {
               switch (query.resultType) {
                 case 'array': {
                   let mergedData = []
-                  if (isArray(formData) === true) mergedData = [...formData];
-                  if (isArray(data[query.name]) === true) mergedData = [...reactory.utils.lodash.cloneDeep(formData), ...reactory.utils.lodash.cloneDeep(data[query.name])];
+                  if (isArray(_formData) === true) mergedData = [..._formData];
+                  if (isArray(data[query.name]) === true) mergedData = [...reactory.utils.lodash.cloneDeep(_formData), ...reactory.utils.lodash.cloneDeep(data[query.name])];
                   if (query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
                     _formData = objectMapper(mergedData, query.resultMap);
                   } else {
@@ -1229,14 +1224,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                   if (query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
 
                     try {
-                      _formData = objectMapper({ ...reactory.utils.lodash.cloneDeep(formData), ...reactory.utils.lodash.cloneDeep(data[query.name]) }, query.resultMap);
+                      _formData = objectMapper({ ...reactory.utils.lodash.cloneDeep(_formData), ...reactory.utils.lodash.cloneDeep(data[query.name]) }, query.resultMap);
                     } catch (mappError) {
 
                       reactory.log("Could not map the object data", { mappError }, 'error')
                     }
 
                   } else {
-                    _formData = { ...formData, ...data[query.name] };
+                    _formData = { ..._formData, ...data[query.name] };
                   }
                 }
               }
@@ -1304,10 +1299,17 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
         setTimeout(executeFormQuery, query.autoQueryDelay || 0);
-      } else setFormData(_formData);
+      } else { 
+
+        setFormData(_formData);
+        setQueryComplete(true);
+      }
 
 
-    } else setFormData(_formData);
+    } else { 
+      setFormData(_formData); 
+      setQueryComplete(true);
+    }
     
   };
 
@@ -1701,10 +1703,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     let toolbarPosition = _formUiOptions.toolbarPosition || 'bottom'
 
     const _graphql = getActiveGraphDefinitions();
-
+    const isBusy = () => {
+      if(_graphql === null || _graphql === undefined) return false;      
+      
+      return !(queryComplete === true);
+    }
     return (
       <>
-        {_graphql && _graphql.query && queryComplete === false && <LinearProgress />}
+        {isBusy() === true && <LinearProgress />}
         {props.before}
         <Form {...{ ...formProps, toolbarPosition: toolbarPosition }}>
           {toolbarPosition.indexOf('bottom') >= 0 && toolbarPosition !== 'none' ? formtoolbar : null}
@@ -1717,16 +1723,18 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     )
   }
 
+
+  /*
   React.useEffect(() => {
 
-    getData();
+    getData(formData);
 
   }, [queryComplete])
-
+  */
 
   React.useEffect(() => {
     reactory.amq.onReactoryPluginLoaded('loaded', onPluginLoaded);
-
+    setQueryComplete(false);
     getData();
 
     if (props.refCallback) props.refCallback(getFormReference());
@@ -1739,9 +1747,15 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
   }, []);
 
+  /*
   React.useEffect(() => {        
     getData(props.formData);
   }, [props.formData])
+  */
+
+  React.useEffect(() => {
+    setVersion(version + 1);
+  },  [formData])
 
   return (
     <IntersectionVisible>{renderForm()}</IntersectionVisible>
