@@ -134,6 +134,8 @@ class ProductCardWidget extends Component {
     const { PricingLineChartComponent, SlideOutLauncher } = this.componentDefs;
     const formData = { ...data };
 
+    debugger;
+
     let _currenciesDisplayed = ['USD', 'EUR', 'GBP', 'ZAR'];
     let _showSpecialPricing = false;
     let _showPricing = false;

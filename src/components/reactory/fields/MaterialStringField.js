@@ -93,11 +93,8 @@ const MaterialStringFieldWidget = (props) => {
 
       if (evt.keyCode === 13 && uiOptions && uiOptions.componentProps && uiOptions.componentProps.submitOnEnter) {
         evt.preventDefault();
-        debugger;
-
         if (uiOptions.componentProps.refreshEvents && uiOptions.componentProps.refreshEvents.length > 0) {
           uiOptions.componentProps.refreshEvents.forEach((refreshEvent) => {
-            debugger;
             // props.formContext.$ref.submit();
             props.onChange(evt.target.value);
             // props.formContext.$ref.forceUpdate();

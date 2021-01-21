@@ -40,9 +40,14 @@ class GridLayoutWidget extends Component {
     super(props, context);
 
     this.componentDefs = props.api.getComponents(['core.Loading']);
+    this.getData = this.getData.bind(this);
   }
 
-  getData = async () => {
+  // getData = async () => {
+  async getData() {
+
+    debugger;
+
     const self = this;
     const { props } = this;
     const { formData, uiSchema, api, formContext } = props;
@@ -50,6 +55,9 @@ class GridLayoutWidget extends Component {
 
     if (uiOptions.remoteData === true) {
       try {
+
+        debugger;
+
         this.setState({ loadingData: true });
         const graphqlDefinitions = formContext.$formState.formDef.graphql;
         if (graphqlDefinitions.query || graphqlDefinitions.queries) {
@@ -70,17 +78,29 @@ class GridLayoutWidget extends Component {
           api.log('GRIDLAYOUTWIDGET - Mapped variables for query', { variables }, 'debug');
 
           const queryResult = await api.graphqlQuery(queryDefinition.text, variables).then();
+
+          debugger;
+
           if (queryResult.errors && queryResult.errors.length > 0) {
             api.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
             this.setState({ data: [], page: 0, totalCount: 0, loadingData: false });
           } else {
+
+            debugger;
+
             let result = api.utils.objectMapper(queryResult.data[queryDefinition.name], uiOptions.resultMap);
             this.setState((prevState) => ({ data: prevState.data.concat(result.data), page: result.page + 1, totalCount: result.totalCount, loadingData: false }));
           }
         } else {
+
+          debugger;
+
           this.setState({ data: [], page: 0, totalCount: 0, loadingData: false });
         }
       } catch (remoteDataError) {
+
+        debugger;
+
         this.setState({ data: [], page: 0, totalCount: 0, loadingData: false });
       }
     } else {
@@ -108,6 +128,8 @@ class GridLayoutWidget extends Component {
     const { api, classes, uiSchema } = props;
     const uiOptions = uiSchema["ui:options"] || {};
     const { Loading } = this.componentDefs;
+
+    debugger;
 
     const loadingMessage = uiOptions.loadingMessage ? uiOptions.loadingMessage : 'Loading product dimensions, please wait a moment';
 
