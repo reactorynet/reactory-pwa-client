@@ -271,7 +271,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
   //get initial data
-  const initialData = () => {
+  const initialData = (_existing: any = null) => {
 
     switch (formDef.schema.type) {
       case "string": {
@@ -293,6 +293,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         if (typeof props.data === 'object') _obj = { ..._obj, ...props.data };
         if (typeof props.formData === 'object') _obj = { ..._obj, ...props.formData };
         if (typeof queryData === 'object') _obj = { ..._obj, ...queryData };
+
+        if(_existing && typeof _existing === 'object') {
+          _obj = { ..._existing, ..._obj };
+        }
 
         return _obj
       }
@@ -1734,11 +1738,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   React.useEffect(() => {
     reactory.amq.onReactoryPluginLoaded('loaded', onPluginLoaded);
-    setQueryComplete(false);
-    getData();
-
     if (props.refCallback) props.refCallback(getFormReference());
-
+    getData();
     return () => {
       if (refreshInterval) {
         clearInterval(refreshInterval);
@@ -1747,11 +1748,23 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
   }, []);
 
-  /*
-  React.useEffect(() => {        
-    getData(props.formData);
+  
+  
+  React.useEffect(() => {       
+  
+    let _formData = initialData(formData);        
+
+    let next_version = version + 1;
+    setVersion(next_version);
+    reactory.log(`${signature} Incoming Properties Changed`, { formData: props.formData, _formData: formData, version });
+
+    getData(_formData);
+    //if(next_version > 0 && formData) {        
+    //}
+
+
   }, [props.formData])
-  */
+    
 
   React.useEffect(() => {
     setVersion(version + 1);
