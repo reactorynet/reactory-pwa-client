@@ -399,6 +399,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const [formRef, setFormRef] = React.useState<Form>(React.createRef());
   const [dependencies, setDepencies] = React.useState<any>(getInitialDepencyState().dependencies);
   const [dependenciesPassed, setDepenciesPassed] = React.useState<boolean>(getInitialDepencyState().passed);
+  const [customState, setCustomState] = React.useState<any>({});
   //const $events = new EventEmitter();
 
   const getActiveUiSchema = () => {
@@ -734,6 +735,33 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   }
 
   const setState = ($state: any, callback = () => { }) => {
+    
+
+    let _$state = {...$state};
+    delete _$state.formData;
+    if(Object.keys(_$state).length > 0) {
+      let _customState = {};
+      Object.keys(_$state).forEach((stateKey) => {
+        switch(stateKey) {
+          case "componentDefs": {
+            setComponents(_$state[stateKey]);
+            break;
+          }
+          case "":
+          case "formData": {
+            //do nothing, already handled or not permitted.
+            break;
+          }
+          default: {
+            _customState[stateKey] = _$state[stateKey];
+          }
+        }
+      });
+    
+      if(Object.keys(_customState).length > 0) {
+        setCustomState(_customState);
+      }
+    }
 
     if ($state.formData) getData($state.formData);
     
@@ -746,7 +774,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       formData,
       queryComplete,
       dirty,
-      _instance_id: instance_id
+      _instance_id: instance_id,
+      ...customState
     }
   }
 
@@ -1091,7 +1120,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     if (typeof validationFunction === 'function') {
       try {
-        validationResult = validationFunction($formData, $errors, this);
+        validationResult = validationFunction($formData, $errors, getFormReference());
       } catch (ex) {
         reactory.log(`Error While Executing Custom Validation`, { ex }, 'error');
       }

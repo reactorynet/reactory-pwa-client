@@ -410,7 +410,7 @@ class ApplicationHeader extends Component {
         localStorage.setItem("$reactory$theme_mode", 'dark');
       }
 
-      api.emit('theme_changed');
+      api.emit('onThemeChanged');
     }
 
 

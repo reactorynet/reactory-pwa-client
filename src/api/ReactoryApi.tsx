@@ -29,7 +29,7 @@ import {
 import amq from '../amq';
 import * as RestApi from './RestApi';
 import GraphQL from '@reactory/client-core/api/graphql';
-import { Typography } from "@material-ui/core";
+import { Theme, Typography } from "@material-ui/core";
 import icons from '../assets/icons';
 import queryString from '../query-string';
 import humanNumber from 'human-number';
@@ -67,6 +67,7 @@ export const ReactoryApiEventNames = {
   onApiStatusUpdate: 'onApiStatusUpdate',
   onRouteChanged: 'onRouteChanged',
   onShowNotification: 'onShowNotification',
+  onThemeChanged: 'onThemeChanged'
 };
 
 export const EmptyComponent = (fqn) => {
@@ -188,7 +189,17 @@ export interface WindowSizeSpec {
   size: string 
 }
 
-class ReactoryApi extends EventEmitter {
+export interface _dynamic {
+  [key: string]: any
+}
+
+
+interface ReactoryTheme extends Theme {
+  [key: string]: any
+}
+
+class ReactoryApi extends EventEmitter implements _dynamic {
+
   $windowSize: WindowSizeSpec = null;
   $user: any;
   history: any;
@@ -235,6 +246,7 @@ class ReactoryApi extends EventEmitter {
   objectToQueryString: Function;
   clearCache: () => void;
   ws_link: any;
+  
 
   constructor(props) {
     super();
@@ -378,8 +390,9 @@ class ReactoryApi extends EventEmitter {
     this.extendClientResolver = this.extendClientResolver.bind(this);
     this.setFormTranslationMaps = this.setFormTranslationMaps.bind(this);
     this.setFormValidationMaps = this.setFormValidationMaps.bind(this);
-    this.clearStoreAndCache = this.clearStoreAndCache.bind(this);
+    this.clearStoreAndCache = this.clearStoreAndCache.bind(this);    
     this.init = this.init.bind(this);    
+    this.getSizeSpec = this.getSizeSpec.bind(this);
   }
 
   async init() {
@@ -399,6 +412,45 @@ class ReactoryApi extends EventEmitter {
     if(this.clearCache) this.clearCache();
   }
 
+  getSizeSpec(){
+    let size = '??';
+  
+    const {
+      innerHeight,
+      outerHeight,
+      innerWidth,
+      outerWidth,
+    } = window;
+  
+    const theme: ReactoryTheme = this.muiTheme;
+    //theme.breakpoints.values.lg
+  
+    let view = 'landscape';
+  
+    if (window.innerHeight > window.innerWidth) {
+      view = 'portrait';
+    }
+  
+    let size_spec: any = {
+      innerHeight,
+      innerWidth,
+      outerHeight,
+      outerWidth,
+      view,
+      size
+    }
+    
+    if(theme && theme.breakpoints) {
+      if (innerWidth >= theme.breakpoints.values.xl) size = 'xl';
+      if (innerWidth < theme.breakpoints.values.xl && innerWidth >= theme.breakpoints.values.lg) size = 'lg';
+      if (innerWidth < theme.breakpoints.values.lg && innerWidth >= theme.breakpoints.values.md) size = 'md';
+      if (innerWidth < theme.breakpoints.values.md && innerWidth >= theme.breakpoints.values.sm) size = 'sm';
+      if (innerWidth < theme.breakpoints.values.sm && innerWidth >= theme.breakpoints.values.xs) size = 'xs';
+    }
+  
+    size_spec.size = size;
+    return size_spec;
+  };
 
   setFormTranslationMaps(maps: any) {
     this.formTranslationMaps = { ...this.formTranslationMaps, ...maps };

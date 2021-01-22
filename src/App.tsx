@@ -33,6 +33,7 @@ import license from './license';
 import { ReactoryProvider } from './api/ApiProvider';
 import Reactory from '@reactory/client-core/types/reactory';
 import { anonUser } from 'api/local';
+import { WindowSizeSpec } from 'api/ReactoryApi';
 
 const packageInfo = require('../package.json');
 
@@ -61,6 +62,7 @@ const api = new ReactoryApi({
   clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
   $version: `${packageInfo.version}-${license.version}`,
 });
+
 api.init().then();
 //register built-in components
 componentRegistery.forEach((componentDef) => {
@@ -234,6 +236,8 @@ const AppLoading = () => {
   )
 }
 
+
+
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
@@ -246,22 +250,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [theme, setTheme] = React.useState<any>(createMuiTheme(props.appTheme));
   const [statusInterval, setStatusInterval] = React.useState<NodeJS.Timeout>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
-  const [version, setVersion] = React.useState(0);  
+  const [version, setVersion] = React.useState(0);
+  const [sizeSpec, setSizeSpec] = React.useState<WindowSizeSpec>(api.getSizeSpec());
 
   const components: any = api.getComponents(dependcies);
   const { Loading, Login, FullScreenModal, NotificationComponent, NotFound } = components;
 
-  let sizes = ['xl', 'lg', 'md', 'sm', 'xs'];
-
-  let size = null;
-
-  sizes.forEach((_size: string) => {
-    if(useMediaQuery(theme.breakpoints.up(size)) === true && size === null) {
-      size = _size;
-      return;
-    }
-  });
-
+  
   const onRouteChanged = (path: string) => {
     setCurrentRoute(path)
   }
@@ -272,6 +267,36 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const onLogout = () => {
     setUser(api.getUser());
+  };
+
+  
+  const applyTheme = () => {
+    let themeOptions = api.getTheme();
+    if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
+    if (Object.keys(themeOptions).length === 0) themeOptions = { ...props.appTheme };
+
+    let muiTheme: Theme & any = createMuiTheme(themeOptions);
+
+    if (themeOptions.provider && typeof themeOptions.type === 'string') {
+      if (themeOptions.provider[themeOptions.type]) {
+        //using new mechanism.
+        switch (themeOptions.type) {
+          case 'material':
+          default: {
+            muiTheme = createMuiTheme(themeOptions);
+          }
+        }
+      }
+    }
+
+    api.muiTheme = muiTheme;
+    setTheme(muiTheme);
+    setSizeSpec(api.getSizeSpec());
+
+  };
+
+  const onThemeChanged = () => {
+    applyTheme();
   };
 
   const onApiStatusUpdate = (status) => {
@@ -320,32 +345,11 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     //   };
     // }
 
-    const {
-      innerHeight,
-      outerHeight,
-      innerWidth,
-      outerWidth,
-    } = window;
-
-    let view = 'landscape';
-
-    if (window.innerHeight > window.innerWidth) {
-      view = 'portrait';
-    }
-    
-    let size_spec = { 
-      innerHeight, 
-      innerWidth, 
-      outerHeight, 
-      outerWidth, 
-      view, 
-      size 
-    }
-
-    if (innerWidth >= 2560) size = 'lg';
-    api.$windowSize = size_spec;
-    api.log('ReactoryHOC Resize', size_spec);
-    api.emit('onWindowResize', size_spec);
+    const _size_spec = api.getSizeSpec();
+    api.$windowSize = _size_spec; 
+    api.log('ReactoryHOC Resize', _size_spec);
+    api.emit('onWindowResize', _size_spec);
+    setSizeSpec(_size_spec);
     setVersion(version + 1);
   };
 
@@ -354,8 +358,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const willMount = () => {
 
     window.addEventListener('resize', onWindowResize);
-
-
     window.matchMedia("(prefers-color-scheme: dark)").addListener((evt) => {
       if (evt.matches === true) {
         localStorage.setItem('$reactory$theme_mode', 'dark');
@@ -382,27 +384,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           setUser(user);
           setOfflineStatus(false);
           setIsReady(true);
-
-          let themeOptions = api.getTheme();
-          if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
-          if (Object.keys(themeOptions).length === 0) themeOptions = { ...props.appTheme };
-
-          let muiTheme: Theme & any = createMuiTheme(themeOptions);
-
-          if (themeOptions.provider && typeof themeOptions.type === 'string') {
-            if (themeOptions.provider[themeOptions.type]) {
-              //using new mechanism.
-              switch (themeOptions.type) {
-                case 'material':
-                default: {
-                  muiTheme = createMuiTheme(themeOptions);
-                }
-              }
-            }
-          }
-
-          api.muiTheme = muiTheme;
-          setTheme(muiTheme);
+          applyTheme();
         }).catch((validationError) => {
           setIsValidated(true);
           setUser(null);
@@ -427,6 +409,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     api.on(ReactoryApiEventNames.onLogin, onLogin)
     api.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
     api.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+    api.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
 
     const query = queryString.parse(window.location.search);
     if (query.auth_token) {
@@ -457,7 +440,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   useEffect(willMount, []);
 
 
- 
+
 
   if (isReady === false) return <AppLoading />;
 
@@ -470,14 +453,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             <ApolloProvider client={api.client}>
               <MuiPickersUtilsProvider utils={MomentUtils}>
                 <ReactoryProvider api={api}>
-                  
-                    <React.Fragment>
-                      {isReady === true && <Globals api={api} />}
-                      {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
-                      {isReady === true && <NotificationComponent />}
-                      {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
-                    </React.Fragment>
-                  
+                  <React.Fragment>
+                    {isReady === true && <Globals api={api} />}
+                    {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
+                    {isReady === true && <NotificationComponent />}
+                    {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
+                    <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '8px' }}>{sizeSpec.size}</div>
+                  </React.Fragment>                  
                 </ReactoryProvider>
               </MuiPickersUtilsProvider>
             </ApolloProvider>
