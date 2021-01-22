@@ -357,7 +357,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       try {
         options.searchText = reactory.utils.template(options.searchText)({ ...props })
         if(tableRef && tableRef.current) {
-          debugger
+          
           if(tableRef.current.state.searchText !== options.searchText) {
             tableRef.current.onQueryChange({ search: options.searchText })
             tableRef.current.setState({ searchText: options.searchText })

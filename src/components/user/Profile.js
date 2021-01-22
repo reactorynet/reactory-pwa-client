@@ -670,7 +670,7 @@ class Profile extends Component {
                                 const deletePeer = e => removePeer(usr);
 
                                 const handleChange = event => {
-                                    debugger
+                                    
                                     if(that.state.expanded === usr.id) {
                                         that.setState({
                                             expanded: null,

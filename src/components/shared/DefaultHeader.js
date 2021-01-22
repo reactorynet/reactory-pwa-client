@@ -209,7 +209,7 @@ const CacheButton = (props) => {
   const bytes = ((new TextEncoder().encode(data)).length / 100000).toPrecision(2);
 
   const clearCache = () => {
-    debugger
+    
     reactory.clearStoreAndCache();
     setVersion(version + 1);
   }

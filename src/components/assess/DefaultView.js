@@ -110,7 +110,7 @@ class RatingControl extends Component {
   }
 
   ratingClick(score) {
-    debugger
+    
     const { behaviour, rating } = this.props;
 
     const data = {
@@ -690,7 +690,7 @@ class DefaultView extends Component {
       deleteRating: deleteRating,
   }, { 'fetch-policy': 'cache-and-network' } ).then(response => {
 
-      debugger
+      
       if(response.errors && response.errors.length > 0) {
         api.createNotification('Could not save your last score. The system may be offline, please try again in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'errors'})
       }

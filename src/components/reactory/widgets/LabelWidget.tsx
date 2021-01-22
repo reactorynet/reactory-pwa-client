@@ -118,7 +118,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 
       reactory.graphqlQuery(lookupGraphql.text, variables, lookupGraphql.options).then((lookupResult) => {
         reactory.log(`Lookup result ${formContext ? formContext.signature : 'NO CONTEXT'}`, { lookupResult }, 'debug');
-        debugger
+        
         if (lookupResult.data && lookupResult.data[lookupGraphql.name]) {
           const _lookupResult = reactory.utils.objectMapper(lookupResult.data[lookupGraphql.name], lookupGraphql.resultMap);
           const _labelText = _lookupResult[lookupGraphql.resultKey || "id"];

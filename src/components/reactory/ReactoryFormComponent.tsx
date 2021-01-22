@@ -702,7 +702,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
         if (_graphql && _graphql.mutation && _graphql.mutation['onChange']) {
-          //debugger;
+          //;
           let onChangeMutation: Reactory.IReactoryFormMutation = _graphql.mutation['onChange'];
           let throttleDelay: number = _graphql.mutation['onChange'].throttle || 250;
           let variables = reactory.utils.objectMapper({ eventData: form, form: { formData, formContext: getFormContext() } }, onChangeMutation.variables);
@@ -723,7 +723,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
         if (formDef && formDef.refresh && formDef.refresh.onChange) {
-          debugger
+          
           if (trigger_onChange === true) fire();
         } else {
           setFormData(form.formData);
@@ -1153,7 +1153,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
     if(_graphql && _graphql.debug) {
-      debugger;
+      ;
     }
     let _formData = null;
 
