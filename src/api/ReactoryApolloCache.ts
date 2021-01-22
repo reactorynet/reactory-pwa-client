@@ -39,7 +39,7 @@ export const getCache = async (debug: boolean = true) => {
 
     return {
         cache,
-        persistor: null
+        persistor: reactory_persistor
     }
 
 };

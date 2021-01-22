@@ -131,7 +131,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
           setError(null);
         }
       }).catch((lookupError) => {
-        reactory.error(`Lookup Query Error`, { lookupError }, 'debug');
+        reactory.log(`Lookup Query Error`, { lookupError }, 'error');
         setError(lookupError);
       });
     }

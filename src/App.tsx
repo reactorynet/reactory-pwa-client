@@ -13,6 +13,7 @@ import {
 import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
+import useMediaQuery from '@material-ui/core/useMediaQuery';
 import { ThemeProvider, Theme } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { createMuiTheme } from '@material-ui/core/styles';
@@ -69,6 +70,9 @@ componentRegistery.forEach((componentDef) => {
 
 const store = configureStore();
 api.reduxStore = store;
+window.reactory = {
+  api: api
+};
 
 export interface NewNotification {
   id: string,
@@ -206,6 +210,30 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   )
 }
 
+const AppLoading = () => {
+  return (
+    <div id="default_loader" className="loader">
+      <div className="loader-inner">
+        <div className="loader-line-wrap">
+          <div className="loader-line"></div>
+        </div>
+        <div className="loader-line-wrap">
+          <div className="loader-line"></div>
+        </div>
+        <div className="loader-line-wrap">
+          <div className="loader-line"></div>
+        </div>
+        <div className="loader-line-wrap">
+          <div className="loader-line"></div>
+        </div>
+        <div className="loader-line-wrap">
+          <div className="loader-line"></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
@@ -218,9 +246,21 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [theme, setTheme] = React.useState<any>(createMuiTheme(props.appTheme));
   const [statusInterval, setStatusInterval] = React.useState<NodeJS.Timeout>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
+  const [version, setVersion] = React.useState(0);  
 
   const components: any = api.getComponents(dependcies);
   const { Loading, Login, FullScreenModal, NotificationComponent, NotFound } = components;
+
+  let sizes = ['xl', 'lg', 'md', 'sm', 'xs'];
+
+  let size = null;
+
+  sizes.forEach((_size: string) => {
+    if(useMediaQuery(theme.breakpoints.up(size)) === true && size === null) {
+      size = _size;
+      return;
+    }
+  });
 
   const onRouteChanged = (path: string) => {
     setCurrentRoute(path)
@@ -263,22 +303,22 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
   const onWindowResize = async () => {
-    const query = queryString.parse(window.location.search)
-    if (query.auth_token) {
-      localStorage.setItem('auth_token', query.auth_token);
-      const cli = await ReactoryApolloClient();
-      api.client = cli.client;
-      api.ws_link = cli.ws_link;
-    }
-    api.queryObject = query;
-    api.queryString = window.location.search;
-    api.objectToQueryString = queryString.stringify;
+    // const query = queryString.parse(window.location.search)
+    // if (query.auth_token) {
+    //   localStorage.setItem('auth_token', query.auth_token);
+    //   const cli = await ReactoryApolloClient();
+    //   api.client = cli.client;
+    //   api.ws_link = cli.ws_link;
+    // }
+    // api.queryObject = query;
+    // api.queryString = window.location.search;
+    // api.objectToQueryString = queryString.stringify;
 
-    if (window && !window.reactory) {
-      window.reactory = {
-        api,
-      };
-    }
+    // if (window && !window.reactory) {
+    //   window.reactory = {
+    //     api,
+    //   };
+    // }
 
     const {
       innerHeight,
@@ -288,16 +328,25 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     } = window;
 
     let view = 'landscape';
-    let size = 'lg';
 
     if (window.innerHeight > window.innerWidth) {
       view = 'portrait';
     }
+    
+    let size_spec = { 
+      innerHeight, 
+      innerWidth, 
+      outerHeight, 
+      outerWidth, 
+      view, 
+      size 
+    }
 
     if (innerWidth >= 2560) size = 'lg';
-
-    api.log('ReactoryHOC Resize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
-    api.emit('onWindowResize', { innerHeight, innerWidth, outerHeight, outerWidth, view, size });
+    api.$windowSize = size_spec;
+    api.log('ReactoryHOC Resize', size_spec);
+    api.emit('onWindowResize', size_spec);
+    setVersion(version + 1);
   };
 
 
@@ -310,8 +359,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     window.matchMedia("(prefers-color-scheme: dark)").addListener((evt) => {
       if (evt.matches === true) {
         localStorage.setItem('$reactory$theme_mode', 'dark');
+        setVersion(version + 1);
       } else {
         localStorage.setItem('$reactory$theme_mode', 'light');
+        setVersion(version + 1);
       }
     });
 
@@ -406,29 +457,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   useEffect(willMount, []);
 
 
-  const AppLoading = () => {
-    return (
-      <div className="loader">
-        <div className="loader-inner">
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+ 
 
   if (isReady === false) return <AppLoading />;
 

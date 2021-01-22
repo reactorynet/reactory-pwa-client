@@ -179,7 +179,17 @@ export interface ReactoryApiUtils {
   lodash: any
 }
 
+export interface WindowSizeSpec {
+  innerHeight: number, 
+  innerWidth: number, 
+  outerHeight: number, 
+  outerWidth: number, 
+  view: string, 
+  size: string 
+}
+
 class ReactoryApi extends EventEmitter {
+  $windowSize: WindowSizeSpec = null;
   $user: any;
   history: any;
   queries: any;

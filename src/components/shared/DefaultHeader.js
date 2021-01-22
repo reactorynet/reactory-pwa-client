@@ -32,12 +32,12 @@ import { withApi, ReactoryApi, ReactoryApiEventNames } from '@reactory/client-co
 import license from '@reactory/client-core/license';
 
 export class ISearchConfig {
-  
-  constructor(params = { show: true, placeholder: 'Search' }){
+
+  constructor(params = { show: true, placeholder: 'Search' }) {
     this.show = params.show || true;
     this.placeholder = params.placeholder || 'Search';
   }
-  
+
 }
 
 const defaultSearchConfig = new ISearchConfig()
@@ -120,11 +120,11 @@ const Menus = (props) => {
           let subnav = null;
           let expandButton = null;
           let allow = false;
-          
+
           if (isArray(menuItem.roles) && isArray(user.roles) === true) {
             allow = api.hasRole(menuItem.roles, user.roles);
           }
-          
+
           if (allow === true) {
             const goto = () => {
               self.navigateTo(menuItem.link, true);
@@ -141,7 +141,7 @@ const Menus = (props) => {
                       };
 
                       return (
-                        <ListItem key={submenu.id ||subindex} button onClick={submenuGoto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
+                        <ListItem key={submenu.id || subindex} button onClick={submenuGoto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
                           <ListItemIcon>
                             {
                               submenu.icon ?
@@ -159,10 +159,10 @@ const Menus = (props) => {
 
               const toggleMenu = (e) => {
                 let currentToggle = self.state.expanded[menuItem.id];
-                if(!currentToggle) currentToggle = { value: false };
+                if (!currentToggle) currentToggle = { value: false };
 
                 currentToggle.value = !currentToggle.value;
-                const _state = {...self.state};
+                const _state = { ...self.state };
                 _state.expanded[menuItem.id] = currentToggle;
 
                 self.setState(_state);
@@ -186,7 +186,7 @@ const Menus = (props) => {
                 </ListItemSecondaryAction> : null}
               </ListItem>);
 
-            if(subnav) {
+            if (subnav) {
               menuItems.push(subnav);
             }
           }
@@ -195,10 +195,43 @@ const Menus = (props) => {
     });
   }
 
-  if(append) menuItems.push(append);
+  if (append) menuItems.push(append);
 
   return menuItems;
 };
+
+
+const CacheButton = (props) => {
+
+  const { reactory, classes } = props;
+  const [version, setVersion] = React.useState(0)
+  const data = localStorage.getItem('reactory_cache') || "";
+  const bytes = ((new TextEncoder().encode(data)).length / 100000).toPrecision(2);
+
+  const clearCache = () => {
+    debugger
+    reactory.clearStoreAndCache();
+    setVersion(version + 1);
+  }
+
+  return (
+    (<ListItem key={'reactory.cache'} onClick={clearCache} button>
+      <ListItemIcon>
+          <Icon color="primary">storage</Icon>
+      </ListItemIcon>
+      <ListItemText
+        primary={<span className={classes.versionPrimary}>Using {reactory.utils.humanNumber(bytes)} MB of local storage</span>}
+        secondary={<span className={classes.version}>🚮&nbsp; Click to clear your cache</span>}
+      />
+    </ListItem>)
+  )
+
+}
+
+const CacheComponent = compose(withApi)(CacheButton);
+
+
+
 
 /**
  * This example is taking advantage of the composability of the `AppBar`
@@ -241,7 +274,7 @@ class ApplicationHeader extends Component {
     this.statusRefresh = this.statusRefresh.bind(this);
     this.doSearch = this.doSearch.bind(this);
     this.renderHelpInterface = this.renderHelpInterface.bind(this);
-    
+
   }
 
   componentDidMount() {
@@ -249,9 +282,9 @@ class ApplicationHeader extends Component {
   }
 
   onRouteChanged(props) {
-   this.props.api.log('ApiPath changed, handle in header app', props);
-   const { actionData, path } = props;
-   this.navigateTo(path); 
+    this.props.api.log('ApiPath changed, handle in header app', props);
+    const { actionData, path } = props;
+    this.navigateTo(path);
   }
 
   onLoginEvent = (evt) => this.forceUpdate();
@@ -261,7 +294,7 @@ class ApplicationHeader extends Component {
     const { history } = this.props;
 
     const nav = () => {
-      if(where.trim().indexOf('http') === 0) {
+      if (where.trim().indexOf('http') === 0) {
         window.open(where, '_new');
       } else {
         history.push(where);
@@ -370,58 +403,58 @@ class ApplicationHeader extends Component {
     };
 
     const toggleDarkMode = () => {
-      
-      if(theme.palette.type === 'dark') {
-        localStorage.setItem("$reactory$theme_mode", 'light');        
+
+      if (theme.palette.type === 'dark') {
+        localStorage.setItem("$reactory$theme_mode", 'light');
       } else {
         localStorage.setItem("$reactory$theme_mode", 'dark');
       }
 
       api.emit('theme_changed');
     }
- 
 
-    
 
-    const getNavigationComponents = () => {      
-      if(user) {        
+
+
+    const getNavigationComponents = () => {
+      if (user) {
         return user.navigationComponents || [];
       }
       return [];
     }
 
-    const avatarComponent = (profileLink) => { 
-      let AvatarComponentDef = find( getNavigationComponents(), { contextType : 'DEFAULT_HEADER_AVATAR' });
+    const avatarComponent = (profileLink) => {
+      let AvatarComponentDef = find(getNavigationComponents(), { contextType: 'DEFAULT_HEADER_AVATAR' });
       let AvatarComponent = null;
-            
-      if( AvatarComponentDef && AvatarComponentDef.componentFqn) {        
+
+      if (AvatarComponentDef && AvatarComponentDef.componentFqn) {
         AvatarComponent = api.getComponent(AvatarComponentDef.componentFqn);
-        if( AvatarComponent  ) {
-          return (<AvatarComponent {...{user, profileLink, ...AvatarComponentDef.componentProps}} />)
-        }                      
+        if (AvatarComponent) {
+          return (<AvatarComponent {...{ user, profileLink, ...AvatarComponentDef.componentProps }} />)
+        }
       }
 
-      return  (<Avatar src={getAvatar(user)} className={self.props.classes.loggedInUserAvatar} />);
+      return (<Avatar src={getAvatar(user)} className={self.props.classes.loggedInUserAvatar} />);
     }
 
     const avatarTitle = () => {
-      let TitleComponentDef = find( getNavigationComponents(), { contextType : 'DEFAULT_HEADER_TITLE' });
+      let TitleComponentDef = find(getNavigationComponents(), { contextType: 'DEFAULT_HEADER_TITLE' });
       let TitleComponent = null;
-      
-      if( TitleComponentDef && TitleComponentDef.componentFqn) {
+
+      if (TitleComponentDef && TitleComponentDef.componentFqn) {
         TitleComponent = api.getComponent(TitleComponentDef.componentFqn);
-        if( TitleComponent  ) {
-          return (<TitleComponent {...{user, ...TitleComponentDef.componentProps}} />);
-        }        
+        if (TitleComponent) {
+          return (<TitleComponent {...{ user, ...TitleComponentDef.componentProps }} />);
+        }
       }
 
       return (
-        <Typography 
-          variant="subtitle1" 
-          color="secondary" 
-          style={{ 
-            textAlign: 'center', 
-            marginTop: '20px' 
+        <Typography
+          variant="subtitle1"
+          color="secondary"
+          style={{
+            textAlign: 'center',
+            marginTop: '20px'
           }}>{api.getUserFullName(user)}
         </Typography>
       );
@@ -446,7 +479,7 @@ class ApplicationHeader extends Component {
       </div>
     </div>);
           */
-    
+
     const { server } = api.$user;
 
     return (
@@ -482,30 +515,30 @@ class ApplicationHeader extends Component {
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <BackIcon />
             </IconButton>
-            
+
             <IconButton onClick={toggleDarkMode}>
               <Icon>{theme.palette.type === 'dark' ? 'visibility_off' : 'visibility'}</Icon>
             </IconButton>
 
-            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />            
+            <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />
           </div>
           <Divider />
-          { avatarTitle() }
-          {user.anon ? null : avatarComponent("/profile/")}          
+          {avatarTitle()}
+          {user.anon ? null : avatarComponent("/profile/")}
           <Divider />
           <List className={this.props.classes.menuItems}>
-            <Menus {...{ menus: menus, history: this.props.history, user, api, self, classes }} append={(<ListItem key={'reactory.status'} onClick={this.statusRefresh} button>
+            <Menus {...{ menus: menus, history: this.props.history, user, api, self, classes }} append={[(<ListItem key={'reactory.status'} onClick={this.statusRefresh} button>
               <ListItemIcon>
                 <Tooltip title={`Api Available @ ${moment(api.getUser().when).format('HH:mm:ss')} click to refresh`}>
                   <Icon color="primary">rss_feed</Icon>
                 </Tooltip>
               </ListItemIcon>
-              <ListItemText 
-                primary={<span className={classes.versionPrimary}>Client ver: {api.props.$version}</span>} 
-                secondary={<span className={classes.version}>📡&nbsp;{ server.id || 'development' } ver: { server.version || 'waiting' } </span>}
-                />
-            </ListItem>)} />
-            
+              <ListItemText
+                primary={<span className={classes.versionPrimary}>Client ver: {api.props.$version}</span>}
+                secondary={<span className={classes.version}>📡&nbsp;{server.id || 'development'} ver: {server.version || 'waiting'} </span>}
+              />
+            </ListItem>), (<CacheComponent classes={classes} />)]} />
+
           </List>
         </Drawer>
         {this.renderHelpInterface()}
