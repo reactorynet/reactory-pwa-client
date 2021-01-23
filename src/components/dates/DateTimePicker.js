@@ -1,7 +1,7 @@
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import moment from 'moment';
-import { FormControl, Typography, TextField } from '@material-ui/core';
+import { FormControl, Typography, TextField, InputLabel } from '@material-ui/core';
 import { DatePicker, DateTimePicker } from '@material-ui/pickers';
 import { withApi } from "@reactory/client-core/api/ApiProvider";
 import { compose } from 'redux';
@@ -34,7 +34,7 @@ class DateTimePickerWidget extends PureComponent {
   };
 
   render() {
-    const { api, formData, uiSchema } = this.props;
+    const { api, formData, uiSchema, idSchema, schema } = this.props;
     const theme = api.getTheme();
 
     let _pickerProps = {
@@ -58,27 +58,30 @@ class DateTimePickerWidget extends PureComponent {
     if (opts.variant == 'outlined') {
       _pickerProps.variant = opts.variant;
 
+      if(hide_label === false) {
+        _pickerProps.label = schema.title
+      } 
+
       const date = moment(this.props.formData, 'YYYY-MM-DD').format('YYYY-MM-DD');
       _pickerProps.defaultValue = date;
       delete _pickerProps.value;
 
       return (
-        <FormControl {...formControlProps}>
-          { hide_label === false ? <Typography {...typographyProps}>{this.props.schema.title || 'Select Time'}</Typography> : null}
+        
           <TextField
             {..._pickerProps}
+            id={idSchema.$id}
             type="date"
             InputLabelProps={{
               shrink: true,
             }}
           />
-        </FormControl>
       );
     }
 
     return (
       <FormControl {...formControlProps}>
-        { hide_label === false ? <Typography {...typographyProps}>{this.props.schema.title || 'Select Time'}</Typography> : null}
+        { hide_label === false ? <InputLabel htmlFor={idSchema.$id} >{this.props.schema.title || 'Select Time'}</InputLabel> : null}
         <DateTimePicker {..._pickerProps} />
       </FormControl>
     );

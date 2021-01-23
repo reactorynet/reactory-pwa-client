@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import { throttle } from 'lodash'
+import { throttle, isNil, isEmpty } from 'lodash'
 import { compose } from 'recompose';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 
@@ -58,8 +58,17 @@ const MaterialStringFieldWidget = (props) => {
       autofocus
     }
 
+
+    let inputLabelProps = {}
+   
     const uiOptions = uiSchema['ui:options'] || { readOnly: false, props: {} };
     let args = uiOptions && uiOptions.props ? { ...uiOptions.props } : {};
+
+    const {    
+      labelStyle = {},
+      labelProps = { visible: true },
+      componentProps,
+    } = uiOptions;
 
     if (uiOptions.propsMap) {
       let margs = om(props, uiOptions.propsMap);
@@ -78,6 +87,19 @@ const MaterialStringFieldWidget = (props) => {
       case "email": args.type = "email"; break;
       default: args.type = schema.format || "text"; break;
     }
+
+    if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
+      inputLabelProps.shrink = false;
+    } else {
+      inputLabelProps.shrink = true;
+      inputLabelProps.style = {
+        backgroundColor: theme.palette.background.paper,
+        // marginTop: '4px',
+        padding: '4px'
+      };
+    }
+    
+    inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
 
     const onInputChanged = (evt) => {
       evt.persist();
@@ -139,12 +161,14 @@ const MaterialStringFieldWidget = (props) => {
         defaultValue: `${formData || schema.default}`.replace("undefined", ""),
         variant: themeDefaults.variant || uiOptions.variant || "standard",
         InputProps: inputProps,
+        label: schema.title,
         value: `${formData || schema.default}`.replace("undefined", "")
       }
 
       if (uiOptions.componentProps) {
         componentProps = { ...componentProps, ...uiOptions.componentProps };
       }
+
 
       return (<TextField {...componentProps} />);
 
@@ -159,7 +183,7 @@ const MaterialStringFieldWidget = (props) => {
       switch (themeDefaults.variant) {
         case "outlined":
         case "outline": {
-          COMPONENT = OutlinedInput;
+          COMPONENT = OutlinedInput;          
           break;
         }
         case "filled":
@@ -170,7 +194,12 @@ const MaterialStringFieldWidget = (props) => {
       }
 
 
-      return (<COMPONENT {...args} onKeyDown={onKeyDown} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />)
+      return (
+        <FormControl>
+          <InputLabel {...inputLabelProps} htmlFor={idSchema.$id}>{schema.title}</InputLabel>
+          <COMPONENT {...args} onKeyDown={onKeyDown} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />
+        </FormControl>
+      )
     }
 
   } catch (renderError) {

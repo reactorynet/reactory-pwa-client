@@ -84,7 +84,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
 
     reactory.log('Rendering SelectWithData', { formContext, formData, menuItems, key_map }, 'debug');
 
-    let variant = 'standard'
+    let variant: string | "standard" | "oulined" | "filled" = 'standard'
     if (theme.MaterialInput) {
       variant = theme.MaterialInput.variant || variant;
     }
@@ -123,7 +123,8 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         selectProps = {},
         labelStyle = {},
         labelProps = { visible: true },
-        formControlProps = {}
+        formControlProps = {},
+        size
       } = uiSchema['ui:options'];
 
 
@@ -169,50 +170,56 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         inputLabelProps.shrink = true;
       }
 
-      React.useEffect(()=>{
+      React.useEffect(() => {
         getData();
       }, [])
 
-      return (<Select
-        {...selectProps}
-        multiple={multiSelect === true}
-        value={formData || ''}
-        onChange={onSelectChanged}
-        name={idSchema.$id}
-        variant={variant}
-        data-version={version}
-        input={
-          <InputComponent id={idSchema.$id} value={typeof formData === 'string' ? formData.trim() : ""} />
-        }
-        renderValue={(_value: any) => {
-          reactory.log(`Rendering value for ${_value}`, {formData, key_map, menuItems})
-          if (_value === null || _value === undefined || _value.length === 0) {
-            return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{menuItems[0].id === 'loading' ? 'Loading' : 'Select' }</span>;
-          }
 
-          if (Array.isArray(_value))
-            return _value.join(', ');
-          else {
-            if (key_map[_value] && key_map[_value].label) {
-              return key_map[_value].label;
+      return (
+        <FormControl size={size || "medium"}>
+          <InputLabel htmlFor={idSchema.$id}>{schema.title}</InputLabel>
+          <Select
+            {...selectProps}
+            multiple={multiSelect === true}
+            value={formData || ''}
+            onChange={onSelectChanged}
+            name={idSchema.$id}
+            variant={variant}
+            data-version={version}
+            input={
+              <InputComponent id={idSchema.$id} value={typeof formData === 'string' ? formData.trim() : ""} />
             }
+            renderValue={(_value: any) => {
+              reactory.log(`Rendering value for ${_value}`, { formData, key_map, menuItems })
+              if (_value === null || _value === undefined || _value.length === 0) {
+                return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{menuItems[0].id === 'loading' ? 'Loading' : 'Select'}</span>;
+              }
 
-            return _value;
-          }          
+              if (Array.isArray(_value))
+                return _value.join(', ');
+              else {
+                if (key_map[_value] && key_map[_value].label) {
+                  return key_map[_value].label;
+                }
 
-        }}>
+                return _value;
+              }
 
-        {
-          menuItems.map((option: any, index: number) => {
-            return (
-              <MenuItem key={option.key || index} value={`${option.value}`}>
-                { option.icon ? <Icon>{option.icon}</Icon> : null}
-                { option.label}
-                { option.key === formData ? <Icon style={{ marginLeft: '8px' }}>check_circle</Icon> : null}
-              </MenuItem>)
-          })
-        }
-      </Select>);
+            }}>
+
+            {
+              menuItems.map((option: any, index: number) => {
+                return (
+                  <MenuItem key={option.key || index} value={`${option.value}`}>
+                    { option.icon ? <Icon>{option.icon}</Icon> : null}
+                    { option.label}
+                    { option.key === formData ? <Icon style={{ marginLeft: '8px' }}>check_circle</Icon> : null}
+                  </MenuItem>)
+              })
+            }
+          </Select>
+        </FormControl>
+      );
 
     } else {
       return <React.Fragment>
