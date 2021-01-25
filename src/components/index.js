@@ -18,8 +18,7 @@ import * as MaterialPickers from '@material-ui/pickers';
 import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
 
-
-
+import IntersectionVisible from 'react-intersection-visible';
 
 import LoginPage, { RegisterPage } from './auth';
 import Main from './home/index';
@@ -115,6 +114,12 @@ export const componentRegistery = [
     name: 'React',
     version: '1.0.0',
     component: React
+  },
+  {
+    nameSpace: 'core',
+    name: 'IntersectionVisible',
+    version: '1.0.0',
+    component: IntersectionVisible,
   },
   {
     nameSpace: 'lodash',
@@ -763,7 +768,7 @@ export const componentRegistery = [
   {
     nameSpace: 'apollo-client',
     name: 'ApolloClient',
-    version: '3.2.7',    
+    version: '3.2.7',
     component: {
       core: require('@apollo/client'),
       react: require('@apollo/client/react'),
@@ -771,11 +776,11 @@ export const componentRegistery = [
       components: require('@apollo/client/react/components'),
     }
   },
-  
+
   {
     nameSpace: 'exceljs',
     name: 'ExcelJS',
     version: '3.4.0',
-    component: require('exceljs'),    
+    component: require('exceljs'),
   }
 ];
