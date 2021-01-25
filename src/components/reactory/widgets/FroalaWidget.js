@@ -421,7 +421,7 @@ const FroalaWidget = (props) => {
   };
 
   const onModelChange = (model) => {
-    debugger
+    
     setModel(model)
     if (props.onChange) props.onChange(model);
   };

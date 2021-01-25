@@ -64,7 +64,7 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
   const [ open, setOpen ] = React.useState<boolean>(false)  
 
   const getOptions = ( ): ReactoryLookupComponentOptions => {
-    debugger
+    
     let _options: ReactoryLookupComponentOptions = {
       label: '',
       title: '',

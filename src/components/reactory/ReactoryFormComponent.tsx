@@ -332,6 +332,43 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return null;
   };
 
+  const getInitialDepencyState = () => {
+    let _dependency_state = { passed: true, dependencies: {} }
+
+    let _all_dependencies = [];
+    if(formDef.widgetMap) {
+      formDef.widgetMap.forEach((map) => {
+        if(map.componentFqn) {
+          if(_all_dependencies.indexOf(map.componentFqn) < 0) _all_dependencies.push(map.componentFqn);
+        }
+      })
+    }
+
+    if(formDef.components) {
+      formDef.components.forEach(( component ) => {
+        if(component.indexOf("@") > 1 && component.indexOf(".") > 0) {
+          if(_all_dependencies.indexOf(component) < 0) _all_dependencies.push(component);
+        }
+      })
+    }
+
+    if(formDef.dependencies && formDef.dependencies.length > 0) {
+      formDef.dependencies.forEach((_dep: Reactory.IReactoryComponentDefinition) => {
+        _dependency_state.dependencies[_dep.fqn] = {
+          available: reactory.componentRegister[_dep.fqn] !== null && reactory.componentRegister[_dep.fqn] !== undefined,
+          component: null
+        };
+
+        if(_dependency_state.dependencies[_dep.fqn].available === true) {
+          _dependency_state.dependencies[_dep.fqn].component = reactory.componentRegister[_dep.fqn].component
+        } else {
+          _dependency_state.passed = false;
+        }                
+      })
+    }
+
+    return _dependency_state;
+  };
 
 
   const [componentDefs, setComponents] = React.useState<ReactoryComponentMap>(reactory.getComponents(default_dependencies()));
@@ -360,6 +397,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const [version, setVersion] = React.useState<number>(0);
   const [last_query_exec, setLastQueryExecution] = React.useState(null);
   const [formRef, setFormRef] = React.useState<Form>(React.createRef());
+  const [dependencies, setDepencies] = React.useState<any>(getInitialDepencyState().dependencies);
+  const [dependenciesPassed, setDepenciesPassed] = React.useState<boolean>(getInitialDepencyState().passed);
+  const [customState, setCustomState] = React.useState<any>({});
   //const $events = new EventEmitter();
 
   const getActiveUiSchema = () => {
@@ -408,11 +448,18 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const onPluginLoaded = (plugin: any) => {
     reactory.log(`${signature} Plugin loaded, activating component`, { plugin }, 'debug');
-    try {
-      plugins[plugin.componentFqn] = plugin.component(props, getFormContext());
-      setPlugins({ plugins: plugins });
+    try {      
+      
+      let _component = plugin.component(props, getFormContext());
+      if(dependencies[plugin.componentFqn]) {
+        let _depends = { ...dependencies };
+        _depends[plugin.componentFqn].available = true;
+        _depends[plugin.componentFqn].component = _component;
+        setDepencies(_depends);        
+      }
+      setVersion(version + 1);
     } catch (pluginFailure) {
-      reactory.log(`${signature} An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure });
+      reactory.log(`${signature} An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure }, 'error');
     }
   }
 
@@ -656,7 +703,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
         if (_graphql && _graphql.mutation && _graphql.mutation['onChange']) {
-          //debugger;
+          //;
           let onChangeMutation: Reactory.IReactoryFormMutation = _graphql.mutation['onChange'];
           let throttleDelay: number = _graphql.mutation['onChange'].throttle || 250;
           let variables = reactory.utils.objectMapper({ eventData: form, form: { formData, formContext: getFormContext() } }, onChangeMutation.variables);
@@ -677,7 +724,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
         if (formDef && formDef.refresh && formDef.refresh.onChange) {
-          debugger
+          
           if (trigger_onChange === true) fire();
         } else {
           setFormData(form.formData);
@@ -688,6 +735,33 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   }
 
   const setState = ($state: any, callback = () => { }) => {
+    
+
+    let _$state = {...$state};
+    delete _$state.formData;
+    if(Object.keys(_$state).length > 0) {
+      let _customState = {};
+      Object.keys(_$state).forEach((stateKey) => {
+        switch(stateKey) {
+          case "componentDefs": {
+            setComponents(_$state[stateKey]);
+            break;
+          }
+          case "":
+          case "formData": {
+            //do nothing, already handled or not permitted.
+            break;
+          }
+          default: {
+            _customState[stateKey] = _$state[stateKey];
+          }
+        }
+      });
+    
+      if(Object.keys(_customState).length > 0) {
+        setCustomState(_customState);
+      }
+    }
 
     if ($state.formData) getData($state.formData);
     
@@ -700,7 +774,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       formData,
       queryComplete,
       dirty,
-      _instance_id: instance_id
+      _instance_id: instance_id,
+      ...customState
     }
   }
 
@@ -1045,7 +1120,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     if (typeof validationFunction === 'function') {
       try {
-        validationResult = validationFunction($formData, $errors, this);
+        validationResult = validationFunction($formData, $errors, getFormReference());
       } catch (ex) {
         reactory.log(`Error While Executing Custom Validation`, { ex }, 'error');
       }
@@ -1107,7 +1182,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
     if(_graphql && _graphql.debug) {
-      debugger;
+      ;
     }
     let _formData = null;
 

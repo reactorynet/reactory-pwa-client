@@ -88,7 +88,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
   const [last_queried, setLastQueried] = useState(null);
-  const [last_result, setLastResult] = useState(formData);
+  const [last_result, setLastResult] = useState(formData);  
 
   // const tableRef: any = React.createRef();
   // let tableRef: any = React.createRef();
@@ -106,16 +106,16 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       if (ToolbarComponent) {
         components.Toolbar = (toolbar_props) => {
           let _toolbar_props = {...toolbar_props};
-
+        
           if(uiOptions.toolbarProps) {
             _toolbar_props = { ..._toolbar_props, ...uiOptions.toolbarProps };
           }
 
           if(uiOptions.toolbarPropsMap) {
-            _toolbar_props = reactory.utils.objectMapper({
-              toolbarProps: uiOptions.toolbarProps || {},
-              table_props: props,
-              props: toolbar_props,
+            _toolbar_props = reactory.utils.objectMapper({ 
+              toolbarProps: uiOptions.toolbarProps || {}, 
+              table_props: props, 
+              props: toolbar_props, 
               formContext,
               schema,
               uiSchema,
@@ -150,7 +150,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         data: [],
         page: 0,
         totalCount: 0,
-      }
+      }      
 
       try {
         const graphqlDefinitions = formContext.graphql;
@@ -357,6 +357,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       try {
         options.searchText = reactory.utils.template(options.searchText)({ ...props })
         if(tableRef && tableRef.current) {
+          
           if(tableRef.current.state.searchText !== options.searchText) {
             tableRef.current.onQueryChange({ search: options.searchText })
             tableRef.current.setState({ searchText: options.searchText })
@@ -529,7 +530,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       });
     };
   }
-
+  
   React.useEffect(() => {
     const uiOptions = uiSchema['ui:options'] || {};
     if (uiOptions.refreshEvents) {
@@ -543,14 +544,17 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     };
 
     return willUnmount;
-  }, []);
+  }, []);  
+
+  
+
 
   return (
     <React.Fragment>
       <MaterialTable
         columns={columns}
         tableRef={tableRef}
-        data={rows}
+        data={rows}        
         title={schema.title || uiOptions.title || "no title"}
         options={options}
         actions={actions}
