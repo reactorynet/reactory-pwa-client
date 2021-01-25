@@ -327,30 +327,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   }
 
 
-  const onWindowResize = async () => {
-    // const query = queryString.parse(window.location.search)
-    // if (query.auth_token) {
-    //   localStorage.setItem('auth_token', query.auth_token);
-    //   const cli = await ReactoryApolloClient();
-    //   api.client = cli.client;
-    //   api.ws_link = cli.ws_link;
-    // }
-    // api.queryObject = query;
-    // api.queryString = window.location.search;
-    // api.objectToQueryString = queryString.stringify;
-
-    // if (window && !window.reactory) {
-    //   window.reactory = {
-    //     api,
-    //   };
-    // }
-
+  const onWindowResize = async () => {    
     const _size_spec = api.getSizeSpec();
     api.$windowSize = _size_spec; 
     api.log('ReactoryHOC Resize', _size_spec);
     api.emit('onWindowResize', _size_spec);
-    setSizeSpec(_size_spec);
-    setVersion(version + 1);
+    //setSizeSpec(_size_spec);
   };
 
 

@@ -317,7 +317,7 @@ namespace Reactory {
     authProvider: string
     providerId: string
     lastLogin: Date
-    roles: [String]
+    roles: [string]
   }
 
   export interface IUser {
@@ -511,25 +511,25 @@ namespace Reactory {
     functionFqn?: string,
   }
   export interface IReactoryForm {
-    id: String,
-    uiFramework: String,
-    uiSupport: String[],
+    id: string,
+    uiFramework: string,
+    uiSupport: string[],
     uiResources?: any[],    
-    title: String,
-    tags?: String[],
-    helpTopics?: String[]
+    title: string,
+    tags?: string[],
+    helpTopics?: string[]
     schema: ISchema | IObjectSchema | IArraySchema,
     sanitizeSchema?: ISchema | IObjectSchema | IArraySchema,
     uiSchema?: any,
     uiSchemas?: IUISchemaMenuItem[],
     defaultUiSchemaKey?: string
     registerAsComponent: boolean,
-    nameSpace: String,
-    name: String,
-    description?: String,
-    version: String,
-    roles?: String[],
-    components?: String[],
+    nameSpace: string,
+    name: string,
+    description?: string,
+    version: string,
+    roles?: string[],
+    components?: string[],
     graphql?: IFormGraphDefinition,
     defaultFormValue?: any,
     defaultPdfReport?: IReactoryPdfReport, 
@@ -544,7 +544,7 @@ namespace Reactory {
     formContext?: any,
     fields?: any,
     widgets?: any,
-
+    wrap?: boolean,
     eventBubbles?: IEventBubbleAction[],
 
     FieldTemplate?: Function,
@@ -552,7 +552,7 @@ namespace Reactory {
     /**
      * components to mount in the componentDef propertie
      */
-    componentDefs?: String[]
+    componentDefs?: string[]
     /**
      * object map to use for mapping querystring
      */
@@ -640,4 +640,4 @@ namespace Reactory {
   }
 }
 
-export default Reactory
+export default Reactory;
