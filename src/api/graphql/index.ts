@@ -409,6 +409,7 @@ const apiStatus = gql`
         roles
         componentFqn
         exact
+        redirect
         args {
           key
           value

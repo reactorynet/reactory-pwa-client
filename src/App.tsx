@@ -155,6 +155,11 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         render: (props) => {
           api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
 
+          debugger;
+          if(routeDef.redirect) {
+            return <Redirect to={{pathname: routeDef.redirect, state: { from: props.location } }} />
+          }
+
           const componentArgs = {
             $route: props.match,
           };
@@ -300,30 +305,35 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
   const onApiStatusUpdate = (status) => {
-    api.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
-    let isOffline = status.offline === true;
 
-    if (offline !== isOffline) {
-      setOfflineStatus(isOffline);
-    }
-
-    if (isOffline === true && !statusInterval) {
-      setStatusInterval(setInterval(api.status, 3000))
-    } else {
-
-      if (isOffline === false && statusInterval) {
-        clearInterval(statusInterval);
-        let user = api.utils.lodash.cloneDeep(api.getUser());
-        delete user.when;
-        let _user = api.utils.lodash.cloneDeep(user);
-        delete _user.when;
-
-        if (deepEquals(user, _user) === false || status.offline !== offline) {
-          setUser(user)
-          setOfflineStatus(status.offline === true);
+    if(!(status === null || status === undefined)) {
+      api.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
+      let isOffline = status.offline === true;
+  
+      if (offline !== isOffline) {
+        setOfflineStatus(isOffline);
+      }
+  
+      if (isOffline === true && !statusInterval) {
+        setStatusInterval(setInterval(api.status, 3000))
+      } else {
+  
+        if (isOffline === false && statusInterval) {
+          clearInterval(statusInterval);
+          let user = api.utils.lodash.cloneDeep(api.getUser());
+          delete user.when;
+          let _user = api.utils.lodash.cloneDeep(user);
+          delete _user.when;
+  
+          if (deepEquals(user, _user) === false || status.offline !== offline) {
+            setUser(user)
+            setOfflineStatus(status.offline === true);
+          }
         }
       }
-    }
+    } else {
+      api.log(`apiStaus returned null value`, { status }, 'warning');
+    }    
   }
 
 
