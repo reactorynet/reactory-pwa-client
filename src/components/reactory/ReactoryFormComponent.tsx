@@ -573,7 +573,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                 }
               }
 
-              //validate data against schema 
+              //validate data against schema
               if (formDef.sanitizeSchema) {
                 reactory.utils.inspector.sanitize(formDef.sanitizeSchema, _formData);
               };
@@ -720,7 +720,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           });
 
 
-          //throttled_call();        
+          //throttled_call();
         }
 
         if (formDef && formDef.refresh && formDef.refresh.onChange) {
@@ -1273,7 +1273,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         //TODO: Updated / fix types so that errors is available on result
         //if (query.autoQuery === false && autoQueryDisabled === false) {
         //  setState({ queryComplete: true, dirty: false, allowRefresh: true, loading: false });
-        //} else {        
+        //} else {
 
         const executeFormQuery = () => {
 
@@ -1497,7 +1497,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
      */
     if (formDef.uiSchemas) {
 
-      // Even handler for the schema selector menu 
+      // Even handler for the schema selector menu
       const onSchemaSelect = (evt: Event, menuItem: Reactory.IUISchemaMenuItem) => {
         reactory.log(`UI Schema Selector onSchemaSelect "${menuItem.title}" selected`, { evt, menuItem });
         setActiveUiSchemaMenuItem(menuItem);
@@ -1523,6 +1523,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
       if (_formUiOptions && _formUiOptions.schemaSelector && activeUiSchemaModel) {
         if (_formUiOptions.schemaSelector.variant === "icon-button") {
+
+          // debugger;
+
           let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px', zIndex: 1000 };
           if (_formUiOptions.schemaSelector.style) {
             schemaStyle = _formUiOptions.schemaSelector.style;
@@ -1532,11 +1535,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             const allowed_schema = AllowedSchemas(formDef.uiSchemas, props.mode, null)
             reactory.log(`<${fqn} /> GetSchemaSelectorMenus`, { allowed_schema }, 'debug');
 
-            allowed_schema.forEach((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
-
-              /**
-               * We hook uip the event handler for each of the schema selection options.
-               */
+            // allowed_schema.forEach((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
+            const schemaButtons = allowed_schema.map((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
+              /**  We hook uip the event handler for each of the schema selection options. */
               const onSelectUiSchema = () => {
                 // self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
                 reactory.log(`<${fqn} /> UI Schema Selector onSchemaSelect "${uiSchemaItem.title}" selected`, { uiSchemaItem });
@@ -1545,6 +1546,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
               return (<IconButton onClick={onSelectUiSchema} key={`schema_selector_${index}`}><Icon>{uiSchemaItem.icon}</Icon></IconButton>)
             });
+
+            return schemaButtons;
 
           };
 
@@ -1559,6 +1562,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               {GetSchemaSelectorMenus()}
             </div>
           )
+
+          debugger;
         }
 
         if (_formUiOptions.schemaSelector.variant === "button") {
@@ -1834,7 +1839,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     reactory.log(`${signature} Incoming Properties Changed`, { formData: props.formData, _formData: formData, version });
 
     getData(_formData);
-    //if(next_version > 0 && formData) {        
+    //if(next_version > 0 && formData) {
     //}
 
 
@@ -1880,10 +1885,10 @@ const ReactoryFormRouter = (props) => {
 
   const { match, api, routePrefix } = props;
   const [version, setVersion] = React.useState<number>(0);
-  
+
 
   api.log('ReactoryFormRouter:render', { props: props }, 'debug');
-    
+
 
   return (
     <Switch>
@@ -1892,9 +1897,9 @@ const ReactoryFormRouter = (props) => {
       </Route>
       <Route path={`${routePrefix}/:formId/`}>
         <RouteBoundForm mode="view"/>
-      </Route>       
+      </Route>
       <Route exact path={`${routePrefix}/`}>
-        <ReactoryFormComponent formId='ReactoryFormList' formData={{ forms: api.formSchemas }} mode='view' />      
+        <ReactoryFormComponent formId='ReactoryFormList' formData={{ forms: api.formSchemas }} mode='view' />
       </Route>
     </Switch>
   )
