@@ -155,7 +155,6 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         render: (props) => {
           api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
 
-          debugger;
           if(routeDef.redirect) {
             return <Redirect to={{pathname: routeDef.redirect, state: { from: props.location } }} />
           }

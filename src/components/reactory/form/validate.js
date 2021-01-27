@@ -156,7 +156,8 @@ export default function validateFormData(
   formData,
   schema,
   customValidate,
-  transformErrors
+  transformErrors,
+  via  
 ) {
   
   try {
@@ -177,7 +178,7 @@ export default function validateFormData(
     return { errors, errorSchema };
   }
 
-  const errorHandler =  customValidate(formData, createErrorHandler(formData));
+  const errorHandler =  customValidate(formData, createErrorHandler(formData), via);
   const userErrorSchema = unwrapErrorHandler(errorHandler);
   const newErrorSchema = mergeObjects(errorSchema, userErrorSchema, true);
   // XXX: The errors list produced is not fully compliant with the format

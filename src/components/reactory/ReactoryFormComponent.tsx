@@ -139,6 +139,7 @@ export interface ReactoryFormProperties {
   refCallback?: Function,
   queryOnFormDataChange?: boolean,
   onBeforeMutation?: Function,
+  onBeforeQuery?: Function,
   componentType?: string | "form" | "widget",
   theme?: Theme,
 }
@@ -522,7 +523,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         };
 
         if (props.onBeforeMutation) {
-          do_mutation = props.onBeforeMutation(mutation_props, form);
+          do_mutation = props.onBeforeMutation(mutation_props, form, getFormContext());
         }
 
         if (do_mutation) {
@@ -1101,7 +1102,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return _formDef
   }
 
-  const formValidation = ($formData: any, $errors: any) => {
+  const formValidation = ($formData: any, $errors: any, via='onChange') => {
 
     let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
     reactory.log(`Executing custom validations for ${formfqn}`, { $formData, $errors }, 'debug');
@@ -1120,7 +1121,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     if (typeof validationFunction === 'function') {
       try {
-        validationResult = validationFunction($formData, $errors, getFormReference());
+        validationResult = validationFunction($formData, $errors, getFormReference(), via);
       } catch (ex) {
         reactory.log(`Error While Executing Custom Validation`, { ex }, 'error');
       }
@@ -1276,6 +1277,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         //} else {        
 
         const executeFormQuery = () => {
+          
+          if(props.onBeforeQuery ) {
+            if(props.onBeforeQuery( _formData, formContext ) === false) return;
+          }
 
           reactory.log(`${signature}  executeFormQuery()`)
           const query_start = new Date().valueOf();
@@ -1409,6 +1414,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       ...formDefinition(),
       validate: formValidation,
       onChange: onChange,
+      onError: props.onError ? props.onError : (error) => {},
       formData,
       ErrorList: (error_props) => (<MaterialErrorListTemplate {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,

@@ -12,8 +12,9 @@ import {
   deepEquals,
 } from "../utils";
 import validateFormData, { toErrorList } from "../validate";
+import {withApi } from '@reactory/client-core/api/ApiProvider'
 
-export default class Form extends Component {
+class Form extends Component {
 
   static defaultProps = {
     uiSchema: {},
@@ -91,7 +92,7 @@ export default class Form extends Component {
     return shouldRender(this, nextProps, nextState);
   }
 
-  validate(formData, schema = this.props.schema) {
+  validate(formData, schema = this.props.schema, via='onChange') {
     const { validate, transformErrors } = this.props;
     const { definitions } = this.getRegistry();
     const resolvedSchema = retrieveSchema(schema, definitions, formData);
@@ -99,7 +100,8 @@ export default class Form extends Component {
       formData,
       resolvedSchema,
       validate,
-      transformErrors
+      transformErrors,
+      via
     );
   }
 
@@ -157,13 +159,11 @@ export default class Form extends Component {
     if(event) event.preventDefault();
 
     if (!this.props.noValidate) {
-      const { errors, errorSchema } = this.validate(this.state.formData);
+      const { errors, errorSchema } = this.validate(this.state.formData, this.props.schema, 'submit');
       if (Object.keys(errors).length > 0) {
         setState(this, { errors, errorSchema }, () => {
           if (this.props.onError) {
             this.props.onError(errors);
-          } else {
-            console.error("Form validation failed", errors);
           }
         });
         return;
@@ -360,3 +360,5 @@ if (process.env.NODE_ENV !== "production") {
     formContext: PropTypes.object,
   };
 }
+
+export default Form;

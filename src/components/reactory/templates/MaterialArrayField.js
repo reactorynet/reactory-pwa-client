@@ -28,6 +28,8 @@ import {
   getDefaultRegistry,
 } from "@reactory/client-core/components/reactory/form/utils";
 
+import { withApi } from '@reactory/client-core/api/ApiProvider';
+
 function ArrayFieldTitle({ TitleField, idSchema, title, required }) {
   if (!title) {
     // See #312: Ensure compatibility with old versions of React.
@@ -371,13 +373,15 @@ class ArrayField extends Component {
       idPrefix,
       rawErrors,
       onChange,
+      api,
     } = this.props;
     //console.log('rendering normal array', {props: this.props});
     let toolbar = null;    
     const title = schema.title === undefined ? name : schema.title;
     let { ArrayFieldTemplate, definitions, fields } = registry;
     
-
+    let mapped_props = {};
+    
     if(uiSchema && uiSchema['ui:widget']) {
       const uiOptions = uiSchema['ui:options'];
       let componentProps = {}
@@ -393,6 +397,11 @@ class ArrayField extends Component {
         })
       }
 
+      
+      if(uiOptions && uiOptions.componentPropsMap) {
+        mapped_props = api.utils.objectMapper(this.props, uiOptions.componentPropsMap)
+      }
+
       if(uiOptions && uiOptions.container) {
         //resolve Container from API
         const Container = formContext.api.getComponent(uiOptions.container)
@@ -404,13 +413,13 @@ class ArrayField extends Component {
           return (
           <Container {...containerProps}>
             {toolbar}
-            {ArrayFieldTemplate !== null ? <ArrayFieldTemplate { ...{...this.props, ...componentProps}} /> : null}
+            {ArrayFieldTemplate !== null ? <ArrayFieldTemplate { ...{...this.props, ...componentProps, ...mapped_props}} /> : null}
           </Container>);
         } else {
           return (
           <Paper {...containerProps}>
             {toolbar}
-            {ArrayFieldTemplate !== null ? <ArrayFieldTemplate { ...{...this.props,...componentProps}} /> : null}
+            {ArrayFieldTemplate !== null ? <ArrayFieldTemplate { ...{...this.props,...componentProps, ...mapped_props}}  /> : null}
           </Paper>);
         }
       }
@@ -459,6 +468,7 @@ class ArrayField extends Component {
       formContext,
       formData,
       rawErrors,
+      ...mapped_props
     };
 
     // Check if a custom render function was passed in
@@ -746,4 +756,4 @@ if (process.env.NODE_ENV !== "production") {
   };
 }
 
-export default ArrayField;
+export default withApi(ArrayField);
