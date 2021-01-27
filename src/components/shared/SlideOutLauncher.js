@@ -56,7 +56,6 @@ class SlideOutLauncher extends Component {
 
     let {
       formData,
-      rowData,
       uiSchema,
     } = _props;
 
@@ -88,6 +87,10 @@ class SlideOutLauncher extends Component {
       actions,
       childProps = {},
     } = _props;
+
+    if(_props.debbuger === true) {
+      debugger
+    }
 
     const { onClick } = this;
 

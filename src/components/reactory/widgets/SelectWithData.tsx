@@ -177,7 +177,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
 
       return (
         <FormControl size={size || "medium"}>
-          <InputLabel htmlFor={idSchema.$id}>{schema.title}</InputLabel>
+          { labelProps && labelProps.visible === true && <InputLabel htmlFor={idSchema.$id}>{schema.title}</InputLabel> }
           <Select
             {...selectProps}
             multiple={multiSelect === true}

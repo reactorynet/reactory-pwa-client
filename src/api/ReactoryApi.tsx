@@ -785,19 +785,19 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         RestApi.forms().then((formsResult) => {
           that.formSchemas = formsResult;
           const ReactoryFormComponent = that.getComponent('core.ReactoryForm');
-          formsResult.forEach((formDef, formDefIndex) => {
+          formsResult.forEach((formDef: Reactory.IReactoryForm, formDefIndex) => {
             if (formDef.registerAsComponent === true) {
               const FormComponent = (props: any, context: any) => {
                 return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={`${formDefIndex}`}
                   onSubmit={props.onSubmit} onChange={props.onChange}
-                  formData={formDef.defaultFormData || props.formData || props.data}
+                  formData={formDef.defaultFormValue || props.formData || props.data}
                   before={props.before}
                   {...props}
                   context={context}
                 >{props.children}
                 </ReactoryFormComponent>, formDef.wrap === true);
               };
-              that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent);
+              that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent, formDef.tags, formDef.roles, true, [], 'form');
             }
           });
           that.formSchemaLastFetch = moment();
@@ -1017,7 +1017,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     localStorage.getItem(storageKeys.LastLoggedInEmail);
   }
 
-  registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false, connectors = []) {
+  registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false, connectors = [], componentType = 'component') {
     const fqn = `${nameSpace}.${name}@${version}`;
     if (isEmpty(nameSpace))
       throw new Error('nameSpace is required for component registration');
@@ -1032,11 +1032,25 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       component: wrapWithApi === false ? component : withApi(component),
       tags,
       roles,
-      connectors
+      connectors,
+      componentType
     };
     this.emit('componentRegistered', fqn);
   }
 
+  getComponentsByType(componentType: string = 'component') {
+
+    let _components = [];
+    Object.keys(this.componentRegister).forEach((fqn) => {
+      if(this.componentRegister[fqn].componentType === componentType) {
+        _components.push(this.componentRegister[fqn]);
+      }
+    })
+
+    return _components;
+
+  };
+  
   getComponents(componentFqns = []): any {
     let componentMap = {};
     componentFqns.forEach(fqn => {

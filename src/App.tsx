@@ -155,6 +155,11 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         render: (props) => {
           api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
 
+          debugger;
+          if(routeDef.redirect) {
+            return <Redirect to={{pathname: routeDef.redirect, state: { from: props.location } }} />
+          }
+
           const componentArgs = {
             $route: props.match,
           };
@@ -300,57 +305,44 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
   const onApiStatusUpdate = (status) => {
-    api.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
-    let isOffline = status.offline === true;
 
-    if (offline !== isOffline) {
-      setOfflineStatus(isOffline);
-    }
-
-    if (isOffline === true && !statusInterval) {
-      setStatusInterval(setInterval(api.status, 3000))
-    } else {
-
-      if (isOffline === false && statusInterval) {
-        clearInterval(statusInterval);
-        let user = api.utils.lodash.cloneDeep(api.getUser());
-        delete user.when;
-        let _user = api.utils.lodash.cloneDeep(user);
-        delete _user.when;
-
-        if (deepEquals(user, _user) === false || status.offline !== offline) {
-          setUser(user)
-          setOfflineStatus(status.offline === true);
+    if(!(status === null || status === undefined)) {
+      api.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
+      let isOffline = status.offline === true;
+  
+      if (offline !== isOffline) {
+        setOfflineStatus(isOffline);
+      }
+  
+      if (isOffline === true && !statusInterval) {
+        setStatusInterval(setInterval(api.status, 3000))
+      } else {
+  
+        if (isOffline === false && statusInterval) {
+          clearInterval(statusInterval);
+          let user = api.utils.lodash.cloneDeep(api.getUser());
+          delete user.when;
+          let _user = api.utils.lodash.cloneDeep(user);
+          delete _user.when;
+  
+          if (deepEquals(user, _user) === false || status.offline !== offline) {
+            setUser(user)
+            setOfflineStatus(status.offline === true);
+          }
         }
       }
-    }
+    } else {
+      api.log(`apiStaus returned null value`, { status }, 'warning');
+    }    
   }
 
 
-  const onWindowResize = async () => {
-    // const query = queryString.parse(window.location.search)
-    // if (query.auth_token) {
-    //   localStorage.setItem('auth_token', query.auth_token);
-    //   const cli = await ReactoryApolloClient();
-    //   api.client = cli.client;
-    //   api.ws_link = cli.ws_link;
-    // }
-    // api.queryObject = query;
-    // api.queryString = window.location.search;
-    // api.objectToQueryString = queryString.stringify;
-
-    // if (window && !window.reactory) {
-    //   window.reactory = {
-    //     api,
-    //   };
-    // }
-
+  const onWindowResize = async () => {    
     const _size_spec = api.getSizeSpec();
     api.$windowSize = _size_spec; 
     api.log('ReactoryHOC Resize', _size_spec);
     api.emit('onWindowResize', _size_spec);
-    setSizeSpec(_size_spec);
-    setVersion(version + 1);
+    //setSizeSpec(_size_spec);
   };
 
 

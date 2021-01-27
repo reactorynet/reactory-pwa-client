@@ -194,11 +194,8 @@ const MaterialStringFieldWidget = (props) => {
       }
 
 
-      return (
-        <FormControl>
-          <InputLabel {...inputLabelProps} htmlFor={idSchema.$id}>{schema.title}</InputLabel>
-          <COMPONENT {...args} onKeyDown={onKeyDown} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />
-        </FormControl>
+      return (        
+        <COMPONENT type={args.type || 'text'} onKeyDown={onKeyDown} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />        
       )
     }
 

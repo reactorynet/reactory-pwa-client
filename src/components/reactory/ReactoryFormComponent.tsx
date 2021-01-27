@@ -1,12 +1,12 @@
 import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties } from 'react';
-import PropTypes, { ReactNodeArray } from 'prop-types';
+import PropTypes, { ReactNodeArray, string } from 'prop-types';
 import IntersectionVisible from 'react-intersection-visible';
 import Form from './form/components/Form';
 import EventEmitter, { ListenerFn } from 'eventemitter3';
 import objectMapper from 'object-mapper';
 import { diff } from 'deep-object-diff';
 import { find, template, isArray, isNil, isString, isEmpty, throttle, filter } from 'lodash';
-import { withRouter, Route, Switch } from 'react-router';
+import { withRouter, Route, Switch, useParams } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
@@ -294,7 +294,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         if (typeof props.formData === 'object') _obj = { ..._obj, ...props.formData };
         if (typeof queryData === 'object') _obj = { ..._obj, ...queryData };
 
-        if(_existing && typeof _existing === 'object') {
+        if (_existing && typeof _existing === 'object') {
           _obj = { ..._existing, ..._obj };
         }
 
@@ -336,34 +336,34 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     let _dependency_state = { passed: true, dependencies: {} }
 
     let _all_dependencies = [];
-    if(formDef.widgetMap) {
+    if (formDef.widgetMap) {
       formDef.widgetMap.forEach((map) => {
-        if(map.componentFqn) {
-          if(_all_dependencies.indexOf(map.componentFqn) < 0) _all_dependencies.push(map.componentFqn);
+        if (map.componentFqn) {
+          if (_all_dependencies.indexOf(map.componentFqn) < 0) _all_dependencies.push(map.componentFqn);
         }
       })
     }
 
-    if(formDef.components) {
-      formDef.components.forEach(( component ) => {
-        if(component.indexOf("@") > 1 && component.indexOf(".") > 0) {
-          if(_all_dependencies.indexOf(component) < 0) _all_dependencies.push(component);
+    if (formDef.components) {
+      formDef.components.forEach((component) => {
+        if (component.indexOf("@") > 1 && component.indexOf(".") > 0) {
+          if (_all_dependencies.indexOf(component) < 0) _all_dependencies.push(component);
         }
       })
     }
 
-    if(formDef.dependencies && formDef.dependencies.length > 0) {
+    if (formDef.dependencies && formDef.dependencies.length > 0) {
       formDef.dependencies.forEach((_dep: Reactory.IReactoryComponentDefinition) => {
         _dependency_state.dependencies[_dep.fqn] = {
           available: reactory.componentRegister[_dep.fqn] !== null && reactory.componentRegister[_dep.fqn] !== undefined,
           component: null
         };
 
-        if(_dependency_state.dependencies[_dep.fqn].available === true) {
+        if (_dependency_state.dependencies[_dep.fqn].available === true) {
           _dependency_state.dependencies[_dep.fqn].component = reactory.componentRegister[_dep.fqn].component
         } else {
           _dependency_state.passed = false;
-        }                
+        }
       })
     }
 
@@ -434,7 +434,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     let _grahDefinitions: Reactory.IFormGraphDefinition = formDef.graphql;
 
     if (activeUiSchemaMenuItem !== null) {
-      if(activeUiSchemaMenuItem.graphql) _grahDefinitions = activeUiSchemaMenuItem.graphql;
+      if (activeUiSchemaMenuItem.graphql) _grahDefinitions = activeUiSchemaMenuItem.graphql;
     }
 
     const _uiSchema = getActiveUiSchema();
@@ -448,14 +448,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const onPluginLoaded = (plugin: any) => {
     reactory.log(`${signature} Plugin loaded, activating component`, { plugin }, 'debug');
-    try {      
-      
+    try {
+
       let _component = plugin.component(props, getFormContext());
-      if(dependencies[plugin.componentFqn]) {
+      if (dependencies[plugin.componentFqn]) {
         let _depends = { ...dependencies };
         _depends[plugin.componentFqn].available = true;
         _depends[plugin.componentFqn].component = _component;
-        setDepencies(_depends);        
+        setDepencies(_depends);
       }
       setVersion(version + 1);
     } catch (pluginFailure) {
@@ -478,7 +478,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const onSubmit = (form: any) => {
     reactory.log(`${signature} ↩ onSubmit`, { form }, 'debug');
     let cancel: boolean = false;
-    
+
     if (props.onSubmit) {
       cancel = props.onSubmit(form) || false;
     }
@@ -652,7 +652,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
       }
-     
+
     }
   }
 
@@ -724,25 +724,25 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
         if (formDef && formDef.refresh && formDef.refresh.onChange) {
-          
+
           if (trigger_onChange === true) fire();
         } else {
           setFormData(form.formData);
         }
       }
     }
-        
+
   }
 
   const setState = ($state: any, callback = () => { }) => {
-    
 
-    let _$state = {...$state};
+
+    let _$state = { ...$state };
     delete _$state.formData;
-    if(Object.keys(_$state).length > 0) {
+    if (Object.keys(_$state).length > 0) {
       let _customState = {};
       Object.keys(_$state).forEach((stateKey) => {
-        switch(stateKey) {
+        switch (stateKey) {
           case "componentDefs": {
             setComponents(_$state[stateKey]);
             break;
@@ -757,16 +757,16 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           }
         }
       });
-    
-      if(Object.keys(_customState).length > 0) {
+
+      if (Object.keys(_customState).length > 0) {
         setCustomState(_customState);
       }
     }
 
     if ($state.formData) getData($state.formData);
-    
+
     callback();
-    
+
   };
 
   const getState = () => {
@@ -832,7 +832,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       setFormData: (formData: any, callback = () => { }) => {
         setFormData(formData);
         callback();
-      },      
+      },
       graphql: getActiveGraphDefinitions(),
       getData,
       screenBreakPoint: getScreenSize(),
@@ -1129,7 +1129,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return $errors;
   };
 
-  
+
 
   const getPdfWidget = () => {
     const { ReportViewer, FullScreenModal } = componentDefs;
@@ -1181,7 +1181,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const getData = (defaultInputData?: any) => {
     reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
-    if(_graphql && _graphql.debug) {
+    if (_graphql && _graphql.debug) {
       ;
     }
     let _formData = null;
@@ -1189,7 +1189,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     switch (formDef.schema.type) {
       case "object": {
 
-        _formData = {  ...formData };
+        _formData = { ...formData };
         if (version === 0 && formDef.defaultFormValue) {
           _formData = { ...formDef.defaultFormValue, ...formData };
         }
@@ -1197,11 +1197,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         break;
       }
       case "array": {
-        _formData = [];              
-        if(formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === true && version === 0) _formData = [...formDef.defaultFormValue];
-        if(formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === false) reactory.log(`🚨 ${signature} Schema type and Default Form Value do not match.`, { formDef }, 'error');        
-        if(formData && Array.isArray(formData) === true) {
-          _formData = [ ...formData];
+        _formData = [];
+        if (formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === true && version === 0) _formData = [...formDef.defaultFormValue];
+        if (formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === false) reactory.log(`🚨 ${signature} Schema type and Default Form Value do not match.`, { formDef }, 'error');
+        if (formData && Array.isArray(formData) === true) {
+          _formData = [...formData];
         }
 
         if (defaultInputData && Array.isArray(defaultInputData) === true) _formData = [..._formData, ...defaultInputData]
@@ -1283,7 +1283,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             const query_end = new Date().valueOf();
 
             reactory.stat(`${formDef.nameSpace}.${formDef.name}@${formDef.version}:query_execution_length`, { query_start, query_end, diff: query_end - query_start, unit: 'utc-date' });
-            const { data, errors } = result;            
+            const { data, errors } = result;
 
             if (data && data[query.name]) {
               switch (query.resultType) {
@@ -1378,18 +1378,18 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
         setTimeout(executeFormQuery, query.autoQueryDelay || 0);
-      } else { 
+      } else {
 
         setFormData(_formData);
         setQueryComplete(true);
       }
 
 
-    } else { 
-      setFormData(_formData); 
+    } else {
+      setFormData(_formData);
       setQueryComplete(true);
     }
-    
+
   };
 
   const renderForm = () => {
@@ -1412,9 +1412,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       formData,
       ErrorList: (error_props) => (<MaterialErrorListTemplate {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,
-      ref: (form: any) => { 
+      ref: (form: any) => {
         setFormRef(form);
-        if(props.refCallback) props.refCallback(getFormReference())
+        if (props.refCallback) props.refCallback(getFormReference())
       },
       transformErrors: (errors = []) => {
         reactory.log(`Transforming error message`, { errors }, 'debug');
@@ -1454,7 +1454,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     let activeUiSchemaModel = null;
 
 
-    
+
 
     const { submitProps, buttons } = _formUiOptions;
     if (typeof submitProps === 'object' && showSubmit === true) {
@@ -1783,8 +1783,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     const _graphql = getActiveGraphDefinitions();
     const isBusy = () => {
-      if(_graphql === null || _graphql === undefined) return false;      
-      
+      if (_graphql === null || _graphql === undefined) return false;
+
       return !(queryComplete === true);
     }
     return (
@@ -1823,11 +1823,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
   }, []);
 
-  
-  
-  React.useEffect(() => {       
-  
-    let _formData = initialData(formData);        
+
+
+  React.useEffect(() => {
+
+    let _formData = initialData(formData);
 
     let next_version = version + 1;
     setVersion(next_version);
@@ -1839,11 +1839,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
   }, [props.formData])
-    
+
 
   React.useEffect(() => {
     setVersion(version + 1);
-  },  [formData])
+  }, [formData])
 
   return (
     <IntersectionVisible>{renderForm()}</IntersectionVisible>
@@ -1868,33 +1868,36 @@ export const ReactoryFormComponent: any = compose(
 )(ReactoryComponentHOC);
 
 
-class ReactoryFormRouter extends Component<any, any> {
 
-  constructor(props, context) {
-    super(props, context);
-  }
+const RouteBoundForm = (props) => {
+  const { formId, mode, id } = useParams<any>();
 
-  render() {
-    const { match, api, routePrefix } = this.props;
+  return <ReactoryFormComponent formId={formId || props.formId || 'ReactoryFormList'} mode={mode || props.mode || 'view'} formData={{id}}/>
+}
 
-    api.log('ReactoryFormRouter:render', { props: this.props }, 'debug');
-    return (
-      <Fragment>
-        <Switch>
-          <Route path={`${routePrefix}/:formId/:mode/`} render={(props) => {
-            return (<ReactoryFormComponent formId={props.match.params.formId || 'ReactoryFormList'} mode={props.match.params.mode} {...props} />)
-          }} />
-          <Route path={`${routePrefix}/:formId/`} render={(props) => {
-            return (<ReactoryFormComponent formId={props.match.params.formId || 'ReactoryFormList'} mode='view' {...props} />)
-          }} />
-          <Route exact path={`${routePrefix}/`} render={(props) => {
-            return (<ReactoryFormComponent formId='ReactoryFormList' formData={{ forms: api.formSchemas }} mode='view' {...props} />)
-          }}>
-          </Route>
-        </Switch>
-      </Fragment>
-    )
-  }
+
+const ReactoryFormRouter = (props) => {
+
+  const { match, api, routePrefix } = props;
+  const [version, setVersion] = React.useState<number>(0);
+  
+
+  api.log('ReactoryFormRouter:render', { props: props }, 'debug');
+    
+
+  return (
+    <Switch>
+      <Route path={`${routePrefix}/:formId/:mode/`} >
+        <RouteBoundForm />
+      </Route>
+      <Route path={`${routePrefix}/:formId/`}>
+        <RouteBoundForm mode="view"/>
+      </Route>       
+      <Route exact path={`${routePrefix}/`}>
+        <ReactoryFormComponent formId='ReactoryFormList' formData={{ forms: api.formSchemas }} mode='view' />      
+      </Route>
+    </Switch>
+  )
 };
 
 export const ReactoryFormRouterComponent = compose(
