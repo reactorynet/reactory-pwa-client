@@ -47,7 +47,8 @@ class SlideOutLauncher extends Component {
   }
 
   onClick() {
-    this.setState({ open: !this.state.open });
+    // this.setState({ open: !this.state.open });
+    this.setState((prevState) => ({ open: !prevState.open }));
   }
 
   render() {
@@ -87,10 +88,6 @@ class SlideOutLauncher extends Component {
       actions,
       childProps = {},
     } = _props;
-
-    if(_props.debbuger === true) {
-      debugger
-    }
 
     const { onClick } = this;
 
@@ -213,6 +210,8 @@ class SlideOutLauncher extends Component {
         </>
       );
     }
+
+    debugger;
 
     return (
       <Fragment>
