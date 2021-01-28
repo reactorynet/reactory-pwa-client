@@ -621,16 +621,25 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                */
               if (props.onMutateComplete) props.onMutateComplete(data[mutation.name], getFormContext(), mutation_result);
 
-              if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event:') >= 0) {
-                let eventName = mutation.onSuccessMethod.split(':')[1];
+              if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event') >= 0) {
 
-                reactory.amq.raiseFormCommand(eventName, {
-                  form: {},
-                  result: data[mutation.name]
-                });
-
-                if (typeof props[eventName] === "function") {
-                  props[eventName]({ formData: data[mutation.name] })
+                if (mutation.onSuccessMethod.indexOf(":") > 0) {
+                  let eventName = mutation.onSuccessMethod.split(':')[1];
+                  if (typeof props[eventName] === "function") {
+                    props[eventName]({ formData: data[mutation.name] })
+                  } else {
+                    reactory.amq.raiseFormCommand(eventName, {
+                      form: {},
+                      result: data[mutation.name]
+                    });
+                  }
+                } else {
+                  if(mutation.onSuccessEvent && mutation.onSuccessEvent.name) {
+                    if(typeof props[mutation.onSuccessEvent.name] === 'function') {  
+                      debugger                    
+                      props[mutation.onSuccessEvent.name]({ formData: mutation.onSuccessEvent.dataMap ? reactory.utils.objectMapper(data[mutation.name], mutation.onSuccessEvent.dataMap) : data[mutation.name] });
+                    }
+                  }
                 }
               }
 
@@ -1102,7 +1111,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return _formDef
   }
 
-  const formValidation = ($formData: any, $errors: any, via='onChange') => {
+  const formValidation = ($formData: any, $errors: any, via = 'onChange') => {
 
     let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
     reactory.log(`Executing custom validations for ${formfqn}`, { $formData, $errors }, 'debug');
@@ -1277,9 +1286,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         //} else {
 
         const executeFormQuery = () => {
-          
-          if(props.onBeforeQuery ) {
-            if(props.onBeforeQuery( _formData, formContext ) === false) return;
+
+          if (props.onBeforeQuery) {
+            if (props.onBeforeQuery(_formData, formContext) === false) return;
           }
 
           reactory.log(`${signature}  executeFormQuery()`)
@@ -1414,7 +1423,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       ...formDefinition(),
       validate: formValidation,
       onChange: onChange,
-      onError: props.onError ? props.onError : (error) => {},
+      onError: props.onError ? props.onError : (error) => { },
       formData,
       ErrorList: (error_props) => (<MaterialErrorListTemplate {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,
@@ -1883,7 +1892,7 @@ export const ReactoryFormComponent: any = compose(
 const RouteBoundForm = (props) => {
   const { formId, mode, id } = useParams<any>();
 
-  return <ReactoryFormComponent formId={formId || props.formId || 'ReactoryFormList'} mode={mode || props.mode || 'view'} formData={{id}}/>
+  return <ReactoryFormComponent formId={formId || props.formId || 'ReactoryFormList'} mode={mode || props.mode || 'view'} formData={{ id }} />
 }
 
 
@@ -1902,7 +1911,7 @@ const ReactoryFormRouter = (props) => {
         <RouteBoundForm />
       </Route>
       <Route path={`${routePrefix}/:formId/`}>
-        <RouteBoundForm mode="view"/>
+        <RouteBoundForm mode="view" />
       </Route>
       <Route exact path={`${routePrefix}/`}>
         <ReactoryFormComponent formId='ReactoryFormList' formData={{ forms: api.formSchemas }} mode='view' />
