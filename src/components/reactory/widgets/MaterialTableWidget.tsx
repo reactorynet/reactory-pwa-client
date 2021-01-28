@@ -57,7 +57,7 @@ export interface MaterialTableResult<T> {
   totalCount: number
 }
 
-const tableRef: any = React.createRef();
+
 
 const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipInput"> = (theme) => ({
   root: {
@@ -88,10 +88,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
   const [last_queried, setLastQueried] = useState(null);
-  const [last_result, setLastResult] = useState(formData);  
+  const [last_result, setLastResult] = useState(formData);    
 
-  // const tableRef: any = React.createRef();
-  // let tableRef: any = React.createRef();
+  const tableRef: any = React.createRef();
 
   let columns = [];
   let actions = [];
@@ -120,7 +119,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               schema,
               uiSchema,
               idSchema,
-              selectedRows }, uiOptions.toolbarPropsMap)
+            }, uiOptions.toolbarPropsMap)
 
             _toolbar_props = { ...toolbar_props, ..._toolbar_props };
           }
@@ -142,7 +141,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   const getData = (query: MaterialTableQuery): Promise<MaterialTableRemoteDataReponse> => {
-
+    debugger
     return new Promise((resolve, reject) => {
       reactory.log('♻ core.ReactoryMaterialTable data query', { query }, 'debug')
 
@@ -195,6 +194,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
                   footerObject[fcol.field] = fcol.text && fcol.text != '' ? fcol.text : fcol.value ? template(fcol.value)(queryResult.data[queryDefinition.name]) : null
                 });
 
+                if(query.selectedRows) {
+                  query.selectedRows.forEach((row) => {
+                    if(row.tableData) {
+                      response.data[row.tableData.id].tableData = row.tableData;
+                    }
+                  })
+                }
+
                 response.data.push(footerObject);
               }
             }
@@ -209,9 +216,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
       } catch (remoteDataError) {
         reactory.log(`Error getting remote data`, { remoteDataError }, 'error');
-        return response;
-      } finally {
-        return response;
+        resolve(response);
       }
     });
 
@@ -516,7 +521,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   };
 
   const onSelectionChange = (selected_rows) => {
-    setSelectedRows(selected_rows);
+    //setSelectedRows(selected_rows);
   }
 
   const willUnmount = () => {
