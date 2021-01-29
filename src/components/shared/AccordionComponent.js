@@ -23,7 +23,7 @@ import { pathExists } from 'fs-extra';
 
 
 const getUIOptions = ({ uiSchema }) => {
-  return uiSchema["ui:options"] || {}; 
+  return uiSchema["ui:options"] || {};
 }
 
 
@@ -52,14 +52,14 @@ const initialState = { activeStep : 0 };
 const getActiveStep = (props, state = initialState) => {
   const _panels = getPanels(props);
   const { expandedPanels } = props;
-  
-  if (expandedPanels.length === 0) return state.activeStep;
 
-  if (expandedPanels.length === 1 && _panels.length > 0) {
+  if (expandedPanels && expandedPanels.length === 0) return state.activeStep;
+
+  if (expandedPanels && expandedPanels.length === 1 && _panels.length > 0) {
     return props.reactory.utils.lodash.findIndex(_panels, (panel) => { return panel.id === expandedPanels[0] });
   }
 
-  if (expandedPanels.length > 1 && _panels.length > 0) {
+  if (expandedPanels && expandedPanels.length > 1 && _panels.length > 0) {
     return state.activeStep
   }
 
@@ -91,7 +91,7 @@ class AccordionWidget extends Component {
 
     const { formData, uiSchema, api, formContext, classes, reactory } = props;
     const uiOptions = uiSchema["ui:options"] || {};
-    
+
     let _panels = [];
     let _panelComponents = [];
     let headerProps = {};
@@ -126,7 +126,7 @@ class AccordionWidget extends Component {
               _panels.map((panel, index) => {
 
                 const panelSummary = (
-                  <AccordionSummary key={`header_${index}`} className={classes.heading} 
+                  <AccordionSummary key={`header_${index}`} className={classes.heading}
                   expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
                     <Typography>{`${index + 1}. ${panel.title}`}</Typography>
                   </AccordionSummary>
@@ -221,7 +221,7 @@ class AccordionWidget extends Component {
             _panels.map((panel, index) => {
               return (
                 <ExpansionPanel key={index}>
-                  <AccordionSummary key={`header_${index}`} 
+                  <AccordionSummary key={`header_${index}`}
                     className={classes.heading} expandIcon={<ExpandMoreIcon />} aria-controls="panel1a-content" id="panel1a-header" {...headerProps}>
                     <Typography>{`${index + 1}. ${panel.title}`}</Typography>
                   </AccordionSummary>
