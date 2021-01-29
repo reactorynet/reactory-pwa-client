@@ -160,7 +160,7 @@ class TabbedNavComponent extends Component {
     const that = this;
     const uiOptions = uiSchema["ui:options"] || {};
     const classes = props.classes;
-    let _tabs = [];
+    let _tabs = props.tabs || [];
     let _tabComponents = [];
     let _tabPannels = [];
     let _additionalMenuItems = [];

@@ -162,8 +162,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
           }
 
-          reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, self: this, map: uiOptions.variables, query }, 'debug')
-          let variables = reactory.utils.objectMapper({ ...self, formContext, query }, uiOptions.variables || queryDefinition.variables);
+          reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
+          let variables = reactory.utils.objectMapper({ formContext, query }, uiOptions.variables || queryDefinition.variables);
 
           variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
           reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
@@ -540,9 +540,23 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
   };
 
+  const refresh = () => {
+    if (uiOptions.remoteData === true) {
+      if (tableRef.current && tableRef.current.onQueryChange) {
+        tableRef.current.onQueryChange()
+      }
+    } else {
+      setVersion(version + 1);
+    }
+  }
+
   const onSelectionChange = (selected_rows) => {
     //setSelectedRows(selected_rows);
   }
+
+  React.useEffect(() => {
+    refresh()
+  }, [formContext.formData]);
 
   const willUnmount = () => {
     const uiOptions = uiSchema['ui:options'] || {};

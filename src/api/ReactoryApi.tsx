@@ -4,6 +4,7 @@ import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
 import inspector from 'schema-inspector';
 import uuid from 'uuid';
+import classNames from 'classnames';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ApolloClient, gql,  ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions  } from '@apollo/client';
@@ -177,7 +178,8 @@ export interface ReactoryApiUtils {
   humanDate: Function,
   slugify: Function,
   deepEquals: Function,
-  lodash: any
+  lodash: any,
+  classNames: Function
 }
 
 export interface WindowSizeSpec {
@@ -289,7 +291,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       humanDate,
       slugify: makeSlug,
       deepEquals,
-      templateObject: parseTemplateObject
+      templateObject: parseTemplateObject,
+      classNames
     };
     this.$func = {
       'core.NullFunction': (params) => {
@@ -559,8 +562,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     }
   }
 
-  registerFunction(fqn, functionReference, requiresApi = false) {
-    this.log(`Registering function ${fqn}`, [functionReference, requiresApi], 'debug');
+  registerFunction(fqn, functionReference, requiresApi = false, signature = '< signature-not-set />') {
+    this.log(`${signature} Registering function ${fqn}`, [functionReference, requiresApi], 'debug');
     if (typeof functionReference === 'function') {
       if (requiresApi === true) {
         this.$func[fqn] = (props) => {

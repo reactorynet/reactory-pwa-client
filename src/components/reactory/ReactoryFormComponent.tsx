@@ -636,7 +636,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                 } else {
                   if(mutation.onSuccessEvent && mutation.onSuccessEvent.name) {
                     if(typeof props[mutation.onSuccessEvent.name] === 'function') {  
-                      debugger                    
                       props[mutation.onSuccessEvent.name]({ formData: mutation.onSuccessEvent.dataMap ? reactory.utils.objectMapper(data[mutation.name], mutation.onSuccessEvent.dataMap) : data[mutation.name] });
                     }
                   }
@@ -993,7 +992,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       if (!_formDef.widgets) _formDef.widgets = {};
       if (isArray(_formDef.widgetMap) === true) {
         _formDef.widgetMap.forEach((map) => {
-          reactory.log(`ReactoryForm:: Mapping ${map.widget} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
+          reactory.log(`${signature} (init) Mapping ${map.widget} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
           let mapped = false;
 
           if (map.component && typeof map.component === 'string') {
@@ -1005,12 +1004,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                   if (component && Object.keys(component).length > 0) component = component[pathArray[pi]]
                 }
                 _formDef.widgets[map.widget] = component;
-                reactory.log(`Component: ${_formDef.id}, ${map.component} successfully mapped`, { component }, 'debug')
+                reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component }, 'debug')
                 mapped = true;
               } else {
                 _formDef.widgets[map.widget] = componentDefs[map.component];
                 if (_formDef.widgets[map.widget]) {
-                  reactory.log(`Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
+                  reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
                   mapped = true;
                 }
               }
@@ -1021,7 +1020,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             if (typeof map.componentFqn === 'string' && typeof map.widget === 'string') {
               _formDef.widgets[map.widget] = reactory.getComponent(map.componentFqn);
               if (_formDef.widgets[map.widget]) {
-                reactory.log(`Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
+                reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
                 mapped = true;
               }
             }
@@ -1033,7 +1032,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               return (<WidgetPresets.WidgetNotAvailable {...props} map={map} />)
 
             }
-            reactory.log(`Component could not be mapped for Form: ${_formDef.id}, ${map.widget}`, { map }, 'warning')
+            reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.widget}`, { map }, 'warning')
           }
         });
       }
@@ -1578,7 +1577,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             </div>
           )
 
-          debugger;
         }
 
         if (_formUiOptions.schemaSelector.variant === "button") {
