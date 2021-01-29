@@ -382,37 +382,46 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           if (action.mutation) {
             const mutationDefinition: Reactory.IReactoryFormMutation = formContext.graphql.mutation[action.mutation];
 
-            reactory.graphqlMutation(mutationDefinition.text, reactory.utils.objectMapper({ ...props, selected }, mutationDefinition.variables)).then((mutationResult) => {
+            reactory.graphqlMutation(mutationDefinition.text, reactory.utils.objectMapper({ ...props, selected }, mutationDefinition.variables)).then((mutationResult: {data: any, errors: any[]}) => {
               reactory.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
 
-              if (uiOptions.remoteData === true) {
-                if (tableRef.current && tableRef.current.onQueryChange) {
-                  tableRef.current.onQueryChange()
-                }
-              } else {
-                setVersion(version + 1);
-              }
+              let has_errors = false;
 
-              if (mutationDefinition.onSuccessEvent) {
-                reactory.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
-                
-                if(typeof formContext[mutationDefinition.onSuccessEvent.name] === 'function') {
-
-                  try {
-                    formContext[mutationDefinition.onSuccessEvent.name]( mutationDefinition.onSuccessEvent.dataMap ? 
-                      reactory.utils.objectMapper(mutationResult[mutationDefinition.name], mutationDefinition.onSuccessEvent.dataMap) : 
-                      mutationResult[mutationDefinition.name]);
-                  } catch (notHandledByForm) {
-                    reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm }, 'warning')
+              if(!mutationResult.errors && mutationResult.data[mutationDefinition.name]) {
+              
+                if (uiOptions.remoteData === true) {
+                  if (tableRef.current && tableRef.current.onQueryChange) {
+                    tableRef.current.onQueryChange()
                   }
-                  
                 } else {
-                  reactory.emit(mutationDefinition.onSuccessEvent.name, reactory.utils.objectMapper({ result: mutationResult }, mutationDefinition.onSuccessEvent.data || { '*': '*' }))
+                  setVersion(version + 1);
                 }
+  
+                if (mutationDefinition.onSuccessEvent) {
+                  reactory.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
+                  
+                  if(typeof formContext[mutationDefinition.onSuccessEvent.name] === 'function') {
+  
+                    let _method_props = mutationDefinition.onSuccessEvent.dataMap ? 
+                    reactory.utils.objectMapper(mutationResult.data[mutationDefinition.name], mutationDefinition.onSuccessEvent.dataMap) : 
+                    mutationResult.data[mutationDefinition.name];
+                    try {
+                      formContext[mutationDefinition.onSuccessEvent.name]( _method_props );
+                    } catch (notHandledByForm) {
+                      reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm, props: _method_props }, 'warning')
+                    }
+                    
+                    reactory.emit(mutationDefinition.onSuccessEvent.name, _method_props);
+                  }
+                }                                                        
+              } else {
+                has_errors = true;
               }
+
+              
 
               if (mutationDefinition.notification) {
-                reactory.createNotification(`${reactory.utils.template(mutationDefinition.notification.title)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: 'success' })
+                reactory.createNotification(`${reactory.utils.template(mutationDefinition.notification.title)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: has_errors === true ? 'warning' : 'success' })
               }
 
               if (mutationDefinition.refreshEvents) {
@@ -425,7 +434,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               reactory.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });
             });
           }
-
 
           if (action.event) {
             let __formData = {

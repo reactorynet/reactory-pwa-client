@@ -361,7 +361,8 @@ namespace Reactory {
   export interface IReactoryEvent {
     name: string,
     data?: any | undefined,
-    dataMap?: any | undefined
+    dataMap?: any | undefined,
+    spreadProps?: boolean
   }
 
 

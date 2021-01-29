@@ -62,6 +62,7 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
   const { lodash } = reactory.utils;
   const { Material, FullScreenModal } = reactory.getComponents(dependencies);
   const [ open, setOpen ] = React.useState<boolean>(false)  
+  const [version, setVersion ] = React.useState(0);
 
   const getOptions = ( ): ReactoryLookupComponentOptions => {
     
@@ -154,10 +155,9 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
 
     if(reactory.utils.deepEquals(formData, new_formData) === false) {
       did_change = true;
-      onChange(_value.formData, errorSchema);
-    }    
-
-    
+      onChange(new_formData, errorSchema);
+      // setVersion(version + 1);
+    }
   }
 
   /**
