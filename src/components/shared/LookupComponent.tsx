@@ -116,6 +116,9 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
    */
   const onLookupValueChanged = ( value: any, errorSchema: any ) => {        
     
+    debugger
+    if(open === true) setOpen(false);
+
     if(options.handleOnChange === false) {
       reactory.log(`👣 onChange not handled by LookupComponent`, { }, 'debug');
       return;
@@ -153,6 +156,8 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
       did_change = true;
       onChange(_value.formData, errorSchema);
     }    
+
+    
   }
 
   /**

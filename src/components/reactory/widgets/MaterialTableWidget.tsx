@@ -141,7 +141,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   const getData = (query: MaterialTableQuery): Promise<MaterialTableRemoteDataReponse> => {
-    debugger
     return new Promise((resolve, reject) => {
       reactory.log('♻ core.ReactoryMaterialTable data query', { query }, 'debug')
 
@@ -381,7 +380,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
         const process = () => {
           if (action.mutation) {
-            const mutationDefinition = formContext.graphql.mutation[action.mutation];
+            const mutationDefinition: Reactory.IReactoryFormMutation = formContext.graphql.mutation[action.mutation];
 
             reactory.graphqlMutation(mutationDefinition.text, reactory.utils.objectMapper({ ...props, selected }, mutationDefinition.variables)).then((mutationResult) => {
               reactory.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
@@ -396,7 +395,20 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
               if (mutationDefinition.onSuccessEvent) {
                 reactory.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
-                reactory.emit(mutationDefinition.onSuccessEvent, reactory.utils.objectMapper({ result: mutationResult }, mutationDefinition.onSuccessEvent.data || { '*': '*' }))
+                
+                if(typeof formContext[mutationDefinition.onSuccessEvent.name] === 'function') {
+
+                  try {
+                    formContext[mutationDefinition.onSuccessEvent.name]( mutationDefinition.onSuccessEvent.dataMap ? 
+                      reactory.utils.objectMapper(mutationResult[mutationDefinition.name], mutationDefinition.onSuccessEvent.dataMap) : 
+                      mutationResult[mutationDefinition.name]);
+                  } catch (notHandledByForm) {
+                    reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm }, 'warning')
+                  }
+                  
+                } else {
+                  reactory.emit(mutationDefinition.onSuccessEvent.name, reactory.utils.objectMapper({ result: mutationResult }, mutationDefinition.onSuccessEvent.data || { '*': '*' }))
+                }
               }
 
               if (mutationDefinition.notification) {
