@@ -1,14 +1,12 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'recompose';
-import {withStyles, withTheme} from '@material-ui/core/styles';
+import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '../../../api/ApiProvider';
 
 class CurrencyLabel extends Component {
-
-
-  render(){
-    const { value, currency, symbol, api, region, classes, uiSchema, formData } = this.props;    
+  render() {
+    const { value, currency, symbol, api, region, classes, uiSchema, formData } = this.props;
 
     let isCents = true;
     let _value = value;
@@ -22,7 +20,7 @@ class CurrencyLabel extends Component {
       let options = uiSchema['ui:options'];
 
       if (options) {
-        isCents = options.isCents === true ? false : isCents; 
+        isCents = options.isCents === true ? false : isCents;
         _value = options.valueProp === true ? this.props[options.valueProps] : formData;
         variant = options.variant || variant;
       }
@@ -30,7 +28,11 @@ class CurrencyLabel extends Component {
 
     return (
       <React.Fragment>
-        <MaterialCore.Typography variant={ variant }>{new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}</MaterialCore.Typography>
+        <MaterialCore.Typography variant={variant}>
+          {
+            _value != '' ? new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value) : ''
+          }
+        </MaterialCore.Typography>
       </React.Fragment>
     );
   }
@@ -50,23 +52,20 @@ CurrencyLabel.defaultProps = {
   region: 'en-ZA'
 };
 
-
-
-CurrencyLabel.styles = (theme) => {  
+CurrencyLabel.styles = (theme) => {
   return {
     currency: {
       margin: theme.spacing(1)
     },
     currencyValue: {
-      
+
     },
   }
 };
 
-
 const CurrencyLabelComponent = compose(
-  withApi, 
-  withTheme, 
+  withApi,
+  withTheme,
   withStyles(CurrencyLabel.styles))(CurrencyLabel);
 
 export default {
@@ -75,6 +74,6 @@ export default {
   version: '1.0.0',
   component: CurrencyLabelComponent,
   tags: ['currency', 'label'],
-  description: 'Basic Currency Label',  
+  description: 'Basic Currency Label',
 };
 
