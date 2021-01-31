@@ -23,6 +23,9 @@ import {
 
 const styles = (theme) => {
   return {
+    dialog_root: {
+      overflowX: 'hidden',
+    },
     appBar: {
       position: 'relative',
     },
@@ -84,7 +87,7 @@ class FullScreenDialog extends Component {
       this.setState({ open: false });
     }
   };
-  
+
   componentDidMount() {
     const { closeOnEvents = [], api } = this.props;
     closeOnEvents.map((eventName) => api.on(eventName, this.handleClose))
@@ -128,9 +131,9 @@ class FullScreenDialog extends Component {
               {
                 backNavigationItems.map((navItem, ind) => {
                   if ((ind + 1) < backNavigationItems.length)
-                    return <Typography variant="h6" classes={{ root: classes.linkText }} key={ ind }>{navItem} /</Typography>
+                    return <Typography variant="h6" classes={{ root: classes.linkText }} key={ind}>{navItem} /</Typography>
 
-                  return <Typography variant="h6" classes={{ root: classes.linkTextLast }} key={ ind }>{navItem}</Typography>
+                  return <Typography variant="h6" classes={{ root: classes.linkTextLast }} key={ind}>{navItem}</Typography>
                 })
               }
             </div>
@@ -154,11 +157,14 @@ class FullScreenDialog extends Component {
         onClose: this.handleClose,
         TransitionComponent: Transition,
         ...containerProps,
-      };
+        style: {
+          overflowX: 'hidden'
+        }
+      }
 
       return (
         <Fragment>
-          <Dialog {...dialogProps} >
+          <Dialog className={classes.dialog_root} {...dialogProps} >
             {
               showAppBar && <AppBar className={classes.appBar}>
                 <Toolbar>
@@ -175,7 +181,7 @@ class FullScreenDialog extends Component {
             }
             {this.props.children}
           </Dialog>
-        </Fragment>
+        </Fragment >
       );
     }
 

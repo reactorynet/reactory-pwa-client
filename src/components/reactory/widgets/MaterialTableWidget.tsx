@@ -75,7 +75,7 @@ const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipI
 
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
-  const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], searchText="" } = props;
+  const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], searchText = "" } = props;
   const uiOptions = uiSchema['ui:options'] || {};
 
   const AlertDialog = reactory.getComponent('core.AlertDialog@1.0.0');
@@ -88,7 +88,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
   const [last_queried, setLastQueried] = useState(null);
-  const [last_result, setLastResult] = useState(formData);    
+  const [last_result, setLastResult] = useState(formData);
 
   const tableRef: any = React.createRef();
 
@@ -104,17 +104,17 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       ToolbarComponent = reactory.getComponent(uiOptions.componentMap.Toolbar);
       if (ToolbarComponent) {
         components.Toolbar = (toolbar_props) => {
-          let _toolbar_props = {...toolbar_props};
-        
-          if(uiOptions.toolbarProps) {
+          let _toolbar_props = { ...toolbar_props };
+
+          if (uiOptions.toolbarProps) {
             _toolbar_props = { ..._toolbar_props, ...uiOptions.toolbarProps };
           }
 
-          if(uiOptions.toolbarPropsMap) {
-            _toolbar_props = reactory.utils.objectMapper({ 
-              toolbarProps: uiOptions.toolbarProps || {}, 
-              table_props: props, 
-              props: toolbar_props, 
+          if (uiOptions.toolbarPropsMap) {
+            _toolbar_props = reactory.utils.objectMapper({
+              toolbarProps: uiOptions.toolbarProps || {},
+              table_props: props,
+              props: toolbar_props,
               formContext,
               schema,
               uiSchema,
@@ -148,7 +148,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         data: [],
         page: 0,
         totalCount: 0,
-      }      
+      }
 
       try {
         const graphqlDefinitions = formContext.graphql;
@@ -169,7 +169,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
           reactory.graphqlQuery(queryDefinition.text, variables, queryDefinition.options).then((queryResult: any) => {
-            reactory.log(`Result From Query`, { queryResult  })
+            reactory.log(`Result From Query`, { queryResult })
             if (queryResult.errors && queryResult.errors.length > 0) {
               //show a loader error
               reactory.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
@@ -180,7 +180,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
               if (uiOptions.disablePaging === true) {
                 response.page = 1,
-                response.totalCount = response.data.length;
+                  response.totalCount = response.data.length;
               }
 
 
@@ -193,9 +193,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
                   footerObject[fcol.field] = fcol.text && fcol.text != '' ? fcol.text : fcol.value ? template(fcol.value)(queryResult.data[queryDefinition.name]) : null
                 });
 
-                if(query.selectedRows) {
+                if (query.selectedRows) {
                   query.selectedRows.forEach((row) => {
-                    if(row.tableData) {
+                    if (row.tableData) {
                       response.data[row.tableData.id].tableData = row.tableData;
                     }
                   })
@@ -259,7 +259,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           }
 
           if (ColRenderer) return <ColRenderer {...props} />
-          else return <Typography>Renderer {def.component} Not Found</Typography>
+          else return <Typography>🕘 ...</Typography>
         }
 
         delete def.component;
@@ -360,9 +360,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     if (options.searchText && options.searchText.indexOf('${') >= 0) {
       try {
         options.searchText = reactory.utils.template(options.searchText)({ ...props })
-        if(tableRef && tableRef.current) {
-          
-          if(tableRef.current.state.searchText !== options.searchText) {
+        if (tableRef && tableRef.current) {
+
+          if (tableRef.current.state.searchText !== options.searchText) {
             tableRef.current.onQueryChange({ search: options.searchText })
             tableRef.current.setState({ searchText: options.searchText })
           }
@@ -382,13 +382,13 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           if (action.mutation) {
             const mutationDefinition: Reactory.IReactoryFormMutation = formContext.graphql.mutation[action.mutation];
 
-            reactory.graphqlMutation(mutationDefinition.text, reactory.utils.objectMapper({ ...props, selected }, mutationDefinition.variables)).then((mutationResult: {data: any, errors: any[]}) => {
+            reactory.graphqlMutation(mutationDefinition.text, reactory.utils.objectMapper({ ...props, selected }, mutationDefinition.variables)).then((mutationResult: { data: any, errors: any[] }) => {
               reactory.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
 
               let has_errors = false;
 
-              if(!mutationResult.errors && mutationResult.data[mutationDefinition.name]) {
-              
+              if (!mutationResult.errors && mutationResult.data[mutationDefinition.name]) {
+
                 if (uiOptions.remoteData === true) {
                   if (tableRef.current && tableRef.current.onQueryChange) {
                     tableRef.current.onQueryChange()
@@ -396,29 +396,29 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
                 } else {
                   setVersion(version + 1);
                 }
-  
+
                 if (mutationDefinition.onSuccessEvent) {
                   reactory.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
-                  
-                  if(typeof formContext[mutationDefinition.onSuccessEvent.name] === 'function') {
-  
-                    let _method_props = mutationDefinition.onSuccessEvent.dataMap ? 
-                    reactory.utils.objectMapper(mutationResult.data[mutationDefinition.name], mutationDefinition.onSuccessEvent.dataMap) : 
-                    mutationResult.data[mutationDefinition.name];
+
+                  if (typeof formContext[mutationDefinition.onSuccessEvent.name] === 'function') {
+
+                    let _method_props = mutationDefinition.onSuccessEvent.dataMap ?
+                      reactory.utils.objectMapper(mutationResult.data[mutationDefinition.name], mutationDefinition.onSuccessEvent.dataMap) :
+                      mutationResult.data[mutationDefinition.name];
                     try {
-                      formContext[mutationDefinition.onSuccessEvent.name]( _method_props );
+                      formContext[mutationDefinition.onSuccessEvent.name](_method_props);
                     } catch (notHandledByForm) {
                       reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm, props: _method_props }, 'warning')
                     }
-                    
+
                     reactory.emit(mutationDefinition.onSuccessEvent.name, _method_props);
                   }
-                }                                                        
+                }
               } else {
                 has_errors = true;
               }
 
-              
+
 
               if (mutationDefinition.notification) {
                 reactory.createNotification(`${reactory.utils.template(mutationDefinition.notification.title)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: has_errors === true ? 'warning' : 'success' })
@@ -569,7 +569,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       });
     };
   }
-  
+
   React.useEffect(() => {
     const uiOptions = uiSchema['ui:options'] || {};
     if (uiOptions.refreshEvents) {
@@ -583,9 +583,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     };
 
     return willUnmount;
-  }, []);  
+  }, []);
 
-  
+
 
 
   return (
@@ -593,7 +593,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       <MaterialTable
         columns={columns}
         tableRef={tableRef}
-        data={rows}        
+        data={rows}
         title={schema.title || uiOptions.title || "no title"}
         options={options}
         actions={actions}

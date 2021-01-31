@@ -7,8 +7,8 @@ import uuid from 'uuid';
 import classNames from 'classnames';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql,  ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions  } from '@apollo/client';
-import { Mutation, Query  } from '@apollo/client/react/components';
+import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions } from '@apollo/client';
+import { Mutation, Query } from '@apollo/client/react/components';
 
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
@@ -25,7 +25,8 @@ import {
   injectResources,
   omitDeep,
   makeSlug,
-  deepEquals
+  deepEquals,
+  CDNResource
 } from '../components/util';
 import amq from '../amq';
 import * as RestApi from './RestApi';
@@ -42,6 +43,7 @@ import ReactoryApolloClient from './ReactoryApolloClient';
 import Reactory from '../types/reactory';
 import { MutationResult, QueryOptions } from "react-apollo";
 import { RefetchQueryDescription } from "@apollo/client/core/watchQueryOptions";
+import { Breakpoints } from "@material-ui/core/styles/createBreakpoints";
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -96,7 +98,7 @@ export const reactoryDomNode = () => {
  * @param templateObject 
  * @param props 
  */
-export const parseTemplateObject = (templateObject: Object, props: any): Object => {  
+export const parseTemplateObject = (templateObject: Object, props: any): Object => {
 
   if (templateObject === null || templateObject === undefined) return templateObject;
 
@@ -110,7 +112,7 @@ export const parseTemplateObject = (templateObject: Object, props: any): Object 
           _$ret[ep] = template(templateObject[ep])(props);
         } else {
           _$ret[ep] = templateObject[ep];
-        }        
+        }
         break;
       }
       case "object": {
@@ -183,12 +185,12 @@ export interface ReactoryApiUtils {
 }
 
 export interface WindowSizeSpec {
-  innerHeight: number, 
-  innerWidth: number, 
-  outerHeight: number, 
-  outerWidth: number, 
-  view: string, 
-  size: string 
+  innerHeight: number,
+  innerWidth: number,
+  outerHeight: number,
+  outerWidth: number,
+  view: string,
+  size: string
 }
 
 export interface _dynamic {
@@ -224,7 +226,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   getAvatar: Function;
   getOrganizationLogo: Function;
   getUserFullName: Function;
-  getThemeResource: Function;
+  getThemeResource: (path?: string) => string;
+  getCDNResource: (path: string) => string;
   CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
@@ -248,14 +251,14 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   objectToQueryString: Function;
   clearCache: () => void;
   ws_link: any;
-  
+
 
   constructor(props) {
     super();
 
     this.history = null;
     this.props = props;
-    this.componentRegister = {};        
+    this.componentRegister = {};
     this.queries = GraphQL.queries;
     this.mutations = GraphQL.mutations;
     this.login = RestApi.login.bind(this);
@@ -265,7 +268,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.forgot = RestApi.forgot;
     this.forms = this.forms.bind(this);
     this.form = this.form.bind(this);
-    
+
     this.utils = {
       omitDeep,
       queryString,
@@ -389,13 +392,15 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.goto = this.goto.bind(this);
     this.createNotification = this.createNotification.bind(this);
     this.getThemeResource = ThemeResource;
+    this.getCDNResource = CDNResource;
     this.getUser = this.getUser.bind(this);
     this.extendClientResolver = this.extendClientResolver.bind(this);
     this.setFormTranslationMaps = this.setFormTranslationMaps.bind(this);
     this.setFormValidationMaps = this.setFormValidationMaps.bind(this);
-    this.clearStoreAndCache = this.clearStoreAndCache.bind(this);    
-    this.init = this.init.bind(this);    
+    this.clearStoreAndCache = this.clearStoreAndCache.bind(this);
+    this.init = this.init.bind(this);
     this.getSizeSpec = this.getSizeSpec.bind(this);
+    this.getThemeMode = this.getThemeMode.bind(this);
   }
 
   async init() {
@@ -404,36 +409,40 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       ws_link,
       clearCache
     } = await ReactoryApolloClient();
-    
+
     this.clearCache = clearCache;
     this.client = client;
     this.ws_link = ws_link;
   }
 
-  clearStoreAndCache(){
-    if(this.client) this.client.resetStore();
-    if(this.clearCache) this.clearCache();
+  clearStoreAndCache() {
+    if (this.client) this.client.resetStore();
+    if (this.clearCache) this.clearCache();
   }
 
-  getSizeSpec(){
+  getThemeMode() {
+    return localStorage.getItem("$reactory$theme_mode") || "light";
+  }
+
+  getSizeSpec() {
     let size = '??';
-  
+
     const {
       innerHeight,
       outerHeight,
       innerWidth,
       outerWidth,
     } = window;
-  
+
     const theme: ReactoryTheme = this.muiTheme;
     //theme.breakpoints.values.lg
-  
+
     let view = 'landscape';
-  
+
     if (window.innerHeight > window.innerWidth) {
       view = 'portrait';
     }
-  
+
     let size_spec: any = {
       innerHeight,
       innerWidth,
@@ -442,15 +451,20 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       view,
       size
     }
-    
-    if(theme && theme.breakpoints) {
-      if (innerWidth >= theme.breakpoints.values.xl) size = 'xl';
-      if (innerWidth < theme.breakpoints.values.xl && innerWidth >= theme.breakpoints.values.lg) size = 'lg';
-      if (innerWidth < theme.breakpoints.values.lg && innerWidth >= theme.breakpoints.values.md) size = 'md';
-      if (innerWidth < theme.breakpoints.values.md && innerWidth >= theme.breakpoints.values.sm) size = 'sm';
-      if (innerWidth < theme.breakpoints.values.sm && innerWidth >= theme.breakpoints.values.xs) size = 'xs';
+
+    let _breakpoints = { xs: 0, sm: 600, md: 960, lg: 1280, xl: 1920 }
+
+
+    if (theme && theme.breakpoints) {
+      _breakpoints = theme.breakpoints.values;
     }
-  
+
+    if (innerWidth >= _breakpoints.xl) size = 'xl';
+    if (innerWidth < _breakpoints.xl && innerWidth >= _breakpoints.lg) size = 'lg';
+    if (innerWidth < _breakpoints.lg && innerWidth >= _breakpoints.md) size = 'md';
+    if (innerWidth < _breakpoints.md && innerWidth >= _breakpoints.sm) size = 'sm';
+    if (innerWidth < _breakpoints.sm && innerWidth >= _breakpoints.xs) size = 'xs';
+
     size_spec.size = size;
     return size_spec;
   };
@@ -470,7 +484,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     }
   }
 
-  createNotification(title: string, options: NotificationOptions | any = { }) {
+  createNotification(title: string, options: NotificationOptions | any = {}) {
     this.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
 
     let defaultNotificationProps = {
@@ -478,7 +492,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       type: options.type || "info",
       config: {
         canDismiss: true,
-        timeOut: 2500,        
+        timeOut: 2500,
       }
     }
 
@@ -693,11 +707,11 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         that.log(`Error occurred while creating the mutation document from input`, { mutation }, 'error');
       }
     } else $mutation = mutation;
-      
+
     return new Promise((resolve, reject) => {
-      let mutation_options: MutationOptions<any, any> = { mutation: $mutation, variables };      
+      let mutation_options: MutationOptions<any, any> = { mutation: $mutation, variables };
       mutation_options.refetchQueries = refetchQueries;
-      that.client.mutate(mutation_options).then((result) => {        
+      that.client.mutate(mutation_options).then((result) => {
         resolve(result);
       }).catch((clientErr) => {
         that.log(`Error occured executing the mutation: ${clientErr.message}`, { $mutation, clientErr }, 'error')
@@ -708,7 +722,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
   graphqlQuery(query,
     variables,
-    options: any = { fetchPolicy: 'network-only'  },
+    options: any = { fetchPolicy: 'network-only' },
     queryDefinition: Reactory.IReactoryFormQuery = null) {
 
     const that = this;
@@ -720,13 +734,13 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       } catch (gqlError) {
         that.log(`Error occurred while creating the query document from input`, { query }, 'error');
       }
-    } else $query = query; 
+    } else $query = query;
 
     return new Promise((resolve, reject) => {
-      that.client.query({ 
-        query: $query, 
-        variables, 
-        fetchPolicy: options.fetchPolicy || 'network-only',        
+      that.client.query({
+        query: $query,
+        variables,
+        fetchPolicy: options.fetchPolicy || 'network-only',
       }).then((result) => {
         resolve(result);
       }).catch((clientErr) => {
@@ -976,7 +990,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
     let $theme = lodash.cloneDeep(themeOptions);
     $theme.extensions = extensions;
-    
+
     if ($theme.palette) $theme.palette.type = paletteType;
     else {
       $theme.palette = {
@@ -1045,7 +1059,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
     let _components = [];
     Object.keys(this.componentRegister).forEach((fqn) => {
-      if(this.componentRegister[fqn].componentType === componentType) {
+      if (this.componentRegister[fqn].componentType === componentType) {
         _components.push(this.componentRegister[fqn]);
       }
     })
@@ -1053,7 +1067,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     return _components;
 
   };
-  
+
   getComponents(componentFqns = []): any {
     let componentMap = {};
     componentFqns.forEach(fqn => {
@@ -1205,7 +1219,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
     const { client } = await ReactoryApolloClient();
     this.client = client;
-    this.setUser({ ...user, ...anonUser });    
+    this.setUser({ ...user, ...anonUser });
 
     if (refreshStatus === true) {
       this.status({ emitLogin: false }).then((apiStatus) => {

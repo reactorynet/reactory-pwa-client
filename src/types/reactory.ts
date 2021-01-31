@@ -60,7 +60,7 @@ namespace Reactory {
       queryString(): any,
       hashCode: (inputString: string) => any,
       injectResources(sources: any[]): void,
-      componentFqn(fqn: Reactory.IComponentFqnDefinition): string,      
+      componentFqn(fqn: Reactory.IComponentFqnDefinition): string,
       pluginDefinitionValid(definition: any): boolean,
       moment: moment.Moment,
       objectMapper(src: any, map: any): any,
@@ -216,20 +216,25 @@ namespace Reactory {
 
       validateToken(token): any;
 
-      resetPassword({password, confirmPassword, resetToken}): void;
+      resetPassword({ password, confirmPassword, resetToken }): void;
 
       setViewContext(context): void;
 
       getViewContext(): any;
 
-      extendClientResolver( resolver: any );
+      extendClientResolver(resolver: any);
     }
 
     export interface IReactoryWiredComponent {
-      api: IReactoryApi,      
-    }
+      /**
+       * The api reference will be phased out and only the reactory reference must be used.
+       */
+      api: IReactoryApi,
 
-    
+      reactory: IReactoryApi,
+    };
+
+
 
     export interface IFrameProperties {
       url: string
@@ -260,19 +265,19 @@ namespace Reactory {
       api: IReactoryApi
     }
   }
-    
+
   export interface IAuthentication {
     provider: string
     props: any
     lastLogin: Date
   }
-  
+
 
   export interface ITemplateParam {
     name: string
     type: string
   }
-  
+
   export interface ITemplate {
     enabled: boolean
     organization?: string
@@ -305,7 +310,7 @@ namespace Reactory {
 
   export interface IBusinessUnit {
     id: string
-    name: string    
+    name: string
   }
 
   export interface IMemberShip {
@@ -333,23 +338,23 @@ namespace Reactory {
     getAuthentication(provider: string): IAuthentication
   }
 
-  
+
   export interface ISchema {
     type: string,
     title?: string | undefined,
     description?: string | undefined,
-    default?: any | undefined    
+    default?: any | undefined
   }
 
   export interface IObjectProperties {
     [field: string]: ISchema
   }
-  
-  export interface IObjectSchema extends ISchema {  
-    properties?: IObjectProperties, 
+
+  export interface IObjectSchema extends ISchema {
+    properties?: IObjectProperties,
   }
-  
-  export interface IArraySchema extends ISchema {  
+
+  export interface IArraySchema extends ISchema {
     items: IObjectSchema | IArraySchema
   }
 
@@ -386,7 +391,7 @@ namespace Reactory {
     onError?: IReactoryFormQueryErrorHandlerDefinition,
     resultType?: string,
     //used where want to extract a single element from an object
-    resultKey?: string, 
+    resultKey?: string,
     refreshEvents?: IReactoryEvent[]
   }
 
@@ -407,7 +412,7 @@ namespace Reactory {
     onError?: IReactoryFormQueryErrorHandlerDefinition,
     options?: any,
     notification?: any,
-    handledBy?:string | 'onChange' | 'onSubmit'
+    handledBy?: string | 'onChange' | 'onSubmit'
   }
 
   export interface IReactoryFormMutations {
@@ -416,7 +421,7 @@ namespace Reactory {
     delete?: IReactoryFormMutation
   }
 
-  export interface IFormGraphDefinition {    
+  export interface IFormGraphDefinition {
     query?: IReactoryFormQuery,
     queries?: {
       [key: string]: IReactoryFormQuery
@@ -425,13 +430,13 @@ namespace Reactory {
     //when true the debugger will be enabled.
     debug?: boolean
   }
-  
+
   export interface IWidgetMap {
     component: string | any;
     componentFqn: string,
     widget: string
   }
-  
+
   export interface IObjectMap {
     [key: string]: string | Array<any> | object
   }
@@ -446,7 +451,7 @@ namespace Reactory {
     dataMap?: IObjectMap
   }
 
-  
+
 
   export interface IExcelColumnDefinition {
     title: string
@@ -454,9 +459,9 @@ namespace Reactory {
     format: string
     type: string
     width?: number,
-    key?: string,    
+    key?: string,
     required: boolean,
-    style?: any    
+    style?: any
   }
 
   export interface IExcelSheet {
@@ -474,13 +479,13 @@ namespace Reactory {
 
   export interface IExport extends Client.IFramedWindowProperties {
     title?: string
-    engine?: string  
-    useClient?: boolean    
+    engine?: string
+    useClient?: boolean
     mappingType?: string
     mapping?: any
     icon?: string
     exportOptions?: any | IExcelExportOptions
-    disabled?: string 
+    disabled?: string
   }
 
   export interface IUISchemaMenuItem {
@@ -506,7 +511,7 @@ namespace Reactory {
   }
 
 
-  
+
   export interface IEventBubbleAction {
     eventName: string,
     action: string | "bubble" | "swallow" | "function",
@@ -516,7 +521,7 @@ namespace Reactory {
     id: string,
     uiFramework: string,
     uiSupport: string[],
-    uiResources?: any[],    
+    uiResources?: any[],
     title: string,
     tags?: string[],
     helpTopics?: string[]
@@ -534,10 +539,10 @@ namespace Reactory {
     components?: string[],
     graphql?: IFormGraphDefinition,
     defaultFormValue?: any,
-    defaultPdfReport?: IReactoryPdfReport, 
+    defaultPdfReport?: IReactoryPdfReport,
     defaultExport?: IExport,
     reports?: IReactoryPdfReport[],
-    exports?:IExport[], 
+    exports?: IExport[],
     refresh?: any,
     widgetMap?: IWidgetMap[],
     backButton?: Boolean,
@@ -597,18 +602,18 @@ namespace Reactory {
     graphDefinitions?: IGraphDefinitions,
     workflows?: IWorkflow[],
     forms?: IReactoryForm[],
-    services?: IReactoryServiceDefinition[], 
+    services?: IReactoryServiceDefinition[],
   }
 
   export interface IReactoryServiceResult<T> {
     data?: T,
-    errors?: Error[],    
+    errors?: Error[],
   }
-  
+
   export interface IReactoryResultService<T> {
-    (props: any, context: any):  IReactoryServiceResult<T>;
+    (props: any, context: any): IReactoryServiceResult<T>;
   }
-  
+
   export interface IReactoryServiceDefinition {
     id: string
     name: string
@@ -616,19 +621,19 @@ namespace Reactory {
     isAsync?: boolean
     service: Function,
     serviceType?: string
-    dependencies?: string[]    
-  }   
-  
+    dependencies?: string[]
+  }
+
   export namespace Service {
-        
+
   }
 
   export interface IPagingRequest {
     page: number
-    pageSize: number 
+    pageSize: number
   }
-  
-  export interface  IPagingResult {
+
+  export interface IPagingResult {
     total: number
     page: number
     hasNext: boolean
