@@ -70,6 +70,8 @@ componentRegistery.forEach((componentDef) => {
   api.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
 });
 
+api.$windowSize = api.getSizeSpec();
+
 const store = configureStore();
 api.reduxStore = store;
 window.reactory = {
@@ -123,6 +125,7 @@ const dependcies = [
   'core.FullScreenModal@1.0.0',
   'core.NotificationComponent@1.0.0',
   'core.NotFound@1.0.0',
+  'reactory.Footer@1.0.0',
 ];
 
 
@@ -155,8 +158,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         render: (props) => {
           api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
 
-          if(routeDef.redirect) {
-            return <Redirect to={{pathname: routeDef.redirect, state: { from: props.location } }} />
+          if (routeDef.redirect) {
+            return <Redirect to={{ pathname: routeDef.redirect, state: { from: props.location } }} />
           }
 
           const componentArgs = {
@@ -240,8 +243,6 @@ const AppLoading = () => {
   )
 }
 
-
-
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
@@ -258,9 +259,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [sizeSpec, setSizeSpec] = React.useState<WindowSizeSpec>(api.getSizeSpec());
 
   const components: any = api.getComponents(dependcies);
-  const { Loading, Login, FullScreenModal, NotificationComponent, NotFound } = components;
+  const { Loading, Login, FullScreenModal, NotificationComponent, NotFound, Footer } = components;
 
-  
+
   const onRouteChanged = (path: string) => {
     setCurrentRoute(path)
   }
@@ -273,7 +274,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     setUser(api.getUser());
   };
 
-  
+
   const applyTheme = () => {
     let themeOptions = api.getTheme();
     if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
@@ -305,25 +306,25 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const onApiStatusUpdate = (status) => {
 
-    if(!(status === null || status === undefined)) {
+    if (!(status === null || status === undefined)) {
       api.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
       let isOffline = status.offline === true;
-  
+
       if (offline !== isOffline) {
         setOfflineStatus(isOffline);
       }
-  
+
       if (isOffline === true && !statusInterval) {
         setStatusInterval(setInterval(api.status, 3000))
       } else {
-  
+
         if (isOffline === false && statusInterval) {
           clearInterval(statusInterval);
           let user = api.utils.lodash.cloneDeep(api.getUser());
           delete user.when;
           let _user = api.utils.lodash.cloneDeep(user);
           delete _user.when;
-  
+
           if (deepEquals(user, _user) === false || status.offline !== offline) {
             setUser(user)
             setOfflineStatus(status.offline === true);
@@ -332,13 +333,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       }
     } else {
       api.log(`apiStaus returned null value`, { status }, 'warning');
-    }    
+    }
   }
 
 
-  const onWindowResize = async () => {    
+  const onWindowResize = async () => {
     const _size_spec = api.getSizeSpec();
-    api.$windowSize = _size_spec; 
+    api.$windowSize = _size_spec;
     api.log('ReactoryHOC Resize', _size_spec);
     api.emit('onWindowResize', _size_spec);
     //setSizeSpec(_size_spec);
@@ -449,8 +450,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                     {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
                     {isReady === true && <NotificationComponent />}
                     {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
-                    <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '8px' }}>{sizeSpec.size}</div>
-                  </React.Fragment>                  
+                    {isReady === true && <Footer />}
+                  </React.Fragment>
                 </ReactoryProvider>
               </MuiPickersUtilsProvider>
             </ApolloProvider>

@@ -761,7 +761,7 @@ export const componentRegistery = [
     name: 'ReactBeautifulDnD',
     version: '1.0.0',
     component: {
-        DragDropContext, Droppable, Draggable
+      DragDropContext, Droppable, Draggable
     },
   },
 
@@ -782,5 +782,18 @@ export const componentRegistery = [
     name: 'ExcelJS',
     version: '3.4.0',
     component: require('exceljs'),
+  },
+
+  {
+    nameSpace: 'hooks',
+    name: 'useSizeSpec',
+    component: require('./hooks/useSizeSpec').useSizeSpec,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'reactory',
+    name: 'Footer',
+    component: require('./shared/Footer').Footer,
+    version: '1.0.0',
   }
 ];

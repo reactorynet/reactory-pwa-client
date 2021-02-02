@@ -33,8 +33,8 @@ const styles = (theme) => {
 
 class SlideOutLauncher extends Component {
 
-  constructor(props, context) {
-    super(props, context);
+  constructor(props) {
+    super(props);
 
     //the handlers must return a function that returns a message call
     this.state = {
@@ -196,7 +196,7 @@ class SlideOutLauncher extends Component {
             maxWidth="lg"
             classes={{ paper: classes.compactRoot }}
           >
-            <DialogTitle style={{ padding: '16px 24px', borderBottom: 'solid 1px #e0e0e0'}}>
+            <DialogTitle style={{ padding: '16px 24px', borderBottom: 'solid 1px #e0e0e0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" style={{ fontWeight: "bold" }}>More Details</Typography>
                 <Icon onClick={onClick}>close</Icon>
@@ -211,7 +211,6 @@ class SlideOutLauncher extends Component {
       );
     }
 
-    debugger;
 
     return (
       <Fragment>
