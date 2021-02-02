@@ -445,13 +445,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             <ApolloProvider client={api.client}>
               <MuiPickersUtilsProvider utils={MomentUtils}>
                 <ReactoryProvider api={api}>
-                  <React.Fragment>
+                  <Paper elevation={0} style={{ height: '100%', borderRadius: 0 }}>
                     {isReady === true && <Globals api={api} />}
                     {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
                     {isReady === true && <NotificationComponent />}
                     {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
                     {isReady === true && <Footer />}
-                  </React.Fragment>
+                  </Paper>
                 </ReactoryProvider>
               </MuiPickersUtilsProvider>
             </ApolloProvider>

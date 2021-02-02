@@ -166,7 +166,7 @@ class FullScreenDialog extends Component {
         <Fragment>
           <Dialog className={classes.dialog_root} {...dialogProps} >
             {
-              showAppBar && <AppBar className={classes.appBar}>
+              showAppBar && <AppBar className={classes.appBar} color={"transparent"}>
                 <Toolbar>
                   <IconButton color="inherit" onClick={this.handleClose} aria-label="Close">
                     <CloseIcon />

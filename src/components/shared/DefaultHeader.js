@@ -209,7 +209,7 @@ const CacheButton = (props) => {
   const bytes = ((new TextEncoder().encode(data)).length / 100000).toPrecision(2);
 
   const clearCache = () => {
-    
+
     reactory.clearStoreAndCache();
     setVersion(version + 1);
   }
@@ -217,7 +217,7 @@ const CacheButton = (props) => {
   return (
     (<ListItem key={'reactory.cache'} onClick={clearCache} button>
       <ListItemIcon>
-          <Icon color="primary">storage</Icon>
+        <Icon color="primary">storage</Icon>
       </ListItemIcon>
       <ListItemText
         primary={<span className={classes.versionPrimary}>Using {reactory.utils.humanNumber(bytes)} MB of local storage</span>}
@@ -484,7 +484,7 @@ class ApplicationHeader extends Component {
 
     return (
       <Fragment>
-        <AppBar position="static" color="primary">
+        <AppBar position="static" color="default">
           <Toolbar variant="dense">
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <MenuIcon />
