@@ -484,7 +484,7 @@ class ApplicationHeader extends Component {
 
     return (
       <Fragment>
-        <AppBar position="static" color="default">
+        <AppBar position="sticky" color="default">
           <Toolbar variant="dense">
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <MenuIcon />
