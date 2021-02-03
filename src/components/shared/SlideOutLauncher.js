@@ -162,7 +162,7 @@ class SlideOutLauncher extends Component {
 
     if (_buttonVariant === 'Typography') {
       LaunchButton = (
-        <Typography onClick={onClick} variant={buttonProps.variant || "body2"} color={buttonProps.color || 'primary'} style={buttonProps.style || {}}>
+        <Typography onClick={onClick} variant={buttonProps.variant || "body2"} color={buttonProps.color || 'default'} style={buttonProps.style || {}}>
           {icon ? <Icon>{icon}</Icon> : null}
           {_buttonTitle}
         </Typography>
