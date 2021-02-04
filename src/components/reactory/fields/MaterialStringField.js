@@ -60,11 +60,11 @@ const MaterialStringFieldWidget = (props) => {
 
 
     let inputLabelProps = {}
-   
+
     const uiOptions = uiSchema['ui:options'] || { readOnly: false, props: {} };
     let args = uiOptions && uiOptions.props ? { ...uiOptions.props } : {};
 
-    const {    
+    const {
       labelStyle = {},
       labelProps = { visible: true },
       componentProps,
@@ -88,17 +88,19 @@ const MaterialStringFieldWidget = (props) => {
       default: args.type = schema.format || "text"; break;
     }
 
+
+
     if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
       inputLabelProps.shrink = false;
     } else {
       inputLabelProps.shrink = true;
       inputLabelProps.style = {
-        backgroundColor: theme.palette.background.paper,
+        //backgroundColor: theme.palette.background.paper,
         // marginTop: '4px',
         padding: '4px'
       };
     }
-    
+
     inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
 
     const onInputChanged = (evt) => {
@@ -183,7 +185,7 @@ const MaterialStringFieldWidget = (props) => {
       switch (themeDefaults.variant) {
         case "outlined":
         case "outline": {
-          COMPONENT = OutlinedInput;          
+          COMPONENT = OutlinedInput;
           break;
         }
         case "filled":
@@ -194,8 +196,8 @@ const MaterialStringFieldWidget = (props) => {
       }
 
 
-      return (        
-        <COMPONENT type={args.type || 'text'} onKeyDown={onKeyDown} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />        
+      return (
+        <COMPONENT type={args.type || 'text'} onKeyDown={onKeyDown} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onInputChanged} />
       )
     }
 
