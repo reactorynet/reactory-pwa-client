@@ -550,13 +550,13 @@ class DefaultView extends Component {
           <componentDefs.StaticContent
             slug={`mores-assessments-${survey.surveyType}_${survey.id}-welcome-screen`.toLowerCase()}
             title={`Welcome Screen: ${survey.surveyType}`}
-            propertyBag={this.props}
+            editAction={'link'}
             showEditIcon={true}
             defaultValue={<Typography gutterBottom variant="body1">Thank you for taking the time to complete this {assessment.survey.leadershipBrand.title} survey</Typography>}>
           </componentDefs.StaticContent>
 
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <componentDefs.StaticContent slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
+            <componentDefs.StaticContent editAction={'link'} slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
           </div>
         </Paper>
       )
@@ -567,8 +567,9 @@ class DefaultView extends Component {
           <componentDefs.StaticContent
             slug={`mores-assessments-${survey.surveyType}_${survey.id}-welcome-screen`.toLowerCase()}
             title={`Welcome Screen: ${survey.surveyType}`}
-            propertyBag={this.props}
+            propertyBag={{ survey, assessment }}
             showEditIcon={true}
+            editAction={'link'}
             defaultValue={<Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
             5 - 7 minutes.<br />
             You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
@@ -577,7 +578,11 @@ class DefaultView extends Component {
 
 
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <componentDefs.StaticContent slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
+            <componentDefs.StaticContent
+              editAction={'link'}
+              slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`}
+              defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo}
+                className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
           </div>
 
         </Paper>
@@ -624,7 +629,7 @@ class DefaultView extends Component {
       <Paper className={classes.thankYouScreen}>
         {assessment.complete === false &&
           <Fragment>
-            <StaticContent slug={`mores-assessments-survey-${survey.id}-thank-you`} propertyBag={{ assessment, survey }} editAction={'link'} defaultValue={<>
+            <StaticContent slug={`mores-assessments-survey-${survey.id}-thank-you`} editAction={'link'} defaultValue={<>
               <Typography gutterBottom variant="body1">Thank you for taking the time to provide your input. If you are comfortable with the ratings and input that you have provided, please click FINISH.</Typography>
               <Typography variant="body1">You may click BACK below to review your input, however once you click FINISH you will not be able to change your input.</Typography>
             </>} />
@@ -1150,7 +1155,6 @@ class DefaultView extends Component {
             slug={contentId}
             title={`Mores Assessment Survey Instruction Header - ${survey.title} [${quality.title}]`}
             defaultValue={assessmetnInstructionsDefaultContent}
-            propertyBag={{ assessment, quality, survey }}
             viewMode='default'
             editAction='link'
           />
@@ -1297,7 +1301,6 @@ class DefaultView extends Component {
 
     const { ratings } = assessment;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
-
 
     const invalidRatings = lodash.find(ratings, r => {
 

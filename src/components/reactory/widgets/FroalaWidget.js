@@ -421,7 +421,7 @@ const FroalaWidget = (props) => {
   };
 
   const onModelChange = (model) => {
-    
+
     setModel(model)
     if (props.onChange) props.onChange(model);
   };
@@ -495,9 +495,13 @@ const FroalaWidget = (props) => {
     config.placeholderText = props.formContext.$ref.props.placeHolder;
   }
 
-  React.useEffect(()=> {
+  React.useEffect(() => {
     mount()
-  },[])
+  }, [])
+
+  React.useEffect(() => {
+    setModel(props.formData);
+  }, [props.formData])
 
   try {
     return (
@@ -511,9 +515,9 @@ const FroalaWidget = (props) => {
         />
       </FormControl>
     )
-  } catch ( render_error ) {
-    
-    setTimeout(()=>{
+  } catch (render_error) {
+
+    setTimeout(() => {
       setVersion(version + 1);
     }, 777);
     return (
@@ -523,7 +527,7 @@ const FroalaWidget = (props) => {
       </FormControl>
     )
   }
-  
+
 }
 
 export default compose(withApi, withTheme)(FroalaWidget)

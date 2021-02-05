@@ -13,11 +13,11 @@ import {
 
 export const MaterialDescriptionField = (props) => {
 
-  const { 
+  const {
     required,
     align,
-    description, 
-    id,        
+    description,
+    id,
     style = {},
     variant = "body2"
   } = props;
@@ -25,21 +25,21 @@ export const MaterialDescriptionField = (props) => {
   let _description = description;
   try {
     _description = template(description, { variable: 'props' })(props);
-  } catch ( templateError ) {
-    if(props.formContext && props.formContext.api) {
+  } catch (templateError) {
+    if (props.formContext && props.formContext.api) {
       props.formContext.api.log(`TemplateField has a bad field template: ${id}`, props);
     }
   }
-  
-  return(<Typography id={id} variant={variant} align={align || 'left'} style={style}>{_description}</Typography>);
 
-}; 
+  return (<Typography id={id} variant={variant} align={align || 'left'} style={style}>{_description}</Typography>);
 
-export default (props) => {   
-  const { 
+};
+
+export const MaterialTitleField = (props) => {
+  const {
     required,
     align,
-    title, 
+    title,
     id,
     style = {},
     variant = "h5"
@@ -48,11 +48,13 @@ export default (props) => {
   let _title = title;
   try {
     _title = template(title, { variable: 'props' })(props);
-  } catch ( templateError ) {
-    if(props.formContext && props.formContext.api) {
+  } catch (templateError) {
+    if (props.formContext && props.formContext.api) {
       props.formContext.api.log(`TemplateField has a bad field template: ${id}`, props);
     }
   }
-  
-  return(<Typography id={id} variant={variant} align={align || 'left'} style={style}>{_title}{required === true ? '*' : null}</Typography>);
+
+  return (<Typography id={id} variant={variant} align={align || 'left'} style={style}>{_title}{required === true ? '*' : null}</Typography>);
 };
+
+export default MaterialTitleField;

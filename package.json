@@ -272,10 +272,18 @@
   },
   "browserslist": {
     "production": [
-      "defaults"
+      "last 2 chrome version",
+      "last 2 firefox version",
+      "last 2 safari version",
+      "ie >= 9",
+      "not ie <= 8"
     ],
     "development": [
-      "defaults"
+      "last 2 chrome version",
+      "last 2 firefox version",
+      "last 2 safari version",
+      "ie >= 9",
+      "not ie <= 8"
     ]
   }
 }

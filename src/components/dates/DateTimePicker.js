@@ -13,35 +13,7 @@ const DateTimePickerWidget = (props) => {
 
   let opts = uiSchema && uiSchema["ui:options"] || {}
   let $id = `DateTimePicker_${idSchema.$id}`;
-
-
   let hide_label = opts.show_label === false;
-  if (opts.variant == 'outlined') {
-    _pickerProps.variant = opts.variant;
-
-    // if (hide_label === false) {
-    //   _pickerProps.label = schema.title
-    // }
-
-    // const date = moment(props.formData, 'YYYY-MM-DD').format('YYYY-MM-DD');
-    // _pickerProps.defaultValue = date;
-    // delete _pickerProps.value;
-
-    // return (
-
-    //   <TextField
-    //     {..._pickerProps}
-    //     id={idSchema.$id}
-    //     type="date"
-    //     InputLabelProps={{
-    //       shrink: true,
-    //     }}
-    //   />
-    // );
-  }
-
-
-
 
   const onDateChange = (date) => {
 
@@ -115,15 +87,16 @@ const DateTimePickerWidget = (props) => {
     };
   }
 
+
   switch (getComponentVariant()) {
     case "date": {
-      return (<KeyboardDatePicker {..._pickerProps} />);
+      return (<KeyboardDatePicker InputProps={{ variant: 'outlined' }} {..._pickerProps} />);
     }
     case "datetime-local": {
-      return (<DateTimePicker {..._pickerProps} />);
+      return (<DateTimePicker InputProps={{ variant: 'outlined' }} {..._pickerProps} />);
     }
     case "time": {
-      return (<KeyboardDateTimePicker {..._pickerProps}
+      return (<KeyboardDateTimePicker InputProps={{ variant: 'outlined' }} {..._pickerProps}
         KeyboardButtonProps={{
           'aria-label': 'Change date',
         }}

@@ -487,7 +487,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             <ApolloProvider client={api.client}>
               <MuiPickersUtilsProvider utils={MomentUtils}>
                 <ReactoryProvider api={api}>
-                  <Paper elevation={0} className={classes.root_paper}>
+                  <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
                     {isReady === true && <Globals api={api} />}
                     {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
                     {isReady === true && <NotificationComponent />}

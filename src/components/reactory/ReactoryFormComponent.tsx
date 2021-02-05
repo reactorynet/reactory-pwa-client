@@ -567,6 +567,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                   _formData = _result;
                   break;
                 }
+                case 'function': {
+                  //use a custom merging function
+                  //for the form / mutation 
+                  //specify the function id on graph
+                  break;
+                }
                 case 'merge':
                 default: {
                   _formData = reactory.utils.lodash.merge({}, formData, _result);
@@ -634,8 +640,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                     });
                   }
                 } else {
-                  if(mutation.onSuccessEvent && mutation.onSuccessEvent.name) {
-                    if(typeof props[mutation.onSuccessEvent.name] === 'function') {  
+                  if (mutation.onSuccessEvent && mutation.onSuccessEvent.name) {
+                    if (typeof props[mutation.onSuccessEvent.name] === 'function') {
                       props[mutation.onSuccessEvent.name]({ formData: mutation.onSuccessEvent.dataMap ? reactory.utils.objectMapper(data[mutation.name], mutation.onSuccessEvent.dataMap) : data[mutation.name] });
                     }
                   }
@@ -806,6 +812,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       props,
       submit: $submitForm,
       state: getState(),
+      validate: () => {
+        if (formRef && formRef.current) {
+          formRef.current.validate();
+        }
+      },
+      formRef,
       onChange
     }
   }
