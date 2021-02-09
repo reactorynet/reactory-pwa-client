@@ -176,64 +176,58 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
 
 
       return (
-        <FormControl size={size || "medium"}>
-          { labelProps && labelProps.visible === true && <InputLabel htmlFor={idSchema.$id}>{schema.title}</InputLabel> }
-          <Select
-            {...selectProps}
-            multiple={multiSelect === true}
-            value={formData || ''}
-            onChange={onSelectChanged}
-            name={idSchema.$id}
-            variant={variant}
-            data-version={version}
-            input={
-              <InputComponent id={idSchema.$id} value={typeof formData === 'string' ? formData.trim() : ""} />
+        <Select
+          {...selectProps}
+          multiple={multiSelect === true}
+          value={formData || ''}
+          onChange={onSelectChanged}
+          name={idSchema.$id}
+          variant={variant}
+          data-version={version}
+          input={
+            <InputComponent id={idSchema.$id} value={typeof formData === 'string' ? formData.trim() : ""} />
+          }
+          renderValue={(_value: any) => {
+            reactory.log(`Rendering value for ${_value}`, { formData, key_map, menuItems })
+            if (_value === null || _value === undefined || _value.length === 0) {
+              return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{menuItems[0].id === 'loading' ? 'Loading' : 'Select'}</span>;
             }
-            renderValue={(_value: any) => {
-              reactory.log(`Rendering value for ${_value}`, { formData, key_map, menuItems })
-              if (_value === null || _value === undefined || _value.length === 0) {
-                return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{menuItems[0].id === 'loading' ? 'Loading' : 'Select'}</span>;
+
+            if (Array.isArray(_value))
+              return _value.join(', ');
+            else {
+              if (key_map[_value] && key_map[_value].label) {
+                return key_map[_value].label;
               }
 
-              if (Array.isArray(_value))
-                return _value.join(', ');
-              else {
-                if (key_map[_value] && key_map[_value].label) {
-                  return key_map[_value].label;
-                }
-
-                return _value;
-              }
-
-            }}>
-
-            {
-              menuItems.map((option: any, index: number) => {
-                return (
-                  <MenuItem key={option.key || index} value={`${option.value}`}>
-                    { option.icon ? <Icon>{option.icon}</Icon> : null}
-                    { option.label}
-                    { option.key === formData ? <Icon style={{ marginLeft: '8px' }}>check_circle</Icon> : null}
-                  </MenuItem>)
-              })
+              return _value;
             }
-          </Select>
-        </FormControl>
+
+          }}>
+
+          {
+            menuItems.map((option: any, index: number) => {
+              return (
+                <MenuItem key={option.key || index} value={`${option.value}`}>
+                  { option.icon ? <Icon>{option.icon}</Icon> : null}
+                  { option.label}
+                  { option.key === formData ? <Icon style={{ marginLeft: '8px' }}>check_circle</Icon> : null}
+                </MenuItem>)
+            })
+          }
+        </Select>
       );
 
     } else {
-      return <React.Fragment>
-        <InputLabel htmlFor={idSchema.$id}>{schema.title}</InputLabel>
-        <Select
-          value={""}
-          readOnly={true}
-          name={props.name}
-          input={<Input id={idSchema.$id} />}>
-          <MenuItem value="">
-            <em>No Query For Select Defined</em>
-          </MenuItem>
-        </Select>
-      </React.Fragment>
+      return (<Select
+        value={""}
+        readOnly={true}
+        name={props.name}
+        input={<Input id={idSchema.$id} />}>
+        <MenuItem value="">
+          <em>No Query For Select Defined</em>
+        </MenuItem>
+      </Select>)
     }
 
   } catch (renderError) {
