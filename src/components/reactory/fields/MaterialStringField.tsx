@@ -18,6 +18,8 @@ import {
   FilledInput,
   InputAdornment,
   TextField,
+  InputLabelProps,
+  InputProps,
 } from '@material-ui/core';
 
 import { withTheme } from '@material-ui/styles';
@@ -50,23 +52,27 @@ const MaterialStringFieldWidget = (props) => {
   } = props;
 
   try {
-    const inputProps = {
+    const inputProps: any = {
       value: '',
       name,
       required,
       disabled,
       autofocus
-    }
+    };
 
 
-    let inputLabelProps = {}
+    let inputLabelProps: InputLabelProps = {}
 
     const uiOptions = uiSchema['ui:options'] || { readOnly: false, props: {} };
-    let args = uiOptions && uiOptions.props ? { ...uiOptions.props } : {};
+    let args: any = uiOptions && uiOptions.props ? { ...uiOptions.props } : {};
 
     const {
-      labelStyle = {},
-      labelProps = { visible: true },
+      labelStyle = {
+
+      },
+      labelProps = {
+        visible: true
+      },
       componentProps,
     } = uiOptions;
 
@@ -135,7 +141,7 @@ const MaterialStringFieldWidget = (props) => {
 
     if (uiOptions.component === "TextField") {
 
-      let inputProps = {
+      let inputProps: any = {
         onChange: onInputChanged,
         onKeyDown: onKeyDown,
         readOnly: disabled === true,
@@ -153,7 +159,10 @@ const MaterialStringFieldWidget = (props) => {
         )
       }
 
-      let themeDefaults = {};
+      let themeDefaults: any = {
+        variant: 'standard'
+      };
+
       if (theme.MaterialTextField) {
         themeDefaults = theme.MaterialTextField;
       }
@@ -175,7 +184,7 @@ const MaterialStringFieldWidget = (props) => {
       return (<TextField {...componentProps} />);
 
     } else {
-      let themeDefaults = {};
+      let themeDefaults: any = {};
       if (theme.MaterialInput) {
         themeDefaults = theme.MaterialInput;
       }

@@ -31,7 +31,7 @@ export const MaterialDescriptionField = (props) => {
     }
   }
 
-  return (<Typography id={id} variant={variant} align={align || 'left'} style={style}>{_description}</Typography>);
+  return (<Typography className={'reactory-material-description-field'} id={id} variant={variant} align={align || 'left'} style={style}>{_description}</Typography>);
 
 };
 
@@ -54,7 +54,7 @@ export const MaterialTitleField = (props) => {
     }
   }
 
-  return (<Typography id={id} variant={variant} align={align || 'left'} style={style}>{_title}{required === true ? '*' : null}</Typography>);
+  return (<Typography className={'reactory-material-title-field'} id={id} variant={variant} align={align || 'left'} style={style}>{_title}{required === true ? '*' : null}</Typography>);
 };
 
 export default MaterialTitleField;

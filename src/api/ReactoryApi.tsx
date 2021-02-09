@@ -592,7 +592,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     if (typeof functionReference === 'function') {
       if (requiresApi === true) {
         this.$func[fqn] = (props) => {
-          return functionReference({ ...props, api: this });
+          return functionReference({ ...props, api: this, reactory: this });
         };
       } else {
         this.$func[fqn] = functionReference;

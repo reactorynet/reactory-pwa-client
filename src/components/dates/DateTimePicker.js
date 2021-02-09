@@ -2,7 +2,7 @@ import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import moment from 'moment';
 import { FormControl, Typography, TextField, InputLabel } from '@material-ui/core';
-import { DatePicker, DateTimePicker, KeyboardDateTimePicker, KeyboardDatePicker } from '@material-ui/pickers';
+import { DatePicker, DateTimePicker } from '@material-ui/pickers';
 import { withApi } from "@reactory/client-core/api/ApiProvider";
 import { compose } from 'redux';
 import { optionsList } from '../reactory/form/utils';
@@ -90,13 +90,13 @@ const DateTimePickerWidget = (props) => {
 
   switch (getComponentVariant()) {
     case "date": {
-      return (<KeyboardDatePicker InputProps={{ variant: 'outlined' }} {..._pickerProps} />);
+      return (<DatePicker InputProps={{ variant: 'outlined' }} {..._pickerProps} />);
     }
     case "datetime-local": {
       return (<DateTimePicker InputProps={{ variant: 'outlined' }} {..._pickerProps} />);
     }
     case "time": {
-      return (<KeyboardDateTimePicker InputProps={{ variant: 'outlined' }} {..._pickerProps}
+      return (<DateTimePicker InputProps={{ variant: 'outlined' }} {..._pickerProps}
         KeyboardButtonProps={{
           'aria-label': 'Change date',
         }}

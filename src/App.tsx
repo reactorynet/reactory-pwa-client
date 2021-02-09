@@ -256,7 +256,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [statusInterval, setStatusInterval] = React.useState<NodeJS.Timeout>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
-  const [sizeSpec, setSizeSpec] = React.useState<WindowSizeSpec>(api.getSizeSpec());
+  //const [sizeSpec, setSizeSpec] = React.useState<WindowSizeSpec>(api.getSizeSpec());
+
 
   const components: any = api.getComponents(dependcies);
   const { Loading, Login, FullScreenModal, NotificationComponent, NotFound, Footer } = components;
@@ -298,7 +299,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
     api.muiTheme = muiTheme;
     setTheme(muiTheme);
-    setSizeSpec(api.getSizeSpec());
+    //setSizeSpec(api.getSizeSpec());
 
   };
 
@@ -344,7 +345,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     api.$windowSize = _size_spec;
     api.log('ReactoryHOC Resize', _size_spec);
     api.emit('onWindowResize', _size_spec);
-    setSizeSpec(_size_spec);
+    // setSizeSpec(_size_spec);
   };
 
 
@@ -437,7 +438,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     return {
 
       root_paper: {
-        minHeight: sizeSpec.resolution.height,
+        //minHeight: sizeSpec.resolution.height,
         borderRadius: 0,
       },
 

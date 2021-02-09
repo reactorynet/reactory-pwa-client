@@ -15,20 +15,20 @@ import {
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { withStyles, withTheme, styled } from '@material-ui/core/styles';
 
-const ErrorStyles = (theme: Theme ): any => {
-        
-  return { 
+const ErrorStyles = (theme: Theme): any => {
+
+  return {
     errorForm: {
       padding: theme.spacing(1)
     },
-    errorButton: 
-      {
-        position: "relative",
-        top: '36px',
-        left: '-12px',
-        color: theme.palette.error.main
-      }
+    errorButton:
+    {
+      position: "relative",
+      top: '36px',
+      left: '-12px',
+      color: theme.palette.error.main
     }
+  }
 };
 
 
@@ -68,7 +68,7 @@ class ErrorPopover extends React.Component<any, any> {
           onClick={handlePopoverOpen}
           color={"primary"}
           className={this.props.classes.errorButton}
-          
+
         >
           <Icon>error</Icon>
         </IconButton>
@@ -142,14 +142,14 @@ class MaterialFormErrorTemplate extends Component<any, any> {
 
   renderMultipleErrors() {
     const { errors } = this.props;
-    
+
     const errorComponent = (
       <React.Fragment>
         <List>
           {errors.map((error) => {
             return (
               <ListItem>
-               <FormHelperText>{error.stack}</FormHelperText>
+                <FormHelperText>{error.stack}</FormHelperText>
               </ListItem>)
           })
           }
@@ -168,6 +168,5 @@ class MaterialFormErrorTemplate extends Component<any, any> {
 }
 
 export const MaterialFormTemplateComponent = compose(withApi, withStyles(MaterialFormErrorTemplate.ErrorStyles), withTheme)(MaterialFormErrorTemplate);
-export default {
-  MaterialFormTemplateComponent,
-}
+export default MaterialFormTemplateComponent;
+

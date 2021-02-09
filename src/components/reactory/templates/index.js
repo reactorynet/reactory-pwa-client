@@ -1,8 +1,13 @@
-import materialFieldTemplate from './MaterialFieldTemplate';
 
+import MaterialFieldTemplate from './MaterialFieldTemplate';
+import MaterialArrayFieldTemplate from './MaterialArrayField';
+import MaterialDateFieldTemplate from './MaterialDateFieldTemplate';
+import MaterialErrorListTemplate from './MaterialFormErrorList';
+import MaterialObjectTemplate from './MaterialObjectTemplate';
 export default {
-  MaterialObjectTemplate: require('./MaterialObjectTemplate'),
-  MaterialFieldTemplate: materialFieldTemplate,
-  MaterialArrayFieldTemplate: require('./MaterialArrayField'),
-  MaterialErrorListTemplate: require('./MaterialFormErrorTemplate').MaterialFormTemplateComponent,
+  MaterialObjectTemplate,
+  MaterialFieldTemplate,
+  MaterialDateFieldTemplate,
+  MaterialArrayFieldTemplate,
+  MaterialErrorListTemplate,
 }

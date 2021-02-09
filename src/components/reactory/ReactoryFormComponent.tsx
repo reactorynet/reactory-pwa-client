@@ -1,4 +1,4 @@
-import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties } from 'react';
+import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties, Ref } from 'react';
 import PropTypes, { ReactNodeArray, string } from 'prop-types';
 import IntersectionVisible from 'react-intersection-visible';
 import Form from './form/components/Form';
@@ -136,7 +136,7 @@ export interface ReactoryFormProperties {
   validate?: Function,
   transformErrors?: Function,
   autoQueryDisabled?: boolean,
-  refCallback?: Function,
+  refCallback?: (formReference: any) => void,
   queryOnFormDataChange?: boolean,
   onBeforeMutation?: Function,
   onBeforeQuery?: Function,
@@ -751,7 +751,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const setState = ($state: any, callback = () => { }) => {
 
-
     let _$state = { ...$state };
     delete _$state.formData;
     if (Object.keys(_$state).length > 0) {
@@ -795,9 +794,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   }
 
   const $submitForm = () => {
-    if (isNil(formRef) === false && formRef) {
+    if (isNil(formRef) === false && formRef.current) {
       try {
-        formRef.onSubmit();
+        if (formRef.current && formRef.current.onSubmit) {
+
+          formRef.current.onSubmit();
+        }
       } catch (submitError) {
         reactory.createNotification(`The Form ${signature} could not submit`, { type: "warning", showInAppNotification: true, canDismis: true });
         reactory.log(`Could not submit the form`, submitError, 'error')
@@ -1439,7 +1441,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       ErrorList: (error_props) => (<MaterialErrorListTemplate {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,
       ref: (form: any) => {
-        setFormRef(form);
+        if (formRef.current === null || formRef.current === undefined) formRef.current = form;
         if (props.refCallback) props.refCallback(getFormReference())
       },
       transformErrors: (errors = []) => {
