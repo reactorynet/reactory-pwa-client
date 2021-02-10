@@ -535,7 +535,7 @@ class ApplicationHeader extends Component {
               </ListItemIcon>
               <ListItemText
                 primary={<span className={classes.versionPrimary}>Client ver: {api.props.$version}</span>}
-                secondary={<span className={classes.version}>📡&nbsp;{server.id || 'development'} ver: {server.version || 'waiting'} </span>}
+                secondary={<span className={classes.version}>📡&nbsp;{server && server.id ? server.id : 'development'} ver: {server && server.version ? server.version : 'waiting'} </span>}
               />
             </ListItem>), (<CacheComponent classes={classes} />)]} />
 

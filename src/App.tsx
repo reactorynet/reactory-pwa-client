@@ -447,7 +447,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                 <ReactoryProvider api={api}>
                   <React.Fragment>
                     {isReady === true && <Globals api={api} />}
-                    {isReady === true && <Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
+                    {isReady === true && <Header api={api} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
                     {isReady === true && <NotificationComponent />}
                     {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
                     {isReady === true && <Footer />}
