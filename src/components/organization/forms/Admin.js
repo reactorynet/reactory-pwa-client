@@ -133,7 +133,7 @@ class OrganizationForm extends Component {
   updateOrganization = (evt) => {
 
     this.props.api.log(`Admin.updateOrganization (evt) `, { evt }, 'debugger')
-    
+
     const { client } = this.props;
     const { organization } = this.state;
     const that = this;
@@ -446,10 +446,10 @@ class DefaultFormContainer extends Component {
     const self = this;
     const { api } = self.props;
     // api.on('DelegateActionComplete', () => {
-      // console.log('DELEGATE ACTION COMPLETE  -  EMIT CAUGHT DO SOMETHING!!!!!!!!!!');
-      // const comp = self.surveyComponent;
-      // comp.props.refresh();
-      // ;
+    // console.log('DELEGATE ACTION COMPLETE  -  EMIT CAUGHT DO SOMETHING!!!!!!!!!!');
+    // const comp = self.surveyComponent;
+    // comp.props.refresh();
+    // ;
     // });
   }
 
@@ -502,7 +502,6 @@ class DefaultFormContainer extends Component {
             variant="fullWidth">
             <Tab label="Surveys" value={'surveys'} disabled={isNew === true} />
             <Tab label="Organisation" value={'general'} />
-            <Tab label="Business Units" value={'business-units'} disabled={isNew === true} />
             <Tab label="Employees" value={'employees'} disabled={isNew === true} />
             <Tab label="Question Sets" value={'brands'} disabled={isNew === true} />
           </Tabs>
@@ -513,19 +512,7 @@ class DefaultFormContainer extends Component {
             <Route path={'/admin/org/:organizationId/general'} >
               <DefaultFormComponent organization={this.props.organization} onSaved={this.onOrganizationSaved} />
             </Route>
-            <Route path={'/admin/org/:organizationId/business-units*'}>
-              <Switch>
-                <Route exact path={'/admin/org/:organizationId/business-units'}>
-                  <BusinessUnitList organizationId={organizationId} />
-                </Route>
-                <Route exact path={'/admin/org/:organizationId/business-units/new'}>
-                  <BusinessUnitForm mode={'new'} organization={organization} businessUnitId={'new'} />
-                </Route>
-                <Route exact path={'/admin/org/:organizationId/business-units/:businessUnitId'}>
-                  <BusinessUnitFormWithQuery mode={'edit'} organization={organization} businessUnitId={match.params.businessUnitId} />
-                </Route>
-              </Switch>
-            </Route>
+
             <Route path={'/admin/org/:organizationId/employees'}>
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/employees'}>
@@ -564,6 +551,7 @@ class DefaultFormContainer extends Component {
                 </Route>
               </Switch>
             </Route>
+
             <Route path={'/admin/org/:organizationId/brands'} >
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/brands'}>
@@ -578,6 +566,7 @@ class DefaultFormContainer extends Component {
                 }} />
               </Switch>
             </Route>
+
             <Route path={'/admin/org/:organizationId/surveys'}>
               <Switch>
                 <Route exact path={'/admin/org/:organizationId/surveys/new'}>
@@ -593,10 +582,10 @@ class DefaultFormContainer extends Component {
                   <SurveyCalendarForOrganization {...this.props} organizationId={organizationId} />
                 </Route>
                 <Route path={'/admin/org/:organizationId/surveys/:surveyId'} render={(route_props) => {
-                  const { params } = route_props.match;                  
+                  const { params } = route_props.match;
                   return (
                     <Fragment>
-                      {params.surveyId}
+
                       <TowerStoneSurveyConfig
                         mode="edit"
                         surveyId={params.surveyId}
@@ -606,15 +595,13 @@ class DefaultFormContainer extends Component {
                         uiSchemaKey={api.CLIENT_KEY === 'mores' ? 'mores-edit' : 'default'}
                       />
 
-                      {params.surveyId}
                       <TowerStoneSurveyDelegateConfig
                         mode="edit"
                         surveyId={params.surveyId}
-                        organizationId={organizationId}                        
+                        organizationId={organizationId}
                         data={[]}
                       />
 
-                      {params.surveyId} 
                       <TowerStoneSurveySettings
                         mode="edit"
                         surveyId={params.surveyId}
@@ -622,7 +609,7 @@ class DefaultFormContainer extends Component {
                         formContext={{ organizationId, surveyId: params.surveyId }}
                         formData={{}}
                       />
-                      {params.surveyId} 
+
                       <TowerStoneSurveyTemplatesForm
                         mode="edit"
                         surveyId={params.surveyId}

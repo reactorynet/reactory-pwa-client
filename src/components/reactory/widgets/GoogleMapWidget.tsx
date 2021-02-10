@@ -191,7 +191,7 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
           </IconButton>
         </Tooltip>
         }
-       
+
 
         {isExisting === true && <Tooltip title="Click here to delete this address">
           <IconButton className={classes.dangerButton} size="small" onClick={() => { setConfirmDeleteAddress(true) }}>
@@ -300,7 +300,7 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
                     <Icon>request_quote</Icon>
                   </Badge>
                 </Tooltip>
-              </Grid>              
+              </Grid>
             </Grid>
           </Grid>
         </Grid>
@@ -1510,6 +1510,7 @@ class ReactoryGoogleMapWidget extends Component<any, any> {
           }
 
           if (onChange && typeof onChange === "function") {
+            debugger
             let addressData = api.utils.objectMapper(
               { address, self },
               objectMap

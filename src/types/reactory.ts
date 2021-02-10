@@ -645,6 +645,11 @@ namespace Reactory {
     items: T[]
     [key: string]: any
   }
+
+  export interface IReactoryContext {
+    user: Reactory.IUser
+    partner: Reactory.IPartner
+  }
 }
 
 export default Reactory;

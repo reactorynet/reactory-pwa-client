@@ -1,4 +1,4 @@
-import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties } from 'react';
+import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties, Ref } from 'react';
 import PropTypes, { ReactNodeArray, string } from 'prop-types';
 import IntersectionVisible from 'react-intersection-visible';
 import Form from './form/components/Form';
@@ -136,7 +136,7 @@ export interface ReactoryFormProperties {
   validate?: Function,
   transformErrors?: Function,
   autoQueryDisabled?: boolean,
-  refCallback?: Function,
+  refCallback?: (formReference: any) => void,
   queryOnFormDataChange?: boolean,
   onBeforeMutation?: Function,
   onBeforeQuery?: Function,
@@ -567,6 +567,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                   _formData = _result;
                   break;
                 }
+                case 'function': {
+                  //use a custom merging function
+                  //for the form / mutation 
+                  //specify the function id on graph
+                  break;
+                }
                 case 'merge':
                 default: {
                   _formData = reactory.utils.lodash.merge({}, formData, _result);
@@ -634,8 +640,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                     });
                   }
                 } else {
-                  if(mutation.onSuccessEvent && mutation.onSuccessEvent.name) {
-                    if(typeof props[mutation.onSuccessEvent.name] === 'function') {  
+                  if (mutation.onSuccessEvent && mutation.onSuccessEvent.name) {
+                    if (typeof props[mutation.onSuccessEvent.name] === 'function') {
                       props[mutation.onSuccessEvent.name]({ formData: mutation.onSuccessEvent.dataMap ? reactory.utils.objectMapper(data[mutation.name], mutation.onSuccessEvent.dataMap) : data[mutation.name] });
                     }
                   }
@@ -745,7 +751,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const setState = ($state: any, callback = () => { }) => {
 
-
     let _$state = { ...$state };
     delete _$state.formData;
     if (Object.keys(_$state).length > 0) {
@@ -789,9 +794,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   }
 
   const $submitForm = () => {
-    if (isNil(formRef) === false && formRef) {
+    if (isNil(formRef) === false && formRef.current) {
       try {
-        formRef.onSubmit();
+        if (formRef.current && formRef.current.onSubmit) {
+
+          formRef.current.onSubmit();
+        }
       } catch (submitError) {
         reactory.createNotification(`The Form ${signature} could not submit`, { type: "warning", showInAppNotification: true, canDismis: true });
         reactory.log(`Could not submit the form`, submitError, 'error')
@@ -806,6 +814,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       props,
       submit: $submitForm,
       state: getState(),
+      validate: () => {
+        if (formRef && formRef.current) {
+          formRef.current.validate();
+        }
+      },
+      formRef,
       onChange
     }
   }
@@ -1427,7 +1441,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       ErrorList: (error_props) => (<MaterialErrorListTemplate {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,
       ref: (form: any) => {
-        setFormRef(form);
+        if (formRef.current === null || formRef.current === undefined) formRef.current = form;
         if (props.refCallback) props.refCallback(getFormReference())
       },
       transformErrors: (errors = []) => {

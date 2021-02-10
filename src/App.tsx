@@ -16,7 +16,7 @@ import configureStore from './models/redux';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
 import { ThemeProvider, Theme } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import { createMuiTheme } from '@material-ui/core/styles';
+import { createMuiTheme, makeStyles } from '@material-ui/core/styles';
 import queryString from './query-string';
 import './App.css';
 import Header from '@reactory/client-core/components/shared/DefaultHeader';
@@ -256,10 +256,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [statusInterval, setStatusInterval] = React.useState<NodeJS.Timeout>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
-  const [sizeSpec, setSizeSpec] = React.useState<WindowSizeSpec>(api.getSizeSpec());
+  //const [sizeSpec, setSizeSpec] = React.useState<WindowSizeSpec>(api.getSizeSpec());
+
 
   const components: any = api.getComponents(dependcies);
   const { Loading, Login, FullScreenModal, NotificationComponent, NotFound, Footer } = components;
+
+
 
 
   const onRouteChanged = (path: string) => {
@@ -296,7 +299,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
     api.muiTheme = muiTheme;
     setTheme(muiTheme);
-    setSizeSpec(api.getSizeSpec());
+    //setSizeSpec(api.getSizeSpec());
 
   };
 
@@ -342,7 +345,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     api.$windowSize = _size_spec;
     api.log('ReactoryHOC Resize', _size_spec);
     api.emit('onWindowResize', _size_spec);
-    //setSizeSpec(_size_spec);
+    // setSizeSpec(_size_spec);
   };
 
 
@@ -431,7 +434,47 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   useEffect(willMount, []);
 
+  const useStyles = makeStyles(($muiTheme) => {
+    return {
 
+      root_paper: {
+        //minHeight: sizeSpec.resolution.height,
+        borderRadius: 0,
+      },
+
+      selectedMenuLabel: {
+        color: $muiTheme.palette.primary.main,
+        paddingRight: $muiTheme.spacing(1.5),
+        paddingLeft: $muiTheme.spacing(1)
+      },
+      prepend: {
+        color: 'rgb(34, 39, 50)',
+        opacity: 0.7,
+        paddingLeft: $muiTheme.spacing(1.5),
+        paddingRight: $muiTheme.spacing(1)
+      },
+      selected: {
+        color: 'rgb(34, 39, 50)',
+        opacity: 1,
+        paddingLeft: $muiTheme.spacing(1)
+      },
+      preffered: {
+        fontWeight: 'bold',
+        color: $muiTheme.palette.primary.main
+      },
+      get_started: {
+        fontSize: '20px',
+        color: 'grey',
+        textAlign: 'center',
+        marginTop: '30px'
+      },
+      schema_selector: {
+        textAlign: 'right'
+      }
+    }
+  });
+
+  const classes = useStyles();
 
 
   if (isReady === false) return <AppLoading />;
@@ -445,13 +488,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             <ApolloProvider client={api.client}>
               <MuiPickersUtilsProvider utils={MomentUtils}>
                 <ReactoryProvider api={api}>
-                  <React.Fragment>
+                  <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
                     {isReady === true && <Globals api={api} />}
                     {isReady === true && <Header api={api} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
                     {isReady === true && <NotificationComponent />}
                     {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
                     {isReady === true && <Footer />}
-                  </React.Fragment>
+                  </Paper>
                 </ReactoryProvider>
               </MuiPickersUtilsProvider>
             </ApolloProvider>

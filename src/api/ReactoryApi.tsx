@@ -190,6 +190,11 @@ export interface WindowSizeSpec {
   outerHeight: number,
   outerWidth: number,
   view: string,
+  resolution: {
+    height: number,
+    width: number,
+  },
+  ratio: number,
   size: string
 }
 
@@ -432,6 +437,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       outerHeight,
       innerWidth,
       outerWidth,
+      screen
     } = window;
 
     const theme: ReactoryTheme = this.muiTheme;
@@ -448,6 +454,11 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       innerWidth,
       outerHeight,
       outerWidth,
+      resolution: {
+        width: screen.width * window.devicePixelRatio,
+        height: screen.height * window.devicePixelRatio
+      },
+      ratio: window.devicePixelRatio,
       view,
       size
     }
@@ -581,7 +592,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     if (typeof functionReference === 'function') {
       if (requiresApi === true) {
         this.$func[fqn] = (props) => {
-          return functionReference({ ...props, api: this });
+          return functionReference({ ...props, api: this, reactory: this });
         };
       } else {
         this.$func[fqn] = functionReference;

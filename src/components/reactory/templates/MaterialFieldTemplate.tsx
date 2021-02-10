@@ -15,6 +15,7 @@ import {
   IconButton,
   Toolbar,
   Tooltip,
+  FormControlProps,
 } from '@material-ui/core'
 
 import { withApi } from '../../../api/ApiProvider'
@@ -69,10 +70,10 @@ const MaterialFieldTemplateFunction = (props) => {
 
 
   if (uiOptions !== null) {
-    showLabel = uiOptions.showLabel ? uiOptions.showLabel === true : false;
+    showLabel = uiOptions.showLabel !== undefined && uiOptions.showLabel !== null ? uiOptions.showLabel === true : true;
 
     if (hidden === true || uiWidget === "HiddenWidget") {
-      return <Fragment>{children}</Fragment>
+      return <>{children}</>
     }
 
     if (uiOptions.componentFqn) {
@@ -129,16 +130,16 @@ const MaterialFieldTemplateFunction = (props) => {
   let allowsNull = false;
   let schemaType = schema.type;
 
-  let themeVariant = "standard";
+  let themeVariant = 'standard';
   if (theme.MaterialInput) {
     themeVariant = theme.MaterialInput.variant || themeVariant;
   }
 
-  let formControlProps = {
+  let formControlProps: FormControlProps = {
     className: classes.formControl,
     style: uiOptions ? uiOptions.style : {},
     fullWidth: true,
-    variant: themeVariant,
+    variant: 'standard'
   }
 
   if (uiOptions && uiOptions.fullWidth === false) {
@@ -173,7 +174,7 @@ const MaterialFieldTemplateFunction = (props) => {
     default: {
 
       const labelRef = React.useRef(null);
-      let inputLabelProps = {
+      let inputLabelProps: any = {
         htmlFor: id,
         required,
         color: uiOptions && uiOptions.labelProps && uiOptions.labelProps.color ? uiOptions.labelProps.color : 'primary',
@@ -190,7 +191,7 @@ const MaterialFieldTemplateFunction = (props) => {
         inputLabelProps.shrink = false;
       } else {
         // if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink) {
-          if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink != undefined && uiOptions.labelProps.dontShrink) {
+        if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink != undefined && uiOptions.labelProps.dontShrink) {
           inputLabelProps.style = {};
           inputLabelProps.shrink = false;
         } else {
@@ -205,9 +206,17 @@ const MaterialFieldTemplateFunction = (props) => {
 
       let labelComponent = isObject === false || isBoolean === true ? <InputLabel {...inputLabelProps}  >{label}</InputLabel> : null;
 
+      if (uiWidget && uiWidget === 'DateSelectorWidget') {
+        return <>{children}</>
+      }
+
+      if (uiOptions && uiOptions.component === 'TextField') return (<>{children}</>);
+
+      if (uiWidget === 'LabelWidget' && (uiOptions.showLabel === null || uiOptions.showLabel === undefined)) showLabel = false;
+
       return (
         <FormControl {...formControlProps}>
-          {uiWidget === null && showLabel !== false ? labelComponent : null}
+          {showLabel !== false ? labelComponent : null}
           {children}
           {isNil(rawDescription) === false ? <FormHelperText id={`${id}_helper`}>{rawDescription}</FormHelperText> : null}
           {errors}

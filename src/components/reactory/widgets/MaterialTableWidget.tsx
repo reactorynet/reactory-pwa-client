@@ -173,7 +173,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             if (queryResult.errors && queryResult.errors.length > 0) {
               //show a loader error
               reactory.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
-              reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })
+              // reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })
             } else {
 
               response = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
@@ -323,23 +323,36 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     });
   }
 
+  const view_mode = localStorage.getItem('$reactory$theme_mode') || "light";
+  let theme_alt_rowStyle = {};
+  let theme_row_style = {};
+  let theme_selected_style = {};
+  let theme_header_style = {};
+
+  if (theme.MaterialTableWidget) {
+    if (theme.MaterialTableWidget[view_mode].rowStyle) theme_row_style = { ...theme.MaterialTableWidget[view_mode].rowStyle };
+    if (theme.MaterialTableWidget[view_mode].altRowStyle) theme_alt_rowStyle = { ...theme.MaterialTableWidget[view_mode].altRowStyle };
+    if (theme.MaterialTableWidget[view_mode].selectedRowStyle) theme_selected_style = theme.MaterialTableWidget[view_mode].selectedRowStyle;
+    if (theme.MaterialTableWidget[view_mode].headerStyle) theme_header_style = theme.MaterialTableWidget[view_mode].headerStyle;
+  }
+
+  if (uiOptions.headerStyle) {
+    theme_header_style = { ...theme_header_style, ...uiOptions.headerStyle };
+  }
+
   let options: any = {
     rowStyle: (rowData, index) => {
       reactory.log(' 🎨 MaterialTableWidget.rowStyle', { rowData, index }, 'debug')
-      let style = {};
-      let selectedStyle = {};
+      let style = { ...theme_row_style };
+      let selectedStyle = { ...theme_selected_style };
 
-      if (theme.MaterialTableWidget) {
-        if (theme.MaterialTableWidget.selectedRowStyle) selectedStyle = theme.MaterialTableWidget.selectedRowStyle;
-        if (theme.MaterialTableWidget.rowStyle) style = { ...theme.MaterialTableWidget.rowStyle };
-        if (theme.MaterialTableWidget.altRowStyle && index % 2 === 0) style = { ...style, ...theme.MaterialTableWidget.altRowStyle };
-      }
+      if (index % 2 === 0) style = { ...style, ...theme_alt_rowStyle };
 
-      if (uiOptions.rowStyle) style = { ...uiOptions.rowStyle };
+      if (uiOptions.rowStyle) style = { ...style, ...uiOptions.rowStyle };
       if (uiOptions.altRowStyle && index % 2 === 0) style = { ...style, ...uiOptions.altRowStyle };
 
       if (uiOptions.selectedRowStyle) {
-        selectedStyle = uiOptions.selectedRowStyle;
+        selectedStyle = { ...selectedStyle, ...uiOptions.selectedRowStyle };
       }
 
       if (find(selectedRows, (row) => row.tableData.id === rowData.tableData.id)) {
@@ -351,6 +364,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       }
 
       return style;
+    },
+    headerStyle: {
+      ...theme_header_style
     }
   };
 

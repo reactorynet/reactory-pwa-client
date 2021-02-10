@@ -147,23 +147,27 @@ class SelectWidget extends Component {
 
     inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
 
-    return (
-      <FormControl variant={variant} size={uiOptions.size || "medium"}>
-        <InputLabel {...inputLabelProps}
+    /**
+     *   <InputLabel {...inputLabelProps}
           htmlFor={self.props.idSchema.$id}
           required={required === true}>{self.props.schema.title}</InputLabel>
-        <Select
-          {...selectProps}
-          value={self.props.formData || ""}
-          onChange={onSelectChanged}
-          name={self.props.name}
-          displayEmpty={true}
-          renderValue={renderSelectedValue}
-          input={<InputComponent id={self.props.idSchema.$id} value={self.props.formData || ""} />}>
-          {required === false ? <MenuItem value=""><em>None</em></MenuItem> : null}
-          {elements}
-        </Select>
-      </FormControl>
+     * 
+     */
+
+    return (
+
+
+      <Select
+        {...selectProps}
+        value={self.props.formData || ""}
+        onChange={onSelectChanged}
+        name={self.props.name}
+        displayEmpty={true}
+        renderValue={renderSelectedValue}
+        input={<InputComponent id={self.props.idSchema.$id} value={self.props.formData || ""} />}>
+        {required === false ? <MenuItem value=""><em>None</em></MenuItem> : null}
+        {elements}
+      </Select>
     )
   }
 }

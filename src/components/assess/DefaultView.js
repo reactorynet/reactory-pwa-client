@@ -110,7 +110,7 @@ class RatingControl extends Component {
   }
 
   ratingClick(score) {
-    
+
     const { behaviour, rating } = this.props;
 
     const data = {
@@ -159,9 +159,9 @@ class RatingControl extends Component {
     let steps = [];
     let needsAttention = false;
     for (let stepId = behaviour.scale.min; stepId < behaviour.scale.max; stepId++) {
-      const doRatingClick = ( evt ) => {  
+      const doRatingClick = (evt) => {
         evt.stopPropagation();
-        that.ratingClick(stepId ); 
+        that.ratingClick(stepId);
       };
 
       steps.push((
@@ -550,12 +550,13 @@ class DefaultView extends Component {
           <componentDefs.StaticContent
             slug={`mores-assessments-${survey.surveyType}_${survey.id}-welcome-screen`.toLowerCase()}
             title={`Welcome Screen: ${survey.surveyType}`}
-            propertyBag={this.props}
+            editAction={'link'}
+            showEditIcon={true}
             defaultValue={<Typography gutterBottom variant="body1">Thank you for taking the time to complete this {assessment.survey.leadershipBrand.title} survey</Typography>}>
           </componentDefs.StaticContent>
 
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <componentDefs.StaticContent slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
+            <componentDefs.StaticContent editAction={'link'} slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
           </div>
         </Paper>
       )
@@ -566,7 +567,9 @@ class DefaultView extends Component {
           <componentDefs.StaticContent
             slug={`mores-assessments-${survey.surveyType}_${survey.id}-welcome-screen`.toLowerCase()}
             title={`Welcome Screen: ${survey.surveyType}`}
-            propertyBag={this.props}
+            propertyBag={{ survey, assessment }}
+            showEditIcon={true}
+            editAction={'link'}
             defaultValue={<Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
             5 - 7 minutes.<br />
             You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
@@ -575,7 +578,11 @@ class DefaultView extends Component {
 
 
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <componentDefs.StaticContent slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`} defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo} className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
+            <componentDefs.StaticContent
+              editAction={'link'}
+              slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`}
+              defaultValue={<img src={isPLC ? theme.assets.feplmodel : theme.assets.logo}
+                className={!isPLC ? classes.logo : classes.plcLogo} alt={theme} />} />
           </div>
 
         </Paper>
@@ -609,8 +616,8 @@ class DefaultView extends Component {
         }).then(response => {
           let isComplete = false;
           if (response.data.setAssessmentComplete && response.data.setAssessmentComplete) isComplete = response.data.setAssessmentComplete.complete === true;
-          that.setState({ completing: false, complete: isComplete, assessment: { ...lodash.cloneDeep(that.state.assessment), complete: isComplete } }, ()=>{
-            gotoDashboard()            
+          that.setState({ completing: false, complete: isComplete, assessment: { ...lodash.cloneDeep(that.state.assessment), complete: isComplete } }, () => {
+            gotoDashboard()
           });
         }).catch(mutateError => {
           that.setState({ completing: false, completeError: 'Could not update the assessment status' });
@@ -622,16 +629,16 @@ class DefaultView extends Component {
       <Paper className={classes.thankYouScreen}>
         {assessment.complete === false &&
           <Fragment>
-            <StaticContent slug={`mores-assessments-survey-${survey.id}-thank-you`} propertyBag={{assessment, survey }} editAction={'link'} defaultValue={<> 
-            <Typography gutterBottom variant="body1">Thank you for taking the time to provide your input. If you are comfortable with the ratings and input that you have provided, please click FINISH.</Typography> 
-            <Typography variant="body1">You may click BACK below to review your input, however once you click FINISH you will not be able to change your input.</Typography>
-            </>}/>                        
+            <StaticContent slug={`mores-assessments-survey-${survey.id}-thank-you`} editAction={'link'} defaultValue={<>
+              <Typography gutterBottom variant="body1">Thank you for taking the time to provide your input. If you are comfortable with the ratings and input that you have provided, please click FINISH.</Typography>
+              <Typography variant="body1">You may click BACK below to review your input, however once you click FINISH you will not be able to change your input.</Typography>
+            </>} />
             <Button onClick={completeAssessment} style={{ marginRight: '4px', color: palette.success.main }}><Icon>check_outline</Icon>&nbsp;Finish</Button>
-          </Fragment>}        
+          </Fragment>}
       </Paper>
     );
   }
-      
+
   startAssessment = () => {
     // SAVES A TIMELINE ENTY ON SURVEY - SURVEY STARTED
     const { api } = this.props;
@@ -688,11 +695,11 @@ class DefaultView extends Component {
       custom: ratingEntry.custom === true,
       behaviourText: ratingEntry.behaviourText,
       deleteRating: deleteRating,
-  }, { 'fetch-policy': 'cache-and-network' } ).then(response => {
+    }, { 'fetch-policy': 'cache-and-network' }).then(response => {
 
-      
-      if(response.errors && response.errors.length > 0) {
-        api.createNotification('Could not save your last score. The system may be offline, please try again in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'errors'})
+
+      if (response.errors && response.errors.length > 0) {
+        api.createNotification('Could not save your last score. The system may be offline, please try again in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'errors' })
       }
 
       if (ratingIndex === -1) {
@@ -707,7 +714,7 @@ class DefaultView extends Component {
         that.setState({ assessment: assessmentState })
       }
 
-      if(iteration > 0) {
+      if (iteration > 0) {
         const assessmentState = lodash.cloneDeep(assessment);
         assessmentState.ratings[ratingIndex] = ratingEntry;
         that.setState({ assessment: assessmentState })
@@ -715,27 +722,27 @@ class DefaultView extends Component {
 
     }).catch((persistRatingError) => {
       api.log('Error saving rating value', persistRatingError, 'error')
-      
-      if(assessment_rollback) {
+
+      if (assessment_rollback) {
         that.setState({ assessment: assessment_rollback }, () => {
-          if(iteration === 0) {
-            api.createNotification('Could not save your last score, the system will automatically retry in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'info'})
-            setTimeout(()=>{
-              that.persistRating(ratingEntry, ratingIndex, deleteRating, iteration+1)
+          if (iteration === 0) {
+            api.createNotification('Could not save your last score, the system will automatically retry in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'info' })
+            setTimeout(() => {
+              that.persistRating(ratingEntry, ratingIndex, deleteRating, iteration + 1)
             }, 3000)
           } else {
-              if(iteration < 3) {
+            if (iteration < 3) {
 
-                setTimeout(()=>{
-                  that.persistRating(ratingEntry, ratingIndex, deleteRating, iteration+1)
-                }, 3000 * iteration)
-              } else {
-                api.createNotification('Could not save your last score, the system may be offline, please try again in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'error'})            
-              }              
+              setTimeout(() => {
+                that.persistRating(ratingEntry, ratingIndex, deleteRating, iteration + 1)
+              }, 3000 * iteration)
+            } else {
+              api.createNotification('Could not save your last score, the system may be offline, please try again in a few moments.', { showInAppNotification: true, canDismiss: true, type: 'error' })
+            }
           }
-         
+
         })
-      } 
+      }
     })
   }
 
@@ -1148,7 +1155,6 @@ class DefaultView extends Component {
             slug={contentId}
             title={`Mores Assessment Survey Instruction Header - ${survey.title} [${quality.title}]`}
             defaultValue={assessmetnInstructionsDefaultContent}
-            propertyBag={{ assessment, quality, survey }}
             viewMode='default'
             editAction='link'
           />
@@ -1295,7 +1301,6 @@ class DefaultView extends Component {
 
     const { ratings } = assessment;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
-
 
     const invalidRatings = lodash.find(ratings, r => {
 

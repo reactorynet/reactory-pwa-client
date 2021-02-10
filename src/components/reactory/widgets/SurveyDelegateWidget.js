@@ -318,12 +318,12 @@ class SurveyDelegates extends Component {
     formData: [],
   };
 
-  
+
 
   constructor(props, context) {
     super(props, context)
 
-    const state = initialState(props);  
+    const state = initialState(props);
     state.reportType = state.surveyProps.delegateReportName;
 
     this.state = state;
@@ -360,10 +360,10 @@ class SurveyDelegates extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    const { api } = this.props;    
+    const { api } = this.props;
     this.props.api.log(`👁‍🗨👁‍🗨👁‍🗨👁‍🗨 SurveyDelegateWidget componentDidUpdate`, { props: this.props, prevProps, prevState });
     if (api.utils.deepEquals(prevProps, this.props) === false) {
-      let state = initialState(this.props);  
+      let state = initialState(this.props);
       state.reportType = state.surveyProps.delegateReportName;
       this.setState(state);
     }
@@ -503,10 +503,10 @@ class SurveyDelegates extends Component {
 
     let modalviewComponent = null;
 
-    
+
     let reportData = {};
 
-    if(basicModalViewMode !== 'one_view_chart') {      
+    if (basicModalViewMode !== 'one_view_chart') {
       reportData = {
         surveyId: self.props.formContext.surveyId,
         delegateId: activeEntry.id || '',
@@ -632,9 +632,9 @@ class SurveyDelegates extends Component {
                 break;
               }
             }
-  
+
             if (!peerHasAssessement) {
-  
+
               const onMenuItemSelect = (evt, menuItem) => {
                 switch (menuItem.id) {
                   case "launch": {
@@ -646,7 +646,7 @@ class SurveyDelegates extends Component {
                   }
                 }
               };
-  
+
               const menus = [
                 {
                   title: 'Launch',
@@ -656,7 +656,7 @@ class SurveyDelegates extends Component {
                 }
               ]
               const dropdown = <DropDownMenu menus={menus} onSelect={onMenuItemSelect} />
-  
+
               return (
                 <UserListItem
                   key={ind}
@@ -664,10 +664,10 @@ class SurveyDelegates extends Component {
                   message={'Pending'}
                   secondaryAction={dropdown} />);
             }
-  
+
           })
-        } 
-        
+        }
+
 
         modalviewComponent = (
           <Paper className={this.props.classes.root} elevation={2}>
@@ -872,7 +872,7 @@ class SurveyDelegates extends Component {
       case 'one_view_chart': {
         component = self.getBasicModalView();
         break;
-      }  
+      }
       case 'detail':
       default: {
         if (activeEntry === null) return null;
@@ -1112,7 +1112,7 @@ class SurveyDelegates extends Component {
   }
 
   // NEW
-  launchSingleAssessore(delegateEntry, communication = 'launch-single-assessor', inputData) {    
+  launchSingleAssessore(delegateEntry, communication = 'launch-single-assessor', inputData) {
     this.doAction(delegateEntry, communication, inputData, `Adding ${inputData.peer.firstName} ${inputData.peer.lastName} as an assessor for ${delegateEntry.delegate.firstName} ${delegateEntry.delegate.lastName}.`);
   }
 
@@ -1389,7 +1389,7 @@ class SurveyDelegates extends Component {
         title: 'Display One View Chart',
         clickHandler: evt => {
           self.setState({ basicModalViewMode: 'one_view_chart', modal: true, modalType: 'basic', delegateIds: selected, selectionTitle: self.state.selectionTitle });
-            
+
         },
         icon: <Icon>donut_large</Icon>,
         enabled: true,
@@ -1774,17 +1774,16 @@ class SurveyDelegates extends Component {
         <Grid container className={this.props.classes.root} direction="column">
           <Grid>
             {that.state.busy && that.state.message && <Typography variant="caption" color="secondary"><Icon>info</Icon>{that.state.message}</Typography>}
-            {formContext.surveyId}
           </Grid>
           <Grid container direction="row">
-            <Grid item md={ 6 }>{reportTitleComponent}</Grid>
-            <Grid item md={ 6 }>{reportDescriptionCompnonent}</Grid>
-          </Grid> 
+            <Grid item md={6}>{reportTitleComponent}</Grid>
+            <Grid item md={6}>{reportDescriptionCompnonent}</Grid>
+          </Grid>
           <Grid item>
             {list}
           </Grid>
-          
-          
+
+
           {<SpeedDial buttonStyle={{ position: 'fixed' }} actions={sortBy(speedDialActions, e => e.ordinal)} icon={<Icon>engineering</Icon>} />}
           {that.getActiveModalView()}
         </Grid>

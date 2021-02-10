@@ -24,7 +24,7 @@ import {
   Tooltip,
 } from '@material-ui/core'
 
-import { withApi } from '../../../api/ApiProvider'
+import { withApi } from '@reactory/client-core/api/ApiProvider'
 
 class ArrayTemplate extends Component {
 
@@ -48,7 +48,7 @@ class ArrayTemplate extends Component {
     arrayContainer: {
 
     },
-    fabButton: {      
+    fabButton: {
       position: 'relative',
       right: 0,
       marginRight: theme.spacing(1),
@@ -73,7 +73,7 @@ class ArrayTemplate extends Component {
       },
       selected: {
 
-      },      
+      },
     };
   }
 
@@ -93,21 +93,21 @@ class ArrayTemplate extends Component {
     this.props.onChange([...formData, newItem])
   }
 
-  onChangeForIndex(value, index, errorSchema){
+  onChangeForIndex(value, index, errorSchema) {
     //console.info('index item change', { index, value, errorSchema })
     //this.props.onChange(formData.map())
-    const newData = this.props.formData.map((item, idx) => { 
-      if(idx === index) return {...item, ...value};
+    const newData = this.props.formData.map((item, idx) => {
+      if (idx === index) return { ...item, ...value };
       return item;
     });
-    
-    if(this.props.onChange) this.props.onChange(newData);    
+
+    if (this.props.onChange) this.props.onChange(newData);
   }
 
-  renderArrayFieldItem(props) {    
+  renderArrayFieldItem(props) {
 
     const {
-      index, 
+      index,
       canMoveUp,
       canMoveDown,
       itemSchema,
@@ -120,8 +120,8 @@ class ArrayTemplate extends Component {
       onFocus,
       parentSchema,
     } = props;
-    
-    const { 
+
+    const {
       selected,
       expanded
     } = this.state
@@ -138,18 +138,18 @@ class ArrayTemplate extends Component {
       toolbar: true,
     };
 
-    const changeForIndex = ( formData, errorSchema ) => {
+    const changeForIndex = (formData, errorSchema) => {
       this.onChangeForIndex(formData, index, errorSchema);
     }
 
-    const expandForIndex = ( index ) => {
+    const expandForIndex = (index) => {
       ////console.log('Expand for index', index);
-      this.setState({ expanded: {...this.state.expanded, index: expanded[index] === true ? false : true }});
+      this.setState({ expanded: { ...this.state.expanded, index: expanded[index] === true ? false : true } });
     };
 
     const selectForIndex = (index) => {
       ////console.log('Select for index', index);
-      this.setState({ selected: {...this.state.selected, index: selected[index] === true ? false : true }});
+      this.setState({ selected: { ...this.state.selected, index: selected[index] === true ? false : true } });
     }
 
     const SchemaField = this.registry.fields.SchemaField;
@@ -162,7 +162,7 @@ class ArrayTemplate extends Component {
       required: itemSchema.type !== "null" || itemSchema.type !== null,
       onChange: changeForIndex,
       onBlur: onBlur,
-      onFocus: onFocus,              
+      onFocus: onFocus,
       registry: this.registry,
       disabled: this.props.disabled,
       readonly: this.props.readonly,
@@ -199,7 +199,7 @@ class ArrayTemplate extends Component {
       expanded: expanded[index] === true,
       selected: selected[index] === true,
       onExpand: expandForIndex,
-      onSelect: selectForIndex,        
+      onSelect: selectForIndex,
       index: index,
       onDropIndexClick: deleteItemClick,
       onReorderClick: this.onReorderClick,
@@ -208,25 +208,25 @@ class ArrayTemplate extends Component {
 
     //console.log('Rendering Default Array Container', { containerProps, schemaFieldProps, props });
 
-    
+
 
     let toolbar = null
-    if(has.toolbar){
+    if (has.toolbar) {
       toolbar = (
         <Toolbar>
-          {has.moveUp === true ? <IconButton type="button"><Icon>keyboard_arrow_up</Icon></IconButton> : null }
-          {has.moveDown === true ? <IconButton type="button"><Icon>keyboard_arrow_down</Icon></IconButton> : null }
-          {has.remove === true ? <IconButton type="button" onClick={deleteItemClick}><Icon>delete_outline</Icon></IconButton> : null }
+          {has.moveUp === true ? <IconButton type="button"><Icon>keyboard_arrow_up</Icon></IconButton> : null}
+          {has.moveDown === true ? <IconButton type="button"><Icon>keyboard_arrow_down</Icon></IconButton> : null}
+          {has.remove === true ? <IconButton type="button" onClick={deleteItemClick}><Icon>delete_outline</Icon></IconButton> : null}
         </Toolbar>
       )
     }
     return (
-      <Fragment key={index}>      
+      <Fragment key={index}>
         <SchemaField {...schemaFieldProps} containerProps={containerProps} toolbar={toolbar}>
         </SchemaField>
-        {toolbar}        
+        {toolbar}
       </Fragment>
-    )    
+    )
   }
 
   renderNormalArray() {
@@ -262,10 +262,10 @@ class ArrayTemplate extends Component {
     let ArrayComponent = null
     let componentProps = {}
     if (uiWidget !== null) {
-      if(registry.widgets[uiWidget]) ArrayComponent = registry.widgets[uiWidget]
-      if(!ArrayComponent) {
+      if (registry.widgets[uiWidget]) ArrayComponent = registry.widgets[uiWidget]
+      if (!ArrayComponent) {
         ArrayComponent = api.getComponent(uiWidget);
-      }      
+      }
       if (uiOptions && uiOptions.componentProps) {  //map properties to the component
         Object.keys(componentProps).map(property => {
           componentProps[property] = formData[uiOptions.componentProps[property]]
@@ -305,40 +305,40 @@ class ArrayTemplate extends Component {
         </Grid>)
     }
 
-    if(uiOptions && uiOptions.container) {
+    if (uiOptions && uiOptions.container) {
       //resolve Container from API
       const Container = api.getComponent(uiOptions.container)
       let containerProps = {}
-      if(uiOptions.containerProps) {
-        containerProps = {...uiOptions.containerProps}
+      if (uiOptions.containerProps) {
+        containerProps = { ...uiOptions.containerProps }
       }
-      if(Container){
+      if (Container) {
         return (
-        <Container {...containerProps}>
-          {ArrayComponent !== null ? <ArrayComponent { ...{...this.props, ...componentProps}} /> : null}
-        </Container>);
+          <Container {...containerProps}>
+            {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+          </Container>);
       } else {
         return (
-        <Paper className={classes.root} {...containerProps}>
-          {ArrayComponent !== null ? <ArrayComponent { ...{...this.props,...componentProps}} /> : null}
-        </Paper>);
+          <Paper className={classes.root} {...containerProps}>
+            {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+          </Paper>);
       }
     } else {
       //default behaviour
       return (
         <Paper className={classes.root}>
-          <Typography variant="h4">{schema.title}</Typography>          
+          <Typography variant="h4">{schema.title}</Typography>
           <Grid container spacing={8}>
-            {ArrayComponent !== null ? <ArrayComponent {...componentProps} /> : null}           
+            {ArrayComponent !== null ? <ArrayComponent {...componentProps} /> : null}
           </Grid>
           <Tooltip title={`Click here to add a new ${schema.title}`}>
-              <Button color="secondary" variant="outlined" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
-                <Icon>add</Icon>
-              </Button>   
-            </Tooltip>
+            <Button color="secondary" variant="outlined" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
+              <Icon>add</Icon>
+            </Button>
+          </Tooltip>
         </Paper>
       );
-    }        
+    }
   }
 
   render() {
