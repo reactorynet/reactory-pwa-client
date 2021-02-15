@@ -1552,7 +1552,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       if (_formUiOptions && _formUiOptions.schemaSelector && activeUiSchemaModel) {
         if (_formUiOptions.schemaSelector.variant === "icon-button") {
 
-          // debugger;
 
           let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px', zIndex: 1000 };
           if (_formUiOptions.schemaSelector.style) {

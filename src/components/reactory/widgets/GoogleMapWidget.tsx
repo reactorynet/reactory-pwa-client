@@ -1510,7 +1510,6 @@ class ReactoryGoogleMapWidget extends Component<any, any> {
           }
 
           if (onChange && typeof onChange === "function") {
-            debugger
             let addressData = api.utils.objectMapper(
               { address, self },
               objectMap

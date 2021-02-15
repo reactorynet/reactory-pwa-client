@@ -49,7 +49,6 @@ class GridLayoutWidget extends Component {
   // getData = async () => {
   async getData() {
 
-    debugger;
 
     const self = this;
     const { props } = this;
@@ -59,7 +58,6 @@ class GridLayoutWidget extends Component {
     if (uiOptions.remoteData === true) {
       try {
 
-        debugger;
 
         this.setState({ loadingData: true });
         const graphqlDefinitions = formContext.$formState.formDef.graphql;
@@ -82,28 +80,20 @@ class GridLayoutWidget extends Component {
 
           const queryResult = await api.graphqlQuery(queryDefinition.text, variables).then();
 
-          debugger;
 
           if (queryResult.errors && queryResult.errors.length > 0) {
             api.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
             this.setState({ data: [], page: 0, totalCount: 0, loadingData: false });
           } else {
 
-            debugger;
 
             let result = api.utils.objectMapper(queryResult.data[queryDefinition.name], uiOptions.resultMap);
             this.setState((prevState) => ({ data: prevState.data.concat(result.data), page: result.page + 1, totalCount: result.totalCount, loadingData: false }));
           }
         } else {
-
-          debugger;
-
           this.setState({ data: [], page: 0, totalCount: 0, loadingData: false });
         }
       } catch (remoteDataError) {
-
-        debugger;
-
         this.setState({ data: [], page: 0, totalCount: 0, loadingData: false });
       }
     } else {
@@ -131,8 +121,6 @@ class GridLayoutWidget extends Component {
     const { api, classes, uiSchema } = props;
     const uiOptions = uiSchema["ui:options"] || {};
     const { Loading } = this.componentDefs;
-
-    debugger;
 
     const loadingMessage = uiOptions.loadingMessage ? uiOptions.loadingMessage : 'Loading product dimensions, please wait a moment';
 

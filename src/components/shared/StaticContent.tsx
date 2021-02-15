@@ -228,7 +228,6 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     id: props.id,
     uiSchemaKey: viewMode || 'default',
     onMutateComplete: (_newData) => {
-      debugger;
       getData(null)
     },
     helpTopics: props.helpTopics,
