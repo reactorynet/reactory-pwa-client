@@ -212,7 +212,7 @@ const MaterialFieldTemplateFunction = (props) => {
 
       if (uiOptions && uiOptions.component === 'TextField') return (<>{children}</>);
 
-      if (uiWidget === 'LabelWidget' && (uiOptions.showLabel === null || uiOptions.showLabel === undefined)) showLabel = false;
+      if (uiWidget === 'LabelWidget' && uiOptions !== null && uiOptions !== undefined && (uiOptions.showLabel === null || uiOptions.showLabel === undefined)) showLabel = false;
 
       return (
         <FormControl {...formControlProps}>
