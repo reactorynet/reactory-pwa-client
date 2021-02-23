@@ -36,9 +36,9 @@ import {
   TextField,
   Typography,
   useMediaQuery,
-  Tooltip,
   Button,
   Theme,
+  Tooltip,
   StyledComponentProps,
   StyleRulesCallback,
   Checkbox,
@@ -255,11 +255,21 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
         lat: marker.place.geometry.location.lat(),
         lng: marker.place.geometry.location.lng()
       },
-      onMutationComplete: (result) => {
+      onMutateComplete: (result) => {
         api.log('Mutation Complete For Address Editing', { result }, 'debug');
+        const { message, success } = result;
 
-        let address_result = result.formData;
-        onAddressEdited(address_result);
+        debugger
+        if (success === true) {
+          let $formatted_address = result.fullAddress;
+          let $place_id = result.id;
+
+          if (onAddressSelected) {
+            onAddressSelected($formatted_address, $place_id, isExisting === false);
+          }
+
+          setDisplayEdit(false)
+        }
       },
       mode: isExisting === true ? "edit" : "new"
     }
@@ -387,11 +397,18 @@ const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
   /**
    * Triggered when the address is selected, passing it to the map component.
    */
-  const onAddressSelected = () => {
+  const onAddressSelected = (fullAddress, addressId, isNew = false) => {
     if (onSelectAddress) {
 
       api.log(`LasecMarker => acceptAddress `, { marker }, "debug");
-      onSelectAddress(marker);
+      let _address = { ...marker };
+
+      if (isNew === true) {
+        _address.type = 'existing',
+          _address.address = fullAddress
+      }
+
+      onSelectAddress(_address);
     }
   };
 
@@ -1227,8 +1244,15 @@ const ReactoryMap = compose(
 
       <MapControl position={google.maps.ControlPosition.TOP_CENTER}>
         <Paper className={classes.top_toolbar}>
-          <FormControlLabel control={<Checkbox checked={show_remote_results === true} onChange={(evt, checked) => setShowRemoteResults(checked)} icon={<Icon>radio_button_unchecked</Icon>} checkedIcon={<Icon>radio_button_checked</Icon>} />} label="Existing Addresses" />
-          <FormControlLabel control={<Checkbox checked={show_google_results === true} onChange={(evt, checked) => setShowGoogleResults(checked)} icon={<Icon>radio_button_unchecked</Icon>} checkedIcon={<Icon>radio_button_checked</Icon>} />} label="Google Results" />
+          <Tooltip title={show_remote_results === true ? 'Click to exclude local search results' : 'Click to include local search results'}>
+            <FormControlLabel
+              control={<Checkbox color="primary" checked={show_remote_results === true} onChange={(evt, checked) => setShowRemoteResults(checked)} />}
+              label={show_remote_results === true ? 'Displaying local results' : 'Hiding local results'} />
+          </Tooltip>
+          <Tooltip title={show_google_results === true ? 'Click to exclude google results' : 'Click to include google results'}>
+            <FormControlLabel control={<Checkbox color="primary" checked={show_google_results === true} onChange={(evt, checked) => setShowGoogleResults(checked)} />}
+              label={show_google_results === true ? 'Displaying Google results' : 'Hiding Google results'} />
+          </Tooltip>
         </Paper>
       </MapControl>
 

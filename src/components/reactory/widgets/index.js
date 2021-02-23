@@ -50,3 +50,4 @@ export { default as SchemaSelectorWidget } from './SchemaSelectorWidget';
 export { default as ReactoryDropZoneWidget } from './ReactoryDropZone';
 export { default as ReactoryGoogleMapWidget } from './GoogleMapWidget';
 export { default as ReactoryImageWidget } from './ImageWidget';
+export { default as ReactoryColorPicker } from './ReactoryColorPicker';
