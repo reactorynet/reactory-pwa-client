@@ -38,7 +38,9 @@ interface DropZoneReactoryFormWidgetProps {
   style: React.CSSProperties,
 
   // function handler
-  fileDropped: Function
+  fileDropped: Function,
+
+  className: string | any
 }
 
 const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
@@ -61,7 +63,7 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
   api.log(`DropZoneReactorFormWidget`, { acceptedFiles, isFileDialogActive, isDragActive, rejectedFiles });
 
   return (
-    <div {...rootProps} style={style}>
+    <div {...rootProps} className={props.className} style={style}>
       <input {...inputProps} />
       <Typography {...labelProps}>{icon && iconProps.position === "left"}{text}{icon && iconProps.position === "right"}</Typography>
     </div>
@@ -110,14 +112,15 @@ class ReactoryDropZone extends Component<any, any> {
       style: {
 
       },
-      api
+      api,
+      className: null,
     }
 
     if (uiSchema && uiSchema['ui:options']) {
       const uiOptions = uiSchema['ui:options'];
 
       if (uiOptions.style) widgetProps.style = { ...uiOptions.style };
-
+      if (uiOptions.className) widgetProps.className = uiOptions.className;
 
       const { ReactoryDropZoneProps = dropZoneProps } = uiOptions;
       //styles form

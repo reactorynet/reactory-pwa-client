@@ -3,7 +3,7 @@ import { Query, graphql } from '@apollo/client';
 import { compose } from 'redux';
 import { withApi } from '../../../api/ApiProvider';
 import * as utils from '../../util';
-import UserLists  from '../../user/Lists/index';
+import UserLists from '../../user/Lists/index';
 
 export const ChipArrayWidget = require('./ChipArray');
 export const SelectWidget = require('./Select');
@@ -26,7 +26,7 @@ export const UserSelectorWidget = require('./UserSelectorWidget');
 export const PieChartWidget = require('./ChartWidget').default.PieChartWidgetComponent;
 export const FunnelChartWidget = require('./ChartWidget').default.FunnelChartWidgetComponent;
 export const ComposedChartWidget = require('./ChartWidget').default.ComposedChartWidgetComponent;
-export { default as LineChartWidget} from './Charts/LineChartWidget';
+export { default as LineChartWidget } from './Charts/LineChartWidget';
 
 //export const LineChartWidget = require('./ChartWidget').default.LineChartWidgetComponent;
 export const ToolbarWidget = require('./ToolbarWidget');
@@ -49,3 +49,5 @@ export { default as ReactoryFormEditor } from './ReactoryFormEditor';
 export { default as SchemaSelectorWidget } from './SchemaSelectorWidget';
 export { default as ReactoryDropZoneWidget } from './ReactoryDropZone';
 export { default as ReactoryGoogleMapWidget } from './GoogleMapWidget';
+export { default as ReactoryImageWidget } from './ImageWidget';
+export { default as ReactoryColorPicker } from './ReactoryColorPicker';

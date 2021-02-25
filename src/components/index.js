@@ -15,6 +15,7 @@ import * as MaterialIcons from '@material-ui/icons'
 import * as MaterialLab from '@material-ui/lab'
 import * as MaterialStyles from '@material-ui/core/styles';
 import * as MaterialPickers from '@material-ui/pickers';
+import * as MaterialUIColor from 'material-ui-color';
 import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
 
@@ -795,5 +796,11 @@ export const componentRegistery = [
     name: 'Footer',
     component: require('./shared/Footer').Footer,
     version: '1.0.0',
+  },
+  {
+    nameSpace: 'material-ui',
+    name: 'MaterialUIColor',
+    component: MaterialUIColor,
+    version: '1.0.0'
   }
 ];

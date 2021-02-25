@@ -189,9 +189,9 @@ class MaterialGridField extends MaterialObjectField {
     let Container = null
     switch (gridOptions.container) {
       case "div": {
-        Container = (props) => {
-          return (<div className={props.className} style={props.style}>
-            {props.children}
+        Container = (cprops) => {
+          return (<div className={cprops.className} style={cprops.style}>
+            {cprops.children}
           </div>)
         }
 
