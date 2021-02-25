@@ -115,14 +115,14 @@ class Profile extends Component {
         avatarContainer: {
             width: '100%',
             display: 'flex',
-            justifyContent: 'center'
+            justifyContent: 'left'
         },
         avatar: {
             margin: 10,
         },
         bigAvatar: {
-            width: 120,
-            height: 120,
+            width: 80,
+            height: 80,
         },
         general: {
             padding: theme.spacing(1),
@@ -134,6 +134,17 @@ class Profile extends Component {
             ...theme.mixins.gutters(),
             paddingTop: theme.spacing(2),
             paddingBottom: theme.spacing(2),
+        },
+        profileTopMargin: {
+            paddingTop: theme.spacing(4),
+        },
+        sectionHeaderText: {
+            textTransform: "uppercase",
+            paddingTop: theme.spacing(3),
+            paddingLeft: theme.spacing(1),
+            paddingRight: theme.spacing(1),
+            color: "#566779",
+            fontWeight: 600,
         }
     });
 
@@ -907,16 +918,28 @@ class Profile extends Component {
             <Grid item sm={12} xs={12} offset={4}>
                 <Paper className={classes.general}>
                     <form>
-                        <Typography variant='h6'>{profileTitle || 'My Profile'}</Typography>
-                        { this.props.withAvatar === true ? avatarComponent : null }
-                        <TextField {...defaultFieldProps} label={emailValid === true ? 'Email' : 'Email!'} value={email} helperText={this.props.emailHelperText || 'Please use your work email address, unless you are an outside provider'} onChange={updateEmail} />
-                        <TextField {...defaultFieldProps} label='Name' value={firstName} helperText={this.props.firstNameHelperText || 'Please use your first name'} onChange={updateFirstname} />
-                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} onKeyPressCapture={onSurnameKeyPress}/>
+                        <Grid container spacing={2}>
+                            <Grid item sm={12} xs={12} >
+                                { this.props.withAvatar === true ? avatarComponent : null }
+                            </Grid>
+                            <Grid item sm={6} xs={6}>
+                                <TextField {...defaultFieldProps} label='First Name' value={firstName} onChange={updateFirstname} />
+                            </Grid>
+                            <Grid item sm={6} xs={6} >
+                                <TextField {...defaultFieldProps} label='Last Name' value={lastName} onChange={updateLastname} onKeyPressCapture={onSurnameKeyPress}/>
+                            </Grid>
+                            <Grid item sm={6} xs={6} >
+                                <TextField {...defaultFieldProps} label={emailValid === true ? 'Email Address' : 'Email!'} value={email} onChange={updateEmail} />
+                            </Grid>
+                            <Grid item sm={6} xs={6} >
+                                <TextField {...defaultFieldProps} label='Mobile Number' value="" onChange={updateLastname} onKeyPressCapture={onSurnameKeyPress}/>
+                            </Grid>
+                        </Grid>
                     </form>
 
                     <div className={classes.avatarContainer} style={{ justifyContent: 'flex-end', marginTop: '5px' }}>
                         {this.props.withBackButton && <Button onClick={back}><CloseIcon />&nbsp;BACK</Button> }
-                        {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ saveDisabled }><SaveIcon />&nbsp;SAVE</Button>}
+                        {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ saveDisabled }><SaveIcon />&nbsp;SAVE </Button>}
                     </div>
                 </Paper>
             </Grid>)
@@ -1036,14 +1059,18 @@ class Profile extends Component {
             xs: 12,
             sm: 12,
             md: 6,
-            lg: 4
+            lg: 4,
+            maxWidth: false
         };
 
         const ProfileInGrid = (
             <Grid container spacing={2}>
                 {this.renderHeader()}
+                <Typography className={classes.sectionHeaderText}>Account Details</Typography>
                 {this.renderGeneral()}
+                <Typography className={classes.sectionHeaderText}>My Nominees</Typography>
                 {this.renderPeers()}
+                <Typography className={classes.sectionHeaderText}>Demographics</Typography>
                 {this.props.withMembership === true ? this.renderMemberships() : null}
                 {this.renderFooter()}
                 {this.renderCropper()}
@@ -1052,7 +1079,7 @@ class Profile extends Component {
 
         if(nocontainer === false) {
             return (
-                <Container {...containerProps} >
+                <Container {...containerProps} className={classes.profileTopMargin}>
                     {ProfileInGrid}
                 </Container>
             );
