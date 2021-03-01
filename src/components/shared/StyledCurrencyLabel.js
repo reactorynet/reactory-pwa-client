@@ -129,7 +129,7 @@ class StyledCurrencyLabel extends Component {
           let $add = true;
 
           if (!isArray(currenciesDisplayed)) {
-            let currenciesArray = template(currenciesDisplayed)(that.props).split(',') ;
+            let currenciesArray = template(currenciesDisplayed)(that.props).split(',');
             $add = indexOf(currenciesArray, currency.currency_code) >= 0;
           }
 
@@ -140,7 +140,6 @@ class StyledCurrencyLabel extends Component {
           if ($add === true) {
             otherCurrencies.push((
               <div className={classes.currency} {..._containerProps}>
-                <span style={{ fontWeight: "bold" }}>({currency.currency_code})&nbsp;</span>
                 <span className={classes.currencyValue}>
                   {
                     !_showZeroValues && currency[_additionalCurrencyMapField] == 0 ?
