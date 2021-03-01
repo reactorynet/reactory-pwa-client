@@ -19,6 +19,8 @@ import * as MaterialUIColor from 'material-ui-color';
 import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
 
+import * as ReactBigCalendar from 'react-big-calendar';
+
 import IntersectionVisible from 'react-intersection-visible';
 
 import LoginPage, { RegisterPage } from './auth';
@@ -802,5 +804,11 @@ export const componentRegistery = [
     name: 'MaterialUIColor',
     component: MaterialUIColor,
     version: '1.0.0'
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactBigCalendar',
+    component: ReactBigCalendar,
+    version: '1.0.0',
   }
 ];

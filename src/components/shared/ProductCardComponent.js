@@ -125,13 +125,13 @@ class ProductCardWidget extends Component {
 
   constructor(props, context) {
     super(props, context);
-    this.componentDefs = props.api.getComponents(['core.PricingLineChartComponent', 'core.SlideOutLauncher']);
+    this.componentDefs = props.api.getComponents(['lasec-crm.ProductCostingInfoWidget', 'core.SlideOutLauncher']);
   }
 
   render() {
     const { props } = this;
     const { classes, data, cardContent, currency, symbol, api, region, theme } = props;
-    const { PricingLineChartComponent, SlideOutLauncher } = this.componentDefs;
+    const { ProductCostingInfoWidget, SlideOutLauncher } = this.componentDefs;
     const formData = { ...data };
 
     let _currenciesDisplayed = ['USD', 'EUR', 'GBP', 'ZAR'];
@@ -339,7 +339,7 @@ class ProductCardWidget extends Component {
           {
             cardContent && cardContent.hasPricingChart && <>
               <div style={{ height: '2rem' }}></div>
-              <PricingLineChartComponent formData={formData} />
+              <ProductCostingInfoWidget product={formData} />
             </>
           }
 
