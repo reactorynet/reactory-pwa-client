@@ -681,7 +681,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
 
 
-    if (_graphql && _graphql.query) {
+    if ((_graphql && _graphql.query) || (_graphql && _graphql.mutation)) {
       if (deepEquals(formData, form.formData) === false) {
 
         reactory.log(`${formDef.name}[${instance_id}].onChange`, { data: form.formData }, 'debug');
@@ -712,10 +712,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           $onChange(form.formData, form.errorSchema, { before: changed, after: rchanged, self });
         }
 
-
         reactory.log(`${signature} => onChange DELTA =>`, { changed, rchanged }, 'debug');
-
-
 
         if (_graphql && _graphql.mutation && _graphql.mutation['onChange']) {
           //;

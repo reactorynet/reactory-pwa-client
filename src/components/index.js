@@ -1,6 +1,6 @@
 import React from 'react';
 import { compose } from 'redux';
-import { withRouter } from 'react-router'
+import * as ReactRouter from 'react-router'
 import Loadable from 'react-loadable';
 import {
   Typography,
@@ -810,5 +810,11 @@ export const componentRegistery = [
     name: 'ReactBigCalendar',
     component: ReactBigCalendar,
     version: '1.0.0',
+  },
+  {
+    nameSpace: 'react-router',
+    name: 'ReactRouter',
+    component: ReactRouter,
+    version: '1.0.0'
   }
 ];
