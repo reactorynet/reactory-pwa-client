@@ -110,10 +110,12 @@ class UserTable extends Component {
       newUser: {
         email: '',
         firstName: '',
-        lastName: ''
+        lastName: '',
+        mobileNumber: ''
       }
     }
 
+    this.onMobileNumberChanged = this.onMobileNumberChanged.bind(this);
     this.onEmailChanged = this.onEmailChanged.bind(this);
     this.onFirstNameChanged = this.onFirstNameChanged.bind(this);
     this.onLastNameChanged = this.onLastNameChanged.bind(this);
@@ -126,6 +128,7 @@ class UserTable extends Component {
 
   onViewDetails = (userId) => this.setState({ viewDetailsForUser: userId });
   onEmailChanged = (evt) => this.setState({ newUser: { ...this.state.newUser, email: evt.target.value } })
+  onMobileNumberChanged = (evt) => this.setState({ newUser: { ...this.state.newUser, mobileNumber: evt.target.value } })
   onFirstNameChanged = (evt) => this.setState({ newUser: { ...this.state.newUser, firstName: evt.target.value } })
   onLastNameChanged = (evt) => this.setState({ newUser: { ...this.state.newUser, lastName: evt.target.value } })
   onCreateEmployee = (evt) => {
@@ -137,7 +140,7 @@ class UserTable extends Component {
   render() {
     const that = this;
     const { loading, error, allUsers } = this.props.data;
-    const { email, firstName, lastName } = this.state;
+    const { email, firstName, lastName, mobileNumber } = this.state;
     const { onViewDetails } = this
     if (loading === true) {
       return <p>Loading ...</p>;
@@ -535,6 +538,7 @@ const UserList = ({
             firstName: '',
             lastName: '',
             email: '',
+            mobileNumber: '',
             avatar: DefaultAvatar,
             businessUnit: null,
             peers: [],
