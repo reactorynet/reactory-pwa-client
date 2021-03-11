@@ -151,6 +151,7 @@ const updateUserMutation = gql`
       firstName
       lastName
       email
+      mobileNumber
       avatar
     }
   }
@@ -298,6 +299,7 @@ const userProfile = gql`
       email
       firstName
       lastName
+      mobileNumber
       avatar
       lastLogin
       deleted

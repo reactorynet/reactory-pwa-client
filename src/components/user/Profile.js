@@ -20,7 +20,7 @@ import {
     InputAdornment, Icon, IconButton,
     ExpansionPanel, ExpansionPanelActions,
     ExpansionPanelDetails, AccordionSummary,
-    Toolbar, Tooltip
+    Toolbar, Tooltip, InputLabel, FormControl
 } from '@material-ui/core';
 
 import Button from '@material-ui/core/Button';
@@ -29,6 +29,8 @@ import SaveIcon from '@material-ui/icons/Save';
 import PhotoCamera from '@material-ui/icons/PhotoCamera';
 import Avatar from '@material-ui/core/Avatar';
 import TextField from '@material-ui/core/TextField';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
 import MyOrganigram from './Widgets/MyOrganigram';
 import { withApi } from '../../api/ApiProvider';
 import { ReactoryApi } from "../../api/ReactoryApi";
@@ -44,6 +46,7 @@ const defaultProfile = {
     firstName: '',
     lastName: '',
     email: '',
+    mobileNumber: '',
     businessUnit: '',
     peers: {
         organization: null,
@@ -115,17 +118,43 @@ class Profile extends Component {
         avatarContainer: {
             width: '100%',
             display: 'flex',
-            justifyContent: 'center'
+            justifyContent: 'left',
+            alignItems: 'center'
+        },
+        saveContainer: {
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'left',
+            alignItems: 'center',
+            justifyContent: 'flex-start', 
+            marginTop: theme.spacing(3),
+            marginBottom: theme.spacing(2),
+        },
+        nomineesContainerButton: {
+            display: 'flex', 
+            justifyContent: 'center', 
+            paddingTop: theme.spacing(1), 
+            paddingBottom: theme.spacing(1)
+        },
+        nomineesContainerBtnLeft: {
+            display: 'flex', 
+            justifyContent: 'left', 
+            paddingTop: theme.spacing(1), 
+            paddingBottom: theme.spacing(1)
+        },
+        uploadButton: {
+            marginLeft: theme.spacing(4),
+            textTransform: 'none'
         },
         avatar: {
             margin: 10,
         },
         bigAvatar: {
-            width: 120,
-            height: 120,
+            width: 80,
+            height: 80,
         },
         general: {
-            padding: theme.spacing(1),
+            padding: theme.spacing(3),
         },
         hiddenInput: {
             display: 'none'
@@ -134,6 +163,18 @@ class Profile extends Component {
             ...theme.mixins.gutters(),
             paddingTop: theme.spacing(2),
             paddingBottom: theme.spacing(2),
+        },
+        profileTopMargin: {
+            paddingTop: theme.spacing(4),
+        },
+        sectionHeaderText: {
+            textTransform: "uppercase",
+            paddingTop: theme.spacing(3),
+            paddingBottom: theme.spacing(2),
+            paddingLeft: theme.spacing(1),
+            paddingRight: theme.spacing(1),
+            color: "#566779",
+            fontWeight: 600,
         }
     });
 
@@ -316,6 +357,98 @@ class Profile extends Component {
         );
 
         return membershipList;
+
+    }
+
+    renderUserDemographics() {
+
+        const that = this
+        const { profile, avatarUpdated, emailValid, imageMustCrop } = this.state;
+        const { firstName, lastName, businessUnit, email, avatar, peers, surveys, teams, __isnew, id, deleted } = profile;
+        const { mode, classes, history, profileTitle, api } = this.props;
+        const { MoresMyPersonalDemographics } = this.componentDefs;
+        const defaultFieldProps = {
+            margin: "normal",
+            fullWidth: true,
+            InputLabelProps: {
+                shrink: true
+            },
+            className: classes.textFieldBase
+        };
+
+        const saveDisabled =  (emailValid === false ||
+        ( (firstName) || isNil(lastName) ) === true ||
+        ( (firstName.length < 2 || lastName.length < 2 ) ));
+
+        const { avatarMouseOver } = this.state;
+
+        const doSave = () => {
+            let profile = { ...that.state.profile }
+            //cleanup for save
+            if (profile.peers) delete profile.peers
+            if (profile.surveys) delete profile.surveys
+            if (profile.teams) delete profile.teams
+            if (profile.notifications) delete profile.notifications
+            if (profile.memberships) delete profile.memberships
+            profile.authProvider = 'LOCAL'
+            profile.providerId = 'reactory-system'
+            that.props.onSave(profile)
+        };
+
+        const back = () => {
+            history.goBack();
+        }
+
+        const onFileClick = () => {
+            const that = this;
+            let preview = null;
+            let file = that.userProfileImageFile.files[0];
+            let reader = new FileReader();
+            reader.addEventListener("load", function () {
+                preview = reader.result;
+                that.setState({ profile: { ...that.state.profile, avatar: preview },  imageMustCrop: true, avatarUpdated: true });
+            }, false);
+
+            if (file) {
+                reader.readAsDataURL(file);
+            }
+        }
+
+        const updateFirstname = (evt) => {
+            that.setState({ profile: { ...that.state.profile, firstName: evt.target.value } })
+        };
+
+        const updateLastname = (evt) => {
+            that.setState({ profile: { ...that.state.profile, lastName: evt.target.value } })
+        };
+
+        const updateEmail = (evt) => {
+            that.setState({ profile: { ...that.state.profile, email: evt.target.value }, emailValid: isEmail(evt.target.value) })
+        };
+
+        const updateMobileNumber = (evt) => {
+            that.setState({ profile: { ...that.state.profile, mobileNumber: evt.target.value } })
+        };
+
+        const updateBusinessUnit = (evt) => {
+            that.setState({ profile: { ...that.state.profile, businessUnit: evt.target.value } })
+        };
+
+        const onSurnameKeyPress = (evt) => {
+            if(evt.charCode === 13 && saveDisabled === false) {
+                doSave();
+            }
+        }
+
+        const userDemographic = (
+            <Grid item sm={12} xs={12} offset={4}>
+                <Paper className={classes.general}>
+                    <MoresMyPersonalDemographics />
+                </Paper>
+            </Grid>
+        );
+
+        return userDemographic;
 
     }
 
@@ -644,22 +777,31 @@ class Profile extends Component {
 
             materialTable = (
                 <Paper className={classes.general}>
-                    <Typography variant="h6">My nominees - {this.state.selectedMembership.organization.name}</Typography>
+                    {/* <Typography variant="h6">My nominees - {this.state.selectedMembership.organization.name}</Typography> */}
                     <Toolbar>
-                        <Tooltip title="Click here to add a new employee to your organisation structure">
-                            <IconButton onClick={editUserSelection} color="secondary">
-                                <Icon>add_circle_outline</Icon>
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title={moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once you have selected all your organisation peers, please confirm by clicking here.'}>
+                    <Grid container spacing={2}>
+                        <Grid container item direction="row">
+                            <Grid item xs={12} sm={12} md={12} lg={12} xl={12}className={classes.nomineesContainerButton}  style={{ display: data && Object.keys(data).length > 0 ? 'none' : 'flex' }}><Typography variant="body2" color={'primary'}>You do not yet have any nominees. Nominees are the employees of your organisation who will be completing surveys for you.</Typography>
+                                
+                            </Grid>
+                            <Grid item xs={12} sm={12} md={12} lg={12} xl={12}className={data && Object.keys(data).length > 0 ? classes.nomineesContainerBtnLeft : classes.nomineesContainerButton}>
+                                <Tooltip title="Click here to add a new employee to your organisation structure">
+                                    <Button color="secondary" variant="contained" component="span" onClick={editUserSelection}><Icon>add</Icon>ADD NOMINEES</Button>
+                                </Tooltip>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                        
+                        
+                        {/* <Tooltip title={moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once you have selected all your organisation peers, please confirm by clicking here.'}>
                             <IconButton onClick={e => confirmPeers(false) } color="secondary">
                                 <Icon>check_circle</Icon>
                             </IconButton>
-                        </Tooltip>
+                        </Tooltip> */}
                     </Toolbar>
-                    <Paper className={classes.peerToolHeader} elevation={2}>
+                    {/* <Paper className={classes.peerToolHeader} elevation={2}>
                         <Content {...contentProps} />
-                    </Paper>
+                    </Paper> */}
                     <div>
                         {
                             data.map(usr => {
@@ -809,7 +951,7 @@ class Profile extends Component {
     renderGeneral() {
         const that = this
         const { profile, avatarUpdated, emailValid, imageMustCrop } = this.state;
-        const { firstName, lastName, businessUnit, email, avatar, peers, surveys, teams, __isnew, id, deleted } = profile;
+        const { firstName, lastName, businessUnit, email, mobileNumber, avatar, peers, surveys, teams, __isnew, id, deleted } = profile;
         const { mode, classes, history, profileTitle, api } = this.props;
         const { Cropper } = this.componentDefs;
         const defaultFieldProps = {
@@ -871,6 +1013,10 @@ class Profile extends Component {
             that.setState({ profile: { ...that.state.profile, email: evt.target.value }, emailValid: isEmail(evt.target.value) })
         };
 
+        const updateMobileNumber = (evt) => {
+            that.setState({ profile: { ...that.state.profile, mobileNumber: evt.target.value } })
+        };
+
         const updateBusinessUnit = (evt) => {
             that.setState({ profile: { ...that.state.profile, businessUnit: evt.target.value } })
         };
@@ -895,9 +1041,7 @@ class Profile extends Component {
                     <input accept="image/*" className={classes.hiddenInput} onChange={onFileClick} id="icon-button-file" type="file" ref={(n) => that.userProfileImageFile = n} />
                     <label htmlFor="icon-button-file">
                         <Tooltip title={`Select a png or jpeg image that is less than 350kb in size.`}>
-                            <IconButton color="primary" className={classes.button} component="span">
-                                <PhotoCamera />
-                            </IconButton>
+                            <Button color="secondary" variant="outlined" component="span" className={classes.uploadButton} >Upload Photo</Button>
                         </Tooltip>
                     </label>
             </div>);
@@ -907,16 +1051,31 @@ class Profile extends Component {
             <Grid item sm={12} xs={12} offset={4}>
                 <Paper className={classes.general}>
                     <form>
-                        <Typography variant='h6'>{profileTitle || 'My Profile'}</Typography>
-                        { this.props.withAvatar === true ? avatarComponent : null }
-                        <TextField {...defaultFieldProps} label={emailValid === true ? 'Email' : 'Email!'} value={email} helperText={this.props.emailHelperText || 'Please use your work email address, unless you are an outside provider'} onChange={updateEmail} />
-                        <TextField {...defaultFieldProps} label='Name' value={firstName} helperText={this.props.firstNameHelperText || 'Please use your first name'} onChange={updateFirstname} />
-                        <TextField {...defaultFieldProps} label='Surname' value={lastName} helperText={this.props.surnameHelperText || 'Please use your last name'} onChange={updateLastname} onKeyPressCapture={onSurnameKeyPress}/>
+                        <Grid container spacing={4}>
+                            <Grid item sm={12} xs={12} >
+                                { this.props.withAvatar === true ? avatarComponent : null }
+                            </Grid>
+                            <Grid item sm={6} xs={6}>
+                                <TextField {...defaultFieldProps} label='First Name' value={firstName} onChange={updateFirstname} />
+                            </Grid>
+                            <Grid item sm={6} xs={6} >
+                                <TextField {...defaultFieldProps} label='Last Name' value={lastName} onChange={updateLastname} onKeyPressCapture={onSurnameKeyPress}/>
+                            </Grid>
+                            <Grid item sm={6} xs={6} >
+                                <TextField {...defaultFieldProps} label={emailValid === true ? 'Email Address' : 'Email!'} value={email} onChange={updateEmail} />
+                            </Grid>
+                            <Grid item sm={6} xs={6} >
+                                <TextField {...defaultFieldProps} label='Mobile Number' value={mobileNumber} onChange={updateMobileNumber}/>
+                            </Grid>
+                        </Grid>
                     </form>
 
-                    <div className={classes.avatarContainer} style={{ justifyContent: 'flex-end', marginTop: '5px' }}>
-                        {this.props.withBackButton && <Button onClick={back}><CloseIcon />&nbsp;BACK</Button> }
-                        {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ saveDisabled }><SaveIcon />&nbsp;SAVE</Button>}
+                    <div className={classes.saveContainer}>
+                        <Button color='primary' variant='contained' onClick={doSave} disabled={ saveDisabled }>SAVE CHANGES</Button>
+                    
+                        {/* {this.props.withBackButton && <Button onClick={back}><CloseIcon />&nbsp;BACK</Button> }
+                        {deleted === true ? null : <Button color='primary' onClick={doSave} disabled={ saveDisabled }><SaveIcon />&nbsp;SAVE </Button>} */}
+                        
                     </div>
                 </Paper>
             </Grid>)
@@ -1036,15 +1195,20 @@ class Profile extends Component {
             xs: 12,
             sm: 12,
             md: 6,
-            lg: 4
+            lg: 4,
+            maxWidth: false
         };
 
         const ProfileInGrid = (
             <Grid container spacing={2}>
                 {this.renderHeader()}
+                <Typography className={classes.sectionHeaderText}>Account Details</Typography>
                 {this.renderGeneral()}
+                <Typography className={classes.sectionHeaderText}>My Nominees</Typography>
                 {this.renderPeers()}
-                {this.props.withMembership === true ? this.renderMemberships() : null}
+                <Typography className={classes.sectionHeaderText}>Demographics</Typography>
+                {this.renderUserDemographics()}
+                {/* {this.props.withMembership === true ? this.renderMemberships() : null} */}
                 {this.renderFooter()}
                 {this.renderCropper()}
             </Grid>
@@ -1052,7 +1216,7 @@ class Profile extends Component {
 
         if(nocontainer === false) {
             return (
-                <Container {...containerProps} >
+                <Container {...containerProps} className={classes.profileTopMargin}>
                     {ProfileInGrid}
                 </Container>
             );
@@ -1078,6 +1242,7 @@ class Profile extends Component {
         this.renderHeader = this.renderHeader.bind(this);
         this.renderFooter = this.renderFooter.bind(this);
         this.renderMemberships = this.renderMemberships.bind(this);
+        this.renderUserDemographics = this.renderUserDemographics.bind(this);
         this.renderCropper = this.renderCropper.bind(this);
         this.inviteUserByEmail = this.inviteUserByEmail.bind(this);
 
@@ -1102,7 +1267,8 @@ class Profile extends Component {
             'core.FullScreenModal',
             'core.CreateProfile',
             'core.UserListItem',
-            'core.Cropper'
+            'core.Cropper',
+            'mores.MoresMyPersonalDemographics',
         ];
 
         this.componentDefs = props.api.getComponents(components);
