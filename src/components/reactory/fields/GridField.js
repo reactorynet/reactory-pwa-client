@@ -186,27 +186,9 @@ class MaterialGridField extends MaterialObjectField {
       gridOptions = { ...gridOptions, ...uiSchema['ui:grid-options'] };
     }
 
-    let Container = null
-    switch (gridOptions.container) {
-      case "div": {
-        Container = (cprops) => {
-          return (<div className={cprops.className} style={cprops.style}>
-            {cprops.children}
-          </div>)
-        }
 
-        break;
-      }
-      case "Paper":
-      default: {
-        Container = Paper
-        break;
-      }
-    }
-
-
-    return (
-      <Container className={classes.root} style={gridOptions.containerStyles}>
+    const grid_content = (
+      <>
         {title ? <TitleField
           id={`${idSchema.$id}__title`}
           title={title}
@@ -286,7 +268,26 @@ class MaterialGridField extends MaterialObjectField {
               </Grid>
             )
           })
-        }</Container>
+        }
+      </>
+    );
+
+
+    let Container = null
+    switch (gridOptions.container) {
+      case "div": {
+        return (<div className={classes.root} style={gridOptions.containerStyles}>{grid_content}</div>)
+      }
+      case "Paper":
+      default: {
+        return (<Paper className={classes.root} style={gridOptions.containerStyles} elevation={gridOptions.elevation || 1}>{grid_content}</Paper>)
+      }
+    }
+
+
+    return (
+      <Container >
+      </Container>
     )
   }
 }

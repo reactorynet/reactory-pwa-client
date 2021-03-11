@@ -181,7 +181,8 @@ export interface ReactoryApiUtils {
   slugify: Function,
   deepEquals: Function,
   lodash: any,
-  classNames: Function
+  classNames: Function,
+  uuid: () => string
 }
 
 export interface WindowSizeSpec {
@@ -300,7 +301,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       slugify: makeSlug,
       deepEquals,
       templateObject: parseTemplateObject,
-      classNames
+      classNames,
+      uuid,
     };
     this.$func = {
       'core.NullFunction': (params) => {

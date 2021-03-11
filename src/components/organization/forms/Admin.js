@@ -562,7 +562,7 @@ class DefaultFormContainer extends Component {
                   <TowerStoneLeadershipBrandConfig mode="new" formContext={{ mode: 'new' }} />
                 </Route>
                 <Route exact path={'/admin/org/:organizationId/brands/:brandId'} render={(props) => {
-                  return (<TowerStoneLeadershipBrandConfig mode="edit" organizationId={props.match.params.organizationId} brandId={props.match.params.brandId} formContext={{ mode: 'edit', brandId: props.match.params.brandId }} data={{ id: props.match.params.brandId }} />)
+                  return (<TowerStoneLeadershipBrandConfig mode="edit" organizationId={props.match.params.organizationId} brandId={props.match.params.brandId} formData={{ id: props.match.params.brandId }} />)
                 }} />
               </Switch>
             </Route>

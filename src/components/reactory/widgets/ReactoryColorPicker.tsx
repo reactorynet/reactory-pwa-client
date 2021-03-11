@@ -58,25 +58,27 @@ export default ({ formData, schema, idSchema, formContext, uiSchema, reactory, o
     color: reactory.muiTheme.palette.getContrastText(formData || theme.palette.primary.main),
   };
 
+  const onButtonClick = (evt) => {
+    const { currentTarget } = evt;
+    setAnchorEl(currentTarget);
+    setShowSelector(!show_selector);
+  };
+
   const ColorAdornment = () => {
 
-    const onButtonClick = (evt) => {
-      const { currentTarget } = evt;
-      setAnchorEl(currentTarget);
-      setShowSelector(!show_selector);
-    };
+
 
     return (
       <InputAdornment position={'end'}>
-        <Button aria-describedby={`${idSchema.$id}_popover`} style={{ backgroundColor: colors.background }} onClick={onButtonClick}>
+        <Button size="small" aria-describedby={`${idSchema.$id}_popover`} style={{ backgroundColor: colors.background }} onClick={onButtonClick}>
           <Icon style={{ color: colors.color }}>palette</Icon>
         </Button>
       </InputAdornment>);
   }
 
   return (
-    <div>
-      <COMPONENT type={'text'} id={idSchema.$id} readOnly={uiOptions.readOnly === true} value={formData || schema.default} onChange={onChange} endAdornment={<ColorAdornment />} />
+    <>
+      <COMPONENT type={'text'} id={idSchema.$id} readOnly={uiOptions.readOnly === true} onClick={onButtonClick} value={formData || schema.default} onChange={onChange} endAdornment={<ColorAdornment />} />
       <Popover
         id={`${idSchema.$id}_popover`}
         open={show_selector}
@@ -94,11 +96,11 @@ export default ({ formData, schema, idSchema, formContext, uiSchema, reactory, o
           horizontal: 'center',
         }}
       >
-        <ColorBox onChange={(color) => {
+        <ColorBox deferred onChange={(color) => {
           onChange(`#${color.hex}`)
         }} />
       </Popover>
-    </div>
+    </>
   )
 
 

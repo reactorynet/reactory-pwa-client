@@ -1,6 +1,6 @@
 import React from 'react';
 import { compose } from 'redux';
-import { withRouter } from 'react-router'
+import * as ReactRouter from 'react-router'
 import Loadable from 'react-loadable';
 import {
   Typography,
@@ -18,6 +18,8 @@ import * as MaterialPickers from '@material-ui/pickers';
 import * as MaterialUIColor from 'material-ui-color';
 import * as UserComponents from './user/index';
 import * as OrganizationComponents from './organization/index';
+
+import * as ReactBigCalendar from 'react-big-calendar';
 
 import IntersectionVisible from 'react-intersection-visible';
 
@@ -801,6 +803,18 @@ export const componentRegistery = [
     nameSpace: 'material-ui',
     name: 'MaterialUIColor',
     component: MaterialUIColor,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactBigCalendar',
+    component: ReactBigCalendar,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'react-router',
+    name: 'ReactRouter',
+    component: ReactRouter,
     version: '1.0.0'
   }
 ];
