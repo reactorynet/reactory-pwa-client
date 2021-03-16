@@ -54,7 +54,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
   const { classes, reactory, formData, value, uiSchema, idSchema, formContext } = props;
 
   const getOptions = () => {
-    if(props.uiSchema && props.uiSchema["ui:options"]) return props.uiSchema["ui:options"];
+    if (props.uiSchema && props.uiSchema["ui:options"]) return props.uiSchema["ui:options"];
     return null;
   };
 
@@ -62,12 +62,12 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     const options = getOptions();
     if (options && options.format) {
       try {
-        if(options.format !== '$LOOKUP$') return template(options.format)({...props})
+        if (options.format !== '$LOOKUP$') return template(options.format)({ ...props })
         else return '🕘';
       } catch (e) {
         return `Template Error (${e.message})`;
       }
-    } else {      
+    } else {
       try {
         return props.formData ? template('${formData}')({ ...props }) : props.value;
       } catch (e) {
@@ -79,6 +79,9 @@ const LabelWidget = (props: LabelWidgetProperties) => {
   const [lookupValue, setLookupValue] = React.useState<string>('🕘');
   const [error, setError] = React.useState<any>(null);
   const [labelText, setLabelText] = React.useState(initialLabelText());
+
+  const options = getOptions();
+
 
   if (error) {
     return (<span>🚨 {error.message}</span>)
@@ -118,7 +121,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 
       reactory.graphqlQuery(lookupGraphql.text, variables, lookupGraphql.options).then((lookupResult) => {
         reactory.log(`Lookup result ${formContext ? formContext.signature : 'NO CONTEXT'}[${props.idSchema.$id}]`, { lookupResult }, 'debug');
-        
+
         if (lookupResult.data && lookupResult.data[lookupGraphql.name]) {
           const _lookupResult = reactory.utils.objectMapper(lookupResult.data[lookupGraphql.name], lookupGraphql.resultMap);
           const _labelText = _lookupResult[lookupGraphql.resultKey || "id"];
@@ -166,7 +169,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     _launchProps = launchProps;
 
     labelTitleProps = titleProps;
-    labelBodyProps = bodyProps;    
+    labelBodyProps = bodyProps;
 
     if (title) {
       try {
@@ -251,8 +254,10 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     reactory.createNotification('Copied To Clipboard!', { body: `'${labelText}' successfully copied to your clipboard.`, showInAppNotification: true, type: 'success' });
   }
 
+
+
   React.useEffect(() => {
-    const options = getOptions();
+
 
     if (lookupGraphql && options.format === "$LOOKUP$") {
       getLookupValue();
@@ -260,7 +265,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
   }, []);
 
   React.useEffect(() => {
-    const options = getOptions();
+
     if (lookupGraphql && options.format === "$LOOKUP$") {
       getLookupValue();
     }
@@ -269,12 +274,12 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     if (options && options.format) {
 
       try {
-        if(options.format !== '$LOOKUP$') _labelText = template(options.format)({...props})
+        if (options.format !== '$LOOKUP$') _labelText = template(options.format)({ ...props })
         else _labelText = '🕘';
       } catch (e) {
         _labelText = `Template Error (${e.message})`;
       }
-    } else {      
+    } else {
       try {
         _labelText = props.formData ? template('${formData}')({ ...props }) : props.value;
       } catch (e) {
@@ -282,8 +287,8 @@ const LabelWidget = (props: LabelWidgetProperties) => {
       }
     }
     setLabelText(_labelText);
-    
-  }, [props.formData, props.value]);
+
+  }, [props.formData, props.value, options.format, props.data]);
 
 
   return (
