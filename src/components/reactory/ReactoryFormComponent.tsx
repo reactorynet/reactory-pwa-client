@@ -104,6 +104,7 @@ TabContainer.propTypes = {
 
 
 export interface ReactoryFormProperties {
+  ref?: (formRef: any) => void;
   uiSchemaKey: string;
   uiSchemaId?: string;
   data: any | any[];
@@ -1439,7 +1440,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       onSubmit: props.onSubmit || onSubmit,
       ref: (form: any) => {
         if (formRef.current === null || formRef.current === undefined) formRef.current = form;
+
         if (props.refCallback) props.refCallback(getFormReference())
+        if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
       },
       transformErrors: (errors = []) => {
         reactory.log(`Transforming error message`, { errors }, 'debug');
@@ -1842,6 +1845,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   React.useEffect(() => {
     reactory.amq.onReactoryPluginLoaded('loaded', onPluginLoaded);
     if (props.refCallback) props.refCallback(getFormReference());
+    if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
+
     getData();
     return () => {
       if (refreshInterval) {
