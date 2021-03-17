@@ -102,10 +102,10 @@ class ObjectField extends Component {
       this.props.onChange(
         newFormData,
         errorSchema &&
-          this.props.errorSchema && {
-            ...this.props.errorSchema,
-            [name]: errorSchema,
-          }
+        this.props.errorSchema && {
+          ...this.props.errorSchema,
+          [name]: errorSchema,
+        }
       );
     };
   };
@@ -129,10 +129,10 @@ class ObjectField extends Component {
       this.props.onChange(
         newFormData,
         errorSchema &&
-          this.props.errorSchema && {
-            ...this.props.errorSchema,
-            [value]: errorSchema,
-          }
+        this.props.errorSchema && {
+          ...this.props.errorSchema,
+          [value]: errorSchema,
+        }
       );
     };
   };
@@ -190,6 +190,13 @@ class ObjectField extends Component {
     const title = schema.title === undefined ? name : schema.title;
     const description = uiSchema["ui:description"] || schema.description;
     const widget = uiSchema["ui:widget"]
+
+    let $props = {};
+
+    if (uiSchema['ui:props']) {
+      $props = { ...uiSchema['ui:props'] }
+    }
+
     let orderedProperties;
 
 
@@ -211,7 +218,7 @@ class ObjectField extends Component {
 
     let Template = registry.ObjectFieldTemplate || DefaultObjectFieldTemplate;
 
-    if(lodash.isString(widget) && lodash.isFunction(registry.widgets[widget])) {
+    if (lodash.isString(widget) && lodash.isFunction(registry.widgets[widget])) {
       //console.log('Set new Template for schema object', Template);
       Template = registry.widgets[widget];
 
@@ -256,7 +263,8 @@ class ObjectField extends Component {
       schema,
       formData,
       formContext,
-      onChange
+      onChange,
+      ...$props
     };
     return <Template {...templateProps} onAddClick={this.handleAddClick} />;
   }
