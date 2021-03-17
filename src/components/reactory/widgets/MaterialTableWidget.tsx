@@ -174,7 +174,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               //show a loader error
               reactory.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
               // reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })
-            } else {
+            }
+
+            if (queryResult.data) {
 
               response = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
 
