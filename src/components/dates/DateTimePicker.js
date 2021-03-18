@@ -70,6 +70,7 @@ const DateTimePickerWidget = (props) => {
 
   let _pickerProps = {
     variant: opts.variant || 'inline',
+    className: opts.className,
     value: formData,
     format: getFormat(),
     onChange: onDateChange,

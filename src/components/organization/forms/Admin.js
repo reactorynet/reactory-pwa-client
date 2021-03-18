@@ -132,7 +132,7 @@ class OrganizationForm extends Component {
   updateOrganizationPicture = (picture) => (this.setState({ organization: { ...this.state.organization, logo: picture }, pristine: false }));
   updateOrganization = (evt) => {
 
-    this.props.api.log(`Admin.updateOrganization (evt) `, { evt }, 'debugger')
+    this.props.api.log(`Admin.updateOrganization (evt) `, { evt }, 'debug')
 
     const { client } = this.props;
     const { organization } = this.state;

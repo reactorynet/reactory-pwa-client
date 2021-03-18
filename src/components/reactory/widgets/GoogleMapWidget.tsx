@@ -259,7 +259,7 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
         api.log('Mutation Complete For Address Editing', { result }, 'debug');
         const { message, success } = result;
 
-        debugger
+
         if (success === true) {
           let $formatted_address = result.fullAddress;
           let $place_id = result.id;
@@ -1487,8 +1487,8 @@ class ReactoryGoogleMapWidget extends Component<any, any> {
       containerElement: shouldBreak === true ? (
         <div style={{ height: window.innerHeight - 80 }} />
       ) : (
-          <div style={{ height: `600px` }} />
-        ),
+        <div style={{ height: `600px` }} />
+      ),
       onMapMounted: (ref) => {
         self.map = React.forwardRef(ref);
       },

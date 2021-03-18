@@ -124,7 +124,8 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         labelStyle = {},
         labelProps = { visible: true },
         formControlProps = {},
-        size
+        size,
+        readOnly
       } = uiSchema['ui:options'];
 
 
