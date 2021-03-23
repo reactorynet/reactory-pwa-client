@@ -76,10 +76,6 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
 
   const [version, setVersion] = React.useState(0);
 
-  if (error !== undefined && error !== null) {
-    return <Typography>🚩 core.SelectWithData Error - see log</Typography>
-  }
-
   try {
 
     reactory.log('Rendering SelectWithData', { formContext, formData, menuItems, key_map }, 'debug');
@@ -139,21 +135,27 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         const variables = propertyMap ? objectMapper(props, propertyMap) : null;
 
         reactory.graphqlQuery(query, variables).then((query_result: any) => {
-          const { data, error } = query_result;
+          const { data, errors = [] } = query_result;
 
-          if (data && data[resultItem]) {
-            let _key_map: any = {};
-            let _menuItems: any[] = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
-            _menuItems.forEach((menu_item: any) => {
-              if (menu_item.key) {
-                _key_map[menu_item.key] = menu_item;
-              }
-            });
-
-            setKeyMap(_key_map);
-            setMenuItems(_menuItems);
+          if (errors.length > 0) {
+            setMenuItems([{ key: null, title: 'Error Loading Data' }]);
             setVersion(version + 1);
+          } else {
+            if (data && data[resultItem]) {
+              let _key_map: any = {};
+              let _menuItems: any[] = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
+              _menuItems.forEach((menu_item: any) => {
+                if (menu_item.key) {
+                  _key_map[menu_item.key] = menu_item;
+                }
+              });
+
+              setKeyMap(_key_map);
+              setMenuItems(_menuItems);
+              setVersion(version + 1);
+            }
           }
+
         }).catch((query_error) => {
           reactory.log(`Error Getting Data For Lookup`)
           setError(query_error);
@@ -173,7 +175,10 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
 
       React.useEffect(() => {
         getData();
-      }, [])
+      }, []);
+
+
+
 
 
       return (
@@ -181,7 +186,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
           {...selectProps}
           multiple={multiSelect === true}
           value={formData || ''}
-          onChange={onSelectChanged}
+          onChange={readOnly === true ? () => { } : onSelectChanged}
           name={idSchema.$id}
           variant={variant}
           data-version={version}
@@ -205,6 +210,10 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
             }
 
           }}>
+
+          {
+            error ? <MenuItem>Error Loading Data</MenuItem> : undefined
+          }
 
           {
             menuItems.map((option: any, index: number) => {

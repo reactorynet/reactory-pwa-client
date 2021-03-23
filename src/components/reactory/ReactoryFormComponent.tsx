@@ -393,7 +393,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const [error, setError] = React.useState<ReactoryComponentError>(null);
   const [uiFramework, setUiFramework] = React.useState(props.uiFramework || 'material');
   const [autoQueryDisabled, setAutoQueryDisabled] = React.useState<boolean>(props.autoQueryDisabled || false);
-  const [dirty, setIsDirty] = React.useState<false>(false);
+  const [dirty, setIsDirty] = React.useState(false);
   const [refreshInterval, setRefreshInterval] = React.useState(null);
   //used for internal tracking of updates / changes since first load
   const [version, setVersion] = React.useState<number>(0);
@@ -591,13 +591,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               }
 
               const templateProps = {
-                formData,
+                formData: _formData,
                 formContext: getFormContext(),
                 props: props,
                 mutation_result: data[mutation.name],
               };
 
               if (typeof mutation.onSuccessUrl === 'string') {
+                debugger;
                 let linkText = template(mutation.onSuccessUrl)(templateProps);
                 props.history.push(linkText);
               }
@@ -675,9 +676,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const onChange = (form: any, errorSchema: any) => {
 
+    debugger
+    const hasDelta = deepEquals(formData, form.formData) === false;
+    setIsDirty(hasDelta);
+    if (hasDelta === true) setVersion(version + 1);
+
     reactory.log(`${signature} => onChange`, { form, errorSchema }, 'debug');
 
-    if ((new Date().valueOf() - created) < 777) return;
+    //if ((new Date().valueOf() - created) < 777) return;
 
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
 

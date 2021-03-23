@@ -55,7 +55,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 
   const getOptions = () => {
     if (props.uiSchema && props.uiSchema["ui:options"]) return props.uiSchema["ui:options"];
-    return null;
+    return {};
   };
 
   const initialLabelText = () => {
