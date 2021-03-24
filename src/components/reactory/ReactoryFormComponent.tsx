@@ -598,7 +598,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               };
 
               if (typeof mutation.onSuccessUrl === 'string') {
-                debugger;
                 let linkText = template(mutation.onSuccessUrl)(templateProps);
                 props.history.push(linkText);
               }
@@ -676,12 +675,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const onChange = (form: any, errorSchema: any) => {
 
-    debugger
     const hasDelta = deepEquals(formData, form.formData) === false;
-    setIsDirty(hasDelta);
-    if (hasDelta === true) setVersion(version + 1);
 
-    reactory.log(`${signature} => onChange`, { form, errorSchema }, 'debug');
+    reactory.log(`${signature} => onChange`, { form, errorSchema, hasDelta }, 'debug');
 
     //if ((new Date().valueOf() - created) < 777) return;
 
@@ -749,8 +745,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           setFormData(form.formData);
         }
       }
+    } else {
+      setFormData(form.formData);
     }
 
+    setIsDirty(hasDelta);
+    if (hasDelta === true) setVersion(version + 1);
   }
 
   const setState = ($state: any, callback = () => { }) => {
