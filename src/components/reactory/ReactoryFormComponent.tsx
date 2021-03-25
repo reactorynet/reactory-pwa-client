@@ -447,6 +447,19 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return _grahDefinitions;
   };
 
+  // TODO: Werner
+  // Please check this is correct
+  const getActiveSchema = () => {
+    let _schemaDefinitions: any = formDef.schema;
+
+    const _uiSchema = getActiveUiSchema();
+    if (_uiSchema["ui:schema"]) {
+      _schemaDefinitions = _uiSchema["ui:schema"];
+    }
+
+    return _schemaDefinitions;
+  }
+
 
   const onPluginLoaded = (plugin: any) => {
     reactory.log(`${signature} Plugin loaded, activating component`, { plugin }, 'debug');
@@ -570,7 +583,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                 }
                 case 'function': {
                   //use a custom merging function
-                  //for the form / mutation 
+                  //for the form / mutation
                   //specify the function id on graph
                   break;
                 }
@@ -897,6 +910,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     //or via UX element.
     _formDef.uiSchema = getActiveUiSchema();
     _formDef.graphql = getActiveGraphDefinitions();
+
+    // TODO: Added by Drew
+    _formDef.schema = getActiveSchema();
 
     // #region setup functions
     const setFormContext = () => {
