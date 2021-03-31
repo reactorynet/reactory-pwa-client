@@ -8,7 +8,7 @@ import { compose } from 'redux';
 import { graphql } from '@apollo/client';
 import { Query, Mutation } from '@apollo/client/react/components';
 import { withApollo } from '@apollo/client/react/hoc';
-import { intersection } from 'lodash';
+import { intersection, isEqualWith } from 'lodash';
 import {
   Avatar,
   Chip,
@@ -515,7 +515,7 @@ const UserList = ({
   selected, multiSelect, excluded = [],
   secondaryAction = null,
   classes, graphql = null,
-  formContext, page = 1, pageSize = 25,  onPageChange = () => { } }) => {
+  formContext, page = 1, pageSize = 25, onPageChange = () => { } }) => {
   const queryText = graphql && graphql.text ? graphql.text : api.queries.Users.usersForOrganization;
   const variables = graphql && graphql.variables ? om(formContext, graphql.variables) : { id: organizationId, searchString };
   const Components = api.getComponents(['material-ui.Material']);
@@ -525,8 +525,8 @@ const UserList = ({
   return (
     <Query query={queryText} variables={{ id: organizationId, searchString, paging: { page, pageSize } }}>
       {(result, info) => {
-        const { loading, errors, data, called } = result;                        
-        
+        const { loading, errors, data, called } = result;
+
 
         try {
 
@@ -578,6 +578,8 @@ const UserList = ({
 
 
                                 const nilf = () => { };
+
+
                                 const isSelected = intersection(selected, [user.id]).length === 1;
                                 const exclude = intersection(excluded, [user.id]).length === 1;
                                 const displayText = `${user.firstName} ${user.lastName}`;
@@ -586,7 +588,7 @@ const UserList = ({
 
                                 return (
                                   <ListItem selected={isSelected} onClick={multiSelect === false ? raiseUserSelected : nilf} dense button key={uid}>
-                                    <Avatar alt={displayText} src={getAvatar(user)} onClick={raiseUserSelected} />
+                                    <Avatar alt={displayText} src={getAvatar(user)} onClick={raiseUserSelected} style={{ marginRight: '20px' }} />
                                     <ListItemText primary={user.__isnew ? 'NEW' : displayText} secondary={user.__isnew ? 'Click here to add a new user / employee' : user.email} />
                                     { multiSelect === true ?
                                       <Checkbox
@@ -617,7 +619,7 @@ const UserList = ({
 
           return <div>No users</div>
         } catch (err) {
-          
+
           return (<div>{err.message}</div>)
         }
       }}

@@ -39,7 +39,7 @@ import PaymentGatewayDashboardComponent from './payments/funisave/Dashboard';
 import DateSelector from './dates/DateSelector.js';
 import Calendar from './dates/Calendar';
 import { LayoutThemed, SingleColumnLayout, TwoColumnGrid, BasicContainer } from './shared/Layout';
-import { UserListWithSearchComponent, SurveyDelegateWidget } from './user/Widgets';
+import { UserListWithSearch } from './user/Widgets';
 import Logo from './shared/logo';
 import SlideOutLauncher from './shared/SlideOutLauncher';
 import BasicModal from './shared/BasicModal';
@@ -380,7 +380,7 @@ export const componentRegistery = [
   {
     nameSpace: 'towerstone',
     name: 'SurveyDelegateWidget',
-    component: SurveyDelegateWidget,
+    component: () => { return <>component moved</> },
     version: '1.0.0',
   },
   {
@@ -404,7 +404,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'UserListWithSearch',
-    component: UserListWithSearchComponent,
+    component: UserListWithSearch,
     version: '1.0.0',
   },
   {

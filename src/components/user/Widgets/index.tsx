@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, SyntheticEvent } from 'react';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';
@@ -17,16 +17,73 @@ import {
   Search as SearchIcon
 } from '@material-ui/icons'
 import { fade } from '@material-ui/core/styles/colorManipulator';
-import { withTheme, withStyles } from '@material-ui/core/styles';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withTheme, withStyles, makeStyles } from '@material-ui/core/styles';
+import { useReactory, withApi } from '@reactory/client-core/api/ApiProvider';
 import styles from '@reactory/client-core/components/shared/styles';
+import Reactory from '@reactory/client-core/types/reactory';
+import ReactoryApi from '@reactory/client-core/api';
 
-export class UserListWithSearch extends Component<any, any> {
+type USER_FILTER = string | "search" | "business_unit" | "team" | "demographics";
+type USERLIST_VIEWMODE = string | "list" | "grid" | "cards";
+interface UserListWithSearchProps {
+  onAcceptSelection: (selection: Reactory.IUser | Reactory.IUser[]) => void,
+  onUserSelect: (user: Reactory.IUser) => void,
+  organization_id: string,
+  filters: USER_FILTER[],
+  onNewUserClick: (evt: SyntheticEvent) => void,
+  onDeleteUsersClick: (evt: SyntheticEvent) => void,
+  allowDelete: boolean,
+  excluded: Reactory.IUser[],
+  selected: Reactory.IUser[],
+  multiSelect: boolean,
+  mode: USERLIST_VIEWMODE,
+  reactory: ReactoryApi,
+  page: number,
+  pageSize: number,
+  onPageChange: (page: number) => void,
+  [key: string]: any
+};
 
-  componentDefs: any
+/*
 
-  static Styles = theme => {
-    return styles(theme, {
+static defaultProps = {
+  businessUnitFilter: true,
+  onAcceptSelection: (evt) => {
+    //console.log('No selection accept handler');
+  },
+  onDeleteUsersClick: (evt) => {
+    //console.log('No delete handler');
+  },
+  allowDelete: false,
+  selected: [],
+  multiSelect: false,
+
+
+*/
+
+export const UserListWithSearch = (props: UserListWithSearchProps) => {
+
+  const reactory = useReactory();
+
+  const {
+    onAcceptSelection = null, //empty handler,
+    onNewUserClick = null, //empty handler
+    onDeleteUsersClick = null,
+    onUserSelect = null,
+    organization_id,
+    filters = ["search"],
+    allowDelete = false,
+    multiSelect = true,
+    selected = [],
+    excluded = [],
+    mode = 'list',
+    page = 1,
+    pageSize = 25
+  } = props;
+
+
+  const Styles = makeStyles((theme) => {
+    return {
       mainContainer: {
         padding: '5px',
         height: '100%',
@@ -138,181 +195,133 @@ export class UserListWithSearch extends Component<any, any> {
           display: 'none',
         },
       }
-    });
+    };
+  });
+
+  const classes = Styles();
+
+  const { useState, useEffect } = React;
+
+  const [searchString, setSearchString] = useState('');
+  const [inputText, setInputText] = useState('');
+  const [skip, setSkip] = useState(false);
+  const [show_deleted, setShowDeleted] = useState('');
+  const [business_units, setBusinessUnits] = useState([]);
+
+  const [paging, setPaging] = useState({ page, pageSize });
+
+
+  const { UserList } = reactory.getComponents(['core.UserList'])
+
+
+  const doRefresh = () => {
+    //this.setState({ skip: false, searchString: this.state.inputText });
+    setSkip(false);
+    setSearchString(inputText);
   }
 
-  static propTypes = {
-    onAcceptSelection: PropTypes.func,
-    organizationId: PropTypes.string.isRequired,
-    businessUnitFilter: PropTypes.bool,
-    onNewUserClick: PropTypes.func,
-    onDeleteUsersClick: PropTypes.func,
-    allowDelete: PropTypes.bool,
-    selected: PropTypes.array,
-    multiSelect: PropTypes.bool,
+  const onSearchStringChanged = (evt) => {
+    setInputText(evt.target.value);
+  }
+
+  const doSearch = () => {
+    //this.setState({ searchString: this.state.inputText })
+    setSearchString(inputText);
   };
 
-  static defaultProps = {
-    businessUnitFilter: true,
-    onAcceptSelection: (evt) => {
-      //console.log('No selection accept handler');
-    },
-    onDeleteUsersClick: (evt) => {
-      //console.log('No delete handler');
-    },
-    allowDelete: false,
-    selected: [],
-    multiSelect: false,
-  };
-
-  constructor(props, context) {
-    super(props, context)
-    this.state = {
-      searchString: '',
-      inputText: '',
-      skip: false,
-      includeDeleted: false,
-      selected: [],
-      businessUnitFilter: null,
-      showBusinessUnitFilter: false,
-      paging: null
-    }
-
-    this.doSearch = this.doSearch.bind(this);
-    this.doRefresh = this.doRefresh.bind(this);
-    this.searchStringChanged = this.searchStringChanged.bind(this);
-    this.searchStringOnKeyPress = this.searchStringOnKeyPress.bind(this);
-    this.onNewUserClick = this.onNewUserClick.bind(this);
-    this.onShowBusinessUnitFilter = this.onShowBusinessUnitFilter.bind(this);
-    this.componentDefs = this.props.api.getComponents(['core.SingleColumnLayout', 'core.UserSearch', 'core.UserList'])
-  }
-
-  doRefresh() {
-    this.setState({ skip: false, searchString: this.state.inputText });
-  }
-
-  searchStringChanged(evt) {
-    this.setState({ inputText: evt.target.value, skip: true });
-  }
-
-  searchStringOnKeyPress(evt) {
-    if (evt.charCode === 13) this.doSearch()
+  const onSearchStringOnKeyPress = (evt) => {
+    if (evt.charCode === 13) doSearch();
   }
 
 
-  doSearch() {
-    this.setState({ searchString: this.state.inputText })
-  }
-
-  onUserSelect(user, index) {
-    //console.log(`User selected ${user.id} ${index}`, {user, index});
-
-    if (this.props.onUserSelect) this.props.onUserSelect(user, index);
+  const onShowBusinessUnitFilter = () => {
 
   }
 
 
-  onShowBusinessUnitFilter() {
-    this.setState({ showBusinessUnitFilter: !this.state.showBusinessUnitFilter })
+  const onPageChange = (new_page) => {
+    // that.setState({ current_page: page });
+    setPaging({ ...paging, page: new_page });
   }
 
-  onNewUserClick() {
-    //console.log("New User Clicked", {onNewUserClick: this.props.onNewUserClick});
-    if (typeof this.props.onNewUserClick === 'function') {
-      this.props.onNewUserClick()
-    } else {
-      this.props.history.push(`/admin/org/${this.props.organizationId}/employees/new`)
-    }
-  }
-
-  render() {
-    const { SingleColumnLayout, UserList } = this.componentDefs;
-    const { classes } = this.props;
-    const { skip, page = 1, pageSize = 25 } = this.state;
-    const that = this;
-    const onPageChange = (page) => {
-      that.setState({ current_page: page });
-    }
-
-    return (
-      <SingleColumnLayout style={{ maxWidth: 900, margin: 'auto' }}>
-        <AppBar position="sticky" color="default" className={classes.toolbar}>
-          <Toolbar>
-            <Typography variant="h6" color="inherit">Employees</Typography>
-            <div className={classes.search}>
-              <div className={classes.searchIcon}>
-                <SearchIcon />
-              </div>
-              <InputBase
-                placeholder="Search…"
-                value={this.state.inputText}
-                onChange={this.searchStringChanged}
-                onKeyPress={this.searchStringOnKeyPress}
-                classes={{
-                  root: classes.inputRoot,
-                  input: classes.inputInput,
-                }}
-              />
+  return (
+    <>
+      <AppBar position="sticky" color="default" className={classes.toolbar}>
+        <Toolbar>
+          <Typography variant="h6" color="inherit">Employees</Typography>
+          <div className={classes.search}>
+            <div className={classes.searchIcon}>
+              <SearchIcon />
             </div>
-            <Tooltip title={`Click to refresh after changing your search options`}>
-              <IconButton color="inherit" onClick={this.doRefresh}>
-                <Badge badgeContent={skip ? '!' : ''} hidden={skip === false} color="secondary">
-                  <Icon>cached</Icon>
+            <InputBase
+              placeholder="Search…"
+              value={inputText}
+              onChange={onSearchStringChanged}
+              onKeyPress={onSearchStringOnKeyPress}
+              classes={{
+                root: classes.inputRoot,
+                input: classes.inputInput,
+              }}
+            />
+          </div>
+          <Tooltip title={`Click to refresh after changing your search options`}>
+            <IconButton color="primary" onClick={doRefresh}>
+              <Badge badgeContent={skip ? '!' : ''} hidden={skip === false} color="secondary">
+                <Icon>cached</Icon>
+              </Badge>
+            </IconButton>
+          </Tooltip>
+
+          {onAcceptSelection && <Tooltip title={'Click to accept your selection'}>
+            <IconButton color="primary" onClick={() => {
+              onAcceptSelection(selected);
+            }}>
+              <Icon>check</Icon>
+            </IconButton>
+          </Tooltip>}
+
+          {onNewUserClick && <Tooltip title={`Click to add new employee`}>
+            <IconButton color="primary" onClick={onNewUserClick}>
+              <Icon>add_circle_outline</Icon>
+            </IconButton>
+          </Tooltip>}
+
+          {filters.indexOf("business_unit") >= 0 ? <Tooltip title={`Filter By Business Unit`}>
+            <IconButton color="inherit" onClick={onShowBusinessUnitFilter}>
+              <Icon>filter</Icon>
+            </IconButton>
+          </Tooltip> : null}
+
+          {allowDelete === true && selected.length > 0 &&
+            <Tooltip title={`Click here to delete the ${selected.length > 1 ? `${selected.length} employees` : 'employee'} selected`}>
+              <IconButton color="inherit" onClick={onDeleteUsersClick}>
+                <Icon>delete</Icon>
+              </IconButton>
+            </Tooltip>
+          }
+          {
+            selected.length > 0 && <Tooltip title={`Click here to clear your selected`}>
+              <IconButton color="primary" onClick={() => { if (props.onClearSelection) props.onClearSelection() }}>
+                <Badge badgeContent={selected.length} hidden={skip === false} color="secondary">
+                  <Icon>select_all</Icon>
                 </Badge>
               </IconButton>
             </Tooltip>
+          }
+        </Toolbar>
+      </AppBar>
 
-            <Tooltip title={'Click to accept your selection'}>
-              <IconButton color="inherit" onClick={this.props.onAcceptSelection}>
-                <Icon>check</Icon>
-              </IconButton>
-            </Tooltip>
-
-            <Tooltip title={`Click to add new employee`}>
-              <IconButton color="inherit" onClick={this.onNewUserClick}>
-                <Icon>add_circle_outline</Icon>
-              </IconButton>
-            </Tooltip>
-            {this.state.businessUnitFilter ? <Tooltip title={`Filter By Business Unit`}>
-              <IconButton color="inherit" onClick={this.onShowBusinessUnitFilter}>
-                <Icon>filter</Icon>
-              </IconButton>
-            </Tooltip> : null}
-
-            {this.props.allowDelete === true && this.props.selected.length > 0 &&
-              <Tooltip title={`Click here to delete the ${this.props.selected.length > 1 ? `${this.props.selected.length} employees` : 'employee'} selected`}>
-                <IconButton color="inherit" onClick={this.props.onDeleteUsersClick}>
-                  <Icon>delete</Icon>
-                </IconButton>
-              </Tooltip>
-            }
-          </Toolbar>
-        </AppBar>
-
-        <UserList
-          onUserSelect={this.props.onUserSelect}
-          organizationId={this.props.organizationId}
-          searchString={this.state.searchString}
-          skip={skip === true}
-          selected={this.props.selected}
-          excluded={this.props.excluded}
-          multiSelect={this.props.multiSelect === true || false}
-          page={this.state.current_page || 1}
-          pageSize={this.state.page_size || 25}
-          onPageChange={onPageChange} />
-      </SingleColumnLayout>
-    )
-  }
-
-}
-
-export const UserListWithSearchComponent = compose(
-  withStyles(UserListWithSearch.Styles),
-  withTheme,
-  withApi,
-  withRouter)(UserListWithSearch);
-
-
-export default {
-  UserListWithSearchComponent,
+      <UserList
+        onUserSelect={onUserSelect}
+        organizationId={organization_id}
+        searchString={searchString}
+        skip={skip === true}
+        selected={selected}
+        excluded={excluded}
+        multiSelect={multiSelect === true || false}
+        page={paging.page || 1}
+        pageSize={paging.pageSize || 25}
+        onPageChange={onPageChange} />
+    </>
+  )
 };
