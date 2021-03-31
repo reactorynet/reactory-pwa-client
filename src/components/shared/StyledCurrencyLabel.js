@@ -16,7 +16,7 @@ class ToolTipHOC extends Component {
         backgroundColor,
         color,
         boxShadow: theme.shadows[1],
-        fontSize: 14,
+        fontSize: 14
       },
     }))(Tooltip);
 
@@ -58,7 +58,8 @@ class StyledCurrencyLabel extends Component {
         displayPrimaryCurrency = true,
         currenciesDisplayed = null,
         options = null,
-        style = {}
+        style = {},
+        valueStyle = {}
       } = this.props;
 
       let isCents = true;
@@ -157,7 +158,7 @@ class StyledCurrencyLabel extends Component {
       let primaryCurrency = (
         <div className={classes.currency} {..._containerProps}>
           {_prependText != '' && <span style={{ fontWeight: "bold" }}>{_prependText}</span>}
-          <span className={classes.currencyValue}>
+          <span className={classes.currencyValue} style={valueStyle}>
             {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
           </span>
           {_postpendText != '' && <span>{_postpendText}</span>}
