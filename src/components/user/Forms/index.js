@@ -64,7 +64,7 @@ class Forgot extends Component {
     super(props, context)
 
     let lastEmail = '';
-    if(localStorage && localStorage.getItem) {
+    if (localStorage && localStorage.getItem) {
       lastEmail = localStorage.getItem('$reactory$last_logged_in_user');
     }
 
@@ -82,25 +82,25 @@ class Forgot extends Component {
     this.emailKeyPressHandler = this.emailKeyPressHandler.bind(this);
     this.componentRefs = props.api.getComponents([
       'core.Loading@1.0.0',
-      'core.Layout@1.0.0',      
-      'core.BasicModal@1.0.0',      
+      'core.Layout@1.0.0',
+      'core.BasicModal@1.0.0',
     ]);
   }
 
   onSubmit() {
-    const that = this;    this.props.api.forgot({ email: this.state.email }).then((forgotResult) => {
+    const that = this; this.props.api.forgot({ email: this.state.email }).then((forgotResult) => {
       that.setState({ mailSent: true })
     }).catch((error) => {
       that.setState({ hasError: true, message: 'Could not send an email. If this problem persists please contact our helpdesk.' })
     });
   }
-  
+
   goBack() {
     this.props.history.goBack();
   }
 
-  emailKeyPressHandler(keyPressEvent){
-    if(keyPressEvent.charCode === 13){
+  emailKeyPressHandler(keyPressEvent) {
+    if (keyPressEvent.charCode === 13) {
       this.onSubmit();
     }
   }
@@ -109,19 +109,19 @@ class Forgot extends Component {
 
     const { emailKeyPressHandler } = this;
     const {
-      BasicModal,      
+      BasicModal,
     } = this.componentRefs;
     const { magicLink } = this.props;
 
     if (this.state.mailSent) {
       return (
-      <BasicModal open={true} onClose={this.goBack} title="Email Sent">
-        <Typography variant="heading">
-          { magicLink === false 
-            ? 'An email has been sent with instructions to reset your password. Please allow a few minutes for delivery' 
-            : 'An email has been sent with a magic link to login. Please allow a few minutes for delivery' } 
-        </Typography>
-      </BasicModal>)
+        <BasicModal open={true} onClose={this.goBack} title="Email Sent">
+          <Typography variant="heading">
+            {magicLink === false
+              ? 'An email has been sent with instructions to reset your password. Please allow a few minutes for delivery'
+              : 'An email has been sent with a magic link to login. Please allow a few minutes for delivery'}
+          </Typography>
+        </BasicModal>)
     }
     if (this.state.hasError) {
       return (<div><Typography variant="heading">{this.state.message}</Typography></div>);
@@ -130,37 +130,37 @@ class Forgot extends Component {
     const beforeComponent = (<div className={this.props.classes.logo} style={{ marginBottom: '16px', marginTop: '20%' }}></div>)
     const updateEmailAddress = e => this.setState({ email: e.target.value })
     return (
-      <CenteredContainer classNames={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto'  }}>
+      <CenteredContainer classNames={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto' }}>
         {beforeComponent}
-        <Paper style={{padding: '16px'}}>
-          <Grid container>            
+        <Paper style={{ padding: '16px' }}>
+          <Grid container>
             <Grid item xs={12}>
-              <TextField 
-                onChange={updateEmailAddress} 
+              <TextField
+                onChange={updateEmailAddress}
                 onKeyPress={emailKeyPressHandler}
-                value={this.state.email} 
-                label="Email"  
-                fullWidth={true} 
-                helperText={ magicLink === false ? 
+                value={this.state.email}
+                label="Email"
+                fullWidth={true}
+                helperText={magicLink === false ?
                   "Enter your email and click the send button below to start the reset process for your account." :
                   "Enter your email address and we will send you link to log in with."
                 }
-                style={{marginBottom: '50px'}}
-                inputProps={{ 
-                  inputProps:{
+                style={{ marginBottom: '50px' }}
+                inputProps={{
+                  inputProps: {
                     onKeyPress: emailKeyPressHandler
                   }
-                 }}
-                />
+                }}
+              />
             </Grid>
             <Grid item xs={12}>
               <Button type="button" onClick={this.goBack} variant="flat"><Icon>keyboard_arrow_left</Icon>&nbsp;BACK</Button>
-              <Tooltip title={ magicLink === false ? "Click to send a reset email" : "Click to send a magic link to login with" }>
+              <Tooltip title={magicLink === false ? "Click to send a reset email" : "Click to send a magic link to login with"}>
                 <Fab onClick={this.onSubmit} variant="rounded" color="primary" ><Icon>send</Icon></Fab>
-              </Tooltip>                    
+              </Tooltip>
             </Grid>
           </Grid>
-          
+
         </Paper>
       </CenteredContainer>
     )
@@ -193,11 +193,11 @@ class ResetPassword extends Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
-      formData: { 
+      formData: {
         user: props.api.getUser(),
-        password: '', 
-        passwordConfirm: '', 
-        authToken: localStorage.getItem('auth_token') 
+        password: '',
+        passwordConfirm: '',
+        authToken: localStorage.getItem('auth_token')
       },
       message: '',
       hasError: false,
@@ -206,12 +206,12 @@ class ResetPassword extends Component {
     }
     this.onSubmit = this.onSubmit.bind(this);
     this.componentDefs = props.api.getComponents([
-      'forms.ResetPasswordForm', 
+      'forms.ResetPasswordForm',
       'core.BasicModal',
     ]);
   }
 
-  componentDidCatch(err){
+  componentDidCatch(err) {
     this.setState({ errored: true, error: err })
   }
 
@@ -219,7 +219,7 @@ class ResetPassword extends Component {
     const that = this;
     //console.log('Submiting Password Change', form);
     let errors = [];
-        
+
     this.props.api.resetPassword({
       email: form.formData.user.email,
       authToken: form.formData.authToken,
@@ -227,8 +227,8 @@ class ResetPassword extends Component {
       confirmPassword: form.formData.confirmPassword
     }).then((forgotResult) => {
       //console.log('Forgot password has been triggered', forgotResult);
-      that.setState({ passwordUpdated: true, message: 'Your password has been updated, you will be redirected to the dashboard momentarily' }, ()=>{
-        setTimeout(()=>{
+      that.setState({ passwordUpdated: true, message: 'Your password has been updated, you will be redirected to the dashboard momentarily' }, () => {
+        setTimeout(() => {
           that.props.history.push('/')
         }, 2500)
       });
@@ -243,17 +243,17 @@ class ResetPassword extends Component {
   render() {
     const { ResetPasswordForm, BasicModal } = this.componentDefs;
 
-    if(this.state.errored === true) {
+    if (this.state.errored === true) {
       return <p>Error {this.state.error.message}</p>
     }
 
-    if (this.state.passwordUpdated === true) {      
+    if (this.state.passwordUpdated === true) {
       return (<BasicModal open={true}><Typography variant="body1" >{this.state.message}</Typography></BasicModal>)
     }
     if (this.state.hasError === true) {
       const clearError = e => this.setState({ hasError: false, message: '' });
       return (<BasicModal open={true}><Typography variant="body1" onClose={clearError}>{this.state.message}</Typography></BasicModal>);
-    }    
+    }
 
     const beforeComponent = (<div className={this.props.classes.logo} style={{ marginBottom: '16px', marginTop: '20%' }}></div>)
 
@@ -282,22 +282,22 @@ class SearchUser extends Component {
     this.state = {
       formData: { searchString: '' },
       message: '',
-      hasError: false,      
-    }    
+      hasError: false,
+    }
   }
 
-  
+
 
   onChange(formData) {
     //console.log('formData changed', formData)
     this.setState({ formData });
   }
-  
+
 
   render() {
-        
 
-    return (      
+
+    return (
       <CenteredContainer classNames={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto' }}>
         <ReactoryFormComponent formId="password-reset" uiFramework="material" onSubmit={this.props.onSubmit} formData={this.state.formData}>
           <Button type="submit" variant="raised" color="primary"><Icon>search</Icon></Button>
@@ -319,31 +319,31 @@ class RememberCredentials extends Component {
     title: PropTypes.string,
     onOk: PropTypes.func,
     loginHandler: PropTypes.func,
-    attemptLogin: PropTypes.bool,    
-    api: PropTypes.instanceOf(ReactoryApi),    
+    attemptLogin: PropTypes.bool,
+    api: PropTypes.instanceOf(ReactoryApi),
   }
 
   static defaultProps = {
-    onComplete: ()=> {
+    onComplete: () => {
 
-    },    
+    },
     showLogin: false,
     attemptLogin: false,
     title: 'We need some security information',
     loginHandler: () => {
-      return new Promise(( resolve, reject ) => { 
+      return new Promise((resolve, reject) => {
         reject('No login handler available');
       });
     }
   }
 
-  static styles = theme => ({ })
+  static styles = theme => ({})
 
-  constructor(props, context){
-    super(props, context);  
+  constructor(props, context) {
+    super(props, context);
     this.componentDefs = props.api.getComponents([
       'core.Loading',
-      'core.Logo',      
+      'core.Logo',
       'forms.LoginForm'
     ]);
 
@@ -357,9 +357,9 @@ class RememberCredentials extends Component {
     this.cancelSave = this.cancelSave.bind(this);
   }
 
-  componentDidMount(){
+  componentDidMount() {
     //make sure we have the provider localsetting store
-    localStorage.setItem(`reactory.authentications.${this.props.provider}.prompt.remember`, 'not-set');    
+    localStorage.setItem(`reactory.authentications.${this.props.provider}.prompt.remember`, 'not-set');
     localStorage.setItem(`reactory.authentications.${this.props.provider}.prompt.last`, new Date().valueOf());
   }
 
@@ -367,74 +367,73 @@ class RememberCredentials extends Component {
     this.props.api.log('An unhandled error occured in RememberCredentials Form', unhandled, 'warning')
   }
 
-  saveCredentials(){
-    const {  provider, onComplete, api, loginHandler, attemptLogin } = this.props;    
+  saveCredentials() {
+    const { provider, onComplete, api, loginHandler, attemptLogin } = this.props;
     const { username, password, loginResults } = this.state;
 
     const self = this;
-    this.setState({ saving: true, busy: true }, ()=>{
-      
+    this.setState({ saving: true, busy: true }, () => {
+
       const doSave = () => {
-        api.saveUserLoginCredentials(provider, { username, password }).then((saved) => {        
-          self.setState({ saving: false, busy: false, complete: true, message: 'Your credentials has been stored and kept safe' }, ()=>{
+        api.saveUserLoginCredentials(provider, { username, password }).then((saved) => {
+          self.setState({ saving: false, busy: false, complete: true, message: 'Your credentials has been stored and kept safe' }, () => {
             onComplete(saved.data.addUserCredentials === true);
           });
         }).catch((saveError) => {
           const errorMessage = saveError.message;
-          self.setState({ saving: false, busy: false, complete: true, message: `We could not save your credentials due to a system error. ${errorMessage}` }, ()=>{          
+          self.setState({ saving: false, busy: false, complete: true, message: `We could not save your credentials due to a system error. ${errorMessage}` }, () => {
             onComplete(false, errorMessage);
-          });      
+          });
         });
       }
-      
-      if(attemptLogin === true) {
-        loginHandler(username, password).then(( { success, message, error, mustSave = true} ) => {
-          if(success === true && mustSave === true) {
+
+      if (attemptLogin === true) {
+        loginHandler(username, password).then(({ success, message, error, mustSave = true }) => {
+          if (success === true && mustSave === true) {
             doSave();
           } else {
-            if(success === true) {
-              self.setState({ saving: false, busy: false, complete: true, message: 'You have been authenticated and your credentials stored.'},
-              ()=>{          
-                onComplete(true, 'You have been authenticated and your credentials stored.');
-              });  
+            if (success === true) {
+              self.setState({ saving: false, busy: false, complete: true, message: 'You have been authenticated and your credentials stored.' },
+                () => {
+                  onComplete(true, 'You have been authenticated and your credentials stored.');
+                });
             } else {
-              self.setState({ saving: false, busy: false, complete: true, message: `We could not authenticate your account using the credentials provided. [${message || error || 'No Other Error Details'}]`},
-              ()=>{          
-                onComplete(false, message);
-              });  
-            }            
+              self.setState({ saving: false, busy: false, complete: true, message: `We could not authenticate your account using the credentials provided. [${message || error || 'No Other Error Details'}]` },
+                () => {
+                  onComplete(false, message);
+                });
+            }
           }
         }).catch((authError) => {
-          self.setState({ saving: false, busy: false, complete: true, message: `We could not authenticate your account using the credentials provided. [${authError.message || 'No Other Error Details'}]`},
-          ()=>{          
-            onComplete(false, authError.message);
-          });
+          self.setState({ saving: false, busy: false, complete: true, message: `We could not authenticate your account using the credentials provided. [${authError.message || 'No Other Error Details'}]` },
+            () => {
+              onComplete(false, authError.message);
+            });
         });
       } else {
         doSave();
       }
 
 
-      
-    })    
+
+    })
   }
 
-  cancelSave(){    
-    if(this.props.onClose) {
+  cancelSave() {
+    if (this.props.onClose) {
       this.props.onClose()
     }
   }
 
-  render(){
+  render() {
     const { Logo, Loading, LoginForm } = this.componentDefs;
     const { api, showLogin, message, loginHandler } = this.props;
     const { loginError, loginResult, busy } = this.state;
     const user = api.getUser();
     const self = this;
 
-    const fixSchema = ( formSchema) => {
+    const fixSchema = (formSchema) => {
       //we remove baseUrl and client Id
-      
       const { schema, uiSchema } = formSchema
       delete schema.properties.baseUrl;
       delete schema.properties.clientId;
@@ -452,26 +451,26 @@ class RememberCredentials extends Component {
       api.log(`Collected formData`, formData);
       const { formData } = form;
       const { email, password } = formData
-      this.setState({ username: email, password, busy: true }, this.saveCredentials);      
+      this.setState({ username: email, password, busy: true }, this.saveCredentials);
     };
 
 
     return (
-      <Container maxWidth="sm" style={{paddingTop: '3%'}}>                
-        { this.state.saving && (<Loading message={'Please wait while we set things up.'} />) }
-        { this.state.saving === false ? (<Logo backgroundSrc={api.assets.logo} />) : null }
-        <Typography variant="h4" style={{marginTyop:"40px"}}>{this.props.title}</Typography>
+      <Container maxWidth="sm" style={{ paddingTop: '3%' }}>
+        { this.state.saving && (<Loading message={'Please wait while we set things up.'} />)}
+        { this.state.saving === false ? (<Logo backgroundSrc={api.assets.logo} />) : null}
+        <Typography variant="h4" style={{ marginTyop: "40px" }}>{this.props.title}</Typography>
         <Typography variant="body2">
           {this.state.message || message || 'Credentials required'}
         </Typography>
-        { showLogin === true && <LoginForm extendSchema={fixSchema} formData={{email: user.email }} onSubmit={collectLogin} busy={ busy === true } /> }               
+        { showLogin === true && <LoginForm extendSchema={fixSchema} formData={{ email: user.email }} onSubmit={collectLogin} busy={busy === true} />}
         { showLogin === false ? (
-          <React.Fragment> 
+          <React.Fragment>
             <Button color="primary" onClick={this.saveCredentials}><Icon>check</Icon>Yes please</Button>
-            <Button onClick={this.cancelSave}><Icon>close</Icon>No thanks</Button> 
-          </React.Fragment>) : 
-          null }      
-        
+            <Button onClick={this.cancelSave}><Icon>close</Icon>No thanks</Button>
+          </React.Fragment>) :
+          null}
+
       </Container>
     )
   }

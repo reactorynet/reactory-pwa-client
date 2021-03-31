@@ -449,8 +449,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   // TODO: Werner
   // Please check this is correct
-  const getActiveSchema = () => {
-    let _schemaDefinitions: any = formDef.schema;
+  const getActiveSchema = (defaultSchema) => {
+    let _schemaDefinitions: any = defaultSchema || formDef.schema;
 
     const _uiSchema = getActiveUiSchema();
     if (_uiSchema["ui:schema"]) {
@@ -697,7 +697,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
 
 
-    if ((_graphql && _graphql.query) || (_graphql && _graphql.mutation)) {
+    if (busy === false && (_graphql && _graphql.query && queryComplete === true) || (_graphql && _graphql.mutation)) {
+
       if (deepEquals(formData, form.formData) === false) {
 
         reactory.log(`${formDef.name}[${instance_id}].onChange`, { data: form.formData }, 'debug');
@@ -730,7 +731,13 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         reactory.log(`${signature} => onChange DELTA =>`, { changed, rchanged }, 'debug');
 
-        if (_graphql && _graphql.mutation && _graphql.mutation['onChange']) {
+        let do_mutation = true;
+
+        if (props.onBeforeMutation) {
+          do_mutation = props.onBeforeMutation({}, form, getFormContext());
+        }
+
+        if (_graphql && _graphql.mutation && _graphql.mutation['onChange'] && do_mutation === true) {
           //;
           let onChangeMutation: Reactory.IReactoryFormMutation = _graphql.mutation['onChange'];
           let throttleDelay: number = _graphql.mutation['onChange'].throttle || 250;
@@ -912,7 +919,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     _formDef.graphql = getActiveGraphDefinitions();
 
     // TODO: Added by Drew
-    _formDef.schema = getActiveSchema();
+    _formDef.schema = getActiveSchema(_formDef.schema);
 
     // #region setup functions
     const setFormContext = () => {
@@ -1840,6 +1847,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
       return !(queryComplete === true);
     }
+
     return (
       <>
         {isBusy() === true && <LinearProgress />}
