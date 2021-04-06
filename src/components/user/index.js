@@ -272,7 +272,7 @@ export const CreateProfile = compose(
 export const EditProfile = compose(
   withApi
 )((props) => {
-  const { api, organizationId, profile, onCancel, withPeers, profileTitle, mode, headerComponents, footerComponents } = props
+  const { api, organizationId, surveyId, profile, onCancel, withPeers, profileTitle, mode, headerComponents, footerComponents } = props
   return (
     <Mutation mutation={api.mutations.Users.updateUser} >
       {(updateUser, { loading, error, data }) => {
@@ -285,6 +285,8 @@ export const EditProfile = compose(
           isNew: false,
           onCancel,
           profileTitle,
+          organizationId,
+          surveyId,
           footerComponents,
           headerComponents,
           onSave: (profileData) => {
