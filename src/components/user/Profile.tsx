@@ -609,7 +609,8 @@ class Profile extends Component<any, any> {
                     rowData => ({
                         icon: 'supervisor_account',
                         tooltip: 'Set user as leader',
-                        disabled: rowData.relationship === 'manager',
+                        //@ts-ignore
+                        disabled: rowData.relationship ? rowData.relationship === 'manager' : false,
                         onClick: (event, rowData) => {
                             ////console.log('Making User Supervisor', { event, rowData });
                             setPeerRelationShip(rowData, 'manager')
@@ -618,7 +619,8 @@ class Profile extends Component<any, any> {
                     rowData => ({
                         icon: 'account_box',
                         tooltip: 'Set user as peer',
-                        disabled: rowData.relationship === 'peer',
+                        //@ts-ignore
+                        disabled: rowData.relationship ? rowData.relationship === 'peer' : false,
                         onClick: (event, rowData) => {
                             ////console.log('Setting User Peer', { event, rowData });
                             setPeerRelationShip(rowData, 'peer')
@@ -627,7 +629,8 @@ class Profile extends Component<any, any> {
                     rowData => ({
                         icon: 'account_circle',
                         tooltip: 'Set user as direct report',
-                        disabled: rowData.relationship === 'report',
+                        //@ts-ignore
+                        disabled: rowData.relationship ? rowData.relationship === 'report' : false,
                         onClick: (event, rowData) => {
                             ////console.log('Making User Supervisor', { event, rowData });
                             setPeerRelationShip(rowData, 'report')
