@@ -437,6 +437,12 @@ namespace Reactory {
     widget: string
   }
 
+  export interface IFieldMap {
+    component: string | any;
+    componentFqn: string,
+    field: string
+  }
+
   export interface IObjectMap {
     [key: string]: string | Array<any> | object
   }
@@ -545,6 +551,7 @@ namespace Reactory {
     exports?: IExport[],
     refresh?: any,
     widgetMap?: IWidgetMap[],
+    fieldMap?: IFieldMap[];
     backButton?: Boolean,
     workflow?: Object,
     noHtml5Validate?: boolean,

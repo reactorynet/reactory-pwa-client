@@ -1000,6 +1000,56 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       }
     };
 
+    if (!_formDef.fields) _formDef.fields = {};
+
+    if (isArray(_formDef.fieldMap) === true) {
+      _formDef.fieldMap.forEach((map) => {
+        reactory.log(`${signature} (init) Mapping ${map.field} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
+        let mapped = false;
+
+        if (map.component && typeof map.component === 'string') {
+          if (map.component.indexOf('.') > -1) {
+            const pathArray = map.component.split('.');
+            let component: Object = componentDefs[pathArray[0]];
+            if (component && Object.keys(component).length > 0) {
+              for (let pi = 1; pi <= pathArray.length - 1; pi += 1) {
+                if (component && Object.keys(component).length > 0) component = component[pathArray[pi]]
+              }
+              _formDef.fields[map.field] = component;
+              reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component }, 'debug')
+              mapped = true;
+            } else {
+              _formDef.widgets[map.field] = componentDefs[map.component];
+              if (_formDef.widgets[map.field]) {
+                reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.field] }, 'debug')
+                mapped = true;
+              }
+            }
+          }
+        }
+
+        if (map.componentFqn && map.field && mapped === false) {
+          if (typeof map.componentFqn === 'string' && typeof map.field === 'string') {
+            _formDef.widgets[map.field] = reactory.getComponent(map.componentFqn);
+            if (_formDef.widgets[map.field]) {
+              reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.field] }, 'debug')
+              mapped = true;
+            }
+          }
+        }
+
+        if (mapped === false) {
+          _formDef.widgets[map.field] = (props, context) => {
+
+            return (<WidgetPresets.WidgetNotAvailable {...props} map={map} />)
+
+          }
+          reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.field}`, { map }, 'warning')
+        }
+      });
+    }
+
+
     const setWidgets = () => {
       switch (_formDef.uiFramework) {
         case 'material': {

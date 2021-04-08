@@ -182,7 +182,8 @@ export interface ReactoryApiUtils {
   deepEquals: Function,
   lodash: any,
   classNames: Function,
-  uuid: () => string
+  uuid: () => string,
+  collectData: (forms: any[], shape: any) => any
 }
 
 export interface WindowSizeSpec {
@@ -303,6 +304,16 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       templateObject: parseTemplateObject,
       classNames,
       uuid,
+      collectData: (forms: any[], shape: any) => {
+        let data = forms.map((reactoryForm) => {
+          if (reactoryForm.formRef && reactoryForm.formRef.current) {
+            return reactoryForm.formRef.current.state.formData
+          }
+        });
+
+        if (shape) return objectMapper(data, shape);
+        return data;
+      }
     };
     this.$func = {
       'core.NullFunction': (params) => {
