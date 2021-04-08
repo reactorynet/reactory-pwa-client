@@ -18,7 +18,7 @@ import {
 import { withApi } from '../../../api/ApiProvider';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
-import { find, template } from 'lodash';
+import { find, template, get } from 'lodash';
 import { Styles } from '@material-ui/styles/withStyles/withStyles';
 import Reactory from '@reactory/client-core/types/reactory';
 import ReactoryApi from 'api';
@@ -365,6 +365,16 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }
       }
 
+      if (uiOptions.conditionalRowStyling && uiOptions.conditionalRowStyling.length > 0) {
+
+        uiOptions.conditionalRowStyling.forEach((option) => {
+          const _field = get(rowData, option.field);
+          if (_field && _field.toLowerCase() == option.condition.toLowerCase()) {
+            style = { ...style, ...option.style };
+          }
+        });
+      }
+
       return style;
     },
     headerStyle: {
@@ -602,9 +612,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     return willUnmount;
   }, []);
-
-
-
 
   return (
     <React.Fragment>
