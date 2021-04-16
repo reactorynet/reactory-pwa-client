@@ -1,7 +1,7 @@
 import React from "react";
 
 export default function ErrorList(props) {
-  const { errors } = props;
+  const { errors, } = props;
   return (
     <div className="panel panel-danger errors">
       <div className="panel-heading">

@@ -8,6 +8,7 @@ import classNames from 'classnames';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions } from '@apollo/client';
+import localForage from 'localforage';
 import { Mutation, Query } from '@apollo/client/react/components';
 
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -183,7 +184,8 @@ export interface ReactoryApiUtils {
   lodash: any,
   classNames: Function,
   uuid: () => string,
-  collectData: (forms: any[], shape: any) => any
+  collectData: (forms: any[], shape: any) => any,
+  localForage: LocalForage
 }
 
 export interface WindowSizeSpec {
@@ -313,7 +315,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
         if (shape) return objectMapper(data, shape);
         return data;
-      }
+      },
+      localForage,
     };
     this.$func = {
       'core.NullFunction': (params) => {
@@ -1303,36 +1306,45 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     const that = this;
     return new Promise((resolve, reject) => {
       that.forms(true).then(() => {
-        that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
-          if (result.data.apiStatus.status === "API OK") {
-            that.setUser({ ...result.data.apiStatus });
-            that.lastValidation = moment().valueOf();
-            that.tokenValidated = true;
+        const getStatus = () => {
+          if (that.client) {
+            that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
+              if (result.data.apiStatus.status === "API OK") {
+                that.setUser({ ...result.data.apiStatus });
+                that.lastValidation = moment().valueOf();
+                that.tokenValidated = true;
 
-            if (options.emitLogin === true)
-              that.emit(ReactoryApiEventNames.onLogin, that.getUser());
-            if (result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
-              result.data.apiStatus.messages.forEach((message) => {
-                that.createNotification(message.title, message);
-              });
-            }
+                if (options.emitLogin === true)
+                  that.emit(ReactoryApiEventNames.onLogin, that.getUser());
+                if (result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
+                  result.data.apiStatus.messages.forEach((message) => {
+                    that.createNotification(message.title, message);
+                  });
+                }
 
-            that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: false });
-            resolve(that.getUser());
+                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: false });
+                resolve(that.getUser());
+              } else {
+                that.logout(false);
+                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: true });
+                that.setUser(anonUser);
+                resolve(anonUser);
+              }
+            }).catch((clientErr) => {
+              that.logout(false);
+              that.emit(ReactoryApiEventNames.onApiStatusUpdate, { offline: true, clientError: clientErr });
+              resolve({ ...anonUser, offline: true, offlineError: true });
+            });
           } else {
-            that.logout(false);
-            that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: true });
-            that.setUser(anonUser);
-            resolve(anonUser);
+            debugger
+            setTimeout(() => {
+              getStatus();
+            }, 1000);
           }
-        }).catch((clientErr) => {
-          that.logout(false);
-          that.emit(ReactoryApiEventNames.onApiStatusUpdate, { offline: true, clientError: clientErr });
-          resolve({ ...anonUser, offline: true, offlineError: true });
-        });
+        };
+        getStatus()
 
       });
-
     });
   }
 

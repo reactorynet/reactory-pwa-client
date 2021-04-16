@@ -1,7 +1,7 @@
-import { 
+import {
   ApolloClient,
   Resolvers,
-  split,  
+  split,
   NormalizedCacheObject
 } from '@apollo/client';
 
@@ -33,19 +33,28 @@ if (localStorage) {
 
 
 
-export default async () => {  
+export default async () => {
   // get the authentication token from local storage if it exists
   const token = localStorage.getItem('auth_token') || anonToken;
 
-  const _cache = await getCache(true);
-  const { cache, persistor } = _cache;
+  let persistedCache: any = null;
+  let cache: any = null;
+  let persistor: any = null;
+  try {
+    persistedCache = await getCache(true);
+    cache = persistedCache.cache ? persistedCache.cache : null;
+    persistor = persistedCache.persistor ? persistedCache.persistor : null;
+  } catch (cacheGetError) {
+    debugger;
+    console.error(`${cacheGetError.message}`);
+  }
 
   const clearCache = () => {
-    if(!persistor) return;
+    if (!persistor) return;
     persistor.purge();
   }
 
-  const authLink = setContext((_, { headers }) => {                
+  const authLink = setContext((_, { headers }) => {
     return {
       headers: {
         ...headers,
@@ -77,7 +86,7 @@ export default async () => {
   });
 
   const ws_link = new WebSocketLink(ws_client);
-  
+
   const splitLink = split(
     ({ query }) => {
       const definition = getMainDefinition(query);
@@ -105,7 +114,7 @@ export default async () => {
         errorPolicy: 'all',
       },
 
-      mutate: {        
+      mutate: {
         errorPolicy: 'all',
       },
     },

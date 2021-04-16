@@ -733,7 +733,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         let do_mutation = true;
 
-        if (props.onBeforeMutation) {
+        if (props.onBeforeMutation && dirty === true) {
           do_mutation = props.onBeforeMutation({}, form, getFormContext());
         }
 
@@ -1281,9 +1281,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const getData = (defaultInputData?: any) => {
     reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
     const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
-    if (_graphql && _graphql.debug) {
-      ;
-    }
+
     let _formData = null;
 
     switch (formDef.schema.type) {
