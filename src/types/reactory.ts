@@ -351,13 +351,14 @@ namespace Reactory {
   }
 
   export interface IObjectSchema extends ISchema {
-    properties?: IObjectProperties,
+    properties: IObjectProperties,
   }
 
   export interface IArraySchema extends ISchema {
     items: IObjectSchema | IArraySchema
   }
 
+  export type AnySchema = ISchema | IObjectSchema | IArraySchema
   export interface IReactoryFormQueryErrorHandlerDefinition {
     componentRef: string,
     method: string

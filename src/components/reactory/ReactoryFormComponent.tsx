@@ -712,6 +712,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         let cancelEvent = false;
 
+        let do_mutation = true;
         const fire = () => {
 
           if (formDef.eventBubbles) {
@@ -731,31 +732,32 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         reactory.log(`${signature} => onChange DELTA =>`, { changed, rchanged }, 'debug');
 
-        let do_mutation = true;
+        if (_graphql && _graphql.mutation && _graphql.mutation['onChange']) {
 
-        if (props.onBeforeMutation && dirty === true) {
-          do_mutation = props.onBeforeMutation({}, form, getFormContext());
-        }
+          do_mutation === true
 
-        if (_graphql && _graphql.mutation && _graphql.mutation['onChange'] && do_mutation === true) {
-          //;
-          let onChangeMutation: Reactory.IReactoryFormMutation = _graphql.mutation['onChange'];
-          let throttleDelay: number = _graphql.mutation['onChange'].throttle || 250;
-          let variables = reactory.utils.objectMapper({ eventData: form, form: { formData, formContext: getFormContext() } }, onChangeMutation.variables);
+          if (props.onBeforeMutation && dirty === true) {
+            do_mutation = props.onBeforeMutation({}, form, getFormContext());
+          }
 
-          //let throttled_call = throttle(() => {
-          reactory.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
-            reactory.log(`${signature} => onChange => onChangeMutation result`, { mutationResult }, 'debug');
+          if (do_mutation === true) {
+            //;
+            let onChangeMutation: Reactory.IReactoryFormMutation = _graphql.mutation['onChange'];
+            let throttleDelay: number = _graphql.mutation['onChange'].throttle || 250;
+            let variables = reactory.utils.objectMapper({ eventData: form, form: { formData, formContext: getFormContext() } }, onChangeMutation.variables);
 
-            if (props.onMutateComplete) props.onMutateComplete(form.formData, getFormContext(), mutationResult);
-          }).catch((mutationError) => {
+            //let throttled_call = throttle(() => {
+            reactory.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
+              reactory.log(`${signature} => onChange => onChangeMutation result`, { mutationResult }, 'debug');
 
-            if (props.onMutateComplete) props.onMutateComplete(form.formData, getFormContext(), null, mutationError);
-            reactory.log(`${signature} => onChange => onChangeMutation error`, { mutationError }, 'error');
-          });
+              if (props.onMutateComplete) props.onMutateComplete(form.formData, getFormContext(), mutationResult);
+            }).catch((mutationError) => {
 
+              if (props.onMutateComplete) props.onMutateComplete(form.formData, getFormContext(), null, mutationError);
+              reactory.log(`${signature} => onChange => onChangeMutation error`, { mutationError }, 'error');
+            });
 
-          //throttled_call();
+          }
         }
 
         if (formDef && formDef.refresh && formDef.refresh.onChange) {

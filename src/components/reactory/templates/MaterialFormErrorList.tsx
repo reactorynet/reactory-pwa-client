@@ -16,6 +16,7 @@ import {
 } from '@material-ui/core';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { withStyles, withTheme, styled } from '@material-ui/core/styles';
+import Reactory from '@reactory/client-core/types/reactory';
 
 const PopOverStyles = (theme: Theme): any => {
 
@@ -138,7 +139,11 @@ const MaterialFormErrorTemplate = (props) => {
 
     let $schemaErrors = [];
 
-    const collate_errors_for_property = (element, propertyName = 'root') => {
+    const collate_errors_for_property = (element: any, propertyName = 'root', $errorSchema: any, parent?: Reactory.AnySchema) => {
+
+      let $item_errors = []
+
+      if (element === null || element === undefined) return [];
 
       switch (element.type) {
         case "string":
@@ -146,37 +151,49 @@ const MaterialFormErrorTemplate = (props) => {
         case "date": {
 
           if (propertyName !== 'root') {
-            if (errorSchema[element] && errorSchema[propertyName].__errors && errorSchema[propertyName].__errors.length > 0) {
-              if (schema.properties && schema.properties[propertyName]) {
-                $schemaErrors.push({
-                  title: schema.properties[propertyName].title,
-                  propertyName,
-                  errors: errorSchema[propertyName].__errors
-                })
-              }
+            //this is a child element.
+            if ($errorSchema[propertyName] && $errorSchema[propertyName].__errors && $errorSchema[propertyName].__errors.length > 0) {
+              $item_errors.push({
+                title: element.title || propertyName,
+                propertyName,
+                errors: errorSchema[propertyName].__errors,
+                parent
+              });
+            }
+          }
+          else {
+            if ($errorSchema.__errors.length > 0) {
+              $item_errors.push({
+                title: element.title || propertyName,
+                propertyName,
+                errors: $errorSchema.__errors,
+                parent
+              });
             }
           }
 
-          return [];
+          break;
         }
         case "array": {
-
+          //
+          debugger
+          break;
         }
         case "object": {
 
+          //For each child element provide collate the errors from the element.
+          Object.keys(element.properties).forEach((childPropertyName) => {
+            let errorsForProperty = collate_errors_for_property(element.properties[childPropertyName], childPropertyName, $errorSchema, element);
+            $item_errors = [...$item_errors, ...errorsForProperty];
+          });
         }
       }
 
-      return [];
+      return $item_errors;
     };
 
-    $schemaErrors = collate_errors_for_property(schema, 'root');
 
-
-
-    Object.keys(errorSchema).forEach((propertyName: string) => {
-      collate_errors_for_property(schema.properties[propertyName])
-    });
+    $schemaErrors = collate_errors_for_property(schema, 'root', errorSchema, null);
 
     const errorComponent = (
       <List>
