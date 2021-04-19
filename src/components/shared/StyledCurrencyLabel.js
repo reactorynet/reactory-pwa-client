@@ -77,9 +77,14 @@ const StyledCurrencyLabel = (props) => {
               fontSize: '1em'
             }
           },
+        },
+        error: {
+          color: theme.palette.error,
+          fontSize: 'smaller',
         }
       }
     })();
+
 
     let isCents = true;
     let _value = value;
@@ -94,8 +99,10 @@ const StyledCurrencyLabel = (props) => {
     let inlineLabel = props.inlineLabel || false;
     let _additionalCurrencyMapField = props.additionalCurrencyMapField || 'list_price_cents';
     let _showZeroValues = props.showZeroValues || true;
+    let _currency = currency;
 
     let defaultStyle = { ...style }
+    let error = null;
 
     if (!_containerProps.style) _containerProps.style = style;
 
@@ -104,6 +111,8 @@ const StyledCurrencyLabel = (props) => {
 
       if (uiOptions.label && uiOptions.label != '')
         _label = uiOptions.label;
+
+      if (uiOptions.currency) _currency = uiOptions.currency;
 
       isCents = uiOptions && uiOptions.isCents === false ? false : isCents;
       _value = uiOptions && (uiOptions.valueProp || props.formData) ? props[uiOptions.valueProp || 'formData'] : value;
@@ -144,16 +153,16 @@ const StyledCurrencyLabel = (props) => {
     if (currencies && isArray(currencies) && displayAdditionalCurrencies === true) {
 
 
-      currencies.forEach((currency) => {
+      currencies.forEach((currency_item) => {
         let $add = true;
 
         if (!isArray(currenciesDisplayed)) {
           let currenciesArray = template(currenciesDisplayed)(props).split(',');
-          $add = indexOf(currenciesArray, currency.currency_code) >= 0;
+          $add = indexOf(currenciesArray, currency_item.currency_code) >= 0;
         }
 
         if (isArray(currenciesDisplayed) === true) {
-          $add = indexOf(currenciesDisplayed, currency.currency_code) >= 0;
+          $add = indexOf(currenciesDisplayed, currency_item.currency_code) >= 0;
         }
 
         if ($add === true) {
@@ -161,10 +170,10 @@ const StyledCurrencyLabel = (props) => {
             <div className={classes.currency} {..._containerProps}>
               <span className={classes.currencyValue}>
                 {
-                  !_showZeroValues && currency[_additionalCurrencyMapField] == 0 ?
+                  !_showZeroValues && currency_item[_additionalCurrencyMapField] == 0 ?
                     <span>   -   </span>
                     :
-                    new Intl.NumberFormat(region, { style: 'currency', currency: currency.currency_code }).format(isCents ? (currency[_additionalCurrencyMapField] / 100) : currency[_additionalCurrencyMapField])
+                    new Intl.NumberFormat(region, { style: 'currency', currency: currency_item.currency_code }).format(isCents ? (currency_item[_additionalCurrencyMapField] / 100) : currency_item[_additionalCurrencyMapField])
                 }
               </span>
             </div>
@@ -173,13 +182,27 @@ const StyledCurrencyLabel = (props) => {
       });
     }
 
+    if (_currency.indexOf('${') >= 0) {
+      try {
+        _currency = reactory.utils.template(_currency)(props);
+        if (_currency === null || _currency === undefined || _currency.trim === '') {
+          error = 'Could not get a value based on template input'
+          _currency = 'ZAR';
+        }
+      } catch (templateError) {
+        error = 'Could not parse template from input.'
+        _currency = 'ZAR';
+      }
+    };
+
     let primaryCurrency = (
       <div className={classes.currency} {..._containerProps}>
         {_prependText != '' && <span style={{ fontWeight: "bold" }}>{_prependText}</span>}
         <span className={classes.currencyValue} style={valueStyle}>
-          {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
+          {new Intl.NumberFormat(region, { style: 'currency', currency: _currency }).format(isCents ? (_value / 100) : _value)}
         </span>
         {_postpendText != '' && <span>{_postpendText}</span>}
+        { error && <span className={classes.error}>{error}</span>}
       </div>
     );
 
@@ -214,7 +237,9 @@ const StyledCurrencyLabel = (props) => {
       </>
     );
   } catch (error) {
+
     return <span>💥{error.message}</span>
+
   }
 }
 
