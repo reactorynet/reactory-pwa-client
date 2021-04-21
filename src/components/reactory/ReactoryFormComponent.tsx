@@ -52,6 +52,7 @@ const {
   BootstrapGridField,
   MaterialObjectField,
   MaterialSchemaField,
+  MaterialTabbedField,
 } = Fields;
 
 const {
@@ -986,6 +987,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             TitleField: MaterialTitleField,
             UnsupportedField: (props, context) => <Typography>Field {props.schema.title} type not supported</Typography>,
             GridLayout: MaterialGridField,
+            TabbedLayout: MaterialTabbedField,
             //TODO: WW Add following layout fields
             //Tabbed Layout
             //Panel Layout (collapsable stack)

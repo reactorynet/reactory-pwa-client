@@ -8,5 +8,6 @@ export default {
   MaterialObjectField: require('./MaterialObjectField'),
   MaterialSchemaField: require('./MaterialSchemaField'),
   MaterialGridField: GridFields.MaterialGridFieldComponent,
-  BootstrapGridField: GridFields.BootstrapGridField
+  BootstrapGridField: GridFields.BootstrapGridField,
+  MaterialTabbedField: require('./MaterialTabbedField')
 }
