@@ -2,7 +2,8 @@ import React, { Component } from 'react'
 import {
   Radio,
   RadioGroup,
-  FormControlLabel
+  FormControlLabel,
+  FormControl
 } from '@material-ui/core';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
@@ -50,28 +51,23 @@ class RadioGroupWidget extends Component {
     };
 
     return (
-      <div>
-        {labelTitle != '' && <label className={classes.label}>{labelTitle}</label>}
-        <div>
+      <FormControl>
+        <RadioGroup style={{ flexDirection: 'row', marginTop: '18px' }} aria-label="gender" name="radio group" value={_selectedValue} onChange={handleChange}>
           {
-            <RadioGroup style={{ flexDirection: 'row' }} aria-label="gender" name="radio group" value={_selectedValue} onChange={handleChange}>
-              {
-                uiOptions.radioOptions.map((option, optionIndex) => {
-                  return (
-                    <FormControlLabel
-                      control={<Radio color="primary" />}
-                      label={option.label}
-                      key={option.value}
-                      labelPlacement="left"
-                      value={option.value}
-                    />
-                  )
-                })
-              }
-            </RadioGroup>
+            uiOptions.radioOptions.map((option, optionIndex) => {
+              return (
+                <FormControlLabel
+                  control={<Radio color="primary" />}
+                  label={option.label}
+                  key={option.value}
+                  labelPlacement="left"
+                  value={option.value}
+                />
+              )
+            })
           }
-        </div>
-      </div >
+        </RadioGroup>
+      </FormControl>
     )
 
   }

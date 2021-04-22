@@ -257,6 +257,7 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
       },
       onMutateComplete: (result) => {
         api.log('Mutation Complete For Address Editing', { result }, 'debug');
+
         const { message, success } = result;
 
 
@@ -404,8 +405,12 @@ const ReactoryMarker = compose(withApi)((props: ReactoryMarkerProps) => {
       let _address = { ...marker };
 
       if (isNew === true) {
-        _address.type = 'existing',
-          _address.address = fullAddress
+        _address.type = 'existing';
+        _address.address = {
+          id: addressId,
+          fullAddress,
+          formatted_address: fullAddress
+        }
       }
 
       onSelectAddress(_address);
@@ -1535,7 +1540,7 @@ class ReactoryGoogleMapWidget extends Component<any, any> {
 
           if (onChange && typeof onChange === "function") {
             let addressData = api.utils.objectMapper(
-              { address, self },
+              { marker, address, self },
               objectMap
             );
 
