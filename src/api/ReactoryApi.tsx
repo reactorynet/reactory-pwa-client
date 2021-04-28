@@ -759,7 +759,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       try {
         $query = gql(query);
       } catch (gqlError) {
-        that.log(`Error occurred while creating the query document from input`, { query }, 'error');
+        that.log(`Error occurred while creating the query document from input`, { query, gqlError }, 'error');
+        that.createNotification('🚨 GRAPHQL ERROR IN QUERY CHECK LOG FOR DETAILS - Test the query in the Developer tools', { type: 'warning', canDismiss: true, timeout: 4000, showInAppNotification: true });
       }
     } else $query = query;
 
@@ -769,6 +770,25 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         variables,
         fetchPolicy: options.fetchPolicy || 'network-only',
       }).then((result) => {
+        const { errors = [], data } = result;
+        if (errors.length > 0) {
+          errors.forEach((error) => {
+            if (error) {
+              const { extensions, path = [] } = error;
+              if (extensions) {
+                const { code, exception } = extensions;
+                if (code === 'INTERNAL_SERVER_ERROR') {
+                  //we know for certain the server had an unhandled error in the resolver chain.
+                  //the client may not cater for these errors, so we can by default warn the user
+                  //that the server reported an error - we should log and report the error 
+                  //to the server side error reporting and tracing.
+                  that.log(`🚨 Server reported an internal error. This is should not occur, all errors need to be gracefully handled, with support info`, { error, variables, options, query, queryDefinition }, 'error');
+                  that.createNotification(`The query at path ${path.map(p => `${p}:`)} has encountered a server error. The administrators have been notified.`, { type: 'error', showInAppNotification: true, timeout: 4500 });
+                }
+              }
+            }
+          });
+        }
         resolve(result);
       }).catch((clientErr) => {
         that.log(`Error occurred while executing the query ${clientErr.message}`, { query, clientErr }, 'error');
@@ -1336,7 +1356,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
               resolve({ ...anonUser, offline: true, offlineError: true });
             });
           } else {
-            debugger
+
             setTimeout(() => {
               getStatus();
             }, 1000);

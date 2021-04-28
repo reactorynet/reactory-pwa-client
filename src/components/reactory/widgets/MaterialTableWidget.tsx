@@ -2,14 +2,31 @@ import React, { Fragment, Component, useState, RefObject, PureComponent } from '
 import PropTypes, { any } from 'prop-types'
 import { pullAt, isNil, remove, filter, isArray, throttle, ThrottleSettings } from 'lodash'
 import {
+
+  Grid,
   Typography,
   Button,
   IconButton,
   Fab,
   Icon,
-  Theme
+  Theme,
+  Table,
+  TableRow,
+  TableFooter,
+  TablePagination,
+  Toolbar,
+  Select,
+  TableCell,
+
 } from '@material-ui/core'
-import MaterialTable, { MTableToolbar } from 'material-table';
+import MaterialTable, {
+  MTableToolbar,
+  MTableBody,
+  MTablePagination,
+  MTableBodyRow,
+  MTableCell,
+  MTableHeader,
+} from 'material-table';
 
 import {
   useMediaQuery
@@ -73,6 +90,105 @@ const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipI
   }
 });
 
+const ReactoryMaterialTablePagination = (props) => {
+  const { reactory, theme, schema, idShema, formContext, uiSchema, formData, rowsPerPageOptions, tableRef } = props;
+  const { DropDownMenu } = reactory.getComponents(['core.DropDownMenu']);
+
+  const options = uiSchema['ui:options'];
+  const default_footer_options = {
+    totals: true,
+    labelStyle: { fontWeight: 'bold' },
+    totalsRowStyle: {},
+    totalsCellStyle: { textAlign: 'left' },
+    displayTotalsLabel: true,
+    paginationStyle: { display: 'flex', justifyContent: 'flex-end' }
+  };
+  const { columns = [], footerColumns = [], footerOptions = default_footer_options } = options;
+
+  const show_totals: boolean = footerColumns.length > 0 && footerOptions.totals === true;
+  const show_totals_label = footerOptions.displayTotalsLabel === true;
+
+  const onMenuItemSelect = (evt, menuItem) => {
+    if (props.onChangeRowsPerPage) {
+      let e = { target: { value: menuItem.key } };
+      props.onChangeRowsPerPage(e);
+    }
+  }
+
+  let data = [];
+
+  if (tableRef.current) {
+    if (tableRef.current.state && tableRef.current.state.data) {
+      data = [...tableRef.current.state.data];
+    }
+  }
+
+  const has_data = data.length > 0;
+
+  return (
+    <Table>
+      {show_totals === true && show_totals_label === true &&
+        <TableRow style={footerOptions.totalsRowStyle}>
+          <TableCell colSpan={footerColumns.length} style={footerOptions.totalsCellStyle}>Totals</TableCell>
+        </TableRow>}
+      {show_totals === true &&
+        <TableRow>
+          {footerColumns.map((col) => {
+            let cellStyle = {};
+            let $display = '';
+            if (col.value && has_data === true) {
+
+              switch (col.value) {
+                case 'SUM':
+                default: {
+                  let s = 0;
+                  data.forEach((row) => {
+                    if (typeof row[col.field] === 'string') {
+                      s += parseFloat(row[col.field]);
+                    }
+
+                    if (typeof row[col.field] === 'number') s += row[col.field]
+                  });
+
+                  $display = `${s}`;
+                }
+              }
+
+              cellStyle = {
+                borderStyle: 'solid none double none',
+                width: `calc((100% - (0px)) / ${columns.length})`
+
+              };
+
+            } else {
+              cellStyle = {
+                border: 'none'
+              };
+            }
+            return <TableCell style={cellStyle}>{$display}</TableCell>
+          })}
+        </TableRow>}
+      <TableRow>
+        <TableCell colSpan={show_totals === true ? footerColumns.length : 1}>
+          <Grid container spacing={0} style={{ justifyContent: 'flex-end' }}>
+            <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
+              <Grid item sm={8}>
+                <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
+              </Grid>
+              <Grid item sm={2}>
+                <DropDownMenu menus={rowsPerPageOptions.map((i) => ({ key: i, title: `${i}` }))} onSelect={onMenuItemSelect} />
+              </Grid>
+            </Grid>
+            <Grid item sm={6} md={4}>
+              <MTablePagination {...props} />
+            </Grid>
+          </Grid>
+        </TableCell>
+      </TableRow>
+    </Table >
+  )
+}
+
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], searchText = "" } = props;
@@ -97,7 +213,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   let ToolbarComponent = null;
   let components: { [key: string]: Component | PureComponent | Function } = {};
   let detailsPanel = null;
-
 
   if (uiOptions.componentMap) {
     if (uiOptions.componentMap.Toolbar) {
@@ -187,24 +302,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
               response.page = response.page - 1;
-
-              if (uiOptions.footerColumns && uiOptions.footerColumns.length > 0) {
-
-                const footerObject = {};
-                uiOptions.footerColumns.forEach(fcol => {
-                  footerObject[fcol.field] = fcol.text && fcol.text != '' ? fcol.text : fcol.value ? template(fcol.value)(queryResult.data[queryDefinition.name]) : null
-                });
-
-                if (query.selectedRows) {
-                  query.selectedRows.forEach((row) => {
-                    if (row.tableData) {
-                      response.data[row.tableData.id].tableData = row.tableData;
-                    }
-                  })
-                }
-
-                response.data.push(footerObject);
-              }
             }
 
             resolve(response);
@@ -580,6 +677,25 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const onSelectionChange = (selected_rows) => {
     //setSelectedRows(selected_rows);
+  }
+
+  if (!components.Pagination) {
+    components.Pagination = (pagination_props) => {
+
+      let $pg_props = {
+        ...pagination_props,
+        reactory,
+        theme,
+        tableRef,
+        formContext,
+        uiSchema,
+        schema,
+        idSchema,
+        formData
+      }
+      return (<ReactoryMaterialTablePagination {...$pg_props} />)
+
+    }
   }
 
   React.useEffect(() => {
