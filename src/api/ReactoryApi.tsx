@@ -783,7 +783,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
                   //that the server reported an error - we should log and report the error 
                   //to the server side error reporting and tracing.
                   that.log(`🚨 Server reported an internal error. This is should not occur, all errors need to be gracefully handled, with support info`, { error, variables, options, query, queryDefinition }, 'error');
-                  that.createNotification(`The query at path ${path.map(p => `${p}:`)} has encountered a server error. The administrators have been notified.`, { type: 'error', showInAppNotification: true, timeout: 4500 });
+                  // that.createNotification(`The query at path ${path.map(p => `${p}:`)} has encountered a server error. The administrators have been notified.`, { type: 'error', showInAppNotification: true, timeout: 4500 });
                 }
               }
             }
