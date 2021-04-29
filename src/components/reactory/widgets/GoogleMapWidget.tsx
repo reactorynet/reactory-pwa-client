@@ -119,10 +119,10 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
 
   const onDeleteAddressConfirmed = () => {
 
-    const mutation_text = `mutation LasecDeleteAddress($address_input: EditAddressInput){ 
+    const mutation_text = `mutation LasecDeleteAddress($address_input: EditAddressInput){
       LasecDeleteAddress(address_input: $address_input) {
         success
-        message          
+        message
       }
     }`;
 
@@ -490,7 +490,7 @@ class MapControl extends Component<any, any> {
 
 interface AddressListProps {
   /**
-   * Array of address items. 
+   * Array of address items.
    * Object needs to have a title, lat & lng and type
    */
   items: IReactoryMarkerData[],
@@ -704,8 +704,8 @@ const ReactoryMap = compose(
 
   /**
    * Function to search for existing / catalogued addresses
-   * 
-   * @param {searh_term} - string value to use for remote searching 
+   *
+   * @param {searh_term} - string value to use for remote searching
    */
   const search_remote = (search_term, page = remote_page) => {
 
@@ -723,17 +723,17 @@ const ReactoryMap = compose(
           formatted_address
           building_description_id
           building_floor_number_id
-  
+
           province_id
-  
+
           country_id
-  
+
           lat
           lng
-  
+
           created_by
-          last_edited_by              
-          
+          last_edited_by
+
           linked_clients_count
           linked_sales_orders_count
         }
@@ -939,6 +939,27 @@ const ReactoryMap = compose(
     api
   };
 
+  const mapClickHandler = (event) => {
+    console.log('MAP CLICK EVENT - LAT & LONG:: ', event.latLng.lng(), event.latLng.lat());
+
+
+    // TODO: Drew
+    // 1. Toggle map state - can click to edit.
+    // 2. Get location from click event
+
+    let lat = 0;
+    let lng = 0;
+
+    if (event && event.latLng) {
+      lat = event.latLng.lat();
+      lng = event.latLng.lng();
+
+
+
+    }
+
+  }
+
 
   let google_markers_components = [];
   let existing_marker_components = [];
@@ -960,7 +981,7 @@ const ReactoryMap = compose(
         },
         onAddressEdited: (address) => {
 
-          //pull from google markers and 
+          //pull from google markers and
           //place into existing addresses
           const { cloneDeep, pullAt } = api.utils.lodash;
           const new_markers_data: IReactoryMarkerData[] = cloneDeep(existing_addresses);
@@ -1011,7 +1032,7 @@ const ReactoryMap = compose(
         onSelectAddress: onAddressSelected,
         onAddressEdited: (address) => {
 
-          //pull from google markers and 
+          //pull from google markers and
           //place into existing addresses
           const { cloneDeep, pullAt } = api.utils.lodash;
           const new_markers_data: IReactoryMarkerData[] = cloneDeep(google_markers);
@@ -1058,7 +1079,7 @@ const ReactoryMap = compose(
 
     const setLatLongForSelectedExistingAddresses = () => {
 
-      const mutation_text = `mutation LasecEditAddress($address_input: EditAddressInput){ 
+      const mutation_text = `mutation LasecEditAddress($address_input: EditAddressInput){
         LasecEditAddress(address_input: $address_input) {
           success
           message
@@ -1123,10 +1144,10 @@ const ReactoryMap = compose(
     };
 
     const deleteSelectedAddresses = () => {
-      const mutation_text = `mutation LasecDeleteAddress($address_input: EditAddressInput){ 
+      const mutation_text = `mutation LasecDeleteAddress($address_input: EditAddressInput){
         LasecDelete(address_input: $address_input) {
           success
-          message          
+          message
         }
       }`
 
@@ -1245,6 +1266,7 @@ const ReactoryMap = compose(
         let new_center = map.getCenter();
         setMapCenter({ lat: new_center.lat(), lng: new_center.lng() });
       }}
+      onClick={mapClickHandler}
     >
 
       <MapControl position={google.maps.ControlPosition.TOP_CENTER}>

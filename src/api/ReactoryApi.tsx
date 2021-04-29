@@ -91,13 +91,13 @@ export const reactoryDomNode = () => {
 
 /**
  * This function allows you to pass in a templated object definition.
- * The function iterates over every propery of the object and then 
+ * The function iterates over every propery of the object and then
  * checks the value of that property.
- * 
+ *
  * If the property is a string, we check for a template pattern ${...}
  * and then parse the template against the input propety bag data.
- * @param templateObject 
- * @param props 
+ * @param templateObject
+ * @param props
  */
 export const parseTemplateObject = (templateObject: Object, props: any): Object => {
 
@@ -645,11 +645,11 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       }
       const dolog = () => params && params.length === 0 ? console[kind](`%cReactory::${message}`, formatting) : console[kind](`%cReactory::${message}`, formatting, params);
       if (process.env.NODE_ENV !== 'production') {
-        dolog();
+        // dolog();
       } else {
         //if it is production, we can enable / disable the log level by inspecting window.reactory object
         if (window.reactory && window.reactory.log && window.reactory.log[kind] === true) {
-          dolog();
+          // dolog();
         }
       }
     } catch (err) {
@@ -780,7 +780,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
                 if (code === 'INTERNAL_SERVER_ERROR') {
                   //we know for certain the server had an unhandled error in the resolver chain.
                   //the client may not cater for these errors, so we can by default warn the user
-                  //that the server reported an error - we should log and report the error 
+                  //that the server reported an error - we should log and report the error
                   //to the server side error reporting and tracing.
                   that.log(`🚨 Server reported an internal error. This is should not occur, all errors need to be gracefully handled, with support info`, { error, variables, options, query, queryDefinition }, 'error');
                   // that.createNotification(`The query at path ${path.map(p => `${p}:`)} has encountered a server error. The administrators have been notified.`, { type: 'error', showInAppNotification: true, timeout: 4500 });
