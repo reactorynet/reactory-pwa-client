@@ -204,7 +204,7 @@ const MaterialFormErrorTemplate = (props) => {
                 <ListSubheader style={{ marginTop: '-20px', fontSize: '14px', padding: 0 }}>{error.title || error.propertyName}</ListSubheader>
                 {error.errors.map((item, iid) => (
                   <ListItem key={`${error.propertyName}-${iid}`} style={{ paddingTop: 0, paddingBottom: 0 }}>
-                    <ListItemText primary={`${item.substring(0, 1).toUpperCase()}${item.substring(1, item.length - 1)}`} />
+                    <ListItemText primary={`${item.substring(0, 1).toUpperCase()}${item.substring(1, item.length)}`} />
                   </ListItem>
                 ))}
               </ul>
