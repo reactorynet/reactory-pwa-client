@@ -1999,6 +1999,8 @@ const ReactoryFormRouter = (props) => {
 
   api.log('ReactoryFormRouter:render', { props: props }, 'debug');
 
+  const all_forms = api.getComponentsByType('form');
+
 
   return (
     <Switch>
@@ -2009,7 +2011,7 @@ const ReactoryFormRouter = (props) => {
         <RouteBoundForm mode="view" />
       </Route>
       <Route exact path={`${routePrefix}/`}>
-        <ReactoryFormComponent formId='ReactoryFormList' formData={{ forms: api.formSchemas }} mode='view' />
+        <ReactoryFormComponent formId='ReactoryFormList' formData={{ forms: all_forms }} mode='view' />
       </Route>
     </Switch>
   )

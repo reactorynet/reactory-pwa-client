@@ -512,7 +512,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   }
 
   createNotification(title: string, options: NotificationOptions | any = {}) {
-    this.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
+    const that = this;
+    that.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
 
     let defaultNotificationProps = {
       title,
@@ -528,7 +529,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     }
 
     if (options.showInAppNotification) {
-      this.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: options.props });
+      that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: options.props });
       return;
     }
 
@@ -553,13 +554,13 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         Notification.requestPermission()
           .then((permission) => {
             if (permission === "granted") {
-              this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
+              that.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
             }
           })
       } else {
         Notification.requestPermission(function (permission) {
           if (permission === "granted") {
-            this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
+            that.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
           }
         });
       }
@@ -570,14 +571,16 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       switch (Notification.permission) {
         case "denied": {
           //denied notificaitons, use fallback
-          this.amq.raiseFormCommand("reactory.core.display.notification",
-            {
-              title: title,
-              options: {
-                ...defaultNotificationProperties,
-                ...options
-              }
-            });
+          // this.amq.raiseFormCommand("reactory.core.display.notification",
+          //   {
+          //     title: title,
+          //     options: {
+          //       ...defaultNotificationProperties,
+          //       ...options
+          //     }
+          //   });
+          // return;
+          that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: options.props });
           return;
         }
         case "granted": {
@@ -841,6 +844,14 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     </React.Fragment>);
   }
 
+  /**
+   * The forms function is executed when the application starts up and 
+   * can be called from any component that has the reactory property injected
+   * via the component registed..
+   * @param bypassCache - if true it will always bypass the cache and and fetch the latest list from 
+   * the server.
+   * @returns - Promise that contains the formSchemas for the user logged in user.
+   */
   forms(bypassCache: boolean = false) {
     const that = this;
     return new Promise((resolve) => {
@@ -883,6 +894,11 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     });
   }
 
+  /**
+   * Returns a form with the specific id.
+   * @param id - string id.
+   * @returns 
+   */
   form(id: string) {
     const { formSchemas } = this;
     return lodash.find(formSchemas, { id });
