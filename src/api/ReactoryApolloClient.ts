@@ -45,7 +45,7 @@ export default async () => {
     cache = persistedCache.cache ? persistedCache.cache : null;
     persistor = persistedCache.persistor ? persistedCache.persistor : null;
   } catch (cacheGetError) {
-    debugger;
+
     console.error(`${cacheGetError.message}`);
   }
 

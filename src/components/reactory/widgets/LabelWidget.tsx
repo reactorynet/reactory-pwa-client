@@ -60,6 +60,11 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 
   const initialLabelText = () => {
     const options = getOptions();
+
+    if (options.$format && typeof reactory.$func[options.$format] === 'function') {
+      return reactory.$func[options.$format](props);
+    }
+
     if (options && options.format) {
       try {
         if (options.format !== '$LOOKUP$') return template(options.format)({ ...props })
@@ -195,7 +200,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
       };
 
       if (typeof $iconProps === 'string' && reactory.$func[$iconProps]) {
-        let patched = reactory.$func[$iconProps]({ label: labelText, widget: {}, iconProps: _iconProps });
+        let patched = reactory.$func[$iconProps]({ label: labelText, widget: {}, iconProps: _iconProps, formData, formContext });
         _iconProps = {
           ..._iconProps,
           ...patched
@@ -205,10 +210,16 @@ const LabelWidget = (props: LabelWidgetProperties) => {
       const _custom = iconType
       let IconComponent = _custom !== undefined ? theme.extensions[_custom].icons[icon] : null;
 
+      let $icon = props.uiSchema["ui:options"].icon;
+
+      if (_iconProps.icon) {
+        $icon = _iconProps.icon;
+      }
+
       if (IconComponent) {
         labelIcon = <IconComponent {..._iconProps} />
       } else {
-        labelIcon = <Icon {..._iconProps}>{props.uiSchema["ui:options"].icon}</Icon>
+        labelIcon = <Icon {..._iconProps}>{$icon}</Icon>
       }
     }
 
@@ -271,6 +282,9 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     }
 
     let _labelText = props.formData;
+
+
+
     if (options && options.format) {
 
       try {
@@ -286,6 +300,11 @@ const LabelWidget = (props: LabelWidgetProperties) => {
         _labelText = `Template Error (${e.message})`;
       }
     }
+
+    if (options.$format && typeof reactory.$func[options.$format] === 'function') {
+      _labelText = reactory.$func[options.$format](props);
+    }
+
     setLabelText(_labelText);
 
   }, [props.formData, props.value, options.format, props.data]);

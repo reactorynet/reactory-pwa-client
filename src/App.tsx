@@ -243,6 +243,14 @@ const AppLoading = () => {
   )
 }
 
+const Offline = (props) => {
+
+  return (
+    <div id="default_offline">
+      Server is offline. This message will dissapear when server comes back online ⭕
+    </div>)
+}
+
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
@@ -260,9 +268,25 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
   const components: any = api.getComponents(dependcies);
-  const { Loading, Login, FullScreenModal, NotificationComponent, NotFound, Footer } = components;
+  const { NotificationComponent, Footer } = components;
 
-
+  const getApiStatus = () => {
+    if (auth_validated === false) {
+      api.status({ emitLogin: true }).then((user: any) => {
+        setIsValidated(true);
+        setOfflineStatus(user.offline === true)
+        setUser(user);
+        setIsReady(true);
+        applyTheme();
+      }).catch((validationError) => {
+        setIsValidated(true);
+        setUser(null);
+        setOfflineStatus(true)
+        setError(validationError);
+        setIsReady(false);
+      });
+    }
+  };
 
 
   const onRouteChanged = (path: string) => {
@@ -271,6 +295,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const onLogin = () => {
     setUser(api.getUser());
+
   };
 
   const onLogout = () => {
@@ -313,25 +338,18 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       api.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
       let isOffline = status.offline === true;
 
-      if (offline !== isOffline) {
+      if (isOffline === true) {
         setOfflineStatus(isOffline);
-      }
-
-      if (isOffline === true && !statusInterval) {
-        setStatusInterval(setInterval(api.status, 3000))
+        setTimeout(() => { getApiStatus() }, 3500);
       } else {
+        let user = api.utils.lodash.cloneDeep(api.getUser());
+        delete user.when;
+        let _user = api.utils.lodash.cloneDeep(user);
+        delete _user.when;
 
-        if (isOffline === false && statusInterval) {
-          clearInterval(statusInterval);
-          let user = api.utils.lodash.cloneDeep(api.getUser());
-          delete user.when;
-          let _user = api.utils.lodash.cloneDeep(user);
-          delete _user.when;
-
-          if (deepEquals(user, _user) === false || status.offline !== offline) {
-            setUser(user)
-            setOfflineStatus(status.offline === true);
-          }
+        if (deepEquals(user, _user) === false || status.offline !== offline) {
+          setUser(user)
+          setOfflineStatus(false);
         }
       }
     } else {
@@ -350,7 +368,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
   const willUnmount = () => { };
+
   const willMount = () => {
+
 
     window.addEventListener('resize', onWindowResize);
     window.matchMedia("(prefers-color-scheme: dark)").addListener((evt) => {
@@ -372,29 +392,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       }
     }
 
-    const getApiStatus = () => {
-      if (auth_validated === false) {
-        api.status({ emitLogin: true }).then((user) => {
-          setIsValidated(true);
-          setUser(user);
-          setOfflineStatus(false);
-          setIsReady(true);
-          applyTheme();
-        }).catch((validationError) => {
-          setIsValidated(true);
-          setUser(null);
-          setOfflineStatus(true);
-          setError(validationError);
-          setIsReady(false);
-        });
-      }
-
-    };
-
     const waitForClient = () => {
-
       if (api.client === null || api.client === undefined) {
-        setTimeout(waitForClient, 777);
+        setTimeout(waitForClient, 100);
       } else {
         getApiStatus();
       }
@@ -476,8 +476,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const classes = useStyles();
 
-
   if (isReady === false) return <AppLoading />;
+
+  if (offline === true) return <Offline />
 
   return (
     <Router>
@@ -502,7 +503,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         </ThemeProvider>
       </React.Fragment>
     </Router>
-
   );
 };
 

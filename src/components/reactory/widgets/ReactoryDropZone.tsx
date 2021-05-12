@@ -84,7 +84,7 @@ class ReactoryDropZone extends Component<any, any> {
   }
 
   constructor(props: any, context: any) {
-    super(props, context);
+    super(props);
 
     this.state = {
       uploading: false,
@@ -138,11 +138,12 @@ class ReactoryDropZone extends Component<any, any> {
           if (ReactoryDropZoneProps.mutation) {
             const mutation = gql(ReactoryDropZoneProps.mutation.text);
 
+
             let _v = {};
             try {
               _v = api.utils.templateObject(ReactoryDropZoneProps.mutation.variables, self);
             } catch (templateErr) {
-              api.log(`Error processing mapping`, { templateErr }, 'error');
+              api.log(`🚨🚨🚨 Error processing mapping 🚨🚨🚨`, { templateErr }, 'error');
             }
 
             const variables = {
@@ -153,6 +154,7 @@ class ReactoryDropZone extends Component<any, any> {
             api.graphqlMutation(mutation, variables).then((docResult) => {
 
               self.setState({ uploading: false }, () => {
+
 
                 const { data, errors } = docResult;
 

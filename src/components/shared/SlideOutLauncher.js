@@ -104,7 +104,7 @@ class SlideOutLauncher extends Component {
 
     let _buttonTitle = buttonTitle ? tpl(buttonTitle) : '';
     let _windowTitle = windowTitle ? tpl(windowTitle) : '';
-    let _buttonVariant = buttonVariant ? tpl(buttonVariant) : '';
+    let _buttonVariant = buttonVariant; //? tpl(buttonVariant) : '';
 
     let _showAppBar = true;
     _showAppBar = this.props.backNavigationConfig ? false : true;

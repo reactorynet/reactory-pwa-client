@@ -176,7 +176,7 @@ const MaterialFormErrorTemplate = (props) => {
         }
         case "array": {
           //
-          debugger
+
           break;
         }
         case "object": {

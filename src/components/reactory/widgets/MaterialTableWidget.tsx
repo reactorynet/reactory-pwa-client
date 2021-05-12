@@ -249,8 +249,30 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     if (uiOptions.componentMap.DetailsPanel) {
       const DetailsPanelComponent = reactory.getComponent(uiOptions.componentMap.DetailsPanel);
 
-      detailsPanel = (rowData) => {
-        return <DetailsPanelComponent {...rowData} />
+      if (DetailsPanelComponent) {
+        detailsPanel = (detail_props) => {
+          let _detail_props = { ...detail_props };
+
+          if (uiOptions.detailPanelProps) {
+            _detail_props = { ..._detail_props, ...uiOptions.detailPanelProps };
+          }
+
+          if (uiOptions.detailPanelPropsMap) {
+            _detail_props = reactory.utils.objectMapper({
+              detailPanelProps: uiOptions.detailPanelProps || {},
+              table_props: props,
+              props: detail_props,
+              formContext,
+              schema,
+              uiSchema,
+              idSchema,
+            }, uiOptions.detailPanelPropsMap)
+
+            _detail_props = { ...detail_props, ..._detail_props };
+          }
+
+          return <DetailsPanelComponent {..._detail_props} formContext={formContext} tableRef={tableRef} />
+        };
       }
     }
   }

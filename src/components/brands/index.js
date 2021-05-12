@@ -22,7 +22,7 @@ import {
   InputLabel,
   FormHelperText,
   FormControl,
-  Select,    
+  Select,
   Table,
   TableBody,
   TableHead,
@@ -93,7 +93,7 @@ class QualityCard extends Component {
     this.patchBehaviourDescription = this.patchBehaviourDescription.bind(this)
   }
 
-  componentWillUnmount(){
+  componentWillUnmount() {
     this.sendQualityUpdated()
   }
 
@@ -149,16 +149,16 @@ class QualityCard extends Component {
     this.setState({ quality: { ...this.state.quality, behaviours }, dirty: true }, this.sendQualityUpdated)
   }
 
-  sendQualityUpdated(){
-    if(this.props.updated) this.props.updated(this.state.quality)
+  sendQualityUpdated() {
+    if (this.props.updated) this.props.updated(this.state.quality)
   }
 
   render() {
     const self = this;
     const { classes } = this.props;
     const { quality, behaviourIndex } = this.state;
-    const { behaviours } = quality;  
-    const avatar = (<Avatar className={classes.avatar} onClick={self.toggleQualityDetail}>{quality.ordinal+1}</Avatar>)
+    const { behaviours } = quality;
+    const avatar = (<Avatar className={classes.avatar} onClick={self.toggleQualityDetail}>{quality.ordinal + 1}</Avatar>)
     const action = (<IconButton><MoreVertIcon /></IconButton>)
     const title = (<Typography variant='subheading'>{quality.title}</Typography>)
     return (
@@ -168,8 +168,8 @@ class QualityCard extends Component {
           avatar={avatar}
           title={title}
           action={action}
-          style={{cursor: 'pointer'}}        
-        />        
+          style={{ cursor: 'pointer' }}
+        />
         <CardContent>
           <Collapse in={this.state.expanded} timeout="auto" unmountOnExit>
             <Grid container>
@@ -184,13 +184,13 @@ class QualityCard extends Component {
                 />
               </Grid>
               <Grid item xs={12}>
-                <FormControl  fullWidth={true}>
+                <FormControl fullWidth={true}>
                   <InputLabel htmlFor="qualityDescription">Quality Description</InputLabel>
-                  <Input fullWidth={true} id="qualityDescription" onBlur={this.sendQualityUpdated} multiline rowsmax={5} value={quality.description} onChange={this.patchDescription} />                
-                </FormControl>                
+                  <Input fullWidth={true} id="qualityDescription" onBlur={this.sendQualityUpdated} multiline rowsmax={5} value={quality.description} onChange={this.patchDescription} />
+                </FormControl>
               </Grid>
               <Grid item xs={12}>
-                <Typography variant={'subheading'} style={{marginTop:'10px'}}>Behaviours</Typography>
+                <Typography variant={'subheading'} style={{ marginTop: '10px' }}>Behaviours</Typography>
                 <Grid item xs={12}>
                   <List>
                     {
@@ -202,46 +202,46 @@ class QualityCard extends Component {
                         const updateDescription = (evt) => {
                           let _behaviours = [...behaviours];
                           _behaviours[index].description = evt.target.value
-                          self.setState({quality: {...self.state.quality, behaviours: _behaviours}})
+                          self.setState({ quality: { ...self.state.quality, behaviours: _behaviours } })
                         }
 
                         const moveUp = () => {
-                          if(index > 0){
-                            let previous = behaviours[index-1];
+                          if (index > 0) {
+                            let previous = behaviours[index - 1];
                             previous.ordinal = behaviour.ordinal
-                            let _behaviour = { ...behaviour, ordinal: index -1 }
+                            let _behaviour = { ...behaviour, ordinal: index - 1 }
                             let _behaviours = [...behaviours];
                             behaviours[index - 1] = _behaviour;
                             behaviours[index] = previous;
 
-                            self.setState({quality: {...self.state.quality, behaviours: _behaviours}}, self.sendQualityUpdated)
+                            self.setState({ quality: { ...self.state.quality, behaviours: _behaviours } }, self.sendQualityUpdated)
                           }
                         }
 
                         const moveDown = () => {
-                          if(index < behaviours.length - 1){
-                            let next = behaviours[index+1];
+                          if (index < behaviours.length - 1) {
+                            let next = behaviours[index + 1];
                             next.ordinal = behaviour.ordinal
                             let _behaviour = { ...behaviour, ordinal: index + 1 }
                             let _behaviours = [...behaviours];
                             behaviours[index + 1] = _behaviour;
                             behaviours[index] = next;
 
-                            self.setState({quality: {...self.state.quality, behaviours: _behaviours}}, self.sendQualityUpdated)
+                            self.setState({ quality: { ...self.state.quality, behaviours: _behaviours } }, self.sendQualityUpdated)
                           }
                         }
 
                         let control = null
-                        if (index === behaviourIndex) {                        
+                        if (index === behaviourIndex) {
                           control = (
-                            <Paper elevation={4} style={{ padding: '10px', width: '100%' }}>                              
-                              <form>                                
+                            <Paper elevation={4} style={{ padding: '10px', width: '100%' }}>
+                              <form>
                                 {!isNil(behaviours[index]) ? (
-                                <FormControl  fullWidth={true} aria-describedby="LeadershipBrandStatementHelper">
-                                  <InputLabel htmlFor="behaviourDescription" >Behavior</InputLabel>
-                                  <Input fullWidth={true} id="qualityDescription" onBlur={this.sendQualityUpdated} value={behaviour.description} onChange={updateDescription} multiline rowsmax={5}  />
-                                  <FormHelperText id="LeadershipBrandStatementHelper">Provide a behavior description</FormHelperText>                
-                                </FormControl>                                  
+                                  <FormControl fullWidth={true} aria-describedby="LeadershipBrandStatementHelper">
+                                    <InputLabel htmlFor="behaviourDescription" >Behavior</InputLabel>
+                                    <Input fullWidth={true} id="qualityDescription" onBlur={this.sendQualityUpdated} value={behaviour.description} onChange={updateDescription} multiline rowsmax={5} />
+                                    <FormHelperText id="LeadershipBrandStatementHelper">Provide a behavior description</FormHelperText>
+                                  </FormControl>
                                 ) : null}
                               </form>
                               <IconButton onClick={moveUp}><KeyboardArrowUp /></IconButton>
@@ -256,20 +256,20 @@ class QualityCard extends Component {
                           return control
                         } else return (
                           <ListItem key={index} dense button onClick={editBehaviour}>
-                            <ListItemText primary={behaviour.description  || 'Not set'} secondary={'Click to edit'} />
+                            <ListItemText primary={behaviour.description || 'Not set'} secondary={'Click to edit'} />
                           </ListItem>)
                       })}
                   </List>
                   <Button onClick={this.addBehaviour}><AddCircleIcon />&nbsp;NEW BEHAVIOUR</Button>
                 </Grid>
               </Grid>
-            </Grid>          
+            </Grid>
           </Collapse>
-        </CardContent>        
+        </CardContent>
         <CardActions>
-          <IconButton onClick={this.props.moveup || nilf }><KeyboardArrowUp /></IconButton>
-          <IconButton onClick={this.props.movedown || nilf }><KeyboardArrowDown /></IconButton>
-          <IconButton onClick={this.props.deleted || nilf } ><DeleteIcon /></IconButton>
+          <IconButton onClick={this.props.moveup || nilf}><KeyboardArrowUp /></IconButton>
+          <IconButton onClick={this.props.movedown || nilf}><KeyboardArrowDown /></IconButton>
+          <IconButton onClick={this.props.deleted || nilf} ><DeleteIcon /></IconButton>
         </CardActions>
       </Card>
     );
@@ -282,26 +282,26 @@ const QualityCardComponent = compose(
   withStyles(QualityCard.styles),
 )(QualityCard)
 
-const ScaleSelector = compose(withApi) (( props, context ) => {
+const ScaleSelector = compose(withApi)((props, context) => {
   const { api, onChange, selectedKey } = props;
   return (
     <Query query={api.queries.Surveys.allScales}>
-    {({ loading, error, data }) => {
-      if (loading) return "Loading...";
-      if (error) return `Error! ${error.message}`;
+      {({ loading, error, data }) => {
+        if (loading) return "Loading...";
+        if (error) return `Error! ${error.message}`;
 
-      return (
-        <Select name="Scale" onChange={onChange} value={selectedKey}>
-          {data.allScales.map(scale => (
-            <option key={scale.id} value={scale.id}>
-              {scale.title}
-            </option>
-          ))}
-        </Select>
-      );
-    }}
-  </Query>
-  )  
+        return (
+          <Select name="Scale" onChange={onChange} value={selectedKey}>
+            {data.allScales.map(scale => (
+              <option key={scale.id} value={scale.id}>
+                {scale.title}
+              </option>
+            ))}
+          </Select>
+        );
+      }}
+    </Query>
+  )
 });
 
 export class BrandEdit extends Component {
@@ -329,13 +329,13 @@ export class BrandEdit extends Component {
   onTitleChanged = (evt) => this.setState({ editBrand: { ...this.state.editBrand, title: evt.target.value } });
   onDescriptionChanged = (evt) => this.setState({ editBrand: { ...this.state.editBrand, description: evt.target.value } });
   onNewQuality = (evt) => this.setState({ editBrand: { ...this.state.editBrand, qualities: [...this.state.editBrand.qualities, { ...newQuality, ordinal: this.state.editBrand.qualities.length + 1 }] } })
-  onScaleSelect = (evt, option) => { 
+  onScaleSelect = (evt, option) => {
     //console.log('survey type change', option)    
-    this.setState({editBrand: { ...this.state.editBrand, scale: option.props.value }});
+    this.setState({ editBrand: { ...this.state.editBrand, scale: option.props.value } });
   }
 
   onCancel = (evt) => {
-    if(this.props.onCancel) this.props.onCancel()    
+    if (this.props.onCancel) this.props.onCancel()
   }
 
   onCopy = (evt) => {
@@ -346,11 +346,11 @@ export class BrandEdit extends Component {
 
   }
 
-  onSave = (evt) => {    
-    if(this.props.mode === 'new'){
-      if(this.props.onCreate) this.props.onCreate(this.state.editBrand)      
+  onSave = (evt) => {
+    if (this.props.mode === 'new') {
+      if (this.props.onCreate) this.props.onCreate(this.state.editBrand)
     } else {
-      if(this.props.onSave) this.props.onSave(this.state.editBrand)
+      if (this.props.onSave) this.props.onSave(this.state.editBrand)
     }
   }
 
@@ -378,13 +378,13 @@ export class BrandEdit extends Component {
                 <InputLabel fullWidth htmlFor="LeadershipBrandStatement">Brand Statement</InputLabel>
                 <Input id="LeadershipBrandStatement" required multiline rowsmax={5} value={description} onChange={this.onDescriptionChanged} />
                 <FormHelperText id="LeadershipBrandStatementHelper">Enter the leadership brand statement</FormHelperText>
-              </FormControl> 
+              </FormControl>
 
               <FormControl fullWidth className={classes.formControl}>
                 <InputLabel htmlFor="assessmentScale">Assessment Scale</InputLabel>
-                <ScaleSelector onChange={this.onScaleSelect} selectedKey={scale ? scale : null }/>                
-              </FormControl>   
-            </Grid>            
+                <ScaleSelector onChange={this.onScaleSelect} selectedKey={scale ? scale : null} />
+              </FormControl>
+            </Grid>
             <Grid item xs={12}>
               {
                 qualities.map((quality, qi) => {
@@ -402,23 +402,23 @@ export class BrandEdit extends Component {
                   };
 
                   const moveUp = () => {
-                    if(qi > 0){
+                    if (qi > 0) {
                       let qualities = [...self.state.editBrand.qualities]
                       let updated = { ...quality, ordinal: qi - 1 }
-                      let next = { ...qualities[qi-1], ordinal: qi } 
+                      let next = { ...qualities[qi - 1], ordinal: qi }
                       qualities[qi] = next
-                      qualities[qi-1] = updated                                           
+                      qualities[qi - 1] = updated
                       self.setState({ editBrand: { ...self.state.editBrand, qualities } })
                     }
                   }
 
                   const moveDown = () => {
                     let qualities = [...self.state.editBrand.qualities]
-                    if(qi < qualities.length - 1){                      
+                    if (qi < qualities.length - 1) {
                       let updated = { ...quality, ordinal: qi + 1 }
                       let next = { ...qualities[qi + 1], ordinal: qi }
                       qualities[qi] = next
-                      qualities[qi+1] = updated                      
+                      qualities[qi + 1] = updated
                       self.setState({ editBrand: { ...self.state.editBrand, qualities } })
                     }
                   }
@@ -428,8 +428,8 @@ export class BrandEdit extends Component {
               }
             </Grid>
             <Grid item xs={12}>
-              <Button onClick={this.onSave}><SaveIcon />&nbsp;{ isNew ? 'CREATE' : 'SAVE'}</Button>
-              { !isNew ? <Button onClick={this.onCopy}><CopyIcon />&nbsp;COPY</Button> : null }
+              <Button onClick={this.onSave}><SaveIcon />&nbsp;{isNew ? 'CREATE' : 'SAVE'}</Button>
+              {!isNew ? <Button onClick={this.onCopy}><CopyIcon />&nbsp;COPY</Button> : null}
               <Button onClick={this.onNewQuality}><AddCircleIcon />&nbsp;NEW QUALITY</Button>
               <Button onClick={this.onCancel}><CloseIcon />&nbsp;CANCEL</Button>
             </Grid>
@@ -453,7 +453,7 @@ BrandEdit.defaultProps = {
     title: '',
     description: '',
     qualities: []
-  }  
+  }
 };
 
 
@@ -467,20 +467,22 @@ export const BrandEditComponent = compose(
 export const CreateBrand = compose(
   withApi
 )((props, context) => {
-  const { api, leadershipBrand, onCancel, organizationId  } = props
+  const { api, leadershipBrand, onCancel, organizationId } = props
 
   return (
     <Mutation mutation={api.mutations.Organization.createBrand}>
       {(createBrand, { data }) => {
 
         const create = (leadershipBrand) => {
-          createBrand({variables: { 
-            brandInput: { ...leadershipBrand, organizationId },
-            organizationId
-          }})
+          createBrand({
+            variables: {
+              brandInput: { ...leadershipBrand, organizationId },
+              organizationId
+            }
+          })
         };
 
-        return <BrandEditComponent leadershipBrand={omitDeep(leadershipBrand)} organizationId={organizationId} onCreate={create} mode='new' onCancel={onCancel}/>
+        return <BrandEditComponent leadershipBrand={omitDeep(leadershipBrand)} organizationId={organizationId} onCreate={create} mode='new' onCancel={onCancel} />
       }}
     </Mutation>
   )
@@ -489,20 +491,22 @@ export const CreateBrand = compose(
 export const EditBrand = compose(
   withApi
 )((props, context) => {
-  const { api, leadershipBrand, onCancel, organizationId  } = props
+  const { api, leadershipBrand, onCancel, organizationId } = props
 
   return (
     <Mutation mutation={api.mutations.Organization.updateBrand}>
       {(updateBrand, { data }) => {
 
         const update = (leadershipBrand) => {
-          updateBrand({variables: omitDeep({ 
-            brandInput: { ...leadershipBrand, organizationId },
-            organizationId
-          }, '__typename')})
+          updateBrand({
+            variables: omitDeep({
+              brandInput: { ...leadershipBrand, organizationId },
+              organizationId
+            }, '__typename')
+          })
         };
 
-        return <BrandEditComponent leadershipBrand={omitDeep(leadershipBrand)} organizationId={organizationId} onSave={update} mode='edit' onCancel={onCancel}/>
+        return <BrandEditComponent leadershipBrand={omitDeep(leadershipBrand)} organizationId={organizationId} onSave={update} mode='edit' onCancel={onCancel} />
       }}
     </Mutation>
   )
@@ -512,49 +516,50 @@ export const EditBrand = compose(
  * List component for user entries
  * @param {*} param0 
  */
-const BrandList = ({organizationId, api, onSelect = nilf, onNewSelected = nilf, selectionOnly = false, selected}) => {  
+const BrandList = ({ organizationId, api, onSelect = nilf, onNewSelected = nilf, selectionOnly = false, selected }) => {
   return (
-  <Query query={api.queries.Organization.leadershipBrands} variables={{organizationId}}>
-    {({ loading, error, data }) => {
-      const brandListForOrganization = data ? data.brandListForOrganization : undefined
+    <Query query={api.queries.Organization.leadershipBrands} variables={{ organizationId }}>
+      {({ loading, error, data }) => {
+        const MoresLeadershipBrands = data ? data.MoresLeadershipBrands : undefined
 
-      if (loading === true) {
-        return <p>Loading ...</p>;
-      }
-  
-      if (error) {
-        return <p>{error.message}</p>;
-      }
-                                    
-      let brands = brandListForOrganization || []
-      return (      
-        <List>
-          {brands.map((brand, index) => {
-            const selectBrand = () => {
-              onSelect(brand)
-            }            
-            const isSelected = selected === brand.id
-                 
-            return (
-              <ListItem key={brand.id} dense button>
-                <ListItemText primary={brand.title} />
-                <Checkbox
-                  checked={isSelected}
-                  tabIndex={-1}
-                  disableRipple
-                  onClick={selectBrand} />
-              </ListItem>)
-          })}
-          {selectionOnly === false ? (<ListItem key={brands.length+1} dense button onClick={onNewSelected}>
-            <ListItemText primary={'NEW BRAND'} secondary={'Click here to create a new leadership brand'} />
-          </ListItem>) : null }          
-          
-        </List>      
+        if (loading === true) {
+          return <p>Loading ...</p>;
+        }
+
+        if (error) {
+          return <p>{error.message}</p>;
+        }
+
+        let brands = MoresLeadershipBrands || []
+        return (
+          <List>
+            {brands.map((brand, index) => {
+              const selectBrand = () => {
+                onSelect(brand)
+              }
+              const isSelected = selected === brand.id
+
+              return (
+                <ListItem key={brand.id} dense button>
+                  <ListItemText primary={brand.title} />
+                  <Checkbox
+                    checked={isSelected}
+                    tabIndex={-1}
+                    disableRipple
+                    onClick={selectBrand} />
+                </ListItem>)
+            })}
+            {selectionOnly === false ? (<ListItem key={brands.length + 1} dense button onClick={onNewSelected}>
+              <ListItemText primary={'NEW BRAND'} secondary={'Click here to create a new leadership brand'} />
+            </ListItem>) : null}
+
+          </List>
         );
-    }}
-  </Query>
+      }}
+    </Query>
 
-)};
+  )
+};
 
 
 BrandList.propTypes = {
@@ -568,12 +573,12 @@ BrandList.defaultProps = {
   data: {
     loading: true,
     error: null,
-    brandListForOrganization: []
+    MoresLeadershipBrands: []
   }
 };
 
 
 export const BrandListWithData = compose(
   withTheme,
-  withApi  
+  withApi
 )(BrandList);

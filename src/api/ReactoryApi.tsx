@@ -407,8 +407,6 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       this.emit(ReactoryApiEventNames.onPluginLoaded, data);
     });
     this.flushIntervalTimer = setInterval(this.flushstats.bind(this, true), 5000);
-    // this.statusIntervalTime = setInterval(this.status.bind(this), 30000);
-    this.status();
     this.__REACTORYAPI = true;
     this.goto = this.goto.bind(this);
     this.createNotification = this.createNotification.bind(this);
@@ -422,6 +420,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.init = this.init.bind(this);
     this.getSizeSpec = this.getSizeSpec.bind(this);
     this.getThemeMode = this.getThemeMode.bind(this);
+    //this.status();
   }
 
   async init() {
@@ -855,7 +854,6 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   forms(bypassCache: boolean = false) {
     const that = this;
     return new Promise((resolve) => {
-
       const refresh = () => {
         RestApi.forms().then((formsResult) => {
           that.formSchemas = formsResult;
@@ -878,7 +876,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
           that.formSchemaLastFetch = moment();
           resolve(formsResult);
         }).catch((error) => {
-          that.log('Error loading forms from api', error, 'error');
+
+          that.log('🚨 Could not make REST call to FORMS', error, 'error');
           resolve([]);
         });
       };
@@ -1358,11 +1357,11 @@ class ReactoryApi extends EventEmitter implements _dynamic {
                   });
                 }
 
-                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: false });
+                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, offline: false });
                 resolve(that.getUser());
               } else {
                 that.logout(false);
-                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: true });
+                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, offline: true });
                 that.setUser(anonUser);
                 resolve(anonUser);
               }

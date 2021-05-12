@@ -30,7 +30,7 @@ const allOrganizations = gql`
 
 const leadershipBrandsForOrganization = gql`
 query brandListForOrganizationQuery($organizationId: String!) {
-    brandListForOrganization(organizationId: $organizationId) {
+    MoresLeadershipBrands(organizationId: $organizationId) {
       id
       title
       description

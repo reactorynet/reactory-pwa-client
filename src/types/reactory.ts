@@ -428,7 +428,7 @@ namespace Reactory {
       [key: string]: IReactoryFormQuery
     },
     mutation?: IReactoryFormMutations,
-    //when true the debugger will be enabled.
+    //when true the  will be enabled.
     debug?: boolean
   }
 

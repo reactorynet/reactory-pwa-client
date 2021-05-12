@@ -1184,7 +1184,7 @@ class Profile extends Component<any, any> {
         const { organizationId } = this.props;
         if (this.state.profile.memberships && this.state.profile.memberships.length > 0) {
             let membershipWithOrganization = null;
-            debugger
+
             this.state.profile.memberships.forEach(membership => {
                 if (membership.organization !== null && membershipWithOrganization === null) {
                     if (organizationId === membership.organization.id) {
