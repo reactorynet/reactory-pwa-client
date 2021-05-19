@@ -1,4 +1,4 @@
-'use strict';
+squadren'use strict';
 
 // Do this as the first thing so that any code reading it knows the right env.
 process.env.BABEL_ENV = 'production';
@@ -74,13 +74,13 @@ checkBrowsers(paths.appPath, isInteractive)
         console.log(warnings.join('\n\n'));
         console.log(
           '\nSearch for the ' +
-            chalk.underline(chalk.yellow('keywords')) +
-            ' to learn more about each warning.'
+          chalk.underline(chalk.yellow('keywords')) +
+          ' to learn more about each warning.'
         );
         console.log(
           'To ignore, add ' +
-            chalk.cyan('// eslint-disable-next-line') +
-            ' to the line before.\n'
+          chalk.cyan('// eslint-disable-next-line') +
+          ' to the line before.\n'
         );
       } else {
         console.log(chalk.green('Compiled successfully.\n'));
@@ -108,7 +108,7 @@ checkBrowsers(paths.appPath, isInteractive)
         useYarn
       );
 
-      const instructions = `run: curl ${process.env.PUBLIC_URL}index.html -s -I -H "secret-header:true" to invalidate nginx file cache` 
+      const instructions = `run: curl ${process.env.PUBLIC_URL}index.html -s -I -H "secret-header:true" to invalidate nginx file cache`
       console.log(instructions);
     },
     err => {
@@ -153,11 +153,11 @@ function build(previousFileSizes) {
   var buildmessage = "------------------------------------------------------------------------\n"
   buildmessage += 'Creating an optimized production build: started @ ' + startedAt.format(datefrmt);
   buildmessage += "\n------------------------------------------------------------------------"
-  buildmessage += '\nApplication Title:\t' + process.env.REACT_APP_TITLE;  
-  buildmessage += '\nApplication API:\t'+ process.env.REACT_APP_API_ENDPOINT;
-  buildmessage += '\nApplication CDN:\t'+ process.env.REACT_APP_CDN;
-  buildmessage += '\nApplication Theme:\t'+ process.env.REACT_APP_THEME;
-  buildmessage += '\nClient Key:\t'+ process.env.REACT_APP_CLIENT_KEY;
+  buildmessage += '\nApplication Title:\t' + process.env.REACT_APP_TITLE;
+  buildmessage += '\nApplication API:\t' + process.env.REACT_APP_API_ENDPOINT;
+  buildmessage += '\nApplication CDN:\t' + process.env.REACT_APP_CDN;
+  buildmessage += '\nApplication Theme:\t' + process.env.REACT_APP_THEME;
+  buildmessage += '\nClient Key:\t' + process.env.REACT_APP_CLIENT_KEY;
   buildmessage += '\nTarget Url:\t' + process.env.PUBLIC_URL;
   buildmessage += "\n------------------------------------------------------------------------\n";
   buildmessage += 'NB: Always check deployment urls and ensure caches are cleared\nafter deployments are complete. Ensure your application manifest files resolve.';
@@ -209,7 +209,7 @@ function build(previousFileSizes) {
         console.log(
           chalk.yellow(
             '\nTreating warnings as errors because process.env.CI = true.\n' +
-              'Most CI servers set it automatically.\n'
+            'Most CI servers set it automatically.\n'
           )
         );
         return reject(new Error(messages.warnings.join('\n\n')));
@@ -218,7 +218,7 @@ function build(previousFileSizes) {
       buildmessage = "\n------------------------------------------------------------------------\n";
       buildmessage += 'Build completed @ ' + moment().format(datefrmt) + '\n(' + moment().diff(startedAt, 'minutes') + ') minutes to complete';
       buildmessage += "\n------------------------------------------------------------------------";
-      
+
       console.log(buildmessage);
 
       return resolve({

@@ -545,10 +545,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           reactory.graphqlMutation(mutation.text, mutation_props.variables, mutation_props.refetchQueries).then((mutation_result: MutationResult) => {
             const { data, error } = mutation_result;
 
+            reactory.log(`🧐 Mutation Response ${mutation.name}`, { data, error }, 'debug');
+
             if (error) {
               // ADDED: DREW
               // Show message returned from resolver
+              if (props.onError) props.onError(error, getFormContext());
               if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+
                 error.graphQLErrors.forEach(gqlError => {
                   reactory.createNotification(
                     `${gqlError.message}`,
@@ -672,7 +676,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           }).catch((mutation_error) => {
 
             if (mutation.onError) {
-              //handle the error with the error handler
+              //handle the error with the error handler              
+            }
+
+            if (props.onError) {
+              props.onError(mutation_error, getFormContext(), 'mutation');
             }
 
             reactory.log(`Error Executing Mutation ${mutation_error.message}`, { mutation_error }, 'error');
@@ -1462,6 +1470,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               errorType: 'runtime',
             });
             setIsBusy(false);
+
+            if (props.onError) {
+              props.onError(queryError, getFormContext(), 'query')
+            }
 
             reactory.stat(`${formDef.nameSpace}.${formDef.name}@${formDef.version}:query_error`, { query_start, query_end, diff: query_end - query_start, unit: 'utc-date', failed: true, error: queryError.message });
           });
