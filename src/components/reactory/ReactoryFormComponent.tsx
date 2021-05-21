@@ -1341,15 +1341,15 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             break;
           }
           case "array": {
-            _formData = [...__staticFormData, ...formData];
+            _formData = [];
+            if (isArray(__staticFormData) === true) _formData = [...__staticFormData];
+            if (isArray(formData) === true) _formData = [...formData, ...formData];
             break;
           }
           default: {
             break;
           }
         }
-
-
 
         const _variables = reactory.utils.omitDeep(objectMapper({
           formContext,

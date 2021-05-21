@@ -365,18 +365,18 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       if (isNil(def.component) === false && def.component !== undefined) {
         const ColRenderer = reactory.getComponent(def.component);
         def.render = (rowData) => {
-          let props = { formData: formContext.$formData, rowData, api: reactory };
+          let props = { formData: formContext.$formData, rowData, api: reactory, reactory, formContext };
           let mappedProps = {};
 
           if (def.props) {
-            props = { ...props, ...def.props, ...mappedProps, api: reactory }
+            props = { ...props, ...def.props, ...mappedProps, api: reactory, reactory, }
           }
 
           //check if there is a propsMap property
           //maps self props
           if (def.propsMap && props) {
             mappedProps = reactory.utils.objectMapper(props, def.propsMap);
-            props = { ...props, ...mappedProps, api: reactory };
+            props = { ...props, ...mappedProps, api: reactory, reactory };
           }
 
           if (ColRenderer) return <ColRenderer {...props} />
@@ -394,7 +394,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
             const ComponentToRender = reactory.getComponent(componentDef.component);
 
-            let props = { formData: formContext.$formData, rowData, api: reactory, key: componentIndex };
+            let props = { formData: formContext.$formData, rowData, api: reactory, key: componentIndex, formContext };
             let mappedProps = {};
 
             if (componentDef.props) {

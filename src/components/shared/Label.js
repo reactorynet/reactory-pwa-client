@@ -17,13 +17,19 @@ class Label extends Component {
       value = "?",
       variant = "h6",
       classes,
+      reactory,
     } = props;
 
     let labelText = value;
 
-    if(props.uiSchema && props.uiSchema["ui:options"]){
-      const { format } = props.uiSchema["ui:options"];
-      if(format) labelText = template(format)(props);
+    debugger
+    if (props.uiSchema && props.uiSchema["ui:options"]) {
+      const { format, $format } = props.uiSchema["ui:options"];
+
+      if (format) labelText = template(format)(props);
+      if ($format && typeof reactory.$func[$format] === 'function') {
+        labelText = reactory.$func[$format](props);
+      }
     }
 
     return (
