@@ -1490,7 +1490,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           query.refreshEvents.forEach((eventDefinition) => {
             reactory.once(eventDefinition.name, (evt) => {
               reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
-              setTimeout(executeFormQuery, query.autoQueryDelay || 500)
+              setTimeout(getData, query.autoQueryDelay || 500)
             });
           });
         }

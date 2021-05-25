@@ -22,7 +22,6 @@ class Label extends Component {
 
     let labelText = value;
 
-    debugger
     if (props.uiSchema && props.uiSchema["ui:options"]) {
       const { format, $format } = props.uiSchema["ui:options"];
 

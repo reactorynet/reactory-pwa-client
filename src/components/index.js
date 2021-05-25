@@ -1,14 +1,7 @@
 import React from 'react';
 import { compose } from 'redux';
+import * as DropZone from 'react-dropzone';
 import * as ReactRouter from 'react-router'
-import Loadable from 'react-loadable';
-import {
-  Typography,
-  Grid,
-  Paper,
-  Button,
-  Icon,
-} from '@material-ui/core';
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import * as MaterialCore from '@material-ui/core'
 import * as MaterialIcons from '@material-ui/icons'
@@ -816,5 +809,11 @@ export const componentRegistery = [
     name: 'ReactRouter',
     component: ReactRouter,
     version: '1.0.0'
+  },
+  {
+    nameSpace: 'dropzone',
+    name: 'DropZone',
+    version: '1.0.0',
+    component: DropZone
   }
-];
+]

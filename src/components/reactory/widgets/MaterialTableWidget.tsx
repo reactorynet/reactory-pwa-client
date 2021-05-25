@@ -692,9 +692,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       if (tableRef.current && tableRef.current.onQueryChange) {
         tableRef.current.onQueryChange()
       }
-    } else {
-      setVersion(version + 1);
     }
+    setVersion(version + 1);
   }
 
   const onSelectionChange = (selected_rows) => {
@@ -744,7 +743,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       //logic in the widget.
       uiOptions.refreshEvents.forEach((reactoryEvent) => {
         reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
-        reactory.on(reactoryEvent.name, refreshHandler.bind(self, reactoryEvent.name));
+        reactory.on(reactoryEvent.name, refresh);
       });
     };
 
