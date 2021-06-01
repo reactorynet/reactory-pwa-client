@@ -144,6 +144,7 @@ const createUserMutation = gql`
   }
 `;
 
+
 const updateUserMutation = gql`
   mutation UpdateUserMutation($id: String!, $profileData: UpdateUserInput!){
     updateUser(id: $id, profileData: $profileData){

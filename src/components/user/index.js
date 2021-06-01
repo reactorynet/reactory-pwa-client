@@ -211,7 +211,7 @@ export const CreateProfile = compose(
     withMembership = false, onUserCreated = () => { },
     firstNameHelperText,
     surnameHelperText,
-    emailHelperText, formProps = {} } = props;
+    emailHelperText, formProps = {}, reactory } = props;
 
   //we update the cache with the server response
   const updateCache = (cache, { data }) => {
@@ -235,8 +235,20 @@ export const CreateProfile = compose(
     onUserCreated(data.createUser);
   };
 
+  const mutationText = reactory.utils.gql(`
+  mutation CreateUserMutation($input: CreateUserInput!, $organizationId: String!){
+    createUser(input: $input, organizationId: $organizationId){
+      id
+      firstName
+      lastName
+      avatar
+      lastLogin
+    }
+  }
+`);
+
   return (
-    <Mutation mutation={api.mutations.Users.createUser} update={updateCache}>
+    <Mutation mutation={mutationText} update={updateCache}>
       {(createUser, { loading, error, data }) => {
         let props = {
           loading,
@@ -260,8 +272,18 @@ export const CreateProfile = compose(
           }
         }
 
-        if (loading) return "Updating please wait"
-        if (error) return error.message
+        if (loading) return "Creating user, please wait"
+        if (error) {
+          if (error.message) {
+            reactory.createNotification('Could not create the user', { type: 'error', canDismiss: true, showInAppNotifcation: true })
+          }
+          return error.message
+        }
+        if (data && data.createUser) {
+          const { firstName, lastName } = data.createUser;
+          reactory.createNotification(`Created user ${firstName} ${lastName}`, { type: 'success', canDismiss: true, showInAppNotifcation: true });
+        }
+
         return <Profile {...props} />
       }}
     </Mutation>
@@ -559,6 +581,10 @@ const UserList = ({
               }
             }
 
+            let pageCount = Math.floor((paging.total / (paging.pageSize || 25)));
+
+            if ((pageCount * (paging.pageSize || 25) < paging.total)) pageCount += 1;
+
             return (
               <React.Fragment>
                 <List subheader={<li />}>
@@ -613,7 +639,7 @@ const UserList = ({
                   }
                 </List>
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <MaterialLab.Pagination count={Math.floor(paging.total / (paging.pageSize || 25))} page={paging.page} onChange={onPageChanged} shape="rounded" />
+                  <MaterialLab.Pagination count={pageCount} page={paging.page} onChange={onPageChanged} shape="rounded" />
                 </div>
               </React.Fragment>
             )
