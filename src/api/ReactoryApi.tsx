@@ -513,7 +513,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   createNotification(title: string, options: NotificationOptions | any = {}) {
     const that = this;
     that.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
-
+    debugger
     let defaultNotificationProps = {
       title,
       type: options.type || "info",
@@ -528,7 +528,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     }
 
     if (options.showInAppNotification) {
-      that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: options.props });
+      that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: { ...options.config, ...options.props } });
       return;
     }
 

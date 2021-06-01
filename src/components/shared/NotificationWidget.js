@@ -75,7 +75,7 @@ class NotificationHOC extends Component {
   componentDidMount = () => {
     if (this.props.config) {
       let { config } = this.props;
-      this.interval = config.timeOut || 3000;
+      this.interval = config.timeOut || config.timeout || 3000;
       this.canDismiss = config.canDismiss;
       this.components = config.components || [];
     }
@@ -97,6 +97,7 @@ class NotificationHOC extends Component {
     let { api, title, type, config, classes } = props;
     let additionalComponentsToMount = null;
 
+    debugger
     if (config && config.components && config.components.length > 0) {
       const additionalComponents = config.components || [];
       additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, propsMap }, additionalComponentIndex) => {
@@ -110,7 +111,7 @@ class NotificationHOC extends Component {
 
         let mappedProps = {};
         if (propsMap)
-          mappedProps = api.utils.objectMapper({...props.config, api}, propsMap)
+          mappedProps = api.utils.objectMapper({ ...props.config, api }, propsMap)
 
         if (additionalComponentFound === true)
           return <ComponentToMount {...{ ...componentProps, ...mappedProps, key: additionalComponentIndex }} />
@@ -121,7 +122,7 @@ class NotificationHOC extends Component {
     }
 
     return (
-      <div onClick={this.clickHandler} className={classNames(classes.notification, classes[type] )}>
+      <div onClick={this.clickHandler} className={classNames(classes.notification, classes[type])}>
         <Grid container className={classes.root} spacing={2}>
           <Grid item className={classes.messageColumn}>
             <Icon>done</Icon>
@@ -134,6 +135,13 @@ class NotificationHOC extends Component {
               {additionalComponentsToMount}
             </Grid>
           }
+
+          {config.children && 
+            <Grid item xs={4} className={classes.componentColumn}>
+              {config.children}
+            </Grid> }
+
+          
         </Grid>
       </div>
     )

@@ -463,7 +463,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   let options: any = {
     rowStyle: (rowData, index) => {
-      reactory.log(' 🎨 MaterialTableWidget.rowStyle', { rowData, index }, 'debug')
+
       let style = { ...theme_row_style };
       let selectedStyle = { ...theme_selected_style };
 
@@ -476,7 +476,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         selectedStyle = { ...selectedStyle, ...uiOptions.selectedRowStyle };
       }
 
-      if (find(selectedRows, (row) => row.tableData.id === rowData.tableData.id)) {
+      if (rowData.tableData.checked === true) {
 
         style = {
           ...style,
