@@ -772,7 +772,12 @@ export const componentRegistery = [
       components: require('@apollo/client/react/components'),
     }
   },
-
+  {
+    nameSpace: 'core',
+    name: 'ReactoryColorPicker',
+    component: require('./reactory/widgets/ReactoryColorPicker').default,
+    version: '1.0.0'
+  },
   {
     nameSpace: 'exceljs',
     name: 'ExcelJS',

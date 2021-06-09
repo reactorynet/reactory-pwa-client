@@ -61,7 +61,7 @@ query brandListForOrganizationQuery($organizationId: String!) {
 
 const createBrandMutation = gql`
   mutation CreateBrandMutation($brandInput: BrandInput!, $organizationId: String!){
-    createBrandForOrganization(brandInput: $brandInput, organizationId: $organizationId){
+    MoreLeadershipBrandCreate(brandInput: $brandInput, organizationId: $organizationId){
       id
       title
       description
@@ -88,7 +88,7 @@ const createBrandMutation = gql`
 
 const updateBrandMutation = gql`
   mutation UpdateBrandMutation($brandInput: BrandInput!, $organizationId: String!){
-    updateBrandForOrganization(brandInput: $brandInput, organizationId: $organizationId){
+    MoreLeadershipBrandUpdate(brandInput: $brandInput, organizationId: $organizationId){
       id
       title
       scale {

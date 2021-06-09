@@ -91,7 +91,7 @@ const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipI
 });
 
 const ReactoryMaterialTablePagination = (props) => {
-  const { reactory, theme, schema, idShema, formContext, uiSchema, formData, rowsPerPageOptions, tableRef } = props;
+  const { reactory, theme, schema, idShema, formContext, uiSchema, formData, rowsPerPageOptions, tableRef, classes } = props;
   const { DropDownMenu } = reactory.getComponents(['core.DropDownMenu']);
 
   const options = uiSchema['ui:options'];
@@ -126,66 +126,64 @@ const ReactoryMaterialTablePagination = (props) => {
   const has_data = data.length > 0;
 
   return (
-    <Table>
-      {show_totals === true && show_totals_label === true &&
-        <TableRow style={footerOptions.totalsRowStyle}>
-          <TableCell colSpan={footerColumns.length} style={footerOptions.totalsCellStyle}>Totals</TableCell>
-        </TableRow>}
-      {show_totals === true &&
-        <TableRow>
-          {footerColumns.map((col) => {
-            let cellStyle = {};
-            let $display = '';
-            if (col.value && has_data === true) {
+    <td style={{ display: 'grid' }}>
+      <Grid container spacing={2}>
+        {show_totals === true && show_totals_label === true &&
+          <Grid item xs={12} md={12} lg={12} xl={12} style={footerOptions.totalsRowStyle}>
+            <div style={footerOptions.totalsCellStyle}>Totals</div>
+          </Grid>}
+        {show_totals === true &&
+          <Grid >
+            {footerColumns.map((col) => {
+              let cellStyle = {};
+              let $display = '';
+              if (col.value && has_data === true) {
 
-              switch (col.value) {
-                case 'SUM':
-                default: {
-                  let s = 0;
-                  data.forEach((row) => {
-                    if (typeof row[col.field] === 'string') {
-                      s += parseFloat(row[col.field]);
-                    }
+                switch (col.value) {
+                  case 'SUM':
+                  default: {
+                    let s = 0;
+                    data.forEach((row) => {
+                      if (typeof row[col.field] === 'string') {
+                        s += parseFloat(row[col.field]);
+                      }
 
-                    if (typeof row[col.field] === 'number') s += row[col.field]
-                  });
+                      if (typeof row[col.field] === 'number') s += row[col.field]
+                    });
 
-                  $display = `${s}`;
+                    $display = `${s}`;
+                  }
                 }
+
+                cellStyle = {
+                  borderStyle: 'solid none double none',
+                  width: `calc((100% - (0px)) / ${columns.length})`
+
+                };
+
+              } else {
+                cellStyle = {
+                  border: 'none'
+                };
               }
-
-              cellStyle = {
-                borderStyle: 'solid none double none',
-                width: `calc((100% - (0px)) / ${columns.length})`
-
-              };
-
-            } else {
-              cellStyle = {
-                border: 'none'
-              };
-            }
-            return <TableCell style={cellStyle}>{$display}</TableCell>
-          })}
-        </TableRow>}
-      <TableRow>
-        <TableCell colSpan={show_totals === true ? footerColumns.length : 1}>
-          <Grid container spacing={0} style={{ justifyContent: 'flex-end' }}>
-            <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
-              <Grid item sm={8}>
-                <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
-              </Grid>
-              <Grid item sm={2}>
-                <DropDownMenu menus={rowsPerPageOptions.map((i) => ({ key: i, title: `${i}` }))} onSelect={onMenuItemSelect} />
-              </Grid>
+              return (<div style={cellStyle}>{$display}</div>);
+            })}
+          </Grid>}
+        <Grid container item xs={12} md={12} lg={12} xl={12} spacing={0} style={{ justifyContent: 'flex-end' }}>
+          <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
+            <Grid item sm={8}>
+              <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
             </Grid>
-            <Grid item sm={6} md={4}>
-              <MTablePagination {...props} />
+            <Grid item sm={2}>
+              <DropDownMenu menus={rowsPerPageOptions.map((i) => ({ key: i, title: `${i}` }))} onSelect={onMenuItemSelect} />
             </Grid>
           </Grid>
-        </TableCell>
-      </TableRow>
-    </Table >
+          <Grid item sm={6} md={4}>
+            <MTablePagination {...{ ...props, classes: { root: classes.root } }} />
+          </Grid>
+        </Grid>
+      </Grid>
+    </td >
   )
 }
 
