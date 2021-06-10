@@ -105,12 +105,12 @@ export default async () => {
     defaultOptions: {
 
       watchQuery: {
-        fetchPolicy: 'cache-and-network',
+        fetchPolicy: 'network-only',
         errorPolicy: 'ignore',
       },
 
       query: {
-        fetchPolicy: 'cache-first',
+        fetchPolicy: 'network-only',
         errorPolicy: 'all',
       },
 

@@ -368,7 +368,8 @@ class Profile extends Component<any, any> {
             </Grid>
         );
 
-        return userDemographic;
+        // return userDemographic;
+        return null;
 
     }
 

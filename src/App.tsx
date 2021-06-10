@@ -221,25 +221,28 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
 const AppLoading = () => {
   return (
-    <div id="default_loader" className="loader">
-      <div className="loader-inner">
-        <div className="loader-line-wrap">
-          <div className="loader-line"></div>
-        </div>
-        <div className="loader-line-wrap">
-          <div className="loader-line"></div>
-        </div>
-        <div className="loader-line-wrap">
-          <div className="loader-line"></div>
-        </div>
-        <div className="loader-line-wrap">
-          <div className="loader-line"></div>
-        </div>
-        <div className="loader-line-wrap">
-          <div className="loader-line"></div>
+    <>
+      <div id="default_loader" className="loader">
+        <div className="loader-inner">
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
         </div>
       </div>
-    </div>
+      <p>Application libraries loaded. Loading Application Client</p>
+    </>
   )
 }
 

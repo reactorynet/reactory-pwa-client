@@ -201,6 +201,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
+  const [is_refreshing, setIsRefreshing] = useState(false);
   const [last_queried, setLastQueried] = useState(null);
   const [last_result, setLastResult] = useState(formData);
 
@@ -303,7 +304,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
           reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
-          reactory.graphqlQuery(queryDefinition.text, variables, queryDefinition.options).then((queryResult: any) => {
+          let options = { ...queryDefinition.options };
+          if (query && query.options) {
+            options = { ...options, ...query.options }
+          }
+
+          reactory.graphqlQuery(queryDefinition.text, variables, options).then((queryResult: any) => {
             reactory.log(`Result From Query`, { queryResult })
             if (queryResult.errors && queryResult.errors.length > 0) {
               //show a loader error
@@ -686,12 +692,15 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   };
 
   const refresh = () => {
+    if (is_refreshing === true) return;
+    setIsRefreshing(true);
     if (uiOptions.remoteData === true) {
       if (tableRef.current && tableRef.current.onQueryChange) {
         tableRef.current.onQueryChange()
       }
     }
     setVersion(version + 1);
+    setIsRefreshing(false);
   }
 
   const onSelectionChange = (selected_rows) => {
@@ -748,21 +757,28 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return willUnmount;
   }, []);
 
-  return (
-    <React.Fragment>
-      <MaterialTable
-        columns={columns}
-        tableRef={tableRef}
-        data={rows}
-        title={schema.title || uiOptions.title || "no title"}
-        options={options}
-        actions={actions}
-        onSelectionChange={onSelectionChange}
-        components={components}
-        detailPanel={detailsPanel} />
-      {confirmDialog}
-    </React.Fragment>
-  )
+  try {
+    return (
+      <React.Fragment>
+        <MaterialTable
+          columns={columns}
+          tableRef={tableRef}
+          data={rows}
+          title={schema.title || uiOptions.title || "no title"}
+          options={options}
+          actions={actions}
+          onSelectionChange={onSelectionChange}
+          components={components}
+          detailPanel={detailsPanel} />
+        {confirmDialog}
+      </React.Fragment>
+    )
+
+  } catch (err) {
+    return <>Something went wrong during the render of the data table, please <Button onClick={() => { setVersion(version + 1) }}>Retry</Button></>
+  }
+
+
 
 };
 

@@ -117,6 +117,49 @@ const StyledCurrencyLabel = (props) => {
 
     let otherCurrencies = [];
 
+    const classes = makeStyles((theme) => {
+      return {
+        label: {
+          fontSize: '0.9em',
+          color: 'rgba(0, 0, 0, 0.54)',
+          display: 'block'
+        },
+        currency: {
+          marginTop: theme.spacing(1),
+          marginBottom: theme.spacing(1),
+          marginRight: theme.spacing(1),
+          whiteSpace: 'nowrap'
+        },
+        currenciesContainer: {
+          flex: 1,
+          flexDirection: currenciesOrientation || "row"
+        },
+        currencyValue: {},
+        inlineContainer: {
+          display: 'flex',
+          '& div': {
+            display: 'flex',
+            alignItems: 'center',
+            '& label': {
+              marginRight: theme.spacing(3),
+              fontSize: '1em'
+            }
+          },
+        },
+        error: {
+          color: theme.palette.error,
+          fontSize: 'smaller',
+        },
+        tooltip: {
+          backgroundColor: _tooltipBackgroundColor,
+          color: _tooltipTextColor,
+          boxShadow: theme.shadows[1],
+          fontSize: 14
+        }
+      }
+    })();
+
+
     if (currencies && isArray(currencies) && displayAdditionalCurrencies === true) {
 
 
@@ -162,47 +205,6 @@ const StyledCurrencyLabel = (props) => {
       }
     };
 
-    const classes = makeStyles((theme) => {
-      return {
-        label: {
-          fontSize: '0.9em',
-          color: 'rgba(0, 0, 0, 0.54)',
-          display: 'block'
-        },
-        currency: {
-          marginTop: theme.spacing(1),
-          marginBottom: theme.spacing(1),
-          marginRight: theme.spacing(1),
-          whiteSpace: 'nowrap'
-        },
-        currenciesContainer: {
-          flex: 1,
-          flexDirection: currenciesOrientation || "row"
-        },
-        currencyValue: {},
-        inlineContainer: {
-          display: 'flex',
-          '& div': {
-            display: 'flex',
-            alignItems: 'center',
-            '& label': {
-              marginRight: theme.spacing(3),
-              fontSize: '1em'
-            }
-          },
-        },
-        error: {
-          color: theme.palette.error,
-          fontSize: 'smaller',
-        },
-        tooltip: {
-          backgroundColor: _tooltipBackgroundColor,
-          color: _tooltipTextColor,
-          boxShadow: theme.shadows[1],
-          fontSize: 14
-        }
-      }
-    })();
 
 
     let primaryCurrency = (

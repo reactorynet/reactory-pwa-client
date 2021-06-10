@@ -12,7 +12,7 @@ import {
   deepEquals,
 } from "../utils";
 import validateFormData, { toErrorList } from "../validate";
-import {withApi } from '@reactory/client-core/api/ApiProvider'
+import { withApi } from '@reactory/client-core/api/ApiProvider'
 
 class Form extends Component {
 
@@ -38,8 +38,8 @@ class Form extends Component {
     this.formElement = null;
   }
 
-  componentWillReceiveProps(nextProps) {
-    
+  UNSAFE_componentWillReceiveProps(nextProps) {
+
     const nextState = this.getStateFromProps(nextProps);
     //TODO: ensure that data and schema are the only items compared before rerended
     if (
@@ -67,9 +67,9 @@ class Form extends Component {
     const { errors, errorSchema } = mustValidate
       ? this.validate(formData, schema)
       : {
-          errors: state.errors || [],
-          errorSchema: state.errorSchema || {},
-        };
+        errors: state.errors || [],
+        errorSchema: state.errorSchema || {},
+      };
     const idSchema = toIdSchema(
       retrievedSchema,
       uiSchema["ui:rootFieldId"],
@@ -88,11 +88,11 @@ class Form extends Component {
     };
   }
 
-  shouldComponentUpdate(nextProps, nextState) {    
+  shouldComponentUpdate(nextProps, nextState) {
     return shouldRender(this, nextProps, nextState);
   }
 
-  validate(formData, schema = this.props.schema, via='onChange') {
+  validate(formData, schema = this.props.schema, via = 'onChange') {
     const { validate, transformErrors } = this.props;
     const { definitions } = this.getRegistry();
     const resolvedSchema = retrieveSchema(schema, definitions, formData);
@@ -111,10 +111,10 @@ class Form extends Component {
 
     if (errors.length && showErrorList != false) {
       return (<ErrorList errors={errors}
-                         errorSchema={errorSchema}
-                         schema={schema}
-                         uiSchema={uiSchema}
-                         formContext={formContext} />
+        errorSchema={errorSchema}
+        schema={schema}
+        uiSchema={uiSchema}
+        formContext={formContext} />
       );
     }
     return null;
@@ -127,10 +127,10 @@ class Form extends Component {
       const { errors, errorSchema } = this.validate(formData);
       state = { ...state, errors, errorSchema };
     } else if (!this.props.noValidate && newErrorSchema) {
-          
+
       state = {
         ...state,
-        errorSchema: newErrorSchema,        
+        errorSchema: newErrorSchema,
         errors: toErrorList(newErrorSchema),
       };
 
@@ -156,7 +156,7 @@ class Form extends Component {
   };
 
   onSubmit = event => {
-    if(event) event.preventDefault();
+    if (event) event.preventDefault();
 
     if (!this.props.noValidate) {
       const { errors, errorSchema } = this.validate(this.state.formData, this.props.schema, 'submit');
@@ -191,9 +191,9 @@ class Form extends Component {
       formContext: this.props.formContext || {},
     };
 
-    if(this.props.formContext) {
+    if (this.props.formContext) {
       registery.formContext.$formElement = this.formElement;
-      registery.formContext.$submit = this.submit;      
+      registery.formContext.$submit = this.submit;
       registery.formContext.$formData = this.state && this.state.formData ? this.state.formData : {};
     }
 
@@ -231,7 +231,7 @@ class Form extends Component {
       acceptcharset,
       noHtml5Validate,
       disabled,
-      toolbarPosition = 'bottom',    
+      toolbarPosition = 'bottom',
     } = this.props;
 
     const { schema, uiSchema, formData, errorSchema, idSchema } = this.state;
@@ -240,15 +240,15 @@ class Form extends Component {
 
     let componentType = 'form';
     let formUiOptions = {};
-    let style = this.props.style || {} 
+    let style = this.props.style || {}
 
-    if(uiSchema['ui:options']) {
+    if (uiSchema['ui:options']) {
       formUiOptions = uiSchema['ui:options'];
       componentType = formUiOptions.componentType || componentType;
-      style = formUiOptions.style ? {...style, ...formUiOptions.style } : style;
+      style = formUiOptions.style ? { ...style, ...formUiOptions.style } : style;
     }
 
-    if(componentType === 'form') {
+    if (componentType === 'form') {
       return (
         <form
           className={className ? className : "reactory-form"}
@@ -267,7 +267,7 @@ class Form extends Component {
             this.formElement = form;
           }}>
           {this.renderErrors()}
-          { toolbarPosition.indexOf('top') >= 0 ? (children) : null }
+          { toolbarPosition.indexOf('top') >= 0 ? (children) : null}
           <_SchemaField
             schema={schema}
             uiSchema={uiSchema}
@@ -281,12 +281,12 @@ class Form extends Component {
             registry={registry}
             safeRenderCompletion={safeRenderCompletion}
             disabled={disabled} />
-          {toolbarPosition.indexOf('bottom') >= 0 ? (children) : null } 
+          {toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
         </form>
       );
     }
 
-    if(componentType === 'div') {
+    if (componentType === 'div') {
       return (<div
         className={className ? className : "rjsf"}
         id={id}
@@ -303,8 +303,8 @@ class Form extends Component {
         ref={form => {
           this.formElement = form;
         }}>
-          {this.renderErrors()}
-          { toolbarPosition.indexOf('top') >= 0 ? (children) : null }
+        {this.renderErrors()}
+        { toolbarPosition.indexOf('top') >= 0 ? (children) : null}
         <_SchemaField
           schema={schema}
           uiSchema={uiSchema}
@@ -318,10 +318,10 @@ class Form extends Component {
           registry={registry}
           safeRenderCompletion={safeRenderCompletion}
           disabled={disabled} />
-        {toolbarPosition.indexOf('bottom') >= 0 ? (children) : null } 
+        {toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
       </div>)
     }
-    
+
   }
 }
 

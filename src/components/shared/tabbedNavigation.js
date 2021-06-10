@@ -67,13 +67,17 @@ const CustomTab = (props) => {
     menuPrepend = (<span className={(SelectedItem ? classNames(classes.prepend, classes.selected) : classes.prepend)}>{props.prepend}</span>)
 
   return (
-    <>
+    <Button onClick={tabButtonClickHandler}>
+      {menuPrepend}
+      <Icon color="primary">more_vert</Icon>
+      {SelectedItem}
       <Popover
         open={anchorElm != null}
         anchorEl={anchorElm}
         onClose={closeMenu}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         transformOrigin={{ vertical: "top", horizontal: "center" }}
+        key={props.key}
       >
         {
           props.menuItems.map(menuItem => {
@@ -81,13 +85,7 @@ const CustomTab = (props) => {
           })
         }
       </Popover>
-
-      <Button onClick={tabButtonClickHandler}>
-        {menuPrepend}
-        <Icon color="primary">more_vert</Icon>
-        {SelectedItem}
-      </Button>
-    </>
+    </Button>
   )
 }
 
@@ -124,7 +122,7 @@ function a11yProps(index) {
 class TabbedNavComponent extends Component {
 
   constructor(props, context) {
-    super(props, context);
+    super(props);
     const { api, formContext, uiSchema } = props;
     let options = getUiOptions(uiSchema);
     let activeTab = null;
@@ -150,9 +148,6 @@ class TabbedNavComponent extends Component {
     this.props.api.log(`Caught out of boundary error TabbedNavigation Component`, { error }, 'error')
   }
 
-  componentWillReceiveProps(nextProps) {
-    this.props.api.log(`TabbedNavComponent.componentWillReceiveProps(nextProps)`, { nextProps });
-  }
 
   render() {
     const { props, theme, state } = this;
@@ -259,9 +254,9 @@ class TabbedNavComponent extends Component {
             <MainComponentToMount {...mainComponentProps} />
             {additionalComponentsToMount}
           </TabPanel>) : (
-            <TabPanel value={state.activeTab} index={(tab.id || index)} key={`panel_${(tab.id || index)}`}>
-              <Typography>Not Visible Yet</Typography>
-            </TabPanel>);
+          <TabPanel value={state.activeTab} index={(tab.id || index)} key={`panel_${(tab.id || index)}`}>
+            <Typography>Not Visible Yet</Typography>
+          </TabPanel>);
 
         _tabPannels.push(newPanel);
 
@@ -288,6 +283,7 @@ class TabbedNavComponent extends Component {
               value={state.activeSubTab}
               component={() => {
                 return <CustomTab
+                  key={'more_vert_custom'}
                   menuItemSelected={handleMenuItemClick}
                   menuItems={_additionalMenuItems}
                   selectedItem={state.activeTab}
