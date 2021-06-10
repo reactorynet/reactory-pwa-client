@@ -18,7 +18,7 @@ import {
     InputAdornment, Icon, IconButton,
     ExpansionPanel, ExpansionPanelActions,
     ExpansionPanelDetails, AccordionSummary,
-    Toolbar, Tooltip, InputLabel, FormControl
+    Toolbar, Tooltip, InputLabel, FormControl, ListItemAvatar, Table, TableBody, TableCell, TableHead, TableRow
 } from '@material-ui/core';
 
 import Button from '@material-ui/core/Button';
@@ -160,7 +160,10 @@ const ProfileStyles = (theme: Theme) => ({
         paddingRight: `${theme.spacing(1)}px`,
         color: "#566779",
         fontWeight: 600,
-    }
+    }  ,
+    activeOrganisation: {
+      backgroundColor: theme.palette.primary.main,
+    },
 });
 
 class Profile extends Component<any, any> {
@@ -223,6 +226,10 @@ class Profile extends Component<any, any> {
 
     onAvatarMouseOut() {
         this.setState({ avatarMouseHover: false });
+    }
+
+    activeOrganisation(index: number) {
+      this.setState({ activeOrganisationIndex: index });
     }
 
     refreshPeers() {
@@ -333,22 +340,73 @@ class Profile extends Component<any, any> {
         )
 
         const membershipList = (
-            <Grid item xs={12} sm={12} md={12} lg={12} xl={12} >
-                <Paper className={classes.general}>
-                    <Content slug={'core-user-profile-memebership-intro'} editRoles={['DEVELOPER', 'ADMIN']} defaultValue={defaultMembershipContent}></Content>
-                    <List>
-                        {data.map((membership, index) => (
-
-                            <ListItem key={index}>
-                                <Avatar style={{ marginRight: `8px` }}>{membership && membership.organization && membership.organization.name ? membership.organization.name.substring(0, 2) : membership.client.name.substring(0, 2)}</Avatar>
-                                <ListItemText secondary={`${membership.client.name} `} primary={isNil(membership.organization) === false ? membership.organization.name : 'No organization'}></ListItemText>
-                                <ListItemSecondaryAction>
-                                    <IconButton onClick={() => { self.onMembershipSelectionChanged(membership) }}><Icon>more</Icon></IconButton>
-                                </ListItemSecondaryAction>
-                            </ListItem>))}
-                    </List>
-                </Paper>
-            </Grid>
+          <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
+            <Paper className={classes.general}>
+              <Table className={classes.table} aria-label="simple table">
+                <caption>
+                  <Content
+                    slug={"core-user-profile-memebership-intro"}
+                    editRoles={["DEVELOPER", "ADMIN"]}
+                    defaultValue={defaultMembershipContent}
+                  ></Content>
+                </caption>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Organisation</TableCell>
+                    <TableCell>Date Joined</TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.map((membership, index) => (
+                    <TableRow
+                      key={index}
+                      className={
+                        this.state.activeOrganisationIndex === index
+                          ? classes.activeOrganisation
+                          : ""
+                      }
+                    >
+                      <TableCell>
+                        <List className={classes.root}>
+                          <ListItem>
+                            <ListItemAvatar>
+                              <Avatar style={{ marginRight: `8px` }}>
+                                {membership &&
+                                membership.organization &&
+                                membership.organization.name
+                                  ? membership.organization.name.substring(0, 2)
+                                  : membership.client.name.substring(0, 2)}
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={`${membership.client.name} `}
+                              secondary={
+                                isNil(membership.organization) === false
+                                  ? membership.organization.name
+                                  : "No organization"
+                              }
+                            />
+                          </ListItem>
+                        </List>
+                      </TableCell>
+                      <TableCell>09/06/2019</TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          onClick={() => {
+                            self.onMembershipSelectionChanged(membership);
+                            this.activeOrganisation(index);
+                          }}
+                        >
+                          <Icon>chevron_right</Icon>
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
+          </Grid>
         );
 
         return membershipList;
@@ -1243,6 +1301,7 @@ class Profile extends Component<any, any> {
                 {isNew === false && <Typography className={classes.sectionHeaderText}>Demographics</Typography>}
                 {isNew === false && this.renderUserDemographics()}
                 {isNew === false && <Typography className={classes.sectionHeaderText}>My Nominees</Typography>}
+                {isNew === false ? this.renderMemberships() : null}
                 {isNew === false ? this.renderPeers() : null}
                 {isNew === false ? this.renderFooter() : null}
                 {isNew === false ? this.renderCropper() : null}
@@ -1280,6 +1339,7 @@ class Profile extends Component<any, any> {
         this.renderUserDemographics = this.renderUserDemographics.bind(this);
         this.renderCropper = this.renderCropper.bind(this);
         this.inviteUserByEmail = this.inviteUserByEmail.bind(this);
+        this.activeOrganisation = this.activeOrganisation.bind(this);
 
         this.state = {
             avatarMouseOver: false,
@@ -1295,7 +1355,7 @@ class Profile extends Component<any, any> {
             help: props.reactory.queryObject.help === "true",
             helpTopic: props.reactory.queryObject.helptopics,
             highlight: props.reactory.queryObject.peerconfig === "true" ? "peers" : null,
-
+            activeOrganisationIndex: 0,
         };
 
         const components = [
