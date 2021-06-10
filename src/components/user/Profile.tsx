@@ -178,7 +178,7 @@ const ProfileStyles = (theme: Theme) => ({
     fontWeight: 600,
   },
   activeOrganisation: {
-    backgroundColor: theme.palette.primary.dark,
+    backgroundColor: theme.palette.primary.main,
   },
 });
 
