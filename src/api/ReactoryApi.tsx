@@ -1388,7 +1388,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     return this.status();
   }
 
-  resetPassword({ password, confirmPassword, resetToken }) {
+  resetPassword({ password, confirmPassword }) {
     const that = this;
     return new Promise((resolve, reject) => {
       const setPasswordMutation = that.mutations.Users.setPassword;

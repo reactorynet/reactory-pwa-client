@@ -226,7 +226,7 @@ const StyledCurrencyLabel = (props) => {
             {_label != '' && <label className={classes.label}>{_label}</label>}
           </div>
           <div>
-            <Tooltip classes={classes.tooltip} title={_tooltip} placement={_tooltipPlacement}>
+            <Tooltip title={_tooltip} placement={_tooltipPlacement}>
               <div>
                 {displayPrimaryCurrency === true ? primaryCurrency : null}
                 {displayAdditionalCurrencies === true ? otherCurrencies : null}
@@ -242,7 +242,7 @@ const StyledCurrencyLabel = (props) => {
     return (
       <>
         {_label != '' && <label className={classes.label}>{_label}</label>}
-        <Tooltip title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
+        <Tooltip title={_tooltip} color={_tooltipTextColor} placement={_tooltipPlacement}>
           <div className={classes.currenciesContainer} style={props.currenciesContainerStyles}>
             {displayPrimaryCurrency === true ? primaryCurrency : null}
             {displayAdditionalCurrencies === true ? otherCurrencies : null}

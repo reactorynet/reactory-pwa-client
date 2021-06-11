@@ -132,42 +132,44 @@ const ReactoryMaterialTablePagination = (props) => {
           <Grid item xs={12} md={12} lg={12} xl={12} style={footerOptions.totalsRowStyle}>
             <div style={footerOptions.totalsCellStyle}>Totals</div>
           </Grid>}
-        {show_totals === true &&
-          <Grid >
-            {footerColumns.map((col) => {
-              let cellStyle = {};
-              let $display = '';
-              if (col.value && has_data === true) {
+        {show_totals === true && footerColumns !== undefined && footerColumns !== null &&
+          <Grid>
+            {
+              footerColumns.map((col) => {
+                let cellStyle = {};
+                let $display = '';
+                if (col.value && has_data === true) {
 
-                switch (col.value) {
-                  case 'SUM':
-                  default: {
-                    let s = 0;
-                    data.forEach((row) => {
-                      if (typeof row[col.field] === 'string') {
-                        s += parseFloat(row[col.field]);
-                      }
+                  switch (col.value) {
+                    case 'SUM':
+                    default: {
+                      let s = 0;
+                      data.forEach((row) => {
+                        if (typeof row[col.field] === 'string') {
+                          s += parseFloat(row[col.field]);
+                        }
 
-                      if (typeof row[col.field] === 'number') s += row[col.field]
-                    });
+                        if (typeof row[col.field] === 'number') s += row[col.field]
+                      });
 
-                    $display = `${s}`;
+                      $display = `${s}`;
+                    }
                   }
+
+                  cellStyle = {
+                    borderStyle: 'solid none double none',
+                    width: `calc((100% - (0px)) / ${columns.length})`
+
+                  };
+
+                } else {
+                  cellStyle = {
+                    border: 'none'
+                  };
                 }
-
-                cellStyle = {
-                  borderStyle: 'solid none double none',
-                  width: `calc((100% - (0px)) / ${columns.length})`
-
-                };
-
-              } else {
-                cellStyle = {
-                  border: 'none'
-                };
-              }
-              return (<div style={cellStyle}>{$display}</div>);
-            })}
+                return (<div style={cellStyle}>{$display}</div>);
+              })
+            }
           </Grid>}
         <Grid container item xs={12} md={12} lg={12} xl={12} spacing={0} style={{ justifyContent: 'flex-end' }}>
           <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
@@ -175,7 +177,7 @@ const ReactoryMaterialTablePagination = (props) => {
               <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
             </Grid>
             <Grid item sm={2}>
-              <DropDownMenu menus={rowsPerPageOptions.map((i) => ({ key: i, title: `${i}` }))} onSelect={onMenuItemSelect} />
+              <DropDownMenu menus={rowsPerPageOptions ? rowsPerPageOptions.map((i) => ({ key: i, title: `${i}` })) : []} onSelect={onMenuItemSelect} />
             </Grid>
           </Grid>
           <Grid item sm={6} md={4}>
@@ -346,7 +348,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   };
 
-  const rows = uiOptions.remoteData ? getData : formData;
+  const rows = uiOptions.remoteData === true ? getData : formData;
 
   if (uiOptions.columns && uiOptions.columns.length) {
     let _columnRef = [];
@@ -394,7 +396,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         reactory.log(`Rendering Chidren Elements`, def);
         const { components } = def;
         def.render = (rowData) => {
-          reactory.log(`Child element to be rendered`, def); const childrenComponents = components.map((componentDef, componentIndex) => {
+          reactory.log(`Child element to be rendered`, def);
+
+          const childrenComponents = (components || []).map((componentDef, componentIndex) => {
 
             const ComponentToRender = reactory.getComponent(componentDef.component);
 
@@ -703,10 +707,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     setIsRefreshing(false);
   }
 
-  const onSelectionChange = (selected_rows) => {
-    //setSelectedRows(selected_rows);
-  }
-
   if (!components.Pagination) {
     components.Pagination = (pagination_props) => {
 
@@ -761,13 +761,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return (
       <React.Fragment>
         <MaterialTable
-          columns={columns}
+          columns={columns || []}
           tableRef={tableRef}
-          data={rows}
+          data={rows || []}
           title={schema.title || uiOptions.title || "no title"}
           options={options}
           actions={actions}
-          onSelectionChange={onSelectionChange}
           components={components}
           detailPanel={detailsPanel} />
         {confirmDialog}
