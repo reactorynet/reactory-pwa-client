@@ -97,7 +97,7 @@ class NotificationHOC extends Component {
     let { api, title, type, config, classes } = props;
     let additionalComponentsToMount = null;
 
-    debugger
+
     if (config && config.components && config.components.length > 0) {
       const additionalComponents = config.components || [];
       additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, propsMap }, additionalComponentIndex) => {
@@ -136,12 +136,12 @@ class NotificationHOC extends Component {
             </Grid>
           }
 
-          {config.children && 
+          {config.children &&
             <Grid item xs={4} className={classes.componentColumn}>
               {config.children}
-            </Grid> }
+            </Grid>}
 
-          
+
         </Grid>
       </div>
     )

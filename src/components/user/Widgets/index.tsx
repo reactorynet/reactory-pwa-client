@@ -78,7 +78,8 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
     excluded = [],
     mode = 'list',
     page = 1,
-    pageSize = 25
+    pageSize = 25,
+    onSearch = null
   } = props;
 
 
@@ -202,8 +203,8 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
 
   const { useState, useEffect } = React;
 
-  const [searchString, setSearchString] = useState('');
-  const [inputText, setInputText] = useState('');
+  const [searchString, setSearchString] = useState(props.searchString);
+  const [inputText, setInputText] = useState(props.searchString);
   const [skip, setSkip] = useState(false);
   const [show_deleted, setShowDeleted] = useState('');
   const [business_units, setBusinessUnits] = useState([]);
@@ -213,9 +214,16 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
 
   const { UserList } = reactory.getComponents(['core.UserList'])
 
+  useEffect(() => {
+    if (paging.page > 1) {
+      setPaging({ page: 1, pageSize: paging.pageSize });
+    }
+  }, [searchString])
 
   const doRefresh = () => {
     //this.setState({ skip: false, searchString: this.state.inputText });
+
+
     setSkip(false);
     setSearchString(inputText);
   }
@@ -240,7 +248,6 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
 
 
   const onPageChange = (new_page) => {
-    // that.setState({ current_page: page });
     setPaging({ ...paging, page: new_page });
   }
 
@@ -272,7 +279,7 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
             </IconButton>
           </Tooltip>
 
-          {onAcceptSelection && <Tooltip title={'Click to accept your selection'}>
+          {onAcceptSelection && selected.length > 0 && <Tooltip title={'Click to accept your selection'}>
             <IconButton color="primary" onClick={() => {
               onAcceptSelection(selected);
             }}>

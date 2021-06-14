@@ -276,11 +276,6 @@ class ApplicationHeader extends Component {
     this.renderHelpInterface = this.renderHelpInterface.bind(this);
 
   }
-
-  componentDidMount() {
-
-  }
-
   onRouteChanged(props) {
     this.props.api.log('ApiPath changed, handle in header app', props);
     const { actionData, path } = props;
@@ -547,11 +542,6 @@ class ApplicationHeader extends Component {
   }
 }
 
-ApplicationHeader.propTypes = {
-  title: PropTypes.string,
-  api: PropTypes.instanceOf(ReactoryApi).isRequired,
-  search: PropTypes.instanceOf(ISearchConfig)
-};
 
 ApplicationHeader.defaultProps = {
   title: 'Reactory',

@@ -7,25 +7,26 @@ import { Tooltip } from '@material-ui/core';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 
 
-class ToolTipHOC extends Component {
+const ToolTipHOC = (props) => {
 
-  render() {
-    const { backgroundColor = 'rgba(0, 0, 0, 0.7)', color = 'rgba(0, 0, 0, 0.87)' } = this.props;
-    const StyledTooltip = withStyles(theme => ({
-      tooltip: {
+  const { backgroundColor = 'rgba(0, 0, 0, 0.7)', color = 'rgba(0, 0, 0, 0.87)' } = props;
+
+  const classes = makeStyles((theme) => {
+    return {
+      root: {
         backgroundColor,
         color,
         boxShadow: theme.shadows[1],
         fontSize: 14
-      },
-    }))(Tooltip);
+      }
+    }
+  })();
 
-    return (
-      <StyledTooltip title={this.props.title} placement={this.props.placement}>
-        {this.props.children}
-      </StyledTooltip>
-    );
-  }
+  return (
+    <Tooltip className={classes.root} title={props.title} placement={props.placement}>
+      {props.children}
+    </Tooltip>
+  );
 }
 
 const StyledCurrencyLabel = (props) => {
@@ -49,41 +50,7 @@ const StyledCurrencyLabel = (props) => {
       currenciesOrientation = 'row'
     } = props;
 
-    const classes = makeStyles((theme) => {
-      return {
-        label: {
-          fontSize: '0.9em',
-          color: 'rgba(0, 0, 0, 0.54)',
-          display: 'block'
-        },
-        currency: {
-          marginTop: theme.spacing(1),
-          marginBottom: theme.spacing(1),
-          marginRight: theme.spacing(1),
-          whiteSpace: 'nowrap'
-        },
-        currenciesContainer: {
-          flex: 1,
-          flexDirection: currenciesOrientation || "row"
-        },
-        currencyValue: {},
-        inlineContainer: {
-          display: 'flex',
-          '& div': {
-            display: 'flex',
-            alignItems: 'center',
-            '& label': {
-              marginRight: theme.spacing(3),
-              fontSize: '1em'
-            }
-          },
-        },
-        error: {
-          color: theme.palette.error,
-          fontSize: 'smaller',
-        }
-      }
-    })();
+
 
 
     let isCents = true;
@@ -150,6 +117,49 @@ const StyledCurrencyLabel = (props) => {
 
     let otherCurrencies = [];
 
+    const classes = makeStyles((theme) => {
+      return {
+        label: {
+          fontSize: '0.9em',
+          color: 'rgba(0, 0, 0, 0.54)',
+          display: 'block'
+        },
+        currency: {
+          marginTop: theme.spacing(1),
+          marginBottom: theme.spacing(1),
+          marginRight: theme.spacing(1),
+          whiteSpace: 'nowrap'
+        },
+        currenciesContainer: {
+          flex: 1,
+          flexDirection: currenciesOrientation || "row"
+        },
+        currencyValue: {},
+        inlineContainer: {
+          display: 'flex',
+          '& div': {
+            display: 'flex',
+            alignItems: 'center',
+            '& label': {
+              marginRight: theme.spacing(3),
+              fontSize: '1em'
+            }
+          },
+        },
+        error: {
+          color: theme.palette.error,
+          fontSize: 'smaller',
+        },
+        tooltip: {
+          backgroundColor: _tooltipBackgroundColor,
+          color: _tooltipTextColor,
+          boxShadow: theme.shadows[1],
+          fontSize: 14
+        }
+      }
+    })();
+
+
     if (currencies && isArray(currencies) && displayAdditionalCurrencies === true) {
 
 
@@ -195,6 +205,8 @@ const StyledCurrencyLabel = (props) => {
       }
     };
 
+
+
     let primaryCurrency = (
       <div className={classes.currency} {..._containerProps}>
         {_prependText != '' && <span style={{ fontWeight: "bold" }}>{_prependText}</span>}
@@ -214,32 +226,32 @@ const StyledCurrencyLabel = (props) => {
             {_label != '' && <label className={classes.label}>{_label}</label>}
           </div>
           <div>
-            <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
+            <Tooltip title={_tooltip} placement={_tooltipPlacement}>
               <div>
                 {displayPrimaryCurrency === true ? primaryCurrency : null}
                 {displayAdditionalCurrencies === true ? otherCurrencies : null}
               </div>
-            </ToolTipHOC>
+            </Tooltip>
           </div>
         </div>
       )
     }
 
+
+
     return (
       <>
         {_label != '' && <label className={classes.label}>{_label}</label>}
-        <ToolTipHOC title={_tooltip} color={_tooltipTextColor} backgroundColor={_tooltipBackgroundColor} placement={_tooltipPlacement}>
+        <Tooltip title={_tooltip} color={_tooltipTextColor} placement={_tooltipPlacement}>
           <div className={classes.currenciesContainer} style={props.currenciesContainerStyles}>
             {displayPrimaryCurrency === true ? primaryCurrency : null}
             {displayAdditionalCurrencies === true ? otherCurrencies : null}
           </div>
-        </ToolTipHOC>
+        </Tooltip>
       </>
     );
   } catch (error) {
-
     return <span>💥{error.message}</span>
-
   }
 }
 

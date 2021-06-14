@@ -72,12 +72,14 @@ import ReactoryFormEditor from './shared/FormEditor';
 
 import lodash from 'lodash';
 
+import { PasswordResetForm } from './user/Forms/ResetPassword';
+
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
 export const UserList = UserComponents.UserListWithData;
 export const UserSearchInput = UserComponents.UserSearchInputComponent;
 export const ForgotForm = UserComponents.ForgotForm;
-export const ResetPasswordForm = UserComponents.ResetPasswordForm;
+export const ResetPasswordForm = PasswordResetForm;
 export const UserInbox = UserComponents.UserInbox;
 export const Home = Main;
 export const Assessment = AssessmentView;
@@ -772,7 +774,12 @@ export const componentRegistery = [
       components: require('@apollo/client/react/components'),
     }
   },
-
+  {
+    nameSpace: 'core',
+    name: 'ReactoryColorPicker',
+    component: require('./reactory/widgets/ReactoryColorPicker').default,
+    version: '1.0.0'
+  },
   {
     nameSpace: 'exceljs',
     name: 'ExcelJS',

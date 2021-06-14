@@ -91,7 +91,7 @@ const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipI
 });
 
 const ReactoryMaterialTablePagination = (props) => {
-  const { reactory, theme, schema, idShema, formContext, uiSchema, formData, rowsPerPageOptions, tableRef } = props;
+  const { reactory, theme, schema, idShema, formContext, uiSchema, formData, rowsPerPageOptions, tableRef, classes } = props;
   const { DropDownMenu } = reactory.getComponents(['core.DropDownMenu']);
 
   const options = uiSchema['ui:options'];
@@ -126,66 +126,66 @@ const ReactoryMaterialTablePagination = (props) => {
   const has_data = data.length > 0;
 
   return (
-    <Table>
-      {show_totals === true && show_totals_label === true &&
-        <TableRow style={footerOptions.totalsRowStyle}>
-          <TableCell colSpan={footerColumns.length} style={footerOptions.totalsCellStyle}>Totals</TableCell>
-        </TableRow>}
-      {show_totals === true &&
-        <TableRow>
-          {footerColumns.map((col) => {
-            let cellStyle = {};
-            let $display = '';
-            if (col.value && has_data === true) {
+    <td style={{ display: 'grid' }}>
+      <Grid container spacing={2}>
+        {show_totals === true && show_totals_label === true &&
+          <Grid item xs={12} md={12} lg={12} xl={12} style={footerOptions.totalsRowStyle}>
+            <div style={footerOptions.totalsCellStyle}>Totals</div>
+          </Grid>}
+        {show_totals === true && footerColumns !== undefined && footerColumns !== null &&
+          <Grid>
+            {
+              footerColumns.map((col) => {
+                let cellStyle = {};
+                let $display = '';
+                if (col.value && has_data === true) {
 
-              switch (col.value) {
-                case 'SUM':
-                default: {
-                  let s = 0;
-                  data.forEach((row) => {
-                    if (typeof row[col.field] === 'string') {
-                      s += parseFloat(row[col.field]);
+                  switch (col.value) {
+                    case 'SUM':
+                    default: {
+                      let s = 0;
+                      data.forEach((row) => {
+                        if (typeof row[col.field] === 'string') {
+                          s += parseFloat(row[col.field]);
+                        }
+
+                        if (typeof row[col.field] === 'number') s += row[col.field]
+                      });
+
+                      $display = `${s}`;
                     }
+                  }
 
-                    if (typeof row[col.field] === 'number') s += row[col.field]
-                  });
+                  cellStyle = {
+                    borderStyle: 'solid none double none',
+                    width: `calc((100% - (0px)) / ${columns.length})`
 
-                  $display = `${s}`;
+                  };
+
+                } else {
+                  cellStyle = {
+                    border: 'none'
+                  };
                 }
-              }
-
-              cellStyle = {
-                borderStyle: 'solid none double none',
-                width: `calc((100% - (0px)) / ${columns.length})`
-
-              };
-
-            } else {
-              cellStyle = {
-                border: 'none'
-              };
+                return (<div style={cellStyle}>{$display}</div>);
+              })
             }
-            return <TableCell style={cellStyle}>{$display}</TableCell>
-          })}
-        </TableRow>}
-      <TableRow>
-        <TableCell colSpan={show_totals === true ? footerColumns.length : 1}>
-          <Grid container spacing={0} style={{ justifyContent: 'flex-end' }}>
-            <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
-              <Grid item sm={8}>
-                <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
-              </Grid>
-              <Grid item sm={2}>
-                <DropDownMenu menus={rowsPerPageOptions.map((i) => ({ key: i, title: `${i}` }))} onSelect={onMenuItemSelect} />
-              </Grid>
+          </Grid>}
+        <Grid container item xs={12} md={12} lg={12} xl={12} spacing={0} style={{ justifyContent: 'flex-end' }}>
+          <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
+            <Grid item sm={8}>
+              <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
             </Grid>
-            <Grid item sm={6} md={4}>
-              <MTablePagination {...props} />
+            <Grid item sm={2}>
+              <DropDownMenu menus={rowsPerPageOptions ? rowsPerPageOptions.map((i) => ({ key: i, title: `${i}` })) : []} onSelect={onMenuItemSelect} />
             </Grid>
           </Grid>
-        </TableCell>
-      </TableRow>
-    </Table >
+          <Grid item sm={6} md={4}>
+            <MTablePagination {...{ ...props, classes: { root: classes.root } }} />
+          </Grid>
+        </Grid>
+      </Grid>
+    </td >
   )
 }
 
@@ -203,6 +203,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
+  const [is_refreshing, setIsRefreshing] = useState(false);
   const [last_queried, setLastQueried] = useState(null);
   const [last_result, setLastResult] = useState(formData);
 
@@ -305,7 +306,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
           reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
-          reactory.graphqlQuery(queryDefinition.text, variables, queryDefinition.options).then((queryResult: any) => {
+          let options = { ...queryDefinition.options };
+          if (query && query.options) {
+            options = { ...options, ...query.options }
+          }
+
+          reactory.graphqlQuery(queryDefinition.text, variables, options).then((queryResult: any) => {
             reactory.log(`Result From Query`, { queryResult })
             if (queryResult.errors && queryResult.errors.length > 0) {
               //show a loader error
@@ -342,7 +348,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   };
 
-  const rows = uiOptions.remoteData ? getData : formData;
+  const rows = uiOptions.remoteData === true ? getData : formData;
 
   if (uiOptions.columns && uiOptions.columns.length) {
     let _columnRef = [];
@@ -390,7 +396,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         reactory.log(`Rendering Chidren Elements`, def);
         const { components } = def;
         def.render = (rowData) => {
-          reactory.log(`Child element to be rendered`, def); const childrenComponents = components.map((componentDef, componentIndex) => {
+          reactory.log(`Child element to be rendered`, def);
+
+          const childrenComponents = (components || []).map((componentDef, componentIndex) => {
 
             const ComponentToRender = reactory.getComponent(componentDef.component);
 
@@ -688,16 +696,15 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   };
 
   const refresh = () => {
+    if (is_refreshing === true) return;
+    setIsRefreshing(true);
     if (uiOptions.remoteData === true) {
       if (tableRef.current && tableRef.current.onQueryChange) {
         tableRef.current.onQueryChange()
       }
     }
     setVersion(version + 1);
-  }
-
-  const onSelectionChange = (selected_rows) => {
-    //setSelectedRows(selected_rows);
+    setIsRefreshing(false);
   }
 
   if (!components.Pagination) {
@@ -750,21 +757,27 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return willUnmount;
   }, []);
 
-  return (
-    <React.Fragment>
-      <MaterialTable
-        columns={columns}
-        tableRef={tableRef}
-        data={rows}
-        title={schema.title || uiOptions.title || "no title"}
-        options={options}
-        actions={actions}
-        onSelectionChange={onSelectionChange}
-        components={components}
-        detailPanel={detailsPanel} />
-      {confirmDialog}
-    </React.Fragment>
-  )
+  try {
+    return (
+      <React.Fragment>
+        <MaterialTable
+          columns={columns || []}
+          tableRef={tableRef}
+          data={rows || []}
+          title={schema.title || uiOptions.title || "no title"}
+          options={options}
+          actions={actions}
+          components={components}
+          detailPanel={detailsPanel} />
+        {confirmDialog}
+      </React.Fragment>
+    )
+
+  } catch (err) {
+    return <>Something went wrong during the render of the data table, please <Button onClick={() => { setVersion(version + 1) }}>Retry</Button></>
+  }
+
+
 
 };
 

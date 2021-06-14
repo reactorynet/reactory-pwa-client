@@ -513,7 +513,6 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   createNotification(title: string, options: NotificationOptions | any = {}) {
     const that = this;
     that.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
-    debugger
     let defaultNotificationProps = {
       title,
       type: options.type || "info",
@@ -770,7 +769,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       that.client.query({
         query: $query,
         variables,
-        fetchPolicy: options.fetchPolicy || 'network-only',
+        fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
       }).then((result) => {
         const { errors = [], data } = result;
         if (errors.length > 0) {
@@ -793,6 +792,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         }
         resolve(result);
       }).catch((clientErr) => {
+        debugger
         that.log(`Error occurred while executing the query ${clientErr.message}`, { query, clientErr }, 'error');
         reject(clientErr)
         // resolve({ data: null, loading: false, errors: [clientErr] });
@@ -1388,7 +1388,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     return this.status();
   }
 
-  resetPassword({ password, confirmPassword, resetToken }) {
+  resetPassword({ password, confirmPassword }) {
     const that = this;
     return new Promise((resolve, reject) => {
       const setPasswordMutation = that.mutations.Users.setPassword;

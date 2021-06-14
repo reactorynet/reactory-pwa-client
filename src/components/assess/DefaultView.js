@@ -1126,7 +1126,7 @@ class DefaultView extends Component {
         CustomFeedbackComponent = (
           <Paper>
             <TextField
-              label={`Provide a custom comment for: ${quality.title}`}
+              label={`Provide a custom comment for: ${quality.title}* [required]`}
               multiline
               InputLabelProps={{ shrink: true }}
               rows={4}
@@ -1136,6 +1136,8 @@ class DefaultView extends Component {
               value={qualityCustomComment}
               onChange={patchCustomContentState}
               variant="outlined"
+              error={qualityCustomComment === null || qualityCustomComment === undefined || qualityCustomComment.length < 10}
+              helperText="Ensure you add a custom comment that is at least 10 characters or longer."
             />
           </Paper>
         )
@@ -1290,7 +1292,7 @@ class DefaultView extends Component {
 
   currentStepValid() {
     const { mode } = this.props;
-    const { assessment, step } = this.state;
+    const { assessment, step, qualityCustomComment } = this.state;
 
     if (mode === 'admin') return true;
 
@@ -1301,6 +1303,10 @@ class DefaultView extends Component {
 
     const { ratings } = assessment;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
+
+    if (qualityCustomComment === null || qualityCustomComment === undefined || qualityCustomComment === "") {
+      return false;
+    }
 
     const invalidRatings = lodash.find(ratings, r => {
 
@@ -1381,7 +1387,8 @@ class DefaultView extends Component {
         variant={"contained"}
         size="small"
         color="secondary"
-        onClick={nextStep} disabled={isCurrentStepValid === false || isThankYou === true}
+        onClick={nextStep}
+        disabled={isCurrentStepValid === false || isThankYou === true}
         style={nextButtonStyle}
       >
         {nextText}{nextIcon}
