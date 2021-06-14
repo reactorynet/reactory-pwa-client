@@ -600,9 +600,15 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
             if (action.event.via === 'form') {
               let handler = formContext.$ref.onChange;
+
               if (typeof formContext.$ref[action.event.name] === 'function') {
                 handler = formContext.$ref[action.event.name];
               }
+
+              if (typeof formContext.$ref.props[action.event.name] === 'function') {
+                handler = formContext.$ref.props[action.event.name];
+              }
+
               handler(__formData);
             };
 
