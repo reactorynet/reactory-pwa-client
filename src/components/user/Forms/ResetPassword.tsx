@@ -13,7 +13,7 @@ export const PasswordResetForm = (props) => {
 
   const { MaterialStyles, MaterialCore } = Material;
 
-  const { Paper } = MaterialCore;
+  const { Paper, TextField, FormControl, InputLabel, Input, InputAdornment, IconButton, Icon } = MaterialCore;
 
   const [error, setError] = useState(null);
   const [passwordUpdated, setIsPasswordUpdated] = useState(false);
@@ -40,6 +40,59 @@ export const PasswordResetForm = (props) => {
       },
     };
   })();
+
+  const ReactoryPasswordField = ({ formData, onChange }) => {
+
+    const [values, setValues] = React.useState({
+      showPassword: false,
+    });
+
+    const handleChange = (prop) => (event) => {
+      // setValues({ ...values, [prop]: event.target.value });
+      onChange(event.target.value)
+    };
+
+    const handleClickShowPassword = () => {
+      setValues({ ...values, showPassword: !values.showPassword });
+    };
+
+    const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+    };
+
+    return (
+      <FormControl>
+        <InputLabel htmlFor="standard-adornment-password">Password</InputLabel>
+        <Input
+          id="standard-adornment-password"
+          type={values.showPassword ? 'text' : 'password'}
+          value={formData}
+          onChange={handleChange('password')}
+          endAdornment={
+            <InputAdornment position="end">
+              <IconButton
+                aria-label="toggle password visibility"
+                onClick={handleClickShowPassword}
+                onMouseDown={handleMouseDownPassword}
+              >
+                <Icon>{values.showPassword ? "visibility" : "visibility_off"}</Icon>
+              </IconButton>
+            </InputAdornment>
+          }
+        />
+      </FormControl>
+    )
+
+
+  };
+
+
+  reactory.componentRegister['core.ReactoryPasswordField@1.0.0'] = {
+    nameSpace: 'core',
+    name: 'ReactoryPasswordField',
+    component: ReactoryPasswordField,
+    version: '1.0.0'
+  }
 
   const onSubmit = ({ formData, uiSchema, schema, errors, formContext }) => {
     debugger
@@ -82,6 +135,7 @@ export const PasswordResetForm = (props) => {
 
   const getFormDefinition = () => {
 
+
     return {
       id: 'ResetPasswordForm',
       uiFramework: 'material',
@@ -95,6 +149,10 @@ export const PasswordResetForm = (props) => {
       version: '1.0.0',
       backButton: true,
       helpTopics: ['password-reset'],
+      widgetMap: [{
+        componentFqn: 'core.ReactoryPasswordField@1.0.0',
+        widget: 'ReactoryPasswordField'
+      }],
       schema: {
         title: '',
         description: 'Provide a new password and confirm it in order to change your password',
@@ -155,9 +213,16 @@ export const PasswordResetForm = (props) => {
         },
         password: {
           'ui:help': 'Ensure your password is at least 8 characters long.',
+          'ui:options': {
+            showLabel: false,
+          },
+          'ui:widget': 'ReactoryPasswordField',
         },
         confirmPassword: {
-          'ui:help': 'Please re-enter your password to ensure they match',
+          'ui:options': {
+            showLabel: false,
+          },
+          'ui:widget': 'ReactoryPasswordField',
         },
       },
     };
