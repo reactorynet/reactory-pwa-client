@@ -307,7 +307,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 
     setLabelText(_labelText);
 
-  }, [props.formData, props.value, options.format, props.data]);
+  }, [props]);
 
 
   return (

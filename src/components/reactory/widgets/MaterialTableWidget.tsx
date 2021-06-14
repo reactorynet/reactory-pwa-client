@@ -306,9 +306,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
           reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
-          let options = { ...queryDefinition.options };
+          let options = queryDefinition.options ? { fetchPolicy: 'network-only', ...queryDefinition.options } : { fetchPolicy: 'network-only' };
           if (query && query.options) {
-            options = { ...options, ...query.options }
+            options = { ...options, ...query.options };
           }
 
           reactory.graphqlQuery(queryDefinition.text, variables, options).then((queryResult: any) => {
