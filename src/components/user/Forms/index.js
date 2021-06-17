@@ -219,7 +219,8 @@ class ResetPassword extends Component {
     const that = this;
     //console.log('Submiting Password Change', form);
     let errors = [];
-
+    // if(form.formData.password !== form.formData.confirmPassword ) throw new Error('Password do not mach')
+    // throw new Error('Password match')
     this.props.api.resetPassword({
       email: form.formData.user.email,
       authToken: form.formData.authToken,
@@ -260,7 +261,8 @@ class ResetPassword extends Component {
     return (
       <CenteredContainer className={this.props.classes.root} style={{ maxWidth: 600, margin: 'auto' }}>
         <ResetPasswordForm before={beforeComponent} onSubmit={this.onSubmit} formData={this.state.formData}>
-          <Button type="submit" variant="raised" color="primary"><Icon>save</Icon>&nbsp;UPDATE PASSWORD</Button>
+          <Button type="submit" variant="raised" color="primary" 
+          ><Icon >save</Icon>&nbsp;UPDATE PASSWORD</Button>
         </ResetPasswordForm>
       </CenteredContainer>
     )

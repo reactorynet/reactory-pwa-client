@@ -1,3 +1,4 @@
+import { Typography } from "@material-ui/core/styles/createTypography";
 import { useReactory } from "@reactory/client-core/api";
 
 export const PasswordResetForm = (props) => {
@@ -13,7 +14,7 @@ export const PasswordResetForm = (props) => {
 
   const { MaterialStyles, MaterialCore } = Material;
 
-  const { Paper, TextField, FormControl, InputLabel, Input, InputAdornment, IconButton, Icon } = MaterialCore;
+  const { Paper, TextField, FormControl, InputLabel, Input, InputAdornment, IconButton, Icon, Typography } = MaterialCore;
 
   const [error, setError] = useState(null);
   const [passwordUpdated, setIsPasswordUpdated] = useState(false);
@@ -38,6 +39,17 @@ export const PasswordResetForm = (props) => {
         marginTop: '10px',
         padding: '24px',
       },
+      header:{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingTop: '5rem',
+        marginTop: '20px'
+      },
+      logo:{
+        paddingBottom: '1rem'
+      }
     };
   })();
 
@@ -95,7 +107,6 @@ export const PasswordResetForm = (props) => {
   }
 
   const onSubmit = ({ formData, uiSchema, schema, errors, formContext }) => {
-    debugger
     reactory.log(`onSubmit`, { formData, uiSchema, schema, errors, formContext }, 'error');
 
     const {
@@ -115,7 +126,7 @@ export const PasswordResetForm = (props) => {
       confirmPassword: confirmPassword
     }).then((forgotResult) => {
 
-      debugger;
+  
 
       setIsPasswordUpdated(true);
       reactory.createNotification("Your password has been updated, you will be redirected momentarily",
@@ -249,7 +260,10 @@ export const PasswordResetForm = (props) => {
 
   return (
     <Paper elevation={1} className={classes.paper}>
-      {/* YOUR COMPONENTS HERE */}
+      <div className={classes.header}>
+      <Typography variant="h6" className={classes.logo}>Logo here</Typography>
+      <Typography variant="h6">Reset Password</Typography>
+      </div>
       <ReactoryForm
         className={classes.form_root}
         formDef={getFormDefinition()}
