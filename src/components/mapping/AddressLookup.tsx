@@ -757,6 +757,32 @@ const ReactoryMap = compose(
               backgroundColor: "#fff",
             },
           }}
+
+          <SearchBox
+        ref={(ref) => {
+          setSearchBoxRef(ref);
+          if (props.searchBoxRef) props.searchBoxRef(ref);
+        }}
+        bounds={bounds}
+        controlPosition={google.maps.ControlPosition.TOP_LEFT}
+        onPlacesChanged={onPlacesChanged}
+      >
+        <TextField
+          value={searchTerm}
+          onChange={onSearchTermChanged}
+          onKeyPress={(evt) => {
+            if (evt.key === 'Enter') {
+              //send to wrapper to find existing items
+            }
+          }}
+          ref={props.onSearchInputMounted}
+          type="text"
+          style={{ visibility: 'hidden' }}
+          placeholder="Search Address"
+          autoFocus={true}
+
+        />
+      </SearchBox>
    * 
    */
 
@@ -773,31 +799,7 @@ const ReactoryMap = compose(
       }}
       onClick={onMapClicked}
     >
-      <SearchBox
-        ref={(ref) => {
-          setSearchBoxRef(ref);
-          if (props.searchBoxRef) props.searchBoxRef(ref);
-        }}
-        bounds={bounds}
-        controlPosition={google.maps.ControlPosition.TOP_LEFT}
-        onPlacesChanged={onPlacesChanged}
-      >
-        <TextField
-          value={searchTerm}
-          onChange={onSearchTermChanged}
-          onKeyPress={(evt) => {
-            if (evt.key === 'Enter') {
-              //send to wrapper to find existing items              
-            }
-          }}
-          ref={props.onSearchInputMounted}
-          type="text"
-          style={{ visibility: 'hidden' }}
-          placeholder="Search Address"
-          autoFocus={true}
 
-        />
-      </SearchBox>
 
       {existing_marker_components}
       {google_markers_components}
@@ -936,8 +938,6 @@ const AddressList = (props: Reactory.IAddressListProps) => {
             )
           } else {
 
-            // <Checkbox edge="end" checked={checked.indexOf(index) !== -1} onChange={onItemCheckStateChange(index)} inputProps={{ "aria-labelledby": labelId }} />
-
             return (
               <ListItem className={classes.list_item}>
                 <ListItemAvatar>
@@ -946,9 +946,9 @@ const AddressList = (props: Reactory.IAddressListProps) => {
                     src={$avatar}></Avatar>}
                 </ListItemAvatar>
                 <ListItemText primary={primaryText} secondary={secondaryText} onClick={() => { onListItemClicked(marker, index); }} />
-                <ListItemSecondaryAction>
+                {marker.type === 'existing' && <ListItemSecondaryAction>
                   <IconButton onClick={(evt) => { onListItemSelected(marker, index) }}><Icon>{marker.type === 'existing' ? 'check_outline' : 'add'}</Icon></IconButton>
-                </ListItemSecondaryAction>
+                </ListItemSecondaryAction>}
               </ListItem>
             );
           }
@@ -1381,10 +1381,6 @@ export const AddressLookupComponent = (props: {
             </Grid>
             <Grid item sm={12} xl={12} style={{ justifyContent: 'center', display: 'flex' }}>
               <ReactoryMap {...map_props} />
-            </Grid>
-            <Grid item sm={12} xl={12} style={{ justifyContent: 'flex-end', display: 'flex' }}>
-              <Button variant="outlined">CANCEL</Button>
-              <Button color='primary' variant="contained">SAVE</Button>
             </Grid>
           </Grid>
         </Paper>
