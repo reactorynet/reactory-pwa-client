@@ -48,10 +48,10 @@ const ThemedAlertDialog = compose(withTheme, withApi)((props: any) => {
                     {props.content}
                 </DialogContentText>
                 {props.children}
-            </DialogContent>            
-            { showActions === true && <DialogActions>
+            </DialogContent>
+            {showActions === true && <DialogActions>
                 {actions}
-                {showCancel === true && < Button
+                {showCancel === true && <Button
                     variant={cancelProps.variant || "text"}
                     onClick={onClose}
                     {...cancelProps}>
@@ -63,7 +63,7 @@ const ThemedAlertDialog = compose(withTheme, withApi)((props: any) => {
                     autoFocus
                     {...confirmProps}>
                     {props.acceptTitle ? props.acceptTitle : 'Yes'}
-                </Button>}                
+                </Button>}
             </DialogActions>}
         </Dialog >
     );

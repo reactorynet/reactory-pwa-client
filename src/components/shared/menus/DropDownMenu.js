@@ -21,9 +21,9 @@ import { List, ListItemIcon, ListItemText } from '@material-ui/core';
 
 
 export class DropDownMenu extends Component {
-  
+
   static styles = (theme) => {
-    return { }
+    return {}
   };
 
   static propTypes = {
@@ -40,11 +40,11 @@ export class DropDownMenu extends Component {
     open: false,
   };
 
-  static noHandler = (evt, menuItem) => {      
+  static noHandler = (evt, menuItem) => {
     //console.log('DropDownMenu requires onSelect function handler.', {evt, menuItem});
   }
 
-  constructor(props, context){
+  constructor(props, context) {
     super(props, context)
     this.state = {
       open: props.open || false,
@@ -53,47 +53,51 @@ export class DropDownMenu extends Component {
     this.handleMenu = this.handleMenu.bind(this)
   }
 
-  handleMenu(evt){
+  handleMenu(evt) {
     //console.log('Menu handle click', { evt, state: this.state });
-    this.setState({ open: !this.state.open, anchorEl:  evt.currentTarget });
+    this.setState({ open: !this.state.open, anchorEl: evt.currentTarget });
   }
-  
-  render(){ 
-      const { props } = this;
-      const { menus } = props;  
-      const { open } = this.state;
-      const ariaId = props.id || uuid();
-      const menuItems = [];
-      let _menus = menus;
-      if(props.propertyMap) {
-        _menus = om(menus, props.propertyMap)
-      }
-      
-      if(_menus && _menus.length) {
-          _menus.map(
-            (menu, mindex) => {
-              const onMenuItemSelect = (evt) => {
-                props.onSelect(evt, menu);
-              };
 
-              let disabled = false;
-              if(isNil(menu.disabled) === false && menu.disabled === true) {
-                disabled = true;
-              } 
+  render() {
+    const { props } = this;
+    const { menus } = props;
+    const { open } = this.state;
+    const ariaId = props.id || uuid();
+    const menuItems = [];
+    let _menus = menus;
+    if (props.propertyMap) {
+      _menus = om(menus, props.propertyMap)
+    }
 
-              let selected = menu.selected === true;
+    if (_menus && _menus.length) {
+      _menus.map(
+        (menu, mindex) => {
+          const onMenuItemSelect = (evt) => {
+            props.onSelect(evt, menu);
+          };
 
-              menuItems.push((
-                <MenuItem key={menu.id || mindex} onClick={ onMenuItemSelect } disabled={  disabled } style={ menu.style || {}}> 
-                    { menu.icon ? <ListItemIcon><Icon color="primary" style={menu.iconProps && menu.iconProps.style ? menu.iconProps.style : {}}>{menu.icon}</Icon></ListItemIcon> : null }                      
-                    { menu.title }
-                    { selected === true ? <Icon>check</Icon> : null }
-                </MenuItem>
-              ));
-            });
-      }
+          let disabled = false;
+          if (isNil(menu.disabled) === false && menu.disabled === true) {
+            disabled = true;
+          }
 
-      return (
+          let selected = menu.selected === true;
+
+          if (menu.title !== '<hr/>') {
+            menuItems.push((
+              <MenuItem key={menu.id || mindex} onClick={onMenuItemSelect} disabled={disabled} style={menu.style || {}}>
+                {menu.icon ? <ListItemIcon><Icon color="primary" style={menu.iconProps && menu.iconProps.style ? menu.iconProps.style : {}}>{menu.icon}</Icon></ListItemIcon> : null}
+                {menu.title}
+                {selected === true ? <Icon>check</Icon> : null}
+              </MenuItem>
+            ));
+          } else {
+            menuItems.push(<hr key={menu.id || mindex} />)
+          }
+        });
+    }
+
+    return (
       <IconButton
         aria-owns={open === true ? ariaId : null}
         aria-haspopup="true"
@@ -103,21 +107,21 @@ export class DropDownMenu extends Component {
         size={this.props.size || "medium"}>
         <Icon>{props.icon || 'keyboard_arrow_down'}</Icon>
         <Menu
-            open={this.state.open === true}
-            id={ariaId}
-            anchorEl={this.state.anchorEl}
-            anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-            }}
-            transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-            }}>
-            { menuItems }
+          open={this.state.open === true}
+          id={ariaId}
+          anchorEl={this.state.anchorEl}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}>
+          {menuItems}
         </Menu>
       </IconButton>
-    )            
+    )
   }
 };
 

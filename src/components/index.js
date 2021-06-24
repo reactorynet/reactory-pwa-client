@@ -73,6 +73,7 @@ import ReactoryFormEditor from './shared/FormEditor';
 import lodash from 'lodash';
 
 import { PasswordResetForm } from './user/Forms/ResetPassword';
+import { AddressLookupComponent } from './mapping/AddressLookup';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -822,5 +823,11 @@ export const componentRegistery = [
     name: 'DropZone',
     version: '1.0.0',
     component: DropZone
+  },
+  {
+    nameSpace: 'core',
+    name: 'AddressLookupComponent',
+    version: '1.0.0',
+    component: AddressLookupComponent
   }
 ]
