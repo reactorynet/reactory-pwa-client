@@ -354,6 +354,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     let _columnRef = [];
     let _mergeColumns = false;
     let _columns = uiOptions.columns;
+
     if (isNil(uiOptions.columnsProperty) === false) {
       _columns = [...formContext.formData[uiOptions.columnsProperty]];
       if (isNil(uiOptions.columnsPropertyMap) === false) {
@@ -735,6 +736,10 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   React.useEffect(() => {
     refresh()
   }, [formContext.formData]);
+
+  React.useEffect(() => {
+    setVersion(version + 1);
+  }, [uiSchema])
 
   const willUnmount = () => {
     const uiOptions = uiSchema['ui:options'] || {};

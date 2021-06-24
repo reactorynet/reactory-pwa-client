@@ -109,7 +109,7 @@ const Globals = ({ api }) => {
 
   return (
     <div data-v={`${v}`} data-globals-container="true">
-      { globals.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) })}
+      {globals.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) })}
     </div>
   );
 
@@ -390,8 +390,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
       if (lastRoute !== null) {
         lastRoute = lastRoute.trim();
-        localStorage.removeItem('$reactory.last.attempted.route$');
-        location.assign(lastRoute);
+        if (window.location.pathname.indexOf('reset-password') === -1) {
+          localStorage.removeItem('$reactory.last.attempted.route$');
+          location.assign(lastRoute);
+        }
       }
     }
 

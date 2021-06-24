@@ -95,7 +95,7 @@ export const PasswordResetForm = (props) => {
   }
 
   const onSubmit = ({ formData, uiSchema, schema, errors, formContext }) => {
-    debugger
+
     reactory.log(`onSubmit`, { formData, uiSchema, schema, errors, formContext }, 'error');
 
     const {
@@ -115,7 +115,6 @@ export const PasswordResetForm = (props) => {
       confirmPassword: confirmPassword
     }).then((forgotResult) => {
 
-      debugger;
 
       setIsPasswordUpdated(true);
       reactory.createNotification("Your password has been updated, you will be redirected momentarily",

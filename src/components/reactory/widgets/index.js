@@ -1,8 +1,4 @@
 import React from 'react';
-import { Query, graphql } from '@apollo/client';
-import { compose } from 'redux';
-import { withApi } from '../../../api/ApiProvider';
-import * as utils from '../../util';
 import UserLists from '../../user/Lists/index';
 
 export const ChipArrayWidget = require('./ChipArray');
@@ -31,8 +27,6 @@ export { default as LineChartWidget } from './Charts/LineChartWidget';
 //export const LineChartWidget = require('./ChartWidget').default.LineChartWidgetComponent;
 export const ToolbarWidget = require('./ToolbarWidget');
 export const ProgressWidget = require('./ProgressWidget').ProgressWidgetComponent;
-export const SurveyDelegateWidget = require('./SurveyDelegateWidget').SurveyDelegateComponent;
-export const SurveyDelegatesWidget = require('./SurveyDelegateWidget').SurveyDelegatesComponent;
 export const UserListItemWidget = (props, context) => {
   return <UserLists.UserListItem {...{ user: props.formData, ...props }} />
 };
@@ -45,9 +39,9 @@ export { default as WidgetNotAvailable } from './WidgetNotAvailable';
 export { default as ColumnSelectorWidget } from './ColumnSelectorWidget';
 export { default as ColumnFilterWidget } from './ColumnFilterWidget';
 export { default as DataPageWidget } from './DataPageWidget';
-export { default as ReactoryFormEditor } from './ReactoryFormEditor';
 export { default as SchemaSelectorWidget } from './SchemaSelectorWidget';
 export { default as ReactoryDropZoneWidget } from './ReactoryDropZone';
-export { default as ReactoryGoogleMapWidget } from './GoogleMapWidget';
+export { default as ReactoryGoogleMapWidget } from './mapping/GoogleMapWidget';
+
 export { default as ReactoryImageWidget } from './ImageWidget';
 export { default as ReactoryColorPicker } from './ReactoryColorPicker';
