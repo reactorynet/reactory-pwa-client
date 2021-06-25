@@ -792,7 +792,6 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         }
         resolve(result);
       }).catch((clientErr) => {
-        debugger
         that.log(`Error occurred while executing the query ${clientErr.message}`, { query, clientErr }, 'error');
         reject(clientErr)
         // resolve({ data: null, loading: false, errors: [clientErr] });

@@ -228,8 +228,8 @@ class Profile extends Component<any, any> {
         this.setState({ avatarMouseHover: false });
     }
 
-    activeOrganisation(index: number) {
-      this.setState({ activeOrganisationIndex: index });
+    activeOrganisation(id: string) {
+      this.setState({ activeOrganisationId: id });
     }
 
     refreshPeers() {
@@ -358,51 +358,59 @@ class Profile extends Component<any, any> {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.map((membership, index) => (
-                    <TableRow
-                      key={index}
-                      className={
-                        this.state.activeOrganisationIndex === index
-                          ? classes.activeOrganisation
-                          : ""
-                      }
-                    >
-                      <TableCell>
-                        <List className={classes.root}>
-                          <ListItem>
-                            <ListItemAvatar>
-                              <Avatar style={{ marginRight: `8px` }}>
-                                {membership &&
-                                membership.organization &&
-                                membership.organization.name
-                                  ? membership.organization.name.substring(0, 2)
-                                  : membership.client.name.substring(0, 2)}
-                              </Avatar>
-                            </ListItemAvatar>
-                            <ListItemText
-                              primary={`${membership.client.name} `}
-                              secondary={
-                                isNil(membership.organization) === false
-                                  ? membership.organization.name
-                                  : "No organization"
-                              }
-                            />
-                          </ListItem>
-                        </List>
-                      </TableCell>
-                      <TableCell>09/06/2019</TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          onClick={() => {
-                            self.onMembershipSelectionChanged(membership);
-                            this.activeOrganisation(index);
-                          }}
-                        >
-                          <Icon>chevron_right</Icon>
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {data.map((membership, index) =>
+                      
+                      (
+                        <TableRow
+                        key={index}
+                        className={
+                            this.state.activeOrganisationId === 
+                            membership 
+                            && membership.organization 
+                            && membership.organization.id
+                            ? classes.activeOrganisation
+                            : ""
+                        }
+                      >
+                        <TableCell>
+                          <List className={classes.root}>
+                            <ListItem>
+                              <ListItemAvatar>
+                                <Avatar style={{ marginRight: `8px` }}>
+                                  {membership &&
+                                  membership.organization &&
+                                  membership.organization.name
+                                    ? membership.organization.name.substring(0, 2)
+                                    : membership.client.name.substring(0, 2)}
+                                </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={`${membership.client.name} `}
+                                secondary={
+                                  isNil(membership.organization) === false
+                                    ? membership.organization.name
+                                    : "No organization"
+                                }
+                              />
+                            </ListItem>
+                          </List>
+                        </TableCell>
+                        <TableCell>09/06/2019</TableCell>
+                        <TableCell align="right">
+                          <IconButton
+                            onClick={() => {
+                              self.onMembershipSelectionChanged(membership);
+                              this.activeOrganisation(membership.organization.id);
+                            }}
+                          >
+                            <Icon>chevron_right</Icon>
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+
+                      ))
+                  
+                  }
                 </TableBody>
               </Table>
             </Paper>
@@ -1355,7 +1363,7 @@ class Profile extends Component<any, any> {
             help: props.reactory.queryObject.help === "true",
             helpTopic: props.reactory.queryObject.helptopics,
             highlight: props.reactory.queryObject.peerconfig === "true" ? "peers" : null,
-            activeOrganisationIndex: 0,
+            activeOrganisationId : props.organizationId
         };
 
         const components = [
