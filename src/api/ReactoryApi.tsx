@@ -832,7 +832,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         <ApolloProvider client={that.client}>
           <MuiThemeProvider theme={that.muiTheme}>
             <Router>
-              <ApiProvider api={that} history={this.history}>
+              <ApiProvider api={that} history={that.history}>
                 {componentView}
               </ApiProvider>
             </Router>

@@ -160,9 +160,9 @@ const ProfileStyles = (theme: Theme) => ({
         paddingRight: `${theme.spacing(1)}px`,
         color: "#566779",
         fontWeight: 600,
-    }  ,
+    },
     activeOrganisation: {
-      backgroundColor: theme.palette.primary.main,
+        backgroundColor: theme.palette.primary.main,
     },
 });
 
@@ -564,7 +564,7 @@ class Profile extends Component<any, any> {
                 reactory.graphqlMutation(mutation, variables).then(result => {
                     if (result && result.data && result.data.confirmPeers) {
                         that.setState({ showConfirmPeersDialog: false, profile: { ...profile, peers: { ...profile.peers, ...result.data.confirmPeers } } }, that.refreshPeers)
-                        history.push('/');
+
                     }
                 }).catch(ex => {
                     //console.error( 'Error confirming peers ', ex)

@@ -7,6 +7,9 @@ import {
   MutationResult,
   QueryResult
 } from "@apollo/client";
+import React from 'react';
+import Module from 'module';
+import GoogleMap from 'react-google-maps/lib/components/GoogleMap';
 
 namespace Reactory {
 
@@ -110,6 +113,7 @@ namespace Reactory {
       queryObject: any;
       queryString: any;
       objectToQueryString: Function;
+
       [key: string]: any;
 
       createNotification(title: string, notificationProperties: NotificationProperties | any);
@@ -158,7 +162,7 @@ namespace Reactory {
 
       getMenus(target): any[];
 
-      getTheme(): { extensions: { reactory: { icons } } };
+      getTheme(): any;
 
       getRoutes(): any[];
 
@@ -180,7 +184,7 @@ namespace Reactory {
 
       getComponent(fqn): any;
 
-      getNotFoundComponent(notFoundComponent): any;
+      getNotFoundComponent(notFoundComponent): { [key: string]: any };
 
       getNotAllowedComponent(notAllowedComponentFqn): any;
 
@@ -231,10 +235,11 @@ namespace Reactory {
        */
       api: IReactoryApi,
 
+      /**
+       * The global reactory variable that represent the reactory api instance
+       */
       reactory: IReactoryApi,
     };
-
-
 
     export interface IFrameProperties {
       url: string
@@ -257,12 +262,28 @@ namespace Reactory {
       messageHandlers?: IMessageHandler[]
     }
 
+    export interface IReactoryFormContext {
 
-    interface IReactoryFormProps {
+      [key: string]: any
+    }
+
+    export interface IReactoryFormProps extends IReactoryWiredComponent {
       formId: string
       uiSchemaId: string
       uiFrameWork: string
-      api: IReactoryApi
+    }
+
+    /**
+     * The base widget property set. Additional property type created 
+     * by extending this interface for your specfic form type
+     */
+    export interface IReactoryWidgetProps<T> extends IReactoryWiredComponent {
+      formData: T,
+      schema: Reactory.ISchema,
+      uiSchema: any,
+      idSchema: any,
+      formContext: Reactory.Client.IReactoryFormContext,
+      [key: string]: any
     }
   }
 
@@ -658,6 +679,98 @@ namespace Reactory {
     user: Reactory.IUser
     partner: Reactory.IPartner
   }
+
+  /**
+ * Data interface for reactory marker data
+ */
+  export interface IReactoryMarkerData {
+    id: string,
+    type: string | "existing" | "google",
+    title: string,
+
+    address?: any,
+    place?: google.maps.places.PlaceResult,
+
+    allow_move?: boolean,
+    is_updating?: boolean,
+    selected?: boolean,
+    show_detail?: boolean,
+
+    componentFqn?: string,
+    componentProps?: any,
+    propertyMap?: {
+      [key: string]: string,
+    },
+
+    [property: string]: any
+  };
+
+
+  /**
+ * Properties inferface for the ReactoryMarker component
+ */
+  export interface IReactoryMarkerProps {
+    index?: number,
+    reactory?: Reactory.Client.IReactoryApi,
+    onAddressDeleted?: Function,
+    onAddressEdited?: Function,
+    onAddressSelected?: Function,
+    classes?: any,
+    marker: IReactoryMarkerData,
+    onMarkerClicked?: (marker: IReactoryMarkerData, index: number) => void,
+    onToggleShowDetail?: () => void,
+    [property: string]: any;
+  };
+
+
+  export interface IReactoryCustomWindowProps {
+    reactory?: Reactory.Client.IReactoryApi,
+    marker: IReactoryMarkerData,
+    classes?: any,
+    new_address_form?: string,
+
+    onAddressSelected?: Function,
+    onAddressDeleted?: Function,
+    onAddressEdited?: Function,
+
+    onClose?: Function,
+
+    [property: string]: any;
+  };
+
+  export interface IAddressListProps {
+    /**
+     * Array of address items.
+     * Object needs to have a title, lat & lng and type
+     */
+    items: Reactory.IReactoryMarkerData[],
+    primaryTextField: string | Function,
+    secondaryTextField: string | Function,
+    avatarField?: string | Function,
+    map?: google.maps.Map,
+    show_avatar?: boolean,
+    multiSelect?: boolean,
+    onSelectionChanged?: (items: any[]) => void,
+    onListItemClicked?: (item: Reactory.IReactoryMarkerData, index) => void,
+    onListItemSelected?: (item: Reactory.IReactoryMarkerData, index) => void,
+    [key: string]: any
+  }
+
+  export interface IReactoryMapOnChangeEvent {
+    target: GoogleMap,
+    value: IReactoryMarkerData,
+    change: string | "add" | "edit" | "delete" | "hide" | "detail" | "select" | "zoom",
+    index?: number,
+    markers?: IReactoryMarkerData[]
+  }
+  export interface IReactoryMapProps {
+    reactory?: Reactory.Client.IReactoryApi,
+    searchTerm: string,
+    onChange: (evt: IReactoryMapOnChangeEvent) => void
+    [key: string]: any
+  }
+
+
 }
 
 export default Reactory;

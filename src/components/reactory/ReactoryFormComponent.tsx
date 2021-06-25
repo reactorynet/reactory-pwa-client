@@ -6,7 +6,7 @@ import EventEmitter, { ListenerFn } from 'eventemitter3';
 import objectMapper from 'object-mapper';
 import { diff } from 'deep-object-diff';
 import { find, template, isArray, isNil, isString, isEmpty, throttle, filter } from 'lodash';
-import { withRouter, Route, Switch, useParams } from 'react-router';
+import { withRouter, Route, Switch, useParams, useHistory } from 'react-router';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
@@ -41,6 +41,8 @@ import Reactory from '../../types/reactory';
 import { History } from 'history';
 import { ReactoryHOC } from 'App';
 import { Breakpoint } from '@material-ui/core/styles/createBreakpoints';
+import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
+import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
 
 const {
   MaterialArrayField,
@@ -228,7 +230,7 @@ const initialState = (props) => ({
   notificationComplete: true,
   mutate_complete_handler_called: false,
   last_query_exec: null,
-  form_created: new Date().valueOf()
+  form_created: new Date().valueOf(),
 });
 
 const default_dependencies = () => {
@@ -1914,6 +1916,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     return (
       <>
+        {getDeveloperOptions()}
         {isBusy() === true && <LinearProgress />}
         {props.before}
         <Form {...{ ...formProps, toolbarPosition: toolbarPosition }}>
@@ -1923,11 +1926,20 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         {getHelpScreen()}
         {getPdfWidget()}
         {getExcelWidget()}
+
       </>
     )
   }
 
 
+  const getDeveloperOptions = () => {
+    if (reactory.hasRole(["DEVELOPER"]) === true && formDef.name.indexOf("$GLOBAL$") === -1) {
+
+      return (
+        <IconButton size="small" style={{ float: 'right', position: 'relative', marginTop: '-8px' }}><Icon style={{ fontSize: '0.9rem' }}>build</Icon></IconButton>
+      )
+    }
+  }
   /*
   React.useEffect(() => {
 
@@ -2005,13 +2017,20 @@ const RouteBoundForm = (props) => {
 
 const ReactoryFormRouter = (props) => {
 
-  const { match, api, routePrefix } = props;
+  const { match, reactory, routePrefix } = props;
   const [version, setVersion] = React.useState<number>(0);
+  const [newFormModalVisible, setNewFormModalVisible] = React.useState(false);
 
+  const history = useHistory();
 
-  api.log('ReactoryFormRouter:render', { props: props }, 'debug');
+  const {
+    AlertDialog
+  } = reactory.getComponents(['core.AlertDialog']);
 
-  const all_forms = api.getComponentsByType('form');
+  reactory.log('ReactoryFormRouter:render', { props: props }, 'debug');
+
+  const all_forms = reactory.getComponentsByType('form');
+
 
 
   return (
@@ -2023,9 +2042,79 @@ const ReactoryFormRouter = (props) => {
         <RouteBoundForm mode="view" />
       </Route>
       <Route exact path={`${routePrefix}/`}>
-        <ReactoryFormComponent formId='ReactoryFormList' formData={{ forms: all_forms }} mode='view' />
+        <ReactoryFormComponent formDef={ReactoryFormListDefinition} routePrefix={`${routePrefix}`} onNewFormClicked={(evt) => {
+          setNewFormModalVisible(true)
+        }} formData={{ forms: all_forms }} mode='view' />
+
+        <AlertDialog
+          open={newFormModalVisible === true}
+          onClose={() => { setNewFormModalVisible(false) }}
+          title={'ADD NEW FORM'}
+        >
+          <ReactoryFormComponent formDef={ReactoryNewFormInput} onSubmit={({ formData }) => {
+            //save the form definition to localStorage and bump on the forms list with a basic schema.
+            const formId = `${formData.nameSpace}.${formData.name}@${formData.version}`
+            const formDef = {
+              id: formId,
+              name: formData.name,
+              nameSpace: formData.nameSpace,
+              version: '1.0.0',
+              local: true,
+              uiFramework: 'material',
+              uiSupport: ['material'],
+              uiResources: [],
+              tags: [],
+              roles: [],
+              author: {
+                fullName: 'Werner Weber',
+                email: 'werner.weber@gmail.com',
+              },
+              helpTopics: [
+                'ReactoryFormList',
+              ],
+              schema: {
+                type: 'string',
+                title: formData.name,
+                defaultValue: ''
+              },
+              defaultFormValue: 'Hallo form',
+              uiSchema: {
+
+              }
+            }
+            reactory.formSchemas.push(formDef);
+
+            const component = ($props) => {
+
+              const $children = $props.children || null;
+
+              if ($children) {
+                delete $props.children;
+              }
+
+              return (
+                <ReactoryFormComponent
+                  formId={formDef.id}
+                  key={formDef.id}
+                  onSubmit={$props.onSubmit}
+                  onChange={$props.onChange}
+                  formData={formDef.defaultFormValue || $props.formData || $props.data}
+                  before={$props.before}
+                  {...$props}
+                >
+                  {$children}
+                </ReactoryFormComponent>);
+            };
+
+            reactory.registerComponent(formDef.nameSpace, formDef.name, formDef.version, component, formDef.tags, formDef.roles, true, [], 'form')
+            history.push(`${routePrefix}/${formId}/`);
+
+          }} />
+        </AlertDialog>
+
       </Route>
     </Switch>
+
   )
 };
 
