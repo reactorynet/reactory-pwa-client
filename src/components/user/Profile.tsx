@@ -358,16 +358,16 @@ class Profile extends Component<any, any> {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.map((membership, index) =>
-                      
-                      (
+                  {data.map((membership, index) =>{
+                      let id = ''
+                      if(membership && membership.organization) {
+                          id = membership.organization.id
+                      }
+                      return(
                         <TableRow
                         key={index}
                         className={
-                            this.state.activeOrganisationId === 
-                            membership 
-                            && membership.organization 
-                            && membership.organization.id
+                            this.state.activeOrganisationId === id
                             ? classes.activeOrganisation
                             : ""
                         }
@@ -408,7 +408,7 @@ class Profile extends Component<any, any> {
                         </TableCell>
                       </TableRow>
 
-                      ))
+                      )})
                   
                   }
                 </TableBody>
