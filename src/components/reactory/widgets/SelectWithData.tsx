@@ -133,7 +133,8 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
 
       const getData = () => {
         const variables = propertyMap ? objectMapper(props, propertyMap) : null;
-
+        setMenuItems([]);
+        setError(null);
         reactory.graphqlQuery(query, variables).then((query_result: any) => {
           const { data, errors = [] } = query_result;
 
@@ -141,9 +142,16 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
             setMenuItems([{ key: null, title: 'Error Loading Data' }]);
             setVersion(version + 1);
           } else {
+
             if (data && data[resultItem]) {
               let _key_map: any = {};
-              let _menuItems: any[] = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
+              let _menuItems: any[] = [];
+              try {
+                _menuItems = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
+              } catch (err) {
+
+              }
+
               _menuItems.forEach((menu_item: any) => {
                 if (menu_item.key) {
                   _key_map[menu_item.key] = menu_item;
@@ -157,7 +165,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
           }
 
         }).catch((query_error) => {
-          reactory.log(`Error Getting Data For Lookup`)
+          reactory.log(`Error Getting Data For Lookup`, { query_error }, 'error');
           setError(query_error);
         });
       };
@@ -178,7 +186,9 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       }, []);
 
 
-
+      React.useEffect(() => {
+        getData();
+      }, [formContext.formData])
 
 
       return (
@@ -194,7 +204,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
             <InputComponent id={idSchema.$id} value={typeof formData === 'string' ? formData.trim() : ""} />
           }
           renderValue={(_value: any) => {
-            reactory.log(`Rendering value for ${_value}`, { formData, key_map, menuItems })
+            reactory.log(`Rendering value for ${_value}`, { formData, key_map, menuItems }, 'debug')
             if (_value === null || _value === undefined || _value.length === 0) {
               return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{menuItems[0].id === 'loading' ? 'Loading' : 'Select'}</span>;
             }
@@ -219,9 +229,9 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
             menuItems.map((option: any, index: number) => {
               return (
                 <MenuItem key={option.key || index} value={`${option.value}`}>
-                  { option.icon ? <Icon>{option.icon}</Icon> : null}
-                  { option.label}
-                  { option.key === formData ? <Icon style={{ marginLeft: '8px' }}>check_circle</Icon> : null}
+                  {option.icon ? <Icon>{option.icon}</Icon> : null}
+                  {option.label}
+                  {option.key === formData ? <Icon style={{ marginLeft: '8px' }}>check_circle</Icon> : null}
                 </MenuItem>)
             })
           }

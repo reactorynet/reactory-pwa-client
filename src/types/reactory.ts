@@ -58,6 +58,10 @@ namespace Reactory {
       options: NotificationOptions
     }
 
+    export interface IReactoryImports {
+      [key: string]: any
+    }
+
     export interface ClientUtils {
       omitDeep(): any,
       queryString(): any,
@@ -180,7 +184,7 @@ namespace Reactory {
 
       registerComponent(nameSpace, name, version, component: any, tags, roles, wrapWithApi): void;
 
-      getComponents(componentFqns): {};
+      getComponents(componentFqns): IReactoryImports;
 
       getComponent(fqn): any;
 
@@ -232,6 +236,7 @@ namespace Reactory {
     export interface IReactoryWiredComponent {
       /**
        * The api reference will be phased out and only the reactory reference must be used.
+       * @deprecated 
        */
       api: IReactoryApi,
 
@@ -334,16 +339,25 @@ namespace Reactory {
     name: string
   }
 
-  export interface IMemberShip {
+  export interface IMembership {
     id: string
     clientId: string | any
+    client: IPartner,
+
+    organization?: IOrganization,
     organizationId: string | any
+
+    businessUnit: IBusinessUnit
     businessUnitId: string | any
+
     enabled: boolean
-    authProvider: string
-    providerId: string
+
+
+
+    created: Date
     lastLogin: Date
-    roles: [string]
+
+    roles: string[]
   }
 
   export interface IUser {
@@ -352,11 +366,20 @@ namespace Reactory {
     firstName: string
     lastName: string
     fullName(email: boolean): string
+    mobileNumber?: string
+
     authentications: any[]
+
     addRole(clientId: string, role: string, organizationId: string, businessUnitId: string): boolean
-    removeRole(clientId: string, role: string, organizationId: string): IMemberShip[],
+    removeRole(clientId: string, role: string, organizationId: string): IMembership[],
     removeAuthentication(provider: string): boolean
     getAuthentication(provider: string): IAuthentication
+
+    authProvider: string
+    providerId: string
+
+    lastLogin: Date
+
   }
 
 
