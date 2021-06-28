@@ -18,7 +18,10 @@ import {
     InputAdornment, Icon, IconButton,
     ExpansionPanel, ExpansionPanelActions,
     ExpansionPanelDetails, AccordionSummary,
-    Toolbar, Tooltip, InputLabel, FormControl, ListItemAvatar, Table, TableBody, TableCell, TableHead, TableRow
+    Toolbar, Tooltip, InputLabel, FormControl,
+    ListItemAvatar, Table, TableBody, TableCell,
+    TableHead, TableRow, FormControlLabel, Switch,
+    Select
 } from '@material-ui/core';
 
 import Button from '@material-ui/core/Button';
@@ -29,6 +32,7 @@ import ReactoryApi from "../../api/ReactoryApi";
 import { CDNProfileResource, getAvatar, isEmail } from '../util';
 import gql from 'graphql-tag';
 import Reactory from 'types/reactory';
+import AlertDialog from 'components/shared/AlertDialog';
 
 const defaultProfile = {
     __isnew: true,
@@ -193,6 +197,7 @@ class Profile extends Component<any, any> {
         emailHelperText: PropTypes.string,
         headerComponents: PropTypes.func,
         footerComponents: PropTypes.func,
+        refetch: PropTypes.func
     };
 
     static defaultProps = {
@@ -235,7 +240,7 @@ class Profile extends Component<any, any> {
     refreshPeers() {
         const { selectedMembership, profile } = this.state;
         const { reactory } = this.props;
-        const self = this;
+        const that = this;
 
         const query = gql`query UserPeers($id: String! $organizationId: String) {
         userPeers(id: $id, organizationId: $organizationId){
@@ -251,9 +256,9 @@ class Profile extends Component<any, any> {
         reactory.graphqlQuery(query, variables).then((result) => {
             //console.log('Result for query', result);
             if (result && result.data && result.data.userPeers)
-                self.setState({ profile: { ...profile, peers: { ...result.data.userPeers } }, loadingPeers: false })
+                that.setState({ profile: { ...profile, peers: { ...result.data.userPeers } }, loadingPeers: false })
             else {
-                self.setState({
+                that.setState({
                     profile:
                     {
                         ...profile,
@@ -271,8 +276,8 @@ class Profile extends Component<any, any> {
                 });
             }
         }).catch((queryError) => {
-            console.error('Error querying user peers', queryError)
-            self.setState({ showError: true, message: 'Could not load the user peers due to an error', loadingPeers: false })
+            reactory.log('Error querying user peers', { queryError }, 'error')
+            that.setState({ showError: true, message: 'Could not load the user peers due to an error', loadingPeers: false })
         });
     }
 
@@ -291,7 +296,7 @@ class Profile extends Component<any, any> {
         //console.log('Inviting user', this.state.inviteEmail);
         const { reactory } = this.props;
         const { profile } = this.state;
-        const self = this
+        const that = this
         const doQuery = () => {
             const options = {
                 searchString: this.state.inviteEmail,
@@ -300,27 +305,27 @@ class Profile extends Component<any, any> {
 
             reactory.graphqlQuery(reactory.queries.Users.searchUser, options).then((userResult) => {
                 //console.log('Search Result', userResult);
-                self.setState({ findPeersResult: userResult, searching: false, showResult: true })
+                that.setState({ findPeersResult: userResult, searching: false, showResult: true })
             }).catch((searchError) => {
                 //console.log('Search Error', searchError);
-                self.setState({ searching: false, findPeersResult: [] })
+                that.setState({ searching: false, findPeersResult: [] })
             });
         }
 
-        self.setState({ searching: true, findPeersResult: [] }, doQuery)
+        that.setState({ searching: true, findPeersResult: [] }, doQuery)
     }
 
     renderMemberships() {
         const { memberships } = this.state.profile
         const { withMembership, classes, reactory } = this.props;
         const Content = reactory.getComponent('core.StaticContent');
-
+        const { AlertDialog, ReactoryCreateUserMembership } = this.componentDefs;
 
 
         if (withMembership === false) return null;
 
         const data = [];
-        const self = this
+        const that = this
 
         if (memberships && memberships.length) {
             memberships.forEach(m => data.push({ ...m }))
@@ -338,6 +343,18 @@ class Profile extends Component<any, any> {
                 </Typography>
             </>
         )
+
+
+
+        const can_edit_roles = reactory.hasRole(['ADMIN']) === true;
+
+        const onAddNewMembership = () => {
+            that.setState({ display_add_membership: true });
+        };
+
+        const onCloseAddMembership = () => {
+            that.setState({ display_add_membership: false });
+        }
 
         const membershipList = (
           <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
@@ -399,7 +416,7 @@ class Profile extends Component<any, any> {
                         <TableCell align="right">
                           <IconButton
                             onClick={() => {
-                              self.onMembershipSelectionChanged(membership);
+                              that.onMembershipSelectionChanged(membership);
                               this.activeOrganisation(membership.organization.id);
                             }}
                           >
@@ -424,11 +441,12 @@ class Profile extends Component<any, any> {
     renderUserDemographics() {
 
         const { MoresMyPersonalDemographics } = this.componentDefs;
-
+        const { classes } = this.props;
 
         const userDemographic = (
             <Grid item sm={12} xs={12} >
                 <Paper className={this.props.classes.general}>
+                    <Typography className={classes.sectionHeaderText}>Demographics</Typography>
                     <MoresMyPersonalDemographics />
                 </Paper>
             </Grid>
@@ -1202,13 +1220,13 @@ class Profile extends Component<any, any> {
         if (showConfirmDeleteUser === true) {
 
             const cancelProfileDelete = e => {
-                that.setState({ showConfirmDeleteUser: false, userDeleteMessage: null, userDeleted: false, });
+                that.setState({ showConfirmDeleteUser: false, userDeleteMessage: null, userDeleted: false });
             };
 
             const deleteUserProfile = e => {
                 const mutation = gql` mutation DeleteUserMutation($id: String!){
-    deleteUser(id: $id)
-} `;
+                    deleteUser(id: $id)
+                } `;
 
                 reactory.graphqlMutation(mutation, { id: profile.id }).then(result => {
                     if (result.errors) {
@@ -1306,7 +1324,6 @@ class Profile extends Component<any, any> {
                 {this.renderHeader()}
                 <Typography className={classes.sectionHeaderText}>Account Details</Typography>
                 {this.renderGeneral()}
-                {isNew === false && <Typography className={classes.sectionHeaderText}>Demographics</Typography>}
                 {isNew === false && this.renderUserDemographics()}
                 {isNew === false && <Typography className={classes.sectionHeaderText}>My Nominees</Typography>}
                 {isNew === false ? this.renderMemberships() : null}
@@ -1363,10 +1380,16 @@ class Profile extends Component<any, any> {
             help: props.reactory.queryObject.help === "true",
             helpTopic: props.reactory.queryObject.helptopics,
             highlight: props.reactory.queryObject.peerconfig === "true" ? "peers" : null,
+<<<<<<< HEAD
             activeOrganisationId : props.organizationId
+=======
+            activeOrganisationIndex: 0,
+            display_role_editor: false,
+>>>>>>> 8c470d0fe27f05ef6fb9b44b117321d365ced26b
         };
 
         const components = [
+            'core.AlertDialog',
             'core.BasicModal',
             'core.Loading',
             'core.FullScreenModal',
@@ -1374,6 +1397,7 @@ class Profile extends Component<any, any> {
             'core.UserListItem',
             'core.Cropper',
             'core.UserListWithSearch',
+            'core.ReactoryCreateUserMembership',
             'mores.MoresMyPersonalDemographics',
         ];
 

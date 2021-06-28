@@ -1933,11 +1933,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
   const getDeveloperOptions = () => {
-    if (reactory.hasRole(["DEVELOPER"]) === true && formDef.name.indexOf("$GLOBAL$") === -1) {
+    if (reactory.hasRole(["DEVELOPER"]) === true) {
+      if (formDef && formDef.name) {
+        if (formDef.name.indexOf("$GLOBAL$") >= 0) return null;
+      }
 
-      return (
-        <IconButton size="small" style={{ float: 'right', position: 'relative', marginTop: '-8px' }}><Icon style={{ fontSize: '0.9rem' }}>build</Icon></IconButton>
-      )
+      return (<IconButton size="small" style={{ float: 'right', position: 'relative', marginTop: '-8px' }}><Icon style={{ fontSize: '0.9rem' }}>build</Icon></IconButton>)
     }
   }
   /*
