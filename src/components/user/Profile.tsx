@@ -1380,12 +1380,7 @@ class Profile extends Component<any, any> {
             help: props.reactory.queryObject.help === "true",
             helpTopic: props.reactory.queryObject.helptopics,
             highlight: props.reactory.queryObject.peerconfig === "true" ? "peers" : null,
-<<<<<<< HEAD
             activeOrganisationId : props.organizationId
-=======
-            activeOrganisationIndex: 0,
-            display_role_editor: false,
->>>>>>> 8c470d0fe27f05ef6fb9b44b117321d365ced26b
         };
 
         const components = [
