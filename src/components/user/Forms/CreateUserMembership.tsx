@@ -2,7 +2,6 @@ import { useReactory } from "@reactory/client-core/api";
 
 export const CreateUserMembership = (props) => {
 
-  debugger
   const reactory = useReactory()
 
 

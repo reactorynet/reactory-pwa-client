@@ -1803,7 +1803,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     let _additionalButtons = [];
     if (buttons && buttons.length) {
       _additionalButtons = buttons.map((button, buttonIndex) => {
-        const { buttonProps, iconProps, type, handler } = button;
+        const { buttonProps, iconProps, type, handler, component } = button;
+
+        if (component && typeof component === "function") return component;
 
         const onButtonClicked = () => {
           reactory.log(`OnClickButtonFor Additional Buttons`);

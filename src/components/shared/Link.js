@@ -14,7 +14,6 @@ const LinkComponent = (props) => {
 
   if (props.uiSchema && props.uiSchema["ui:options"]) {
     if (props.uiSchema["ui:options"].format) {
-      debugger
       linkText = template(props.uiSchema["ui:options"].format)(props)
     }
     if (props.uiSchema["ui:options"].title) {

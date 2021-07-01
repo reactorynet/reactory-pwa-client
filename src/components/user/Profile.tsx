@@ -281,8 +281,8 @@ class Profile extends Component<any, any> {
         });
     }
 
-    onMembershipSelectionChanged(membership) {
-        this.setState({ selectedMembership: membership, loadingPeers: true }, () => {
+    onMembershipSelectionChanged(membership, index) {
+        this.setState({ selectedMembership: membership, activeOrganisationIndex: index, loadingPeers: true }, () => {
             this.refreshPeers()
         });
     }
@@ -401,14 +401,13 @@ class Profile extends Component<any, any> {
                                             {can_edit_roles === true && that.state.selectedMembership && that.state.selectedMembership.id === membership.id && <IconButton onClick={() => {
                                                 that.setState({ display_role_editor: true }, () => {
                                                     if (membership.id !== that.state.selectedMembership.id) {
-                                                        that.onMembershipSelectionChanged(membership);
+                                                        that.onMembershipSelectionChanged(membership, index);
                                                     }
                                                 })
                                             }}><Icon>edit</Icon></IconButton>}
                                             <IconButton
                                                 onClick={() => {
-                                                    that.onMembershipSelectionChanged(membership);
-                                                    that.activeOrganisation(index);
+                                                    that.onMembershipSelectionChanged(membership, index);
                                                 }}>
                                                 <Icon>chevron_right</Icon>
                                             </IconButton>
@@ -1456,6 +1455,9 @@ class Profile extends Component<any, any> {
             display_role_editor: false,
         };
 
+
+        //check if there is a selec
+
         const components = [
             'core.AlertDialog',
             'core.BasicModal',
@@ -1478,17 +1480,19 @@ class Profile extends Component<any, any> {
         if (this.state.profile.memberships && this.state.profile.memberships.length > 0) {
             let membershipWithOrganization = null;
 
-            this.state.profile.memberships.forEach(membership => {
+            let idx = 0;
+            this.state.profile.memberships.forEach((membership, index) => {
                 if (membership.organization !== null && membershipWithOrganization === null) {
                     if (organizationId === membership.organization.id) {
                         membershipWithOrganization = membership;
+                        idx = 0;
                     }
                 };
             });
 
             if (membershipWithOrganization === null) membershipWithOrganization = this.state.profile.memberships[0];
 
-            if (membershipWithOrganization !== null) this.onMembershipSelectionChanged(membershipWithOrganization);
+            if (membershipWithOrganization !== null) this.onMembershipSelectionChanged(membershipWithOrganization, idx);
         }
     }
 }

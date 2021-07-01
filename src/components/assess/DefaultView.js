@@ -263,7 +263,7 @@ class RatingControl extends Component {
         <Typography variant="body1" className={classes.behaviourTitle}>
           {$ratingContent}
         </Typography>
-        { contentsDiffer && (<Typography variant="body2" className={classes.behaviourSubTitle}>{$ratingSubContent}</Typography>)}
+        {contentsDiffer && (<Typography variant="body2" className={classes.behaviourSubTitle}>{$ratingSubContent}</Typography>)}
 
         <Stepper alternativeLabel nonLinear activeStep={rating.rating - 1}>
           {steps}
@@ -539,8 +539,8 @@ class DefaultView extends Component {
 
     const defaultWelcomeMessage = (
       <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
-      5 - 7 minutes to complete.<br />
-      You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? `well the ${survey.leadershipBrand.title} are displayed:` : ` we live the organisation's leadership brand:`}
+        5 - 7 minutes to complete.<br />
+        You will be asked to provide a rating against a series of behaviours that are used to measure how {isPLC === true ? `well the ${survey.leadershipBrand.title} are displayed:` : ` we live the organisation's leadership brand:`}
       </Typography>
     )
 
@@ -571,9 +571,9 @@ class DefaultView extends Component {
             showEditIcon={true}
             editAction={'link'}
             defaultValue={<Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
-            5 - 7 minutes.<br />
-            You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
-          </Typography>}>
+              5 - 7 minutes.<br />
+              You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
+            </Typography>}>
           </componentDefs.StaticContent>
 
 
@@ -617,7 +617,10 @@ class DefaultView extends Component {
           let isComplete = false;
           if (response.data.setAssessmentComplete && response.data.setAssessmentComplete) isComplete = response.data.setAssessmentComplete.complete === true;
           that.setState({ completing: false, complete: isComplete, assessment: { ...lodash.cloneDeep(that.state.assessment), complete: isComplete } }, () => {
-            gotoDashboard()
+
+            if (that.props.mode !== 'admin') {
+              gotoDashboard()
+            }
           });
         }).catch(mutateError => {
           that.setState({ completing: false, completeError: 'Could not update the assessment status' });
@@ -968,7 +971,7 @@ class DefaultView extends Component {
           <Typography>
             If you want to provide a customised behaviour that {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName} exhibits that relates to {quality.title}, type it in the box below and then click the add <Icon>add</Icon> button and provide your rating and feedback.<br /><br />
             Note, these custom ratings will not affect the calculation of {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName}'s overall rating for this assessment.
-         </Typography>
+          </Typography>
           <Paper className={classes.root} elevation={1}>
             <InputBase
               className={classes.input}
@@ -1439,7 +1442,7 @@ class DefaultView extends Component {
               <Button variant="outlined" size="small" onClick={prevStep} disabled={step === 0}>
                 {theme.direction === 'rtl' ? <KeyboardArrowRight /> : <KeyboardArrowLeft />}
                 Back
-                </Button>
+              </Button>
             }
           />
         </Grid>
