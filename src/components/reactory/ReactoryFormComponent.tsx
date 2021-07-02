@@ -43,6 +43,7 @@ import { ReactoryHOC } from 'App';
 import { Breakpoint } from '@material-ui/core/styles/createBreakpoints';
 import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
 import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
+import { Fullscreen } from '@material-ui/icons';
 
 const {
   MaterialArrayField,
@@ -240,7 +241,8 @@ const default_dependencies = () => {
     'core.FullScreenModal',
     'core.DropDownMenu',
     'core.HelpMe',
-    'core.ReportViewer'
+    'core.ReportViewer',
+    'core.ReactoryFormEditor',
   ];
 };
 
@@ -405,6 +407,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const [dependencies, setDepencies] = React.useState<any>(getInitialDepencyState().dependencies);
   const [dependenciesPassed, setDepenciesPassed] = React.useState<boolean>(getInitialDepencyState().passed);
   const [customState, setCustomState] = React.useState<any>({});
+  const [showFormEditor, setShowEditor] = React.useState<boolean>(false);
   //const $events = new EventEmitter();
 
   const getActiveUiSchema = () => {
@@ -1361,7 +1364,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         reactory.log(`Variables for query`, { variables: _variables }, 'debug');
 
-        let options = query.options || {};
+        let $options = query.options ? { ...query.options } : { fetchPolicy: 'network-only' }
 
         //error handler function
         const handleErrors = (errors) => {
@@ -1395,7 +1398,16 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
           reactory.log(`${signature}  executeFormQuery()`)
           const query_start = new Date().valueOf();
-          reactory.graphqlQuery(gql(query.text), _variables, query.options).then((result: any) => {
+
+          if ($options && $options.fetchPolicy && $options.fetchPolicy.indexOf('${') >= 0) {
+            try {
+              $options.fetchPolicy = reactory.utils.template($options.fetchPolicy)({ formContext: getFormContext(), query, props });
+            } catch (fpterror) {
+              $options.fetchPolicy = 'network-only';
+            }
+          }
+
+          reactory.graphqlQuery(gql(query.text), _variables, $options).then((result: any) => {
             const query_end = new Date().valueOf();
 
             reactory.stat(`${formDef.nameSpace}.${formDef.name}@${formDef.version}:query_execution_length`, { query_start, query_end, diff: query_end - query_start, unit: 'utc-date' });
@@ -1940,7 +1952,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         if (formDef.name.indexOf("$GLOBAL$") >= 0) return null;
       }
 
-      return (<IconButton size="small" style={{ float: 'right', position: 'relative', marginTop: '-8px' }}><Icon style={{ fontSize: '0.9rem' }}>build</Icon></IconButton>)
+
+
+      return (
+        <>
+          <IconButton size="small" onClick={() => { setShowEditor(true) }} style={{ float: 'right', position: 'relative', marginTop: '-8px' }}>
+            <Icon style={{ fontSize: '0.9rem' }}>build</Icon>
+          </IconButton>
+        </>)
     }
   }
   /*
@@ -1985,7 +2004,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   React.useEffect(() => {
     setVersion(version + 1);
-  }, [formData])
+  }, [formData, props])
+
 
   return (
     <IntersectionVisible>{renderForm()}</IntersectionVisible>
