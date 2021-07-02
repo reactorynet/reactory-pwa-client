@@ -1,5 +1,5 @@
 import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties, Ref } from 'react';
-import PropTypes, { ReactNodeArray, string } from 'prop-types';
+import PropTypes, { any, ReactNodeArray, string } from 'prop-types';
 import IntersectionVisible from 'react-intersection-visible';
 import Form from './form/components/Form';
 import EventEmitter, { ListenerFn } from 'eventemitter3';
@@ -462,8 +462,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     return _schemaDefinitions;
   }
-
-
   const onPluginLoaded = (plugin: any) => {
     reactory.log(`${signature} Plugin loaded, activating component`, { plugin }, 'debug');
     try {
