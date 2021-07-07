@@ -382,6 +382,9 @@ namespace Reactory {
 
   }
 
+  export interface IDSchema {
+    $id: string,
+  }
 
   export interface ISchema {
     type: string,

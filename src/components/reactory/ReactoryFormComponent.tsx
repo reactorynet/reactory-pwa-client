@@ -11,7 +11,7 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
 import Dropzone, { DropzoneState } from 'react-dropzone';
-import { MutationResult } from '@apollo/client'
+import { ApolloQueryResult, MutationResult } from '@apollo/client'
 import { Mutation } from '@apollo/client/react/components';
 import { nil } from '@reactory/client-core/components/util';
 import queryString from '@reactory/client-core/query-string';
@@ -408,7 +408,18 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const [dependenciesPassed, setDepenciesPassed] = React.useState<boolean>(getInitialDepencyState().passed);
   const [customState, setCustomState] = React.useState<any>({});
   const [showFormEditor, setShowEditor] = React.useState<boolean>(false);
-  //const $events = new EventEmitter();
+
+  const reset = () => {
+    setComponents(reactory.getComponents(default_dependencies()));
+    setFormData(initialData());
+    setQueryComplete(false);
+    setAllowRefresh(false);
+    setIsBusy(false);
+    setIsDirty(false);
+    setVersion(0);
+    setDepencies(getInitialDepencyState().dependencies);
+    setCustomState({});
+  };
 
   const getActiveUiSchema = () => {
 
@@ -534,7 +545,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           return;
         }
 
-        const _variables = objectMapper({ ...form, formContext: getFormContext(), $route: props.$route, reactory, api: props.api }, mutation.variables);
+        const _variables = objectMapper({
+          ...form,
+          formContext: getFormContext(),
+          $route:
+            props.$route,
+          reactory,
+          api: reactory
+        }, mutation.variables);
 
         let do_mutation = true;
         let mutation_props: any = {
@@ -547,8 +565,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
         if (do_mutation) {
-          reactory.graphqlMutation(mutation.text, mutation_props.variables, mutation_props.refetchQueries).then((mutation_result: MutationResult) => {
-            const { data, error } = mutation_result;
+          reactory.graphqlMutation(mutation.text, mutation_props.variables, mutation_props.refetchQueries).then((mutation_result: ApolloQueryResult<any>) => {
+            const { data, error, errors = [] } = mutation_result;
 
             reactory.log(`🧐 Mutation Response ${mutation.name}`, { data, error }, 'debug');
 
@@ -573,6 +591,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                     showInAppNotification: true,
                     type: 'error',
                   });
+              }
+            }
+
+            if (errors && errors.length > 0) {
+
+              if (props.onError) props.onError(errors, getFormContext());
+              else {
+                reactory.createNotification('Could not execute the action.  Server responded with errors', { type: 'warning', showInAppNotification: true })
               }
             }
 
@@ -621,8 +647,15 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               };
 
               if (typeof mutation.onSuccessUrl === 'string') {
-                let linkText = template(mutation.onSuccessUrl)(templateProps);
-                props.history.push(linkText);
+                try {
+                  let linkText = template(mutation.onSuccessUrl)(templateProps);
+                  setTimeout(() => {
+                    props.history.push(linkText);
+                  }, mutation.onSuccessRedirectTimeout || 500);
+                } catch (exception) {
+                  reactory.createNotification('Cannot redirect form, template error', { type: 'warning' });
+                  reactory.log('ReactoryForm Mutation Cannot redirect using redirect method as the template caused an error.', { templateError: exception }, 'error')
+                }
               }
 
               if (mutation.onSuccessMethod === "notification") {
@@ -676,8 +709,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               if (mutation.onSuccessMethod === "refresh") {
                 getData();
               }
+
+
             }
 
+            setQueryComplete(true);
+            setVersion(version + 1);
           }).catch((mutation_error) => {
 
             if (mutation.onError) {
@@ -690,7 +727,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
             reactory.log(`Error Executing Mutation ${mutation_error.message}`, { mutation_error }, 'error');
             setError({ error: mutation_error, errorType: "runtime" });
-
+            setQueryComplete(true);
+            setVersion(version + 1);
           });
         }
 
@@ -860,7 +898,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
       },
       formRef,
-      onChange
+      onChange,
+      refresh: (args = { autoQueryDisabled: true }) => {
+        setAutoQueryDisabled(args.autoQueryDisabled);
+        getData(formData);
+      },
     }
   }
 
@@ -898,6 +940,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       },
       graphql: getActiveGraphDefinitions(),
       getData,
+      reset,
       screenBreakPoint: getScreenSize(),
       ...inputContext,
     }
@@ -1002,7 +1045,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             GridLayout: MaterialGridField,
             TabbedLayout: MaterialTabbedField,
             //TODO: WW Add following layout fields
-            //Tabbed Layout
             //Panel Layout (collapsable stack)
             // ?? customer component layout/
           };

@@ -516,6 +516,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     let defaultNotificationProps = {
       title,
       type: options.type || "info",
+      showInAppNotification: true,
       config: {
         canDismiss: true,
         timeOut: 2500,
@@ -526,7 +527,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       defaultNotificationProps.config = { ...defaultNotificationProps.config, ...options.config }
     }
 
-    if (options.showInAppNotification) {
+    if (options.showInAppNotification !== false) {
       that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: { ...options.config, ...options.props } });
       return;
     }
@@ -644,17 +645,18 @@ class ReactoryApi extends EventEmitter implements _dynamic {
           break;
         }
       }
-      const dolog = () => params && params.length === 0 ? console[kind](`%cReactory::${message}`, formatting) : console[kind](`%cReactory::${message}`, formatting, params);
-      if (process.env.NODE_ENV !== 'production') {
-        // dolog();
+      const dolog = () => params && params.length === 0 || Object.keys(params).length === 0 ? console[kind](`%cReactory::${message}`, formatting) : console[kind](`%cReactory::${message}`, formatting, params);
+      if (process.env.NODE_ENV !== 'production' && window.console) {
+        dolog();
       } else {
         //if it is production, we can enable / disable the log level by inspecting window.reactory object
         if (window.reactory && window.reactory.log && window.reactory.log[kind] === true) {
-          // dolog();
+          dolog();
         }
       }
     } catch (err) {
-      console.error(err);
+      // do nothing, it could be that we have a problem with console
+      // console.error(err);
     }
   }
 

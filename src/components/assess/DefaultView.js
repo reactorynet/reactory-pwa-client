@@ -238,16 +238,32 @@ class RatingControl extends Component {
     let $ratingContent = 'processing';
     let $ratingSubContent = 'processing'
     try {
-      $ratingContent = template(behaviour.title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
+      let $title = behaviour.title;
+      if (assessment.selfAssessment === true && behaviour.delegateTitle) {
+        $title = behaviour.delegateTitle;
+      } else {
+        if (behaviour.assessorTitle) {
+          $title = behaviour.assessorTitle;
+        }
+      }
+      $ratingContent = template($title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
 
     } catch (templateErr) {
       that.props.api.log(`Behaviour Template Error`, { template: behaviour.title, templateErr }, 'error');
 
-      $ratingContent = `Error Processing behaviour template text. See logs for details`
+      $ratingContent = `Error Processing behaviour template text. See logs for details`;
     }
 
     try {
-      $ratingSubContent = template(behaviour.description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
+      let $description = behaviour.description;
+      if (assessment.selfAssessment === true && behaviour.delegateDescription) {
+        $description = behaviour.delegateDescription;
+      } else {
+        if (behaviour.assessorDescription) {
+          $description = behaviour.assessorDescription;
+        }
+      }
+      $ratingSubContent = template($description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
     } catch (e) {
       that.props.api.log(`Behaviour Template Error`, { template: behaviour.description, templateErr }, 'error');
 
@@ -255,7 +271,6 @@ class RatingControl extends Component {
     }
 
     const contentsDiffer = $ratingContent !== $ratingSubContent
-
 
     const ratingComponent = (
       <Fragment>
@@ -888,6 +903,7 @@ class DefaultView extends Component {
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
     const { slugify } = api.utils;
 
+    debugger
     const behaviours = quality.behaviours.map((behaviour) => {
 
       let ratingIndex = lodash.findIndex(ratings, (r) => { return behaviour.id === r.behaviour.id && quality.id === r.quality.id });
