@@ -568,6 +568,10 @@ query assesmentWithId($id: String) {
             id
 						title
 						description
+            assessorTitle
+            assessorDescription
+            delegateTitle
+            delegateDescription                        
 						ordinal
 					}
 				}

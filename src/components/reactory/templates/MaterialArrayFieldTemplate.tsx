@@ -26,9 +26,9 @@ import {
 
 import { withApi } from '@reactory/client-core/api/ApiProvider'
 
-class ArrayTemplate extends Component {
+class ArrayTemplate extends Component<any, any> {
 
-  static styles = (theme) => ({
+  static styles: any = (theme) => ({
     root: {
       padding: theme.spacing(1),
       minHeight: '200px',
@@ -60,8 +60,12 @@ class ArrayTemplate extends Component {
     formData: []
   }
 
+  registry: any;
+  onReorderClick: any;
+
   constructor(props, context) {
-    super(props, context)
+    super(props)
+
     this.onAddClicked = this.onAddClicked.bind(this)
     this.renderNormalArray = this.renderNormalArray.bind(this)
     this.renderArrayFieldItem = this.renderArrayFieldItem.bind(this)

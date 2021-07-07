@@ -512,7 +512,7 @@ class ApplicationHeader extends Component {
             </IconButton>
 
             <IconButton onClick={toggleDarkMode}>
-              <Icon>{theme.palette.type === 'dark' ? 'visibility_off' : 'visibility'}</Icon>
+              <Icon>{theme.palette.type === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
             </IconButton>
 
             <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />

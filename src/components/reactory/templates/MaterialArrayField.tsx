@@ -12,7 +12,7 @@ import {
 import PropTypes from "prop-types";
 import includes from "lodash/includes";
 
-import  { UnsupportedField } from '@reactory/client-core/components/reactory/form/components/fields';
+import { UnsupportedField } from '@reactory/client-core/components/reactory/form/components/fields';
 
 import {
   getWidget,
@@ -61,33 +61,33 @@ function DefaultArrayItem(props) {
     <Paper key={props.index} className={props.className}>
       <Fragment>
         {props.children}
-      </Fragment>      
+      </Fragment>
       {props.hasToolbar && (
         <Toolbar>
-            {(props.hasMoveUp || props.hasMoveDown) && (
-              <IconButton                
-                tabIndex="-1"                
-                disabled={props.disabled || props.readonly || !props.hasMoveUp}
-                onClick={props.onReorderClick(props.index, props.index - 1)}><Icon>keyboard_arrow_up</Icon></IconButton>
-            )}
+          {(props.hasMoveUp || props.hasMoveDown) && (
+            <IconButton
+              tabIndex="-1"
+              disabled={props.disabled || props.readonly || !props.hasMoveUp}
+              onClick={props.onReorderClick(props.index, props.index - 1)}><Icon>keyboard_arrow_up</Icon></IconButton>
+          )}
 
-            {(props.hasMoveUp || props.hasMoveDown) && (
-              <IconButton
-                tabIndex="-1"
-                disabled={
-                  props.disabled || props.readonly || !props.hasMoveDown
-                }
-                onClick={props.onReorderClick(props.index, props.index + 1)}
-              ><Icon>keyboard_arrow_down</Icon></IconButton>
-            )}
+          {(props.hasMoveUp || props.hasMoveDown) && (
+            <IconButton
+              tabIndex="-1"
+              disabled={
+                props.disabled || props.readonly || !props.hasMoveDown
+              }
+              onClick={props.onReorderClick(props.index, props.index + 1)}
+            ><Icon>keyboard_arrow_down</Icon></IconButton>
+          )}
 
-            {props.hasRemove && (
-              <IconButton
-                tabIndex="-1"
-                disabled={props.disabled || props.readonly}
-                onClick={props.onDropIndexClick(props.index)}
-              ><Icon>delete_outline</Icon></IconButton>
-            )}
+          {props.hasRemove && (
+            <IconButton
+              tabIndex="-1"
+              disabled={props.disabled || props.readonly}
+              onClick={props.onDropIndexClick(props.index)}
+            ><Icon>delete_outline</Icon></IconButton>
+          )}
         </Toolbar>
       )}
     </Paper>
@@ -113,13 +113,13 @@ function DefaultFixedArrayFieldTemplate(props) {
         </Typography>
       )}
 
-      <Grid container spacing={8}        
+      <Grid container spacing={8}
         key={`array-item-list-${props.idSchema.$id}`}>
         {props.items && props.items.map(DefaultArrayItem)}
       </Grid>
 
       {props.canAdd && (
-        <Button variant="outlined"          
+        <Button variant="outlined"
           onClick={props.onAddClick}
           disabled={props.disabled || props.readonly}
         ><Icon>add</Icon></Button>
@@ -130,22 +130,22 @@ function DefaultFixedArrayFieldTemplate(props) {
 
 function DefaultNormalArrayFieldTemplate(props) {
   let visible = true;
-  if(props.uiSchema && props.uiSchema['ui:options'] && props.uiSchema['ui:options'].hidden === true) visible = false;
+  if (props.uiSchema && props.uiSchema['ui:options'] && props.uiSchema['ui:options'].hidden === true) visible = false;
   let buttons = null;
-  if(props.uiSchema && props.uiSchema['ui:toolbar']){    
+  if (props.uiSchema && props.uiSchema['ui:toolbar']) {
     buttons = props.uiSchema['ui:toolbar'].map((button) => {
       const api = props.formContext.api
-      const onRaiseCommand = ( evt ) => {                
-        if(api) api.raiseFormCommand(button.command, button, { formData: props.formData, formContext: props.formContext });
-      }            
+      const onRaiseCommand = (evt) => {
+        if (api) api.raiseFormCommand(button.command, button, { formData: props.formData, formContext: props.formContext });
+      }
       return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
     });
   }
-  
-  if(visible === false) return null
+
+  if (visible === false) return null
   return (
     <Fragment>
-      <Toolbar variant="dense">      
+      <Toolbar variant="dense">
         <ArrayFieldTitle
           key={`array-field-title-${props.idSchema.$id}`}
           TitleField={props.TitleField}
@@ -154,15 +154,15 @@ function DefaultNormalArrayFieldTemplate(props) {
           required={props.required}
         />
         {props.canAdd && (
-          <IconButton          
+          <IconButton
             onClick={props.onAddClick}
             disabled={props.disabled || props.readonly}
-            style={{float:'right'}}
+            style={{ float: 'right' }}
             color='secondary'
           ><Icon>add</Icon></IconButton>
         )}
         {buttons}
-        </Toolbar>
+      </Toolbar>
       {(props.uiSchema["ui:description"] || props.schema.description) && (
         <ArrayFieldDescription
           key={`array-field-description-${props.idSchema.$id}`}
@@ -179,12 +179,12 @@ function DefaultNormalArrayFieldTemplate(props) {
         {props.items && props.items.map(p => DefaultArrayItem(p))}
       </Fragment>
 
-      
+
     </Fragment>
   );
 }
 
-class ArrayField extends Component {
+class ArrayField extends Component<any, any> {
   static defaultProps = {
     uiSchema: {},
     formData: [],
@@ -193,6 +193,11 @@ class ArrayField extends Component {
     disabled: false,
     readonly: false,
     autofocus: false,
+  };
+
+  static propTypes: {
+    schema: PropTypes.Validator<object>;
+    uiSchema: PropTypes.Requireable<PropTypes.InferProps<{ "ui:options": PropTypes.Requireable<PropTypes.InferProps<{ addable: PropTypes.Requireable<boolean>; orderable: PropTypes.Requireable<boolean>; removable: PropTypes.Requireable<boolean>; }>>; }>>; idSchema: PropTypes.Requireable<object>; errorSchema: PropTypes.Requireable<object>; onChange: PropTypes.Validator<(...args: any[]) => any>; onBlur: PropTypes.Requireable<(...args: any[]) => any>; onFocus: PropTypes.Requireable<(...args: any[]) => any>; formData: PropTypes.Requireable<any[]>; required: PropTypes.Requireable<boolean>; disabled: PropTypes.Requireable<boolean>; readonly: PropTypes.Requireable<boolean>; autofocus: PropTypes.Requireable<boolean>; registry: PropTypes.Requireable<PropTypes.InferProps<{ widgets: PropTypes.Validator<{ [x: string]: object; }>; fields: PropTypes.Validator<{ [x: string]: (...args: any[]) => any; }>; definitions: PropTypes.Validator<object>; formContext: PropTypes.Validator<object>; }>>;
   };
 
   get itemTitle() {
@@ -250,8 +255,8 @@ class ArrayField extends Component {
       if (this.props.errorSchema) {
         newErrorSchema = {};
         const errorSchema = this.props.errorSchema;
-        for (let i in errorSchema) {
-          i = parseInt(i);
+        for (let idx in errorSchema) {
+          let i: number = parseInt(idx);
           if (i < index) {
             newErrorSchema[i] = errorSchema[i];
           } else if (i > index) {
@@ -313,10 +318,10 @@ class ArrayField extends Component {
       onChange(
         newFormData,
         errorSchema &&
-          this.props.errorSchema && {
-            ...this.props.errorSchema,
-            [index]: errorSchema,
-          }
+        this.props.errorSchema && {
+          ...this.props.errorSchema,
+          [index]: errorSchema,
+        }
       );
     };
   };
@@ -376,51 +381,51 @@ class ArrayField extends Component {
       api,
     } = this.props;
     //console.log('rendering normal array', {props: this.props});
-    let toolbar = null;    
+    let toolbar = null;
     const title = schema.title === undefined ? name : schema.title;
     let { ArrayFieldTemplate, definitions, fields } = registry;
-    
+
     let mapped_props = {};
-    
-    if(uiSchema && uiSchema['ui:widget']) {
+
+    if (uiSchema && uiSchema['ui:widget']) {
       const uiOptions = uiSchema['ui:options'];
       let componentProps = {}
       ArrayFieldTemplate = registry.widgets[uiSchema['ui:widget']]
-      
-      if(!ArrayFieldTemplate && formContext.api) {
+
+      if (!ArrayFieldTemplate && formContext.api) {
         ArrayFieldTemplate = formContext.api.getComponent(uiSchema['ui:widget']);
       }
-      
+
       if (uiOptions && uiOptions.componentProps) {  //map properties to the component
         Object.keys(componentProps).map(property => {
           componentProps[property] = formData[uiOptions.componentProps[property]]
         })
       }
 
-      
-      if(uiOptions && uiOptions.componentPropsMap) {
+
+      if (uiOptions && uiOptions.componentPropsMap) {
         mapped_props = api.utils.objectMapper(this.props, uiOptions.componentPropsMap)
       }
 
-      if(uiOptions && uiOptions.container) {
+      if (uiOptions && uiOptions.container) {
         //resolve Container from API
         const Container = formContext.api.getComponent(uiOptions.container)
         let containerProps = {}
-        if(uiOptions.containerProps) {
-          containerProps = {...uiOptions.containerProps}
+        if (uiOptions.containerProps) {
+          containerProps = { ...uiOptions.containerProps }
         }
-        if(Container){
+        if (Container) {
           return (
-          <Container {...containerProps}>
-            {toolbar}
-            {ArrayFieldTemplate !== null ? <ArrayFieldTemplate { ...{...this.props, ...componentProps, ...mapped_props}} /> : null}
-          </Container>);
+            <Container {...containerProps}>
+              {toolbar}
+              {ArrayFieldTemplate !== null ? <ArrayFieldTemplate {...{ ...this.props, ...componentProps, ...mapped_props }} /> : null}
+            </Container>);
         } else {
           return (
-          <Paper {...containerProps}>
-            {toolbar}
-            {ArrayFieldTemplate !== null ? <ArrayFieldTemplate { ...{...this.props,...componentProps, ...mapped_props}}  /> : null}
-          </Paper>);
+            <Paper {...containerProps}>
+              {toolbar}
+              {ArrayFieldTemplate !== null ? <ArrayFieldTemplate {...{ ...this.props, ...componentProps, ...mapped_props }} /> : null}
+            </Paper>);
         }
       }
     }
@@ -477,7 +482,7 @@ class ArrayField extends Component {
     return (
       <Fragment>
         {toolbar}
-        <Component { ...arrayProps } />
+        <Component {...arrayProps} />
       </Fragment>);
   }
 
@@ -620,8 +625,8 @@ class ArrayField extends Component {
         const itemUiSchema = additional
           ? uiSchema.additionalItems || {}
           : Array.isArray(uiSchema.items)
-          ? uiSchema.items[index]
-          : uiSchema.items || {};
+            ? uiSchema.items[index]
+            : uiSchema.items || {};
         const itemErrorSchema = errorSchema ? errorSchema[index] : undefined;
 
         return this.renderArrayFieldItem({
@@ -680,12 +685,12 @@ class ArrayField extends Component {
     const {
       fields: { SchemaField },
     } = registry;
-    const { orderable, removable } = {
+    const { orderable = true, removable = true } = {
       orderable: true,
       removable: true,
       ...uiSchema["ui:options"],
     };
-    const has = {
+    const has: any = {
       moveUp: orderable && canMoveUp,
       moveDown: orderable && canMoveDown,
       remove: removable && canRemove,
@@ -717,7 +722,7 @@ class ArrayField extends Component {
       hasMoveUp: has.moveUp,
       hasMoveDown: has.moveDown,
       hasRemove: has.remove,
-      index,      
+      index,
       onDropIndexClick: this.onDropIndexClick,
       onReorderClick: this.onReorderClick,
       readonly,
