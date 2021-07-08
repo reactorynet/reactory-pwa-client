@@ -311,6 +311,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             options = { ...options, ...query.options };
           }
 
+          if (options.fetchPolicy && options.fetchPolicy.indexOf('${') >= 0) {
+            try {
+              options.fetchPolicy = reactory.utils.template(options.fetchPolicy)({ formContext, query });
+            } catch (fpterror) {
+              options.fetchPolicy = 'network-only';
+            }
+          }
+
           reactory.graphqlQuery(queryDefinition.text, variables, options).then((queryResult: any) => {
             reactory.log(`Result From Query`, { queryResult })
             if (queryResult.errors && queryResult.errors.length > 0) {

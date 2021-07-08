@@ -516,6 +516,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     let defaultNotificationProps = {
       title,
       type: options.type || "info",
+      showInAppNotification: true,
       config: {
         canDismiss: true,
         timeOut: 2500,
@@ -526,7 +527,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       defaultNotificationProps.config = { ...defaultNotificationProps.config, ...options.config }
     }
 
-    if (options.showInAppNotification) {
+    if (options.showInAppNotification !== false) {
       that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: { ...options.config, ...options.props } });
       return;
     }
@@ -644,17 +645,18 @@ class ReactoryApi extends EventEmitter implements _dynamic {
           break;
         }
       }
-      const dolog = () => params && params.length === 0 ? console[kind](`%cReactory::${message}`, formatting) : console[kind](`%cReactory::${message}`, formatting, params);
-      if (process.env.NODE_ENV !== 'production') {
-        // dolog();
+      const dolog = () => params && params.length === 0 || Object.keys(params).length === 0 ? console[kind](`%cReactory::${message}`, formatting) : console[kind](`%cReactory::${message}`, formatting, params);
+      if (process.env.NODE_ENV !== 'production' && window.console) {
+        dolog();
       } else {
         //if it is production, we can enable / disable the log level by inspecting window.reactory object
         if (window.reactory && window.reactory.log && window.reactory.log[kind] === true) {
-          // dolog();
+          dolog();
         }
       }
     } catch (err) {
-      console.error(err);
+      // do nothing, it could be that we have a problem with console
+      // console.error(err);
     }
   }
 
@@ -992,7 +994,16 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.amq.onFormCommandEvent(commandId, func);
   }
 
-  hasRole(itemRoles = [], userRoles = null) {
+  /**
+   * Checks if there is an overlap between the item roles and the user roles. 
+   * @param itemRoles - A string[] that represents the allowed roles for the item we want to check. 
+   * @param userRoles - The user roles as a string[] that we are checking against.  When no roles are provided the logged in account roles are used.
+   * @param organization - Provide a organization if the membership should be checked for a specific organization 
+   * @param business_unit - Provide a businessUnit item if the membership should be check for access to a specific business unit
+   * @param user_memberships - Provide a memberships[] array to check
+   * @returns 
+   */
+  hasRole(itemRoles = [], userRoles = null, organization?: Reactory.IOrganization, business_unit?: Reactory.IBusinessUnit, user_memberships?: Reactory.IMembership[]) {
     let comparedRoles = userRoles || [];
 
     if (itemRoles.length === 1 && itemRoles[0] === '*')
@@ -1000,7 +1011,45 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
     if (userRoles === null) {
       const loggedInUser = this.getUser();
-      comparedRoles = loggedInUser.roles;
+
+      if (organization === null || organization === undefined) {
+        comparedRoles = loggedInUser.roles;
+      } else {
+        //if there is a organization_id, we check if there is a membership that has the organization id
+        let $memberships = user_memberships || loggedInUser.memberships;
+        if ($memberships && $memberships.length > 0) {
+          const matched_memberships: Reactory.IMembership[] = lodash.filter($memberships, (membership: Reactory.IMembership) => {
+
+            if (!membership.organization) return false;
+
+            if (membership.organization.id === organization.id) {
+              //if the business unit parameter is null, we only care about the organization role.
+              //but if the membership we are checking against does have a business unit, we should
+              //not use it as a comparable, so we only return true if the membership businessUnit is null.
+              if ((business_unit === null || business_unit === undefined) && membership.businessUnit === null) return true;
+
+              //we comapre the business units if there is one of either element
+              if (business_unit && business_unit.id && membership.businessUnit) {
+                return business_unit.id === membership.businessUnit.id;
+              }
+              //not enough information for us to determine there is a match,
+              //so return false.
+              return false;
+            }
+          });
+
+          if (matched_memberships.length > 0) {
+            comparedRoles = [];
+            matched_memberships.forEach((membership: Reactory.IMembership) => {
+              if (membership.roles) {
+                comparedRoles.push(...membership.roles);
+              }
+            });
+            //create a unique list of the roles.
+            comparedRoles = lodash.uniq(comparedRoles);
+          }
+        }
+      }
     }
 
     const result = intersection(itemRoles, comparedRoles);

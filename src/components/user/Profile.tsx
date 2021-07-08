@@ -18,7 +18,10 @@ import {
     InputAdornment, Icon, IconButton,
     ExpansionPanel, ExpansionPanelActions,
     ExpansionPanelDetails, AccordionSummary,
-    Toolbar, Tooltip, InputLabel, FormControl, ListItemAvatar, Table, TableBody, TableCell, TableHead, TableRow
+    Toolbar, Tooltip, InputLabel, FormControl,
+    ListItemAvatar, Table, TableBody, TableCell,
+    TableHead, TableRow, FormControlLabel, Switch,
+    Select
 } from '@material-ui/core';
 
 import Button from '@material-ui/core/Button';
@@ -29,6 +32,7 @@ import ReactoryApi from "../../api/ReactoryApi";
 import { CDNProfileResource, getAvatar, isEmail } from '../util';
 import gql from 'graphql-tag';
 import Reactory from 'types/reactory';
+import AlertDialog from 'components/shared/AlertDialog';
 
 const defaultProfile = {
     __isnew: true,
@@ -193,6 +197,7 @@ class Profile extends Component<any, any> {
         emailHelperText: PropTypes.string,
         headerComponents: PropTypes.func,
         footerComponents: PropTypes.func,
+        refetch: PropTypes.func
     };
 
     static defaultProps = {
@@ -235,7 +240,7 @@ class Profile extends Component<any, any> {
     refreshPeers() {
         const { selectedMembership, profile } = this.state;
         const { reactory } = this.props;
-        const self = this;
+        const that = this;
 
         const query = gql`query UserPeers($id: String! $organizationId: String) {
         userPeers(id: $id, organizationId: $organizationId){
@@ -251,9 +256,9 @@ class Profile extends Component<any, any> {
         reactory.graphqlQuery(query, variables).then((result) => {
             //console.log('Result for query', result);
             if (result && result.data && result.data.userPeers)
-                self.setState({ profile: { ...profile, peers: { ...result.data.userPeers } }, loadingPeers: false })
+                that.setState({ profile: { ...profile, peers: { ...result.data.userPeers } }, loadingPeers: false })
             else {
-                self.setState({
+                that.setState({
                     profile:
                     {
                         ...profile,
@@ -271,13 +276,13 @@ class Profile extends Component<any, any> {
                 });
             }
         }).catch((queryError) => {
-            console.error('Error querying user peers', queryError)
-            self.setState({ showError: true, message: 'Could not load the user peers due to an error', loadingPeers: false })
+            reactory.log('Error querying user peers', { queryError }, 'error')
+            that.setState({ showError: true, message: 'Could not load the user peers due to an error', loadingPeers: false })
         });
     }
 
-    onMembershipSelectionChanged(membership) {
-        this.setState({ selectedMembership: membership, loadingPeers: true }, () => {
+    onMembershipSelectionChanged(membership, index) {
+        this.setState({ selectedMembership: membership, activeOrganisationIndex: index, loadingPeers: true }, () => {
             this.refreshPeers()
         });
     }
@@ -291,7 +296,7 @@ class Profile extends Component<any, any> {
         //console.log('Inviting user', this.state.inviteEmail);
         const { reactory } = this.props;
         const { profile } = this.state;
-        const self = this
+        const that = this
         const doQuery = () => {
             const options = {
                 searchString: this.state.inviteEmail,
@@ -300,27 +305,27 @@ class Profile extends Component<any, any> {
 
             reactory.graphqlQuery(reactory.queries.Users.searchUser, options).then((userResult) => {
                 //console.log('Search Result', userResult);
-                self.setState({ findPeersResult: userResult, searching: false, showResult: true })
+                that.setState({ findPeersResult: userResult, searching: false, showResult: true })
             }).catch((searchError) => {
                 //console.log('Search Error', searchError);
-                self.setState({ searching: false, findPeersResult: [] })
+                that.setState({ searching: false, findPeersResult: [] })
             });
         }
 
-        self.setState({ searching: true, findPeersResult: [] }, doQuery)
+        that.setState({ searching: true, findPeersResult: [] }, doQuery)
     }
 
     renderMemberships() {
         const { memberships } = this.state.profile
         const { withMembership, classes, reactory } = this.props;
         const Content = reactory.getComponent('core.StaticContent');
-
+        const { AlertDialog, ReactoryCreateUserMembership } = this.componentDefs;
 
 
         if (withMembership === false) return null;
 
         const data = [];
-        const self = this
+        const that = this
 
         if (memberships && memberships.length) {
             memberships.forEach(m => data.push({ ...m }))
@@ -339,82 +344,168 @@ class Profile extends Component<any, any> {
             </>
         )
 
-        const membershipList = (
-          <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
-            <Paper className={classes.general}>
-              <Table className={classes.table} aria-label="simple table">
-                <caption>
-                  <Content
-                    slug={"core-user-profile-memebership-intro"}
-                    editRoles={["DEVELOPER", "ADMIN"]}
-                    defaultValue={defaultMembershipContent}
-                  ></Content>
-                </caption>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Organisation</TableCell>
-                    <TableCell>Date Joined</TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {data.map((membership, index) =>{
-                      let id = ''
-                      if(membership && membership.organization) {
-                          id = membership.organization.id
-                      }
-                      return(
-                        <TableRow
-                        key={index}
-                        className={
-                            this.state.activeOrganisationId === id
-                            ? classes.activeOrganisation
-                            : ""
-                        }
-                      >
-                        <TableCell>
-                          <List className={classes.root}>
-                            <ListItem>
-                              <ListItemAvatar>
-                                <Avatar style={{ marginRight: `8px` }}>
-                                  {membership &&
-                                  membership.organization &&
-                                  membership.organization.name
-                                    ? membership.organization.name.substring(0, 2)
-                                    : membership.client.name.substring(0, 2)}
-                                </Avatar>
-                              </ListItemAvatar>
-                              <ListItemText
-                                primary={`${membership.client.name} `}
-                                secondary={
-                                  isNil(membership.organization) === false
-                                    ? membership.organization.name
-                                    : "No organization"
-                                }
-                              />
-                            </ListItem>
-                          </List>
-                        </TableCell>
-                        <TableCell>09/06/2019</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            onClick={() => {
-                              self.onMembershipSelectionChanged(membership);
-                              this.activeOrganisation(membership.organization.id);
-                            }}
-                          >
-                            <Icon>chevron_right</Icon>
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
 
-                      )})
-                  
-                  }
-                </TableBody>
-              </Table>
-            </Paper>
-          </Grid>
+
+        const can_edit_roles = reactory.hasRole(['ADMIN']) === true;
+
+        const onAddNewMembership = () => {
+            that.setState({ display_add_membership: true });
+        };
+
+        const onCloseAddMembership = () => {
+            that.setState({ display_add_membership: false });
+        }
+
+        const membershipList = (
+            <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
+                <Paper className={classes.general}>
+                    <Table className={classes.table} aria-label="simple table">
+                        <caption>
+                            <Content
+                                slug={"core-user-profile-memebership-intro"}
+                                editRoles={["DEVELOPER", "ADMIN"]}
+                                defaultValue={defaultMembershipContent}
+                            ></Content>
+                        </caption>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Organisation</TableCell>
+                                <TableCell>{can_edit_roles === true && <Button color="primary" onClick={onAddNewMembership}>ADD MEMBERSHIP</Button>}</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {data.map((membership: Reactory.IMembership, index) => {
+                                     let id = ''
+                                     if(membership && membership.organization) {
+                                         id = membership.organization.id
+                                     }
+                                return (
+                                    <TableRow
+                                        key={index}
+                                        className={this.state.activeOrganisationId === id ? classes.activeOrganisation : ""}>
+                                        <TableCell>
+                                            <ListItem>
+                                                <ListItemAvatar>
+                                                    <Avatar style={{ marginRight: `8px` }}>
+                                                        {membership &&
+                                                            membership.organization &&
+                                                            membership.organization.name
+                                                            ? membership.organization.name.substring(0, 2)
+                                                            : membership.client.name.substring(0, 2)}
+                                                    </Avatar>
+                                                </ListItemAvatar>
+                                                <ListItemText
+                                                    primary={`${membership && membership.organization ? membership.organization.name : `${membership.client.name} - APPLICATION MEMBERSHIP`}`}
+                                                    secondary={`Roles: ${membership.roles.map((r: string) => `${r}`)}`.trim()}
+                                                />
+                                            </ListItem>
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {can_edit_roles === true && that.state.selectedMembership && that.state.selectedMembership.id === membership.id && <IconButton onClick={() => {
+                                                that.setState({ display_role_editor: true }, () => {
+                                                    if (membership.id !== that.state.selectedMembership.id) {
+                                                        that.onMembershipSelectionChanged(membership, index);
+                                                    }
+                                                })
+                                            }}><Icon>edit</Icon></IconButton>}
+                                            <IconButton
+                                                onClick={() => {
+                                                    that.onMembershipSelectionChanged(membership, index);
+                                                }}>
+                                                <Icon>chevron_right</Icon>
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            })
+                            }
+                        </TableBody>
+                    </Table>
+                    {this.state.selectedMembership !== null && <AlertDialog
+                        title={`Update membership for ${this.state.selectedMembership && this.state.selectedMembership.organization ? this.state.selectedMembership.organization.name : `${this.state.selectedMembership.client.name} - APPLICATION MEMBERSHIP`}`}
+                        open={this.state.display_role_editor === true && this.state.selectedMembership}
+                        showCancel={false}
+                        acceptTitle={'DONE'}
+                        onAccept={() => {
+                            that.setState({
+                                display_role_editor: false
+                            }, () => {
+                                debugger
+                                if (that.props.refetch) {
+                                    that.props.refetch()
+                                }
+                            });
+                        }}
+                    >
+                        <Grid container>
+                            {that.state.selectedMembership && reactory.$user.applicationRoles.map((applicationRole: string) => {
+
+                                if (applicationRole !== 'ANON') {
+                                    return (<Grid item xs={12} sm={12} md={12} lg={12}>
+                                        <FormControlLabel
+                                            control={<Switch size="small" checked={reactory.hasRole([applicationRole], that.state.selectedMembership.roles)} onChange={(evt) => {
+                                                let roles = [...that.state.selectedMembership.roles];
+                                                if (evt.target.checked === false) {
+                                                    //remove the role
+                                                    reactory.utils.lodash.remove(roles, r => r === applicationRole);
+                                                } else {
+                                                    roles.push(applicationRole);
+                                                }
+
+                                                that.setState({ selectedMembership: { ...that.state.selectedMembership, roles } }, () => {
+
+                                                    const mutation = `mutation ReactoryCoreSetRolesForMembership($user_id: String!, $id: String!, $roles: [String]!){
+                                                        ReactoryCoreSetRolesForMembership(user_id: $user_id, id: $id, roles: $roles) {
+                                                            success
+                                                            message
+                                                            payload
+                                                        }
+                                                    }`;
+
+                                                    const variables = {
+                                                        user_id: that.state.profile.id,
+                                                        id: that.state.selectedMembership.id,
+                                                        roles: that.state.selectedMembership.roles
+                                                    };
+
+
+                                                    reactory.graphqlMutation(mutation, variables).then(({ data, errors = [] }) => {
+                                                        if (errors.length > 0) {
+                                                            reactory.createNotification('Could not update the user roles.', { type: 'error', showInAppNotification: true });
+                                                        }
+
+                                                        if (data && data.SetMembershipRoles) {
+                                                            const { success, message, payload } = data.SetMembershipRoles;
+                                                            reactory.createNotification('Could not update the user roles.', { type: 'error', showInAppNotification: true });
+                                                        }
+
+
+                                                    }).catch((error) => {
+                                                        reactory.log('Could not process request', { error }, 'error');
+                                                        reactory.createNotification('Could not update the user roles.', { type: 'error', showInAppNotification: true })
+                                                    })
+
+                                                })
+                                            }} />}
+                                            label={applicationRole}
+                                        />
+
+                                    </Grid>)
+                                }
+
+                            })}
+                        </Grid>
+                    </AlertDialog>}
+
+                    {that.state.display_add_membership === true && <AlertDialog
+                        open={true} title={`Add new membership for ${that.state.profile.firstName} ${that.state.profile.lastName}`}
+                        showCancel={false}
+                        onAccept={() => { that.setState({ display_add_membership: false }) }}
+                        acceptTitle={'DONE'}>
+                        <ReactoryCreateUserMembership user={that.state.profile} />
+                    </AlertDialog>}
+                </Paper>
+            </Grid>
         );
 
         return membershipList;
@@ -424,11 +515,12 @@ class Profile extends Component<any, any> {
     renderUserDemographics() {
 
         const { MoresMyPersonalDemographics } = this.componentDefs;
-
+        const { classes } = this.props;
 
         const userDemographic = (
             <Grid item sm={12} xs={12} >
                 <Paper className={this.props.classes.general}>
+                    <Typography className={classes.sectionHeaderText}>Demographics</Typography>
                     <MoresMyPersonalDemographics />
                 </Paper>
             </Grid>
@@ -1202,13 +1294,13 @@ class Profile extends Component<any, any> {
         if (showConfirmDeleteUser === true) {
 
             const cancelProfileDelete = e => {
-                that.setState({ showConfirmDeleteUser: false, userDeleteMessage: null, userDeleted: false, });
+                that.setState({ showConfirmDeleteUser: false, userDeleteMessage: null, userDeleted: false });
             };
 
             const deleteUserProfile = e => {
                 const mutation = gql` mutation DeleteUserMutation($id: String!){
-    deleteUser(id: $id)
-} `;
+                    deleteUser(id: $id)
+                } `;
 
                 reactory.graphqlMutation(mutation, { id: profile.id }).then(result => {
                     if (result.errors) {
@@ -1306,7 +1398,6 @@ class Profile extends Component<any, any> {
                 {this.renderHeader()}
                 <Typography className={classes.sectionHeaderText}>Account Details</Typography>
                 {this.renderGeneral()}
-                {isNew === false && <Typography className={classes.sectionHeaderText}>Demographics</Typography>}
                 {isNew === false && this.renderUserDemographics()}
                 {isNew === false && <Typography className={classes.sectionHeaderText}>My Nominees</Typography>}
                 {isNew === false ? this.renderMemberships() : null}
@@ -1363,10 +1454,16 @@ class Profile extends Component<any, any> {
             help: props.reactory.queryObject.help === "true",
             helpTopic: props.reactory.queryObject.helptopics,
             highlight: props.reactory.queryObject.peerconfig === "true" ? "peers" : null,
-            activeOrganisationId : props.organizationId
+            activeOrganisationId : props.organizationId,
+            activeOrganisationIndex: 0,
+            display_role_editor: false,
         };
 
+
+        //check if there is a selec
+
         const components = [
+            'core.AlertDialog',
             'core.BasicModal',
             'core.Loading',
             'core.FullScreenModal',
@@ -1374,6 +1471,7 @@ class Profile extends Component<any, any> {
             'core.UserListItem',
             'core.Cropper',
             'core.UserListWithSearch',
+            'core.ReactoryCreateUserMembership',
             'mores.MoresMyPersonalDemographics',
         ];
 
@@ -1386,17 +1484,19 @@ class Profile extends Component<any, any> {
         if (this.state.profile.memberships && this.state.profile.memberships.length > 0) {
             let membershipWithOrganization = null;
 
-            this.state.profile.memberships.forEach(membership => {
+            let idx = 0;
+            this.state.profile.memberships.forEach((membership, index) => {
                 if (membership.organization !== null && membershipWithOrganization === null) {
                     if (organizationId === membership.organization.id) {
                         membershipWithOrganization = membership;
+                        idx = 0;
                     }
                 };
             });
 
             if (membershipWithOrganization === null) membershipWithOrganization = this.state.profile.memberships[0];
 
-            if (membershipWithOrganization !== null) this.onMembershipSelectionChanged(membershipWithOrganization);
+            if (membershipWithOrganization !== null) this.onMembershipSelectionChanged(membershipWithOrganization, idx);
         }
     }
 }

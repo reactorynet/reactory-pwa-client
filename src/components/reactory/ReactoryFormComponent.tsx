@@ -11,7 +11,7 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import uuid from 'uuid';
 import Dropzone, { DropzoneState } from 'react-dropzone';
-import { MutationResult } from '@apollo/client'
+import { ApolloQueryResult, MutationResult } from '@apollo/client'
 import { Mutation } from '@apollo/client/react/components';
 import { nil } from '@reactory/client-core/components/util';
 import queryString from '@reactory/client-core/query-string';
@@ -43,6 +43,7 @@ import { ReactoryHOC } from 'App';
 import { Breakpoint } from '@material-ui/core/styles/createBreakpoints';
 import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
 import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
+import { Fullscreen } from '@material-ui/icons';
 
 const {
   MaterialArrayField,
@@ -240,7 +241,8 @@ const default_dependencies = () => {
     'core.FullScreenModal',
     'core.DropDownMenu',
     'core.HelpMe',
-    'core.ReportViewer'
+    'core.ReportViewer',
+    'core.ReactoryFormEditor',
   ];
 };
 
@@ -405,7 +407,19 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const [dependencies, setDepencies] = React.useState<any>(getInitialDepencyState().dependencies);
   const [dependenciesPassed, setDepenciesPassed] = React.useState<boolean>(getInitialDepencyState().passed);
   const [customState, setCustomState] = React.useState<any>({});
-  //const $events = new EventEmitter();
+  const [showFormEditor, setShowEditor] = React.useState<boolean>(false);
+
+  const reset = () => {
+    setComponents(reactory.getComponents(default_dependencies()));
+    setFormData(initialData());
+    setQueryComplete(false);
+    setAllowRefresh(false);
+    setIsBusy(false);
+    setIsDirty(false);
+    setVersion(0);
+    setDepencies(getInitialDepencyState().dependencies);
+    setCustomState({});
+  };
 
   const getActiveUiSchema = () => {
 
@@ -531,7 +545,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           return;
         }
 
-        const _variables = objectMapper({ ...form, formContext: getFormContext(), $route: props.$route, reactory, api: props.api }, mutation.variables);
+        const _variables = objectMapper({
+          ...form,
+          formContext: getFormContext(),
+          $route:
+            props.$route,
+          reactory,
+          api: reactory
+        }, mutation.variables);
 
         let do_mutation = true;
         let mutation_props: any = {
@@ -544,8 +565,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
 
         if (do_mutation) {
-          reactory.graphqlMutation(mutation.text, mutation_props.variables, mutation_props.refetchQueries).then((mutation_result: MutationResult) => {
-            const { data, error } = mutation_result;
+          reactory.graphqlMutation(mutation.text, mutation_props.variables, mutation_props.refetchQueries).then((mutation_result: ApolloQueryResult<any>) => {
+            const { data, error, errors = [] } = mutation_result;
 
             reactory.log(`🧐 Mutation Response ${mutation.name}`, { data, error }, 'debug');
 
@@ -570,6 +591,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                     showInAppNotification: true,
                     type: 'error',
                   });
+              }
+            }
+
+            if (errors && errors.length > 0) {
+
+              if (props.onError) props.onError(errors, getFormContext());
+              else {
+                reactory.createNotification('Could not execute the action.  Server responded with errors', { type: 'warning', showInAppNotification: true })
               }
             }
 
@@ -618,8 +647,15 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               };
 
               if (typeof mutation.onSuccessUrl === 'string') {
-                let linkText = template(mutation.onSuccessUrl)(templateProps);
-                props.history.push(linkText);
+                try {
+                  let linkText = template(mutation.onSuccessUrl)(templateProps);
+                  setTimeout(() => {
+                    props.history.push(linkText);
+                  }, mutation.onSuccessRedirectTimeout || 500);
+                } catch (exception) {
+                  reactory.createNotification('Cannot redirect form, template error', { type: 'warning' });
+                  reactory.log('ReactoryForm Mutation Cannot redirect using redirect method as the template caused an error.', { templateError: exception }, 'error')
+                }
               }
 
               if (mutation.onSuccessMethod === "notification") {
@@ -673,8 +709,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               if (mutation.onSuccessMethod === "refresh") {
                 getData();
               }
+
+
             }
 
+            setQueryComplete(true);
+            setVersion(version + 1);
           }).catch((mutation_error) => {
 
             if (mutation.onError) {
@@ -687,7 +727,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
             reactory.log(`Error Executing Mutation ${mutation_error.message}`, { mutation_error }, 'error');
             setError({ error: mutation_error, errorType: "runtime" });
-
+            setQueryComplete(true);
+            setVersion(version + 1);
           });
         }
 
@@ -857,7 +898,11 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
       },
       formRef,
-      onChange
+      onChange,
+      refresh: (args = { autoQueryDisabled: true }) => {
+        setAutoQueryDisabled(args.autoQueryDisabled);
+        getData(formData);
+      },
     }
   }
 
@@ -895,6 +940,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       },
       graphql: getActiveGraphDefinitions(),
       getData,
+      reset,
       screenBreakPoint: getScreenSize(),
       ...inputContext,
     }
@@ -999,7 +1045,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             GridLayout: MaterialGridField,
             TabbedLayout: MaterialTabbedField,
             //TODO: WW Add following layout fields
-            //Tabbed Layout
             //Panel Layout (collapsable stack)
             // ?? customer component layout/
           };
@@ -1361,7 +1406,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         reactory.log(`Variables for query`, { variables: _variables }, 'debug');
 
-        let options = query.options || {};
+        let $options = query.options ? { ...query.options } : { fetchPolicy: 'network-only' }
 
         //error handler function
         const handleErrors = (errors) => {
@@ -1395,7 +1440,16 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
           reactory.log(`${signature}  executeFormQuery()`)
           const query_start = new Date().valueOf();
-          reactory.graphqlQuery(gql(query.text), _variables, query.options).then((result: any) => {
+
+          if ($options && $options.fetchPolicy && $options.fetchPolicy.indexOf('${') >= 0) {
+            try {
+              $options.fetchPolicy = reactory.utils.template($options.fetchPolicy)({ formContext: getFormContext(), query, props });
+            } catch (fpterror) {
+              $options.fetchPolicy = 'network-only';
+            }
+          }
+
+          reactory.graphqlQuery(gql(query.text), _variables, $options).then((result: any) => {
             const query_end = new Date().valueOf();
 
             reactory.stat(`${formDef.nameSpace}.${formDef.name}@${formDef.version}:query_execution_length`, { query_start, query_end, diff: query_end - query_start, unit: 'utc-date' });
@@ -1803,7 +1857,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     let _additionalButtons = [];
     if (buttons && buttons.length) {
       _additionalButtons = buttons.map((button, buttonIndex) => {
-        const { buttonProps, iconProps, type, handler } = button;
+        const { buttonProps, iconProps, type, handler, component } = button;
+
+        if (component && typeof component === "function") return component;
 
         const onButtonClicked = () => {
           reactory.log(`OnClickButtonFor Additional Buttons`);
@@ -1933,11 +1989,19 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
   const getDeveloperOptions = () => {
-    if (reactory.hasRole(["DEVELOPER"]) === true && formDef.name.indexOf("$GLOBAL$") === -1) {
+    if (reactory.hasRole(["DEVELOPER"]) === true) {
+      if (formDef && formDef.name) {
+        if (formDef.name.indexOf("$GLOBAL$") >= 0) return null;
+      }
+
+
 
       return (
-        <IconButton size="small" style={{ float: 'right', position: 'relative', marginTop: '-8px' }}><Icon style={{ fontSize: '0.9rem' }}>build</Icon></IconButton>
-      )
+        <>
+          <IconButton size="small" onClick={() => { setShowEditor(true) }} style={{ float: 'right', position: 'relative', marginTop: '-8px' }}>
+            <Icon style={{ fontSize: '0.9rem' }}>build</Icon>
+          </IconButton>
+        </>)
     }
   }
   /*
@@ -1982,7 +2046,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   React.useEffect(() => {
     setVersion(version + 1);
-  }, [formData])
+  }, [formData, props])
+
 
   return (
     <IntersectionVisible>{renderForm()}</IntersectionVisible>

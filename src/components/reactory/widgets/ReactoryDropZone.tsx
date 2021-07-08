@@ -94,7 +94,7 @@ class ReactoryDropZone extends Component<any, any> {
   }
 
   render() {
-    const self = this;
+    const that = this;
     const { uiSchema, schema, formData, classes, api, formContext } = this.props;
 
     let widgetProps = {
@@ -129,7 +129,7 @@ class ReactoryDropZone extends Component<any, any> {
 
     const dropHandler = (acceptedFiles) => {
 
-      self.setState({ uploading: true }, () => {
+      that.setState({ uploading: true }, () => {
 
         if (uiSchema && uiSchema['ui:options']) {
           const uiOptions = uiSchema['ui:options'];
@@ -141,7 +141,7 @@ class ReactoryDropZone extends Component<any, any> {
 
             let _v = {};
             try {
-              _v = api.utils.templateObject(ReactoryDropZoneProps.mutation.variables, self);
+              _v = api.utils.templateObject(ReactoryDropZoneProps.mutation.variables, that);
             } catch (templateErr) {
               api.log(`🚨🚨🚨 Error processing mapping 🚨🚨🚨`, { templateErr }, 'error');
             }
@@ -153,7 +153,7 @@ class ReactoryDropZone extends Component<any, any> {
 
             api.graphqlMutation(mutation, variables).then((docResult) => {
 
-              self.setState({ uploading: false }, () => {
+              that.setState({ uploading: false }, () => {
 
 
                 const { data, errors } = docResult;
@@ -174,9 +174,9 @@ class ReactoryDropZone extends Component<any, any> {
                   return;
                 }
 
-                const { filename, size, id, link, mimetype } = data[ReactoryDropZoneProps.mutation.name];
+                // const { filename, size, id, link, mimetype } = data[ReactoryDropZoneProps.mutation.name];
 
-                api.createNotification(`File ${filename} has been uploaded`, {
+                api.createNotification(`File ${acceptedFiles[0].filename} has been uploaded`, {
                   showInAppNotification: true,
                   type: 'success',
                   props: {
@@ -197,14 +197,14 @@ class ReactoryDropZone extends Component<any, any> {
                       formContext.$ref[ReactoryDropZoneProps.mutation.onSuccessEvent.name](docResult.data[ReactoryDropZoneProps.mutation.name])
                     }
                   } else {
-                    api.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, { filename, link, id, size, mimetype });
+                    api.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, data[ReactoryDropZoneProps.mutation.name]);
                   }
                 }
               });
 
             }).catch((docError) => {
 
-              self.setState({ uploading: false }, () => {
+              that.setState({ uploading: false }, () => {
                 api.createNotification(`File ${acceptedFiles[0].filename} could not be uploaded`, {
                   showInAppNotification: true,
                   type: 'warning',

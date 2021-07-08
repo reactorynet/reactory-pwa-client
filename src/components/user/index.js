@@ -294,7 +294,7 @@ export const CreateProfile = compose(
 export const EditProfile = compose(
   withApi
 )((props) => {
-  const { api, organizationId, surveyId, profile, onCancel, withPeers, profileTitle, mode, headerComponents, footerComponents } = props
+  const { api, organizationId, surveyId, profile, onCancel, withPeers, profileTitle, mode, headerComponents, footerComponents, refetch } = props
   return (
     <Mutation mutation={api.mutations.Users.updateUser} >
       {(updateUser, { loading, error, data }) => {
@@ -311,6 +311,7 @@ export const EditProfile = compose(
           surveyId,
           footerComponents,
           headerComponents,
+          refetch,
           onSave: (profileData) => {
             let profileDataInput = omitDeep(profileData);
             delete profileDataInput.peers
@@ -346,12 +347,13 @@ export const UserProfile = compose(
   return (
     <Query query={api.queries.Users.userProfile} variables={{ profileId: pid }} >
       {(queryProps, context) => {
-        const { loading, error, data } = queryProps;
+        const { loading, error, data, refetch } = queryProps;
+
         if (loading) return <p>Loading User Profile, please wait...</p>
         if (error) return <p>{error.message}</p>
 
         if (data.userWithId) {
-          let profileProps = { ...props, profile: { ...data.userWithId } }
+          let profileProps = { ...props, profile: { ...data.userWithId }, refetch }
           return <EditProfile  {...profileProps} />
         } else {
           return <p>No user data available</p>
@@ -618,14 +620,14 @@ const UserList = ({
                                   <ListItem selected={isSelected} onClick={multiSelect === false ? raiseUserSelected : nilf} dense button key={uid}>
                                     <Avatar alt={displayText} src={getAvatar(user)} onClick={raiseUserSelected} style={{ marginRight: '20px' }} />
                                     <ListItemText primary={user.__isnew ? 'NEW' : displayText} secondary={user.__isnew ? 'Click here to add a new user / employee' : user.email} />
-                                    { multiSelect === true ?
+                                    {multiSelect === true ?
                                       <Checkbox
                                         checked={isSelected}
                                         tabIndex={-1}
                                         disableRipple
                                         onClick={raiseUserChecked}
                                       /> : null}
-                                    { isFunction(secondaryAction) === true ?
+                                    {isFunction(secondaryAction) === true ?
                                       secondaryAction(user) :
                                       secondaryAction}
                                   </ListItem>

@@ -305,6 +305,7 @@ const userProfile = gql`
       lastLogin
       deleted
       memberships {
+        id
         client {
           id
           name
@@ -317,6 +318,8 @@ const userProfile = gql`
           id
           name
         }
+        created
+        lastLogin
         roles
         enabled
       }
@@ -355,6 +358,7 @@ const apiStatus = gql`
       apiStatus {
       applicationName
       applicationAvatar
+      applicationRoles
       when
       status
       firstName
@@ -373,6 +377,7 @@ const apiStatus = gql`
         avatar
       }
       memberships {
+        id
         client {
           id
           name
@@ -563,6 +568,10 @@ query assesmentWithId($id: String) {
             id
 						title
 						description
+            assessorTitle
+            assessorDescription
+            delegateTitle
+            delegateDescription                        
 						ordinal
 					}
 				}

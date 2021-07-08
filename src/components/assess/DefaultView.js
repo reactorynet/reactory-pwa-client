@@ -238,16 +238,32 @@ class RatingControl extends Component {
     let $ratingContent = 'processing';
     let $ratingSubContent = 'processing'
     try {
-      $ratingContent = template(behaviour.title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
+      let $title = behaviour.title;
+      if (assessment.selfAssessment === true && behaviour.delegateTitle) {
+        $title = behaviour.delegateTitle;
+      } else {
+        if (behaviour.assessorTitle) {
+          $title = behaviour.assessorTitle;
+        }
+      }
+      $ratingContent = template($title)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
 
     } catch (templateErr) {
       that.props.api.log(`Behaviour Template Error`, { template: behaviour.title, templateErr }, 'error');
 
-      $ratingContent = `Error Processing behaviour template text. See logs for details`
+      $ratingContent = `Error Processing behaviour template text. See logs for details`;
     }
 
     try {
-      $ratingSubContent = template(behaviour.description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
+      let $description = behaviour.description;
+      if (assessment.selfAssessment === true && behaviour.delegateDescription) {
+        $description = behaviour.delegateDescription;
+      } else {
+        if (behaviour.assessorDescription) {
+          $description = behaviour.assessorDescription;
+        }
+      }
+      $ratingSubContent = template($description)({ employee: assessment.delegate, employeeDemographics: assessment.delegate.demographics || { pronoun: 'his/her' }, assessment, survey: assessment.survey, api: this.props.api })
     } catch (e) {
       that.props.api.log(`Behaviour Template Error`, { template: behaviour.description, templateErr }, 'error');
 
@@ -256,14 +272,13 @@ class RatingControl extends Component {
 
     const contentsDiffer = $ratingContent !== $ratingSubContent
 
-
     const ratingComponent = (
       <Fragment>
         <Badge>{ratingTooltip}</Badge>
         <Typography variant="body1" className={classes.behaviourTitle}>
           {$ratingContent}
         </Typography>
-        { contentsDiffer && (<Typography variant="body2" className={classes.behaviourSubTitle}>{$ratingSubContent}</Typography>)}
+        {contentsDiffer && (<Typography variant="body2" className={classes.behaviourSubTitle}>{$ratingSubContent}</Typography>)}
 
         <Stepper alternativeLabel nonLinear activeStep={rating.rating - 1}>
           {steps}
@@ -539,8 +554,8 @@ class DefaultView extends Component {
 
     const defaultWelcomeMessage = (
       <Typography gutterBottom>Thank you for taking the time to assess {assessment.selfAssessment === true ? 'yourself' : api.getUserFullName(assessment.delegate)}. This assessment should take approximately
-      5 - 7 minutes to complete.<br />
-      You will be asked to provide a rating against a series of behaviours that are used to measure how { isPLC === true ? `well the ${survey.leadershipBrand.title} are displayed:` : ` we live the organisation's leadership brand:`}
+        5 - 7 minutes to complete.<br />
+        You will be asked to provide a rating against a series of behaviours that are used to measure how {isPLC === true ? `well the ${survey.leadershipBrand.title} are displayed:` : ` we live the organisation's leadership brand:`}
       </Typography>
     )
 
@@ -571,9 +586,9 @@ class DefaultView extends Component {
             showEditIcon={true}
             editAction={'link'}
             defaultValue={<Typography gutterBottom>Thank you for taking the time to assess the {survey.delegateTeamName} team. This assessment should take approximately
-            5 - 7 minutes.<br />
-            You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
-          </Typography>}>
+              5 - 7 minutes.<br />
+              You will be asked to provide a rating against a series of behaviours that are used to measure how we live the organisation's leadership brand:
+            </Typography>}>
           </componentDefs.StaticContent>
 
 
@@ -617,7 +632,10 @@ class DefaultView extends Component {
           let isComplete = false;
           if (response.data.setAssessmentComplete && response.data.setAssessmentComplete) isComplete = response.data.setAssessmentComplete.complete === true;
           that.setState({ completing: false, complete: isComplete, assessment: { ...lodash.cloneDeep(that.state.assessment), complete: isComplete } }, () => {
-            gotoDashboard()
+
+            if (that.props.mode !== 'admin') {
+              gotoDashboard()
+            }
           });
         }).catch(mutateError => {
           that.setState({ completing: false, completeError: 'Could not update the assessment status' });
@@ -885,6 +903,7 @@ class DefaultView extends Component {
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
     const { slugify } = api.utils;
 
+    debugger
     const behaviours = quality.behaviours.map((behaviour) => {
 
       let ratingIndex = lodash.findIndex(ratings, (r) => { return behaviour.id === r.behaviour.id && quality.id === r.quality.id });
@@ -968,7 +987,7 @@ class DefaultView extends Component {
           <Typography>
             If you want to provide a customised behaviour that {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName} exhibits that relates to {quality.title}, type it in the box below and then click the add <Icon>add</Icon> button and provide your rating and feedback.<br /><br />
             Note, these custom ratings will not affect the calculation of {assessment.survey.surveyType === '180' ? `the ${assessment.survey.delegateTeamName} team` : delegate.firstName}'s overall rating for this assessment.
-         </Typography>
+          </Typography>
           <Paper className={classes.root} elevation={1}>
             <InputBase
               className={classes.input}
@@ -1443,7 +1462,7 @@ class DefaultView extends Component {
               <Button variant="outlined" size="small" onClick={prevStep} disabled={step === 0}>
                 {theme.direction === 'rtl' ? <KeyboardArrowRight /> : <KeyboardArrowLeft />}
                 Back
-                </Button>
+              </Button>
             }
           />
         </Grid>
