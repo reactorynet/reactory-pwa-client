@@ -592,14 +592,18 @@ const UserList = ({
             let pageCount = Math.floor((paging.total / (paging.pageSize || 25)));
 
             if ((pageCount * (paging.pageSize || 25) < paging.total)) pageCount += 1;
-
-            debugger
             return (
               <React.Fragment>
-                <div style={{ height: 400, width: '100%'}}>
-                  <DataGrid rows={[...users]} columns={columns} checkboxSelection >
-                  <MaterialLab.Pagination count={pageCount} page={paging.page} onChange={onPageChanged} shape="rounded" />
-                  </DataGrid>
+                <div style={{ width: '100%'}}>
+                  <DataGrid 
+                  columns={columns} 
+                  rows={[...users]} 
+                  onPageChange={onPageChanged} 
+                  checkboxSelection
+                  paginationMode="server"
+                  autoHeight
+                  pageSize={25}
+                  rowCount={paging.total}/>
                 </div>
                 <List subheader={<li />}>
                   {
