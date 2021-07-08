@@ -223,7 +223,7 @@ class Profile extends Component<any, any> {
 
         },
     };
-    userProfileImageFile: any;
+    userProfileImageFile:  any;
 
     onAvatarMouseOver() {
         this.setState({ avatarMouseHover: true });

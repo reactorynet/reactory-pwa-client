@@ -1,4 +1,4 @@
-import React, { Fragment, Component } from 'react';
+import React, { Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { pullAt, find, isArray, isNil, isEmpty } from 'lodash';
 import {
@@ -17,9 +17,8 @@ import {
 import { compose } from 'recompose';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 
-class SelectWidget extends Component {
-
-  static styles = (theme) => ({
+const SelectWidget = (props)=> {
+  const styles = (theme) => ({
     root: {
       display: 'flex',
       flexWrap: 'wrap',
@@ -32,24 +31,7 @@ class SelectWidget extends Component {
     },
   });
 
-  static propTypes = {
-    formData: PropTypes.any,
-    onChange: PropTypes.func,
-    onSubmit: PropTypes.func,
-    readOnly: PropTypes.bool,
-    schema: PropTypes.object,
-    uiSchema: PropTypes.object
-  }
-
-  static defaultProps = {
-    formData: [],
-    readOnly: false
-  }
-
-  render() {
-    const self = this
     let elements = null
-
     let allowNull = true;
     const {
       schema,
@@ -58,17 +40,19 @@ class SelectWidget extends Component {
       formData,
       formContext,
       required,
-      theme
-    } = this.props;
+      classes, 
+      onChange,
+      theme,
+    } = props;
 
     let controlProps = {
       style: {
 
       },
-      className: `${this.props.classes.formControl}`
+      className: `${classes.formControl}`
     };
 
-    let uiOptions = this.props.uiSchema['ui:options'] || {};
+    let uiOptions = uiSchema['ui:options'] || {};
 
     const {
       labelStyle = {},
@@ -118,28 +102,29 @@ class SelectWidget extends Component {
     };
 
     const matchOption = value => {
-      if (this.props.uiSchema['ui:options'] && this.props.uiSchema['ui:options'].selectOptions) {
-        const option = find(this.props.uiSchema['ui:options'].selectOptions, { value: value })
+      if (uiSchema['ui:options'] && uiSchema['ui:options'].selectOptions) {
+        const option = find(uiSchema['ui:options'].selectOptions, { value: value })
         return option ? option : { value: value, label: value }
       }
     }
 
     const onSelectChanged = (evt) => {
-      this.props.onChange(evt.target.value)
+      onChange(evt.target.value)
     }
 
     const renderSelectedValue = (value) => {
 
 
 
-      if (value == null || value.length == 0)
-        return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Select</span>;
+      if (value == null || value.length == 0){
+        return null//<span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Select</span>;
+      }
 
       let option = matchOption(value);
       return (
         <>
           {option.icon ? <Icon {...(option.iconProps || { style: { margin: '0px', verticalAlign: 'middle' } })}>{option.icon}</Icon> : null}
-          <Typography variant="label">{option.label}</Typography>
+          <Typography >{option.label}</Typography>
         </>
       )
     };
@@ -155,21 +140,30 @@ class SelectWidget extends Component {
      */
 
     return (
-
-
       <Select
         {...selectProps}
-        value={self.props.formData || ""}
+        value={formData || ""}
         onChange={onSelectChanged}
-        name={self.props.name}
+        name={props.name}
         displayEmpty={true}
         renderValue={renderSelectedValue}
-        input={<InputComponent id={self.props.idSchema.$id} value={self.props.formData || ""} />}>
+        input={<InputComponent id={props.idSchema.$id} value={formData || ""} />}>
         {required === false ? <MenuItem value=""><em>None</em></MenuItem> : null}
         {elements}
       </Select>
     )
-  }
+}
+SelectWidget.propTypes = {
+  formData: PropTypes.any,
+  onChange: PropTypes.func,
+  onSubmit: PropTypes.func,
+  readOnly: PropTypes.bool,
+  schema: PropTypes.object,
+  uiSchema: PropTypes.object
+}
+SelectWidget.defaultProps = {
+  formData: [],
+  readOnly: false
 }
 const SelectWidgetComponent = compose(withTheme, withStyles(SelectWidget.styles))(SelectWidget)
 export default SelectWidgetComponent
