@@ -282,7 +282,9 @@ class Profile extends Component<any, any> {
     }
 
     onMembershipSelectionChanged(membership, index) {
-        this.setState({ selectedMembership: membership, activeOrganisationIndex: index, loadingPeers: true }, () => {
+        this.setState({ selectedMembership: membership, 
+            activeOrganisationIndex: index, 
+            loadingPeers: true }, () => {
             this.refreshPeers()
         });
     }
@@ -411,6 +413,7 @@ class Profile extends Component<any, any> {
                                             <IconButton
                                                 onClick={() => {
                                                     that.onMembershipSelectionChanged(membership, index);
+                                                    this.activeOrganisation(membership.organization.id)
                                                 }}>
                                                 <Icon>chevron_right</Icon>
                                             </IconButton>
@@ -430,7 +433,6 @@ class Profile extends Component<any, any> {
                             that.setState({
                                 display_role_editor: false
                             }, () => {
-                                debugger
                                 if (that.props.refetch) {
                                     that.props.refetch()
                                 }
