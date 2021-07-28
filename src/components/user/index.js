@@ -594,7 +594,7 @@ const UserList = ({
             if ((pageCount * (paging.pageSize || 25) < paging.total)) pageCount += 1;
             return (
               <React.Fragment>
-                <div style={{ width: '100%'}}>
+                {/* <div style={{ width: '100%'}}>
                   <DataGrid 
                   columns={columns} 
                   rows={[...users]} 
@@ -604,7 +604,7 @@ const UserList = ({
                   autoHeight
                   pageSize={25}
                   rowCount={paging.total}/>
-                </div>
+                </div> */}
                 <List subheader={<li />}>
                   {
                     availableAlphabet.map((letter, index) => {

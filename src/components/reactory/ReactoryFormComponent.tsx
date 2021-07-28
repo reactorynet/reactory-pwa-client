@@ -2039,7 +2039,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     //}
 
 
-  }, [props.formData])
+  }, [props.formData,props.formDef,props.formId])
 
 
   React.useEffect(() => {

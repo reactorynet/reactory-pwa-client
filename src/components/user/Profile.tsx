@@ -9,6 +9,7 @@ import lodash, { isNil, isArray, isString } from 'lodash';
 import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
+import Demographics from '../organization/Demographics'
 import {
     Container,
     Badge,
@@ -233,7 +234,10 @@ class Profile extends Component<any, any> {
         this.setState({ avatarMouseHover: false });
     }
 
-    activeOrganisation(id: string) {
+    activeOrganisation(membership) {
+        let id = ''
+        if(membership && membership.organization) id = membership.organization.id 
+
       this.setState({ activeOrganisationId: id });
     }
 
@@ -413,7 +417,7 @@ class Profile extends Component<any, any> {
                                             <IconButton
                                                 onClick={() => {
                                                     that.onMembershipSelectionChanged(membership, index);
-                                                    this.activeOrganisation(membership.organization.id)
+                                                    this.activeOrganisation(membership)
                                                 }}>
                                                 <Icon>chevron_right</Icon>
                                             </IconButton>
@@ -562,7 +566,6 @@ class Profile extends Component<any, any> {
 
         //data field for table
         const data = [];
-
         if (peers && peers.peers) {
             peers.peers.map((entry, index) => {
                 data.push({
@@ -1017,6 +1020,7 @@ class Profile extends Component<any, any> {
 
 
             const Content = reactory.getComponent('core.StaticContent');
+            const { ReactoryForm } = reactory.getComponents(['core.ReactoryForm'])
 
             const InModal = ({ onDone = () => { } }) => {
 
@@ -1400,7 +1404,7 @@ class Profile extends Component<any, any> {
                 {this.renderHeader()}
                 <Typography className={classes.sectionHeaderText}>Account Details</Typography>
                 {this.renderGeneral()}
-                {isNew === false && this.renderUserDemographics()}
+                { this.renderUserDemographics()}
                 {isNew === false && <Typography className={classes.sectionHeaderText}>My Nominees</Typography>}
                 {isNew === false ? this.renderMemberships() : null}
                 {isNew === false ? this.renderPeers() : null}
@@ -1408,11 +1412,14 @@ class Profile extends Component<any, any> {
                 {isNew === false ? this.renderCropper() : null}
             </Grid>
         );
-
+        const reactory = this.props    
         if (nocontainer === false) {
             return (
                 <Container {...containerProps} className={classes.profileTopMargin}>
                     {ProfileInGrid}
+                    <Demographics reactory={reactory} user={this.state.profile} 
+                    membershipId={this.state.selectedMembership}
+                     organisationId={this.state.activeOrganisationId}/>
                 </Container>
             );
         } else {

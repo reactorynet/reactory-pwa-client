@@ -1,9 +1,11 @@
 import OrganizationGQLTable from './OrganizationTable';
 import OrganizationGQLList from './OrganizationList';
 import DefaultOrganizationForm from './forms/Admin';
+import Demographics from './Demographics';
 
-export const OrganizationTable = OrganizationGQLTable;
-export const OrganizationList = OrganizationGQLList;
+const OrganizationTable = OrganizationGQLTable;
+const OrganizationList = OrganizationGQLList;
+export {Demographics, OrganizationTable, OrganizationList}
 export const Forms = {
   Default: DefaultOrganizationForm
 };
