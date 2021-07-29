@@ -172,6 +172,16 @@ const ReactoryMaterialTablePagination = (props) => {
             }
           </Grid>}
         <Grid container item xs={12} md={12} lg={12} xl={12} spacing={0} style={{ justifyContent: 'flex-end' }}>
+
+          <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
+            <Grid item sm={8}>
+              <Typography style={{ marginTop: '10px', float: 'right' }}>Total records:</Typography>
+            </Grid>
+            <Grid item sm={2}>
+              <Typography style={{ marginTop: '10px', float: 'right' }}>{props.count || 0}</Typography>
+            </Grid>
+          </Grid>
+
           <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
             <Grid item sm={8}>
               <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>

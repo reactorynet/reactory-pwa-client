@@ -264,12 +264,13 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
       onMutateComplete: (result) => {
         reactory.log('Mutation Complete For Address Editing', { result }, 'debug');
 
-        const { message, success } = result;
+        const { message, success, address } = result;
 
 
         if (success === true) {
           let $formatted_address = result.fullAddress;
-          let $place_id = result.id;
+          let $formatted_address = result.fullAddress || address.formatted_address;
+          let $place_id = result.id || address.id;
 
           if (onAddressSelected) {
             debugger;
@@ -598,6 +599,7 @@ const ReactoryMap = compose(
 
         //pull from google markers and
         //place into existing addresses
+
         const { cloneDeep, pullAt } = reactory.utils.lodash;
         const new_markers_data: Reactory.IReactoryMarkerData[] = cloneDeep($markers);
 
@@ -1018,7 +1020,6 @@ export const AddressLookupComponent = (props: {
         map.current = mref;
       },
       searchBoxRef: (ref) => {
-        debugger
         searchBoxRef.current = ref;
       },
       onAddressSelected: (marker: Reactory.IReactoryMarkerData) => {
@@ -1388,221 +1389,3 @@ export const AddressLookupComponent = (props: {
     </Grid>
   </Grid>);
 };
-
-
-
-/**
- *
- * TRASH
- *
- *  let center_label = `lat: ${center.lat} lng: ${center.lng}`
-  let existing_address_component = null;
-
-
-  // let toolbar = null;
-  // let dialog = null;
-
-  // if (selected_existing_addresses.length > 0) {
-
-  //   const setLatLongForSelectedExistingAddresses = () => {
-
-  //     const mutation_text = `mutation LasecEditAddress($address_input: EditAddressInput){
-  //       LasecEditAddress(address_input: $address_input) {
-  //         success
-  //         message
-  //         address {
-
-  //           lat
-  //           lng
-  //         }
-  //       }
-  //     }`
-
-  //     selected_existing_addresses.forEach((selected_index: number) => {
-  //       const address_to_update: Reactory.IReactoryMarkerData = existing_addresses[selected_index];
-
-  //       address_to_update.address.lat = map_center.lat;
-  //       address_to_update.address.lng = map_center.lng;
-  //       address_to_update.is_updating = true;
-  //       address_to_update.place.geometry.location = new google.maps.LatLng(map_center.lat, map_center.lng);
-
-  //       const variables = {
-  //         address_input: {
-  //           id: address_to_update.id,
-  //           lat: map_center.lat,
-  //           lng: map_center.lng
-  //         },
-  //       }
-
-  //       let $new_address_list = [...existing_addresses];
-  //       $new_address_list[selected_index] = address_to_update;
-
-  //       setExistingAddresses($new_address_list);
-
-  //       reactory.graphqlMutation(mutation_text, variables).then((mutation_result: MutationResult) => {
-  //         const { error, data, called, loading } = mutation_result;
-
-  //         if (called === true && data) {
-  //           data.LasecUpdateAddressPosition
-  //           address_to_update.is_updating = false
-  //           $new_address_list[selected_index] = address_to_update;
-  //           setExistingAddresses($new_address_list);
-  //         }
-
-  //         if (!error) {
-  //           reactory.log(`Could not update the address position`, { error }, "error");
-  //           reactory.createNotification(`Could not update the address ${address_to_update.title}`, { type: "error", canDismiss: true, timeout: 2500 });
-  //         }
-  //       }).catch((update_error) => {
-  //         reactory.log(`Could not update the address position`, { update_error }, "error");
-  //         reactory.createNotification(`Could not update the address ${address_to_update.title}`, { type: "error", canDismiss: true, timeout: 2500 });
-  //       })
-  //     })
-  //   };
-
-  //   const showConfirmDeleteAddress = () => {
-
-  //     setShowConfirmDelete(true);
-
-  //   };
-
-  //   const cancelDeleteAddress = () => {
-  //     setShowConfirmDelete(false);
-  //   };
-
-  //   const deleteSelectedAddresses = () => {
-  //     const mutation_text = `mutation LasecDeleteAddress($address_input: EditAddressInput){
-  //       LasecDelete(address_input: $address_input) {
-  //         success
-  //         message
-  //       }
-  //     }`
-
-  //     selected_existing_addresses.forEach((selected_index: number) => {
-  //       const address_to_update = existing_addresses[selected_index];
-
-  //       address_to_update.is_updating = true;
-
-  //       const variables = {
-  //         address_input: {
-  //           id: address_to_update.id
-  //         }
-  //       }
-
-  //       let $new_address_list = [...existing_addresses];
-  //       $new_address_list[selected_index] = address_to_update;
-
-  //       setExistingAddresses($new_address_list);
-
-  //       reactory.graphqlMutation(mutation_text, variables).then((mutation_result: MutationResult) => {
-  //         const { error, data, called, loading } = mutation_result;
-
-  //         if (called === true && data) {
-  //           data.LasecUpdateAddressPosition
-  //           address_to_update.is_updating = false
-  //           reactory.utils.lodash.pullAt(selected_index);
-  //         }
-
-  //         if (!error) {
-  //           reactory.log(`Could not update the address position`, { error }, "error");
-  //           reactory.createNotification(`Could not update the address ${address_to_update.title}`, { type: "error", canDismiss: true, timeout: 2500 });
-  //         }
-  //       }).catch((update_error) => {
-  //         reactory.log(`Could not update the address position`, { update_error }, "error");
-  //         reactory.createNotification(`Could not update the address ${address_to_update.title}`, { type: "error", canDismiss: true, timeout: 2500 });
-  //       })
-  //     })
-  //   };
-
-  //   // <Tooltip title={`Click to delete the selected address${selected_existing_addresses.length > 1 ? 'es' : ''}`}><Button onClick={showConfirmDeleteAddress}><Icon style={{ color: palette.error.main }}>delete</Icon></Button></Tooltip>
-
-  //   toolbar = (<ButtonGroup>
-  //     <Tooltip title={"Click apply the lat and long to the selected addresses"}><Button onClick={setLatLongForSelectedExistingAddresses}><Icon>track_changes</Icon></Button></Tooltip>
-  //   </ButtonGroup>)
-
-  //   if (show_confirm_deledte === true) {
-  //     const Dialog = reactory.getComponent("core.AlertDialog@1.0.0");
-  //     const dialog_props = {
-  //       open: true,
-  //       onAccept: () => {
-  //         setShowConfirmDelete(false);
-  //         deleteSelectedAddresses();
-  //       },
-  //       cancelTitle: "Cancel",
-  //       acceptTitle: `Delete (${selected_existing_addresses.length})`,
-  //       showAccept: true,
-  //       cancelProps: { variant: "text", color: "#00b100" },
-  //       confirmProps: { variant: "text", color: palette.error.main },
-  //       onClose: () => { cancelDeleteAddress() },
-  //       fullWidth: true,
-  //       maxWidth: 'xl',
-  //       style: { height: `${Math.floor(window.innerHeight * 0.9)}px` },
-  //       title: `Confirm Delete Action`,
-  //     };
-  //     dialog = (
-  //       <Dialog {...dialog_props}>
-  //         <Typography variant="body2"> Please confirm you want to delete {selected_existing_addresses.length} address. </Typography>
-  //       </Dialog>
-  //     );
-  //   }
-
-  // }
-
-  /**
-   * {google_markers_components}
-      {existing_marker_components}
-   *
-   */
-
-/**
- *
- * <MapControl position={google.maps.ControlPosition.TOP_CENTER}>
-  <Paper className={classes.top_toolbar}>
-    <Tooltip title={show_remote_results === true ? 'Click to exclude local search results' : 'Click to include local search results'}>
-      <FormControlLabel
-        control={<Checkbox color="primary" checked={show_remote_results === true} onChange={(evt, checked) => setShowRemoteResults(checked)} />}
-        label={show_remote_results === true ? 'Displaying local results' : 'Hiding local results'} />
-    </Tooltip>
-    <Tooltip title={show_google_results === true ? 'Click to exclude google results' : 'Click to include google results'}>
-      <FormControlLabel control={<Checkbox color="primary" checked={show_google_results === true} onChange={(evt, checked) => setShowGoogleResults(checked)} />}
-        label={show_google_results === true ? 'Displaying Google results' : 'Hiding Google results'} />
-    </Tooltip>
-  </Paper>
-</MapControl>
- */
-
-
-
-  // const onMapMounted = (map_ref: GoogleMap) => {
-  //   // setMap(map_ref);
-  // }
-
-// existing_address_component = (
-  //   <MapControl position={google.maps.ControlPosition.LEFT_TOP}>
-  //     <Paper style={{ marginLeft: '16px', padding: '8px' }}>
-  //       <React.Fragment>
-  //         <Grid container spacing={1}>
-  //           <Grid item container direction="row">
-  //             <Grid item sm={12}>Existing Addresses</Grid>
-  //           </Grid>
-  //         </Grid>
-  //         <Grid item>
-  //           <Grid item container direction="row">
-  //             <Grid item sm={12}>
-  //               <Typography variant="caption"><Icon>gps_fixed</Icon>{center_label}</Typography>
-  //             </Grid>
-  //           </Grid>
-  //         </Grid>
-  //         <Grid>
-  //           <Grid item container direction="row">
-  //             <Grid item sm={12}>
-  //               {toolbar}
-  //             </Grid>
-  //           </Grid>
-  //         </Grid>
-  //         <AddressList {...address_list_props} ></AddressList>
-  //         <Pagination count={paging.total} page={remote_page} variant="outlined" color="secondary" onChange={remote_search_page_change} />
-  //       </React.Fragment>
-  //     </Paper>
-  //   </MapControl>
-  // );

@@ -19,7 +19,8 @@ import { ReactoryApi } from "../../api/ReactoryApi";
 const styles = (theme) => {
   return {
     compactRoot: {
-      height: '90%'
+      height: '90%',
+      minWidth: '90%'
     },
     closeButton: {
       position: 'absolute',
@@ -136,8 +137,8 @@ class SlideOutLauncher extends Component {
 
     let LaunchButton = (
       <Button onClick={onClick}>
-        { icon && <Icon>{icon}</Icon>}
-        { _buttonTitle}
+        {icon && <Icon>{icon}</Icon>}
+        {_buttonTitle}
       </Button>
     );
 

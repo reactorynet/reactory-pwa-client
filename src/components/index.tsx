@@ -1,4 +1,6 @@
+'use explicit'
 import React from 'react';
+
 import { compose } from 'redux';
 import * as DropZone from 'react-dropzone';
 import * as ReactRouter from 'react-router'
@@ -38,12 +40,11 @@ import SlideOutLauncher from './shared/SlideOutLauncher';
 import BasicModal from './shared/BasicModal';
 import AotAnalyticsDashboardComponent from './tasks/analytics/AnalyticsDashboard';
 import SpeedDialWidget from './shared/SpeedDialWidget';
-import FullScreenDialog from './shared/FullScreenDialog';
+import FullScreenDialog from './shared/ReactoryCoreDialog';
 import FramedWindow, { ReportViewerComponent, GraphiqlWindow } from './shared/FramedWindow';
 
 import FroalaWired from './richtext/Froala';
 
-// DREW
 import TabbedNavigation from './shared/tabbedNavigation';
 import ChipLabel from './shared/ChipLabel';
 import MaterialInput from './shared/MaterialInput';
@@ -109,6 +110,8 @@ export const CompanyLogo = (props) => {
   };
   return <Logo {...logoProps} />
 };
+
+
 
 export const componentRegistery = [
   {
@@ -246,7 +249,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'DataTable',
-    component: (props) => (<span>core.DataTable deprecated -> use MuiDataTables instead.</span>),
+    component: (props) => { return (<span>core.DataTable deprecated use MuiDataTables instead.</span>) },
     version: '1.0.0',
   },
   {
@@ -348,7 +351,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'ApplicationUserListItem',
-    component: withTheme((props) => {
+    component: withTheme((props: any) => {
       const { UserListItem } = UserComponents;
       if (props.theme && props.theme.key) {
         return <UserListItem user={{ firstName: props.firstName || 'Reactory', lastName: props.lastName || 'System', id: props.id || `${props.theme.key}_app`, avatar: 'avatar.png' }} message={props.message} />

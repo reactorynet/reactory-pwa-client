@@ -226,7 +226,7 @@ class RatingControl extends Component {
     }) || { description: 'Make a selection' };
 
     let ratingTooltip = rating.rating === 0 ?
-      <Tooltip title="Requires a rating selection"><Icon color="error">info</Icon></Tooltip> :
+      <Tooltip title={`Behaviour ${that.props.reactory.hasRole(['DEVELOPER']) === true ? `(${rating.id})` : ''} Requires a rating selection`}><Icon color="error">info</Icon></Tooltip> :
       <Tooltip title={`You provide a score of ${rating.rating}`}><Icon style={{ color: theme.palette.success.main }}>check_circle</Icon></Tooltip>;
 
     if (commentAllowed === true && rating.rating > 0 && rating.rating <= 2) {
