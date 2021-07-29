@@ -60,7 +60,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
     readOnly: false
   }
 
-  const { classes, formContext, formData, required, reactory, theme, schema, idSchema, uiSchema } = props;
+  const { classes, formContext, formData, required, reactory, theme, schema, idSchema, uiSchema, onChange } = props;
   const [error, setError] = React.useState(null);
   const [menuItems, setMenuItems] = React.useState<any[]>([{
     id: 'loading',
@@ -127,7 +127,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
 
       const onSelectChanged = (evt) => {
         reactory.log('Raising onChange for data select', { v: evt.target.value });
-        props.onChange(evt.target.value);
+        props.onChange(evt.target.value)
       }
 
 

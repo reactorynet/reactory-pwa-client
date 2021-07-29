@@ -1323,7 +1323,11 @@ class DefaultView extends Component {
     const { ratings } = assessment;
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
 
-    if (qualityCustomComment === null || qualityCustomComment === undefined || qualityCustomComment === "") {
+    if (qualityCustomComment === null 
+      || qualityCustomComment === undefined 
+      || qualityCustomComment === "" 
+      || qualityCustomComment.trim() === ""
+      || qualityCustomComment.trim().split(" ").length < 2) {
       return false;
     }
 

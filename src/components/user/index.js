@@ -37,6 +37,7 @@ import {
   Tooltip,
   Typography,
 } from '@material-ui/core';
+import { DataGrid, ColDef, ValueGetterParams } from '@material-ui/data-grid';
 
 import {
   Visibility,
@@ -548,6 +549,11 @@ const UserList = ({
 
   const { MaterialLab } = Components.Material;
 
+  const columns = [
+    {field: 'firstName', headerName: 'First Name', width: 250},
+    {field: 'lastName', headerName: 'Last Name', width: 250},
+    {field: 'email', headerName: 'Email', width: 250},
+  ]
   return (
     <Query query={queryText} variables={{ id: organizationId, searchString, paging: { page, pageSize } }}>
       {(result, info) => {
@@ -586,9 +592,19 @@ const UserList = ({
             let pageCount = Math.floor((paging.total / (paging.pageSize || 25)));
 
             if ((pageCount * (paging.pageSize || 25) < paging.total)) pageCount += 1;
-
             return (
               <React.Fragment>
+                {/* <div style={{ width: '100%'}}>
+                  <DataGrid 
+                  columns={columns} 
+                  rows={[...users]} 
+                  onPageChange={onPageChanged} 
+                  checkboxSelection
+                  paginationMode="server"
+                  autoHeight
+                  pageSize={25}
+                  rowCount={paging.total}/>
+                </div> */}
                 <List subheader={<li />}>
                   {
                     availableAlphabet.map((letter, index) => {
