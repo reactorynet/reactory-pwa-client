@@ -1,7 +1,8 @@
 'use explicit'
 import React from 'react';
 
-import { compose } from 'redux';
+import lodash from 'lodash';
+import recompose from 'recompose';
 import * as DropZone from 'react-dropzone';
 import * as ReactRouter from 'react-router'
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -68,10 +69,10 @@ import NotFoundComponent from './shared/NotFoundComponent';
 import DocumentListComponent from './shared/DocumentListComponent';
 import DocumentUploadComponent from './shared/DocumentUploadComponents';
 import * as MaterialTable from 'material-table';
+import Demographics from './user/Widgets/Demographics';
 
 import ReactoryFormEditor from './shared/FormEditor';
 
-import lodash from 'lodash';
 
 import { PasswordResetForm } from './user/Forms/ResetPassword';
 import CreateUserMembership from './user/Forms/CreateUserMembership';
@@ -835,6 +836,18 @@ export const componentRegistery = [
     name: 'AddressLookupComponent',
     version: '1.0.0',
     component: AddressLookupComponent
+  },
+  {
+    nameSpace: 'recompose',
+    name: 'Recompose',
+    version: '1.0.0',
+    component: recompose,
+  },
+  {
+    nameSpace: 'core',
+    name: 'UserDemographics',
+    version: '1.0.0',
+    component: Demographics,
   },
   MembershipRoles,
   CreateUserMembership

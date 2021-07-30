@@ -796,6 +796,17 @@ namespace Reactory {
     [key: string]: any
   }
 
+  export interface PagingRequest {
+    page: number
+    pageSize: number
+  }
+
+  export interface PagingResult {
+    total: number
+    page: number
+    hasNext: boolean
+    pageSize: number
+  }
 
 }
 

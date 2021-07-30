@@ -268,12 +268,10 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
 
 
         if (success === true) {
-          let $formatted_address = result.fullAddress;
           let $formatted_address = result.fullAddress || address.formatted_address;
           let $place_id = result.id || address.id;
 
           if (onAddressSelected) {
-            debugger;
 
             onAddressSelected({
               address: {

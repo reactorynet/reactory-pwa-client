@@ -1,4 +1,4 @@
-import { SchemaType, FormatType } from '../../models/schema';
+import { SchemaType, FormatType } from '@reactory/client-core/models/schema';
 
 const schema = {
     title: "Organisation",
@@ -35,13 +35,13 @@ const schema = {
         updatedAt: {
             type: SchemaType.Date,
             title: "Updated At",
-            format: FormatType.DateTime            
+            format: FormatType.DateTime
         }
     }
 };
 
 const Form = [
-    "id",    
+    "id",
     { key: "name", placeHolder: "Please provide a name for the organization" },
     { key: "logo", placeHolder: "Please provide a logo for the organization" }
 ];

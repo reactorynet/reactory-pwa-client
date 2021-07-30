@@ -9,7 +9,6 @@ import lodash, { isNil, isArray, isString } from 'lodash';
 import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import Demographics from '../organization/Demographics'
 import {
     Container,
     Badge,
@@ -224,7 +223,7 @@ class Profile extends Component<any, any> {
 
         },
     };
-    userProfileImageFile:  any;
+    userProfileImageFile: any;
 
     onAvatarMouseOver() {
         this.setState({ avatarMouseHover: true });
@@ -236,9 +235,9 @@ class Profile extends Component<any, any> {
 
     activeOrganisation(membership) {
         let id = ''
-        if(membership && membership.organization) id = membership.organization.id 
+        if (membership && membership.organization) id = membership.organization.id
 
-      this.setState({ activeOrganisationId: id });
+        this.setState({ activeOrganisationId: id });
     }
 
     refreshPeers() {
@@ -286,9 +285,11 @@ class Profile extends Component<any, any> {
     }
 
     onMembershipSelectionChanged(membership, index) {
-        this.setState({ selectedMembership: membership, 
-            activeOrganisationIndex: index, 
-            loadingPeers: true }, () => {
+        this.setState({
+            selectedMembership: membership,
+            activeOrganisationIndex: index,
+            loadingPeers: true
+        }, () => {
             this.refreshPeers()
         });
     }
@@ -381,10 +382,10 @@ class Profile extends Component<any, any> {
                         </TableHead>
                         <TableBody>
                             {data.map((membership: Reactory.IMembership, index) => {
-                                     let id = ''
-                                     if(membership && membership.organization) {
-                                         id = membership.organization.id
-                                     }
+                                let id = ''
+                                if (membership && membership.organization) {
+                                    id = membership.organization.id
+                                }
                                 return (
                                     <TableRow
                                         key={index}
@@ -1390,7 +1391,7 @@ class Profile extends Component<any, any> {
     }
 
     render() {
-        const { classes, nocontainer = false, isNew = false } = this.props;
+        const { classes, nocontainer = false, isNew = false, reactory } = this.props;
 
         const containerProps = {
             xs: 12,
@@ -1404,7 +1405,7 @@ class Profile extends Component<any, any> {
                 {this.renderHeader()}
                 <Typography className={classes.sectionHeaderText}>Account Details</Typography>
                 {this.renderGeneral()}
-                { this.renderUserDemographics()}
+                {this.renderUserDemographics()}
                 {isNew === false && <Typography className={classes.sectionHeaderText}>My Nominees</Typography>}
                 {isNew === false ? this.renderMemberships() : null}
                 {isNew === false ? this.renderPeers() : null}
@@ -1412,14 +1413,17 @@ class Profile extends Component<any, any> {
                 {isNew === false ? this.renderCropper() : null}
             </Grid>
         );
-        const reactory = this.props    
+
+        const Demographics = reactory.getComponent('core.UserDemographics');
+
         if (nocontainer === false) {
             return (
                 <Container {...containerProps} className={classes.profileTopMargin}>
                     {ProfileInGrid}
-                    <Demographics reactory={reactory} user={this.state.profile} 
-                    membershipId={this.state.selectedMembership}
-                     organisationId={this.state.activeOrganisationId}/>
+                    <Demographics user={this.state.profile}
+                        heading={<Typography className={classes.sectionHeaderText}>Demographics</Typography>}
+                        membership={this.state.selectedMembership}
+                        organisationId={this.state.activeOrganisationId} />
                 </Container>
             );
         } else {
@@ -1463,7 +1467,7 @@ class Profile extends Component<any, any> {
             help: props.reactory.queryObject.help === "true",
             helpTopic: props.reactory.queryObject.helptopics,
             highlight: props.reactory.queryObject.peerconfig === "true" ? "peers" : null,
-            activeOrganisationId : props.organizationId,
+            activeOrganisationId: props.organizationId,
             activeOrganisationIndex: 0,
             display_role_editor: false,
         };

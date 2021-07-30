@@ -72,10 +72,11 @@ const DateTimePickerWidget = (props) => {
     variant: opts.variant || 'inline',
     className: opts.className,
     value: formData,
+    fullWidth: true,
     format: getFormat(),
     onChange: onDateChange,
     id: $id,
-    label: hide_label ? null : '',
+    label: hide_label === true ? null : schema.title,
     KeyboardButtonProps: {
       'aria-label': 'Change date',
     }

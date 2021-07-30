@@ -1,5 +1,5 @@
-import { PagingRequest } from "./../../../../../../reactory-server/src/database/types";
-const paging: PagingRequest = {
+import Reactory from "@reactory/client-core/types/reactory";
+const paging: Reactory.PagingRequest = {
   page: 1,
   pageSize: 100,
 };
@@ -123,12 +123,14 @@ const pronoun = {
       }
     }`,
     propertyMap: {
-    'formContext.organisationId': [
-      'id',
-      {key: 'paging', transform: (value)=>{
-        return paging
-      }}
-    ]
+      'formContext.organisationId': [
+        'id',
+        {
+          key: 'paging', transform: (value) => {
+            return paging
+          }
+        }
+      ]
     },
     resultItem: "MoresPronounDemographics",
     resultsMap: {
@@ -154,15 +156,15 @@ const region = {
       }
     }`,
     propertyMap: {
-    'formContext.organisationId': [
-      'id',
-      {
-        key: 'paging', 
-        transform: ()=>{
-          return paging
+      'formContext.organisationId': [
+        'id',
+        {
+          key: 'paging',
+          transform: () => {
+            return paging
+          }
         }
-      }
-    ]
+      ]
     },
     resultItem: "MoresRegionDemographics",
     resultsMap: {
@@ -187,15 +189,15 @@ const operationalGroup = {
       }
     }`,
     propertyMap: {
-    'formContext.organisationId': [
-      'id',
-      {
-        key: 'paging',
-        transform: ()=>{
-          return paging
+      'formContext.organisationId': [
+        'id',
+        {
+          key: 'paging',
+          transform: () => {
+            return paging
+          }
         }
-      }
-    ]
+      ]
     },
     resultItem: "MoresOperationalGroups",
     resultsMap: {
@@ -220,15 +222,15 @@ const businessUnit = {
       }
     }`,
     propertyMap: {
-    'formContext.organisationId': [
-      'id',
-      {
-        key: 'paging',
-        transform:()=>{
-          return paging
+      'formContext.organisationId': [
+        'id',
+        {
+          key: 'paging',
+          transform: () => {
+            return paging
+          }
         }
-      }
-    ]
+      ]
     },
     resultItem: "MoresBusinessUnits",
     resultsMap: {
@@ -272,21 +274,15 @@ const uiSchema: any = {
       text: "SAVE CHANGES",
       iconAlign: "none",
     },
-    containerStyles: {
-      padding: "0px",
-      margin: "0px",
-      paddingBottom: "8px",
-    },
     style: {
       marginTop: "16px",
-      marginRight: "16px",
-      marginLeft: "16px",
+      marginBottom: "16px",
     },
   },
   "ui:field": "GridLayout",
   "ui:grid-options": {
     spacing: 2,
-    container: "div",
+    container: "Paper",
   },
   "ui:grid-layout": [
     {
