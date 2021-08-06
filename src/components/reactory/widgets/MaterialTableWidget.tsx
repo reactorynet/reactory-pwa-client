@@ -91,7 +91,7 @@ const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipI
 });
 
 const ReactoryMaterialTablePagination = (props) => {
-  const { reactory, theme, schema, idShema, formContext, uiSchema, formData, rowsPerPageOptions, tableRef, classes } = props;
+  const { reactory, theme, schema, idShema, formContext, uiSchema, formData, rowsPerPageOptions = [5, 10, 25, 50, 100], tableRef, classes } = props;
   const { DropDownMenu } = reactory.getComponents(['core.DropDownMenu']);
 
   const options = uiSchema['ui:options'];
@@ -733,7 +733,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   if (!components.Pagination) {
-    components.Pagination = (pagination_props) => {
+    components.Pagination = (pagination_props: any) => {
 
       let $pg_props = {
         ...pagination_props,
@@ -744,7 +744,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         uiSchema,
         schema,
         idSchema,
-        formData
+        formData,
+        rowsPerPageOptions: pagination_props.rowsPerPageOptions || [5, 10, 25, 50, 100]
       }
       return (<ReactoryMaterialTablePagination {...$pg_props} />)
 

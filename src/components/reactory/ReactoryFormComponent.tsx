@@ -888,6 +888,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       setState,
       forceUpdate: () => { setVersion(version + 1) },
       props,
+      setFormDefinition,
       submit: $submitForm,
       state: getState(),
       validate: () => {
@@ -2039,7 +2040,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     //}
 
 
-  }, [props.formData,props.formDef,props.formId])
+  }, [props.formData, props.formDef, props.formId])
 
 
   React.useEffect(() => {
