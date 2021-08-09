@@ -176,7 +176,7 @@ class RatingControl extends Component {
       steps.push(
         <Step key={stepId}>
           <StepButton
-            onClick={assessment.complete === false ? doRatingClick : () => {}}
+            onClick={assessment.complete === false ? doRatingClick : () => { }}
             completed={false}
             active={rating.rating - 1 === stepId}
           ></StepButton>
@@ -204,9 +204,8 @@ class RatingControl extends Component {
     let wordsLeft = "";
 
     if (wordCount === 0) {
-      wordsLeft = ` (at least 10 words ${
-        rating.rating <= 2 ? "required!" : "optional"
-      })`;
+      wordsLeft = ` (at least 10 words ${rating.rating <= 2 ? "required!" : "optional"
+        })`;
     }
 
     if (
@@ -222,7 +221,7 @@ class RatingControl extends Component {
         id="multiline-flexible"
         label={
           this.state.comment.split(" ").length < that.minWordCount &&
-          rating.rating <= 2
+            rating.rating <= 2
             ? "How does this impact you? - * required"
             : "How does this impact you?"
         }
@@ -234,16 +233,15 @@ class RatingControl extends Component {
         maxLength={5000}
         value={this.state.comment}
         onChange={
-          assessment.complete === false ? this.commentChanged : () => {}
+          assessment.complete === false ? this.commentChanged : () => { }
         }
-        onBlur={assessment.complete === false ? this.notifyChange : () => {}}
+        onBlur={assessment.complete === false ? this.notifyChange : () => { }}
         autoFocus={this.state.comment.split(" ").length < 10}
         className={classes.textField}
         disabled={assessment.complete === true}
         margin="normal"
-        helperText={`Provide some ${
-          rating.rating <= 2 ? "required" : "optional"
-        } context as to how this affects you personally or your ability to perform your duties${wordsLeft}.`}
+        helperText={`Provide some ${rating.rating <= 2 ? "required" : "optional"
+          } context as to how this affects you personally or your ability to perform your duties${wordsLeft}.`}
       />
     );
 
@@ -254,11 +252,10 @@ class RatingControl extends Component {
     let ratingTooltip =
       rating.rating === 0 ? (
         <Tooltip
-          title={`Behaviour ${
-            that.props.reactory.hasRole(["DEVELOPER"]) === true
-              ? `(${rating.id})`
-              : ""
-          } Requires a rating selection`}
+          title={`Behaviour ${that.props.reactory.hasRole(["DEVELOPER"]) === true
+            ? `(${rating.id})`
+            : ""
+            } Requires a rating selection`}
         >
           <Icon color="error">info</Icon>
         </Tooltip>
@@ -420,9 +417,9 @@ class RatingControl extends Component {
       rating: 0,
     },
     comment: "",
-    onRatingChange: (rating) => {},
-    onCommentChange: (comment) => {},
-    onDelete: (rating) => {},
+    onRatingChange: (rating) => { },
+    onCommentChange: (comment) => { },
+    onDelete: (rating) => { },
   };
 }
 
@@ -899,10 +896,11 @@ class DefaultView extends Component {
           behaviourText: ratingEntry.behaviourText,
           deleteRating: deleteRating,
         },
-        { "fetch-policy": "cache-and-network" }
+        { "fetch-policy": "network-only" }
       )
-      .then((response) => {
-        if (response.errors && response.errors.length > 0) {
+      .then(({ data, errors = [] }) => {
+
+        if (errors && errors.length > 0) {
           api.createNotification(
             "Could not save your last score. The system may be offline, please try again in a few moments.",
             { showInAppNotification: true, canDismiss: true, type: "errors" }
@@ -912,7 +910,7 @@ class DefaultView extends Component {
         if (ratingIndex === -1) {
           const assessmentState = lodash.cloneDeep(assessment);
           assessmentState.ratings.push({
-            ...response.data.setRatingForAssessment,
+            ...data.setRatingForAssessment,
           });
           that.setState({ assessment: assessmentState });
         }
@@ -931,7 +929,6 @@ class DefaultView extends Component {
       })
       .catch((persistRatingError) => {
         api.log("Error saving rating value", persistRatingError, "error");
-
         if (assessment_rollback) {
           that.setState({ assessment: assessment_rollback }, () => {
             if (iteration === 0) {
@@ -1467,7 +1464,7 @@ class DefaultView extends Component {
                 qualityCustomComment === undefined ||
                 qualityCustomComment.length < 10
               }
-              helperText="Ensure you add a custom comment that is at least two words with a total of 10 characters"
+              helperText="Ensure you add a custom comment that is at least three words with a total of 10 characters"
             />
           </Paper>
         );
@@ -1670,8 +1667,11 @@ class DefaultView extends Component {
   }
 
   currentStepValid() {
+
     const { mode } = this.props;
     const { assessment, step, qualityCustomComment = "" } = this.state;
+
+    debugger
 
     if (mode === "admin") return true;
 
@@ -1685,28 +1685,11 @@ class DefaultView extends Component {
 
     //trim the string an replace multiple empty spaces with a single space
     let trimmedComment = qualityCustomComment.trim().replace(/\s+/g, ' ');
-    let validComment = false;
-    if (trimmedComment.split(" ").length >= 2) {
-      let comments = trimmedComment.split(" ");
-      if (
-        (comments[0].trim().length + comments[1].trim().length >= 10 &&
-          comments[0].trim().length >= 2 &&
-          comments[1].trim().length >= 2) ||
-        (comments[0].trim().toLowerCase() === "no" &&
-          comments[1].trim().toLowerCase() === "comment")
-      )
-        validComment = true;
-    }
 
-    if (
-      trimmedComment === null ||
-      trimmedComment === undefined ||
-      trimmedComment === "" ||
-      trimmedComment === "" ||
-      validComment === false
-    ) {
-      return false;
-    }
+    if (lodash.isNil(trimmedComment)) return false;
+    if (trimmedComment.length < 10) return false;
+    if (trimmedComment.split(" ").length <= 2) return false;
+    if (trimmedComment.toLowerCase() === "no comment") return false;
 
     const invalidRatings =
       lodash.find(ratings, (r) => {
@@ -1753,9 +1736,8 @@ class DefaultView extends Component {
     const is180 = this.is180(survey);
 
     let headerTitle = assessment.delegate
-      ? `${api.getUserFullName(delegate)} - ${survey.title} ${
-          selfAssessment === true ? " [Self Assessment]" : ""
-        }`
+      ? `${api.getUserFullName(delegate)} - ${survey.title} ${selfAssessment === true ? " [Self Assessment]" : ""
+      }`
       : `Unknown`;
     if (is180 === true) {
       headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName}`;
@@ -1834,11 +1816,10 @@ class DefaultView extends Component {
                     survey.startDate
                   ).format("DD MMMM YYYY")} till ${moment(
                     survey.endDate
-                  ).format("DD MMMM YYYY")} - ${
-                    assessment.complete === true
-                      ? "Completed - Review Only"
-                      : "In progress"
-                  }`}
+                  ).format("DD MMMM YYYY")} - ${assessment.complete === true
+                    ? "Completed - Review Only"
+                    : "In progress"
+                    }`}
                   action={
                     <IconButton
                       aria-owns={showMenu ? "assessment-options" : null}
