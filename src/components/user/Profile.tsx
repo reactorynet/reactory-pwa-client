@@ -646,6 +646,7 @@ class Profile extends Component<any, any> {
 
         const confirmPeers = (confirmed) => {
             ////console.log('Confirming peers for user', this.props, this.state)
+            let surveyId = localStorage.getItem('surveyId')            
             if (confirmed === true) {
                 const mutation = gql(`mutation ConfirmPeers($id: String!, $organization: String!, $surveyId: String){
                     confirmPeers(id: $id, organization: $organization, surveyId: $surveyId){
@@ -656,13 +657,11 @@ class Profile extends Component<any, any> {
                 const variables = {
                     id: profile.id,
                     organization: selectedMembership.organization.id,
-                    surveyId: reactory.queryObject.survey
+                    surveyId: surveyId
                 };
-
                 reactory.graphqlMutation(mutation, variables).then(result => {
                     if (result && result.data && result.data.confirmPeers) {
                         that.setState({ showConfirmPeersDialog: false, profile: { ...profile, peers: { ...profile.peers, ...result.data.confirmPeers } } }, that.refreshPeers)
-
                     }
                 }).catch(ex => {
                     //console.error( 'Error confirming peers ', ex)
@@ -671,7 +670,6 @@ class Profile extends Component<any, any> {
             } else {
                 that.setState({ showConfirmPeersDialog: true })
             }
-
         };
 
         const setUserPeerSelection = (selection) => {
@@ -727,9 +725,9 @@ class Profile extends Component<any, any> {
             that.setState({ showAddUserDialog: false });
         };
 
-        const doConfirm = () => {
-            that.setState({ showAddUserDialog: false });
-        };
+        // const doConfirm = () => {
+        //     that.setState({ showAddUserDialog: false });
+        // };
 
 
 
@@ -878,7 +876,7 @@ class Profile extends Component<any, any> {
                                     </Tooltip>
 
                                     <Tooltip title={moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once you have selected all your organisation peers, please confirm by clicking here.'}>
-                                        <Button color="secondary" variant="contained" component="span" onClick={e => confirmPeers(false)} >
+                                        <Button disabled={peers.peers.length === 0 } color="secondary" variant="contained" component="span" onClick={e => confirmPeers(false)} >
                                             <Icon>check_circle</Icon> CONFIRM YOUR NOMINATIONS
                                         </Button>
                                     </Tooltip>
