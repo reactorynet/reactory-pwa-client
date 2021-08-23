@@ -9,6 +9,7 @@ function ColorWidget(props) {
       widgets: { BaseInput },
     },
   } = props;
+  debugger
   return <BaseInput type="color" {...props} disabled={disabled || readonly} />;
 }
 
