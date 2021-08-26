@@ -41,6 +41,7 @@ import Reactory from '@reactory/client-core/types/reactory';
 import ReactoryApi from 'api';
 import { QueryResult } from '@apollo/client';
 import { Resolver } from 'dns';
+import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
 
 export interface MaterialTableRemoteDataReponse {
   data: any[],
@@ -94,6 +95,16 @@ const ReactoryMaterialTablePagination = (props) => {
   const { reactory, theme, schema, idShema, formContext, uiSchema, formData, rowsPerPageOptions = [5, 10, 25, 50, 100], tableRef, classes } = props;
   const { DropDownMenu } = reactory.getComponents(['core.DropDownMenu']);
 
+
+  const { useState, useEffect } = React;
+
+  const [version, setVersion] = useState(0);
+  const sizeSpec = useSizeSpec();
+
+  useEffect(() => {
+    setVersion(version + 1);
+  }, [sizeSpec.innerWidth])
+
   const options = uiSchema['ui:options'];
   const default_footer_options = {
     totals: true,
@@ -133,7 +144,7 @@ const ReactoryMaterialTablePagination = (props) => {
             <div style={footerOptions.totalsCellStyle}>Totals</div>
           </Grid>}
         {show_totals === true && footerColumns !== undefined && footerColumns !== null &&
-          <Grid>
+          <Grid item container spacing={0} xs={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
             {
               footerColumns.map((col) => {
                 let cellStyle = {};
@@ -158,13 +169,13 @@ const ReactoryMaterialTablePagination = (props) => {
 
                   cellStyle = {
                     borderStyle: 'solid none double none',
-                    width: `calc((100% - (0px)) / ${columns.length})`
-
+                    width: `calc((95%) / ${columns.length})`
                   };
 
                 } else {
                   cellStyle = {
-                    border: 'none'
+                    border: 'none',
+                    width: `calc((95%) / ${columns.length})`
                   };
                 }
                 return (<div style={cellStyle}>{$display}</div>);
@@ -789,7 +800,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   try {
     return (
-      <React.Fragment>
+      <>
         <MaterialTable
           columns={columns || []}
           tableRef={tableRef}
@@ -800,7 +811,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           components={components}
           detailPanel={detailsPanel} />
         {confirmDialog}
-      </React.Fragment>
+      </>
     )
 
   } catch (err) {

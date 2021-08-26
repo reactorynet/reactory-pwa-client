@@ -505,7 +505,7 @@ class ApplicationHeader extends Component {
               </IconButton>}
           </Toolbar>
         </AppBar>
-        <Drawer open={this.state.drawerOpen === true} className={this.props.classes.drawer}>
+        <Drawer variant={'temporary'} open={this.state.drawerOpen === true} className={this.props.classes.drawer} PaperProps={{ style: { width: '320px', maxWidth: '320px', overflowX: 'hidden' } }}>
           <div className={this.props.classes.drawerHeader}>
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <BackIcon />

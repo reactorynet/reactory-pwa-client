@@ -52,7 +52,6 @@ export const CreateUserMembership = (props) => {
     return (
       <>
         <ReactoryMembershipRoles user={props.user} membership={{ id: null, organization: null, businessUnit: null, roles: formData }} onChange={(membership) => {
-          debugger
           onChange(membership.roles)
         }} />
       </>
@@ -76,8 +75,6 @@ export const CreateUserMembership = (props) => {
       businessUnit,
       roles
     } = formData;
-
-    debugger
 
     const mutation = `mutation ReactoryCoreCreateUserMembership($user_id:String!, $organization: String, $businessUnit: String, $roles:[String]!) {
       ReactoryCoreCreateUserMembership(user_id: $user_id, organization: $organization, businessUnit: $businessUnit, roles: $roles) {

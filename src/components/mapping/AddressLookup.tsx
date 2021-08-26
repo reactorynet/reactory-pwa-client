@@ -119,7 +119,6 @@ const CustomInfoWindow = (props: ReactoryCustomWindowProps) => {
   };
 
   const onSelectAddress = () => {
-    debugger
     if (onAddressSelected) onAddressSelected(marker, place_id);
   };
 
@@ -492,7 +491,6 @@ const ReactoryMap = compose(
   const onMapMounted = (map_ref: GoogleMap) => {
     setMap(map_ref);
     if (props.mapRef && typeof props.mapRef === "function") {
-      debugger
       props.mapRef(map_ref);
     }
   };
@@ -1102,8 +1100,6 @@ export const AddressLookupComponent = (props: {
     setSearchingRemote(true);
 
     if (map.current && searchBoxRef.current) {
-      debugger
-
       //
     }
 

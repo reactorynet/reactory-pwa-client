@@ -1671,8 +1671,6 @@ class DefaultView extends Component {
     const { mode } = this.props;
     const { assessment, step, qualityCustomComment = "" } = this.state;
 
-    debugger
-
     if (mode === "admin") return true;
 
     if (step === 0) return true;

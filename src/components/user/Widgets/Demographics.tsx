@@ -17,8 +17,6 @@ import $uiSchema, {
 
 const Demographics = (props: any) => {
 
-  debugger;
-
   const { reactory, organisationId, user, membership } = props;
   const { id, memberships = [] } = user
   const { ReactoryForm, MaterialCore, MaterialStyles } = reactory.getComponents([
@@ -59,7 +57,6 @@ const Demographics = (props: any) => {
    * @param formSubmit - contains { formData, formContext, schema, uiSchema and Error Schema }
    */
   const updateDemographic = ({ formData }) => {
-    debugger;
 
     const _membershipId = membership ? membership.id : ''
     const input = {
