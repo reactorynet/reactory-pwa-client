@@ -57,7 +57,6 @@ const Demographics = (props: any) => {
    * @param formSubmit - contains { formData, formContext, schema, uiSchema and Error Schema }
    */
   const updateDemographic = ({ formData }) => {
-
     const _membershipId = membership ? membership.id : ''
     const input = {
       userId: id,

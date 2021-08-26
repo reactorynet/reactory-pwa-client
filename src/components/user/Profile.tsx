@@ -279,8 +279,8 @@ class Profile extends Component<any, any> {
                 });
             }
         }).catch((queryError) => {
-            reactory.log('Error querying user peers', { queryError }, 'error')
-            that.setState({ showError: true, message: 'Could not load the user peers due to an error', loadingPeers: false })
+            reactory.log('Error querying user assessors', { queryError }, 'error')
+            that.setState({ showError: true, message: 'Could not load the user assessors due to an error', loadingPeers: false })
         });
     }
 
@@ -563,7 +563,7 @@ class Profile extends Component<any, any> {
         const that = this;
         let content = null
 
-        if (loadingPeers === true) return (<Loading title="Looking for peers" />)
+        if (loadingPeers === true) return (<Loading title="Looking for assessors" />)
 
         //data field for table
         const data = [];
@@ -645,7 +645,7 @@ class Profile extends Component<any, any> {
         }
 
         const confirmPeers = (confirmed) => {
-            ////console.log('Confirming peers for user', this.props, this.state)
+            let surveyId = localStorage.getItem('surveyId')            
             if (confirmed === true) {
                 const mutation = gql(`mutation ConfirmPeers($id: String!, $organization: String!, $surveyId: String){
                     confirmPeers(id: $id, organization: $organization, surveyId: $surveyId){
@@ -656,26 +656,21 @@ class Profile extends Component<any, any> {
                 const variables = {
                     id: profile.id,
                     organization: selectedMembership.organization.id,
-                    surveyId: reactory.queryObject.survey
+                    surveyId: surveyId
                 };
-
                 reactory.graphqlMutation(mutation, variables).then(result => {
                     if (result && result.data && result.data.confirmPeers) {
                         that.setState({ showConfirmPeersDialog: false, profile: { ...profile, peers: { ...profile.peers, ...result.data.confirmPeers } } }, that.refreshPeers)
-
                     }
                 }).catch(ex => {
-                    //console.error( 'Error confirming peers ', ex)
-                    that.setState({ showConfirmPeersDialog: false, showMessage: true, message: 'An error occured confirming peer settings' })
+                    that.setState({ showConfirmPeersDialog: false, showMessage: true, message: 'An error occured confirming assessor settings' })
                 });
             } else {
                 that.setState({ showConfirmPeersDialog: true })
             }
-
         };
 
         const setUserPeerSelection = (selection) => {
-            //console.log('Set the user peer selection', selection);
             setPeerRelationShip(selection, 'peer', (result) => {
                 // that.setState({ profile: { ...profile, peers: { ...result }  } })
                 that.refreshPeers()
@@ -727,9 +722,9 @@ class Profile extends Component<any, any> {
             that.setState({ showAddUserDialog: false });
         };
 
-        const doConfirm = () => {
-            that.setState({ showAddUserDialog: false });
-        };
+        // const doConfirm = () => {
+        //     that.setState({ showAddUserDialog: false });
+        // };
 
 
 
@@ -746,7 +741,7 @@ class Profile extends Component<any, any> {
                                 <Typography className={peers.confirmedAt ?
                                     classNames([classes.confirmedLabel, classes.notConfirmed]) :
                                     classNames([classes.confirmedLabel, classes.confirmed])}
-                                    variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers'}</Typography>
+                                    variant={"body1"}>{moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your assessors'}</Typography>
                             </div>
                         )
                     }
@@ -798,13 +793,12 @@ class Profile extends Component<any, any> {
                         //@ts-ignore
                         disabled: rowData.relationship ? rowData.relationship === 'report' : false,
                         onClick: (event, rowData) => {
-                            ////console.log('Making User Supervisor', { event, rowData });
                             setPeerRelationShip(rowData, 'report')
                         },
                     }),
                     rowData => ({
                         icon: 'delete_outline',
-                        tooltip: 'Delete user from peers',
+                        tooltip: 'Delete user from assessors',
                         disabled: false,
                         onClick: (event, rowData) => {
                             removePeer(rowData);
@@ -812,11 +806,10 @@ class Profile extends Component<any, any> {
                     }),
                     {
                         icon: 'check_circle',
-                        tooltip: data.length < 5 ? 'Remember to nominate a total of at least 5 people' : (peers.confirmedAt ? `Peers last confirmed at ${moment(peers.confirmedAt).format('YYYY-MM-DD')} ` : 'Confirm peer selection'),
+                        tooltip: data.length < 5 ? 'Remember to nominate a total of at least 5 people' : (peers.confirmedAt ? `Assessors last confirmed at ${moment(peers.confirmedAt).format('YYYY-MM-DD')} ` : 'Confirm peer selection'),
                         disabled: data.length < 5,
                         isFreeAction: true,
                         onClick: (event, rowData) => {
-                            // //console.log('Confirm peers', { event, rowData });
                             confirmPeers(false);
                         },
                     },
@@ -850,7 +843,7 @@ class Profile extends Component<any, any> {
                         classNames([classes.confirmedLabel, classes.notConfirmed]) :
                         classNames([classes.confirmedLabel, classes.confirmed])}
                         variant={"body1"}>
-                        {moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your peers'}
+                        {moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once completed, please confirm your assessors'}
                     </Typography>
                 </>
             );
@@ -858,7 +851,7 @@ class Profile extends Component<any, any> {
             const Content = reactory.getComponent('core.StaticContent');
             const contentProps = {
                 defaultValue: defaultInstructions,
-                slug: `core-peers- nomination-instructions-${selectedMembership.client.id}-${selectedMembership.organization && selectedMembership.organization.id ? selectedMembership.organization.id : 'general'} `,
+                slug: `core-assessors- nomination-instructions-${selectedMembership.client.id}-${selectedMembership.organization && selectedMembership.organization.id ? selectedMembership.organization.id : 'general'} `,
             }
 
             const { theme } = this.props;
@@ -877,8 +870,8 @@ class Profile extends Component<any, any> {
                                         <Button color="secondary" variant="contained" component="span" onClick={editUserSelection} style={{ marginRight: '12px' }}><Icon>add</Icon>ADD NOMINEES</Button>
                                     </Tooltip>
 
-                                    <Tooltip title={moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once you have selected all your organisation peers, please confirm by clicking here.'}>
-                                        <Button color="secondary" variant="contained" component="span" onClick={e => confirmPeers(false)} >
+                                    <Tooltip title={moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once you have selected all your organisation assessors, please confirm by clicking here.'}>
+                                        <Button disabled={peers.peers.length === 0 } color="secondary" variant="contained" component="span" onClick={e => confirmPeers(false)} >
                                             <Icon>check_circle</Icon> CONFIRM YOUR NOMINATIONS
                                         </Button>
                                     </Tooltip>
@@ -1125,7 +1118,7 @@ class Profile extends Component<any, any> {
             }
 
             addUserDialog = (
-                <FullScreenModal open={showAddUserDialog === true} title={`${this.props.mode === 'admin' ? 'Manage peer for user' : 'Manage your peers'}`} onClose={closeAddUserDialog}>
+                <FullScreenModal open={showAddUserDialog === true} title={`${this.props.mode === 'admin' ? 'Manage assessor for user' : 'Manage your assessors'}`} onClose={closeAddUserDialog}>
                     <InModal />
                 </FullScreenModal>
             );
@@ -1138,7 +1131,7 @@ class Profile extends Component<any, any> {
                     {addUserDialog}
                     {
                         !membershipSelected &&
-                        <Paper className={this.props.classes.general}><Typography variant="body2">Select a membership with an organization organization to load peers</Typography></Paper>
+                        <Paper className={this.props.classes.general}><Typography variant="body2">Select a membership with an organization organization to load assessors</Typography></Paper>
                     }
                     {
                         membershipSelected &&
