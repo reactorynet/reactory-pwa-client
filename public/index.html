@@ -160,6 +160,15 @@
         transform: rotate(360deg);
       }
     }
+    #browser-not-supported{
+      flex-direction: column;
+      align-items: center;      
+      margin: 10% auto;
+      width: 100%;
+    }
+    #browser-not-supported h1{
+      color: red;
+    }
   </style>
   <link rel="stylesheet" href="%REACT_APP_CDN%/themes/%REACT_APP_THEME%/styles.css" type="text/css" />
   <!--
@@ -173,6 +182,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0/codemirror.min.css">
+  
   <style>
     @import url('https://fonts.googleapis.com/css?family=Lato|Roboto');
   </style>
@@ -190,8 +200,7 @@
     src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0/codemirror.min.js"></script>
   <script type="text/javascript"
     src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.25.0/mode/xml/xml.min.js"></script>
-
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bowser/2.11.0/bundled.min.js"></script>
   <title>%REACT_APP_TITLE%</title>
 </head>
 
@@ -199,28 +208,33 @@
   <noscript>
     You need to enable JavaScript to run this app.
   </noscript>
-  <div id="root" class="loading">
-    <div class="loading-logo"><img src="%REACT_APP_CDN%/themes/%REACT_APP_THEME%/images/icons-192.png" /></div>
-    <div class="loader">
-      <div class="loader-inner">
-        <div class="loader-line-wrap">
-          <div class="loader-line"></div>
-        </div>
-        <div class="loader-line-wrap">
-          <div class="loader-line"></div>
-        </div>
-        <div class="loader-line-wrap">
-          <div class="loader-line"></div>
-        </div>
-        <div class="loader-line-wrap">
-          <div class="loader-line"></div>
-        </div>
-        <div class="loader-line-wrap">
-          <div class="loader-line"></div>
+  <div class="" id="container">
+    <div id="root" class="loading">
+      <div class="loading-logo"><img src="%REACT_APP_CDN%/themes/%REACT_APP_THEME%/images/icons-192.png" /></div>
+      <div class="loader">
+        <div class="loader-inner">
+          <div class="loader-line-wrap">
+            <div class="loader-line"></div>
+          </div>
+          <div class="loader-line-wrap">
+            <div class="loader-line"></div>
+          </div>
+          <div class="loader-line-wrap">
+            <div class="loader-line"></div>
+          </div>
+          <div class="loader-line-wrap">
+            <div class="loader-line"></div>
+          </div>
+          <div class="loader-line-wrap">
+            <div class="loader-line"></div>
+          </div>
         </div>
       </div>
     </div>
+    <div id="browser-not-supported" style="display: none;"></div>
   </div>
 </body>
-
+  <script src="browserValidator.js">
+    
+  </script>
 </html>
