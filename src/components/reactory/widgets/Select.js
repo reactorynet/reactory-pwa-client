@@ -108,7 +108,10 @@ const SelectWidget = (props)=> {
     }
 
     const onSelectChanged = (evt) => {
-      onChange(evt.target.value)
+      const {value, name} = evt.target
+      //This key will used on the selectWithData widget to filter for the question sets
+      if(name === 'surveyType') localStorage.setItem('questionSetKey', value)
+      onChange(value)
     }
 
     const renderSelectedValue = (value) => {

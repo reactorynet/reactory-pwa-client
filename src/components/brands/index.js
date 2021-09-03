@@ -160,7 +160,8 @@ class QualityCard extends Component {
     const { behaviours } = quality;
     const avatar = (<Avatar className={classes.avatar} onClick={self.toggleQualityDetail}>{quality.ordinal + 1}</Avatar>)
     const action = (<IconButton><MoreVertIcon /></IconButton>)
-    const title = (<Typography variant='subheading'>{quality.title}</Typography>)
+    const title = (<Typography variant='subheading'> Test {quality.title}</Typography>)
+    debugger
     return (
       <Card className={classes.card}>
         <CardHeader
@@ -359,7 +360,7 @@ export class BrandEdit extends Component {
     const { id, title, description, qualities, scale } = this.state.editBrand;
     const { classes, mode, scales } = this.props;
     const isNew = mode === 'new'
-
+    debugger
     return (
       <Paper style={{ padding: '5px' }}>
         <Typography variant={'headline'}>{isNew ? 'Edit' : 'Create'} Leadership Brand: {title}</Typography>
