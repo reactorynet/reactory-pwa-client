@@ -190,7 +190,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         getData();
       }, [formContext.formData])
 
-
+      
       return (
         <Select
           {...selectProps}

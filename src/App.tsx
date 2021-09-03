@@ -22,7 +22,7 @@ import './App.css';
 import Header from '@reactory/client-core/components/shared/DefaultHeader';
 import {
   componentRegistery
-} from './components';
+} from './components/index';
 
 import ReactoryApi, { ApiProvider, ReactoryApiEventNames } from './api'
 import { fetch } from "whatwg-fetch";

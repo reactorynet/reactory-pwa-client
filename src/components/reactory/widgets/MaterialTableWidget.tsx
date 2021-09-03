@@ -203,7 +203,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], searchText = "" } = props;
   const uiOptions = uiSchema['ui:options'] || {};
-
   const AlertDialog = reactory.getComponent('core.AlertDialog@1.0.0');
   const [activeAction, setActiveAction] = useState({
     show: false,
@@ -367,7 +366,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   };
 
   const rows = uiOptions.remoteData === true ? getData : formData;
-
   if (uiOptions.columns && uiOptions.columns.length) {
     let _columnRef = [];
     let _mergeColumns = false;
@@ -530,7 +528,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   if (uiOptions.options) {
     options = { ...options, ...uiOptions.options }
-
     if (options.searchText && options.searchText.indexOf('${') >= 0) {
       try {
         options.searchText = reactory.utils.template(options.searchText)({ ...props })
@@ -554,8 +551,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
         const process = () => {
           if (action.mutation) {
-            const mutationDefinition: Reactory.IReactoryFormMutation = formContext.graphql.mutation[action.mutation];
-
+            const mutationDefinition: Reactory.IReactoryFormMutation = 
+            formContext.graphql.mutation[action.mutation];
             reactory.graphqlMutation(mutationDefinition.text, reactory.utils.objectMapper({ ...props, selected }, mutationDefinition.variables)).then((mutationResult: { data: any, errors: any[] }) => {
               reactory.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
 

@@ -49,11 +49,11 @@ const SelectWidget = (props)=> {
       style: {
 
       },
-      className: `${classes.formControl}`
+      className: `${classes.formControl}`,
     };
 
     let uiOptions = uiSchema['ui:options'] || {};
-
+    const {disabled = false, readonly = false} = uiOptions
     const {
       labelStyle = {},
       selectProps = {}
@@ -63,7 +63,6 @@ const SelectWidget = (props)=> {
     if (theme.MaterialInput) {
       variant = theme.MaterialInput.variant || variant;
     }
-
 
     let InputComponent = Input;
     let inputLabelProps = {};
@@ -109,7 +108,10 @@ const SelectWidget = (props)=> {
     }
 
     const onSelectChanged = (evt) => {
-      onChange(evt.target.value)
+      const {value, name} = evt.target
+      //This key will used on the selectWithData widget to filter for the question sets
+      if(name === 'surveyType') localStorage.setItem('questionSetKey', value)
+      onChange(value)
     }
 
     const renderSelectedValue = (value) => {
@@ -138,7 +140,6 @@ const SelectWidget = (props)=> {
           required={required === true}>{self.props.schema.title}</InputLabel>
      * 
      */
-
     return (
       <Select
         {...selectProps}
@@ -146,6 +147,7 @@ const SelectWidget = (props)=> {
         onChange={onSelectChanged}
         name={props.name}
         displayEmpty={true}
+        disabled = {disabled || readonly}
         renderValue={renderSelectedValue}
         input={<InputComponent id={props.idSchema.$id} value={formData || ""} />}>
         {required === false ? <MenuItem value=""><em>None</em></MenuItem> : null}
