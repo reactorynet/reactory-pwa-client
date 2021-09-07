@@ -180,16 +180,30 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
           } else {
             const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
 
+            
             if (auth_validated === true && hasRolesForRoute === true) {
               if (ApiComponent) return (<ApiComponent {...componentArgs} />)
               else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
             }
-
             if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
               if (localStorage) {
                 localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
               }
-              return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
+              const last_attempted_route = localStorage.getItem('$reactory.last.attempted.route$')
+              let timer = null
+              if(last_attempted_route){
+                 timer = setTimeout(() => {
+                  //@ts-ignore
+                  window.location.reload(true)
+                  localStorage.setItem('hasRefreshed', 'true')
+                }, 3000);
+              }
+              if(localStorage.getItem('hasRefreshed')){
+                clearTimeout(timer)
+                localStorage.removeItem('hasRefreshed')
+                return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
+              }
+              return <Typography style={{display: 'flex', justifyContent: 'center', paddingTop: '10%'}} variant='h5'>Please wait while we validate your access token...</Typography>
             }
 
             if (api.isAnon() === false && hasRolesForRoute === false) {
