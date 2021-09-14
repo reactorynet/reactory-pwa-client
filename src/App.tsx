@@ -203,11 +203,11 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
                 localStorage.removeItem('hasRefreshed')
                 return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
               }
-              return <Typography style={{display: 'flex', justifyContent: 'center', paddingTop: '10%'}} variant='h5'>Please wait while we validate your access token...</Typography>
+              return <Typography style={{display: 'flex', justifyContent: 'center', padding: '10% 2rem'}} variant='h5'>Please wait while we validate your access token...</Typography>
             }
 
             if (api.isAnon() === false && hasRolesForRoute === false) {
-              //we may waiting 
+              //we may be waiting 
               return <NotFound message="You don't have sufficient permissions to access this route yet... (we may be fetching your permissions)" link={routeDef.path} wait={500} />
             }
 
