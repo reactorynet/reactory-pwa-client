@@ -158,12 +158,12 @@ export const PasswordResetForm = (props) => {
           }
         );
 
-        const last_route = localStorage.getItem(
+        let last_route = localStorage.getItem(
           "$reactory.last.attempted.route$"
-        );
-
+        ) || "/";
+        if(last_route && last_route.includes('reset-password')) last_route = "/"
         setTimeout(() => {
-          history.push(last_route || "/");
+          history.push(last_route);
         }, 3501);
       })
       .catch((error) => {
