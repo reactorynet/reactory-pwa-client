@@ -2,22 +2,14 @@ import React, { Component } from "react";
 import PropTypes from "prop-types";
 import uuid from "uuid";
 import om from "object-mapper";
-import { Link, withRouter } from "react-router-dom";
 import { compose } from "redux";
-import { isArray, isNil } from "lodash";
+import { isNil } from "lodash";
 import { withStyles, withTheme } from "@material-ui/core/styles";
 import { Tooltip } from "@material-ui/core";
-import Drawer from "@material-ui/core/Drawer";
-import Avatar from "@material-ui/core/Avatar";
-import AppBar from "@material-ui/core/AppBar";
-import Divider from "@material-ui/core/Divider";
-import Toolbar from "@material-ui/core/Toolbar";
-import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
-import Button from "@material-ui/core/Button";
 import { Menu, MenuItem } from "@material-ui/core";
 import Icon from "@material-ui/core/Icon";
-import { List, ListItemIcon, ListItemText } from "@material-ui/core";
+import { ListItemIcon } from "@material-ui/core";
 
 export class DropDownMenu extends Component {
   static styles = (theme) => {
@@ -143,7 +135,7 @@ export class DropDownMenu extends Component {
     return (
       <>
         {tooltip ? (
-          <Tooltip title={tooltip} arrow>
+          <Tooltip title={tooltip} placement={"top"} arrow>
             {content}
           </Tooltip>
         ) : (
