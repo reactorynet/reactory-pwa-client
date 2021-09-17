@@ -198,9 +198,6 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
                     //@ts-ignore
                     window.location.reload(true)
                     localStorage.setItem('hasRefreshed', 'true')
-                    if(props.location.pathname.includes('/profile/')){
-                      localStorage.setItem('surveyId', new URLSearchParams(props.location.search).get('survey_id'))
-                    }
                   }, 3000);
                 }
                 if(localStorage.getItem('hasRefreshed')){
