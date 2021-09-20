@@ -262,6 +262,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   ws_link: any;
 
 
+  __uuid: string;
   constructor(props) {
     super();
 
@@ -420,6 +421,11 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.init = this.init.bind(this);
     this.getSizeSpec = this.getSizeSpec.bind(this);
     this.getThemeMode = this.getThemeMode.bind(this);
+    this.__uuid = localStorage.getItem("$reactory_instance_id$");
+    if(this.__uuid === null) {
+      this.__uuid = uuid();
+      localStorage.setItem("$reactory_instance_id$", this.__uuid);
+    }
     //this.status();
   }
 
@@ -433,6 +439,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.clearCache = clearCache;
     this.client = client;
     this.ws_link = ws_link;
+    
   }
 
   clearStoreAndCache() {
@@ -809,7 +816,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.clearCache = clearCache;
     //this.$ws_link = ws_link;
     //this.forms(true).then();
-    return this.status({ emitLogin: true });
+    return this.status({ emitLogin: true, forceLogout: true });
   }
 
   loadComponent(Component, props, target) {
@@ -1332,7 +1339,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.setUser({ ...user, ...anonUser });
 
     if (refreshStatus === true) {
-      this.status({ emitLogin: false }).then((apiStatus) => {
+      this.status({ emitLogin: false, forceLogout: true }).then((apiStatus) => {
         this.emit(ReactoryApiEventNames.onLogout);
       });
     } else {
@@ -1385,7 +1392,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     localStorage.removeItem(key);
   }
 
-  status(options = { emitLogin: false }) {
+  status(options: { emitLogin: boolean, forceLogout?: boolean } = { emitLogin: false, forceLogout: true }) {
     const that = this;
     return new Promise((resolve, reject) => {
       that.forms(true).then(() => {
@@ -1408,15 +1415,24 @@ class ReactoryApi extends EventEmitter implements _dynamic {
                 that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, offline: false });
                 resolve(that.getUser());
               } else {
-                that.logout(false);
-                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, offline: true });
-                that.setUser(anonUser);
-                resolve(anonUser);
+                
+                if(options.forceLogout !== false) {
+                  that.logout(false);
+                  that.setUser(anonUser);
+                  resolve(anonUser);
+                }
+                
+                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, status: 'API OFFLINE', offline: true });
               }
             }).catch((clientErr) => {
-              that.logout(false);
-              that.emit(ReactoryApiEventNames.onApiStatusUpdate, { offline: true, clientError: clientErr });
-              resolve({ ...anonUser, offline: true, offlineError: true });
+              
+              if(options.forceLogout !== false) {
+                that.logout(false);
+                resolve({ ...anonUser, status: 'API OFFLINE', offline: true, offlineError: true });
+              }
+
+              that.emit(ReactoryApiEventNames.onApiStatusUpdate, { status: 'API OFFLINE', offline: true, clientError: clientErr });
+
             });
           } else {
 

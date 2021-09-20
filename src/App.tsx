@@ -1,4 +1,4 @@
-import React, { Component, LegacyRef, useEffect } from 'react';
+import React, { Component, LegacyRef, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import MomentUtils from '@date-io/moment';
@@ -28,12 +28,13 @@ import ReactoryApi, { ApiProvider, ReactoryApiEventNames } from './api'
 import { fetch } from "whatwg-fetch";
 import { deepEquals } from './components/reactory/form/utils';
 import ReactoryApolloClient from './api/ReactoryApolloClient';
-import { Typography, Icon, Paper } from '@material-ui/core';
+import { Typography, Icon, Paper, Hidden, Box } from '@material-ui/core';
 import license from './license';
 import { ReactoryProvider } from './api/ApiProvider';
 import Reactory from '@reactory/client-core/types/reactory';
 import { anonUser } from 'api/local';
 import { WindowSizeSpec } from 'api/ReactoryApi';
+import { TIMEOUT } from 'dns';
 
 const packageInfo = require('../package.json');
 
@@ -180,7 +181,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
           } else {
             const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
 
-            
+
             if (auth_validated === true && hasRolesForRoute === true) {
               if (ApiComponent) return (<ApiComponent {...componentArgs} />)
               else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
@@ -191,19 +192,19 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
               }
               const last_attempted_route = localStorage.getItem('$reactory.last.attempted.route$')
               let timer = null
-              if(last_attempted_route){
-                 timer = setTimeout(() => {
+              if (last_attempted_route) {
+                timer = setTimeout(() => {
                   //@ts-ignore
                   window.location.reload(true)
                   localStorage.setItem('hasRefreshed', 'true')
                 }, 3000);
               }
-              if(localStorage.getItem('hasRefreshed')){
+              if (localStorage.getItem('hasRefreshed')) {
                 clearTimeout(timer)
                 localStorage.removeItem('hasRefreshed')
                 return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
               }
-              return <Typography style={{display: 'flex', justifyContent: 'center', paddingTop: '10%'}} variant='h5'>Please wait while we validate your access token...</Typography>
+              return <Typography style={{ display: 'flex', justifyContent: 'center', paddingTop: '10%' }} variant='h5'>Please wait while we validate your access token...</Typography>
             }
 
             if (api.isAnon() === false && hasRolesForRoute === false) {
@@ -260,12 +261,115 @@ const AppLoading = () => {
   )
 }
 
-const Offline = (props) => {
+const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
+
+  const { onOfflineChanged } = props;
+
+  const [offline, setOfflineStatus] = React.useState<boolean>(false);
+
+  const TM_BASE: number = 5000;
+  let timeoutMS: number = 5000;
+  let totals = { error: 0, slow: 0, ok: 0, total: 0 };
+  let last_slow = null;
+
+
+  const getApiStatus = () => {
+
+    const started = Date.now();
+
+    api.status({ emitLogin: false }).then((apiStatus: any) => {
+      const done = Date.now();
+      const api_ok = apiStatus.status === 'API OK'
+
+      setOfflineStatus(!api_ok);
+      if (offline !== !api_ok) {
+        onOfflineChanged(!api_ok);
+      }
+    
+      let isSlow = false;
+
+      const newLast = {
+        when: started,
+        pingMS: done - started,
+      };
+
+      timeoutMS = TM_BASE;
+
+      if (newLast.pingMS > 1000) {
+        last_slow = done;
+        isSlow = true;
+        timeoutMS = TM_BASE * 1.25;
+      }
+
+      if(newLast.pingMS > 1500) {
+        timeoutMS = TM_BASE * 1.25; 
+      }
+
+      const newTotals = {
+        error: totals.error,
+        slow: isSlow ? totals.slow + 1 : totals.slow,
+        ok: api_ok ? totals.ok + 1 : totals.ok,
+        total: totals.total + 1,      
+      };
+
+      totals = newTotals;
+
+      api.stat(`user-session-api-status-totals#${api.getUser().id}`, { ...totals, ...newLast });
+      api.emit('onApiStatusTotalsChange', { ...totals, ...newLast, api_ok, isSlow });
+      setTimeout(() => {
+        getApiStatus();
+      }, timeoutMS);
+      
+      api.log(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS }, 'debug');
+    }).catch((statusError) => {
+      api.log(`Error while fetching api status`, { error: statusError }, 'error');
+      setOfflineStatus(true);
+      onOfflineChanged(true);
+
+      totals = {
+        error: totals.error + 1,
+        slow: totals.slow,
+        ok: totals.ok + 1,
+        total: totals.total + 1,
+      };
+
+      setTimeout(() => {
+        getApiStatus();
+      }, timeoutMS);
+    });
+
+   
+  };
+
+
+  useEffect(() => {
+
+    getApiStatus();
+
+  }, []);
+
+
+  if (offline === false) return null;
 
   return (
-    <div id="default_offline">
-      Server is offline. This message will dissapear when server comes back online ⭕
-    </div>)
+    <React.Fragment>
+      <Box style={{ margin: 'auto', textAlign: 'center', paddingTop: '100px' }}>
+        <Typography variant="h1" style={{ color: api.muiTheme.palette.error.main }}>
+          <Icon style={{ fontSize: '100px' }}>cloud_off</Icon>
+        </Typography>
+        <Typography variant="body2">
+          We are unable to connect you to our service at this time.
+          This may be due to a poor internet connection or your
+          device is currently offline.
+        </Typography>
+
+        <Typography variant="body2">
+          This message will disappear as soon as we are able to establish a connection.
+          If you accessed the system with an email link, please retry using this link in a few moments.
+        </Typography>
+      </Box>
+    </React.Fragment>
+  )
 }
 
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
@@ -287,9 +391,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const components: any = api.getComponents(dependcies);
   const { NotificationComponent, Footer } = components;
 
-  const getApiStatus = () => {
+  const getApiStatus = (emitLogin = true) => {
     if (auth_validated === false) {
-      api.status({ emitLogin: true }).then((user: any) => {
+      api.status({ emitLogin }).then((user: any) => {
         setIsValidated(true);
         setOfflineStatus(user.offline === true)
         setUser(user);
@@ -368,6 +472,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           setUser(user)
           setOfflineStatus(false);
         }
+
       }
     } else {
       api.log(`apiStaus returned null value`, { status }, 'warning');
@@ -457,8 +562,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     return {
 
       root_paper: {
-        //minHeight: sizeSpec.resolution.height,
+        minHeight: window.innerHeight,
         borderRadius: 0,
+        margin: 0,
+        padding: 0,
+        overflowX: "hidden",
+        overflowY: "auto"
       },
 
       selectedMenuLabel: {
@@ -493,11 +602,15 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     }
   });
 
+
   const classes = useStyles();
+
+  const onOfflineChanged = (isOffline: boolean) => {
+    setOfflineStatus(isOffline)
+  };
 
   if (isReady === false) return <AppLoading />;
 
-  if (offline === true) return <Offline />
 
   return (
     <Router>
@@ -508,13 +621,14 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             <ApolloProvider client={api.client}>
               <MuiPickersUtilsProvider utils={MomentUtils}>
                 <ReactoryProvider api={api}>
-                  <div className={classes.root_paper} id={'reactory_paper_root'}>
-                    {isReady === true && <Globals api={api} />}
-                    {isReady === true && <Header api={api} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />}
-                    {isReady === true && <NotificationComponent />}
-                    {isReady === true && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
-                    {isReady === true && <Footer />}
-                  </div>
+                  <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
+                    {offline === false && <Globals api={api} />}
+                    <Header api={api} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
+                    <NotificationComponent />
+                    {offline === false && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
+                    <Offline onOfflineChanged={onOfflineChanged} />
+                    <Footer />
+                  </Paper>
                 </ReactoryProvider>
               </MuiPickersUtilsProvider>
             </ApolloProvider>

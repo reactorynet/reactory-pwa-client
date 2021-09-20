@@ -415,7 +415,9 @@ namespace Reactory {
     name: string,
     data?: any | undefined,
     dataMap?: any | undefined,
-    spreadProps?: boolean
+    spreadProps?: boolean,
+    //when set to true, the form will refresh with each event, when not provided it will only execute the refresh once
+    on?: boolean,
   }
 
 

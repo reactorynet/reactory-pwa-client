@@ -728,7 +728,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
   };
 
-  const refresh = () => {
+  const refresh = (args: any) => {
+    debugger
+
     if (is_refreshing === true) return;
     setIsRefreshing(true);
     if (uiOptions.remoteData === true) {
@@ -761,7 +763,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   React.useEffect(() => {
-    refresh()
+    refresh({})
   }, [formContext.formData]);
 
   React.useEffect(() => {

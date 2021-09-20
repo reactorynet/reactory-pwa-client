@@ -7,6 +7,7 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import {
   Tooltip,
   Button,
+  Grid,
   ListItem,
   ListItemSecondaryAction,
   Collapse,
@@ -239,7 +240,7 @@ const CacheComponent = compose(withApi)(CacheButton);
  */
 class ApplicationHeader extends Component {
   constructor(props, context) {
-    super(props, context);
+    super(props);
     this.state = {
       logged: true,
       drawerOpen: false,
@@ -248,6 +249,14 @@ class ApplicationHeader extends Component {
       search: props.search || defaultSearchConfig,
       expanded: {
 
+      },
+      apiStatusTotals: {
+        error: 0,
+        slow: 0,
+        ok: 0,
+        total: 0,
+        api_ok: true,
+        isSlow: false
       }
     };
 
@@ -263,8 +272,10 @@ class ApplicationHeader extends Component {
     this.adminClicked = this.adminClicked.bind(this);
     this.onLoginEvent = this.onLoginEvent.bind(this);
     this.onRouteChanged = this.onRouteChanged.bind(this);
+    this.onApiStatusTotalsChanged = this.onApiStatusTotalsChanged.bind(this);
     props.api.on(ReactoryApiEventNames.onLogin, this.onLoginEvent);
     props.api.on(ReactoryApiEventNames.onRouteChanged, this.onRouteChanged)
+    props.reactory.on('onApiStatusTotalsChange', this.onApiStatusTotalsChanged);
     this.componentDefs = this.props.api.getComponents([
       'core.SystemStatus',
       'core.FullScreenModal',
@@ -283,6 +294,11 @@ class ApplicationHeader extends Component {
   }
 
   onLoginEvent = (evt) => this.forceUpdate();
+
+  onApiStatusTotalsChanged = (totals) => {
+    debugger
+    this.setState({ apiStatusTotals: totals });
+  }
 
   navigateTo(where = '/', toggleDrawer = false) {
     //console.log('Need to redirect', where);
@@ -389,7 +405,6 @@ class ApplicationHeader extends Component {
     //get the main nav
 
 
-
     const setSearchText = e => this.setState({ searchInput: e.target.value });
     const onSearchTextKeyPress = e => {
       if (e.charCode === 13) {
@@ -477,6 +492,8 @@ class ApplicationHeader extends Component {
 
     const { server } = api.$user;
 
+    const { api_ok, isSlow, total } = this.state.apiStatusTotals;
+
     return (
       <Fragment>
         <AppBar position="sticky" color="default" id="reactory_default_app_bar">
@@ -484,10 +501,12 @@ class ApplicationHeader extends Component {
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <MenuIcon />
             </IconButton>
-            <Typography type="title" color="inherit" style={{ flex: 1 }}>
-              {user.applicationName}
+            <Typography variant="body2" color="inherit" style={{ flex: 1 }}>
+              <span>{user.applicationName}</span>
+              {api_ok === false && <span style={{ color: theme.palette.error.main }}> - OFFLINE</span>}
+              {isSlow === true && total > 2 &&  <span style={{ color: theme.palette.warning.main }}> - SLOW NETWORK</span>}
             </Typography>
-
+            
             {user.anon === true ? null :
               <IconButton
                 aria-owns={menuOpen ? 'top-right' : null}

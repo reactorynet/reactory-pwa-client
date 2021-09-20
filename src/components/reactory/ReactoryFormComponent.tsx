@@ -1543,10 +1543,20 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         if (query.refreshEvents) {
           query.refreshEvents.forEach((eventDefinition) => {
-            reactory.once(eventDefinition.name, (evt) => {
-              reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
-              setTimeout(getData, query.autoQueryDelay || 500)
-            });
+            if(eventDefinition.on === true) {
+              // only use on when the use case is explicit for it's use. Otherwise it is recommended
+              // to use once 
+              reactory.on(eventDefinition.name, (evt) => {
+                reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
+                setTimeout(getData, query.autoQueryDelay || 500)
+              });
+            } else {
+              reactory.once(eventDefinition.name, (evt) => {
+                reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
+                setTimeout(getData, query.autoQueryDelay || 500)
+              });
+            }
+            
           });
         }
 

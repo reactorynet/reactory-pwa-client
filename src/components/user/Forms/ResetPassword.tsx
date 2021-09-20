@@ -158,9 +158,11 @@ export const PasswordResetForm = (props) => {
           }
         );
 
-        const last_route = localStorage.getItem(
+        let last_route = localStorage.getItem(
           "$reactory.last.attempted.route$"
         );
+        
+        
 
         setTimeout(() => {
           history.push(last_route || "/");
@@ -243,6 +245,9 @@ export const PasswordResetForm = (props) => {
         },
       },
       uiSchema: {
+        'ui-options': {
+          showErrorList: false,
+        },
         user: {
           "ui:widget": "UserListItemWidget",
         },
@@ -291,13 +296,7 @@ export const PasswordResetForm = (props) => {
   };
 
   return (
-    <Paper elevation={1} className={classes.paper}>
-      <div className={classes.header}>
-        <Typography variant="h6" className={classes.logo}>
-          Logo here
-        </Typography>
-        <Typography variant="h6">Reset Password</Typography>
-      </div>
+    <Paper elevation={1} className={classes.paper}>      
       <ReactoryForm
         className={classes.form_root}
         formDef={getFormDefinition()}
