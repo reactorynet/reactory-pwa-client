@@ -53,7 +53,9 @@ const SelectWidget = (props)=> {
     };
 
     let uiOptions = uiSchema['ui:options'] || {};
-    const {disabled = false, readonly = false} = uiOptions
+    const disabled = uiSchema.disabled || uiOptions.disabled || false
+    const readonly = uiSchema.disabled || uiOptions.disabled || false
+   
     const {
       labelStyle = {},
       selectProps = {}
@@ -109,8 +111,6 @@ const SelectWidget = (props)=> {
 
     const onSelectChanged = (evt) => {
       const {value, name} = evt.target
-      //This key will used on the selectWithData widget to filter for the question sets
-      if(name === 'surveyType') localStorage.setItem('questionSetKey', value)
       onChange(value)
     }
 
@@ -133,7 +133,6 @@ const SelectWidget = (props)=> {
 
 
     inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
-
     /**
      *   <InputLabel {...inputLabelProps}
           htmlFor={self.props.idSchema.$id}
