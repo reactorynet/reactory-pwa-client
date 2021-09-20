@@ -116,7 +116,6 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       const onSelectChanged = (evt) => {
         reactory.log('Raising onChange for data select', { v: evt.target.value });
         props.onChange(evt.target.value)
-        localStorage.setItem('questionSetKey', evt.target.value)
       }
 
 
