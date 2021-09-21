@@ -296,7 +296,6 @@ class ApplicationHeader extends Component {
   onLoginEvent = (evt) => this.forceUpdate();
 
   onApiStatusTotalsChanged = (totals) => {
-    debugger
     this.setState({ apiStatusTotals: totals });
   }
 

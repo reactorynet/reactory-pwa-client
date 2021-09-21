@@ -729,7 +729,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   };
 
   const refresh = (args: any) => {
-    debugger
 
     if (is_refreshing === true) return;
     setIsRefreshing(true);

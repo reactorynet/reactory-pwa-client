@@ -68,7 +68,7 @@ class NotFound extends Component<NotFoundProps, NotFoundState> {
       }
       if(mustCheck === true) message = `Waiting for component ${waitingFor} to load.`
       return (      
-        <UserListItem user={{ firstName: 'Software Factory', lastName: '', id: 'reactory', avatar: 'reactory_bot.png' }} message={ `Waiting for application components to finish loading...` } onClick={onUserItemClicked} />
+        <UserListItem user={{ firstName: 'Software Factory', lastName: '', id: 'reactory', avatar: 'reactory_bot.png' }} message={ `Waiting for application components to finish loading... ${process.env.NODE_ENV !== 'production' ? this.props.waitingFor : ''}` } onClick={onUserItemClicked} />
       )
     } else {
       const { ComponentToMount } = this;
