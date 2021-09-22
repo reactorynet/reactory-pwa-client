@@ -11,6 +11,7 @@ import {
   Toolbar,
   Tooltip,
   Typography,
+  Button,
 } from '@material-ui/core';
 
 import {
@@ -279,14 +280,6 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
             </IconButton>
           </Tooltip>
 
-          {onAcceptSelection && selected.length > 0 && <Tooltip title={'Click to accept your selection'}>
-            <IconButton color="primary" onClick={() => {
-              onAcceptSelection(selected);
-            }}>
-              <Icon>check</Icon>
-            </IconButton>
-          </Tooltip>}
-
           {onNewUserClick && <Tooltip title={`Click to add new employee`}>
             <IconButton color="primary" onClick={onNewUserClick}>
               <Icon>add_circle_outline</Icon>
@@ -315,7 +308,17 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
               </IconButton>
             </Tooltip>
           }
+        {onAcceptSelection && selected.length > 0 && <Tooltip title={'Click to accept your selection'}>
+            <Button
+              onClick={() => { onAcceptSelection(selected) }}
+              style={{ marginRight: "4px", marginLeft: '40px', color: '#ffffff', background: '#7d983c' }}
+              variant="contained"
+            >
+              Confirm 
+            </Button>
+          </Tooltip>}
         </Toolbar>
+
       </AppBar>
 
       <UserList
