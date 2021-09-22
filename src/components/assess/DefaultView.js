@@ -811,9 +811,8 @@ class DefaultView extends Component {
               onClick={completeAssessment}
               style={{ marginRight: "4px", marginTop: '10px', color: '#ffffff', background: palette.success.main }}
               variant="contained"
-
             >
-              Finish&nbsp;<Icon>check_outline</Icon>
+              Finish
             </Button>
           </Fragment>
         )}
