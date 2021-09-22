@@ -629,6 +629,9 @@ class Profile extends Component<any, any> {
                 //if(cb) cb(peerResult)                
                 if (that.state.confirmRemovePeer) {
                     that.setState({ confirmRemovePeer: null }, that.refreshPeers)
+                    reactory.emit('mores_onDelegateAction_confirm-delegate', {
+                        
+                    })
                 } else {
                     that.refreshPeers();
                 }
