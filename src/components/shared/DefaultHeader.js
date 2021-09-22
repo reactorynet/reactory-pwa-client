@@ -94,21 +94,33 @@ export class Logged extends Component {
 Logged.muiName = 'IconMenu';
 
 const SubMenus = (props) => {
-  const { items = [], history, user, api, self, classes } = props;
-  return items.map((menu, index) => {
-    const goto = () => history.push(menu.link);
-    return (
-      <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer' }}>
-        <ListItemIcon>
-          {
-            menu.icon ?
-              (<Icon color="primary">{menu.icon}</Icon>)
-              : null
-          }
-        </ListItemIcon>
-        {menu.title}
-      </ListItem>)
+  const { items = [], history, user, api, self, classes, reactory } = props;
+
+  const submenus = [];
+
+  items.forEach((menu, index) => {
+    let allow = true;
+    if (isArray(menu.roles) && isArray(user.roles) === true) {
+      allow = api.hasRole(menu.roles, user.roles);
+    }
+
+    if(allow === true) {
+      const goto = () => history.push(menu.link);
+      submenus.push(
+        <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer' }}>
+          <ListItemIcon>
+            {
+              menu.icon ?
+                (<Icon color="primary">{menu.icon}</Icon>)
+                : null
+            }
+          </ListItemIcon>
+          {menu.title}
+        </ListItem>)
+    }    
   });
+
+  return submenus;
 };
 
 const Menus = (props) => {
@@ -136,24 +148,29 @@ const Menus = (props) => {
               subnav = (
                 <Collapse in={isExpanded === true} timeout="auto" unmountOnExit key={`${menuItem.id || mid}-collapse`} >
                   <List component="div" disablePadding>
-                    {menuItem.items.map((submenu, subindex) => {
-                      const submenuGoto = () => {
-                        self.navigateTo(submenu.link, true);
-                      };
+                    {
+                      menuItem.items.map((menu, index) => {
+                        const goto = () => history.push(menu.link);
+                        const sub_item = (
+                          <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
+                            <ListItemIcon>
+                              {
+                                menu.icon ?
+                                  (<Icon color="primary">{menu.icon}</Icon>)
+                                  : null
+                              }
+                            </ListItemIcon>
+                            {menu.title}
+                          </ListItem>);
 
-                      return (
-                        <ListItem key={submenu.id || subindex} button onClick={submenuGoto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
-                          <ListItemIcon>
-                            {
-                              submenu.icon ?
-                                (<Icon color="secondary">{submenu.icon}</Icon>)
-                                : null
-                            }
-                          </ListItemIcon>
-                          {submenu.title}
-                        </ListItem>
-                      )
-                    })}
+                        if(!menu.roles || menu.roles.length === 0) return sub_item;
+
+                        if (isArray(menu.roles) && isArray(user.roles) === true) {
+                          if (api.hasRole(menu.roles, user.roles) === true )
+                            return sub_item;
+                        }                        
+                      })
+                    }
                   </List>
                 </Collapse>
               );
