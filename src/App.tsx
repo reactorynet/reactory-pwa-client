@@ -263,11 +263,11 @@ const AppLoading = () => {
 
 const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
+  const TM_BASE_DEFAULT: number = 5000;
   const { onOfflineChanged } = props;
-
+  const [ timeout_base, setTimeoutBase ] = React.useState<number>(TM_BASE_DEFAULT);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
 
-  const TM_BASE: number = 5000;
   let timeoutMS: number = 5000;
   let totals = { error: 0, slow: 0, ok: 0, total: 0 };
   let last_slow = null;
@@ -293,18 +293,33 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
         pingMS: done - started,
       };
 
-      timeoutMS = TM_BASE;
+      timeoutMS = timeout_base;
 
-      if (newLast.pingMS > 1000) {
+      //if our ping timeout is slow
+      if (newLast.pingMS > 1000 && totals.total > 3) {
         last_slow = done;
         isSlow = true;
-        timeoutMS = TM_BASE * 1.25;
+        timeoutMS = timeout_base * 1.25;
       }
 
-      if(newLast.pingMS > 1500) {
-        timeoutMS = TM_BASE * 1.25; 
+      //if our ping time is really low
+      if (newLast.pingMS > 1500 && totals.total > 3) {
+        timeoutMS = timeout_base * 1.5;
       }
 
+      let next_tm_base = TM_BASE_DEFAULT;
+      if(totals.total > 3) {
+        let avg: number = (totals.ok * 100) / totals.total;
+        if(avg > 90) next_tm_base = TM_BASE_DEFAULT * 1.30
+        
+        
+        if(avg > 95) next_tm_base = TM_BASE_DEFAULT * 1.5;
+
+
+        if (avg > 98) next_tm_base = TM_BASE_DEFAULT * 2.5;
+        
+      }
+            
       const newTotals = {
         error: totals.error,
         slow: isSlow ? totals.slow + 1 : totals.slow,
@@ -316,6 +331,9 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
       api.stat(`user-session-api-status-totals#${api.getUser().id}`, { ...totals, ...newLast });
       api.emit('onApiStatusTotalsChange', { ...totals, ...newLast, api_ok, isSlow });
+
+      if(next_tm_base !== timeout_base) setTimeoutBase(next_tm_base);
+
       setTimeout(() => {
         getApiStatus();
       }, timeoutMS);
