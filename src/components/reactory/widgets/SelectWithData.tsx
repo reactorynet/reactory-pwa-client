@@ -1,27 +1,15 @@
-import React, { Fragment, Component } from 'react'
-import PropTypes from 'prop-types'
-import { pullAt, find, isNil, isEmpty } from 'lodash'
+import React, {  } from 'react'
+import { isNil, isEmpty } from 'lodash'
 import objectMapper from 'object-mapper'
 import {
-  Chip,
-  IconButton,
   Icon,
-  FormControl,
-  InputLabel,
   Input,
   MenuItem,
-  Typography,
-  Tooltip,
   Select,
   FilledInput,
-  FormHelperText,
-  OutlinedInput,
-  StyleRulesCallback,
-  Theme
+  OutlinedInput
 } from '@material-ui/core';
 
-import { Query } from '@apollo/client/react/components';
-import gql from 'graphql-tag';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import ReactoryApi from '@reactory/client-core/api/ReactoryApi';

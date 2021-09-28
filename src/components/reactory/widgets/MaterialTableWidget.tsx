@@ -333,7 +333,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             if (queryResult.errors && queryResult.errors.length > 0) {
               //show a loader error
               reactory.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
-              // reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })
+              //reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })
             }
 
             if (queryResult.data) {
@@ -548,7 +548,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     actions = uiOptions.actions.map((action) => {
 
       const actionClickHandler = (selected) => {
-
         const process = () => {
           if (action.mutation) {
             const mutationDefinition: Reactory.IReactoryFormMutation = 
@@ -559,7 +558,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               let has_errors = false;
 
               if (!mutationResult.errors && mutationResult.data[mutationDefinition.name]) {
-
                 if (uiOptions.remoteData === true) {
                   if (tableRef.current && tableRef.current.onQueryChange) {
                     tableRef.current.onQueryChange()
@@ -567,7 +565,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
                 } else {
                   setVersion(version + 1);
                 }
-
                 if (mutationDefinition.onSuccessEvent) {
                   reactory.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
 

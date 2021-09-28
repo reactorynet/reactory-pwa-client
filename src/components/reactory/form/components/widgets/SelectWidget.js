@@ -34,7 +34,6 @@ function getValue(event, multiple) {
 }
 
 function SelectWidget(props) {
-
   const {
     schema,
     id,
@@ -52,7 +51,6 @@ function SelectWidget(props) {
   } = props;
   const { enumOptions, enumDisabled } = options;
   const emptyValue = multiple ? [] : "";
-  
   return (
     <select
       id={id || props.idSchema.$id}
