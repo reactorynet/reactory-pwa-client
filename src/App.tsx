@@ -142,6 +142,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const [routes, setRoutes] = React.useState<Reactory.IRouteDefinition[]>([]);
   const NotFound = api.getComponent("core.NotFound");
 
+  
+  
   const configureRouting = () => {
     let loginRouteDef = null;
     let homeRouteDef = null;
@@ -174,7 +176,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
           }
 
           const ApiComponent = api.getComponent(routeDef.componentFqn)
-
+         
           if (routeDef.public === true) {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)
             else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
@@ -192,23 +194,22 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
               }
               const last_attempted_route = localStorage.getItem('$reactory.last.attempted.route$')
               let timer = null
-              if (last_attempted_route) {
-                timer = setTimeout(() => {
-                  //@ts-ignore
-                  window.location.reload(true)
-                  localStorage.setItem('hasRefreshed', 'true')
-                }, 3000);
+                if(last_attempted_route && !last_attempted_route.includes('/reset-password')){
+                   timer = setTimeout(() => {
+                    //@ts-ignore
+                    window.location.reload(true)
+                    localStorage.setItem('hasRefreshed', 'true')
+                  }, 3000);
+                }
+                if(localStorage.getItem('hasRefreshed')){
+                  clearTimeout(timer)
+                  localStorage.removeItem('hasRefreshed')
+                  return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
+                }
+                return <Typography style={{display: 'flex', justifyContent: 'center', padding: '10% 2rem'}} variant='h5'>Please wait while we validate your access token...</Typography>
               }
-              if (localStorage.getItem('hasRefreshed')) {
-                clearTimeout(timer)
-                localStorage.removeItem('hasRefreshed')
-                return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
-              }
-              return <Typography style={{ display: 'flex', justifyContent: 'center', paddingTop: '10%' }} variant='h5'>Please wait while we validate your access token...</Typography>
-            }
-
             if (api.isAnon() === false && hasRolesForRoute === false) {
-              //we may waiting 
+              //we may be waiting 
               return <NotFound message="You don't have sufficient permissions to access this route yet... (we may be fetching your permissions)" link={routeDef.path} wait={500} />
             }
 

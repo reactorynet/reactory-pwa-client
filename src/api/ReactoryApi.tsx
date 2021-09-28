@@ -734,7 +734,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     });
   }
 
-  graphqlMutation(mutation, variables, options: any = { fetchPolicy: "no-cache" }, refetchQueries: RefetchQueryDescription = []) {
+  graphqlMutation(mutation, variables, options: any = { fetchPolicy: "no-cache", refresh: false}, refetchQueries: RefetchQueryDescription = []) {
     const that = this;
     let $mutation = null;
     if (typeof mutation === 'string') {

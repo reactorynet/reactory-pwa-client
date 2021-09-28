@@ -5,34 +5,28 @@ import { withRouter } from 'react-router';
 import { withStyles, withTheme, Theme } from '@material-ui/core/styles';
 import { compose } from 'redux';
 import MaterialTable, { MTableToolbar } from 'material-table';
-import lodash, { isNil, isArray, isString } from 'lodash';
+import lodash, { isNil } from 'lodash';
 import classNames from 'classnames';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import {
     Container,
-    Badge,
-    CircularProgress, List, ListItem,
-    ListItemSecondaryAction, ListItemText,
+    ListItem,
+    ListItemText,
     Paper,
-    InputAdornment, Icon, IconButton,
-    ExpansionPanel, ExpansionPanelActions,
-    ExpansionPanelDetails, AccordionSummary,
-    Toolbar, Tooltip, InputLabel, FormControl,
-    ListItemAvatar, Table, TableBody, TableCell,
-    TableHead, TableRow, FormControlLabel, Switch,
-    Select
-} from '@material-ui/core';
+    Icon, IconButton,
+    ExpansionPanel, ExpansionPanelDetails, AccordionSummary,
+    Toolbar, Tooltip, ListItemAvatar, Table, TableBody, TableCell,
+    TableHead, TableRow, FormControlLabel, Switch} from '@material-ui/core';
 
 import Button from '@material-ui/core/Button';
 import Avatar from '@material-ui/core/Avatar';
 import TextField from '@material-ui/core/TextField';
 import { withApi } from '../../api/ApiProvider';
 import ReactoryApi from "../../api/ReactoryApi";
-import { CDNProfileResource, getAvatar, isEmail } from '../util';
+import { getAvatar, isEmail } from '../util';
 import gql from 'graphql-tag';
 import Reactory from 'types/reactory';
-import AlertDialog from 'components/shared/AlertDialog';
 
 const defaultProfile = {
     __isnew: true,
@@ -635,6 +629,9 @@ class Profile extends Component<any, any> {
                 //if(cb) cb(peerResult)                
                 if (that.state.confirmRemovePeer) {
                     that.setState({ confirmRemovePeer: null }, that.refreshPeers)
+                    reactory.emit('mores_onDelegateAction_confirm-delegate', {
+                        
+                    })
                 } else {
                     that.refreshPeers();
                 }
@@ -645,7 +642,7 @@ class Profile extends Component<any, any> {
         }
 
         const confirmPeers = (confirmed) => {
-            let surveyId = localStorage.getItem('surveyId')            
+            let surveyId = localStorage.getItem('surveyId')
             if (confirmed === true) {
                 const mutation = gql(`mutation ConfirmPeers($id: String!, $organization: String!, $surveyId: String){
                     confirmPeers(id: $id, organization: $organization, surveyId: $surveyId){
@@ -660,7 +657,12 @@ class Profile extends Component<any, any> {
                 };
                 reactory.graphqlMutation(mutation, variables).then(result => {
                     if (result && result.data && result.data.confirmPeers) {
-                        that.setState({ showConfirmPeersDialog: false, profile: { ...profile, peers: { ...profile.peers, ...result.data.confirmPeers } } }, that.refreshPeers)
+                        const updated_profile = { ...profile, peers: { ...profile.peers, ...result.data.confirmPeers } }
+                        that.setState({ showConfirmPeersDialog: false, profile:  updated_profile}, that.refreshPeers)
+                        reactory.emit('mores_onDelegateAction_confirm-delegate', {
+                            profile : updated_profile,
+                            surveyId
+                        })
                     }
                 }).catch(ex => {
                     that.setState({ showConfirmPeersDialog: false, showMessage: true, message: 'An error occured confirming assessor settings' })
