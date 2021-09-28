@@ -807,6 +807,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           options={options}
           actions={actions}
           components={components}
+          localization={uiOptions.localization || {}}
           detailPanel={detailsPanel} />
         {confirmDialog}
       </>

@@ -1442,8 +1442,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
           }
         };
         getStatus()
-
-      });
+      })
     });
   }
 
