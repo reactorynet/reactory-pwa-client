@@ -101,8 +101,6 @@ const MaterialStringFieldWidget = (props) => {
     } else {
       inputLabelProps.shrink = true;
       inputLabelProps.style = {
-        //backgroundColor: theme.palette.background.paper,
-        // marginTop: '4px',
         padding: '4px'
       };
     }

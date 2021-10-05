@@ -38,8 +38,33 @@ const race = {
   },
 };
 const age = {
+  // "ui:widget": "DateSelectorWidget",
+  "ui:widget": "LabelWidget",
+  'ui:options': {
+    title: 'Age',
+    readOnly: true,
+    format: '${formData}',
+    variant: 'subtitle1',
+    titleProps: {
+      style: {
+        display: 'content',
+        minWidth: '220px',
+        color: "#9A9A9A",
+      }
+    },
+    bodyProps: {
+      style: {
+        display: 'flex',
+        justifyContent: 'flex-end'
+      }
+    }
+  }
+};
+
+const dateOfBirth = {
   "ui:widget": "DateSelectorWidget",
 };
+
 const gender = {
   "ui:widget": "SelectWithDataWidget",
   "ui:options": {
@@ -247,17 +272,27 @@ const team = {
       MoresTeams(organization_id: $id, paging:$paging) {
         message
         success
-        items{
+        items {
           id
-          title
-          description
+          name
         }
       }
     }`,
+    propertyMap: {
+      'formContext.organisationId': [
+        'id',
+        {
+          key: 'paging',
+          transform: () => {
+            return paging
+          }
+        }
+      ]
+    },
     resultItem: "MoresTeams",
     resultsMap: {
       "MoresTeams.items.[].id": ["[].key", "[].value"],
-      "MoresTeams.tiems.[].title": "[].label",
+      "MoresTeams.items.[].name": "[].label",
     },
   },
 };
@@ -286,6 +321,7 @@ const uiSchema: any = {
   },
   "ui:grid-layout": [
     {
+      dateOfBirth: { xs: 12, sm: 6, md: 6 },
       age: { xs: 12, sm: 6, md: 6 },
       gender: { xs: 12, sm: 6, md: 6 },
       race: { xs: 12, sm: 6, md: 6 },
@@ -293,7 +329,7 @@ const uiSchema: any = {
       region: { xs: 12, sm: 6, md: 6 },
       operationalGroup: { xs: 12, sm: 6 },
       businessUnit: { xs: 12, sm: 6 },
-      team: { xs: 12, sm: 6 },
+      teams: { xs: 12, sm: 6 },
     },
   ],
 };
@@ -309,4 +345,5 @@ export {
   businessUnit as businessUnitUISchema,
   operationalGroup as operationalGroupUISchema,
   team as teamUISchema,
+  dateOfBirth as dateOfBirthUISchema
 };

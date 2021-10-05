@@ -196,8 +196,8 @@ const MaterialFieldTemplateFunction = (props) => {
           inputLabelProps.shrink = false;
         } else {
           inputLabelProps.style = {
-            backgroundColor: 'white',
-            padding: '3px'
+            // backgroundColor: 'white',
+            // padding: '3px'
           };
           inputLabelProps.shrink = true;
         }

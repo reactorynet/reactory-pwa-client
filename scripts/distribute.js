@@ -126,7 +126,7 @@ const doUpload = function () {
                                 meta: {
                                     installer: 'nginx',
                                     installerprops: {
-                                        path: `${REACT_APP_WEBROOT}/${REACT_APP_CLIENT_KEY}`,
+                                        path: path.join(REACT_APP_WEBROOT, REACT_APP_CLIENT_KEY),
                                         uri: PUBLIC_URL
                                     },
                                     release: true,

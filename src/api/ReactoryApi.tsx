@@ -1392,8 +1392,10 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     localStorage.removeItem(key);
   }
 
-  status(options: { emitLogin: boolean, forceLogout?: boolean } = { emitLogin: false, forceLogout: true }) {
+  status(options: { emitLogin: boolean, forceLogout?: boolean } = { emitLogin: false, forceLogout: false }) {
     const that = this;
+    const current_user = this.$user;
+
     return new Promise((resolve, reject) => {
       that.forms(true).then(() => {
         const getStatus = () => {
@@ -1417,9 +1419,11 @@ class ReactoryApi extends EventEmitter implements _dynamic {
               } else {
                 
                 if(options.forceLogout !== false) {
-                  that.logout(false);
+                  that.logout(false);                  
                   that.setUser(anonUser);
                   resolve(anonUser);
+                } else {
+                  resolve(current_user);
                 }
                 
                 that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, status: 'API OFFLINE', offline: true });
@@ -1429,6 +1433,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
               if(options.forceLogout !== false) {
                 that.logout(false);
                 resolve({ ...anonUser, status: 'API OFFLINE', offline: true, offlineError: true });
+              } else {
+                resolve(current_user);
               }
 
               that.emit(ReactoryApiEventNames.onApiStatusUpdate, { status: 'API OFFLINE', offline: true, clientError: clientErr });

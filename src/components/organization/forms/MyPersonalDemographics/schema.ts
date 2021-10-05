@@ -4,8 +4,12 @@ const schema = {
     title: 'Race'
   },
   age: {
-    type: 'string',
+    type: 'number',
     title: 'Age'
+  },
+  dateOfBirth: {
+    type: 'string',
+    title: 'Date Of Birth'
   },
   gender: {
     type: 'string',

@@ -1,4 +1,5 @@
 import React, { Component, Fragment } from 'react';
+import path from 'path';
 import PropTypes from 'prop-types';
 import { withRouter } from 'react-router';
 import { compose } from 'redux';

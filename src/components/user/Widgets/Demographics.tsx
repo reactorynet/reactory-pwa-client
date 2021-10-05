@@ -13,6 +13,7 @@ import $uiSchema, {
   operationalGroupUISchema,
   teamUISchema,
   regionUISchema,
+  dateOfBirthUISchema
 } from "../../organization/forms/MyPersonalDemographics/uiSchema";
 
 const Demographics = (props: any) => {
@@ -62,22 +63,71 @@ const Demographics = (props: any) => {
       userId: id,
       organisationId: organisationId,
       membershipId: _membershipId,
+
+      dob: formData.dateOfBirth,
+      gender: formData.gender,
+      race: formData.race,
+      position: formData.position,
+      region: formData.region,
+      operationalGroup: formData.operationalGroup,
+      team: formData.teams,
+      businessUnit: formData.businessUnit
     }
-    for (const [key, value] of Object.entries(formData)) {
-      if (value) input[key] = value
-    }
+    // for (const [key, value] of Object.entries(formData)) {
+    //   if (value) input[key] = value
+    // }
     reactory.graphqlMutation(`
       mutation MoresUpdateUserDemographic($input: UserDemographicInput!){
         MoresUpdateUserDemographic(input:$input){
-          demographics{
+          id
+          gender{
             id
-            type
+            key
+            title
+          }
+          dateOfBirth
+          age
+          ageGroup {
+            id
+            title
+            key
+          }
+          race{
+            id
+            key
+            title
+          }
+          position{
+            id
+            key
+            title
+          }
+          region{
+            id
+            key
+            title
+          }
+          operationalGroup{
+            id
+            key
+            title
+          }
+          businessUnit{
+            id
+            name
+          }
+          team{
+            id
+            name
           }
         }
       }`, { input }).then(({ data, errors = [] }) => {
       if (errors.length > 0) {
         reactory.createNotification('Mutation indicates errors occured, check logs for details', { type: 'warning' });
         reactory.log('Errors in mutation result', { errors, data }, 'error');
+      } else {
+        if(formRef && formRef.current) formRef.current.refresh();
+        reactory.createNotification("Demographics has been updated", { type: "success" })
       }
     }).catch((err) => {
       reactory.createNotification('Network or related API error occured, please check logs', { type: 'warning' });
@@ -86,7 +136,7 @@ const Demographics = (props: any) => {
   }
 
   const [demographicsAvail, setDemographicsAvail] = React.useState(false)
-  const formRef = React.useRef()
+  const formRef = React.useRef(null)
   const _schema = {
     type: 'object',
     properties: {
@@ -155,6 +205,9 @@ const Demographics = (props: any) => {
     const field = schema[key];
 
     if (demographicsEnabled[key]) {
+      if(key === "age" ) {
+        _schema.properties[`dateOfBirth`] = schema.dateOfBirth;
+      }
       _schema.properties[`${key}`] = { ...field };
       return _schema;
     }
@@ -169,6 +222,7 @@ const Demographics = (props: any) => {
     uiSchema: {
       ...$uiSchema,
       age: { ...ageUISchema },
+      dateOfBirth: { ...dateOfBirthUISchema },      
       race: { ...raceUISchema },
       gender: { ...genderUISchema },
       position: { ...positionUISchema },
@@ -176,7 +230,7 @@ const Demographics = (props: any) => {
       region: { ...regionUISchema },
       operationalGroup: { ...operationalGroupUISchema },
       businessUnit: { ...businessUnitUISchema },
-      team: { ...teamUISchema },
+      teams: { ...teamUISchema },
     },
   };
 

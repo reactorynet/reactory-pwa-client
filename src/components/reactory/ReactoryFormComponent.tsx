@@ -1963,7 +1963,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         {showSubmit === true && submitButton}
         {_additionalButtons}
         {allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
-        {formDef.backButton && <Button variant="text" onClick={() => { props.history.goBack() }} color="secondary"><Icon>keyboard_arrow_left</Icon></Button>}
+        {formDef.backButton && <Button variant="text" onClick={() => { props.history.goBack() }} color="secondary">BACK <Icon>keyboard_arrow_left</Icon></Button>}
         {formDef.helpTopics && showHelp === true && <Button variant="text" onClick={() => { setShowHelpModal(!showHelpModal) }} color="secondary"><Icon>help</Icon></Button>}
         {reportButton}
         {exportButton}

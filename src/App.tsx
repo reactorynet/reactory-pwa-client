@@ -188,6 +188,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
               if (ApiComponent) return (<ApiComponent {...componentArgs} />)
               else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
             }
+
             if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
               if (localStorage) {
                 localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
@@ -201,11 +202,13 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
                     localStorage.setItem('hasRefreshed', 'true')
                   }, 3000);
                 }
+
                 if(localStorage.getItem('hasRefreshed')){
                   clearTimeout(timer)
                   localStorage.removeItem('hasRefreshed')
                   return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
                 }
+                
                 return <Typography style={{display: 'flex', justifyContent: 'center', padding: '10% 2rem'}} variant='h5'>Please wait while we validate your access token...</Typography>
               }
             if (api.isAnon() === false && hasRolesForRoute === false) {
@@ -278,7 +281,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
     const started = Date.now();
 
-    api.status({ emitLogin: false }).then((apiStatus: any) => {
+    api.status({ emitLogin: false, forceLogout: false }).then((apiStatus: any) => {
       const done = Date.now();
       const api_ok = apiStatus.status === 'API OK'
 
@@ -297,19 +300,19 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       timeoutMS = timeout_base;
 
       //if our ping timeout is slow
-      if (newLast.pingMS > 1000 && totals.total > 3) {
+      if (newLast.pingMS > 2000 && totals.total > 5) {
         last_slow = done;
         isSlow = true;
         timeoutMS = timeout_base * 1.25;
       }
 
       //if our ping time is really low
-      if (newLast.pingMS > 1500 && totals.total > 3) {
+      if (newLast.pingMS > 3000 && totals.total > 5) {
         timeoutMS = timeout_base * 1.5;
       }
 
       let next_tm_base = TM_BASE_DEFAULT;
-      if(totals.total > 3) {
+      if(totals.total > 5) {
         let avg: number = (totals.ok * 100) / totals.total;
         if(avg > 90) next_tm_base = TM_BASE_DEFAULT * 1.30
         
@@ -412,7 +415,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const getApiStatus = (emitLogin = true) => {
     if (auth_validated === false) {
-      api.status({ emitLogin }).then((user: any) => {
+      api.status({ emitLogin, forceLogout: false }).then((user: any) => {
         setIsValidated(true);
         setOfflineStatus(user.offline === true)
         setUser(user);

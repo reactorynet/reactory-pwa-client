@@ -380,6 +380,17 @@ class Profile extends Component<any, any> {
                                 if (membership && membership.organization) {
                                     id = membership.organization.id
                                 }
+
+                                let membershipText = `${membership.client.name} - APPLICATION MEMBERSHIP`;
+
+                                if(membership.organization && membership.organization.name) {
+                                    membershipText = `${membership.organization.name}`
+                                }
+
+                                if(membership.businessUnit && membership.businessUnit.name) {
+                                    membershipText = `${membershipText} [${membership.businessUnit.name}]`;
+                                }
+
                                 return (
                                     <TableRow
                                         key={index}
@@ -396,7 +407,7 @@ class Profile extends Component<any, any> {
                                                     </Avatar>
                                                 </ListItemAvatar>
                                                 <ListItemText
-                                                    primary={`${membership && membership.organization ? membership.organization.name : `${membership.client.name} - APPLICATION MEMBERSHIP`}`}
+                                                    primary={`${membershipText}`}
                                                     secondary={`Roles: ${membership.roles.map((r: string) => `${r}`)}`.trim()}
                                                 />
                                             </ListItem>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useParams, useHistory } from 'react-router';
 import SwipeableViews from 'react-swipeable-views';
 import { makeStyles, Theme, useTheme } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
@@ -54,6 +55,9 @@ const MaterialTabbedField = (props) => {
   const classes = useStyles();
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
+  
+  const history = useHistory();
+  const params = useParams();
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     setValue(newValue);
@@ -99,6 +103,26 @@ const MaterialTabbedField = (props) => {
       );
     };
   };
+
+  React.useEffect(() => {
+    //determine default tab
+    if (uiSchema["ui:options"] && uiSchema["ui:options"].activeTab === 'params') {      
+      if(uiSchema["ui:options"].activeTabKey) {
+        let tab_param = uiSchema["ui:options"].activeTabKey;
+        if(params["tab_param"]) {
+            let activeIndex = 0;
+
+            layout.forEach((tabDef, tindex) => {
+              if (schema.properties[params["tab_param"]]) {
+                activeIndex = tindex;
+              }                
+            });
+            
+            setValue(activeIndex);
+        }
+      }
+    }
+  }, [])
 
   return (
     <div className={classes.root}>
