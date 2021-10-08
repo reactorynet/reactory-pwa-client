@@ -71,11 +71,11 @@ class ChipLabel extends Component {
 
     const { format, useUserAvatar } = uiSchema["ui:options"];
     let chipData = formData && formData.length > 0 ? formData : childprops.chips;
-    if(!chipData) chipData = [];
-    
+    if (!chipData) chipData = [];
+
     const chips = chipData.map((chip, index) => {
-      let _avatar = useUserAvatar ? <Avatar alt="Natacha" src={getAvatar(chip)} /> : null;
-      let chipLabel = format ? template(format)({who: chip}) : 'no user';
+      let chipLabel = format ? template(format)({ who: chip }) : 'no user';
+      let _avatar = useUserAvatar ? <Avatar alt={chipLabel} src={getAvatar(chip)} /> : null;
 
       return (<Chip avatar={_avatar} style={{ marginRight: '5px' }} key={index} variant="outlined" label={chipLabel} />);
     });

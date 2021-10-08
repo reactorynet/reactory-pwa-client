@@ -129,6 +129,8 @@ class ReactoryDropZone extends Component<any, any> {
 
     const dropHandler = (acceptedFiles) => {
 
+      
+
       that.setState({ uploading: true }, () => {
 
         if (uiSchema && uiSchema['ui:options']) {
@@ -159,7 +161,7 @@ class ReactoryDropZone extends Component<any, any> {
                 const { data, errors } = docResult;
 
                 if (errors && errors.length > 0) {
-                  api.createNotification(`File ${acceptedFiles[0].filename} could not be uploaded.`, {
+                  api.createNotification(`File ${acceptedFiles[0].name} could not be uploaded.`, {
                     showInAppNotification: true,
                     type: 'warning',
                     props: {
@@ -176,7 +178,7 @@ class ReactoryDropZone extends Component<any, any> {
 
                 // const { filename, size, id, link, mimetype } = data[ReactoryDropZoneProps.mutation.name];
 
-                api.createNotification(`File ${acceptedFiles[0].filename} has been uploaded`, {
+                api.createNotification(`File ${acceptedFiles[0].name} has been uploaded`, {
                   showInAppNotification: true,
                   type: 'success',
                   props: {

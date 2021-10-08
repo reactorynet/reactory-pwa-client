@@ -7,6 +7,7 @@ import { withStyles, withTheme } from '@material-ui/core/styles';
 import {
   Tooltip,
   Button,
+  Grid,
   ListItem,
   ListItemSecondaryAction,
   Collapse,
@@ -93,21 +94,33 @@ export class Logged extends Component {
 Logged.muiName = 'IconMenu';
 
 const SubMenus = (props) => {
-  const { items = [], history, user, api, self, classes } = props;
-  return items.map((menu, index) => {
-    const goto = () => history.push(menu.link);
-    return (
-      <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer' }}>
-        <ListItemIcon>
-          {
-            menu.icon ?
-              (<Icon color="primary">{menu.icon}</Icon>)
-              : null
-          }
-        </ListItemIcon>
-        {menu.title}
-      </ListItem>)
+  const { items = [], history, user, api, self, classes, reactory } = props;
+
+  const submenus = [];
+
+  items.forEach((menu, index) => {
+    let allow = true;
+    if (isArray(menu.roles) && isArray(user.roles) === true) {
+      allow = api.hasRole(menu.roles, user.roles);
+    }
+
+    if(allow === true) {
+      const goto = () => history.push(menu.link);
+      submenus.push(
+        <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer' }}>
+          <ListItemIcon>
+            {
+              menu.icon ?
+                (<Icon color="primary">{menu.icon}</Icon>)
+                : null
+            }
+          </ListItemIcon>
+          {menu.title}
+        </ListItem>)
+    }    
   });
+
+  return submenus;
 };
 
 const Menus = (props) => {
@@ -135,24 +148,29 @@ const Menus = (props) => {
               subnav = (
                 <Collapse in={isExpanded === true} timeout="auto" unmountOnExit key={`${menuItem.id || mid}-collapse`} >
                   <List component="div" disablePadding>
-                    {menuItem.items.map((submenu, subindex) => {
-                      const submenuGoto = () => {
-                        self.navigateTo(submenu.link, true);
-                      };
+                    {
+                      menuItem.items.map((menu, index) => {
+                        const goto = () => history.push(menu.link);
+                        const sub_item = (
+                          <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
+                            <ListItemIcon>
+                              {
+                                menu.icon ?
+                                  (<Icon color="primary">{menu.icon}</Icon>)
+                                  : null
+                              }
+                            </ListItemIcon>
+                            {menu.title}
+                          </ListItem>);
 
-                      return (
-                        <ListItem key={submenu.id || subindex} button onClick={submenuGoto} style={{ cursor: 'pointer', paddingLeft: self.props.theme.spacing(4) }}>
-                          <ListItemIcon>
-                            {
-                              submenu.icon ?
-                                (<Icon color="secondary">{submenu.icon}</Icon>)
-                                : null
-                            }
-                          </ListItemIcon>
-                          {submenu.title}
-                        </ListItem>
-                      )
-                    })}
+                        if(!menu.roles || menu.roles.length === 0) return sub_item;
+
+                        if (isArray(menu.roles) && isArray(user.roles) === true) {
+                          if (api.hasRole(menu.roles, user.roles) === true )
+                            return sub_item;
+                        }                        
+                      })
+                    }
                   </List>
                 </Collapse>
               );
@@ -239,7 +257,7 @@ const CacheComponent = compose(withApi)(CacheButton);
  */
 class ApplicationHeader extends Component {
   constructor(props, context) {
-    super(props, context);
+    super(props);
     this.state = {
       logged: true,
       drawerOpen: false,
@@ -248,6 +266,14 @@ class ApplicationHeader extends Component {
       search: props.search || defaultSearchConfig,
       expanded: {
 
+      },
+      apiStatusTotals: {
+        error: 0,
+        slow: 0,
+        ok: 0,
+        total: 0,
+        api_ok: true,
+        isSlow: false
       }
     };
 
@@ -263,8 +289,10 @@ class ApplicationHeader extends Component {
     this.adminClicked = this.adminClicked.bind(this);
     this.onLoginEvent = this.onLoginEvent.bind(this);
     this.onRouteChanged = this.onRouteChanged.bind(this);
+    this.onApiStatusTotalsChanged = this.onApiStatusTotalsChanged.bind(this);
     props.api.on(ReactoryApiEventNames.onLogin, this.onLoginEvent);
     props.api.on(ReactoryApiEventNames.onRouteChanged, this.onRouteChanged)
+    props.reactory.on('onApiStatusTotalsChange', this.onApiStatusTotalsChanged);
     this.componentDefs = this.props.api.getComponents([
       'core.SystemStatus',
       'core.FullScreenModal',
@@ -283,6 +311,10 @@ class ApplicationHeader extends Component {
   }
 
   onLoginEvent = (evt) => this.forceUpdate();
+
+  onApiStatusTotalsChanged = (totals) => {
+    this.setState({ apiStatusTotals: totals });
+  }
 
   navigateTo(where = '/', toggleDrawer = false) {
     //console.log('Need to redirect', where);
@@ -389,7 +421,6 @@ class ApplicationHeader extends Component {
     //get the main nav
 
 
-
     const setSearchText = e => this.setState({ searchInput: e.target.value });
     const onSearchTextKeyPress = e => {
       if (e.charCode === 13) {
@@ -477,6 +508,8 @@ class ApplicationHeader extends Component {
 
     const { server } = api.$user;
 
+    const { api_ok, isSlow, total } = this.state.apiStatusTotals;
+
     return (
       <Fragment>
         <AppBar position="sticky" color="default" id="reactory_default_app_bar">
@@ -484,10 +517,12 @@ class ApplicationHeader extends Component {
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <MenuIcon />
             </IconButton>
-            <Typography type="title" color="inherit" style={{ flex: 1 }}>
-              {user.applicationName}
+            <Typography variant="body2" color="inherit" style={{ flex: 1 }}>
+              <span>{user.applicationName}</span>
+              {api_ok === false && <span style={{ color: theme.palette.error.main }}> - OFFLINE</span>}
+              {isSlow === true && total > 2 &&  <span style={{ color: theme.palette.warning.main }}> - SLOW NETWORK</span>}
             </Typography>
-
+            
             {user.anon === true ? null :
               <IconButton
                 aria-owns={menuOpen ? 'top-right' : null}
@@ -505,7 +540,7 @@ class ApplicationHeader extends Component {
               </IconButton>}
           </Toolbar>
         </AppBar>
-        <Drawer open={this.state.drawerOpen === true} className={this.props.classes.drawer}>
+        <Drawer variant={'temporary'} open={this.state.drawerOpen === true} className={this.props.classes.drawer} PaperProps={{ style: { width: '320px', maxWidth: '320px', overflowX: 'hidden' } }}>
           <div className={this.props.classes.drawerHeader}>
             <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
               <BackIcon />

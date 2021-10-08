@@ -114,6 +114,10 @@ const MaterialFormErrorTemplate = (props) => {
 
   const { errors = [], uiSchema, schema, api, formContext, errorSchema } = props;
 
+  if(uiSchema && uiSchema['ui-options']) {
+    if(uiSchema['ui-options'].showErrorList === false) return null;
+  }
+
   if (errors.length === 0) return null;
 
   const renderSingleError = () => {

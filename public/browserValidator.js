@@ -14,13 +14,13 @@ switch (browserName) {
       "<h2>Microsoft Edge Version **** or greater should be fine</h2>";
     break;
   case bowser.BROWSER_MAP.chrome:
-    if (version <= "91") {
+    if (version <= "85") {
       message =
         "<h1>" +
         browserName +
         " " +
         version +
-        " is not supported please update to atleast version 93</h1>";
+        " is not supported please update to atleast version</h1>";
     }
     break;
   default:

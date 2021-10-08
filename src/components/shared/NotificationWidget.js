@@ -187,7 +187,8 @@ class NotificationWidget extends Component {
     return (
       <div className={classes.container}>
         {
-          this.state.notifications.map((message, index) => (
+          this.state.notifications.map((message, index) => {
+            return (
             <NotificationHOCComponent
               key={message.id}
               id={message.id}
@@ -196,7 +197,7 @@ class NotificationWidget extends Component {
               config={message.config}
               deleteNotification={this.deleteNotificationHandler}>
             </NotificationHOCComponent>
-          ))
+          )})
         }
       </div>
     )

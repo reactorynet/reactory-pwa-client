@@ -886,6 +886,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       setState,
       forceUpdate: () => { setVersion(version + 1) },
       props,
+      setFormDefinition,
       submit: $submitForm,
       state: getState(),
       validate: () => {
@@ -1539,10 +1540,20 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         if (query.refreshEvents) {
           query.refreshEvents.forEach((eventDefinition) => {
-            reactory.once(eventDefinition.name, (evt) => {
-              reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
-              setTimeout(getData, query.autoQueryDelay || 500)
-            });
+            if(eventDefinition.on === true) {
+              // only use on when the use case is explicit for it's use. Otherwise it is recommended
+              // to use once 
+              reactory.on(eventDefinition.name, (evt) => {
+                reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
+                setTimeout(getData, query.autoQueryDelay || 500)
+              });
+            } else {
+              reactory.once(eventDefinition.name, (evt) => {
+                reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
+                setTimeout(getData, query.autoQueryDelay || 500)
+              });
+            }
+            
           });
         }
 
@@ -1984,20 +1995,22 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
   const getDeveloperOptions = () => {
-    if (reactory.hasRole(["DEVELOPER"]) === true) {
-      if (formDef && formDef.name) {
-        if (formDef.name.indexOf("$GLOBAL$") >= 0) return null;
-      }
 
 
+    // if (reactory.hasRole(["DEVELOPER"]) === true) {
+    //   if (formDef && formDef.name) {
+    //     if (formDef.name.indexOf("$GLOBAL$") >= 0) return null;
+    //   }
 
-      return (
-        <>
-          <IconButton size="small" onClick={() => { setShowEditor(true) }} style={{ float: 'right', position: 'relative', marginTop: '-8px' }}>
-            <Icon style={{ fontSize: '0.9rem' }}>build</Icon>
-          </IconButton>
-        </>)
-    }
+    //   return (
+    //     <>
+    //       <IconButton size="small" onClick={() => { setShowEditor(true) }} style={{ float: 'right', position: 'relative', marginTop: '-8px' }}>
+    //         <Icon style={{ fontSize: '0.9rem' }}>build</Icon>
+    //       </IconButton>
+    //     </>)
+    // }
+
+    return null;
   }
   /*
   React.useEffect(() => {
@@ -2036,7 +2049,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     //}
 
 
-  }, [props.formData,props.formDef,props.formId])
+  }, [props.formData, props.formDef, props.formId])
 
 
   React.useEffect(() => {
