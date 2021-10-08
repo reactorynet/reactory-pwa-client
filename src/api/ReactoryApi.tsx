@@ -14,7 +14,7 @@ import { Mutation, Query } from '@apollo/client/react/components';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
-import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic } from 'lodash';
+import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
 import {
@@ -170,7 +170,7 @@ export interface ReactoryApiUtils {
   pluginDefinitionValid: Function,
   moment: Function,
   objectMapper: Function,
-  template: Function,
+  template: (templateString: string, templateOptions?: TemplateOptions) => TemplateExecutor,
   templateObject(item: Object, props: any): Object,
   humanNumber: Function,
   inspector: {

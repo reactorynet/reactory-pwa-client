@@ -7,6 +7,7 @@ import * as DropZone from 'react-dropzone';
 import * as ReactRouter from 'react-router'
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import * as MaterialCore from '@material-ui/core'
+import * as MaterialCoreStyles from '@material-ui/core/styles'
 import * as MaterialIcons from '@material-ui/icons'
 import * as MaterialLab from '@material-ui/lab'
 import * as MaterialStyles from '@material-ui/core/styles';
@@ -684,7 +685,12 @@ export const componentRegistery = [
     nameSpace: 'material-ui',
     name: 'MaterialCore',
     version: '1.0.0',
-    component: MaterialCore,
+    component: {
+      ...MaterialCore,
+      styles: {
+        ...MaterialCoreStyles
+      }
+    }
   },
   {
     nameSpace: 'material-ui',

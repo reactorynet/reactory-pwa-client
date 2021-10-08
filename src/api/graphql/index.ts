@@ -532,8 +532,14 @@ query assesmentWithId($id: String) {
         name
         logo
       }
-      delegateTeamName
-      assessorTeamName
+      delegateTeam {
+        id
+        name
+      }
+      assessorTeams {
+        id
+        name
+      }
       delegates {
         id
         delegate {
@@ -627,7 +633,14 @@ query MoresUserSurvey($id: String) {
 			startDate
 			endDate
       surveyType
-      delegateTeamName
+      assessorTeams {
+        id
+        name
+      }
+      delegateTeam {
+        id
+        name
+      }
 			leadershipBrand {
         id
 				title

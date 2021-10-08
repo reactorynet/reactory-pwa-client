@@ -1249,7 +1249,7 @@ class DefaultView extends Component {
           <Typography>
             If you want to provide a customised behaviour that{" "}
             {assessment.survey.surveyType === "180"
-              ? `the ${assessment.survey.delegateTeamName} team`
+              ? `the ${assessment.survey.delegateTeam.name} team`
               : delegate.firstName}{" "}
             exhibits that relates to {quality.title}, type it in the box below
             and then click the add <Icon>add</Icon> button and provide your
@@ -1258,7 +1258,7 @@ class DefaultView extends Component {
             <br />
             Note, these custom ratings will not affect the calculation of{" "}
             {assessment.survey.surveyType === "180"
-              ? `the ${assessment.survey.delegateTeamName} team`
+              ? `the ${assessment.survey.delegateTeam.name} team`
               : delegate.firstName}
             's overall rating for this assessment.
           </Typography>
@@ -1739,7 +1739,7 @@ class DefaultView extends Component {
       }`
       : `Unknown`;
     if (is180 === true) {
-      headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeamName}`;
+      headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeam.name}`;
     }
 
     if (survey.surveyType === "culture") {

@@ -2,6 +2,7 @@ import React, { Fragment, Component } from 'react';
 import PropTypes from 'prop-types';
 import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from  '@reactory/client-core/components/reactory/form/utils';
 import { pullAt, isNil, template, isString } from 'lodash';
+import { useHistory } from 'react-router'
 import { withRouter, Link } from 'react-router-dom';
 import uuid from 'uuid';
 import {
@@ -40,7 +41,7 @@ function LinkIconButton(link, icon) {
   );
 }
 
-class MaterialListWidget extends Component {
+class MaterialListWidget extends Component<any, any> {
 
   static styles = (theme) => ({
     root: {
@@ -70,8 +71,10 @@ class MaterialListWidget extends Component {
     readOnly: false
   }
 
-  constructor(props, context) {
-    super(props, context)
+  registry: any = null;
+
+  constructor(props) {
+    super(props)
     this.registry = props.registry || getDefaultRegistry();
     this.state = {
 
@@ -83,7 +86,7 @@ class MaterialListWidget extends Component {
   render() {
     const self = this;
     const { api, history } = self.props;
-    const uiOptions = this.props.uiSchema['ui:options'] || {};
+    const uiOptions: any = this.props.uiSchema['ui:options'] || {};
     const { formData, schema, uiSchema, idSchema } = this.props;
     let columns = [];
 
@@ -144,7 +147,7 @@ class MaterialListWidget extends Component {
             };
             let icon = null;
             const iconPosition = uiOptions.iconPosition || 'left';
-
+            //@ts-ignore
             if (uiOptions.iconStyle) iconProps.style = uiOptions.iconStyle;
             //mapped from field value
             if (hasIcon && typeof uiOptions.iconField === 'string') {
@@ -231,7 +234,9 @@ class MaterialListWidget extends Component {
                 let avatarIcon = null;
 
                 if (uiOptions.avatarAltField) {
+                  //@ts-ignore
                   listItemAvatarProps.src = item[uiOptions.avatarSrcField];
+                  //@ts-ignore
                   listItemAvatarProps.alt = item[uiOptions.avatarAltField];
                 }
 
@@ -353,12 +358,14 @@ class MaterialListWidget extends Component {
             };
 
             if (uiOptions && typeof uiOptions.listItemStyle === 'object') {
+              //@ts-ignore
               listItemProps.style = { ...uiOptions.listItemStyle };
             }
 
             if (uiOptions && typeof uiOptions.listItemSelectedStyle)
 
               if (uiOptions && uiOptions.variant === 'button') {
+                //@ts-ignore
                 listItemProps.button = true;
               }
 
@@ -376,5 +383,7 @@ class MaterialListWidget extends Component {
     )
   }
 }
+
+//@ts-ignore
 const MaterialListWidgetComponent = compose(withApi, withRouter, withTheme, withStyles(MaterialListWidget.styles))(MaterialListWidget)
 export default MaterialListWidgetComponent

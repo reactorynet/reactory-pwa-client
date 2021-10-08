@@ -102,7 +102,7 @@ class UserSurvey extends Component {
             let listTitle = selfAssessment === true ? '- Self assessment' : `- ${delegate.firstName} ${delegate.lastName}`
 
             if(is180 === true) {
-                listTitle = `- Team being assessed: ${survey.delegateTeamName}`
+                listTitle = `- Team being assessed: ${survey.delegateTeam.name}`
             }
 
             if(isCulture === true) {

@@ -425,24 +425,31 @@ namespace Reactory {
     name: string,
     text: string,
     resultMap?: Object,
+    resultType?: string,
+    /**
+     * Used when only want to extract a single value from the data result
+     */
+    resultKey?: string; 
     queryMessage?: string,
-    variables: Object,
     formData?: any,
+    variables?: Object,
+    props?: Object,
     edit?: boolean,
     new?: boolean,
     delete?: boolean,
     options?: any,
     autoQuery?: boolean,
+    //the number of milliseconds the autoQuery must be delayed for before executing
     autoQueryDelay?: number,
     waitUntil?: string,
-    interval?: number,
     waitTimeout?: number,
+    interval?: number,
     useWebsocket?: boolean,
     onError?: IReactoryFormQueryErrorHandlerDefinition,
-    resultType?: string,
-    //used where want to extract a single element from an object
-    resultKey?: string,
-    refreshEvents?: IReactoryEvent[]
+    onSuccessMethod?: String | "redirect" | "notification" | "function",
+    onSuccessEvent?: IReactoryEvent | undefined,
+    notification?: any,
+    refreshEvents?: IReactoryEvent[] | undefined
   }
 
   export interface IReactoryFormMutation {
