@@ -51,7 +51,7 @@ import KeyboardArrowRight from "@material-ui/icons/KeyboardArrowRight";
 import { withApi } from "../../api/ApiProvider";
 import { ReactoryApi } from "../../api/ReactoryApi";
 import { isArray } from "util";
-
+import getInstructions from './defaultInstructions'
 const nil = isNil;
 
 class RatingControl extends Component {
@@ -1471,12 +1471,40 @@ class DefaultView extends Component {
         );
       }
     }
-
+    const {title : _title_, description} = getInstructions(quality.title)
+  
+    const _styles = {
+      scale: {
+        marginLeft: '5px',
+        marginRight: '2px',
+        fontWeight: 'bold'
+      },
+      scaleWrapper:{
+        padding: '15px 0', 
+        display: 'block',
+      },
+      captionText: {
+        fontSize: '1.2rem'
+      }
+    }
     const assessmetnInstructionsDefaultContent = (
-      <Typography variant="caption" color="primary">
-        <span style={{fontWeight: 'bold'}}>{quality.title}:</span>
-        <span>This section </span>
+      <>
+      <Typography variant="caption" color="primary" style={_styles.captionText}>
+        <span style={{fontWeight: 'bold'}}>{_title_}:</span>
+        <span> This section tests for {description}</span>
       </Typography>
+      <Typography  style={{..._styles.scaleWrapper, ..._styles.captionText}} variant="caption" color="primary">
+        <span style={{fontWeight: 'bold'}}>Rating scale: </span>
+        <span style={_styles.scale}> 1. </span>Strongly disagree
+        <span style={_styles.scale}> 2. </span>Disagree
+        <span style={_styles.scale}> 3. </span>Neutral
+        <span style={_styles.scale}> 4. </span>Agree
+        <span style={_styles.scale}> 5. </span>Strongly Agree
+      </Typography>
+      <Typography variant="caption" style={{..._styles.captionText,color: 'red'}}>
+        Use the comment box at the bottom of this page for additional feedback.
+      </Typography>
+      </>
     );
 
     const contentId = `mores-assessments-instructions-${slugify(
