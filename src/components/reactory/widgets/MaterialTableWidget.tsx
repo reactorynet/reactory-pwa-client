@@ -311,7 +311,16 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
           reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
           let variables = reactory.utils.objectMapper({ formContext, query }, uiOptions.variables || queryDefinition.variables);
-
+          
+          if(query.orderBy){
+            variables = {
+              ...variables,
+              options:{
+                field: query.orderBy.field,
+                order: query.orderDirection
+              }
+            }
+          }
           variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
           reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
@@ -327,7 +336,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               options.fetchPolicy = 'network-only';
             }
           }
-
           reactory.graphqlQuery(queryDefinition.text, variables, options).then((queryResult: any) => {
             reactory.log(`Result From Query`, { queryResult })
             if (queryResult.errors && queryResult.errors.length > 0) {

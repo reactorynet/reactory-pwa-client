@@ -1353,7 +1353,7 @@ class DefaultView extends Component {
           rows={8}
           onBlur={updateAdminActionContent}
           fullWidth={true}
-          placeholder={`Type here if you want add a admin for this section: ${quality.title}`}
+          placeholder={`Type here add an admin for this section: ${quality.title}`}
           value={qualityAction}
           onChange={patchCustomActionState}
           variant="outlined"
@@ -1391,7 +1391,7 @@ class DefaultView extends Component {
           mode: that.state.comment_for_section === quality.id ? "edit" : "view",
           title: `Section ${quality.title} Comment by ${assessment.assessor.firstName} ${assessment.assessor.lastName} on ${assessment.survey.title}`,
           slug: `mores-survey-${assessment.survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`,
-          placeHolder: `Type here if you want add a comment for this section: ${quality.title}`,
+          placeHolder: `Type here to add a comment for this section: ${quality.title}`,
         };
 
         /**
@@ -1459,7 +1459,7 @@ class DefaultView extends Component {
               rows={4}
               onBlur={updateCustomContent}
               fullWidth={true}
-              placeholder={`Type here if you want add a comment for this section: ${quality.title}`}
+              placeholder={`Type here to add a comment for this section: ${quality.title}`}
               value={qualityCustomComment}
               onChange={patchCustomContentState}
               variant="outlined"
@@ -1468,7 +1468,7 @@ class DefaultView extends Component {
                 qualityCustomComment === undefined ||
                 qualityCustomComment.length < 10
               }
-              helperText="Ensure you add a custom comment that is at least two words with a total of 10 characters"
+              helperText="Ensure you add a custom comment that is at least 3 words with a total of 10 characters"
             />
           </Paper>
         );
@@ -1477,8 +1477,8 @@ class DefaultView extends Component {
 
     const assessmetnInstructionsDefaultContent = (
       <Typography variant="caption" color="primary">
-        *System Defined Behaviours for {quality.title} - These are mandatory and
-        have to be completed.
+        <span style={{fontWeight: 'bold'}}>{quality.title}:</span>
+        <span>This section </span>
       </Typography>
     );
 

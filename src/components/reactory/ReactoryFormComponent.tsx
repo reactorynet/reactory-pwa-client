@@ -276,7 +276,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return _response;
   };
 
-
   //get initial data
   const initialData = (_existing: any = null) => {
 
@@ -535,23 +534,22 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         }
         */
 
-
-
-        if (mutation === null || mutation === undefined) {
-          //check if we need to rerun the query with the updated formData.
-          reactory.log(`No mutations available for configured mode`)
-          return;
+       
+       if (mutation === null || mutation === undefined) {
+         //check if we need to rerun the query with the updated formData.
+         reactory.log(`No mutations available for configured mode`)
+         return;
         }
-
+        
         const _variables = objectMapper({
           ...form,
           formContext: getFormContext(),
           $route:
-            props.$route,
+          props.$route,
           reactory,
           api: reactory
         }, mutation.variables);
-
+        
         let do_mutation = true;
         let mutation_props: any = {
           variables: reactory.utils.omitDeep({ ..._variables }),
@@ -1401,7 +1399,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           formData: _formData,
           $route: props.$route
         }, query.variables || {}));
-
         reactory.log(`Variables for query`, { variables: _variables }, 'debug');
 
         let $options = query.options ? { ...query.options } : { fetchPolicy: 'network-only' }
