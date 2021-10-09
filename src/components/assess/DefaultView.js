@@ -51,7 +51,7 @@ import KeyboardArrowRight from "@material-ui/icons/KeyboardArrowRight";
 import { withApi } from "../../api/ApiProvider";
 import { ReactoryApi } from "../../api/ReactoryApi";
 import { isArray } from "util";
-
+import getInstructions from './defaultInstructions'
 const nil = isNil;
 
 class RatingControl extends Component {
@@ -1350,7 +1350,7 @@ class DefaultView extends Component {
           rows={8}
           onBlur={updateAdminActionContent}
           fullWidth={true}
-          placeholder={`Type here if you want add a admin for this section: ${quality.title}`}
+          placeholder={`Type here add an admin for this section: ${quality.title}`}
           value={qualityAction}
           onChange={patchCustomActionState}
           variant="outlined"
@@ -1388,7 +1388,7 @@ class DefaultView extends Component {
           mode: that.state.comment_for_section === quality.id ? "edit" : "view",
           title: `Section ${quality.title} Comment by ${assessment.assessor.firstName} ${assessment.assessor.lastName} on ${assessment.survey.title}`,
           slug: `mores-survey-${assessment.survey.id}-assessment_${assessment.id}-section_${quality.id}-assessor_${assessment.assessor.id}-CustomComment`,
-          placeHolder: `Type here if you want add a comment for this section: ${quality.title}`,
+          placeHolder: `Type here to add a comment for this section: ${quality.title}`,
         };
 
         /**
@@ -1456,7 +1456,7 @@ class DefaultView extends Component {
               rows={4}
               onBlur={updateCustomContent}
               fullWidth={true}
-              placeholder={`Type here if you want add a comment for this section: ${quality.title}`}
+              placeholder={`Type here to add a comment for this section: ${quality.title}`}
               value={qualityCustomComment}
               onChange={patchCustomContentState}
               variant="outlined"
@@ -1471,12 +1471,40 @@ class DefaultView extends Component {
         );
       }
     }
-
+    const {title : _title_, description} = getInstructions(quality.title)
+  
+    const _styles = {
+      scale: {
+        marginLeft: '5px',
+        marginRight: '2px',
+        fontWeight: 'bold'
+      },
+      scaleWrapper:{
+        padding: '15px 0', 
+        display: 'block',
+      },
+      captionText: {
+        fontSize: '1.2rem'
+      }
+    }
     const assessmetnInstructionsDefaultContent = (
-      <Typography variant="caption" color="primary">
-        *System Defined Behaviours for {quality.title} - These are mandatory and
-        have to be completed.
+      <>
+      <Typography variant="caption" color="primary" style={_styles.captionText}>
+        <span style={{fontWeight: 'bold'}}>{_title_}:</span>
+        <span> This section tests for {description}</span>
       </Typography>
+      <Typography  style={{..._styles.scaleWrapper, ..._styles.captionText}} variant="caption" color="primary">
+        <span style={{fontWeight: 'bold'}}>Rating scale: </span>
+        <span style={_styles.scale}> 1. </span>Strongly disagree
+        <span style={_styles.scale}> 2. </span>Disagree
+        <span style={_styles.scale}> 3. </span>Neutral
+        <span style={_styles.scale}> 4. </span>Agree
+        <span style={_styles.scale}> 5. </span>Strongly Agree
+      </Typography>
+      <Typography variant="caption" style={{..._styles.captionText,color: 'red'}}>
+        Use the comment box at the bottom of this page for additional feedback.
+      </Typography>
+      </>
     );
 
     const contentId = `mores-assessments-instructions-${slugify(
