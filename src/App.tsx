@@ -300,14 +300,14 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       timeoutMS = timeout_base;
 
       //if our ping timeout is slow
-      if (newLast.pingMS > 2000 && totals.total > 5) {
-        last_slow = done;
-        isSlow = true;
+      if (newLast.pingMS > 2000 && totals.total > 10) {
+        last_slow = done;        
         timeoutMS = timeout_base * 1.25;
       }
 
       //if our ping time is really low
-      if (newLast.pingMS > 3000 && totals.total > 5) {
+      if (newLast.pingMS > 3000 && totals.total > 10) {
+        isSlow = true;
         timeoutMS = timeout_base * 1.5;
       }
 

@@ -130,19 +130,9 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
                 else {
 
                     let $items = $props.onChangePropsMap ? reactory.utils.objectMapper(value, $props.onChangePropsMap) : value;
-                    debugger;
                     props.onChange($items);
 
 
-                    // let predicate = {};
-                    // predicate[$props.matchField || "id"] = value[$props.keyField || "id"];
-
-                    // debugger
-
-                    // if(reactory.utils.lodash.findIndex($formData, predicate) === -1) {
-                    //     $selected.push($item);
-                    //     props.onChange($selected);
-                    // }
                     
                 }
             } else {
@@ -153,7 +143,6 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
                     return;
                 }
                 else {
-                    // props.onChange(value.value);
 
                     if (schema.type === 'string' && typeof value === 'object') {
                         props.onChange(value.value);
@@ -253,7 +242,6 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
             renderTags={(value, getTagProps) => {
                 return value.map((option, index) => { 
                     
-                    debugger
 
                     const onDeleteItem = () => {
                         let newArray = [];
@@ -285,24 +273,7 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
                             displayText = $formData;                        
                         }
                     }
-                    // } else {
 
-                    //     displayText = $formData.map((selected_value, index) => {
-                    //         let text;
-
-                    //         if (schema.items.type === 'object') {
-                    //             text = selected_value[$props.displayField] || selected_value["name"] || selected_value["title"];
-                    //         }
-
-                    //         if (schema.items.type === 'string') {
-                    //             text = selected_value;
-                    //         }
-
-                    //         return `${text}${index < $formData.length + 1 ? ',' : ''}`
-                    //     });
-
-                        
-                    // }
                 }
 
                 let inputLabelProps = {

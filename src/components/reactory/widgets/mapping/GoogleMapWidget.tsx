@@ -1,3 +1,4 @@
+import React from 'react';
 import { compose, withProps } from "recompose";
 import { withStyles, withTheme } from "@material-ui/core/styles";
 import { withApi } from "@reactory/client-core/api/ApiProvider";
@@ -14,7 +15,7 @@ import {
   InfoWindow,
   MarkerProps,
 } from "react-google-maps";
-import Reactory from "types/reactory";
+import Reactory from "@reactory/client-core/types/reactory";
 
 const VIEWMODES = {
   MAP_WITH_SEARCH: "MAP_WITH_SEARCH",
@@ -40,19 +41,19 @@ const GoogleMapWidget = (props: any) => {
   } = props;
 
   const {
-    React,
-    Label,
+    MaterialCore,
     FullScreenModal,
     AddressLookupComponent,
   } = reactory.getComponents([
-    'react.React',
-    'core.Label',
     'core.FullScreenModal',
-    'core.AddressLookupComponent'
+    'core.AddressLookupComponent',
+    'material-ui.MaterialCore',
   ]);
 
 
   const { useState } = React;
+
+  const { FormControl, Input, InputLabel, InputAdornment, IconButton } = MaterialCore;
 
   /**
    * indicates whether or not the map modal is open.
@@ -122,8 +123,10 @@ const GoogleMapWidget = (props: any) => {
         _inputProps.style = { ...uiOptions.inputProps.style };
       }
     }
-    return (
-      <div onClick={searchClicked} style={{ cursor: "pointer" }}>
+
+    /**
+     * 
+     * <TextField onClick={searchClicked} style={{ cursor: "pointer" }}>
         <label className={classes.label}>{title || schema.title}</label>
         <div className={classes.container}>
           {!fullAddress || fullAddress == "" ? (
@@ -137,6 +140,31 @@ const GoogleMapWidget = (props: any) => {
           </Icon>
         </div>
       </div>
+     * 
+     */
+
+
+    return (
+
+      <FormControl fullWidth={true}>
+        <InputLabel htmlFor={idSchema.$id}>{schema.title}</InputLabel>
+        <Input          
+          id={idSchema.$id}
+          type={"text"}
+          value={fullAddress}
+          onChange={searchClicked}
+          endAdornment={
+            <InputAdornment position="end">
+              <IconButton
+                aria-label="Search for an address"
+                onClick={searchClicked}                
+              >
+                <Icon>search</Icon>
+              </IconButton>
+            </InputAdornment>
+          }
+        />      
+      </FormControl>
     );
   }
 
@@ -238,13 +266,15 @@ const GoogleMapWidget = (props: any) => {
 
   return (<>
     {getTextFieldWithSearch()}
-    {show_label === true && <Label />}
     {show_modal === true && <GetModal />}
   </>);
 
 }
 
 const ReactoryGoogleMapWidgetStyles = (theme, props): any => {
+
+  const { palette } = theme;  
+
   return {
     container: {
       border: "solid 1px #e2e0e0",

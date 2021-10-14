@@ -113,6 +113,7 @@ export const CompanyLogo = (props) => {
   return <Logo {...logoProps} />
 };
 
+import media_components from './media';
 
 
 export const componentRegistery = [
@@ -856,5 +857,6 @@ export const componentRegistery = [
     component: Demographics,
   },
   MembershipRoles,
-  CreateUserMembership
+  CreateUserMembership,
+  ...media_components
 ]

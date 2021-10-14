@@ -1333,23 +1333,7 @@ export const AddressLookupComponent = (props: {
           type="text"
           placeholder="Search Address"
           autoFocus={true}
-          fullWidth={true}
-          inputProps={{
-            style: {
-              boxSizing: `border-box`,
-              border: `1px solid transparent`,
-              // width: `240px`,
-              height: `42px`,
-              // marginTop: `10px`,
-              padding: `0 12px`,
-              borderRadius: `3px`,
-              boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
-              //fontSize: `14px`,
-              outline: `none`,
-              textOverflow: `ellipses`,
-              backgroundColor: "#fff",
-            },
-          }}
+          fullWidth={true}        
         />
 
       </Grid>

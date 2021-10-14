@@ -20,19 +20,21 @@ import { getUiOptions } from '../reactory/form/utils';
 
 const useStyles = makeStyles((theme) => ({
 
+  
+
   selectedMenuLabel: {
     color: theme.palette.primary.main,
     paddingRight: theme.spacing(1.5),
     paddingLeft: theme.spacing(1)
   },
   prepend: {
-    color: 'rgb(34, 39, 50)',
+    // color: 'rgb(34, 39, 50)',
     opacity: 0.7,
     paddingLeft: theme.spacing(1.5),
     paddingRight: theme.spacing(1)
   },
   selected: {
-    color: 'rgb(34, 39, 50)',
+    // color: 'rgb(34, 39, 50)',
     opacity: 1,
     paddingLeft: theme.spacing(1)
   }
