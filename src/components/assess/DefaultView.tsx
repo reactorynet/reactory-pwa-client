@@ -286,13 +286,14 @@ class RatingControl extends Component<any, any> {
       isSelfAssessment = true;
     }
 
-    if(is180 === true && assessment.team !== "delegates") {
-      isSelfAssessment === false
+    if(is180 === true && assessment.team === "assessor") {
+      isSelfAssessment = false
     }
+
     
     try {
       let $title = behaviour.title;
-      if (assessment.selfAssessment === true && behaviour.delegateTitle) {
+      if (isSelfAssessment === true && behaviour.delegateTitle) {
         $title = behaviour.delegateTitle;
       } else {
         if (behaviour.assessorTitle) {
@@ -321,7 +322,7 @@ class RatingControl extends Component<any, any> {
 
     try {
       let $description = behaviour.description;
-      if (assessment.selfAssessment === true && behaviour.delegateDescription) {
+      if (isSelfAssessment === true && behaviour.delegateDescription) {
         $description = behaviour.delegateDescription;
       } else {
         if (behaviour.assessorDescription) {
