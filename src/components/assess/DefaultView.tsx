@@ -5,8 +5,6 @@ import { compose } from "redux";
 import moment from "moment";
 import lodash, { isNil, find, isEmpty, template } from "lodash";
 import classNames from "classnames";
-import { graphql, Query, Mutation } from "@apollo/client";
-import { withApollo } from "@apollo/client/react/hoc";
 import gql from "graphql-tag";
 import MobileStepper from "@material-ui/core/MobileStepper";
 import {
@@ -49,12 +47,11 @@ import Assessment, { Behaviour } from "./Assessment";
 import KeyboardArrowLeft from "@material-ui/icons/KeyboardArrowLeft";
 import KeyboardArrowRight from "@material-ui/icons/KeyboardArrowRight";
 import { withApi } from "../../api/ApiProvider";
-import { ReactoryApi } from "../../api/ReactoryApi";
-import { isArray } from "util";
+import ReactoryApi from "../../api/ReactoryApi";
 import getInstructions from './defaultInstructions'
 const nil = isNil;
 
-class RatingControl extends Component {
+class RatingControl extends Component<any, any> {
   static styles = (theme) => {
     const primaryColor = theme.palette.primary.main;
     const primaryColorLight = theme.palette.primary.light;
@@ -103,6 +100,8 @@ class RatingControl extends Component {
       },
     };
   };
+
+  minWordCount: number = 10;
 
   constructor(props, context) {
     super(props, context);
@@ -185,6 +184,8 @@ class RatingControl extends Component {
     }
 
     let commentAllowed = true;
+    let is180 = assessment.survey.surveyType.endsWith("180");
+    let isCulture = assessment.survey.surveyType === "culture";
     switch (assessment.survey.surveyType) {
       case "culture":
       case "i360":
@@ -229,8 +230,7 @@ class RatingControl extends Component {
         fullWidth
         rowsMax="4"
         variant="outlined"
-        error={hasError}
-        maxLength={5000}
+        error={hasError}        
         value={this.state.comment}
         onChange={
           assessment.complete === false ? this.commentChanged : () => { }
@@ -279,6 +279,17 @@ class RatingControl extends Component {
 
     let $ratingContent = "processing";
     let $ratingSubContent = "processing";
+
+    let isSelfAssessment = assessment.selfAssessment === true;
+
+    if(is180 === true && assessment.team === "delegates") {
+      isSelfAssessment = true;
+    }
+
+    if(is180 === true && assessment.team !== "delegates") {
+      isSelfAssessment === false
+    }
+    
     try {
       let $title = behaviour.title;
       if (assessment.selfAssessment === true && behaviour.delegateTitle) {
@@ -307,6 +318,7 @@ class RatingControl extends Component {
       $ratingContent = `Error Processing behaviour template text. See logs for details`;
     }
 
+
     try {
       let $description = behaviour.description;
       if (assessment.selfAssessment === true && behaviour.delegateDescription) {
@@ -328,7 +340,7 @@ class RatingControl extends Component {
     } catch (e) {
       that.props.api.log(
         `Behaviour Template Error`,
-        { template: behaviour.description, templateErr },
+        { template: behaviour.description, templateErr: e },
         "error"
       );
 
@@ -426,10 +438,11 @@ class RatingControl extends Component {
 export const RatingComponent = compose(
   withApi,
   withTheme,
+  //@ts-ignore
   withStyles(RatingControl.styles)
 )(RatingControl);
 
-class DefaultView extends Component {
+class DefaultView extends Component<any, any> {
   // #region style definition
   static styles = (theme) => {
     const primaryColor = theme.palette.primary.main;
@@ -497,6 +510,9 @@ class DefaultView extends Component {
       },
       logo: {
         maxWidth: "370px",
+        height: windowWidth < 768 ? "90px" : "110px",
+        marginLeft: "auto",
+        marginRight: "auto",
       },
       welcomeContainer: {
         padding: "5px",
@@ -543,12 +559,7 @@ class DefaultView extends Component {
       },
       paragraph: {
         textAlign: "justify",
-      },
-      logo: {
-        height: windowWidth < 768 ? "90px" : "110px",
-        marginLeft: "auto",
-        marginRight: "auto",
-      },
+      },      
       plcLogo: {
         height: "280px",
         marginLeft: "auto",
@@ -568,6 +579,8 @@ class DefaultView extends Component {
       },
     };
   };
+
+  componentDefs: any = {};
 
   constructor(props, context) {
     super(props);
@@ -693,7 +706,7 @@ class DefaultView extends Component {
             defaultValue={
               <Typography gutterBottom>
                 Thank you for taking the time to assess the{" "}
-                {survey.delegateTeamName} team. This assessment should take
+                {survey.delegateTeam.name} team. This assessment should take
                 approximately 5 - 7 minutes.
                 <br />
                 You will be asked to provide a rating against a series of
@@ -1127,7 +1140,7 @@ class DefaultView extends Component {
       })
       .catch((graphError) => {
         api.log(`Could not load Custom comment`, { graphError }, "error");
-        that.setState({ qualityCustomComment, qualityAction });
+        that.setState({ qualityCustomComment, qualityAction: "" });
       });
   }
 
@@ -1147,7 +1160,7 @@ class DefaultView extends Component {
     const { slugify } = api.utils;
 
     const behaviours = quality.behaviours.map((behaviour) => {
-      let ratingIndex = lodash.findIndex(ratings, (r) => {
+      let ratingIndex = lodash.findIndex(ratings, (r: any) => {
         return behaviour.id === r.behaviour.id && quality.id === r.quality.id;
       });
       let rating = assessment.ratings[ratingIndex];
@@ -1194,7 +1207,7 @@ class DefaultView extends Component {
       .map((rating) => {
         const ratingIndex = lodash.findIndex(
           ratings,
-          (r) => r.id === rating.id
+          (r: any) => r.id === rating.id
         );
 
         const commentBlurred = () => {
@@ -1473,7 +1486,7 @@ class DefaultView extends Component {
     }
     const {title : _title_, description} = getInstructions(quality.title)
   
-    const _styles = {
+    const _styles: any = {
       scale: {
         marginLeft: '5px',
         marginRight: '2px',
@@ -1767,7 +1780,7 @@ class DefaultView extends Component {
       }`
       : `Unknown`;
     if (is180 === true) {
-      headerTitle = `180° Leadership Brand Assessment for the ${survey.delegateTeam.name}`;
+      headerTitle = `${survey.title}`;
     }
 
     if (survey.surveyType === "culture") {
@@ -1810,7 +1823,6 @@ class DefaultView extends Component {
         }
       >
         <Button
-          size="large"
           variant={"contained"}
           size="small"
           color="secondary"
@@ -1864,7 +1876,7 @@ class DefaultView extends Component {
           </Paper>
         </Grid>
         <Grid item xs={12} sm={12}>
-          {toolbar()}
+          {toolbar(null)}
         </Grid>
         <Grid item xs={12} sm={12} style={{ marginBottom: "48px" }}>
           {wizardControl}
@@ -1900,7 +1912,7 @@ class DefaultView extends Component {
   static propTypes = {
     assessment: PropTypes.object,
     api: PropTypes.instanceOf(ReactoryApi),
-    mode: PropTypes.objectOf(["assessor", "delegate", "admin"]),
+    mode: PropTypes.oneOf(["assessor", "delegate", "admin"]),
   };
 
   static defaultProps = {
@@ -1912,6 +1924,7 @@ class DefaultView extends Component {
 const DefaultViewComponent = compose(
   withApi,
   withRouter,
+  //@ts-ignore
   withStyles(DefaultView.styles),
   withTheme
 )(DefaultView);

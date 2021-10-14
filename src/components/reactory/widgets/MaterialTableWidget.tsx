@@ -42,6 +42,7 @@ import ReactoryApi from 'api';
 import { QueryResult } from '@apollo/client';
 import { Resolver } from 'dns';
 import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
+import { table } from 'console';
 
 export interface MaterialTableRemoteDataReponse {
   data: any[],
@@ -298,6 +299,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
   }
 
+
+
   const getData = (query: MaterialTableQuery): Promise<MaterialTableRemoteDataReponse> => {
     return new Promise((resolve, reject) => {
       reactory.log('♻ core.ReactoryMaterialTable data query', { query }, 'debug')
@@ -315,10 +318,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
           let queryDefinition: Reactory.IReactoryFormQuery = graphqlDefinitions.query;
 
+          
+
           if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
             queryDefinition = graphqlDefinitions.queries[uiOptions.query];
             reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
           }
+
+        
 
           reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
           let variables = reactory.utils.objectMapper({ formContext, query }, uiOptions.variables || queryDefinition.variables);
@@ -372,6 +379,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               response.page = response.page - 1;
             }
 
+          
             resolve(response);
           }).catch((queryError) => {
             reactory.log(`Error getting remote data`, { queryError }, 'error');
@@ -770,6 +778,42 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
   }
 
+  const bindRefreshEvents = (table) => {
+
+    const graphqlDefinitions = formContext.graphql;
+
+    if (graphqlDefinitions.query || graphqlDefinitions.queries) {
+
+      let queryDefinition: Reactory.IReactoryFormQuery = graphqlDefinitions.query;
+
+      const onEventRefreshHandler = (evt, evtkwargs) => {
+        if (uiOptions.remoteData === true) {
+          if (table && table.onQueryChange) {
+            table.onQueryChange()
+          }
+        } else {
+          setVersion(version + 1);
+        }
+
+        reactory.removeListener(evt.name, onEventRefreshHandler);
+      };
+
+
+      if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
+        queryDefinition = graphqlDefinitions.queries[uiOptions.query];
+        reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
+      }
+
+    if (queryDefinition && queryDefinition.refreshEvents) {
+      queryDefinition.refreshEvents.forEach((reactoryEvent) => {
+        reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
+        reactory.on(reactoryEvent.name, onEventRefreshHandler);
+      });
+    }
+  }
+
+  }
+
   React.useEffect(() => {
     refresh({})
   }, [formContext.formData]);
@@ -785,7 +829,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       //for now we just do a force refresh which will trigger re-rendering
       //logic in the widget.
       uiOptions.refreshEvents.forEach((reactoryEvent) => {
-        reactory.removeListener(reactoryEvent.name, refreshHandler);
+        reactory.removeListener(reactoryEvent.name, refresh);
       });
     };
   }
@@ -810,7 +854,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       <>
         <MaterialTable
           columns={columns || []}
-          tableRef={tableRef}
+          tableRef={(ref) => { tableRef.current = ref, bindRefreshEvents(ref) }}
           data={rows || []}
           title={schema.title || uiOptions.title || "no title"}
           options={options}

@@ -420,8 +420,7 @@ namespace Reactory {
     on?: boolean,
   }
 
-
-  export interface IReactoryFormQuery {
+  export interface IReactoryFormGraphElement {
     name: string,
     text: string,
     resultMap?: Object,
@@ -429,15 +428,32 @@ namespace Reactory {
     /**
      * Used when only want to extract a single value from the data result
      */
-    resultKey?: string; 
-    queryMessage?: string,
+    resultKey?: string;
+
     formData?: any,
     variables?: Object,
+
+    onSuccessMethod?: string | "redirect" | "notification" | "function",
+    onSuccessEvent?: IReactoryEvent | undefined,
+
+    mergeStrategy?: string | "merge" | "replace" | "function",
+    mergeFunction?: string
+
+    onError?: IReactoryFormQueryErrorHandlerDefinition,
+
+    options?: any,
+  }
+
+  export interface IReactoryFormQuery extends IReactoryFormGraphElement {
+        
+    queryMessage?: string,
+    
     props?: Object,
+
     edit?: boolean,
     new?: boolean,
     delete?: boolean,
-    options?: any,
+
     autoQuery?: boolean,
     //the number of milliseconds the autoQuery must be delayed for before executing
     autoQueryDelay?: number,
@@ -445,31 +461,27 @@ namespace Reactory {
     waitTimeout?: number,
     interval?: number,
     useWebsocket?: boolean,
-    onError?: IReactoryFormQueryErrorHandlerDefinition,
-    onSuccessMethod?: String | "redirect" | "notification" | "function",
-    onSuccessEvent?: IReactoryEvent | undefined,
+    
     notification?: any,
-    refreshEvents?: IReactoryEvent[] | undefined
+    refreshEvents?: IReactoryEvent[] | undefined,    
   }
 
-  export interface IReactoryFormMutation {
+  export interface IReactoryFormMutation extends IReactoryFormGraphElement {
     name: string,
     text: string,
-    objectMap: boolean,
     updateMessage?: string,
-    resultMap?: Object,
-    resultType?: string,
-    variables?: Object,
-    formData?: Object,
-    onSuccessMethod?: string | "redirect" | "notification" | "function",
-    onSuccessEvent?: IReactoryEvent | undefined,
+    
+    
     refreshEvents?: IReactoryEvent[] | undefined
     onSuccessUrl?: string,
     onSuccessRedirectTimeout?: number,
-    onError?: IReactoryFormQueryErrorHandlerDefinition,
-    options?: any,
+
+
     notification?: any,
+    mergeStrategy?: string | "merge" | "replace" | "function",
+    mergeFunction?: string
     handledBy?: string | 'onChange' | 'onSubmit'
+    objectMap?: boolean,
   }
 
   export interface IReactoryFormMutations {

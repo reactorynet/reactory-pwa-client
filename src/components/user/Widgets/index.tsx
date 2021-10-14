@@ -72,6 +72,7 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
     onDeleteUsersClick = null,
     onUserSelect = null,
     organization_id,
+    teams = [],
     filters = ["search"],
     allowDelete = false,
     multiSelect = true,

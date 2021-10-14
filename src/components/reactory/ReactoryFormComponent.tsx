@@ -45,6 +45,8 @@ import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
 import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
 import { Fullscreen } from '@material-ui/icons';
 
+import ReactoryFormDataManager from './ReactoryFormDataManager';
+
 const {
   MaterialArrayField,
   MaterialBooleanField,
@@ -275,6 +277,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     let _response: ScreenSizeKey = "md";
     return _response;
   };
+
+  const DATAMANAGER = ReactoryFormDataManager(reactory);
 
   //get initial data
   const initialData = (_existing: any = null) => {
@@ -600,31 +604,32 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
             if (data && data[mutation.name]) {
 
-              let _formData = null;
-              let _result = reactory.utils.omitDeep(data[mutation.name]);
+              let _formData = DATAMANAGER.fromGraphResult(data, form.formData, mutation);
+              // let _result = reactory.utils.omitDeep(data[mutation.name]);
 
-              if (mutation.resultMap && Object.getOwnPropertyNames(mutation.resultMap).length > 0) {
-                _result = reactory.utils.objectMapper(_result, mutation.resultMap);
-              }
+              // if (mutation.resultMap && Object.getOwnPropertyNames(mutation.resultMap).length > 0) {
+              //   _result = reactory.utils.objectMapper(_result, mutation.resultMap);
+              // }
 
-              let _strategy = 'merge';
-              switch (_strategy) {
-                case "overwrite": {
-                  _formData = _result;
-                  break;
-                }
-                case 'function': {
-                  //use a custom merging function
-                  //for the form / mutation
-                  //specify the function id on graph
-                  break;
-                }
-                case 'merge':
-                default: {
-                  _formData = reactory.utils.lodash.merge({}, formData, _result);
-                  break;
-                }
-              }
+              // let _strategy = 'merge';
+              // switch (_strategy) {
+              //   case "overwrite": {
+              //     _formData = _result;
+              //     break;
+              //   }
+              //   case 'function': {
+              //     //use a custom merging function
+              //     //for the form / mutation
+              //     //specify the function id on graph
+              //     break;
+              //   }
+              //   case 'merge':
+              //   default: {
+
+              //     _formData = reactory.utils.lodash.merge({}, formData, _result);
+              //     break;
+              //   }
+              // }
 
               //validate data against schema
               if (formDef.sanitizeSchema) {
@@ -1342,7 +1347,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     switch (formDef.schema.type) {
       case "object": {
-
         _formData = { ...formData };
         if (version === 0 && formDef.defaultFormValue) {
           _formData = { ...formDef.defaultFormValue, ...formData };
@@ -1387,7 +1391,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           case "array": {
             _formData = [];
             if (isArray(__staticFormData) === true) _formData = [...__staticFormData];
-            if (isArray(formData) === true) _formData = [...formData, ...formData];
+            if (isArray(formData) === true) _formData = [...formData];
             break;
           }
           default: {
@@ -1451,38 +1455,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             reactory.stat(`${formDef.nameSpace}.${formDef.name}@${formDef.version}:query_execution_length`, { query_start, query_end, diff: query_end - query_start, unit: 'utc-date' });
             const { data, errors } = result;
 
-            if (data && data[query.name]) {
-              switch (query.resultType) {
-                case 'array': {
-                  let mergedData = []
-                  if (isArray(_formData) === true) mergedData = [..._formData];
-                  if (isArray(data[query.name]) === true) mergedData = [...reactory.utils.lodash.cloneDeep(_formData), ...reactory.utils.lodash.cloneDeep(data[query.name])];
-                  if (query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
-                    _formData = objectMapper(mergedData, query.resultMap);
-                  } else {
-                    _formData = mergedData;
-                  }
-
-                  break;
-                }
-                default: {
-                  if (query.resultMap && Object.getOwnPropertyNames(query.resultMap).length > 0) {
-
-                    try {
-                      _formData = objectMapper({ ...reactory.utils.lodash.cloneDeep(_formData), ...reactory.utils.lodash.cloneDeep(data[query.name]) }, query.resultMap);
-                    } catch (mappError) {
-
-                      reactory.log("Could not map the object data", { mappError }, 'error')
-                    }
-
-                  } else {
-                    _formData = { ..._formData, ...data[query.name] };
-                  }
-                }
-              }
+            if (data && data[query.name]) {              
+              _formData = DATAMANAGER.fromGraphResult(data, _formData, query);              
             }
 
-            //update component state with new form data
 
             try {
               //setState({ formData: _formData, queryComplete: true, dirty: false, allowRefresh: true, queryError: errors, loading, last_query_exec: new Date().valueOf() }, () => {
@@ -1544,13 +1520,16 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
               // only use on when the use case is explicit for it's use. Otherwise it is recommended
               // to use once 
               reactory.on(eventDefinition.name, (evt) => {
-                reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
+                reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt, signature }, 'debug')
                 setTimeout(getData, query.autoQueryDelay || 500)
               });
             } else {
               reactory.once(eventDefinition.name, (evt) => {
-                reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt }, 'debug')
-                setTimeout(getData, query.autoQueryDelay || 500)
+                reactory.log(`🔔 Refresh of query triggred via ONCE refresh event`, { eventDefinition, evt, signature }, 'debug')
+                setTimeout(() => {
+                  getData();
+
+                }, query.autoQueryDelay || 0)
               });
             }
             
