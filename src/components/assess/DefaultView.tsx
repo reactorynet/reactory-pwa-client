@@ -1497,7 +1497,7 @@ class DefaultView extends Component<any, any> {
         display: 'block',
       },
       captionText: {
-        fontSize: '1.2rem'
+        fontSize: '14px'
       }
     }
     const assessmetnInstructionsDefaultContent = (

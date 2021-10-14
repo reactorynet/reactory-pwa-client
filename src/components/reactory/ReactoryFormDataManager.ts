@@ -34,21 +34,19 @@ export default (reactory: ReactoryApi) => ({
                   break;
                 }
               }
-            } else {
-              //not using the key from the result item the default behaviour, this implies
-              //that the result from the query is an array of data and not a object containing elements.
-              if (isArray(data[graphElement.name]) === true && reactory.utils.lodash.isNil(graphElement.resultMap) === true)
-                switch (_strategy) {
-                  case "replace": {
-                    nextFormData = [...reactory.utils.lodash.cloneDeep(data[graphElement.name])];
-                  }
-                  case "merge":
-                  default: {
-                    nextFormData = [...nextFormData, ...reactory.utils.lodash.cloneDeep(data[graphElement.name])];
-                    break;
-                  }
-                }
             }
+          } else {
+            if (isArray(data[graphElement.name]) === true)
+              switch (_strategy) {
+                case "replace": {
+                  nextFormData = [...reactory.utils.lodash.cloneDeep(data[graphElement.name])];
+                }
+                case "merge":
+                default: {
+                  nextFormData = [...nextFormData, ...reactory.utils.lodash.cloneDeep(data[graphElement.name])];
+                  break;
+                }
+              }
           }
 
           if (graphElement.resultMap && Object.getOwnPropertyNames(graphElement.resultMap).length > 0) {
