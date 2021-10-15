@@ -5,10 +5,11 @@ import { makeStyles, Theme, useTheme } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
-import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
+import Icon from '@material-ui/core/Icon';
 
 import { retrieveSchema } from '@reactory/client-core/components/reactory/form/utils';
+import { Typography } from '@material-ui/core';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -17,23 +18,19 @@ interface TabPanelProps {
   value: any;
 }
 
+
 function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+  const { children, value, index } = props;
+
+  if(value !== index) return null;
 
   return (
-    <div
-      role="tabpanel"
+    <Box key={index} role="tabpanel"
       hidden={value !== index}
       id={`full-width-tabpanel-${index}`}
-      aria-labelledby={`full-width-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box p={3}>
-          <Typography>{children}</Typography>
-        </Box>
-      )}
-    </div>
+      aria-labelledby={`full-width-tab-${index}`} p={1}>
+      <Typography>{children}</Typography>
+    </Box>
   );
 }
 
@@ -55,7 +52,7 @@ const MaterialTabbedField = (props) => {
   const classes = useStyles();
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
-  
+
   const history = useHistory();
   const params = useParams();
 
@@ -106,26 +103,26 @@ const MaterialTabbedField = (props) => {
 
   React.useEffect(() => {
     //determine default tab
-    if (uiSchema["ui:options"] && uiSchema["ui:options"].activeTab === 'params') {      
-      if(uiSchema["ui:options"].activeTabKey) {
+    if (uiSchema["ui:options"] && uiSchema["ui:options"].activeTab === 'params') {
+      if (uiSchema["ui:options"].activeTabKey) {
         let tab_param = uiSchema["ui:options"].activeTabKey;
-        if(params["tab_param"]) {
-            let activeIndex = 0;
+        if (params["tab_param"]) {
+          let activeIndex = 0;
 
-            layout.forEach((tabDef, tindex) => {
-              if (schema.properties[params["tab_param"]]) {
-                activeIndex = tindex;
-              }                
-            });
-            
-            setValue(activeIndex);
+          layout.forEach((tabDef, tindex) => {
+            if (schema.properties[params["tab_param"]]) {
+              activeIndex = tindex;
+            }
+          });
+
+          setValue(activeIndex);
         }
       }
     }
   }, [])
 
   return (
-    <div className={classes.root}>
+    <>
       <AppBar position="static" color="default">
         <Tabs
           value={value}
@@ -137,7 +134,7 @@ const MaterialTabbedField = (props) => {
         >
           {layout.map((tabDef, tindex) => {
             if (schema.properties[tabDef.field])
-              return (<Tab label={`${schema.properties[tabDef.field].title || tabDef.field}`} {...a11yProps(tindex)} />)
+              return (<Tab icon={tabDef.icon ? (<Icon>{tabDef.icon}</Icon>) : null} label={`${tabDef.title || schema.properties[tabDef.field].title || tabDef.field}`} {...a11yProps(tindex)} />)
           })}
 
         </Tabs>
@@ -146,11 +143,12 @@ const MaterialTabbedField = (props) => {
         axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'}
         index={value}
         onChangeIndex={handleChangeIndex}
+        key={'view'}        
       >
         {layout.map((tabDef, tindex) => {
           if (schema.properties[tabDef.field])
             return (
-              <TabPanel value={value} index={tindex}>
+              <TabPanel {...props} value={value} index={tindex}>
                 <SchemaField
                   name={tabDef.field}
                   required={isRequired(tabDef.field)}
@@ -168,103 +166,8 @@ const MaterialTabbedField = (props) => {
             )
         })}
       </SwipeableViews>
-    </div>
+    </>
   );
 }
 
 export default MaterialTabbedField;
-
-
-/*
-export default class GridField extends ObjectField {
-  state = { firstName: 'hasldf' }
-  render() {
-    const {
-      uiSchema,
-      errorSchema,
-      idSchema,
-      required,
-      disabled,
-      readonly,
-      onBlur,
-      formData
-    } = this.props
-    const { definitions, fields, formContext } = this.props.registry
-    const { SchemaField, TitleField, DescriptionField } = fields
-    const schema = retrieveSchema(this.props.schema, definitions)
-    const title = (schema.title === undefined) ? '' : schema.title
-
-    const layout = uiSchema['ui:tabs-layout']
-
-    return (
-      <fieldset>
-        {title ? <TitleField
-            id={`${idSchema.$id}__title`}
-            title={title}
-            required={required}
-            formContext={formContext}/> : null}
-        {schema.description ?
-          <DescriptionField
-            id={`${idSchema.$id}__description`}
-            description={schema.description}
-            formContext={formContext}/> : null}
-        {
-          layout.map((row, index) => {
-            return (
-              <div className="row" key={index}>
-                {
-                  Object.keys(row).map((name, index) => {
-                    const { doShow, ...rowProps } = row[name]
-                    let style = {}
-                    if (doShow && !doShow({ formData })) {
-                      style = { display: 'none' }
-                    }
-                    if (schema.properties[name]) {
-                      return (
-                          <Col {...rowProps} key={index} style={style}>
-                            <SchemaField
-                               name={name}
-                               required={this.isRequired(name)}
-                               schema={schema.properties[name]}
-                               uiSchema={uiSchema[name]}
-                               errorSchema={errorSchema[name]}
-                               idSchema={idSchema[name]}
-                               formData={formData[name]}
-                               onChange={this.onPropertyChange(name)}
-                               onBlur={onBlur}
-                               registry={this.props.registry}
-                               disabled={disabled}
-                               readonly={readonly}/>
-                          </Col>
-                      )
-                    } else {
-                      const { render, ...rowProps } = row[name]
-                      let UIComponent = () => null
-
-                      if (render) {
-                        UIComponent = render
-                      }
-
-                      return (
-                            <Col {...rowProps} key={index} style={style}>
-                              <UIComponent
-                                name={name}
-                                formData={formData}
-                                errorSchema={errorSchema}
-                                uiSchema={uiSchema}
-                                schema={schema}
-                                registry={this.props.registry}
-                              />
-                            </Col>
-                      )
-                    }
-                  })
-                }
-              </div>
-            )
-          })
-        }</fieldset>
-    )
-  }
-}
-*/

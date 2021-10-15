@@ -16,7 +16,6 @@ export default (reactory: ReactoryApi) => ({
 
       switch (graphElement.resultType) {
         case 'array': {
-          debugger
           nextFormData = []; //start with empty array
           if (isArray(formData) === true && _strategy === 'merge') nextFormData = [...reactory.utils.lodash.cloneDeep(formData)];
 
