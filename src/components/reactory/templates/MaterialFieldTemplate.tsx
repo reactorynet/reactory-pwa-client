@@ -71,35 +71,41 @@ const MaterialFieldTemplateFunction = (props) => {
 
   if (uiOptions !== null) {
     showLabel = uiOptions.showLabel !== undefined && uiOptions.showLabel !== null ? uiOptions.showLabel === true : true;
+    let _props = { ...props };
 
     if (hidden === true || uiWidget === "HiddenWidget") {
       return <>{children}</>
     }
 
     if (uiOptions.componentFqn) {
-      Widget = api.getComponent(uiOptions.componentFqn);
-      let _props = { ...props };
-      if (typeof uiOptions.componentProps === 'object') {
-        _props = { ..._props, ...uiOptions.componentProps }
-      }
+      Widget = api.getComponent(uiOptions.componentFqn);            
+    }
 
-      if (uiOptions.componentPropsMap) {
-        let mappedProps = api.utils.objectMapper(props, uiOptions.componentPropsMap);
-        if (mappedProps) {
-          _props = { ..._props, ...mappedProps }
-        }
-      }
+    if (typeof uiOptions.componentProps === 'object') {
+      _props = { ..._props, ...uiOptions.componentProps }
+    }
 
-      if (uiOptions.propsMap) {
-        let mappedProps = api.utils.objectMapper(props, uiOptions.propsMap);
-        if (mappedProps) {
-          _props = { ..._props, ...mappedProps }
-        }
-      }
+    if (typeof uiOptions.props === 'object') {
+      _props = { ..._props, ...uiOptions.props }
+    }
 
-      if (Widget) {
-        return (<Widget {..._props} />)
+    if (uiOptions.componentPropsMap) {
+      let mappedProps = api.utils.objectMapper(props, uiOptions.componentPropsMap);
+      if (mappedProps) {
+        _props = { ..._props, ...mappedProps }
       }
+    }
+
+
+    if (uiOptions.propsMap) {
+      let mappedProps = api.utils.objectMapper(props, uiOptions.propsMap);
+      if (mappedProps) {
+        _props = { ..._props, ...mappedProps }
+      }
+    }
+
+    if (Widget) {
+      return (<Widget {..._props} />)
     }
   }
   let toolbar = null;

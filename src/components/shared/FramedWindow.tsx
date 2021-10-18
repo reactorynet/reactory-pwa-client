@@ -15,7 +15,7 @@ const defaultFrameProps = {
   url: 'http://localhost:3001/',
   className: null,
   style: {
-    top: '65px',
+    top: '45px',
     bottom: '0px',
     width: '100%',
     height: '100%',

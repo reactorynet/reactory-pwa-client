@@ -3,6 +3,14 @@ import { useReactory, withApi } from "@reactory/client-core/api";
 import { withTheme } from '@material-ui/styles';
 import { compose } from 'redux';
 
+interface IRecording {
+  id: string,
+  type: string | "video" | "audio",
+  data: Blob,
+  url: string,
+  title: string,
+  saved: boolean
+}
 
 export default {
   nameSpace: 'core',
@@ -15,11 +23,18 @@ export default {
     const { Material } = reactory.getComponents(['material-ui.Material']);
     const { palette } = theme;
     const canvas = React.useRef<HTMLCanvasElement>(null);
+    const video = React.useRef<HTMLVideoElement>(null);
     //@ts-ignore
     const mediaRecorder = React.useRef<MediaRecorder>(null);
-    const recordings = React.useRef<any[]>([])
+    const recordings = React.useRef<IRecording[]>([]);
+    // const [recordings, setRecordings] = React.useState<any[]>([])
     const [is_recording, setIsRecording] = React.useState(false);
+    const [mediaConstraint, setMediaConstraint] = React.useState<MediaStreamConstraints>({ audio: true, video: true });
     const [canvasContext, setCanvasContext] = React.useState<CanvasRenderingContext2D>(null);
+    const [isPlayingKey, setIsPlayingKey] = React.useState(null);
+    const [isPlaying, setIsPlaying] = React.useState(false);
+    const [isLiveStreaming, setIsLiveStreaming] = React.useState(false);
+
 
 
 
@@ -29,68 +44,90 @@ export default {
     // const mainSection = document.querySelector('.main-controls');
 
     const { MaterialCore } = Material;
-    const { Button, Paper, Grid, List, ListItem, ListItemText, Icon } = MaterialCore;
+    const { Button, Box, Paper, Grid, List, ListItem,
+      ListItemText, Icon, IconButton, ListItemSecondaryAction,
+      Toolbar } = MaterialCore;
 
     const visualize = (stream) => {
 
-      if(!mediaRecorder.current) return;
-      if(!canvasContext) return;
+      if (!mediaRecorder.current) return;
+      if (!canvasContext) return;
 
-      let audioCtx = new AudioContext();
-
-      const source = audioCtx.createMediaStreamSource(stream);
-
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      source.connect(analyser);
-      //analyser.connect(audioCtx.destination);
-
-
-
-      const draw = () => {
-        const WIDTH = canvas.current.width;
-        const HEIGHT = canvas.current.height;
-
-        requestAnimationFrame(draw);
-
-        analyser.getByteTimeDomainData(dataArray);
-
-        canvasContext.fillStyle = 'rgb(200, 200, 200)';
-        canvasContext.fillRect(0, 0, WIDTH, HEIGHT);
-
-        canvasContext.lineWidth = 2;
-        canvasContext.strokeStyle = 'rgb(0, 0, 0)';
-
-        canvasContext.beginPath();
-
-        let sliceWidth = WIDTH * 1.0 / bufferLength;
-        let x = 0;
-
-
-        for (let i = 0; i < bufferLength; i++) {
-
-          let v = dataArray[i] / 128.0;
-          let y = v * HEIGHT / 2;
-
-          if (i === 0) {
-            canvasContext.moveTo(x, y);
-          } else {
-            canvasContext.lineTo(x, y);
-          }
-
-          x += sliceWidth;
+      if (mediaConstraint.video === true) {
+        if (video.current) {
+          video.current.src = URL.createObjectURL(stream);
+          video.current.load();
+          video.current.play().then(() => {
+            setIsLiveStreaming(true)
+          }).catch((err) => {
+            setIsLiveStreaming(false)
+          });
         }
-
-        canvasContext.lineTo(canvas.current.width, canvas.current.height / 2);
-        canvasContext.stroke();
-
       }
 
-      
-      draw()
+      if (mediaConstraint.audio === true) {
+        let audioCtx = new AudioContext();
+
+
+        const source = audioCtx.createMediaStreamSource(stream);
+
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+
+
+        const draw = () => {
+
+          if (canvas && canvas.current) {
+            const WIDTH = canvas.current.width;
+            const HEIGHT = canvas.current.height;
+
+            requestAnimationFrame(draw);
+
+            analyser.getByteTimeDomainData(dataArray);
+
+            canvasContext.fillStyle = 'rgb(200, 200, 200)';
+            canvasContext.fillRect(0, 0, WIDTH, HEIGHT);
+
+            canvasContext.lineWidth = 2;
+            canvasContext.strokeStyle = 'rgb(0, 0, 0)';
+
+            canvasContext.beginPath();
+
+            let sliceWidth = WIDTH * 1.0 / bufferLength;
+            let x = 0;
+
+
+            for (let i = 0; i < bufferLength; i++) {
+
+              let v = dataArray[i] / 128.0;
+              let y = v * HEIGHT / 2;
+
+              if (i === 0) {
+                canvasContext.moveTo(x, y);
+              } else {
+                canvasContext.lineTo(x, y);
+              }
+
+              x += sliceWidth;
+            }
+
+            canvasContext.lineTo(canvas.current.width, canvas.current.height / 2);
+            canvasContext.stroke();
+          }
+
+        }
+
+
+        draw()
+      }
+
+
     }
 
 
@@ -101,23 +138,33 @@ export default {
       if (navigator.mediaDevices) {
         console.log('getUserMedia supported.');
 
-        var constraints = { audio: true };
         let chunks = [];
-        navigator.mediaDevices.getUserMedia(constraints)
+
+        navigator.mediaDevices.getUserMedia(mediaConstraint)
           .then(function (stream) {
 
             //@ts-ignore
             mediaRecorder.current = new MediaRecorder(stream);
-          
 
-            visualize(stream);
+            if (mediaConstraint.video === true) {
+              try {
+                video.current.srcObject = stream;
+                video.current.play();
+              } catch (err) {
+                // deal with this.
+              }
+
+            } else {
+              visualize(stream);
+            }
 
             mediaRecorder.current.onstart = (e) => {
               chunks = [];
             };
 
             mediaRecorder.current.onstop = function (e) {
-              debugger
+              video.current.srcObject = null;
+
               reactory.log("data available after MediaRecorder.stop() called.");
 
 
@@ -140,15 +187,16 @@ export default {
 
               // audio.controls = true;
 
-
+              let blobProps: BlobPropertyBag = mediaConstraint.video === true ? { type: 'video/mp4' } : { 'type': 'audio/ogg; codecs=opus' };
+              const data = new Blob(chunks, blobProps);
               const recording: any = {
                 id: reactory.utils.uuid(),
-                type: 'audio',
+                type: mediaConstraint.video === true ? 'video' : 'audio',
                 title: null,
                 saved: false,
                 chunks: chunks,
-                data: new Blob(chunks, { 'type': 'audio/ogg; codecs=opus' }),
-                url: URL.createObjectURL(new Blob(chunks, { 'type': 'audio/ogg; codecs=opus' }))
+                data: data,
+                url: URL.createObjectURL(data)
               }
 
               recordings.current.push(recording);
@@ -157,12 +205,12 @@ export default {
             }
 
             mediaRecorder.current.ondataavailable = function (e) {
-                chunks.push(e.data);
+              chunks.push(e.data);
             }
 
           })
           .catch(function (err) {
-            reactory.createNotification('Error getting stream', { type: 'warning'});
+            reactory.createNotification('Error getting stream', { type: 'warning' });
             reactory.log('The following error occurred: ' + err, { err }, 'error');
           })
       }
@@ -172,17 +220,16 @@ export default {
 
 
     const onStartRecording = () => {
-      if (mediaRecorder.current && mediaRecorder.current.start && mediaRecorder.current.state !== "recording")  {
-        setIsRecording(true)
+      if (mediaRecorder.current && mediaRecorder.current.start && mediaRecorder.current.state !== "recording") {
         mediaRecorder.current.start();
+        setIsRecording(true)
       }
     };
 
     const onStopRecording = () => {
-      debugger
-
       if (mediaRecorder.current && mediaRecorder.current.stop && mediaRecorder.current.state === "recording") {
         mediaRecorder.current.stop();
+        setIsRecording(false)
       }
     }
 
@@ -201,22 +248,104 @@ export default {
       acquireStream();
     }, [canvasContext]);
 
-    React.useEffect(() => {      
+    React.useEffect(() => {
+      if (mediaRecorder.current) {
+
+        if (mediaRecorder.current.state === "recording")
+          mediaRecorder.current.stop();
+
+        acquireStream();
+      }
+    }, [mediaConstraint]);
+
+    React.useEffect(() => {
       return () => {
-        if(mediaRecorder.current) {
+        if (mediaRecorder.current) {
           if (mediaRecorder.current.state !== "inactive") {
-            mediaRecorder.current.stop();            
-          }          
+            mediaRecorder.current.stop();
+          }
         }
       }
     }, [])
 
-    const AudioPlayer = (recording: any, key: string) => {      
-      return <audio src={recording.url} key={key}/>
+
+    const doPromptUpload = (recording, key) => {
+
+    };
+
+    const doRemoveRecording = (recording, key) => {
+
+      reactory.utils.lodash.pullAt(recordings.current, [key])
+
+    }
+
+
+    const AudioPlayer = (recording: any, key: string) => {
+
+      const audioRef = React.useRef<HTMLAudioElement>(null);
+
+      return (
+        <Box>
+          <Paper>
+            <audio src={recording.url} key={key} ref={audio => audioRef.current = audio} />
+          </Paper>
+          <Toolbar>
+            <IconButton size={'small'} onClick={() => {
+              if (isPlayingKey === key) {
+                if (audioRef.current.paused === false) {
+                  audioRef.current.pause();
+                  setIsPlaying(true);
+                }
+                else {
+                  audioRef.current.pause();
+                  setIsPlaying(false);
+                }
+              } else {
+                audioRef.current.srcObject = recording.data;
+                audioRef.current.play();
+                setIsPlayingKey(key);
+                setIsPlaying(true);
+              }
+            }}><Icon>{isPlayingKey === key && isPlaying === true ? 'stop' : 'play_arrow'}</Icon></IconButton>
+
+            <IconButton size="small" color="primary" onClick={() => { doPromptUpload(recording, key) }}><Icon>save</Icon></IconButton>
+            <IconButton size="small" onClick={() => { doRemoveRecording(recording, key) }}><Icon style={{ color: theme.palette.error.main }}>delete</Icon></IconButton>
+
+          </Toolbar>
+        </Box>
+      )
+
     }
 
     const VideoPlayer = (recording, key) => {
-      return (<video src={recording.url} controls={true} width={240} height={240} key={key} />)
+      const player = React.useRef<HTMLVideoElement>(null)
+
+      return (
+        <Box>
+          <Paper>
+            <video ref={ref => {
+              player.current = ref;
+              player.current.src = recording.url;
+              player.current.load();
+            }} width={200} />
+          </Paper>
+          <Toolbar>
+            <IconButton size={'small'} onClick={() => {
+              if (player.current.paused === false) {
+                player.current.pause();
+              }
+              else {
+                player.current.play().then(() => {
+                });
+              }
+            }}><Icon>{isPlayingKey === key && isPlaying === true ? 'stop' : 'play_arrow'}</Icon></IconButton>
+
+            <IconButton size="small" color="primary" onClick={() => { doPromptUpload(recording, key) }}><Icon>save</Icon></IconButton>
+            <IconButton size="small" onClick={doRemoveRecording(recording, key)}><Icon style={{ color: theme.palette.error.main }}>delete</Icon></IconButton>
+
+          </Toolbar>
+        </Box>
+      );
     }
 
 
@@ -227,21 +356,36 @@ export default {
     return (
       <Paper elevation={2}>
         <Grid container spacing={2}>
-          <Grid item xs={12} xl={12}>
-            <canvas ref={(canvasRef) => { canvas.current = canvasRef }} className="visualizer" height="60px"></canvas>
+          <Grid>
+            <video ref={(ref) => { video.current = ref }} width={320} />
           </Grid>
           <Grid item xs={12} xl={12}>
-            <Icon style={recording_icon_style}>fiber_manual_record</Icon>
-            <Button className="record" onClick={onStartRecording}>Record</Button>
-            <Button className="stop" onClick={onStopRecording}>Stop</Button>
+            <canvas ref={(canvasRef) => { canvas.current = canvasRef }} height="60px"></canvas>
+          </Grid>
+          <Grid item xs={12} xl={12}>
+            <Toolbar>
+
+              <IconButton size={'small'} onClick={() => {
+                setMediaConstraint({ ...mediaConstraint, audio: !mediaConstraint.audio });
+              }}><Icon>{mediaConstraint.audio ? 'mic' : 'mic_off'}</Icon></IconButton>
+              <IconButton size={'small'} onClick={() => {
+                setMediaConstraint({ ...mediaConstraint, video: !mediaConstraint.video });
+              }}><Icon>{mediaConstraint.video ? 'videocam' : 'videocam_off'}</Icon></IconButton>
+
+              <IconButton size={'small'} onClick={onStartRecording}><Icon style={recording_icon_style}>fiber_manual_record</Icon></IconButton>
+              <IconButton size={'small'} onClick={onStopRecording}><Icon>stop</Icon></IconButton>
+            </Toolbar>
           </Grid>
           <Grid>
             <List>
-              {recordings.current && recordings.current.map((recording, idx) => {
+              {recordings.current.map((recording, idx) => {
                 return (
-                  <ListItem key={idx}>
-                    {recording.type === 'audio' ? <audio src={recording.url} key={idx} controls={true} /> : <VideoPlayer recording={recording} key={idx} />}
+                  <ListItem key={idx} style={{ width: '250px' }}>
+                    {recording.type === 'audio' ?
+                      <AudioPlayer recording={recording} key={idx} /> :
+                      <VideoPlayer recording={recording} key={idx} />}
                   </ListItem >
+
                 )
               })}
             </List>

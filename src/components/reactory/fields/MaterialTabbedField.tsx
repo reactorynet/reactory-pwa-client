@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useHistory } from 'react-router';
 import SwipeableViews from 'react-swipeable-views';
 import { makeStyles, Theme, useTheme } from '@material-ui/core/styles';
@@ -10,37 +10,16 @@ import Icon from '@material-ui/core/Icon';
 
 import { retrieveSchema } from '@reactory/client-core/components/reactory/form/utils';
 import { Typography } from '@material-ui/core';
+import { useReactory } from '@reactory/client-core/api';
 
 interface TabPanelProps {
   children?: React.ReactNode;
   dir?: string;
+  options?: any;
   index: any;
   value: any;
 }
 
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index } = props;
-
-  if(value !== index) return null;
-
-  return (
-    <Box key={index} role="tabpanel"
-      hidden={value !== index}
-      id={`full-width-tabpanel-${index}`}
-      aria-labelledby={`full-width-tab-${index}`} p={1}>
-      <Typography>{children}</Typography>
-    </Box>
-  );
-}
-
-function a11yProps(index: any) {
-  return {
-    id: `full-width-tab-${index}`,
-    'aria-controls': `full-width-tabpanel-${index}`,
-    key: `tab-${index}`,
-  };
-}
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -49,20 +28,14 @@ const useStyles = makeStyles((theme: Theme) => ({
 }));
 
 const MaterialTabbedField = (props) => {
-  const classes = useStyles();
-  const theme = useTheme();
-  const [value, setValue] = React.useState(0);
+
 
   const history = useHistory();
   const params = useParams();
-
-  const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
-    setValue(newValue);
-  };
-
-  const handleChangeIndex = (index: number) => {
-    setValue(index);
-  };
+  
+  const classes = useStyles();
+  const theme = useTheme();
+  const reactory = useReactory();
 
   const {
     uiSchema,
@@ -72,14 +45,102 @@ const MaterialTabbedField = (props) => {
     disabled,
     readonly,
     onBlur,
-    formData
-  } = props
+    formData,
+  } = props;
+
+
+  const layout = uiSchema['ui:tab-layout'] || [];
+  const uiOptions = uiSchema['ui:tab-options'] || {};
+
+  
+  const getTabIndex = () => {
+    const index = reactory.utils.lodash.findIndex(layout, { field: props.activeTab });
+    if(index < 0) return 0;
+    return index;
+  }
+
+  const getTabKey = (index: number) => {
+    return layout[index].field
+  }
+
+  const [value, setValue] = React.useState( getTabIndex() );
+
+
+  const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
+
+    if(uiOptions.useRouter === true) {
+      const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')({ props, tab_id: getTabKey(newValue) });
+      history.push(new_path);
+    } else {
+      setValue(newValue);
+    }
+
+    
+  };
+
+  const handleChangeIndex = (index: number) => {
+    setValue(index);
+  };
+
+
+
+  const TabPanel = (panelProps: TabPanelProps) => {
+    const { children, value, index, options } = panelProps;
+
+    if (value !== index) return null;
+
+    return (
+      <Box key={index} role="tabpanel"
+        hidden={value !== index}
+        id={`full-width-tabpanel-${index}`}
+        aria-labelledby={`full-width-tab-${index}`} p={1}>
+        <Typography>{children}</Typography>
+      </Box>
+    );
+  }
+
+  function a11yProps(index: any) {
+    return {
+      id: `full-width-tab-${index}`,
+      'aria-controls': `full-width-tabpanel-${index}`,
+      key: `tab-${index}`,
+    };
+  }
+
+
+  
   const { definitions, fields, formContext } = props.registry
   const { SchemaField, TitleField, DescriptionField } = fields
   const schema = retrieveSchema(props.schema, definitions)
   const title = (schema.title === undefined) ? '' : schema.title
 
-  const layout = uiSchema['ui:tab-layout'] || []
+  const DefaultTabProps = {
+    useRouter: false,
+    tabsProps: {
+      indicatorColor: "primary",
+      textColor: "primary",
+      variant: "fullWidth",
+      "aria-label": `Tabbed navigation for ${schema.title ? schema.title : "form field"}`, 
+    }
+  }
+
+  let options: any = {
+    appBarProps: {
+      position: "static",
+      color: "default",
+    },
+    tabsProps: { ...DefaultTabProps.tabsProps }
+  };
+
+  const uiSchemaOptions = uiSchema["ui:options"] || {};
+
+  if( uiSchemaOptions.tabsProps ) {
+    options.tabsProps = { ...DefaultTabProps, ...uiSchemaOptions.tabsProps };
+  }
+
+  if( uiSchemaOptions.appBarProps) {
+    options.appBarProps = { ...options.appBarProps, ...uiSchemaOptions.appBarProps };
+  }
 
   const isRequired = (name: string) => {
     return (
@@ -120,21 +181,25 @@ const MaterialTabbedField = (props) => {
       }
     }
   }, [])
+  
+
+  const TabsProps = {
+    ...options.tabsProps,
+    value,
+    onChange: handleChange
+  }
 
   return (
     <>
-      <AppBar position="static" color="default">
-        <Tabs
-          value={value}
-          onChange={handleChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-          aria-label="full width tabs example"
-        >
+      <AppBar { ...options.appBarProps }>
+        <Tabs {...TabsProps}>
           {layout.map((tabDef, tindex) => {
-            if (schema.properties[tabDef.field])
-              return (<Tab icon={tabDef.icon ? (<Icon>{tabDef.icon}</Icon>) : null} label={`${tabDef.title || schema.properties[tabDef.field].title || tabDef.field}`} {...a11yProps(tindex)} />)
+            if (schema.properties[tabDef.field]) {
+              let tabUISchema = uiSchema[tabDef.field] || {  };
+              let tabUIOptions = tabUISchema["ui:options"] || { }
+
+              return (<Tab key={tindex} textColor={theme.palette[tabUIOptions.textColor || "primary"].contrastText} icon={tabDef.icon ? (<Icon>{tabDef.icon}</Icon>) : null} label={`${tabDef.title || schema.properties[tabDef.field].title || tabDef.field}`} {...a11yProps(tindex)} />)
+            }              
           })}
 
         </Tabs>
@@ -146,9 +211,16 @@ const MaterialTabbedField = (props) => {
         key={'view'}        
       >
         {layout.map((tabDef, tindex) => {
-          if (schema.properties[tabDef.field])
+          if (schema.properties[tabDef.field]) {
+
+            const panelProps: any = {
+              value,
+              index: tindex,
+              key: tindex
+            };
+
             return (
-              <TabPanel {...props} value={value} index={tindex}>
+              <TabPanel {...panelProps} >
                 <SchemaField
                   name={tabDef.field}
                   required={isRequired(tabDef.field)}
@@ -164,6 +236,8 @@ const MaterialTabbedField = (props) => {
                   readonly={readonly} />
               </TabPanel>
             )
+          }
+          return null
         })}
       </SwipeableViews>
     </>
