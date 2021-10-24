@@ -1131,7 +1131,7 @@ class Profile extends Component<any, any> {
             }
 
             addUserDialog = (
-                <FullScreenModal open={showAddUserDialog === true} title={`${this.props.mode === 'admin' ? 'Add assessors for user' : 'Add your assessors'}`} onClose={closeAddUserDialog}>
+                <FullScreenModal open={showAddUserDialog === true} title={`${this.props.mode === 'admin' ? 'Add assessors for user ' : 'Add your assessors'}`} onClose={closeAddUserDialog}>
                     <InModal />
                 </FullScreenModal>
             );
