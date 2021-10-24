@@ -329,7 +329,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
           reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
           let variables = reactory.utils.objectMapper({ formContext, query }, uiOptions.variables || queryDefinition.variables);
-          
           // TODO: Werner explain to christian why this won't work and will break code 
           // - you cannot assume that query will have an options input field. Many other 
           // tables queries will break when you sort the table - you must do the variable

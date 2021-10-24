@@ -114,13 +114,13 @@ const ProfileStyles = (theme: Theme) => ({
         marginTop: `${theme.spacing(3)}px`,
         marginBottom: `${theme.spacing(2)}px`,
     },
-    nomineesContainerButton: {
+    assessorsContainerButton: {
         display: 'flex',
         justifyContent: 'center',
         paddingTop: `${theme.spacing(1)}px`,
         paddingBottom: `${theme.spacing(1)}px`
     },
-    nomineesContainerBtnLeft: {
+    assessorsContainerBtnLeft: {
         display: 'flex',
         justifyContent: 'left',
         paddingTop: `${theme.spacing(1)}px`,
@@ -843,13 +843,13 @@ class Profile extends Component<any, any> {
             const defaultInstructions = (
                 <>
                     <Typography variant="body1">
-                        Use the list below to manage your nominees.  Click on the <Icon>add_circle_outline</Icon> above to add a new colleague to your list.
+                        Use the list below to manage your assessors.  Click on the <Icon>add_circle_outline</Icon> above to add a new colleague to your list.
                     </Typography>
                     <Typography variant="body1">
                         If you need to edit the details of an existing colleague you nominated previously, click on their name or the <Icon>expand</Icon> icon. This will enable you to change
                         the relationship type (LEADER, PEER, DIRECT REPORT) or remove the peer by clicking the <Icon>delete_outline</Icon> button.<br />
                         Once you have selected a minimum of six assessors (a maximum of 10),  please click the <Icon>check_circle</Icon> button to confirm your peer selection.<br />
-                        Your nominees will only be notified of their nomination a maximum of once every 30 days.
+                        Your assessors will only be notified of their nomination a maximum of once every 30 days.
                     </Typography>
                     <hr />
                     <Typography className={peers.confirmedAt ?
@@ -871,16 +871,16 @@ class Profile extends Component<any, any> {
 
             materialTable = (
                 <Paper className={classes.general}>
-                    {/* <Typography variant="h6">My nominees - {this.state.selectedMembership.organization.name}</Typography> */}
+                    {/* <Typography variant="h6">My assessors - {this.state.selectedMembership.organization.name}</Typography> */}
                     <Toolbar>
                         <Grid container spacing={2}>
                             <Grid container item direction="row">
-                                <Grid item xs={12} sm={12} md={12} lg={12} xl={12} className={classes.nomineesContainerButton} style={{ display: data && Object.keys(data).length > 0 ? 'none' : 'flex' }}>
-                                    <Typography variant="body2" color={'primary'}>You do not yet have any nominees. Nominees are the employees of your organisation who will be completing surveys for you.</Typography>
+                                <Grid item xs={12} sm={12} md={12} lg={12} xl={12} className={classes.assessorsContainerButton} style={{ display: data && Object.keys(data).length > 0 ? 'none' : 'flex' }}>
+                                    <Typography variant="body2" color={'primary'}>You do not yet have any assessors. Assessors are the employees of your organisation who will be completing surveys for you.</Typography>
                                 </Grid>
-                                <Grid item xs={12} sm={12} md={12} lg={12} xl={12} className={data && Object.keys(data).length > 0 ? classes.nomineesContainerBtnLeft : classes.nomineesContainerButton}>
-                                    <Tooltip title="Click here to add a new employee to your organisation structure">
-                                        <Button color="secondary" variant="contained" component="span" onClick={editUserSelection} style={{ marginRight: '12px' }}><Icon>add</Icon>ADD NOMINEES</Button>
+                                <Grid item xs={12} sm={12} md={12} lg={12} xl={12} className={data && Object.keys(data).length > 0 ? classes.assessorsContainerBtnLeft : classes.assessorsContainerButton}>
+                                    <Tooltip title="Click here to add new assessors">
+                                        <Button color="secondary" variant="contained" component="span" onClick={editUserSelection} style={{ marginRight: '12px' }}><Icon>add</Icon>ADD ASSESSORS</Button>
                                     </Tooltip>
 
                                     <Tooltip title={moment(peers.confirmedAt).isValid() === true ? `Last Confirmed: ${moment(peers.confirmedAt).format('YYYY-MM-DD')} (Year Month Day)` : 'Once you have selected all your organisation assessors, please confirm by clicking here.'}>
@@ -1131,7 +1131,7 @@ class Profile extends Component<any, any> {
             }
 
             addUserDialog = (
-                <FullScreenModal open={showAddUserDialog === true} title={`${this.props.mode === 'admin' ? 'Manage assessor for user' : 'Manage your assessors'}`} onClose={closeAddUserDialog}>
+                <FullScreenModal open={showAddUserDialog === true} title={`${this.props.mode === 'admin' ? 'Add assessors for user' : 'Add your assessors'}`} onClose={closeAddUserDialog}>
                     <InModal />
                 </FullScreenModal>
             );
@@ -1412,7 +1412,7 @@ class Profile extends Component<any, any> {
                 <Typography className={classes.sectionHeaderText}>Account Details</Typography>
                 {this.renderGeneral()}
                 {this.renderUserDemographics()}
-                {isNew === false && <Typography className={classes.sectionHeaderText}>My Nominees</Typography>}
+                {isNew === false && <Typography className={classes.sectionHeaderText}>My Assessors</Typography>}
                 {isNew === false ? this.renderMemberships() : null}
                 {isNew === false ? this.renderPeers() : null}
                 {isNew === false ? this.renderFooter() : null}

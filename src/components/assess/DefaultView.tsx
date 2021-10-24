@@ -819,7 +819,11 @@ class DefaultView extends Component<any, any> {
               }
             />
             <Button
-              onClick={completeAssessment}
+              onClick={()=>{
+                completeAssessment()
+                api.emit('mores_onSurveyAction_complete-assessment', {})
+              }
+              }
               style={{ marginRight: "4px", marginTop: '10px', color: '#ffffff', background: palette.success.main }}
               variant="contained"
             >
