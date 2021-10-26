@@ -149,6 +149,7 @@ export interface ReactoryFormProperties {
   onBeforeQuery?: Function,
   componentType?: string | "form" | "widget",
   theme?: Theme,
+  watchList?: string[] 
 }
 
 export interface ReactoryFormState {
@@ -787,14 +788,15 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         if (_graphql && _graphql.mutation && _graphql.mutation['onChange']) {
 
-          do_mutation === true
+          do_mutation = dirty === true
 
-          if (props.onBeforeMutation && dirty === true) {
+          if (props.onBeforeMutation && do_mutation === true) {
             do_mutation = props.onBeforeMutation({}, form, getFormContext());
           }
 
           if (do_mutation === true) {
             //;
+            debugger
             let onChangeMutation: Reactory.IReactoryFormMutation = _graphql.mutation['onChange'];
             let throttleDelay: number = _graphql.mutation['onChange'].throttle || 250;
             let variables = reactory.utils.objectMapper({ eventData: form, form: { formData, formContext: getFormContext() } }, onChangeMutation.variables);
@@ -947,7 +949,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       ...inputContext,
     }
 
-    reactory.log(`<${formDef.nameSpace}.${formDef.name}@${formDef.version} /> -> getFormContext()`, { _context }, 'debug');
+    // reactory.log(`<${formDef.nameSpace}.${formDef.name}@${formDef.version} /> -> getFormContext()`, { _context }, 'debug');
     return _context;
   }
 
@@ -2014,6 +2016,17 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   }, []);
 
 
+  const watchList = [props.formData, props.formDef, props.formId];
+
+  if(props.watchList) {
+    props.watchList.forEach((p) => {
+      watchList.push(props[p]);
+    })
+  }
+
+  
+
+
 
   React.useEffect(() => {
 
@@ -2028,7 +2041,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     //}
 
 
-  }, [props.formData, props.formDef, props.formId])
+  }, watchList)
 
 
   React.useEffect(() => {

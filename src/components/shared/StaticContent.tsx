@@ -5,7 +5,6 @@ import { Icon, IconButton } from '@material-ui/core';
 import { withStyles, withTheme, } from '@material-ui/core/styles';
 import moment, { Moment } from 'moment';
 import ReactoryApi, { withApi } from '@reactory/client-core/api';
-import FroalaWidget from '@reactory/client-core/components/reactory/widgets/FroalaWidget';
 
 interface ReactoryStaticContentProps {
   id: string,
@@ -216,11 +215,13 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     <Icon>{editing === false ? 'edit' : 'check'}</Icon>
   </IconButton>)
 
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
   let default_content = '';
   if (typeof props.defaultValue === 'string') default_content = props.defaultValue;
   else default_content = '';
 
-  let contentComponent = found === true && content.published === true ? (<div {...containerProps} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>) : props.defaultValue;
+  let contentComponent = found === true && content.published === true ? (<div {...containerProps} ref={ref => contentRef.current = ref} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>) : props.defaultValue;
   let ContentCaptureComponent = reactory.getComponent(formFqn);
   let contentCaptureProps: any = {
     formData: { slug: getSlug(), title: state.title, published: state.content.published, content: state.found === true ? content.content : default_content },
@@ -243,6 +244,12 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     getData(null)
   }, [props.slug])
 
+  useEffect(() => {
+    //bind components on page.
+    if(contentRef.current && contentRef.current.innerHTML) {
+      
+    }
+  }, [contentRef.current])
 
   useEffect(() => {
     if (state.found) {
@@ -250,7 +257,9 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     }
   }, [props.propertyBag])
 
-  return (
+  const ContentContainer = React.useRef<HTMLDivElement>(null);
+
+  return (        
     <div className={`${classes.staticContentContainer} ${isDeveloper ? classes.staticContainerDeveloper : ''}`}>
       {canEdit === true && editWidget}
       {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}

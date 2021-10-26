@@ -272,7 +272,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
   const [ timeout_base, setTimeoutBase ] = React.useState<number>(TM_BASE_DEFAULT);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
 
-  let timeoutMS: number = 5000;
+  let timeoutMS: number = 30000;
   let totals = { error: 0, slow: 0, ok: 0, total: 0 };
   let last_slow = null;
 
@@ -300,13 +300,13 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       timeoutMS = timeout_base;
 
       //if our ping timeout is slow
-      if (newLast.pingMS > 2000 && totals.total > 10) {
+      if (newLast.pingMS > 4000 && totals.total > 10) {
         last_slow = done;        
         timeoutMS = timeout_base * 1.25;
       }
 
       //if our ping time is really low
-      if (newLast.pingMS > 3000 && totals.total > 10) {
+      if (newLast.pingMS > 7000 && totals.total > 10) {
         isSlow = true;
         timeoutMS = timeout_base * 1.5;
       }

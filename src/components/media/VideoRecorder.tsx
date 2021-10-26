@@ -2,6 +2,7 @@ import React from 'react';
 import { useReactory, withApi } from "@reactory/client-core/api";
 import { withTheme } from '@material-ui/styles';
 import { compose } from 'redux';
+import { size } from 'lodash';
 
 interface IRecording {
   id: string,
@@ -34,6 +35,8 @@ export default {
     const [isPlayingKey, setIsPlayingKey] = React.useState(null);
     const [isPlaying, setIsPlaying] = React.useState(false);
     const [isLiveStreaming, setIsLiveStreaming] = React.useState(false);
+    const [buffer, setBuffer] = React.useState<any[]>([]);
+    const [version, setVersion] = React.useState(0)
 
 
 
@@ -45,25 +48,13 @@ export default {
 
     const { MaterialCore } = Material;
     const { Button, Box, Paper, Grid, List, ListItem,
-      ListItemText, Icon, IconButton, ListItemSecondaryAction,
+      ListItemText, Icon, IconButton, ListItemSecondaryAction, Typography,
       Toolbar } = MaterialCore;
 
     const visualize = (stream) => {
 
       if (!mediaRecorder.current) return;
       if (!canvasContext) return;
-
-      if (mediaConstraint.video === true) {
-        if (video.current) {
-          video.current.src = URL.createObjectURL(stream);
-          video.current.load();
-          video.current.play().then(() => {
-            setIsLiveStreaming(true)
-          }).catch((err) => {
-            setIsLiveStreaming(false)
-          });
-        }
-      }
 
       if (mediaConstraint.audio === true) {
         let audioCtx = new AudioContext();
@@ -139,73 +130,86 @@ export default {
         console.log('getUserMedia supported.');
 
         let chunks = [];
+        let markerStart = null;
+        const isVideo = mediaConstraint.video === true;
+        let mime = `video/mp4;`;
+        mime = isVideo === true ? mime : 'audio/ogg; codecs=opus';
 
         navigator.mediaDevices.getUserMedia(mediaConstraint)
           .then(function (stream) {
 
+            //@ts-ignore            
+            const streamOptions: MediaRecorderOptions = {
+              audioBitsPerSecond: props.audioBitrate || 128000,
+              videoBitsPerSecond: props.videoBitrate || 2500000,
+              mimeType: mime
+            }
+
             //@ts-ignore
             mediaRecorder.current = new MediaRecorder(stream);
 
+            //live video display should be property
             if (mediaConstraint.video === true) {
               try {
                 video.current.srcObject = stream;
-                video.current.play();
+                video.current.play().then();
               } catch (err) {
                 // deal with this.
               }
 
-            } else {
-              visualize(stream);
-            }
+            } 
+            
+            visualize(stream);
+            
 
             mediaRecorder.current.onstart = (e) => {
               chunks = [];
+              markerStart = new Date();
             };
 
-            mediaRecorder.current.onstop = function (e) {
-              video.current.srcObject = null;
+            mediaRecorder.current.onstop = (e) => {
 
-              reactory.log("data available after MediaRecorder.stop() called.");
-
-
-              // var clipContainer = document.createElement('article');
-              // var clipLabel = document.createElement('p');
-              // var audio = document.createElement('audio');
-              // var deleteButton = document.createElement('button');
-
-              // clipContainer.classList.add('clip');
-              // audio.setAttribute('controls', '');
-              // deleteButton.innerHTML = "Delete";
-              // clipLabel.innerHTML = clipName;
-
-              // clipContainer.appendChild(audio);
-              // clipContainer.appendChild(clipLabel);
-              // clipContainer.appendChild(deleteButton);
-              // soundClips.appendChild(clipContainer);
-
+              reactory.log("data available after MediaRecorder.stop() called.", {}, 'debug');
 
 
               // audio.controls = true;
+              
 
-              let blobProps: BlobPropertyBag = mediaConstraint.video === true ? { type: 'video/mp4' } : { 'type': 'audio/ogg; codecs=opus' };
+              let blobProps: BlobPropertyBag = { type: mime };
               const data = new Blob(chunks, blobProps);
+
+
+              const user = reactory.$user;
+              const index = recordings.current.length
+              let filename = `${user.firstName}_${user.lastName}_${index}.${isVideo === true ? 'mp4' : 'ogg'}`;
+              let file = new File([data], filename, { type: mime });
+
               const recording: any = {
                 id: reactory.utils.uuid(),
                 type: mediaConstraint.video === true ? 'video' : 'audio',
                 title: null,
                 saved: false,
                 chunks: chunks,
-                data: data,
+                blob: data,
+                started: markerStart,
+                ended: new Date(),
+                filename,
+                mime,
+                file,
+                index: recordings.current.length,
                 url: URL.createObjectURL(data)
               }
 
               recordings.current.push(recording);
               chunks = [];
               setIsRecording(false);
+              setBuffer([]);
             }
 
             mediaRecorder.current.ondataavailable = function (e) {
               chunks.push(e.data);
+              setBuffer(chunks);
+              setVersion(version + 1);
             }
 
           })
@@ -227,9 +231,9 @@ export default {
     };
 
     const onStopRecording = () => {
-      if (mediaRecorder.current && mediaRecorder.current.stop && mediaRecorder.current.state === "recording") {
+      if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
         mediaRecorder.current.stop();
-        setIsRecording(false)
+        setIsRecording(false);
       }
     }
 
@@ -270,46 +274,65 @@ export default {
 
 
     const doPromptUpload = (recording, key) => {
-
+      recording.confirmUpload = true;
+      setVersion(version + 1);
     };
 
     const doRemoveRecording = (recording, key) => {
-
-      reactory.utils.lodash.pullAt(recordings.current, [key])
-
+      reactory.utils.lodash.pullAt(recordings.current, [recording.index]);
+      setVersion(version + 1);
     }
 
 
-    const AudioPlayer = (recording: any, key: string) => {
+    const onSaveRecording = (recording) => {
+      recording.isUploading = true;
+      
+      if(props.onSave) {
+        props.onSave(recording, ({ errors = [], success = true }) => {
+          recording.isUploading = false;
+          
+          if(success === false) {
+            recording.errors = errors;
+          } 
+        })
+      } else {
+        // download the file locally
+      } 
+    }
+
+    const onCancelSaveRecording = (recording) => {
+      recording.confirmUploaded = false;
+    }
+
+    const AudioPlayer = ({ recording, key}) => {
 
       const audioRef = React.useRef<HTMLAudioElement>(null);
+
+      const play = () => {
+        if (audioRef.current) {
+          audioRef.current.src = URL.createObjectURL(recording.blob);
+          audioRef.current.play().then(() => { });
+        }
+      }
+
+      React.useEffect(play, [audioRef.current])
+
+      const upload = (
+        <>          
+          <Typography variant="body2">Save recording?</Typography>
+          <Button color="primary" onClick={() => { onSaveRecording(recording) }}> <Icon>cloud_upload</Icon> SAVE </Button>
+          <Button color="primary" onClick={() => { onCancelSaveRecording(recording) }}> <Icon>not_interested</Icon> CANCEL </Button>
+        </>
+      );
 
       return (
         <Box>
           <Paper>
-            <audio src={recording.url} key={key} ref={audio => audioRef.current = audio} />
+            <audio src={recording.url} key={key} ref={audio => audioRef.current = audio}  controls={true}/>
           </Paper>
-          <Toolbar>
-            <IconButton size={'small'} onClick={() => {
-              if (isPlayingKey === key) {
-                if (audioRef.current.paused === false) {
-                  audioRef.current.pause();
-                  setIsPlaying(true);
-                }
-                else {
-                  audioRef.current.pause();
-                  setIsPlaying(false);
-                }
-              } else {
-                audioRef.current.srcObject = recording.data;
-                audioRef.current.play();
-                setIsPlayingKey(key);
-                setIsPlaying(true);
-              }
-            }}><Icon>{isPlayingKey === key && isPlaying === true ? 'stop' : 'play_arrow'}</Icon></IconButton>
-
-            <IconButton size="small" color="primary" onClick={() => { doPromptUpload(recording, key) }}><Icon>save</Icon></IconButton>
-            <IconButton size="small" onClick={() => { doRemoveRecording(recording, key) }}><Icon style={{ color: theme.palette.error.main }}>delete</Icon></IconButton>
+          <Toolbar>            
+            { recording.confirmUpload === true  ? upload : (<><IconButton size="small" color="primary" onClick={() => { doPromptUpload(recording, key) }}><Icon>save</Icon></IconButton>
+            <IconButton size="small" onClick={() => { doRemoveRecording(recording, key); }}><Icon style={{ color: theme.palette.error.main }}>delete</Icon></IconButton></>) }
 
           </Toolbar>
         </Box>
@@ -317,40 +340,90 @@ export default {
 
     }
 
-    const VideoPlayer = (recording, key) => {
+    const VideoPlayer = ({ recording, key }) => {
       const player = React.useRef<HTMLVideoElement>(null)
+      const downloadLink = React.useRef<HTMLAnchorElement>(null);
 
+      const play = () => {
+        if(player.current) {
+          player.current.src = URL.createObjectURL(recording.blob);
+          player.current.play().then(() => {});
+        }
+      }
+
+      const save = () => {        
+        if(props.onSave) {          
+          props.onSave(recording, ({ success = true, errors = [] }) => {
+            //do nothing for now.
+          });
+        } else {
+          downloadLink.current.click();
+        }
+      }
+
+      const cancelSave = () => {
+        recording.confirmUpload = false;
+        setVersion(version + 1);
+      }
+
+      React.useEffect(() => {
+        play()
+      }, [player.current]);
+
+      const upload = (
+        <>
+          <Typography variant="body2">Save recording?</Typography>
+          <Button color="primary" onClick={save}> <Icon>cloud_upload</Icon> SAVE </Button>
+          <Button color="primary" onClick={cancelSave}> <Icon>not_interested</Icon> CANCEL </Button>
+        </>
+      );
+
+      const user = reactory.$user;
+      const linkProps: any = {
+        href: recording.url,
+        download: `${user.firstName} ${user.lastName} ${recording.type}_${recording.index}.${recording.type === 'video' ? 'mp4' : 'ogg'}`,
+        ref: (ref) => { downloadLink.current = ref; },
+        style: { visibility: 'hidden', display: 'none' },
+      }
       return (
-        <Box>
-          <Paper>
-            <video ref={ref => {
-              player.current = ref;
-              player.current.src = recording.url;
-              player.current.load();
-            }} width={200} />
-          </Paper>
-          <Toolbar>
-            <IconButton size={'small'} onClick={() => {
-              if (player.current.paused === false) {
-                player.current.pause();
-              }
-              else {
-                player.current.play().then(() => {
-                });
-              }
-            }}><Icon>{isPlayingKey === key && isPlaying === true ? 'stop' : 'play_arrow'}</Icon></IconButton>
-
-            <IconButton size="small" color="primary" onClick={() => { doPromptUpload(recording, key) }}><Icon>save</Icon></IconButton>
-            <IconButton size="small" onClick={doRemoveRecording(recording, key)}><Icon style={{ color: theme.palette.error.main }}>delete</Icon></IconButton>
-
-          </Toolbar>
+        <Box key={key}>
+          <Grid container spacing={0}> 
+            <Grid item xs={12} lg={12}>
+              <Paper>
+                <a {...linkProps} />
+                <video ref={(vp) => { player.current = vp; }} width={180} controls={true}/>
+              </Paper>
+            </Grid>  
+            <Grid item xs={12} lg={12}>              
+              <Toolbar>
+                {recording.confirmUpload === true ? upload : ( <><IconButton size="small" color="primary" onClick={() => { doPromptUpload(recording, key) }}><Icon>save</Icon></IconButton>
+                  <IconButton size="small" onClick={() => { doRemoveRecording(recording, key) }}><Icon style={{ color: theme.palette.error.main }}>delete</Icon></IconButton></>)}                
+              </Toolbar>
+            </Grid>        
+          </Grid>                    
         </Box>
       );
     }
 
 
     let recording_icon_style = {
-      color: is_recording ? palette.error.main : 'grey'
+      color: is_recording ? palette.error.main : '#fff'
+    }
+
+    let stop_icon_style = {
+      color: is_recording ? '#fff' : 'grey'
+    }
+
+    const size = (bytesize: number) => {
+       const sizes: string[] = [ "B", "KB", "MB", "GB", "TB" ];
+      let len: number = bytesize;
+      let order: number = 0;
+      while (len >= 1024 && order < sizes.length - 1){
+        order++;
+        len /= 1024;
+      }
+
+      return `${parseFloat(`${len}`).toFixed(2)} ${sizes[order]}`;
     }
 
     return (
@@ -360,7 +433,10 @@ export default {
             <video ref={(ref) => { video.current = ref }} width={320} />
           </Grid>
           <Grid item xs={12} xl={12}>
-            <canvas ref={(canvasRef) => { canvas.current = canvasRef }} height="60px"></canvas>
+            <canvas ref={(canvasRef) => { canvas.current = canvasRef }} height="60px" width={320}></canvas>
+          </Grid>
+          <Grid>
+            <Typography variant="label">{buffer.length} BYTES</Typography>
           </Grid>
           <Grid item xs={12} xl={12}>
             <Toolbar>
@@ -373,22 +449,19 @@ export default {
               }}><Icon>{mediaConstraint.video ? 'videocam' : 'videocam_off'}</Icon></IconButton>
 
               <IconButton size={'small'} onClick={onStartRecording}><Icon style={recording_icon_style}>fiber_manual_record</Icon></IconButton>
-              <IconButton size={'small'} onClick={onStopRecording}><Icon>stop</Icon></IconButton>
+              <IconButton size={'small'} enabled={is_recording === true} onClick={onStopRecording} ><Icon style={stop_icon_style}>stop</Icon></IconButton>
             </Toolbar>
           </Grid>
-          <Grid>
-            <List>
+          <Grid item container>
               {recordings.current.map((recording, idx) => {
                 return (
-                  <ListItem key={idx} style={{ width: '250px' }}>
+                  <Grid sm={12} xs={12} md={3} lg={2} xl={2} key={idx} style={{ width: '250px' }}>
                     {recording.type === 'audio' ?
                       <AudioPlayer recording={recording} key={idx} /> :
                       <VideoPlayer recording={recording} key={idx} />}
-                  </ListItem >
-
+                  </Grid >
                 )
               })}
-            </List>
           </Grid>
         </Grid>
       </Paper >

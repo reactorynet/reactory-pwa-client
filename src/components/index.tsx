@@ -83,6 +83,9 @@ import { AddressLookupComponent } from './mapping/AddressLookup';
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
 import MembershipRoles from './user/Forms/MembershipRoles';
+
+import MorphCast from './morphcast';
+
 export const UserList = UserComponents.UserListWithData;
 export const UserSearchInput = UserComponents.UserSearchInputComponent;
 export const ForgotForm = UserComponents.ForgotForm;
@@ -858,5 +861,6 @@ export const componentRegistery = [
   },
   MembershipRoles,
   CreateUserMembership,
-  ...media_components
+  ...media_components,
+  ...MorphCast
 ]

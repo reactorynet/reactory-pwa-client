@@ -94,7 +94,7 @@ const MaterialTabbedField = (props) => {
         hidden={value !== index}
         id={`full-width-tabpanel-${index}`}
         aria-labelledby={`full-width-tab-${index}`} p={1}>
-        <Typography>{children}</Typography>
+        {children}
       </Box>
     );
   }

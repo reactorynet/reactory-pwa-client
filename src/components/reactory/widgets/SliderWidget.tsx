@@ -72,6 +72,23 @@ const SliderWidget = (props: SliderWidgetWidgetProps) => {
     return options.valueTextFormat ? reactory.utils.template(options.valueTextForm)({ value }) : `${value}`;
   }
 
+  const styles: any = {
+    font: 'inherit',
+    width: '100 %',
+    border: '0',
+    height: '1.1876em',
+    margin: '0',
+    display: 'block',
+    padding: '6px 0 7px',
+    minWidth: '0',
+    background: 'none',
+    boxSizing: 'content-box',
+    animationName: 'mui-auto-fill-cancel',
+    'letterSpacing': 'inherit',
+    'animationDuration': '10ms',
+    '-webkit-tap-highlight-color': 'transparent'
+  };
+
   const slider = (
     <Slider
       id={idSchema.$id}
@@ -89,14 +106,15 @@ const SliderWidget = (props: SliderWidgetWidgetProps) => {
 
   if (schema.type === 'array') {
     return (
-      <FormControl style={{ marginTop: '8px' }}>
+      <FormControl>
         <InputLabel shrink={true} htmlFor={idSchema.$id}>{schema.title}</InputLabel>
-        <div style={{ paddingTop: '8px' }}>{slider}</div>
+        <div className={'MuiInputBase-input'} style={{ ...styles, paddingTop: '8px' }}>{slider}</div>
         <FormHelperText>{schema.description}</FormHelperText>
       </FormControl>
     )
   } else {
-    return slider;
+    
+    return <div className={'MuiInputBase-input'} style={{ ...styles, paddingTop: '8px' }}>{slider}</div>;
   }
 }
 

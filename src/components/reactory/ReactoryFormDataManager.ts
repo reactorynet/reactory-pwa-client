@@ -58,24 +58,30 @@ export default (reactory: ReactoryApi) => ({
         }
 
         default: {
+          
+          if (graphElement.resultKey) {
+            nextFormData = data[graphElement.name][graphElement.resultKey];            
+          } else {
+            nextFormData = data[graphElement.name];
+          }
+
+
           switch (_strategy) {
             case "replace": {
-
+              
               if (graphElement.resultMap && Object.getOwnPropertyNames(graphElement.resultMap).length > 0) {
 
                 try {
 
                   nextFormData = reactory.utils.objectMapper({
-                    ...reactory.utils.lodash.cloneDeep(data[graphElement.name])
+                    ...reactory.utils.lodash.cloneDeep(nextFormData)
                   }, graphElement.resultMap);
 
                 } catch (mappError) {
                   reactory.log("Could not map the object data", { mappError }, 'error')
                 }
 
-              } else {
-                nextFormData = { ...data[graphElement.name] };
-              }
+              } 
 
               break;
             }
@@ -89,7 +95,7 @@ export default (reactory: ReactoryApi) => ({
                     
                     nextFormData = reactory.utils.objectMapper({ 
                       ...reactory.utils.lodash.cloneDeep(formData), 
-                      ...reactory.utils.lodash.cloneDeep(data[graphElement.name]) 
+                      ...reactory.utils.lodash.cloneDeep(nextFormData) 
                     }, graphElement.resultMap);
 
                   } catch (mappError) {                    

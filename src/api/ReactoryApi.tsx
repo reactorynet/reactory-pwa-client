@@ -1430,14 +1430,15 @@ class ReactoryApi extends EventEmitter implements _dynamic {
               }
             }).catch((clientErr) => {
               
-              if(options.forceLogout !== false) {
-                that.logout(false);
-                resolve({ ...anonUser, status: 'API OFFLINE', offline: true, offlineError: true });
-              } else {
-                resolve(current_user);
-              }
+              resolve(current_user);
+              
+              // if(options.forceLogout !== false) {
+              //   that.logout(false);
+              //   resolve({ ...anonUser, status: 'API OFFLINE', offline: true, offlineError: true });
+              // } else {
+              // }
 
-              that.emit(ReactoryApiEventNames.onApiStatusUpdate, { status: 'API OFFLINE', offline: true, clientError: clientErr });
+              // that.emit(ReactoryApiEventNames.onApiStatusUpdate, { status: 'API OFFLINE', offline: true, clientError: clientErr });
 
             });
           } else {

@@ -295,15 +295,13 @@ export const DateHelpers = {
 
 export const injectResources = (sources = []) => {
   sources.forEach((resource) => {
-    //console.log(`Installing Application Resource`, resource);
     const resourceId = `${resource.id}_res_${resource.type}_${resource.name}`;
     if (document.getElementById(resourceId) === null) {
-      //console.log(`Adding Resource ${resourceId}`);
       switch (resource.type) {
         case 'style': {
           let styleLink = document.createElement('link');
           styleLink.id = resourceId;
-          styleLink.href = resource.uri;
+          styleLink.href = resource.uri || resource.src;
           styleLink.rel = 'stylesheet';
           setTimeout(() => {
             document.head.append(styleLink)
@@ -314,7 +312,7 @@ export const injectResources = (sources = []) => {
         case 'script': {
           let scriptLink = document.createElement('script');
           scriptLink.id = resourceId;
-          scriptLink.src = resource.uri;
+          scriptLink.src = resource.uri || resource.src;
           scriptLink.type = 'text/javascript';
           setTimeout(() => {
             document.body.append(scriptLink)
