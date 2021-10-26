@@ -48,7 +48,7 @@ import KeyboardArrowLeft from "@material-ui/icons/KeyboardArrowLeft";
 import KeyboardArrowRight from "@material-ui/icons/KeyboardArrowRight";
 import { withApi } from "../../api/ApiProvider";
 import ReactoryApi from "../../api/ReactoryApi";
-import getInstructions from './defaultInstructions'
+import getInstructions from "./defaultInstructions";
 const nil = isNil;
 
 class RatingControl extends Component<any, any> {
@@ -175,7 +175,7 @@ class RatingControl extends Component<any, any> {
       steps.push(
         <Step key={stepId}>
           <StepButton
-            onClick={assessment.complete === false ? doRatingClick : () => { }}
+            onClick={assessment.complete === false ? doRatingClick : () => {}}
             completed={false}
             active={rating.rating - 1 === stepId}
           ></StepButton>
@@ -205,8 +205,9 @@ class RatingControl extends Component<any, any> {
     let wordsLeft = "";
 
     if (wordCount === 0) {
-      wordsLeft = ` (at least 10 words ${rating.rating <= 2 ? "required!" : "optional"
-        })`;
+      wordsLeft = ` (at least 10 words ${
+        rating.rating <= 2 ? "required!" : "optional"
+      })`;
     }
 
     if (
@@ -222,7 +223,7 @@ class RatingControl extends Component<any, any> {
         id="multiline-flexible"
         label={
           this.state.comment.split(" ").length < that.minWordCount &&
-            rating.rating <= 2
+          rating.rating <= 2
             ? "How does this impact you? - * required"
             : "How does this impact you?"
         }
@@ -230,18 +231,19 @@ class RatingControl extends Component<any, any> {
         fullWidth
         rowsMax="4"
         variant="outlined"
-        error={hasError}        
+        error={hasError}
         value={this.state.comment}
         onChange={
-          assessment.complete === false ? this.commentChanged : () => { }
+          assessment.complete === false ? this.commentChanged : () => {}
         }
-        onBlur={assessment.complete === false ? this.notifyChange : () => { }}
+        onBlur={assessment.complete === false ? this.notifyChange : () => {}}
         autoFocus={this.state.comment.split(" ").length < 10}
         className={classes.textField}
         disabled={assessment.complete === true}
         margin="normal"
-        helperText={`Provide some ${rating.rating <= 2 ? "required" : "optional"
-          } context as to how this affects you personally or your ability to perform your duties${wordsLeft}.`}
+        helperText={`Provide some ${
+          rating.rating <= 2 ? "required" : "optional"
+        } context as to how this affects you personally or your ability to perform your duties${wordsLeft}.`}
       />
     );
 
@@ -252,10 +254,11 @@ class RatingControl extends Component<any, any> {
     let ratingTooltip =
       rating.rating === 0 ? (
         <Tooltip
-          title={`Behaviour ${that.props.reactory.hasRole(["DEVELOPER"]) === true
-            ? `(${rating.id})`
-            : ""
-            } Requires a rating selection`}
+          title={`Behaviour ${
+            that.props.reactory.hasRole(["DEVELOPER"]) === true
+              ? `(${rating.id})`
+              : ""
+          } Requires a rating selection`}
         >
           <Icon color="error">info</Icon>
         </Tooltip>
@@ -282,15 +285,14 @@ class RatingControl extends Component<any, any> {
 
     let isSelfAssessment = assessment.selfAssessment === true;
 
-    if(is180 === true && assessment.team === "delegates") {
+    if (is180 === true && assessment.team === "delegates") {
       isSelfAssessment = true;
     }
 
-    if(is180 === true && assessment.team === "assessor") {
-      isSelfAssessment = false
+    if (is180 === true && assessment.team === "assessor") {
+      isSelfAssessment = false;
     }
 
-    
     try {
       let $title = behaviour.title;
       if (isSelfAssessment === true && behaviour.delegateTitle) {
@@ -318,7 +320,6 @@ class RatingControl extends Component<any, any> {
 
       $ratingContent = `Error Processing behaviour template text. See logs for details`;
     }
-
 
     try {
       let $description = behaviour.description;
@@ -430,9 +431,9 @@ class RatingControl extends Component<any, any> {
       rating: 0,
     },
     comment: "",
-    onRatingChange: (rating) => { },
-    onCommentChange: (comment) => { },
-    onDelete: (rating) => { },
+    onRatingChange: (rating) => {},
+    onCommentChange: (comment) => {},
+    onDelete: (rating) => {},
   };
 }
 
@@ -560,7 +561,7 @@ class DefaultView extends Component<any, any> {
       },
       paragraph: {
         textAlign: "justify",
-      },      
+      },
       plcLogo: {
         height: "280px",
         marginLeft: "auto",
@@ -819,8 +820,16 @@ class DefaultView extends Component<any, any> {
               }
             />
             <Button
-              onClick={completeAssessment}
-              style={{ marginRight: "4px", marginTop: '10px', color: '#ffffff', background: palette.success.main }}
+              onClick={() => {
+                completeAssessment();
+                api.emit("mores_onSurveyAction_complete-assessment", {});
+              }}
+              style={{
+                marginRight: "4px",
+                marginTop: "10px",
+                color: "#ffffff",
+                background: palette.success.main,
+              }}
               variant="contained"
             >
               Finish
@@ -914,7 +923,6 @@ class DefaultView extends Component<any, any> {
         { "fetch-policy": "network-only" }
       )
       .then(({ data, errors = [] }) => {
-
         if (errors && errors.length > 0) {
           api.createNotification(
             "Could not save your last score. The system may be offline, please try again in a few moments.",
@@ -1485,39 +1493,51 @@ class DefaultView extends Component<any, any> {
         );
       }
     }
-    const {title : _title_, description} = getInstructions(quality.title)
-  
+    const { title: _title_, description } = getInstructions(quality.title);
+
     const _styles: any = {
       scale: {
-        marginLeft: '5px',
-        marginRight: '2px',
-        fontWeight: 'bold'
+        marginLeft: "5px",
+        marginRight: "2px",
+        fontWeight: "bold",
       },
-      scaleWrapper:{
-        padding: '15px 0', 
-        display: 'block',
+      scaleWrapper: {
+        padding: "15px 0",
+        display: "block",
       },
       captionText: {
-        fontSize: '14px'
-      }
-    }
+        fontSize: "14px",
+      },
+    };
     const assessmetnInstructionsDefaultContent = (
       <>
-      <Typography variant="caption" color="primary" style={_styles.captionText}>
-        <span style={{fontWeight: 'bold'}}>{_title_}:</span>
-        <span> This section tests for {description}</span>
-      </Typography>
-      <Typography  style={{..._styles.scaleWrapper, ..._styles.captionText}} variant="caption" color="primary">
-        <span style={{fontWeight: 'bold'}}>Rating scale: </span>
-        <span style={_styles.scale}> 1. </span>Strongly disagree
-        <span style={_styles.scale}> 2. </span>Disagree
-        <span style={_styles.scale}> 3. </span>Neutral
-        <span style={_styles.scale}> 4. </span>Agree
-        <span style={_styles.scale}> 5. </span>Strongly Agree
-      </Typography>
-      <Typography variant="caption" style={{..._styles.captionText,color: 'red'}}>
-        Use the comment box at the bottom of this page for additional feedback.
-      </Typography>
+        <Typography
+          variant="caption"
+          color="primary"
+          style={_styles.captionText}
+        >
+          <span style={{ fontWeight: "bold" }}>{_title_}:</span>
+          <span> This section tests for {description}</span>
+        </Typography>
+        <Typography
+          style={{ ..._styles.scaleWrapper, ..._styles.captionText }}
+          variant="caption"
+          color="primary"
+        >
+          <span style={{ fontWeight: "bold" }}>Rating scale: </span>
+          <span style={_styles.scale}> 1. </span>Strongly disagree
+          <span style={_styles.scale}> 2. </span>Disagree
+          <span style={_styles.scale}> 3. </span>Neutral
+          <span style={_styles.scale}> 4. </span>Agree
+          <span style={_styles.scale}> 5. </span>Strongly Agree
+        </Typography>
+        <Typography
+          variant="caption"
+          style={{ ..._styles.captionText, color: "red" }}
+        >
+          Use the comment box at the bottom of this page for additional
+          feedback.
+        </Typography>
       </>
     );
 
@@ -1710,7 +1730,6 @@ class DefaultView extends Component<any, any> {
   }
 
   currentStepValid() {
-
     const { mode } = this.props;
     const { assessment, step, qualityCustomComment = "" } = this.state;
 
@@ -1725,7 +1744,7 @@ class DefaultView extends Component<any, any> {
     const quality = assessment.survey.leadershipBrand.qualities[step - 1];
 
     //trim the string an replace multiple empty spaces with a single space
-    let trimmedComment = qualityCustomComment.trim().replace(/\s+/g, ' ');
+    let trimmedComment = qualityCustomComment.trim().replace(/\s+/g, " ");
 
     if (lodash.isNil(trimmedComment)) return false;
     if (trimmedComment.length < 10) return false;
@@ -1777,8 +1796,9 @@ class DefaultView extends Component<any, any> {
     const is180 = this.is180(survey);
 
     let headerTitle = assessment.delegate
-      ? `${api.getUserFullName(delegate)} - ${survey.title} ${selfAssessment === true ? " [Self Assessment]" : ""
-      }`
+      ? `${api.getUserFullName(delegate)} - ${survey.title} ${
+          selfAssessment === true ? " [Self Assessment]" : ""
+        }`
       : `Unknown`;
     if (is180 === true) {
       headerTitle = `${survey.title}`;
@@ -1856,10 +1876,11 @@ class DefaultView extends Component<any, any> {
                     survey.startDate
                   ).format("DD MMMM YYYY")} till ${moment(
                     survey.endDate
-                  ).format("DD MMMM YYYY")} - ${assessment.complete === true
-                    ? "Completed - Review Only"
-                    : "In progress"
-                    }`}
+                  ).format("DD MMMM YYYY")} - ${
+                    assessment.complete === true
+                      ? "Completed - Review Only"
+                      : "In progress"
+                  }`}
                   action={
                     <IconButton
                       aria-owns={showMenu ? "assessment-options" : null}
