@@ -156,10 +156,6 @@ const FroalaWidget = (props) => {
       
   };  
 
-  debugger;
-
-
-
   if (config.imageUploadURL && config.imageUploadURL.indexOf("${") >= 0) {
     config.imageUploadURL = template(config.imageUploadURL)({ ...props })
   }

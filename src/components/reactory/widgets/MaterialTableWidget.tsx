@@ -102,6 +102,8 @@ const ReactoryMaterialTablePagination = (props) => {
   const [version, setVersion] = useState(0);
   const sizeSpec = useSizeSpec();
 
+  formContext.$page = props.page;
+
   useEffect(() => {
     setVersion(version + 1);
   }, [sizeSpec.innerWidth])
@@ -359,10 +361,16 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
               if (uiOptions.disablePaging === true) {
                 response.page = 1,
-                  response.totalCount = response.data.length;
+                response.totalCount = response.data.length;
               }
 
-
+              response.data.forEach((item, item_id) => {
+                if(formContext.$selectedRows && formContext.$selectedRows.current) {
+                  if(reactory.utils.lodash.findIndex(formContext.$selectedRows.current, { id: item.id }) >= 0) {
+                    item.tableData = { checked: true, id: item_id }
+                  }
+                }
+              });
               response.page = response.page - 1;
             }
 
@@ -848,7 +856,10 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           actions={actions}
           components={components}
           localization={uiOptions.localization || {}}
-          detailPanel={detailsPanel} />
+          detailPanel={detailsPanel}
+          onSelectionChange={ (rows) => {  
+            reactory.emit(`MaterialTableWidget.${idSchema.$id}.onSelectionChange`, rows)
+          } } />
         {confirmDialog}
       </>
     )

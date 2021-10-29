@@ -267,12 +267,12 @@ const AppLoading = () => {
 
 const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
-  const TM_BASE_DEFAULT: number = 5000;
+  const TM_BASE_DEFAULT: number = 45000;
   const { onOfflineChanged } = props;
   const [ timeout_base, setTimeoutBase ] = React.useState<number>(TM_BASE_DEFAULT);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
 
-  let timeoutMS: number = 30000;
+  let timeoutMS: number = 45000;
   let totals = { error: 0, slow: 0, ok: 0, total: 0 };
   let last_slow = null;
 
@@ -333,7 +333,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
       totals = newTotals;
 
-      api.stat(`user-session-api-status-totals#${api.getUser().id}`, { ...totals, ...newLast });
+      api.stat(`user-session-api-status-totals`, { user_id: api.getUser().id, ...totals, ...newLast });
       api.emit('onApiStatusTotalsChange', { ...totals, ...newLast, api_ok, isSlow });
 
       if(next_tm_base !== timeout_base) setTimeoutBase(next_tm_base);
