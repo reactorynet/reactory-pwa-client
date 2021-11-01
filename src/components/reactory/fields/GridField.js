@@ -282,13 +282,7 @@ class MaterialGridField extends MaterialObjectField {
       default: {
         return (<Paper className={classes.root} style={gridOptions.containerStyles} elevation={gridOptions.elevation || 1}>{grid_content}</Paper>)
       }
-    }
-
-
-    return (
-      <Container >
-      </Container>
-    )
+    }    
   }
 }
 

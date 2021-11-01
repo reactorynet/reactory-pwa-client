@@ -1,14 +1,16 @@
-import React, { Component, LegacyRef, useCallback, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import React, { useEffect } from 'react';
 import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import MomentUtils from '@date-io/moment';
 import { ApolloProvider } from '@apollo/client';
+import { 
+  useHistory,
+  useParams,
+  useRouteMatch,
+} from 'react-router';
 import {
   BrowserRouter as Router,
   Route,
-  Link,
   Redirect,
-  BrowserRouter,
 } from 'react-router-dom';
 import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
@@ -24,17 +26,13 @@ import {
   componentRegistery
 } from './components/index';
 
-import ReactoryApi, { ApiProvider, ReactoryApiEventNames } from './api'
-import { fetch } from "whatwg-fetch";
+import ReactoryApi, { ReactoryApiEventNames } from './api'
 import { deepEquals } from './components/reactory/form/utils';
 import ReactoryApolloClient from './api/ReactoryApolloClient';
 import { Typography, Icon, Paper, Hidden, Box } from '@material-ui/core';
 import license from './license';
 import { ReactoryProvider } from './api/ApiProvider';
 import Reactory from '@reactory/client-core/types/reactory';
-import { anonUser } from 'api/local';
-import { WindowSizeSpec } from 'api/ReactoryApi';
-import { TIMEOUT } from 'dns';
 
 const packageInfo = require('../package.json');
 
@@ -58,25 +56,25 @@ const getTheme = () => {
   return localStorage.getItem('theme')
 }
 
-const api = new ReactoryApi({
+const reactory = new ReactoryApi({
   clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
   clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
   $version: `${packageInfo.version}-${license.version}`,
 });
 
-api.init().then();
+reactory.init().then();
 //register built-in components
 componentRegistery.forEach((componentDef) => {
   const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
-  api.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
+  reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
 });
 
-api.$windowSize = api.getSizeSpec();
+reactory.$windowSize = reactory.getSizeSpec();
 
 const store = configureStore();
-api.reduxStore = store;
+reactory.reduxStore = store;
 window.reactory = {
-  api: api
+  api: reactory
 };
 
 export interface NewNotification {
@@ -120,7 +118,7 @@ interface ReactoryHOCProps {
   [key: string]: any,
 };
 
-const dependcies = [
+const dependencies = [
   'core.Loading@1.0.0',
   'core.Login@1.0.0',
   'core.FullScreenModal@1.0.0',
@@ -131,16 +129,16 @@ const dependcies = [
 
 
 interface ReactoryRouterProps {
-  api: ReactoryApi,
+  reactory: ReactoryApi,
   auth_validated: boolean,
   user: Reactory.IUser
 };
 
 const ReactoryRouter = (props: ReactoryRouterProps) => {
 
-  const { auth_validated, user, api } = props;
+  const { auth_validated, user, reactory } = props;
   const [routes, setRoutes] = React.useState<Reactory.IRouteDefinition[]>([]);
-  const NotFound = api.getComponent("core.NotFound");
+  const NotFound = reactory.getComponent("core.NotFound");
 
   
   
@@ -148,9 +146,9 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     let loginRouteDef = null;
     let homeRouteDef = null;
 
-    api.log('Configuring Routing', { auth_validated, user }, 'debug');
+    reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
     let $routes = [];
-    api.getRoutes().forEach((routeDef) => {
+    reactory.getRoutes().forEach((routeDef) => {
 
 
       const routeProps: Reactory.IRouteDefinition = {
@@ -159,7 +157,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (props) => {
-          api.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
+          reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
 
           if (routeDef.redirect) {
             return <Redirect to={{ pathname: routeDef.redirect, state: { from: props.location } }} />
@@ -175,13 +173,13 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             })
           }
 
-          const ApiComponent = api.getComponent(routeDef.componentFqn)
+          const ApiComponent = reactory.getComponent(routeDef.componentFqn)
          
           if (routeDef.public === true) {
             if (ApiComponent) return (<ApiComponent {...componentArgs} />)
             else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
           } else {
-            const hasRolesForRoute = api.hasRole(routeDef.roles, api.getUser().roles) === true;
+            const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().roles) === true;
 
 
             if (auth_validated === true && hasRolesForRoute === true) {
@@ -189,7 +187,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
               else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
             }
 
-            if (api.isAnon() === true && auth_validated && routeDef.path !== "/login") {
+            if (reactory.isAnon() === true && auth_validated && routeDef.path !== "/login") {
               if (localStorage) {
                 localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
               }
@@ -211,7 +209,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
                 
                 return <Typography style={{display: 'flex', justifyContent: 'center', padding: '10% 2rem'}} variant='h5'>Please wait while we validate your access token...</Typography>
               }
-            if (api.isAnon() === false && hasRolesForRoute === false) {
+            if (reactory.isAnon() === false && hasRolesForRoute === false) {
               //we may be waiting 
               return <NotFound message="You don't have sufficient permissions to access this route yet... (we may be fetching your permissions)" link={routeDef.path} wait={500} />
             }
@@ -281,7 +279,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
     const started = Date.now();
 
-    api.status({ emitLogin: false, forceLogout: false }).then((apiStatus: any) => {
+    reactory.status({ emitLogin: false, forceLogout: false }).then((apiStatus: any) => {
       const done = Date.now();
       const api_ok = apiStatus.status === 'API OK'
 
@@ -333,8 +331,8 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
       totals = newTotals;
 
-      api.stat(`user-session-api-status-totals`, { user_id: api.getUser().id, ...totals, ...newLast });
-      api.emit('onApiStatusTotalsChange', { ...totals, ...newLast, api_ok, isSlow });
+      reactory.stat(`user-session-api-status-totals`, { user_id: reactory.getUser().id, ...totals, ...newLast });
+      reactory.emit('onApiStatusTotalsChange', { ...totals, ...newLast, api_ok, isSlow });
 
       if(next_tm_base !== timeout_base) setTimeoutBase(next_tm_base);
 
@@ -342,9 +340,9 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
         getApiStatus();
       }, timeoutMS);
       
-      api.log(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS }, 'debug');
+      reactory.log(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS }, 'debug');
     }).catch((statusError) => {
-      api.log(`Error while fetching api status`, { error: statusError }, 'error');
+      reactory.log(`Error while fetching api status`, { error: statusError }, 'error');
       setOfflineStatus(true);
       onOfflineChanged(true);
 
@@ -376,7 +374,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
   return (
     <React.Fragment>
       <Box style={{ margin: 'auto', textAlign: 'center', paddingTop: '100px' }}>
-        <Typography variant="h1" style={{ color: api.muiTheme.palette.error.main }}>
+        <Typography variant="h1" style={{ color: reactory.muiTheme.palette.error.main }}>
           <Icon style={{ fontSize: '100px' }}>cloud_off</Icon>
         </Typography>
         <Typography variant="body2">
@@ -407,15 +405,17 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [statusInterval, setStatusInterval] = React.useState<NodeJS.Timeout>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
-  //const [sizeSpec, setSizeSpec] = React.useState<WindowSizeSpec>(api.getSizeSpec());
 
+  const history = useHistory();
 
-  const components: any = api.getComponents(dependcies);
+  reactory.history = history;
+
+  const components: any = reactory.getComponents(dependencies);
   const { NotificationComponent, Footer } = components;
 
   const getApiStatus = (emitLogin = true) => {
     if (auth_validated === false) {
-      api.status({ emitLogin, forceLogout: false }).then((user: any) => {
+      reactory.status({ emitLogin, forceLogout: false }).then((user: any) => {
         setIsValidated(true);
         setOfflineStatus(user.offline === true)
         setUser(user);
@@ -437,17 +437,17 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   }
 
   const onLogin = () => {
-    setUser(api.getUser());
+    setUser(reactory.getUser());
 
   };
 
   const onLogout = () => {
-    setUser(api.getUser());
+    setUser(reactory.getUser());
   };
 
 
   const applyTheme = () => {
-    let themeOptions = api.getTheme();
+    let themeOptions = reactory.getTheme();
     if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...props.appTheme };
 
@@ -465,7 +465,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       }
     }
 
-    api.muiTheme = muiTheme;
+    reactory.muiTheme = muiTheme;
     setTheme(muiTheme);
     //setSizeSpec(api.getSizeSpec());
 
@@ -478,16 +478,16 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const onApiStatusUpdate = (status) => {
 
     if (!(status === null || status === undefined)) {
-      api.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
+      reactory.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
       let isOffline = status.offline === true;
 
       if (isOffline === true) {
         setOfflineStatus(isOffline);
         setTimeout(() => { getApiStatus() }, 3500);
       } else {
-        let user = api.utils.lodash.cloneDeep(api.getUser());
+        let user = reactory.utils.lodash.cloneDeep(reactory.getUser());
         delete user.when;
-        let _user = api.utils.lodash.cloneDeep(user);
+        let _user = reactory.utils.lodash.cloneDeep(user);
         delete _user.when;
 
         if (deepEquals(user, _user) === false || status.offline !== offline) {
@@ -497,16 +497,16 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
       }
     } else {
-      api.log(`apiStaus returned null value`, { status }, 'warning');
+      reactory.log(`apiStaus returned null value`, { status }, 'warning');
     }
   }
 
 
   const onWindowResize = async () => {
-    const _size_spec = api.getSizeSpec();
-    api.$windowSize = _size_spec;
-    api.log('ReactoryHOC Resize', _size_spec);
-    api.emit('onWindowResize', _size_spec);
+    const _size_spec = reactory.getSizeSpec();
+    reactory.$windowSize = _size_spec;
+    reactory.log('ReactoryHOC Resize', _size_spec);
+    reactory.emit('onWindowResize', _size_spec);
     // setSizeSpec(_size_spec);
   };
 
@@ -539,36 +539,36 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     }
 
     const waitForClient = () => {
-      if (api.client === null || api.client === undefined) {
+      if (reactory.client === null || reactory.client === undefined) {
         setTimeout(waitForClient, 100);
       } else {
         getApiStatus();
       }
     }
 
-    api.on(ReactoryApiEventNames.onLogout, onLogout)
-    api.on(ReactoryApiEventNames.onLogin, onLogin)
-    api.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
-    api.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
-    api.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
+    reactory.on(ReactoryApiEventNames.onLogout, onLogout)
+    reactory.on(ReactoryApiEventNames.onLogin, onLogin)
+    reactory.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
+    reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+    reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
 
     const query = queryString.parse(window.location.search);
     if (query.auth_token) {
       localStorage.setItem('auth_token', query.auth_token);
       ReactoryApolloClient().then((cli) => {
-        api.client = cli.client;
-        api.ws_link = cli.ws_link;
+        reactory.client = cli.client;
+        reactory.ws_link = cli.ws_link;
         cli.clearCache();
       });
     }
 
-    api.queryObject = query;
-    api.queryString = window.location.search;
-    api.objectToQueryString = queryString.stringify;
+    reactory.queryObject = query;
+    reactory.queryString = window.location.search;
+    reactory.objectToQueryString = queryString.stringify;
 
     if (window && !window.reactory) {
       window.reactory = {
-        api,
+        api: reactory,
       };
     }
 
@@ -640,14 +640,14 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         <CssBaseline />
         <ThemeProvider theme={theme}>
           <Provider store={store}>
-            <ApolloProvider client={api.client}>
+            <ApolloProvider client={reactory.client}>
               <MuiPickersUtilsProvider utils={MomentUtils}>
-                <ReactoryProvider api={api}>
+                <ReactoryProvider api={reactory}>
                   <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
-                    {offline === false && <Globals api={api} />}
-                    <Header api={api} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
+                    {offline === false && <Globals api={reactory} />}
+                    <Header api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
                     <NotificationComponent />
-                    {offline === false && <ReactoryRouter api={api} user={user} auth_validated={auth_validated} />}
+                    {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} />}
                     <Offline onOfflineChanged={onOfflineChanged} />
                     <Footer />
                   </Paper>

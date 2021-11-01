@@ -32,7 +32,7 @@ const MaterialTabbedField = (props) => {
 
   const history = useHistory();
   const params = useParams();
-  
+
   const classes = useStyles();
   const theme = useTheme();
   const reactory = useReactory();
@@ -52,33 +52,33 @@ const MaterialTabbedField = (props) => {
   const layout = uiSchema['ui:tab-layout'] || [];
   const uiOptions = uiSchema['ui:tab-options'] || {};
 
-  
+
   const getTabIndex = () => {
     const index = reactory.utils.lodash.findIndex(layout, { field: props.activeTab });
-    if(index < 0) return 0;
-    return index;
+    if (index < 0) return 0;
+    return index || 0;
   }
 
   const getTabKey = (index: number) => {
     return layout[index].field
   }
 
-  const [value, setValue] = React.useState( getTabIndex() );
-
+  const [value, setValue] = React.useState(getTabIndex());
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
-
-    if(uiOptions.useRouter === true) {
+    debugger
+    if (uiOptions.useRouter === true) {
       const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')({ props, tab_id: getTabKey(newValue) });
       history.push(new_path);
     } else {
       setValue(newValue);
     }
 
-    
+
   };
 
   const handleChangeIndex = (index: number) => {
+    debugger
     setValue(index);
   };
 
@@ -108,7 +108,7 @@ const MaterialTabbedField = (props) => {
   }
 
 
-  
+
   const { definitions, fields, formContext } = props.registry
   const { SchemaField, TitleField, DescriptionField } = fields
   const schema = retrieveSchema(props.schema, definitions)
@@ -120,7 +120,7 @@ const MaterialTabbedField = (props) => {
       indicatorColor: "primary",
       textColor: "primary",
       variant: "fullWidth",
-      "aria-label": `Tabbed navigation for ${schema.title ? schema.title : "form field"}`, 
+      "aria-label": `Tabbed navigation for ${schema.title ? schema.title : "form field"}`,
     }
   }
 
@@ -134,11 +134,11 @@ const MaterialTabbedField = (props) => {
 
   const uiSchemaOptions = uiSchema["ui:options"] || {};
 
-  if( uiSchemaOptions.tabsProps ) {
+  if (uiSchemaOptions.tabsProps) {
     options.tabsProps = { ...DefaultTabProps, ...uiSchemaOptions.tabsProps };
   }
 
-  if( uiSchemaOptions.appBarProps) {
+  if (uiSchemaOptions.appBarProps) {
     options.appBarProps = { ...options.appBarProps, ...uiSchemaOptions.appBarProps };
   }
 
@@ -150,7 +150,8 @@ const MaterialTabbedField = (props) => {
 
   const onPropertyChange = name => {
     return (value, errorSchema) => {
-      const newFormData = { ...props.formData, [name]: value };
+      const newFormData = { ...formData, [name]: value };
+
       props.onChange(
         newFormData,
         errorSchema &&
@@ -159,6 +160,7 @@ const MaterialTabbedField = (props) => {
           [name]: errorSchema,
         }
       );
+
     };
   };
 
@@ -167,7 +169,7 @@ const MaterialTabbedField = (props) => {
     if (uiSchema["ui:options"] && uiSchema["ui:options"].activeTab === 'params') {
       if (uiSchema["ui:options"].activeTabKey) {
         let tab_param = uiSchema["ui:options"].activeTabKey;
-        if (params["tab_param"]) {
+        if (params[tab_param]) {
           let activeIndex = 0;
 
           layout.forEach((tabDef, tindex) => {
@@ -181,7 +183,7 @@ const MaterialTabbedField = (props) => {
       }
     }
   }, [])
-  
+
 
   const TabsProps = {
     ...options.tabsProps,
@@ -189,17 +191,22 @@ const MaterialTabbedField = (props) => {
     onChange: handleChange
   }
 
+
+  /**
+   * 
+   */
+
   return (
     <>
-      <AppBar { ...options.appBarProps }>
+      <AppBar {...options.appBarProps}>
         <Tabs {...TabsProps}>
           {layout.map((tabDef, tindex) => {
             if (schema.properties[tabDef.field]) {
-              let tabUISchema = uiSchema[tabDef.field] || {  };
-              let tabUIOptions = tabUISchema["ui:options"] || { }
+              let tabUISchema = uiSchema[tabDef.field] || {};
+              let tabUIOptions = tabUISchema["ui:options"] || {}
 
               return (<Tab key={tindex} textColor={theme.palette[tabUIOptions.textColor || "primary"].contrastText} icon={tabDef.icon ? (<Icon>{tabDef.icon}</Icon>) : null} label={`${tabDef.title || schema.properties[tabDef.field].title || tabDef.field}`} {...a11yProps(tindex)} />)
-            }              
+            }
           })}
 
         </Tabs>
@@ -208,34 +215,32 @@ const MaterialTabbedField = (props) => {
         axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'}
         index={value}
         onChangeIndex={handleChangeIndex}
-        key={'view'}        
+        key={idSchema.$id}
       >
         {layout.map((tabDef, tindex) => {
-          if (schema.properties[tabDef.field]) {
+          if (schema.properties[tabDef.field] && tindex === value) {
 
-            const panelProps: any = {
-              value,
-              index: tindex,
-              key: tindex
-            };
+            return (<Box key={tindex} role="tabpanel"
 
-            return (
-              <TabPanel {...panelProps} >
-                <SchemaField
-                  name={tabDef.field}
-                  required={isRequired(tabDef.field)}
-                  schema={schema.properties[tabDef.field]}
-                  uiSchema={uiSchema[tabDef.field]}
-                  errorSchema={errorSchema[tabDef.field]}
-                  idSchema={idSchema[tabDef.field]}
-                  formData={formData[tabDef.field]}
-                  onChange={onPropertyChange(tabDef.field)}
-                  onBlur={onBlur}
-                  registry={props.registry}
-                  disabled={disabled}
-                  readonly={readonly} />
-              </TabPanel>
-            )
+              id={`full-width-tabpanel-${tindex}`}
+              aria-labelledby={`full-width-tab-${tindex}`} p={1}>
+
+              <SchemaField
+                name={tabDef.field}
+                required={isRequired(tabDef.field)}
+                schema={schema.properties[tabDef.field]}
+                uiSchema={uiSchema[tabDef.field]}
+                errorSchema={errorSchema[tabDef.field]}
+                idSchema={idSchema[tabDef.field]}
+                formData={formData[tabDef.field]}
+                onChange={onPropertyChange(tabDef.field)}
+                onBlur={onBlur}
+                registry={props.registry}
+                disabled={disabled}
+                readonly={readonly} />
+
+            </Box>)
+
           }
           return null
         })}

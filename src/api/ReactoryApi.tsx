@@ -216,6 +216,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   $windowSize: WindowSizeSpec = null;
   $user: any;
   history: any;
+  params: any;
   queries: any;
   mutations: any;
   props: Object;
