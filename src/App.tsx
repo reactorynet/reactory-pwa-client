@@ -633,7 +633,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   if (isReady === false) return <AppLoading />;
 
-
+  
   return (
     <Router>
       <React.Fragment>
@@ -645,7 +645,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                 <ReactoryProvider api={reactory}>
                   <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
                     {offline === false && <Globals api={reactory} />}
-                    <Header api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
+                    {//@ts-ignore
+                    <Header  api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
+                    }
                     <NotificationComponent />
                     {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} />}
                     <Offline onOfflineChanged={onOfflineChanged} />

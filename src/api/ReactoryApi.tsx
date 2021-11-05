@@ -71,7 +71,9 @@ export const ReactoryApiEventNames = {
   onApiStatusUpdate: 'onApiStatusUpdate',
   onRouteChanged: 'onRouteChanged',
   onShowNotification: 'onShowNotification',
-  onThemeChanged: 'onThemeChanged'
+  onThemeChanged: 'onThemeChanged',
+  onHideMenu: 'onHideMenu',
+  onShowMenu: 'onShowMenu'
 };
 
 export const EmptyComponent = (fqn) => {

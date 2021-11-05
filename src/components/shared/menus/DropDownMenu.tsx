@@ -93,13 +93,12 @@ export const DropDownMenu = (props) => {
   const content = (
     <IconButton
       aria-owns={open === true ? ariaId : null}
-      aria-haspopup="true"
-      color={props.color || "inherit"}
+      aria-haspopup="true"      
       onClick={handleMenu}
       style={props.style}
       size={props.size || "medium"}
     >
-      <Icon className={classes.icon} style={props.iconStyle}>{props.icon || "keyboard_arrow_down"}</Icon>
+      <Icon style={props.iconStyle}>{props.icon || "keyboard_arrow_down"}</Icon>
       <Menu
         open={open === true}
         id={ariaId}

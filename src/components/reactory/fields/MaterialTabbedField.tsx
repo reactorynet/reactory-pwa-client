@@ -211,12 +211,7 @@ const MaterialTabbedField = (props) => {
 
         </Tabs>
       </AppBar>
-      <SwipeableViews
-        axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'}
-        index={value}
-        onChangeIndex={handleChangeIndex}
-        key={idSchema.$id}
-      >
+      
         {layout.map((tabDef, tindex) => {
           if (schema.properties[tabDef.field] && tindex === value) {
 
@@ -242,9 +237,8 @@ const MaterialTabbedField = (props) => {
             </Box>)
 
           }
-          return null
-        })}
-      </SwipeableViews>
+          
+        })}      
     </>
   );
 }

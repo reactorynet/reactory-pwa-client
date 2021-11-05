@@ -40,7 +40,7 @@ export default (props) => {
   }
 
   const toggleSwitch = ( evt, checked ) => {
-    if(onChange) onChange(checked)
+    if(onChange) onChange(checked === true)
   }
 
   let yesLabel = 'Yes';
@@ -65,9 +65,7 @@ export default (props) => {
       />
     }
     label={`${schema.title || name} - ${formData ? yesLabel : noLabel }`}
-  />)
-
-  
+  />);
 };
 
 

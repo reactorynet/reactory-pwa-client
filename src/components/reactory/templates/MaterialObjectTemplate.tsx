@@ -1,9 +1,7 @@
 import React, { Component, Fragment } from 'react';
 import { compose } from 'redux';
-import PropTypes from 'prop-types';
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '../../../api/ApiProvider';
-import { ReactoryApi } from "../../../api/ReactoryApi";
 import { template, isNil, isEmpty, isArray } from 'lodash';
 import * as Widgets from '../widgets';
 import {
@@ -59,15 +57,8 @@ const MaterialObjectTemplateHOC = (props) => {
     
     
     // //console.log('Object template field', { props: this.props, uiSchema });
-    let titleText = title && title.indexOf("$") >= 0 ? template(title)({formData: this.props.formData}) : title;    
-    const toggleExpand = () => { 
-      this.setState({ expanded: !this.state.expanded }, 
-        ()=>{
-          if(containerProps && containerProps.onExpand) containerProps.onExpand(index)
-        });
-    };
-    
-    
+    let titleText = title && title.indexOf("$") >= 0 ? template(title)({formData: props.formData}) : title;    
+            
     const uiOptions = uiSchema['ui:options'] || null;
     const uiWidget = uiSchema['ui:widget'] || null;
     const uiToolbar = uiSchema['ui:toolbar'] || null;    
@@ -144,7 +135,7 @@ const MaterialObjectTemplateHOC = (props) => {
 
     if(uiOptions && uiOptions.container) {      
       if( typeof uiOptions.containerStyles === 'object') {
-        ContainerStyles = { ...uiOptions.containerStyles}
+        ContainerStyles = { ...uiOptions.containerStyles }
       }      
 
       switch(uiOptions.container) {
@@ -155,7 +146,7 @@ const MaterialObjectTemplateHOC = (props) => {
         }
         case "div": {          
           ContainerComponent = (props) => {             
-            return (<div className={props.className} key={props.key} style={props.style || {}}>{props.children}</div>) 
+            return (<div className={props.className} key={key} style={props.style || {}}>{props.children}</div>) 
           }
           break;
         }
@@ -170,11 +161,15 @@ const MaterialObjectTemplateHOC = (props) => {
         }
       }
     }
+
+    if(uiOptions && uiOptions.style) {
+      ContainerStyles = { ...uiOptions.style, ...ContainerStyles }
+    }
             
     return (
       <ContainerComponent className={classes.root} key={key} style={ContainerStyles}>
         { isNil(titleText) === false && isEmpty(titleText) === false ? <Typography gutterBottom>{titleText}</Typography> : null }
-        { isNil(description) === false && isEmpty(titleText) === false ? <Typography gutterBottom component="p">{description}</Typography> : null }
+        {isNil(description) === false ? <Typography gutterBottom component="p">{template(description)({ formData: props.formData })}</Typography> : null }
         {toolbar}
         {properties.map(element => element.content)}
       </ContainerComponent>

@@ -1,0 +1,660 @@
+import React, { Component, Fragment, SyntheticEvent } from 'react';
+import PropTypes, { any } from 'prop-types';
+import { Link, withRouter } from 'react-router-dom';
+import { compose } from 'redux';
+import { isArray, find } from 'lodash';
+import { withTheme, makeStyles } from '@material-ui/core/styles';
+import {
+  Tooltip,
+  Button,
+  Grid,
+  ListItem,
+  ListItemSecondaryAction,
+  Collapse,
+  CircularProgress
+} from '@material-ui/core';
+import Drawer from '@material-ui/core/Drawer';
+import Avatar from '@material-ui/core/Avatar';
+import AppBar from '@material-ui/core/AppBar';
+import Divider from '@material-ui/core/Divider';
+import Toolbar from '@material-ui/core/Toolbar';
+import Typography from '@material-ui/core/Typography';
+import IconButton from '@material-ui/core/IconButton';
+import { Menu, MenuItem, InputBase } from '@material-ui/core';
+import Icon from '@material-ui/core/Icon';
+import { List, ListItemIcon, ListItemText } from '@material-ui/core';
+import { fade } from '@material-ui/core/styles/colorManipulator';
+import MenuIcon from '@material-ui/icons/Menu';
+import BackIcon from '@material-ui/icons/ArrowBack';
+import PowerSettingIcon from '@material-ui/icons/PowerSettingsNew';
+import { getAvatar } from '../util';
+import moment from 'moment';
+import { withApi, ReactoryApiEventNames } from '@reactory/client-core/api';
+import license from '@reactory/client-core/license';
+
+export class ISearchConfig {
+  show: boolean = false;
+  placeholder: string = "Search";
+
+  constructor(params: { show: boolean, placeholder: string } = { show: false, placeholder: 'Search' }) {
+    this.show = params.show || true;
+    this.placeholder = params.placeholder || 'Search';
+  }
+}
+
+const defaultSearchConfig = new ISearchConfig()
+
+export const Logged = (props) => {
+
+  const { menus, reactory, user, self } = props;
+  const menuItems = [];
+
+  if (menus && menus.length) {
+    menus.map((menu) => {
+      if (menu.target === 'top-right') {
+        menu.entries.map((menuItem) => {
+          let allow = true;
+          if (isArray(menuItem.roles) && isArray(user.roles)) {
+            allow = reactory.hasRole(menuItem.roles, user.roles)
+          }
+          if (allow === true) {
+            const goto = () => {
+              self.navigateTo(menuItem.link, false);
+            };
+            menuItems.push((
+              <MenuItem key={menuItem.id} onClick={goto}>
+                <ListItemIcon><Icon color="primary">{menuItem.icon}</Icon></ListItemIcon>
+                {menuItem.title}
+              </MenuItem>));
+          }
+        });
+      }
+
+    });
+  }
+
+  return (<Menu
+    open={props.open}
+    id='top-right'
+    anchorEl={props.anchorEl}
+    anchorOrigin={{
+      vertical: 'top',
+      horizontal: 'right',
+    }}
+    transformOrigin={{
+      vertical: 'top',
+      horizontal: 'right',
+    }}>
+    {menuItems}
+  </Menu>)
+}
+
+Logged.muiName = 'IconMenu';
+
+const SubMenus = (props) => {
+  const { items = [], history, user, reactory, self, classes } = props;
+
+  const submenus = [];
+
+  items.forEach((menu, index) => {
+    let allow = true;
+    if (isArray(menu.roles) && isArray(user.roles) === true) {
+      allow = reactory.hasRole(menu.roles, user.roles);
+    }
+
+    if (allow === true) {
+      const goto = () => history.push(menu.link);
+      submenus.push(
+        <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer' }}>
+          <ListItemIcon>
+            {
+              menu.icon ?
+                (<Icon color="primary">{menu.icon}</Icon>)
+                : null
+            }
+          </ListItemIcon>
+          {menu.title}
+        </ListItem>)
+    }
+  });
+
+  return submenus;
+};
+
+
+
+const CacheButton = (props) => {
+
+  const { reactory, classes } = props;
+  const [version, setVersion] = React.useState(0)
+  const data = localStorage.getItem('reactory_cache') || "";
+  const bytes = ((new TextEncoder().encode(data)).length / 100000).toPrecision(2);
+
+  const clearCache = () => {
+
+    reactory.clearStoreAndCache();
+    setVersion(version + 1);
+  }
+
+  return (
+    (<ListItem key={'reactory.cache'} onClick={clearCache} button>
+      <ListItemIcon>
+        <Icon color="primary">storage</Icon>
+      </ListItemIcon>
+      <ListItemText
+        primary={<span className={classes.versionPrimary}>Using {reactory.utils.humanNumber(bytes)} MB of local storage</span>}
+        secondary={<span className={classes.version}>🚮&nbsp; Click to clear your cache</span>}
+      />
+    </ListItem>)
+  )
+
+}
+
+const CacheComponent = compose(withApi)(CacheButton);
+
+/**
+ * This example is taking advantage of the composability of the `AppBar`
+ * to render different components depending on the application state.
+ */
+const ApplicationHeader = (props) => {
+
+  const { reactory, history, theme } = props;
+
+  const {
+    SystemStatus,
+    FullScreenModal,
+    Loading,
+    HelpListForm
+  } = reactory.getComponents([
+    'core.SystemStatus',
+    'core.FullScreenModal',
+    'core.Loading',
+    'forms.HelpListForm'
+  ]);
+
+
+  const [logged, setLogged] = React.useState<boolean>(true);
+  const [drawerOpen, setDrawerOpen] = React.useState<boolean>(false);
+  const [menuOpen, setMenuOpen] = React.useState<boolean>(false);
+  const [menuAnchor, setMenuAnchor] = React.useState<any>(null);
+  const [show, setShow] = React.useState<boolean>(window === window.top);
+  const [expanded, setExpanded] = React.useState<any>({});
+  const [version, setVersion] = React.useState<number>(0);
+  const [search, setSearch] = React.useState<any>({ show: false, searchInput: ''});
+  const [apiStatus, setApiStatus] = React.useState({
+    error: 0,
+    slow: 0,
+    ok: 0,
+    total: 0,
+    api_ok: true,
+    isSlow: false,
+    session: []
+  });
+
+  const classes: any = makeStyles((theme: any) => {
+
+    return {
+      drawerHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        minWidth: '260px',
+        padding: `0 ${theme.spacing(1)}px`,
+      },
+      nested: {
+        paddingLeft: theme.spacing(4),
+      },
+      loggedInUserAvatar: {
+        height: 120,
+        width: 120,
+        margin: 20,
+        marginLeft: 'auto',
+        marginRight: 'auto'
+      },
+      busyIndicator: {
+        outline: '1px solid black',
+      },
+      version: {
+        fontSize: '10px',
+      },
+      versionPrimary: {
+        fontSize: '12px',
+      },
+      root: {
+        width: '100%',
+      },
+      grow: {
+        flexGrow: 1,
+      },
+      menuItem: {
+        cursor: 'pointer'
+      },
+      menuButton: {
+        marginLeft: -12,
+        marginRight: 20,
+      },
+      title: {
+        display: 'none',
+        [theme.breakpoints.up('sm')]: {
+          display: 'block',
+        },
+      },
+      search: {
+        position: 'relative',
+        borderRadius: theme.shape.borderRadius,
+        backgroundColor: fade(theme.palette.common.white, 0.15),
+        '&:hover': {
+          backgroundColor: fade(theme.palette.common.white, 0.25),
+        },
+        marginLeft: 0,
+        width: '100%',
+        [theme.breakpoints.up('sm')]: {
+          marginLeft: theme.spacing(1),
+          width: 'auto',
+        },
+      },
+      searchIcon: {
+        width: theme.spacing(9),
+        height: '100%',
+        position: 'absolute',
+        pointerEvents: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      inputRoot: {
+        color: 'inherit',
+        width: '100%',
+      },
+      inputInput: {
+        paddingTop: theme.spacing(1),
+        paddingRight: theme.spacing(1),
+        paddingBottom: theme.spacing(1),
+        paddingLeft: theme.spacing(10),
+        transition: theme.transitions.create('width'),
+        width: '100%',
+        [theme.breakpoints.up('sm')]: {
+          width: 120,
+          '&:focus': {
+            width: 200,
+          },
+        },
+      }
+    }
+  })();
+
+  const onShowMenu = () => {
+    setShow(true);
+  };
+
+  const onHideMenu = () => {
+    setShow(false);
+  };
+
+
+  const onRouteChanged = (routeProps) => {
+    reactory.log('ApiPath changed, handle in header app', routeProps);
+    const { actionData, path } = routeProps;
+    navigateTo(path);
+  }
+
+  const onLoginEvent = (evt) => {
+    setVersion(version + 1);
+  }
+
+  const onApiStatusTotalsChanged = (totals: any) => {
+    setApiStatus(totals);
+  }
+
+  const navigateTo = (where = '/', toggleDrawer = false) => {
+    //console.log('Need to redirect', where);
+
+
+    const nav = () => {
+      if (where.trim().indexOf('http') === 0) {
+        window.open(where, '_new');
+      } else {
+        history.push(where);
+      }
+    }
+
+    if (toggleDrawer === true) {
+      setDrawerOpen(!drawerOpen);
+    }
+
+    nav();
+  }
+
+  const handleChange = (event, $logged) => {
+    setLogged($logged);
+  };
+
+  const toggleDrawer = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  const handleMenu = (evt: SyntheticEvent) => {
+    //this.setState({ menuOpen: !this.state.menuOpen, menuAnchor: evt.currentTarget })
+    setMenuAnchor(evt.currentTarget)
+    setMenuOpen(!menuOpen);
+  };
+
+  const loginClicked = (evt) => {
+    navigateTo('/login', false);
+  };
+
+  const signOutClicked = (evt) => {
+    reactory.logout();
+    navigateTo('/', false)
+  };
+
+
+  const statusRefresh = e => {
+    reactory.status().catch(e => {
+      reactory.createNotification('Unable to refresh API status. API may be offline.', { type: 'warning' });
+    });
+  };
+
+  const doSearch = () => {
+    setSearch({ ...search, show: true });
+  }
+
+  /**
+   * This is the main render entry point for the help interface.
+   * Accessible to all, use the search input as keyword filter.
+   */
+  const renderHelpInterface = () => {
+    const { show, searchInput } = search;
+    const HelpListForm = reactory.getComponent('forms.HelpListForm@1.0.0');
+    if (show !== true) return null;
+    const closeSearch = e => setSearch({ searchInput: '', show: false })
+    return (
+      <FullScreenModal open={show === true} onClose={closeSearch} title={`Searching For: ${searchInput}`}>
+        <HelpListForm />
+      </FullScreenModal>
+    );
+  }
+
+  const Menus = () => {
+    // const { menus = [], target = 'left-nav', history, user, reactory, self, classes, append, expanded } = props;    
+    let menuItems = [];
+    if (menus && menus.length) {
+      menus.map((menu) => {
+        if (menu.target === 'left-nav') {
+          menu.entries.map((menuItem: any, mid: number) => {
+            let subnav = null;
+            let expandButton = null;
+            let allow = false;
+
+            if (isArray(menuItem.roles) && isArray(user.roles) === true) {
+              allow = reactory.hasRole(menuItem.roles, user.roles);
+            }
+
+            if (allow === true) {
+              const goto = () => {
+                navigateTo(menuItem.link, true);
+              };
+
+              if (isArray(menuItem.items) === true && menuItem.items.length > 0) {
+                const isExpanded = expanded[menuItem.id] && expanded[menuItem.id].value === true;
+                subnav = (
+                  <Collapse in={isExpanded === true} timeout="auto" unmountOnExit key={`${menuItem.id || mid}-collapse`} >
+                    <List component="div" disablePadding>
+                      {
+                        menuItem.items.map((menu, index) => {
+                          const goto = () => history.push(menu.link);
+                          const sub_item = (
+                            <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer', paddingLeft: theme.spacing(4) }}>
+                              <ListItemIcon>
+                                {
+                                  menu.icon ?
+                                    (<Icon color="primary">{menu.icon}</Icon>)
+                                    : null
+                                }
+                              </ListItemIcon>
+                              {menu.title}
+                            </ListItem>);
+
+                          if (!menu.roles || menu.roles.length === 0) return sub_item;
+
+                          if (isArray(menu.roles) && isArray(user.roles) === true) {
+                            if (reactory.hasRole(menu.roles, user.roles) === true)
+                              return sub_item;
+                          }
+                        })
+                      }
+                    </List>
+                  </Collapse>
+                );
+
+                const toggleMenu = (e) => {
+                  let currentToggle = expanded[menuItem.id];
+                  if (!currentToggle) currentToggle = { value: false };
+
+                  currentToggle.value = !currentToggle.value;
+                  const $expanded = { ...expanded };
+                  $expanded[menuItem.id] = currentToggle;
+                  setExpanded($expanded);
+                };
+
+                expandButton = (
+                  <IconButton key={`${menuItem.id}`} onClick={toggleMenu}>
+                    <Icon>{isExpanded === true ? 'keyboard_arrow_down' : 'keyboard_arrow_right'}</Icon>
+                  </IconButton>
+                )
+              }
+
+              menuItems.push(
+                <ListItem key={menuItem.id || mid} onClick={goto} button>
+                  <ListItemIcon>
+                    <Icon color="primary">{menuItem.icon}</Icon>
+                  </ListItemIcon>
+                  {menuItem.title}
+                  {expandButton ? <ListItemSecondaryAction>
+                    {expandButton}
+                  </ListItemSecondaryAction> : null}
+                </ListItem>);
+
+              if (subnav) {
+                menuItems.push(subnav);
+              }
+            }
+          });
+        }
+      });
+    }
+
+    //if (append) menuItems.push(append);
+    menuItems.push(<ListItem key={'reactory.status'} onClick={statusRefresh} >
+      <ListItemIcon>
+        <Tooltip title={`Api Available @ ${moment(reactory.getUser().when).format('HH:mm:ss')} click to refresh`}>
+          <Icon color="primary">rss_feed</Icon>
+        </Tooltip>
+      </ListItemIcon>
+      <ListItemText
+        primary={<span className={classes.versionPrimary}>Client ver: {reactory.props.$version}</span>}
+        secondary={<span className={classes.version}>📡&nbsp;{server && server.id ? server.id : 'development'} ver: {server && server.version ? server.version : 'waiting'} </span>}
+      />
+    </ListItem>);
+
+    menuItems.push(<CacheComponent classes={classes} />);
+
+    return (<>{menuItems.map((menu) => menu)}</>);
+  };
+
+
+
+
+  React.useEffect(() => {
+    reactory.on(ReactoryApiEventNames.onHideMenu, onHideMenu);
+    reactory.on(ReactoryApiEventNames.onShowMenu, onShowMenu);
+    reactory.on(ReactoryApiEventNames.onLogin, onLoginEvent);
+    reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged)
+    reactory.on('onApiStatusTotalsChange', onApiStatusTotalsChanged);
+
+    return () => {
+      reactory.removeListener(ReactoryApiEventNames.onHideMenu, onHideMenu);
+      reactory.removeListener(ReactoryApiEventNames.onShowMenu, onShowMenu);
+      reactory.removeListener(ReactoryApiEventNames.onLogin, onLoginEvent);
+      reactory.removeListener(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+    }
+  }, []);
+
+  const user = reactory.$user;
+  const menus = reactory.getMenus();
+
+  const setSearchText = e => setSearch({ ...search, searchInput: e.target.value });
+  const onSearchTextKeyPress = e => {
+    if (e.charCode === 13) {
+      doSearch();
+    }
+  };
+
+  const toggleDarkMode = () => {
+
+    if (theme.palette.type === 'dark') {
+      localStorage.setItem("$reactory$theme_mode", 'light');
+    } else {
+      localStorage.setItem("$reactory$theme_mode", 'dark');
+    }
+
+    reactory.emit('onThemeChanged');
+  }
+
+
+
+
+  const getNavigationComponents = () => {
+    if (user) {
+      return user.navigationComponents || [];
+    }
+    return [];
+  }
+
+  const avatarComponent = (profileLink) => {
+    let AvatarComponentDef = find(getNavigationComponents(), { contextType: 'DEFAULT_HEADER_AVATAR' });
+    let AvatarComponent = null;
+
+    if (AvatarComponentDef && AvatarComponentDef.componentFqn) {
+      AvatarComponent = reactory.getComponent(AvatarComponentDef.componentFqn);
+      if (AvatarComponent) {
+        return (<AvatarComponent {...{ user, profileLink, ...AvatarComponentDef.componentProps }} />)
+      }
+    }
+
+    return (<Avatar src={getAvatar(user, `${user.firstName} ${user.lastName}`)} className={classes.loggedInUserAvatar} />);
+  }
+
+  const avatarTitle = () => {
+    let TitleComponentDef = find(getNavigationComponents(), { contextType: 'DEFAULT_HEADER_TITLE' });
+    let TitleComponent = null;
+
+    if (TitleComponentDef && TitleComponentDef.componentFqn) {
+      TitleComponent = reactory.getComponent(TitleComponentDef.componentFqn);
+      if (TitleComponent) {
+        return (<TitleComponent {...{ user, ...TitleComponentDef.componentProps }} />);
+      }
+    }
+
+    return (
+      <Typography
+        variant="subtitle1"
+        color="secondary"
+        style={{
+          textAlign: 'center',
+          marginTop: '20px'
+        }}>{reactory.getUserFullName(user)}
+      </Typography>
+    );
+  };
+
+  /*
+  const searchControl = (<div className={classes.grow}>
+    <div className={classes.search}>
+      <div className={classes.searchIcon}>
+        <Icon>search</Icon>
+      </div>
+      <InputBase
+        placeholder="Search…"
+        classes={{
+          root: classes.inputRoot,
+          input: classes.inputInput,
+        }}
+        onKeyPress={onSearchTextKeyPress}
+        onChange={setSearchText}
+        value={this.state.searchInput}
+      />
+    </div>
+  </div>);
+        */
+
+  const { server } = reactory.$user;
+
+  const { isSlow, total } = apiStatus;
+
+  const menuItems = Menus();
+
+
+  return (
+    <Fragment>
+      <AppBar position="sticky" color="default" id="reactory_default_app_bar" style={{ visibility: show === true ? 'visible' : 'collapse' }}>
+        <Toolbar variant="dense">
+          <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="body2" color="inherit" style={{ flex: 1 }}>
+            <span>{user.applicationName}</span>
+            {apiStatus.api_ok === false && <span style={{ color: theme.palette.error.main }}> - OFFLINE</span>}
+            {isSlow === true && total > 2 && <span style={{ color: theme.palette.warning.main }}><Icon>sensors</Icon></span>}
+          </Typography>
+
+          {user.anon === true ? null :
+            <IconButton
+              aria-owns={menuOpen ? 'top-right' : null}
+              aria-haspopup="true"
+              onClick={handleMenu}
+              color="inherit">
+              <PowerSettingIcon />
+              <Logged open={menuOpen === true}
+                id={'top-right'}
+                anchorEl={menuAnchor}
+                menus={menus}
+                reactory={reactory}
+                user={user}
+                self={self} />
+            </IconButton>}
+        </Toolbar>
+      </AppBar>
+      <Drawer variant={'temporary'} open={drawerOpen === true} className={classes.drawer} PaperProps={{ style: { width: '320px', maxWidth: '320px', overflowX: 'hidden' } }}>
+        <div className={classes.drawerHeader}>
+          <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
+            <BackIcon />
+          </IconButton>
+
+          <IconButton onClick={toggleDarkMode}>
+            <Icon>{theme.palette.type === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
+          </IconButton>
+
+          <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />
+        </div>
+        <Divider />
+        {avatarTitle()}
+        {user.anon ? null : avatarComponent("/profile/")}
+        <Divider />
+        <List className={classes.menuItems}>
+          {menuItems}          
+        </List>
+      </Drawer>
+      {renderHelpInterface()}
+    </Fragment>
+  );
+};
+
+
+
+const ApplicationHeaderComponent = compose(
+  withRouter,
+  withApi,
+  withTheme
+)(ApplicationHeader);
+
+export default ApplicationHeaderComponent;

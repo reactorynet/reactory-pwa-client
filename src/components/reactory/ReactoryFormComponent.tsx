@@ -605,32 +605,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
             if (data && data[mutation.name]) {
 
-              let _formData = DATAMANAGER.fromGraphResult(data, form.formData, mutation);
-              // let _result = reactory.utils.omitDeep(data[mutation.name]);
-
-              // if (mutation.resultMap && Object.getOwnPropertyNames(mutation.resultMap).length > 0) {
-              //   _result = reactory.utils.objectMapper(_result, mutation.resultMap);
-              // }
-
-              // let _strategy = 'merge';
-              // switch (_strategy) {
-              //   case "overwrite": {
-              //     _formData = _result;
-              //     break;
-              //   }
-              //   case 'function': {
-              //     //use a custom merging function
-              //     //for the form / mutation
-              //     //specify the function id on graph
-              //     break;
-              //   }
-              //   case 'merge':
-              //   default: {
-
-              //     _formData = reactory.utils.lodash.merge({}, formData, _result);
-              //     break;
-              //   }
-              // }
+              let _formData = DATAMANAGER.fromGraphResult(data, form.formData, mutation);            
 
               //validate data against schema
               if (formDef.sanitizeSchema) {
@@ -676,14 +651,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                 );
               }
 
-              // REMOVED BLOCK TEMPORARLY
-              /*
-              if (that.props.onMutateComplete && that.state.mutate_complete_handler_called) {
-                 that.setState({ mutate_complete_handler_called: true }, () => {
-                   that.props.onMutateComplete(_formData, that.getFormContext(), mutationResult);
-                 })
-               }
-               */
+             
               if (props.onMutateComplete) props.onMutateComplete(data[mutation.name], getFormContext(), mutation_result);
 
               if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event') >= 0) {

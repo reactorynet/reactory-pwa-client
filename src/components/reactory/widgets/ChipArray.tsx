@@ -15,7 +15,7 @@ import { compose } from 'redux'
 import { withStyles, withTheme } from '@material-ui/core/styles';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 
-class ChipArray extends Component {
+class ChipArray extends Component<any, any> {
   
   static styles = (theme) => ({
     root: {
@@ -80,7 +80,7 @@ class ChipArray extends Component {
   render(){
     const self = this
     const { uiSchema, api } = self.props;
-    let options = {
+    let options: any = {
       labelFormat: '${item}'
     };
 
@@ -119,11 +119,11 @@ class ChipArray extends Component {
             }
           }; 
           
-          let addItemProps = {};
+          let addItemProps: any = {};
           if (options.onAddHandler) {
             addItemProps[options.onAddHandler] = onAddItemHandler;
           } else {
-            addItemsProps.onSubmit = onAddItemHandler;
+            addItemProps.onSubmit = onAddItemHandler;
           }
 
           
@@ -165,5 +165,7 @@ class ChipArray extends Component {
     )
   }
 }
+
+//@ts-ignore
 const ChipArrayComponent = compose(withApi, withTheme, withStyles(ChipArray.styles))(ChipArray)
 export default ChipArrayComponent

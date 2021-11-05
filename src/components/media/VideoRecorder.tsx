@@ -387,15 +387,13 @@ export default {
       }
       return (
         <Box key={key}>
-          <Grid container spacing={0}> 
-            <Grid item xs={12} lg={12}>
-              <Paper>
+          <Grid container spacing={0}>
+            <Grid item xs={12} lg={12} justifyContent="center" alignItems="center" direction="row" style={{ display: 'flex', justifyContent: 'center', maxWidth: '320px', margin: 'auto' }}>
                 <a {...linkProps} />
                 <video ref={(vp) => { player.current = vp; }} width={180} controls={true}/>
-              </Paper>
             </Grid>  
-            <Grid item xs={12} lg={12}>              
-              <Toolbar>
+            <Grid item xs={12} lg={12} justifyContent="center" alignItems="center" direction="row">
+              <Toolbar style={{ maxWidth: '320px', margin: 'auto', justifyContent: 'center' }}>
                 {recording.confirmUpload === true ? upload : ( <><IconButton size="small" color="primary" onClick={() => { doPromptUpload(recording, key) }}><Icon>save</Icon></IconButton>
                   <IconButton size="small" onClick={() => { doRemoveRecording(recording, key) }}><Icon style={{ color: theme.palette.error.main }}>delete</Icon></IconButton></>)}                
               </Toolbar>
@@ -426,18 +424,20 @@ export default {
       return `${parseFloat(`${len}`).toFixed(2)} ${sizes[order]}`;
     }
 
+    // <Grid>
+    //   <Typography variant="label">{buffer.length} BYTES</Typography>
+    // </Grid>
+
     return (
-      <Paper elevation={2}>
-        <Grid container spacing={2}>
+      <Paper elevation={2} style={{ maxWidth: '320px', display: 'flex', justifyContent: 'center', margin: 'auto' }}>
+        <Grid container spacing={1} >
           <Grid>
             <video ref={(ref) => { video.current = ref }} width={320} />
           </Grid>
           <Grid item xs={12} xl={12}>
             <canvas ref={(canvasRef) => { canvas.current = canvasRef }} height="60px" width={320}></canvas>
           </Grid>
-          <Grid>
-            <Typography variant="label">{buffer.length} BYTES</Typography>
-          </Grid>
+          
           <Grid item xs={12} xl={12}>
             <Toolbar>
 

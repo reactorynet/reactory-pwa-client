@@ -279,10 +279,8 @@ class ArrayTemplate extends Component<any, any> {
 
     if (ArrayComponent === null) {
       ArrayComponent = () => (
-        <Grid item sm={12} md={12}>
-          {formData && formData.map && formData.map((item, index) => {
-            ;
-            ////console.log('Rendering item', { item, index })
+        <Grid spacing={2} item sm={12} md={12}>
+          {formData && formData.map && formData.map((item, index) => {          
             let itemSchema = retrieveSchema(schema.items, definitions, item);
             let itemErrorSchema = errorSchema ? errorSchema[index] : undefined;
             let itemIdPrefix = idSchema.$id + "_" + index;
