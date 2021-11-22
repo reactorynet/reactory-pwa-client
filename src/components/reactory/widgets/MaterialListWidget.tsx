@@ -1,6 +1,6 @@
-import React, { Fragment, Component } from 'react';
+import React, { Fragment, Component, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from  '@reactory/client-core/components/reactory/form/utils';
+import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from '@reactory/client-core/components/reactory/form/utils';
 import { pullAt, isNil, template, isString } from 'lodash';
 import { useHistory } from 'react-router'
 import { withRouter, Link } from 'react-router-dom';
@@ -10,7 +10,7 @@ import {
   Fab,
   FormLabel,
   Icon,
-  IconButton,  
+  IconButton,
   List,
   ListItem,
   ListItemAvatar,
@@ -20,11 +20,16 @@ import {
   ListSubheader,
   Typography,
   Switch,
-  Checkbox
+  Checkbox,
+  Theme
 } from '@material-ui/core';
+import {
+  Pagination
+} from '@material-ui/lab'
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux';
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withStyles, withTheme, makeStyles } from '@material-ui/core/styles';
+import Reactory from '@reactory/client-core/types/reactory';
 
 
 function LinkIconButton(link, icon) {
@@ -41,13 +46,273 @@ function LinkIconButton(link, icon) {
   );
 }
 
-class MaterialListWidget extends Component<any, any> {
+type MaterialListItemStyleFunction = (item: TAny, formContext: Reactory.Client.IReactoryFormContext<TAny>, index: number, items: TAny[]) => StyleSheet;
+type MaterialListItemObjectValueProvider = (item: TAny, formContext: Reactory.Client.IReactoryFormContext<TAny>, index: number, items: TAny[]) => any;
+type MaterialListItemStringValueProvider = (item: TAny, formContext: Reactory.Client.IReactoryFormContext<TAny>, index: number, items: TAny[]) => string;
+interface IMaterialListWidgetOptions<T> {
+  /**
+   * String field template to use for primary text
+   */
+  primaryText?: string | MaterialListItemStringValueProvider,
+  /**
+   * String field template for secondary text
+   */
+  secondaryText?: string | MaterialListItemStringValueProvider,
+  /**
+   * String field template for avatar
+   */
+  avatar?: string | MaterialListItemStringValueProvider,
 
-  static styles = (theme) => ({
+  /**
+   * String field template for the avatar alt
+   */
+  avatarAlt?: string | MaterialListItemStringValueProvider,
+  /**
+   * position of the avatar
+   */
+  avatarPosition?: string | "right" | "left",
+  /**
+   * avatar source field. Use this field to specify which property 
+   * should be used on the item as the source for the avatar
+   */
+  avatarSrcField?: string | MaterialListItemStringValueProvider,
+
+  /**
+   * The alt field name or provider function
+   */
+  avatarAltField?: string | MaterialListItemStringValueProvider,
+  /**
+   * Dropdown field / action button for the list item
+   */
+  dropdown?: string | MaterialListItemStringValueProvider,
+  /**
+   * Boolean to indicate if the list data must be 
+   * fetched by the component
+   */
+  remoteData?: boolean,
+  /**
+   * variable map to use for the input
+   */
+  variables?: object,
+  /**
+   * Result map to use when converting the data
+   */
+  resultMap?: object,
+  /**
+   * Key to use for to extract the array from the result
+   */
+  resultKey?: string,
+  /**
+   * Properties to pass to the List object
+   */
+  listProps?: any,
+  /**
+   * The name of the query on the graphql definition
+   */
+  query?: string,
+  /**
+   * Pagination settings for the list item
+   */
+  pagination?: {
+    /**
+     * Page size 
+     */
+    pageSize?: 25,
+    /**
+     * the variant will determine how the paging is managed
+     */
+    variant?: string | "page" | "infinte",
+    /**
+     * The result key to use for extracting the pagination field
+     */
+    resultKey?: string,
+    /**
+     * Object map for mapping the result
+     */
+    resultMap?: any
+  },
+  /**
+   * The icon property
+   */
+  icon?: string | MaterialListItemStringValueProvider,
+  /**
+   * Icon classname 
+   */
+  iconClassname?: string | MaterialListItemStringValueProvider,
+  /**
+   * The field name on the item to be referenced for the icon
+   */
+  iconField?: string | MaterialListItemStringValueProvider,
+  /**
+   * a map that is used to map the value in the item field
+   * to an icon
+   */
+  iconFieldMap?: {
+    [key: string]: string | MaterialListItemStringValueProvider
+  },
+  /**
+   * Stylesheet for the icon formatting
+   */
+  iconStyle?: StyleSheet | MaterialListItemStyleFunction,
+  /**
+   * Position of icon
+   */
+  iconPosition?: string | "left" | "right",
+  /**
+   * any custom jss we want to use when creating the list item
+   */
+  jss?: any,
+  /**
+   * A custom component that we may want to use for the item instead of the default 
+   * list item.
+   */
+  listItemsComponent?: string,
+
+  secondaryAction?: {
+    label?: string | MaterialListItemStringValueProvider,
+    iconKey?: string | MaterialListItemStringValueProvider,
+    componentFqn?: string | MaterialListItemStringValueProvider,
+    component?: MaterialListItemObjectValueProvider,
+    action?: string | MaterialListItemStringValueProvider,
+    actionData?: any | MaterialListItemObjectValueProvider,
+    link?: string | MaterialListItemStringValueProvider,
+    props?: any,
+    propsMap?: any
+  },
+  [key: string]: any
+};
+
+const DefaultListOptions: IMaterialListWidgetOptions<any> = {
+  primaryText: "${item.title}",
+  secondaryText: '${item.description}',
+  remoteData: false,
+  pagination: {
+    pageSize: 25,
+    variant: "page"
+  }
+}
+
+
+type ListType<T> = T[]
+
+interface IMateriaListWidgetProps<T> {
+  reactory: Reactory.Client.IReactoryApi,
+  formData: ListType<TAny>,
+  schema: Reactory.IArraySchema,
+  uiSchema: any,
+  onChange: (formData: ListType<TAny>) => void,
+  idSchema: {
+    $id: string
+  },
+  history: any,
+  theme: Theme,
+  formContext: Reactory.Client.IReactoryFormContext<TAny>,
+  registry: any,
+}
+
+interface TAny {
+  id?: string,
+  [key: string]: any
+}
+
+const DefaultPaging = {
+  page: 1,
+  pageSize: 25,
+  hasNext: false,
+  total: 0
+}
+
+//@ts-ignore
+function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
+
+  const { theme, history, formData, schema, uiSchema, idSchema, reactory, formContext } = props;
+
+  const getOptions = (): IMaterialListWidgetOptions<any> => {
+    let uiOptions: any = uiSchema['ui:options'] || {};
+
+    let _options = { ...DefaultListOptions, ...uiOptions };
+    if (uiOptions.pagination) {
+      _options.pagination = { ...DefaultListOptions.pagination, ...uiOptions.pagination }
+    }
+
+    return _options;
+  }
+
+  const [data, setData] = React.useState<ListType<TAny>>(reactory.utils.lodash.isNil(formData) === true ? [] : formData);
+  const [error, setError] = React.useState<string>(null);
+  const [paging, setPaging] = React.useState<any>(DefaultPaging)
+  const [listening, setListening] = React.useState<boolean>(false);
+  const registry: any = props.registry || getDefaultRegistry();
+  const options: IMaterialListWidgetOptions<any> = getOptions();
+
+  const getGraphDefinition = () => {
+    if (formContext.graphql && formContext.graphql.queries && options.query) {
+      return formContext.graphql.queries[options.query];
+    }
+  }
+
+  const getRemoteData = () => {
+
+    if (formContext.graphql && formContext.graphql.queries && options.query) {
+      const query = formContext.graphql.queries[options.query];
+      let variables: any = {};
+
+      if (query.refreshEvents && query.refreshEvents.length > 0 && listening === false) {      
+        query.refreshEvents.forEach((e) => {
+          reactory.on(e.name, getRemoteData)
+        });
+        setListening(true)
+      }
+
+      if (options.variables || query.variables) variables = reactory.utils.objectMapper({ ...props, paging }, options.variables || query.variables)
+      //@ts-ignore
+      reactory.graphqlQuery(query.text, variables, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
+        if (errors.length > 0) {
+          setError(`Could not all or some of the data, please try again`);
+        }
+
+        if (data && data[query.name]) {
+          let _formData = data[query.name];
+          if (reactory.utils.lodash.isArray(_formData) === true) {
+            if (options.resultMap || query.resultMap) {
+              let result = reactory.utils.objectMapper(data[query.name], options.resultMap || query.resultMap);                            
+              if (reactory.utils.lodash.isArray(_formData) === true) _formData = result;
+            }
+          } else {
+            if (options.resultKey || query.resultKey) {
+              _formData = data[query.name][options.resultKey || query.resultKey];
+              if (options.resultMap || query.resultMap) {
+                let result = reactory.utils.objectMapper(data[query.name], options.resultMap || query.resultMap);
+                if (reactory.utils.lodash.isArray(_formData) === true) _formData = result;
+              }
+            }
+
+            let _paging = { ...paging };
+            if (options.pagination && options.resultKey) {
+              _paging = data[options.resultKey]
+            }
+
+            if (options.pagination && options.pagination.resultMap) {
+              _paging = reactory.utils.objectMapper(_paging, options.pagination.resultMap);
+            }
+
+            if(JSON.stringify(paging) !== JSON.stringify(_paging)) {
+              setPaging(_paging);
+            }
+          
+          }
+
+          setData(_formData);          
+        }
+      }).then()
+    }
+  }
+
+
+  let sheet = {
     root: {
       display: 'flex',
       justifyContent: 'center',
-      flexWrap: 'wrap',
     },
     chip: {
       margin: theme.spacing(1),
@@ -55,107 +320,147 @@ class MaterialListWidget extends Component<any, any> {
     newChipInput: {
       margin: theme.spacing(1)
     }
-  });
+  };
 
-  static propTypes = {
-    formData: PropTypes.array,
-    onChange: PropTypes.func,
-    onSubmit: PropTypes.func,
-    readOnly: PropTypes.bool,
-    schema: PropTypes.object,
-    uiSchema: PropTypes.object,
+  if (options.jss) {
+    sheet = { ...sheet, ...options.jss };
   }
 
-  static defaultProps = {
-    formData: [],
-    readOnly: false
+  const useStyles = makeStyles(sheet);
+
+  const classes = useStyles(props)
+
+  const widgetsBefore = [];
+  const widgetsAfter = [];
+
+  if (schema.title && isString(schema.title) && schema.title.length > 0) {
+    if (options.showTitle !== false) {
+      widgetsBefore.push((<FormLabel className={classes[options.titleClass]} key={`${idSchema.$id}_Label`}>{options.title || schema.title}</FormLabel>));
+    }
   }
 
-  registry: any = null;
+  if (options.allowAdd === true) {
 
-  constructor(props) {
-    super(props)
-    this.registry = props.registry || getDefaultRegistry();
-    this.state = {
+    
 
+    const addItem = () => {
+      const newItem = getDefaultFormState(schema.items, undefined, registry.definitions)
+      if (props.onChange) props.onChange([...formData, newItem])
     };
 
+    widgetsAfter.push(
+      (<Fab key={`${idSchema.$id}_add_array`} variant={"round"} color={"primary"} onClick={addItem}>
+        <Icon>add</Icon>
+      </Fab>)
+    )
   }
 
 
-  render() {
-    const self = this;
-    const { api, history } = self.props;
-    const uiOptions: any = this.props.uiSchema['ui:options'] || {};
-    const { formData, schema, uiSchema, idSchema } = this.props;
-    let columns = [];
+  if(options.pagination) {
+    if(options.pagination.variant === "page") {
 
-    let data = [];
-    if (formData && formData.length > 0) {
-      formData.forEach(row => {
-        data.push({ ...row })
-      });
-    }
+      let pageCount = Math.floor((paging.total / (paging.pageSize || 25)));
 
-    const widgetsBefore = [];
-    const widgetsAfter = [];
+      if ((pageCount * (paging.pageSize || 25) < paging.total)) pageCount += 1;
+
+
+      const onPageChanged = (evt, page) => {
+        setPaging({...paging, page });
+      }
     
-    if(schema.title && isString(schema.title) && schema.title.length > 0) {
-      widgetsBefore.push((<FormLabel key={`${idSchema.$id}_Label`}>{schema.title}</FormLabel>));
+      widgetsAfter.push(<div style={{ display: 'flex', justifyContent: 'center' }}>
+        <Pagination count={pageCount} page={paging.page} onChange={onPageChanged} shape="rounded" />
+      </div>)
+    }
+  }
+
+  useEffect(() => {
+
+    if (options.remoteData === true) {
+      getRemoteData();
     }
 
-    if(uiOptions.allowAdd === true) {
-
-      const addItem = () => {        
-        const newItem = getDefaultFormState(schema.items, undefined, self.registry.definitions)
-        self.props.onChange([...formData, newItem])
-      };
-
-      widgetsAfter.push(
-        (<Fab key={`${idSchema.$id}_add_array`} variant={"round"} color={"primary"} onClick={addItem}>
-          <Icon>add</Icon>
-        </Fab>)
-      )
+    return () => {
     }
+  }, [])
 
-    let listProps = uiOptions.listProps || {};
+  useEffect(() => {
+    if (JSON.stringify(data) !== JSON.stringify(props.formData)) {
+      props.onChange(data);
+    }
+  }, [data])
 
-    return (
-      <Fragment>
-        {widgetsBefore}
-        <List {...listProps}>
-          {data.map((item, itemIndex) => {
-            //Create a list item entry using the uiOptions for the widget
+  useEffect(() => {
+    if(options.remoteData === true && options.pagination) {
+      getRemoteData();
+    }
+  }, [paging.page])
 
-            const widgetsLeft = []; //widgets to render left of text
-            const widgetsRight = []; //widgets to render right of text
-            /*
-              ** ICON MANAGEMENT **
-              iconField: 'actionType',
-              iconFieldMap: {
-                'default': 'history',
-                'client-visit': 'face',
-                'email': 'email',
-                'follow-up-call': 'voicemail',
-              },
-              iconStyle,
-              iconPosition: 'left' || 'right'
-            */
+  let listProps = options.listProps || {};
 
-            const hasIcon = typeof uiOptions.icon === 'string' || typeof uiOptions.iconField === 'string';
-            let iconProps = {
-            };
-            let icon = null;
-            const iconPosition = uiOptions.iconPosition || 'left';
-            //@ts-ignore
-            if (uiOptions.iconStyle) iconProps.style = uiOptions.iconStyle;
-            //mapped from field value
-            if (hasIcon && typeof uiOptions.iconField === 'string') {
-              let iconKey = 'info'; //default
-              if (typeof uiOptions.iconFieldMap === 'object') {
-                if (item[uiOptions.iconField]) {
-                  // iconKey = uiOptions.iconFieldMap[formData[uiOptions.iconField]] || uiOptions.iconFieldMap.default;
-                  iconKey = uiOptions.iconFieldMap[item[uiOptions.iconField]] || uiOptions.iconFieldMap.default;
+  let emptyListItem = null;
+  if (data.length === 0 && options.showEmptyListItem !== false) emptyListItem = (<ListItem><ListItemText>{options.emptyListItemText || "No Data"}</ListItemText></ListItem>)
+  return (
+    <div className={classes[options.className || "root"]}>
+      {widgetsBefore}
+      <List {...listProps} className={classes[listProps.className || "list"]}>
+        {emptyListItem}
+        {data.map((item: TAny, itemIndex) => {
+          //Create a list item entry using the uiOptions for the widget
+
+          const widgetsLeft = []; //widgets to render left of text
+          const widgetsRight = []; //widgets to render right of text
+          /*
+            ** ICON MANAGEMENT **
+            iconField: 'actionType',
+            iconFieldMap: {
+              'default': 'history',
+              'client-visit': 'face',
+              'email': 'email',
+              'follow-up-call': 'voicemail',
+            },
+            iconStyle,
+            iconPosition: 'left' || 'right'
+          */
+
+
+          const hasIcon = reactory.utils.lodash.isNil(options.icon || options.iconField) === false;
+          let iconProps = {};
+          let icon = null;
+          const iconPosition = options.iconPosition || 'left';
+          //@ts-ignore
+          if (options.iconStyle) iconProps.style = options.iconStyle;
+          //mapped from field value
+          if (hasIcon === true) {
+            let iconKey: string = 'info'; //default
+            let iconField: string = null;
+            let iconFieldValue: string = null;
+
+            if (typeof options.iconField === "function") {
+              iconField = options.iconField(item, formContext, itemIndex, data);
+            }
+
+            if (typeof options.iconField === "string") {
+              iconField = options.iconField;
+            }
+
+            if (reactory.utils.lodash.isNil(iconField) === false) {
+              iconFieldValue = item[iconField];
+
+              if (typeof options.iconFieldMap === 'object') {
+                if (iconFieldValue) {
+                  // iconKey = options.iconFieldMap[formData[options.iconField]] || options.iconFieldMap.default;
+                  if (typeof options.iconFieldMap[iconFieldValue] === "function") {
+                    //@ts-ignore
+                    const f: MaterialListItemStringValueProvider<any> = options.iconFieldMap[iconFieldValue];
+                    iconKey = f(item, formContext, itemIndex, data);
+                  } else {
+                    if (typeof options.iconFieldMap[iconFieldValue] === "string") {
+                      //@ts-ignore
+                      iconKey = options.iconFieldMap[iconFieldValue];
+                    }
+                  }
+
                   iconKey = iconKey || 'info';
 
                   icon = (
@@ -164,129 +469,185 @@ class MaterialListWidget extends Component<any, any> {
                     </ListItemIcon>
                   );
                 } else {
-                  iconKey = uiOptions.iconFieldMap.default;
+                  if (options.iconFieldMap.default) {
+                    if (typeof options.iconFieldMap.default === "function") {
+                      iconKey = options.iconFieldMap.default(item, formContext, itemIndex, data);
+                    } else {
+                      iconKey = options.iconFieldMap.default;
+                    }
+                  }
+
                   iconKey = iconKey || 'info';
-                  icon = (
-                    <ListItemIcon>
-                      <Icon {...iconProps}>{iconKey}</Icon>
-                    </ListItemIcon>
-                  );
-                  // api.log('Filed Mapping for Icon on Widget has no field on object matching the name', {item, props: this.props}, 'warning');
                 }
               } else {
-                iconKey = item[uiOptions.iconField] || 'info';
-
-                icon = (
-                  <ListItemIcon>
-                    <Icon {...iconProps}>{iconKey}</Icon>
-                  </ListItemIcon>
-                );
+                iconKey = iconFieldValue || 'info';
               }
-
-              if (iconPosition === 'left') widgetsLeft.push(icon);
-              if (iconPosition === 'right') widgetsRight.push(icon);
+            } else {
+              if (options.icon) {
+                if (typeof options.icon === "function") {
+                  iconKey = options.icon(item, formContext, itemIndex, data);
+                } else {
+                  iconKey = options.icon
+                }
+              }
             }
 
-            //plain icon
-            if (hasIcon && icon === null && typeof uiOptions.icon === 'string') {
-              icon = (
-                <ListItemIcon>
-                  <Icon {...iconProps}>{uiOptions.icon}</Icon>
-                </ListItemIcon>
+            icon = (
+              <ListItemIcon>
+                <Icon {...iconProps}>{iconKey}</Icon>
+              </ListItemIcon>
+            );
+
+
+            if (iconPosition === 'left') widgetsLeft.push(icon);
+            if (iconPosition === 'right') widgetsRight.push(icon);
+          }
+
+          //plain icon
+          if (hasIcon && icon === null && typeof options.icon === 'string') {
+            icon = (
+              <ListItemIcon>
+                <Icon {...iconProps}>{options.icon}</Icon>
+              </ListItemIcon>
+            );
+
+            if (iconPosition === 'left') widgetsLeft.push(icon);
+            if (iconPosition === 'right') widgetsRight.push(icon);
+          }
+
+          /** TEXT **/
+          let listItemTextProps = {
+            primary: "",
+            secondary: ""
+          };
+
+          let $primaryText = '${item.text || item.primaryText}';
+          let $secondaryText = '${item.description || item.secondaryText}';
+
+          try {
+            if (typeof options.primaryText === "string") $primaryText = options.primaryText;
+            if (typeof options.primaryText === "function") $primaryText = options.primaryText(item, formContext, itemIndex, data);
+
+            listItemTextProps.primary = template($primaryText)({ props: props, item });
+          }
+          catch (templateError) {
+            reactory.log(`Error parsing primary text template ${$primaryText}`, { options }, 'error')
+            listItemTextProps.primary = `Bad Template ${templateError.message}`;
+          }
+
+          try {
+            if (typeof options.secondaryText === "string") $secondaryText = options.secondaryText;
+            if (typeof options.secondaryText === "function") $secondaryText = options.secondaryText(item, formContext, itemIndex, data);
+            listItemTextProps.secondary = template($secondaryText)({ props: props, item });
+          }
+          catch (templateError) {
+            reactory.log(`Error parsing secondary text template ${$secondaryText}`, { options }, 'error')
+            listItemTextProps.secondary = `Bad Template ${templateError.message}`;
+          }
+
+
+          /** AVATAR */
+          const hasAvatar = reactory.utils.lodash.isNil(options.avatarSrcField || options.avatar) === false;
+          if (options.showAvatar === true) {
+
+            const listItemAvatarProps = {
+              src: '',
+              alt: ''
+            };
+            let avatarPosition = options.avatarPosition ? options.avatarPosition : 'left';
+            let avatar = null;
+            if (hasAvatar === true) {
+              let avatarIcon: any = null;
+
+              if (options.avatarSrcField) {
+                //@ts-ignore
+                listItemAvatarProps.src = item[options.avatarSrcField];
+              }
+
+              if (options.avatarAltField) {
+                //@ts-ignore
+                listItemAvatarProps.alt = item[options.avatarAltField];
+              }
+
+              if (options.avatarIconField && item[options.avatarIconField]) {
+                if (typeof options.avatarIconMap === 'object') {
+                  avatarIcon = (<Icon>{options.avatarIconMap[item[options.avatarIconField]]}</Icon>)
+                } else {
+                  avatarIcon = (<Icon>{item[options.avatarIconField]}</Icon>)
+                }
+              }
+
+              if (options.avatar) {
+                if (typeof options.avatar === "function") {
+                  listItemAvatarProps.src = options.avatar(item, formContext, itemIndex, data);
+                } else {
+                  listItemAvatarProps.src = reactory.utils.template(options.avatar)({ ...props, item, itemIndex, data });
+                }
+              }
+
+              if (options.avatarAlt) {
+                debugger
+                if (typeof options.avatarAlt === "function") {
+                  listItemAvatarProps.alt = reactory.utils.template(options.avatarAlt(item, formContext, itemIndex, data))({ ...props, item, itemIndex, data });
+                } else {
+                  listItemAvatarProps.alt = reactory.utils.template(options.avatarAlt)({ ...props, item, itemIndex, data });
+                }
+              }
+
+              avatar = (
+                <ListItemAvatar key={`${idSchema.$id}.avatar.${itemIndex}`}>
+                  <Avatar {...listItemAvatarProps}>
+                    {avatarIcon ? avatarIcon : listItemTextProps.primary.substring(0, 1)}
+                  </Avatar>
+                </ListItemAvatar>
               );
 
-              if (iconPosition === 'left') widgetsLeft.push(icon);
-              if (iconPosition === 'right') widgetsRight.push(icon);
+              if (avatar && avatarPosition === 'left') widgetsLeft.push(avatar);
+              if (avatar && avatarPosition === 'right') widgetsRight.push(avatar);
             }
 
-            /** TEXT **/
-            let listItemTextProps = {
-              primary: "",
-              secondary: ""
-            };
+          }
 
-            try {
-              listItemTextProps.primary = template(uiOptions.primaryText || '${item.text || item.primaryText}')({ props: this.props, item });
-            }
-            catch (templateError) {
-              listItemTextProps.primary = `Bad Template ${templateError.message}`
-            }
-
-            try {
-              listItemTextProps.secondary = template(uiOptions.secondaryText || '${item.secondaryText}')({ props: this.props, item });
-            }
-            catch (templateError) {
-              listItemTextProps.secondary = `Bad Template ${templateError.message}`;
-            }
+          /** DROP DOWN / ACTION BUTTON */
+          if (options.secondaryAction) {
+            debugger
+            let secondaryActionWidget = null;
+            if (typeof (options.secondaryAction) === 'object') {
+              const {
+                label,
+                iconKey,
+                component,
+                componentFqn,
+                action,
+                actionData,
+                link
+              } = options.secondaryAction;
 
 
+              if (component && typeof component === "function") {
+                secondaryActionWidget = component(item, formContext, itemIndex, data);
+              } else {
 
-            /** AVATAR */
-
-            const hasAvatar = typeof uiOptions.avatarField === 'string';
-
-            if (uiOptions.showAvatar === true) {
-
-              const listItemAvatarProps = {};
-              let avatarPosition = uiOptions.avatarPosition ? uiOptions.avatarPosition : 'left';
-              let avatar = null;
-              if (hasAvatar === true) {
-                let avatarIcon = null;
-
-                if (uiOptions.avatarAltField) {
-                  //@ts-ignore
-                  listItemAvatarProps.src = item[uiOptions.avatarSrcField];
-                  //@ts-ignore
-                  listItemAvatarProps.alt = item[uiOptions.avatarAltField];
-                }
-
-                if (uiOptions.avatarIconField && item[uiOptions.avatarIconField]) {
-                  if (typeof uiOptions.avatarIconMap === 'object') {
-                    avatarIcon = (<Icon>{uiOptions.avatarIconMap[item[uiOptions.avatarIconField]]}</Icon>)
-                  } else {
-                    avatarIcon = (<Icon>{item[uiOptions.avatarIconField]}</Icon>)
-                  }
-                }
-
-                avatar = (
-                  <ListItemAvatar>
-                    <Avatar {...listItemAvatarProps}>
-                      {avatarIcon ? avatarIcon : listItemTextProps.primary.substring(0, 1)}
-                    </Avatar>
-                  </ListItemAvatar>
-                );
-
-                if (avatar && avatarPosition === 'left') widgetsLeft.push(avatar);
-                if (avatar && avatarPosition === 'right') widgetsRight.push(avatar);
-              }
-
-            }
-
-            /** DROP DOWN / ACTION BUTTON */
-
-            if (uiOptions.secondaryAction) {
-              let secondaryActionWidget = null;
-              if (typeof (uiOptions.secondaryAction) === 'object') {
-                const {
-                  label,
-                  iconKey,
-                  componentFqn,
-                  action,
-                  actionData,
-                  link
-                } = uiOptions.secondaryAction;
                 let secondaryActionIconKey = 'info'
-                const path = template(link)({ item, props: this.props });
+
+                let $link: string = typeof link === "function" ?
+                  link(item, formContext, itemIndex, data) :
+                  link;
+
+
+
+                const path = template($link)({ item, props: props, data });
 
                 const actionClick = () => {
-                  api.log('Secondary Action Clicked For List Item', item, 'debug');
+                  reactory.log('Secondary Action Clicked For List Item', item, 'debug');
                   if (typeof action === 'string' && action.indexOf('event:') === 0) {
                     //raise an event via AMQ / the form
                     const eventName = action.split(':')[1];
                     history.push({ pathname: path })
-                    self.props.api.emit(eventName, { actionData, path });
+                    reactory.emit(eventName, { actionData, path });
                   }
                 };
+
 
                 let componentToRender = (
                   <IconButton onClick={actionClick}>
@@ -294,24 +655,27 @@ class MaterialListWidget extends Component<any, any> {
                   </IconButton>
                 )
 
-                if (typeof action === 'string' && action.indexOf('mount:') === 0) {
-                  
-                  
+                if (typeof action === 'string' && action.indexOf('mount') === 0) {
+
+
                   if (isNil(componentFqn) === false && componentFqn !== undefined) {
-                    const SecondaryItemComponent = api.getComponent(componentFqn);                                        
-                                        
+
+
+
+                    const SecondaryItemComponent = reactory.getComponent(componentFqn);
+
                     let secondaryComponentProps = {
                       formData: item,
-                      ...uiOptions.secondaryAction.props,
+                      ...options.secondaryAction.props,
                       onChange: (updatedItem) => {
                         let newState = [...data];
                         newState[itemIndex] = { ...newState[itemIndex], ...updatedItem };
-                        self.props.onChange(newState);
-                      }                                           
+                        props.onChange(newState);
+                      }
                     };
-                    
-                    if(uiOptions.secondaryAction.propsMap) {
-                      let outputObject = self.props.api.utils.objectMapper(this.props, uiOptions.secondaryAction.propsMap);
+
+                    if (options.secondaryAction.propsMap) {
+                      let outputObject = reactory.utils.objectMapper(props, options.secondaryAction.propsMap);
                       secondaryComponentProps = { ...secondaryComponentProps, ...outputObject };
                     }
                     // secondaryComponentProps.componentProps = this.props.api.utils.objectMapper(item, objectmapDefinition)
@@ -323,67 +687,68 @@ class MaterialListWidget extends Component<any, any> {
                   <ListItemSecondaryAction key={`${idSchema.$id}.${itemIndex}.secondary_action`}>
                     {componentToRender}
                   </ListItemSecondaryAction>)
+
               }
 
               if (secondaryActionWidget) {
-                uiOptions.secondaryActionPosition && uiOptions.secondaryActionPosition === 'left' ? widgetsLeft.push(secondaryActionWidget) : widgetsRight.push(secondaryActionWidget);
+                options.secondaryActionPosition && options.secondaryActionPosition === 'left' ? widgetsLeft.push(secondaryActionWidget) : widgetsRight.push(secondaryActionWidget);
               }
             }
+          }
 
 
-            /** SELECTED  */
-            if (uiOptions.selectOptions) {
-              let selectVariant = 'toggle'; //switch, checkbox, highlight
-              let selectedField = uiOptions.selectOptions.selectedField || 'selected'; //
+          /** SELECTED  */
+          if (options.selectOptions) {
+            let selectVariant = 'toggle'; //switch, checkbox, highlight
+            let selectedField = options.selectOptions.selectedField || 'selected'; //
 
-              let SelectedWidget = null;
-              /*
-              switch(selectedVariant) {
-                case 'switch': {
-                  SelectedWidget = <Switch  checked={formData["selectedField"] === true} onChange={} />
-                  break;
-                }
-                case 'checkbox': {
-                  SelectedWidget = <Checkbox />
-                  break;
-                }
+            let SelectedWidget = null;
+            /*
+            switch(selectedVariant) {
+              case 'switch': {
+                SelectedWidget = <Switch  checked={formData["selectedField"] === true} onChange={} />
+                break;
               }
-              */
+              case 'checkbox': {
+                SelectedWidget = <Checkbox />
+                break;
+              }
             }
+            */
+          }
 
-            /** Root Item Properties */
-            const listItemProps = {
-              id: item.id ? item.id : uuid(),
-              key: `${idSchema.$id}.${itemIndex}`
-            };
+          /** Root Item Properties */
+          const listItemProps = {
+            id: item.id ? item.id : uuid(),
+            key: `${idSchema.$id}.${itemIndex}`
+          };
 
-            if (uiOptions && typeof uiOptions.listItemStyle === 'object') {
+          if (options && typeof options.listItemStyle === 'object') {
+            //@ts-ignore
+            listItemProps.style = { ...options.listItemStyle };
+          }
+
+          if (options && typeof options.listItemSelectedStyle)
+
+            if (options && options.variant === 'button') {
               //@ts-ignore
-              listItemProps.style = { ...uiOptions.listItemStyle };
+              listItemProps.button = true;
             }
 
-            if (uiOptions && typeof uiOptions.listItemSelectedStyle)
-
-              if (uiOptions && uiOptions.variant === 'button') {
-                //@ts-ignore
-                listItemProps.button = true;
-              }
-
-            return (
-              <ListItem {...listItemProps}>
-                {widgetsLeft}
-                <ListItemText {...listItemTextProps} />
-                {widgetsRight}
-              </ListItem>
-            )
-          })}
-        </List>
-        {widgetsAfter}
-      </Fragment>
-    )
-  }
+          return (
+            <ListItem {...listItemProps}>
+              {widgetsLeft}
+              <ListItemText {...listItemTextProps} />
+              {widgetsRight}
+            </ListItem>
+          )
+        })}
+      </List>
+      {widgetsAfter}
+    </div>
+  )
 }
 
 //@ts-ignore
-const MaterialListWidgetComponent = compose(withApi, withRouter, withTheme, withStyles(MaterialListWidget.styles))(MaterialListWidget)
+const MaterialListWidgetComponent = compose(withApi, withRouter, withTheme)(MaterialListWidget)
 export default MaterialListWidgetComponent

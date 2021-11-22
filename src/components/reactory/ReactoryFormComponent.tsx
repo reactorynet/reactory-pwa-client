@@ -312,6 +312,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         return _obj
       }
       case "array": {
+
+        if (formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === false) reactory.log(`🚨 ${signature} Schema type and Default Form Value do not match.`, { formDef }, 'error');
+
         if (reactory.utils.lodash.isArray(props.data) === true) return props.data;
         if (reactory.utils.lodash.isArray(props.formData) === true) return props.formData;
         if (reactory.utils.lodash.isArray(formDef.defaultFormValue) === true) return formDef.defaultFormValue;
@@ -445,11 +448,19 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return formDef.uiSchema;
   }
 
-  const getActiveUiOptions = () => {
-    const _baseOptions = formDef.uiSchema && formDef.uiSchema['ui:options'] ? formDef.uiSchema['ui:options'] : { showSchemaSelectorInToolbar: true };
-    let _uiSchema = getActiveUiSchema();
-    let _options = { ..._baseOptions, ..._uiSchema["ui:options"] };
+  const getActiveUiOptions = (): Reactory.IFormUIOptions => {
 
+    let _options = { showSchemaSelectorInToolbar: true };
+    let _uiSchema: Reactory.IFormUISchema = getActiveUiSchema();
+
+    if (_uiSchema && _uiSchema['ui:form']) {
+      _options = { ..._options, ..._uiSchema['ui:form'] };
+    } else {
+      if(_uiSchema && _uiSchema['ui:options']) {
+        _options = { ..._options, ..._uiSchema['ui:options'] };
+      }
+    }
+       
     return _options;
   }
 
@@ -468,8 +479,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return _grahDefinitions;
   };
 
-  // TODO: Werner
-  // Please check this is correct
   const getActiveSchema = (defaultSchema) => {
     let _schemaDefinitions: any = defaultSchema || formDef.schema;
 
@@ -480,6 +489,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     return _schemaDefinitions;
   }
+
   const onPluginLoaded = (plugin: any) => {
     reactory.log(`${signature} Plugin loaded, activating component`, { plugin }, 'debug');
     try {
@@ -530,16 +540,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         let mutation: Reactory.IReactoryFormMutation = _graphql.mutation[mode];
 
-        /*
-        if (activeUiSchemaMenuItem && activeUiSchemaMenuItem.graphql) {
-          if (activeUiSchemaMenuItem.graphql.mutation && activeUiSchemaMenuItem.graphql.mutation[mode]) {
-            reactory.log(`<${fqn} instance={${instance_id} />`)
-            mutation = activeUiSchemaMenuItem.graphql.mutation[mode];
-          }
-        }
-        */
-
-       
        if (mutation === null || mutation === undefined) {
          //check if we need to rerun the query with the updated formData.
          reactory.log(`No mutations available for configured mode`)
@@ -913,7 +913,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       graphql: getActiveGraphDefinitions(),
       getData,
       reset,
-      screenBreakPoint: getScreenSize(),
+      screenBreakPoint: getScreenSize(),      
       ...inputContext,
     }
 
@@ -1325,9 +1325,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         break;
       }
       case "array": {
-        _formData = [];
-        if (formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === true && version === 0) _formData = [...formDef.defaultFormValue];
-        if (formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === false) reactory.log(`🚨 ${signature} Schema type and Default Form Value do not match.`, { formDef }, 'error');
+        debugger
+        _formData = [];        
         if (formData && Array.isArray(formData) === true) {
           _formData = [...formData];
         }
@@ -1520,7 +1519,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
 
   };
-
+  
   const renderForm = () => {
 
     reactory.log(`Rendering <${formDef.nameSpace}.${formDef.name}@${formDef.version} />`, { props: props, formData }, 'debug');
@@ -1529,7 +1528,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       return props;
     };
 
-    const _formUiOptions = getActiveUiOptions();
+    const _formUiOptions: Reactory.IFormUIOptions = getActiveUiOptions();
 
     const DropDownMenu = componentDefs["DropDownMenu"];
     const formProps = {
@@ -1600,10 +1599,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           case 'fab':
             {
               delete _props.variant;
+              //@ts-ignore
               submitButton = (<Fab {..._props}>{iconWidget}</Fab>);
               break;
             }
           default: {
+            //@ts-ignore
             submitButton = (<Button {..._props}>{iconAlign === 'left' && iconWidget}{template(_props.text)({ props: props, formData, formDef, reactory })}{iconAlign === 'right' && iconWidget}</Button>);
             break;
           }
@@ -1632,7 +1633,21 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       // Even handler for the schema selector menu
       const onSchemaSelect = (evt: Event, menuItem: Reactory.IUISchemaMenuItem) => {
         reactory.log(`UI Schema Selector onSchemaSelect "${menuItem.title}" selected`, { evt, menuItem });
+        let doQuery = false;
+        if(menuItem.graphql) {
+          doQuery = true
+        }
+
+        if(menuItem.uiSchema['ui:graphql']) {
+          doQuery = true;
+        }
+
         setActiveUiSchemaMenuItem(menuItem);
+        if(doQuery === true) {
+          setQueryComplete(false);
+          setIsBusy(false);
+          setIsDirty(false);          
+        }        
       };
 
       // if there is an active with a key
@@ -1904,7 +1919,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
 
     let formtoolbar = (
-      <Toolbar>
+      <Toolbar style={_formUiOptions.toolbarStyle || {}}>
         {_formUiOptions.showSchemaSelectorInToolbar && !_formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}
         {showSubmit === true && submitButton}
         {_additionalButtons}
@@ -1929,9 +1944,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       <>
         {getDeveloperOptions()}
         {isBusy() === true && <LinearProgress />}
-        {props.before}
-        <Form {...{ ...formProps, toolbarPosition: toolbarPosition }}>
-          {toolbarPosition.indexOf('bottom') >= 0 && toolbarPosition !== 'none' ? formtoolbar : null}
+        {props.before}        
+        <Form {...{ ...formProps, toolbarPosition: toolbarPosition }}>          
+        {toolbarPosition !== 'none' ? formtoolbar : null}
         </Form>
         {props.children}
         {getHelpScreen()}
@@ -1983,6 +1998,9 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
   }, []);
 
+  React.useEffect(() => {
+    getData();
+  }, [activeUiSchemaMenuItem])
 
   const watchList = [props.formData, props.formDef, props.formId];
 
@@ -2002,12 +2020,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     let next_version = version + 1;
     setVersion(next_version);
-    reactory.log(`${signature} Incoming Properties Changed`, { formData: props.formData, _formData: formData, version });
-
-    getData(_formData);
-    //if(next_version > 0 && formData) {
-    //}
-
+    reactory.log(`${signature} Incoming Properties Changed`, { formData: props.formData, _formData: formData, version });    
+    getData(_formData);    
 
   }, watchList)
 

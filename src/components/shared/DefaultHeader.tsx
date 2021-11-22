@@ -31,6 +31,7 @@ import { getAvatar } from '../util';
 import moment from 'moment';
 import { withApi, ReactoryApiEventNames } from '@reactory/client-core/api';
 import license from '@reactory/client-core/license';
+import { useHistory } from 'react-router';
 
 export class ISearchConfig {
   show: boolean = false;
@@ -46,7 +47,8 @@ const defaultSearchConfig = new ISearchConfig()
 
 export const Logged = (props) => {
 
-  const { menus, reactory, user, self } = props;
+  const { menus, reactory, user } = props;
+  const history = useHistory();
   const menuItems = [];
 
   if (menus && menus.length) {
@@ -59,7 +61,7 @@ export const Logged = (props) => {
           }
           if (allow === true) {
             const goto = () => {
-              self.navigateTo(menuItem.link, false);
+              history.push(menuItem.link)
             };
             menuItems.push((
               <MenuItem key={menuItem.id} onClick={goto}>
@@ -180,7 +182,7 @@ const ApplicationHeader = (props) => {
   const [show, setShow] = React.useState<boolean>(window === window.top);
   const [expanded, setExpanded] = React.useState<any>({});
   const [version, setVersion] = React.useState<number>(0);
-  const [search, setSearch] = React.useState<any>({ show: false, searchInput: ''});
+  const [search, setSearch] = React.useState<any>({ show: false, searchInput: '' });
   const [apiStatus, setApiStatus] = React.useState({
     error: 0,
     slow: 0,
@@ -607,12 +609,17 @@ const ApplicationHeader = (props) => {
             {isSlow === true && total > 2 && <span style={{ color: theme.palette.warning.main }}><Icon>sensors</Icon></span>}
           </Typography>
 
-          {user.anon === true ? null :
+          <>
+            <Typography variant="caption">
+              {reactory.$user.id === "anon" ? 'LOGIN' : 'LOGOUT'}
+            </Typography>
             <IconButton
               aria-owns={menuOpen ? 'top-right' : null}
               aria-haspopup="true"
-              onClick={handleMenu}
-              color="inherit">
+              onClick={handleMenu}              
+              style={{ 
+                color: reactory.$user.id === "anon" ? "inherit" : reactory && reactory.muiTheme ? reactory.muiTheme.palette.success.main : "inherit"
+              }}>
               <PowerSettingIcon />
               <Logged open={menuOpen === true}
                 id={'top-right'}
@@ -621,7 +628,8 @@ const ApplicationHeader = (props) => {
                 reactory={reactory}
                 user={user}
                 self={self} />
-            </IconButton>}
+            </IconButton>
+          </>
         </Toolbar>
       </AppBar>
       <Drawer variant={'temporary'} open={drawerOpen === true} className={classes.drawer} PaperProps={{ style: { width: '320px', maxWidth: '320px', overflowX: 'hidden' } }}>
@@ -641,7 +649,7 @@ const ApplicationHeader = (props) => {
         {user.anon ? null : avatarComponent("/profile/")}
         <Divider />
         <List className={classes.menuItems}>
-          {menuItems}          
+          {menuItems}
         </List>
       </Drawer>
       {renderHelpInterface()}

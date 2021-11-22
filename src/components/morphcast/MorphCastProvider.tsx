@@ -13,7 +13,7 @@ export default {
 
     // "FACE_AGE"
 
-    const morph_modules = ["FACE_DETECTOR", "FACE_POSE"]
+    const morph_modules = ["FACE_DETECTOR", "FACE_POSE", "DATA_AGGREGATOR"]
 
 
     const reactory = useReactory();

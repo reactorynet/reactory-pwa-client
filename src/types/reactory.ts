@@ -7,7 +7,7 @@ import {
   MutationResult,
   QueryResult
 } from "@apollo/client";
-import React from 'react';
+import React, { CSSProperties, StyleHTMLAttributes } from 'react';
 import Module from 'module';
 import GoogleMap from 'react-google-maps/lib/components/GoogleMap';
 
@@ -267,8 +267,20 @@ namespace Reactory {
       messageHandlers?: IMessageHandler[]
     }
 
-    export interface IReactoryFormContext {
-
+    export interface IReactoryFormContext<T> {
+      signature: string,
+      version: number,
+      formDef: IReactoryForm,
+      formData: T,
+      query: any,
+      formInstanceId: string,
+      $ref: any,
+      refresh: (args: any) => void,
+      setFormData: (formData: T, callback: () => void) => void,
+      graphql: IFormGraphDefinition,
+      getData: (data?: T) => void,
+      reset: () => void,
+      screenBreakPoint: string | "xs" | "sm" | "md" | "lg" | "xl",
       [key: string]: any
     }
 
@@ -287,7 +299,7 @@ namespace Reactory {
       schema: Reactory.ISchema,
       uiSchema: any,
       idSchema: any,
-      formContext: Reactory.Client.IReactoryFormContext,
+      formContext: Reactory.Client.IReactoryFormContext<T>,
       [key: string]: any
     }
   }
@@ -592,6 +604,50 @@ namespace Reactory {
     action: string | "bubble" | "swallow" | "function",
     functionFqn?: string,
   }
+
+  export interface IFormUIOptions {
+    submitProps?: {
+      variant?: string | "fab" | "button",
+      iconAlign?: string | "left" | "right";
+      onClick: () => void,
+      href: any,
+      [key: string]: any
+    },
+    showSubmit?: boolean,
+    showHelp?:boolean,
+    showRefresh?: boolean,
+    toolbarStyle?: CSSProperties,
+    toolbarPosition?: string,
+    buttons?: any[],
+    showSchemaSelectorInToolbar?: boolean,
+    schemaSelector?:  {
+      variant?: string | "icon-button" | "dropdown",
+      style?: CSSProperties,
+      showTitle?: boolean,
+      selectSchemaId?: string,
+      buttonStyle: CSSProperties,
+      buttonVariant: any,
+      buttonTitle: string,
+      activeColor?: any,
+      components: string[]
+    },
+
+
+    
+  }
+  export interface IFormUISchema {
+    'ui:form'?: IFormUIOptions,
+    /**
+     * "ui:form" is prefered method to set Form specific settting.
+     * 
+     */
+    'ui:options'?: IFormUIOptions | any,
+    'ui:field'?: string | "GridLayout" | "TabbedLayout" | "AccordionLayout" | "SteppedLayout",
+    'ui:widget'?: string,
+
+    [key: string]: any
+  }
+
   export interface IReactoryForm {
     id: string,
     uiFramework: string,
