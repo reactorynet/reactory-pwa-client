@@ -251,18 +251,12 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
     }
   }
 
-  const getRemoteData = () => {
+  const getRemoteData = () => { 
 
     if (formContext.graphql && formContext.graphql.queries && options.query) {
       const query = formContext.graphql.queries[options.query];
       let variables: any = {};
 
-      if (query.refreshEvents && query.refreshEvents.length > 0 && listening === false) {      
-        query.refreshEvents.forEach((e) => {
-          reactory.on(e.name, getRemoteData)
-        });
-        setListening(true)
-      }
 
       if (options.variables || query.variables) variables = reactory.utils.objectMapper({ ...props, paging }, options.variables || query.variables)
       //@ts-ignore
@@ -275,7 +269,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
           let _formData = data[query.name];
           if (reactory.utils.lodash.isArray(_formData) === true) {
             if (options.resultMap || query.resultMap) {
-              let result = reactory.utils.objectMapper(data[query.name], options.resultMap || query.resultMap);                            
+              let result = reactory.utils.objectMapper(data[query.name], options.resultMap || query.resultMap);
               if (reactory.utils.lodash.isArray(_formData) === true) _formData = result;
             }
           } else {
@@ -296,13 +290,13 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
               _paging = reactory.utils.objectMapper(_paging, options.pagination.resultMap);
             }
 
-            if(JSON.stringify(paging) !== JSON.stringify(_paging)) {
+            if (JSON.stringify(paging) !== JSON.stringify(_paging)) {
               setPaging(_paging);
             }
-          
+
           }
 
-          setData(_formData);          
+          setData(_formData);
         }
       }).then()
     }
@@ -341,7 +335,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 
   if (options.allowAdd === true) {
 
-    
+
 
     const addItem = () => {
       const newItem = getDefaultFormState(schema.items, undefined, registry.definitions)
@@ -356,8 +350,8 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
   }
 
 
-  if(options.pagination) {
-    if(options.pagination.variant === "page") {
+  if (options.pagination) {
+    if (options.pagination.variant === "page") {
 
       let pageCount = Math.floor((paging.total / (paging.pageSize || 25)));
 
@@ -365,9 +359,9 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 
 
       const onPageChanged = (evt, page) => {
-        setPaging({...paging, page });
+        setPaging({ ...paging, page });
       }
-    
+
       widgetsAfter.push(<div style={{ display: 'flex', justifyContent: 'center' }}>
         <Pagination count={pageCount} page={paging.page} onChange={onPageChanged} shape="rounded" />
       </div>)
@@ -378,9 +372,25 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 
     if (options.remoteData === true) {
       getRemoteData();
+      if (formContext.graphql && formContext.graphql.queries && options.query) {
+        const query = formContext.graphql.queries[options.query];
+        if (query.refreshEvents && query.refreshEvents.length > 0 && listening === false) {
+          query.refreshEvents.forEach((e) => {
+            reactory.on(e.name, getRemoteData)
+          });
+        }
+      }
     }
 
     return () => {
+      if (formContext.graphql && formContext.graphql.queries && options.query) {
+        const query = formContext.graphql.queries[options.query];
+        if (query.refreshEvents && query.refreshEvents.length > 0) {
+          query.refreshEvents.forEach((e) => {
+            reactory.removeListener(e.name, getRemoteData)
+          });
+        }
+      }
     }
   }, [])
 
@@ -391,7 +401,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
   }, [data])
 
   useEffect(() => {
-    if(options.remoteData === true && options.pagination) {
+    if (options.remoteData === true && options.pagination) {
       getRemoteData();
     }
   }, [paging.page])
@@ -528,7 +538,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
             if (typeof options.primaryText === "string") $primaryText = options.primaryText;
             if (typeof options.primaryText === "function") $primaryText = options.primaryText(item, formContext, itemIndex, data);
 
-            listItemTextProps.primary = template($primaryText)({ props: props, item });
+            listItemTextProps.primary = template($primaryText)({ props: props, item, reactory });
           }
           catch (templateError) {
             reactory.log(`Error parsing primary text template ${$primaryText}`, { options }, 'error')
@@ -538,7 +548,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
           try {
             if (typeof options.secondaryText === "string") $secondaryText = options.secondaryText;
             if (typeof options.secondaryText === "function") $secondaryText = options.secondaryText(item, formContext, itemIndex, data);
-            listItemTextProps.secondary = template($secondaryText)({ props: props, item });
+            listItemTextProps.secondary = template($secondaryText)({ props: props, item, reactory });
           }
           catch (templateError) {
             reactory.log(`Error parsing secondary text template ${$secondaryText}`, { options }, 'error')
@@ -586,7 +596,6 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
               }
 
               if (options.avatarAlt) {
-                debugger
                 if (typeof options.avatarAlt === "function") {
                   listItemAvatarProps.alt = reactory.utils.template(options.avatarAlt(item, formContext, itemIndex, data))({ ...props, item, itemIndex, data });
                 } else {
@@ -610,7 +619,6 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 
           /** DROP DOWN / ACTION BUTTON */
           if (options.secondaryAction) {
-            debugger
             let secondaryActionWidget = null;
             if (typeof (options.secondaryAction) === 'object') {
               const {

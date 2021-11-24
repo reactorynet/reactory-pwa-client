@@ -18,7 +18,7 @@ export default {
   name: 'ReactoryVideoRecorder',
   component: compose(withTheme, withApi)((props) => {
 
-    const { reactory, theme } = props;
+    const { reactory, theme, finalizeHook } = props;
 
 
     const { Material } = reactory.getComponents(['material-ui.Material']);
@@ -127,7 +127,6 @@ export default {
 
     const acquireStream = () => {
       if (navigator.mediaDevices) {
-        console.log('getUserMedia supported.');
 
         let chunks = [];
         let markerStart = null;
@@ -135,8 +134,9 @@ export default {
         let mime = `video/mp4;`;
         mime = isVideo === true ? mime : 'audio/ogg; codecs=opus';
 
+
         navigator.mediaDevices.getUserMedia(mediaConstraint)
-          .then(function (stream) {
+          .then(function (stream: MediaStream) {
 
             //@ts-ignore            
             const streamOptions: MediaRecorderOptions = {
@@ -144,7 +144,7 @@ export default {
               videoBitsPerSecond: props.videoBitrate || 2500000,
               mimeType: mime
             }
-
+            
             //@ts-ignore
             mediaRecorder.current = new MediaRecorder(stream);
 
@@ -159,6 +159,16 @@ export default {
 
             } 
             
+            stream.getTracks().forEach((track) => {
+              if(track.kind === "audio" && mediaConstraint.audio === false) {
+                track.stop();
+              }
+
+              if(track.kind === "video" && mediaConstraint.video === false) {
+                track.stop();
+              }
+            });
+
             visualize(stream);
             
 
@@ -221,8 +231,6 @@ export default {
 
     }
 
-
-
     const onStartRecording = () => {
       if (mediaRecorder.current && mediaRecorder.current.start && mediaRecorder.current.state !== "recording") {
         mediaRecorder.current.start();
@@ -234,6 +242,29 @@ export default {
       if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
         mediaRecorder.current.stop();
         setIsRecording(false);
+      }
+    }
+
+    const finalize = () => {
+      if (mediaRecorder.current) {
+        if(mediaRecorder.current.stream && mediaRecorder.current.stream.active === true) {          
+          
+          if (mediaRecorder.current.state === "recording" || mediaRecorder.current.state === "paused") {
+            mediaRecorder.current.stop();
+          }
+
+          if(video.current) {
+            video.current.pause();
+            video.current.src = ""
+            video.current.srcObject = null;
+          }
+                    
+          mediaRecorder.current.stream.getTracks().forEach((track: MediaStreamTrack) => {
+            track.stop();
+          });
+
+          mediaRecorder.current = null; 
+        }
       }
     }
 
@@ -253,21 +284,41 @@ export default {
     }, [canvasContext]);
 
     React.useEffect(() => {
+
       if (mediaRecorder.current) {
 
         if (mediaRecorder.current.state === "recording")
           mediaRecorder.current.stop();
+        
+        if (video.current) {
+          video.current.pause();
+          video.current.src = ""
+          video.current.srcObject = null;
+        }
 
+        mediaRecorder.current.stream.getTracks().forEach((track: MediaStreamTrack) => {
+          track.stop();
+        });
+
+        mediaRecorder.current = null;
+
+        if(mediaConstraint.audio === true || mediaConstraint.video === true ) {
+          acquireStream();
+        }
+      } else {
         acquireStream();
       }
     }, [mediaConstraint]);
 
     React.useEffect(() => {
+
+      if(finalizeHook) {
+        finalizeHook(finalize)
+      }
+
       return () => {
-        if (mediaRecorder.current) {
-          if (mediaRecorder.current.state !== "inactive") {
-            mediaRecorder.current.stop();
-          }
+        if(!finalizeHook) {
+          finalize();
         }
       }
     }, [])

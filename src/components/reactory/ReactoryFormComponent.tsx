@@ -763,8 +763,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           }
 
           if (do_mutation === true) {
-            //;
-            debugger
             let onChangeMutation: Reactory.IReactoryFormMutation = _graphql.mutation['onChange'];
             let throttleDelay: number = _graphql.mutation['onChange'].throttle || 250;
             let variables = reactory.utils.objectMapper({ eventData: form, form: { formData, formContext: getFormContext() } }, onChangeMutation.variables);
@@ -1325,7 +1323,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         break;
       }
       case "array": {
-        debugger
         _formData = [];        
         if (formData && Array.isArray(formData) === true) {
           _formData = [...formData];

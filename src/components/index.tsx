@@ -79,6 +79,7 @@ import { PasswordResetForm } from './user/Forms/ResetPassword';
 import CreateUserMembership from './user/Forms/CreateUserMembership';
 import ReactortMembershipRoles from './user/Forms/MembershipRoles';
 import { AddressLookupComponent } from './mapping/AddressLookup';
+import Cropper from './shared/image/Cropper';
 
 import * as utils from './util';
 import { withTheme } from '@material-ui/styles';
@@ -298,7 +299,7 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'Cropper',
     version: '1.0.0',
-    component: require('./shared/image/Cropper').Cropper,
+    component: Cropper,
   },
   {
     nameSpace: 'core',
