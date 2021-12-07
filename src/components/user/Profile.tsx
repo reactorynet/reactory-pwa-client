@@ -1239,7 +1239,7 @@ class Profile extends Component<any, any> {
         let avatarComponent = null;
         avatarComponent = (
             <div className={classes.avatarContainer}>
-                <Tooltip title={`Click on the camera icon to upload / add a new picture`}>
+                <Tooltip title={`Click on the UPLOAD PHOTO button to change you profile picture`}>
                     <Avatar
                         src={that.state.avatarUpdated === false ? getAvatar(profile, null) : that.state.profile.avatar} alt={`${firstName} ${lastName} `}
                         className={classNames(classes.avatar, classes.bigAvatar, avatarMouseOver === true ? classes.avatarHover : '')}
@@ -1250,7 +1250,7 @@ class Profile extends Component<any, any> {
                 <input accept="image/png" className={classes.hiddenInput} onChange={onFileClick} id="icon-button-file" type="file" ref={(n) => that.userProfileImageFile = n} />
                 <label htmlFor="icon-button-file">
                     <Tooltip title={`Select a png image that is less than 350kb in size.`}>
-                        <Button color="secondary" variant="outlined" component="span" className={classes.uploadButton} >Upload Photo</Button>
+                        <Button color="secondary" variant="outlined" component="span" className={classes.uploadButton}>Upload Photo</Button>
                     </Tooltip>
                 </label>
             </div>);

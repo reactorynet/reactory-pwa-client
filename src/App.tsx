@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import MomentUtils from '@date-io/moment';
 import { ApolloProvider } from '@apollo/client';
-import { 
+import {
   useHistory,
   useParams,
   useRouteMatch,
@@ -138,13 +138,25 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
   const { auth_validated, user, reactory } = props;
   const [routes, setRoutes] = React.useState<Reactory.IRouteDefinition[]>([]);
+  const [v, setVersion] = React.useState<number>(0)
   const NotFound = reactory.getComponent("core.NotFound");
 
-  
-  
+
+  const onLogin = () => {
+    configureRouting();
+    setVersion(v + 1);
+  };
+
+
+  const onLogout = () => {
+    setVersion(v + 1);
+  };
+
+  reactory.on(ReactoryApiEventNames.onLogout, onLogout)
+  reactory.on(ReactoryApiEventNames.onLogin, onLogin)
+
+
   const configureRouting = () => {
-    let loginRouteDef = null;
-    let homeRouteDef = null;
 
     reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
     let $routes = [];
@@ -156,15 +168,15 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         componentFqn: routeDef.componentFqn,
         path: routeDef.path,
         exact: routeDef.exact === true,
-        render: (props) => {
-          reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props }, 'debug');
+        render: (route_props) => {
+          reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: route_props }, 'debug');
 
           if (routeDef.redirect) {
-            return <Redirect to={{ pathname: routeDef.redirect, state: { from: props.location } }} />
+            return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
           }
 
           const componentArgs = {
-            $route: props.match,
+            $route: route_props.match,
           };
 
           if (isArray(routeDef.args)) {
@@ -173,45 +185,49 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             })
           }
 
-          const ApiComponent = reactory.getComponent(routeDef.componentFqn)
-         
+          const ReactoryComponent = reactory.getComponent(routeDef.componentFqn)
+
           if (routeDef.public === true) {
-            if (ApiComponent) return (<ApiComponent {...componentArgs} />)
+            if (ReactoryComponent) return (<ReactoryComponent {...componentArgs} />);
             else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
           } else {
             const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().roles) === true;
 
-
-            if (auth_validated === true && hasRolesForRoute === true) {
-              if (ApiComponent) return (<ApiComponent {...componentArgs} />)
-              else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
+            if (reactory.isAnon() === false && hasRolesForRoute === false) {              
+              return <NotFound message="You don't have sufficient permissions to access this route." link={routeDef.path} wait={500} />
             }
 
-            if (reactory.isAnon() === true && auth_validated && routeDef.path !== "/login") {
-              if (localStorage) {
-                localStorage.setItem('$reactory.last.attempted.route$', `${window.location.pathname}`)
-              }
-              const last_attempted_route = localStorage.getItem('$reactory.last.attempted.route$')
-              let timer = null
-                if(last_attempted_route && !last_attempted_route.includes('/reset-password')){
-                   timer = setTimeout(() => {
+            if (auth_validated === true && hasRolesForRoute === true) {
+              if (ReactoryComponent) return (<ReactoryComponent {...componentArgs} />)
+              else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
+            } else {
+
+              const hasRefreshed: boolean = localStorage.getItem('hasRefreshed') === 'true';
+
+              //auth token not validated yet in process of checking
+              if (auth_validated === false) {
+                return <Typography style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem' }} variant='h5'>Please wait while we validate your access token...</Typography>
+              } else {
+                
+
+                if (hasRefreshed === true && reactory.isAnon() === true && routeDef.path !== "/login") {
+                  localStorage.removeItem('hasRefreshed');                  
+                  return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
+                }                   
+                
+                
+                if (hasRefreshed === false && reactory.isAnon() === true) {
+                  localStorage.setItem('$reactory.onlogin.redirect$', routeDef.path);
+                  setTimeout(() => {
                     //@ts-ignore
-                    window.location.reload(true)
-                    localStorage.setItem('hasRefreshed', 'true')
+                    // window.location.reload(true)
+                    reactory.status({ emitLogin: true });
+                    setVersion(v + 1);
+                    localStorage.setItem('hasRefreshed', 'true');
                   }, 3000);
                 }
 
-                if(localStorage.getItem('hasRefreshed')){
-                  clearTimeout(timer)
-                  localStorage.removeItem('hasRefreshed')
-                  return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
-                }
-                
-                return <Typography style={{display: 'flex', justifyContent: 'center', padding: '10% 2rem'}} variant='h5'>Please wait while we validate your access token...</Typography>
               }
-            if (reactory.isAnon() === false && hasRolesForRoute === false) {
-              //we may be waiting 
-              return <NotFound message="You don't have sufficient permissions to access this route yet... (we may be fetching your permissions)" link={routeDef.path} wait={500} />
             }
 
             return (<p> ... </p>);
@@ -223,11 +239,21 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     });
 
     setRoutes($routes);
+    setVersion( v + 1);
   }
 
   useEffect(() => {
     configureRouting();
   }, []);
+
+  useEffect(() => {
+    configureRouting();
+  }, [auth_validated])
+
+
+  if(auth_validated === false) {
+    return (<span>Validating Authentication</span>)
+  }
 
   return (
     <React.Fragment>
@@ -267,7 +293,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
   const TM_BASE_DEFAULT: number = 45000;
   const { onOfflineChanged } = props;
-  const [ timeout_base, setTimeoutBase ] = React.useState<number>(TM_BASE_DEFAULT);
+  const [timeout_base, setTimeoutBase] = React.useState<number>(TM_BASE_DEFAULT);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
 
   let timeoutMS: number = 45000;
@@ -287,7 +313,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       if (offline !== !api_ok) {
         onOfflineChanged(!api_ok);
       }
-    
+
       let isSlow = false;
 
       const newLast = {
@@ -299,7 +325,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
       //if our ping timeout is slow
       if (newLast.pingMS > 4000 && totals.total > 10) {
-        last_slow = done;        
+        last_slow = done;
         timeoutMS = timeout_base * 1.25;
       }
 
@@ -310,23 +336,23 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       }
 
       let next_tm_base = TM_BASE_DEFAULT;
-      if(totals.total > 5) {
+      if (totals.total > 5) {
         let avg: number = (totals.ok * 100) / totals.total;
-        if(avg > 90) next_tm_base = TM_BASE_DEFAULT * 1.30
-        
-        
-        if(avg > 95) next_tm_base = TM_BASE_DEFAULT * 1.5;
+        if (avg > 90) next_tm_base = TM_BASE_DEFAULT * 1.30
+
+
+        if (avg > 95) next_tm_base = TM_BASE_DEFAULT * 1.5;
 
 
         if (avg > 98) next_tm_base = TM_BASE_DEFAULT * 2.5;
-        
+
       }
-            
+
       const newTotals = {
         error: totals.error,
         slow: isSlow ? totals.slow + 1 : totals.slow,
         ok: api_ok ? totals.ok + 1 : totals.ok,
-        total: totals.total + 1,      
+        total: totals.total + 1,
       };
 
       totals = newTotals;
@@ -334,12 +360,12 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       reactory.stat(`user-session-api-status-totals`, { user_id: reactory.getUser().id, ...totals, ...newLast });
       reactory.emit('onApiStatusTotalsChange', { ...totals, ...newLast, api_ok, isSlow });
 
-      if(next_tm_base !== timeout_base) setTimeoutBase(next_tm_base);
+      if (next_tm_base !== timeout_base) setTimeoutBase(next_tm_base);
 
       setTimeout(() => {
         getApiStatus();
       }, timeoutMS);
-      
+
       reactory.log(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS }, 'debug');
     }).catch((statusError) => {
       reactory.log(`Error while fetching api status`, { error: statusError }, 'error');
@@ -358,7 +384,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       }, timeoutMS);
     });
 
-   
+
   };
 
 
@@ -414,21 +440,19 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const { NotificationComponent, Footer } = components;
 
   const getApiStatus = (emitLogin = true) => {
-    if (auth_validated === false) {
-      reactory.status({ emitLogin, forceLogout: false }).then((user: any) => {
-        setIsValidated(true);
-        setOfflineStatus(user.offline === true)
-        setUser(user);
-        setIsReady(true);
-        applyTheme();
-      }).catch((validationError) => {
-        setIsValidated(true);
-        setUser(null);
-        setOfflineStatus(true)
-        setError(validationError);
-        setIsReady(false);
-      });
-    }
+    reactory.status({ emitLogin, forceLogout: false }).then((user: any) => {
+      setIsValidated(true);
+      setOfflineStatus(user.offline === true)
+      setUser(user);
+      setIsReady(true);
+      applyTheme();      
+    }).catch((validationError) => {
+      setIsValidated(true);
+      setUser(null);
+      setOfflineStatus(true)
+      setError(validationError);
+      setIsReady(false);
+    });
   };
 
 
@@ -437,11 +461,21 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   }
 
   const onLogin = () => {
+    reactory.log('App.onLogin handler', {}, 'debug')    
     setUser(reactory.getUser());
+    const redirect = localStorage.getItem('$reactory.onlogin.redirect$')
+    if (redirect && redirect !== "") {
+      setTimeout(() => {
+        localStorage.removeItem('$reactory.onlogin.redirect$');
+        localStorage.setItem('hasRefreshed', 'true');
+        window.location.assign(redirect);
+      }, 1500)
 
+    }
   };
 
   const onLogout = () => {
+    reactory.log('App.onLogout handler', {}, 'debug')
     setUser(reactory.getUser());
   };
 
@@ -553,14 +587,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
 
     const query = queryString.parse(window.location.search);
-    if (query.auth_token) {
-      localStorage.setItem('auth_token', query.auth_token);
-      ReactoryApolloClient().then((cli) => {
-        reactory.client = cli.client;
-        reactory.ws_link = cli.ws_link;
-        cli.clearCache();
-      });
-    }
 
     reactory.queryObject = query;
     reactory.queryString = window.location.search;
@@ -572,8 +598,18 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       };
     }
 
-    waitForClient();
 
+    if (query.auth_token) {
+      localStorage.setItem('auth_token', query.auth_token);
+      ReactoryApolloClient().then((cli) => {
+        reactory.client = cli.client;
+        reactory.ws_link = cli.ws_link;
+        cli.clearCache();
+        getApiStatus();
+      });
+    } else {
+      waitForClient();
+    }
 
     return willUnmount;
   };
@@ -633,7 +669,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   if (isReady === false) return <AppLoading />;
 
-  
+
   return (
     <Router>
       <React.Fragment>
@@ -646,7 +682,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                   <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
                     {offline === false && <Globals api={reactory} />}
                     {//@ts-ignore
-                    <Header  api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
+                      <Header api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
                     }
                     <NotificationComponent />
                     {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} />}

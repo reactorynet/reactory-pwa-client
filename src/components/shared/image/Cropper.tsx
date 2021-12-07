@@ -8,6 +8,7 @@ import {
   Paper,
   Typography,
   Toolbar,
+  Grid,
 } from '@material-ui/core';
 import "react-image-crop/dist/ReactCrop.css";
 import ReactoryApi, { useReactory } from "@reactory/client-core/api";
@@ -45,7 +46,7 @@ const Cropper = (props: ICropProps) => {
   const [imageRef, setImageRef] = useState<any>(null);
   const [crop, setCrop] = useState(props.crop || DEFAULT_CROP);
 
-  const { } = reactory.getComponents
+  const { StaticContent } = reactory.getComponents(["core.StaticContent"]);
 
   // this.onImageLoaded = this.onImageLoaded.bind(this)
   // this.onCropComplete = this.onCropComplete.bind(this)
@@ -133,23 +134,38 @@ const Cropper = (props: ICropProps) => {
     return (
       <Container maxWidth="md">
         <Paper>
-          <Toolbar>
-            <ButtonGroup variant="contained">
-              <Button onClick={acceptCrop}><Icon>check</Icon></Button>
-              <Button onClick={() => { onCancelCrop() }}><Icon>close</Icon></Button>
-            </ButtonGroup>
-          </Toolbar>
-          {src && (
-            <div style={{ display: 'flex', justifyContent: 'center', height: '370px', width: '370px' }}>
-              <ReactCrop
-                src={src}
-                crop={crop}
-                onImageLoaded={onImageLoaded}
-                onComplete={onCropComplete}
-                onChange={onCropChange}
-              />
-            </div>
-          )}
+
+        <Grid container spacing={0}>
+
+          <Grid item container direction="row">
+            <Grid item xs={12} sm={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
+              <StaticContent slug={`profile-image-cropper-info`} />
+            </Grid>
+              <Grid item xs={12} sm={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
+              {src && (
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <ReactCrop
+                    src={src}
+                    crop={crop}
+                    onImageLoaded={onImageLoaded}
+                    onComplete={onCropComplete}
+                    onChange={onCropChange}
+                  />
+                </div>
+              )}
+              {(src === null || src === undefined) && (<Typography>No Image Data Available</Typography>)}
+            </Grid>
+              <Grid item xs={12} sm={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
+                <Toolbar>
+                  <ButtonGroup variant="contained">
+                    <Button color="primary" onClick={acceptCrop}><Icon>check</Icon></Button>
+                    <Button color="secondary" onClick={() => { onCancelCrop() }}><Icon>close</Icon></Button>
+                  </ButtonGroup>
+                </Toolbar>
+            </Grid>
+          </Grid>
+
+        </Grid>                            
         </Paper>
       </Container>
     );
