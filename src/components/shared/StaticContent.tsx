@@ -63,7 +63,7 @@ interface ReactoryStaticContentState {
 const StaticContent = (props: ReactoryStaticContentProps) => {
 
   const { reactory } = props;
-
+  
 
   const { MaterialCore } = reactory.getComponents(['material-ui.MaterialCore'])
 
@@ -102,6 +102,8 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     found: false,
     parsed_content: null
   });
+
+  const [version, setVersion] = React.useState<number>(0)
 
   const containerProps = {};
   const {
@@ -198,7 +200,7 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     });
   };
 
-  let isDeveloper = reactory.hasRole(['DEVELOPER']);
+  let isDeveloper = reactory.hasRole(['DEVELOPER']) && reactory.isDevelopmentMode() === true;
   let canEdit = reactory.hasRole(editRoles);
 
   canEdit = canEdit === false && isDeveloper === true ? true : canEdit;
@@ -210,6 +212,10 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     }
 
   };
+
+  const onDevelopmentModeChanged = () => {
+    setVersion(version + 1);
+  }
 
   let editWidget = (<IconButton onClick={edit} color="primary" size={'small'} className={classes.editIcon}>
     <Icon>{editing === false ? 'edit' : 'check'}</Icon>
@@ -238,11 +244,22 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
 
   useEffect(() => {
     getData(null);
+    reactory.on("onReactoryDevelopmentModeChanged", onDevelopmentModeChanged);
+
+    return () => {
+      reactory.removeListener("onDevelopmentModeChanged", onDevelopmentModeChanged);
+    }
   }, []);
+
+  useEffect(() => {
+    setVersion(version + 1);;
+  }, [reactory.$development_mode]);
+
 
   useEffect(() => {
     getData(null)
   }, [props.slug])
+
 
   useEffect(() => {
     //bind components on page.
@@ -260,8 +277,8 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
   const ContentContainer = React.useRef<HTMLDivElement>(null);
 
   return (        
-    <div className={`${classes.staticContentContainer} ${isDeveloper ? classes.staticContainerDeveloper : ''}`}>
-      {canEdit === true && editWidget}
+    <div className={`${classes.staticContentContainer} ${isDeveloper === true ? classes.staticContainerDeveloper : ''}`}>
+      {canEdit === true && reactory.$development_mode === true && editWidget}
       {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}
     </div>
   )

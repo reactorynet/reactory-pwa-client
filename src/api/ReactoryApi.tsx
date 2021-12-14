@@ -213,6 +213,103 @@ interface ReactoryTheme extends Theme {
   [key: string]: any
 }
 
+
+
+const FORM_QUERY_SEGMENTS = {
+  FORM_CORE_ELEMENTS: `
+    id
+    uiFramework
+    uiSupport
+    registerAsComponent
+    title
+    tags
+    display
+    name
+    nameSpace
+    description
+    version
+    className
+    style
+    helpTopics
+    defaultUiSchemaKey
+    defaultFormValue
+    roles
+  `,
+  FORM_SCHEMAS: `
+    schema
+    uiSchema
+    sanitizeSchema
+    modules {
+      id
+      src
+      url
+      signed
+      signature
+      compiler
+      compilerOptions
+      roles
+    }
+    uiResources {
+      id
+      name
+      type
+      required
+      expr
+      uri
+    }
+    uiSchemas {
+      id
+      title
+      key
+      description
+      icon
+      graphql {
+        query
+        mutation
+        queries
+        clientResolvers
+      }
+      modes
+    }
+    graphql {
+      query
+      mutation
+      queries
+      clientResolvers
+    }
+  `,
+  ADDITIONAL: `
+    components  
+    defaultPdfReport
+    defaultExport
+    exports
+    reports    
+    refresh
+    widgetMap {
+      componentFqn
+      component
+      widget
+    }
+    backButton
+    workflow
+    noHtml5Validate
+    formContext
+    eventBubbles {
+      eventName
+      action
+      functionFqn
+    }
+    componentDefs
+    queryStringMap
+    dependencies {
+      fqn
+      props
+      propsMap
+      componentType
+    }
+  `
+}
+
 class ReactoryApi extends EventEmitter implements _dynamic {
 
   $windowSize: WindowSizeSpec = null;
@@ -248,7 +345,6 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   formValidationMaps: any;
   formTranslationMaps: any;
   formSchemaLastFetch: moment.Moment = null;
-
   assets: Object = null;
   amq: any = null;
   statistics: any = null;
@@ -263,6 +359,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   objectToQueryString: Function;
   clearCache: () => void;
   ws_link: any;
+  $development_mode: boolean = false;
 
 
   __uuid: string;
@@ -424,6 +521,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.init = this.init.bind(this);
     this.getSizeSpec = this.getSizeSpec.bind(this);
     this.getThemeMode = this.getThemeMode.bind(this);
+    this.isDevelopmentMode = this.isDevelopmentMode.bind(this);
+    this.setDevelopmentMode = this.setDevelopmentMode.bind(this);
     this.__uuid = localStorage.getItem("$reactory_instance_id$");
     if(this.__uuid === null) {
       this.__uuid = uuid();
@@ -854,6 +953,9 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     </React.Fragment>);
   }
 
+
+  
+
   /**
    * The forms function is executed when the application starts up and 
    * can be called from any component that has the reactory property injected
@@ -865,32 +967,74 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   forms(bypassCache: boolean = false) {
     const that = this;
     return new Promise((resolve) => {
-      const refresh = () => {
-        RestApi.forms().then((formsResult) => {
-          that.formSchemas = formsResult;
-          const ReactoryFormComponent = that.getComponent('core.ReactoryForm');
-          formsResult.forEach((formDef: Reactory.IReactoryForm, formDefIndex) => {
-            if (formDef.registerAsComponent === true) {
-              const FormComponent = (props: any, context: any) => {
-                return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={`${formDefIndex}`}
-                  onSubmit={props.onSubmit} onChange={props.onChange}
-                  formData={formDef.defaultFormValue || props.formData || props.data}
-                  before={props.before}
-                  {...props}
-                  context={context}
-                >{props.children}
-                </ReactoryFormComponent>, formDef.wrap === true);
-              };
-              that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent, formDef.tags, formDef.roles, true, [], 'form');
-            }
-          });
-          that.formSchemaLastFetch = moment();
-          resolve(formsResult);
-        }).catch((error) => {
+      const refresh = () => {   
 
-          that.log('🚨 Could not make REST call to FORMS', error, 'error');
+        const FORMS_QUERY = `
+        query ReactoryForms {
+          ReactoryForms {
+            ${FORM_QUERY_SEGMENTS.FORM_CORE_ELEMENTS}
+          }
+        }
+        `;
+
+
+        const tempSchema = {
+          schema: {
+            type: 'string',
+            title: ''
+          },
+          uiSchema: {
+            'ui:widget': 'HiddenWidget',
+            'ui:options': {
+              showSubmit: false,
+              style: {
+                display: 'none',
+                height: '0px',
+              }
+            },            
+          },
+        }
+
+        that.graphqlQuery(FORMS_QUERY, {}, { fetchPolicy: 'network-only' }).then(({ data, errors = []}) => {
+          const { ReactoryForms } = data;
+          const ReactoryFormComponent = that.getComponent('core.ReactoryForm');
+
+          if(ReactoryForms && ReactoryForms.length > 0) {
+            that.formSchemas = [];
+            ReactoryForms.forEach(($formDef: Reactory.IReactoryForm, formDefIndex) => {
+              
+              const formDef = {...$formDef, ...tempSchema };
+              that.formSchemas.push(formDef);
+              if (formDef.registerAsComponent === true) {
+                const FormComponent = (props: any, context: any) => {
+                  return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={`${formDefIndex}`}
+                    onSubmit={props.onSubmit} onChange={props.onChange}
+                    formData={formDef.defaultFormValue || props.formData || props.data}
+                    before={props.before}
+                    {...props}
+                    context={context}
+                  >{props.children}
+                  </ReactoryFormComponent>, formDef.wrap === true);
+                };
+                that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent, formDef.tags, formDef.roles, true, [], 'form');                
+              }
+            });
+            that.formSchemaLastFetch = moment();            
+            resolve(ReactoryForms);
+          }
+
+          if(errors.length > 0) {
+            errors.forEach((err, erridx) => {
+              that.log(`GraphQL ReactoryForms result error #${erridx}`, { err }, 'error');
+            })
+          }
+
+        }).catch((err) => {
+          that.log('🚨 Unabled to process query', err, 'error');
           resolve([]);
         });
+
+       
       };
 
       if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined && bypassCache === false) {
@@ -909,9 +1053,43 @@ class ReactoryApi extends EventEmitter implements _dynamic {
    * @param id - string id.
    * @returns 
    */
-  form(id: string) {
-    const { formSchemas } = this;
-    return lodash.find(formSchemas, { id });
+  form(id: string, onFormUpdated: (formDef: Reactory.IReactoryForm) => void = null) {
+    const that = this;
+    const { formSchemas = [] } = this;
+
+    if(formSchemas.length === 0) return undefined;
+
+
+    let $formDef = lodash.find(formSchemas, { id });
+
+    const FORM_QUERY = `
+    query ReactoryFormGetById($id: String!) {
+      ReactoryFormGetById(id: $id) {
+        ${FORM_QUERY_SEGMENTS.FORM_CORE_ELEMENTS}
+        ${FORM_QUERY_SEGMENTS.FORM_SCHEMAS}        
+        ${FORM_QUERY_SEGMENTS.ADDITIONAL}
+      }
+    }`;
+
+    if(!$formDef.__complete__) {
+      that.graphqlQuery(FORM_QUERY, { id }, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
+        if (data && data.ReactoryFormGetById) {
+          let index = lodash.findIndex(this.formSchemas, { id });
+
+          that.formSchemas[index] = { ...data.ReactoryFormGetById, __complete__: true };
+          
+          if (onFormUpdated) {
+            onFormUpdated(that.formSchemas[index]);
+          }
+          
+          that.emit(`onReactoryFormDefinitionUpdate::${id}`, that.formSchemas[index]);
+        }
+      }).catch((err) => {
+        that.log('Could not get the form component data', { err }, 'error', "ReatoryApi")
+      });
+    }
+    
+    return $formDef;
   }
 
   async raiseFormCommand(commandId, commandDef, formProps) {
@@ -1494,6 +1672,14 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
   getViewContext() {
     return JSON.parse(localStorage.getItem(storageKeys.viewContext) || '{}');
+  }
+
+  setDevelopmentMode(mode: boolean = false) {
+    this.$development_mode = mode;
+  }
+
+  isDevelopmentMode(): boolean{
+    return this.$development_mode;
   }
 
   static propTypes = {

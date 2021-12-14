@@ -269,7 +269,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const created = new Date().valueOf();
 
   const [formDef, setFormDefinition] = React.useState<Reactory.IReactoryForm>(props.formDef || reactory.form(props.formId) || ReactoryDefaultForm);
-
+  
   const fqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
   const signature = `<${fqn} instance={${instance_id} />`;
   const queryData: any = reactory.utils.queryString.parse(window.location.search) || {};
@@ -1986,13 +1986,24 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     if (props.refCallback) props.refCallback(getFormReference());
     if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
 
+    if(props.formId) {
+      reactory.on(`onReactoryFormDefinitionUpdate::${props.formId}`, setFormDefinition);
+    }
+
     getData();
     return () => {
       if (refreshInterval) {
         clearInterval(refreshInterval);
         setInterval(null);
       }
+
+      if(props.formId) {
+        reactory.removeListener(`onReactoryFormDefinitionUpdate::${props.formId}`, setFormDefinition)
+      }
     }
+
+
+
   }, []);
 
   React.useEffect(() => {

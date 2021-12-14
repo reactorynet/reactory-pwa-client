@@ -156,7 +156,12 @@ namespace Reactory {
 
       onFormCommandEvent(commandId, func): void;
 
-      hasRole(itemRoles, userRoles): boolean;
+      hasRole(
+        itemRoles: string[], 
+        userRoles?: string[], 
+        organization?: Reactory.IOrganization, 
+        business_unit?: Reactory.IBusinessUnit, 
+        userMembership?: Reactory.IMembership[]): boolean;
 
       isAnon(): boolean;
 
@@ -231,6 +236,10 @@ namespace Reactory {
       getViewContext(): any;
 
       extendClientResolver(resolver: any);
+
+      setDevelopmentMode(enabled: boolean);
+
+      isDevelopmentMode(): boolean;
     }
 
     export interface IReactoryWiredComponent {
@@ -304,6 +313,13 @@ namespace Reactory {
     }
   }
 
+  /**
+   * Simple interface type that provides the reactory sdk as a property
+   */
+  export interface IReactoryComponentProps {
+    reactory: Client.IReactoryApi,
+    [key: string]: any
+  }
   export interface IAuthentication {
     provider: string
     props: any
@@ -701,7 +717,8 @@ namespace Reactory {
      * Array of dependencies this form or it's children 
      * may relay on in order to successfully load.
      */
-    dependencies?: IReactoryComponentDefinition[]
+    dependencies?: IReactoryComponentDefinition[],
+    [key: string]: any
   }
 
   export interface IGraphShape {
@@ -884,6 +901,8 @@ namespace Reactory {
     hasNext: boolean
     pageSize: number
   }
+
+  
 
 }
 

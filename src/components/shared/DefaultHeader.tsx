@@ -32,6 +32,8 @@ import moment from 'moment';
 import { withApi, ReactoryApiEventNames } from '@reactory/client-core/api';
 import license from '@reactory/client-core/license';
 import { useHistory } from 'react-router';
+import Reactory from 'types/reactory';
+import localForage from 'localforage';
 
 export class ISearchConfig {
   show: boolean = false;
@@ -42,6 +44,15 @@ export class ISearchConfig {
     this.placeholder = params.placeholder || 'Search';
   }
 }
+
+localForage.config({
+  driver: localForage.INDEXEDDB, // Force WebSQL; same as using setDriver()
+  name: 'reactory',
+  version: 1.0,
+  //size: 4980736, // Size of database, in bytes. WebSQL-only for now.
+  storeName: 'reactory_client', // Should be alphanumeric, with underscores.
+  description: 'Reactory Client local database.'
+});
 
 const defaultSearchConfig = new ISearchConfig()
 
@@ -128,15 +139,22 @@ const SubMenus = (props) => {
 const CacheButton = (props) => {
 
   const { reactory, classes } = props;
-  const [version, setVersion] = React.useState(0)
-  const data = localStorage.getItem('reactory_cache') || "";
-  const bytes = ((new TextEncoder().encode(data)).length / 100000).toPrecision(2);
+  const [version, setVersion] = React.useState(0);
+  const [cacheSize, setCacheSize] = React.useState<string>('0.00');
 
   const clearCache = () => {
 
     reactory.clearStoreAndCache();
-    setVersion(version + 1);
+    setVersion(version + 1);    
   }
+
+  React.useEffect(() => {
+    localForage.getItem('reactory_apollo_cache').then(( data: string ) => {      
+      const bytes: string = ((new TextEncoder().encode(data)).length / 100000).toPrecision(2);
+      setCacheSize(bytes);
+    });
+
+  })
 
   return (
     (<ListItem key={'reactory.cache'} onClick={clearCache} button>
@@ -144,7 +162,7 @@ const CacheButton = (props) => {
         <Icon color="primary">storage</Icon>
       </ListItemIcon>
       <ListItemText
-        primary={<span className={classes.versionPrimary}>Using {reactory.utils.humanNumber(bytes)} MB of local storage</span>}
+        primary={<span className={classes.versionPrimary}>Using {reactory.utils.humanNumber(cacheSize)} MB of local storage</span>}
         secondary={<span className={classes.version}>🚮&nbsp; Click to clear your cache</span>}
       />
     </ListItem>)
@@ -152,7 +170,40 @@ const CacheButton = (props) => {
 
 }
 
+
+
 const CacheComponent = compose(withApi)(CacheButton);
+
+
+const ToggleDevelopMode = (props: Reactory.IReactoryComponentProps) => {  
+  const { reactory } = props;
+
+  const [version, setVersion] = React.useState(0)
+  const data = localStorage.getItem('') || "";
+
+  const toggle = () => {
+    reactory.setDevelopmentMode(!reactory.$development_mode);
+    reactory.emit('onReactoryDevelopmentModeChanged', reactory.isDevelopmentMode());
+    setVersion(version + 1);
+  }
+
+  if(reactory.hasRole(["DEVELOPER"]) === false) {
+    return null;
+  }
+
+
+  return (<ListItem key={'reactory.development_mode'} onClick={toggle} button>
+    <ListItemIcon>
+      <Icon color="primary">build</Icon>
+    </ListItemIcon>
+    <ListItemText
+      primary={<span>DEVELOPMENT</span>}
+      secondary={<span>{reactory.$development_mode === true ? '(enabled)' : '(disabled)'}</span>}
+    />
+  </ListItem>)
+};
+
+const ToggleDevelopComponent = compose(withApi)(ToggleDevelopMode);
 
 /**
  * This example is taking advantage of the composability of the `AppBar`
@@ -479,6 +530,7 @@ const ApplicationHeader = (props) => {
     </ListItem>);
 
     menuItems.push(<CacheComponent classes={classes} />);
+    menuItems.push(<ToggleDevelopComponent classes={classes} />);
 
     return (<>{menuItems.map((menu) => menu)}</>);
   };
