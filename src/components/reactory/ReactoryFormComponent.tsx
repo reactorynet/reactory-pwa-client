@@ -1630,15 +1630,23 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       // Even handler for the schema selector menu
       const onSchemaSelect = (evt: Event, menuItem: Reactory.IUISchemaMenuItem) => {
         reactory.log(`UI Schema Selector onSchemaSelect "${menuItem.title}" selected`, { evt, menuItem });
+
+        
         let doQuery = false;
         if(menuItem.graphql) {
           doQuery = true
         }
 
-        if(menuItem.uiSchema['ui:graphql']) {
-          doQuery = true;
+        
+        if (menuItem && menuItem.uiSchema) {
+          if (menuItem.uiSchema['ui:graphql']) {
+            doQuery = true;
+          }
+        } else {
+          //the uiSchema is null? now what?
+          reactory.log(`Null uiSchema?`, { menuItem }, 'warning');
         }
-
+        
         setActiveUiSchemaMenuItem(menuItem);
         if(doQuery === true) {
           setQueryComplete(false);
@@ -2001,9 +2009,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         reactory.removeListener(`onReactoryFormDefinitionUpdate::${props.formId}`, setFormDefinition)
       }
     }
-
-
-
   }, []);
 
   React.useEffect(() => {

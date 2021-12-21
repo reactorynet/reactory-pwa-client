@@ -243,6 +243,7 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
   };
 
   useEffect(() => {
+    reactory.form("ContentCapture");
     getData(null);
     reactory.on("onReactoryDevelopmentModeChanged", onDevelopmentModeChanged);
 

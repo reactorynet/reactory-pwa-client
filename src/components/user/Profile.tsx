@@ -1250,7 +1250,7 @@ class Profile extends Component<any, any> {
                 <input accept="image/png" className={classes.hiddenInput} onChange={onFileClick} id="icon-button-file" type="file" ref={(n) => that.userProfileImageFile = n} />
                 <label htmlFor="icon-button-file">
                     <Tooltip title={`Select a png image that is less than 350kb in size.`}>
-                        <Button color="secondary" variant="outlined" component="span" className={classes.uploadButton}>Upload Photo</Button>
+                        <Button color="primary" variant="outlined" component="span" className={classes.uploadButton}>Upload Photo</Button>
                     </Tooltip>
                 </label>
             </div>);
@@ -1390,7 +1390,7 @@ class Profile extends Component<any, any> {
         }
 
         return (
-            <FullScreenModal title="Adjust your profile image" open={this.state.imageMustCrop} onClose={onModalClose}>
+            <FullScreenModal title="Crop your profile image" open={this.state.imageMustCrop} onClose={onModalClose}>
                 <Cropper src={this.state.profile.avatar} onCancelCrop={onModalClose} onAccept={onCropAccept} crop={{ unit: '%', aspect: 1, width: '%' }}></Cropper>
             </FullScreenModal>
         );
@@ -1409,7 +1409,7 @@ class Profile extends Component<any, any> {
         const ProfileInGrid = (
             <Grid container spacing={2}>
                 {this.renderHeader()}
-                <Typography className={classes.sectionHeaderText}>Account Details</Typography>
+                <Typography className={classes.sectionHeaderText}>PROFILE</Typography>
                 {this.renderGeneral()}
                 {this.renderUserDemographics()}
                 {isNew === false && <Typography className={classes.sectionHeaderText}>My Assessors</Typography>}

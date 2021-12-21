@@ -269,6 +269,7 @@ const FORM_QUERY_SEGMENTS = {
         queries
         clientResolvers
       }
+      uiSchema
       modes
     }
     graphql {

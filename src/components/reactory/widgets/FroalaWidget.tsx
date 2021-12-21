@@ -169,11 +169,14 @@ const FroalaWidget = (props) => {
   }
 
   if (config.requestHeaders) {
+    let requestHeaders: any = {};
     Object.keys(config.requestHeaders).map(pn => {
       if (config.requestHeaders[pn].indexOf('${') >= 0) {
-        config.requestHeaders[pn] = template(config.requestHeaders[pn])({ ...props })
+        requestHeaders[pn] = template(config.requestHeaders[pn])({ ...props })
       }
-    })
+    });
+
+    config.requestHeaders = requestHeaders;
   }
 
   let showLabel = true;

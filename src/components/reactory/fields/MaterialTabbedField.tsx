@@ -66,7 +66,6 @@ const MaterialTabbedField = (props) => {
   const [value, setValue] = React.useState(getTabIndex());
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
-    debugger
     if (uiOptions.useRouter === true) {
       const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')({ props, tab_id: getTabKey(newValue) });
       history.push(new_path);
@@ -78,7 +77,6 @@ const MaterialTabbedField = (props) => {
   };
 
   const handleChangeIndex = (index: number) => {
-    debugger
     setValue(index);
   };
 

@@ -13,7 +13,7 @@ interface NotFoundProps {
   link?: string,
   api: ReactoryApi,
   theme: any,
-  location: any  
+  location: any
 };
 
 interface NotFoundState {
@@ -25,16 +25,16 @@ interface NotFoundState {
 
 class NotFound extends Component<NotFoundProps, NotFoundState> {
 
-  ComponentToMount: any  = null;
+  ComponentToMount: any = null;
 
-  constructor(props: NotFoundProps, context: any){
-    super(props);    
+  constructor(props: NotFoundProps, context: any) {
+    super(props);
     const state = {
-        found: false, 
-        wait: props.wait || 1000,
-        waitingFor: props.waitingFor || null,
-        mustCheck: typeof props.waitingFor === 'string' && props.waitingFor.indexOf(".") > 0
-    };    
+      found: false,
+      wait: props.wait || 1000,
+      waitingFor: props.waitingFor || null,
+      mustCheck: typeof props.waitingFor === 'string' && props.waitingFor.indexOf(".") > 0
+    };
 
     this.state = state;
     this.checkComponentLoaded = this.checkComponentLoaded.bind(this);
@@ -43,37 +43,37 @@ class NotFound extends Component<NotFoundProps, NotFoundState> {
 
   checkComponentLoaded() {
     this.ComponentToMount = this.props.api.getComponent(this.state.waitingFor)
-      if(this.ComponentToMount === null || undefined) {
-        setTimeout(this.checkComponentLoaded, this.state.wait);
-      } else {
-        this.setState({ found: true, mustCheck: false })
-      }
-  }
-
-  componentDidMount(){
-    if(this.state.mustCheck === true) {
-      this.checkComponentLoaded()  
+    if (this.ComponentToMount === null || undefined) {
+      setTimeout(this.checkComponentLoaded, this.state.wait);
+    } else {
+      this.setState({ found: true, mustCheck: false })
     }
   }
 
-  render(){
+  componentDidMount() {
+    if (this.state.mustCheck === true) {
+      this.checkComponentLoaded()
+    }
+  }
 
-    const { found, waitingFor, mustCheck } = this.state;    
-    if(found === false) {
+  render() {
+
+    const { found, waitingFor, mustCheck } = this.state;
+    if (found === false) {
       let message = this.props.message;
       const onUserItemClicked = () => {
-        if(this.props.link) {
+        if (this.props.link) {
           this.props.location.push(this.props.link);
         }
       }
-      if(mustCheck === true) message = `Waiting for component ${waitingFor} to load.`
-      return (      
-        <UserListItem user={{ firstName: 'Software Factory', lastName: '', id: 'reactory', avatar: 'reactory_bot.png' }} message={ `Waiting for application components to finish loading... ${process.env.NODE_ENV !== 'production' ? this.props.waitingFor : ''}` } onClick={onUserItemClicked} />
+      if (mustCheck === true) message = `Waiting for component ${waitingFor} to load.`
+      return (
+        <UserListItem user={{ firstName: 'Software Factory', lastName: '', id: 'reactory', avatar: 'reactory_bot.png' }} message={`Waiting for application components to finish loading... ${process.env.NODE_ENV !== 'production' ? this.props.waitingFor : ''}`} onClick={onUserItemClicked} />
       )
     } else {
       const { ComponentToMount } = this;
       return (<ComponentToMount {...this.props.args} />)
-    }    
+    }
   }
 
 };
