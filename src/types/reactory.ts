@@ -605,6 +605,7 @@ namespace Reactory {
     minWidth?: number
   }
 
+
   export interface IReactoryComponentDefinition {
     fqn?: string,
     dependencies?: IReactoryComponentDefinition[]
@@ -612,9 +613,6 @@ namespace Reactory {
     propsMap?: any,
     componentType: string | "component" | "object" | "function" | "module" | "plugin"
   }
-
-
-
   export interface IEventBubbleAction {
     eventName: string,
     action: string | "bubble" | "swallow" | "function",
@@ -646,10 +644,7 @@ namespace Reactory {
       buttonTitle: string,
       activeColor?: any,
       components: string[]
-    },
-
-
-    
+    },    
   }
   export interface IFormUISchema {
     'ui:form'?: IFormUIOptions,
@@ -664,6 +659,48 @@ namespace Reactory {
     [key: string]: any
   }
 
+  /**
+   * Defines the interface definition for a component
+   * that is registered in the client kernel.
+   */
+  export interface IReactoryComponentRegistryEntry {
+    nameSpace: string
+    name: string
+    version: string
+    component: any
+    tags: string[]
+    roles: string[]
+    connectors: any[]
+    componentType: string
+  }
+
+  /**
+   * A Reactory Form / Code module.
+   * 
+   * A module that is defined on a form will be parsed 
+   * by the forms collector / forms resolvers.  The 
+   * module definitions will automatically add
+   * resource dependendies to the form resources 
+   * that will allow the ReactoryFormComponent to download
+   * and install components in a JIT compiled manner.
+   */
+  export interface IReactoryFormModule {
+    id: string,
+    src?: string,
+    url?: string,
+    compiled?: boolean,
+    signed?: boolean,
+    signature?: string,
+    compiler?: string | "npm" | "none" | "webpack" | "grunt" | "rollup"
+    compilerOptions: any,
+    /***
+     * When roles are added the API will check the logged in user
+     * credentials and will include or exclude the resource based on role 
+     */
+    roles?: string[],
+    fileType?: string,
+    components: IReactoryComponentRegistryEntry
+  }
   export interface IReactoryForm {
     id: string,
     uiFramework: string,
@@ -718,6 +755,7 @@ namespace Reactory {
      * may relay on in order to successfully load.
      */
     dependencies?: IReactoryComponentDefinition[],
+    modules?: IReactoryFormModule[]
     [key: string]: any
   }
 

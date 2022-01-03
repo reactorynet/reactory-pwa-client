@@ -363,7 +363,9 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   $development_mode: boolean = false;
 
 
+
   __uuid: string;
+  React: typeof React;
   constructor(props) {
     super();
 
@@ -379,6 +381,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.forgot = RestApi.forgot;
     this.forms = this.forms.bind(this);
     this.form = this.form.bind(this);
+    this.React = React;
 
     this.utils = {
       omitDeep,
@@ -1333,7 +1336,15 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     localStorage.getItem(storageKeys.LastLoggedInEmail);
   }
 
-  registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false, connectors = [], componentType = 'component') {
+  registerComponent(
+    nameSpace: string, 
+    name: string,
+    version: string = '1.0.0', 
+    component: any = EmptyComponent, 
+    tags: string[] = [], 
+    roles: string[] = ['*'], 
+    wrapWithApi: boolean = false, connectors: any[] = [], 
+    componentType: string = 'component') {
     const fqn = `${nameSpace}.${name}@${version}`;
     if (isEmpty(nameSpace))
       throw new Error('nameSpace is required for component registration');
