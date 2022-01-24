@@ -213,6 +213,25 @@ const ReactoryMaterialTablePagination = (props) => {
   )
 }
 
+const ReactoryMaterialTableWaitForRenderer = (props) => {
+  const { reactory, componentId, DefaultComponent } = props;
+  const [version, setVersion] = React.useState<number>(0);
+
+  if (!reactory.componentRegister[componentId]) {
+
+    setTimeout(() => {
+      setVersion(version + 1)
+    }, 777)
+
+    return DefaultComponent;
+  }
+  
+  const Component = reactory.getComponent(componentId);
+
+  return <Component {...props}/>;
+
+};
+
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], searchText = "" } = props;
@@ -413,7 +432,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
       if (isNil(def.component) === false && def.component !== undefined) {
         const ColRenderer = reactory.getComponent(def.component);
+
+        
+
         def.render = (rowData) => {
+
+
           let props = { formData: formContext.$formData, rowData, api: reactory, reactory, formContext };
           let mappedProps = {};
 
@@ -429,7 +453,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           }
 
           if (ColRenderer) return <ColRenderer {...props} />
-          else return <Typography>🕘 ...</Typography>
+          else return <ReactoryMaterialTableWaitForRenderer {...props} componentId={def.component} DefaultComponent={<>...</>} />
         }
 
         delete def.component;

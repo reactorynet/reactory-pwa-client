@@ -1,4 +1,9 @@
 import React from "react";
+
+import _il8n, { i18n } from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+
 import ReactDOM from 'react-dom';
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
@@ -7,7 +12,7 @@ import uuid from 'uuid';
 import classNames from 'classnames';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions } from '@apollo/client';
+import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult } from '@apollo/client';
 import localForage from 'localforage';
 import { Mutation, Query } from '@apollo/client/react/components';
 
@@ -17,6 +22,7 @@ import useMediaQuery from '@material-ui/core/useMediaQuery';
 import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
+
 import {
   attachComponent,
   getAvatar,
@@ -29,6 +35,7 @@ import {
   deepEquals,
   CDNResource
 } from '../components/util';
+
 import amq from '../amq';
 import * as RestApi from './RestApi';
 import GraphQL from '@reactory/client-core/api/graphql';
@@ -45,6 +52,7 @@ import Reactory from '../types/reactory';
 import { MutationResult, QueryOptions } from "react-apollo";
 import { RefetchQueryDescription } from "@apollo/client/core/watchQueryOptions";
 import { Breakpoints } from "@material-ui/core/styles/createBreakpoints";
+import { cloneDeep } from "@apollo/client/utilities";
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -361,9 +369,10 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   clearCache: () => void;
   ws_link: any;
   $development_mode: boolean = false;
-
-
   __uuid: string;
+  React: typeof React;
+  $il8n: i18n;
+
   constructor(props) {
     super();
 
@@ -379,6 +388,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.forgot = RestApi.forgot;
     this.forms = this.forms.bind(this);
     this.form = this.form.bind(this);
+    this.React = React;
 
     this.utils = {
       omitDeep,
@@ -542,6 +552,44 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.clearCache = clearCache;
     this.client = client;
     this.ws_link = ws_link;
+    
+  }
+
+  async initil8n(lang: string = 'en') {
+
+    const TRANSLATIONS = `
+      query ReactoryTranslations($lang: String) {
+        ReactoryTranslations(lang: $lang) {
+          id
+          translations
+          resources
+        }
+      }
+    `;
+    
+    const { data, error }: QueryResult = await this.graphqlQuery(TRANSLATIONS, { lang }).then()
+    
+    let $resources: any = {};
+
+    $resources[lang] = { translation: {  } }
+
+    if(data && data.Translations) {
+      $resources[lang].translation = cloneDeep(data.Translations);
+    }
+
+    await _il8n
+      .use(LanguageDetector)
+      .use(initReactI18next)
+      .init({
+        debug: true,
+        fallbackLng: 'en',
+        interpolation: {
+          escapeValue: false
+        },
+        resources: $resources
+      }).then();
+
+    this.$il8n = _il8n;
     
   }
 
@@ -860,7 +908,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     });
   }
 
-  graphqlQuery(query,
+  graphqlQuery<T>(query,
     variables,
     options: any = { fetchPolicy: 'network-only' },
     queryDefinition: Reactory.IReactoryFormQuery = null) {
@@ -882,7 +930,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         query: $query,
         variables,
         fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
-      }).then((result) => {
+      }).then((result: ApolloQueryResult<T>) => {
         const { errors = [], data } = result;
         if (errors.length > 0) {
           errors.forEach((error) => {
@@ -1333,7 +1381,15 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     localStorage.getItem(storageKeys.LastLoggedInEmail);
   }
 
-  registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false, connectors = [], componentType = 'component') {
+  registerComponent(
+    nameSpace: string, 
+    name: string,
+    version: string = '1.0.0', 
+    component: any = EmptyComponent, 
+    tags: string[] = [], 
+    roles: string[] = ['*'], 
+    wrapWithApi: boolean = false, connectors: any[] = [], 
+    componentType: string = 'component') {
     const fqn = `${nameSpace}.${name}@${version}`;
     if (isEmpty(nameSpace))
       throw new Error('nameSpace is required for component registration');

@@ -671,7 +671,7 @@ class DefaultView extends Component<any, any> {
           <componentDefs.StaticContent
             slug={`mores-assessments-${survey.surveyType}_${survey.id}-welcome-screen`.toLowerCase()}
             title={`Welcome Screen: ${survey.surveyType}`}
-            editAction={"link"}
+            editAction={"inline"}
             showEditIcon={true}
             defaultValue={
               <Typography gutterBottom variant="body1">
@@ -683,7 +683,7 @@ class DefaultView extends Component<any, any> {
 
           <div style={{ display: "flex", justifyContent: "center" }}>
             <componentDefs.StaticContent
-              editAction={"link"}
+              editAction={"inline"}
               slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`}
               defaultValue={
                 <img
@@ -704,7 +704,7 @@ class DefaultView extends Component<any, any> {
             title={`Welcome Screen: ${survey.surveyType}`}
             propertyBag={{ survey, assessment }}
             showEditIcon={true}
-            editAction={"link"}
+            editAction={"inline"}
             defaultValue={
               <Typography gutterBottom>
                 Thank you for taking the time to assess the{" "}
@@ -720,7 +720,7 @@ class DefaultView extends Component<any, any> {
 
           <div style={{ display: "flex", justifyContent: "center" }}>
             <componentDefs.StaticContent
-              editAction={"link"}
+              editAction={"inline"}
               slug={`towerstone-CDN-leadershipbrand-main-surveytype_${survey.surveyType}_${survey.leadershipBrand.id}`}
               defaultValue={
                 <img
@@ -804,7 +804,7 @@ class DefaultView extends Component<any, any> {
           <Fragment>
             <StaticContent
               slug={`mores-assessments-survey-${survey.id}-thank-you`}
-              editAction={"link"}
+              editAction={"inline"}
               defaultValue={
                 <>
                   <Typography gutterBottom variant="body1">
