@@ -4,6 +4,7 @@ import { TemplateOptions } from 'lodash';
 import { TemplateType, UIFrameWork } from './constants';
 import {
   ApolloClient,
+  ApolloQueryResult,
   MutationResult,
   QueryResult
 } from "@apollo/client";
@@ -138,7 +139,7 @@ namespace Reactory {
 
       graphqlMutation(mutation, variables, options: any): Promise<MutationResult>;
 
-      graphqlQuery(query, variables, options: any): Promise<QueryResult>;
+      graphqlQuery<T>(query, variables: any, options: any): Promise<ApolloQueryResult<T>>;
 
       afterLogin(user): any;
 
@@ -597,7 +598,7 @@ namespace Reactory {
     key: string,
     description: string,
     icon: string,
-    uiSchema: any,
+    uiSchema: IUISchema,
     //used to override the graphql definitions for that view type
     graphql?: IFormGraphDefinition,
     modes?: string
@@ -656,7 +657,15 @@ namespace Reactory {
     'ui:field'?: string | "GridLayout" | "TabbedLayout" | "AccordionLayout" | "SteppedLayout",
     'ui:widget'?: string,
 
-    [key: string]: any
+    [key: string]: IUISchema | any
+  }
+
+
+  export interface IUISchema {
+    'ui:widget'?: string | "null",
+    'ui:options'?: object | "null",
+    'ui:field'?: string | "GridLayout" | "TabbedLayout" | "AccordionLayout" | "SteppedLayout",
+    [key: string]: IUISchema | any,
   }
 
   /**
@@ -711,7 +720,7 @@ namespace Reactory {
     helpTopics?: string[]
     schema: ISchema | IObjectSchema | IArraySchema,
     sanitizeSchema?: ISchema | IObjectSchema | IArraySchema,
-    uiSchema?: any,
+    uiSchema?: IFormUISchema | IUISchema,
     uiSchemas?: IUISchemaMenuItem[],
     defaultUiSchemaKey?: string
     registerAsComponent: boolean,

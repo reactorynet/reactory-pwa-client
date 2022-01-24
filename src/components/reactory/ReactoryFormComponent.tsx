@@ -1032,6 +1032,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     if (!_formDef.fields) _formDef.fields = {};
 
     if (isArray(_formDef.fieldMap) === true) {
+      debugger
       _formDef.fieldMap.forEach((map) => {
         reactory.log(`${signature} (init) Mapping ${map.field} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
         let mapped = false;
