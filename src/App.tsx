@@ -131,12 +131,13 @@ const dependencies = [
 interface ReactoryRouterProps {
   reactory: ReactoryApi,
   auth_validated: boolean,
-  user: Reactory.IUser
+  user: Reactory.IUser,
+  authenticating: boolean
 };
 
 const ReactoryRouter = (props: ReactoryRouterProps) => {
 
-  const { auth_validated, user, reactory } = props;
+  const { auth_validated, user, reactory, authenticating = false } = props;
   const [routes, setRoutes] = React.useState<Reactory.IRouteDefinition[]>([]);
   const [v, setVersion] = React.useState<number>(0)
   const NotFound = reactory.getComponent("core.NotFound");
@@ -157,7 +158,6 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
 
   const configureRouting = () => {
-
     reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
     let $routes = [];
     reactory.getRoutes().forEach((routeDef) => {
@@ -205,7 +205,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
               const hasRefreshed: boolean = localStorage.getItem('hasRefreshed') === 'true';
 
               //auth token not validated yet in process of checking
-              if (auth_validated === false) {
+              if (auth_validated === false || authenticating === true) {
                 return <Typography style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem' }} variant='h5'>Please wait while we validate your access token...</Typography>
               } else {
                 
@@ -216,21 +216,32 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
                 }                   
                 
                 
-                if (hasRefreshed === false && reactory.isAnon() === true) {
-                  localStorage.setItem('$reactory.onlogin.redirect$', routeDef.path);
+                if (hasRefreshed === false && reactory.isAnon() === true) {                
+                  const qs = queryString.parse(route_props.location.search);
+                  if(qs['auth_token']) delete qs.auth_token;
+
+
+                  localStorage.setItem('$reactory.onlogin.redirect$', `${route_props.location.pathname}?${queryString.stringify(qs)}`);
                   setTimeout(() => {
                     //@ts-ignore
                     // window.location.reload(true)
                     reactory.status({ emitLogin: true });
                     setVersion(v + 1);
                     localStorage.setItem('hasRefreshed', 'true');
-                  }, 3000);
+                  }, 5000);
                 }
 
               }
             }
 
-            return (<p> ... </p>);
+            return (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div style={{ margin: 'auto', display: 'flex', flexDirection: 'column', justifyContent: "center" }}>
+                  <Typography variant="h4" style={{ marginTop: '40px'}}>Verifying Client</Typography>
+                  <Icon style={{ fontSize: '48px', margin: 'auto', marginTop: '40px', }}>security</Icon>
+                </div>
+            </div>
+            )
           }
         }
       }
@@ -431,6 +442,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [statusInterval, setStatusInterval] = React.useState<NodeJS.Timeout>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
+  const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
 
   const history = useHistory();
 
@@ -445,12 +457,14 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       setOfflineStatus(user.offline === true)
       setUser(user);
       setIsReady(true);
+      setIsAuthenticating(false);
       applyTheme();      
     }).catch((validationError) => {
       setIsValidated(true);
       setUser(null);
       setOfflineStatus(true)
       setError(validationError);
+      setIsAuthenticating(false);
       setIsReady(false);
     });
   };
@@ -460,7 +474,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     setCurrentRoute(path)
   }
 
-  const onLogin = () => {
+  const onLogin = () => {  
     reactory.log('App.onLogin handler', {}, 'debug')    
     setUser(reactory.getUser());
     const redirect = localStorage.getItem('$reactory.onlogin.redirect$')
@@ -474,7 +488,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     }
   };
 
-  const onLogout = () => {
+  const onLogout = () => {    
     reactory.log('App.onLogout handler', {}, 'debug')
     setUser(reactory.getUser());
   };
@@ -607,7 +621,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         cli.clearCache();
         getApiStatus();
       });
+      setIsAuthenticating(true);
     } else {
+      setIsAuthenticating(true);
       waitForClient();
     }
 
@@ -667,7 +683,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     setOfflineStatus(isOffline)
   };
 
-  if (isReady === false) return <AppLoading />;
+  if (isReady === false || isAuthenticating) return <AppLoading />;
 
 
   return (
@@ -685,7 +701,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                       <Header api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
                     }
                     <NotificationComponent />
-                    {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} />}
+                    {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} authenticating={isAuthenticating}/>}
                     <Offline onOfflineChanged={onOfflineChanged} />
                     <Footer />
                   </Paper>
