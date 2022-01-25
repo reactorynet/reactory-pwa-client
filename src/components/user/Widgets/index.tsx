@@ -42,6 +42,7 @@ interface UserListWithSearchProps {
   page: number,
   pageSize: number,
   onPageChange: (page: number) => void,
+  refreshEvents: string[],
   [key: string]: any
 };
 
@@ -81,7 +82,8 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
     mode = 'list',
     page = 1,
     pageSize = 25,
-    onSearch = null
+    onSearch = null,
+    refreshEvents = []
   } = props;
 
 
@@ -216,20 +218,35 @@ export const UserListWithSearch = (props: UserListWithSearchProps) => {
 
   const { UserList } = reactory.getComponents(['core.UserList'])
 
+  useEffect(()=>{
+    if(refreshEvents && refreshEvents.length >0) {
+      refreshEvents.forEach((evt) => {
+        reactory.on(evt, doRefresh);
+      });
+    }
+
+    return () => {
+      if (refreshEvents && refreshEvents.length > 0) {
+        refreshEvents.forEach((evt) => {
+          reactory.removeListener(evt, doRefresh);
+        });
+      }
+    }
+
+  },[]);
+
+  const doRefresh = () => {
+    //this.setState({ skip: false, searchString: this.state.inputText });
+    setSkip(false);
+    setSearchString(inputText);
+  }
+
   useEffect(() => {
     if (paging.page > 1) {
       setPaging({ page: 1, pageSize: paging.pageSize });
     }
   }, [searchString])
-
-  const doRefresh = () => {
-    //this.setState({ skip: false, searchString: this.state.inputText });
-
-
-    setSkip(false);
-    setSearchString(inputText);
-  }
-
+  
   const onSearchStringChanged = (evt) => {
     setInputText(evt.target.value);
   }
