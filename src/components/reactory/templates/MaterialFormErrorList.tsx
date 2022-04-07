@@ -13,9 +13,9 @@ import {
   IconButton,
   FormHelperText,
   Theme,
-} from '@material-ui/core';
+} from '@mui/material';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
-import { withStyles, withTheme, styled } from '@material-ui/core/styles';
+import { withStyles, withTheme, styled } from '@mui/styles';
 import Reactory from '@reactory/client-core/types/reactory';
 
 const PopOverStyles = (theme: Theme): any => {

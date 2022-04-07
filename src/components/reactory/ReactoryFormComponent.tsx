@@ -1,26 +1,21 @@
 import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties, Ref } from 'react';
 import PropTypes, { any, ReactNodeArray, string } from 'prop-types';
-import IntersectionVisible from 'react-intersection-visible';
 import Form from './form/components/Form';
-import EventEmitter, { ListenerFn } from 'eventemitter3';
 import objectMapper from 'object-mapper';
 import { diff } from 'deep-object-diff';
 import { find, template, isArray, isNil, isString, isEmpty, throttle, filter } from 'lodash';
 import { withRouter, Route, Switch, useParams, useHistory } from 'react-router';
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withTheme } from '@mui/styles';
 import { compose } from 'redux';
-import uuid from 'uuid';
-import Dropzone, { DropzoneState } from 'react-dropzone';
-import { ApolloQueryResult, MutationResult } from '@apollo/client'
-import { Mutation } from '@apollo/client/react/components';
+import * as uuid from 'uuid';
+import { ApolloQueryResult } from '@apollo/client'
 import { nil } from '@reactory/client-core/components/util';
-import queryString from '@reactory/client-core/query-string';
+import queryString from '../utility/query-string';
 import ReactoryApi from '../../api/ReactoryApi';
 import { withApi } from '../../api/ApiProvider';
 
 import {
   Button,
-  ButtonGroup,
   Fab,
   Typography,
   IconButton,
@@ -28,9 +23,9 @@ import {
   Input,
   Toolbar,
   LinearProgress,
-  useMediaQuery,
-  Theme
-} from '@material-ui/core';
+  Theme,
+  Breakpoint
+} from '@mui/material';
 
 import Fields from './fields';
 import * as WidgetPresets from './widgets';
@@ -39,13 +34,12 @@ import gql from 'graphql-tag';
 import { deepEquals } from './form/utils';
 import Reactory from '../../types/reactory';
 import { History } from 'history';
-import { ReactoryHOC } from 'App';
-import { Breakpoint } from '@material-ui/core/styles/createBreakpoints';
 import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
 import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
-import { Fullscreen } from '@material-ui/icons';
 
 import ReactoryFormDataManager from './ReactoryFormDataManager';
+import IntersectionVisible from '../utility/IntersectionVisible';
+import { ErrorBoundary } from '@reactory/client-core/api/ErrorBoundary';
 
 const {
   MaterialArrayField,
@@ -81,20 +75,36 @@ const DefaultUiSchema = {
   },
 };
 
-
 const ReactoryDefaultForm: Reactory.IReactoryForm = {
-  id: 'ReactoryFormNotFoundForm',
+  id: 'ReactoryLoadingForm',
   schema: DefaultLoadingSchema,
   uiSchema: DefaultUiSchema,
-  name: 'FormNotFound',
+  name: 'ReactoryLoadingForm',
   uiFramework: 'material',
   uiSupport: ['material'],
   nameSpace: 'core',
   version: '1.0.0',
-  title: "Form Not Found Form",
+  title: "Loading Form",
   registerAsComponent: false,
   defaultFormValue: "🧙",
+  __complete__: true
 };
+
+const ReactoryErrorForm: Reactory.IReactoryForm = {
+  id: 'ReactoryErrorForm',
+  schema: DefaultLoadingSchema,
+  uiSchema: DefaultUiSchema,
+  name: 'ReactoryErrorForm',
+  uiFramework: 'material',
+  uiSupport: ['material'],
+  nameSpace: 'core',
+  version: '1.0.0',
+  title: "Error Form",
+  registerAsComponent: false,
+  defaultFormValue: "Error in form",
+  __complete__: true
+}
+
 
 function TabContainer(props) {
   return (
@@ -115,7 +125,7 @@ export interface ReactoryFormProperties {
   uiSchemaId?: string;
   data: any | any[];
   formData: any | any[];
-  formDef?: any;
+  formDef?: Reactory.IReactoryForm;
   location: any;
   api: ReactoryApi;
   reactory: ReactoryApi,
@@ -229,7 +239,7 @@ const initialState = (props) => ({
   busy: props.busy === true,
   liveUpdate: false,
   pendingResources: {},
-  _instance_id: uuid(),
+  _instance_id: uuid.v4(),
   autoQueryDisabled: props.autoQueryDisabled || false,
   notificationComplete: true,
   mutate_complete_handler_called: false,
@@ -265,10 +275,10 @@ const available_sizes: ScreenSizeKey[] = ["xl", "lg", "md", "sm", "xs"];
 const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const { reactory, mode = 'view', theme } = props;
-  const instance_id = uuid();
+  const instance_id = uuid.v4();
   const created = new Date().valueOf();
 
-  const [formDef, setFormDefinition] = React.useState<Reactory.IReactoryForm>(props.formDef || reactory.form(props.formId) || ReactoryDefaultForm);
+  const [formDef, setFormDefinition] = React.useState<Reactory.IReactoryForm>(ReactoryDefaultForm);  
   
   const fqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
   const signature = `<${fqn} instance={${instance_id} />`;
@@ -386,6 +396,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
 
   const [componentDefs, setComponents] = React.useState<ReactoryComponentMap>(reactory.getComponents(default_dependencies()));
+  
   const [formData, setFormData] = React.useState<any>(initialData());
   const [formData_history, setHistory] = React.useState<any[]>([props.data || props.formData]);
   const [loading, setLoading] = React.useState<boolean>(false);
@@ -410,11 +421,13 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   //used for internal tracking of updates / changes since first load
   const [version, setVersion] = React.useState<number>(0);
   const [last_query_exec, setLastQueryExecution] = React.useState(null);
-  const [formRef, setFormRef] = React.useState<Form>(React.createRef());
+  //const [formRef, setFormRef] = React.useState<React.RefObject<Form>>(React.createRef());
   const [dependencies, setDepencies] = React.useState<any>(getInitialDepencyState().dependencies);
   const [dependenciesPassed, setDepenciesPassed] = React.useState<boolean>(getInitialDepencyState().passed);
   const [customState, setCustomState] = React.useState<any>({});
   const [showFormEditor, setShowEditor] = React.useState<boolean>(false);
+
+  const formRef: React.RefObject<Form> = React.createRef<Form>();
 
   const reset = () => {
     setComponents(reactory.getComponents(default_dependencies()));
@@ -427,6 +440,79 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     setDepencies(getInitialDepencyState().dependencies);
     setCustomState({});
   };
+
+  const onReactoryFormUnmount = () => {
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+      setInterval(null);
+    }
+
+    if (props.formId) {
+      reactory.removeListener(`onReactoryFormDefinitionUpdate::${props.formId}`, setFormDefinition)
+    }
+  }
+
+  const onReactoryFormMounted = () => {
+
+    debugger
+    reactory.amq.onReactoryPluginLoaded('loaded', onPluginLoaded);
+
+    if (props.refCallback) props.refCallback(getFormReference());
+    if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
+
+
+    let $id = props.formId;
+    if (!$id && props.formDef && props.formDef.id) $id = props.formData.$id;
+
+
+    const $formDef = reactory.form($id, (nextFormDef, error) => {
+
+      if (error) {
+        setFormDefinition(ReactoryErrorForm);
+        setFormData({ error })
+      } else {
+        setFormDefinition(nextFormDef);
+      }
+    });
+
+    setFormDefinition($formDef.__complete__ === true ? $formDef : ReactoryDefaultForm)
+
+
+    getData();
+
+    return onReactoryFormUnmount;
+  }
+
+  React.useEffect(onReactoryFormMounted, []);
+
+  React.useEffect(() => {
+    getData();
+  }, [activeUiSchemaMenuItem])
+
+  const watchList = [props.formData, props.formDef, props.formId];
+
+  if (props.watchList) {
+    props.watchList.forEach((p) => {
+      watchList.push(props[p]);
+    })
+  }
+
+  React.useEffect(() => {
+    debugger
+    let _formData = initialData(formData);
+
+    let next_version = version + 1;
+    setVersion(next_version);
+    reactory.log(`${signature} Incoming Properties Changed`, { formData: props.formData, _formData: formData, version });
+    getData(_formData);
+
+  }, watchList)
+
+
+  React.useEffect(() => {
+    debugger
+    setVersion(version + 1);
+  }, [formData, props])
 
   const getActiveUiSchema = () => {
 
@@ -845,7 +931,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       try {
         if (formRef.current && formRef.current.onSubmit) {
 
-          formRef.current.onSubmit();
+          formRef.current.onSubmit(null);
         }
       } catch (submitError) {
         reactory.createNotification(`The Form ${signature} could not submit`, { type: "warning", showInAppNotification: true, canDismis: true });
@@ -864,7 +950,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       state: getState(),
       validate: () => {
         if (formRef && formRef.current) {
-          formRef.current.validate();
+          formRef.current.validate(formData);
         }
       },
       formRef,
@@ -923,6 +1009,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
    * Returns the entire form definition
    */
   const formDefinition = (): Reactory.IReactoryForm => {
+
+    if(formDef.__complete__ === false) return ReactoryDefaultForm;
 
     const { extendSchema, uiSchemaKey, uiSchemaId } = props;
     let _formDef: Reactory.IReactoryForm = reactory.utils.lodash.cloneDeep(formDef);
@@ -1032,7 +1120,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     if (!_formDef.fields) _formDef.fields = {};
 
     if (isArray(_formDef.fieldMap) === true) {
-      debugger
       _formDef.fieldMap.forEach((map) => {
         reactory.log(`${signature} (init) Mapping ${map.field} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
         let mapped = false;
@@ -1519,7 +1606,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   };
   
   const renderForm = () => {
-
+    debugger
     reactory.log(`Rendering <${formDef.nameSpace}.${formDef.name}@${formDef.version} />`, { props: props, formData }, 'debug');
 
     const filter_props = () => {
@@ -1540,7 +1627,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       ErrorList: (error_props) => (<MaterialErrorListTemplate {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,
       ref: (form: any) => {
-        if (formRef.current === null || formRef.current === undefined) formRef.current = form;
+        if (formRef.current === null || formRef.current === undefined) { 
+          //@ts-ignore
+          formRef.current = form;
+        }
 
         if (props.refCallback) props.refCallback(getFormReference())
         if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
@@ -1946,21 +2036,27 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       return !(queryComplete === true);
     }
 
-    return (
-      <>
-        {getDeveloperOptions()}
-        {isBusy() === true && <LinearProgress />}
-        {props.before}        
-        <Form {...{ ...formProps, toolbarPosition: toolbarPosition }}>          
-        {toolbarPosition !== 'none' ? formtoolbar : null}
-        </Form>
-        {props.children}
-        {getHelpScreen()}
-        {getPdfWidget()}
-        {getExcelWidget()}
-
-      </>
-    )
+    try {
+      // {getDeveloperOptions()}
+      // {isBusy() === true && <LinearProgress />}
+      // { getHelpScreen() }
+      // { getPdfWidget() }
+      // { getExcelWidget() }
+      return (
+        <>
+          {props.before}   
+          <ErrorBoundary 
+            FallbackComponent={(props) => (<>Error in Reactory Form: {props.error}</>)}>     
+            <Form {...{ ...formProps, toolbarPosition: toolbarPosition }}>          
+            {toolbarPosition !== 'none' ? formtoolbar : null}
+            </Form>
+          </ErrorBoundary>
+          {props.children}      
+        </>
+      )
+    } catch (err) {
+      return <>{err.message}</>
+    }
   }
 
 
@@ -1990,59 +2086,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   }, [queryComplete])
   */
 
-  React.useEffect(() => {
-    reactory.amq.onReactoryPluginLoaded('loaded', onPluginLoaded);
-    if (props.refCallback) props.refCallback(getFormReference());
-    if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
-
-    if(props.formId) {
-      reactory.on(`onReactoryFormDefinitionUpdate::${props.formId}`, setFormDefinition);
-    }
-
-    getData();
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-        setInterval(null);
-      }
-
-      if(props.formId) {
-        reactory.removeListener(`onReactoryFormDefinitionUpdate::${props.formId}`, setFormDefinition)
-      }
-    }
-  }, []);
-
-  React.useEffect(() => {
-    getData();
-  }, [activeUiSchemaMenuItem])
-
-  const watchList = [props.formData, props.formDef, props.formId];
-
-  if(props.watchList) {
-    props.watchList.forEach((p) => {
-      watchList.push(props[p]);
-    })
-  }
-
   
-
-
-
-  React.useEffect(() => {
-
-    let _formData = initialData(formData);
-
-    let next_version = version + 1;
-    setVersion(next_version);
-    reactory.log(`${signature} Incoming Properties Changed`, { formData: props.formData, _formData: formData, version });    
-    getData(_formData);    
-
-  }, watchList)
-
-
-  React.useEffect(() => {
-    setVersion(version + 1);
-  }, [formData, props])
 
 
   return (
@@ -2050,13 +2094,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   )
 
 };
-
-const styles = (theme: Object) => {
-  return {
-
-  }
-};
-
 
 /**
  * Component Export

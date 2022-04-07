@@ -10,11 +10,11 @@ import {
   Tooltip as MaterialTooltip,
   Typography,
   Theme,  
-} from '@material-ui/core';
+} from '@mui/material';
 import uuid from 'uuid';
-import { compose } from 'recompose';
+import { compose } from 'redux';
 import lodash, { isNull, isArray } from 'lodash';
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withStyles, withTheme } from '@mui/styles';
 import { withContentRect } from 'react-measure';
 import { withApi } from '@reactory/client-core/api';
 import {
@@ -106,7 +106,7 @@ class LineChartWidget extends PureComponent<any> {
   }
 };
 
-
+//@ts-ignore
 const LineChartWidgetComponent = compose(withTheme, withApi, withContentRect('bounds'))(LineChartWidget);
 
 export default LineChartWidgetComponent;

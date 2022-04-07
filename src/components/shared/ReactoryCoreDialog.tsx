@@ -1,26 +1,26 @@
 'use strict'
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { compose } from 'recompose';
+import { compose } from 'redux';
 import { isEqual } from 'lodash';
-import { withStyles, withTheme } from '@material-ui/core/styles';
-import Dialog from '@material-ui/core/Dialog';
-import AppBar from '@material-ui/core/AppBar';
+import { withStyles, withTheme } from '@mui/styles';
 import {
+  AppBar,
+  Dialog,
+  Toolbar,
+  Typography,
   Grid,
   Icon,
+  IconButton,
   Button,
   Slide,
-} from '@material-ui/core';
-import Toolbar from '@material-ui/core/Toolbar';
-import IconButton from '@material-ui/core/IconButton';
-import Typography from '@material-ui/core/Typography';
-import CloseIcon from '@material-ui/icons/Close';
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { deepEquals } from '../reactory/form/utils';
 import {
   useMediaQuery
-} from '@material-ui/core';
+} from '@mui/material';
 
 const FullScreenDialogStyles = (theme): any => {
   return {

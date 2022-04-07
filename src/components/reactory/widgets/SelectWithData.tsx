@@ -8,10 +8,10 @@ import {
   Select,
   FilledInput,
   OutlinedInput
-} from '@material-ui/core';
+} from '@mui/material';
 
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withStyles, withTheme } from '@mui/styles';
 import ReactoryApi from '@reactory/client-core/api/ReactoryApi';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/client-core/types/reactory';

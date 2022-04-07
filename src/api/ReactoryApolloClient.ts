@@ -5,10 +5,10 @@ import {
   NormalizedCacheObject
 } from '@apollo/client';
 
-import { WebSocketLink } from "@apollo/link-ws";
-import { setContext } from '@apollo/link-context';
+import { GraphQLWsLink  } from "@apollo/client/link/subscriptions";
+import { setContext } from "@apollo/client/link/context";
 import { getMainDefinition } from '@apollo/client/utilities';
-import { SubscriptionClient } from "subscriptions-transport-ws";
+import { createClient } from 'graphql-ws'
 import { createUploadLink } from 'apollo-upload-client';
 import { fetch } from "whatwg-fetch";
 import { getCache } from './ReactoryApolloCache';
@@ -75,17 +75,25 @@ export default async () => {
   let clientTypeDefs: string[] = [];
   let resolvers: Resolvers[] = [];
 
-  const ws_client = new SubscriptionClient(`${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`.replace('http', 'ws'), {
-    reconnect: true,
-    reconnectionAttempts: 5,
-    timeout: 1000,
+  createClient({  
+    url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`.replace('http', 'ws'),    
+    retryAttempts: 5,
+    connectionParams: {
+      Authorization: `Bearer ${token}`,
+      authToken: token
+    }    
+  })
+
+  const ws_client = createClient({
+    url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`.replace('http', 'ws'),
+    retryAttempts: 5,
     connectionParams: {
       Authorization: `Bearer ${token}`,
       authToken: token
     }
-  });
+  })
 
-  const ws_link = new WebSocketLink(ws_client);
+  const ws_link = new GraphQLWsLink(ws_client);
 
   const splitLink = split(
     ({ query }) => {

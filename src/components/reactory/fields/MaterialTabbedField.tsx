@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
 import { useParams, useHistory } from 'react-router';
-import SwipeableViews from 'react-swipeable-views';
-import { makeStyles, Theme, useTheme } from '@material-ui/core/styles';
-import AppBar from '@material-ui/core/AppBar';
-import Tabs from '@material-ui/core/Tabs';
-import Tab from '@material-ui/core/Tab';
-import Box from '@material-ui/core/Box';
-import Icon from '@material-ui/core/Icon';
+import { DefaultTheme, makeStyles, useTheme } from '@mui/styles';
+import AppBar from '@mui/material/AppBar';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Box from '@mui/material/Box';
+import Icon from '@mui/material/Icon';
+import { Theme } from '@mui/material'
 
 import { retrieveSchema } from '@reactory/client-core/components/reactory/form/utils';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 import { useReactory } from '@reactory/client-core/api';
 
 interface TabPanelProps {
@@ -34,7 +34,7 @@ const MaterialTabbedField = (props) => {
   const params = useParams();
 
   const classes = useStyles();
-  const theme = useTheme();
+  const theme = useTheme<DefaultTheme>();
   const reactory = useReactory();
 
   const {
@@ -203,7 +203,17 @@ const MaterialTabbedField = (props) => {
               let tabUISchema = uiSchema[tabDef.field] || {};
               let tabUIOptions = tabUISchema["ui:options"] || {}
 
-              return (<Tab key={tindex} textColor={theme.palette[tabUIOptions.textColor || "primary"].contrastText} icon={tabDef.icon ? (<Icon>{tabDef.icon}</Icon>) : null} label={`${tabDef.title || schema.properties[tabDef.field].title || tabDef.field}`} {...a11yProps(tindex)} />)
+              //textColor={theme.palette[tabUIOptions.textColor || "primary"].contrastText} 
+
+              return (
+                <Tab 
+                  key={tindex} 
+                  icon={tabDef.icon ? (<Icon>{tabDef.icon}</Icon>) : null} 
+                  color={
+                    //@ts-ignore
+                    theme.palette[tabUIOptions.textColor || "primary"].contrastText}
+                  label={`${tabDef.title || schema.properties[tabDef.field].title || tabDef.field}`} 
+                  {...a11yProps(tindex)} />)
             }
           })}
 

@@ -1,5 +1,5 @@
 {
-  "compilerOptions": {
+  "compilerOptions": {    
     "noImplicitAny": false,
     "removeComments": true,
     "moduleResolution": "node",
@@ -7,7 +7,8 @@
     "allowJs": false,
     "target": "es6",
     "jsx": "preserve",
-    "experimentalDecorators": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "sourceMap": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
@@ -18,7 +19,6 @@
     ],
     "types": [
       "webpack-env",
-      "googlemaps",
       "markerclustererplus"
     ],
     "baseUrl": ".",
@@ -34,11 +34,16 @@
       ],
       "test/*": [
         "test/*"
-      ]
+      ],
+      "@reactory/webpack/*": [
+        "webpack/*"
+      ],
+      "@reactory/config/*": ["config/*"]
     },
     "pretty": true,
     "typeRoots": [
-      "./node_modules/@types"
+      "./node_modules/@types",
+      "src/types"
     ],
   },
   "compileOnSave": true,
@@ -51,6 +56,5 @@
   ],
   "include": [
     "src/**/*",
-    "src/types/**/*.d.ts"
-  ]
-}
+    "src/types/**/*.d.ts"]
+  }

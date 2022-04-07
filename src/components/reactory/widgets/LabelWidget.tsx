@@ -1,7 +1,7 @@
 import React, { Component, Fragment, useState } from 'react';
-import { Button, Typography, Icon, Tooltip } from '@material-ui/core';
-import { compose } from 'recompose';
-import { withTheme, withStyles } from '@material-ui/styles';
+import { Button, Typography, Icon, Tooltip } from '@mui/material';
+import { compose } from 'redux';
+import { withTheme, withStyles } from '@mui/styles';
 import { template, isNil } from 'lodash';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/client-core/types/reactory';
@@ -328,7 +328,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 };
 
 
-const LabelFieldComponent = compose(withApi, withTheme, withStyles(LabelWidgetStyle))(LabelWidget)
+const LabelFieldComponent: any = compose(withApi, withTheme, withStyles(LabelWidgetStyle))(LabelWidget)
 
 LabelFieldComponent.meta = {
   nameSpace: "core",

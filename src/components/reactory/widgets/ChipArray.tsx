@@ -9,10 +9,10 @@ import {
   Input,
   Typography,
   Tooltip,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withStyles, withTheme } from '@mui/styles';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 
 class ChipArray extends Component<any, any> {

@@ -2,52 +2,37 @@
 import React from 'react';
 
 import lodash from 'lodash';
-import recompose from 'recompose';
+import * as MaterialCore from '@mui/material'
+import * as MaterialCoreStyles from '@mui/styles'
+import * as MaterialIcons from '@mui/icons-material'
+import * as MaterialLab from '@mui/lab'
+import * as MaterialStyles from '@mui/styles';
+
 import * as DropZone from 'react-dropzone';
 import * as ReactRouter from 'react-router'
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import * as MaterialCore from '@material-ui/core'
-import * as MaterialCoreStyles from '@material-ui/core/styles'
-import * as MaterialIcons from '@material-ui/icons'
-import * as MaterialLab from '@material-ui/lab'
-import * as MaterialStyles from '@material-ui/core/styles';
-import * as MaterialPickers from '@material-ui/pickers';
-import * as MaterialUIColor from 'material-ui-color';
-import * as UserComponents from './user/index';
-import * as OrganizationComponents from './organization/index';
-
 import * as ReactBigCalendar from 'react-big-calendar';
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
-import IntersectionVisible from 'react-intersection-visible';
+//import * as OrganizationComponents from './organization/index';
+
+
+import IntersectionVisible from './utility/IntersectionVisible';
 
 import LoginPage, { RegisterPage } from './auth';
-import Main from './home/index';
-import AssessmentView from './assess/index';
-import UserSurveyComponent from './survey/UserSurvey';
-import ReportComponent from './report/index';
-import KanbanDashboardComponent, { TaskListComponentWithData, TaskDetailWithData } from './home/kanban/KanbanDashboard';
-import TowerStoneHome from './home/TowerStoneHomeComponent';
 import Loading from './shared/Loading';
 import LinkComponent from './shared/Link';
 import ReactoryRouterComponent, { ReactoryFormComponent } from './reactory/ReactoryFormComponent'
-import { TaskListComponent, TaskDashboardComponent } from './tasks/Taskboard';
-import AdminDashboardComponent from './admin/dashboard'
-import PaymentGatewayDashboardComponent from './payments/funisave/Dashboard';
-import DateSelector from './dates/DateSelector.js';
+import DateSelector from './dates/DateSelector';
 import Calendar from './dates/Calendar';
 import { LayoutThemed, SingleColumnLayout, TwoColumnGrid, BasicContainer } from './shared/Layout';
-import { UserListWithSearch } from './user/Widgets';
 import Logo from './shared/logo';
 import SlideOutLauncher from './shared/SlideOutLauncher';
 import BasicModal from './shared/BasicModal';
-import AotAnalyticsDashboardComponent from './tasks/analytics/AnalyticsDashboard';
 import SpeedDialWidget from './shared/SpeedDialWidget';
 import FullScreenDialog from './shared/ReactoryCoreDialog';
 import FramedWindow, { ReportViewerComponent, GraphiqlWindow } from './shared/FramedWindow';
 
-import FroalaWired from './richtext/Froala';
-
-import TabbedNavigation from './shared/tabbedNavigation';
+import TabbedNavigation from './shared/TabbedNavigation';
 import ChipLabel from './shared/ChipLabel';
 import MaterialInput from './shared/MaterialInput';
 import FormSubmissionComponent from './shared/FormSubmissionComponent';
@@ -57,57 +42,30 @@ import LabelComponent from './reactory/widgets/LabelWidget';
 import ReactoryDropZone from './reactory/widgets/ReactoryDropZone';
 
 import StyledCurrencyLabel from './shared/StyledCurrencyLabel';
-import PricingSliderComponent from './shared/PricingSliderComponent';
-import PricingLineChartComponent from './shared/PricingLineChartComponent';
+
 import TableChildComponentWrapper from './shared/TableChildComponentWrapper';
 import AccordionComponent from './shared/AccordionComponent';
 import RadioGroupComponent from './shared/RadioGroupComponent';
 import LookupComponent from './shared/LookupComponent';
 import NotificationComponent from './shared/NotificationWidget';
 import GridLayoutComponent from './shared/GridLayoutComponent';
-import ProductCardComponent from './shared/ProductCardComponent';
+
 import NotFoundComponent from './shared/NotFoundComponent';
 import DocumentListComponent from './shared/DocumentListComponent';
 import DocumentUploadComponent from './shared/DocumentUploadComponents';
-import * as MaterialTable from 'material-table';
-import Demographics from './user/Widgets/Demographics';
-
-import ReactoryFormEditor from './shared/FormEditor';
-
-
-import { PasswordResetForm } from './user/Forms/ResetPassword';
-import CreateUserMembership from './user/Forms/CreateUserMembership';
-import ReactortMembershipRoles from './user/Forms/MembershipRoles';
-import { AddressLookupComponent } from './mapping/AddressLookup';
 import Cropper from './shared/image/Cropper';
 
 import * as utils from './util';
-import { withTheme } from '@material-ui/styles';
-import MembershipRoles from './user/Forms/MembershipRoles';
+import { compose } from 'redux';
+import { DropDownMenuComponent } from './shared/menus/DropDownMenu';
 
-import MorphCast from './morphcast';
+import * as MaterialReactoryWidgets from './reactory/widgets'
 
-export const UserList = UserComponents.UserListWithData;
-export const UserSearchInput = UserComponents.UserSearchInputComponent;
-export const ForgotForm = UserComponents.ForgotForm;
-export const ResetPasswordForm = PasswordResetForm;
-export const UserInbox = UserComponents.UserInbox;
-export const Home = Main;
-export const Assessment = AssessmentView;
-export const OrganizationTable = OrganizationComponents.OrganizationTable;
-export const OrganizationList = OrganizationComponents.OrganizationList;
 export const Login = LoginPage;
-export const Profile = UserComponents.UserProfile;
-export const UserSurvey = UserSurveyComponent;
-export const Report = ReportComponent;
-export const TaskList = TaskListComponent;
-export const TaskDashboard = TaskDashboardComponent;
-export const AdminDashboard = AdminDashboardComponent;
+export const AdminDashboard = <NotFoundComponent key={'AdminDashboard - Deprecated'}/>;
 export const Register = RegisterPage;
 export const ReactoryRouter = ReactoryRouterComponent;
 export const ReactoryForm = ReactoryFormComponent;
-export const KanbanDashboard = KanbanDashboardComponent;
-export const FuniSaveDashboard = PaymentGatewayDashboardComponent
 export const CompanyLogo = (props) => {
   const { organization } = props;
   const logoProps = {
@@ -116,9 +74,6 @@ export const CompanyLogo = (props) => {
   };
   return <Logo {...logoProps} />
 };
-
-import media_components from './media';
-
 
 export const componentRegistery = [
   {
@@ -187,24 +142,24 @@ export const componentRegistery = [
     component: StyledCurrencyLabel,
     version: '1.0.0',
   },
-  {
-    nameSpace: 'core',
-    name: 'PricingSliderComponent',
-    component: PricingSliderComponent,
-    version: '1.0.0',
-  },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'PricingSliderComponent',
+  //   component: PricingSliderComponent,
+  //   version: '1.0.0',
+  // },
   {
     nameSpace: 'core',
     name: 'SelectWithDataWidget',
     component: require('./reactory/widgets/SelectWithData'),
     version: '1.0.0',
   },
-  {
-    nameSpace: 'core',
-    name: 'PricingLineChartComponent',
-    component: PricingLineChartComponent,
-    version: '1.0.0',
-  },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'PricingLineChartComponent',
+  //   component: PricingLineChartComponent,
+  //   version: '1.0.0',
+  // },
   {
     nameSpace: 'core',
     name: 'TableChildComponentWrapper',
@@ -240,13 +195,7 @@ export const componentRegistery = [
     name: 'GridLayoutComponent',
     component: GridLayoutComponent,
     version: '1.0.0',
-  },
-  {
-    nameSpace: 'lasec',
-    name: 'ProductCardComponent',
-    component: ProductCardComponent,
-    version: '1.0.0',
-  },
+  }, 
   {
     nameSpace: 'core',
     name: 'TabbedNavigation',
@@ -339,61 +288,6 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'core',
-    name: 'UserList',
-    component: UserComponents.UserListWithData,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'UserListItem',
-    component: UserComponents.UserListItem,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'UserWithQuery',
-    component: UserComponents.UserWithQuery,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'ApplicationUserListItem',
-    component: withTheme((props: any) => {
-      const { UserListItem } = UserComponents;
-      if (props.theme && props.theme.key) {
-        return <UserListItem user={{ firstName: props.firstName || 'Reactory', lastName: props.lastName || 'System', id: props.id || `${props.theme.key}_app`, avatar: 'avatar.png' }} message={props.message} />
-      }
-
-      return <UserListItem user={{ firstName: 'Reactory', lastName: 'System', id: 'reactory_app', avatar: 'avatar.png' }} message={props.message} />
-    }),
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'towerstone',
-    name: 'OwlyListItem',
-    component: (props) => {
-      const { UserListItem } = UserComponents;
-      return <UserListItem user={{ firstName: 'TowerStone Leadership', lastName: 'Centre', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
-    },
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'towerstone',
-    name: 'OwlyListItem',
-    component: (props) => {
-      const { UserListItem } = UserComponents;
-      return <UserListItem user={{ firstName: 'TowerStone Leadership', lastName: 'Centre', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
-    },
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'towerstone',
-    name: 'SurveyDelegateWidget',
-    component: () => { return <>component moved</> },
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
     name: 'NotFound',
     component: NotFoundComponent,
     version: '1.0.0'
@@ -413,7 +307,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'UserListWithSearch',
-    component: UserListWithSearch,
+    component: () => '',
     version: '1.0.0',
   },
   {
@@ -422,90 +316,14 @@ export const componentRegistery = [
     version: '1.0.0',
     component: require('../components/shared/HelpMe')
   },
-  {
-    nameSpace: 'core',
-    name: 'UserSearch',
-    component: UserComponents.UserSearchInputComponent,
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'core',
-    name: 'ForgotPassword',
-    component: ForgotForm,
-    version: '1.0.0'
-  },
+  
   {
     nameSpace: 'core',
     name: 'ResetPassword',
-    component: ResetPasswordForm,
+    component: () => new Error('Complete core.ResetPassword Migratation to reactory-user plugin'),
     version: '1.0.0'
   },
-  {
-    nameSpace: 'core',
-    name: 'Home',
-    component: Home,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'towerstone',
-    name: 'Assessment',
-    component: Assessment,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'towerstone',
-    name: 'TowerStone180Assessment',
-    component: require('./assess/DefaultView').default,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'towerstone',
-    name: 'TowerStone360Assessment',
-    component: require('./assess/DefaultView').default,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'plc',
-    name: 'PlcDefaultAssessment',
-    component: require('./assess/DefaultView').default,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'OrganizationLabelForId',
-    component: require('./organization/OrganizationList').OrganizationLabelForIdComponent,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'OrganizationTable',
-    component: OrganizationTable,
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'core',
-    name: 'OrganizationList',
-    component: OrganizationList,
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'core',
-    name: 'BusinessUnitList',
-    component: require('./businessunit').BusinessUnitListWithToolbar,
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'core',
-    name: 'BusinessUnitForm',
-    component: require('./businessunit').BusinessUnitForm,
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'core',
-    name: 'BusinessUnitFormWithQuery',
-    component: require('./businessunit').BusinessUnitFormWithQuery,
-    version: '1.0.0'
-  },
+  
   {
     nameSpace: 'core',
     name: 'Login',
@@ -524,48 +342,7 @@ export const componentRegistery = [
     version: '1.0.0',
     component: Calendar
   },
-  {
-    nameSpace: 'core',
-    name: 'Profile',
-    component: Profile,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'towerstone',
-    name: 'Surveys',
-    component: UserSurvey,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'towerstone',
-    name: 'Report',
-    component: Report,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'TaskList',
-    component: TaskList,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'UserTaskListWithData',
-    component: TaskListComponentWithData,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'UserTaskDetailWithData',
-    component: TaskDetailWithData,
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'core',
-    name: 'TaskDashboard',
-    component: TaskDashboard,
-    version: '1.0.0',
-  },
+  
   {
     nameSpace: 'core',
     name: 'Administration',
@@ -589,43 +366,7 @@ export const componentRegistery = [
     name: 'ReactoryForm',
     component: ReactoryForm,
     version: '1.0.0',
-  },
-  {
-    nameSpace: 'aot',
-    name: 'Dashboard',
-    component: KanbanDashboard,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'Task',
-    component: KanbanDashboard,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'towerstone',
-    name: 'Dashboard',
-    component: TowerStoneHome,
-    version: '1.0.0'
-  },
-  {
-    nameSpace: 'core',
-    name: 'InboxComponent',
-    version: '1.0.0',
-    component: UserInbox,
-  },
-  {
-    nameSpace: 'core',
-    name: 'Logout',
-    version: '1.0.0',
-    component: UserComponents.LogoutComponent,
-  },
-  {
-    nameSpace: 'funisave-gw',
-    name: 'Dashboard',
-    version: '1.0.0',
-    component: FuniSaveDashboard
-  },
+  },  
   {
     nameSpace: 'core',
     name: 'Layout',
@@ -644,23 +385,12 @@ export const componentRegistery = [
     version: '1.0.0',
     component: FullScreenDialog
   },
-  {
-    nameSpace: 'core',
-    name: 'CreateProfile',
-    version: '1.0.0',
-    component: UserComponents.CreateProfile,
-  },
-  {
-    nameSpace: 'aot',
-    name: 'AnalyticsDashboard',
-    version: '1.0.0',
-    component: AotAnalyticsDashboardComponent
-  },
+
   {
     nameSpace: 'core',
     name: 'RememberCredentials',
     version: '1.0.0',
-    component: require('./user/Forms/index').RememberCredentialsComponent,
+    component: () => (<>Complete Migration to reactory-user plugin</>),
   },
   {
     nameSpace: 'core',
@@ -668,24 +398,7 @@ export const componentRegistery = [
     version: '1.0.0',
     component: SpeedDialWidget
   },
-  {
-    nameSpace: 'core',
-    name: 'PageIntegrations',
-    version: '1.0.0',
-    component: require('./template/integrations/index')
-  },
-  {
-    nameSpace: 'boxcommerce',
-    name: 'PageEditorHome',
-    version: '1.0.0',
-    component: require('./template/PageTemplate').PageBuilderComponent
-  },
-  {
-    nameSpace: 'core',
-    name: 'FroalaEditor',
-    version: '1.0.0',
-    component: FroalaWired
-  },
+ 
   {
     nameSpace: 'material-ui',
     name: 'MaterialCore',
@@ -719,7 +432,7 @@ export const componentRegistery = [
     nameSpace: 'material-ui',
     name: 'MaterialPickers',
     version: '1.0.0',
-    component: MaterialPickers,
+    component: (<NotFoundComponent key={'material-ui.MaterialPickers is deprecated'}/>),
   },
   {
     nameSpace: 'material-ui',
@@ -730,49 +443,30 @@ export const componentRegistery = [
       MaterialIcons,
       MaterialLab,
       MaterialStyles,
-      MaterialPickers,
-      MaterialTable
+      MaterialPickers: (<NotFoundComponent key={'material-ui.MaterialPickers is deprecated'} />),
+      MaterialTable: (<NotFoundComponent key={'material-ui.MaterialTable is deprecated'} />)
     },
   },
   {
     nameSpace: 'core',
     name: 'DropDownMenu',
     version: '1.0.0',
-    component: require('./shared/menus/DropDownMenu').DropDownMenuComponent,
-  },
-  {
-    nameSpace: 'core',
-    name: 'AssessmentList',
-    version: '1.0.0',
-    component: require('./assess/AssessmentList'),
-  },
-  {
-    nameSpace: 'core',
-    name: 'AssessmentTable',
-    version: '1.0.0',
-    component: require('./assess/AssessmentList').AssessmentTableComponent
-  },
-  {
-    nameSpace: 'widgets',
-    name: 'UserListItemWidget',
-    version: '1.0.0',
-    component: require('./reactory/widgets').UserListItemWidget
-  },
+    component: DropDownMenuComponent
+  },  
+ 
   {
     nameSpace: 'core',
     name: 'MaterialFormWidgets',
     version: '1.0.0',
-    component: require('./reactory/widgets')
+    component: MaterialReactoryWidgets
   },
   GraphiqlWindow.meta,
   SlideOutLauncher.meta,
-  require('./shared/currency/CurrencyLabel'),
-  require('./shared/DateLabel'),
-  require('./shared/StaticContent').meta,
-  require('./shared/Label'),
-  require('./shared/AlertDialog'),
-  // require('./reactory/widgets/LabelWidget'),
-  // require('./shared/MaterialInput')
+  // require('./shared/currency/CurrencyLabel'),
+  // require('./shared/DateLabel'),
+  // require('./shared/StaticContent').meta,
+  // require('./shared/Label'),
+  // require('./shared/AlertDialog'),  
   {
     nameSpace: 'reactory-core',
     name: 'ReactBeautifulDnD',
@@ -821,7 +515,7 @@ export const componentRegistery = [
   {
     nameSpace: 'material-ui',
     name: 'MaterialUIColor',
-    component: MaterialUIColor,
+    component: (<NotFoundComponent key={'material-ui.MaterialUIColor is deprecated'} />),
     version: '1.0.0'
   },
   {
@@ -843,25 +537,267 @@ export const componentRegistery = [
     component: DropZone
   },
   {
-    nameSpace: 'core',
-    name: 'AddressLookupComponent',
-    version: '1.0.0',
-    component: AddressLookupComponent
-  },
-  {
     nameSpace: 'recompose',
     name: 'Recompose',
     version: '1.0.0',
-    component: recompose,
+    component: compose,
   },
   {
     nameSpace: 'core',
     name: 'UserDemographics',
     version: '1.0.0',
-    component: Demographics,
-  },
-  MembershipRoles,
-  CreateUserMembership,
-  ...media_components,
-  ...MorphCast
+    component: <>complete import from reactory-user plugin</>,
+  }
 ]
+
+
+
+// {
+//   nameSpace: 'core',
+//   name: 'AddressLookupComponent',
+//   version: '1.0.0',
+//   component: AddressLookupComponent
+// },
+
+
+// {
+  //   nameSpace: 'core',
+  //   name: 'Profile',
+  //   component: Profile,
+  //   version: '1.0.0',
+  // },
+
+
+  // {
+  //   nameSpace: 'core',
+  //   name: 'TaskList',
+  //   component: TaskList,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'UserTaskListWithData',
+  //   component: TaskListComponentWithData,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'UserTaskDetailWithData',
+  //   component: TaskDetailWithData,
+  //   version: '1.0.0'
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'TaskDashboard',
+  //   component: TaskDashboard,
+  //   version: '1.0.0',
+  // },
+
+
+   // {
+  //   nameSpace: 'core',
+  //   name: 'PageIntegrations',
+  //   version: '1.0.0',
+  //   component: require('./template/integrations/index')
+  // },
+  // {
+  //   nameSpace: 'boxcommerce',
+  //   name: 'PageEditorHome',
+  //   version: '1.0.0',
+  //   component: require('./template/PageTemplate').PageBuilderComponent
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'FroalaEditor',
+  //   version: '1.0.0',
+  //   component: FroalaWired
+  // },
+
+  // {
+  //   nameSpace: 'core',
+  //   name: 'CreateProfile',
+  //   version: '1.0.0',
+  //   component: UserComponents.CreateProfile,
+  // },
+  // {
+  //   nameSpace: 'aot',
+  //   name: 'AnalyticsDashboard',
+  //   version: '1.0.0',
+  //   component: AotAnalyticsDashboardComponent
+  // },
+
+  // {
+  //   nameSpace: 'aot',
+  //   name: 'Dashboard',
+  //   component: KanbanDashboard,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'Task',
+  //   component: KanbanDashboard,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'towerstone',
+  //   name: 'Dashboard',
+  //   component: TowerStoneHome,
+  //   version: '1.0.0'
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'InboxComponent',
+  //   version: '1.0.0',
+  //   component: UserInbox,
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'Logout',
+  //   version: '1.0.0',
+  //   component: UserComponents.LogoutComponent,
+  // },
+  // {
+  //   nameSpace: 'funisave-gw',
+  //   name: 'Dashboard',
+  //   version: '1.0.0',
+  //   component: FuniSaveDashboard
+  // },
+
+  // {
+  //   nameSpace: 'core',
+  //   name: 'Home',
+  //   component: Home,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'towerstone',
+  //   name: 'Assessment',
+  //   component: Assessment,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'towerstone',
+  //   name: 'TowerStone180Assessment',
+  //   component: require('./assess/DefaultView').default,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'towerstone',
+  //   name: 'TowerStone360Assessment',
+  //   component: require('./assess/DefaultView').default,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'plc',
+  //   name: 'PlcDefaultAssessment',
+  //   component: require('./assess/DefaultView').default,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'OrganizationLabelForId',
+  //   component: require('./organization/OrganizationList').OrganizationLabelForIdComponent,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'OrganizationTable',
+  //   component: OrganizationTable,
+  //   version: '1.0.0'
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'OrganizationList',
+  //   component: OrganizationList,
+  //   version: '1.0.0'
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'BusinessUnitList',
+  //   component: require('./businessunit').BusinessUnitListWithToolbar,
+  //   version: '1.0.0'
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'BusinessUnitForm',
+  //   component: require('./businessunit').BusinessUnitForm,
+  //   version: '1.0.0'
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'BusinessUnitFormWithQuery',
+  //   component: require('./businessunit').BusinessUnitFormWithQuery,
+  //   version: '1.0.0'
+  // },
+
+  // {
+  //   nameSpace: 'core',
+  //   name: 'UserSearch',
+  //   component: UserComponents.UserSearchInputComponent,
+  //   version: '1.0.0'
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'ForgotPassword',
+  //   component: ForgotForm,
+  //   version: '1.0.0'
+  // },
+
+
+   // {
+  //   nameSpace: 'core',
+  //   name: 'UserList',
+  //   component: UserComponents.UserListWithData,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'UserListItem',
+  //   component: UserComponents.UserListItem,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'UserWithQuery',
+  //   component: UserComponents.UserWithQuery,
+  //   version: '1.0.0',
+  // },
+  // {
+  //   nameSpace: 'core',
+  //   name: 'ApplicationUserListItem',
+  //   component: withTheme((props: any) => {
+  //     const { UserListItem } = UserComponents;
+  //     if (props.theme && props.theme.key) {
+  //       return <UserListItem user={{ firstName: props.firstName || 'Reactory', lastName: props.lastName || 'System', id: props.id || `${props.theme.key}_app`, avatar: 'avatar.png' }} message={props.message} />
+  //     }
+
+  //     return <UserListItem user={{ firstName: 'Reactory', lastName: 'System', id: 'reactory_app', avatar: 'avatar.png' }} message={props.message} />
+  //   }),
+  //   version: '1.0.0'
+  // },
+  // {
+  //   nameSpace: 'towerstone',
+  //   name: 'OwlyListItem',
+  //   component: (props) => {
+  //     const { UserListItem } = UserComponents;
+  //     return <UserListItem user={{ firstName: 'TowerStone Leadership', lastName: 'Centre', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
+  //   },
+  //   version: '1.0.0'
+  // },
+  // {
+  //   nameSpace: 'towerstone',
+  //   name: 'OwlyListItem',
+  //   component: (props) => {
+  //     const { UserListItem } = UserComponents;
+  //     return <UserListItem user={{ firstName: 'TowerStone Leadership', lastName: 'Centre', id: 'towerstone_app', avatar: 'avatar.png' }} message={props.message} />
+  //   },
+  //   version: '1.0.0'
+  // },
+
+
+  //  {
+  //   nameSpace: 'widgets',
+  //   name: 'UserListItemWidget',
+  //   version: '1.0.0',
+  //   component: UserListItemWidget
+  // },

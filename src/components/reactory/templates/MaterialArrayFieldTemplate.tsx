@@ -1,7 +1,7 @@
 import React, { Component, Fragment } from 'react'
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withStyles, withTheme } from '@mui/styles';
 import Draggable from 'react-draggable';
 import { pullAt } from 'lodash';
 import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from '@reactory/client-core/components/reactory/form/utils';
@@ -22,7 +22,7 @@ import {
   Paper,
   Toolbar,
   Tooltip,
-} from '@material-ui/core'
+} from '@mui/material'
 
 import { withApi } from '@reactory/client-core/api/ApiProvider'
 

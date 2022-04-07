@@ -3,30 +3,26 @@ import PropTypes, { any } from 'prop-types';
 import { Link, withRouter } from 'react-router-dom';
 import { compose } from 'redux';
 import { isArray, find } from 'lodash';
-import { withTheme, makeStyles } from '@material-ui/core/styles';
+import { withTheme, makeStyles } from '@mui/styles';
 import {
+  Avatar,
+  AppBar,
+  Divider,
+  Drawer,
   Tooltip,
-  Button,
-  Grid,
+  Toolbar,
+  Icon,
+  IconButton,
   ListItem,
   ListItemSecondaryAction,
   Collapse,
-  CircularProgress
-} from '@material-ui/core';
-import Drawer from '@material-ui/core/Drawer';
-import Avatar from '@material-ui/core/Avatar';
-import AppBar from '@material-ui/core/AppBar';
-import Divider from '@material-ui/core/Divider';
-import Toolbar from '@material-ui/core/Toolbar';
-import Typography from '@material-ui/core/Typography';
-import IconButton from '@material-ui/core/IconButton';
-import { Menu, MenuItem, InputBase } from '@material-ui/core';
-import Icon from '@material-ui/core/Icon';
-import { List, ListItemIcon, ListItemText } from '@material-ui/core';
-import { fade } from '@material-ui/core/styles/colorManipulator';
-import MenuIcon from '@material-ui/icons/Menu';
-import BackIcon from '@material-ui/icons/ArrowBack';
-import PowerSettingIcon from '@material-ui/icons/PowerSettingsNew';
+  Typography,
+} from '@mui/material';
+import { Menu, MenuItem, InputBase } from '@mui/material';
+import { List, ListItemIcon, ListItemText } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import BackIcon from '@mui/icons-material/ArrowBack';
+import PowerSettingIcon from '@mui/icons-material/PowerSettingsNew';
 import { getAvatar } from '../util';
 import moment from 'moment';
 import { withApi, ReactoryApiEventNames } from '@reactory/client-core/api';
@@ -244,8 +240,7 @@ const ApplicationHeader = (props) => {
     session: []
   });
 
-  const classes: any = makeStyles((theme: any) => {
-
+  const classes: any = makeStyles((theme: any): any => {
     return {
       drawerHeader: {
         display: 'flex',
@@ -294,10 +289,7 @@ const ApplicationHeader = (props) => {
       search: {
         position: 'relative',
         borderRadius: theme.shape.borderRadius,
-        backgroundColor: fade(theme.palette.common.white, 0.15),
-        '&:hover': {
-          backgroundColor: fade(theme.palette.common.white, 0.25),
-        },
+        
         marginLeft: 0,
         width: '100%',
         [theme.breakpoints.up('sm')]: {
@@ -431,7 +423,7 @@ const ApplicationHeader = (props) => {
     // const { menus = [], target = 'left-nav', history, user, reactory, self, classes, append, expanded } = props;    
     let menuItems = [];
     if (menus && menus.length) {
-      menus.map((menu) => {
+      menus.map((menu, menu_id) => {
         if (menu.target === 'left-nav') {
           menu.entries.map((menuItem: any, mid: number) => {
             let subnav = null;
@@ -718,3 +710,4 @@ const ApplicationHeaderComponent = compose(
 )(ApplicationHeader);
 
 export default ApplicationHeaderComponent;
+

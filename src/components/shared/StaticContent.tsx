@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { compose } from 'recompose';
+import { compose } from 'redux';
 import { withRouter, match } from 'react-router-dom';
-import { Icon, IconButton } from '@material-ui/core';
-import { withStyles, withTheme, } from '@material-ui/core/styles';
+import { Icon, IconButton } from '@mui/material';
+import { withStyles, withTheme, } from '@mui/styles';
 import moment, { Moment } from 'moment';
 import ReactoryApi, { withApi } from '@reactory/client-core/api';
 
@@ -63,10 +63,8 @@ interface ReactoryStaticContentState {
 const StaticContent = (props: ReactoryStaticContentProps) => {
 
   const { reactory } = props;
-  
 
   const { MaterialCore } = reactory.getComponents(['material-ui.MaterialCore'])
-
 
   const {
     classes,
@@ -306,7 +304,7 @@ const StaticContentStyles = (theme: any): any => {
   }
 };
 
-const StaticContentComponent = compose(withApi, withRouter, withTheme, withStyles(StaticContentStyles))(StaticContent);
+const StaticContentComponent: any = compose(withApi, withRouter, withTheme, withStyles(StaticContentStyles))(StaticContent);
 
 StaticContentComponent.meta = {
   nameSpace: 'core',

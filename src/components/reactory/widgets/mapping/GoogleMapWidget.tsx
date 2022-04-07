@@ -1,20 +1,20 @@
 import React from 'react';
-import { compose, withProps } from "recompose";
-import { withStyles, withTheme } from "@material-ui/core/styles";
+import { compose } from "redux";
+import { withStyles, withTheme } from "@mui/styles";
 import { withApi } from "@reactory/client-core/api/ApiProvider";
 import {
   Icon,
   useMediaQuery,
-} from "@material-ui/core";
+} from "@mui/material";
 
-import {
-  withScriptjs,
-  withGoogleMap,
-  GoogleMap,
-  Marker,
-  InfoWindow,
-  MarkerProps,
-} from "react-google-maps";
+// import {
+//   withScriptjs,
+//   withGoogleMap,
+//   GoogleMap,
+//   Marker,
+//   InfoWindow,
+//   MarkerProps,
+// } from "react-google-maps";
 import Reactory from "@reactory/client-core/types/reactory";
 
 const VIEWMODES = {
@@ -271,7 +271,7 @@ const GoogleMapWidget = (props: any) => {
 
 }
 
-const ReactoryGoogleMapWidgetStyles = (theme, props): any => {
+const ReactoryGoogleMapWidgetStyles = (theme): any => {
 
   const { palette } = theme;  
 

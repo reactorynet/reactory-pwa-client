@@ -7,9 +7,9 @@ import {
   FormHelperText,
   InputLabel,
   Typography,
-} from '@material-ui/core';
-import { withStyles } from '@material-ui/core/styles';
-import Slider from '@material-ui/core/Slider';
+} from '@mui/material';
+import { withStyles } from '@mui/styles';
+import Slider from '@mui/material/Slider';
 import Reactory from 'types/reactory';
 
 const styles = (theme) => ({

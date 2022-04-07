@@ -1,15 +1,15 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes, { any } from 'prop-types';
-import { AppBar, IconButton, Toolbar, Icon, Typography } from '@material-ui/core';
+import { AppBar, IconButton, Toolbar, Icon, Typography } from '@mui/material';
 import { isArray } from 'lodash';
-import { compose } from 'recompose';
-import { withTheme } from '@material-ui/styles';
+import { compose } from 'redux';
+import { withTheme } from '@mui/styles';
 import { withApi } from '../../api/ApiProvider';
 import ReactoryApi from "../../api/ReactoryApi";
 import Reactory from '@reactory/client-core/types/reactory';
 import * as ExcelJS from 'exceljs';
 import moment from 'moment';
-import { closeSync } from 'fs';
+
 
 const defaultFrameProps = {
   url: 'http://localhost:3001/',
@@ -261,7 +261,7 @@ class _GraphiqlWindow extends Component<any, any> {
   }
 }
 
-const GraphiqlWindowComponent = compose(withTheme, withApi)(_GraphiqlWindow); 
+const GraphiqlWindowComponent: any = compose(withTheme, withApi)(_GraphiqlWindow); 
 GraphiqlWindowComponent.meta = {
   nameSpace: 'core',
   name: 'ReactoryGraphiQLExplorer',

@@ -1,6 +1,6 @@
 import Reactory from '@reactory/client-core/types/reactory';
 import { useReactory } from '@reactory/client-core/api';
-import { Chip } from '@material-ui/core';
+import { Chip } from '@mui/material';
 /**
  * Rep Code Filter Component.
  * 

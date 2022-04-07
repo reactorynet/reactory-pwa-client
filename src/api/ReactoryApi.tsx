@@ -8,17 +8,17 @@ import ReactDOM from 'react-dom';
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
 import inspector from 'schema-inspector';
-import uuid from 'uuid';
+import { v4 as uuid } from 'uuid';
 import classNames from 'classnames';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult } from '@apollo/client';
+import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions } from '@apollo/client';
 import localForage from 'localforage';
 import { Mutation, Query } from '@apollo/client/react/components';
 
-import CssBaseline from '@material-ui/core/CssBaseline';
-import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
-import useMediaQuery from '@material-ui/core/useMediaQuery';
+import { CssBaseline } from '@mui/material';
+import { ThemeProvider as MuiThemeProvider } from '@mui/styles';
+
 import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
@@ -39,19 +39,16 @@ import {
 import amq from '../amq';
 import * as RestApi from './RestApi';
 import GraphQL from '@reactory/client-core/api/graphql';
-import { Theme, Typography } from "@material-ui/core";
+import { Theme, Typography } from "@mui/material";
 import icons from '../assets/icons';
-import queryString from '../query-string';
+import * as queryString from '../components/utility/query-string';
 import humanNumber from 'human-number';
 import humanDate from 'human-date';
 import ApiProvider, { withApi } from './ApiProvider';
 import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
-
 import Reactory from '../types/reactory';
-import { MutationResult, QueryOptions } from "react-apollo";
-import { RefetchQueryDescription } from "@apollo/client/core/watchQueryOptions";
-import { Breakpoints } from "@material-ui/core/styles/createBreakpoints";
+
 import { cloneDeep } from "@apollo/client/utilities";
 
 const pluginDefinitionValid = (definition) => {
@@ -885,7 +882,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     });
   }
 
-  graphqlMutation(mutation, variables, options: any = { fetchPolicy: "no-cache", refresh: false}, refetchQueries: RefetchQueryDescription = []) {
+  graphqlMutation(mutation, variables, options: any = { fetchPolicy: "no-cache", refresh: false}, refetchQueries = []) {
     const that = this;
     let $mutation = null;
     if (typeof mutation === 'string') {
@@ -1021,7 +1018,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         const FORMS_QUERY = `
         query ReactoryForms {
           ReactoryForms {
-            ${FORM_QUERY_SEGMENTS.FORM_CORE_ELEMENTS}
+            ${FORM_QUERY_SEGMENTS.FORM_CORE_ELEMENTS}          
           }
         }
         `;
@@ -1102,7 +1099,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
    * @param id - string id.
    * @returns 
    */
-  form(id: string, onFormUpdated: (formDef: Reactory.IReactoryForm) => void = null) {
+  form(id: string, onFormUpdated: (formDef: Reactory.IReactoryForm, error?: Error) => void = null) {
     const that = this;
     const { formSchemas = [] } = this;
 
@@ -1128,12 +1125,13 @@ class ReactoryApi extends EventEmitter implements _dynamic {
           that.formSchemas[index] = { ...data.ReactoryFormGetById, __complete__: true };
           
           if (onFormUpdated) {
-            onFormUpdated(that.formSchemas[index]);
+            onFormUpdated(that.formSchemas[index], null);
           }
           
           that.emit(`onReactoryFormDefinitionUpdate::${id}`, that.formSchemas[index]);
         }
       }).catch((err) => {
+        onFormUpdated(null, err);
         that.log('Could not get the form component data', { err }, 'error', "ReatoryApi")
       });
     }
@@ -1392,16 +1390,19 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     componentType: string = 'component') {
     const fqn = `${nameSpace}.${name}@${version}`;
     if (isEmpty(nameSpace))
-      throw new Error('nameSpace is required for component registration');
+      throw new Error(`nameSpace is required for component registration: ${fqn}`);
     if (isEmpty(name))
-      throw new Error('name is required for component registration');
+      throw new Error(`name is required for component registration: ${fqn}`);
     if (isNil(component))
-      throw new Error('component is required to register component');
+      throw new Error(`component is required to register component: ${fqn}`);
+    
+    
+  
     this.componentRegister[fqn] = {
       nameSpace,
       name,
       version,
-      component: wrapWithApi === false ? component : withApi(component),
+      component: wrapWithApi === false ? component : withApi(component, fqn),
       tags,
       roles,
       connectors,
@@ -1425,19 +1426,23 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
   getComponents(componentFqns = []): any {
     let componentMap = {};
+    const that = this;
     componentFqns.forEach(fqn => {
       let component = null;
+      let $name: string = '';
       if (typeof fqn === 'string') {
         component = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
         try {
           if (component) {
             const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
+            $name = component.name;
             componentMap[component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
           } else {
-            componentMap[componentPartsFromFqn(fqn).name] = this.getNotFoundComponent();
+            $name = componentPartsFromFqn(fqn).name;
+            componentMap[$name] = this.getNotFoundComponent();
           }
         } catch (e) {
-          this.log('Error Occured Loading Component Fqns', [fqn], 'error');
+          that.log('Error Occured Loading Component Fqns', [fqn], 'error');
         }
       }
       if (typeof fqn === 'object') {
@@ -1445,14 +1450,24 @@ class ReactoryApi extends EventEmitter implements _dynamic {
           component = this.componentRegister[`${fqn.componentFqn}${fqn.componentFqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
           try {
             if (component) {
-              const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
-              componentMap[typeof fqn.alias === 'string' ? fqn.alias : component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
+              const canUserCreateComponent = isArray(component.roles) === true ? that.hasRole(component.roles) : true;
+              $name = typeof fqn.alias === 'string' ? fqn.alias : component.name;
+              componentMap[$name] = canUserCreateComponent === true ? component.component : that.getNotAllowedComponent(component.name);
+
             } else {
-              componentMap[componentPartsFromFqn(fqn.componentFqn).name] = this.getNotFoundComponent();
+              componentMap[componentPartsFromFqn(fqn.componentFqn).name] = that.getNotFoundComponent();
             }
+
+
           } catch (e) {
-            this.log('Error Occured Loading Component Fqns', fqn.componentFqn, 'error');
+            that.log('Error Occured Loading Component Fqns', fqn.componentFqn, 'error');
           }
+        }
+      }
+
+      if($name) {
+        if(typeof componentMap[$name] === "object") {
+          that.log(`Warning ${$name} component is an object`, fqn, 'warning')
         }
       }
     });

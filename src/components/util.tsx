@@ -5,7 +5,7 @@ import { map } from 'lodash';
 import {
   Paper,
   Grid
-} from '@material-ui/core';
+} from '@mui/material';
 
 const DefaultProfile = {
   id: 'default',
@@ -234,7 +234,7 @@ export const ThemeResource = (path = 'images/avatar.png') => {
   return `${partnerThemeRoute}${path}`;
 }
 
-export const getAvatar = (profile, alt) => {
+export const getAvatar = (profile, alt?) => {
   if (nil(profile)) return CDNProfileResource();
   if (nil(profile.avatar)) return CDNProfileResource();
   if (profile.anon === true) return CDNProfileResource();

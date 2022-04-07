@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import MomentUtils from '@date-io/moment';
 import { ApolloProvider } from '@apollo/client';
 import {
@@ -15,11 +14,11 @@ import {
 import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
-import useMediaQuery from '@material-ui/core/useMediaQuery';
-import { ThemeProvider, Theme } from '@material-ui/core/styles';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import { createMuiTheme, makeStyles } from '@material-ui/core/styles';
-import queryString from './query-string';
+//import useMediaQuery from '@mui/useMediaQuery';
+import { ThemeProvider } from '@mui/styles';
+import { Theme, CssBaseline, createTheme } from '@mui/material'
+import { makeStyles } from '@mui/styles';
+import queryString from './components/utility/query-string';
 import './App.css';
 import Header from '@reactory/client-core/components/shared/DefaultHeader';
 import {
@@ -29,12 +28,14 @@ import {
 import ReactoryApi, { ReactoryApiEventNames } from './api'
 import { deepEquals } from './components/reactory/form/utils';
 import ReactoryApolloClient from './api/ReactoryApolloClient';
-import { Typography, Icon, Paper, Hidden, Box } from '@material-ui/core';
+import { Typography, Icon, Paper, Box } from '@mui/material';
 import license from './license';
 import { ReactoryProvider } from './api/ApiProvider';
 import Reactory from '@reactory/client-core/types/reactory';
 
-const packageInfo = require('../package.json');
+const packageInfo = {
+  version: '1.0.0'
+}
 
 const {
   REACT_APP_CLIENT_KEY,
@@ -71,7 +72,7 @@ componentRegistery.forEach((componentDef) => {
 
 reactory.$windowSize = reactory.getSizeSpec();
 
-const store = configureStore();
+const store = configureStore(null);
 reactory.reduxStore = store;
 window.reactory = {
   api: reactory
@@ -108,7 +109,9 @@ const Globals = ({ api }) => {
 
   return (
     <div data-v={`${v}`} data-globals-container="true">
-      {globals.map((GLOBALFORM, gidx) => { return (<GLOBALFORM key={gidx} />) })}
+      {globals.map((GLOBALFORM, gidx) => {        
+        return (<GLOBALFORM key={gidx} />) 
+      })}
     </div>
   );
 
@@ -438,8 +441,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [error, setError] = React.useState<Error>(null);
   const [apiStatus, setApiStatus] = React.useState<any>(null);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
-  const [theme, setTheme] = React.useState<any>(createMuiTheme(props.appTheme));
-  const [statusInterval, setStatusInterval] = React.useState<NodeJS.Timeout>(null);
+  const [theme, setTheme] = React.useState<any>(createTheme(props.appTheme));
+  const [statusInterval, setStatusInterval] = React.useState<any>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
   const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
@@ -499,7 +502,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
     if (Object.keys(themeOptions).length === 0) themeOptions = { ...props.appTheme };
 
-    let muiTheme: Theme & any = createMuiTheme(themeOptions);
+    let muiTheme: Theme & any = createTheme(themeOptions);
 
     if (themeOptions.provider && typeof themeOptions.type === 'string') {
       if (themeOptions.provider[themeOptions.type]) {
@@ -507,7 +510,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         switch (themeOptions.type) {
           case 'material':
           default: {
-            muiTheme = createMuiTheme(themeOptions);
+            muiTheme = createTheme(themeOptions);
           }
         }
       }
@@ -632,7 +635,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   useEffect(willMount, []);
 
-  const useStyles = makeStyles(($muiTheme) => {
+  const useStyles = makeStyles(() => {
+    
     return {
 
       root_paper: {
@@ -645,24 +649,24 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       },
 
       selectedMenuLabel: {
-        color: $muiTheme.palette.primary.main,
-        paddingRight: $muiTheme.spacing(1.5),
-        paddingLeft: $muiTheme.spacing(1)
+        color: theme.palette.primary.main,
+        paddingRight: theme.spacing(1.5),
+        paddingLeft: theme.spacing(1)
       },
       prepend: {
         color: 'rgb(34, 39, 50)',
         opacity: 0.7,
-        paddingLeft: $muiTheme.spacing(1.5),
-        paddingRight: $muiTheme.spacing(1)
+        paddingLeft: theme.spacing(1.5),
+        paddingRight: theme.spacing(1)
       },
       selected: {
         color: 'rgb(34, 39, 50)',
         opacity: 1,
-        paddingLeft: $muiTheme.spacing(1)
+        paddingLeft: theme.spacing(1)
       },
       preffered: {
         fontWeight: 'bold',
-        color: $muiTheme.palette.primary.main
+        color: theme.palette.primary.main
       },
       get_started: {
         fontSize: '20px',
@@ -693,7 +697,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         <ThemeProvider theme={theme}>
           <Provider store={store}>
             <ApolloProvider client={reactory.client}>
-              <MuiPickersUtilsProvider utils={MomentUtils}>
+              
                 <ReactoryProvider api={reactory}>
                   <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
                     {offline === false && <Globals api={reactory} />}
@@ -706,7 +710,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                     <Footer />
                   </Paper>
                 </ReactoryProvider>
-              </MuiPickersUtilsProvider>
+              
             </ApolloProvider>
           </Provider>
         </ThemeProvider>

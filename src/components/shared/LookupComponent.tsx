@@ -1,9 +1,9 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { isArray, indexOf } from 'lodash';
-import { compose } from 'recompose';
-import { Icon, StyledComponentProps, Theme } from '@material-ui/core';
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { compose } from 'redux';
+import { Icon, StyledComponentProps, Theme } from '@mui/material';
+import { withStyles, withTheme } from '@mui/styles';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import ReactoryApi from 'api';
 import Reactory from 'types/reactory';

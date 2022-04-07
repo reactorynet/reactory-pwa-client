@@ -10,40 +10,40 @@ import {
   Fab,
   Icon,
   Theme,
-  Table,
-  TableRow,
-  TableFooter,
-  TablePagination,
   Toolbar,
   Select,
-  TableCell,
 
-} from '@material-ui/core'
-import MaterialTable, {
-  MTableToolbar,
-  MTableBody,
-  MTablePagination,
-  MTableBodyRow,
-  MTableCell,
-  MTableHeader,
-} from 'material-table';
+  useMediaQuery,
+  Table,
+  TableRow,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TablePagination
+
+} from '@mui/material'
+// import MaterialTable, {
+//   MTableToolbar,
+//   MTableBody,
+//   MTablePagination,
+//   MTableBodyRow,
+//   MTableCell,
+//   MTableHeader,
+// } from 'material-table';
 
 import {
-  useMediaQuery
-} from '@material-ui/core';
+  
 
+} from '@mui/material';
 import { withApi } from '../../../api/ApiProvider';
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withStyles, withTheme } from '@mui/styles';
 import { find, template, get } from 'lodash';
-import { Styles } from '@material-ui/styles/withStyles/withStyles';
+import { Styles } from '@mui/styles/withStyles/withStyles';
 import Reactory from '@reactory/client-core/types/reactory';
 import ReactoryApi from 'api';
-import { QueryResult } from '@apollo/client';
-import { Resolver } from 'dns';
 import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
-import { table } from 'console';
-
 export interface MaterialTableRemoteDataReponse {
   data: any[],
   page: number,
@@ -205,7 +205,7 @@ const ReactoryMaterialTablePagination = (props) => {
             </Grid>
           </Grid>
           <Grid item sm={6} md={4}>
-            <MTablePagination {...{ ...props, classes: { root: classes.root } }} />
+            <TablePagination {...{ ...props, classes: { root: classes.root } }} />
           </Grid>
         </Grid>
       </Grid>
@@ -868,10 +868,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return willUnmount;
   }, []);
 
-  try {
-    return (
-      <>
-        <MaterialTable
+  {/* <MaterialTable
           columns={columns || []}
           tableRef={(ref) => { tableRef.current = ref, bindRefreshEvents(ref) }}
           data={rows || []}
@@ -883,7 +880,51 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           detailPanel={detailsPanel}
           onSelectionChange={ (rows) => {  
             reactory.emit(`MaterialTableWidget.${idSchema.$id}.onSelectionChange`, rows)
-          } } />
+
+          } } /> */}
+
+
+  const getHeader = () => {
+    return <TableHead><TableRow><TableCell>Header</TableCell></TableRow></TableHead>
+  }        
+
+  const getBody = () => {
+    <TableBody>
+      <TableRow>
+        <TableCell>Body</TableCell>
+      </TableRow>
+    </TableBody>
+  }
+
+  const getFooter = () => {
+    return <TableRow>
+      <TableCell>Footer</TableCell>
+    </TableRow>
+  }
+
+  const getPagination = () => {
+
+    return (
+      <TablePagination 
+        count={10}
+        page={1}
+        rowsPerPage={10}
+        component={(props)=>{ return (<>COmponent</>) }}
+        onPageChange={(evt, page)=>{}}
+        >
+
+      </TablePagination>)
+  }
+
+  try {
+    return (
+      <>
+       <Table>
+         {getHeader()}
+         {getBody()}
+         {getFooter()}
+         {getPagination()}         
+       </Table>
         {confirmDialog}
       </>
     )

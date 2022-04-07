@@ -1,11 +1,11 @@
 import React, { Component, Fragment } from 'react';
-import { compose } from 'recompose';
-import { Button, IconButton, Icon, TextField } from '@material-ui/core';
-import { withStyles, withTheme } from '@material-ui/styles';
+import { compose } from 'redux';
+import { Button, IconButton, Icon, TextField } from '@mui/material';
+import { withStyles, withTheme } from '@mui/styles';
 import { withApi } from '@reactory/client-core/api';
 import Reactory from '@reactory/client-core/types/reactory';
 import LabelWidget from './LabelWidget';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 
 export interface PagingResult {
   total: number,

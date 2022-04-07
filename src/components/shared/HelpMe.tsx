@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
-import { compose } from 'recompose';
-import { Paper, Theme } from '@material-ui/core';
-import { withTheme } from '@material-ui/styles';
+import { compose } from 'redux';
+import { Paper, Theme } from '@mui/material';
+import { withTheme } from '@mui/styles';
 import { withApi } from '../../api/ApiProvider';
 import Reactory from '@reactory/client-core/types/reactory';
 

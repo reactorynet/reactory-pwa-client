@@ -1,4 +1,6 @@
-const DateFieldTemplate = (props: any) => {
+export const DateFieldTemplate = (props: any) => {
 
   return <>{props.children}</>
 }
+
+export default DateFieldTemplate

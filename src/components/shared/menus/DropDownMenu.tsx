@@ -4,12 +4,12 @@ import uuid from "uuid";
 import om from "object-mapper";
 import { compose } from "redux";
 import { isNil } from "lodash";
-import { withStyles, withTheme, makeStyles } from "@material-ui/core/styles";
-import { Tooltip } from "@material-ui/core";
-import IconButton from "@material-ui/core/IconButton";
-import { Menu, MenuItem } from "@material-ui/core";
-import Icon from "@material-ui/core/Icon";
-import { ListItemIcon } from "@material-ui/core";
+import { withStyles, withTheme, makeStyles } from "@mui/styles";
+import { Theme, Tooltip } from "@mui/material";
+import IconButton from "@mui/material/IconButton";
+import { Menu, MenuItem } from "@mui/material/";
+import Icon from "@mui/material/Icon";
+import { ListItemIcon } from "@mui/material";
 
 
 const noHandler = (evt, menuItem) => {
@@ -27,19 +27,8 @@ export const DropDownMenu = (props) => {
   }
 
   const { menus, tooltip, theme } = props;
-  const ariaId = props.id || uuid();
-  const menuItems = [];
-
-  const palette = theme.palette;
-
-  const classes: any = makeStyles((theme) => {
-    return {
-      icon: {
-        color: theme.palette[props.color || "primary"].contrastText
-      }
-    };
-  })();
-
+  const ariaId = props.id || uuid.v4();
+  const menuItems = []; 
 
   let _menus = menus;
   if (props.propertyMap) {

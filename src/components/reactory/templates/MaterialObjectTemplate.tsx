@@ -1,16 +1,13 @@
 import React, { Component, Fragment } from 'react';
 import { compose } from 'redux';
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withStyles, withTheme } from '@mui/styles';
 import { withApi } from '../../../api/ApiProvider';
 import { template, isNil, isEmpty, isArray } from 'lodash';
 import * as Widgets from '../widgets';
 import {
   Button,
   Typography,
-  ExpansionPanel,
-  ExpansionPanelDetails,
   AccordionSummary,
-  ExpansionPanelActions,
   Divider,
   Card,
   CardContent,
@@ -22,8 +19,7 @@ import {
   Toolbar,
   Tooltip,
   Paper,
-} from '@material-ui/core';
-import { sign } from 'crypto';
+} from '@mui/material';
 
 const MaterialObjectTemplateStyles = (theme) => ({
     root: {

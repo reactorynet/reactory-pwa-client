@@ -22,13 +22,13 @@ import {
   Switch,
   Checkbox,
   Theme
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Pagination
-} from '@material-ui/lab'
+} from '@mui/lab'
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux';
-import { withStyles, withTheme, makeStyles } from '@material-ui/core/styles';
+import { withStyles, withTheme, makeStyles } from '@mui/styles';
 import Reactory from '@reactory/client-core/types/reactory';
 
 
@@ -343,7 +343,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
     };
 
     widgetsAfter.push(
-      (<Fab key={`${idSchema.$id}_add_array`} variant={"round"} color={"primary"} onClick={addItem}>
+      (<Fab key={`${idSchema.$id}_add_array`} variant={"circular"} color={"primary"} onClick={addItem}>
         <Icon>add</Icon>
       </Fab>)
     )
@@ -727,7 +727,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 
           /** Root Item Properties */
           const listItemProps = {
-            id: item.id ? item.id : uuid(),
+            id: item.id ? item.id : uuid.v4(),
             key: `${idSchema.$id}.${itemIndex}`
           };
 

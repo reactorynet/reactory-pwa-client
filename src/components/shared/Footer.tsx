@@ -1,10 +1,10 @@
 import React from 'react';
 import { withApi, useReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/client-core/types/reactory';
-import * as MaterialCore from '@material-ui/core';
-import { makeStyles } from '@material-ui/styles';
+import * as MaterialCore from '@mui/material';
+import { makeStyles } from '@mui/styles';
 import useSizeSpec from '@reactory/client-core/components/hooks/useSizeSpec';
-import { Theme } from '@material-ui/core';
+import { Theme } from '@mui/material';
 
 
 export const Footer = () => {

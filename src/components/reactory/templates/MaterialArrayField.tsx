@@ -8,11 +8,11 @@ import {
   Toolbar,
   Tooltip,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import PropTypes from "prop-types";
 import includes from "lodash/includes";
 
-import { UnsupportedField } from '@reactory/client-core/components/reactory/form/components/fields';
+import UnsupportedField from '@reactory/client-core/components/reactory/form/components/fields/UnsupportedField';
 
 import {
   getWidget,
@@ -66,14 +66,14 @@ function DefaultArrayItem(props) {
         <Toolbar>
           {(props.hasMoveUp || props.hasMoveDown) && (
             <IconButton
-              tabIndex="-1"
+              tabIndex={-1}
               disabled={props.disabled || props.readonly || !props.hasMoveUp}
               onClick={props.onReorderClick(props.index, props.index - 1)}><Icon>keyboard_arrow_up</Icon></IconButton>
           )}
 
           {(props.hasMoveUp || props.hasMoveDown) && (
             <IconButton
-              tabIndex="-1"
+              tabIndex={-1}
               disabled={
                 props.disabled || props.readonly || !props.hasMoveDown
               }
@@ -83,7 +83,7 @@ function DefaultArrayItem(props) {
 
           {props.hasRemove && (
             <IconButton
-              tabIndex="-1"
+              tabIndex={-1}
               disabled={props.disabled || props.readonly}
               onClick={props.onDropIndexClick(props.index)}
             ><Icon>delete_outline</Icon></IconButton>

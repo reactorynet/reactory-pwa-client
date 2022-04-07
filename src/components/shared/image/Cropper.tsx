@@ -9,7 +9,7 @@ import {
   Typography,
   Toolbar,
   Grid,
-} from '@material-ui/core';
+} from '@mui/material';
 import "react-image-crop/dist/ReactCrop.css";
 import ReactoryApi, { useReactory } from "@reactory/client-core/api";
 

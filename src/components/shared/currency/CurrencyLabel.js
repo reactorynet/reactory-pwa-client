@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { compose } from 'recompose';
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { compose } from 'redux';
+import { withStyles, withTheme } from '@mui/styles';
 import { withApi } from '../../../api/ApiProvider';
 
 class CurrencyLabel extends Component {

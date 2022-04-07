@@ -2,7 +2,7 @@ import React, { Component, Fragment } from 'react';
 import { isNil, isEmpty, isArray } from 'lodash';
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import { withStyles, withTheme } from '@mui/styles';
 import {
   Typography,
   Card,
@@ -16,7 +16,7 @@ import {
   Toolbar,
   Tooltip,
   FormControlProps,
-} from '@material-ui/core'
+} from '@mui/material'
 
 import { withApi } from '../../../api/ApiProvider'
 

@@ -397,7 +397,31 @@ const apiStatus = gql`
       id
       theme
       themeOptions
-      themes
+      themes {
+        id
+        name
+        nameSpace
+        version
+        modes {
+          id
+          name
+          description
+          icon
+        }
+        assets {
+          id
+          name
+          assetType
+          url
+          loader
+          options
+          data
+        }
+        colorSchemes {
+          primary
+          secondary
+        }
+      }
       server {
         id
         version,

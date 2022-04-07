@@ -5,12 +5,10 @@ import { TemplateType, UIFrameWork } from './constants';
 import {
   ApolloClient,
   ApolloQueryResult,
-  MutationResult,
-  QueryResult
+  MutationResult,  
 } from "@apollo/client";
-import React, { CSSProperties, StyleHTMLAttributes } from 'react';
-import Module from 'module';
-import GoogleMap from 'react-google-maps/lib/components/GoogleMap';
+import React, { CSSProperties } from 'react';
+// import GoogleMap from 'react-google-maps/lib/components/GoogleMap';
 
 namespace Reactory {
 
@@ -710,6 +708,9 @@ namespace Reactory {
     fileType?: string,
     components: IReactoryComponentRegistryEntry
   }
+  /**
+   * 
+   */
   export interface IReactoryForm {
     id: string,
     uiFramework: string,
@@ -764,7 +765,17 @@ namespace Reactory {
      * may relay on in order to successfully load.
      */
     dependencies?: IReactoryComponentDefinition[],
+    /**
+     * An array of modules that the form may require. 
+     * These modules are compiled and emitted at runtime to optimize 
+     * best use of server resource and client resources
+     */
     modules?: IReactoryFormModule[]
+    /**
+     * Boolean flag stored on the form to indicate if the full 
+     * schema has been fetched yet.
+     */
+    __complete__?: Boolean
     [key: string]: any
   }
 
@@ -924,7 +935,7 @@ namespace Reactory {
   }
 
   export interface IReactoryMapOnChangeEvent {
-    target: GoogleMap,
+    target: any,
     value: IReactoryMarkerData,
     change: string | "add" | "edit" | "delete" | "hide" | "detail" | "select" | "zoom",
     index?: number,

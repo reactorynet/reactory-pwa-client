@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { throttle, isNil, isEmpty } from 'lodash'
-import { compose } from 'recompose';
+import { compose } from 'redux';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 
 import om from 'object-mapper';
@@ -20,9 +20,9 @@ import {
   TextField,
   InputLabelProps,
   InputProps,
-} from '@material-ui/core';
+} from '@mui/material';
 
-import { withTheme } from '@material-ui/styles';
+import { withTheme } from '@mui/styles';
 
 
 const MaterialStringFieldWidget = (props) => {

@@ -375,7 +375,7 @@ For example:
 ```js
 import React, { Component } from 'react';
 
-class Button extends Component {
+class Button extends Component<any, any>
   render() {
     // ...
   }
@@ -391,7 +391,7 @@ export default Button; // Don’t forget to use export default!
 import React, { Component } from 'react';
 import Button from './Button'; // Import a component from another file
 
-class DangerButton extends Component {
+class DangerButton extends Component<any, any>
   render() {
     return <Button color="red" />;
   }
@@ -432,7 +432,7 @@ export { moduleA };
 ```js
 import React, { Component } from 'react';
 
-class App extends Component {
+class App extends Component<any, any>
   handleClick = () => {
     import('./moduleA')
       .then(({ moduleA }) => {
@@ -481,7 +481,7 @@ This project setup uses [Webpack](https://webpack.js.org/) for handling all asse
 import React, { Component } from 'react';
 import './Button.css'; // Tell Webpack that Button.js uses these styles
 
-class Button extends Component {
+class Button extends Component<any, any>
   render() {
     // You can use them as regular CSS styles
     return <div className="Button" />;
@@ -740,39 +740,6 @@ const $ = window.$;
 This makes it obvious you are using a global variable intentionally rather than because of a typo.
 
 Alternatively, you can force the linter to ignore any line by adding `// eslint-disable-line` after it.
-
-## Adding Bootstrap
-
-You don’t have to use [React Bootstrap](https://react-bootstrap.github.io) together with React but it is a popular library for integrating Bootstrap with React apps. If you need it, you can integrate it with Create React App by following these steps:
-
-Install React Bootstrap and Bootstrap from npm. React Bootstrap does not include Bootstrap CSS so this needs to be installed as well:
-
-```sh
-npm install --save react-bootstrap bootstrap@3
-```
-
-Alternatively you may use `yarn`:
-
-```sh
-yarn add react-bootstrap bootstrap@3
-```
-
-Import Bootstrap CSS and optionally Bootstrap theme CSS in the beginning of your ```src/index.js``` file:
-
-```js
-import 'bootstrap/dist/css/bootstrap.css';
-import 'bootstrap/dist/css/bootstrap-theme.css';
-// Put any other imports below so that CSS from your
-// components takes precedence over default styles.
-```
-
-Import required React Bootstrap components within ```src/App.js``` file or your custom component files:
-
-```js
-import { Navbar, Jumbotron, Button } from 'react-bootstrap';
-```
-
-Now you are ready to use the imported React Bootstrap components within your component hierarchy defined in the render method. Here is an example [`App.js`](https://gist.githubusercontent.com/gaearon/85d8c067f6af1e56277c82d19fd4da7b/raw/6158dd991b67284e9fc8d70b9d973efe87659d72/App.js) redone using React Bootstrap.
 
 ### Using a Custom Theme
 

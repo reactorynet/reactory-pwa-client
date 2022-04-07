@@ -1,5 +1,5 @@
 import React, { Component, Fragment } from 'react';
-import { compose } from 'recompose';
+import { compose } from 'redux';
 import {
   AppBar,
   Button,
@@ -13,8 +13,8 @@ import {
   Switch,
   Toolbar,
   Typography
-} from '@material-ui/core';
-import { withStyles, withTheme } from '@material-ui/styles';
+} from '@mui/material';
+import { withStyles, withTheme } from '@mui/styles';
 import { withApi } from '@reactory/client-core/api';
 import Reactory from '@reactory/client-core/types/reactory';
 import { getUiOptions } from '@reactory/client-core/components/reactory/form/utils';

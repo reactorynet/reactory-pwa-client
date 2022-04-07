@@ -15,7 +15,7 @@ process.on('unhandledRejection', err => {
 require('../config/env');
 
 const path = require('path');
-const chalk = require('react-dev-utils/chalk');
+const chalk = require('chalk');
 const fs = require('fs-extra');
 const moment = require('moment');
 const webpack = require('webpack');
@@ -40,7 +40,7 @@ const WARN_AFTER_CHUNK_GZIP_SIZE = 1024 * 1024;
 const isInteractive = process.stdout.isTTY;
 
 // Warn and crash if required files are missing
-if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {
+if (!checkRequiredFiles([paths.appTemplate, paths.appIndexJs])) {
   process.exit(1);
 }
 

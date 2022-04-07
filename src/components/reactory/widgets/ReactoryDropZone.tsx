@@ -1,16 +1,16 @@
 import React, { Component, Fragment, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { withStyles, withTheme } from '@material-ui/styles';
+import { withStyles, withTheme } from '@mui/styles';
 import ReactoryApi from '@reactory/client-core/api';
 import { withApi } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux';
-import { Typography, TypographyProps, Icon, PropTypes } from '@material-ui/core';
+import { Typography, TypographyProps, Icon, PropTypes } from '@mui/material';
 import gql from 'graphql-tag';
 
 
 interface DropZoneIconProps {
   icon: String,
-  color: PropTypes.Color,
+  color: any,
   position: String | "left" | "right"
 }
 

@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import { compose } from 'recompose';
-import { withTheme, withStyles } from '@material-ui/styles';
+import { compose } from 'redux';
+import { withTheme, withStyles } from '@mui/styles';
 import ReactoryApi, { withApi } from '@reactory/client-core/api';
-import { UserListItem } from '../user'
+
 import { withRouter } from 'react-router';
 
 interface NotFoundProps {
@@ -67,9 +67,9 @@ class NotFound extends Component<NotFoundProps, NotFoundState> {
         }
       }
       if (mustCheck === true) message = `Waiting for component ${waitingFor} to load.`
-      return (
-        <UserListItem user={{ firstName: 'Software Factory', lastName: '', id: 'reactory', avatar: 'reactory_bot.png' }} message={`Waiting for application components to finish loading... ${process.env.NODE_ENV !== 'production' ? this.props.waitingFor : ''}`} onClick={onUserItemClicked} />
-      )
+      //<UserListItem user={{ firstName: 'Software Factory', lastName: '', id: 'reactory', avatar: 'reactory_bot.png' }} message={`Waiting for application components to finish loading... ${process.env.NODE_ENV !== 'production' ? this.props.waitingFor : ''}`} onClick={onUserItemClicked} />
+      let msg = `Waiting for application components to finish loading... ${ process.env.NODE_ENV !== 'production' ? this.props.waitingFor : '' }`;
+      return (<>{msg}</>)
     } else {
       const { ComponentToMount } = this;
       return (<ComponentToMount {...this.props.args} />)
