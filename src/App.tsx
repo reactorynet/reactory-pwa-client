@@ -16,7 +16,7 @@ import { Provider } from 'react-redux';
 import configureStore from './models/redux';
 //import useMediaQuery from '@mui/useMediaQuery';
 import { ThemeProvider } from '@mui/styles';
-import { Theme, CssBaseline, createTheme } from '@mui/material'
+import { Theme, CssBaseline, createTheme, ThemeOptions } from '@mui/material'
 import { makeStyles } from '@mui/styles';
 import queryString from './components/utility/query-string';
 import './App.css';
@@ -433,7 +433,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 }
 
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
-
+  
 
   const [isReady, setIsReady] = React.useState<boolean>(false);
   const [auth_validated, setIsValidated] = React.useState<boolean>(false);
@@ -507,6 +507,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     if (themeOptions.provider && typeof themeOptions.type === 'string') {
       if (themeOptions.provider[themeOptions.type]) {
         //using new mechanism.
+        debugger;
         switch (themeOptions.type) {
           case 'material':
           default: {
