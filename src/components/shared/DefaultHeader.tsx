@@ -246,7 +246,7 @@ const ApplicationHeader = (props) => {
         display: 'flex',
         justifyContent: 'space-between',
         minWidth: '260px',
-        padding: `0 ${theme.spacing(1)}px`,
+        padding: `0 ${theme.spacing(1)}`,
       },
       nested: {
         paddingLeft: theme.spacing(4),
@@ -482,7 +482,7 @@ const ApplicationHeader = (props) => {
                 };
 
                 expandButton = (
-                  <IconButton key={`${menuItem.id}`} onClick={toggleMenu}>
+                  <IconButton key={`${menuItem.id}`} onClick={toggleMenu} size="large">
                     <Icon>{isExpanded === true ? 'keyboard_arrow_down' : 'keyboard_arrow_right'}</Icon>
                   </IconButton>
                 )
@@ -557,7 +557,7 @@ const ApplicationHeader = (props) => {
 
   const toggleDarkMode = () => {
 
-    if (theme.palette.type === 'dark') {
+    if (theme.palette.mode === 'dark') {
       localStorage.setItem("$reactory$theme_mode", 'light');
     } else {
       localStorage.setItem("$reactory$theme_mode", 'dark');
@@ -644,7 +644,7 @@ const ApplicationHeader = (props) => {
     <Fragment>
       <AppBar position="sticky" color="default" id="reactory_default_app_bar" style={{ visibility: show === true ? 'visible' : 'collapse' }}>
         <Toolbar variant="dense">
-          <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
+          <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer} size="large">
             <MenuIcon />
           </IconButton>
           <Typography variant="body2" color="inherit" style={{ flex: 1 }}>
@@ -660,10 +660,11 @@ const ApplicationHeader = (props) => {
             <IconButton
               aria-owns={menuOpen ? 'top-right' : null}
               aria-haspopup="true"
-              onClick={handleMenu}              
+              onClick={handleMenu}
               style={{ 
                 color: reactory.$user.id === "anon" ? "inherit" : reactory && reactory.muiTheme ? reactory.muiTheme.palette.success.main : "inherit"
-              }}>
+              }}
+              size="large">
               <PowerSettingIcon />
               <Logged open={menuOpen === true}
                 id={'top-right'}
@@ -678,12 +679,12 @@ const ApplicationHeader = (props) => {
       </AppBar>
       <Drawer variant={'temporary'} open={drawerOpen === true} className={classes.drawer} PaperProps={{ style: { width: '320px', maxWidth: '320px', overflowX: 'hidden' } }}>
         <div className={classes.drawerHeader}>
-          <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer}>
+          <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer} size="large">
             <BackIcon />
           </IconButton>
 
-          <IconButton onClick={toggleDarkMode}>
-            <Icon>{theme.palette.type === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
+          <IconButton onClick={toggleDarkMode} size="large">
+            <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
           </IconButton>
 
           <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />

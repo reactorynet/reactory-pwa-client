@@ -98,16 +98,16 @@ class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSe
     const that = this;
     return (
       <div>
-        <IconButton onClick={this.toggleSelector}>
+        <IconButton onClick={this.toggleSelector} size="large">
           <Icon>view_column</Icon>
         </IconButton>
         <FullScreenModal open={this.state.expanded} onClose={this.toggleSelector}>
           <AppBar title="Column Selection">
             <Toolbar>
-              <IconButton onClick={this.acceptSelection}>
+              <IconButton onClick={this.acceptSelection} size="large">
                 <Icon>check_circle_outline</Icon>
               </IconButton>
-              <IconButton onClick={this.toggleSelector}>
+              <IconButton onClick={this.toggleSelector} size="large">
                 <Icon>cancel</Icon>
               </IconButton>
               <Typography>Column Selection</Typography>
@@ -175,7 +175,7 @@ class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSe
           </List>
         </FullScreenModal> 
       </div>
-    )
+    );
   }
 }
 

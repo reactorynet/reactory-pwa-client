@@ -251,7 +251,6 @@ class Form extends Component<any, any> {
       style = formUiOptions.style ? { ...style, ...formUiOptions.style } : style;
     }
 
-    debugger
     const $children = (<>
     {this.renderErrors()}
       {toolbarPosition.indexOf('top') >= 0 ? (children) : null}

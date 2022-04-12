@@ -218,9 +218,9 @@ class ArrayTemplate extends Component<any, any> {
     if (has.toolbar) {
       toolbar = (
         <Toolbar>
-          {has.moveUp === true ? <IconButton type="button"><Icon>keyboard_arrow_up</Icon></IconButton> : null}
-          {has.moveDown === true ? <IconButton type="button"><Icon>keyboard_arrow_down</Icon></IconButton> : null}
-          {has.remove === true ? <IconButton type="button" onClick={deleteItemClick}><Icon>delete_outline</Icon></IconButton> : null}
+          {has.moveUp === true ? <IconButton type="button" size="large"><Icon>keyboard_arrow_up</Icon></IconButton> : null}
+          {has.moveDown === true ? <IconButton type="button" size="large"><Icon>keyboard_arrow_down</Icon></IconButton> : null}
+          {has.remove === true ? <IconButton type="button" onClick={deleteItemClick} size="large"><Icon>delete_outline</Icon></IconButton> : null}
         </Toolbar>
       )
     }

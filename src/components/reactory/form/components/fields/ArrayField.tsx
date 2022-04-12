@@ -67,7 +67,7 @@ function DefaultArrayItem(props) {
                 style={btnStyle}
                 disabled={props.disabled || props.readonly || !props.hasMoveUp}
                 onClick={props.onReorderClick(props.index, props.index - 1)}
-              />
+                size="large" />
             )}
 
             {(props.hasMoveUp || props.hasMoveDown) && (
@@ -80,7 +80,7 @@ function DefaultArrayItem(props) {
                   props.disabled || props.readonly || !props.hasMoveDown
                 }
                 onClick={props.onReorderClick(props.index, props.index + 1)}
-              />
+                size="large" />
             )}
 
             {props.hasRemove && (
@@ -92,7 +92,7 @@ function DefaultArrayItem(props) {
                 style={btnStyle}
                 disabled={props.disabled || props.readonly}
                 onClick={props.onDropIndexClick(props.index)}
-              />
+                size="large" />
             )}
           </div>
         </div>

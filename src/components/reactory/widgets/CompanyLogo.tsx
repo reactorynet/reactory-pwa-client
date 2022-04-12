@@ -237,11 +237,11 @@ class CompanyLogoWidget extends Component<any, any> {
       return (
         <Fragment>
           <div style={containerStyles}>
-            <IconButton onClick={onChangeImage} color="secondary"><Icon>{showDropZone === true ? 'close' : 'camera_enhance'}</Icon></IconButton>
+            <IconButton onClick={onChangeImage} color="secondary" size="large"><Icon>{showDropZone === true ? 'close' : 'camera_enhance'}</Icon></IconButton>
             {showDropZone && this.renderDropZone()}            
           </div>
         </Fragment>
-      )
+      );
     }
     
     

@@ -55,7 +55,7 @@ class IconButtonDropDown extends Component<any, any> {
           aria-owns={anchorEl ? 'long-menu' : null}
           aria-haspopup="true"
           onClick={this.handleClick}
-        >
+          size="large">
           <MoreVertIcon />
         </IconButton>
         <Menu

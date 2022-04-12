@@ -128,13 +128,14 @@ class LoginCard extends Component<any, any> {
   render() {
     const that = this;
     const { doLogin, props, context } = that;
-    const { theme, classes, authlist, magicLink } = props;
+    const { theme, classes, authlist, magicLink, reactory } = props;
     const { busy, loginError, message } = this.state;
     const { Logo, MicrosoftLogin } = this.componentRefs;
     const enableLogin = isEmail(this.state.username) && isValidPassword(this.state.password) && !busy;
 
     const authcomponents = [];
-    
+    const activeTheme = reactory.getTheme();
+    debugger
     authlist.forEach( authType => {
       switch (authType) {
         case 'local': {
@@ -193,7 +194,7 @@ class LoginCard extends Component<any, any> {
     });
 
     return (<CenteredContainer>
-      <Logo />
+      <Logo backgroundSrc={activeTheme.assets.logo} />
       <Paper className={classes.root}>        
         <Typography variant="h6" color="primary" style={{ fontSize: '80px', marginTop: '20px', marginBottom: '20px' }}>
           <Icon fontSize='inherit'>security</Icon>

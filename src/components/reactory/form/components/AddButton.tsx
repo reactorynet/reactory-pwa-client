@@ -12,7 +12,7 @@ export default function AddButton({ className, onClick, disabled }) {
           tabIndex="0"
           onClick={onClick}
           disabled={disabled}
-        />
+          size="large" />
       </p>
     </div>
   );

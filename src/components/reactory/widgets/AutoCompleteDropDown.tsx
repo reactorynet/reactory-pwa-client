@@ -190,7 +190,7 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
             value={$formData}
             onChange={onChange}
             inputValue={filter}
-            getOptionSelected={(opt) => {                 
+            isOptionEqualToValue={(opt) => {                 
 
                 try {
                     if ($props.multiSelect === true) {

@@ -68,7 +68,8 @@ function DefaultArrayItem(props) {
             <IconButton
               tabIndex={-1}
               disabled={props.disabled || props.readonly || !props.hasMoveUp}
-              onClick={props.onReorderClick(props.index, props.index - 1)}><Icon>keyboard_arrow_up</Icon></IconButton>
+              onClick={props.onReorderClick(props.index, props.index - 1)}
+              size="large"><Icon>keyboard_arrow_up</Icon></IconButton>
           )}
 
           {(props.hasMoveUp || props.hasMoveDown) && (
@@ -78,7 +79,7 @@ function DefaultArrayItem(props) {
                 props.disabled || props.readonly || !props.hasMoveDown
               }
               onClick={props.onReorderClick(props.index, props.index + 1)}
-            ><Icon>keyboard_arrow_down</Icon></IconButton>
+              size="large"><Icon>keyboard_arrow_down</Icon></IconButton>
           )}
 
           {props.hasRemove && (
@@ -86,7 +87,7 @@ function DefaultArrayItem(props) {
               tabIndex={-1}
               disabled={props.disabled || props.readonly}
               onClick={props.onDropIndexClick(props.index)}
-            ><Icon>delete_outline</Icon></IconButton>
+              size="large"><Icon>delete_outline</Icon></IconButton>
           )}
         </Toolbar>
       )}
@@ -138,7 +139,7 @@ function DefaultNormalArrayFieldTemplate(props) {
       const onRaiseCommand = (evt) => {
         if (api) api.raiseFormCommand(button.command, button, { formData: props.formData, formContext: props.formContext });
       }
-      return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
+      return <Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand} size="large"><Icon>{button.icon}</Icon></IconButton></Tooltip>;
     });
   }
 
@@ -159,7 +160,7 @@ function DefaultNormalArrayFieldTemplate(props) {
             disabled={props.disabled || props.readonly}
             style={{ float: 'right' }}
             color='secondary'
-          ><Icon>add</Icon></IconButton>
+            size="large"><Icon>add</Icon></IconButton>
         )}
         {buttons}
       </Toolbar>

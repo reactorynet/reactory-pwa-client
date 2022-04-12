@@ -156,13 +156,13 @@ class ChipArray extends Component<any, any> {
       <Fragment>
         { chips }        
         {this.props.formData.length > 0 ? <Tooltip title="Remove all">
-          <IconButton onClick={clearAll}>
+          <IconButton onClick={clearAll} size="large">
             <Icon>delete_outline</Icon>
           </IconButton>
         </Tooltip> : null}
         <AddItemComponentWrapper />
       </Fragment>
-    )
+    );
   }
 }
 

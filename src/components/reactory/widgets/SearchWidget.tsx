@@ -64,7 +64,7 @@ class SearchWidget extends Component<any, any> {
               <IconButton
                 aria-label="Search for user"
                 onClick={this.props.onSearch ? this.props.onSearch : () => {}}
-              >
+                size="large">
                 <Icon>search</Icon>
               </IconButton>
             </InputAdornment>

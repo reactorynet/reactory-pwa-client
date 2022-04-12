@@ -1310,40 +1310,26 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   }
 
   getTheme() {
-    const user = this.getUser();
-    const { themeOptions } = user;
-    //add theme extension
-    const extensions = {
-      reactory: {
-        icons
-      }
-    };
+    
+    try { 
+      
+      const user = this.getUser();
+      const { activeTheme = {} } = user;
+      //add theme extension
+      const extensions = {
+        reactory: {
+          icons
+        }
+      };
 
 
-    let paletteType = 'light';
+      return {...activeTheme, extensions};          
 
-    const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
-    const isLightMode = window.matchMedia("(prefers-color-scheme: light)").matches
-    const isNotSpecified = window.matchMedia("(prefers-color-scheme: no-preference)").matches
-
-    if (localStorage) {
-      paletteType = localStorage.getItem("$reactory$theme_mode")
-      if (!paletteType) {
-        paletteType = isDarkMode === true ? 'dark' : 'light'
-      }
+    }catch(error) {
+      this.log(`Error getting theme for the logged in user: ${error.message}`, error, 'error');
+      throw error;
     }
-
-    let $theme = lodash.cloneDeep(themeOptions);
-    $theme.extensions = extensions;
-
-    if ($theme.palette) $theme.palette.type = paletteType;
-    else {
-      $theme.palette = {
-        type: paletteType
-      }
-    }
-
-    return $theme;
+    
   }
 
   getRoutes() {

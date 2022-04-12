@@ -40,11 +40,15 @@ class ToolbarWidget extends Component<any, any> {
         if(api) api.raiseFormCommand(command.command, { formData: formData, formContext: formContext });
       }            
       return (
-      <Tooltip key={command.id} title={command.tooltip || command.id}>
-        <IconButton color={command.color || "secondary"} onClick={onRaiseCommand}>
-          <Icon>{command.icon}</Icon>
-        </IconButton>
-      </Tooltip>)
+        <Tooltip key={command.id} title={command.tooltip || command.id}>
+          <IconButton
+            color={command.color || "secondary"}
+            onClick={onRaiseCommand}
+            size="large">
+            <Icon>{command.icon}</Icon>
+          </IconButton>
+        </Tooltip>
+      );
     });
     return (
       <Toolbar>

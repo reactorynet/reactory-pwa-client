@@ -454,7 +454,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const onReactoryFormMounted = () => {
 
-    debugger
     reactory.amq.onReactoryPluginLoaded('loaded', onPluginLoaded);
 
     if (props.refCallback) props.refCallback(getFormReference());
@@ -498,7 +497,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   }
 
   React.useEffect(() => {
-    debugger
     let _formData = initialData(formData);
 
     let next_version = version + 1;
@@ -509,8 +507,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   }, watchList)
 
 
-  React.useEffect(() => {
-    debugger
+  React.useEffect(() => {    
     setVersion(version + 1);
   }, [formData, props])
 
@@ -1605,10 +1602,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   };
   
-  const renderForm = () => {
-    debugger
+  const renderForm = () => {    
     reactory.log(`Rendering <${formDef.nameSpace}.${formDef.name}@${formDef.version} />`, { props: props, formData }, 'debug');
-
     const filter_props = () => {
       return props;
     };
@@ -1786,7 +1781,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                 setActiveUiSchemaMenuItem(uiSchemaItem);
               };
 
-              return (<IconButton onClick={onSelectUiSchema} key={`schema_selector_${index}`}><Icon>{uiSchemaItem.icon}</Icon></IconButton>)
+              return <IconButton onClick={onSelectUiSchema} key={`schema_selector_${index}`} size="large"><Icon>{uiSchemaItem.icon}</Icon></IconButton>;
             });
 
             return schemaButtons;

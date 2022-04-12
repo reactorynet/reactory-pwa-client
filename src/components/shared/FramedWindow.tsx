@@ -417,7 +417,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
       const toolbar = (
         <AppBar>
           <Toolbar>
-            <IconButton>
+            <IconButton size="large">
               <Icon>refresh</Icon>
             </IconButton>
           </Toolbar>

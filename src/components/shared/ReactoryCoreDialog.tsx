@@ -180,7 +180,7 @@ const FullScreenDialog = (props) => {
         {
           showAppBar && <AppBar className={classes.appBar} color={"transparent"} {...appBarProps}>
             <Toolbar {...toolbarProps} variant={"dense"}>
-              <IconButton color="inherit" onClick={handleClose} aria-label="Close">
+              <IconButton color="inherit" onClick={handleClose} aria-label="Close" size="large">
                 <Icon>{props.closeButtonIcon || 'close'}</Icon>
               </IconButton>
               {title ? <Typography variant="h6" color="inherit">{title}</Typography> : null}

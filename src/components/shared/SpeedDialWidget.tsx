@@ -28,7 +28,7 @@ const styles = (theme:Theme): any => ({
     height: 80,
   },
   radioGroup: {
-    margin: `${theme.spacing(1)}px 0`,
+    margin: `${theme.spacing(1)} 0`,
   },
   speedDial: {
     position: 'absolute',

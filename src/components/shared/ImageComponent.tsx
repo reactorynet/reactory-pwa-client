@@ -31,14 +31,14 @@ class ImageWidget extends Component<any, any> {
 
         if (uiOptions.size == 'medium') {
           avatarProps.style = {
-            height: `${theme.spacing(10)}px`,
-            width: `${theme.spacing(10)}px`
+            height: theme.spacing(10),
+            width: theme.spacing(10)
           }
         }
         if (uiOptions.size == 'large') {
           avatarProps.style = {
-            height: `${theme.spacing(15)}px`,
-            width: `${theme.spacing(15)}px`
+            height: theme.spacing(15),
+            width: theme.spacing(15)
           }
         }
       }

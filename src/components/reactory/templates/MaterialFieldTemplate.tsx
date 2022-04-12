@@ -123,7 +123,7 @@ const MaterialFieldTemplateFunction = (props) => {
           //console.log('No API to handle form command', {api, evt });
         }
       }
-      return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
+      return <Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand} size="large"><Icon>{button.icon}</Icon></IconButton></Tooltip>;
     });
 
     toolbar = (

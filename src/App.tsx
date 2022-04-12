@@ -11,7 +11,7 @@ import {
   Route,
   Redirect,
 } from 'react-router-dom';
-import { isNil, isArray } from 'lodash';
+import { isNil, isArray, isFunction } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
 //import useMediaQuery from '@mui/useMediaQuery';
@@ -109,8 +109,8 @@ const Globals = ({ api }) => {
 
   return (
     <div data-v={`${v}`} data-globals-container="true">
-      {globals.map((GLOBALFORM, gidx) => {        
-        return (<GLOBALFORM key={gidx} />) 
+      {globals.map((GLOBALFORM, gidx) => {
+        return (<GLOBALFORM key={gidx} />)
       })}
     </div>
   );
@@ -196,7 +196,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
           } else {
             const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().roles) === true;
 
-            if (reactory.isAnon() === false && hasRolesForRoute === false) {              
+            if (reactory.isAnon() === false && hasRolesForRoute === false) {
               return <NotFound message="You don't have sufficient permissions to access this route." link={routeDef.path} wait={500} />
             }
 
@@ -211,17 +211,17 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
               if (auth_validated === false || authenticating === true) {
                 return <Typography style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem' }} variant='h5'>Please wait while we validate your access token...</Typography>
               } else {
-                
+
 
                 if (hasRefreshed === true && reactory.isAnon() === true && routeDef.path !== "/login") {
-                  localStorage.removeItem('hasRefreshed');                  
+                  localStorage.removeItem('hasRefreshed');
                   return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
-                }                   
-                
-                
-                if (hasRefreshed === false && reactory.isAnon() === true) {                
+                }
+
+
+                if (hasRefreshed === false && reactory.isAnon() === true) {
                   const qs = queryString.parse(route_props.location.search);
-                  if(qs['auth_token']) delete qs.auth_token;
+                  if (qs['auth_token']) delete qs.auth_token;
 
 
                   localStorage.setItem('$reactory.onlogin.redirect$', `${route_props.location.pathname}?${queryString.stringify(qs)}`);
@@ -238,12 +238,12 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             }
 
             return (
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <div style={{ margin: 'auto', display: 'flex', flexDirection: 'column', justifyContent: "center" }}>
-                  <Typography variant="h4" style={{ marginTop: '40px'}}>Verifying Client</Typography>
+                  <Typography variant="h4" style={{ marginTop: '40px' }}>Verifying Client</Typography>
                   <Icon style={{ fontSize: '48px', margin: 'auto', marginTop: '40px', }}>security</Icon>
                 </div>
-            </div>
+              </div>
             )
           }
         }
@@ -253,7 +253,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     });
 
     setRoutes($routes);
-    setVersion( v + 1);
+    setVersion(v + 1);
   }
 
   useEffect(() => {
@@ -265,7 +265,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   }, [auth_validated])
 
 
-  if(auth_validated === false) {
+  if (auth_validated === false) {
     return (<span>Validating Authentication</span>)
   }
 
@@ -433,7 +433,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 }
 
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
-  
+
 
   const [isReady, setIsReady] = React.useState<boolean>(false);
   const [auth_validated, setIsValidated] = React.useState<boolean>(false);
@@ -441,7 +441,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [error, setError] = React.useState<Error>(null);
   const [apiStatus, setApiStatus] = React.useState<any>(null);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
-  const [theme, setTheme] = React.useState<any>(createTheme(props.appTheme));
+  const [theme, setTheme] = React.useState<any>(createTheme({}));
   const [statusInterval, setStatusInterval] = React.useState<any>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
@@ -455,13 +455,14 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const { NotificationComponent, Footer } = components;
 
   const getApiStatus = (emitLogin = true) => {
-    reactory.status({ emitLogin, forceLogout: false }).then((user: any) => {
+
+    reactory.status({ emitLogin, forceLogout: false }).then((user: any) => {      
       setIsValidated(true);
       setOfflineStatus(user.offline === true)
       setUser(user);
       setIsReady(true);
-      setIsAuthenticating(false);
-      applyTheme();      
+      setIsAuthenticating(false);      
+      applyTheme();
     }).catch((validationError) => {
       setIsValidated(true);
       setUser(null);
@@ -477,8 +478,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     setCurrentRoute(path)
   }
 
-  const onLogin = () => {  
-    reactory.log('App.onLogin handler', {}, 'debug')    
+  const onLogin = () => {
+    reactory.log('App.onLogin handler', {}, 'debug')
     setUser(reactory.getUser());
     const redirect = localStorage.getItem('$reactory.onlogin.redirect$')
     if (redirect && redirect !== "") {
@@ -491,30 +492,69 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     }
   };
 
-  const onLogout = () => {    
+  const onLogout = () => {
     reactory.log('App.onLogout handler', {}, 'debug')
     setUser(reactory.getUser());
   };
 
 
   const applyTheme = () => {
-    let themeOptions = reactory.getTheme();
-    if (isNil(themeOptions)) themeOptions = { ...props.appTheme };
-    if (Object.keys(themeOptions).length === 0) themeOptions = { ...props.appTheme };
+    let activeTheme = reactory.getTheme();
+    if (isNil(activeTheme)) activeTheme = { ...props.appTheme };
+    if (Object.keys(activeTheme).length === 0) activeTheme = { ...props.appTheme };
 
-    let muiTheme: Theme & any = createTheme(themeOptions);
 
-    if (themeOptions.provider && typeof themeOptions.type === 'string') {
-      if (themeOptions.provider[themeOptions.type]) {
-        //using new mechanism.
-        debugger;
-        switch (themeOptions.type) {
-          case 'material':
-          default: {
-            muiTheme = createTheme(themeOptions);
+    //default empty state is mui  create theme
+    let muiTheme: Theme & any = createTheme();
+    
+    debugger;
+
+      const {
+        type = 'material',
+        options = {}
+      } = activeTheme;
+
+      // let themeMode = 'light';
+
+      // debugger;
+
+      // const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
+
+      // if (localStorage) {
+      //   themeMode = localStorage.getItem("$reactory$theme_mode")
+      //   if (!themeMode) {
+      //     themeMode = isDarkMode === true ? 'dark' : 'light'
+      //   }
+      // }
+
+      // let $theme = lodash.cloneDeep(options || activeTheme);
+      // $theme.extensions = extensions;
+
+      // if (type === 'material') {
+      //   if ($theme.palette) $theme.palette.mode = themeMode;
+      //   else {
+      //     $theme.palette = {
+      //       mode: themeMode
+      //     }
+      //   }
+      // }
+
+      // return $theme;
+    
+      //using new mechanism.      
+      switch (type) {
+        
+        case 'material':
+        default: {
+          debugger
+          if (activeTheme.options) {
+            muiTheme = createTheme(activeTheme.options);
+          } else {
+            //backward compat while in progress
+            muiTheme = createTheme(activeTheme);
           }
         }
-      }
+      
     }
 
     reactory.muiTheme = muiTheme;
@@ -637,7 +677,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   useEffect(willMount, []);
 
   const useStyles = makeStyles(() => {
-    
+
     return {
 
       root_paper: {
@@ -698,20 +738,20 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         <ThemeProvider theme={theme}>
           <Provider store={store}>
             <ApolloProvider client={reactory.client}>
-              
-                <ReactoryProvider api={reactory}>
-                  <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
-                    {offline === false && <Globals api={reactory} />}
-                    {//@ts-ignore
-                      <Header api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
-                    }
-                    <NotificationComponent />
-                    {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} authenticating={isAuthenticating}/>}
-                    <Offline onOfflineChanged={onOfflineChanged} />
-                    <Footer />
-                  </Paper>
-                </ReactoryProvider>
-              
+
+              <ReactoryProvider api={reactory}>
+                <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
+                  {offline === false && <Globals api={reactory} />}
+                  {//@ts-ignore
+                    <Header api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
+                  }
+                  <NotificationComponent />
+                  {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} authenticating={isAuthenticating} />}
+                  <Offline onOfflineChanged={onOfflineChanged} />
+                  <Footer />
+                </Paper>
+              </ReactoryProvider>
+
             </ApolloProvider>
           </Provider>
         </ThemeProvider>

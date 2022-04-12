@@ -66,7 +66,8 @@ function DefaultObjectFieldTemplate(props: any) {
       {canExpand() && (
         <IconButton
           onClick={props.onAddClick(props.schema)}
-          disabled={props.disabled || props.readonly}>
+          disabled={props.disabled || props.readonly}
+          size="large">
           <Icon>add</Icon>
         </IconButton>
       )}

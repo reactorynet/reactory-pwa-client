@@ -22,14 +22,14 @@ const ArrayItemToolbar = () => {
 
   return (
     <Grid item md={12} xs={12}>
-      <IconButton>
+      <IconButton size="large">
         <Icon>keyboard_arrow_up</Icon>
       </IconButton>
-      <IconButton>
+      <IconButton size="large">
         <Icon>keyboard_arrow_down</Icon>
       </IconButton>
     </Grid>
-  )
+  );
 }
 
 

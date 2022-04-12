@@ -102,20 +102,20 @@ class ColumnFilterWidget extends Component<ColumnFilterWidgetProps, ColumnFilter
     const that = this;
     return (
       <div>
-        <IconButton onClick={this.toggleFilterSelector}>
+        <IconButton onClick={this.toggleFilterSelector} size="large">
           <Icon>filter_list</Icon>
         </IconButton>
         <FullScreenModal open={this.state.expanded} onClose={this.toggleFilterSelector} title="Column Filter">
           <AppBar title="Column Selection">
             <Toolbar>
-              <IconButton onClick={this.acceptSelection}>
+              <IconButton onClick={this.acceptSelection} size="large">
                 <Icon>check_circle_outline</Icon>
               </IconButton>
-              <IconButton onClick={this.toggleFilterSelector}>
+              <IconButton onClick={this.toggleFilterSelector} size="large">
                 <Icon>cancel</Icon>
               </IconButton>
               <Typography>Column Filter</Typography>
-              <IconButton style={{float: 'right'}} onClick={this.onAddFilterClicked}>
+              <IconButton style={{float: 'right'}} onClick={this.onAddFilterClicked} size="large">
                 <Icon>add_circle</Icon>
               </IconButton>
             </Toolbar>
@@ -175,7 +175,7 @@ class ColumnFilterWidget extends Component<ColumnFilterWidgetProps, ColumnFilter
             </List>
         </FullScreenModal>            
       </div>
-    )
+    );
   }
 }
 

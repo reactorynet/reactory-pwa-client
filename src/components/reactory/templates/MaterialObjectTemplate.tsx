@@ -72,7 +72,7 @@ const MaterialObjectTemplateHOC = (props) => {
             const onRaiseCommand = ( evt ) => {                      
               if(api) reactory.raiseFormCommand(button.command,  { formData: formData, formContext: formContext });              
             };            
-            return (<Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand}><Icon>{button.icon}</Icon></IconButton></Tooltip>)
+            return <Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand} size="large"><Icon>{button.icon}</Icon></IconButton></Tooltip>;
           });
           toolbar = (<Toolbar>{buttons}</Toolbar>);
         }

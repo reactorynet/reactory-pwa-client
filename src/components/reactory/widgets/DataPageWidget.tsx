@@ -129,7 +129,7 @@ class DataPageWidget extends Component<DataPageWidgetProps, DataPageWidgetState>
     return (
       <div className={this.props.classes.container}>
         {this.props.formData.page > 1 ? 
-          <IconButton onClick={this.onPrevious}>
+          <IconButton onClick={this.onPrevious} size="large">
             <Icon>chevron_left</Icon>
           </IconButton> : null}
           <TextField
@@ -145,11 +145,11 @@ class DataPageWidget extends Component<DataPageWidgetProps, DataPageWidgetState>
             variant="filled"
           />
         <Typography variant={"h6"} style={{ marginLeft: '8px' }}>of {Math.floor(this.props.formData.total / this.props.formData.pageSize)}</Typography>
-        <IconButton onClick={this.onNext}>
+        <IconButton onClick={this.onNext} size="large">
           <Icon>chevron_right</Icon>
         </IconButton>
       </div>
-    )
+    );
   }
 }
 

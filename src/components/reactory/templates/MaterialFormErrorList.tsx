@@ -71,7 +71,8 @@ const ErrorPopover = (props) => {
         aria-haspopup="true"
         onClick={handlePopoverOpen}
         color={"primary"}
-        className={classes.errorButton}>
+        className={classes.errorButton}
+        size="large">
         <Icon>error</Icon>
       </IconButton>
       <Popover

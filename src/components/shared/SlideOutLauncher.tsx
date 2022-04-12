@@ -149,7 +149,11 @@ class SlideOutLauncher extends Component<any, any> {
 
     if (_buttonVariant === 'IconButton') {
       LaunchButton = (
-        <IconButton onClick={onClick} color={buttonProps.color || "primary"} style={buttonProps.style || {}}>
+        <IconButton
+          onClick={onClick}
+          color={buttonProps.color || "primary"}
+          style={buttonProps.style || {}}
+          size="large">
           <Icon>{icon}</Icon>
         </IconButton>
       )

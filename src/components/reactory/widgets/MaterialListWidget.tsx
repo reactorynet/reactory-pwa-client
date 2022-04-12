@@ -40,7 +40,7 @@ function LinkIconButton(link, icon) {
   }
 
   return (
-    <IconButton onClick={handleClick}>
+    <IconButton onClick={handleClick} size="large">
       <Icon>{icon}</Icon>
     </IconButton>
   );
@@ -658,7 +658,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 
 
                 let componentToRender = (
-                  <IconButton onClick={actionClick}>
+                  <IconButton onClick={actionClick} size="large">
                     <Icon>{iconKey}</Icon>
                   </IconButton>
                 )
@@ -754,7 +754,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
       </List>
       {widgetsAfter}
     </div>
-  )
+  );
 }
 
 //@ts-ignore

@@ -71,7 +71,7 @@ const GoogleMapWidget = (props: any) => {
   /**
    * the breakpoint at which we switch to a full screen MapInModal
    */
-  const shouldBreak = useMediaQuery(theme.breakpoints.down("md"));
+  const shouldBreak = useMediaQuery(theme.breakpoints.down('lg'));
 
   const state = {
     markers: [],
@@ -145,7 +145,6 @@ const GoogleMapWidget = (props: any) => {
 
 
     return (
-
       <FormControl fullWidth={true}>
         <InputLabel htmlFor={idSchema.$id}>{schema.title}</InputLabel>
         <Input          
@@ -155,10 +154,7 @@ const GoogleMapWidget = (props: any) => {
           onChange={searchClicked}
           endAdornment={
             <InputAdornment position="end">
-              <IconButton
-                aria-label="Search for an address"
-                onClick={searchClicked}                
-              >
+              <IconButton aria-label="Search for an address" onClick={searchClicked} size="large">
                 <Icon>search</Icon>
               </IconButton>
             </InputAdornment>

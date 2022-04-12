@@ -246,8 +246,7 @@ export const makeSlug = (text: string = '') => {
   return text
     .toLowerCase()
     .replace(/ /g, '-')
-    .replace(/[^\w-]+/g, '')
-    ;
+    .replace(/[^\w-]+/g, '');
 }
 
 export const getOrganizationLogo = (organizationId, file) => {

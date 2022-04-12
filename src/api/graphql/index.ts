@@ -396,18 +396,20 @@ const apiStatus = gql`
       }
       id
       theme
-      themeOptions
-      themes {
+      activeTheme {
         id
+        type
         name
         nameSpace
         version
+        description
         modes {
           id
           name
           description
           icon
         }
+        options
         assets {
           id
           name
@@ -416,11 +418,15 @@ const apiStatus = gql`
           loader
           options
           data
-        }
-        colorSchemes {
-          primary
-          secondary
-        }
+        }        
+      }
+      themes {
+        id
+        type
+        name
+        nameSpace
+        version
+        description        
       }
       server {
         id
