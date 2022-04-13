@@ -31,7 +31,7 @@ class Logo extends Component<any, any> {
       customStyle.background = `url(${this.props.backgroundSrc})`
       customStyle.backgroundSize = 'contain'
       customStyle.backgroundRepeat = 'no-repeat'
-      customStyle.backgroundPosition = 'center !important'      
+      customStyle.backgroundPosition = 'center'      
     }
 
     return <div className={this.props.classes.logo} style={this.props.style ? {...this.props.style, ...customStyle } : {...customStyle}} ></div>

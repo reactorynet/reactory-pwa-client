@@ -50,7 +50,7 @@ class LoginCard extends Component<any, any> {
     }
   }
 
-  mountComponents(){
+  mountComponents() {
     this.componentRefs = this.props.api.getComponents([
       'core.Logo@1.0.0',
       'core.Loading@1.0.0',
@@ -60,16 +60,16 @@ class LoginCard extends Component<any, any> {
     this.forceUpdate();
   }
 
-  componentDidMount(){
+  componentDidMount() {
     const that = this;
     const { api } = that.props;
     let checked = 0;
-    if(api.formSchemaLastFetch !== null) {
+    if (api.formSchemaLastFetch !== null) {
       that.mountComponents();
     } else {
-      const checkWait = () => {        
-        if(api.formSchemaLastFetch === null) {
-          if(checked >= 5) { 
+      const checkWait = () => {
+        if (api.formSchemaLastFetch === null) {
+          if (checked >= 5) {
             api.forms();
             checked = 0;
           }
@@ -77,7 +77,7 @@ class LoginCard extends Component<any, any> {
         } else {
           that.mountComponents();
         }
-      } 
+      }
 
       setTimeout(checkWait, 300);
     }
@@ -91,13 +91,13 @@ class LoginCard extends Component<any, any> {
 
     that.setState({ busy: true }, () => {
       api.setLastUserEmail(this.state.username);
-      api.login(this.state.username, this.state.password).then(({ user }) => {        
+      api.login(this.state.username, this.state.password).then(({ user }) => {
         api.afterLogin(user).then(status => {
           that.setState({ loginError: `Welcome ${user.firstName}`, loggedIn: true }, () => {
             setTimeout(() => {
               history.push(redirectOnLogin);
             }, 1000);
-          })                            
+          })
         });
       }).catch((error) => {
         that.setState({ loginError: 'Your account details could not be authenticated', busy: false });
@@ -106,15 +106,15 @@ class LoginCard extends Component<any, any> {
   }
 
   doEmailLogin = () => {
-    const { history, api } = this.props;    
+    const { history, api } = this.props;
     history.push('/send-link');
   }
 
   doRegister = evt => this.props.history.push('/register')
   doForgot = evt => this.props.history.push('/forgot')
-  updateUsername = (evt) => { 
-    this.setState({ username: evt.target.value }) 
-    if(localStorage) {
+  updateUsername = (evt) => {
+    this.setState({ username: evt.target.value })
+    if (localStorage) {
       localStorage.setItem('$reactory$last_logged_in_user', evt.target.value);
     }
   }
@@ -136,11 +136,11 @@ class LoginCard extends Component<any, any> {
     const authcomponents = [];
     const activeTheme = reactory.getTheme();
     debugger
-    authlist.forEach( authType => {
+    authlist.forEach(authType => {
       switch (authType) {
         case 'local': {
           authcomponents.push((
-            <form style={{padding: '20px', borderBottom: `1px ${theme.palette.primary.main}`}} key={authType}>
+            <form style={{ padding: '20px', borderBottom: `1px ${theme.palette.primary.main}` }} key={authType}>
               <TextField
                 label="Email"
                 style={textStyle}
@@ -164,11 +164,11 @@ class LoginCard extends Component<any, any> {
                 disabled={busy}
               />
 
-              <Fab 
+              <Fab
                 id="reactory-security::standard-login-button"
                 name="reactory-security::standard-login-button"
-                onClick={doLogin} 
-                color="primary"                
+                onClick={doLogin}
+                color="primary"
                 disabled={enableLogin === false || busy === true}
                 style={{ marginTop: '20px' }}>
                 <Icon>lock_open</Icon>
@@ -178,13 +178,13 @@ class LoginCard extends Component<any, any> {
                 Forgot Password
               </Button>
               {this.props.magicLink === true && <Fragment>
-                  <br/>
-                  <Button onClick={this.doEmailLogin} id="reactory-security::standard-send-link-button" name="reactory-security::standard-send-link-button" color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
-                    Send Magic Link
-                  </Button>
-                </Fragment>}                    
+                <br />
+                <Button onClick={this.doEmailLogin} id="reactory-security::standard-send-link-button" name="reactory-security::standard-send-link-button" color='secondary' disabled={busy} style={{ marginTop: '20px' }}>
+                  Send Magic Link
+                </Button>
+              </Fragment>}
             </form>))
-            break;
+          break;
         }
         case 'microsoft': {
           // authcomponents.push((<MicrosoftLogin key={authType} /> || <p>Login Button goes here</p>));
@@ -193,13 +193,15 @@ class LoginCard extends Component<any, any> {
       }
     });
 
+    let logoResource = activeTheme.assets.find((e) => e.name === "logo");
+
     return (<CenteredContainer>
-      <Logo backgroundSrc={activeTheme.assets.logo} />
-      <Paper className={classes.root}>        
+    <Logo backgroundSrc={logoResource?.url} />
+      <Paper className={classes.root}>
         <Typography variant="h6" color="primary" style={{ fontSize: '80px', marginTop: '20px', marginBottom: '20px' }}>
           <Icon fontSize='inherit'>security</Icon>
         </Typography>
-        <Typography variant="subtitle1" color="secondary">{loginError || 'Welcome, please sign in below' }</Typography>
+        <Typography variant="subtitle1" color="secondary">{loginError || 'Welcome, please sign in below'}</Typography>
         {authcomponents}
       </Paper>
     </CenteredContainer>)
@@ -223,13 +225,15 @@ class LoginCard extends Component<any, any> {
 
 };
 
-const styles = (theme): any => ({
-  root: {
-    maxWidth: '600px',
-    minWidth: '320px',
-    padding: theme.spacing(1),
-    textAlign: 'center',
-    margin: 'auto',
-  },
-})
+const styles = (theme): any => {  
+  return {
+    root: {
+      maxWidth: '600px',
+      minWidth: '320px',
+      padding: theme.spacing(1),
+      textAlign: 'center',
+      margin: 'auto',
+    },
+  }
+}
 export default compose(withApi, withStyles(styles), withTheme, withRouter)(LoginCard);

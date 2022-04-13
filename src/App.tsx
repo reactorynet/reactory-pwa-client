@@ -14,9 +14,9 @@ import {
 import { isNil, isArray, isFunction } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
-//import useMediaQuery from '@mui/useMediaQuery';
-import { ThemeProvider } from '@mui/styles';
-import { Theme, CssBaseline, createTheme, ThemeOptions } from '@mui/material'
+
+import { Theme, CssBaseline } from '@mui/material'
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { makeStyles } from '@mui/styles';
 import queryString from './components/utility/query-string';
 import './App.css';
@@ -441,7 +441,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [error, setError] = React.useState<Error>(null);
   const [apiStatus, setApiStatus] = React.useState<any>(null);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
-  const [theme, setTheme] = React.useState<any>(createTheme({}));
+  const [theme, setTheme] = React.useState<any>(createTheme({ palette: { mode: "dark" } }));
   const [statusInterval, setStatusInterval] = React.useState<any>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
@@ -546,13 +546,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         
         case 'material':
         default: {
-          debugger
+         
           if (activeTheme.options) {
             muiTheme = createTheme(activeTheme.options);
           } else {
             //backward compat while in progress
             muiTheme = createTheme(activeTheme);
-          }
+          }         
         }
       
     }
@@ -675,6 +675,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
   useEffect(willMount, []);
+  
 
   const useStyles = makeStyles(() => {
 
@@ -682,7 +683,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
       root_paper: {
         minHeight: window.innerHeight,
-        borderRadius: 0,
+        borderRadius: 0,        
         margin: 0,
         padding: 0,
         overflowX: "hidden",
@@ -730,6 +731,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   if (isReady === false || isAuthenticating) return <AppLoading />;
 
+ 
 
   return (
     <Router>
@@ -737,8 +739,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         <CssBaseline />
         <ThemeProvider theme={theme}>
           <Provider store={store}>
-            <ApolloProvider client={reactory.client}>
-
+            <ApolloProvider client={reactory.client}>              
               <ReactoryProvider api={reactory}>
                 <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
                   {offline === false && <Globals api={reactory} />}
@@ -751,7 +752,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                   <Footer />
                 </Paper>
               </ReactoryProvider>
-
             </ApolloProvider>
           </Provider>
         </ThemeProvider>
