@@ -168,12 +168,11 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
       const routeProps: Reactory.IRouteDefinition = {
         key: routeDef.id,
-        componentFqn: routeDef.componentFqn,
+        componentFqn: routeDef.componentFqn,        
         path: routeDef.path,
         exact: routeDef.exact === true,
         render: (route_props) => {
           reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: route_props }, 'debug');
-
           if (routeDef.redirect) {
             return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
           }
@@ -507,8 +506,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     //default empty state is mui  create theme
     let muiTheme: Theme & any = createTheme();
     
-    debugger;
-
       const {
         type = 'material',
         options = {}
@@ -729,9 +726,20 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     setOfflineStatus(isOffline)
   };
 
-  if (isReady === false || isAuthenticating) return <AppLoading />;
+  if (isReady === false) return <AppLoading />;
+  //@ts-ignore
+  let header = isAuthenticating === false ? (<Header api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />) : null;
 
- 
+
+  let onlyChild = (
+  <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
+    {offline === false && <Globals api={reactory} />}
+    {header}
+    <NotificationComponent />
+    {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} authenticating={isAuthenticating} />}
+    <Offline onOfflineChanged={onOfflineChanged} />
+    <Footer />
+  </Paper>);
 
   return (
     <Router>
@@ -741,16 +749,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           <Provider store={store}>
             <ApolloProvider client={reactory.client}>              
               <ReactoryProvider api={reactory}>
-                <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
-                  {offline === false && <Globals api={reactory} />}
-                  {//@ts-ignore
-                    <Header api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />
-                  }
-                  <NotificationComponent />
-                  {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} authenticating={isAuthenticating} />}
-                  <Offline onOfflineChanged={onOfflineChanged} />
-                  <Footer />
-                </Paper>
+                {onlyChild}
               </ReactoryProvider>
             </ApolloProvider>
           </Provider>

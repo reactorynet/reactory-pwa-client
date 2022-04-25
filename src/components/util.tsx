@@ -190,7 +190,17 @@ export const BasicContainer = (props) => {
 
 };
 
-export const omitDeep = (obj, key = '__typename') => {
+/**
+ * Function that iterates over an object and it's properties iterativly 
+ * strip out properties from an object. The default key is the __typename
+ * key, as often objects are copied from the results and posted back to the 
+ * graphql server. When it contains the typename it often leads to failures 
+ * in the graph mutation / query.
+ * @param obj - the object to inspect and clean
+ * @param key - the property name that needs to be removed
+ * @returns a cleaned object.
+ */
+export const omitDeep = (obj: Object | Object[] | any | any[], key: string = '__typename') => {
   if (nil(obj)) return null;
   if (Array.isArray(obj)) return omitDeepArrayWalk(obj, key)
   const keys = Object.keys(obj)
@@ -206,7 +216,14 @@ export const omitDeep = (obj, key = '__typename') => {
   return newObj
 }
 
-export const omitDeepArrayWalk = (arr, key = '__typename') => {
+/**
+ * Function that iterates over an array and clears each element in the array
+ * from any properties that match the given key.
+ * @param arr - the array the inspect
+ * @param key - the keyname to remove from each element.
+ * @returns array with values properties removed matching the key
+ */
+export const omitDeepArrayWalk = (arr: any[], key = '__typename') => {
   return arr.map((val) => {
     if (Array.isArray(val)) return omitDeepArrayWalk(val, key)
     else if (typeof val === 'object') return omitDeep(val, key)
@@ -242,11 +259,22 @@ export const getAvatar = (profile, alt?) => {
   //return profile.avatar
 };
 
-export const makeSlug = (text: string = '') => {
-  return text
+/**
+ * Function that generates a slug from a string input
+ * @param text 
+ * @returns 
+ */
+export const makeSlug = (text: string = '', limit: number = 0) => {
+  let slug: string = text
     .toLowerCase()
     .replace(/ /g, '-')
     .replace(/[^\w-]+/g, '');
+
+  if(limit > 0 && slug.length > limit) {
+    return slug.substring(0, limit);
+  }
+
+  return slug;
 }
 
 export const getOrganizationLogo = (organizationId, file) => {

@@ -18,7 +18,6 @@ import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 import IntersectionVisible from './utility/IntersectionVisible';
 
-import LoginPage, { RegisterPage } from './auth';
 import Loading from './shared/Loading';
 import LinkComponent from './shared/Link';
 import ReactoryRouterComponent, { ReactoryFormComponent } from './reactory/ReactoryFormComponent'
@@ -59,11 +58,11 @@ import * as utils from './util';
 import { compose } from 'redux';
 import { DropDownMenuComponent } from './shared/menus/DropDownMenu';
 
+import { ErrorBoundary } from '../api/ErrorBoundary';
+
 import * as MaterialReactoryWidgets from './reactory/widgets'
 
-export const Login = LoginPage;
 export const AdminDashboard = <NotFoundComponent key={'AdminDashboard - Deprecated'}/>;
-export const Register = RegisterPage;
 export const ReactoryRouter = ReactoryRouterComponent;
 export const ReactoryForm = ReactoryFormComponent;
 export const CompanyLogo = (props) => {
@@ -81,6 +80,12 @@ export const componentRegistery = [
     name: 'React',
     version: '1.0.0',
     component: React
+  },
+  {
+    nameSpace: 'core',
+    name: 'ErrorBoundary',
+    version: '1.0.0',
+    component: ErrorBoundary,
   },
   {
     nameSpace: 'core',
@@ -322,14 +327,7 @@ export const componentRegistery = [
     name: 'ResetPassword',
     component: () => new Error('Complete core.ResetPassword Migratation to reactory-user plugin'),
     version: '1.0.0'
-  },
-  
-  {
-    nameSpace: 'core',
-    name: 'Login',
-    component: Login,
-    version: '1.0.0',
-  },
+  },  
   {
     nameSpace: 'core',
     name: 'DateSelector',
@@ -347,12 +345,6 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'Administration',
     component: AdminDashboard,
-    version: '1.0.0',
-  },
-  {
-    nameSpace: 'core',
-    name: 'Register',
-    component: Register,
     version: '1.0.0',
   },
   {

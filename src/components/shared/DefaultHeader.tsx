@@ -3,7 +3,7 @@ import PropTypes, { any } from 'prop-types';
 import { Link, withRouter } from 'react-router-dom';
 import { compose } from 'redux';
 import { isArray, find } from 'lodash';
-import { withTheme, makeStyles } from '@mui/styles';
+import { withTheme, makeStyles, styled } from '@mui/styles';
 import {
   Avatar,
   AppBar,
@@ -130,8 +130,6 @@ const SubMenus = (props) => {
   return submenus;
 };
 
-
-
 const CacheButton = (props) => {
 
   const { reactory, classes } = props;
@@ -166,10 +164,7 @@ const CacheButton = (props) => {
 
 }
 
-
-
 const CacheComponent = compose(withApi)(CacheButton);
-
 
 const ToggleDevelopMode = (props: Reactory.IReactoryComponentProps) => {  
   const { reactory } = props;
@@ -578,16 +573,29 @@ const ApplicationHeader = (props) => {
 
   const avatarComponent = (profileLink) => {
     let AvatarComponentDef = find(getNavigationComponents(), { contextType: 'DEFAULT_HEADER_AVATAR' });
-    let AvatarComponent = null;
+    let AvatarComponent: any = null;
+
+    let styles = {
+      height: 120,
+      width: 120,
+      margin: 20,
+      marginLeft: 'auto',
+      marginRight: 'auto'
+    }
 
     if (AvatarComponentDef && AvatarComponentDef.componentFqn) {
       AvatarComponent = reactory.getComponent(AvatarComponentDef.componentFqn);
       if (AvatarComponent) {
-        return (<AvatarComponent {...{ user, profileLink, ...AvatarComponentDef.componentProps }} />)
+        //@ts-ignore
+        // AvatarComponent = styled(AvatarComponent)(styles);
+
+        return (<AvatarComponent  {...{ user, profileLink, ...AvatarComponentDef.componentProps }} />)
       }
     }
 
-    return (<Avatar src={getAvatar(user, `${user.firstName} ${user.lastName}`)} className={classes.loggedInUserAvatar} />);
+    
+    // AvatarComponent = styled(Avatar)(styles);
+    return <Avatar sx={{ width: 120, height: 120 }} src={getAvatar(user, `${user.firstName} ${user.lastName}`)} className={classes.loggedInUserAvatar} />
   }
 
   const avatarTitle = () => {

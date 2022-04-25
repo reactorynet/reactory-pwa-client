@@ -1,4 +1,5 @@
 import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties, Ref } from 'react';
+import Reactory from '@reactory/reactory-core';
 import PropTypes, { any, ReactNodeArray, string } from 'prop-types';
 import Form from './form/components/Form';
 import objectMapper from 'object-mapper';
@@ -32,7 +33,6 @@ import * as WidgetPresets from './widgets';
 import MaterialTemplates from './templates';
 import gql from 'graphql-tag';
 import { deepEquals } from './form/utils';
-import Reactory from '../../types/reactory';
 import { History } from 'history';
 import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
 import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
@@ -75,7 +75,7 @@ const DefaultUiSchema = {
   },
 };
 
-const ReactoryDefaultForm: Reactory.IReactoryForm = {
+const ReactoryDefaultForm: Reactory.Forms.IReactoryForm = {
   id: 'ReactoryLoadingForm',
   schema: DefaultLoadingSchema,
   uiSchema: DefaultUiSchema,
@@ -90,7 +90,7 @@ const ReactoryDefaultForm: Reactory.IReactoryForm = {
   __complete__: true
 };
 
-const ReactoryErrorForm: Reactory.IReactoryForm = {
+const ReactoryErrorForm: Reactory.Forms.IReactoryForm = {
   id: 'ReactoryErrorForm',
   schema: DefaultLoadingSchema,
   uiSchema: DefaultUiSchema,
@@ -125,7 +125,7 @@ export interface ReactoryFormProperties {
   uiSchemaId?: string;
   data: any | any[];
   formData: any | any[];
-  formDef?: Reactory.IReactoryForm;
+  formDef?: Reactory.Forms.IReactoryForm;
   location: any;
   api: ReactoryApi;
   reactory: ReactoryApi,
@@ -166,19 +166,19 @@ export interface ReactoryFormState {
   loading: boolean,
   allowRefresh?: boolean,
   forms_loaded: boolean,
-  forms: Reactory.IReactoryForm[],
+  forms: Reactory.Forms.IReactoryForm[],
   uiFramework: string,
   uiSchemaKey: string,
-  activeUiSchemaMenuItem?: Reactory.IUISchemaMenuItem,
-  formDef?: Reactory.IReactoryForm,
+  activeUiSchemaMenuItem?: Reactory.Forms.IUISchemaMenuItem,
+  formDef?: Reactory.Forms.IReactoryForm,
   formData?: any,
   dirty: boolean,
   queryComplete: boolean,
   showHelp: boolean,
   showReportModal: boolean,
   showExportWindow: boolean,
-  activeExportDefinition?: Reactory.IExport,
-  activeReportDefinition?: Reactory.IReactoryPdfReport,
+  activeExportDefinition?: Reactory.Forms.IExport,
+  activeReportDefinition?: Reactory.Forms.IReactoryPdfReport,
   query?: any,
   busy: boolean,
   liveUpdate: boolean,
@@ -196,7 +196,7 @@ export interface ReactoryFormState {
   form_created: number
 }
 
-const AllowedSchemas = (uiSchemaItems: Reactory.IUISchemaMenuItem[], mode = 'view', size = 'md'): Reactory.IUISchemaMenuItem[] => {
+const AllowedSchemas = (uiSchemaItems: Reactory.Forms.IUISchemaMenuItem[], mode = 'view', size = 'md'): Reactory.Forms.IUISchemaMenuItem[] => {
   return filter(uiSchemaItems, item => {
     let mode_pass = false;
     let size_pass = false;
@@ -278,7 +278,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const instance_id = uuid.v4();
   const created = new Date().valueOf();
 
-  const [formDef, setFormDefinition] = React.useState<Reactory.IReactoryForm>(ReactoryDefaultForm);  
+  const [formDef, setFormDefinition] = React.useState<Reactory.Forms.IReactoryForm>(ReactoryDefaultForm);  
   
   const fqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
   const signature = `<${fqn} instance={${instance_id} />`;
@@ -377,7 +377,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     }
 
     if (formDef.dependencies && formDef.dependencies.length > 0) {
-      formDef.dependencies.forEach((_dep: Reactory.IReactoryComponentDefinition) => {
+      formDef.dependencies.forEach((_dep: Reactory.Forms.IReactoryComponentDefinition) => {
         _dependency_state.dependencies[_dep.fqn] = {
           available: reactory.componentRegister[_dep.fqn] !== null && reactory.componentRegister[_dep.fqn] !== undefined,
           component: null
@@ -401,14 +401,14 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const [formData_history, setHistory] = React.useState<any[]>([props.data || props.formData]);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [activeUiSchemaKey, setActiveUiSchemaKey] = React.useState<string>(getInitialUiSchemaKey());
-  const [activeUiSchemaMenuItem, setActiveUiSchemaMenuItem] = React.useState<Reactory.IUISchemaMenuItem>(getInitialActiveMenuItem());
+  const [activeUiSchemaMenuItem, setActiveUiSchemaMenuItem] = React.useState<Reactory.Forms.IUISchemaMenuItem>(getInitialActiveMenuItem());
   const [queryComplete, setQueryComplete] = React.useState<boolean>(false);
   const [allowRefresh, setAllowRefresh] = React.useState<boolean>(false);
   const [showReportModal, setShowReportModal] = React.useState<boolean>(false);
   const [showExportModal, setShowExportModal] = React.useState<boolean>(false)
   const [showHelpModal, setShowHelpModal] = React.useState<boolean>(false)
-  const [activeExportDefinition, setActiveExportDefinition] = React.useState<Reactory.IExport>(null);
-  const [activeReportDefinition, setActiveReportDefinition] = React.useState<Reactory.IReactoryPdfReport>(null);
+  const [activeExportDefinition, setActiveExportDefinition] = React.useState<Reactory.Forms.IExport>(null);
+  const [activeReportDefinition, setActiveReportDefinition] = React.useState<Reactory.Forms.IReactoryPdfReport>(null);
   const [busy, setIsBusy] = React.useState<boolean>(false);
   const [pendingResources, setPendingResources] = React.useState<any>(null);
   const [plugins, setPlugins] = React.useState(null);
@@ -531,10 +531,10 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return formDef.uiSchema;
   }
 
-  const getActiveUiOptions = (): Reactory.IFormUIOptions => {
+  const getActiveUiOptions = (): Reactory.Schema.IFormUIOptions => {
 
     let _options = { showSchemaSelectorInToolbar: true };
-    let _uiSchema: Reactory.IFormUISchema = getActiveUiSchema();
+    let _uiSchema: Reactory.Schema.IFormUISchema = getActiveUiSchema();
 
     if (_uiSchema && _uiSchema['ui:form']) {
       _options = { ..._options, ..._uiSchema['ui:form'] };
@@ -547,8 +547,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     return _options;
   }
 
-  const getActiveGraphDefinitions = (): Reactory.IFormGraphDefinition => {
-    let _grahDefinitions: Reactory.IFormGraphDefinition = formDef.graphql;
+  const getActiveGraphDefinitions = (): Reactory.Forms.IFormGraphDefinition => {
+    let _grahDefinitions: Reactory.Forms.IFormGraphDefinition = formDef.graphql;
 
     if (activeUiSchemaMenuItem !== null) {
       if (activeUiSchemaMenuItem.graphql) _grahDefinitions = activeUiSchemaMenuItem.graphql;
@@ -616,12 +616,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     setQueryComplete(false);
     setVersion(version + 1);
 
-    const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
+    const _graphql: Reactory.Forms.IFormGraphDefinition = getActiveGraphDefinitions();
     if (_graphql) {
 
       if (_graphql.mutation) {
 
-        let mutation: Reactory.IReactoryFormMutation = _graphql.mutation[mode];
+        let mutation: Reactory.Forms.IReactoryFormMutation = _graphql.mutation[mode];
 
        if (mutation === null || mutation === undefined) {
          //check if we need to rerun the query with the updated formData.
@@ -799,7 +799,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     //if ((new Date().valueOf() - created) < 777) return;
 
-    const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
+    const _graphql: Reactory.Forms.IFormGraphDefinition = getActiveGraphDefinitions();
 
 
     if (busy === false && (_graphql && _graphql.query && queryComplete === true) || (_graphql && _graphql.mutation)) {
@@ -846,7 +846,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
           }
 
           if (do_mutation === true) {
-            let onChangeMutation: Reactory.IReactoryFormMutation = _graphql.mutation['onChange'];
+            let onChangeMutation: Reactory.Forms.IReactoryFormMutation = _graphql.mutation['onChange'];
             let throttleDelay: number = _graphql.mutation['onChange'].throttle || 250;
             let variables = reactory.utils.objectMapper({ eventData: form, form: { formData, formContext: getFormContext() } }, onChangeMutation.variables);
 
@@ -1005,12 +1005,12 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   /**
    * Returns the entire form definition
    */
-  const formDefinition = (): Reactory.IReactoryForm => {
+  const formDefinition = (): Reactory.Forms.IReactoryForm => {
 
     if(formDef.__complete__ === false) return ReactoryDefaultForm;
 
     const { extendSchema, uiSchemaKey, uiSchemaId } = props;
-    let _formDef: Reactory.IReactoryForm = reactory.utils.lodash.cloneDeep(formDef);
+    let _formDef: Reactory.Forms.IReactoryForm = reactory.utils.lodash.cloneDeep(formDef);
 
     //we check schema id on the query object only if the uiSchemaId
     //const { uiSchemaId } = this.state.query;
@@ -1375,7 +1375,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const getExcelWidget = () => {
     const { ReportViewer, FullScreenModal } = componentDefs;
-    const formDef: Reactory.IReactoryForm = formDefinition();
+    const formDef: Reactory.Forms.IReactoryForm = formDefinition();
     if (formDef !== undefined) {
       const closeReport = (e: React.SyntheticEvent): void => { setShowExportModal(false); }
       return (
@@ -1394,7 +1394,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
   const getData = (defaultInputData?: any) => {
     reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
-    const _graphql: Reactory.IFormGraphDefinition = getActiveGraphDefinitions();
+    const _graphql: Reactory.Forms.IFormGraphDefinition = getActiveGraphDefinitions();
 
     let _formData = null;
 
@@ -1608,7 +1608,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
       return props;
     };
 
-    const _formUiOptions: Reactory.IFormUIOptions = getActiveUiOptions();
+    const _formUiOptions: Reactory.Schema.IFormUIOptions = getActiveUiOptions();
 
     const DropDownMenu = componentDefs["DropDownMenu"];
     const formProps = {
@@ -1714,7 +1714,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
     if (formDef.uiSchemas) {
 
       // Even handler for the schema selector menu
-      const onSchemaSelect = (evt: Event, menuItem: Reactory.IUISchemaMenuItem) => {
+      const onSchemaSelect = (evt: Event, menuItem: Reactory.Forms.IUISchemaMenuItem) => {
         reactory.log(`UI Schema Selector onSchemaSelect "${menuItem.title}" selected`, { evt, menuItem });
 
         
@@ -1773,7 +1773,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
             reactory.log(`<${fqn} /> GetSchemaSelectorMenus`, { allowed_schema }, 'debug');
 
             // allowed_schema.forEach((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
-            const schemaButtons = allowed_schema.map((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
+            const schemaButtons = allowed_schema.map((uiSchemaItem: Reactory.Forms.IUISchemaMenuItem, index: number) => {
               /**  We hook uip the event handler for each of the schema selection options. */
               const onSelectUiSchema = () => {
                 // self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
@@ -1804,7 +1804,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
         if (_formUiOptions.schemaSelector.variant === "button") {
           const onSelectUiSchema = () => {
-            const selectedSchema: Reactory.IUISchemaMenuItem = find(formDef.uiSchemas, { id: _formUiOptions.schemaSelector.selectSchemaId });
+            const selectedSchema: Reactory.Forms.IUISchemaMenuItem = find(formDef.uiSchemas, { id: _formUiOptions.schemaSelector.selectSchemaId });
 
             reactory.log(`<${fqn} /> UI Schema Selector onSchemaSelect "${selectedSchema.title}" selected`, { selectedSchema });
             // TODO - this needs to be tested
@@ -1996,7 +1996,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         //showExcelModal(menuItem.data);
       };
 
-      let exportMenus = formDef.exports.map((exportDef: Reactory.IExport, index) => {
+      let exportMenus = formDef.exports.map((exportDef: Reactory.Forms.IExport, index) => {
         return {
           title: exportDef.title,
           icon: exportDef.icon,

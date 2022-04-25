@@ -14,7 +14,6 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions } from '@apollo/client';
 import localForage from 'localforage';
-import { Mutation, Query } from '@apollo/client/react/components';
 
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider as MuiThemeProvider } from '@mui/styles';
@@ -33,7 +32,11 @@ import {
   omitDeep,
   makeSlug,
   deepEquals,
-  CDNResource
+  CDNResource,
+  isEmail,
+  isValidPassword,
+  nil,
+  nilStr,
 } from '../components/util';
 
 import amq from '../amq';
@@ -47,7 +50,7 @@ import humanDate from 'human-date';
 import ApiProvider, { withApi } from './ApiProvider';
 import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
-import Reactory from '../types/reactory';
+import Reactory from '@reactory/reactory-core';
 
 import { cloneDeep } from "@apollo/client/utilities";
 
@@ -106,11 +109,11 @@ export const reactoryDomNode = () => {
  * @param templateObject
  * @param props
  */
-export const parseTemplateObject = (templateObject: Object, props: any): Object => {
+export function parseTemplateObject(templateObject: Object, props: any): any {
 
-  if (templateObject === null || templateObject === undefined) return templateObject;
+  if (templateObject === null || templateObject === undefined) return null;
 
-  let _$ret: Object = {};
+  let _$ret: any = {};
 
   Object.keys(templateObject).forEach((ep) => {
     let toep = typeof templateObject[ep];
@@ -166,34 +169,7 @@ export const componentPartsFromFqn = (fqn) => {
   }
   throw new Error('Component FQN not valid, must have at least nameSpace.name with version being options i.e. nameSpace.name@version')
 }
-export interface ReactoryApiUtils {
-  omitDeep: Function,
-  queryString: {
-    parse: (queryString: string) => object
-  },
-  hashCode: Function,
-  injectResources: Function,
-  componentFqn: Function,
-  pluginDefinitionValid: Function,
-  moment: Function,
-  objectMapper: Function,
-  template: (templateString: string, templateOptions?: TemplateOptions) => TemplateExecutor,
-  templateObject(item: Object, props: any): Object,
-  humanNumber: Function,
-  inspector: {
-    sanitize: (sanitizeSchema: any, data: any) => void,
-    validate: (validationSchema: any, data: any) => any
-  },
-  gql: Function,
-  humanDate: Function,
-  slugify: Function,
-  deepEquals: Function,
-  lodash: any,
-  classNames: Function,
-  uuid: () => string,
-  collectData: (forms: any[], shape: any) => any,
-  localForage: LocalForage
-}
+
 
 export interface WindowSizeSpec {
   innerHeight: number,
@@ -331,7 +307,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   register: Function = null;
   reset: Function = null;
   forgot: Function = null;
-  utils: ReactoryApiUtils = null;
+  utils: Reactory.Client.IReactoryApiUtils = null;
   companyWithId: Function = null;
   $func: Object;
   rest: Object = null;
@@ -347,7 +323,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
   CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
-  formSchemas: Reactory.IReactoryForm[]
+  formSchemas: Reactory.Forms.IReactoryForm[]
   formValidationMaps: any;
   formTranslationMaps: any;
   formSchemaLastFetch: moment.Moment = null;
@@ -390,7 +366,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     this.utils = {
       omitDeep,
       queryString,
-      hashCode: (inputString) => {
+      hashCode: (inputString: string) => {
         let i = 0;
         let h = 0;
         for (i < inputString.length; i += 1;) {
@@ -402,6 +378,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
       componentFqn,
       //componentDefinitionFromFqn,
       pluginDefinitionValid,
+      nil,
+      nilStr,
       lodash,
       moment,
       objectMapper,
@@ -426,6 +404,8 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         return data;
       },
       localForage,
+      isEmail,
+      isValidPassword
     };
     this.$func = {
       'core.NullFunction': (params) => {
@@ -905,10 +885,10 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     });
   }
 
-  graphqlQuery<T>(query,
-    variables,
+  graphqlQuery<T, V>(query,
+    variables: V,
     options: any = { fetchPolicy: 'network-only' },
-    queryDefinition: Reactory.IReactoryFormQuery = null) {
+    queryDefinition: Reactory.Forms.IReactoryFormQuery = null) {
 
     const that = this;
 
@@ -923,7 +903,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     } else $query = query;
 
     return new Promise((resolve, reject) => {
-      that.client.query({
+      that.client.query<T, V>({
         query: $query,
         variables,
         fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
@@ -1047,7 +1027,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
           if(ReactoryForms && ReactoryForms.length > 0) {
             that.formSchemas = [];
-            ReactoryForms.forEach(($formDef: Reactory.IReactoryForm, formDefIndex) => {
+            ReactoryForms.forEach(($formDef: Reactory.Forms.IReactoryForm, formDefIndex) => {
               
               const formDef = {...$formDef, ...tempSchema };
               that.formSchemas.push(formDef);
@@ -1099,7 +1079,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
    * @param id - string id.
    * @returns 
    */
-  form(id: string, onFormUpdated: (formDef: Reactory.IReactoryForm, error?: Error) => void = null) {
+  form(id: string, onFormUpdated: (formDef: Reactory.Forms.IReactoryForm, error?: Error) => void = null) {
     const that = this;
     const { formSchemas = [] } = this;
 
@@ -1238,7 +1218,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
    * @param user_memberships - Provide a memberships[] array to check
    * @returns 
    */
-  hasRole(itemRoles = [], userRoles = null, organization?: Reactory.IOrganization, business_unit?: Reactory.IBusinessUnit, user_memberships?: Reactory.IMembership[]) {
+  hasRole(itemRoles = [], userRoles = null, organization?: Reactory.Models.IOrganization, business_unit?: Reactory.Models.IBusinessUnit, user_memberships?: Reactory.Models.IMembership[]) {
     let comparedRoles = userRoles || [];
 
     if (itemRoles.length === 1 && itemRoles[0] === '*')
@@ -1253,7 +1233,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         //if there is a organization_id, we check if there is a membership that has the organization id
         let $memberships = user_memberships || loggedInUser.memberships;
         if ($memberships && $memberships.length > 0) {
-          const matched_memberships: Reactory.IMembership[] = lodash.filter($memberships, (membership: Reactory.IMembership) => {
+          const matched_memberships: Reactory.Models.IMembership[] = lodash.filter($memberships, (membership: Reactory.Models.IMembership) => {
 
             if (!membership.organization) return false;
 
@@ -1275,7 +1255,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
 
           if (matched_memberships.length > 0) {
             comparedRoles = [];
-            matched_memberships.forEach((membership: Reactory.IMembership) => {
+            matched_memberships.forEach((membership: Reactory.Models.IMembership) => {
               if (membership.roles) {
                 comparedRoles.push(...membership.roles);
               }
