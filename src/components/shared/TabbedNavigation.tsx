@@ -3,7 +3,7 @@ import { Icon, Popover, MenuItem, Theme } from '@mui/material';
 import { template } from 'lodash';
 import { compose } from 'redux';
 import { withTheme, withStyles } from '@mui/styles';
-import { Link, withRouter } from 'react-router-dom';
+
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@mui/styles';
@@ -324,5 +324,5 @@ class TabbedNavComponent extends Component<any, any> {
   }
 };
 
-const TabbedNavigationComponent = compose(withApi, withRouter, withTheme, withStyles(TabbedNavComponent.styles))(TabbedNavComponent);
+const TabbedNavigationComponent = compose(withApi, withTheme, withStyles(TabbedNavComponent.styles))(TabbedNavComponent);
 export default TabbedNavigationComponent;

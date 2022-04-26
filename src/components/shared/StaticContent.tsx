@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { compose } from 'redux';
-import { withRouter, match } from 'react-router-dom';
+//import { withRouter, match } from 'react-router-dom';
 import { Icon, IconButton } from '@mui/material';
 import { withStyles, withTheme, } from '@mui/styles';
 import moment, { Moment } from 'moment';
@@ -23,7 +23,7 @@ interface ReactoryStaticContentProps {
   formFqn?: string,
   mode?: string | "edit" | "view",
   templateEngine: 'lodash',
-  match: match,
+  match: any,
   location: any,
   history: any,
   editAction?: string | "inline" | "link",
@@ -304,7 +304,7 @@ const StaticContentStyles = (theme: any): any => {
   }
 };
 
-const StaticContentComponent: any = compose(withApi, withRouter, withTheme, withStyles(StaticContentStyles))(StaticContent);
+const StaticContentComponent: any = compose(withApi, withTheme, withStyles(StaticContentStyles))(StaticContent);
 
 StaticContentComponent.meta = {
   nameSpace: 'core',

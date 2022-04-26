@@ -12,7 +12,7 @@ import { v4 as uuid } from 'uuid';
 import classNames from 'classnames';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions } from '@apollo/client';
+import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions, MutationResult, FetchResult } from '@apollo/client';
 import localForage from 'localforage';
 
 import { CssBaseline } from '@mui/material';
@@ -47,7 +47,7 @@ import icons from '../assets/icons';
 import * as queryString from '../components/utility/query-string';
 import humanNumber from 'human-number';
 import humanDate from 'human-date';
-import ApiProvider, { withApi } from './ApiProvider';
+import { withApi, ReactoryProvider } from './ApiProvider';
 import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
 import Reactory from '@reactory/reactory-core';
@@ -185,11 +185,6 @@ export interface WindowSizeSpec {
   size: string
 }
 
-export interface _dynamic {
-  [key: string]: any
-}
-
-
 interface ReactoryTheme extends Theme {
   [key: string]: any
 }
@@ -292,7 +287,7 @@ const FORM_QUERY_SEGMENTS = {
   `
 }
 
-class ReactoryApi extends EventEmitter implements _dynamic {
+class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   $windowSize: WindowSizeSpec = null;
   $user: any;
@@ -301,9 +296,10 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   queries: any;
   mutations: any;
   props: Object;
-  componentRegister: Object;
+  componentRegister: Reactory.Client.IReactoryComponentRegister;
+  //@ts-ignore
   client: ApolloClient<NormalizedCacheObject>;
-  login: Function = null;
+  login: (username: string, password: string) => Promise<Reactory.Client.ILoginResult>;  
   register: Function = null;
   reset: Function = null;
   forgot: Function = null;
@@ -862,7 +858,10 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     });
   }
 
-  graphqlMutation(mutation, variables, options: any = { fetchPolicy: "no-cache", refresh: false}, refetchQueries = []) {
+  graphqlMutation<T, V>(mutation, 
+    variables: V, 
+    options: any = { fetchPolicy: "no-cache", refresh: false}, 
+    refetchQueries = []): Promise<FetchResult<T>> {
     const that = this;
     let $mutation = null;
     if (typeof mutation === 'string') {
@@ -876,7 +875,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     return new Promise((resolve, reject) => {
       let mutation_options: MutationOptions<any, any> = { mutation: $mutation, variables };
       mutation_options.refetchQueries = refetchQueries;
-      that.client.mutate(mutation_options).then((result) => {
+      that.client.mutate<T>(mutation_options).then((result) => {
         resolve(result);
       }).catch((clientErr) => {
         that.log(`Error occured executing the mutation: ${clientErr.message}`, { $mutation, clientErr }, 'error')
@@ -888,7 +887,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
   graphqlQuery<T, V>(query,
     variables: V,
     options: any = { fetchPolicy: 'network-only' },
-    queryDefinition: Reactory.Forms.IReactoryFormQuery = null) {
+    queryDefinition: Reactory.Forms.IReactoryFormQuery = null): Promise<ApolloQueryResult<T>> {
 
     const that = this;
 
@@ -936,7 +935,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     });
   }
 
-  async afterLogin(user) {
+  async afterLogin(user: Reactory.Client.ILoginResult): Promise<Reactory.Models.IApiStatus> {
     //this.setUser(user);
     this.setAuthToken(user.token);
     const { client, ws_link, clearCache } = await ReactoryApolloClient();
@@ -969,9 +968,9 @@ class ReactoryApi extends EventEmitter implements _dynamic {
         <ApolloProvider client={that.client}>
           <MuiThemeProvider theme={that.muiTheme}>
             <Router>
-              <ApiProvider api={that} history={that.history}>
+              <ReactoryProvider api={that}>
                 {componentView}
-              </ApiProvider>
+              </ReactoryProvider>
             </Router>
           </MuiThemeProvider>
         </ApolloProvider>
@@ -1021,7 +1020,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
           },
         }
 
-        that.graphqlQuery(FORMS_QUERY, {}, { fetchPolicy: 'network-only' }).then(({ data, errors = []}) => {
+        that.graphqlQuery<any, any>(FORMS_QUERY, {}, { fetchPolicy: 'network-only' }).then(({ data, errors = []}) => {
           const { ReactoryForms } = data;
           const ReactoryFormComponent = that.getComponent('core.ReactoryForm');
 
@@ -1098,7 +1097,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     }`;
 
     if(!$formDef.__complete__) {
-      that.graphqlQuery(FORM_QUERY, { id }, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
+      that.graphqlQuery<any, any>(FORM_QUERY, { id }, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
         if (data && data.ReactoryFormGetById) {
           let index = lodash.findIndex(this.formSchemas, { id });
 
@@ -1475,12 +1474,12 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     return components;
   }
 
-  getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0') {
+  getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0'): Reactory.Client.ValidComponent {
     if (this.componentRegister && this.componentRegister[notFoundComponent]) {
       return this.componentRegister[notFoundComponent].component;
     } else {
-      return (React.forwardRef((props, context) => (
-        <div>Component Find Failure, please check component registry and component name requested</div>)));
+      return (props, context) => (
+        <div>Component Find Failure, please check component registry and component name requested</div>);
     }
   }
 
@@ -1501,9 +1500,9 @@ class ReactoryApi extends EventEmitter implements _dynamic {
           <ApolloProvider client={that.client}>
             <MuiThemeProvider theme={that.muiTheme}>
               <Router>
-                <ApiProvider api={that} history={this.history}>
+                <ReactoryProvider api={that}>
                   <ComponentToMount {...props} />
-                </ApiProvider>
+                </ReactoryProvider>
               </Router>
             </MuiThemeProvider>
           </ApolloProvider>
@@ -1611,7 +1610,7 @@ class ReactoryApi extends EventEmitter implements _dynamic {
     localStorage.removeItem(key);
   }
 
-  status(options: { emitLogin: boolean, forceLogout?: boolean } = { emitLogin: false, forceLogout: false }) {
+  status(options: { emitLogin: boolean, forceLogout?: boolean } = { emitLogin: false, forceLogout: false }): Promise<Reactory.Models.IApiStatus> {
     const that = this;
     const current_user = this.$user;
 

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useParams, useHistory } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
 import { DefaultTheme, makeStyles, useTheme } from '@mui/styles';
 import AppBar from '@mui/material/AppBar';
 import Tabs from '@mui/material/Tabs';
@@ -30,7 +30,7 @@ const useStyles = makeStyles((theme: Theme) => ({
 const MaterialTabbedField = (props) => {
 
 
-  const history = useHistory();
+  const navigate = useNavigate();
   const params = useParams();
 
   const classes = useStyles();
@@ -68,7 +68,7 @@ const MaterialTabbedField = (props) => {
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     if (uiOptions.useRouter === true) {
       const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')({ props, tab_id: getTabKey(newValue) });
-      history.push(new_path);
+      navigate(new_path);
     } else {
       setValue(newValue);
     }

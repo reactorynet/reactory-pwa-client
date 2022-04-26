@@ -1,6 +1,5 @@
 import React, { Component, Fragment, SyntheticEvent } from 'react';
 import PropTypes, { any } from 'prop-types';
-import { Link, withRouter } from 'react-router-dom';
 import { compose } from 'redux';
 import { isArray, find } from 'lodash';
 import { withTheme, makeStyles, styled } from '@mui/styles';
@@ -27,7 +26,7 @@ import { getAvatar } from '../util';
 import moment from 'moment';
 import { withApi, ReactoryApiEventNames } from '@reactory/client-core/api';
 import license from '@reactory/client-core/license';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import Reactory from 'types/reactory';
 import localForage from 'localforage';
 
@@ -55,7 +54,7 @@ const defaultSearchConfig = new ISearchConfig()
 export const Logged = (props) => {
 
   const { menus, reactory, user } = props;
-  const history = useHistory();
+  const navigate = useNavigate();
   const menuItems = [];
 
   if (menus && menus.length) {
@@ -68,7 +67,7 @@ export const Logged = (props) => {
           }
           if (allow === true) {
             const goto = () => {
-              history.push(menuItem.link)
+              navigate(menuItem.link)
             };
             menuItems.push((
               <MenuItem key={menuItem.id} onClick={goto}>
@@ -101,9 +100,11 @@ export const Logged = (props) => {
 Logged.muiName = 'IconMenu';
 
 const SubMenus = (props) => {
-  const { items = [], history, user, reactory, self, classes } = props;
+  const { items = [], user, reactory, self, classes } = props;
 
   const submenus = [];
+
+  const navigate = useNavigate();
 
   items.forEach((menu, index) => {
     let allow = true;
@@ -112,7 +113,7 @@ const SubMenus = (props) => {
     }
 
     if (allow === true) {
-      const goto = () => history.push(menu.link);
+      const goto = () => navigate(menu.link);
       submenus.push(
         <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer' }}>
           <ListItemIcon>
@@ -202,7 +203,7 @@ const ToggleDevelopComponent = compose(withApi)(ToggleDevelopMode);
  */
 const ApplicationHeader = (props) => {
 
-  const { reactory, history, theme } = props;
+  const { reactory, theme } = props;
 
   const {
     SystemStatus,
@@ -234,6 +235,8 @@ const ApplicationHeader = (props) => {
     isSlow: false,
     session: []
   });
+
+  const navigate = useNavigate();
 
   const classes: any = makeStyles((theme: any): any => {
     return {
@@ -353,7 +356,7 @@ const ApplicationHeader = (props) => {
       if (where.trim().indexOf('http') === 0) {
         window.open(where, '_new');
       } else {
-        history.push(where);
+        navigate(where);
       }
     }
 
@@ -415,7 +418,7 @@ const ApplicationHeader = (props) => {
   }
 
   const Menus = () => {
-    // const { menus = [], target = 'left-nav', history, user, reactory, self, classes, append, expanded } = props;    
+    // const { menus = [], target = 'left-nav', user, reactory, self, classes, append, expanded } = props;    
     let menuItems = [];
     if (menus && menus.length) {
       menus.map((menu, menu_id) => {
@@ -441,7 +444,7 @@ const ApplicationHeader = (props) => {
                     <List component="div" disablePadding>
                       {
                         menuItem.items.map((menu, index) => {
-                          const goto = () => history.push(menu.link);
+                          const goto = () => navigate(menu.link);
                           const sub_item = (
                             <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer', paddingLeft: theme.spacing(4) }}>
                               <ListItemIcon>
@@ -712,8 +715,7 @@ const ApplicationHeader = (props) => {
 
 
 
-const ApplicationHeaderComponent = compose(
-  withRouter,
+const ApplicationHeaderComponent = compose(  
   withApi,
   withTheme
 )(ApplicationHeader);

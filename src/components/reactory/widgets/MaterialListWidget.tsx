@@ -2,8 +2,8 @@ import React, { Fragment, Component, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from '@reactory/client-core/components/reactory/form/utils';
 import { pullAt, isNil, template, isString } from 'lodash';
-import { useHistory } from 'react-router'
-import { withRouter, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router'
+
 import uuid from 'uuid';
 import {
   Avatar,
@@ -33,10 +33,10 @@ import Reactory from '@reactory/client-core/types/reactory';
 
 
 function LinkIconButton(link, icon) {
-  let history = useHistory();
+  let navigate = useNavigate();
 
   function handleClick() {
-    history.push(link);
+    navigate(link);
   }
 
   return (
@@ -758,5 +758,5 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 }
 
 //@ts-ignore
-const MaterialListWidgetComponent = compose(withApi, withRouter, withTheme)(MaterialListWidget)
+const MaterialListWidgetComponent = compose(withApi, withTheme)(MaterialListWidget)
 export default MaterialListWidgetComponent

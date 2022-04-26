@@ -1,14 +1,20 @@
+import Reactory from "@reactory/reactory-core";
+
 /**
  * The default user when no user is logged is returned 
  * as the anon user.
  */
-export const anonUser = {
+export const anonUser: Reactory.Models.IApiStatus = {
   id: '',
   firstName: '',
   lastName: '',
   avatar: '',
   anon: true,
-  roles: ['ANON']
+  roles: ['ANON'],
+  menus: [],
+  loggedIn: null,
+  status: 'API OK',
+  when: new Date()
 };
 
 export const storageKeys = {

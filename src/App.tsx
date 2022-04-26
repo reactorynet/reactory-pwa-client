@@ -1,15 +1,14 @@
 import React, { useEffect } from 'react';
 import MomentUtils from '@date-io/moment';
 import { ApolloProvider } from '@apollo/client';
-import {
-  useHistory,
-  useParams,
-  useRouteMatch,
+import {  
+  useParams,  
 } from 'react-router';
 import {
   BrowserRouter as Router,
-  Route,
-  Redirect,
+  Route, 
+  Routes,
+  useNavigate
 } from 'react-router-dom';
 import { isNil, isArray, isFunction } from 'lodash';
 import { Provider } from 'react-redux';
@@ -108,7 +107,7 @@ const Globals = ({ api }) => {
   });
 
   return (
-    <div data-v={`${v}`} data-globals-container="true">
+    <div data-v={`${v}`} data-globals-container="true" style={{ height: 0, width: 0, position: "absolute", left: 0, top: 0, display: 'none' }}>
       {globals.map((GLOBALFORM, gidx) => {
         return (<GLOBALFORM key={gidx} />)
       })}
@@ -145,6 +144,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const [v, setVersion] = React.useState<number>(0)
   const NotFound = reactory.getComponent("core.NotFound");
 
+  const navigation = useNavigate();
 
   const onLogin = () => {
     configureRouting();
@@ -165,16 +165,16 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     let $routes = [];
     reactory.getRoutes().forEach((routeDef) => {
 
-
       const routeProps: Reactory.IRouteDefinition = {
         key: routeDef.id,
         componentFqn: routeDef.componentFqn,        
         path: routeDef.path,
         exact: routeDef.exact === true,
-        render: (route_props) => {
+        element: (route_props) => {
           reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: route_props }, 'debug');
           if (routeDef.redirect) {
-            return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
+            //return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
+            navigation(routeDef.redirect, {state: { from: route_props.location}, replace: true })
           }
 
           const componentArgs = {
@@ -214,7 +214,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
                 if (hasRefreshed === true && reactory.isAnon() === true && routeDef.path !== "/login") {
                   localStorage.removeItem('hasRefreshed');
-                  return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
+                  //return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
+                  navigation("/login", { state: { from: route_props.location }, replace: true })
                 }
 
 
@@ -239,7 +240,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             return (
               <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <div style={{ margin: 'auto', display: 'flex', flexDirection: 'column', justifyContent: "center" }}>
-                  <Typography variant="h4" style={{ marginTop: '40px' }}>Verifying Client</Typography>
+                  <Typography variant="h4" style={{ marginTop: '40px' }}>Verifying Authentication</Typography>
                   <Icon style={{ fontSize: '48px', margin: 'auto', marginTop: '40px', }}>security</Icon>
                 </div>
               </div>
@@ -270,7 +271,15 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
   return (
     <React.Fragment>
-      {routes.map((route) => (<Route {...route} />))}
+      <Routes>
+        {routes.map((route) => (<Route 
+          path={route.path} 
+          caseSensitive={true} 
+          element={route.element(route)}
+          key={route.key}          
+          />))}
+        <Route path={"*"} element={<>Not Found</>}></Route>
+      </Routes>
     </React.Fragment>
   )
 }
@@ -444,12 +453,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [statusInterval, setStatusInterval] = React.useState<any>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
-  const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
-
-  const history = useHistory();
-
-  reactory.history = history;
-
+  const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);  
+  
   const components: any = reactory.getComponents(dependencies);
   const { NotificationComponent, Footer } = components;
 
@@ -646,7 +651,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.queryObject = query;
     reactory.queryString = window.location.search;
     reactory.objectToQueryString = queryString.stringify;
-
+    
     if (window && !window.reactory) {
       window.reactory = {
         api: reactory,

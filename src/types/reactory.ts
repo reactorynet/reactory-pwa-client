@@ -43,7 +43,7 @@ namespace Reactory {
     componentFqn: string,
     path: string,
     exact: boolean
-    render: (props) => React.ReactElement
+    element: (props) => React.ReactElement
   }
   export namespace Client {
 

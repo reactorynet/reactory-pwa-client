@@ -5,7 +5,7 @@ import Form from './form/components/Form';
 import objectMapper from 'object-mapper';
 import { diff } from 'deep-object-diff';
 import { find, template, isArray, isNil, isString, isEmpty, throttle, filter } from 'lodash';
-import { withRouter, Route, Switch, useParams, useHistory } from 'react-router';
+import { Route, Routes, useParams, useNavigate, useLocation } from 'react-router';
 import { withTheme } from '@mui/styles';
 import { compose } from 'redux';
 import * as uuid from 'uuid';
@@ -235,7 +235,7 @@ const initialState = (props) => ({
   showHelp: false,
   showExportWindow: false,
   showReportModal: false,
-  query: { ...props.query, ...queryString.parse(props.location.search) },
+  query: { ...props.query, ...queryString.parse(location.search) },
   busy: props.busy === true,
   liveUpdate: false,
   pendingResources: {},
@@ -274,7 +274,10 @@ const available_sizes: ScreenSizeKey[] = ["xl", "lg", "md", "sm", "xs"];
 
 const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
-  const { reactory, mode = 'view', theme } = props;
+  const { reactory, mode = 'view' } = props;
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const instance_id = uuid.v4();
   const created = new Date().valueOf();
 
@@ -296,7 +299,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 
     switch (formDef.schema.type) {
       case "string": {
-        return `${props.location.search || props.data || props.formData || formDef.defaultFormValue}`
+        return `${location.search || props.data || props.formData || formDef.defaultFormValue}`
       }
       case "number": {
         if (typeof props.data === 'number') return props.data;
@@ -428,6 +431,8 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
   const [showFormEditor, setShowEditor] = React.useState<boolean>(false);
 
   const formRef: React.RefObject<Form> = React.createRef<Form>();
+
+  
 
   const reset = () => {
     setComponents(reactory.getComponents(default_dependencies()));
@@ -710,7 +715,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
                 try {
                   let linkText = template(mutation.onSuccessUrl)(templateProps);
                   setTimeout(() => {
-                    props.history.push(linkText);
+                    navigate(linkText);
                   }, mutation.onSuccessRedirectTimeout || 500);
                 } catch (exception) {
                   reactory.createNotification('Cannot redirect form, template error', { type: 'warning' });
@@ -2015,7 +2020,7 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
         {showSubmit === true && submitButton}
         {_additionalButtons}
         {allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
-        {formDef.backButton && <Button variant="text" onClick={() => { props.history.goBack() }} color="secondary">BACK <Icon>keyboard_arrow_left</Icon></Button>}
+        {formDef.backButton && <Button variant="text" onClick={() => { navigate }} color="secondary">BACK <Icon>keyboard_arrow_left</Icon></Button>}
         {formDef.helpTopics && showHelp === true && <Button variant="text" onClick={() => { setShowHelpModal(!showHelpModal) }} color="secondary"><Icon>help</Icon></Button>}
         {reportButton}
         {exportButton}
@@ -2096,7 +2101,6 @@ const ReactoryComponentHOC = (props: ReactoryFormProperties) => {
 export const ReactoryFormComponent: any = compose(
   withApi,
   withTheme,
-  withRouter
 )(ReactoryComponentHOC);
 
 
@@ -2114,7 +2118,7 @@ const ReactoryFormRouter = (props) => {
   const [version, setVersion] = React.useState<number>(0);
   const [newFormModalVisible, setNewFormModalVisible] = React.useState(false);
 
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const {
     AlertDialog
@@ -2127,14 +2131,14 @@ const ReactoryFormRouter = (props) => {
 
 
   return (
-    <Switch>
+    <Routes>
       <Route path={`${routePrefix}/:formId/:mode/`} >
         <RouteBoundForm />
       </Route>
       <Route path={`${routePrefix}/:formId/`}>
         <RouteBoundForm mode="view" />
       </Route>
-      <Route exact path={`${routePrefix}/`}>
+      <Route path={`${routePrefix}/`}>
         <ReactoryFormComponent formDef={ReactoryFormListDefinition} routePrefix={`${routePrefix}`} onNewFormClicked={(evt) => {
           setNewFormModalVisible(true)
         }} formData={{ forms: all_forms }} mode='view' />
@@ -2200,20 +2204,19 @@ const ReactoryFormRouter = (props) => {
             };
 
             reactory.registerComponent(formDef.nameSpace, formDef.name, formDef.version, component, formDef.tags, formDef.roles, true, [], 'form')
-            history.push(`${routePrefix}/${formId}/`);
+            navigate(`${routePrefix}/${formId}/`);
 
           }} />
         </AlertDialog>
 
       </Route>
-    </Switch>
+    </Routes>
 
   )
 };
 
 export const ReactoryFormRouterComponent = compose(
   withApi,
-  withTheme,
-  withRouter)(ReactoryFormRouter);
+  withTheme)(ReactoryFormRouter);
 
 export default ReactoryFormRouterComponent;

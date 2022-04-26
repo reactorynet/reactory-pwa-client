@@ -1,6 +1,7 @@
 import React, { Component, Children, createContext, useContext } from "react";
 import PropTypes from "prop-types";
-import { RouteComponentProps, withRouter } from 'react-router-dom';
+import {  } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { compose } from 'redux';
 import ReactoryApi from "./ReactoryApi";
 import { withErrorBoundary } from './ErrorBoundary';
@@ -9,30 +10,6 @@ export interface ApiProviderProps {
     api: ReactoryApi,
     history: History
 }
-
-class ApiProvider extends Component<any, any> {
-
-    static propTypes = {
-        api: PropTypes.instanceOf(ReactoryApi).isRequired,
-    };
-
-    static childContextTypes = {
-        api: PropTypes.instanceOf(ReactoryApi).isRequired,
-    };
-
-    getChildContext() {
-        let { api, history } = this.props;
-        api.history = history;
-        return { api };
-    };
-
-    render() {
-        return Children.only(this.props.children);
-    }
-}
-
-export const ApiProviderComponent = withRouter(ApiProvider)
-
 
 export const ReactoryProvider = ({ children, api }) => {
 
@@ -82,4 +59,4 @@ export const useReactory = () => {
 
 
 
-export default ApiProvider;
+export default ReactoryProvider;

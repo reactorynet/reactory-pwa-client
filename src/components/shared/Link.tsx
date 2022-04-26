@@ -3,9 +3,10 @@ import { Icon } from '@mui/material';
 import { template } from 'lodash';
 import { compose } from 'redux';
 import { withTheme, withStyles } from '@mui/styles';
-import { Link, withRouter, useHistory } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const LinkComponent = (props: any) => {
+
 
 
   let linkText = template('${link}')({ ...props });
@@ -39,5 +40,5 @@ const LinkComponent = (props: any) => {
 
 };
 
-const ThemeLinkComponent = compose(withRouter, withTheme)(LinkComponent);
+const ThemeLinkComponent = compose(withTheme)(LinkComponent);
 export default ThemeLinkComponent;

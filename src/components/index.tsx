@@ -9,7 +9,9 @@ import * as MaterialLab from '@mui/lab'
 import * as MaterialStyles from '@mui/styles';
 
 import * as DropZone from 'react-dropzone';
-import * as ReactRouter from 'react-router'
+import * as ReactRouter from 'react-router';
+import * as ReactRouterDom from 'react-router-dom';
+
 import * as ReactBigCalendar from 'react-big-calendar';
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
@@ -520,6 +522,12 @@ export const componentRegistery = [
     nameSpace: 'react-router',
     name: 'ReactRouter',
     component: ReactRouter,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'react-router',
+    name: 'ReactRouterDom',
+    component: ReactRouterDom,
     version: '1.0.0'
   },
   {
