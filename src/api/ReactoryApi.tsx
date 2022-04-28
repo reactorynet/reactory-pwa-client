@@ -935,9 +935,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     });
   }
 
-  async afterLogin(user: Reactory.Client.ILoginResult): Promise<Reactory.Models.IApiStatus> {
+  async afterLogin(loginResult: Reactory.Client.ILoginResult): Promise<Reactory.Models.IApiStatus> {
     //this.setUser(user);
-    this.setAuthToken(user.token);
+    this.setAuthToken(loginResult.user.token);
     const { client, ws_link, clearCache } = await ReactoryApolloClient();
     this.client = client;
     this.clearCache = clearCache;

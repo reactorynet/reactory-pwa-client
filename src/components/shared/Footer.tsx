@@ -62,8 +62,7 @@ export const Footer = () => {
       <Grid item container direction="row">
         <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
           <div className={classes.powered_by}>
-            <Avatar className={classes.avatar} src={reactory.getCDNResource('themes/reactory/images/avatar.png')} ></Avatar>
-            <Typography variant={'caption'}> &nbsp;Reactory</Typography>
+            <Avatar sx={{ width: '18px', height: '18px' }} className={classes.avatar} src={reactory.getCDNResource('themes/reactory/images/avatar.png')} ></Avatar>            
           </div>
         </Grid>
       </Grid>

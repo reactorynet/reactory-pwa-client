@@ -20,13 +20,14 @@ const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) 
 
 
   const checkComponentLoaded = () => {
-    const $ComponentToMount = reactory.getComponent(props.waitingFor)
-    
-    if ($ComponentToMount === null || $ComponentToMount === undefined) {
-      setTimeout(checkComponentLoaded, 1000);
-    } else {
-      //this.setState({ found: true, mustCheck: false })    
-      setFound(true);
+    if(props.waitingFor) {
+      const $ComponentToMount = reactory.getComponent(props.waitingFor)
+      if ($ComponentToMount === null || $ComponentToMount === undefined) {
+        setTimeout(checkComponentLoaded, 1000);
+      } else {
+        //this.setState({ found: true, mustCheck: false })    
+        setFound(true);
+      }
     }
   }
 
@@ -36,8 +37,13 @@ const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) 
     let msg = `Waiting for application components to finish loading... ${process.env.NODE_ENV !== 'production' ? props.waitingFor : ''}`;
     return (<>{msg}</>)
   } else {
-    const ComponentToMount = reactory.getComponent(props.waitingFor)
-    return (<ComponentToMount {...props.args} />)
+
+    if(props.waitingFor) {
+      const ComponentToMount = reactory.getComponent(props.waitingFor)
+      return (<ComponentToMount {...props.args} />)
+    }
+
+    return (<>No component data available</>)
   }
 
 };

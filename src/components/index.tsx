@@ -64,7 +64,7 @@ import { ErrorBoundary } from '../api/ErrorBoundary';
 
 import * as MaterialReactoryWidgets from './reactory/widgets'
 
-export const AdminDashboard = <NotFoundComponent key={'AdminDashboard - Deprecated'}/>;
+export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
 export const ReactoryForm = ReactoryFormComponent;
 export const CompanyLogo = (props) => {
@@ -478,6 +478,7 @@ export const componentRegistery = [
       core: require('@apollo/client'),
       react: require('@apollo/client/react'),
       hoc: require('@apollo/client/react/hoc'),
+      hooks: require('@apollo/client/react/hooks'),
       components: require('@apollo/client/react/components'),
     }
   },

@@ -8,7 +8,8 @@ import {
   BrowserRouter as Router,
   Route, 
   Routes,
-  useNavigate
+  useNavigate,
+  useLocation
 } from 'react-router-dom';
 import { isNil, isArray, isFunction } from 'lodash';
 import { Provider } from 'react-redux';
@@ -145,8 +146,9 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const NotFound = reactory.getComponent("core.NotFound");
 
   const navigation = useNavigate();
+  const location = useLocation();
 
-  const onLogin = () => {
+  const onLogin = () => {  
     configureRouting();
     setVersion(v + 1);
   };
@@ -163,6 +165,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const configureRouting = () => {
     reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
     let $routes = [];
+    
     reactory.getRoutes().forEach((routeDef) => {
 
       const routeProps: Reactory.IRouteDefinition = {
@@ -171,7 +174,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         path: routeDef.path,
         exact: routeDef.exact === true,
         element: (route_props) => {
-          reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: route_props }, 'debug');
+          //reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: route_props }, 'debug');
+          console.debug(`Reactory Router ELEMENT ${routeDef.path}`, {route_props})
           if (routeDef.redirect) {
             //return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
             navigation(routeDef.redirect, {state: { from: route_props.location}, replace: true })
@@ -193,6 +197,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             if (ReactoryComponent) return (<ReactoryComponent {...componentArgs} />);
             else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
           } else {
+            
             const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().roles) === true;
 
             if (reactory.isAnon() === false && hasRolesForRoute === false) {
@@ -220,18 +225,18 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
 
                 if (hasRefreshed === false && reactory.isAnon() === true) {
-                  const qs = queryString.parse(route_props.location.search);
+                  const qs = queryString.parse(location.search);
                   if (qs['auth_token']) delete qs.auth_token;
 
 
-                  localStorage.setItem('$reactory.onlogin.redirect$', `${route_props.location.pathname}?${queryString.stringify(qs)}`);
-                  setTimeout(() => {
-                    //@ts-ignore
-                    // window.location.reload(true)
-                    reactory.status({ emitLogin: true });
-                    setVersion(v + 1);
-                    localStorage.setItem('hasRefreshed', 'true');
-                  }, 5000);
+                  localStorage.setItem('$reactory.onlogin.redirect$', `${location.pathname}?${queryString.stringify(qs)}`);
+                  // setTimeout(() => {
+                  //   //@ts-ignore
+                  //   // window.location.reload(true)
+                  //   reactory.status({ emitLogin: true });
+                  //   setVersion(v + 1);
+                  //   localStorage.setItem('hasRefreshed', 'true');
+                  // }, 5000);
                 }
 
               }
@@ -240,7 +245,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             return (
               <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <div style={{ margin: 'auto', display: 'flex', flexDirection: 'column', justifyContent: "center" }}>
-                  <Typography variant="h4" style={{ marginTop: '40px' }}>Verifying Authentication</Typography>
+                  <Typography variant="h4" style={{ marginTop: '40px' }}>Validating access to route</Typography>
+                  <Typography variant="h6" style={{ marginTop: '40px', textAlign: 'center' }}>{routeDef.path}</Typography>
                   <Icon style={{ fontSize: '48px', margin: 'auto', marginTop: '40px', }}>security</Icon>
                 </div>
               </div>
@@ -262,7 +268,9 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
   useEffect(() => {
     configureRouting();
-  }, [auth_validated])
+  }, [auth_validated, authenticating])
+
+
 
 
   if (auth_validated === false) {
@@ -270,17 +278,15 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   }
 
   return (
-    <React.Fragment>
-      <Routes>
-        {routes.map((route) => (<Route 
-          path={route.path} 
-          caseSensitive={true} 
-          element={route.element(route)}
-          key={route.key}          
-          />))}
-        <Route path={"*"} element={<>Not Found</>}></Route>
-      </Routes>
-    </React.Fragment>
+    <Routes>
+      {routes.map((route) => (<Route 
+        path={route.path} 
+        caseSensitive={true} 
+        element={route.element(route)}
+        key={route.key}          
+        />))}
+      <Route path={"*"} element={<>Not Found</>}></Route>
+    </Routes> 
   )
 }
 
@@ -486,14 +492,15 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.log('App.onLogin handler', {}, 'debug')
     setUser(reactory.getUser());
     const redirect = localStorage.getItem('$reactory.onlogin.redirect$')
-    if (redirect && redirect !== "") {
+    if (redirect && redirect !== "" && redirect.indexOf("logout") < 0) {
       setTimeout(() => {
         localStorage.removeItem('$reactory.onlogin.redirect$');
         localStorage.setItem('hasRefreshed', 'true');
         window.location.assign(redirect);
       }, 1500)
-
     }
+
+    localStorage.removeItem('$reactory.onlogin.redirect$');
   };
 
   const onLogout = () => {
