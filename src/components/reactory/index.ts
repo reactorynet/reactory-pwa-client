@@ -1,1 +1,1 @@
-export { ReactoryFormComponent, ReactoryFormRouterComponent } from './ReactoryFormComponent';
+export { ReactoryForm, ReactoryFormRouterComponent } from './ReactoryFormComponent';

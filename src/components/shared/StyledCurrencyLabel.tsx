@@ -4,7 +4,7 @@ import { isArray, template, indexOf } from 'lodash';
 import { compose } from 'redux';
 import { makeStyles, withStyles, withTheme } from '@mui/styles';
 import { Theme, Tooltip } from '@mui/material';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 
 const ToolTipHOC = (props) => {
@@ -271,6 +271,6 @@ StyledCurrencyLabel.defaultProps = {
 
 
 
-const StyledCurrencyLabelComponent = compose(withApi, withTheme)(StyledCurrencyLabel);
+const StyledCurrencyLabelComponent = compose(withReactory, withTheme)(StyledCurrencyLabel);
 export default StyledCurrencyLabelComponent;
 

@@ -1,12 +1,12 @@
 import ReactoryApi from "@reactory/client-core/api/ReactoryApi";
 import { isArray } from "lodash";
-import Reactory from "@reactory/client-core/types/reactory";
+import Reactory from "@reactory/reactory-core";
 
-export default (reactory: ReactoryApi) => ({
+export default (reactory: Reactory.Client.IReactoryApi) => ({
   /**
    * Returns the next data set from the input params
    */
-  fromGraphResult: (data: any, formData: any, graphElement: Reactory.IReactoryFormGraphElement) => {
+  fromGraphResult: (data: any, formData: any, graphElement: Reactory.Forms.IReactoryFormGraphElement) => {
 
     let nextFormData = null;
 

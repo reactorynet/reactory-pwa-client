@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import MomentUtils from '@date-io/moment';
-import { ApolloProvider } from '@apollo/client';
-import {  
-  useParams,  
+import { ApolloClient, ApolloProvider } from '@apollo/client';
+import {
+  useMatch,
+  useParams,
 } from 'react-router';
 import {
   BrowserRouter as Router,
-  Route, 
+  Route,
   Routes,
   useNavigate,
   useLocation
@@ -30,8 +31,9 @@ import { deepEquals } from './components/reactory/form/utils';
 import ReactoryApolloClient from './api/ReactoryApolloClient';
 import { Typography, Icon, Paper, Box } from '@mui/material';
 import license from './license';
-import { ReactoryProvider } from './api/ApiProvider';
-import Reactory from '@reactory/client-core/types/reactory';
+import { ReactoryProvider, useReactory } from './api/ApiProvider';
+import Reactory from '@reactory/reactory-core';
+import { Routing } from '@reactory/reactory-core/src/types';
 
 const packageInfo = {
   version: '1.0.0'
@@ -57,7 +59,8 @@ const getTheme = () => {
   return localStorage.getItem('theme')
 }
 
-const reactory = new ReactoryApi({
+//@ts-ignore
+const reactory: Reactory.Client.IReactoryApi = new ReactoryApi({
   clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
   clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
   $version: `${packageInfo.version}-${license.version}`,
@@ -132,23 +135,29 @@ const dependencies = [
 
 
 interface ReactoryRouterProps {
-  reactory: ReactoryApi,
+  reactory: Reactory.Client.IReactoryApi,
   auth_validated: boolean,
-  user: Reactory.IUser,
+  user: Reactory.Models.IUser,
   authenticating: boolean
 };
 
+const ReactoryRoute = (routeDef: Reactory.Routing.IReactoryRoute, auth_validated: boolean = false, authenticating: boolean = false) => {
+
+  
+}
+
+
 const ReactoryRouter = (props: ReactoryRouterProps) => {
-
-  const { auth_validated, user, reactory, authenticating = false } = props;
-  const [routes, setRoutes] = React.useState<Reactory.IRouteDefinition[]>([]);
-  const [v, setVersion] = React.useState<number>(0)
-  const NotFound = reactory.getComponent("core.NotFound");
-
+  
   const navigation = useNavigate();
   const location = useLocation();
+    
+  const { auth_validated, user, reactory, authenticating = false } = props;
+  const [routes, setRoutes] = React.useState<Reactory.Client.IReactoryClientRoute[]>([]);
+  const [v, setVersion] = React.useState<number>(0);
 
-  const onLogin = () => {  
+
+  const onLogin = () => {
     configureRouting();
     setVersion(v + 1);
   };
@@ -161,28 +170,28 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   reactory.on(ReactoryApiEventNames.onLogout, onLogout)
   reactory.on(ReactoryApiEventNames.onLogin, onLogin)
 
-
   const configureRouting = () => {
     reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
     let $routes = [];
-    
+
     reactory.getRoutes().forEach((routeDef) => {
 
-      const routeProps: Reactory.IRouteDefinition = {
-        key: routeDef.id,
-        componentFqn: routeDef.componentFqn,        
+      const routeProps: Reactory.Client.IReactoryClientRoute = {
+        key: routeDef.key || routeDef.id || reactory.utils.uuid(),
         path: routeDef.path,
-        exact: routeDef.exact === true,
-        element: (route_props) => {
+        element: (props: any) => {        
+          
+          //const match = useMatch(routeDef.path);
+          //debugger;
           //reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: route_props }, 'debug');
-          console.debug(`Reactory Router ELEMENT ${routeDef.path}`, {route_props})
+          console.debug(`Reactory Router ELEMENT ${routeDef.path}`, {  })
           if (routeDef.redirect) {
             //return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
-            navigation(routeDef.redirect, {state: { from: route_props.location}, replace: true })
+            navigation(routeDef.redirect, { state: { from: location }, replace: true })
           }
 
           const componentArgs = {
-            $route: route_props.match,
+            //$route: match,
           };
 
           if (isArray(routeDef.args)) {
@@ -191,13 +200,14 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             })
           }
 
-          const ReactoryComponent = reactory.getComponent(routeDef.componentFqn)
+          const ReactoryComponent = reactory.getComponent<any>(routeDef.componentFqn)
+          const NotFound = reactory.getComponent<any>("core.NotFound");
 
           if (routeDef.public === true) {
             if (ReactoryComponent) return (<ReactoryComponent {...componentArgs} />);
             else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
           } else {
-            
+
             const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().roles) === true;
 
             if (reactory.isAnon() === false && hasRolesForRoute === false) {
@@ -220,7 +230,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
                 if (hasRefreshed === true && reactory.isAnon() === true && routeDef.path !== "/login") {
                   localStorage.removeItem('hasRefreshed');
                   //return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
-                  navigation("/login", { state: { from: route_props.location }, replace: true })
+                  navigation("/login", { state: { from: location }, replace: true })
                 }
 
 
@@ -262,6 +272,9 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     setVersion(v + 1);
   }
 
+
+
+
   useEffect(() => {
     configureRouting();
   }, []);
@@ -279,14 +292,14 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
   return (
     <Routes>
-      {routes.map((route) => (<Route 
-        path={route.path} 
-        caseSensitive={true} 
+      {routes.map((route: any) => (<Route
+        path={route.path}
+        caseSensitive={true}
         element={route.element(route)}
-        key={route.key}          
-        />))}
+        key={route.key}
+      />))}
       <Route path={"*"} element={<>Not Found</>}></Route>
-    </Routes> 
+    </Routes>
   )
 }
 
@@ -448,10 +461,9 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
-
   const [isReady, setIsReady] = React.useState<boolean>(false);
   const [auth_validated, setIsValidated] = React.useState<boolean>(false);
-  const [user, setUser] = React.useState<any | Reactory.IUser>(null);
+  const [user, setUser] = React.useState<any | Reactory.Models.IUser>(null);
   const [error, setError] = React.useState<Error>(null);
   const [apiStatus, setApiStatus] = React.useState<any>(null);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
@@ -459,19 +471,19 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [statusInterval, setStatusInterval] = React.useState<any>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
-  const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);  
-  
+  const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
+
   const components: any = reactory.getComponents(dependencies);
   const { NotificationComponent, Footer } = components;
 
   const getApiStatus = (emitLogin = true) => {
 
-    reactory.status({ emitLogin, forceLogout: false }).then((user: any) => {      
+    reactory.status({ emitLogin, forceLogout: false }).then((user: any) => {
       setIsValidated(true);
       setOfflineStatus(user.offline === true)
       setUser(user);
       setIsReady(true);
-      setIsAuthenticating(false);      
+      setIsAuthenticating(false);
       applyTheme();
     }).catch((validationError) => {
       setIsValidated(true);
@@ -517,53 +529,53 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
     //default empty state is mui  create theme
     let muiTheme: Theme & any = createTheme();
-    
-      const {
-        type = 'material',
-        options = {}
-      } = activeTheme;
 
-      // let themeMode = 'light';
+    const {
+      type = 'material',
+      options = {}
+    } = activeTheme;
 
-      // debugger;
+    // let themeMode = 'light';
 
-      // const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
+    // debugger;
 
-      // if (localStorage) {
-      //   themeMode = localStorage.getItem("$reactory$theme_mode")
-      //   if (!themeMode) {
-      //     themeMode = isDarkMode === true ? 'dark' : 'light'
-      //   }
-      // }
+    // const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
 
-      // let $theme = lodash.cloneDeep(options || activeTheme);
-      // $theme.extensions = extensions;
+    // if (localStorage) {
+    //   themeMode = localStorage.getItem("$reactory$theme_mode")
+    //   if (!themeMode) {
+    //     themeMode = isDarkMode === true ? 'dark' : 'light'
+    //   }
+    // }
 
-      // if (type === 'material') {
-      //   if ($theme.palette) $theme.palette.mode = themeMode;
-      //   else {
-      //     $theme.palette = {
-      //       mode: themeMode
-      //     }
-      //   }
-      // }
+    // let $theme = lodash.cloneDeep(options || activeTheme);
+    // $theme.extensions = extensions;
 
-      // return $theme;
-    
-      //using new mechanism.      
-      switch (type) {
-        
-        case 'material':
-        default: {
-         
-          if (activeTheme.options) {
-            muiTheme = createTheme(activeTheme.options);
-          } else {
-            //backward compat while in progress
-            muiTheme = createTheme(activeTheme);
-          }         
+    // if (type === 'material') {
+    //   if ($theme.palette) $theme.palette.mode = themeMode;
+    //   else {
+    //     $theme.palette = {
+    //       mode: themeMode
+    //     }
+    //   }
+    // }
+
+    // return $theme;
+
+    //using new mechanism.      
+    switch (type) {
+
+      case 'material':
+      default: {
+
+        if (activeTheme.options) {
+          muiTheme = createTheme(activeTheme.options);
+        } else {
+          //backward compat while in progress
+          muiTheme = createTheme(activeTheme);
         }
-      
+      }
+
     }
 
     reactory.muiTheme = muiTheme;
@@ -658,7 +670,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.queryObject = query;
     reactory.queryString = window.location.search;
     reactory.objectToQueryString = queryString.stringify;
-    
+
     if (window && !window.reactory) {
       window.reactory = {
         api: reactory,
@@ -669,6 +681,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     if (query.auth_token) {
       localStorage.setItem('auth_token', query.auth_token);
       ReactoryApolloClient().then((cli) => {
+        //@ts-ignore
         reactory.client = cli.client;
         reactory.ws_link = cli.ws_link;
         cli.clearCache();
@@ -684,7 +697,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
   useEffect(willMount, []);
-  
+
 
   const useStyles = makeStyles(() => {
 
@@ -692,7 +705,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
       root_paper: {
         minHeight: window.innerHeight,
-        borderRadius: 0,        
+        borderRadius: 0,
         margin: 0,
         padding: 0,
         overflowX: "hidden",
@@ -744,14 +757,14 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
   let onlyChild = (
-  <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
-    {offline === false && <Globals api={reactory} />}
-    {header}
-    <NotificationComponent />
-    {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} authenticating={isAuthenticating} />}
-    <Offline onOfflineChanged={onOfflineChanged} />
-    <Footer />
-  </Paper>);
+    <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
+      {offline === false && <Globals api={reactory} />}
+      {header}
+      <NotificationComponent />
+      {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} authenticating={isAuthenticating} />}
+      <Offline onOfflineChanged={onOfflineChanged} />
+      <Footer />
+    </Paper>);
 
   return (
     <Router>
@@ -759,10 +772,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         <CssBaseline />
         <ThemeProvider theme={theme}>
           <Provider store={store}>
-            <ApolloProvider client={reactory.client}>              
-              <ReactoryProvider api={reactory}>
-                {onlyChild}
-              </ReactoryProvider>
+            <ApolloProvider client={reactory.client as any}>
+              <React.StrictMode>
+                <ReactoryProvider reactory={reactory}>
+                  {onlyChild}
+                </ReactoryProvider>
+              </React.StrictMode>
             </ApolloProvider>
           </Provider>
         </ThemeProvider>

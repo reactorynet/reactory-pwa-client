@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { template } from 'lodash';
 
 class DocumentUploadWidget extends Component<any, any> {
@@ -82,7 +82,7 @@ class DocumentUploadWidget extends Component<any, any> {
 }
 
 
-const DocumentUploadComponent = compose(withApi, withTheme, withStyles(DocumentUploadWidget.styles))(DocumentUploadWidget)
+const DocumentUploadComponent = compose(withReactory, withTheme, withStyles(DocumentUploadWidget.styles))(DocumentUploadWidget)
 export default DocumentUploadComponent;
 
 

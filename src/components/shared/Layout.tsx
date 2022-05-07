@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 
 import { withTheme, withStyles } from '@mui/styles';
-import { withApi } from '../../api/ApiProvider'
+import { withReactory } from '../../api/ApiProvider'
 
 
 const defaultLayout = {
@@ -92,7 +92,7 @@ class Layout extends Component<any, any> {
 }
 
 export const LayoutThemed = compose(
-  withApi,
+  withReactory,
   withTheme,
   withStyles(Layout.styles)
 )(Layout)

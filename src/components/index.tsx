@@ -22,7 +22,7 @@ import IntersectionVisible from './utility/IntersectionVisible';
 
 import Loading from './shared/Loading';
 import LinkComponent from './shared/Link';
-import ReactoryRouterComponent, { ReactoryFormComponent } from './reactory/ReactoryFormComponent'
+import ReactoryRouterComponent, { ReactoryForm } from './reactory/ReactoryFormComponent'
 import DateSelector from './dates/DateSelector';
 import Calendar from './dates/Calendar';
 import { LayoutThemed, SingleColumnLayout, TwoColumnGrid, BasicContainer } from './shared/Layout';
@@ -39,8 +39,8 @@ import MaterialInput from './shared/MaterialInput';
 import FormSubmissionComponent from './shared/FormSubmissionComponent';
 import ImageComponent from './shared/ImageComponent';
 import ConditionalIconComponent from './shared/ConditionalIconComponent';
-import LabelComponent from './reactory/widgets/LabelWidget';
-import ReactoryDropZone from './reactory/widgets/ReactoryDropZone';
+import LabelComponent from '@reactory/client-core/components/reactory/ux/mui/widgets/LabelWidget';
+import ReactoryDropZone from '@reactory/client-core/components/reactory/ux/mui/widgets/ReactoryDropZone';
 
 import StyledCurrencyLabel from './shared/StyledCurrencyLabel';
 
@@ -62,11 +62,12 @@ import { DropDownMenuComponent } from './shared/menus/DropDownMenu';
 
 import { ErrorBoundary } from '../api/ErrorBoundary';
 
-import * as MaterialReactoryWidgets from './reactory/widgets'
+import Forms from './reactory/forms';
+
+import *  as MaterialReactoryWidgets from '@reactory/client-core/components/reactory/ux/mui/widgets'
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
-export const ReactoryForm = ReactoryFormComponent;
 export const CompanyLogo = (props) => {
   const { organization } = props;
   const logoProps = {
@@ -158,7 +159,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'SelectWithDataWidget',
-    component: require('./reactory/widgets/SelectWithData'),
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/SelectWithData'),
     version: '1.0.0',
   },
   // {
@@ -456,11 +457,11 @@ export const componentRegistery = [
   },
   GraphiqlWindow.meta,
   SlideOutLauncher.meta,
-  // require('./shared/currency/CurrencyLabel'),
-  // require('./shared/DateLabel'),
-  // require('./shared/StaticContent').meta,
-  // require('./shared/Label'),
-  // require('./shared/AlertDialog'),  
+  require('./shared/currency/CurrencyLabel').default,
+  require('./shared/DateLabel').default,
+  require('./shared/StaticContent').default.meta,
+  require('./shared/Label').default,
+  require('./shared/AlertDialog').default,  
   {
     nameSpace: 'reactory-core',
     name: 'ReactBeautifulDnD',
@@ -485,7 +486,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'ReactoryColorPicker',
-    component: require('./reactory/widgets/ReactoryColorPicker').default,
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/ReactoryColorPicker').default,
     version: '1.0.0'
   },
   {
@@ -548,7 +549,8 @@ export const componentRegistery = [
     name: 'UserDemographics',
     version: '1.0.0',
     component: <>complete import from reactory-user plugin</>,
-  }
+  },
+  ...Forms
 ]
 
 

@@ -14,7 +14,7 @@ import {
 import { isArray } from 'lodash';
 import { compose } from 'redux';
 import { withTheme, withStyles } from '@mui/styles';
-import { withApi } from '../../api/ApiProvider';
+import { withReactory } from '../../api/ApiProvider';
 import ReactoryApi from '../../api/ReactoryApi';
 
 const styles = (theme: Theme): any => {
@@ -239,7 +239,7 @@ class SlideOutLauncher extends Component<any, any> {
   }
 }
 
-const SlideOutLauncherComponent: any = compose(withTheme, withApi, withStyles(styles))(SlideOutLauncher);
+const SlideOutLauncherComponent: any = compose(withTheme, withReactory, withStyles(styles))(SlideOutLauncher);
 
 SlideOutLauncherComponent.propTypes = {
   api: PropTypes.instanceOf(ReactoryApi).isRequired,

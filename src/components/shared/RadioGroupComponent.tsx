@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '../../api/ApiProvider';
+import { withReactory } from '../../api/ApiProvider';
 
 class RadioGroupWidget extends Component<any, any> {
   static styles: (theme: any) => { label: { color: string; fontSize: string; fontWeight: number; }; };
@@ -84,5 +84,5 @@ RadioGroupWidget.styles = (theme) => {
   }
 };
 
-const RadioGroupComponent = compose(withTheme, withApi, withStyles(RadioGroupWidget.styles))(RadioGroupWidget)
+const RadioGroupComponent = compose(withTheme, withReactory, withStyles(RadioGroupWidget.styles))(RadioGroupWidget)
 export default RadioGroupComponent

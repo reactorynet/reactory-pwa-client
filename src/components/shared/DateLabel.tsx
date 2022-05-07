@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '@reactory/client-core/api';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { Typography } from '@mui/material';
 import moment from 'moment';
 
@@ -64,7 +64,7 @@ class DateLabel extends Component<any, any> {
 
 
 const DateLabelComponent = compose(
-  withApi,
+  withReactory,
   withTheme,
   withStyles(DateLabel.styles))(DateLabel);
 

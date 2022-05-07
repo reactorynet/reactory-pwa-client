@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Styles } from '@mui/styles/withStyles/withStyles';
 import { compose } from 'redux';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { withStyles } from '@mui/styles';
 import PropTypes from 'prop-types';
 import {
@@ -155,6 +155,6 @@ class GridLayoutWidget extends Component<any, any> {
   }
 };
 
-const GridLayoutComponent = compose(withApi, withStyles(GridLayoutWidget.styles))(GridLayoutWidget);
+const GridLayoutComponent = compose(withReactory, withStyles(GridLayoutWidget.styles))(GridLayoutWidget);
 export default GridLayoutComponent;
 

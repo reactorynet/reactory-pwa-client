@@ -24,10 +24,10 @@ import BackIcon from '@mui/icons-material/ArrowBack';
 import PowerSettingIcon from '@mui/icons-material/PowerSettingsNew';
 import { getAvatar } from '../util';
 import moment from 'moment';
-import { withApi, ReactoryApiEventNames } from '@reactory/client-core/api';
+import { withReactory, ReactoryApiEventNames } from '@reactory/client-core/api';
 import license from '@reactory/client-core/license';
 import { useNavigate } from 'react-router';
-import Reactory from 'types/reactory';
+import Reactory from '@reactory/reactory-core';
 import localForage from 'localforage';
 
 export class ISearchConfig {
@@ -165,7 +165,7 @@ const CacheButton = (props) => {
 
 }
 
-const CacheComponent = compose(withApi)(CacheButton);
+const CacheComponent = compose(withReactory)(CacheButton);
 
 const ToggleDevelopMode = (props: Reactory.IReactoryComponentProps) => {  
   const { reactory } = props;
@@ -195,7 +195,7 @@ const ToggleDevelopMode = (props: Reactory.IReactoryComponentProps) => {
   </ListItem>)
 };
 
-const ToggleDevelopComponent = compose(withApi)(ToggleDevelopMode);
+const ToggleDevelopComponent = compose(withReactory)(ToggleDevelopMode);
 
 /**
  * This example is taking advantage of the composability of the `AppBar`
@@ -716,7 +716,7 @@ const ApplicationHeader = (props) => {
 
 
 const ApplicationHeaderComponent = compose(  
-  withApi,
+  withReactory,
   withTheme
 )(ApplicationHeader);
 

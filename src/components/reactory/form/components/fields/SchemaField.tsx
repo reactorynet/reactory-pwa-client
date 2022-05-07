@@ -180,12 +180,11 @@ DefaultTemplate.defaultProps = {
 
 function SchemaFieldRender(props) {
 
-  debugger
 
   const {
-    uiSchema,
+    uiSchema = {},
     formData,
-    errorSchema,
+    errorSchema = { __errors: [], fieldErrorSchema: {} },
     idPrefix,
     name,
     onKeyChange,

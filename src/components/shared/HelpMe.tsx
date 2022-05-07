@@ -2,8 +2,8 @@ import React, { Component } from 'react'
 import { compose } from 'redux';
 import { Paper, Theme } from '@mui/material';
 import { withTheme } from '@mui/styles';
-import { withApi } from '../../api/ApiProvider';
-import Reactory from '@reactory/client-core/types/reactory';
+import { withReactory } from '../../api/ApiProvider';
+import Reactory from '@reactory/reactory-core';
 
 interface IHelpMeProps {
   reactory: Reactory.Client.IReactoryApi,
@@ -41,6 +41,6 @@ const { Typography } = MaterialCore;
     )
 }
 
-const HelpMeComponent = compose(withTheme, withApi)(HelpMe);
+const HelpMeComponent = compose(withTheme, withReactory)(HelpMe);
 
 export default HelpMeComponent;

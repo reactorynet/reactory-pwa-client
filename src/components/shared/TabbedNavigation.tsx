@@ -13,7 +13,7 @@ import Tab from '@mui/material/Tab';
 import { Button, Toolbar } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { getUiOptions } from '../reactory/form/utils';
 
 
@@ -324,5 +324,5 @@ class TabbedNavComponent extends Component<any, any> {
   }
 };
 
-const TabbedNavigationComponent = compose(withApi, withTheme, withStyles(TabbedNavComponent.styles))(TabbedNavComponent);
+const TabbedNavigationComponent = compose(withReactory, withTheme, withStyles(TabbedNavComponent.styles))(TabbedNavComponent);
 export default TabbedNavigationComponent;

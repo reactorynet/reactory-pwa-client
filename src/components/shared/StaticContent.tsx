@@ -4,11 +4,11 @@ import { compose } from 'redux';
 import { Icon, IconButton } from '@mui/material';
 import { withStyles, withTheme, } from '@mui/styles';
 import moment, { Moment } from 'moment';
-import ReactoryApi, { withApi } from '@reactory/client-core/api';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 interface ReactoryStaticContentProps {
   id: string,
-  reactory: ReactoryApi,
+  reactory: Reactory.Client.IReactoryApi,
   classes?: any,
   showTitle: boolean,
   title: string,
@@ -226,7 +226,7 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
   else default_content = '';
 
   let contentComponent = found === true && content.published === true ? (<div {...containerProps} ref={ref => contentRef.current = ref} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>) : props.defaultValue;
-  let ContentCaptureComponent = reactory.getComponent(formFqn);
+  let ContentCaptureComponent = reactory.getComponent<any>(formFqn);
   let contentCaptureProps: any = {
     formData: { slug: getSlug(), title: state.title, published: state.content.published, content: state.found === true ? content.content : default_content },
     mode: "edit",
@@ -304,7 +304,7 @@ const StaticContentStyles = (theme: any): any => {
   }
 };
 
-const StaticContentComponent: any = compose(withApi, withTheme, withStyles(StaticContentStyles))(StaticContent);
+const StaticContentComponent: any = compose(withReactory, withTheme, withStyles(StaticContentStyles))(StaticContent);
 
 StaticContentComponent.meta = {
   nameSpace: 'core',

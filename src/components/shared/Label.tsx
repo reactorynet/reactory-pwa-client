@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { Typography } from '@mui/material';
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 import { template } from 'lodash';
 
@@ -62,7 +62,7 @@ class Label extends Component<any, any> {
 
 
 const LabelComponent = compose(
-  withApi,
+  withReactory,
   withTheme,
   withStyles(Label.styles))(Label);
 

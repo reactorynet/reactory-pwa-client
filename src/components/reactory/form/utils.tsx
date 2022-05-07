@@ -1,6 +1,8 @@
 import React from "react";
 import fill from "lodash/fill";
 import validateFormData from "./validate";
+import FormFields from './components/fields';
+import FormWidgets from './components/widgets';
 
 
 export const ADDITIONAL_PROPERTY_FLAG = "__additional_property";
@@ -58,8 +60,8 @@ const widgetMap = {
 
 export function getDefaultRegistry() {
   return {
-    fields: require("./components/fields"),
-    widgets: require("./components/widgets"),
+    fields: FormFields,
+    widgets: FormWidgets,
     definitions: {},
     formContext: {},
   };

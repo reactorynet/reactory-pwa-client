@@ -10,7 +10,7 @@ import {
 import gql from 'graphql-tag';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 class DocumentListWidget extends Component<any, any> {
 
@@ -157,6 +157,6 @@ class DocumentListWidget extends Component<any, any> {
     )
   }
 }
-const DocumentListComponent = compose(withApi, withTheme, withStyles(DocumentListWidget.styles))(DocumentListWidget)
+const DocumentListComponent = compose(withReactory, withTheme, withStyles(DocumentListWidget.styles))(DocumentListWidget)
 export default DocumentListComponent;
 

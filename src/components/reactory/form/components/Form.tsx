@@ -12,10 +12,13 @@ import {
   deepEquals,
 } from "../utils";
 import validateFormData, { toErrorList } from "../validate";
-import { withApi } from '@reactory/client-core/api/ApiProvider'
+import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider'
 import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
 
-class Form extends Component<any, any> {
+import fields from './fields';
+import widgets from './widgets';
+import templates from './templates';
+class FormClass extends Component<any, any> {
 
   formElement: any;
   $formElement: any;
@@ -93,7 +96,9 @@ class Form extends Component<any, any> {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
+    //return false;
     return shouldRender(this, nextProps, nextState);
+    
   }
 
   validate(formData, schema = this.props.schema, via = 'onChange') {
@@ -187,9 +192,9 @@ class Form extends Component<any, any> {
     let registery = {
       fields: { ...fields, ...this.props.fields },
       widgets: { ...widgets, ...this.props.widgets },
-      ArrayFieldTemplate: this.props.ArrayFieldTemplate,
-      ObjectFieldTemplate: this.props.ObjectFieldTemplate,
-      FieldTemplate: this.props.FieldTemplate,
+      ArrayFieldTemplate: this.props.ArrayFieldTemplate || templates.MaterialArrayFieldTemplate,
+      ObjectFieldTemplate: this.props.ObjectFieldTemplate || templates.MaterialObjectTemplate,
+      FieldTemplate: this.props.FieldTemplate || templates.MaterialFieldTemplate,
       definitions: this.props.schema.definitions || {},
       formContext: this.props.formContext || {},
     };
@@ -252,7 +257,7 @@ class Form extends Component<any, any> {
     }
 
     const $children = (<>
-    {this.renderErrors()}
+      {this.renderErrors()}
       {toolbarPosition.indexOf('top') >= 0 ? (children) : null}
       <ErrorBoundary FallbackComponent={(props) => (<>{idSchema.$id} Field Error: {props.error}</>)}>
         <_SchemaField
@@ -270,12 +275,13 @@ class Form extends Component<any, any> {
           disabled={disabled} />
       </ErrorBoundary>
       {toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}</>)
-    
+
     if (componentType === 'form') {
       return (
         <form
-          className={className ? className : "reactory-form"}
+          className={className}
           id={id}
+          key={id}
           name={name}
           method={method}
           target={target}
@@ -297,7 +303,7 @@ class Form extends Component<any, any> {
     if (componentType === 'div') {
       //@ts-ignore
       return (<div
-        className={className ? className : "rjsf"}
+        className={className ? className : null}
         id={id}
         ref={form => {
           this.formElement = form;
@@ -309,40 +315,370 @@ class Form extends Component<any, any> {
   }
 }
 
-// if (process.env.NODE_ENV !== "production") {
-//   Form.propTypes = {
-//     schema: PropTypes.object.isRequired,
-//     uiSchema: PropTypes.object,
-//     formData: PropTypes.any,
-//     widgets: PropTypes.objectOf(
-//       PropTypes.oneOfType([PropTypes.func, PropTypes.object])
-//     ),
-//     fields: PropTypes.objectOf(PropTypes.func),
-//     ArrayFieldTemplate: PropTypes.func,
-//     ObjectFieldTemplate: PropTypes.func,
-//     FieldTemplate: PropTypes.func,
-//     ErrorList: PropTypes.func,
-//     onChange: PropTypes.func,
-//     onError: PropTypes.func,
-//     showErrorList: PropTypes.bool,
-//     onSubmit: PropTypes.func,
-//     id: PropTypes.string,
-//     className: PropTypes.string,
-//     name: PropTypes.string,
-//     method: PropTypes.string,
-//     target: PropTypes.string,
-//     action: PropTypes.string,
-//     autocomplete: PropTypes.string,
-//     enctype: PropTypes.string,
-//     acceptcharset: PropTypes.string,
-//     noValidate: PropTypes.bool,
-//     noHtml5Validate: PropTypes.bool,
-//     liveValidate: PropTypes.bool,
-//     validate: PropTypes.func,
-//     transformErrors: PropTypes.func,
-//     safeRenderCompletion: PropTypes.bool,
-//     formContext: PropTypes.object,
-//   };
-// }
+export interface ISchemaForm {
+  idSchema?: Reactory.Schema.IDSchema,
+  schema: Reactory.Schema.ISchema,
+  uiSchema: Reactory.Schema.IUISchema,
+  idPrefix?: string,
+  errorSchema?: any,
+  formData?: any,
+  widgets?: {
+    [key: string]: React.Component | React.FC | React.PureComponent
+  },
+  fields?: object,
+  ArrayFieldTemplate?: () => any,
+  ObjectFieldTemplate?: () => any,
+  FieldTemplate?: () => any,
+  ErrorList?: React.FC<any>,
+  onBlur?: (...args: any) => void
+  onFocus?: (...args: any) => void,
+  onChange?: (formData: any) => any,
+  onError?: (errors: any[], erroSchema?: any) => any,
+  showErrorList?: boolean,
+  onSubmit?: (form: any) => void,
+  id?: string,
+  className?: string,
+  chilren?: any
+  name?: string,
+  method?: string,
+  target?: string,
+  action?: string,
+  autocomplete?: string,
+  enctype?: string,
+  acceptcharset?: string,
+  noValidate?: boolean,
+  noHtml5Validate?: boolean,
+  liveValidate?: boolean,
+  toolbarPosition?: string
+  validate?: (formData: any, schema?: Reactory.Schema.ISchema, validationType?: string) => { errors: any, errorSchema: any },
+  transformErrors?: (errors: any) => any,
+  safeRenderCompletion?: boolean,
+  formContext: object,
+  disabled?: boolean
+  style?: any,  
+  [key: string]: any
+}
 
-export default Form;
+
+interface FormState {
+  schema: Reactory.Schema.ISchema,
+  uiSchema: Reactory.Schema.IUISchema,
+  idSchema: Reactory.Schema.IDSchema,
+  formData: any,
+  edit: any,
+  errors: any,
+  errorSchema: any,
+}
+
+const Form: React.FC<ISchemaForm> = (props) => {
+
+  const formElement = React.useRef<HTMLFormElement | HTMLDivElement>();
+  
+  //let $formElement: any;
+
+  const reactory = useReactory();
+
+    //   static defaultProps = {
+  //   uiSchema: {},
+  //   noValidate: false,
+  //   liveValidate: false,
+  //   disabled: false,
+  //   safeRenderCompletion: false,
+  //   noHtml5Validate: false,
+  //   ErrorList: DefaultErrorList,
+  // };
+
+  const {
+    id,      
+    formContext,
+    ArrayFieldTemplate,
+    FieldTemplate,
+    ObjectFieldTemplate,
+    acceptcharset,
+    action,
+    autocomplete,
+    enctype,
+    liveValidate,
+    method,
+    name,
+    noHtml5Validate,            
+    safeRenderCompletion,
+    target,
+    transformErrors,    
+    children,
+    className,
+    schema,    
+    idPrefix = 'root',
+    disabled = false,
+    uiSchema = {},
+  } = props;
+    
+  const [idSchema, setIdSchema] = React.useState<Reactory.Schema.IDSchema>({ $id: "root" });
+  const [formData, setFormData] = React.useState<any>(null);
+  const [edit, setEdit] = React.useState<boolean>(false);
+  const [errors, setError] = React.useState<any[]>([])
+  const [errorSchema, setErrorSchema] = React.useState<any>(null);
+
+
+  React.useEffect(()=>{
+    const $state = getStateFromProps(props);
+    if (
+      props.onChange && !deepEquals(props.formData, $state.formData)
+    ) {
+      props.onChange($state);
+    }
+
+  },[])
+    
+  React.useEffect(() => {
+
+    const nextState = getStateFromProps(props);
+    //TODO: ensure that data and schema are the only items compared before rerended
+    if (
+      !deepEquals(nextState.formData, props.formData) &&
+      !deepEquals(nextState.formData, formData) && props.onChange
+    ) {
+      props.onChange(nextState);
+    }
+    
+    setEdit(nextState.edit === true);
+    setFormData(nextState.formData);
+    setIdSchema(nextState.idSchema);
+    setError(nextState.errors);    
+    setErrorSchema(nextState.errorSchema);
+
+  }, [props])
+
+
+  const getRegistry = () => {
+    // For BC, accept passed SchemaField and TitleField props and pass them to
+    // the "fields" registry one.
+    const { fields, widgets } = getDefaultRegistry();
+    let registery: any = {
+      fields: { ...fields, ...props.fields },
+      widgets: { ...widgets, ...props.widgets },
+      ArrayFieldTemplate,
+      ObjectFieldTemplate,
+      FieldTemplate,
+      definitions: schema.definitions || {},
+      formContext: formContext || {},
+    };
+
+    if (formContext) {
+      registery.formContext.$formElement = formElement;
+      registery.formContext.$submit = submit;
+      registery.formContext.$formData = formData;
+    }
+
+    return registery;
+  }
+
+  const validate = (formData: any, schema: Reactory.Schema.ISchema = props.schema, via = 'onChange') => {
+    const { definitions } = getRegistry();
+    const resolvedSchema = retrieveSchema(schema, definitions, formData);
+    return validateFormData(
+      formData,
+      resolvedSchema,
+      props.validate,
+      transformErrors,
+      via
+    );
+  }
+
+  const getStateFromProps = (props): FormState => {    
+    
+    const edit = typeof props.formData !== "undefined";    
+    const mustValidate = edit && !props.noValidate && liveValidate;
+    const { definitions } = schema;
+    const formData = getDefaultFormState(schema, props.formData, definitions);
+    const retrievedSchema = retrieveSchema(schema, definitions, formData);
+
+    const validationResult = mustValidate ? validate(formData, schema) : {
+      errors: errors || [],
+      errorSchema: errorSchema || {},
+    };
+
+    const idSchema = toIdSchema(
+      retrievedSchema,
+      uiSchema["ui:rootFieldId"],
+      definitions,
+      formData,
+      props.idPrefix
+    );
+    return {
+      schema,
+      uiSchema,
+      idSchema,
+      formData,
+      edit,
+      errors: validationResult.errors,
+      errorSchema: validationResult.errorSchema,
+    };
+  }
+
+
+  const onChange = (formData: any, newErrorSchema: any) => {
+    const mustValidate = !props.noValidate && props.liveValidate;    
+    let $errorSchema = null;
+    let $errors = null;
+    if (mustValidate) {
+      const validationResult = validate(formData);
+      $errorSchema = validationResult.errorSchema || {};
+      $errors = validationResult.errors || [];      
+    } else if (!props.noValidate && newErrorSchema) {      
+      $errors = toErrorList(newErrorSchema);
+      $errorSchema = newErrorSchema;      
+    }
+    
+    setError($errors || []);
+    setErrorSchema($errorSchema || {});
+
+    if(props.onChange) {
+      props.onChange({  
+        schema,
+        uiSchema,
+        idSchema,
+        formData,
+        edit,
+        errors: $errors,
+        errorSchema: $errorSchema,
+      })
+    } 
+  };
+
+  const renderErrors = () => {
+    
+    const { ErrorList, showErrorList, formContext } = props;
+
+    if (errors.length && showErrorList != false) {
+      return (<ErrorList errors={errors}
+        errorSchema={errorSchema}
+        schema={schema}
+        uiSchema={uiSchema}
+        formContext={formContext} />
+      );
+    }
+    return null;
+  }
+
+
+
+  const onBlur = (...args) => {
+    if (props.onBlur) {
+      props.onBlur(...args);
+    }
+  };
+
+  const onFocus = (...args) => {
+    if (props.onFocus) {
+      props.onFocus(...args);
+    }
+  };
+
+  const onSubmit = (event) => {
+    if (event) event.preventDefault();
+
+    if (!props.noValidate) {
+      const { errors, errorSchema } = validate(formData, props.schema, 'submit');
+      if (Object.keys(errors).length > 0) {
+        setErrorSchema(errorSchema);
+        setError(errors);
+        
+        if(props.onError) props.onError(errors, errorSchema)        
+        return;
+      }
+    }
+
+    setError([]);
+    setErrorSchema({});
+    if(props.onSubmit) props.onSubmit({ schema, uiSchema, formData, errorSchema, errors, status: "submitted" })        
+  };
+
+
+
+  const submit = () => {    
+
+    let submitted = false;
+    if (formElement) {      
+      formElement.current.dispatchEvent(new Event("submit", { cancelable: true }));      
+      submitted = true;
+    }    
+
+    return submitted;
+  }
+  
+  const registry = getRegistry();
+  const _SchemaField = registry.fields.SchemaField;
+
+  let componentType = 'form';
+  let formUiOptions: any = {};
+  let style = props.style || {}
+
+  if (uiSchema['ui:options']) {
+    formUiOptions = uiSchema['ui:options'];
+    componentType = formUiOptions.componentType || componentType;
+    style = formUiOptions.style ? { ...style, ...formUiOptions.style } : style;
+  }
+
+  const $children = (<>
+    {renderErrors()}
+    {props.toolbarPosition && props.toolbarPosition.indexOf('top') >= 0 ? (children) : null}
+    <ErrorBoundary FallbackComponent={(props) => (<>{idSchema.$id} Field Error: {props.error}</>)}>
+      <_SchemaField
+        schema={schema}
+        uiSchema={uiSchema}
+        errorSchema={props.errorSchema}
+        idSchema={idSchema}
+        idPrefix={idPrefix}
+        formData={formData}
+        onChange={onChange}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        registry={registry}
+        safeRenderCompletion={safeRenderCompletion}
+        disabled={disabled} />
+    </ErrorBoundary>
+    {props.toolbarPosition && props.toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
+    </>);
+
+  if (componentType === 'form') {
+    return (
+      <form
+        className={className}
+        id={id}
+        name={name}
+        method={method}
+        target={target}
+        action={action}
+        autoComplete={autocomplete}
+        encType={enctype}
+        acceptCharset={acceptcharset}
+        noValidate={noHtml5Validate}
+        onSubmit={onSubmit}
+        style={style}
+        ref={(form: HTMLFormElement) => {
+          formElement.current = form;
+        }}>
+        {$children}
+      </form>
+    );
+  }
+
+  if (componentType === 'div') {
+    //@ts-ignore
+    return (<div
+      className={className ? className : null}
+      id={id}
+      ref={(form: HTMLDivElement) => {
+        formElement.current = form;
+      }}>
+      {$children}
+    </div>)
+  }
+
+}
+
+
+
+
+export default FormClass;

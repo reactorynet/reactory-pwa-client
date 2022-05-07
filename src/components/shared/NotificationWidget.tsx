@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { compose } from 'redux';
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '../../api/ApiProvider';
+import { withReactory } from '../../api/ApiProvider';
 import classNames from 'classnames';
 import { ReactoryApiEventNames } from '../../api'
 import { v1 as uuidV1 } from 'uuid';
@@ -19,7 +19,7 @@ class NotificationHOC extends Component<any, any> {
   components = [];
 
   constructor(props, context) {
-    super(props, context);
+    super(props);
   }
 
   static styles = (theme: Theme): any => {
@@ -95,24 +95,24 @@ class NotificationHOC extends Component<any, any> {
 
   render() {
     let { props } = this;
-    let { api, title, type, config, classes } = props;
+    const { reactory, title, type, config, classes } = props;
     let additionalComponentsToMount = null;
 
 
     if (config && config.components && config.components.length > 0) {
       const additionalComponents = config.components || [];
       additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, propsMap }, additionalComponentIndex) => {
-        let ComponentToMount = api.getComponent(componentFqn);
-        api.log('NOTIFICATION __ ADITIONAL COMPONENT:: ', { componentProps, componentFqn }, 'debug');
+        let ComponentToMount = reactory.getComponent(componentFqn);
+        reactory.log('NOTIFICATION __ ADITIONAL COMPONENT:: ', { componentProps, componentFqn }, 'debug');
         let additionalComponentFound = true;
         if (ComponentToMount === null || ComponentToMount === undefined) {
           additionalComponentFound = false;
-          ComponentToMount = api.getComponent("core.NotFound");
+          ComponentToMount = reactory.getComponent("core.NotFound");
         }
 
         let mappedProps = {};
         if (propsMap)
-          mappedProps = api.utils.objectMapper({ ...props.config, api }, propsMap)
+          mappedProps = reactory.utils.objectMapper({ ...props.config, reactory }, propsMap)
 
         if (additionalComponentFound === true)
           return <ComponentToMount {...{ ...componentProps, ...mappedProps, key: additionalComponentIndex }} />
@@ -149,14 +149,14 @@ class NotificationHOC extends Component<any, any> {
   }
 }
 
-const NotificationHOCComponent = compose(withTheme, withApi, withStyles(NotificationHOC.styles))(NotificationHOC);
+const NotificationHOCComponent = compose(withTheme, withReactory, withStyles(NotificationHOC.styles))(NotificationHOC);
 
 class NotificationWidget extends Component<any, any> {
   constructor(props, context) {
     super(props, context);
 
     this.state = { notifications: [] }
-    this.props.api.on(ReactoryApiEventNames.onShowNotification, this.onShowNotification);
+    this.props.reactory.on(ReactoryApiEventNames.onShowNotification, this.onShowNotification);
   }
 
   static styles = (theme: Theme): any => {
@@ -204,6 +204,6 @@ class NotificationWidget extends Component<any, any> {
   }
 }
 
-const NotificationComponent = compose(withTheme, withApi, withStyles(NotificationWidget.styles))(NotificationWidget);
+const NotificationComponent = compose(withTheme, withReactory, withStyles(NotificationWidget.styles))(NotificationWidget);
 
 export default NotificationComponent;

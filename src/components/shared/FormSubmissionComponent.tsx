@@ -4,7 +4,7 @@ import { Button, Icon } from '@mui/material';
 import { template, isFunction } from 'lodash';
 import { compose } from 'redux';
 import { withTheme, withStyles } from '@mui/styles';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 //REQUIREMENTS
 // Text
 // Color
@@ -64,5 +64,5 @@ class SubmissionComponent extends Component<any, any> {
   // static styles = (theme) => ({})
 };
 
-const FormSubmissionComponent = compose(withTheme, withApi)(SubmissionComponent);
+const FormSubmissionComponent = compose(withTheme, withReactory)(SubmissionComponent);
 export default FormSubmissionComponent;

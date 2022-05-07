@@ -1,6 +1,6 @@
 import React from 'react';
-import { withApi, useReactory } from '@reactory/client-core/api/ApiProvider';
-import Reactory from '@reactory/client-core/types/reactory';
+import { withReactory, useReactory } from '@reactory/client-core/api/ApiProvider';
+import Reactory from '@reactory/reactory-core';
 import * as MaterialCore from '@mui/material';
 import { makeStyles } from '@mui/styles';
 import useSizeSpec from '@reactory/client-core/components/hooks/useSizeSpec';

@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@mui/styles';
 import { getAvatar } from '../util';
-import { withApi } from '../../api/ApiProvider';
+import { withReactory } from '../../api/ApiProvider';
 
 
 class ChipLabel extends Component<any, any> {
@@ -90,5 +90,5 @@ class ChipLabel extends Component<any, any> {
     )
   }
 }
-const ChipLabelComponent = compose(withTheme, withApi, withStyles(ChipLabel.styles))(ChipLabel)
+const ChipLabelComponent = compose(withTheme, withReactory, withStyles(ChipLabel.styles))(ChipLabel)
 export default ChipLabelComponent

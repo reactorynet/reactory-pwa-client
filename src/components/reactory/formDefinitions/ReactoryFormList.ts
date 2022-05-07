@@ -1,3 +1,5 @@
+import Reactory from '@reactory/reactory-core';
+
 const schema = {
   type: 'object',
   title: 'Reactory Forms',
@@ -97,7 +99,7 @@ const uiSchema = {
 };
 
 
-const ReactoryFormList = {
+const ReactoryFormList: Reactory.Forms.IReactoryForm = {
   id: 'ReactoryFormList',
   uiFramework: 'material',
   uiSupport: ['material'],
@@ -117,6 +119,7 @@ const ReactoryFormList = {
   ],
   schema,
   uiSchema,
+  registerAsComponent: true
 };
 
 export default ReactoryFormList;

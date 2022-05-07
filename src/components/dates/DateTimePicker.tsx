@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import moment from 'moment';
 import { FormControl, Typography, TextField, InputLabel } from '@mui/material';
 
-import { withApi } from "@reactory/client-core/api/ApiProvider";
+import { withReactory } from "@reactory/client-core/api/ApiProvider";
 import { compose } from 'redux';
 import { optionsList } from '../reactory/form/utils';
 
@@ -108,6 +108,6 @@ const DateTimePickerWidget = (props) => {
 
 
 
-const DateTimePickerWithApi = compose(withApi)(DateTimePickerWidget);
+const DateTimePickerWithApi = compose(withReactory)(DateTimePickerWidget);
 
 export default DateTimePickerWithApi;

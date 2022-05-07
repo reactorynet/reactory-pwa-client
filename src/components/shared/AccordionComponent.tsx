@@ -17,7 +17,7 @@ import { compose } from 'redux';
 import { withTheme, withStyles } from '@mui/styles';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@mui/styles';
-import ApiProvider, { withApi } from '@reactory/client-core/api/ApiProvider';
+import ApiProvider, { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { pathExists } from 'fs-extra';
 
 
@@ -278,5 +278,5 @@ class AccordionWidget extends Component<any, any> {
   }
 };
 
-const AccordionComponent = compose(withApi, withTheme, withStyles(AccordionWidget.styles))(AccordionWidget);
+const AccordionComponent = compose(withReactory, withTheme, withStyles(AccordionWidget.styles))(AccordionWidget);
 export default AccordionComponent;

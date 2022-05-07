@@ -4,9 +4,9 @@ import { AppBar, IconButton, Toolbar, Icon, Typography } from '@mui/material';
 import { isArray } from 'lodash';
 import { compose } from 'redux';
 import { withTheme } from '@mui/styles';
-import { withApi } from '../../api/ApiProvider';
+import { withReactory } from '../../api/ApiProvider';
 import ReactoryApi from "../../api/ReactoryApi";
-import Reactory from '@reactory/client-core/types/reactory';
+import Reactory from '@reactory/reactory-core';
 import * as ExcelJS from 'exceljs';
 import moment from 'moment';
 
@@ -24,8 +24,7 @@ const defaultFrameProps = {
   }    
 };
 
-export type ReactoryFormDefinition = Reactory.IReactoryForm;
-
+export type ReactoryFormDefinition = Reactory.Forms.IReactoryForm;
 
 class FramedWindow extends Component<any, any> {
   
@@ -234,7 +233,7 @@ class FramedWindow extends Component<any, any> {
   }
 }
 
-const FramedWindowComponent = compose(withTheme, withApi)(FramedWindow);
+const FramedWindowComponent = compose(withTheme, withReactory)(FramedWindow);
 
 class _GraphiqlWindow extends Component<any, any> {
   
@@ -261,7 +260,7 @@ class _GraphiqlWindow extends Component<any, any> {
   }
 }
 
-const GraphiqlWindowComponent: any = compose(withTheme, withApi)(_GraphiqlWindow); 
+const GraphiqlWindowComponent: any = compose(withTheme, withReactory)(_GraphiqlWindow); 
 GraphiqlWindowComponent.meta = {
   nameSpace: 'core',
   name: 'ReactoryGraphiQLExplorer',
@@ -288,10 +287,10 @@ export interface ReportViewerProperties extends Reactory.Client.IReactoryWiredCo
   deliveryOptions?: any,
   /** A form component that can be used to provide input / filters for the report */
   inputForm?: string,
-  formDef?: Reactory.IReactoryForm,
-  exportDefinition?: Reactory.IExport,
+  formDef?: Reactory.Forms.IReactoryForm,
+  exportDefinition?: Reactory.Excel.IExport,
   useClient?: boolean,
-  theme: Reactory.ITheme
+  theme: any
 };
 
 export interface ReportViewerState {
@@ -366,8 +365,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
 
   constructor(props: ReportViewerProperties, context: any){
     
-
-    super(props, context)
+    super(props)
     this.state = {
       ready: props.useClient === true ? false : props.method === 'get' && props.delivery === 'inline',
       inlineLocalFile: '',
@@ -381,7 +379,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
     this.getInlineViewResult = this.getInlineViewResult.bind(this);
     this.getClientSide = this.getClientSide.bind(this);
 
-    this.componentDefs = props.api.getComponents(ReportViewer.dependencies);
+    this.componentDefs = props.reactory.getComponents(ReportViewer.dependencies);
   }
   
   onSubmitReport(){
@@ -389,7 +387,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
   }
 
   getInlineViewResult(){
-    const { folder, report, api, method, data, engine = 'pdf', useClient } = this.props;
+    const { folder, report, reactory, method, data, engine = 'pdf', useClient } = this.props;
     const { Loading } = this.componentDefs;
     const { ready, inlineLocalFile } = this.state;
     
@@ -407,13 +405,13 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
     if(useClient === false) {           
       const queryparams = {
         ...data,
-        'x-client-key': api.CLIENT_KEY,
-        'x-client-pwd': api.CLIENT_PWD,
-        'auth_token': api.getAuthToken(),
+        'x-client-key': reactory.CLIENT_KEY,
+        'x-client-pwd': reactory.CLIENT_PWD,
+        'auth_token': reactory.getAuthToken(),
         'view': 'inline',      
       };
     
-      reportWindowProps.url = `${api.API_ROOT}/${engine}/${folder}/${report}?${api.utils.queryString.stringify(queryparams)}`; 
+      reportWindowProps.url = `${reactory.API_ROOT}/${engine}/${folder}/${report}?${reactory.utils.queryString.stringify(queryparams)}`; 
       const toolbar = (
         <AppBar>
           <Toolbar>
@@ -430,17 +428,17 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
   }
 
   getDownloadViewResult(){
-    const { folder, report, api, method, data } = this.props;
+    const { folder, report, reactory, method, data } = this.props;
     
     const queryparams = {
       ...data,
-      'x-client-key': api.CLIENT_KEY,
-      'x-client-pwd': api.CLIENT_PWD,
-      'auth_token': api.getAuthToken(),
+      'x-client-key': reactory.CLIENT_KEY,
+      'x-client-pwd': reactory.CLIENT_PWD,
+      'auth_token': reactory.getAuthToken(),
       'view': 'attachment',      
     };
   
-    const downloaduri = `${api.API_ROOT}/pdf/${folder}/${report}?${api.utils.queryString.stringify(queryparams)}`;
+    const downloaduri = `${reactory.API_ROOT}/pdf/${folder}/${report}?${reactory.utils.queryString.stringify(queryparams)}`;
     setTimeout(()=>{
       window.open(downloaduri, '_blank')
     }, 1200)
@@ -467,7 +465,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
       throw new Error('Cannot call getClientSide() when useClient === false');
     }    
 
-    const self = this;
+    const that = this;
     const { ready, inlineLocalFile, downloaded } = this.state;
 
     if(inlineLocalFile && ready === true) {
@@ -478,27 +476,27 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
       )
     }
 
-    const exportDefinition: Reactory.IExport = this.props.exportDefinition
-    let formData = self.props.data;
+    const exportDefinition: Reactory.Excel.IExport = this.props.exportDefinition
+    let formData = that.props.data;
             
     if(exportDefinition) {
 
       if(exportDefinition.mapping && exportDefinition.mappingType === 'om') {
-        formData = self.props.api.utils.objectMapper({ formData }, exportDefinition.mapping);
+        formData = that.props.reactory.utils.objectMapper({ formData }, exportDefinition.mapping);
       }
 
       const wb = new ExcelJS.Workbook();            
-      const excelOptions: Reactory.IExcelExportOptions = exportDefinition.exportOptions;
+      const excelOptions: Reactory.Excel.IExcelExportOptions = exportDefinition.exportOptions;
             
       const options: Partial<ExcelJS.XlsxWriteOptions> = {
-        filename: `${self.props.api.utils.template(excelOptions.filename)({ formData: this.props.data, moment: moment })}`,
+        filename: `${that.props.reactory.utils.template(excelOptions.filename)({ formData: this.props.data, moment: moment })}`,
       };
       
       const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-      excelOptions.sheets.forEach((sheet: Reactory.IExcelSheet, sheetIndex: number) => {
+      excelOptions.sheets.forEach((sheet: Reactory.Excel.IExcelSheet, sheetIndex: number) => {
         const ws = wb.addWorksheet(sheet.name);               
         
-        sheet.columns.forEach((column: Reactory.IExcelColumnDefinition, columnIndex: number) => {
+        sheet.columns.forEach((column: Reactory.Excel.IExcelColumnDefinition, columnIndex: number) => {
           const headerCell = ws.getCell(`${cols[columnIndex]}1`);          
           ws.columns[columnIndex].width = column.width;
           if(column.style) {
@@ -553,7 +551,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
             const dataArray: any[] = sheetObject[sheet.arrayField];          
             dataArray.forEach((row: any, rowIndex: number) => {
               console.log(`Processing row ${rowIndex}`, { row, rowIndex });
-              sheet.columns.forEach(( column: Reactory.IExcelColumnDefinition, columnIndex: number ) => {                
+              sheet.columns.forEach(( column: Reactory.Excel.IExcelColumnDefinition, columnIndex: number ) => {                
                 let fieldValue: string = row[column.propertyField];
                 let cell = ws.getCell(rowIndex + 2, columnIndex + 1);
                 cell.numFmt = "";
@@ -577,7 +575,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
           // Remove anchor from body
           // document.body.removeChild(a)           
           //update local file reference
-          self.setState({ inlineLocalFile: options.filename, ready: true, downloaded: true })
+          that.setState({ inlineLocalFile: options.filename, ready: true, downloaded: true })
         });
 
         return (<Loading message="Writing Excel, please wait" />)
@@ -636,7 +634,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
       folder, report, method, 
       resolver, delivery, 
       deliveryOptions,
-      api, data, filename
+      reactory, data, filename
     } = this.props;
     
 
@@ -670,7 +668,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
   }
 }
 
-export const ReportViewerComponent = compose(withTheme, withApi)(ReportViewer);
+export const ReportViewerComponent = compose(withTheme, withReactory)(ReportViewer);
 
 
 export default FramedWindowComponent;

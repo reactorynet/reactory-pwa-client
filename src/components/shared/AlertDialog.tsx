@@ -7,9 +7,9 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
-const ThemedAlertDialog = compose(withTheme, withApi)((props: any) => {
+const ThemedAlertDialog = compose(withTheme, withReactory)((props: any) => {
 
     const {
         open,

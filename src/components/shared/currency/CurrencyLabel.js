@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '../../../api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 class CurrencyLabel extends Component {
   render() {
@@ -64,7 +64,7 @@ CurrencyLabel.styles = (theme) => {
 };
 
 const CurrencyLabelComponent = compose(
-  withApi,
+  withReactory,
   withTheme,
   withStyles(CurrencyLabel.styles))(CurrencyLabel);
 

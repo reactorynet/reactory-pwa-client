@@ -107,7 +107,7 @@ export default async () => {
     authLink.concat(uploadLink),
   );
 
-  const client = new ApolloClient<NormalizedCacheObject>({
+  const client: ApolloClient<NormalizedCacheObject> = new ApolloClient<NormalizedCacheObject>({
     link: splitLink,//authLink.concat(uploadLink),
     cache,
     defaultOptions: {

@@ -16,7 +16,7 @@ import {
   Slide,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { deepEquals } from '../reactory/form/utils';
 import {
   useMediaQuery
@@ -202,4 +202,4 @@ FullScreenDialog.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-export default compose(withApi, withTheme, withStyles(FullScreenDialogStyles))(FullScreenDialog);
+export default compose(withReactory, withTheme, withStyles(FullScreenDialogStyles))(FullScreenDialog);

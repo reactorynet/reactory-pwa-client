@@ -1,5 +1,7 @@
+import Reactory from '@reactory/reactory-core';
 
-export default {
+
+const ReactoryNewForm: Reactory.Forms.IReactoryForm =  {
   id: 'core.ReactoryNewFormInput',
   name: 'ReactoryNewFormInput',
   nameSpace: 'core',
@@ -13,8 +15,7 @@ export default {
       version: { type: 'string', title: 'Form Version', description: 'Provide a version number for your form', defaultValue: '1.0.0' },
       storage: { type: 'string', title: 'Form Storage', description: 'Decide where you want to store your form', defaultValue: 'local' },
     }
-  },
-  uiSchema: {
-
-  }
+  },  
 }
+
+export default ReactoryNewForm;

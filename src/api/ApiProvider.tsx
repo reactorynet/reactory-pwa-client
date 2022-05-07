@@ -11,16 +11,16 @@ export interface ApiProviderProps {
     history: History
 }
 
-export const ReactoryProvider = ({ children, api }) => {
+export const ReactoryProvider = ({ children, reactory }) => {
 
-    return (<ReactoryContext.Provider value={api}>
+    return (<ReactoryContext.Provider value={reactory}>
         {Children.only(children)}
     </ReactoryContext.Provider>)
 };
 
-export const ReactoryContext = createContext<ReactoryApi>(null);
+export const ReactoryContext = createContext<Reactory.Client.IReactoryApi>(null);
 
-export const withApi = (ComponentToWrap: any | React.Component | Function, id = 'not-set') => {
+export const withReactory = (ComponentToWrap: any | React.Component | Function, id = 'not-set') => {
 
     function ErrorFallback({ error, resetErrorBoundary }) {
         return (
@@ -34,15 +34,19 @@ export const withApi = (ComponentToWrap: any | React.Component | Function, id = 
 
 
     return (props: any) => {
-        const reactory = useContext(ReactoryContext)
+        const reactory = useContext(ReactoryContext);
+                
+        if(!ComponentToWrap) throw new Error("Component to wrap cannot be null")
+
         const ComponentWithErrorBoundary = withErrorBoundary(ComponentToWrap, {
             FallbackComponent: ErrorFallback,
             onError: (error, info) => {
                 reactory.log(`Error in component ${id}`, {error, info}, 'error');
             }
-        })
+        });
+
         try {
-            return <ComponentWithErrorBoundary {...props} api={reactory} reactory={reactory} />
+            return <ComponentWithErrorBoundary {...props} reactory={reactory} />
         } catch (error) {
             return <span>Component: {id}: error: {error.message}</span>
         }
@@ -51,7 +55,7 @@ export const withApi = (ComponentToWrap: any | React.Component | Function, id = 
 };
 
 
-export const useReactory = () => {
+export const useReactory = (): Reactory.Client.IReactoryApi => {
     const reactory = useContext(ReactoryContext);
     return reactory;
 }

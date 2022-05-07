@@ -47,12 +47,13 @@ import icons from '../assets/icons';
 import * as queryString from '../components/utility/query-string';
 import humanNumber from 'human-number';
 import humanDate from 'human-date';
-import { withApi, ReactoryProvider } from './ApiProvider';
+import { withReactory, ReactoryProvider } from './ApiProvider';
 import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
 import Reactory from '@reactory/reactory-core';
 
 import { cloneDeep } from "@apollo/client/utilities";
+import { ReactoryForm } from "../components/reactory";
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -748,8 +749,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
     }
   };
-
+  
   log(message, params: any = [], kind = 'log', formatting = "") {
+  
+
     try {
       switch (kind) {
         case 'log':
@@ -955,7 +958,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   loadComponentWithFQN(fqn, props, target) {
     let Component = this.getComponent(fqn);
     this.loadComponent(Component, props, target);
-  }
+  }  
 
   renderForm(componentView, wrap: boolean = true) {
     const that = this;
@@ -968,7 +971,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         <ApolloProvider client={that.client}>
           <MuiThemeProvider theme={that.muiTheme}>
             <Router>
-              <ReactoryProvider api={that}>
+              <ReactoryProvider reactory={that}>
                 {componentView}
               </ReactoryProvider>
             </Router>
@@ -979,7 +982,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
 
-  
+  /**
+   * Function call to render a reactory form component.
+   * @param form 
+   */
+  reactoryForm(form: Reactory.Forms.IReactoryForm): React.ReactElement {
+    return <ReactoryForm formDef={form} />
+  } 
 
   /**
    * The forms function is executed when the application starts up and 
@@ -1030,7 +1039,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
               
               const formDef = {...$formDef, ...tempSchema };
               that.formSchemas.push(formDef);
-              if (formDef.registerAsComponent === true) {
+              // A form must explicitly be set to false 
+              // to not register as a component.
+              if (formDef.registerAsComponent !== false) {
                 const FormComponent = (props: any, context: any) => {
                   return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={`${formDefIndex}`}
                     onSubmit={props.onSubmit} onChange={props.onChange}
@@ -1351,7 +1362,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     component: any = EmptyComponent, 
     tags: string[] = [], 
     roles: string[] = ['*'], 
-    wrapWithApi: boolean = false, connectors: any[] = [], 
+    wrapWithApi: boolean = false, 
+    connectors: any[] = [], 
     componentType: string = 'component') {
     const fqn = `${nameSpace}.${name}@${version}`;
     if (isEmpty(nameSpace))
@@ -1367,7 +1379,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       nameSpace,
       name,
       version,
-      component: wrapWithApi === false ? component : withApi(component, fqn),
+      component: wrapWithApi === false ? component : withReactory(component, fqn),
       tags,
       roles,
       connectors,
@@ -1430,11 +1442,11 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         }
       }
 
-      if($name) {
-        if(typeof componentMap[$name] === "object") {
-          that.log(`Warning ${$name} component is an object`, fqn, 'warning')
-        }
-      }
+      // if($name) {
+      //   if(typeof componentMap[$name] === "object") {
+      //     that.log(`Warning ${$name} component is an object`, fqn, 'warning')
+      //   }
+      // }
     });
     return componentMap;
   }
@@ -1474,7 +1486,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return components;
   }
 
-  getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0'): Reactory.Client.ValidComponent {
+  getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0'): Reactory.Client.AnyValidComponent {
     if (this.componentRegister && this.componentRegister[notFoundComponent]) {
       return this.componentRegister[notFoundComponent].component;
     } else {
@@ -1500,7 +1512,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           <ApolloProvider client={that.client}>
             <MuiThemeProvider theme={that.muiTheme}>
               <Router>
-                <ReactoryProvider api={that}>
+                <ReactoryProvider reactory={that}>
                   <ComponentToMount {...props} />
                 </ReactoryProvider>
               </Router>

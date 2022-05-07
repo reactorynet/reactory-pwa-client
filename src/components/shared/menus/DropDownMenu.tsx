@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import PropTypes from "prop-types";
-import uuid from "uuid";
+import { v4 as uuid } from "uuid";
 import om from "object-mapper";
 import { compose } from "redux";
 import { isNil } from "lodash";
@@ -27,7 +27,7 @@ export const DropDownMenu = (props) => {
   }
 
   const { menus, tooltip, theme } = props;
-  const ariaId = props.id || uuid.v4();
+  const ariaId = props.id || uuid();
   const menuItems = []; 
 
   let _menus = menus;

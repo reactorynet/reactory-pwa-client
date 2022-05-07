@@ -3,7 +3,7 @@ import { compose } from 'redux';
 import { isString } from 'lodash';
 import { Typography } from '@mui/material';
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 class TableChildWrapper extends Component<any, any> {
 
@@ -26,7 +26,7 @@ class TableChildWrapper extends Component<any, any> {
   }  
 }
 
-const TableChildWrapperComponent = withApi(TableChildWrapper, 'TableChildComponentWrapper');
+const TableChildWrapperComponent = withReactory(TableChildWrapper, 'TableChildComponentWrapper');
 
 export default TableChildWrapperComponent;
 

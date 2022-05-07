@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import ReactoryApi, { useReactory } from '@reactory/client-core/api';
+import ReactoryApi, { useReactory } from '@reactory/client-core/api//ApiProvider';
 
 // TODO: Move this interface to @reactory/reactory-core/types/index.d.ts
 interface NotFoundProps {
@@ -39,7 +39,7 @@ const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) 
   } else {
 
     if(props.waitingFor) {
-      const ComponentToMount = reactory.getComponent(props.waitingFor)
+      const ComponentToMount = reactory.getComponent<any>(props.waitingFor)
       return (<ComponentToMount {...props.args} />)
     }
 

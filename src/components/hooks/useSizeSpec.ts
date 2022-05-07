@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import Reactory from '@reactory/client-core/types/reactory';
+import Reactory from '@reactory/reactory-core';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 
 

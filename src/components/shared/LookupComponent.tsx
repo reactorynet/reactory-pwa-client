@@ -4,9 +4,9 @@ import { isArray, indexOf } from 'lodash';
 import { compose } from 'redux';
 import { Icon, StyledComponentProps, Theme } from '@mui/material';
 import { withStyles, withTheme } from '@mui/styles';
-import { withApi } from '@reactory/client-core/api/ApiProvider';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import ReactoryApi from 'api';
-import Reactory from 'types/reactory';
+import Reactory from '@reactory/reactory-core';
 
 
 
@@ -14,7 +14,7 @@ interface ReactoryLookupWidgetProperties {
   [key: string]: any,
   reactory: ReactoryApi,
   uiSchema: any,
-  schema: Reactory.ISchema,
+  schema: Reactory.Schema.ISchema,
   formData: any,
   onChange: (formData: any, errorSchema: any) => void,
 }
@@ -268,6 +268,6 @@ const LookupWidgetStyles = (theme: Theme): any => {
   }
 };
 
-const LookupComponent = compose(withApi, withTheme, withStyles(LookupWidgetStyles))(LookupWidget);
+const LookupComponent = compose(withReactory, withTheme, withStyles(LookupWidgetStyles))(LookupWidget);
 export default LookupComponent;
 
