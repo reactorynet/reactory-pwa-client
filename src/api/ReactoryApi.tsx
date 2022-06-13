@@ -1098,6 +1098,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
     let $formDef = lodash.find(formSchemas, { id });
 
+    if(!$formDef) return null;
+    
     const FORM_QUERY = `
     query ReactoryFormGetById($id: String!) {
       ReactoryFormGetById(id: $id) {

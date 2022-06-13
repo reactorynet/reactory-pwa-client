@@ -279,11 +279,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   const location = useLocation();
   const navigate = useNavigate();
 
-  const instance_id = uuid.v4();
+  
   const created = new Date().valueOf();
 
-  const [formDef, setFormDefinition] = React.useState<Reactory.Forms.IReactoryForm>(ReactoryDefaultForm);  
-  
+  const [formDef, setFormDefinition] = React.useState<Reactory.Forms.IReactoryForm>(props.formDef || ReactoryDefaultForm);  
+  const [instance_id] = React.useState(uuid.v4())
+
   const fqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
   const signature = `<${fqn} instance={${instance_id} />`;
   const queryData: any = reactory.utils.queryString.parse(window.location.search) || {};
@@ -403,7 +404,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     return _dependency_state;
   };
-
+  
+  
   const [componentDefs, setComponents] = React.useState<ReactoryComponentMap>(reactory.getComponents(default_dependencies()));  
   const [formData, setFormData] = React.useState<any>(initialData());
   const [formHistory, setHistory] = React.useState<any[]>([props.data || props.formData]);
@@ -466,23 +468,27 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     if (props.refCallback) props.refCallback(getFormReference());
     if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
+    
+    if(props.formDef) {
+      setFormDefinition({ ...props.formDef, __complete__: true });
+    } else {
+      let $id = props.formId;
+      if (!$id && props.formDef && props.formDef.id) $id = props.formData.$id;
+      const $formDef = reactory.form($id, (nextFormDef, error) => {
+  
+        if (error) {
+          setFormDefinition(ReactoryErrorForm);
+          setFormData({ error })
+        } else {
+          setFormDefinition(nextFormDef);
+        }
+        
+      });
 
+      if($formDef) setFormDefinition($formDef.__complete__ === true ? $formDef : ReactoryDefaultForm)
+      
+    }
 
-    let $id = props.formId;
-    if (!$id && props.formDef && props.formDef.id) $id = props.formData.$id;
-
-
-    const $formDef = reactory.form($id, (nextFormDef, error) => {
-
-      if (error) {
-        setFormDefinition(ReactoryErrorForm);
-        setFormData({ error })
-      } else {
-        setFormDefinition(nextFormDef);
-      }
-    });
-
-    setFormDefinition($formDef.__complete__ === true ? $formDef : ReactoryDefaultForm)
 
 
     getData();
@@ -1544,11 +1550,11 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const _formUiOptions: Reactory.Schema.IFormUIOptions = getActiveUiOptions();
 
     const DropDownMenu = componentDefs["DropDownMenu"];
-    const formProps = {
+    const formProps: any = {
       id: instance_id,
       key: instance_id,
-      ...filter_props(),
-      ...formDefinition(),
+      // ...filter_props(),
+      ...formDefinition(),      
       validate: formValidation,
       onChange: onChange,
       onError: props.onError ? props.onError : (error) => { },
@@ -1772,6 +1778,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                 if (componentRef.indexOf(".") > 0) {
                   const ComponentInSchemaSelector = reactory.getComponent<any>(componentRef);
                   if (ComponentInSchemaSelector) {
+                    //@ts-ignore
                     _after.push(<ComponentInSchemaSelector formData={formData} formContext={formProps.formContext} uiSchema={formProps.uiSchema} schema={formProps.schema} />)
                   }
                 } else {
@@ -1974,14 +1981,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       let $fp: ISchemaForm = { ...{ ...formProps, toolbarPosition: toolbarPosition } };
 
       return (        
-        <ErrorBoundary 
-          FallbackComponent={(errorProps) => (<>Error in Reactory Form: {errorProps.error}</>)}>     
-          {props.before}
-          <Form {...$fp}>          
-          
-          </Form>
-          {props.children}      
-        </ErrorBoundary>        
+          <Form {...$fp} />
+      
       )
     } catch (err) {
       return <>{err.message}</>

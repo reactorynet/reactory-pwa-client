@@ -113,7 +113,9 @@ const TemplateErrorStyles = (theme) => {
 
 const MaterialFormErrorTemplate = (props) => {
 
-  const { errors = [], uiSchema, schema, api, formContext, errorSchema } = props;
+  const { errors = [], uiSchema, schema, formContext, errorSchema } = props;
+
+  
 
   if(uiSchema && uiSchema['ui-options']) {
     if(uiSchema['ui-options'].showErrorList === false) return null;
@@ -233,6 +235,9 @@ const MaterialFormErrorTemplate = (props) => {
   return errorComponent;
 }
 
-export const MaterialFormTemplateComponent = compose(withReactory, withStyles(TemplateErrorStyles), withTheme)(MaterialFormErrorTemplate);
-export default MaterialFormTemplateComponent;
+
+export default MaterialFormErrorTemplate
+
+// export const MaterialFormTemplateComponent = compose(withReactory, withStyles(TemplateErrorStyles), withTheme)(MaterialFormErrorTemplate);
+// export default MaterialFormTemplateComponent;
 

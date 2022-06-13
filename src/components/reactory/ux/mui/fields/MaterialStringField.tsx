@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { throttle, isNil, isEmpty } from 'lodash'
 import { compose } from 'redux';
-import { withReactory } from '@reactory/client-core/api/ApiProvider';
+import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider';
 
 import om from 'object-mapper';
 
@@ -45,11 +45,11 @@ const MaterialStringFieldWidget = (props) => {
     required,
     schema,
     uiSchema,
-    hidden,
-    theme,
-    api,
-    reactory
+    hidden,    
+    
   } = props;
+
+  const reactory = useReactory();
 
   try {
     const inputProps: any = {
@@ -163,8 +163,8 @@ const MaterialStringFieldWidget = (props) => {
         variant: 'standard'
       };
 
-      if (theme.MaterialTextField) {
-        themeDefaults = theme.MaterialTextField;
+      if (reactory && reactory?.muiTheme?.MaterialTextField) {
+        themeDefaults = reactory?.muiTheme?.MaterialTextField
       }
 
 
@@ -187,8 +187,8 @@ const MaterialStringFieldWidget = (props) => {
 
     } else {
       let themeDefaults: any = {};
-      if (theme.MaterialInput) {
-        themeDefaults = theme.MaterialInput;
+      if (reactory?.theme?.MaterialInput) {
+        themeDefaults = reactory?.theme?.MaterialInput;
       }
 
       let COMPONENT = Input;
@@ -222,14 +222,16 @@ const MaterialStringFieldWidget = (props) => {
     }
 
   } catch (renderError) {
-    if (api) {
-      api.log(`💥 MaterialString Field Error`, { renderError }, 'error')
+    if (reactory) {
+      reactory.log(`💥 MaterialString Field Error`, { renderError }, 'error')
     }
     return <>💥 Could not render field</>
   }
 
 };
 
-const MaterialStringApiFieldWidget = compose(withReactory, withTheme)(MaterialStringFieldWidget)
-export default MaterialStringApiFieldWidget;
+export default MaterialStringFieldWidget;
+
+// const MaterialStringApiFieldWidget = compose(withReactory)(MaterialStringFieldWidget)
+// export default MaterialStringApiFieldWidget;
 

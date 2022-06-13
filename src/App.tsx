@@ -199,7 +199,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
               componentArgs[arg.key] = arg.value[arg.key];
             })
           }
-
+      
           const ReactoryComponent = reactory.getComponent<any>(routeDef.componentFqn)
           const NotFound = reactory.getComponent<any>("core.NotFound");
 
@@ -753,7 +753,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   if (isReady === false) return <AppLoading />;
   //@ts-ignore
-  let header = isAuthenticating === false ? (<Header api={reactory} title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />) : null;
+  let header = isAuthenticating === false ? (<Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />) : null;
 
 
   let onlyChild = (

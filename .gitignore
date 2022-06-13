@@ -24,5 +24,6 @@ package-lock.json
 yarn.lock
 
 /config/env*
+!/config/env.ts
 !/config/env/README.MD
 !/config/env/reactory.local

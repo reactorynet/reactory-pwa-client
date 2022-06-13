@@ -1,5 +1,5 @@
 import Reactory from '@reactory/reactory-core';
-import MaterialPackage from './mui';
+// import MaterialPackage from './mui';
 
 interface IReactoryUxPackage {
   fields: {
@@ -35,7 +35,7 @@ interface IReactoryUxPackages {
 
 const ReactoryUxPackages: IReactoryUxPackages = {
   //@ts-ignore
-  "material": MaterialPackage
+  // "material": MaterialPackage
 }
 
 export default ReactoryUxPackages;

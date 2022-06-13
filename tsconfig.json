@@ -38,7 +38,10 @@
       "@reactory/webpack/*": [
         "webpack/*"
       ],
-      "@reactory/config/*": ["config/*"]
+      "@reactory/config/*": ["config/*"],
+      "@rjsf/material-ui/*": [
+        "node_modules/@rjsf/material-ui/dist/*"
+      ]
     },
     "pretty": true,
     "typeRoots": [

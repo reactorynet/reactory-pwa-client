@@ -1,7 +1,17 @@
 import React from 'react';
-import Form from '@reactory/client-core/components/reactory/form';
+import Form from '../form';
+import ObjectFieldTemplate, { MaterialPaperObjectTemplate } from '../ux/mui/templates/MaterialObjectTemplate'
+import FieldTemplate from '../ux/mui/templates/MaterialFieldTemplate';
 import ReactoryNewForm from '../formDefinitions/ReactoryNewFormInput';
+import { ReactoryForm } from '../ReactoryFormComponent'
 
 export default () => {
-  return <Form schema={ReactoryNewForm.schema} uiSchema={ReactoryNewForm.uiSchema || {}} />
+
+  return <ReactoryForm formDef={ReactoryNewForm} />
+  
+  // return <Form 
+  //     schema={ReactoryNewForm.schema}
+  //     ObjectField={ObjectFieldTemplate}
+  //     FieldTemplate={FieldTemplate}
+  //    />
 }

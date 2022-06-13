@@ -22,7 +22,7 @@ import { getWebpackDevServerConfiguration } from '../webpack/webpackDevServer.co
 
 console.log(`NODE_ENV ${process.env.NODE_ENV}`)
 
-require('../config/env');
+// require('../config/env');
 
 // Makes the script crash on unhandled rejections instead of silently
 // ignoring them. In the future, promise rejections that are not handled will

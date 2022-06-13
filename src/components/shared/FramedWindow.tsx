@@ -33,7 +33,7 @@ class FramedWindow extends Component<any, any> {
     frameProps: PropTypes.object,
     method: PropTypes.oneOf(['get', 'post']),
     data: PropTypes.object,
-    api: PropTypes.instanceOf(ReactoryApi).isRequired,
+    reactory: PropTypes.instanceOf(ReactoryApi).isRequired,
     sendApi: PropTypes.bool,
     messageHandlers: PropTypes.array,
     header: PropTypes.element,
@@ -61,7 +61,7 @@ class FramedWindow extends Component<any, any> {
   componentDefs: any;
   
   constructor(props, context){
-    super(props, context);
+    super(props);
     
     //the handlers must return a function that returns a message call        
     this.state = {
@@ -79,10 +79,10 @@ class FramedWindow extends Component<any, any> {
   }
   
   onListnerLoaded(data){    
-    const { api } = this.props;
+    const { reactory } = this.props;
     const { activeHandlers, handlers } = this.state;
     const self = this;
-    api.log('Listner Loaded Notification Via Postal', data)    
+    reactory.log('Listner Loaded Notification Via Postal', data)    
     if(activeHandlers.hasOwnProperty(`${data.nameSpace}.${data.name}@${data.version}`) === false) {
       let _handlerRefs = { ...activeHandlers };
       if(typeof data.component === 'function') {
@@ -97,14 +97,14 @@ class FramedWindow extends Component<any, any> {
   
   componentDidMount(){
     if(this.props.sendApi === true) {
-      const { api } = this.props;
-      const subscription = this.props.api.amq.onMessageHandlerLoaded('postwindow.message.handler', this.onListnerLoaded); 
+      const { reactory } = this.props;
+      const subscription = this.props.reactory.amq.onMessageHandlerLoaded('postwindow.message.handler', this.onListnerLoaded); 
       const _handlers = [];
       const _handlerRefs = {};
 
       this.props.messageHandlers.forEach( handlerFqn => {
       
-        const HandlerComponent = api.getComponent(`${handlerFqn.nameSpace}.${handlerFqn.name}@${handlerFqn.version}`);
+        const HandlerComponent = reactory.getComponent(`${handlerFqn.nameSpace}.${handlerFqn.name}@${handlerFqn.version}`);
         if(typeof HandlerComponent === 'function'){
               const HandlerInstance = HandlerComponent({ ...this.props, sendMessage: this.sendMessage }, this.context);
               if(typeof HandlerInstance === 'function') {                
@@ -116,10 +116,10 @@ class FramedWindow extends Component<any, any> {
       this.doHandshake(); //we try a handshake with target window... 
 
       if(isArray(this.props.messageHandlers) === true) {
-        this.props.api.utils.injectResources(this.props.messageHandlers);      
+        this.props.reactory.utils.injectResources(this.props.messageHandlers);      
       }
 
-      this.props.api.log(`Have subscription for listeners being loaded`, subscription);      
+      this.props.reactory.log(`Have subscription for listeners being loaded`, subscription);      
       this.setState({ listnerLoadedSubscription: subscription, handlers: _handlers, activeHandlers: _handlerRefs }, ()=>{
         window.addEventListener("message", this.onReceiveMessage)
       });
@@ -127,14 +127,14 @@ class FramedWindow extends Component<any, any> {
   }
 
   onReceiveMessage({ data, origin, source }) {        
-    const { api } = this.props;
-    api.log(`Received new message from ${origin}`, data);
+    const { reactory } = this.props;
+    reactory.log(`Received new message from ${origin}`, data);
     const { activeHandlers } = this.state;
     const handlerKeys = Object.keys(activeHandlers);
     if(data.message){      
       switch(data.type) {
         case 'reactory.core.handshake:ack': {
-          api.log(`'Received ack on handshake`)
+          reactory.log(`'Received ack on handshake`)
           this.setState({ apiAcknowledge: true })
           break;  
         }
@@ -149,7 +149,7 @@ class FramedWindow extends Component<any, any> {
                 try {
                   activeHandlers[handlerKey](data, origin, source, this.props);
                 }catch(messageHanlderError) {
-                  api.log(`Could not execute message handler`, { error: messageHanlderError }, 'error');
+                  reactory.log(`Could not execute message handler`, { error: messageHanlderError }, 'error');
                 }
               }
             });
@@ -163,10 +163,10 @@ class FramedWindow extends Component<any, any> {
   doHandshake(){
     const self = this;    
     if(this.state.apiAcknowledge === false) {
-      this.props.api.log('Attempting Handshake');
+      this.props.reactory.log('Attempting Handshake');
       if(this.targetWindow && typeof this.targetWindow.contentWindow.postMessage === 'function') {
-        this.props.api.log('Attempting Handshake - iframe has content window');
-        const user = this.props.api.getUser();
+        this.props.reactory.log('Attempting Handshake - iframe has content window');
+        const user = this.props.reactory.getUser();
       this.targetWindow.contentWindow.postMessage({ message: 'reactory.delivery', type: 'reactory.core.handshake', props: { message: `Welcome ${user.firstName}, please login below.` } }, "*");
         if(this.state.tried < 3) {
           this.setState({ tried: this.state.tried + 1}, ()=>{
@@ -182,7 +182,7 @@ class FramedWindow extends Component<any, any> {
   sendMessage(message, targetOrigin = "*"){
     if(message && targetOrigin) {
       if(this.targetWindow && typeof this.targetWindow.contentWindow.postMessage === 'function') {
-        this.props.api.log(`Sending message to window ${message.type}`);
+        this.props.reactory.log(`Sending message to window ${message.type}`);
         this.targetWindow.contentWindow.postMessage(message, targetOrigin);      
       }
     }    
@@ -194,10 +194,10 @@ class FramedWindow extends Component<any, any> {
 
   render(){
 
-    const { containerProps, frameProps, api, data, method } = this.props;
+    const { containerProps, frameProps, reactory, data, method } = this.props;
     const _cprops = {...FramedWindow.defaultProps.containerProps, ...containerProps}
     const _fprops = {...FramedWindow.defaultProps.frameProps, ...frameProps }    
-    const frameid = this.props.id || `reactory_iframe_${api.utils.hashCode(_fprops.url || 'about:blank')}`
+    const frameid = this.props.id || `reactory_iframe_${reactory.utils.hashCode(_fprops.url || 'about:blank')}`
     
     if(method === 'post') {    
       _fprops.src = _fprops.url;
@@ -238,23 +238,24 @@ const FramedWindowComponent = compose(withTheme, withReactory)(FramedWindow);
 class _GraphiqlWindow extends Component<any, any> {
   
   render(){    
-    const { api } = this.props;
-    const { themeOptions } = api.getUser();
+    const { reactory } = this.props;
+    debugger
+    const { themeOptions } = reactory.getUser();
     let color1 = themeOptions && themeOptions.palette && themeOptions.palette.primary1Color 
       ? themeOptions.palette.primary1Color 
       : 'unset'
 
     const queryparams = {      
-      'x-client-key': api.CLIENT_KEY,
-      'x-client-pwd': api.CLIENT_PWD,
-      'auth_token': api.getAuthToken(), 
-      'color1':  color1,     
+      'x-client-key': reactory.CLIENT_KEY,
+      'x-client-pwd': reactory.CLIENT_PWD,
+      'auth_token': reactory.getAuthToken(), 
+      'color1':  color1,
     };
   
     return (
       <FramedWindowComponent 
         id={`reactory-graphiql-window`} 
-        frameProps={{ url :`${api.CDN_ROOT}/plugins/graphiql/index.html?${api.utils.queryString.stringify(queryparams)}` }} 
+        frameProps={{ url: `${reactory.CDN_ROOT}/plugins/graphiql/index.html?${reactory.utils.queryString.stringify(queryparams)}` }} 
         method={'get'} 
         />)
   }
@@ -310,7 +311,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
     //filename for the pdf report
     filename: PropTypes.string.isRequired,
     //api import
-    api: PropTypes.instanceOf(ReactoryApi),
+    reactory: PropTypes.instanceOf(ReactoryApi),
     //The data we want to post to the pdf generator
     data: PropTypes.object,
     //The way the report is to be returned

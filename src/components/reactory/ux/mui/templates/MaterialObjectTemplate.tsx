@@ -1,7 +1,7 @@
 import React, { Component, Fragment } from 'react';
 import { compose } from 'redux';
-import { withStyles, withTheme } from '@mui/styles';
-import { withReactory } from '@reactory/client-core/api/ApiProvider';
+import { makeStyles, withStyles, withTheme } from '@mui/styles';
+import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider';
 import { template, isNil, isEmpty, isArray } from 'lodash';
 import * as Widgets from '../widgets';
 import {
@@ -21,14 +21,9 @@ import {
   Paper,
 } from '@mui/material';
 
-const MaterialObjectTemplateStyles = (theme) => ({
-    root: {
-      padding: theme.spacing(1),
-      margin: theme.spacing(1)
-    }
-  })
 
-const MaterialObjectTemplateHOC = (props) => {
+
+const MaterialObjectTemplate = (props) => {
 
       
   
@@ -37,7 +32,7 @@ const MaterialObjectTemplateHOC = (props) => {
       description, 
       properties,
       children, 
-      classes, 
+      
       key, 
       disabled, 
       containerProps, 
@@ -45,13 +40,26 @@ const MaterialObjectTemplateHOC = (props) => {
       hidden,
       idSchema,
       uiSchema, 
-      reactory, 
+       
       formData, 
       formContext 
     } = props;
 
+
+
     
+    const reactory = useReactory();
     
+
+    const MaterialObjectTemplateStyles = (theme) => ({
+      root: {
+        padding: theme.spacing(1),
+        margin: theme.spacing(1)
+      }
+    })
+
+    const classes = makeStyles(MaterialObjectTemplateStyles)();
+
     // //console.log('Object template field', { props: this.props, uiSchema });
     let titleText = title && title.indexOf("$") >= 0 ? template(title)({formData: props.formData}) : title;    
             
@@ -70,7 +78,7 @@ const MaterialObjectTemplateHOC = (props) => {
           const buttons = uiToolbar.buttons.map((button) => {
             const api = formContext.api
             const onRaiseCommand = ( evt ) => {                      
-              if(api) reactory.raiseFormCommand(button.command,  { formData: formData, formContext: formContext });              
+              if(reactory) reactory.raiseFormCommand(button.command,  { formData: formData, formContext: formContext }, formData);              
             };            
             return <Tooltip key={button.id} title={button.tooltip || button.id}><IconButton color={button.color || "secondary"} onClick={onRaiseCommand} size="large"><Icon>{button.icon}</Icon></IconButton></Tooltip>;
           });
@@ -172,12 +180,18 @@ const MaterialObjectTemplateHOC = (props) => {
     );  
 }
 
-const MaterialObjectTemplate = compose(
-  withReactory,
-  withStyles(MaterialObjectTemplateStyles),
-  withTheme)(MaterialObjectTemplateHOC)
 
-const MaterialObjectTemplateFunction = (props) => {
-  return (<MaterialObjectTemplate {...props} />)
-};
-export default MaterialObjectTemplateFunction
+export const MaterialPaperObjectTemplate = (props) => {
+
+  const { properties } = props;
+
+  return (
+    <Paper>
+      {properties.map(element => element.content)}
+    </Paper>
+  )
+
+}
+
+
+export default MaterialObjectTemplate;

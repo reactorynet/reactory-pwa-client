@@ -18,7 +18,7 @@ import {
   FormControlProps,
 } from '@mui/material'
 
-import { withReactory } from '@reactory/client-core/api/ApiProvider'
+import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider'
 
 
 
@@ -51,14 +51,15 @@ const MaterialFieldTemplateFunction = (props) => {
     idSchema,
     uiSchema, //The uiSchema object for this field.
     formContext, //The formContext object that you passed to Form.api, uiSchema, formData
-    api,
+    
     registry,
     formData,
     classes,
-    theme
   } = props;
 
-  // api.log(`MaterialFieldTemplate Rendering field ${id}`, props);
+  // reactory.log(`MaterialFieldTemplate Rendering field ${id}`, props);
+
+
 
   const isObject = schema.type === 'object'
   const isBoolean = schema.type === 'boolean'
@@ -69,7 +70,9 @@ const MaterialFieldTemplateFunction = (props) => {
   let Widget = null;
   let showLabel = true;
 
-
+  const reactory = useReactory();
+  const theme = reactory.muiTheme;
+  
   if (uiOptions !== null) {
     showLabel = uiOptions.showLabel !== undefined && uiOptions.showLabel !== null ? uiOptions.showLabel === true : true;
     let _props = { ...props };
@@ -79,7 +82,7 @@ const MaterialFieldTemplateFunction = (props) => {
     }
 
     if (uiOptions.componentFqn) {
-      Widget = api.getComponent(uiOptions.componentFqn);            
+      Widget = reactory.getComponent(uiOptions.componentFqn);            
     }
 
     if (typeof uiOptions.componentProps === 'object') {
@@ -91,7 +94,7 @@ const MaterialFieldTemplateFunction = (props) => {
     }
 
     if (uiOptions.componentPropsMap) {
-      let mappedProps = api.utils.objectMapper(props, uiOptions.componentPropsMap);
+      let mappedProps = reactory.utils.objectMapper(props, uiOptions.componentPropsMap);
       if (mappedProps) {
         _props = { ..._props, ...mappedProps }
       }
@@ -99,7 +102,7 @@ const MaterialFieldTemplateFunction = (props) => {
 
 
     if (uiOptions.propsMap) {
-      let mappedProps = api.utils.objectMapper(props, uiOptions.propsMap);
+      let mappedProps = reactory.utils.objectMapper(props, uiOptions.propsMap);
       if (mappedProps) {
         _props = { ..._props, ...mappedProps }
       }
@@ -114,11 +117,11 @@ const MaterialFieldTemplateFunction = (props) => {
   if (uiToolbar) {
     //console.log('Generating toolbar with formState', { props });
     const buttons = uiSchema['ui:toolbar'].buttons.map((button) => {
-      const api = formContext.api
+      
       const onRaiseCommand = (evt) => {
         //console.log('Raising Toolbar Command', { evt, api });
-        if (api) {
-          api.raiseFormCommand(button.command, button, { formData: formData, formContext: formContext });
+        if (reactory) {
+          reactory.raiseFormCommand(button.command, button, { formData: formData, formContext: formContext });
         }
         else {
           //console.log('No API to handle form command', {api, evt });
@@ -138,12 +141,12 @@ const MaterialFieldTemplateFunction = (props) => {
   let schemaType = schema.type;
 
   let themeVariant = 'standard';
-  if (theme.MaterialInput) {
+  if (theme && theme.MaterialInput) {
     themeVariant = theme.MaterialInput.variant || themeVariant;
   }
 
   let formControlProps: FormControlProps = {
-    className: classes.formControl,
+    // className: classes.formControl,
     style: uiOptions ? uiOptions.style : {},
     fullWidth: true,
     variant: 'standard',
@@ -163,7 +166,7 @@ const MaterialFieldTemplateFunction = (props) => {
     case 'array':
     case 'boolean': {
       return (
-        <FormControl className={classes.formControl} fullWidth={formControlProps.fullWidth === true}>
+        <FormControl fullWidth={formControlProps.fullWidth === true}>
           {children}
         </FormControl>
       )
@@ -236,5 +239,7 @@ const MaterialFieldTemplateFunction = (props) => {
 
 };
 
-const MaterialFieldTemplateComponent = compose(withReactory, withTheme, withStyles(MaterialFieldStyles))(MaterialFieldTemplateFunction);
-export default MaterialFieldTemplateComponent as Reactory.Client.AnyValidComponent;
+// const MaterialFieldTemplateComponent = compose(withReactory, withTheme, withStyles(MaterialFieldStyles))(MaterialFieldTemplateFunction);
+//export default MaterialFieldTemplateComponent as Reactory.Client.AnyValidComponent;
+
+export default MaterialFieldTemplateFunction;
