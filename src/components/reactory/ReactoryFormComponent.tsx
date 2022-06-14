@@ -119,48 +119,6 @@ TabContainer.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
-
-// export interface ReactoryFormProperties {
-//   ref?: (formRef: any) => void;
-//   uiSchemaKey: string;
-//   uiSchemaId?: string;
-//   data: any | any[];
-//   formData: any | any[];
-//   formDef?: Reactory.Forms.IReactoryForm;
-//   location: any;    
-//   formId: string,
-//   helpTopics?: string[],
-//   helpTitle?: string,
-//   uiFramework: string,
-//   mode: string,
-//   history: History,
-//   formContext?: any,
-//   extendSchema?: Function,
-//   busy: boolean,
-//   events?: Object,
-//   query?: Object,
-//   onChange?: Function,
-//   onSubmit?: Function,
-//   onError?: Function,
-//   onCommand?: Function,
-//   onMutateComplete?: Function,
-//   onQueryComplete?: Function,
-//   before?: Component | undefined,
-//   children?: ReactNodeArray,
-//   $route?: any,
-//   $App?: any,
-//   validate?: Function,
-//   transformErrors?: Function,
-//   autoQueryDisabled?: boolean,
-//   refCallback?: (formReference: any) => void,
-//   queryOnFormDataChange?: boolean,
-//   onBeforeMutation?: Function,
-//   onBeforeQuery?: Function,
-//   componentType?: string | "form" | "widget",
-//   theme?: Theme,
-//   watchList?: string[] 
-// }
-
 export interface ReactoryFormState {
   loading: boolean,
   allowRefresh?: boolean,

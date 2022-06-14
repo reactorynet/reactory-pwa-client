@@ -704,7 +704,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     return {
 
       root_paper: {
-        minHeight: window.innerHeight,
+        minHeight: window.innerHeight + 10,
         borderRadius: 0,
         margin: 0,
         padding: 0,
@@ -759,7 +759,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   let onlyChild = (
     <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
       {offline === false && <Globals api={reactory} />}
-      {header}
+      {header}      
       <NotificationComponent />
       {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} authenticating={isAuthenticating} />}
       <Offline onOfflineChanged={onOfflineChanged} />

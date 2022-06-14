@@ -23,14 +23,7 @@ import {
   TablePagination
 
 } from '@mui/material'
-// import MaterialTable, {
-//   MTableToolbar,
-//   MTableBody,
-//   MTablePagination,
-//   MTableBodyRow,
-//   MTableCell,
-//   MTableHeader,
-// } from 'material-table';
+
 
 import {
   
@@ -234,7 +227,7 @@ const ReactoryMaterialTableWaitForRenderer = (props) => {
 
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
-  const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext, formData = [], searchText = "" } = props;
+  const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext = {}, formData = [], searchText = "" } = props;
   const uiOptions = uiSchema['ui:options'] || {};
   const AlertDialog = reactory.getComponent('core.AlertDialog@1.0.0');
   const [activeAction, setActiveAction] = useState({
@@ -834,6 +827,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   React.useEffect(() => {
+    debugger
     refresh({})
   }, [formContext.formData]);
 
@@ -907,7 +901,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return (
       <TablePagination 
         count={10}
-        page={1}
+        page={0}
         rowsPerPage={10}
         component={(props)=>{ return (<>COmponent</>) }}
         onPageChange={(evt, page)=>{}}
@@ -920,12 +914,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return (
       <>
        <Table>
-         {getHeader()}
-         {getBody()}
-         {getFooter()}
-         {getPagination()}         
-       </Table>
-        {confirmDialog}
+        </Table>
       </>
     )
 
