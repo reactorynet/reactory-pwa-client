@@ -59,7 +59,7 @@ const ThemedAlertDialog = compose(withTheme, withReactory)((props: any) => {
                 </Button>}
                 {showAccept === true && <Button onClick={onAccept}
                     variant={confirmProps.variant || 'outlined'}
-                    style={{ color: theme.palette.error.main }}
+                    style={{  }}
                     autoFocus
                     {...confirmProps}>
                     {props.acceptTitle ? props.acceptTitle : 'Yes'}

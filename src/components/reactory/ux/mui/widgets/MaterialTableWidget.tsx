@@ -827,7 +827,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   React.useEffect(() => {
-    debugger
+    
     refresh({})
   }, [formContext.formData]);
 
@@ -912,10 +912,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   try {
     return (
-      <>
-       <Table>
-        </Table>
-      </>
+      <Table>
+        {getHeader()}
+        {getBody()}
+        {getPagination()}
+        {getFooter()}
+      </Table>
     )
 
   } catch (err) {

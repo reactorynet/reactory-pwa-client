@@ -20,6 +20,7 @@ import {
   Typography,
   IconButton,
   Icon,
+  
   Input,
   Toolbar,
   LinearProgress,
@@ -546,7 +547,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   }
 
   const onPluginLoaded = (plugin: any) => {
-    reactory.log(`${signature} Plugin loaded, activating component`, { plugin }, 'debug');
+    reactory.log(` ${signature} Plugin loaded, activating component`, { plugin }, 'debug');
     try {
 
       let _component = plugin.component(props, getFormContext());
@@ -1983,122 +1984,3 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
 };
 
-const RouteBoundForm = (props) => {
-  const { formId, mode, id } = useParams<any>();
-
-  return <ReactoryForm 
-  formId={formId || props.formId || 'ReactoryFormList'} mode={mode || props.mode || 'view'} formData={{ id }} uiFramework={''} id={''} uiSupport={[]} title={''} schema={undefined} registerAsComponent={false} nameSpace={''} name={''} version={''} />
-}
-
-
-const ReactoryFormRouter = (props) => {
-
-  const reactory = useReactory();
-
-  const { match, routePrefix } = props;
-  const [version, setVersion] = React.useState<number>(0);
-  const [newFormModalVisible, setNewFormModalVisible] = React.useState(false);
-
-  const navigate = useNavigate();
-
-  const {
-    AlertDialog
-  } = reactory.getComponents(['core.AlertDialog']);
-
-  reactory.log('ReactoryFormRouter:render', { props: props }, 'debug');
-
-  const all_forms = reactory.getComponentsByType('form');
-
-  const user = reactory.getUser();
-
-
-  return (
-    <Routes>
-      <Route path={`${routePrefix}/:formId/:mode/`} >
-        <RouteBoundForm />
-      </Route>
-      <Route path={`${routePrefix}/:formId/`}>
-        <RouteBoundForm mode="view" />
-      </Route>
-      <Route path={`${routePrefix}/`}>
-        <ReactoryForm formDef={ReactoryFormListDefinition} routePrefix={`${routePrefix}`} onNewFormClicked={(evt) => {
-          setNewFormModalVisible(true)
-        }} formData={{ forms: all_forms }} mode='view' />
-
-        <AlertDialog
-          open={newFormModalVisible === true}
-          onClose={() => { setNewFormModalVisible(false) }}
-          title={'ADD NEW FORM'}
-        >
-          <ReactoryForm formDef={ReactoryNewFormInput} onSubmit={({ formData }) => {
-            //save the form definition to localStorage and bump on the forms list with a basic schema.
-            const formId = `${formData.nameSpace}.${formData.name}@${formData.version}`
-            const formDef = {
-              id: formId,
-              name: formData.name,
-              nameSpace: formData.nameSpace,
-              version: '1.0.0',
-              local: true,
-              uiFramework: 'material',
-              uiSupport: ['material'],
-              uiResources: [],
-              tags: [],
-              roles: [],
-              author: {
-                fullName: `${user.loggedIn.user.firstName} ${user.loggedIn.user.lastName}`,
-                email: `${user.loggedIn.user.email}`,
-              },
-              helpTopics: [
-                'ReactoryFormList',
-              ],
-              schema: {
-                type: 'string',
-                title: formData.name,
-                defaultValue: ''
-              },
-              defaultFormValue: 'Hallo form',
-              uiSchema: {
-
-              }
-            }
-            reactory.formSchemas.push(formDef);
-
-            const component = ($props) => {
-
-              const $children = $props.children || null;
-
-              if ($children) {
-                delete $props.children;
-              }
-
-              return (
-                <ReactoryForm
-                  formId={formDef.id}
-                  key={formDef.id}
-                  onSubmit={$props.onSubmit}
-                  onChange={$props.onChange}
-                  formData={formDef.defaultFormValue || $props.formData || $props.data}
-                  before={$props.before}
-                  {...$props}
-                >
-                  {$children}
-                </ReactoryForm>);
-            };
-
-            reactory.registerComponent(formDef.nameSpace, formDef.name, formDef.version, component, formDef.tags, formDef.roles, true, [], 'form')
-            navigate(`${routePrefix}/${formId}/`);
-
-          }} />
-        </AlertDialog>
-
-      </Route>
-    </Routes>
-
-  )
-};
-
-export const ReactoryFormRouterComponent = compose(
-  withReactory,
-  withTheme)(ReactoryFormRouter);
-
-export default ReactoryFormRouterComponent;

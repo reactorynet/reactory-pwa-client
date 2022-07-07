@@ -36,9 +36,9 @@ const MaterialStringFieldWidget = (props) => {
     idPrefix,
     idSchema,
     name,
-    onBlur,
-    onChange,
-    onFocus,
+    onBlur = () => {},
+    onChange = () => {},
+    onFocus = () => { },
     rawErrors,
     readOnly,
     registry,
@@ -121,11 +121,9 @@ const MaterialStringFieldWidget = (props) => {
 
       if (evt.keyCode === 13 && uiOptions && uiOptions.componentProps && uiOptions.componentProps.submitOnEnter) {
         evt.preventDefault();
-        ;
 
         if (uiOptions.componentProps.refreshEvents && uiOptions.componentProps.refreshEvents.length > 0) {
           uiOptions.componentProps.refreshEvents.forEach((refreshEvent) => {
-            ;
             // props.formContext.$ref.submit();
             props.onChange(evt.target.value);
             // props.formContext.$ref.forceUpdate();
@@ -143,7 +141,7 @@ const MaterialStringFieldWidget = (props) => {
         onChange: onInputChanged,
         onKeyDown: onKeyDown,
         onFocus: onFocus && (e => onFocus(id, e.target.value)), 
-        onBlur: onBlur && (e => onFocus(id, e.target.value)),
+        onBlur: onBlur && (e => onBlur(id, e.target.value)),
         readOnly: disabled === true,
       };
 

@@ -242,7 +242,7 @@ class ObjectField extends React.Component<any, any, any> {
               errorSchema={errorSchema[name]}
               idSchema={idSchema[name]}
               idPrefix={idPrefix}
-              formData={formData[name]}
+              formData={formData && formData[name] ? formData[name] : null}
               onKeyChange={this.onKeyChange(name)}
               onChange={this.onPropertyChange(name)}
               onBlur={onBlur}

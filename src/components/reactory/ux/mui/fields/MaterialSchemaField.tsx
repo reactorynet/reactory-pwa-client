@@ -314,21 +314,21 @@ function SchemaFieldRender(props) {
   return <FieldTemplate {...fieldProps}>{field}</FieldTemplate>;
 }
 
-class SchemaField extends React.Component {
-  shouldComponentUpdate(nextProps, nextState) {
-    // if schemas are equal idSchemas will be equal as well,
-    // so it is not necessary to compare
-    return !deepEquals(
-      { ...this.props, idSchema: undefined },
-      { ...nextProps, idSchema: undefined }
-    );
+// class SchemaField extends React.Component {
+//   shouldComponentUpdate(nextProps, nextState) {
+//     // if schemas are equal idSchemas will be equal as well,
+//     // so it is not necessary to compare
+//     return !deepEquals(
+//       { ...this.props, idSchema: undefined },
+//       { ...nextProps, idSchema: undefined }
+//     );
     
     
-  }
+//   }
 
-  render() {
-    return SchemaFieldRender(this.props);
-  }
+//   render() {
+//     return SchemaFieldRender(this.props);
+//   }
 
   // SchemaField.defaultProps = {
   //   uiSchema: {},
@@ -360,7 +360,6 @@ class SchemaField extends React.Component {
 //   };
 // }
 
-}
 
 
-export default SchemaField;
+export default SchemaFieldRender;

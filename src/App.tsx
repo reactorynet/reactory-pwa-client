@@ -99,19 +99,12 @@ export interface AppState {
   currentRoute: any
 }
 
-const Globals = ({ api }) => {
+const Globals = ({ reactory }) => {
 
-  const [v, setVersion] = React.useState<number>(0);
-  const [plugins_loaded, setPluginsLoaded] = React.useState<any>([])
-  const globals = api.getGlobalComponents();
-
-  api.on('onPluginLoaded', (plugin) => {
-    setVersion(v + 1);
-    setPluginsLoaded([...plugins_loaded, plugin]);
-  });
+  const globals = reactory.getGlobalComponents();
 
   return (
-    <div data-v={`${v}`} data-globals-container="true" style={{ height: 0, width: 0, position: "absolute", left: 0, top: 0, display: 'none' }}>
+    <div data-v={`1`} data-globals-container="true" style={{ height: 0, width: 0, position: "absolute", left: 0, top: 0, display: 'none' }}>
       {globals.map((GLOBALFORM, gidx) => {
         return (<GLOBALFORM key={gidx} />)
       })}
@@ -123,16 +116,6 @@ const Globals = ({ api }) => {
 interface ReactoryHOCProps {
   [key: string]: any,
 };
-
-const dependencies = [
-  'core.Loading@1.0.0',
-  'core.Login@1.0.0',
-  'core.FullScreenModal@1.0.0',
-  'core.NotificationComponent@1.0.0',
-  'core.NotFound@1.0.0',
-  'reactory.Footer@1.0.0',
-];
-
 
 interface ReactoryRouterProps {
   reactory: Reactory.Client.IReactoryApi,
@@ -182,7 +165,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         element: (props: any) => {        
           
           //const match = useMatch(routeDef.path);
-          //debugger;
+          
           //reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: route_props }, 'debug');
           console.debug(`Reactory Router ELEMENT ${routeDef.path}`, {  })
           if (routeDef.redirect) {
@@ -459,6 +442,18 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
   )
 }
 
+
+const dependencies = [
+  'core.Loading@1.0.0',
+  'core.Login@1.0.0',
+  'core.FullScreenModal@1.0.0',
+  'core.NotificationComponent@1.0.0',
+  'core.NotFound@1.0.0',
+  'reactory.Footer@1.0.0',
+];
+
+
+
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const [isReady, setIsReady] = React.useState<boolean>(false);
@@ -536,8 +531,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     } = activeTheme;
 
     // let themeMode = 'light';
-
-    // debugger;
 
     // const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
 
@@ -758,7 +751,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   let onlyChild = (
     <Paper elevation={0} className={classes.root_paper} id={'reactory_paper_root'}>
-      {offline === false && <Globals api={reactory} />}
+      {offline === false && <Globals reactory={reactory} />}
       {header}      
       <NotificationComponent />
       {offline === false && <ReactoryRouter reactory={reactory} user={user} auth_validated={auth_validated} authenticating={isAuthenticating} />}

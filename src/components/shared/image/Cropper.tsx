@@ -76,7 +76,6 @@ const Cropper = (props: ICropProps) => {
     );
 
     return new Promise((resolve, reject) => {
-      debugger
       canvas.toBlob((blob: Blob) => {
         if (!blob) {
           //reject(new Error('Canvas is empty'));
@@ -88,7 +87,6 @@ const Cropper = (props: ICropProps) => {
           window.URL.revokeObjectURL(fileUrl);
           let $fileUrl = window.URL.createObjectURL(blob);
           setFileUrl(window.URL.createObjectURL(blob));
-          debugger
           resolve($fileUrl);
         } catch (err) {
           reject(err);

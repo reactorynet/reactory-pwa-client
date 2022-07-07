@@ -2,7 +2,7 @@ import React from 'react';
 import { DefaultTheme, useTheme } from '@mui/styles';
 import { Icon, SvgIcon } from '@mui/material';
 
-export const O365 = React.forwardRef((props: any) => {
+export const O365 = React.forwardRef((props: any, ref) => {
   const theme: DefaultTheme = useTheme();
   let fill = "#000000";
   if (props.color) {
@@ -21,7 +21,7 @@ export const O365 = React.forwardRef((props: any) => {
   </Icon>)
 });
 
-export const OnSyspro = React.forwardRef<any, any>((props, context) => {
+export const OnSyspro = React.forwardRef<any, any>((props, ref) => {
   const theme: any = useTheme();
   // let rectStyle = { fill: "none", stroke: "#9AD86E", strokeMiterlimit: 10, strokeWidth: "1px" };
   let rectStyle: any = { fill: "none", strokeMiterlimit: 10, strokeWidth: "1px" };
@@ -46,7 +46,7 @@ export const OnSyspro = React.forwardRef<any, any>((props, context) => {
   </Icon >
 });
 
-export const Ruler = React.forwardRef<any, any>((props, context) => {
+export const Ruler = React.forwardRef<any, any>((props, ref) => {
   const theme: any = useTheme();
   let _style: any = { fill: "none", stroke: "#000", strokeLinejoin: "round", strokeWidth: "2px" };
   let rectStyle: any = { fill: "none", strokeMiterlimit: 10, strokeWidth: "1px" };
@@ -75,7 +75,7 @@ export const Ruler = React.forwardRef<any, any>((props, context) => {
   </Icon >
 });
 
-export const Briefcase = React.forwardRef((props: any) => {
+export const Briefcase = React.forwardRef((props: any, ref) => {
   const theme: any = useTheme();
   let rectStyle = { fill: "none", stroke: "#000", strokeLinejoin: "round", strokeWidth: "2px" };
   let fill = "#000000";

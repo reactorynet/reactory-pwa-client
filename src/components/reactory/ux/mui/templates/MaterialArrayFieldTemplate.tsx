@@ -264,6 +264,7 @@ class ArrayTemplate extends Component<any, any> {
     const uiWidget = uiSchema['ui:widget'] || null
     const definitions = registry.definitions;
     let ArrayComponent = null
+    
     let componentProps = {}
     if (uiWidget !== null) {
       if (registry.widgets[uiWidget]) ArrayComponent = registry.widgets[uiWidget]
@@ -275,6 +276,8 @@ class ArrayTemplate extends Component<any, any> {
           componentProps[property] = formData[uiOptions.componentProps[property]]
         })
       }
+
+
     }
 
     if (ArrayComponent === null) {
@@ -321,7 +324,7 @@ class ArrayTemplate extends Component<any, any> {
           </Container>);
       } else {
         return (
-          <Paper className={classes.root} {...containerProps}>
+          <Paper {...containerProps}>
             {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
           </Paper>);
       }
@@ -331,7 +334,7 @@ class ArrayTemplate extends Component<any, any> {
         <Paper className={classes.root}>
           <Typography variant="h4">{schema.title}</Typography>
           <Grid container spacing={8}>
-            {ArrayComponent !== null ? <ArrayComponent {...componentProps} /> : null}
+            {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps}} /> : null}
           </Grid>
           <Tooltip title={`Click here to add a new ${schema.title}`}>
             <Button color="secondary" variant="outlined" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>

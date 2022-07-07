@@ -224,7 +224,7 @@ const DefaultPaging = {
 //@ts-ignore
 function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 
-  const { theme, history, formData, schema, uiSchema, idSchema, reactory, formContext } = props;
+  const { theme, history, formData, schema, uiSchema = {}, idSchema, reactory, formContext } = props;
 
   const getOptions = (): IMaterialListWidgetOptions<any> => {
     let uiOptions: any = uiSchema['ui:options'] || {};

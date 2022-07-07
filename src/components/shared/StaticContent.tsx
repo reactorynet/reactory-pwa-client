@@ -277,8 +277,12 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
 
   return (        
     <div className={`${classes.staticContentContainer} ${isDeveloper === true ? classes.staticContainerDeveloper : ''}`}>
-      {canEdit === true && reactory.$development_mode === true && editWidget}
-      {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}
+      <div className={`${classes.contentContainer}`}>
+        {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}
+      </div>
+      <div className={`${classes.buttonContainer}`}>
+        {canEdit === true && reactory.$development_mode === true && editWidget}
+      </div>
     </div>
   )
 
@@ -291,9 +295,22 @@ const StaticContentStyles = (theme: any): any => {
   return {
     editIcon: {
       float: 'right',
+      margin: '10px',
+      fontSize: '18px'
+    },
+    contentContainer: {
+
+    },
+    buttonContainer: {
+
     },
     staticContentContainer: {
-      padding: theme.spacing(2)
+      display: 'flex',
+      justifyContent: 'centre',
+      minHeight: '40px',      
+      padding: theme.spacing(1),
+      margin: theme.spacing(1),
+      marginBottom: '50px'
     },
     staticContainerDeveloper: {
       '&:hover': {

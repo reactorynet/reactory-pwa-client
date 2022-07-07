@@ -715,22 +715,22 @@ export function toIdSchema(
   }
   if (schema.type !== "object") {
     return idSchema;
-  }
-  for (const name in schema.properties || {}) {
-    const field = schema.properties[name];
-    const fieldId = idSchema.$id + "_" + name;
-    try {
+  } else {
+    for (const name in schema.properties || {}) {
+      const field = schema.properties[name];
+      const fieldId = idSchema.$id + "_" + name;
+      try {
         idSchema[name] = toIdSchema(
-        field,
-        fieldId,
-        definitions,
-        formData[name],
-        idPrefix
-      );
-    } catch (e) {
-       console.error('Error Processing toIdSchema: \n' + e.message, e);
+          field,
+          fieldId,
+          definitions,
+          formData && formData[name] ? formData[name] : null,
+          idPrefix
+        );
+      } catch (e) {
+        console.error('Error Processing toIdSchema: \n' + e.message, e);
+      }
     }
-    
   }
   return idSchema;
 }

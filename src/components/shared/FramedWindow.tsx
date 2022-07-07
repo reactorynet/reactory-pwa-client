@@ -239,7 +239,7 @@ class _GraphiqlWindow extends Component<any, any> {
   
   render(){    
     const { reactory } = this.props;
-    debugger
+  
     const { themeOptions } = reactory.getUser();
     let color1 = themeOptions && themeOptions.palette && themeOptions.palette.primary1Color 
       ? themeOptions.palette.primary1Color 

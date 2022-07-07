@@ -1,6 +1,5 @@
 import React, { Component, Fragment } from "react";
 import PropTypes from "prop-types";
-
 import { default as DefaultErrorList } from "./ErrorList";
 import {
   getDefaultFormState,
@@ -18,6 +17,15 @@ import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
 import fields from './fields';
 import widgets from './widgets';
 import templates from './templates';
+
+
+
+import { withTheme } from '@rjsf/core';
+// Make modifications to the theme with your own fields and widgets
+
+
+
+
 class FormClass extends Component<any, any> {
 
   formElement: any;
@@ -370,313 +378,313 @@ interface FormState {
   errorSchema: any,
 }
 
-const Form: React.FC<ISchemaForm> = (props) => {
+// const Form: React.FC<ISchemaForm> = (props) => {
 
-  const formElement = React.useRef<HTMLFormElement | HTMLDivElement>();
+//   const formElement = React.forwardRef<HTMLFormElement | HTMLDivElement>();
   
-  //let $formElement: any;
+//   //let $formElement: any;
 
-  const reactory = useReactory();
+//   const reactory = useReactory();
 
-    //   static defaultProps = {
-  //   uiSchema: {},
-  //   noValidate: false,
-  //   liveValidate: false,
-  //   disabled: false,
-  //   safeRenderCompletion: false,
-  //   noHtml5Validate: false,
-  //   ErrorList: DefaultErrorList,
-  // };
+//     //   static defaultProps = {
+//   //   uiSchema: {},
+//   //   noValidate: false,
+//   //   liveValidate: false,
+//   //   disabled: false,
+//   //   safeRenderCompletion: false,
+//   //   noHtml5Validate: false,
+//   //   ErrorList: DefaultErrorList,
+//   // };
 
-  const {
-    id,      
-    formContext,
-    ArrayFieldTemplate,
-    FieldTemplate,
-    ObjectFieldTemplate,
-    acceptcharset,
-    action,
-    autocomplete,
-    enctype,
-    liveValidate,
-    method,
-    name,
-    noHtml5Validate,            
-    safeRenderCompletion,
-    target,
-    transformErrors,    
-    children,
-    className,
-    schema,    
-    idPrefix = 'root',
-    disabled = false,
-    uiSchema = {},
-  } = props;
+//   const {
+//     id,      
+//     formContext,
+//     ArrayFieldTemplate,
+//     FieldTemplate,
+//     ObjectFieldTemplate,
+//     acceptcharset,
+//     action,
+//     autocomplete,
+//     enctype,
+//     liveValidate,
+//     method,
+//     name,
+//     noHtml5Validate,            
+//     safeRenderCompletion,
+//     target,
+//     transformErrors,    
+//     children,
+//     className,
+//     schema,    
+//     idPrefix = 'root',
+//     disabled = false,
+//     uiSchema = {},
+//   } = props;
     
-  const [idSchema, setIdSchema] = React.useState<Reactory.Schema.IDSchema>({ $id: "root" });
-  const [formData, setFormData] = React.useState<any>(null);
-  const [edit, setEdit] = React.useState<boolean>(false);
-  const [errors, setError] = React.useState<any[]>([])
-  const [errorSchema, setErrorSchema] = React.useState<any>(null);
+//   const [idSchema, setIdSchema] = React.useState<Reactory.Schema.IDSchema>({ $id: "root" });
+//   const [formData, setFormData] = React.useState<any>(null);
+//   const [edit, setEdit] = React.useState<boolean>(false);
+//   const [errors, setError] = React.useState<any[]>([])
+//   const [errorSchema, setErrorSchema] = React.useState<any>(null);
 
 
-  React.useEffect(()=>{
-    const $state = getStateFromProps(props);
-    if (
-      props.onChange && !deepEquals(props.formData, $state.formData)
-    ) {
-      props.onChange($state);
-    }
+//   React.useEffect(()=>{
+//     const $state = getStateFromProps(props);
+//     if (
+//       props.onChange && !deepEquals(props.formData, $state.formData)
+//     ) {
+//       props.onChange($state);
+//     }
 
-  },[])
+//   },[])
     
-  React.useEffect(() => {
+//   React.useEffect(() => {
 
-    const nextState = getStateFromProps(props);
-    //TODO: ensure that data and schema are the only items compared before rerended
-    if (
-      !deepEquals(nextState.formData, props.formData) &&
-      !deepEquals(nextState.formData, formData) && props.onChange
-    ) {
-      props.onChange(nextState);
-    }
+//     const nextState = getStateFromProps(props);
+//     //TODO: ensure that data and schema are the only items compared before rerended
+//     if (
+//       !deepEquals(nextState.formData, props.formData) &&
+//       !deepEquals(nextState.formData, formData) && props.onChange
+//     ) {
+//       props.onChange(nextState);
+//     }
     
-    setEdit(nextState.edit === true);
-    setFormData(nextState.formData);
-    setIdSchema(nextState.idSchema);
-    setError(nextState.errors);    
-    setErrorSchema(nextState.errorSchema);
+//     setEdit(nextState.edit === true);
+//     setFormData(nextState.formData);
+//     setIdSchema(nextState.idSchema);
+//     setError(nextState.errors);    
+//     setErrorSchema(nextState.errorSchema);
 
-  }, [props])
+//   }, [props])
 
 
-  const getRegistry = () => {
-    // For BC, accept passed SchemaField and TitleField props and pass them to
-    // the "fields" registry one.
-    const { fields, widgets } = getDefaultRegistry();
-    let registery: any = {
-      fields: { ...fields, ...props.fields },
-      widgets: { ...widgets, ...props.widgets },
-      ArrayFieldTemplate,
-      ObjectFieldTemplate,
-      FieldTemplate,
-      definitions: schema.definitions || {},
-      formContext: formContext || {},
-    };
+//   const getRegistry = () => {
+//     // For BC, accept passed SchemaField and TitleField props and pass them to
+//     // the "fields" registry one.
+//     const { fields, widgets } = getDefaultRegistry();
+//     let registery: any = {
+//       fields: { ...fields, ...props.fields },
+//       widgets: { ...widgets, ...props.widgets },
+//       ArrayFieldTemplate,
+//       ObjectFieldTemplate,
+//       FieldTemplate,
+//       definitions: schema.definitions || {},
+//       formContext: formContext || {},
+//     };
 
-    if (formContext) {
-      registery.formContext.$formElement = formElement;
-      registery.formContext.$submit = submit;
-      registery.formContext.$formData = formData;
-    }
+//     if (formContext) {
+//       registery.formContext.$formElement = formElement;
+//       registery.formContext.$submit = submit;
+//       registery.formContext.$formData = formData;
+//     }
 
-    return registery;
-  }
+//     return registery;
+//   }
 
-  const validate = (formData: any, schema: Reactory.Schema.ISchema = props.schema, via = 'onChange') => {
-    const { definitions } = getRegistry();
-    const resolvedSchema = retrieveSchema(schema, definitions, formData);
-    return validateFormData(
-      formData,
-      resolvedSchema,
-      props.validate,
-      transformErrors,
-      via
-    );
-  }
+//   const validate = (formData: any, schema: Reactory.Schema.ISchema = props.schema, via = 'onChange') => {
+//     const { definitions } = getRegistry();
+//     const resolvedSchema = retrieveSchema(schema, definitions, formData);
+//     return validateFormData(
+//       formData,
+//       resolvedSchema,
+//       props.validate,
+//       transformErrors,
+//       via
+//     );
+//   }
 
-  const getStateFromProps = (props): FormState => {    
+//   const getStateFromProps = (props): FormState => {    
     
-    const edit = typeof props.formData !== "undefined";    
-    const mustValidate = edit && !props.noValidate && liveValidate;
-    const { definitions } = schema;
-    const formData = getDefaultFormState(schema, props.formData, definitions);
-    const retrievedSchema = retrieveSchema(schema, definitions, formData);
+//     const edit = typeof props.formData !== "undefined";    
+//     const mustValidate = edit && !props.noValidate && liveValidate;
+//     const { definitions } = schema;
+//     const formData = getDefaultFormState(schema, props.formData, definitions);
+//     const retrievedSchema = retrieveSchema(schema, definitions, formData);
 
-    const validationResult = mustValidate ? validate(formData, schema) : {
-      errors: errors || [],
-      errorSchema: errorSchema || {},
-    };
+//     const validationResult = mustValidate ? validate(formData, schema) : {
+//       errors: errors || [],
+//       errorSchema: errorSchema || {},
+//     };
 
-    const idSchema = toIdSchema(
-      retrievedSchema,
-      uiSchema["ui:rootFieldId"],
-      definitions,
-      formData,
-      props.idPrefix
-    );
-    return {
-      schema,
-      uiSchema,
-      idSchema,
-      formData,
-      edit,
-      errors: validationResult.errors,
-      errorSchema: validationResult.errorSchema,
-    };
-  }
+//     const idSchema = toIdSchema(
+//       retrievedSchema,
+//       uiSchema["ui:rootFieldId"],
+//       definitions,
+//       formData,
+//       props.idPrefix
+//     );
+//     return {
+//       schema,
+//       uiSchema,
+//       idSchema,
+//       formData,
+//       edit,
+//       errors: validationResult.errors,
+//       errorSchema: validationResult.errorSchema,
+//     };
+//   }
 
 
-  const onChange = (formData: any, newErrorSchema: any) => {
-    const mustValidate = !props.noValidate && props.liveValidate;    
-    let $errorSchema = null;
-    let $errors = null;
-    if (mustValidate) {
-      const validationResult = validate(formData);
-      $errorSchema = validationResult.errorSchema || {};
-      $errors = validationResult.errors || [];      
-    } else if (!props.noValidate && newErrorSchema) {      
-      $errors = toErrorList(newErrorSchema);
-      $errorSchema = newErrorSchema;      
-    }
+//   const onChange = (formData: any, newErrorSchema: any) => {
+//     const mustValidate = !props.noValidate && props.liveValidate;    
+//     let $errorSchema = null;
+//     let $errors = null;
+//     if (mustValidate) {
+//       const validationResult = validate(formData);
+//       $errorSchema = validationResult.errorSchema || {};
+//       $errors = validationResult.errors || [];      
+//     } else if (!props.noValidate && newErrorSchema) {      
+//       $errors = toErrorList(newErrorSchema);
+//       $errorSchema = newErrorSchema;      
+//     }
     
-    setError($errors || []);
-    setErrorSchema($errorSchema || {});
+//     setError($errors || []);
+//     setErrorSchema($errorSchema || {});
 
-    if(props.onChange) {
-      props.onChange({  
-        schema,
-        uiSchema,
-        idSchema,
-        formData,
-        edit,
-        errors: $errors,
-        errorSchema: $errorSchema,
-      })
-    } 
-  };
+//     if(props.onChange) {
+//       props.onChange({  
+//         schema,
+//         uiSchema,
+//         idSchema,
+//         formData,
+//         edit,
+//         errors: $errors,
+//         errorSchema: $errorSchema,
+//       })
+//     } 
+//   };
 
-  const renderErrors = () => {
+//   const renderErrors = () => {
     
-    const { ErrorList, showErrorList, formContext } = props;
+//     const { ErrorList, showErrorList, formContext } = props;
 
-    if (errors.length && showErrorList != false) {
-      return (<ErrorList errors={errors}
-        errorSchema={errorSchema}
-        schema={schema}
-        uiSchema={uiSchema}
-        formContext={formContext} />
-      );
-    }
-    return null;
-  }
+//     if (errors.length && showErrorList != false) {
+//       return (<ErrorList errors={errors}
+//         errorSchema={errorSchema}
+//         schema={schema}
+//         uiSchema={uiSchema}
+//         formContext={formContext} />
+//       );
+//     }
+//     return null;
+//   }
 
 
 
-  const onBlur = (...args) => {
-    if (props.onBlur) {
-      props.onBlur(...args);
-    }
-  };
+//   const onBlur = (...args) => {
+//     if (props.onBlur) {
+//       props.onBlur(...args);
+//     }
+//   };
 
-  const onFocus = (...args) => {
-    if (props.onFocus) {
-      props.onFocus(...args);
-    }
-  };
+//   const onFocus = (...args) => {
+//     if (props.onFocus) {
+//       props.onFocus(...args);
+//     }
+//   };
 
-  const onSubmit = (event) => {
-    if (event) event.preventDefault();
+//   const onSubmit = (event) => {
+//     if (event) event.preventDefault();
 
-    if (!props.noValidate) {
-      const { errors, errorSchema } = validate(formData, props.schema, 'submit');
-      if (Object.keys(errors).length > 0) {
-        setErrorSchema(errorSchema);
-        setError(errors);
+//     if (!props.noValidate) {
+//       const { errors, errorSchema } = validate(formData, props.schema, 'submit');
+//       if (Object.keys(errors).length > 0) {
+//         setErrorSchema(errorSchema);
+//         setError(errors);
         
-        if(props.onError) props.onError(errors, errorSchema)        
-        return;
-      }
-    }
+//         if(props.onError) props.onError(errors, errorSchema)        
+//         return;
+//       }
+//     }
 
-    setError([]);
-    setErrorSchema({});
-    if(props.onSubmit) props.onSubmit({ schema, uiSchema, formData, errorSchema, errors, status: "submitted" })        
-  };
+//     setError([]);
+//     setErrorSchema({});
+//     if(props.onSubmit) props.onSubmit({ schema, uiSchema, formData, errorSchema, errors, status: "submitted" })        
+//   };
 
 
 
-  const submit = () => {    
+//   const submit = () => {    
 
-    let submitted = false;
-    if (formElement) {      
-      formElement.current.dispatchEvent(new Event("submit", { cancelable: true }));      
-      submitted = true;
-    }    
+//     let submitted = false;
+//     if (formElement) {      
+//       formElement.current.dispatchEvent(new Event("submit", { cancelable: true }));      
+//       submitted = true;
+//     }    
 
-    return submitted;
-  }
+//     return submitted;
+//   }
   
-  const registry = getRegistry();
-  const _SchemaField = registry.fields.SchemaField;
+//   const registry = getRegistry();
+//   const _SchemaField = registry.fields.SchemaField;
 
-  let componentType = 'form';
-  let formUiOptions: any = {};
-  let style = props.style || {}
+//   let componentType = 'form';
+//   let formUiOptions: any = {};
+//   let style = props.style || {}
 
-  if (uiSchema['ui:options']) {
-    formUiOptions = uiSchema['ui:options'];
-    componentType = formUiOptions.componentType || componentType;
-    style = formUiOptions.style ? { ...style, ...formUiOptions.style } : style;
-  }
+//   if (uiSchema['ui:options']) {
+//     formUiOptions = uiSchema['ui:options'];
+//     componentType = formUiOptions.componentType || componentType;
+//     style = formUiOptions.style ? { ...style, ...formUiOptions.style } : style;
+//   }
 
-  const $children = (<>
-    {renderErrors()}
-    {props.toolbarPosition && props.toolbarPosition.indexOf('top') >= 0 ? (children) : null}
-    <ErrorBoundary FallbackComponent={(props) => (<>{idSchema.$id} Field Error: {props.error}</>)}>
-      <_SchemaField
-        schema={schema}
-        uiSchema={uiSchema}
-        errorSchema={props.errorSchema}
-        idSchema={idSchema}
-        idPrefix={idPrefix}
-        formData={formData}
-        onChange={onChange}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        registry={registry}
-        safeRenderCompletion={safeRenderCompletion}
-        disabled={disabled} />
-    </ErrorBoundary>
-    {props.toolbarPosition && props.toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
-    </>);
+//   const $children = (<>
+//     {renderErrors()}
+//     {props.toolbarPosition && props.toolbarPosition.indexOf('top') >= 0 ? (children) : null}
+//     <ErrorBoundary FallbackComponent={(props) => (<>{idSchema.$id} Field Error: {props.error}</>)}>
+//       <_SchemaField
+//         schema={schema}
+//         uiSchema={uiSchema}
+//         errorSchema={props.errorSchema}
+//         idSchema={idSchema}
+//         idPrefix={idPrefix}
+//         formData={formData}
+//         onChange={onChange}
+//         onBlur={onBlur}
+//         onFocus={onFocus}
+//         registry={registry}
+//         safeRenderCompletion={safeRenderCompletion}
+//         disabled={disabled} />
+//     </ErrorBoundary>
+//     {props.toolbarPosition && props.toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
+//     </>);
 
-  if (componentType === 'form') {
-    return (
-      <form
-        className={className}
-        id={id}
-        name={name}
-        method={method}
-        target={target}
-        action={action}
-        autoComplete={autocomplete}
-        encType={enctype}
-        acceptCharset={acceptcharset}
-        noValidate={noHtml5Validate}
-        onSubmit={onSubmit}
-        style={style}
-        ref={(form: HTMLFormElement) => {
-          formElement.current = form;
-        }}>
-        {$children}
-      </form>
-    );
-  }
+//   // if (componentType === 'form') {
+//   //   return (
+//   //     <form
+//   //       className={className}
+//   //       id={id}
+//   //       name={name}
+//   //       method={method}
+//   //       target={target}
+//   //       action={action}
+//   //       autoComplete={autocomplete}
+//   //       encType={enctype}
+//   //       acceptCharset={acceptcharset}
+//   //       noValidate={noHtml5Validate}
+//   //       onSubmit={onSubmit}
+//   //       style={style}
+//   //       ref={(form: HTMLFormElement) => {
+//   //         formElement.current = form;
+//   //       }}>
+//   //       {$children}
+//   //     </form>
+//   //   );
+//   // }
 
-  if (componentType === 'div') {
-    //@ts-ignore
-    return (<div
-      className={className ? className : null}
-      id={id}
-      ref={(form: HTMLDivElement) => {
-        formElement.current = form;
-      }}>
-      {$children}
-    </div>)
-  }
+//   // if (componentType === 'div') {
+//   //   //@ts-ignore
+//     return (<div
+//       className={className ? className : null}
+//       id={id}
+//       ref={(form: HTMLDivElement) => {
+//         formElement.current = form;
+//       }}>
+//       {$children}
+//     </div>)
+//   //}
 
-}
+// }
 
 
 
