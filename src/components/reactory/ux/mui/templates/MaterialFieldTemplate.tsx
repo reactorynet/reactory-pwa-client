@@ -59,6 +59,7 @@ const MaterialFieldTemplateFunction = (props) => {
 
   // reactory.log(`MaterialFieldTemplate Rendering field ${id}`, props);
 
+  const { signature } = formContext;
 
 
   const isObject = schema.type === 'object'
@@ -73,6 +74,11 @@ const MaterialFieldTemplateFunction = (props) => {
   const reactory = useReactory();
   const theme = reactory.muiTheme;
   
+  // REMOVE: Remove this 
+  if (signature.indexOf('PeopleResourcesForm') > 0) {
+   // debugger
+  }
+
   if (uiOptions !== null) {
     showLabel = uiOptions.showLabel !== undefined && uiOptions.showLabel !== null ? uiOptions.showLabel === true : true;
     let _props = { ...props };

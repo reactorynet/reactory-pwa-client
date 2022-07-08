@@ -257,19 +257,19 @@ class ArrayTemplate extends Component<any, any> {
       onBlur,
       onFocus,
       idPrefix,
-      api
+      reactory
     } = this.props;
     ;
     const uiOptions = uiSchema['ui:options'] || null
-    const uiWidget = uiSchema['ui:widget'] || null
+    const uiWidget: string = uiSchema['ui:widget'] || null
     const definitions = registry.definitions;
     let ArrayComponent = null
     
     let componentProps = {}
     if (uiWidget !== null) {
       if (registry.widgets[uiWidget]) ArrayComponent = registry.widgets[uiWidget]
-      if (!ArrayComponent) {
-        ArrayComponent = api.getComponent(uiWidget);
+      if (!ArrayComponent && uiWidget.indexOf('.') > 0) {
+        ArrayComponent = reactory.getComponent(uiWidget);
       }
       if (uiOptions && uiOptions.componentProps) {  //map properties to the component
         Object.keys(componentProps).map(property => {
@@ -281,7 +281,7 @@ class ArrayTemplate extends Component<any, any> {
     }
 
     if (ArrayComponent === null) {
-      ArrayComponent = () => (
+      ArrayComponent = (
         <Grid spacing={2} item sm={12} md={12}>
           {formData && formData.map && formData.map((item, index) => {          
             let itemSchema = retrieveSchema(schema.items, definitions, item);
@@ -312,7 +312,8 @@ class ArrayTemplate extends Component<any, any> {
 
     if (uiOptions && uiOptions.container) {
       //resolve Container from API
-      const Container = api.getComponent(uiOptions.container)
+      let Container = null;
+      if(uiOptions.container.indexOf('.') > 0) Container = reactory.getComponent(uiOptions.container)
       let containerProps = {}
       if (uiOptions.containerProps) {
         containerProps = { ...uiOptions.containerProps }
@@ -323,10 +324,41 @@ class ArrayTemplate extends Component<any, any> {
             {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
           </Container>);
       } else {
-        return (
-          <Paper {...containerProps}>
-            {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
-          </Paper>);
+
+        switch(uiOptions.container) {
+          case "div": {
+            return (
+              <div {...containerProps}>
+                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+              </div>);
+          }
+          case "p": {
+            return (
+              <p {...containerProps}>
+                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+              </p>);
+          }
+          case "section": {
+            return (
+              <section {...containerProps}>
+                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+              </section>);
+          }
+          case "article": {
+            return (
+              <article {...containerProps}>
+                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+              </article>);
+          }
+          default: {
+            return (
+              <Paper {...containerProps}>
+                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+              </Paper>);
+          }
+        }
+
+        
       }
     } else {
       //default behaviour
@@ -336,11 +368,11 @@ class ArrayTemplate extends Component<any, any> {
           <Grid container spacing={8}>
             {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps}} /> : null}
           </Grid>
-          <Tooltip title={`Click here to add a new ${schema.title}`}>
+          {uiOptions.allowAdd === true && <Tooltip title={`Click here to add a new ${schema.title}`}>
             <Button color="secondary" variant="outlined" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
               <Icon>add</Icon>
             </Button>
-          </Tooltip>
+          </Tooltip>}
         </Paper>
       );
     }

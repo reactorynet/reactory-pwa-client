@@ -20,15 +20,13 @@ import {
   TableCell,
   TableFooter,
   TableHead,
-  TablePagination
+  TablePagination,
+  Paper,
+  Tooltip,
+  TextField
 
 } from '@mui/material'
-
-
-import {
-  
-
-} from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux'
 import { withStyles, withTheme } from '@mui/styles';
@@ -37,6 +35,7 @@ import { Styles } from '@mui/styles/withStyles/withStyles';
 import Reactory from '@reactory/reactory-core';
 import ReactoryApi from 'api';
 import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
+import addYears from 'date-fns/esm/fp/addYears/index.js';
 export interface MaterialTableRemoteDataReponse {
   data: any[],
   page: number,
@@ -69,6 +68,45 @@ export interface MaterialTableResult<T> {
   totalCount: number
 }
 
+export interface MaterialTableRowState {
+  [key: number]: {
+    /**
+     * indicates if the row is selected
+     */
+    selected?: boolean,
+    /**
+     * indicates if the row has hover state
+     */
+    hover?: boolean,
+    /**
+     * indicates if the row is set into editing state
+     */
+    editing?: boolean
+    /**
+     * indicates if the row is in saving state
+     */
+    saving?: boolean
+
+    /**
+     * indicates if the row data has changed
+     */
+    dirty?: boolean
+  }
+}
+
+
+export interface MaterialTableColumn<TRow> {
+  field: string,
+  title: string,
+  renderRow?: (rowData: TRow, rowIndex: number, rowState: MaterialTableRowState) => JSX.Element
+  renderHeader?: (data: TRow[], rowState: MaterialTableRowState) => JSX.Element
+  renderFooter?: (data: TRow[], rowState: MaterialTableRowState) => JSX.Element
+  footerProps?: any,
+  headerProps?: any,
+  rowProps?: any,
+  altRowProps?: any,
+  cellProps?: any
+}
 
 
 const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipInput"> = (theme) => ({
@@ -241,11 +279,13 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [is_refreshing, setIsRefreshing] = useState(false);
   const [last_queried, setLastQueried] = useState(null);
   const [last_result, setLastResult] = useState(formData);
+  const [rowsState, setRowState] = useState({});
 
   const tableRef: any = React.createRef();
 
   let columns = [];
   let actions = [];
+
   let ToolbarComponent = null;
   let components: { [key: string]: Component | PureComponent | Function } = {};
   let detailsPanel = null;
@@ -877,23 +917,96 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
           } } /> */}
 
+  //modify columns with virtual columns
+  //virtual columns are columns action columns
+  //we will provide basic types, checkbox / slider
+  //dropdown,
+  //action
+
+  // this is our rows object that we will render.
+  let $rows = []
+
+  if (typeof rows === "object") {
+    $rows = rows as any[]
+  }
+
+  if (typeof rows === "function") {
+    $rows = last_result as any[]
+  }
 
   const getHeader = () => {
-    return <TableHead><TableRow><TableCell>Header</TableCell></TableRow></TableHead>
+
+    return (
+      <TableHead>
+        <TableRow>
+          {columns.map((column: MaterialTableColumn<any>, idx) => {             
+            const {
+              title,
+              renderHeader,
+              field
+            } = column
+
+            if(renderHeader) return renderHeader($rows, rowsState) 
+
+            return (<TableCell key={idx}>{title}</TableCell>)
+          })}      
+        </TableRow>
+      </TableHead>)
   }        
 
   const getBody = () => {
-    <TableBody>
-      <TableRow>
-        <TableCell>Body</TableCell>
-      </TableRow>
-    </TableBody>
+
+    let $body_rows = $rows.map((row, rid) => {
+
+      const $rState = rowsState[rid] || {}
+
+      return (<TableRow key={rid}>
+        {columns.map((column: MaterialTableColumn<any>, columnIndex: number) => {
+          if (column.renderRow) return column.renderRow({ ...row, $rowState: $rState }, rid, rowsState);
+          return (<TableCell key={columnIndex}><Typography variant={'body2'}>{row[column.field]}</Typography></TableCell>)
+        })}
+
+      </TableRow>)
+    });
+
+    if($body_rows.length === 0) {
+      $body_rows.push((
+        <TableRow key={0}>
+          <TableCell colSpan={columns.length}>
+            <Typography variant={"body2"} style={{ height: '200px', paddingTop: '90px', textAlign: 'center' }}>{uiOptions?.localization?.body?.emptyDataSourceMessage || "No data available."}</Typography>
+          </TableCell>
+        </TableRow>
+      ))
+    }
+
+    return (<TableBody>
+      {$body_rows}
+    </TableBody>)
   }
 
   const getFooter = () => {
-    return <TableRow>
-      <TableCell>Footer</TableCell>
-    </TableRow>
+
+    let $columns = [];
+
+    columns.forEach((column: MaterialTableColumn<any>, idx) => {
+      const {
+        renderFooter,
+        field
+      } = column
+
+      if (renderFooter) $columns.push(column)
+    })
+
+    if($columns.length === 0) return null;
+
+    return  (
+    <TableFooter>
+        <TableRow>
+          {$columns.map((footerColumn: MaterialTableColumn<any>) => {
+            return footerColumn.renderFooter($rows, rowsState);
+          })}      
+        </TableRow>
+    </TableFooter>)    
   }
 
   const getPagination = () => {
@@ -903,21 +1016,93 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         count={10}
         page={0}
         rowsPerPage={10}
-        component={(props)=>{ return (<>COmponent</>) }}
+        component={"div"}
         onPageChange={(evt, page)=>{}}
         >
 
       </TablePagination>)
   }
 
+
+  const getToolbar = () => {
+
+    let numSelected = 0;
+
+    let addButton = null;
+    let deleteButton = null;
+
+    const callAdd = () => {
+
+    }
+
+    const callDelete = () => {
+
+    }
+
+    if(uiOptions.allowAdd === true) {
+      addButton = (
+        <Tooltip title={`Click to add a new entry`}><IconButton onClick={callAdd}><Icon>{uiOptions?.addButtonProps?.icon || "add"}</Icon></IconButton></Tooltip>
+      )
+    }
+
+    if (uiOptions.allowDelete === true) {
+      deleteButton = (
+        <IconButton onClick={callDelete}><Icon>{uiOptions?.addButtonProps?.icon || "trash"}</Icon></IconButton>
+      )
+    }
+    
+    let searchField = null;
+    debugger
+    if(uiOptions?.search) {
+      searchField = (<TextField key={"search"} title={"Search"} size="small" />);
+    }
+
+    return (
+      <Toolbar sx={{
+        pl: { sm: 2 },
+        pr: { xs: 1, sm: 1 },
+        ...(numSelected > 0 && {
+          bgcolor: (theme) =>
+            alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
+        }),
+      }}>
+        {numSelected > 0 ? (
+          <Typography
+            sx={{ flex: '1 1 100%' }}
+            color="inherit"
+            variant="subtitle1"
+            component="div"
+          >
+            {numSelected} selected
+          </Typography>
+        ) : (
+          <Typography
+            sx={{ flex: '1 1 100%' }}
+            variant="h6"
+            id="tableTitle"
+            component="div"
+          >
+            {schema.title}
+          </Typography>
+        )}
+        {numSelected === 0 && searchField}
+        {numSelected === 0 && addButton}
+        {numSelected > 0 && deleteButton}
+    </Toolbar>
+    )
+  }
+
   try {
     return (
-      <Table>
-        {getHeader()}
-        {getBody()}
-        {getPagination()}
-        {getFooter()}
-      </Table>
+      <React.Fragment>
+        {getToolbar()}
+        <Table>        
+          {getHeader()}
+          {getBody()}
+          {getPagination()}
+          {getFooter()}
+        </Table>
+      </React.Fragment>
     )
 
   } catch (err) {
