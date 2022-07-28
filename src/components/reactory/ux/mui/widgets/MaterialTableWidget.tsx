@@ -36,10 +36,15 @@ import Reactory from '@reactory/reactory-core';
 import ReactoryApi from 'api';
 import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
 import addYears from 'date-fns/esm/fp/addYears/index.js';
+import DropDownMenu from 'components/shared/menus/DropDownMenu';
 export interface MaterialTableRemoteDataReponse {
   data: any[],
-  page: number,
-  totalCount: number,
+  paging: {
+    page: number
+    pageSize: number
+    hasNext: boolean
+    total: number
+  }
 }
 
 export interface ReactoryMaterialTableProps {
@@ -268,6 +273,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext = {}, formData = [], searchText = "" } = props;
   const uiOptions = uiSchema['ui:options'] || {};
   const AlertDialog = reactory.getComponent('core.AlertDialog@1.0.0');
+  const DropDownMenu = reactory.getComponent('core.DropDownMenu@1.0.0');
+  
   const [activeAction, setActiveAction] = useState({
     show: false,
     rowsSelected: [],
@@ -280,6 +287,18 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [last_queried, setLastQueried] = useState(null);
   const [last_result, setLastResult] = useState(formData);
   const [rowsState, setRowState] = useState({});
+  const [error, setError] = useState(null);
+  const [query, setQuery] = useState<MaterialTableQuery>({ page: 1, pageSize: 10, search: "" });
+
+  const [data, setData] = useState<MaterialTableRemoteDataReponse>({
+    data: formData || [],
+    paging: {
+      hasNext: false,
+      page: 0,
+      pageSize: 10,
+      total: 0
+    }
+  });
 
   const tableRef: any = React.createRef();
 
@@ -355,32 +374,24 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
 
-  const getData = (query: MaterialTableQuery): Promise<MaterialTableRemoteDataReponse> => {
-    return new Promise((resolve, reject) => {
-      reactory.log('♻ core.ReactoryMaterialTable data query', { query }, 'debug')
+  const getData = async (): Promise<MaterialTableRemoteDataReponse> => {    
+      
+      reactory.log('core.ReactoryMaterialTable data query', { query }, 'debug')
 
       let response: MaterialTableRemoteDataReponse = {
-        data: [],
-        page: 0,
-        totalCount: 0,
+        ...data
       }
-
+      
       try {
         const graphqlDefinitions = formContext.graphql;
 
         if (graphqlDefinitions.query || graphqlDefinitions.queries) {
-
-          let queryDefinition: Reactory.Forms.IReactoryFormQuery = graphqlDefinitions.query;
-
-          
-
+          let queryDefinition: Reactory.Forms.IReactoryFormQuery = graphqlDefinitions.query;          
           if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
             queryDefinition = graphqlDefinitions.queries[uiOptions.query];
             reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
           }
-
-        
-
+                  
           reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
           let variables = reactory.utils.objectMapper({ formContext, query }, uiOptions.variables || queryDefinition.variables);
          
@@ -399,51 +410,59 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               options.fetchPolicy = 'network-only';
             }
           }
-          reactory.graphqlQuery(queryDefinition.text, variables, options).then((queryResult: any) => {
-            reactory.log(`Result From Query`, { queryResult })
-            if (queryResult.errors && queryResult.errors.length > 0) {
-              //show a loader error
-              reactory.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
-              //reactory.createNotification(`Could not fetch the data for this query due to an error`, { showInAppNotification: true, type: 'warning' })
-            }
 
-            if (queryResult.data) {
-
-              response = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
-
-              if (uiOptions.disablePaging === true) {
-                response.page = 1,
-                response.totalCount = response.data.length;
-              }
-
-              response.data.forEach((item, item_id) => {
-                if(formContext.$selectedRows && formContext.$selectedRows.current) {
-                  if(reactory.utils.lodash.findIndex(formContext.$selectedRows.current, { id: item.id }) >= 0) {
-                    item.tableData = { checked: true, id: item_id }
-                  }
-                }
-              });
-              response.page = response.page - 1;
-            }
-
+          let queryResult: any = null; 
           
-            resolve(response);
-          }).catch((queryError) => {
-            reactory.log(`Error getting remote data`, { queryError }, 'error');
-            //reject(queryError);
-            resolve(response);
-          });
+          try { 
+            queryResult = await reactory.graphqlQuery(queryDefinition.text, variables, options).then();
+          } catch (e) {
+            reactory.log(`Error running query for grid`, {e}, 'error');
+            setError("Error executing query");
+          }
+          //show a loader error
+          if (queryResult?.data) {
+
+            const $data: any = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
+            if($data) {
+              if($data.data && $data.paging) {
+                response.data = $data.data
+                response.paging = $data.paging
+              } else {
+                if( isArray($data) ) {
+                  response.data = $data;
+                }
+              }            
+            }
+            
+            if (uiOptions.disablePaging === true) {
+              response.paging.page = 1,
+              response.paging.total = response.data.length;
+            }
+
+            if (formContext.$selectedRows && formContext.$selectedRows.current) {
+              response.data.forEach((item, item_id) => {              
+                if(reactory.utils.lodash.findIndex(formContext.$selectedRows.current, { id: item.id }) >= 0) {
+                  item.tableData = { checked: true, id: item_id }
+                }                
+              });
+            }
+            //response.paging.page = response.paging.page - 1;
+          } else {
+            reactory.log(`Query returned null data`, { queryResult }, 'warning')
+            setError("No data returned from query")
+          }                              
         }
 
       } catch (remoteDataError) {
-        reactory.log(`Error getting remote data`, { remoteDataError }, 'error');
-        resolve(response);
+        reactory.log(`Error getting remote data`, { remoteDataError }, 'error');        
+        return response;
       }
-    });
 
+      debugger
+      setData(response);
   };
 
-  const rows = uiOptions.remoteData === true ? getData : formData;
+  const rows = uiOptions.remoteData === true ? data?.data : formData;
   if (uiOptions.columns && uiOptions.columns.length) {
     let _columnRef = [];
     let _mergeColumns = false;
@@ -899,6 +918,10 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       });
     };
 
+    if(uiOptions.remoteData === true) {
+      getData()
+    }
+
     return willUnmount;
   }, []);
 
@@ -1051,10 +1074,17 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       )
     }
     
-    let searchField = null;
-    debugger
+    let searchField = null;    
     if(uiOptions?.search) {
       searchField = (<TextField key={"search"} title={"Search"} size="small" />);
+    }
+
+    let actions = null;
+
+    if(numSelected > 0) {
+      actions = (
+        <DropDownMenu menus={[]}/>
+      )
     }
 
     return (
@@ -1066,6 +1096,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
         }),
       }}>
+        {actions}
         {numSelected > 0 ? (
           <Typography
             sx={{ flex: '1 1 100%' }}
