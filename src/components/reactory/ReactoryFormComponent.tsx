@@ -25,7 +25,8 @@ import {
   Toolbar,
   LinearProgress,
   Theme,
-  Breakpoint
+  Breakpoint,
+  Tooltip
 } from '@mui/material';
 
 import ReactoryUxPackages from './ux';
@@ -512,6 +513,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     if (_uiSchema && _uiSchema['ui:form']) {
       _options = { ..._options, ..._uiSchema['ui:form'] };
     } else {
+      //fallback
       if(_uiSchema && _uiSchema['ui:options']) {
         _options = { ..._options, ..._uiSchema['ui:options'] };
       }
@@ -598,10 +600,10 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
        if (mutation === null || mutation === undefined) {
          //check if we need to rerun the query with the updated formData.
-         reactory.log(`No mutations available for configured mode}`, {}, 'debug')
+         reactory.log(`No mutations available for configured mode}`, {}, 'warning')
          return;
         }
-        
+                
         const _variables = objectMapper({
           ...form,
           formContext: getFormContext(),
@@ -1547,6 +1549,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     let icon = 'save';
 
+    // BACKWARDS COMPATIBLE SCHEMA OBJECTS
     if(typeof formDef.uiSchema === "object") {
       if (formDef.uiSchema && formDef.uiSchema.submitIcon) {
         if (typeof formDef.uiSchema.submitIcon === 'string') {
@@ -1561,21 +1564,29 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       }
     }
 
-
-    let iconWidget = (icon === '$none' ? null : <Icon>{icon}</Icon>);
+    if (_formUiOptions.submitIcon) icon = _formUiOptions.submitIcon;
+    let iconProps = _formUiOptions?.submitIconProps || {};
+    let iconWidget = (icon === '$none' ? null : <Icon {...iconProps}>{icon}</Icon>);
     let showSubmit = true;
     let showRefresh = true;
     let showHelp = true;
     let submitButton = null;
     let uiSchemaSelector = null;
     let activeUiSchemaModel = null;
+    let submitTooltip = 'Click to submit the form';
 
     const { submitProps, buttons } = _formUiOptions;
     if (typeof submitProps === 'object' && showSubmit === true) {
-      const { variant = 'fab', iconAlign = 'left' } = submitProps;
+      const { variant = 'fab', iconAlign = 'left', tooltip = submitTooltip } = submitProps;
       const _props = { ...submitProps };
       delete _props.iconAlign;
       _props.onClick = $submitForm;
+
+      submitTooltip = reactory.utils.template(tooltip)({
+        props: props,
+        state: { formData }
+      });
+      
 
       if (variant && typeof variant === 'string' && showSubmit === true) {
         switch (variant) {
@@ -1599,11 +1610,17 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
      * options for submit buttons
      * variant = 'fab' / 'button'
      *
-     */
+     */    
+    if (showSubmit === true && submitButton === null) {            
+      
 
-    if (showSubmit === true && submitButton === null) {
-      submitButton = (<Fab onClick={$submitForm} color="primary">{iconWidget}</Fab>);
+      submitButton = (        
+          <Fab onClick={$submitForm} color="primary">
+            {iconWidget}
+          </Fab>
+      );
     }
+
 
 
     /**
@@ -1905,16 +1922,16 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         }
       });
       exportButton = (<DropDownMenu menus={exportMenus} onSelect={onDropDownSelect} icon={"import_export"} />)
-    }
+    }  
 
     let formtoolbar = (
       <Toolbar style={_formUiOptions.toolbarStyle || {}}>
         {_formUiOptions.showSchemaSelectorInToolbar && !_formUiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}
-        {showSubmit === true && submitButton}
+        {showSubmit === true && submitButton ? (<Tooltip title={submitTooltip}>{submitButton}</Tooltip>) : null}
         {_additionalButtons}
         {allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
-        {formDef.backButton && <Button variant="text" onClick={() => { navigate }} color="secondary">BACK <Icon>keyboard_arrow_left</Icon></Button>}
-        {formDef.helpTopics && showHelp === true && <Button variant="text" onClick={() => { setShowHelpModal(!showHelpModal) }} color="secondary"><Icon>help</Icon></Button>}
+        {formDef.backButton && <Button variant="text" onClick={() => { navigate }} color="primary">BACK <Icon>keyboard_arrow_left</Icon></Button>}
+        {formDef.helpTopics && showHelp === true && <Button variant="text" onClick={() => { setShowHelpModal(!showHelpModal) }} color="primary"><Icon>help</Icon></Button>}
         {reportButton}
         {exportButton}
       </Toolbar>
@@ -1937,11 +1954,16 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       // { getExcelWidget() }
       //{toolbarPosition !== 'none' ? formtoolbar : null}
       //@ts-ignore
-      let $fp: ISchemaForm = { ...{ ...formProps, toolbarPosition: toolbarPosition } };
-
-      return (        
-          <Form {...$fp} />
-      
+      let $fp: ISchemaForm = { ...{ ...formProps, toolbarPosition: toolbarPosition } };      
+      return (
+        <div id={`reactory_container::${instance_id}`}>          
+          {toolbarPosition.indexOf("top") >= 0 ? formtoolbar : null}
+          {isBusy() === true && <LinearProgress />}
+          <Form {...$fp}>
+            {toolbarPosition.indexOf("form") >= 0 ? formtoolbar : null}  
+          </Form>
+          {toolbarPosition.indexOf("bottom") >= 0 ? formtoolbar : null}                
+        </div>
       )
     } catch (err) {
       return <>{err.message}</>

@@ -65,9 +65,6 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
   const [version, setVersion] = React.useState(0);
 
   try {
-
-    reactory.log('Rendering SelectWithData', { formContext, formData, menuItems, key_map }, 'debug');
-
     let variant: string | "standard" | "oulined" | "filled" = 'standard'
     if (theme.MaterialInput) {
       variant = theme.MaterialInput.variant || variant;
@@ -170,6 +167,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       }
 
       React.useEffect(() => {
+        reactory.log('Rendering SelectWithData', { formContext, formData, menuItems, key_map, version }, 'debug');
         getData();
       }, []);
 
