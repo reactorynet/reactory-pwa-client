@@ -613,7 +613,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.$windowSize = _size_spec;
     reactory.log('ReactoryHOC Resize', _size_spec);
     reactory.emit('onWindowResize', _size_spec);
-    // setSizeSpec(_size_spec);
+    setVersion(version + 1)    
   };
 
 

@@ -1948,8 +1948,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     try {
       // {getDeveloperOptions()}
-      // {isBusy() === true && <LinearProgress />}
       // { getHelpScreen() }
+      // {isBusy() === true && <LinearProgress />}      
       // { getPdfWidget() }
       // { getExcelWidget() }
       //{toolbarPosition !== 'none' ? formtoolbar : null}
@@ -1960,9 +1960,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           {toolbarPosition.indexOf("top") >= 0 ? formtoolbar : null}
           {isBusy() === true && <LinearProgress />}
           <Form {...$fp}>
-            {toolbarPosition.indexOf("form") >= 0 ? formtoolbar : null}  
+            {toolbarPosition.indexOf("form") >= 0 ? formtoolbar : null}
           </Form>
-          {toolbarPosition.indexOf("bottom") >= 0 ? formtoolbar : null}                
+          {toolbarPosition.indexOf("bottom") >= 0 ? formtoolbar : null}
         </div>
       )
     } catch (err) {

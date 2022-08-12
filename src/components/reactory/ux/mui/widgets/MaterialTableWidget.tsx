@@ -1068,7 +1068,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       )
     }
 
-    if (uiOptions.allowDelete === true) {
+    if (uiOptions?.allowDelete === true) {
       deleteButton = (
         <IconButton onClick={callDelete}><Icon>{uiOptions?.addButtonProps?.icon || "trash"}</Icon></IconButton>
       )

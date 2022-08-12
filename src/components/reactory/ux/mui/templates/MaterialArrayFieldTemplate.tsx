@@ -86,10 +86,9 @@ class ArrayTemplate extends Component<any, any> {
    * @param {React.SynthecticEvent} e 
    */
   onAddClicked(e) {
-    //console.log('Add Clicked ', e)
-    ;
+    //console.log('Add Clicked ', e)    
     const {
-      formData, //The formData for this array. 
+      formData = [], //The formData for this array - default to empty array in the event of the value being undefined 
       registry,
       schema,
     } = this.props;
@@ -259,7 +258,7 @@ class ArrayTemplate extends Component<any, any> {
       idPrefix,
       reactory
     } = this.props;
-    ;
+  
     const uiOptions = uiSchema['ui:options'] || null
     const uiWidget: string = uiSchema['ui:widget'] || null
     const definitions = registry.definitions;
@@ -281,9 +280,10 @@ class ArrayTemplate extends Component<any, any> {
     }
 
     if (ArrayComponent === null) {
+      
       ArrayComponent = (
         <Grid spacing={2} item sm={12} md={12}>
-          {formData && formData.map && formData.map((item, index) => {          
+          {formData && formData.map && formData.map((item, index) => {                    
             let itemSchema = retrieveSchema(schema.items, definitions, item);
             let itemErrorSchema = errorSchema ? errorSchema[index] : undefined;
             let itemIdPrefix = idSchema.$id + "_" + index;
@@ -306,8 +306,18 @@ class ArrayTemplate extends Component<any, any> {
               classes: this.props.classes
             });
           })}
-          {!formData || (formData && formData.length === 0) ? <Typography>Create a new {this.props.schema.title} by clicking the <Icon>add</Icon> icon</Typography> : null}
+          {!formData || (formData && formData.length === 0) ? <Typography>Create a new item by clicking the <Icon>add</Icon> icon</Typography> : null}
         </Grid>)
+    }
+
+    let $children = null;
+
+    if (ArrayComponent && ArrayComponent.$$typeof) {
+      $children = ArrayComponent
+    }
+
+    if (typeof ArrayComponent === "function") {
+      $children = (<ArrayComponent {...{ ...this.props, ...componentProps }} />)
     }
 
     if (uiOptions && uiOptions.container) {
@@ -321,7 +331,7 @@ class ArrayTemplate extends Component<any, any> {
       if (Container) {
         return (
           <Container {...containerProps}>
-            {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+            {$children}
           </Container>);
       } else {
 
@@ -329,47 +339,49 @@ class ArrayTemplate extends Component<any, any> {
           case "div": {
             return (
               <div {...containerProps}>
-                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+                {$children}
               </div>);
           }
           case "p": {
             return (
               <p {...containerProps}>
-                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+                {$children}
               </p>);
           }
           case "section": {
             return (
               <section {...containerProps}>
-                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+                {$children}
               </section>);
           }
           case "article": {
             return (
               <article {...containerProps}>
-                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+                {$children}
               </article>);
           }
           default: {
             return (
               <Paper {...containerProps}>
-                {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps }} /> : null}
+                {$children}
               </Paper>);
           }
         }
-
-        
       }
     } else {
       //default behaviour
+      // 
+
+      
+
       return (
         <Paper className={classes.root}>
           <Typography variant="h4">{schema.title}</Typography>
           <Grid container spacing={8}>
-            {ArrayComponent !== null ? <ArrayComponent {...{ ...this.props, ...componentProps}} /> : null}
+            {$children}
           </Grid>
-          {uiOptions.allowAdd === true && <Tooltip title={`Click here to add a new ${schema.title}`}>
-            <Button color="secondary" variant="outlined" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
+          {uiOptions?.allowAdd !== false && <Tooltip title={`Click here to add a new ${schema.title}`}>
+            <Button color="secondary" variant="contained" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
               <Icon>add</Icon>
             </Button>
           </Tooltip>}
