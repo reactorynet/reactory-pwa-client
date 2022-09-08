@@ -1,7 +1,7 @@
 import React, { Component, Fragment } from 'react'
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
-import { withStyles, withTheme } from '@mui/styles';
+import { makeStyles, withStyles, withTheme } from '@mui/styles';
 import Draggable from 'react-draggable';
 import { pullAt } from 'lodash';
 import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from '@reactory/client-core/components/reactory/form/utils';
@@ -26,7 +26,25 @@ import {
 
 import { withReactory } from '@reactory/client-core/api/ApiProvider'
 
-class ArrayTemplate extends Component<any, any> {
+interface ArrayTemplateState {
+  formData: any[],
+  isDirty: boolean
+  expanded: boolean[],
+  selected: boolean[],
+  onChangeTimer: number
+}
+
+interface ArrayTemplateProps {
+  
+  schema: Reactory.Schema.IArraySchema,
+  uiSchema: Reactory.Schema.IUISchema,
+  formContext: any,
+  registry: any,
+  formData?: any[]
+  idSchema: Reactory.Schema.IDSchema
+  [key: string]: any
+}
+class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
 
   static styles: any = (theme) => ({
     root: {
@@ -64,6 +82,7 @@ class ArrayTemplate extends Component<any, any> {
   onReorderClick: any;
 
   constructor(props, context) {
+
     super(props)
 
     this.onAddClicked = this.onAddClicked.bind(this)
@@ -71,40 +90,102 @@ class ArrayTemplate extends Component<any, any> {
     this.renderArrayFieldItem = this.renderArrayFieldItem.bind(this)
     this.registry = props.registry || getDefaultRegistry();
     this.onChangeForIndex = this.onChangeForIndex.bind(this);
-    this.state = {
-      expanded: {
-
-      },
-      selected: {
-
-      },
-    };
+    this.startOnChangeTimer = this.startOnChangeTimer.bind(this);
+    
+    this.state = this.stateFromProps(props);
   }
+
+  stateFromProps(props: ArrayTemplateProps) {
+    
+    let $state: ArrayTemplateState = {
+      formData: [],
+      isDirty: false,
+      expanded: [],
+      selected: [],
+      onChangeTimer: null
+    };
+
+    
+    if(props.formContext.reactory.utils.lodash.isArray(props.formData) === true) {
+      $state.formData = [...props.formData];
+      $state.expanded = $state.formData.map(e => false);
+      $state.selected = [...$state.expanded];
+    }
+
+    return $state;
+  }
+
+  // shouldComponentUpdate(nextProps: Readonly<ArrayTemplateProps>, nextState: Readonly<ArrayTemplateState>, nextContext: any): boolean {
+  //   const { state, props } = this;
+  //   const { reactory } = props.formContext;
+  //   //the only time we return false is when our incoming formData is different from our internal state version.
+  //   if(state?.formData?.length === nextProps?.formData?.length) {
+  //     let isSame: boolean = true;
+  //     state.formData.forEach((e, i) => {
+  //       const f = nextProps.formData[i];
+  //       const isEq = reactory.utils.deepEquals(e,f);
+  //       if(isEq === false) {          
+  //         isSame = false
+  //       }
+  //     });
+
+  //     return !isSame;
+  //   }
+
+  //   if(state.)
+    
+  //   return true;
+  // }
 
   /**
    * The event fired when clicking the add button on the array container
    * @param {React.SynthecticEvent} e 
    */
-  onAddClicked(e) {
-    //console.log('Add Clicked ', e)    
+    onAddClicked(e) {
+      
     const {
       formData = [], //The formData for this array - default to empty array in the event of the value being undefined 
       registry,
       schema,
+      
     } = this.props;
     const newItem = getDefaultFormState(schema.items, undefined, registry.definitions)
-    this.props.onChange([...formData, newItem])
+
+    let $formData = formData && formData?.length > 0 ? [...formData] : []
+
+    $formData.push(newItem);
+    this.props.onChange($formData)
   }
 
   onChangeForIndex(value, index, errorSchema) {
     //console.info('index item change', { index, value, errorSchema })
     //this.props.onChange(formData.map())
+    const that = this;
     const newData = this.props.formData.map((item, idx) => {
-      if (idx === index) return { ...item, ...value };
+      if (idx === index) {
+        return { ...item, ...value };      
+      } 
       return item;
     });
 
+    //this.setState({ isDirty: true, formData: newData }, () => { that.startOnChangeTimer(index) });
     if (this.props.onChange) this.props.onChange(newData);
+  }
+
+  startOnChangeTimer(forIndex: number){
+    if(this.state.onChangeTimer) {
+      clearTimeout(this.state.onChangeTimer)
+    }
+    const that = this;
+    const { onChange, formContext } = that.props;
+    
+    let timeoutId = setTimeout(() => {
+      if(that.state.isDirty) {
+        onChange(that.state.formData);
+      }
+    }, 1800);
+
+    this.setState({ onChangeTimer: timeoutId });
   }
 
   renderArrayFieldItem(props) {
@@ -119,8 +200,8 @@ class ArrayTemplate extends Component<any, any> {
       itemData,
       itemUiSchema,
       autofocus,
-      onBlur,
-      onFocus,
+      onBlur = () => {},
+      onFocus = () => {},
       parentSchema,
     } = props;
 
@@ -129,6 +210,8 @@ class ArrayTemplate extends Component<any, any> {
       expanded
     } = this.state
     ////console.log('Rendering array item', { props });
+
+    
 
     let orderable = true;
     let removable = true;
@@ -141,18 +224,26 @@ class ArrayTemplate extends Component<any, any> {
       toolbar: true,
     };
 
+    const that = this;
+
+    const { formContext } = that.props;
+
     const changeForIndex = (formData, errorSchema) => {
       this.onChangeForIndex(formData, index, errorSchema);
     }
 
-    const expandForIndex = (index) => {
+    const expandForIndex = (index: number) => {
       ////console.log('Expand for index', index);
-      this.setState({ expanded: { ...this.state.expanded, index: expanded[index] === true ? false : true } });
+      let $nextState = { ...this.state.expanded };
+      if($nextState && $nextState[index])
+      this.setState( { expanded: $nextState }, () => {
+        that.startOnChangeTimer(index);
+      } );
     };
 
-    const selectForIndex = (index) => {
+    const selectForIndex = (index: number) => {
       ////console.log('Select for index', index);
-      this.setState({ selected: { ...this.state.selected, index: selected[index] === true ? false : true } });
+      //this.setState({ selected: { ...this.state.selected, index: selected[index] === true ? false : true } });
     }
 
     const SchemaField = this.registry.fields.SchemaField;
@@ -164,13 +255,20 @@ class ArrayTemplate extends Component<any, any> {
       idSchema: itemIdSchema,
       required: itemSchema.type !== "null" || itemSchema.type !== null,
       onChange: changeForIndex,
-      onBlur: onBlur,
-      onFocus: onFocus,
+      onBlur: (id, e) => {
+        // formContext.$focus = null;
+        if(onBlur) onBlur(id, e)
+      },
+      onFocus: (id, e) => {
+        // formContext.$focus = id;
+        if(onFocus) onFocus(id, e)
+      },
       registry: this.registry,
       disabled: this.props.disabled,
       readonly: this.props.readonly,
       autofocus: autofocus,
       rawErrors: this.props.rawErrors,
+      formContext: this.props.formContext,
       key: index
     };
 
@@ -193,7 +291,7 @@ class ArrayTemplate extends Component<any, any> {
       className: "array-item",
       disabled: this.props.disabled,
       draggable: true,
-      dragHandle: props.classes.dragHandle,
+      //dragHandle: props.classes.dragHandle,
       hasToolbar: has.toolbar,
       toolbarPosition: "bottom",
       hasMoveUp: has.moveUp,
@@ -223,12 +321,12 @@ class ArrayTemplate extends Component<any, any> {
         </Toolbar>
       )
     }
-    return (
-      <Fragment key={index}>
+    return (      
+      <Grid item sm={12} xl={12} key={index}>
         <SchemaField {...schemaFieldProps} containerProps={containerProps} toolbar={toolbar}>
         </SchemaField>
         {toolbar}
-      </Fragment>
+      </Grid>
     )
   }
 
@@ -249,17 +347,30 @@ class ArrayTemplate extends Component<any, any> {
       title, //A string value containing the title for the array.
       formContext, //The formContext object that you passed to Form.
       formData, //The formData for this array. 
-      classes,
+      //classes,
       errorSchema,
       registry,
       autofocus,
       onBlur,
       onFocus,
-      idPrefix,
-      reactory
+      idPrefix,      
     } = this.props;
-  
-    const uiOptions = uiSchema['ui:options'] || null
+    
+    const { reactory } = formContext;
+
+    const classes = {
+      root: ""
+    };
+
+    const { 
+      //formData,
+      isDirty,
+      expanded,
+      selected,
+
+    } = this.state;
+
+    const uiOptions: any = uiSchema['ui:options'] || null
     const uiWidget: string = uiSchema['ui:widget'] || null
     const definitions = registry.definitions;
     let ArrayComponent = null
@@ -275,18 +386,17 @@ class ArrayTemplate extends Component<any, any> {
           componentProps[property] = formData[uiOptions.componentProps[property]]
         })
       }
-
-
     }
 
     if (ArrayComponent === null) {
       
       ArrayComponent = (
-        <Grid spacing={2} item sm={12} md={12}>
+        <Grid container spacing={2} item sm={12} md={12}>
           {formData && formData.map && formData.map((item, index) => {                    
             let itemSchema = retrieveSchema(schema.items, definitions, item);
             let itemErrorSchema = errorSchema ? errorSchema[index] : undefined;
             let itemIdPrefix = idSchema.$id + "_" + index;
+            // debugger
             let itemIdSchema = toIdSchema(itemSchema, itemIdPrefix, definitions, item, idPrefix);
             return this.renderArrayFieldItem({
               index: index,
@@ -300,13 +410,18 @@ class ArrayTemplate extends Component<any, any> {
               formData: formData,
               parentSchema: schema,
               itemUiSchema: uiSchema.items,
-              autofocus: autofocus && index === 0,
+              //@ts-ignore
+              autofocus:  formContext.$focus === itemIdPrefix.$id || autofocus && index === 0,
               onBlur: onBlur,
               onFocus: onFocus,
-              classes: this.props.classes
+              classes: {},
+              itemMeta: {
+                selected: selected[index],
+                exapanded: expanded[index],
+              }   
             });
           })}
-          {!formData || (formData && formData.length === 0) ? <Typography>Create a new item by clicking the <Icon>add</Icon> icon</Typography> : null}
+          {!formData || (formData && formData.length === 0) && uiOptions?.allowAdd !== false ? <Typography>Create a new item by clicking the <Icon>add</Icon> icon</Typography> : null}
         </Grid>)
     }
 
@@ -376,15 +491,8 @@ class ArrayTemplate extends Component<any, any> {
 
       return (
         <Paper className={classes.root}>
-          <Typography variant="h4">{schema.title}</Typography>
-          <Grid container spacing={8}>
-            {$children}
-          </Grid>
-          {uiOptions?.allowAdd !== false && <Tooltip title={`Click here to add a new ${schema.title}`}>
-            <Button color="secondary" variant="contained" disabled={canAdd === false} aria-label="Add" className={classes.fabButton} onClick={this.onAddClicked}>
-              <Icon>add</Icon>
-            </Button>
-          </Tooltip>}
+          {uiOptions?.showLabel !== false && <Typography variant="h4">{schema.title}</Typography>}
+          {$children}          
         </Paper>
       );
     }
@@ -395,11 +503,16 @@ class ArrayTemplate extends Component<any, any> {
   }
 }
 
-const MaterialArrayTemplate = compose(
-  withReactory,
-  withStyles(ArrayTemplate.styles),
-  withTheme)(ArrayTemplate);
+// const MaterialArrayTemplate = compose(
+//   withReactory,
+//   withStyles(ArrayTemplate.styles),
+//   withTheme)(ArrayTemplate);
 
-export default (props) => {
-  return (<MaterialArrayTemplate {...props} />)
-};
+// export default (props) => {
+//   return (<MaterialArrayTemplate {...props} />)
+// };
+
+
+const MaterialArrayTemplate = ArrayTemplate;
+
+export default MaterialArrayTemplate;

@@ -153,6 +153,10 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   reactory.on(ReactoryApiEventNames.onLogout, onLogout)
   reactory.on(ReactoryApiEventNames.onLogin, onLogin)
 
+  reactory.navigation = navigation;
+  reactory.location = location;
+
+
   const configureRouting = () => {
     reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
     let $routes = [];

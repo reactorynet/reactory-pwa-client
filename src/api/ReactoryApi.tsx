@@ -1,6 +1,6 @@
 import React from "react";
 
-import _il8n, { i18n } from 'i18next';
+import i18next, { i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
@@ -10,7 +10,7 @@ import EventEmitter from 'eventemitter3';
 import inspector from 'schema-inspector';
 import { v4 as uuid } from 'uuid';
 import classNames from 'classnames';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router,  } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions, MutationResult, FetchResult } from '@apollo/client';
 import localForage from 'localforage';
@@ -341,7 +341,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   $development_mode: boolean = false;
   __uuid: string;
   React: typeof React;
-  $il8n: i18n;
+  i18n: i18n = i18next;
 
   constructor(props) {
     super();
@@ -527,44 +527,59 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.client = client;
     this.ws_link = ws_link;
     
+    await this.initi18n()
+
+    
   }
 
-  async initil8n(lang: string = 'en') {
-
+  async initi18n() {
+    
     const TRANSLATIONS = `
-      query ReactoryTranslations($lang: String) {
-        ReactoryTranslations(lang: $lang) {
+       query ReactoryTranslation($lang: String) {
+        ReactoryTranslation(lang: $lang) {
           id
-          translations
-          resources
+          i18n {
+            id
+            ns
+            translations
+          }          
         }
       }
-    `;
+    `;    
     
-    const { data, error }: QueryResult = await this.graphqlQuery(TRANSLATIONS, { lang }).then()
+    const { data, error }: QueryResult = await this.graphqlQuery(TRANSLATIONS, { }).then()
     
     let $resources: any = {};
+   
 
-    $resources[lang] = { translation: {  } }
+    if (data && data.ReactoryTranslation) {      
+      const { i18n, id } = data.ReactoryTranslation;
+      if(i18n && lodash.isArray(i18n) === true) {
+        $resources[id] = {};
+        i18n.forEach(( e ) => {
+          if(e && e.translations && e.ns) {
+            if(!$resources[id][e.ns] && e.translations) {
+              $resources[id][e.ns] = { ...e.translations };
+            }
+          }
+        });
+      }
+      
+      await i18next
+        .use(LanguageDetector)
+        .use(initReactI18next)
+        .init({
+          debug: true,
+          lng: id,
+          fallbackLng: 'en-US',      
+          interpolation: {
+            escapeValue: false
+          },
+          resources: $resources
+        }).then();
 
-    if(data && data.Translations) {
-      $resources[lang].translation = cloneDeep(data.Translations);
-    }
-
-    await _il8n
-      .use(LanguageDetector)
-      .use(initReactI18next)
-      .init({
-        debug: true,
-        fallbackLng: 'en',
-        interpolation: {
-          escapeValue: false
-        },
-        resources: $resources
-      }).then();
-
-    this.$il8n = _il8n;
-    
+      this.i18n = i18next;        
+    }       
   }
 
   clearStoreAndCache() {
@@ -731,10 +746,11 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   goto(where = "/", state = { __t: new Date().valueOf() }) {
-    if (this.history && this.history) {
-      this.history.replace({ pathname: where, state });
-      this.emit(ReactoryApiEventNames.onRouteChanged, { path: where, state, where });
-    }
+    
+    // if (this.history && this.history) {
+    //   this.history.replace({ pathname: where, state });
+    //   this.emit(ReactoryApiEventNames.onRouteChanged, { path: where, state, where });
+    // }
   }
 
   registerFunction(fqn, functionReference, requiresApi = false, signature = '< signature-not-set />') {
@@ -1390,7 +1406,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.emit('componentRegistered', fqn);
   }
 
-  getComponentsByType(componentType: string = 'component') {
+  // @ts-ignore
+  getComponentsByType(componentType: string = 'component'): any[] {
 
     let _components = [];
     Object.keys(this.componentRegister).forEach((fqn) => {
@@ -1612,16 +1629,19 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         }`, { provider });
   }
 
-  storeObjectWithKey(key, objectToStore) {
-    localStorage.setItem(key, JSON.stringify(objectToStore));
+  async storeObjectWithKey(key, objectToStore, indexDB: boolean = false, cb = (err) => {}): Promise<void> {
+    if(!indexDB) return localStorage.setItem(key, JSON.stringify(objectToStore));
+    else return await localForage.setItem(key, objectToStore, cb);
   }
 
-  readObjectWithKey(key) {
-    return JSON.parse(localStorage.getItem(key));
+  async readObjectWithKey(key, indexDB: boolean = false) {
+    if(!indexDB) return JSON.parse(localStorage.getItem(key));
+    else return JSON.parse(await localForage.getItem(key))
   }
 
-  deleteObjectWithKey(key) {
-    localStorage.removeItem(key);
+  async deleteObjectWithKey(key, indexDB: boolean = false) {
+    if(!indexDB)  return localStorage.removeItem(key);
+    else await localForage.removeItem(key);
   }
 
   status(options: { emitLogin: boolean, forceLogout?: boolean } = { emitLogin: false, forceLogout: false }): Promise<Reactory.Models.IApiStatus> {

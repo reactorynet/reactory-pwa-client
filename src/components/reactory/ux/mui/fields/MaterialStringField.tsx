@@ -210,7 +210,8 @@ const MaterialStringFieldWidget = (props) => {
           key={props.key || id || idSchema.$id} 
           type={args.type || 'text'} 
           onKeyDown={onKeyDown} 
-          id={idSchema.$id} 
+          id={idSchema.$id}
+          autoFocus={idSchema.id === props.formContext.$focus && props.formContext.$focus !== undefined}
           readOnly={uiOptions.readOnly === true} 
           value={formData || schema.default}
           onFocus={onFocus && (e => onFocus(id, e.target.value))}

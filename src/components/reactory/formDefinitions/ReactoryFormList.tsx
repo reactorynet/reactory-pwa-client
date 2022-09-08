@@ -1,6 +1,8 @@
+import React from 'react';
 import Reactory from '@reactory/reactory-core';
+import { useNavigate } from 'react-router';
 
-const formSchema = {
+const formSchema: Reactory.Schema.ISchema = {
   type: 'array',
   title: 'Forms',
   items: {
@@ -21,6 +23,14 @@ const formSchema = {
       version: {
         type: 'string',
         title: 'Version'
+      },
+      userCount: {
+        type: 'number',
+        title: 'Active users'
+      },
+      description: {
+        type: 'string',
+        title: 'Description'
       }
     }
   }
@@ -29,22 +39,22 @@ const formSchema = {
 const schema = {
   type: 'object',
   title: 'Reactory Forms',
-  properties: {
-    recent: { ...formSchema },
+  properties: {     
     forms: { ...formSchema } 
   }
 };
 
 const uiSchema = {
-  recent: {
-
-  },
+  'ui:title': null,  
   forms: {
     'ui:widget': 'MaterialListWidget',
+    'ui:title': null,
     'ui:options': {
-      primaryText: '${item.name}',
-      secondaryText: '${item.version}',
-      showAvatar: true,
+      primaryText: '${item.title}',
+      secondaryText: '${item.description} [${item.nameSpace}.${item.name}@${item.version}]',      
+      showAvatar: false,
+      showTitle: true,
+      showLabel: false,
       // avatar: (item, formContext) => {
       //   const { reactory } = formContext;
       //   if (item.event.organization && item.event.organization.avatar) {
@@ -64,88 +74,68 @@ const uiSchema = {
       //avatarPosition: "left",
       secondaryAction: {
         component: (item, formContext, itemIndex, data) => {
-          const { event, link, user, checkedIn, checkedOut, eventLinkActivated } = item;
-          const { options } = event;
+          const { id, name, nameSpace, version } = item;
+          
           const { reactory } = formContext;
+
+          const [showModal, setShowModal] = React.useState<boolean>(false);
+          const [action, setAction] = React.useState<string>(null);
+
+          const navigate = useNavigate();
+
           const {
             DropDownMenu,
-            CheckinLinkLauncher,
-            CheckoutLinkLauncher,
-            UserReportViewLauncher
+            AlertDialog,
+            FullScreenModal,
+            ReactoryFormEditor,
+            MaterialCore,            
           } = reactory.getComponents([
             "core.DropDownMenu",
+            'core.AlertDialog',
+            'core.FullScreenModal',
+            'core.ReactoryFormEditor',
+            'material-ui.MaterialCore'
           ]);
 
-          let nextAction = 'checkin';
+          const {
+            Tooltip
+          } = MaterialCore
 
+          const onMenuSelect = (evt, menu) => {
+            //do the thing
+            // setAction(menu.id);
+            // setShowModal(true);            
+            navigate(`${item.id}/${menu.id}`, {});            
+          }
 
-          // if (options.linkOptions.checkinLinkEnabled === false) nextAction = 'launch';
-          // if (checkedIn === true) nextAction = 'launch';
-          // if (eventLinkActivated === true) nextAction = 'checkout';
-          // if (checkedOut === true) nextAction = 'report'
+          const menus = [
+            {
+              id: 'edit',
+              icon: 'edit',
+              title: 'Edit',              
+            },
+            {
+              id: 'view',
+              icon: 'launch',
+              title: 'Open',
+            },
+            {
+              id: 'new',
+              icon: 'add',
+              title: "New"
+            },
+            {
+              id: 'develop',
+              icon: 'developer_mode',
+              title: "Develop"
+            }
+          ];
 
-          // let tooltip = 'Please click on the button to start';
-
-          // const launcherProps: any = {
-          //   event,
-          //   user,
-          //   link,
-          //   checkedIn,
-          //   checkedOut,
-          //   eventLinkActivated,
-          //   userEvent: item,
-          //   user_event: item,
-          //   variant: nextAction === 'launch' ? 'eventLink' : 'checkinLink',
-          //   buttonVariant: 'iconbutton',
-          // }
-
-          // if (nextAction === 'checkout') {
-          //   launcherProps.variant = 'checkoutLink';
-          //   return (
-          //     <Tooltip title={tooltip}>
-          //       <CheckoutLinkLauncher {...launcherProps} />
-          //     </Tooltip>
-          //   )
-          // }
-
-          // if (nextAction === 'report') {
-          //   return (
-          //     <Tooltip title={tooltip}>
-          //       <UserReportViewLauncher {...launcherProps} />
-          //     </Tooltip>
-          //   )
-          // }
-
-          // return (
-          //   <Tooltip title={tooltip}>
-          //     <CheckinLinkLauncher {...launcherProps} />
-          //   </Tooltip>
-          // )
-
+          return <DropDownMenu menus={menus} onSelect={onMenuSelect} />         
         }
       },
       remoteData: false,
-      // query: 'events',
-      // variables: {
-      //   'formContext.formData.events.$one_on_one': 'eventTypes[0]',
-      //   'formContext.formData.events.$focus_group': 'eventTypes[1]',
-      //   'paging.page': 'paging.page',
-      //   'paging.pageSize': 'paging.pageSize'
-      // },
-      // resultKey: 'events',
-      // listProps: {
-      //   className: "list"
-      // },
-      // pagination: {
-      //   pageSize: 1,
-      //   variant: "page",
-      //   resultMap: {
-      //     'paging.page': 'page',
-      //     'paging.pageSize': 'pageSize',
-      //     'paging.hasNext': 'hasNext',
-      //     'paging.total': 'total'
-      //   }
-      // },
+      
       title: 'Reactory Forms',
       titleClass: 'title',
       jss: {
@@ -159,13 +149,10 @@ const uiSchema = {
           textAlign: 'center',
         },
         list: {
-          minWidth: '70%',
-          maxWidth: '800px',
+          minWidth: '70%',          
           margin: 'auto',
           maxHeight: '80%',
           minHeight: '80%',
-          overflowY: 'scroll',
-
         }
       }
     }
@@ -199,6 +186,23 @@ const ReactoryFormList: Reactory.Forms.IReactoryForm = {
   ], 
   schema: schema,
   uiSchema: uiSchema,
+  uiSchemas: [{
+    id: 'list',
+    icon: 'list',
+    title: 'List',
+    uiSchema: uiSchema,
+    description: 'List view',
+    key: 'list'
+  },
+    {
+      id: 'def',
+      icon: 'grid',
+      title: 'Grid',
+      uiSchema: {},
+      description: 'Empty ui Schema',
+      key: 'def'
+    }
+],
   registerAsComponent: true
 };
 

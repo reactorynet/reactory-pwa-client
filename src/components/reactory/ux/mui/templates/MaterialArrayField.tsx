@@ -114,7 +114,7 @@ function DefaultFixedArrayFieldTemplate(props) {
         </Typography>
       )}
 
-      <Grid container spacing={8}
+      <Grid container spacing={4}
         key={`array-item-list-${props.idSchema.$id}`}>
         {props.items && props.items.map(DefaultArrayItem)}
       </Grid>
@@ -381,7 +381,7 @@ class ArrayField extends Component<any, any> {
       onChange,
       api,
     } = this.props;
-    //console.log('rendering normal array', {props: this.props});
+    
     let toolbar = null;
     const title = schema.title === undefined ? name : schema.title;
     let { ArrayFieldTemplate, definitions, fields } = registry;
@@ -394,7 +394,7 @@ class ArrayField extends Component<any, any> {
       ArrayFieldTemplate = registry.widgets[uiSchema['ui:widget']]
 
       if (!ArrayFieldTemplate && formContext.api) {
-        ArrayFieldTemplate = formContext.api.getComponent(uiSchema['ui:widget']);
+        ArrayFieldTemplate = formContext.reactory.getComponent(uiSchema['ui:widget']);
       }
 
       if (uiOptions && uiOptions.componentProps) {  //map properties to the component
@@ -410,7 +410,7 @@ class ArrayField extends Component<any, any> {
 
       if (uiOptions && uiOptions.container) {
         //resolve Container from API
-        const Container = formContext.api.getComponent(uiOptions.container)
+        const Container = formContext.reactory.getComponent(uiOptions.container)
         let containerProps = {}
         if (uiOptions.containerProps) {
           containerProps = { ...uiOptions.containerProps }

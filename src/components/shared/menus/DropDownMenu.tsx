@@ -17,7 +17,7 @@ const noHandler = (evt, menuItem) => {
 };
 
 
-export const DropDownMenu = (props) => {
+export const DropDownMenu = (props: Reactory.UX.IDropDownMenuProps) => {
 
   const [open, setIsOpen] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState(null);
@@ -26,7 +26,7 @@ export const DropDownMenu = (props) => {
     setAnchorEl(evt.currentTarget);
   }
 
-  const { menus, tooltip, theme } = props;
+  const { menus, tooltip } = props;
   const ariaId = props.id || uuid();
   const menuItems = []; 
 

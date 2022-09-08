@@ -9,6 +9,7 @@ import {
   InputLabel,
   Input,
 } from '@mui/material'
+import { useReactory } from '@reactory/client-core/api/ApiProvider';
 
 
 export const MaterialDescriptionField = (props) => {
@@ -27,7 +28,7 @@ export const MaterialDescriptionField = (props) => {
     _description = template(description, { variable: 'props' })(props);
   } catch (templateError) {
     if (props.formContext && props.formContext.api) {
-      props.formContext.api.log(`TemplateField has a bad field template: ${id}`, props);
+      props.formContext.reactory.log(`TemplateField has a bad field template: ${id}`, props);
     }
   }
 
@@ -45,13 +46,13 @@ export const MaterialTitleField = (props) => {
     variant = "h5"
   } = props;
 
+  const reactory = useReactory();
+
   let _title = title;
   try {
-    _title = template(title, { variable: 'props' })(props);
+    _title = template(reactory.i18n.t(title), { variable: 'props' })(props);
   } catch (templateError) {
-    if (props.formContext && props.formContext.api) {
-      props.formContext.api.log(`TemplateField has a bad field template: ${id}`, props);
-    }
+    reactory.log(`TemplateField has a bad field template: ${id}`, props);
   }
 
   return (<Typography className={'reactory-material-title-field'} id={id} variant={variant} align={align || 'left'} style={style}>{_title}{required === true ? '*' : null}</Typography>);

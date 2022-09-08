@@ -54,6 +54,7 @@ class MaterialGridField extends MaterialObjectField {
       formData
     } = this.props
     const { definitions, fields, formContext } = this.props.registry
+    const { reactory } = formContext;
     const { SchemaField, TitleField, DescriptionField } = fields
     const schema = retrieveSchema(this.props.schema, definitions)
     const title = (schema.title === undefined) ? '' : schema.title
@@ -64,7 +65,7 @@ class MaterialGridField extends MaterialObjectField {
       spacing: 8,
       container: 'Paper',
       containerStyles: {
-
+        padding: reactory.muiTheme.spacing(1)
       }
     };
 
@@ -173,16 +174,16 @@ class MaterialGridField extends MaterialObjectField {
     let Container = null
     switch (gridOptions.container) {
       case "div": {
-        return (<div className={classes.root} style={gridOptions.containerStyles}>{grid_content}</div>)
+        return (<div style={gridOptions.containerStyles}>{grid_content}</div>)
       }
       case "Paper":
       default: {
-        return (<Paper className={classes.root} style={gridOptions.containerStyles} elevation={gridOptions.elevation || 1}>{grid_content}</Paper>)
+        return (<Paper style={gridOptions.containerStyles} elevation={gridOptions.elevation || 1}>{grid_content}</Paper>)
       }
     }    
   }
 }
 
-export const MaterialGridFieldComponent = compose(withReactory, withStyles(MaterialGridField.styles), withTheme)(MaterialGridField);
+// export const MaterialGridFieldComponent = compose(withReactory, withStyles(MaterialGridField.styles), withTheme)(MaterialGridField);
 
-export default  MaterialGridFieldComponent;
+export default MaterialGridField;

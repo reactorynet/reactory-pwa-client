@@ -650,6 +650,8 @@ const ApplicationHeader = (props) => {
 
   const menuItems = Menus();
 
+  //debugger
+  let title = reactory.i18n.t(user.applicationName)
 
   return (
     <Fragment>
@@ -659,7 +661,7 @@ const ApplicationHeader = (props) => {
             <MenuIcon />
           </IconButton>
           <Typography variant="body2" color="inherit" style={{ flex: 1 }}>
-            <span>{user.applicationName}</span>
+            <span>{ title }</span>
             {apiStatus.api_ok === false && <span style={{ color: theme.palette.error.main }}> - OFFLINE</span>}
             {isSlow === true && total > 2 && <span style={{ color: theme.palette.warning.main }}><Icon>sensors</Icon></span>}
           </Typography>

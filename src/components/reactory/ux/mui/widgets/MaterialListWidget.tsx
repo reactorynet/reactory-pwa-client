@@ -4,7 +4,7 @@ import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } f
 import { pullAt, isNil, template, isString } from 'lodash';
 import { useNavigate } from 'react-router'
 
-import uuid from 'uuid';
+import * as uuid from 'uuid';
 import {
   Avatar,
   Fab,
@@ -263,30 +263,34 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
         if (errors.length > 0) {
           setError(`Could not all or some of the data, please try again`);
         }
-
+        let _paging = { ...paging };
+        
         if (data && data[query.name]) {
           let _formData = data[query.name];
           if (reactory.utils.lodash.isArray(_formData) === true) {
             if (options.resultMap || query.resultMap) {
-              let result = reactory.utils.objectMapper(data[query.name], options.resultMap || query.resultMap);
+              let result = reactory.utils.objectMapper(data[query.name], {}, options.resultMap || query.resultMap);
               if (reactory.utils.lodash.isArray(_formData) === true) _formData = result;
-            }
+            } 
           } else {
             if (options.resultKey || query.resultKey) {
               _formData = data[query.name][options.resultKey || query.resultKey];
-              if (options.resultMap || query.resultMap) {
-                let result = reactory.utils.objectMapper(data[query.name], options.resultMap || query.resultMap);
-                if (reactory.utils.lodash.isArray(_formData) === true) _formData = result;
-              }
             }
 
-            let _paging = { ...paging };
-            if (options.pagination && options.resultKey) {
+            if (options.resultMap || query.resultMap && _formData) {
+              //debugger
+              let result = reactory.utils.objectMapper(_formData, {}, options.resultMap || query.resultMap);
+              if (reactory.utils.lodash.isArray(_formData) === true) _formData = result;
+              if(result.data) _formData = result.data;
+              if(result.paging) _paging = result.paging;
+            }
+
+            if (options?.pagination?.resultKey) {
               _paging = data[options.resultKey]
             }
 
-            if (options.pagination && options.pagination.resultMap) {
-              _paging = reactory.utils.objectMapper(_paging, options.pagination.resultMap);
+            if (options?.pagination?.resultMap) {
+              _paging = reactory.utils.objectMapper(_paging, {}, options.pagination.resultMap);
             }
 
             if (JSON.stringify(paging) !== JSON.stringify(_paging)) {
@@ -326,15 +330,15 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
   const widgetsBefore = [];
   const widgetsAfter = [];
 
+  let uiTitle = uiSchema["ui:title"];
+
   if (schema.title && isString(schema.title) && schema.title.length > 0) {
     if (options.showTitle !== false) {
-      widgetsBefore.push((<FormLabel className={classes[options.titleClass]} key={`${idSchema.$id}_Label`}>{options.title || schema.title}</FormLabel>));
+      widgetsBefore.push((<FormLabel className={classes[options.titleClass]} key={`${idSchema.$id}_Label`}>{reactory.i18n.t(uiTitle || options.title || schema.title)}</FormLabel>));
     }
   }
 
   if (options.allowAdd === true) {
-
-
 
     const addItem = () => {
       const newItem = getDefaultFormState(schema.items, undefined, registry.definitions)
@@ -414,7 +418,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
       {widgetsBefore}
       <List {...listProps} className={classes[listProps.className || "list"]}>
         {emptyListItem}
-        {data.map((item: TAny, itemIndex) => {
+        {data?.map && data.map((item: TAny, itemIndex) => {
           //Create a list item entry using the uiOptions for the widget
 
           const widgetsLeft = []; //widgets to render left of text
@@ -537,7 +541,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
             if (typeof options.primaryText === "string") $primaryText = options.primaryText;
             if (typeof options.primaryText === "function") $primaryText = options.primaryText(item, formContext, itemIndex, data);
 
-            listItemTextProps.primary = template($primaryText)({ props: props, item, reactory });
+            listItemTextProps.primary = template(reactory.i18n.t($primaryText))({ props: props, item, reactory, itemIndex, data });
           }
           catch (templateError) {
             reactory.log(`Error parsing primary text template ${$primaryText}`, { options }, 'error')
@@ -630,7 +634,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
                 link
               } = options.secondaryAction;
 
-
+              debugger
               if (component && typeof component === "function") {
                 secondaryActionWidget = component(item, formContext, itemIndex, data);
               } else {
@@ -640,8 +644,6 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
                 let $link: string = typeof link === "function" ?
                   link(item, formContext, itemIndex, data) :
                   link;
-
-
 
                 const path = template($link)({ item, props: props, data });
 
@@ -662,33 +664,32 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
                   </IconButton>
                 )
 
-                if (typeof action === 'string' && action.indexOf('mount') === 0) {
 
-
-                  if (isNil(componentFqn) === false && componentFqn !== undefined) {
-
-
-
-                    const SecondaryItemComponent = reactory.getComponent<any>(componentFqn as string);
-
-                    let secondaryComponentProps = {
-                      formData: item,
-                      ...options.secondaryAction.props,
-                      onChange: (updatedItem) => {
-                        let newState = [...data];
-                        newState[itemIndex] = { ...newState[itemIndex], ...updatedItem };
-                        props.onChange(newState);
-                      }
-                    };
-
-                    if (options.secondaryAction.propsMap) {
-                      let outputObject = reactory.utils.objectMapper(props, options.secondaryAction.propsMap);
-                      secondaryComponentProps = { ...secondaryComponentProps, ...outputObject };
+                if (isNil(componentFqn) === false && componentFqn !== undefined) {
+                  const SecondaryItemComponent = reactory.getComponent<any>(componentFqn as string);
+                  
+                  let secondaryComponentProps = {
+                    formData: item,
+                    ...options.secondaryAction.props,
+                    onChange: (updatedItem) => {
+                      let newState = [...data];
+                      newState[itemIndex] = { ...newState[itemIndex], ...updatedItem };
+                      props.onChange(newState);
                     }
-                    // secondaryComponentProps.componentProps = this.props.api.utils.objectMapper(item, objectmapDefinition)
-                    componentToRender = <SecondaryItemComponent {...secondaryComponentProps} />
+                  };
+
+                  if (options.secondaryAction.propsMap) {
+                    let outputObject = reactory.utils.objectMapper({...props, item, data, itemIndex}, options.secondaryAction.propsMap);
+                    secondaryComponentProps = { ...secondaryComponentProps, ...outputObject };
                   }
+
+                  debugger
+                  // secondaryComponentProps.componentProps = this.props.api.utils.objectMapper(item, objectmapDefinition)
+                  componentToRender = <SecondaryItemComponent {...secondaryComponentProps} />
                 }
+
+                // if (typeof action === 'string' && action.indexOf('mount') === 0) {   
+                // }
 
                 secondaryActionWidget = (
                   <ListItemSecondaryAction key={`${idSchema.$id}.${itemIndex}.secondary_action`}>
@@ -701,6 +702,8 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
                 options.secondaryActionPosition && options.secondaryActionPosition === 'left' ? widgetsLeft.push(secondaryActionWidget) : widgetsRight.push(secondaryActionWidget);
               }
             }
+
+            
           }
 
 

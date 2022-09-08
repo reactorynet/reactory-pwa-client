@@ -75,7 +75,7 @@ function DefaultObjectFieldTemplate(props: any) {
   );
 }
 
-class ObjectField extends React.Component<any, any, any> {
+class MaterialObjectField extends React.Component<any, any, any> {
   static defaultProps = {
     uiSchema: {},
     formData: {},
@@ -98,7 +98,11 @@ class ObjectField extends React.Component<any, any, any> {
   }
 
   onPropertyChange = name => {
+    
     return (value, errorSchema) => {
+
+      this.props.formContext.reactory.log(`onPropertyChange ${name}`, {value})
+
       const newFormData = { ...this.props.formData, [name]: value };
       this.props.onChange(
         newFormData,
@@ -187,6 +191,7 @@ class ObjectField extends React.Component<any, any, any> {
     const { SchemaField, TitleField, DescriptionField } = fields;
     const schema = retrieveSchema(this.props.schema, definitions, formData);
     // const uiSchema = retrieve
+    // this.props.formContext.reactory.log(`MaterialObjectField.render ${idSchema.id}`)
 
     const title = schema.title === undefined ? name : schema.title;
     const description = uiSchema["ui:description"] || schema.description;
@@ -199,8 +204,6 @@ class ObjectField extends React.Component<any, any, any> {
     }
 
     let orderedProperties;
-
-
 
     try {
       const properties = Object.keys(schema.properties);
@@ -272,4 +275,4 @@ class ObjectField extends React.Component<any, any, any> {
 }
 
 
-export default ObjectField;
+export default MaterialObjectField;

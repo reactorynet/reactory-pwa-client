@@ -242,11 +242,11 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   
   const created = new Date().valueOf();
 
-  const [formDef, setFormDefinition] = React.useState<Reactory.Forms.IReactoryForm>(props.formDef || ReactoryDefaultForm);  
+  const [formDef, setFormDefinition] = React.useState<Reactory.Forms.IReactoryForm>(undefined);  
   const [instance_id] = React.useState(uuid.v4())
 
-  const fqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
-  const signature = `<${fqn} instance={${instance_id} />`;
+  const fqn = `${formDef?.nameSpace || '*'}.${formDef?.name || '*'}@${formDef?.version || '*'}`;
+  const signature = `${formDef === undefined ? '🔸':''}<${fqn} instance={${instance_id} />`;
   const queryData: any = reactory.utils.queryString.parse(window.location.search) || {};
 
   const getScreenSize = () => {
@@ -258,7 +258,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
   //get initial data
   const initialData = (_existing: any = null) => {
-
+    if(formDef === undefined) return null;
+    
     if(typeof formDef.schema === "object" ) {
       switch (formDef.schema.type) {
         case "string": {
@@ -279,12 +280,11 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           if (typeof formDef.defaultFormValue === 'object') _obj = { ..._obj, ...formDef.defaultFormValue };
           if (typeof props.data === 'object') _obj = { ..._obj, ...props.data };
           if (typeof props.formData === 'object') _obj = { ..._obj, ...props.formData };
-          if (typeof queryData === 'object') _obj = { ..._obj, ...queryData };
+          // if (typeof queryData === 'object') _obj = { ..._obj, ...queryData };
   
           if (_existing && typeof _existing === 'object') {
             _obj = { ..._existing, ..._obj };
           }
-  
           return _obj
         }
         case "array": {
@@ -313,8 +313,13 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     return queryData.uiSchemaKey || props.uiSchemaKey || 'default';
   };
 
-  const getInitialActiveMenuItem = () => {
+  const getInitialActiveMenuItem = (): Reactory.Forms.IUISchemaMenuItem => {
+
     const key = getInitialUiSchemaKey();
+
+    if(formDef === undefined) return null;
+    
+    //if (formDef?.id ==='core.SupportTickets@1.0.0') debugger
 
     let allowed_schemas = AllowedSchemas(formDef.uiSchemas, mode, getScreenSize());
 
@@ -324,14 +329,25 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     if (matched_schema) return matched_schema;
 
-    return null;
+    if(allowed_schemas.length > 0) {
+      return allowed_schemas[0];
+    } 
+
+    return {
+      id: 'default',
+      key: 'default',
+      uiSchema: formDef.uiSchema || {},
+      description: "Default active menu item",
+      title: "Default",
+      icon: "form",
+    };
   };
 
   const getInitialDepencyState = () => {
     let _dependency_state = { passed: true, dependencies: {} }
 
     let _all_dependencies = [];
-    if (formDef.widgetMap) {
+    if (formDef?.widgetMap) {
       formDef.widgetMap.forEach((map) => {
         if (map.componentFqn) {
           if (_all_dependencies.indexOf(map.componentFqn) < 0) _all_dependencies.push(map.componentFqn);
@@ -339,7 +355,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       })
     }
 
-    if (formDef.components) {
+    if (formDef?.components) {
       formDef.components.forEach((component) => {
         if (component.indexOf("@") > 1 && component.indexOf(".") > 0) {
           if (_all_dependencies.indexOf(component) < 0) _all_dependencies.push(component);
@@ -347,7 +363,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       })
     }
 
-    if (formDef.dependencies && formDef.dependencies.length > 0) {
+    if (formDef?.dependencies && formDef.dependencies.length > 0) {
       formDef.dependencies.forEach((_dep: Reactory.Forms.IReactoryComponentDefinition) => {
         _dependency_state.dependencies[_dep.fqn] = {
           available: reactory.componentRegister[_dep.fqn] !== null && reactory.componentRegister[_dep.fqn] !== undefined,
@@ -366,9 +382,10 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   };
   
   
+
   const [componentDefs, setComponents] = React.useState<ReactoryComponentMap>(reactory.getComponents(default_dependencies()));  
   const [formData, setFormData] = React.useState<any>(initialData());
-  const [formHistory, setHistory] = React.useState<any[]>([props.data || props.formData]);
+  const [formHistory, setHistory] = React.useState<any[]>([initialData()]);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [activeUiSchemaKey, setActiveUiSchemaKey] = React.useState<string>(getInitialUiSchemaKey());
   const [activeUiSchemaMenuItem, setActiveUiSchemaMenuItem] = React.useState<Reactory.Forms.IUISchemaMenuItem>(getInitialActiveMenuItem());
@@ -430,36 +447,37 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
     
     if(props.formDef) {
-      setFormDefinition({ ...props.formDef, __complete__: true });
+      setFormDefinition({ ...props.formDef, __complete__: true });    
     } else {
       let $id = props.formId;
       if (!$id && props.formDef && props.formDef.id) $id = props.formData.$id;
       const $formDef = reactory.form($id, (nextFormDef, error) => {
-  
+        
         if (error) {
           setFormDefinition(ReactoryErrorForm);
           setFormData({ error })
         } else {
-          setFormDefinition(nextFormDef);
+          setFormDefinition(nextFormDef);          
         }
         
       });
-
+      
       if($formDef) setFormDefinition($formDef.__complete__ === true ? $formDef : ReactoryDefaultForm)
       
     }
 
-
-
-    getData();
-
     return onReactoryFormUnmount;
   }
+
+  /**
+   * Effects Starts
+   */
 
   React.useEffect(onReactoryFormMounted, []);
 
   React.useEffect(() => {
     getData();
+    reactory.utils.localForage.setItem(`${fqn}::preferred_uiSchema`, activeUiSchemaMenuItem);
   }, [activeUiSchemaMenuItem])
 
   const watchList = [props.formData, props.formDef, props.formId];
@@ -471,12 +489,10 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   }
 
   React.useEffect(() => {
-    let _formData = initialData(formData);
-
-    let next_version = version + 1;
-    setVersion(next_version);
-    reactory.log(`${signature} Incoming Properties Changed`, { formData: props.formData, _formData: formData, version }, 'debug');
-    getData(_formData);
+    //let next_version = version + 1;
+    setVersion(0);
+    reactory.log(`${signature} Incoming Properties Changed`, { formData, version }, 'debug');
+    getData();
 
   }, watchList)
 
@@ -485,9 +501,21 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     setVersion(version + 1);
   }, [formData, props])
 
+  React.useEffect(()=>{
+    //clear the data
+    setFormData(undefined);
+    //get the data
+    getData();
+  }, [formDef])
+
+  /** Effects End */
+
   const getActiveUiSchema = () => {
 
+    if(formDef === undefined) return {};
+
     if (activeUiSchemaMenuItem !== null) {
+      //debugger
       return activeUiSchemaMenuItem.uiSchema;
     }
 
@@ -523,14 +551,15 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   }
 
   const getActiveGraphDefinitions = (): Reactory.Forms.IFormGraphDefinition => {
-    let _grahDefinitions: Reactory.Forms.IFormGraphDefinition = formDef.graphql;
+    let _grahDefinitions: Reactory.Forms.IFormGraphDefinition = formDef?.graphql;
+
 
     if (activeUiSchemaMenuItem !== null) {
       if (activeUiSchemaMenuItem.graphql) _grahDefinitions = activeUiSchemaMenuItem.graphql;
     }
 
     const _uiSchema = getActiveUiSchema();
-    if (_uiSchema["ui:graphql"]) {
+    if (_uiSchema && _uiSchema["ui:graphql"]) {
       _grahDefinitions = _uiSchema["ui:graphql"];
     }
 
@@ -538,10 +567,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   };
 
   const getActiveSchema = (defaultSchema) => {
+    if(formDef === undefined) return ReactoryDefaultForm.schema;
+
     let _schemaDefinitions: any = defaultSchema || formDef.schema;
 
     const _uiSchema = getActiveUiSchema();
-    if (_uiSchema["ui:schema"]) {
+    if (_uiSchema && _uiSchema["ui:schema"]) {
       _schemaDefinitions = _uiSchema["ui:schema"];
     }
 
@@ -566,11 +597,13 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   }
 
   const getHelpScreen = () => {
+        
     const { HelpMe } = componentDefs;
     let topics = [];
     if (formDef.helpTopics) topics = [...formDef.helpTopics]
     if (props.helpTopics) topics = [...props.helpTopics, ...topics];
     const closeHelp = e => setShowHelpModal(false);
+
     return (
       <HelpMe topics={topics} tags={formDef.tags} title={props.helpTitle || formDef.title} open={showHelpModal === true} onClose={closeHelp}>
       </HelpMe>
@@ -771,7 +804,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const hasDelta = deepEquals(formData, form.formData) === false;
     
     //@ts-ignore
-    reactory.log(`${signature} => onChange`, { form, errorSchema, hasDelta }, 'debug' );
+    //reactory.log(`${signature} => onChange`, { form, errorSchema, hasDelta }, 'debug' );
 
     //if ((new Date().valueOf() - created) < 777) return;
 
@@ -782,7 +815,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
       if (deepEquals(formData, form.formData) === false) {
 
-        reactory.log(`${formDef.name}[${instance_id}].onChange`, { data: form.formData }, 'debug');
+        //reactory.log(`${formDef.name}[${instance_id}].onChange`, { data: form.formData }, 'debug');
 
         const $onChange = props.onChange;
 
@@ -811,7 +844,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           $onChange(form.formData, form.errorSchema, { before: changed, after: rchanged, self });
         }
 
-        reactory.log(`${signature} => onChange DELTA =>`, { changed, rchanged }, 'debug');
+        //reactory.log(`${signature} => onChange DELTA =>`, { changed, rchanged }, 'debug');
 
         if (_graphql && _graphql.mutation && _graphql.mutation['onChange']) {
 
@@ -847,7 +880,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           setFormData(form.formData);
         }
       }
-    } else {
+    } else {      
       setFormData(form.formData);
     }
 
@@ -970,7 +1003,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       graphql: getActiveGraphDefinitions(),
       getData,
       reset,
-      screenBreakPoint: getScreenSize(),      
+      screenBreakPoint: getScreenSize(),
+      i18n: reactory.i18n,
+      reactory,
       ...inputContext,
     }
 
@@ -982,7 +1017,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
    * Returns the entire form definition
    */
   const formDefinition = (): Reactory.Forms.IReactoryForm => {
-
+    if(formDef === undefined) return ReactoryDefaultForm;
     if(formDef.__complete__ === false) return ReactoryDefaultForm;
 
     const { extendSchema, uiSchemaKey, uiSchemaId } = props;
@@ -1032,7 +1067,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     if (isArray(_formDef.fieldMap) === true) {
       _formDef.fieldMap.forEach((map) => {
-        reactory.log(`${signature} (init) Mapping ${map.field} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
+        //reactory.log(`${signature} (init) Mapping ${map.field} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
         let mapped = false;
 
         if (map.component && typeof map.component === 'string') {
@@ -1044,12 +1079,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                 if (component && Object.keys(component).length > 0) component = component[pathArray[pi]]
               }
               _formDef.fields[map.field] = component;
-              reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component }, 'debug')
+              //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component }, 'debug')
               mapped = true;
             } else {
               _formDef.widgets[map.field] = componentDefs[map.component];
               if (_formDef.widgets[map.field]) {
-                reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.field] }, 'debug')
+                //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.field] }, 'debug')
                 mapped = true;
               }
             }
@@ -1060,7 +1095,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           if (typeof map.componentFqn === 'string' && typeof map.field === 'string') {
             _formDef.widgets[map.field] = reactory.getComponent(map.componentFqn);
             if (_formDef.widgets[map.field]) {
-              reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.field] }, 'debug')
+              //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.field] }, 'debug')
               mapped = true;
             }
           }
@@ -1072,7 +1107,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             return (<MuiReactoryPackage.widgets.WidgetNotAvailable {...props} map={map} />)
 
           }
-          reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.field}`, { map }, 'warning')
+          //reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.field}`, { map }, 'warning')
         }
       });
     }
@@ -1089,7 +1124,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       if (!_formDef.widgets) _formDef.widgets = {};
       if (isArray(_formDef.widgetMap) === true) {
         _formDef.widgetMap.forEach((map) => {
-          reactory.log(`${signature} (init) Mapping ${map.widget} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
+          //reactory.log(`${signature} (init) Mapping ${map.widget} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
           let mapped = false;
 
           if (map.component && typeof map.component === 'string') {
@@ -1101,12 +1136,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                   if (component && Object.keys(component).length > 0) component = component[pathArray[pi]]
                 }
                 _formDef.widgets[map.widget] = component;
-                reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component }, 'debug')
+                //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component }, 'debug')
                 mapped = true;
               } else {
                 _formDef.widgets[map.widget] = componentDefs[map.component];
                 if (_formDef.widgets[map.widget]) {
-                  reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
+                  //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
                   mapped = true;
                 }
               }
@@ -1117,7 +1152,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             if (typeof map.componentFqn === 'string' && typeof map.widget === 'string') {
               _formDef.widgets[map.widget] = reactory.getComponent(map.componentFqn);
               if (_formDef.widgets[map.widget]) {
-                reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
+                // reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
                 mapped = true;
               }
             }
@@ -1130,7 +1165,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
               return (<>Widget not found</>)
 
             }
-            reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.widget}`, { map }, 'warning')
+            // reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.widget}`, { map }, 'warning')
           }
         });
       }
@@ -1287,23 +1322,24 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   };
 
   const getData = (defaultInputData?: any) => {
+    if(formDef === undefined) return null
     reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
     const _graphql: Reactory.Forms.IFormGraphDefinition = getActiveGraphDefinitions();
-
     let _formData = null;
 
     if(typeof formDef.schema === "object") {
       switch (formDef.schema.type) {
         case "object": {
           _formData = { ...formData };
-          if (version === 0 && formDef.defaultFormValue) {
-            _formData = { ...formDef.defaultFormValue, ...formData };
+          //debugger
+          if (formData === undefined || formData === null && formDef.defaultFormValue) {
+            _formData = { ...formDef.defaultFormValue };
           }
           if (defaultInputData && typeof defaultInputData === 'object') _formData = { ..._formData, ...defaultInputData }
           break;
         }
         case "array": {
-          _formData = [];        
+          _formData = [];
           if (formData && Array.isArray(formData) === true) {
             _formData = [...formData];
           }
@@ -1502,8 +1538,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   };
   
   const renderForm = () => {    
-    reactory.log(`Rendering <${formDef.nameSpace}.${formDef.name}@${formDef.version} />`, { props: props, formData }, 'debug');
+    reactory.log(`Rendering ${signature}`, { props: props, formData }, 'debug');
     
+    if(formDef === undefined) return null
     const filter_props = () => {
       return props;
     };
@@ -1519,7 +1556,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       validate: formValidation,
       onChange: onChange,
       onError: props.onError ? props.onError : (error) => { },
-      formData,
+      formData: formData,
       ErrorList: (error_props) => (<MuiReactoryPackage.templates.MaterialErrorListTemplate {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,
       ref: (form: any) => {
@@ -1546,6 +1583,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         return _errors;
       }
     };
+
+    reactory.log(`Form Props: ${signature}`, { formProps })
 
     let icon = 'save';
 
@@ -1628,7 +1667,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
      * we need to determine which is the preffered, currently
      * active one.
      */
-    if (formDef.uiSchemas) {
+    if (formDef.uiSchemas && formDef.uiSchemas.length > 0) {
 
       // Even handler for the schema selector menu
       const onSchemaSelect = (evt: Event, menuItem: Reactory.Forms.IUISchemaMenuItem) => {
@@ -1658,14 +1697,15 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         }        
       };
 
+      
       // if there is an active with a key
       if (activeUiSchemaMenuItem !== null && activeUiSchemaMenuItem.key) {
         activeUiSchemaModel = activeUiSchemaMenuItem;
       }
 
-
       if (!activeUiSchemaModel) {
         activeUiSchemaModel = find(formDef.uiSchemas, { key: props.uiSchemaKey });
+        if(!activeUiSchemaModel) activeUiSchemaModel = formDef.uiSchemas[0];
       }
 
       if (activeUiSchemaModel) {
@@ -1676,11 +1716,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           </Fragment>);
       }
 
-      if (_formUiOptions && _formUiOptions.schemaSelector && activeUiSchemaModel) {
+      
+      if (_formUiOptions && _formUiOptions.schemaSelector) {
         if (_formUiOptions.schemaSelector.variant === "icon-button") {
 
 
-          let schemaStyle: CSSProperties = { position: 'absolute', top: '10px', right: '10px', zIndex: 1000 };
+          let schemaStyle: CSSProperties = { };
           if (_formUiOptions.schemaSelector.style) {
             schemaStyle = _formUiOptions.schemaSelector.style;
           }
@@ -1930,8 +1971,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         {showSubmit === true && submitButton ? (<Tooltip title={submitTooltip}>{submitButton}</Tooltip>) : null}
         {_additionalButtons}
         {allowRefresh && showRefresh === true && <Button variant="text" onClick={refreshClick} color="secondary"><Icon>cached</Icon></Button>}
-        {formDef.backButton && <Button variant="text" onClick={() => { navigate }} color="primary">BACK <Icon>keyboard_arrow_left</Icon></Button>}
-        {formDef.helpTopics && showHelp === true && <Button variant="text" onClick={() => { setShowHelpModal(!showHelpModal) }} color="primary"><Icon>help</Icon></Button>}
+        {formDef.backButton && <Button variant="text" onClick={() => { history.back() }} color="primary">BACK <Icon>keyboard_arrow_left</Icon></Button>}
+        {formDef.helpTopics && showHelp === true && <Button variant="text" onClick={() => { setShowHelpModal(true) }} color="primary"><Icon>help</Icon></Button>}
         {reportButton}
         {exportButton}
       </Toolbar>
@@ -1947,13 +1988,13 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     }
 
     try {
-      // {getDeveloperOptions()}
-      // { getHelpScreen() }
-      // {isBusy() === true && <LinearProgress />}      
+      // {getDeveloperOptions()}      
+      // {isBusy() === true && <LinearProgress />}
       // { getPdfWidget() }
       // { getExcelWidget() }
       //{toolbarPosition !== 'none' ? formtoolbar : null}
       //@ts-ignore
+      
       let $fp: ISchemaForm = { ...{ ...formProps, toolbarPosition: toolbarPosition } };      
       return (
         <div id={`reactory_container::${instance_id}`}>          
@@ -1963,6 +2004,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             {toolbarPosition.indexOf("form") >= 0 ? formtoolbar : null}
           </Form>
           {toolbarPosition.indexOf("bottom") >= 0 ? formtoolbar : null}
+          {getHelpScreen()}
         </div>
       )
     } catch (err) {

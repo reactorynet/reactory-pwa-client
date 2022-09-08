@@ -42,8 +42,8 @@ export { default as ReactoryGoogleMapWidget } from './mapping/GoogleMapWidget';
 export { default as ReactoryImageWidget } from './ImageWidget';
 export { default as ReactoryColorPicker } from './ReactoryColorPicker';
 export { default as AutoCompleteDropDown } from './AutoCompleteDropDown';
-export { StaticContent } from './StaticContentWidget'
-
+export { StaticContent } from './StaticContentWidget';
+export { default as FroalaWidget } from './Froala/FroalaWidget';
 /**
  * 
  * switch (_formDef.uiFramework) {

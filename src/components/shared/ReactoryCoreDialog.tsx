@@ -28,7 +28,7 @@ const FullScreenDialogStyles = (theme): any => {
       overflowX: 'hidden',
     },
     appBar: {
-      position: 'relative',
+      position: 'relative',          
     },
     flex: {
       flex: 1,
@@ -191,7 +191,9 @@ const FullScreenDialog = (props) => {
         {
           backNavigationItems && backNavigationItems.length > 0 && <BackNavigation />
         }
+        <div style={{ marginTop: showAppBar ? '48px' : '0px' }}>
         {children}
+        </div>
       </Dialog>
     </Fragment >
   );

@@ -19,6 +19,7 @@ import {
 import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
 
 const REQUIRED_FIELD_SYMBOL = "*";
+
 const COMPONENT_TYPES = {
   array: "ArrayField",
   boolean: "BooleanField",
@@ -26,6 +27,7 @@ const COMPONENT_TYPES = {
   number: "NumberField",
   object: "ObjectField",
   string: "StringField",
+  date: "DateField"
 };
 
 function getFieldComponent(schema, uiSchema = {}, idSchema, fields) {

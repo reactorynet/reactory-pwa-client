@@ -179,10 +179,10 @@ const MaterialFieldTemplateFunction = (props) => {
     }
     case 'object': {
       return (
-        <Fragment>
+        <>
           {toolbar}
           {children}
-        </Fragment>
+        </>
       )
     }
     case 'string':
@@ -205,7 +205,12 @@ const MaterialFieldTemplateFunction = (props) => {
       }
 
       if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
-        inputLabelProps.shrink = false;
+        
+        if(schemaType !== "number") {
+          inputLabelProps.shrink = false;
+        } else {
+          inputLabelProps.shrink = true;
+        }
       } else {
         // if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink) {
         if (uiOptions && uiOptions.labelProps && uiOptions.labelProps.dontShrink != undefined && uiOptions.labelProps.dontShrink) {

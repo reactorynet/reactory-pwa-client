@@ -1,1 +1,1 @@
-export { default as MaterialArrayField } from '../templates/MaterialArrayFieldTemplate';
+export { default as MaterialArrayField } from '../templates/MaterialArrayTemplate';

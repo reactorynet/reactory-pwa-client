@@ -323,7 +323,7 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'HelpMe',
     version: '1.0.0',
-    component: require('../components/shared/HelpMe')
+    component: require('../components/shared/HelpMe').default
   },
   
   {

@@ -12,7 +12,8 @@ import {
   Theme,
   Toolbar,
   Select,
-
+  Checkbox,
+  Slider,
   useMediaQuery,
   Table,
   TableRow,
@@ -47,11 +48,17 @@ export interface MaterialTableRemoteDataReponse {
   }
 }
 
+export interface ReactoryMaterialTableUISchema {
+  'ui:title': string,
+  'ui:widget': 'MaterialTableWidget',
+  'ui:options': Reactory.Client.Components.IMaterialTableWidgetOptions
+}
+
 export interface ReactoryMaterialTableProps {
   reactory: ReactoryApi,
   theme: any,
   schema: Reactory.Schema.IArraySchema,
-  uiSchema: any,
+  uiSchema: ReactoryMaterialTableUISchema,
   idSchema: any,
   formData: any[],
   formContext: any,
@@ -73,30 +80,47 @@ export interface MaterialTableResult<T> {
   totalCount: number
 }
 
-export interface MaterialTableRowState {
-  [key: number]: {
-    /**
-     * indicates if the row is selected
-     */
-    selected?: boolean,
-    /**
-     * indicates if the row has hover state
-     */
-    hover?: boolean,
-    /**
-     * indicates if the row is set into editing state
-     */
-    editing?: boolean
-    /**
-     * indicates if the row is in saving state
-     */
-    saving?: boolean
+/**
+ * 
+ */
+export interface MaterialTableDetailPanelProps {
+  rowData: any,
+  rid: number,
+  state: IRowState,
+  [key: string]: any
+}
 
-    /**
-     * indicates if the row data has changed
-     */
-    dirty?: boolean
-  }
+export interface IRowState {
+
+  /**
+   * indicates if the row is selected
+   */
+  selected?: boolean,
+  /**
+   * indicates if the row has hover state
+   */
+  hover?: boolean,
+  /**
+   * indicates if the row is set into editing state
+   */
+  editing?: boolean
+  /**
+   * indicates if the row is in saving state
+   */
+  saving?: boolean
+
+  /**
+   * indicates if the row data has changed
+   */
+  dirty?: boolean
+
+  /**
+   * indicates if the row element is expanded
+   */
+  expanded?: boolean
+}
+export interface MaterialTableRowState {
+  [key: number]: IRowState
 }
 
 
@@ -106,6 +130,7 @@ export interface MaterialTableColumn<TRow> {
   renderRow?: (rowData: TRow, rowIndex: number, rowState: MaterialTableRowState) => JSX.Element
   renderHeader?: (data: TRow[], rowState: MaterialTableRowState) => JSX.Element
   renderFooter?: (data: TRow[], rowState: MaterialTableRowState) => JSX.Element
+  renderCell?: (cellData: any, cellIndex: number, rowData: TRow[], rowIndex: number) => JSX.Element,
   footerProps?: any,
   headerProps?: any,
   rowProps?: any,
@@ -113,6 +138,16 @@ export interface MaterialTableColumn<TRow> {
   cellProps?: any
 }
 
+
+export interface MaterialTableOptions {
+  //[key: string]: any
+  rowStyle?: (rowData: any, idx: number) => any,
+  headerStyle?: any,
+  searchText?: string,
+  selection?: boolean
+  sort?: boolean,
+  grouping?: boolean
+}
 
 const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipInput"> = (theme) => ({
   root: {
@@ -261,21 +296,25 @@ const ReactoryMaterialTableWaitForRenderer = (props) => {
 
     return DefaultComponent;
   }
-  
+
   const Component = reactory.getComponent(componentId);
 
-  return <Component {...props}/>;
+  return <Component {...props} />;
 
 };
 
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext = {}, formData = [], searchText = "" } = props;
-  const uiOptions = uiSchema['ui:options'] || {};
+  const uiOptions: Reactory.Client.Components.IMaterialTableWidgetOptions = uiSchema['ui:options'] || {};
   const AlertDialog = reactory.getComponent('core.AlertDialog@1.0.0');
-  const DropDownMenu = reactory.getComponent('core.DropDownMenu@1.0.0');
-  
-  const [activeAction, setActiveAction] = useState({
+  const DropDownMenu: Reactory.Client.Components.DropDownMenu = reactory.getComponent('core.DropDownMenu@1.0.0');
+
+  const [activeAction, setActiveAction] = useState<{
+    show: boolean,
+    rowsSelected: any[],
+    action?: Reactory.Client.Components.IMaterialTableWidgetAction
+  }>({
     show: false,
     rowsSelected: [],
     action: null,
@@ -283,10 +322,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
+  const [allChecked, setAllChecked] = useState<boolean>(false);
   const [is_refreshing, setIsRefreshing] = useState(false);
   const [last_queried, setLastQueried] = useState(null);
   const [last_result, setLastResult] = useState(formData);
-  const [rowsState, setRowState] = useState({});
+  const [rowsState, setRowState] = useState<MaterialTableRowState>({});
   const [error, setError] = useState(null);
   const [query, setQuery] = useState<MaterialTableQuery>({ page: 1, pageSize: 10, search: "" });
 
@@ -307,7 +347,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   let ToolbarComponent = null;
   let components: { [key: string]: Component | PureComponent | Function } = {};
-  let detailsPanel = null;
+  let detailsPanel: (props: MaterialTableDetailPanelProps) => JSX.Element = null;
 
   if (uiOptions.componentMap) {
     if (uiOptions.componentMap.Toolbar) {
@@ -345,7 +385,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       const DetailsPanelComponent = reactory.getComponent(uiOptions.componentMap.DetailsPanel);
 
       if (DetailsPanelComponent) {
-        detailsPanel = (detail_props) => {
+        detailsPanel = (detail_props: MaterialTableDetailPanelProps) => {
           let _detail_props = { ...detail_props };
 
           if (uiOptions.detailPanelProps) {
@@ -374,92 +414,99 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
 
-  const getData = async (): Promise<MaterialTableRemoteDataReponse> => {    
-      
-      reactory.log('core.ReactoryMaterialTable data query', { query }, 'debug')
+  const getData = async (): Promise<MaterialTableRemoteDataReponse> => {
 
-      let response: MaterialTableRemoteDataReponse = {
-        ...data
-      }
-      
-      try {
-        const graphqlDefinitions = formContext.graphql;
+    reactory.log('core.ReactoryMaterialTable data query', { query }, 'debug')
 
-        if (graphqlDefinitions.query || graphqlDefinitions.queries) {
-          let queryDefinition: Reactory.Forms.IReactoryFormQuery = graphqlDefinitions.query;          
-          if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
-            queryDefinition = graphqlDefinitions.queries[uiOptions.query];
-            reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
-          }
-                  
-          reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
-          let variables = reactory.utils.objectMapper({ formContext, query }, uiOptions.variables || queryDefinition.variables);
-         
-          variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
-          reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
+    let response: MaterialTableRemoteDataReponse = {
+      ...data
+    }
 
-          let options = queryDefinition.options ? { fetchPolicy: 'network-only', ...queryDefinition.options } : { fetchPolicy: 'network-only' };
-          if (query && query.options) {
-            options = { ...options, ...query.options };
-          }
+    try {
+      const graphqlDefinitions = formContext.graphql;
 
-          if (options.fetchPolicy && options.fetchPolicy.indexOf('${') >= 0) {
-            try {
-              options.fetchPolicy = reactory.utils.template(options.fetchPolicy)({ formContext, query });
-            } catch (fpterror) {
-              options.fetchPolicy = 'network-only';
-            }
-          }
-
-          let queryResult: any = null; 
-          
-          try { 
-            queryResult = await reactory.graphqlQuery(queryDefinition.text, variables, options).then();
-          } catch (e) {
-            reactory.log(`Error running query for grid`, {e}, 'error');
-            setError("Error executing query");
-          }
-          //show a loader error
-          if (queryResult?.data) {
-
-            const $data: any = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
-            if($data) {
-              if($data.data && $data.paging) {
-                response.data = $data.data
-                response.paging = $data.paging
-              } else {
-                if( isArray($data) ) {
-                  response.data = $data;
-                }
-              }            
-            }
-            
-            if (uiOptions.disablePaging === true) {
-              response.paging.page = 1,
-              response.paging.total = response.data.length;
-            }
-
-            if (formContext.$selectedRows && formContext.$selectedRows.current) {
-              response.data.forEach((item, item_id) => {              
-                if(reactory.utils.lodash.findIndex(formContext.$selectedRows.current, { id: item.id }) >= 0) {
-                  item.tableData = { checked: true, id: item_id }
-                }                
-              });
-            }
-            //response.paging.page = response.paging.page - 1;
-          } else {
-            reactory.log(`Query returned null data`, { queryResult }, 'warning')
-            setError("No data returned from query")
-          }                              
+      if (graphqlDefinitions.query || graphqlDefinitions.queries) {
+        let queryDefinition: Reactory.Forms.IReactoryFormQuery = graphqlDefinitions.query;
+        if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
+          queryDefinition = graphqlDefinitions.queries[uiOptions.query];
+          reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
         }
 
-      } catch (remoteDataError) {
-        reactory.log(`Error getting remote data`, { remoteDataError }, 'error');        
-        return response;
+        reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
+        let variables = reactory.utils.objectMapper({ formContext, query }, uiOptions.variables || queryDefinition.variables);
+
+        variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
+        reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
+
+        let options = queryDefinition.options ? { fetchPolicy: 'network-only', ...queryDefinition.options } : { fetchPolicy: 'network-only' };
+        if (query && query.options) {
+          options = { ...options, ...query.options };
+        }
+
+        if (options.fetchPolicy && options.fetchPolicy.indexOf('${') >= 0) {
+          try {
+            options.fetchPolicy = reactory.utils.template(options.fetchPolicy)({ formContext, query });
+          } catch (fpterror) {
+            options.fetchPolicy = 'network-only';
+          }
+        }
+
+        let queryResult: any = null;
+
+        try {
+          queryResult = await reactory.graphqlQuery(queryDefinition.text, variables, options).then();
+        } catch (e) {
+          reactory.log(`Error running query for grid`, { e }, 'error');
+          setError("Error executing query");
+        }
+        //show a loader error
+        if (queryResult?.data) {
+
+          const $data: any = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
+          if ($data) {
+            if (isArray($data) === true) response.data = $data;
+            else {
+              if ($data.data && isArray($data.data) === true) response.data = $data.data;
+              if ($data.paging) response.paging = $data.paging
+            }
+            // if($data.data && $data.paging) {
+            //   response.data = $data.data
+            //   response.paging = $data.paging
+            // } else {
+            //   if( isArray($data) ) {
+            //     response.data = $data;
+            //   }
+            // }            
+          }
+
+          if (uiOptions.disablePaging === true) {
+            response.paging.page = 1,
+              response.paging.total = response.data.length;
+          }
+
+          if (formContext.$selectedRows && formContext.$selectedRows.current) {
+            response.data.forEach((item, item_id) => {
+              if (reactory.utils.lodash.findIndex(formContext.$selectedRows.current, { id: item.id }) >= 0) {
+                item.tableData = { checked: true, id: item_id }
+              }
+            });
+          }
+          //response.paging.page = response.paging.page - 1;
+        } else {
+          reactory.log(`Query returned null data`, { queryResult }, 'warning')
+          setError("No data returned from query")
+        }
+
+        if (queryResult?.errors && queryResult.errors.length > 0) {
+          reactory.log('Query contains errors', { queryResult }, 'error');
+        }
       }
 
-      debugger
-      setData(response);
+    } catch (remoteDataError) {
+      reactory.log(`Error getting remote data`, { remoteDataError }, 'error');
+      return response;
+    }
+    setData(response);
   };
 
   const rows = uiOptions.remoteData === true ? data?.data : formData;
@@ -468,7 +515,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     let _mergeColumns = false;
     let _columns = uiOptions.columns;
 
+
     if (isNil(uiOptions.columnsProperty) === false) {
+
       _columns = [...formContext.formData[uiOptions.columnsProperty]];
       if (isNil(uiOptions.columnsPropertyMap) === false) {
         _columns = reactory.utils.objectMapper(_columns, uiOptions.columnsPropertyMap)
@@ -478,19 +527,17 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     remove(_columns, { selected: false });
 
     _columns.forEach(coldef => {
+
       const def = {
         ...coldef
       };
 
       if (isNil(def.component) === false && def.component !== undefined) {
         const ColRenderer = reactory.getComponent(def.component);
+        // @ts-ignore       
+        def.renderCell = (cellData, cellIndex, rowData, rowIndex) => {
 
-        
-
-        def.render = (rowData) => {
-
-
-          let props = { formData: formContext.$formData, rowData, api: reactory, reactory, formContext };
+          let props = { formData: formContext.$formData, rowData, api: reactory, reactory, formContext, cellData, cellIndex, rowIndex };
           let mappedProps = {};
 
           if (def.props) {
@@ -558,6 +605,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }
       }
 
+
       if (def.breakpoint) {
         const shouldBreak = useMediaQuery(theme.breakpoints.down(def.breakpoint));
 
@@ -588,7 +636,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     theme_header_style = { ...theme_header_style, ...uiOptions.headerStyle };
   }
 
-  let options: any = {
+  let options: MaterialTableOptions = {
     rowStyle: (rowData, index) => {
 
       let style = { ...theme_row_style };
@@ -646,163 +694,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
   }
 
-  if (uiOptions.actions && isArray(uiOptions.actions) === true) {
-    actions = uiOptions.actions.map((action) => {
 
-      const actionClickHandler = (selected) => {
-        const process = () => {
-          if (action.mutation) {
-            const mutationDefinition: Reactory.Forms.IReactoryFormMutation = 
-            formContext.graphql.mutation[action.mutation];
-            reactory.graphqlMutation(mutationDefinition.text, reactory.utils.objectMapper({ ...props, selected }, mutationDefinition.variables)).then((mutationResult: { data: any, errors: any[] }) => {
-              reactory.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
-
-              let has_errors = false;
-
-              if (!mutationResult.errors && mutationResult.data[mutationDefinition.name]) {
-                if (uiOptions.remoteData === true) {
-                  if (tableRef.current && tableRef.current.onQueryChange) {
-                    tableRef.current.onQueryChange()
-                  }
-                } else {
-                  setVersion(version + 1);
-                }
-                if (mutationDefinition.onSuccessEvent) {
-                  reactory.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
-
-                  if (typeof formContext[mutationDefinition.onSuccessEvent.name] === 'function') {
-
-                    let _method_props = mutationDefinition.onSuccessEvent.dataMap ?
-                      reactory.utils.objectMapper(mutationResult.data[mutationDefinition.name], mutationDefinition.onSuccessEvent.dataMap) :
-                      mutationResult.data[mutationDefinition.name];
-                    try {
-                      formContext[mutationDefinition.onSuccessEvent.name](_method_props);
-                    } catch (notHandledByForm) {
-                      reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm, props: _method_props }, 'warning')
-                    }
-
-                    reactory.emit(mutationDefinition.onSuccessEvent.name, _method_props);
-                  }
-                }
-              } else {
-                has_errors = true;
-              }
-
-
-
-              if (mutationDefinition.notification) {
-                reactory.createNotification(`${reactory.utils.template(mutationDefinition.notification.title)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: has_errors === true ? 'warning' : 'success' })
-              }
-
-              if (mutationDefinition.refreshEvents) {
-                mutationDefinition.refreshEvents.forEach((eventDefinition) => {
-                  reactory.emit(eventDefinition.name, selected);
-                });
-              }
-
-            }).catch((rejectedError) => {
-              reactory.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });
-            });
-          }
-
-          if (action.event) {
-            let __formData = {
-              ...formContext.$formData,
-              ...reactory.utils.objectMapper({ selected }, action.event.paramsMap || {}),
-              ...(action.event.params ? action.event.params : {})
-            };
-
-
-            if (action.event.via === 'form') {
-              let handler = formContext.$ref.onChange;
-
-              if (typeof formContext.$ref[action.event.name] === 'function') {
-                handler = formContext.$ref[action.event.name];
-              }
-
-              if (typeof formContext.$ref.props[action.event.name] === 'function') {
-                handler = formContext.$ref.props[action.event.name];
-              }
-
-              handler(__formData);
-            };
-
-            if (action.event.via === 'api') {
-
-              let handler = () => {
-                reactory.emit(action.event.name, __formData);
-              }
-
-              handler();
-            }
-          }
-
-          setActiveAction({ show: false, action: null, rowsSelected: [] });
-        };
-
-        if (action.confirmation) {
-          setActiveAction({
-            show: true,
-            rowsSelected: selected,
-            action: {
-              ...action,
-              confirmation: {
-                ...action.confirmation,
-                onAccept: () => {
-                  process();
-                  setActiveAction({
-                    show: false,
-                    action: null,
-                    rowsSelected: []
-                  });
-                },
-                onClose: () => {
-                  setActiveAction({
-                    show: false,
-                    action: null,
-                    rowsSelected: []
-                  })
-                }
-              }
-            },
-          });
-        } else {
-          setActiveAction({ action, show: false, rowsSelected: [] })
-          process();
-        }
-      };
-
-      return {
-        icon: action.icon,
-        iconProps: action.iconProps || {},
-        tooltip: action.tooltip || '',
-        isFreeAction: action.isFreeAction === true,
-        key: action.key || action.icon,
-        onClick: (evt, selected_rows) => {
-          actionClickHandler(selected_rows);
-        }
-      };
-    });
-  }
-
-  let confirmDialog = null;
-  if (activeAction.show === true) {
-
-    confirmDialog = (
-      <AlertDialog
-        open={true}
-        title={reactory.utils.template(activeAction.action.confirmation.title)({ selected: activeAction.rowsSelected })}
-        content={reactory.utils.template(activeAction.action.confirmation.content)({ selected: activeAction.rowsSelected })}
-        onAccept={activeAction.action.confirmation.onAccept}
-        onClose={activeAction.action.confirmation.onClose}
-        cancelTitle={activeAction.action.confirmation.cancelTitle}
-        acceptTitle={activeAction.action.confirmation.acceptTitle}
-        titleProps={activeAction.action.confirmation.titleProps}
-        contentProps={activeAction.action.confirmation.contentProps}
-        cancelProps={activeAction.action.confirmation.cancelProps}
-        confirmProps={activeAction.action.confirmation.confirmProps}
-      />);
-  }
 
   const refreshHandler = (eventName: string, eventData: any) => {
     const uiOptions = uiSchema['ui:options'] || {};
@@ -875,18 +767,18 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
       }
 
-    if (queryDefinition && queryDefinition.refreshEvents) {
-      queryDefinition.refreshEvents.forEach((reactoryEvent) => {
-        reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
-        reactory.on(reactoryEvent.name, onEventRefreshHandler);
-      });
+      if (queryDefinition && queryDefinition.refreshEvents) {
+        queryDefinition.refreshEvents.forEach((reactoryEvent) => {
+          reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
+          reactory.on(reactoryEvent.name, onEventRefreshHandler);
+        });
+      }
     }
-  }
 
   }
 
   React.useEffect(() => {
-    
+
     refresh({})
   }, [formContext.formData]);
 
@@ -918,13 +810,35 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       });
     };
 
-    if(uiOptions.remoteData === true) {
+    if (uiOptions.remoteData === true) {
       getData()
     }
 
     return willUnmount;
   }, []);
 
+  React.useEffect(() => {
+
+    const newRowsState: MaterialTableRowState = { ...rowsState };
+
+    $rows.forEach((row, rid) => {
+      if (!newRowsState[rid]) {
+        newRowsState[rid] = {
+          dirty: false,
+          editing: false,
+          expanded: false,
+          hover: false,
+          saving: false,
+          selected: allChecked,
+        }
+      } else {
+        newRowsState[rid].selected = allChecked === true
+      }
+    });
+
+    setRowState(newRowsState);
+
+  }, [allChecked])
   {/* <MaterialTable
           columns={columns || []}
           tableRef={(ref) => { tableRef.current = ref, bindRefreshEvents(ref) }}
@@ -959,40 +873,147 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const getHeader = () => {
 
-    return (
-      <TableHead>
-        <TableRow>
-          {columns.map((column: MaterialTableColumn<any>, idx) => {             
-            const {
-              title,
-              renderHeader,
-              field
-            } = column
+    let $headers: JSX.Element[] = [];
 
-            if(renderHeader) return renderHeader($rows, rowsState) 
+    if (options.selection === true) {
+      const toggleSelectAll = () => {
+        setAllChecked(!allChecked)
+      }
 
-            return (<TableCell key={idx}>{title}</TableCell>)
-          })}      
-        </TableRow>
-      </TableHead>)
-  }        
+      $headers.push((<TableCell key={'header_selection'}>
+        <Checkbox checked={allChecked} onClick={toggleSelectAll} />
+      </TableCell>))
+    }
 
-  const getBody = () => {
+    columns.forEach((column: MaterialTableColumn<any>, idx) => {
+      const {
+        title,
+        renderHeader,
+        field,
 
-    let $body_rows = $rows.map((row, rid) => {
+      } = column
 
-      const $rState = rowsState[rid] || {}
+      if (renderHeader) $headers.push(renderHeader($rows, rowsState))
 
-      return (<TableRow key={rid}>
-        {columns.map((column: MaterialTableColumn<any>, columnIndex: number) => {
-          if (column.renderRow) return column.renderRow({ ...row, $rowState: $rState }, rid, rowsState);
-          return (<TableCell key={columnIndex}><Typography variant={'body2'}>{row[column.field]}</Typography></TableCell>)
-        })}
-
-      </TableRow>)
+      $headers.push((<TableCell key={idx} width={`${(100 / columns.length)}%`}>{title}</TableCell>))
     });
 
-    if($body_rows.length === 0) {
+
+    return (
+      <thead>
+        <TableRow>
+          {$headers}
+        </TableRow>
+      </thead>)
+  }
+
+  /**
+   * Returns the selected rows across all pages for the 
+   * current query.
+   */
+  const getSelectedRows = () => {
+    let selected = [];
+    Object.keys(rowsState).forEach(key => {
+      selected.push(data.data[parseInt(key)])
+    });
+    return selected;
+  }
+
+  const getRowActions = (): Reactory.Client.Components.IMaterialTableWidgetAction[] => {
+
+    let rowActions: Reactory.Client.Components.IMaterialTableWidgetAction[] = [];
+
+    if (uiOptions.actions) {
+      rowActions = reactory.utils.lodash.filter(uiOptions, (action: Reactory.Client.Components.IMaterialTableWidgetAction) => {
+        return action.isFreeAction === false || action.isFreeAction === undefined || action.isFreeAction === null
+      })
+    }
+
+    return rowActions;
+  }
+
+  const getRow = (row, rid: number, rowActions: Reactory.Client.Components.IMaterialTableWidgetAction[] = []): JSX.Element[] => {
+    const $rState: IRowState = rowsState[rid] || { dirty: false, editing: false, expanded: false, hover: false, saving: false, selected: false }
+
+    const {
+      expanded = false,
+      selected = false,
+    } = $rState;
+
+    let $DetailComponent = null;
+    if (detailsPanel && expanded === true) {
+      $DetailComponent = detailsPanel({ rid, rowData: row, state: $rState })
+    }
+
+
+
+    const $cols = [];
+
+    if (options.selection === true) {
+      const toggleSelect = (evt) => {
+        let newRowState = { ...rowsState };
+        if (!newRowState[rid]) newRowState[rid] = { expanded: false, selected: false };
+        newRowState[rid].selected = !selected
+        setRowState(newRowState)
+      };
+
+      $cols.push((
+        <TableCell key={`row_${rid}_select`}>
+          <Checkbox onClick={toggleSelect} checked={selected === true}></Checkbox>
+        </TableCell>
+      ))
+    }
+
+    const rowActionComponents = [];
+    if (rowActions?.length > 0) {
+      // rowActionComponents = rowActions.map(( action ) => {
+
+      //   //action.
+
+      // })
+    }
+
+    columns.forEach((column: MaterialTableColumn<any>, columnIndex: number) => {
+      if (column.renderCell) $cols.push((<TableCell key={columnIndex}>{column.renderCell(row[column.field], columnIndex, row, rid)}</TableCell>));
+      else $cols.push((<TableCell key={columnIndex}>{`${row[column.field]}`}</TableCell>))
+    });
+
+
+
+    let rowComponents: JSX.Element[] = [(<TableRow key={rid}>
+      {$cols}
+    </TableRow>)];
+
+    const colCount = () => {
+      let additionalCols = 0;
+
+      if (actions.length > 0) additionalCols + 1;
+
+      if (options.selection === true) additionalCols + 1;
+
+      return $cols.length + additionalCols
+    }
+
+    if ($DetailComponent) {
+      rowComponents.push((<TableRow key={`${rid}_details`}>
+        <TableCell colSpan={colCount()}>
+          {$DetailComponent}
+        </TableCell>
+      </TableRow>))
+    }
+
+
+    return rowComponents;
+  }
+
+  const getBody = () => {
+    const rowActions = getRowActions();
+    let $body_rows = [];
+    $rows.forEach((row, rid) => {
+      $body_rows.push(...getRow(row, rid, rowActions))
+    });
+
+    if ($body_rows.length === 0) {
       $body_rows.push((
         <TableRow key={0}>
           <TableCell colSpan={columns.length}>
@@ -1020,120 +1041,346 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       if (renderFooter) $columns.push(column)
     })
 
-    if($columns.length === 0) return null;
+    if ($columns.length === 0) return null;
 
-    return  (
-    <TableFooter>
-        <TableRow>
+    return (
+      <TableFooter>
+        <TableRow key={`${idSchema.$id}_footer`}>
           {$columns.map((footerColumn: MaterialTableColumn<any>) => {
             return footerColumn.renderFooter($rows, rowsState);
-          })}      
+          })}
         </TableRow>
-    </TableFooter>)    
+      </TableFooter>)
   }
 
   const getPagination = () => {
 
     return (
-      <TablePagination 
-        count={10}
-        page={0}
-        rowsPerPage={10}
-        component={"div"}
-        onPageChange={(evt, page)=>{}}
-        >
-
-      </TablePagination>)
+      <Table>
+        <TableRow key={`${idSchema.$id}_pagination`}>
+          <TableCell colSpan={columns.length}>
+            <TablePagination
+              count={10}
+              page={0}
+              rowsPerPage={10}
+              component={"div"}
+              onPageChange={(evt, page) => { }}
+            >
+            </TablePagination>
+          </TableCell>
+        </TableRow>
+      </Table>)
   }
 
+  const processAction = async (): Promise<any> => {
+    debugger
+    let selected = getSelectedRows();
+
+    const { action } = activeAction;
+    if (action.mutation) {
+      const mutationDefinition: Reactory.Forms.IReactoryFormMutation =
+        formContext.graphql.mutation[action.mutation];
+      const mutationResult = await reactory.graphqlMutation(mutationDefinition.text, reactory.utils.objectMapper({ ...props, selected }, mutationDefinition.variables));
+      reactory.log(`MaterialTableWidget --> action mutation ${action.mutation} result`, { mutationDefinition, self, mutationResult, selected })
+      let has_errors = false;
+
+      if (!mutationResult.errors && mutationResult.data[mutationDefinition.name]) {
+
+        if (uiOptions.remoteData === true) {
+          // if (tableRef.current && tableRef.current.onQueryChange) {
+          //   tableRef.current.onQueryChange()
+          // }
+          getData();
+        } else {
+          setVersion(version + 1);
+        }
+
+        if (mutationDefinition.onSuccessEvent) {
+          reactory.log(`Mutation ${mutationDefinition.name} has onSuccessEvent`, mutationDefinition.onSuccessEvent);
+
+          if (typeof formContext[mutationDefinition.onSuccessEvent.name] === 'function') {
+
+            let _method_props = mutationDefinition.onSuccessEvent.dataMap ?
+              reactory.utils.objectMapper(mutationResult.data[mutationDefinition.name], mutationDefinition.onSuccessEvent.dataMap) :
+              mutationResult.data[mutationDefinition.name];
+            try {
+              formContext[mutationDefinition.onSuccessEvent.name](_method_props);
+            } catch (notHandledByForm) {
+              reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm, props: _method_props }, 'warning')
+            }
+
+            reactory.emit(mutationDefinition.onSuccessEvent.name, _method_props);
+          }
+        }
+      } else {
+        has_errors = true;
+      }
+
+      if (mutationDefinition.notification) {
+        reactory.createNotification(`${reactory.utils.template(mutationDefinition.notification.title)({ result: mutationResult, selected })}`, { showInAppNotification: true, type: has_errors === true ? 'warning' : 'success' })
+      }
+
+      if (mutationDefinition.refreshEvents) {
+        mutationDefinition.refreshEvents.forEach((eventDefinition) => {
+          reactory.emit(eventDefinition.name, selected);
+        });
+      }
+      //reactory.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });
+
+      return;
+    }
+
+    if (action.event) {
+      let __formData = {
+        ...formContext.$formData,
+        ...reactory.utils.objectMapper({ selected, data, formContext, uiSchema, schema, reactory }, action.event.paramsMap || {}),
+        ...(action.event.params ? action.event.params : {})
+      };
+
+
+      if (action.event.via === 'form') {
+        let handler = formContext.$ref.onChange;
+
+        if (typeof formContext.$ref[action.event.name] === 'function') {
+          handler = formContext.$ref[action.event.name];
+        }
+
+        if (typeof formContext.$ref.props[action.event.name] === 'function') {
+          handler = formContext.$ref.props[action.event.name];
+        }
+
+        await handler(__formData);
+      };
+
+      if (action.event.via === 'api') {
+
+        let handler = () => {
+          reactory.emit(action.event.name, __formData);
+        }
+
+        await handler();
+      }
+
+      if (action.event.via === "component" && action.event.component) {
+        debugger
+        const component = reactory.getComponent(action.event.component);
+        if (typeof component[action.event.name] === "function") {
+          await component[action.event.name](__formData)
+        }
+
+        return;
+      }
+    }
+
+    setActiveAction({ show: false, action: null, rowsSelected: [] });
+  }
 
   const getToolbar = () => {
 
     let numSelected = 0;
 
+    Object.keys(rowsState).forEach((property, index) => {
+      if (rowsState[property].selected === true) numSelected += + 1;
+    });
+
+    let selected = getSelectedRows();
+
     let addButton = null;
     let deleteButton = null;
 
-    const callAdd = () => {
+    if (uiOptions?.componentMap && uiOptions.componentMap.Toolbar) {
+      //get custom toolbar
+    }
 
+    const callAdd = () => {
+      if (uiOptions?.addButtonProps) {
+        const { onClick, onClickProps = {}, onClickPropsMap = {} } = uiOptions?.addButtonProps;
+
+        if (onClick?.length > 0) {
+          const [onClickComponent, onClickName] = onClick.split("/");
+          const $component = reactory.getComponent(onClickComponent);
+          if ($component && typeof $component[onClickName] === "function") {
+            let $props = { ...onClickProps };
+            if (Object.keys(onClickPropsMap).length > 0) {
+              $props = reactory.utils.objectMapper({ rowsState, rows: $rows }, onClickPropsMap);
+              $props = { ...onClickProps, ...$props }
+            }
+            $component[onClickName]($props);
+          }
+        }
+      }
     }
 
     const callDelete = () => {
 
     }
 
-    if(uiOptions.allowAdd === true) {
+    if (uiOptions?.allowAdd === true) {
       addButton = (
-        <Tooltip title={`Click to add a new entry`}><IconButton onClick={callAdd}><Icon>{uiOptions?.addButtonProps?.icon || "add"}</Icon></IconButton></Tooltip>
+        <Tooltip title={reactory.i18n.t(uiOptions?.addButtonProps?.tooltip || `Click to add a new entry`)}><IconButton onClick={callAdd}><Icon>{uiOptions?.addButtonProps?.icon || "add"}</Icon></IconButton></Tooltip>
       )
     }
 
     if (uiOptions?.allowDelete === true) {
       deleteButton = (
-        <IconButton onClick={callDelete}><Icon>{uiOptions?.addButtonProps?.icon || "trash"}</Icon></IconButton>
+        <IconButton onClick={callDelete}><Icon>{uiOptions?.deleteButton?.icon || "trash"}</Icon></IconButton>
       )
     }
-    
-    let searchField = null;    
-    if(uiOptions?.search) {
+
+    let searchField = null;
+    if (uiOptions?.search) {
       searchField = (<TextField key={"search"} title={"Search"} size="small" />);
     }
 
     let actions = null;
 
-    if(numSelected > 0) {
+    if (numSelected > 0 && uiOptions?.actions?.length > 0) {
+      let $menus: Reactory.UX.IDataDropDownMenuItem<Reactory.Client.Components.IMaterialTableWidgetAction>[] = [];
+
+
+
+      uiOptions.actions.forEach((action, actionIndex) => {
+        const {
+          key,
+          componentFqn,
+          confirmation,
+          event,
+          isFreeAction,
+          mutation,
+          icon,
+          iconProps,
+          propsMap,
+          tooltip,
+          title,
+        } = action;
+
+        if (isFreeAction === true) {
+          $menus.push({
+            id: key,
+            icon: icon,
+            title: reactory.utils.template(reactory.i18n.t(title, { selected, action, reactory }), {})({ reactory, action, selected }),
+            data: action,
+          })
+        }
+
+      });
+
+      const onMenuSelect = (evt, menu) => {
+        const { data } = menu as Reactory.UX.IDataDropDownMenuItem<Reactory.Client.Components.IMaterialTableWidgetAction>
+
+        if (data.confirmation === null) {
+          //process the action
+
+        }
+
+        setActiveAction({ action: data, show: data.confirmation !== null, rowsSelected: selected })
+
+      }
+
       actions = (
-        <DropDownMenu menus={[]}/>
+        <DropDownMenu menus={$menus} onSelect={onMenuSelect} />
       )
     }
 
     return (
-      <Toolbar sx={{
-        pl: { sm: 2 },
-        pr: { xs: 1, sm: 1 },
-        ...(numSelected > 0 && {
-          bgcolor: (theme) =>
-            alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
-        }),
-      }}>
-        {actions}
-        {numSelected > 0 ? (
-          <Typography
-            sx={{ flex: '1 1 100%' }}
-            color="inherit"
-            variant="subtitle1"
-            component="div"
-          >
-            {numSelected} selected
-          </Typography>
-        ) : (
-          <Typography
-            sx={{ flex: '1 1 100%' }}
-            variant="h6"
-            id="tableTitle"
-            component="div"
-          >
-            {schema.title}
-          </Typography>
-        )}
-        {numSelected === 0 && searchField}
-        {numSelected === 0 && addButton}
-        {numSelected > 0 && deleteButton}
-    </Toolbar>
+      <Table id={`${idSchema.$id}_toolbar`}>
+        <TableRow>
+          <TableCell colSpan={columns.length}>
+            <Toolbar sx={{
+              pl: { sm: 2 },
+              pr: { xs: 1, sm: 1 },
+              ...(numSelected > 0 && {
+                bgcolor: (theme) =>
+                  alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
+              }),
+            }}>
+              {actions}
+              {numSelected > 0 ? (
+                <>
+                  <Typography
+                    sx={{ flex: '1 1 100%' }}
+                    color="inherit"
+                    variant="subtitle1"
+                    component="div"
+                  >
+                    {numSelected} selected
+                  </Typography>
+                  {deleteButton}
+                </>
+              ) : (
+                <>
+                  <Typography
+                    sx={{ flex: '1 1 100%' }}
+                    variant="h6"
+                    id="tableTitle"
+                    component="div"
+                  >
+                    {schema.title}
+                  </Typography>
+                  {searchField}
+                  {addButton}
+                </>
+              )}
+            </Toolbar>
+          </TableCell>
+        </TableRow>
+      </Table>
     )
+  }
+
+  const getTableStyles = (): React.CSSProperties => {
+    return {}
+  }
+
+  let confirmDialog = null;
+  if (activeAction.show === true) {
+
+    confirmDialog = (
+      <AlertDialog
+        open={true}
+        title={
+          activeAction.action.confirmation?.title.indexOf("${") > -1 ?
+            reactory.utils.template(activeAction.action.confirmation.title)({ reactory, data, selected: activeAction.rowsSelected }) :
+            reactory.i18n.t(activeAction.action.confirmation.title, { reactory, data, selected: activeAction.rowsSelected })
+        }
+        content={activeAction.action.confirmation?.content.indexOf("${") > -1 ?
+          reactory.utils.template(activeAction.action.confirmation.content)({ reactory, data, selected: activeAction.rowsSelected }) :
+          reactory.i18n.t(activeAction.action.confirmation.content, { reactory, data, selected: activeAction.rowsSelected })
+        }
+        onAccept={async () => {
+          debugger
+          await processAction();
+        }}
+        onClose={() => {
+          setActiveAction({ show: false, action: null, rowsSelected: [] });
+        }}
+        cancelTitle={
+          activeAction.action.confirmation?.cancelTitle.indexOf("${") > -1 ?
+            reactory.utils.template(activeAction.action.confirmation.cancelTitle)({ reactory, data, selected: activeAction.rowsSelected }) :
+            reactory.i18n.t(activeAction.action.confirmation.cancelTitle, { reactory, data, selected: activeAction.rowsSelected })}
+        acceptTitle={
+          activeAction.action.confirmation?.acceptTitle.indexOf("${") > -1 ?
+            reactory.utils.template(activeAction.action.confirmation.acceptTitle)({ reactory, data, selected: activeAction.rowsSelected }) :
+            reactory.i18n.t(activeAction.action.confirmation.acceptTitle, { reactory, data, selected: activeAction.rowsSelected })}
+        titleProps={activeAction.action.confirmation.titleProps}
+        contentProps={activeAction.action.confirmation.contentProps}
+        cancelProps={activeAction.action.confirmation.cancelProps}
+        confirmProps={activeAction.action.confirmation.confirmProps}
+      />);
   }
 
   try {
     return (
-      <React.Fragment>
+      <>
         {getToolbar()}
-        <Table>        
+        <Table id={`${idSchema.$id}_table`} style={getTableStyles()}>
           {getHeader()}
           {getBody()}
-          {getPagination()}
           {getFooter()}
         </Table>
-      </React.Fragment>
+        {getPagination()}
+        {confirmDialog}
+      </>
     )
 
   } catch (err) {

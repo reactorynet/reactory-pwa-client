@@ -65,7 +65,13 @@ const MaterialObjectTemplate = (props) => {
             
     const uiOptions = uiSchema['ui:options'] || null;
     const uiWidget = uiSchema['ui:widget'] || null;
-    const uiToolbar = uiSchema['ui:toolbar'] || null;    
+    const uiToolbar = uiSchema['ui:toolbar'] || null;
+    const uiTitle = uiSchema['ui:title'];
+        
+    if(uiTitle === null || uiTitle === '') {
+      //means the value has been specfically set to null or empty
+      titleText = null;
+    }  
 
     let _componentName = 'default';
 
@@ -89,7 +95,7 @@ const MaterialObjectTemplate = (props) => {
     if(hidden === true) {
       return <Fragment>{children}</Fragment>
     }
-    
+      
     if(uiOptions && uiOptions.componentFqn && typeof uiOptions.componentFqn === 'string')  {
       Widget = reactory.getComponent(uiOptions.componentFqn);
       _componentName = uiOptions.componentFqn;
@@ -132,7 +138,7 @@ const MaterialObjectTemplate = (props) => {
     let signature = `${formContext.signature}\n\t<${_componentName} id=${idSchema.$id} />`;
 
     
-    reactory.log(`MaterialObjectTemplate ${signature}`, { props }, 'debug');
+    // reactory.log(`MaterialObjectTemplate ${signature}`, { props }, 'debug');
 
     let ContainerComponent = Paper;
     let ContainerStyles = {};

@@ -27,7 +27,7 @@ const MaterialDescriptionField = (props) => {
     _description = template(description, { variable: 'props' })(props);
   } catch (templateError) {
     if (props.formContext && props.formContext.api) {
-      props.formContext.api.log(`TemplateField has a bad field template: ${id}`, props);
+      props.formContext.reactory.log(`TemplateField has a bad field template: ${id}`, props);
     }
   }
 
