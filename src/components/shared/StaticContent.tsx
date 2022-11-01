@@ -5,6 +5,7 @@ import { Icon, IconButton } from '@mui/material';
 import { withStyles, withTheme, } from '@mui/styles';
 import moment, { Moment } from 'moment';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
+import classNames from 'classnames';
 
 interface ReactoryStaticContentProps {
   id: string,
@@ -60,11 +61,16 @@ interface ReactoryStaticContentState {
 };
 
 
+/**
+ * Static Content Component. Used for editing static content using a wysiwig editor
+ * @param props 
+ * @returns 
+ */
 const StaticContent = (props: ReactoryStaticContentProps) => {
 
   const { reactory } = props;
 
-  const { MaterialCore } = reactory.getComponents(['material-ui.MaterialCore'])
+  const { MaterialCore } = reactory.getComponents<any>(['material-ui.MaterialCore'])
 
   const {
     classes,
@@ -102,6 +108,7 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
   });
 
   const [version, setVersion] = React.useState<number>(0)
+  const [allowEdit, setAllowEdit] = React.useState<boolean>(false);
 
   const containerProps = {};
   const {
@@ -120,19 +127,80 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
   };
 
   const parseTemplate = ($template) => {
-    let $content = $template;
+    let $content: string = $template;
     if (propertyBag && $content && $content.indexOf("${") >= 0) {
       try {
-        $content = reactory.utils.template($content)({ props: { ...propertyBag, reactory } });
+        $content = reactory.utils.template($content)({ props: { ...propertyBag, reactory } });    
       } catch (templateError) {
         $content = `Could not process template ${templateError}\\n${$content}`;
       }
     }
+    
+    if (propertyBag && $content && $content.indexOf("<reactory ") >= 0) {
+      let componentsToMount = [];
 
+      const getNextComponent = (_content: string): { component: string, props: any, content: string } => {
+        debugger;
+        const startPos: number = _content.indexOf("<reactory ");
+                  
+        if(startPos < 0) return { component: null, props: null, content: _content }; 
+        
+        let endPos: number = _content.indexOf(" />", startPos);
+        if (endPos == -1) {
+          endPos = _content.indexOf("</reactory>");
+          if (endPos == -1) throw new Error(`Malformed <reactory /> tag at pos ${startPos}. No closing tag found in static content with slug ${getSlug()}`)
+          else {
+            endPos += "</reactory>".length
+          }
+        }
+
+        const foundTag = _content.substring(startPos, endPos);
+        let component = "";
+        let props = {};
+
+        let parser = new DOMParser();
+        const xmlString = `
+          <?xml version="1.0" encoding="utf-8"?>
+          ${foundTag}
+        `;
+        const xmlConf: XMLDocument = parser.parseFromString(xmlString, "application/xml");
+        debugger
+        let reactoryNode = xmlConf.getRootNode();
+
+        // reactoryNode.getAttributeNames().map((attr: string) => {
+        //   let [key, value]: string[] = attr.split("=");
+        //   if (key === "component") component = key;
+        //   props[`${key.replace("props-", "")}`] = value; 
+        // })
+                
+        const mountpoint_id = `reactory_component_mount_${getSlug()}_${component}_${reactory.utils.hashCode(JSON.stringify(props))}`;
+
+        const newTag = `<div id="${mountpoint_id}"></div>`
+        _content = _content.replace(foundTag, newTag);
+        
+        return {
+          component,
+          props,
+          content: _content, 
+        }
+      }
+
+      while($content.indexOf("<reactory ") >= 0) {
+        debugger
+        const nextComponent = getNextComponent($content);
+        if(nextComponent.component) {
+          componentsToMount.push({ component: nextComponent.component, props: nextComponent.props || {} });
+        }
+
+        $content = nextComponent.content;
+      }
+    }
+    
     return $content;
   }
 
-  const getData = (formData) => {
+  const getData = () => {
+    if(state.found === true) return;
     reactory.graphqlQuery(`
       query ReactoryGetContentBySlug($slug: String!) {
         ReactoryGetContentBySlug(slug: $slug) {
@@ -152,9 +220,8 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     `, { slug: getSlug() }, { fetchPolicy: 'network-only' }).then((result: any) => {
       if (result.data && result.data.ReactoryGetContentBySlug) {
         const staticContent: ReactoryStaticContent = result.data.ReactoryGetContentBySlug;
-
         try {
-
+          
           setState({
             content: { ...staticContent },
             found: true,
@@ -198,10 +265,17 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     });
   };
 
-  let isDeveloper = reactory.hasRole(['DEVELOPER']) && reactory.isDevelopmentMode() === true;
-  let canEdit = reactory.hasRole(editRoles);
+  const getIsDeveloper = () => { 
+    let isDeveloper = reactory.hasRole(['DEVELOPER']) && reactory.isDevelopmentMode() === true;
+    return isDeveloper;
+  }
 
-  canEdit = canEdit === false && isDeveloper === true ? true : canEdit;
+  const getCanEdit = () => {
+    let canEdit = reactory.hasRole(editRoles);
+    return canEdit;
+  }
+
+  //canEdit = canEdit === false && isDeveloper === true ? true : canEdit;
   const edit = () => {
     if (props.editAction && props.editAction === "link") {
       window.open(`${editLink}?slug=${slug}&title=${title}&published=${published === true}`, '_new');
@@ -211,7 +285,8 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
 
   };
 
-  const onDevelopmentModeChanged = () => {
+  const onDevelopmentModeChanged = (isDevelopmentMode: boolean) => {
+    
     setVersion(version + 1);
   }
 
@@ -225,15 +300,20 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
   if (typeof props.defaultValue === 'string') default_content = props.defaultValue;
   else default_content = '';
 
-  let contentComponent = found === true && content.published === true ? (<div {...containerProps} ref={ref => contentRef.current = ref} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>) : props.defaultValue;
+  let contentComponent = found === true ? (<div {...containerProps} ref={ref => contentRef.current = ref} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>) : props.defaultValue;
   let ContentCaptureComponent = reactory.getComponent<any>(formFqn);
   let contentCaptureProps: any = {
-    formData: { slug: getSlug(), title: state.title, published: state.content.published, content: state.found === true ? content.content : default_content },
+    formData: { 
+      slug: getSlug(), 
+      title: state.title, 
+      published: state.content.published, 
+      content: state.found === true ? content.content : default_content 
+    },
     mode: "edit",
     id: props.id,
-    uiSchemaKey: viewMode || 'default',
+    uiSchemaKey: viewMode || 'inline',
     onMutateComplete: (_newData) => {
-      getData(null)
+      getData()
     },
     helpTopics: props.helpTopics,
     helpTitle: props.helpTitle,
@@ -242,21 +322,16 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
 
   useEffect(() => {
     reactory.form("ContentCapture");
-    getData(null);
+    getData();
     reactory.on("onReactoryDevelopmentModeChanged", onDevelopmentModeChanged);
 
     return () => {
-      reactory.removeListener("onDevelopmentModeChanged", onDevelopmentModeChanged);
+      reactory.removeListener("onReactoryDevelopmentModeChanged", onDevelopmentModeChanged);
     }
   }, []);
-
+  
   useEffect(() => {
-    setVersion(version + 1);;
-  }, [reactory.$development_mode]);
-
-
-  useEffect(() => {
-    getData(null)
+    getData()
   }, [props.slug])
 
 
@@ -276,14 +351,14 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
   const ContentContainer = React.useRef<HTMLDivElement>(null);
 
   return (        
-    <div className={`${classes.staticContentContainer} ${isDeveloper === true ? classes.staticContainerDeveloper : ''}`}>
+    <>
       <div className={`${classes.contentContainer}`}>
         {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}
       </div>
       <div className={`${classes.buttonContainer}`}>
-        {canEdit === true && reactory.$development_mode === true && editWidget}
+        {getCanEdit() === true && getIsDeveloper() === true && editWidget}
       </div>
-    </div>
+    </>
   )
 
 

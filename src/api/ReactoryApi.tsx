@@ -508,6 +508,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.getThemeMode = this.getThemeMode.bind(this);
     this.isDevelopmentMode = this.isDevelopmentMode.bind(this);
     this.setDevelopmentMode = this.setDevelopmentMode.bind(this);
+    this.hydrate = this.hydrate.bind(this);
     this.__uuid = localStorage.getItem("$reactory_instance_id$");
     if(this.__uuid === null) {
       this.__uuid = uuid();
@@ -527,10 +528,18 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.client = client;
     this.ws_link = ws_link;
     
-    await this.initi18n()
-
-    
+    await this.hydrate();
+    await this.initi18n();
   }
+
+  /**
+   * hydrate function is called to load variables from local storage that we want to 
+   * have set in the SDK between sessions.
+   */
+  async hydrate() {
+    this.$development_mode = await localForage.getItem<boolean>(storageKeys.developmentMode).then();
+  }
+  
 
   async initi18n() {
     
@@ -1747,10 +1756,11 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   setDevelopmentMode(mode: boolean = false) {
     this.$development_mode = mode;
+    localForage.setItem(storageKeys.developmentMode, mode).then();
   }
 
   isDevelopmentMode(): boolean{
-    return this.$development_mode;
+    return this.$development_mode === true;
   }
 
   static propTypes = {

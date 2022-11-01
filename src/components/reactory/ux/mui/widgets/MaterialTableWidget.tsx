@@ -38,6 +38,8 @@ import ReactoryApi from 'api';
 import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
 import addYears from 'date-fns/esm/fp/addYears/index.js';
 import DropDownMenu from 'components/shared/menus/DropDownMenu';
+import { Paragliding } from '@mui/icons-material';
+import { de } from 'date-fns/locale';
 export interface MaterialTableRemoteDataReponse {
   data: any[],
   paging: {
@@ -149,6 +151,10 @@ export interface MaterialTableOptions {
   grouping?: boolean
 }
 
+export interface MaterialTablePagingState {
+  activeRowsPerPage: number
+}
+
 const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipInput"> = (theme) => ({
   root: {
     display: 'flex',
@@ -164,13 +170,26 @@ const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipI
 });
 
 const ReactoryMaterialTablePagination = (props) => {
-  const { reactory, theme, schema, idShema, formContext, uiSchema, formData, rowsPerPageOptions = [5, 10, 25, 50, 100], tableRef, classes } = props;
+  const { 
+    reactory, 
+    theme, 
+    schema, 
+    idShema, 
+    formContext, 
+    uiSchema, 
+    formData, 
+    rowsPerPageOptions = [5, 10, 25, 50, 100], 
+    tableRef, 
+    classes, 
+  } = props;
+
   const { DropDownMenu } = reactory.getComponents(['core.DropDownMenu']);
 
 
   const { useState, useEffect } = React;
+  const [version, setVersion] = useState<number>(0);
 
-  const [version, setVersion] = useState(0);
+  
   const sizeSpec = useSizeSpec();
 
   formContext.$page = props.page;
@@ -209,6 +228,16 @@ const ReactoryMaterialTablePagination = (props) => {
   }
 
   const has_data = data.length > 0;
+
+  const rowsPerPageDropDownProps: Reactory.UX.IDropDownMenuProps = {
+    menus: rowsPerPageOptions ? rowsPerPageOptions.map((i) => ({ 
+      key: i, 
+      title: `${i}`,
+      selected: i === (props.rowsPerPage || 10) 
+    })) : [],
+    onSelect: onMenuItemSelect,
+    tooltip: "Click here to change the rows per page",    
+  }
 
   return (
     <td style={{ display: 'grid' }}>
@@ -272,7 +301,7 @@ const ReactoryMaterialTablePagination = (props) => {
               <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
             </Grid>
             <Grid item sm={2}>
-              <DropDownMenu menus={rowsPerPageOptions ? rowsPerPageOptions.map((i) => ({ key: i, title: `${i}` })) : []} onSelect={onMenuItemSelect} />
+              <DropDownMenu {...rowsPerPageDropDownProps } />
             </Grid>
           </Grid>
           <Grid item sm={6} md={4}>
@@ -323,10 +352,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
   const [allChecked, setAllChecked] = useState<boolean>(false);
+  const [allExpanded, setAllExpanded] = useState<boolean>(false);
   const [is_refreshing, setIsRefreshing] = useState(false);
   const [last_queried, setLastQueried] = useState(null);
   const [last_result, setLastResult] = useState(formData);
   const [rowsState, setRowState] = useState<MaterialTableRowState>({});
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [paginationCount, setPaginationCount] = useState<number>(10);
+  const [page, setActivePage] = useState<number>(0);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState<MaterialTableQuery>({ page: 1, pageSize: 10, search: "" });
 
@@ -435,7 +468,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
         let variables = reactory.utils.objectMapper({ formContext, query }, uiOptions.variables || queryDefinition.variables);
 
-        variables = { ...variables, paging: { page: query.page + 1, pageSize: query.pageSize } };
+        variables = { ...variables, paging: { page: query.page, pageSize: query.pageSize } };
         reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
 
         let options = queryDefinition.options ? { fetchPolicy: 'network-only', ...queryDefinition.options } : { fetchPolicy: 'network-only' };
@@ -460,8 +493,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           setError("Error executing query");
         }
         //show a loader error
-        if (queryResult?.data) {
-
+        if (queryResult?.data) {          
           const $data: any = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
           if ($data) {
             if (isArray($data) === true) response.data = $data;
@@ -777,6 +809,10 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   }
 
+  React.useEffect(()=>{
+    getData()
+  }, [query])
+
   React.useEffect(() => {
 
     refresh({})
@@ -839,20 +875,29 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     setRowState(newRowsState);
 
   }, [allChecked])
-  {/* <MaterialTable
-          columns={columns || []}
-          tableRef={(ref) => { tableRef.current = ref, bindRefreshEvents(ref) }}
-          data={rows || []}
-          title={schema.title || uiOptions.title || "no title"}
-          options={options}
-          actions={actions}
-          components={components}
-          localization={uiOptions.localization || {}}
-          detailPanel={detailsPanel}
-          onSelectionChange={ (rows) => {  
-            reactory.emit(`MaterialTableWidget.${idSchema.$id}.onSelectionChange`, rows)
+  
+  React.useEffect(() => {
 
-          } } /> */}
+    const newRowsState: MaterialTableRowState = { ...rowsState };
+
+    $rows.forEach((row, rid) => {
+      if (!newRowsState[rid]) {
+        newRowsState[rid] = {
+          dirty: false,
+          editing: false,
+          hover: false,
+          saving: false,
+          selected: allChecked,
+          expanded: allExpanded
+        }
+      } else {
+        newRowsState[rid].expanded = allExpanded === true
+      }
+    });
+
+    setRowState(newRowsState);
+
+  }, [allExpanded])
 
   //modify columns with virtual columns
   //virtual columns are columns action columns
@@ -874,6 +919,19 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const getHeader = () => {
 
     let $headers: JSX.Element[] = [];
+
+    if (detailsPanel) {
+      const toggleExpandAll = () => {
+        setAllExpanded(!allExpanded)
+      }
+
+      $headers.push((<TableCell key={'header_expand_collapse'}>
+        <IconButton onClick={toggleExpandAll}>
+          <Icon>{allExpanded ? 'unfold_less' : 'unfold_more'}</Icon>
+        </IconButton>
+      </TableCell>))
+    }
+
 
     if (options.selection === true) {
       const toggleSelectAll = () => {
@@ -949,6 +1007,22 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     const $cols = [];
 
+    if(detailsPanel) {
+      
+      const toggleDetailsPanel = (evt) => {
+        let newRowState = { ...rowsState };
+        if (!newRowState[rid]) newRowState[rid] = { expanded: false, selected: false };
+        newRowState[rid].expanded = !expanded
+        setRowState(newRowState)
+      };
+
+      $cols.push((<TableCell key={`row_${rid}_expand`}>
+        <IconButton onClick={toggleDetailsPanel}>
+          <Icon>{expanded === true ? 'expand_less' : 'expand_more'}</Icon>
+        </IconButton>
+      </TableCell>));
+    }
+
     if (options.selection === true) {
       const toggleSelect = (evt) => {
         let newRowState = { ...rowsState };
@@ -965,12 +1039,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
 
     const rowActionComponents = [];
-    if (rowActions?.length > 0) {
-      // rowActionComponents = rowActions.map(( action ) => {
-
-      //   //action.
-
-      // })
+    if (rowActions?.length > 0) {      
     }
 
     columns.forEach((column: MaterialTableColumn<any>, columnIndex: number) => {
@@ -1054,17 +1123,29 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   const getPagination = () => {
-
+    
     return (
-      <Table>
+      <Table id={`${idSchema.$id}_paging_table`}>
         <TableRow key={`${idSchema.$id}_pagination`}>
           <TableCell colSpan={columns.length}>
             <TablePagination
-              count={10}
-              page={0}
-              rowsPerPage={10}
+              count={data?.paging?.total || 0}
+              page={query.page - 1}
+              rowsPerPage={query?.pageSize || 10}
               component={"div"}
-              onPageChange={(evt, page) => { }}
+              rowsPerPageOptions={uiOptions?.options?.pageSizeOptions || [5,10,25,50,100]}
+              onRowsPerPageChange={(evt) => {                 
+                setQuery({
+                  ...query,
+                  pageSize: parseInt(evt.target.value)
+                })
+              }}
+              onPageChange={(evt, nextPage) => {                 
+                setQuery({
+                  ...query,
+                  page: nextPage + 1
+                })
+              }}
             >
             </TablePagination>
           </TableCell>
@@ -1073,7 +1154,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   const processAction = async (): Promise<any> => {
-    debugger
     let selected = getSelectedRows();
 
     const { action } = activeAction;
@@ -1348,7 +1428,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           reactory.i18n.t(activeAction.action.confirmation.content, { reactory, data, selected: activeAction.rowsSelected })
         }
         onAccept={async () => {
-          debugger
           await processAction();
         }}
         onClose={() => {
@@ -1382,8 +1461,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         {confirmDialog}
       </>
     )
-
   } catch (err) {
+    reactory.log(`Error rendering MaterialTable:\n${err.message}`, {error: err}, 'error');
     return <>Something went wrong during the render of the data table, please <Button onClick={() => { setVersion(version + 1) }}>Retry</Button></>
   }
 

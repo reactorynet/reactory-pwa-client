@@ -22,6 +22,7 @@ export const storageKeys = {
   AuthToken: 'auth_token',
   LastLoggedInEmail: '$reactory$last_logged_in_user',
   viewContext: '$rectory$viewContext',
+  developmentMode: '$reactory.developmentMode'
 };
 
 export const ReactoryLoggedInUser = () => {

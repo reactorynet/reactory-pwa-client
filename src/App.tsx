@@ -161,7 +161,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
     let $routes = [];
 
-    reactory.getRoutes().forEach((routeDef) => {
+    reactory.getRoutes().forEach((routeDef: Reactory.Routing.IReactoryRoute) => {
 
       const routeProps: Reactory.Client.IReactoryClientRoute = {
         key: routeDef.key || routeDef.id || reactory.utils.uuid(),
@@ -177,9 +177,11 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             navigation(routeDef.redirect, { state: { from: location }, replace: true })
           }
 
-          const componentArgs = {
-            //$route: match,
-          };
+          let componentArgs = {};
+
+          if(routeDef.props) {
+            componentArgs = {...routeDef.props}
+          }
 
           if (isArray(routeDef.args)) {
             routeDef.args.forEach((arg) => {

@@ -258,7 +258,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
   //get initial data
   const initialData = (_existing: any = null) => {
-    if(formDef === undefined) return null;
+    if(formDef === undefined || formDef.id === "ReactoryLoadingForm") return null;
     
     if(typeof formDef.schema === "object" ) {
       switch (formDef.schema.type) {
@@ -319,7 +319,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     if(formDef === undefined) return null;
     
-    //if (formDef?.id ==='core.SupportTickets@1.0.0') debugger
+    //if (formDef?.id ==='core.SupportTickets@1.0.0') 
 
     let allowed_schemas = AllowedSchemas(formDef.uiSchemas, mode, getScreenSize());
 
@@ -381,11 +381,11 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     return _dependency_state;
   };
   
-  
+  const $initialData = initialData();
 
   const [componentDefs, setComponents] = React.useState<ReactoryComponentMap>(reactory.getComponents(default_dependencies()));  
-  const [formData, setFormData] = React.useState<any>(initialData());
-  const [formHistory, setHistory] = React.useState<any[]>([initialData()]);
+  const [formData, setFormData] = React.useState<any>($initialData);
+  const [formHistory, setHistory] = React.useState<any[]>([$initialData]);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [activeUiSchemaKey, setActiveUiSchemaKey] = React.useState<string>(getInitialUiSchemaKey());
   const [activeUiSchemaMenuItem, setActiveUiSchemaMenuItem] = React.useState<Reactory.Forms.IUISchemaMenuItem>(getInitialActiveMenuItem());
@@ -455,6 +455,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         
         if (error) {
           setFormDefinition(ReactoryErrorForm);
+          
           setFormData({ error })
         } else {
           setFormDefinition(nextFormDef);          
@@ -503,19 +504,26 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
   React.useEffect(()=>{
     //clear the data
-    setFormData(undefined);
-    //get the data
-    getData();
+    // setFormData();
+    //get the data    
+    getData(initialData());
   }, [formDef])
 
   /** Effects End */
 
-  const getActiveUiSchema = () => {
 
+  /**
+   * Determines what is the correct uiSchema to use for the form based on order of importance.
+   * User Preference overrides other values
+   * Route param overrides form props / state
+   * Form state overrides props
+   * props is initial and base values
+   * @returns 
+   */
+  const getActiveUiSchema = () => {    
     if(formDef === undefined) return {};
 
-    if (activeUiSchemaMenuItem !== null) {
-      //debugger
+    if (activeUiSchemaMenuItem !== null) {      
       return activeUiSchemaMenuItem.uiSchema;
     }
 
@@ -528,7 +536,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       return menu_item.key === props.uiSchemaKey || menu_item.id === props.uiSchemaId;
     });
 
-    if (matched_schema) return matched_schema;
+    if (matched_schema) return matched_schema.uiSchema;
 
     return formDef.uiSchema;
   }
@@ -566,7 +574,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     return _grahDefinitions;
   };
 
-  const getActiveSchema = (defaultSchema) => {
+  const getActiveSchema = (defaultSchema) => {    
     if(formDef === undefined) return ReactoryDefaultForm.schema;
 
     let _schemaDefinitions: any = defaultSchema || formDef.schema;
@@ -637,14 +645,20 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
          return;
         }
                 
-        const _variables = objectMapper({
+        const _input_mapping_params = {
           ...form,
           formContext: getFormContext(),
           $route:
-          props.$route,
+            props.$route,
           reactory,
           api: reactory
-        }, mutation.variables);
+        };
+
+        
+        // TODO: Werner Weber - Add the ability here for variables to be mapped to an async function
+        // that will allow the developer to create a custom client side mapping object and resolve async
+        // data as part of the input params.
+        const _variables = objectMapper(_input_mapping_params, mutation.variables);
         
         let do_mutation = true;
         let mutation_props: any = {
@@ -704,6 +718,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
               };
 
               if (reactory.utils.deepEquals(_formData, formData) === false) {
+                
                 setFormData(_formData);
               }
 
@@ -877,10 +892,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
           if (trigger_onChange === true) fire();
         } else {
+          
           setFormData(form.formData);
         }
       }
     } else {      
+      
       setFormData(form.formData);
     }
 
@@ -997,6 +1014,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
       },
       setFormData: (formData: any, callback = () => { }) => {
+        
         setFormData(formData);
         callback();
       },
@@ -1322,7 +1340,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   };
 
   const getData = (defaultInputData?: any) => {
-    if(formDef === undefined) return null
+    if(formDef === undefined || formDef.id === "ReactoryLoadingForm") return null
     reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
     const _graphql: Reactory.Forms.IFormGraphDefinition = getActiveGraphDefinitions();
     let _formData = null;
@@ -1330,8 +1348,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     if(typeof formDef.schema === "object") {
       switch (formDef.schema.type) {
         case "object": {
-          _formData = { ...formData };
-          //debugger
+          _formData = { ...formData };          
           if (formData === undefined || formData === null && formDef.defaultFormValue) {
             _formData = { ...formDef.defaultFormValue };
           }
@@ -1385,11 +1402,18 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           }
         }
 
-        const _variables = reactory.utils.omitDeep(objectMapper({
+        // TODO: Werner Weber - Add the ability here for variables to be mapped to an async function
+        // that will allow the developer to create a custom client side mapping object and resolve async
+        // data as part of the input params.
+
+
+        const _input_mapping_params: any = {
           formContext,
           formData: _formData,
           $route: props.$route
-        }, query.variables || {}));
+        };
+        
+        const _variables: any = reactory.utils.omitDeep(objectMapper(_input_mapping_params, query.variables || {}));
         reactory.log(`Variables for query`, { variables: _variables }, 'debug');
 
         let $options = query.options ? { ...query.options } : { fetchPolicy: 'network-only' }
@@ -1460,6 +1484,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                 handleErrors(errors);
               }
 
+              
               setFormData(_formData);
               setQueryComplete(true);
               setIsDirty(false);
@@ -1475,6 +1500,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
             reactory.log(`Error Executing Form Query`, { queryError }, 'error')
             const query_end = new Date().valueOf();
+            
             setFormData(_formData);
             setQueryComplete(true);
             setIsDirty(false);
@@ -1524,13 +1550,14 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
         setTimeout(executeFormQuery, query.autoQueryDelay || 0);
       } else {
-
+        
         setFormData(_formData);
         setQueryComplete(true);
       }
 
 
     } else {
+      
       setFormData(_formData);
       setQueryComplete(true);
     }
