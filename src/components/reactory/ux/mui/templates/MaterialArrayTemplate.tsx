@@ -81,10 +81,8 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
   registry: any;
   onReorderClick: any;
 
-  constructor(props, context) {
-
+  constructor(props) {
     super(props)
-
     this.onAddClicked = this.onAddClicked.bind(this)
     this.renderNormalArray = this.renderNormalArray.bind(this)
     this.renderArrayFieldItem = this.renderArrayFieldItem.bind(this)
@@ -189,6 +187,8 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
   }
 
   renderArrayFieldItem(props) {
+    
+    const that = this;
 
     const {
       index,
@@ -211,23 +211,23 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
     } = this.state
     ////console.log('Rendering array item', { props });
 
-    
+    let readOnly: boolean = parentSchema?.readonly === true;    
+    let orderable: boolean = !readOnly && itemSchema?.readonly === false && (canMoveUp || canMoveDown);
+    let removable: boolean = !readOnly && itemSchema?.readonly === false;    
 
-    let orderable = true;
-    let removable = true;
-    let canRemove = true;
+    let itemUiOptions: any = { toolbar: !readOnly };
+    if(itemUiSchema && itemUiSchema["ui:options"]) {
+      itemUiOptions = { ...itemUiOptions, ...itemUiSchema["ui:options"]}
+    }
 
     const has = {
       moveUp: orderable && canMoveUp,
       moveDown: orderable && canMoveDown,
-      remove: removable && canRemove,
-      toolbar: true,
+      remove: removable,
+      toolbar: itemUiOptions.toolbar === true
     };
 
-    const that = this;
-
-    const { formContext } = that.props;
-
+    
     const changeForIndex = (formData, errorSchema) => {
       this.onChangeForIndex(formData, index, errorSchema);
     }
@@ -321,8 +321,19 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
         </Toolbar>
       )
     }
+
+    const gridProps: any = {
+      key: index,
+      item: true,
+      xs: itemUiOptions?.size?.xs || 12,
+      sm: itemUiOptions?.size?.sm || 12,
+      md: itemUiOptions?.size?.md || 6,
+      lg: itemUiOptions?.size?.lg || 3,
+      xl: itemUiOptions?.size?.xl || 3,      
+    };
+    
     return (      
-      <Grid item sm={12} xl={12} key={index}>
+      <Grid {...gridProps}>
         <SchemaField {...schemaFieldProps} containerProps={containerProps} toolbar={toolbar}>
         </SchemaField>
         {toolbar}
@@ -367,15 +378,14 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
       isDirty,
       expanded,
       selected,
-
     } = this.state;
-
+    
     const uiOptions: any = uiSchema['ui:options'] || null
     const uiWidget: string = uiSchema['ui:widget'] || null
     const definitions = registry.definitions;
     let ArrayComponent = null
     
-    let componentProps = {}
+    let componentProps: any = {};
     if (uiWidget !== null) {
       if (registry.widgets[uiWidget]) ArrayComponent = registry.widgets[uiWidget]
       if (!ArrayComponent && uiWidget.indexOf('.') > 0) {
@@ -421,7 +431,9 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
               }   
             });
           })}
-          {!formData || (formData && formData.length === 0) && uiOptions?.allowAdd !== false ? <Typography>Create a new item by clicking the <Icon>add</Icon> icon</Typography> : null}
+          <Grid item justifyContent={'center'}>
+            {!formData || (formData && formData.length === 0) && uiOptions?.allowAdd !== false ? <Typography>Create a new item by clicking the <Icon>add</Icon> icon</Typography> : null}
+          </Grid>
         </Grid>)
     }
 
@@ -434,6 +446,8 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
     if (typeof ArrayComponent === "function") {
       $children = (<ArrayComponent {...{ ...this.props, ...componentProps }} />)
     }
+
+    const $label = uiOptions?.showLabel !== false && <Typography variant="body1">{schema.title}</Typography>;
 
     if (uiOptions && uiOptions.container) {
       //resolve Container from API
@@ -454,44 +468,44 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
           case "div": {
             return (
               <div {...containerProps}>
+                {$label}
                 {$children}
               </div>);
           }
           case "p": {
             return (
               <p {...containerProps}>
+                {$label}
                 {$children}
               </p>);
           }
           case "section": {
             return (
               <section {...containerProps}>
+                {$label}
                 {$children}
               </section>);
           }
           case "article": {
             return (
               <article {...containerProps}>
+                {$label}
                 {$children}
               </article>);
           }
           default: {
             return (
               <Paper {...containerProps}>
+                {$label}
                 {$children}
               </Paper>);
           }
         }
       }
     } else {
-      //default behaviour
-      // 
-
-      
-
       return (
-        <Paper className={classes.root}>
-          {uiOptions?.showLabel !== false && <Typography variant="h4">{schema.title}</Typography>}
+        <Paper>
+          {$label}
           {$children}          
         </Paper>
       );
@@ -502,16 +516,6 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
     return this.renderNormalArray();
   }
 }
-
-// const MaterialArrayTemplate = compose(
-//   withReactory,
-//   withStyles(ArrayTemplate.styles),
-//   withTheme)(ArrayTemplate);
-
-// export default (props) => {
-//   return (<MaterialArrayTemplate {...props} />)
-// };
-
 
 const MaterialArrayTemplate = ArrayTemplate;
 

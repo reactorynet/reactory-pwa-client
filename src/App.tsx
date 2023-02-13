@@ -522,7 +522,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
 
-  const applyTheme = () => {
+  const applyTheme = () => {    
     let activeTheme = reactory.getTheme();
     if (isNil(activeTheme)) activeTheme = { ...props.appTheme };
     if (Object.keys(activeTheme).length === 0) activeTheme = { ...props.appTheme };
@@ -566,7 +566,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
       case 'material':
       default: {
-
         if (activeTheme.options) {
           muiTheme = createTheme(activeTheme.options);
         } else {
@@ -583,8 +582,17 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   };
 
+  /**
+   * 
+   * @param theme 
+   * @param mode 
+   */
   const onThemeChanged = () => {
-    applyTheme();
+    reactory.status({
+      emitLogin: false,
+    }).then(() => {
+      applyTheme();
+    });
   };
 
   const onApiStatusUpdate = (status) => {
@@ -703,7 +711,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     return {
 
       root_paper: {
-        minHeight: window.innerHeight + 10,
+        minHeight: window.innerHeight,
         borderRadius: 0,
         margin: 0,
         padding: 0,

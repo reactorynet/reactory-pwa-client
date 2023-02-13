@@ -20,7 +20,6 @@ import {
   Typography,
   IconButton,
   Icon,
-  
   Input,
   Toolbar,
   LinearProgress,
@@ -41,6 +40,7 @@ import ReactoryFormDataManager from './ReactoryFormDataManager';
 import IntersectionVisible from '../utility/IntersectionVisible';
 import { ErrorBoundary } from '@reactory/client-core/api/ErrorBoundary';
 import MuiReactoryPackage from './ux/mui';
+import { WidgetNotAvailable } from './ux/mui/widgets';
 
 
 
@@ -1140,8 +1140,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       }
       
       if (!_formDef.widgets) _formDef.widgets = {};
+      debugger
       if (isArray(_formDef.widgetMap) === true) {
-        _formDef.widgetMap.forEach((map) => {
+        _formDef.widgetMap.forEach((map) => {          
           //reactory.log(`${signature} (init) Mapping ${map.widget} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
           let mapped = false;
 
@@ -1179,8 +1180,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           if (mapped === false) {
             _formDef.widgets[map.widget] = (props, context) => {
 
-              //return (<WidgetPresets.WidgetNotAvailable {...props} map={map} />)
-              return (<>Widget not found</>)
+              return (<WidgetNotAvailable {...props} map={map} />)
+              //setTimeout(() => { setVersion(version + 1) }, 777);
+              //return (<>loading ...{map.widget}</>)
 
             }
             // reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.widget}`, { map }, 'warning')
@@ -1220,9 +1222,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     const injectResources = () => {
       if (document) {
-        if (_formDef.uiResources && _formDef.uiResources.length) {
+        if (_formDef.uiResources && _formDef.uiResources.length) {          
           _formDef.uiResources.forEach((resource) => {
-            const resourceId = `${resource.type}_${resource.id}`;
+            const resourceId = `${resource.type}_${resource.id}`;            
             if (nil(document.getElementById(resourceId)) === true) {
               switch (resource.type) {
                 case 'style': {

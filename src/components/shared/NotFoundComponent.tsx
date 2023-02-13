@@ -16,14 +16,20 @@ const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) 
 
   const reactory = useReactory();
 
-  const [found, setFound] = React.useState<boolean>(false);  
-
+  const [found, setFound] = React.useState<boolean>(false);
+  const [loadedAt] = React.useState<number>(new Date().valueOf());    
+  const [unavailable, setUnavailable] = React.useState<boolean>(false);
+  const [showCreate, setShowCreateComponent] = React.useState<boolean>(false);  
 
   const checkComponentLoaded = () => {
     if(props.waitingFor) {
       const $ComponentToMount = reactory.getComponent(props.waitingFor)
       if ($ComponentToMount === null || $ComponentToMount === undefined) {
-        setTimeout(checkComponentLoaded, 1000);
+        if((new Date().valueOf() - loadedAt) / 1000 < 5) {
+          setTimeout(checkComponentLoaded, 1000);
+        } else {
+          setUnavailable(true);
+        }
       } else {
         //this.setState({ found: true, mustCheck: false })    
         setFound(true);
@@ -33,6 +39,31 @@ const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) 
 
   React.useEffect(() => { checkComponentLoaded() }, [])
   
+  if(unavailable === true) {
+    if(reactory.isDevelopmentMode() === true && reactory.hasRole(["DEVELOPER"]) === true) {
+      
+
+      if(showCreate === true) {
+        const {
+          FormEditor
+        } = reactory.getComponents<any>(["reactory.FormEditor"])
+        
+        const { name, nameSpace, version } = reactory.utils.componentPartsFromFqn(props.waitingFor)
+
+        return <FormEditor formData={{ name, nameSpace, version }} />
+      } else {
+        const {
+          Material
+        } = reactory.getComponents<{ Material: Reactory.Client.Web.IMaterialModule }>(["material-ui.Material"]);
+        
+        return (
+          <Material.MaterialCore.Typography variant='body1'>Component not found, click <Material.MaterialCore.Button onClick={() => { setShowCreateComponent(true) }}>here to create a component</Material.MaterialCore.Button></Material.MaterialCore.Typography>
+        )
+      }
+
+    }
+  }
+
   if (found === false) {
     let msg = `Waiting for application components to finish loading... ${process.env.NODE_ENV !== 'production' ? props.waitingFor : ''}`;
     return (<>{msg}</>)

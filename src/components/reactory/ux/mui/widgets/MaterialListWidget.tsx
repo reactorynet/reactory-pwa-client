@@ -634,7 +634,6 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
                 link
               } = options.secondaryAction;
 
-              debugger
               if (component && typeof component === "function") {
                 secondaryActionWidget = component(item, formContext, itemIndex, data);
               } else {
@@ -683,7 +682,6 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
                     secondaryComponentProps = { ...secondaryComponentProps, ...outputObject };
                   }
 
-                  debugger
                   // secondaryComponentProps.componentProps = this.props.api.utils.objectMapper(item, objectmapDefinition)
                   componentToRender = <SecondaryItemComponent {...secondaryComponentProps} />
                 }

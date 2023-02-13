@@ -6,6 +6,7 @@ import { withStyles, withTheme, } from '@mui/styles';
 import moment, { Moment } from 'moment';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import classNames from 'classnames';
+import ReactDOM from 'react-dom';
 
 interface ReactoryStaticContentProps {
   id: string,
@@ -60,6 +61,13 @@ interface ReactoryStaticContentState {
   [key: string]: any
 };
 
+interface ComponentMountInfo {
+  id: string,
+  component: string,
+  props: any,
+  content: string
+}
+
 
 /**
  * Static Content Component. Used for editing static content using a wysiwig editor
@@ -91,7 +99,7 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
 
   const [state, setState] = React.useState<ReactoryStaticContentState>({
     content: {
-      title: `Loading`,
+      title: title || `Loading`,
       content: 'Loading',
       createdBy: {
         id: null,
@@ -99,7 +107,7 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
       },
       createdAt: moment(),
       topics: [],
-      published: false,
+      published: published || false,
     },
     editing: props.isEditing === true,
     original: null,
@@ -109,6 +117,7 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
 
   const [version, setVersion] = React.useState<number>(0)
   const [allowEdit, setAllowEdit] = React.useState<boolean>(false);
+  const [components, setComponents] = React.useState<ComponentMountInfo[]>([]);
 
   const containerProps = {};
   const {
@@ -137,13 +146,12 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     }
     
     if (propertyBag && $content && $content.indexOf("<reactory ") >= 0) {
-      let componentsToMount = [];
+      let componentsToMount: ComponentMountInfo[] = [];
 
-      const getNextComponent = (_content: string): { component: string, props: any, content: string } => {
-        debugger;
+      const getNextComponent = (_content: string): ComponentMountInfo => {        
         const startPos: number = _content.indexOf("<reactory ");
                   
-        if(startPos < 0) return { component: null, props: null, content: _content }; 
+        if(startPos < 0) return { id: null, component: null, props: null, content: _content }; 
         
         let endPos: number = _content.indexOf(" />", startPos);
         if (endPos == -1) {
@@ -158,20 +166,42 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
         let component = "";
         let props = {};
 
-        let parser = new DOMParser();
-        const xmlString = `
-          <?xml version="1.0" encoding="utf-8"?>
-          ${foundTag}
-        `;
-        const xmlConf: XMLDocument = parser.parseFromString(xmlString, "application/xml");
-        debugger
-        let reactoryNode = xmlConf.getRootNode();
-
-        // reactoryNode.getAttributeNames().map((attr: string) => {
-        //   let [key, value]: string[] = attr.split("=");
-        //   if (key === "component") component = key;
-        //   props[`${key.replace("props-", "")}`] = value; 
-        // })
+        let parser = new DOMParser();        
+        const xmlDoc: Document = parser.parseFromString(foundTag, "application/xml");
+        
+        if(xmlDoc.childNodes.length > 0) {
+          xmlDoc.childNodes.forEach((el: any) => {
+            if(el.nodeName === "reactory") {
+              if(el?.attributes && el.attributes?.length > 0) {                
+                for(let attr_idx = 0; attr_idx < el.attributes.length; attr_idx += 1) {
+                  let attr = el.attributes[attr_idx];   
+                  const key = attr.nodeName.split("-")[1];
+                  if (key === "component") component = attr.value;
+                  else {                    
+                    const $value: string = `${attr.value}`.trim();
+                    const $propname: string = `${attr.nodeName.replace("reactory-props-", "")}`;                    
+                    if($value.indexOf("bool:") === 0) {
+                      props[$propname] = $value.split(":")[1].trim() === "true";
+                    } else if ($value.indexOf("object:{") === 0) {
+                      props[$propname] = JSON.parse(`{attr.value}`.substring(6,$value.length));
+                    } else if ($value.indexOf("int:") === 0) {                      
+                      props[$propname] = parseInt($value.split(":")[1].trim());                   
+                    } else if ($value.indexOf("float:") === 0) {
+                      props[$propname] = parseFloat($value.split(":")[1].trim());
+                    } else if ($value.indexOf("moment:") === 0) {
+                      props[$propname] = reactory.utils.moment($value.substring(4,$value.length));
+                    } else if (attr.value && attr.value.indexOf("date:") === 0) {
+                      props[$propname] = new Date($value.substring(4,$value.length));
+                    }
+                    else {
+                      props[$propname] = $value;
+                    }                    
+                  }
+                }                 
+              }
+            }
+          })  
+        }
                 
         const mountpoint_id = `reactory_component_mount_${getSlug()}_${component}_${reactory.utils.hashCode(JSON.stringify(props))}`;
 
@@ -179,23 +209,22 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
         _content = _content.replace(foundTag, newTag);
         
         return {
+          id: mountpoint_id,
           component,
           props,
           content: _content, 
         }
       }
 
-      while($content.indexOf("<reactory ") >= 0) {
-        debugger
+      while($content.indexOf("<reactory ") >= 0) {        
         const nextComponent = getNextComponent($content);
         if(nextComponent.component) {
-          componentsToMount.push({ component: nextComponent.component, props: nextComponent.props || {} });
+          componentsToMount.push(nextComponent);
         }
-
         $content = nextComponent.content;
       }
+      setComponents(componentsToMount)
     }
-    
     return $content;
   }
 
@@ -222,14 +251,20 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
         const staticContent: ReactoryStaticContent = result.data.ReactoryGetContentBySlug;
         try {
           
-          setState({
-            content: { ...staticContent },
-            found: true,
-            original: staticContent.content,
-            editing: state.editing,
-            parsed_content: parseTemplate(staticContent.content)
-          });
+          if(staticContent !== null) {
+            let nextState = {
+              content: { ...staticContent },
+              found: true,
+              original: staticContent.content,
+              editing: state.editing,
+              parsed_content: parseTemplate(staticContent.content)
+            }
 
+            if (nextState.content.title === null && title !== null) nextState.content.title = title;
+            if (nextState.content.published === null && published !== null) nextState.content.published = published;
+
+            setState(nextState);
+          }          
         } catch (err) { }
 
       } else {
@@ -240,10 +275,10 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
           parsed_content: `Content for content: "${getSlug()}" does not exists, please create it.`,
           content: {
             content: `Content for content: "${getSlug()}" does not exists, please create it.`,
-            title: "Not Found",
+            title: title || "Not Found",
             createdBy: { id: user.id, fullName: user.fullName },
             createdAt: moment(),
-            published: false,
+            published: published || false,
             topics: ["new content"],
           }, found: false
         });
@@ -300,12 +335,34 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
   if (typeof props.defaultValue === 'string') default_content = props.defaultValue;
   else default_content = '';
 
-  let contentComponent = found === true ? (<div {...containerProps} ref={ref => contentRef.current = ref} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>) : props.defaultValue;
+
+  const getContent = () => {
+
+    const portals = components.map((mountInfo) => {
+      const portalContainer = document.getElementById(mountInfo.id);
+      const MountableComponent = reactory.getComponent<any>(mountInfo.component);
+
+      if(!portalContainer || MountableComponent === null) return null
+            
+      return ReactDOM.createPortal(<MountableComponent  { ...mountInfo.props }/>, portalContainer);
+      // reactory.mountComponent(component, {reactory, ...mountInfo.props }, portalContainer, true, () => {
+      //   reactory.log(`component ${mountInfo.component} mounted at ${mountInfo.id}`)
+      // });
+    })
+
+    return (
+    <React.Fragment>      
+        <div {...containerProps} ref={ref => contentRef.current = ref} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>
+        {portals}
+    </React.Fragment>)  
+  }
+
+  let contentComponent = found === true ? getContent() : props.defaultValue;
   let ContentCaptureComponent = reactory.getComponent<any>(formFqn);
   let contentCaptureProps: any = {
     formData: { 
       slug: getSlug(), 
-      title: state.title, 
+      title: state.content.title, 
       published: state.content.published, 
       content: state.found === true ? content.content : default_content 
     },
@@ -313,7 +370,7 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     id: props.id,
     uiSchemaKey: viewMode || 'inline',
     onMutateComplete: (_newData) => {
-      getData()
+      setState({ ...state, found: false });
     },
     helpTopics: props.helpTopics,
     helpTitle: props.helpTitle,
@@ -332,23 +389,13 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
   
   useEffect(() => {
     getData()
-  }, [props.slug])
-
-
-  useEffect(() => {
-    //bind components on page.
-    if(contentRef.current && contentRef.current.innerHTML) {
-      
-    }
-  }, [contentRef.current])
+  }, [props.slug, state.editing, state.found])
 
   useEffect(() => {
     if (state.found) {
       setState({ ...state, parsed_content: parseTemplate(state.content.content) });
     }
   }, [props.propertyBag])
-
-  const ContentContainer = React.useRef<HTMLDivElement>(null);
 
   return (        
     <>
@@ -377,7 +424,7 @@ const StaticContentStyles = (theme: any): any => {
 
     },
     buttonContainer: {
-
+      minHeight: '40px'
     },
     staticContentContainer: {
       display: 'flex',

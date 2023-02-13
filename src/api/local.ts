@@ -14,7 +14,9 @@ export const anonUser: Reactory.Models.IApiStatus = {
   menus: [],
   loggedIn: null,
   status: 'API OK',
-  when: new Date()
+  when: new Date(),
+  navigationComponents: [],
+
 };
 
 export const storageKeys = {

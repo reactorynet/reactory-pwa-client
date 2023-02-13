@@ -4,7 +4,7 @@ import { template } from 'lodash';
 
 import MaterialObjectField from './MaterialObjectField';
 import { retrieveSchema } from '@reactory/client-core/components/reactory/form/utils';
-import { Grid, Paper } from '@mui/material'
+import { Grid, Paper, Typography } from '@mui/material'
 
 import { withStyles, withTheme } from '@mui/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
@@ -101,7 +101,8 @@ class MaterialGridField extends MaterialObjectField {
         {
           layout.map((row, index) => {
             let numberOfVisibleItems = 0;
-            let items = Object.keys(row).map((name, index) => {
+            let items = Object.keys(row).map((name, index) => {              
+
               const { doShow, ...rowProps } = row[name]
               let style = {}
               if (row.style)
@@ -113,51 +114,60 @@ class MaterialGridField extends MaterialObjectField {
                 style = { display: 'none' }
                 hide = true;
               }
-              if (schema.properties[name]) {
-                return (
-                  <Grid {...rowProps} item key={index} style={style}>
-                    <SchemaField
-                      name={name}
-                      required={this.isRequired(name)}
-                      schema={schema.properties[name]}
-                      uiSchema={uiSchema[name]}
-                      errorSchema={errorSchema[name]}
-                      idSchema={idSchema[name]}
-                      formData={formData[name]}
-                      onChange={this.onPropertyChange(name)}
-                      onBlur={onBlur}
-                      registry={this.props.registry}
-                      disabled={disabled}
-                      readonly={readonly} />
-                  </Grid>
-                )
-              } else {
-                const { render, ...rowProps } = row[name]
-                let UIComponent: any = () => null
-
-                if (render) {
-                  UIComponent = render
-                } else {
-                  hide = true;
-                }
-
-                if (hide === false) {
-                  numberOfVisibleItems += 1;
+              
+              if(schema.type !== "array") {
+                if (schema.properties[name]) {
                   return (
                     <Grid {...rowProps} item key={index} style={style}>
-                      <UIComponent
+                      <SchemaField
                         name={name}
-                        formData={formData}
-                        errorSchema={errorSchema}
-                        uiSchema={uiSchema}
-                        schema={schema}
+                        required={this.isRequired(name)}
+                        schema={schema.properties[name]}
+                        uiSchema={uiSchema[name]}
+                        errorSchema={errorSchema[name]}
+                        idSchema={idSchema[name]}
+                        formData={formData[name]}
+                        onChange={this.onPropertyChange(name)}
+                        onBlur={onBlur}
                         registry={this.props.registry}
-                      />
-                    </Grid>)
-                }
+                        disabled={disabled}
+                        readonly={readonly} />
+                    </Grid>
+                  )
+                } else {
+                  const { render, ...rowProps } = row[name]
+                  let UIComponent: any = () => null
 
-                return null;
+                  if (render) {
+                    UIComponent = render
+                  } else {
+                    hide = true;
+                  }
+
+                  if (hide === false) {
+                    numberOfVisibleItems += 1;
+                    return (
+                      <Grid {...rowProps} item key={index} style={style}>
+                        <UIComponent
+                          name={name}
+                          formData={formData}
+                          errorSchema={errorSchema}
+                          uiSchema={uiSchema}
+                          schema={schema}
+                          registry={this.props.registry}
+                        />
+                      </Grid>)
+                  }
+
+                  return null;
+                }
+              } else {
+                return (<Grid {...rowProps} item key={index} style={style}>
+                  <Typography variant="h6">Grid Layout not available for array types. Arrays are by default wrapped in a grid container.</Typography>
+                  </Grid>)
               }
+
+              
             });
 
             return (

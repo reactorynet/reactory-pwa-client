@@ -354,8 +354,8 @@ const userProfile = gql`
 `;
 
 const apiStatus = gql`
-  query status {
-      apiStatus {
+  query status($theme: String, $mode: String) {
+      apiStatus(theme: $theme, mode: $mode) {
       applicationName
       applicationAvatar
       applicationRoles
@@ -396,7 +396,7 @@ const apiStatus = gql`
       }
       id
       theme
-      activeTheme {
+      activeTheme(mode: $mode) {
         id
         type
         name

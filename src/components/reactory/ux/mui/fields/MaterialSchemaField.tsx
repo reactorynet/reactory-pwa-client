@@ -1,9 +1,6 @@
 import React, { Component, Fragment } from "react";
 import PropTypes from "prop-types";
-
-
 import  UnsupportedField from "@reactory/client-core/components/reactory/form/components/fields/UnsupportedField";
-
 import {
   isMultiSelect,
   retrieveSchema,
@@ -11,8 +8,7 @@ import {
   getDefaultRegistry,
   mergeObjects,
   getUiOptions,
-  isFilesArray,
-  deepEquals,
+  isFilesArray,  
   getSchemaType,
   ADDITIONAL_PROPERTY_FLAG
 } from "@reactory/client-core/components/reactory/form/utils";
@@ -20,6 +16,10 @@ import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
 
 const REQUIRED_FIELD_SYMBOL = "*";
 
+/**
+ * The component types that is inferred
+ * from the schema field type.
+ */
 const COMPONENT_TYPES = {
   array: "ArrayField",
   boolean: "BooleanField",
@@ -316,53 +316,5 @@ function SchemaFieldRender(props) {
 
   return <FieldTemplate {...fieldProps}>{field}</FieldTemplate>;
 }
-
-// class SchemaField extends React.Component {
-//   shouldComponentUpdate(nextProps, nextState) {
-//     // if schemas are equal idSchemas will be equal as well,
-//     // so it is not necessary to compare
-//     return !deepEquals(
-//       { ...this.props, idSchema: undefined },
-//       { ...nextProps, idSchema: undefined }
-//     );
-    
-    
-//   }
-
-//   render() {
-//     return SchemaFieldRender(this.props);
-//   }
-
-  // SchemaField.defaultProps = {
-  //   uiSchema: {},
-  //   errorSchema: {},
-  //   idSchema: {},
-  //   disabled: false,
-  //   readonly: false,
-  //   autofocus: false,
-  // };
-
-//   if(process.env.NODE_ENV !== "production") {
-//   SchemaField.propTypes = {
-//     schema: PropTypes.object.isRequired,
-//     uiSchema: PropTypes.object,
-//     idSchema: PropTypes.object,
-//     formData: PropTypes.any,
-//     errorSchema: PropTypes.object,
-//     registry: PropTypes.shape({
-//       widgets: PropTypes.objectOf(
-//         PropTypes.oneOfType([PropTypes.func, PropTypes.object])
-//       ).isRequired,
-//       fields: PropTypes.objectOf(PropTypes.func).isRequired,
-//       definitions: PropTypes.object.isRequired,
-//       ArrayFieldTemplate: PropTypes.func,
-//       ObjectFieldTemplate: PropTypes.func,
-//       FieldTemplate: PropTypes.func,
-//       formContext: PropTypes.object.isRequired,
-//     }),
-//   };
-// }
-
-
 
 export default SchemaFieldRender;

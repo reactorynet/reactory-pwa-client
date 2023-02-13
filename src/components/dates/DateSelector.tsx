@@ -24,7 +24,7 @@ class DateSelector extends Component<any, any> {
   
     return (
       <Fragment>
-        DateSelector Deprecate Replace
+        
       </Fragment>
     )
   }

@@ -7,6 +7,8 @@ import * as MaterialCoreStyles from '@mui/styles'
 import * as MaterialIcons from '@mui/icons-material'
 import * as MaterialLab from '@mui/lab'
 import * as MaterialStyles from '@mui/styles';
+import * as MaterialDates from '@mui/x-date-pickers';
+import * as MaterialGrid from '@mui/x-data-grid';
 
 import * as DropZone from 'react-dropzone';
 import * as ReactRouter from 'react-router';
@@ -426,9 +428,21 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'material-ui',
+    name: 'MaterialDates',
+    component: MaterialDates,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'material-ui',
+    name: 'MaterialGrid',
+    component: MaterialGrid,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'material-ui',
     name: 'MaterialPickers',
     version: '1.0.0',
-    component: (<NotFoundComponent key={'material-ui.MaterialPickers is deprecated'}/>),
+    component: MaterialDates,
   },
   {
     nameSpace: 'material-ui',
@@ -439,8 +453,10 @@ export const componentRegistery = [
       MaterialIcons,
       MaterialLab,
       MaterialStyles,
-      MaterialPickers: (<NotFoundComponent key={'material-ui.MaterialPickers is deprecated'} />),
-      MaterialTable: (<NotFoundComponent key={'material-ui.MaterialTable is deprecated'} />)
+      MaterialPickers: MaterialDates,
+      MaterialTable: MaterialGrid,
+      MaterialGrid,
+      MaterialDates
     },
   },
   {

@@ -1,5 +1,5 @@
-import React from 'react';
-
+import React, { useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { template } from 'lodash';
 import {
   Button,
@@ -9,10 +9,8 @@ import {
   InputLabel,
   Typography,
 } from '@mui/material';
-import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
 import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider';
-import  * as uuid from 'uuid';
+import * as uuid from 'uuid';
 
 
 // Require Editor JS files.
@@ -61,11 +59,218 @@ import 'froala-editor/css/froala_style.min.css';
 import 'froala-editor/css/froala_editor.pkgd.min.css';
 
 import FroalaEditor from 'react-froala-wysiwyg';
+import Froala from 'froala-editor';
+import FroalaComponentSelector from './plugins/ReactoryComponentSelector';
 
 const LICENSEKEY = process.env.REACT_APP_FROALA_KEY;
+const DefaultPluginList = [
+  'align',
+  'charCounter',
+  'codeBeautifier',
+  'codeView',
+  'colors',
+  'draggable',
+  'embedly',
+  'emoticons',
+  'entities',
+  'file',
+  'fontFamily',
+  'fontSize',
+  'fullscreen',
+  'image',
+  'imageManager',
+  'inlineStyle',
+  'lineBreaker',
+  'link',
+  'lists',
+  'paragraphFormat',
+  'paragraphStyle',
+  'quickInsert',
+  'quote',
+  'save',
+  'table',
+  'url',
+  'video',
+  'wordPaste',
+  'reactoryWidget'
+];
+
+interface ComponentMountInfo {
+  id: string,
+  component: string,
+  props: any,
+  content: string
+}
+
+
+const initFroala = () => {
+  Froala.DEFAULTS = { ...Froala.DEFAULTS, reactoryWidgets: { displayInline: true } };
+  Froala.POPUP_TEMPLATES["reactoryWidget.popup"] = '[_BUTTONS_][_CUSTOM_LAYER_]';
+  Froala.PLUGINS.reactoryWidget = ($editor) => {
+
+    let isModalOpen: boolean = false;
+    // const _onContentChanged = () => {
+    //   const html = $editor.html.get();
+    //   if(html.indexOf('reactory-component="froala.ComponentSelector"') > 0) {
+
+    //   }
+    // }
+
+    const _init = () => {
+      // $editor.events.on('contentChanged', _onContentChanged);
+    }
+
+    const initPopup = (id: string) => {
+      let popup_buttons = '';
+      // Create the list of buttons.
+      
+      popup_buttons += '<div class="fr-buttons">';
+      popup_buttons += $editor.button.buildList(['popupClose', '|', 'reactoryWidgetsFilter']);
+      popup_buttons += '</div>';
+      
+      // Load popup template.
+      const template = {
+        buttons: popup_buttons,
+        custom_layer: `<div id="selector_placeholder_${id}">
+          ...
+        </div>`
+      };
+
+      // Create popup.
+      var $popup = $editor.popups.create('reactoryWidget.popup', template);
+
+      return $popup;
+    };
+
+    const showPopup = (id: string, callback: () => void) => {
+      let $popup = $editor.popups.get('reactoryWidget.popup');
+      
+      // If popup doesn't exist then create it.
+      // To improve performance it is best to create the popup when it is first needed
+      // and not when the editor is initialized.
+      if (!$popup) $popup = initPopup(id);
+      
+      // Set the editor toolbar as the popup's container.
+      $editor.popups.setContainer('reactoryWidget.popup', $editor.$tb);
+      
+      // This will trigger the refresh event assigned to the popup.
+      // editor.popups.refresh('customPlugin.popup');
+      
+      // This custom popup is opened by pressing a button from the editor's toolbar.
+      // Get the button's object in order to place the popup relative to it.
+      let $btn = $editor.$tb.find('.fr-command[data-cmd="reactoryWidget"]');
+      // Set the popup's position.
+      let left = (window.innerWidth / 2) //$btn.offset().left + $btn.outerWidth() / 2;
+      let top = (window.innerHeight / 2) //$btn.offset().top + ($editor.opts.toolbarBottom ? 10 : $btn.outerHeight() - 10);
+
+      // Show the custom popup.
+      // The button's outerHeight is required in case the popup needs to be displayed above it.
+      $editor.popups.show('reactoryWidget.popup', left, top, $btn.outerHeight());
+      if(callback && typeof callback === "function") callback()
+    };
+
+    const hidePopup = () => {
+      $editor.popups.hide('reactoryWidget.popup');
+    };
+
+
+    const insertReactoryTag = (id: string, callback: ($portal: React.ReactPortal) => void) => {
+      const placeHolder = `<reactory id="${id}" reactory-component="froala.ComponentSelector">COMPONENT</reactory>`;
+      $editor.html.insert(placeHolder);
+      $editor.reactoryWidget.showPopup(id);
+      let container = document.getElementById(id);
+      const start = new Date().valueOf();
+      let lastTick = start;
+      while(container === null) {
+        const nextTick = new Date().valueOf();
+        if(nextTick - lastTick > 10) {
+          container = document.getElementById(id); 
+          if(container !== null) {
+            break;
+          }
+        }
+        lastTick = nextTick
+        if(nextTick - start > 500) {
+          break;
+        }
+      }
+
+      if(container) {
+
+        const onCancel = () => {
+          //cancel activity
+        }
+
+        const onSelectionChange = (evt) => {
+          debugger
+        }
+
+        const portal = ReactDOM.createPortal(<FroalaComponentSelector onCancel={onCancel} onSelectionChange={onSelectionChange} />, container);
+        if(callback && typeof callback === "function") {
+          callback(portal)
+        }
+      }
+
+      
+    }
+
+
+    return {
+      _init,
+      insertReactoryTag,
+      showPopup,
+      hidePopup,
+    }
+  }
+
+  Froala.DefineIcon('reactoryIcon', { NAME: 'star', SVG_KEY: 'star' });
+  Froala.DefineIcon('popupClose', { NAME: 'times', SVG_KEY: 'back' });
+  Froala.DefineIcon('reactoryWidgetsFilter', { NAME: 'filter', SVG_KEY: 'filter' });
+
+  Froala.RegisterCommand('addReactoryWidget', {
+    title: 'Add Reactory Widget',
+    icon: 'reactoryIcon',
+    undo: false,
+    focus: false,
+    plugin: 'reatoryWidget',
+    callback: function () {
+      const $editor = this;
+      $editor.reactoryWidget.insertReactoryTag(uuid.v4());
+    }
+  });
+
+  Froala.RegisterCommand('closePopup', {
+    title: 'Close Popup',
+    icon: 'popupClose',
+    undo: false,
+    focus: false,
+    callback: function() {
+      const $editor = this;
+      $editor.reactoryWidget.hidePopup();
+    }
+  });
+
+  Froala.RegisterQuickInsertButton('reactoryWidget', {
+    // Icon name.
+    icon: 'reactoryIcon',
+
+    // Tooltip.
+    title: 'Add Reactory Widget',
+
+    // Callback for the button.
+    callback: function () {
+      // Call any editor method here.        
+      const $editor = this;
+      $editor.reactoryWidget.insertReactoryTag(uuid.v4());
+    },
+
+    // Save changes to undo stack.
+    undo: true
+  });
+}
+
 
 const FroalaWidget = (props) => {
-
 
   const { formData, uiSchema, schema, formContext } = props;
 
@@ -79,26 +284,20 @@ const FroalaWidget = (props) => {
   // const [showTemplateConfig, setShowTemplateConfig] = React.useState(false);
   // const [showComponentSelector, setShowComponentSelector] = React.useState(false);
   // const [onChangeTimeout, setOnChangeTimeout] = React.useState(null);
-  const [version, setVersion] = React.useState(0)
+  const [version, setVersion] = React.useState(0);
+  const [showComponentSelector, setShowComponentSelector] = React.useState<{ id: string, show: boolean, placeHolder: string }>({ id: null, show: false, placeHolder: null })
 
   const model = React.useRef(formData);
   const reactory = useReactory();
 
 
 
+  useEffect(() => {
+    initFroala();
+  }, []);
+
   const _id = uuid.v4();
 
-
-  const componentDefs = reactory.getComponents([
-    'core.FullScreenModal',
-    'core.SpeedDial',
-    'core.ReactoryFormComponent',
-    'forms.PageTemplateConfig',
-    'forms.FileLoader',
-    'forms.ComponentSelector'
-  ]);
-
-   
   const onEditorInitialized = ($editor, config) => {
     reactory.log(`Froala Editor is Initialized`, { $editor, config }, 'debug');
     setEditor($editor);
@@ -116,7 +315,7 @@ const FroalaWidget = (props) => {
     imageDefaultWidth: 300,
     imageDefaultDisplay: 'inline',
     zIndex: 101,
-    pluginsEnabled: ['align', 'charCounter', 'codeBeautifier', 'codeView', 'colors', 'draggable', 'embedly', 'emoticons', 'entities', 'file', 'fontFamily', 'fontSize', 'fullscreen', 'image', 'imageManager', 'inlineStyle', 'lineBreaker', 'link', 'lists', 'paragraphFormat', 'paragraphStyle', 'quickInsert', 'quote', 'save', 'table', 'url', 'video', 'wordPaste'],
+    pluginsEnabled: DefaultPluginList,
     fontFamilyDefaultSelection: 'Roboto',
     fontFamily: {
       "Roboto,Helvetica,Arial,sans-serif": "Roboto",
@@ -138,10 +337,9 @@ const FroalaWidget = (props) => {
         'buttons': ['insertLink', 'insertImage', 'insertVideo', 'insertTable', 'emoticons', 'fontAwesome', 'specialCharacters', 'embedly', 'insertFile', 'insertHR']
       },
       'moreMisc': {
-        'buttons': ['undo', 'redo', 'fullscreen', 'print', 'getPDF', 'spellChecker', 'selectAll', 'html', 'help'],
+        'buttons': ['undo', 'redo', 'fullscreen', 'print', 'getPDF', 'spellChecker', 'selectAll', 'html', 'help', 'reactoryWidget'],
       }
     },
-
     lineBreakerOffset: 0,
     linkAlwaysBlank: true,
     linkText: true,
@@ -149,12 +347,12 @@ const FroalaWidget = (props) => {
     linkAttributes: {
       clicktracking: "Click Tracking"
     },
+    quickInsertButtons: ['image', 'table', 'ol', 'ul', 'reactoryWidget'],
     fullPage: false,
     ...schemaItemOptions,
-      
-  };  
 
-  debugger
+  };
+
   if (config.imageUploadURL && config.imageUploadURL.indexOf("${") >= 0) {
     config.imageUploadURL = template(config.imageUploadURL)({ ...props })
   }
@@ -195,11 +393,10 @@ const FroalaWidget = (props) => {
     },
     'focus': function () {
       const $editor = this;
-     
+
     },
     'blur': function () {
       let $editor = this;
-      debugger
       const html = $editor.html.get();
       model.current = html;
       if (props.onChange) {
@@ -217,6 +414,47 @@ const FroalaWidget = (props) => {
   config.events = events;
 
 
+  const ReactoryFroalaPlugin = (editor: any) => {
+
+    // Private variable visible only inside the plugin scope.
+    let private_var: string = 'My awesome plugin';
+
+    // Private method that is visible only inside plugin scope.
+    const _privateMethod = (): string => {
+      return private_var;
+    }
+
+    // Public method that is visible in the instance scope.
+    const publicMethod = () => {
+      reactory.log(_privateMethod());
+    }
+
+    // The start point for your plugin.
+    const _init = () => {
+      // You can access any option from documentation or your custom options.
+      debugger
+      reactory.log(`Options for editor is`, editor.opts);
+
+      // Call any method from documentation.
+      // editor.methodName(params);
+
+      // You can listen to any event from documentation.
+      // editor.events.add('contentChanged', function (params) {});
+    }
+
+    // Expose public methods. If _init is not public then the plugin won't be initialized.
+    // Public method can be accessed through the editor API:
+    // editor.myPlugin.publicMethod();
+    return {
+      _init: _init,
+      publicMethod: publicMethod
+    }
+
+  };
+
+  //@ts-ignore
+  //FroalaEditor.plugins.reactory = ReactoryFroalaPlugin;
+
   React.useEffect(() => {
     model.current = props.formData;
   }, [props.formData])
@@ -227,11 +465,10 @@ const FroalaWidget = (props) => {
     return (
       <FormControl>
         {showLabel && <Typography variant="caption" gutterBottom>{props.schema.title}</Typography>}
-        <FroalaEditor          
+        <FroalaEditor
           config={config}
           model={model.current}
         />
-
       </FormControl>
     )
   } catch (render_error) {

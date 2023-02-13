@@ -44,6 +44,7 @@ export { default as ReactoryColorPicker } from './ReactoryColorPicker';
 export { default as AutoCompleteDropDown } from './AutoCompleteDropDown';
 export { StaticContent } from './StaticContentWidget';
 export { default as FroalaWidget } from './Froala/FroalaWidget';
+export { DateWidget } from './DateSelector';
 /**
  * 
  * switch (_formDef.uiFramework) {

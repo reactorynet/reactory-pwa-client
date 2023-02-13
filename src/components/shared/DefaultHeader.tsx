@@ -367,16 +367,11 @@ const ApplicationHeader = (props) => {
     nav();
   }
 
-  const handleChange = (event, $logged) => {
-    setLogged($logged);
-  };
-
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
   };
 
   const handleMenu = (evt: SyntheticEvent) => {
-    //this.setState({ menuOpen: !this.state.menuOpen, menuAnchor: evt.currentTarget })
     setMenuAnchor(evt.currentTarget)
     setMenuOpen(!menuOpen);
   };
@@ -554,7 +549,6 @@ const ApplicationHeader = (props) => {
   };
 
   const toggleDarkMode = () => {
-
     if (theme.palette.mode === 'dark') {
       localStorage.setItem("$reactory$theme_mode", 'light');
     } else {
@@ -624,38 +618,19 @@ const ApplicationHeader = (props) => {
     );
   };
 
-  /*
-  const searchControl = (<div className={classes.grow}>
-    <div className={classes.search}>
-      <div className={classes.searchIcon}>
-        <Icon>search</Icon>
-      </div>
-      <InputBase
-        placeholder="Search…"
-        classes={{
-          root: classes.inputRoot,
-          input: classes.inputInput,
-        }}
-        onKeyPress={onSearchTextKeyPress}
-        onChange={setSearchText}
-        value={this.state.searchInput}
-      />
-    </div>
-  </div>);
-        */
-
   const { server } = reactory.$user;
-
   const { isSlow, total } = apiStatus;
-
   const menuItems = Menus();
 
-  //debugger
   let title = reactory.i18n.t(user.applicationName)
 
   return (
     <Fragment>
-      <AppBar position="sticky" color="default" id="reactory_default_app_bar" style={{ visibility: show === true ? 'visible' : 'collapse' }}>
+      <AppBar 
+        position="sticky" 
+        color="inherit" 
+        id="reactory_default_app_bar" 
+        style={{ visibility: show === true ? 'visible' : 'collapse' }}>
         <Toolbar variant="dense">
           <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer} size="large">
             <MenuIcon />
