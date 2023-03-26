@@ -7,6 +7,10 @@ Configuring the Reactory Client involves setting up the connection between the c
 ## Configuration Settings
 The configuration settings listed below are used in deployment of the client app, as well as in running the app using the bin/start.sh or bin/debug.sh command.
 These settings are also used in deployment of the client app.
+
+Your application needs a valid key provided by the REACT_APP_CLIENT_KEY variable and a password in order to connect to the reactory-server. Once it establishes connection it will make an apiStatus call which provides it with the application configuration schema. The application main menu and routing is defined by the ApiStatus results returned from the server.
+
+The ApiStatus is called on interval or when the user triggers a refetch which will affect the application menu and routing in realtime. This means if we remove a user from a certain role, their menu options and routing instructions are updated in real-time. 
 ## Configuration Sample 
 
 Below is a configuration sample for the environment files when running 
@@ -44,6 +48,8 @@ REACT_APP_THEME_BG=#464775
 REACT_APP_WEBROOT=/www/reactory/www/html
 
 # The user account to use to upload the built app to the client
+# this has to be a valid reactory user with SYS_DEVOPS assigned
+# for your app.
 REACT_APP_UPLOAD_BTOA=username:password 
 
 # Disables CI-specific features during build

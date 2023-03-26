@@ -1,55 +1,34 @@
-# Running Reactory Client
-The reactory core server is a node js based server, that can be started by using the commands provided in this folder.
+# Reactory Client Utilities.
+There are several shell scripts you can use with the reactory client. Some are stil experimental.
 
-It is advised to install nvm as your node version manager.
+## start.sh / debug.sh
+The [start](start.sh) script is a Bash script that starts the Reactory Web Client. It takes two optional arguments: the first argument is the name of the Reactory Web Client key (defaulting to "reactory"), and the second argument is the target environment (defaulting to "local").
 
-The server is currently being maintained on Node 10.16.3 and can be run on Windows using the Ubuntu on Windows feature.
+The script starts by printing a message to the console indicating the Reactory Web Client that is being started and the target environment.
 
-Checkout the source code
+The second line of the script runs the env-cmd command, which loads environment variables from a file specified by the -f option. The environment file is located at ./config/env/${1:-reactory}/.env.${2:-local}, which means it looks for a file named .env.local in the ./config/env/reactory/ folder. If the file is not found, it falls back to a default environment file .env.local.
 
-`> git clone git@bitbucket.org:reactory/reactory-server.git`
+After loading the environment variables, the script uses npx babel-node to run the start.ts script with the following options: --presets @babel/env --extensions ".js,.ts" --max_old_space_size=2000000. These options enable the script to use ES6 syntax and increase the memory limit to 2GB.
 
-## Dependencies
-The PDF rendering require some specific configuration and has a requirement on build-essential and libss1-dev and is installed using 
+The last line of the script is commented out, but it is an alternative command that can be used to start the script using Node.js directly. It sets the memory limit to 4GB.
 
+** debug.sh just starts the client with the debugging enabled. This is for debugging the node process, debugging your application you can do using chrome debugger or similar with react-devtools extions enabled.
 
-`> sudo apt-get update`
+## build.sh 
+This script sets the environment variable NODE_PATH to the ./src directory, then runs the command `env-cmd -f ./config/env/${1:-reactory}/.env.${2:-local} node --max_old_space_size=4096 scripts/build.js.` this will create a production build of the application.
 
-`> sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev`
+env-cmd -f sets the environment variables to the ones specified in the .env.${2:-local} file in the ./config/env/${1:-reactory}/ directory.
+node runs the build.js file using Node.js.
+--max_old_space_size=4096 sets the maximum heap size for the Node.js process.
+The :${1:-reactory} and ${2:-local} syntax sets default values of reactory and local respectively if no arguments are passed to the script.
 
-### mongodb
-You need to have a mongodb instance the server can connect to.  MongoDB is currently use via mongoose as the core data storage.  It is however not limited to it and mysql, sqlserver and postgress drivers can be used for storage for custom resolvers and plugins.
+## deploy.sh
+The deploys a specific build of the application to the configured reactory-server backend instance. The server will deploy the client to the folder on the system as provided by the environment variable `REACT_APP_WEBROOT` set in your .env.<target> file. The server does not act as the HTTP proxy for the application and it is advised you configure a static site using nginx.   
+## builddeploy.sh
+Builds and deploys in the same pipeline.
 
-## Install nvm (optional)
-You can install nvm using the curl command below:
+## test.sh
+Runs all unit tests (there aren't many at this stage, we're working on)
 
-`> curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.36.0/install.sh | bash`
-
-Latest releases of nvm can be found on [github](
-https://github.com/nvm-sh/nvm/releases)
-
-## Install Node and NPM
-If you installed nvm you can install node using 
-`> nvm install 10.16.3`
-
-run `> npm install` this will install all the dependencies for the server.
-
-## Development
-To run the application in development mode in your terminal run:
-`> bin/start.sh <key> <environment>` where"key" is the specific environment configuration folder within `<root>/config/<key>/.env.<environment>`
-
-Files matching `<root>/config/*/.env*.local` will be ignored by git by default. 
-
-<b>Note:</b> Do not commit and env files that are used for local use.
-
-_** Running the start command without any parameters will start with 'reactory' and 'local' as the parameters for key and environment._
-
-## Production / Other
-
-Create a user account under which to run the server. 
-
-* `sudo adduser -d /var/reactory -m reactory`
-* `sudo usermod -aG sudo reactory`
-* ensure the reactory user is the 
-* check out the code into the reactory-api folder
-* install pm2 or alternatively use the service definition file to register your service
+## analyze.sh
+Analyzes the built output (experimental)
