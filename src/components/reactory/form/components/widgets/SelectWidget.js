@@ -53,7 +53,8 @@ function SelectWidget(props) {
   const emptyValue = multiple ? [] : "";
   return (
     <select
-      id={id}
+      id={id || props.idSchema.$id}
+      name={props.name || props.idSchema.$id}
       multiple={multiple}
       className="form-control"
       value={typeof value === "undefined" ? emptyValue : value}
@@ -82,7 +83,7 @@ function SelectWidget(props) {
       {enumOptions.map(({ value, label }, i) => {
         const disabled = enumDisabled && enumDisabled.indexOf(value) != -1;
         return (
-          <option key={i} value={value} disabled={disabled}>
+          <option key={i} value={value} disabled={disabled} id={`${props.id || props.idSchema.$id}::${value}`} >
             {label}
           </option>
         );

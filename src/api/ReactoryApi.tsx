@@ -1,18 +1,27 @@
 import React from "react";
+
+import i18next, { i18n } from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+
 import ReactDOM from 'react-dom';
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
 import inspector from 'schema-inspector';
-import uuid from 'uuid';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { v4 as uuid } from 'uuid';
+import classNames from 'classnames';
+import { BrowserRouter as Router, } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql, Resolvers } from 'apollo-client-preset';
-import { ApolloProvider } from 'react-apollo';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import { ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
-import { intersection, isArray, isEmpty, isNil, template } from 'lodash';
+import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions, MutationResult, FetchResult } from '@apollo/client';
+import localForage from 'localforage';
+
+import { CssBaseline } from '@mui/material';
+import { ThemeProvider as MuiThemeProvider } from '@mui/styles';
+
+import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
+
 import {
   attachComponent,
   getAvatar,
@@ -20,22 +29,31 @@ import {
   getUserFullName,
   ThemeResource,
   injectResources,
-  omitDeep
+  omitDeep,
+  makeSlug,
+  deepEquals,
+  CDNResource,
+  isEmail,
+  isValidPassword,
+  nil,
+  nilStr,
 } from '../components/util';
+
 import amq from '../amq';
 import * as RestApi from './RestApi';
 import GraphQL from '@reactory/client-core/api/graphql';
-import { Typography } from "@material-ui/core";
+import { Theme, Typography } from "@mui/material";
 import icons from '../assets/icons';
-import queryString from '../query-string';
+import * as queryString from '../components/utility/query-string';
 import humanNumber from 'human-number';
 import humanDate from 'human-date';
-import ApiProvider, { withApi } from './ApiProvider';
+import { withReactory, ReactoryProvider } from './ApiProvider';
+import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
+import Reactory from '@reactory/reactory-core';
 
-import Reactory from '../types/reactory';
-
-
+import { cloneDeep } from "@apollo/client/utilities";
+import { ReactoryForm } from "../components/reactory";
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -54,21 +72,6 @@ const pluginDefinitionValid = (definition) => {
   return pass.nameSpace && pass.name && pass.component && pass.version;
 };
 
-export const storageKeys = {
-  LoggedInUser: 'loggedInUser',
-  AuthToken: 'auth_token',
-  LastLoggedInEmail: '$reactory$last_logged_in_user',
-  viewContext: '$rectory$viewContext',
-};
-
-export const anonUser = {
-  id: '',
-  firstName: '',
-  lastName: '',
-  avatar: '',
-  anon: true,
-  roles: ['ANON']
-};
 
 export const ReactoryApiEventNames = {
   onLogout: 'loggedOut',
@@ -77,6 +80,9 @@ export const ReactoryApiEventNames = {
   onApiStatusUpdate: 'onApiStatusUpdate',
   onRouteChanged: 'onRouteChanged',
   onShowNotification: 'onShowNotification',
+  onThemeChanged: 'onThemeChanged',
+  onHideMenu: 'onHideMenu',
+  onShowMenu: 'onShowMenu'
 };
 
 export const EmptyComponent = (fqn) => {
@@ -94,8 +100,48 @@ export const reactoryDomNode = () => {
   return domNode;
 }
 
+/**
+ * This function allows you to pass in a templated object definition.
+ * The function iterates over every propery of the object and then
+ * checks the value of that property.
+ *
+ * If the property is a string, we check for a template pattern ${...}
+ * and then parse the template against the input propety bag data.
+ * @param templateObject
+ * @param props
+ */
+export function parseTemplateObject(templateObject: Object, props: any): any {
 
-export const componentPartsFromFqn = (fqn) => {
+  if (templateObject === null || templateObject === undefined) return null;
+
+  let _$ret: any = {};
+
+  Object.keys(templateObject).forEach((ep) => {
+    let toep = typeof templateObject[ep];
+    switch (toep) {
+      case "string": {
+        if (templateObject[ep].indexOf("${") >= 0) {
+          _$ret[ep] = template(templateObject[ep])(props);
+        } else {
+          _$ret[ep] = templateObject[ep];
+        }
+        break;
+      }
+      case "object": {
+        _$ret[ep] = parseTemplateObject(templateObject[ep], props);
+        break;
+      }
+      default: {
+        _$ret[ep] = templateObject[ep];
+      }
+    }
+  });
+
+  return _$ret;
+}
+
+
+export const componentPartsFromFqn = (fqn: string) => {
   if (typeof fqn === 'string' && fqn.length > 0) {
     if (fqn.indexOf('.') >= 1) {
       let _fqn = fqn;
@@ -115,8 +161,27 @@ export const componentPartsFromFqn = (fqn) => {
 
       const nameParts = _fqn.split('.')
 
-      componentMeta.nameSpace = nameParts[0];
-      componentMeta.name = nameParts[1];
+      if (nameParts.length === 2) {
+        componentMeta.nameSpace = nameParts[0];
+        componentMeta.name = nameParts[1];
+      }
+
+      if (nameParts.length === 1) {
+        componentMeta.nameSpace = '__runtime__';
+        componentMeta.name = nameParts[0];
+      }
+
+      if (nameParts.length > 2) {
+        componentMeta.name = nameParts[nameParts.length];
+        for (let p: number = 0; p < nameParts.length - 1; p += 1) {
+          if (p === nameParts.length - 1) {
+            componentMeta.nameSpace += nameParts[p]
+          } else {
+            componentMeta.nameSpace += `${nameParts[p]}.`
+          }
+        }
+      }
+
 
       return componentMeta;
 
@@ -124,36 +189,141 @@ export const componentPartsFromFqn = (fqn) => {
   }
   throw new Error('Component FQN not valid, must have at least nameSpace.name with version being options i.e. nameSpace.name@version')
 }
-export interface ReactoryApiUtils {
-  omitDeep: Function,
-  queryString: Function,
-  hashCode: Function,
-  injectResources: Function,
-  componentFqn: Function,  
-  pluginDefinitionValid: Function,
-  moment: Function,
-  objectMapper: Function,
-  template : Function,
-  humanNumber: Function,
-  inspector: Function,
-  gql: Function,
-  humanDate: Function
+
+
+export interface WindowSizeSpec {
+  innerHeight: number,
+  innerWidth: number,
+  outerHeight: number,
+  outerWidth: number,
+  view: string,
+  resolution: {
+    height: number,
+    width: number,
+  },
+  ratio: number,
+  size: string
 }
 
-class ReactoryApi extends EventEmitter {
-  $user: any;
+interface ReactoryTheme extends Theme {
+  [key: string]: any
+}
 
+
+
+const FORM_QUERY_SEGMENTS = {
+  FORM_CORE_ELEMENTS: `
+    id
+    uiFramework
+    uiSupport
+    registerAsComponent
+    title
+    tags
+    display
+    name
+    nameSpace
+    description
+    version
+    className
+    style
+    helpTopics
+    defaultUiSchemaKey
+    defaultFormValue
+    roles
+  `,
+  FORM_SCHEMAS: `
+    schema
+    uiSchema
+    sanitizeSchema
+    modules {
+      id
+      src
+      url
+      signed
+      signature
+      compiler
+      compilerOptions
+      roles
+    }
+    uiResources {
+      id
+      name
+      type
+      required
+      expr
+      uri
+    }
+    uiSchemas {
+      id
+      title
+      key
+      description
+      icon
+      graphql {
+        query
+        mutation
+        queries
+        clientResolvers
+      }
+      uiSchema
+      modes
+    }
+    graphql {
+      query
+      mutation
+      queries
+      clientResolvers
+    }
+  `,
+  ADDITIONAL: `
+    components  
+    defaultPdfReport
+    defaultExport
+    exports
+    reports    
+    refresh
+    widgetMap {
+      componentFqn
+      component
+      widget
+    }
+    backButton
+    workflow
+    noHtml5Validate
+    formContext
+    eventBubbles {
+      eventName
+      action
+      functionFqn
+    }
+    componentDefs
+    queryStringMap
+    dependencies {
+      fqn
+      props
+      propsMap
+      componentType
+    }
+  `
+}
+
+class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
+
+  $windowSize: WindowSizeSpec = null;
+  $user: any;
   history: any;
+  params: any;
   queries: any;
   mutations: any;
   props: Object;
-  componentRegister: Object;
-  client: ApolloClient<any>;
-  login: Function = null;
+  componentRegister: Reactory.Client.IReactoryComponentRegister;
+  //@ts-ignore
+  client: ApolloClient<NormalizedCacheObject>;
+  login: (username: string, password: string) => Promise<Reactory.Client.ILoginResult>;
   register: Function = null;
   reset: Function = null;
   forgot: Function = null;
-  utils: ReactoryApiUtils = null;
+  utils: Reactory.Client.IReactoryApiUtils = null;
   companyWithId: Function = null;
   $func: Object;
   rest: Object = null;
@@ -163,16 +333,16 @@ class ReactoryApi extends EventEmitter {
   getAvatar: Function;
   getOrganizationLogo: Function;
   getUserFullName: Function;
-  getThemeResource: Function;  
+  getThemeResource: (path?: string) => string;
+  getCDNResource: (path: string) => string;
   CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
   CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
-  formSchemas: Reactory.IReactoryForm[]
+  formSchemas: Reactory.Forms.IReactoryForm[]
   formValidationMaps: any;
   formTranslationMaps: any;
   formSchemaLastFetch: moment.Moment = null;
-
   assets: Object = null;
   amq: any = null;
   statistics: any = null;
@@ -185,21 +355,19 @@ class ReactoryApi extends EventEmitter {
   queryObject: any;
   queryString: any;
   objectToQueryString: Function;
-
+  clearCache: () => void;
+  ws_link: any;
+  $development_mode: boolean = false;
+  __uuid: string;
+  React: typeof React;
+  i18n: i18n = i18next;
 
   constructor(props) {
     super();
 
-    const {
-      client,
-      ws_link
-    } = ReactoryApolloClient();
-
     this.history = null;
     this.props = props;
     this.componentRegister = {};
-    this.client = client;
-    //this.$ws_link = ws_link;
     this.queries = GraphQL.queries;
     this.mutations = GraphQL.mutations;
     this.login = RestApi.login.bind(this);
@@ -208,10 +376,13 @@ class ReactoryApi extends EventEmitter {
     this.reset = RestApi.reset;
     this.forgot = RestApi.forgot;
     this.forms = this.forms.bind(this);
+    this.form = this.form.bind(this);
+    this.React = React;
+
     this.utils = {
       omitDeep,
       queryString,
-      hashCode: (inputString) => {
+      hashCode: (inputString: string) => {
         let i = 0;
         let h = 0;
         for (i < inputString.length; i += 1;) {
@@ -221,8 +392,12 @@ class ReactoryApi extends EventEmitter {
       },
       injectResources,
       componentFqn,
+      componentPartsFromFqn,
       //componentDefinitionFromFqn,
       pluginDefinitionValid,
+      nil,
+      nilStr,
+      lodash,
       moment,
       objectMapper,
       template,
@@ -230,6 +405,24 @@ class ReactoryApi extends EventEmitter {
       inspector,
       gql,
       humanDate,
+      slugify: makeSlug,
+      deepEquals,
+      templateObject: parseTemplateObject,
+      classNames,
+      uuid,
+      collectData: (forms: any[], shape: any) => {
+        let data = forms.map((reactoryForm) => {
+          if (reactoryForm.formRef && reactoryForm.formRef.current) {
+            return reactoryForm.formRef.current.state.formData
+          }
+        });
+
+        if (shape) return objectMapper(data, shape);
+        return data;
+      },
+      localForage,
+      isEmail,
+      isValidPassword
     };
     this.$func = {
       'core.NullFunction': (params) => {
@@ -292,7 +485,7 @@ class ReactoryApi extends EventEmitter {
     this.getUserLoginCredentials = this.getUserLoginCredentials.bind(this);
     this.setAuthToken = this.setAuthToken.bind(this);
     this.getAuthToken = this.getAuthToken.bind(this);
-    
+
     this.assets = {
       logo: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/logo.png`,
       avatar: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/avatar.png`,
@@ -320,38 +513,198 @@ class ReactoryApi extends EventEmitter {
       this.emit(ReactoryApiEventNames.onPluginLoaded, data);
     });
     this.flushIntervalTimer = setInterval(this.flushstats.bind(this, true), 5000);
-    // this.statusIntervalTime = setInterval(this.status.bind(this), 30000);
-    this.status();
     this.__REACTORYAPI = true;
     this.goto = this.goto.bind(this);
     this.createNotification = this.createNotification.bind(this);
     this.getThemeResource = ThemeResource;
+    this.getCDNResource = CDNResource;
     this.getUser = this.getUser.bind(this);
     this.extendClientResolver = this.extendClientResolver.bind(this);
     this.setFormTranslationMaps = this.setFormTranslationMaps.bind(this);
     this.setFormValidationMaps = this.setFormValidationMaps.bind(this);
+    this.clearStoreAndCache = this.clearStoreAndCache.bind(this);
+    this.init = this.init.bind(this);
+    this.getSizeSpec = this.getSizeSpec.bind(this);
+    this.getThemeMode = this.getThemeMode.bind(this);
+    this.isDevelopmentMode = this.isDevelopmentMode.bind(this);
+    this.setDevelopmentMode = this.setDevelopmentMode.bind(this);
+    this.hydrate = this.hydrate.bind(this);
+    this.__uuid = localStorage.getItem("$reactory_instance_id$");
+    if (this.__uuid === null) {
+      this.__uuid = uuid();
+      localStorage.setItem("$reactory_instance_id$", this.__uuid);
+    }
+    //this.status();
   }
 
-  setFormTranslationMaps(maps: any){
-    this.formTranslationMaps = { ...this.formTranslationMaps, ...maps };
+  async init() {
+    const {
+      client,
+      ws_link,
+      clearCache
+    } = await ReactoryApolloClient();
+
+    this.clearCache = clearCache;
+    this.client = client;
+    this.ws_link = ws_link;
+
+    await this.hydrate();
+    await this.initi18n();
   }
 
-  setFormValidationMaps(maps: any){
-    this.formValidationMaps = { ...this.formValidationMaps, ...maps };
+  /**
+   * hydrate function is called to load variables from local storage that we want to 
+   * have set in the SDK between sessions.
+   */
+  async hydrate() {
+    this.$development_mode = await localForage.getItem<boolean>(storageKeys.developmentMode).then();
   }
-  
-  extendClientResolver( resolvers: Resolvers) {
-    const { client } = this;
-    if(client && resolvers) {       
-      client.addResolvers(resolvers);      
+
+
+  async initi18n() {
+
+    const TRANSLATIONS = `
+       query ReactoryTranslation($lang: String) {
+        ReactoryTranslation(lang: $lang) {
+          id
+          i18n {
+            id
+            ns
+            translations
+          }          
+        }
+      }
+    `;
+
+    const { data, error }: QueryResult = await this.graphqlQuery(TRANSLATIONS, {}).then()
+
+    let $resources: any = {};
+
+
+    if (data && data.ReactoryTranslation) {
+      const { i18n, id } = data.ReactoryTranslation;
+      if (i18n && lodash.isArray(i18n) === true) {
+        $resources[id] = {};
+        i18n.forEach((e) => {
+          if (e && e.translations && e.ns) {
+            if (!$resources[id][e.ns] && e.translations) {
+              $resources[id][e.ns] = { ...e.translations };
+            }
+          }
+        });
+      }
+
+      await i18next
+        .use(LanguageDetector)
+        .use(initReactI18next)
+        .init({
+          debug: true,
+          lng: id,
+          fallbackLng: 'en-US',
+          interpolation: {
+            escapeValue: false
+          },
+          resources: $resources
+        }).then();
+
+      this.i18n = i18next;
     }
   }
 
-  createNotification(title: string, options: NotificationOptions | any = {} ){
-    this.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
+  clearStoreAndCache() {
+    if (this.client) this.client.resetStore();
+    if (this.clearCache) this.clearCache();
+  }
 
-    if (options.showInAppNotification) {
-      this.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: options.props });
+  getThemeMode() {
+    return localStorage.getItem("$reactory$theme_mode") || "light";
+  }
+
+  getSizeSpec() {
+    let size = '??';
+
+    const {
+      innerHeight,
+      outerHeight,
+      innerWidth,
+      outerWidth,
+      screen
+    } = window;
+
+    const theme: ReactoryTheme = this.muiTheme;
+    //theme.breakpoints.values.lg
+
+    let view = 'landscape';
+
+    if (window.innerHeight > window.innerWidth) {
+      view = 'portrait';
+    }
+
+    let size_spec: any = {
+      innerHeight,
+      innerWidth,
+      outerHeight,
+      outerWidth,
+      resolution: {
+        width: screen.width * window.devicePixelRatio,
+        height: screen.height * window.devicePixelRatio
+      },
+      ratio: window.devicePixelRatio,
+      view,
+      size
+    }
+
+    let _breakpoints = { xs: 0, sm: 600, md: 960, lg: 1280, xl: 1920 }
+
+
+    if (theme && theme.breakpoints) {
+      _breakpoints = theme.breakpoints.values;
+    }
+
+    if (innerWidth >= _breakpoints.xl) size = 'xl';
+    if (innerWidth < _breakpoints.xl && innerWidth >= _breakpoints.lg) size = 'lg';
+    if (innerWidth < _breakpoints.lg && innerWidth >= _breakpoints.md) size = 'md';
+    if (innerWidth < _breakpoints.md && innerWidth >= _breakpoints.sm) size = 'sm';
+    if (innerWidth < _breakpoints.sm && innerWidth >= _breakpoints.xs) size = 'xs';
+
+    size_spec.size = size;
+    return size_spec;
+  };
+
+  setFormTranslationMaps(maps: any) {
+    this.formTranslationMaps = { ...this.formTranslationMaps, ...maps };
+  }
+
+  setFormValidationMaps(maps: any) {
+    this.formValidationMaps = { ...this.formValidationMaps, ...maps };
+  }
+
+  extendClientResolver(resolvers: Resolvers) {
+    const { client } = this;
+    if (client && resolvers) {
+      client.addResolvers(resolvers);
+    }
+  }
+
+  createNotification(title: string, options: NotificationOptions | any = {}) {
+    const that = this;
+    that.log('_____ CREATE NOTIFICATION ______', { title, options }, 'debug');
+    let defaultNotificationProps = {
+      title,
+      type: options.type || "info",
+      showInAppNotification: true,
+      config: {
+        canDismiss: true,
+        timeOut: 2500,
+      }
+    }
+
+    if (options.props) {
+      defaultNotificationProps.config = { ...defaultNotificationProps.config, ...options.config }
+    }
+
+    if (options.showInAppNotification !== false) {
+      that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: { ...options.config, ...options.props } });
       return;
     }
 
@@ -365,43 +718,44 @@ class ReactoryApi extends EventEmitter {
     const checkNotificationPromise = () => {
       try {
         Notification.requestPermission().then();
-      } catch(e) {
+      } catch (e) {
         return false;
       }
       return true;
     }
 
     const requestPermission = () => {
-      if(checkNotificationPromise() === true) {
+      if (checkNotificationPromise() === true) {
         Notification.requestPermission()
-        .then((permission) => {
-          if(permission === "granted") {
-            this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
-          }
-        })
+          .then((permission) => {
+            if (permission === "granted") {
+              that.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
+            }
+          })
       } else {
-        Notification.requestPermission(function(permission) {
-          if(permission === "granted") {
-            this.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
+        Notification.requestPermission(function (permission) {
+          if (permission === "granted") {
+            that.createNotification(title, { ...defaultNotificationProperties, ...options, body: options.text || "" });
           }
         });
       }
     };
 
-    if(window && window.Notification) {
+    if (window && window.Notification) {
 
-      switch(Notification.permission)
-      {
+      switch (Notification.permission) {
         case "denied": {
           //denied notificaitons, use fallback
-          this.amq.raiseFormCommand("reactory.core.display.notification",
-          {
-            title: title,
-            options: {
-              ...defaultNotificationProperties,
-              ...options
-            }
-          });
+          // this.amq.raiseFormCommand("reactory.core.display.notification",
+          //   {
+          //     title: title,
+          //     options: {
+          //       ...defaultNotificationProperties,
+          //       ...options
+          //     }
+          //   });
+          // return;
+          that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: options.props });
           return;
         }
         case "granted": {
@@ -421,18 +775,19 @@ class ReactoryApi extends EventEmitter {
   }
 
   goto(where = "/", state = { __t: new Date().valueOf() }) {
-    if (this.history && this.history) {
-      this.history.replace({ pathname: where, state });
-      this.emit(ReactoryApiEventNames.onRouteChanged, { path: where, state, where });
-    }
+
+    // if (this.history && this.history) {
+    //   this.history.replace({ pathname: where, state });
+    //   this.emit(ReactoryApiEventNames.onRouteChanged, { path: where, state, where });
+    // }
   }
 
-  registerFunction(fqn, functionReference, requiresApi = false) {
-    this.log(`Registering function ${fqn}`, [functionReference, requiresApi], 'debug');
+  registerFunction(fqn, functionReference, requiresApi = false, signature = '< signature-not-set />') {
+    this.log(`${signature} Registering function ${fqn}`, [functionReference, requiresApi], 'debug');
     if (typeof functionReference === 'function') {
       if (requiresApi === true) {
         this.$func[fqn] = (props) => {
-          functionReference({ ...props, api: this });
+          return functionReference({ ...props, api: this, reactory: this });
         };
       } else {
         this.$func[fqn] = functionReference;
@@ -441,6 +796,8 @@ class ReactoryApi extends EventEmitter {
   };
 
   log(message, params: any = [], kind = 'log', formatting = "") {
+
+
     try {
       switch (kind) {
         case 'log':
@@ -449,7 +806,7 @@ class ReactoryApi extends EventEmitter {
           break;
         case 'error':
           formatting = "color: red; font-weight: bold;"
-          break;        
+          break;
         case 'warn':
           {
             formatting = "color: yellow, font-weight: bold;"
@@ -467,8 +824,8 @@ class ReactoryApi extends EventEmitter {
           break;
         }
       }
-      const dolog = () => params && params.length === 0 ? console[kind](`%cReactory::${message}`, formatting) : console[kind](`%cReactory::${message}`, formatting, params);
-      if (process.env.NODE_ENV !== 'production') {
+      const dolog = () => params && params.length === 0 || Object.keys(params).length === 0 ? console[kind](`%cReactory::${message}`, formatting) : console[kind](`%cReactory::${message}`, formatting, params);
+      if (process.env.NODE_ENV !== 'production' && window.console) {
         dolog();
       } else {
         //if it is production, we can enable / disable the log level by inspecting window.reactory object
@@ -477,7 +834,8 @@ class ReactoryApi extends EventEmitter {
         }
       }
     } catch (err) {
-      console.error(err);
+      // do nothing, it could be that we have a problem with console
+      // console.error(err);
     }
   }
 
@@ -522,64 +880,118 @@ class ReactoryApi extends EventEmitter {
   };
 
   stat(key, statistic) {
-    if (this.statistics.items[key]) {
-      this.statistics.items[key] = { ...this.statistics.item[key], ...statistic };
-      this.statistics.__keys.push(key);
-    } else {
-      this.statistics.items[key] = statistic;
+
+    try {
+      if (this.statistics && this.statistics.items && this.statistics.items[key]) {
+        this.statistics.items[key] = { ...this.statistics.items[key], ...statistic };
+      } else {
+
+        this.statistics.items[key] = statistic;
+        this.statistics.__keys.push(key);
+      }
+      this.statistics.__delta += 1;
+    } catch (statisticsCollectionError) {
+      this.log(`Error capturing statistic`, { key, statistic, statisticsCollectionError }, 'error');
     }
-    this.statistics.__delta += 1;
+
   };
 
   trackFormInstance(formInstance) {
     const self = this;
     self.log('ApiProvider.trackingFormInstance(formInstance)', [formInstance], 'debug');
-    this.__form_instances[formInstance.state._instance_id] = formInstance;
+    this.__form_instances[formInstance.instance_id] = formInstance;
     formInstance.on('componentWillUnmount', (instance) => {
       self.log('ApiProvider.trackingFormInstance(formInstance).on("componentWillUnmount")', [formInstance], 'debug');
       delete self.__form_instances[formInstance.state._instance_id];
     });
   }
 
-  graphqlMutation(mutation, variables, options: any = { fetchPolicy: "network-only" }) {
+  graphqlMutation<T, V>(mutation,
+    variables: V,
+    options: any = { fetchPolicy: "no-cache", refresh: false },
+    refetchQueries = []): Promise<FetchResult<T>> {
     const that = this;
-    if (typeof mutation === 'string')
-      mutation = gql(mutation);
+    let $mutation = null;
+    if (typeof mutation === 'string') {
+      try {
+        $mutation = gql(mutation);
+      } catch (gqlError) {
+        that.log(`Error occurred while creating the mutation document from input`, { mutation }, 'error');
+      }
+    } else $mutation = mutation;
+
     return new Promise((resolve, reject) => {
-      that.client.mutate({ mutation: mutation, variables, fetchPolicy: "no-cache" }).then((result) => {
+      let mutation_options: MutationOptions<any, any> = { mutation: $mutation, variables };
+      mutation_options.refetchQueries = refetchQueries;
+      that.client.mutate<T>(mutation_options).then((result) => {
         resolve(result);
       }).catch((clientErr) => {
+        that.log(`Error occured executing the mutation: ${clientErr.message}`, { $mutation, clientErr }, 'error')
         reject(clientErr);
       });
     });
   }
 
-  graphqlQuery(query, 
-    variables, 
-    options: any = { fetchPolicy: 'network-only' }, 
-    queryDefinition: Reactory.IReactoryFormQuery = null) {
-    
+  graphqlQuery<T, V>(query,
+    variables: V,
+    options: any = { fetchPolicy: 'network-only' },
+    queryDefinition: Reactory.Forms.IReactoryFormQuery = null): Promise<ApolloQueryResult<T>> {
+
     const that = this;
-    
-    if (typeof query === 'string')
-      query = gql(query);
+
+    let $query = null;
+    if (typeof query === 'string') {
+      try {
+        $query = gql(query);
+      } catch (gqlError) {
+        that.log(`Error occurred while creating the query document from input`, { query, gqlError }, 'error');
+        that.createNotification('🚨 GRAPHQL ERROR IN QUERY CHECK LOG FOR DETAILS - Test the query in the Developer tools', { type: 'warning', canDismiss: true, timeout: 4000, showInAppNotification: true });
+      }
+    } else $query = query;
+
     return new Promise((resolve, reject) => {
-      that.client.query({ query, variables, fetchPolicy: options.fetchPolicy || "network-only" }).then((result) => {
+      that.client.query<T, V>({
+        query: $query,
+        variables,
+        fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
+      }).then((result: ApolloQueryResult<T>) => {
+        const { errors = [], data } = result;
+        if (errors.length > 0) {
+          errors.forEach((error) => {
+            if (error) {
+              const { extensions, path = [] } = error;
+              if (extensions) {
+                const { code, exception } = extensions;
+                if (code === 'INTERNAL_SERVER_ERROR') {
+                  //we know for certain the server had an unhandled error in the resolver chain.
+                  //the client may not cater for these errors, so we can by default warn the user
+                  //that the server reported an error - we should log and report the error
+                  //to the server side error reporting and tracing.
+                  that.log(`🚨 Server reported an internal error. This is should not occur, all errors need to be gracefully handled, with support info`, { error, variables, options, query, queryDefinition }, 'error');
+                  // that.createNotification(`The query at path ${path.map(p => `${p}:`)} has encountered a server error. The administrators have been notified.`, { type: 'error', showInAppNotification: true, timeout: 4500 });
+                }
+              }
+            }
+          });
+        }
         resolve(result);
       }).catch((clientErr) => {
-        resolve({ data: null, loading: false, errors: [clientErr] });
+        that.log(`Error occurred while executing the query ${clientErr.message}`, { query, clientErr }, 'error');
+        reject(clientErr)
+        // resolve({ data: null, loading: false, errors: [clientErr] });
       });
     });
   }
 
-  afterLogin(user) {
+  async afterLogin(loginResult: Reactory.Client.ILoginResult): Promise<Reactory.Models.IApiStatus> {
     //this.setUser(user);
-    this.setAuthToken(user.token);
-    const { client, ws_link } = ReactoryApolloClient();
+    this.setAuthToken(loginResult.user.token);
+    const { client, ws_link, clearCache } = await ReactoryApolloClient();
     this.client = client;
+    this.clearCache = clearCache;
     //this.$ws_link = ws_link;
     //this.forms(true).then();
-    return this.status({ emitLogin: true });
+    return this.status({ emitLogin: true, forceLogout: true });
   }
 
   loadComponent(Component, props, target) {
@@ -593,17 +1005,20 @@ class ReactoryApi extends EventEmitter {
     this.loadComponent(Component, props, target);
   }
 
-  renderForm(componentView) {
+  renderForm(componentView, wrap: boolean = true) {
     const that = this;
+
+    if (wrap === false) return (<React.Fragment>{componentView}</React.Fragment>)
+
     return (<React.Fragment>
       <CssBaseline />
       <Provider store={that.reduxStore}>
         <ApolloProvider client={that.client}>
           <MuiThemeProvider theme={that.muiTheme}>
             <Router>
-              <ApiProvider api={that} history={this.history}>
+              <ReactoryProvider reactory={that}>
                 {componentView}
-              </ApiProvider>
+              </ReactoryProvider>
             </Router>
           </MuiThemeProvider>
         </ApolloProvider>
@@ -611,35 +1026,96 @@ class ReactoryApi extends EventEmitter {
     </React.Fragment>);
   }
 
+
+  /**
+   * Function call to render a reactory form component.
+   * @param form 
+   */
+  reactoryForm(form: Reactory.Forms.IReactoryForm): React.ReactElement {
+    return <ReactoryForm formDef={form} />
+  }
+
+  /**
+   * The forms function is executed when the application starts up and 
+   * can be called from any component that has the reactory property injected
+   * via the component registed..
+   * @param bypassCache - if true it will always bypass the cache and and fetch the latest list from 
+   * the server.
+   * @returns - Promise that contains the formSchemas for the user logged in user.
+   */
   forms(bypassCache: boolean = false) {
     const that = this;
     return new Promise((resolve) => {
-
       const refresh = () => {
-        RestApi.forms().then((formsResult) => {
-          that.formSchemas = formsResult;
+
+        const FORMS_QUERY = `
+        query ReactoryForms {
+          ReactoryForms {
+            ${FORM_QUERY_SEGMENTS.FORM_CORE_ELEMENTS}          
+          }
+        }
+        `;
+
+
+        const tempSchema = {
+          schema: {
+            type: 'string',
+            title: ''
+          },
+          uiSchema: {
+            'ui:widget': 'HiddenWidget',
+            'ui:options': {
+              showSubmit: false,
+              style: {
+                display: 'none',
+                height: '0px',
+              }
+            },
+          },
+        }
+
+        that.graphqlQuery<any, any>(FORMS_QUERY, {}, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
+          const { ReactoryForms } = data;
           const ReactoryFormComponent = that.getComponent('core.ReactoryForm');
-          formsResult.forEach((formDef) => {
-            if (formDef.registerAsComponent) {
-              const FormComponent = (props, context) => {
-                return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={props.key || 0}
-                  onSubmit={props.onSubmit} onChange={props.onChange}
-                  formData={formDef.defaultFormData || props.formData || props.data}
-                  before={props.before}
-                  {...props}
-                  context={context}
+
+          if (ReactoryForms && ReactoryForms.length > 0) {
+            that.formSchemas = [];
+            ReactoryForms.forEach(($formDef: Reactory.Forms.IReactoryForm, formDefIndex) => {
+
+              const formDef = { ...$formDef, ...tempSchema };
+              that.formSchemas.push(formDef);
+              // A form must explicitly be set to false 
+              // to not register as a component.
+              if (formDef.registerAsComponent !== false) {
+                const FormComponent = (props: any, context: any) => {
+                  return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={`${formDefIndex}`}
+                    onSubmit={props.onSubmit} onChange={props.onChange}
+                    formData={formDef.defaultFormValue || props.formData || props.data}
+                    before={props.before}
+                    {...props}
+                    context={context}
                   >{props.children}
-                </ReactoryFormComponent>);
-              };
-              that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent);
-            }
-          });
-          that.formSchemaLastFetch = moment();
-          resolve(formsResult);
-        }).catch((error) => {
-          that.log('Error loading forms from api', error, 'error');
+                  </ReactoryFormComponent>, formDef.wrap === true);
+                };
+                that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent, formDef.tags, formDef.roles, true, [], 'form');
+              }
+            });
+            that.formSchemaLastFetch = moment();
+            resolve(ReactoryForms);
+          }
+
+          if (errors.length > 0) {
+            errors.forEach((err, erridx) => {
+              that.log(`GraphQL ReactoryForms result error #${erridx}`, { err }, 'error');
+            })
+          }
+
+        }).catch((err) => {
+          that.log('🚨 Unabled to process query', err, 'error');
           resolve([]);
         });
+
+
       };
 
       if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined && bypassCache === false) {
@@ -651,6 +1127,53 @@ class ReactoryApi extends EventEmitter {
         }
       } else refresh();
     });
+  }
+
+  /**
+   * Returns a form with the specific id.
+   * @param id - string id.
+   * @returns 
+   */
+  form(id: string, onFormUpdated: (formDef: Reactory.Forms.IReactoryForm, error?: Error) => void = null) {
+    const that = this;
+    const { formSchemas = [] } = this;
+
+    if (formSchemas.length === 0) return undefined;
+
+
+    let $formDef = lodash.find(formSchemas, { id });
+
+    if (!$formDef) return null;
+
+    const FORM_QUERY = `
+    query ReactoryFormGetById($id: String!) {
+      ReactoryFormGetById(id: $id) {
+        ${FORM_QUERY_SEGMENTS.FORM_CORE_ELEMENTS}
+        ${FORM_QUERY_SEGMENTS.FORM_SCHEMAS}        
+        ${FORM_QUERY_SEGMENTS.ADDITIONAL}
+      }
+    }`;
+
+    if (!$formDef.__complete__) {
+      that.graphqlQuery<any, any>(FORM_QUERY, { id }, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
+        if (data && data.ReactoryFormGetById) {
+          let index = lodash.findIndex(this.formSchemas, { id });
+
+          that.formSchemas[index] = { ...data.ReactoryFormGetById, __complete__: true };
+
+          if (onFormUpdated) {
+            onFormUpdated(that.formSchemas[index], null);
+          }
+
+          that.emit(`onReactoryFormDefinitionUpdate::${id}`, that.formSchemas[index]);
+        }
+      }).catch((err) => {
+        onFormUpdated(null, err);
+        that.log('Could not get the form component data', { err }, 'error', "ReatoryApi")
+      });
+    }
+
+    return $formDef;
   }
 
   async raiseFormCommand(commandId, commandDef, formProps) {
@@ -693,7 +1216,7 @@ class ReactoryApi extends EventEmitter {
 
             self.log(`______ MUTATION NOTIFICATION _______`);
 
-            const resultMap = commandDef.graphql.mutation.resultMap || {'*': '*'};
+            const resultMap = commandDef.graphql.mutation.resultMap || { '*': '*' };
             let notificationProperties = {
               ...(commandDef.graphql.mutation.notificationProperties || {}),
               ...(objectMapper(mutationResult, resultMap))
@@ -743,15 +1266,62 @@ class ReactoryApi extends EventEmitter {
     this.amq.onFormCommandEvent(commandId, func);
   }
 
-  hasRole(itemRoles = [], userRoles = null) {
+  /**
+   * Checks if there is an overlap between the item roles and the user roles. 
+   * @param itemRoles - A string[] that represents the allowed roles for the item we want to check. 
+   * @param userRoles - The user roles as a string[] that we are checking against.  When no roles are provided the logged in account roles are used.
+   * @param organization - Provide a organization if the membership should be checked for a specific organization 
+   * @param business_unit - Provide a businessUnit item if the membership should be check for access to a specific business unit
+   * @param user_memberships - Provide a memberships[] array to check
+   * @returns 
+   */
+  hasRole(itemRoles = [], userRoles = null, organization?: Reactory.Models.IOrganization, business_unit?: Reactory.Models.IBusinessUnit, user_memberships?: Reactory.Models.IMembership[]) {
     let comparedRoles = userRoles || [];
 
     if (itemRoles.length === 1 && itemRoles[0] === '*')
       return true;
 
-      if (userRoles === null) {
+    if (userRoles === null) {
       const loggedInUser = this.getUser();
-      comparedRoles = loggedInUser.roles;
+
+      if (organization === null || organization === undefined) {
+        comparedRoles = loggedInUser.roles;
+      } else {
+        //if there is a organization_id, we check if there is a membership that has the organization id
+        let $memberships = user_memberships || loggedInUser.memberships;
+        if ($memberships && $memberships.length > 0) {
+          const matched_memberships: Reactory.Models.IMembership[] = lodash.filter($memberships, (membership: Reactory.Models.IMembership) => {
+
+            if (!membership.organization) return false;
+
+            if (membership.organization.id === organization.id) {
+              //if the business unit parameter is null, we only care about the organization role.
+              //but if the membership we are checking against does have a business unit, we should
+              //not use it as a comparable, so we only return true if the membership businessUnit is null.
+              if ((business_unit === null || business_unit === undefined) && membership.businessUnit === null) return true;
+
+              //we comapre the business units if there is one of either element
+              if (business_unit && business_unit.id && membership.businessUnit) {
+                return business_unit.id === membership.businessUnit.id;
+              }
+              //not enough information for us to determine there is a match,
+              //so return false.
+              return false;
+            }
+          });
+
+          if (matched_memberships.length > 0) {
+            comparedRoles = [];
+            matched_memberships.forEach((membership: Reactory.Models.IMembership) => {
+              if (membership.roles) {
+                comparedRoles.push(...membership.roles);
+              }
+            });
+            //create a unique list of the roles.
+            comparedRoles = lodash.uniq(comparedRoles);
+          }
+        }
+      }
     }
 
     const result = intersection(itemRoles, comparedRoles);
@@ -759,7 +1329,7 @@ class ReactoryApi extends EventEmitter {
   }
 
   isAnon() {
-    return this.hasRole(['ANON']) === true;
+    return this.hasRole(['ANON'], this.$user.roles) === true;
   }
 
   addRole(user, organization, role = 'USER') {
@@ -777,15 +1347,26 @@ class ReactoryApi extends EventEmitter {
   }
 
   getTheme() {
-    const user = this.getUser();
-    const { themeOptions } = user;
-    //add theme extension
-    const extensions = {
-      reactory: {
-        icons
-      }
-    };
-    return { ...themeOptions, extensions };
+
+    try {
+
+      const user = this.getUser();
+      const { activeTheme = {} } = user;
+      //add theme extension
+      const extensions = {
+        reactory: {
+          icons
+        }
+      };
+
+
+      return { ...activeTheme, extensions };
+
+    } catch (error) {
+      this.log(`Error getting theme for the logged in user: ${error.message}`, error, 'error');
+      throw error;
+    }
+
   }
 
   getRoutes() {
@@ -821,41 +1402,72 @@ class ReactoryApi extends EventEmitter {
     localStorage.getItem(storageKeys.LastLoggedInEmail);
   }
 
-  registerComponent(nameSpace, name, version = '1.0.0', component: any = EmptyComponent, tags = [], roles = ['*'], wrapWithApi = false, connectors = []) {
+  registerComponent(
+    nameSpace: string,
+    name: string,
+    version: string = '1.0.0',
+    component: any = EmptyComponent,
+    tags: string[] = [],
+    roles: string[] = ['*'],
+    wrapWithApi: boolean = false,
+    connectors: any[] = [],
+    componentType: string = 'component') {
     const fqn = `${nameSpace}.${name}@${version}`;
     if (isEmpty(nameSpace))
-      throw new Error('nameSpace is required for component registration');
+      throw new Error(`nameSpace is required for component registration: ${fqn}`);
     if (isEmpty(name))
-      throw new Error('name is required for component registration');
+      throw new Error(`name is required for component registration: ${fqn}`);
     if (isNil(component))
-      throw new Error('component is required to register component');
+      throw new Error(`component is required to register component: ${fqn}`);
+
+
+
     this.componentRegister[fqn] = {
       nameSpace,
       name,
       version,
-      component: wrapWithApi === false ? component : withApi(component),
+      component: wrapWithApi === false ? component : withReactory(component, fqn),
       tags,
       roles,
-      connectors
+      connectors,
+      componentType
     };
     this.emit('componentRegistered', fqn);
   }
 
-  getComponents(componentFqns = []) {
+  // @ts-ignore
+  getComponentsByType(componentType: string = 'component'): any[] {
+
+    let _components = [];
+    Object.keys(this.componentRegister).forEach((fqn) => {
+      if (this.componentRegister[fqn].componentType === componentType) {
+        _components.push(this.componentRegister[fqn]);
+      }
+    })
+
+    return _components;
+
+  };
+
+  getComponents(componentFqns = []): any {
     let componentMap = {};
+    const that = this;
     componentFqns.forEach(fqn => {
       let component = null;
+      let $name: string = '';
       if (typeof fqn === 'string') {
         component = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
         try {
           if (component) {
             const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
+            $name = component.name;
             componentMap[component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
           } else {
-            componentMap[componentPartsFromFqn(fqn).name] = this.getNotFoundComponent();
+            $name = componentPartsFromFqn(fqn).name;
+            componentMap[$name] = this.getNotFoundComponent();
           }
         } catch (e) {
-          this.log('Error Occured Loading Component Fqns', [fqn], 'error');
+          that.log('Error Occured Loading Component Fqns', [fqn], 'error');
         }
       }
       if (typeof fqn === 'object') {
@@ -863,20 +1475,24 @@ class ReactoryApi extends EventEmitter {
           component = this.componentRegister[`${fqn.componentFqn}${fqn.componentFqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
           try {
             if (component) {
-              const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
-              componentMap[typeof fqn.alias === 'string' ? fqn.alias : component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
+              const canUserCreateComponent = isArray(component.roles) === true ? that.hasRole(component.roles) : true;
+              $name = typeof fqn.alias === 'string' ? fqn.alias : component.name;
+              componentMap[$name] = canUserCreateComponent === true ? component.component : that.getNotAllowedComponent(component.name);
+
             } else {
-              componentMap[componentPartsFromFqn(fqn.componentFqn).name] = this.getNotFoundComponent();
+              componentMap[componentPartsFromFqn(fqn.componentFqn).name] = that.getNotFoundComponent();
             }
+
+
           } catch (e) {
-            this.log('Error Occured Loading Component Fqns', fqn.componentFqn, 'error');
+            that.log('Error Occured Loading Component Fqns', fqn.componentFqn, 'error');
           }
         }
       }
     });
     return componentMap;
   }
-  
+
   getComponent(fqn) {
     if (fqn === undefined)
       throw new Error('NO NULL FQN');
@@ -897,12 +1513,12 @@ class ReactoryApi extends EventEmitter {
     const components = [];
     const that = this;
     const { componentRegister } = this;
-    const GLOBAL_REGEX_PATTERN = /.\$GLOBAL\$/;    
-    Object.keys(componentRegister).forEach((componentKey) => {      
-      if(GLOBAL_REGEX_PATTERN.test(componentKey) === true) {                
+    const GLOBAL_REGEX_PATTERN = /.\$GLOBAL\$/;
+    Object.keys(componentRegister).forEach((componentKey) => {
+      if (GLOBAL_REGEX_PATTERN.test(componentKey) === true) {
         const { roles, component } = componentRegister[componentKey];
-        if(isArray(roles) === true) {
-          if(that.hasRole(roles) === true) components.push(component) 
+        if (isArray(roles) === true) {
+          if (that.hasRole(roles) === true) components.push(component)
         } else {
           components.push(component);
         }
@@ -912,12 +1528,12 @@ class ReactoryApi extends EventEmitter {
     return components;
   }
 
-  getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0') {
+  getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0'): Reactory.Client.ValidComponent<any, any, any> {
     if (this.componentRegister && this.componentRegister[notFoundComponent]) {
       return this.componentRegister[notFoundComponent].component;
     } else {
-      return (React.forwardRef((props, context) => (
-        <div>Component Find Failure, please check component registry and component name requested</div>)));
+      return (props, context) => (
+        <div>Component Find Failure, please check component registry and component name requested</div>);
     }
   }
 
@@ -929,23 +1545,24 @@ class ReactoryApi extends EventEmitter {
     }
   }
 
-  mountComponent(ComponentToMount, props, domNode, theme = true, callback) {
+  mountComponent(ComponentToMount, props, domNode, theme = true, callback?) {
     const that = this;
+
     if (theme === true) {
-      ReactDOM.render(<React.Fragment>
-        <CssBaseline />
-        <Provider store={that.reduxStore}>
-          <ApolloProvider client={that.client}>
-            <MuiThemeProvider theme={that.muiTheme}>
-              <Router>
-                <ApiProvider api={that} history={this.history}>
-                  <ComponentToMount {...props} />
-                </ApiProvider>
-              </Router>
-            </MuiThemeProvider>
-          </ApolloProvider>
-        </Provider>
-      </React.Fragment>, domNode, callback);
+      ReactDOM.createPortal(<ComponentToMount {...props} />, domNode);
+      // ReactDOM.render(<React.Fragment>        
+      //   <Provider store={that.reduxStore}>
+      //     <ApolloProvider client={that.client}>
+      //       <MuiThemeProvider theme={that.muiTheme}>
+      //         <Router>
+      //           <ReactoryProvider reactory={that}>
+      //             <ComponentToMount {...props} />
+      //           </ReactoryProvider>
+      //         </Router>
+      //       </MuiThemeProvider>
+      //     </ApolloProvider>
+      //   </Provider>
+      // </React.Fragment>, domNode, callback);
     } else {
       ReactDOM.render(<ComponentToMount {...props} />, domNode, callback);
     }
@@ -959,8 +1576,8 @@ class ReactoryApi extends EventEmitter {
   showModalWithComponent(title = '', ComponentToMount, props, modalProps: any = {}, domNode = null, theme = true, callback) {
     const that = this;
     const FullScreenModal = that.getComponent('core.FullScreenModal');
-    const _modalProps: any = {...modalProps};
-    if(modalProps.open === null || modalProps.open === undefined) _modalProps.open = true;
+    const _modalProps: any = { ...modalProps };
+    if (modalProps.open === null || modalProps.open === undefined) _modalProps.open = true;
     else _modalProps.open = modalProps.open === true;
     _modalProps.title = title;
     let _domNode = domNode || reactoryDomNode();
@@ -985,14 +1602,17 @@ class ReactoryApi extends EventEmitter {
     return ReactDOM.unmountComponentAtNode(node);
   }
 
-  logout(refreshStatus = true) {
+  async logout(refreshStatus = true) {
     const user = this.getUser();
     localStorage.removeItem(storageKeys.AuthToken);
-    const { client, ws_link } = ReactoryApolloClient();
+    this.clearStoreAndCache();
+
+    const { client } = await ReactoryApolloClient();
     this.client = client;
     this.setUser({ ...user, ...anonUser });
+
     if (refreshStatus === true) {
-      this.status({ emitLogin: false }).then((apiStatus) => {        
+      this.status({ emitLogin: false, forceLogout: true }).then((apiStatus) => {
         this.emit(ReactoryApiEventNames.onLogout);
       });
     } else {
@@ -1009,21 +1629,8 @@ class ReactoryApi extends EventEmitter {
   }
 
   getUser() {
-    if(this.$user) return this.$user;
-
-    const userString = localStorage.getItem(storageKeys.LoggedInUser);
-    if (userString){
-      try {
-        let parsedUser = JSON.parse(userString);
-        this.$user = parsedUser;
-        return parsedUser;
-      } catch(parseError) {
-        this.log('Could not parse the logged in user data', parseError, 'error');
-        return anonUser;
-      }
-    }
-
-    return anonUser;
+    if (!this.$user) this.$user = ReactoryLoggedInUser();
+    return this.$user;
   }
 
   saveUserLoginCredentials(provider, props) {
@@ -1046,52 +1653,90 @@ class ReactoryApi extends EventEmitter {
         }`, { provider });
   }
 
-  storeObjectWithKey(key, objectToStore) {
-    localStorage.setItem(key, JSON.stringify(objectToStore));
+  async storeObjectWithKey(key, objectToStore, indexDB: boolean = false, cb = (err) => { }): Promise<void> {
+    if (!indexDB) return localStorage.setItem(key, JSON.stringify(objectToStore));
+    else return await localForage.setItem(key, objectToStore, cb);
   }
 
-  readObjectWithKey(key) {
-    return JSON.parse(localStorage.getItem(key));
+  async readObjectWithKey(key, indexDB: boolean = false) {
+    if (!indexDB) return JSON.parse(localStorage.getItem(key));
+    else return JSON.parse(await localForage.getItem(key))
   }
 
-  deleteObjectWithKey(key) {
-    localStorage.removeItem(key);
+  async deleteObjectWithKey(key, indexDB: boolean = false) {
+    if (!indexDB) return localStorage.removeItem(key);
+    else await localForage.removeItem(key);
   }
 
-  status(options = { emitLogin: false }) {
+  status(options?: Reactory.Client.IApiStatusRequestOptions): Promise<Reactory.Models.IApiStatus> {
     const that = this;
-    return new Promise((resolve, reject) => {
-      this.forms(true).then(()=>{      
-        that.client.query({ query: that.queries.System.apiStatus, fetchPolicy: 'network-only' }).then((result) => {
-          if (result.data.apiStatus.status === "API OK") {
-            that.setUser({ ...result.data.apiStatus });
-            that.lastValidation = moment().valueOf();
-            that.tokenValidated = true;
-  
-            if (options.emitLogin === true)
-              that.emit(ReactoryApiEventNames.onLogin, that.getUser());          
-            if(result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
-              result.data.apiStatus.messages.forEach((message) => {
-                that.createNotification(message.title, message);
-              });
-            }
-  
-            that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: false });
-            resolve(that.getUser());
-          } else {
-            that.logout(false);
-            that.emit(ReactoryApiEventNames.onApiStatusUpdate, { result, offline: true });
-            that.setUser(anonUser);
-            resolve(anonUser);
-          }
-        }).catch((clientErr) => {
-          that.logout(false);
-          that.emit(ReactoryApiEventNames.onApiStatusUpdate, { offline: true, clientError: clientErr });
-          resolve({ ...anonUser, offline: true, offlineError: true });
-        });
+    const current_user = this.$user as Reactory.Models.IApiStatus;
 
-      });
-      
+    const variables: Reactory.Client.IApiStatusRequestOptions = {
+      emitLogin: options?.emitLogin === true || false,
+      forceLogout: options?.forceLogout === true || false,
+      mode: options?.mode || that.getThemeMode(),
+      theme: options?.theme || current_user?.theme || "reactory"
+    }
+
+    return new Promise((resolve, reject) => {
+      that.forms(true).then(() => {
+        const getStatus = () => {
+          if (that.client) {            
+            that.client.query({
+              query: that.queries.System.apiStatus,
+              variables: { theme: that.$user?.theme, mode: that.getThemeMode() },
+              fetchPolicy: 'network-only'
+            }).then((result) => {
+              if (result.data.apiStatus.status === "API OK") {
+                that.setUser({ ...result.data.apiStatus });
+                that.lastValidation = moment().valueOf();
+                that.tokenValidated = true;
+
+                if (options.emitLogin === true)
+                  that.emit(ReactoryApiEventNames.onLogin, that.getUser());
+                if (result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
+                  result.data.apiStatus.messages.forEach((message) => {
+                    that.createNotification(message.title, message);
+                  });
+                }
+
+                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, offline: false });
+                resolve(that.getUser());
+              } else {
+
+                if (options.forceLogout !== false) {
+                  that.logout(false);
+                  that.setUser(anonUser);
+                  resolve(anonUser);
+                } else {
+                  resolve(current_user);
+                }
+
+                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, status: 'API OFFLINE', offline: true });
+              }
+            }).catch((clientErr) => {
+
+              resolve(current_user);
+
+              // if(options.forceLogout !== false) {
+              //   that.logout(false);
+              //   resolve({ ...anonUser, status: 'API OFFLINE', offline: true, offlineError: true });
+              // } else {
+              // }
+
+              // that.emit(ReactoryApiEventNames.onApiStatusUpdate, { status: 'API OFFLINE', offline: true, clientError: clientErr });
+
+            });
+          } else {
+
+            setTimeout(() => {
+              getStatus();
+            }, 1000);
+          }
+        };
+        getStatus()
+      })
     });
   }
 
@@ -1100,7 +1745,7 @@ class ReactoryApi extends EventEmitter {
     return this.status();
   }
 
-  resetPassword({ password, confirmPassword, resetToken }) {
+  resetPassword({ password, confirmPassword }) {
     const that = this;
     return new Promise((resolve, reject) => {
       const setPasswordMutation = that.mutations.Users.setPassword;
@@ -1133,6 +1778,15 @@ class ReactoryApi extends EventEmitter {
 
   getViewContext() {
     return JSON.parse(localStorage.getItem(storageKeys.viewContext) || '{}');
+  }
+
+  setDevelopmentMode(mode: boolean = false) {
+    this.$development_mode = mode;
+    localForage.setItem(storageKeys.developmentMode, mode).then();
+  }
+
+  isDevelopmentMode(): boolean {
+    return this.$development_mode === true;
   }
 
   static propTypes = {

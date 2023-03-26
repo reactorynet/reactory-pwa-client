@@ -3,3 +3,10 @@ body {
   padding: 0;
   font-family: sans-serif;
 }
+
+.pac-container {
+  z-index: 2000 !important
+}
+pac-container {
+  z-index: 2000 !important
+}

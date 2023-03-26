@@ -1,30 +1,39 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { compose } from 'recompose';
-import {withStyles, withTheme} from '@material-ui/core/styles';
-import { withApi } from '../../../api/ApiProvider';
+import { compose } from 'redux';
+import { withStyles, withTheme } from '@mui/styles';
+import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 class CurrencyLabel extends Component {
-
-
-  render(){
-    const { value, currency, symbol, api, region, classes, uiSchema } = this.props;    
+  render() {
+    const { value, currency, symbol, api, region, classes, uiSchema, formData } = this.props;
 
     let isCents = true;
     let _value = value;
-    
-    if(uiSchema) {
-      isCents = uiSchema['ui:options'] && uiSchema['ui:options'].isCents === false ? false : isCents; 
-      _value = uiSchema['ui:options']  ? 
-          this.props[uiSchema['ui:options'].valueProp || 'formData'] : value;
+
+    const { MaterialCore } = api.getComponents(['material-ui.MaterialCore']);
+
+
+    let variant = this.props.variant || 'body1';
+
+    if (uiSchema) {
+      let options = uiSchema['ui:options'];
+
+      if (options) {
+        isCents = options.isCents === true ? false : isCents;
+        _value = options.valueProp === true ? this.props[options.valueProps] : formData;
+        variant = options.variant || variant;
+      }
     }
 
     return (
-      <div className={classes.currency}>        
-        <span className={classes.currencyValue}>
-          {new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value)}
-        </span>
-      </div>
+      <React.Fragment>
+        <MaterialCore.Typography variant={variant}>
+          {
+            _value != '' ? new Intl.NumberFormat(region, { style: 'currency', currency }).format(isCents ? (_value / 100) : _value) : ''
+          }
+        </MaterialCore.Typography>
+      </React.Fragment>
     );
   }
 }
@@ -43,23 +52,20 @@ CurrencyLabel.defaultProps = {
   region: 'en-ZA'
 };
 
-
-
-CurrencyLabel.styles = (theme) => {  
+CurrencyLabel.styles = (theme) => {
   return {
     currency: {
       margin: theme.spacing(1)
     },
     currencyValue: {
-      
+
     },
   }
 };
 
-
 const CurrencyLabelComponent = compose(
-  withApi, 
-  withTheme, 
+  withReactory,
+  withTheme,
   withStyles(CurrencyLabel.styles))(CurrencyLabel);
 
 export default {
@@ -68,6 +74,6 @@ export default {
   version: '1.0.0',
   component: CurrencyLabelComponent,
   tags: ['currency', 'label'],
-  description: 'Basic Currency Label',  
+  description: 'Basic Currency Label',
 };
 

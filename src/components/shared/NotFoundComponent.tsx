@@ -1,86 +1,82 @@
 import React, { Component } from 'react';
-import { compose } from 'recompose';
-import { withTheme, withStyles } from '@material-ui/styles';
-import ReactoryApi, { withApi } from '@reactory/client-core/api';
-import { UserListItem } from '../user'
-import { withRouter } from 'react-router';
+import ReactoryApi, { useReactory } from '@reactory/client-core/api//ApiProvider';
 
+// TODO: Move this interface to @reactory/reactory-core/types/index.d.ts
 interface NotFoundProps {
   message?: string,
   waitingFor?: string,
   wait?: number,
   args?: any,
   link?: string,
-  api: ReactoryApi,
-  theme: any,
-  location: any  
+  theme?: any,
+  location?: any
 };
 
-interface NotFoundState {
-  found: boolean,
-  wait: number,
-  waitingFor: string | null,
-  mustCheck: boolean
-}
+const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) => {
 
-class NotFound extends Component<NotFoundProps, NotFoundState> {
+  const reactory = useReactory();
 
-  ComponentToMount: any  = null;
+  const [found, setFound] = React.useState<boolean>(false);
+  const [loadedAt] = React.useState<number>(new Date().valueOf());    
+  const [unavailable, setUnavailable] = React.useState<boolean>(false);
+  const [showCreate, setShowCreateComponent] = React.useState<boolean>(false);  
 
-  constructor(props: NotFoundProps, context: any){
-    super(props, context);    
-    const state = {
-        found: false, 
-        wait: props.wait || 1000,
-        waitingFor: props.waitingFor || null,
-        mustCheck: typeof props.waitingFor === 'string' && props.waitingFor.indexOf(".") > 0
-    };    
-
-    this.state = state;
-    this.checkComponentLoaded = this.checkComponentLoaded.bind(this);
-    this.ComponentToMount = undefined;
-  }
-
-  checkComponentLoaded() {
-    this.ComponentToMount = this.props.api.getComponent(this.state.waitingFor)
-      if(this.ComponentToMount === null || undefined) {
-        setTimeout(this.checkComponentLoaded, this.state.wait);
+  const checkComponentLoaded = () => {
+    if(props.waitingFor) {
+      const $ComponentToMount = reactory.getComponent(props.waitingFor)
+      if ($ComponentToMount === null || $ComponentToMount === undefined) {
+        if((new Date().valueOf() - loadedAt) / 1000 < 5) {
+          setTimeout(checkComponentLoaded, 1000);
+        } else {
+          setUnavailable(true);
+        }
       } else {
-        this.setState({ found: true, mustCheck: false })
+        //this.setState({ found: true, mustCheck: false })    
+        setFound(true);
       }
-  }
-
-  componentDidMount(){
-    if(this.state.mustCheck === true) {
-      this.checkComponentLoaded()  
     }
   }
 
-  render(){
+  React.useEffect(() => { checkComponentLoaded() }, [])
+  
+  if(unavailable === true) {
+    if(reactory.isDevelopmentMode() === true && reactory.hasRole(["DEVELOPER"]) === true) {
+      
 
-    const { found, waitingFor, mustCheck } = this.state;    
-    if(found === false) {
-      let message = this.props.message;
-      const onUserItemClicked = () => {
-        if(this.props.link) {
-          this.props.location.push(this.props.link);
-        }
+      if(showCreate === true) {
+        const {
+          FormEditor
+        } = reactory.getComponents<any>(["reactory.FormEditor"])
+        
+        const { name, nameSpace, version } = reactory.utils.componentPartsFromFqn(props.waitingFor)
+
+        return <FormEditor formData={{ name, nameSpace, version }} />
+      } else {
+        const {
+          Material
+        } = reactory.getComponents<{ Material: Reactory.Client.Web.IMaterialModule }>(["material-ui.Material"]);
+        
+        return (
+          <Material.MaterialCore.Typography variant='body1'>Component not found, click <Material.MaterialCore.Button onClick={() => { setShowCreateComponent(true) }}>here to create a component</Material.MaterialCore.Button></Material.MaterialCore.Typography>
+        )
       }
-      if(mustCheck === true) message = `Waiting for component ${waitingFor} to load.`
-      return (      
-        <UserListItem user={{ firstName: 'Reactory', lastName: 'Bot', id: 'reactory', avatar: 'reactory_bot.png' }} message={this.props.message } onClick={onUserItemClicked} />
-      )
-    } else {
-      const { ComponentToMount } = this;
-      return (<ComponentToMount {...this.props.args} />)
-    }    
+
+    }
+  }
+
+  if (found === false) {
+    let msg = `Waiting for application components to finish loading... ${process.env.NODE_ENV !== 'production' ? props.waitingFor : ''}`;
+    return (<>{msg}</>)
+  } else {
+
+    if(props.waitingFor) {
+      const ComponentToMount = reactory.getComponent<any>(props.waitingFor)
+      return (<ComponentToMount {...props.args} />)
+    }
+
+    return (<>No component data available</>)
   }
 
 };
 
-const NotFoundStyles = (theme: any) => {
-  return {};
-};
-
-export default compose(withRouter, withTheme, withStyles(NotFoundStyles), withApi)(NotFound);
-
+export default NotFound

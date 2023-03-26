@@ -1,4 +1,14 @@
 import ReactoryApi from './ReactoryApi';
-export { default as ApiProvider, withApi } from './ApiProvider';
-export { ReactoryApiEventNames } from './ReactoryApi'; 
+import { withReactory as WITH_REACTORY } from './ApiProvider';
+import { useReactory as USE_REACTORY } from './ApiProvider';
+import { default as API_PROVIDER } from './ApiProvider';
+import { ReactoryApiEventNames as API_EVENTS } from './ReactoryApi';
+
+
+
+
+export const withReactory = WITH_REACTORY;
+export const useReactory = USE_REACTORY;
+export const ApiProvider = API_PROVIDER;
+export const ReactoryApiEventNames = API_EVENTS;
 export default ReactoryApi;
