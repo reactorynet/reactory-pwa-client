@@ -1140,7 +1140,6 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       }
       
       if (!_formDef.widgets) _formDef.widgets = {};
-      debugger
       if (isArray(_formDef.widgetMap) === true) {
         _formDef.widgetMap.forEach((map) => {          
           //reactory.log(`${signature} (init) Mapping ${map.widget} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');

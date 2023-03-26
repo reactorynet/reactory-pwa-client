@@ -10,10 +10,28 @@ import {
 } from '@mui/material';
 import { withStyles, withTheme } from '@mui/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import ReactoryApi from '@reactory/client-core/api/ApiProvider';
 
+interface IToolbarWidgetProps {
+  uiSchema: any;
+  reactory: Reactory.Client.IReactoryApi;
+  formData: any;
+  formContext: any;
+}
 
-class ToolbarWidget extends Component<any, any> {
+interface IToolbarWidgetState {
+  formData: any;
+  formContext: any;
+}
+
+class ToolbarWidget extends Component<IToolbarWidgetProps, IToolbarWidgetState> {
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      formData: props.formData,
+      formContext: props.formContext,
+    }
+  }
 
   static styles = theme => ({
     root: {
@@ -25,6 +43,12 @@ class ToolbarWidget extends Component<any, any> {
     },    
   });
 
+  static propTypes = {
+    uiSchema: PropTypes.object,
+    reactory: PropTypes.object,
+    formData: PropTypes.object,
+    formContext: PropTypes.object,
+  }
      
   render() {
     const { uiSchema, reactory, formData, formContext } = this.props;
@@ -32,8 +56,7 @@ class ToolbarWidget extends Component<any, any> {
     if(uiSchema['ui:options']) options = {...options, ...uiSchema['ui:options']}
     const buttons = options.commands.map((command) => {
       const onRaiseCommand = ( evt ) => {        
-        ////console.log('Raising Toolbar Command', api);
-        if(reactory) reactory.raiseFormCommand(command.command, { formData: formData, formContext: formContext });
+        if(reactory) reactory.raiseFormCommand(command.command, command, { formData: formData, formContext: formContext });
       }            
       return (
         <Tooltip key={command.id} title={command.tooltip || command.id}>
@@ -55,4 +78,4 @@ class ToolbarWidget extends Component<any, any> {
 }
 
 export const ToolbarWidgetComponent = compose(withReactory, withStyles(ToolbarWidget.styles), withTheme)(ToolbarWidget);
-export default ToolbarWidgetComponent
+export default ToolbarWidgetComponent;

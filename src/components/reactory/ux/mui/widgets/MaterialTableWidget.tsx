@@ -334,7 +334,18 @@ const ReactoryMaterialTableWaitForRenderer = (props) => {
 
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
-  const { reactory, theme, schema, idSchema, onChange, uiSchema = {}, formContext = {}, formData = [], searchText = "" } = props;
+  const { 
+    reactory,
+    theme, 
+    schema, 
+    idSchema, 
+    onChange, 
+    uiSchema = {}, 
+    formContext = {}, 
+    formData = [], 
+    searchText = "" 
+  } = props;
+
   const uiOptions: Reactory.Client.Components.IMaterialTableWidgetOptions = uiSchema['ui:options'] || {};
   const AlertDialog = reactory.getComponent('core.AlertDialog@1.0.0');
   const DropDownMenu: Reactory.Client.Components.DropDownMenu = reactory.getComponent('core.DropDownMenu@1.0.0');
@@ -362,6 +373,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [page, setActivePage] = useState<number>(0);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState<MaterialTableQuery>({ page: 1, pageSize: 10, search: "" });
+  const [searchInput, setSearchInput] = useState<string>(searchText);
 
   const [data, setData] = useState<MaterialTableRemoteDataReponse>({
     data: formData || [],
@@ -1309,7 +1321,25 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     let searchField = null;
     if (uiOptions?.search) {
-      searchField = (<TextField key={"search"} title={"Search"} size="small" />);
+      const searchLableText = reactory.i18n.t("reactory:common.search", "Search", {})
+      searchField = (
+      <TextField
+        style={{ minWidth: 200 }}
+        key={"search"} 
+        title={searchLableText}
+        label={searchLableText} 
+        size="small"
+        placeholder={searchLableText}
+        value={searchInput}
+        onChange={(evt)=>{
+          setSearchInput(evt.target.value);
+        }}
+        onKeyPress={(evt)=>{
+          if(evt.key === "Enter") {
+            setQuery({ ...query, search: searchInput})            
+          }
+        }}
+      />);
     }
 
     let actions = null;

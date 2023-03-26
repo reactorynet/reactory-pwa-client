@@ -33,7 +33,6 @@ import { Typography, Icon, Paper, Box } from '@mui/material';
 import license from './license';
 import { ReactoryProvider, useReactory } from './api/ApiProvider';
 import Reactory from '@reactory/reactory-core';
-import { Routing } from '@reactory/reactory-core/src/types';
 
 const packageInfo = {
   version: '1.0.0'

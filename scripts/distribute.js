@@ -1,22 +1,4 @@
 'use strict';
-/**
- * 
-PUBLIC_URL=https://app.reactory.net/
-REACT_APP_API_ENDPOINT=https://api.reactory.net
-REACT_APP_CDN=https://api.reactory.net/cdn
-REACT_APP_TITLE='Reactory Launchpad'
-REACT_APP_THEME=reactory
-REACT_APP_CLIENT_KEY=reactory
-REACT_APP_SHORTNAME=Reactory
-REACT_APP_CLIENT_PASSWORD=sonicwasadog
-REACT_APP_THEME_PRIMARY=#1a2049
-REACT_APP_THEME_BG=#464775
-CI=false
-
-process.env.NODE_ENV = 'production';
-* 
- */
-
 process.env.BABEL_ENV = 'production';
 process.env.NODE_ENV = 'production';
 
@@ -64,11 +46,12 @@ process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0; //EEEEEKK
 console.log(`Called distribute, zipping files in ${paths.appBuild} and sending to ${REACT_APP_CDN}/builds/${appPackage.version}/${REACT_APP_CLIENT_KEY}/ for distribution`);
 
 
-
+/**
+ * Zip the files and upload to CDN via filemanager
+ */
 const doUpload = function () {
     //upload distribution to target server
-
-    const token = btoa('werner.weber+reactory-sysadmin@gmail.com:sonicwasadog')
+    const token = btoa(process.env.REACT_APP_UPLOAD_BTOA)
     const headers = {
         'x-client-key': REACT_APP_CLIENT_KEY,
         'x-client-pwd': REACT_APP_CLIENT_PASSWORD,
@@ -110,7 +93,6 @@ const doUpload = function () {
             }).then(response => {
                 if (response.status === 200) {
                     console.log(`File has been successfully uploaded ${response.data.link}`);
-                    //stream.close();
                     if (response.data.link) {
                         axios({
                             url: `${REACT_APP_API_ENDPOINT}/resources/`,

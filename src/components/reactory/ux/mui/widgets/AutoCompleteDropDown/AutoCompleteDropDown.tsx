@@ -1,31 +1,20 @@
 import Reactory from '@reactory/reactory-core';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 import { Chip } from '@mui/material';
-/**
- * Rep Code Filter Component.
- * 
- * This widget is intended to be used where ever a user is a able to make a selection of their available 
- * sales team ids / rep codes.
- */
-
-
-type AutoCompleteFormData = any 
-interface IAutoCompleteWidgetProps { 
-    
-    formData: AutoCompleteFormData,
-    schema: any,
-    idSchema: { 
-        $id: string
-    },
-    uiSchema: any,
-    formContext: any,
-    onChange: (formData: AutoCompleteFormData) => void 
-}
 
 'use strict';
 const dependencies = ['react.React', 'material-ui.MaterialCore', 'material-ui.MaterialLab'];
 
-const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
+/**
+ * A Material-UI Autocomplete component that fetches a list of options from a GraphQL API
+ * @param props 
+ * @returns 
+ */
+function AutoCompleteDropDown<
+    TData extends unknown | unknown[],
+    TSchema extends Reactory.Schema.AnySchema,
+    TUISchema,
+    TContext extends Reactory.Client.IReactoryFormContext<unknown>>(props: Reactory.Schema.IAutoCompleteWidgetProps<TData, TSchema, TUISchema, TContext>) {
 
     const reactory = useReactory();
 
@@ -39,22 +28,18 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
         props: null,
         variables: null,
         resultMap: null
-    }
+    };
 
-    const DefaultUISchema = {
+    const DefaultUISchema: { [key: string]: unknown } = {
         'ui:options': DefaultUIOptions,
         'ui:graphql': FormQuery,
-        'ui:props': { 
+        'ui:props': {
             multiSelect: false
         }
-    }
+    };
 
     const {
-        
-        formContext,
-        formData,
-        uiSchema = DefaultUISchema,
-        schema = {
+        formData, uiSchema = DefaultUISchema, schema = {
             type: 'array',
             title: 'Auto Complete',
         }
@@ -62,38 +47,33 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
 
     const $props = uiSchema['ui:props'] || {};
 
-    let user = reactory.$user ;
-
-    /**
-     * Helper function to return a consisten list of rep codes.
-     * @returns 
-     */
-    const getInitialItems = () => {        
-
-        return [];
-    };
+    let user = reactory.$user;
 
     FormQuery = uiSchema["ui:graphql"];
 
-    const { React, MaterialCore, MaterialLab } = reactory.getComponents(dependencies);
+    const { React, MaterialCore, MaterialLab } = reactory.getComponents<{
+        React: Reactory.React;
+        MaterialCore: Reactory.Client.Web.MaterialCore;
+        MaterialLab: Reactory.Client.Web.MaterialLabs;
+    }>(dependencies);
 
     const { TextField } = MaterialCore;
     const { Autocomplete } = MaterialLab;
 
-    const [options, setOptions] = React.useState(getInitialItems());
+    const [options, setOptions] = React.useState<TData[]>([]);
     const [filter, setFilter] = React.useState(null);
-    const [available, setAvailable] = React.useState(getInitialItems());
+    const [available, setAvailable] = React.useState<TData[]>([]);
 
     let $formData: any | any[] = $props.multiSelect === false ? formData || null : formData || [];
 
     const GetItems = () => {
 
-        if(FormQuery && FormQuery.text) {
+        if (FormQuery && FormQuery.text) {
             const variables = reactory.utils.objectMapper(props, FormQuery.variables || {});
-            reactory.graphqlQuery(FormQuery.text, variables , { fetchPolicy: 'network-only' }).then(({ errors = [], data }) => {
+            reactory.graphqlQuery(FormQuery.text, variables, { fetchPolicy: 'network-only' }).then(({ errors = [], data }) => {
                 if (data && data[FormQuery.name]) {
-                    let _result_data = data[FormQuery.name];                    
-                    if(FormQuery.resultMap) {
+                    let _result_data = data[FormQuery.name];
+                    if (FormQuery.resultMap) {
                         _result_data = reactory.utils.objectMapper(data[FormQuery.name], FormQuery.resultMap);
                     }
 
@@ -102,20 +82,20 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
                 }
             }).catch((err) => {
                 reactory.log(`Error Getting Items for ${schema.title}`, { err }, 'error');
-                setOptions(getInitialItems());
+                setOptions([]);
             });
         }
-        
-    }
 
-    /**    
+    };
+
+    /**
      * @param {*} evt: The event source of the callback.
      * @param {*} value: The new value of the component.
      * @param {*} reason: One of "create-option", "select-option", "remove-option", "blur" or "clear".
      */
     const onChange = (evt, value, reason) => {
         reactory.log(`Selection Changed AutoComplete`, { value, reason }, 'debug');
-        let multiSelect = $props.multiSelect === true ? true : false;                    
+        let multiSelect = $props.multiSelect === true ? true : false;
         if (props.onChange && reason === "select-option") {
             if (value === null || value === undefined) {
                 props.onChange(value);
@@ -124,16 +104,12 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
 
             if (value !== null && value !== undefined && multiSelect === true) {
                 if (value.length && value.length === 0) {
-                    props.onChange([])
+                    props.onChange([] as any);
                     return;
                 }
                 else {
-
                     let $items = $props.onChangePropsMap ? reactory.utils.objectMapper(value, $props.onChangePropsMap) : value;
                     props.onChange($items);
-
-
-                    
                 }
             } else {
 
@@ -146,7 +122,7 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
 
                     if (schema.type === 'string' && typeof value === 'object') {
                         props.onChange(value.value);
-                        return
+                        return;
                     }
 
                     props.onChange(value);
@@ -158,13 +134,14 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
             setOptions(available);
         }
 
-        if(props.onChange && reason === "clear") {
-            if(schema.type === "array") props.onChange([]);
-            else { 
-                props.onChange($props.nullValue)
+        if (props.onChange && reason === "clear") {
+            if (schema.type === "array")
+                props.onChange([] as any);
+            else {
+                props.onChange($props.nullValue);
             }
         }
-    }
+    };
 
     React.useEffect(() => {
         GetItems();
@@ -172,10 +149,10 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
 
     React.useEffect(() => {
         GetItems();
-    }, [user])
+    }, [user]);
 
-    
-    let $labelText = schema.title
+
+    let $labelText = schema.title;
 
     return (
         <Autocomplete
@@ -184,17 +161,17 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
             multiple={$props.multiSelect === true}
             autoHighlight
             autoSelect={true}
-            getOptionLabel={(option) => {                         
+            getOptionLabel={(option) => {
                 return option[$props.labelField || "label" || "name"];
             }}
             value={$formData}
             onChange={onChange}
             inputValue={filter}
-            isOptionEqualToValue={(opt) => {                 
+            isOptionEqualToValue={(opt) => {
 
                 try {
                     if ($props.multiSelect === true) {
-                        if (schema.items.type === 'object') {
+                        if ((schema as Reactory.Schema.IArraySchema).items.type === 'object') {
                             let matched = false;
                             $formData.forEach(entry => {
                                 matched = opt[$props.keyField || "key"] === entry[$props.matchField || "id"];
@@ -204,7 +181,7 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
                             });
                         }
 
-                        if (schema.items.type === 'string') {
+                        if ((schema as Reactory.Schema.IArraySchema).items.type === 'string') {
                             let matched = false;
                             $formData.forEach(entry => {
                                 matched = opt[$props.keyField || "key"] === entry;
@@ -219,16 +196,16 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
                         }
 
                         if (schema.type === 'string') {
-                            return opt[$props.keyField || "key"] === $formData
+                            return opt[$props.keyField || "key"] === $formData;
                         }
 
                     }
                 } catch (err) {
-                    
-                    return false
+
+                    return false;
                 }
-                
-                
+
+
             }}
             onInputChange={(event, newInputValue) => {
                 setFilter(newInputValue);
@@ -240,37 +217,32 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
                 </React.Fragment>
             )}
             renderTags={(value, getTagProps) => {
-                return value.map((option, index) => { 
-                    
-
+                return value.map((option, index) => {
                     const onDeleteItem = () => {
-                        let newArray = [];
-                        
-                        for(const elem of formData ) {
-                            if(elem[$props.matchField || "id"] !== option.id) newArray.push(elem);
+                        let newArray: TData[] = [];
+                        for (const elem of (formData as TData[])) {
+                            if (elem[$props.matchField || "id"] !== option.id)
+                                newArray.push(elem);
                         }
-
-                        props.onChange(newArray);
-                    }
-
-
-                    return (<Chip variant="outlined" size="small" label={option[$props.labelField]} {...getTagProps({ index })} onDelete={onDeleteItem} />)
-                })
+                        props.onChange(newArray as any);
+                    };
+                    return (<Chip variant="outlined" size="small" label={option[$props.labelField]} {...getTagProps({ index })} onDelete={onDeleteItem} />);
+                });
             }}
-            filterSelectedOptions={$props.filterSelectedOptions === true}            
-            
+            filterSelectedOptions={$props.filterSelectedOptions === true}
+
             renderInput={(params) => {
 
                 let displayText: string = filter;
 
-                if((displayText === null || displayText === undefined || displayText === "") && $formData) {
-                    if($props.multiSelect !== true) {
+                if ((displayText === null || displayText === undefined || displayText === "") && $formData) {
+                    if ($props.multiSelect !== true) {
                         if (schema.type === 'object') {
                             displayText = $formData[$props.displayField] || $formData["name"] || $formData["title"];
                         }
 
                         if (schema.type === 'string') {
-                            displayText = $formData;                        
+                            displayText = $formData;
                         }
                     }
 
@@ -283,27 +255,28 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
 
                 if (formData) {
 
-                    switch(schema.type) {
+                    switch (schema.type) {
                         case "array": {
-                            inputLabelProps.shrink = formData.length > 0;
+                            inputLabelProps.shrink = (formData as TData[]).length > 0;
                             break;
                         }
                         case "object": {
                             let hasData = false;
-                            if(formData) {
+                            if (formData) {
                                 hasData = true;
                                 let idFieldData = formData[$props.matchField || "id"];
-                                if(idFieldData === null || idFieldData === undefined) {
+                                if (idFieldData === null || idFieldData === undefined) {
                                     hasData = false;
                                 } else {
-                                    if(`${idFieldData}`.trim() === "") hasData = false;
+                                    if (`${idFieldData}`.trim() === "")
+                                        hasData = false;
                                 }
                             }
                             inputLabelProps.shrink = hasData === true;
                             break;
                         }
                         default: {
-                            inputLabelProps.shrink = true
+                            inputLabelProps.shrink = true;
                         }
                     }
                 }
@@ -311,17 +284,15 @@ const AutoCompleteDropDown = (props: IAutoCompleteWidgetProps) => {
                 return (<TextField
                     {...params}
                     InputLabelProps={inputLabelProps}
-                    label={reactory.utils.template(schema.title || $props.title)({ ...props, reactory, })}                    
-                    inputProps={{ 
+                    label={reactory.utils.template(schema.title || $props.title)({ ...props, reactory, })}
+                    inputProps={{
                         ...params.inputProps,
                         // autoComplete: 'new-password', // disable autocomplete and autofill
                         value: filter && filter.length > 0 ? filter : displayText
-                    }}
-                />)
-            }}
-        />
+                    }} />);
+            }} />
     );
-};
+}
 
 export default AutoCompleteDropDown;
 

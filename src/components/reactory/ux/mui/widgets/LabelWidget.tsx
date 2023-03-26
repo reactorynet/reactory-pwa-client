@@ -44,7 +44,7 @@ interface LabelWidgetProperties {
   [key: string]: any,
   value?: any,
   formData?: any,
-  uiSchema?: any,
+  uiSchema?: Reactory.Schema.IUILabelWidgetOptions,
   schema?: any,
 };
 
@@ -107,7 +107,6 @@ const LabelWidget = (props: LabelWidgetProperties) => {
   let _renderHtml = false;
   let LabelBody = null;
   let _copyToClip = false;
-  let _launchProps = null;
 
   let labelContainerProps = {
     id: `${props.idSchema && props.idSchema.$id ? props.idSchema.$id : undefined}`,
@@ -163,15 +162,12 @@ const LabelWidget = (props: LabelWidgetProperties) => {
       componentFqn = null,
       componentProps = {},
       componentPropsMap = {},
-      launchProps = null,
       copyToClipboard = false
     } = props.uiSchema["ui:options"];
 
     if (containerProps.style) {
       labelContainerProps.style = { ...labelContainerProps.style, ...containerProps.style };
     }
-
-    _launchProps = launchProps;
 
     labelTitleProps = titleProps;
     labelBodyProps = bodyProps;
