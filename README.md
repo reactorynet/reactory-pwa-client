@@ -46,3 +46,6 @@ Pull requests are accepted and appreciated where components are updated, cleaned
 The Reactory Client has several utilities in the `bin/` folder that you can use to build and deploy your application. Refer to the [readme file](bin/README.MD) for more details.
 
 For more information on the schema forms and components, see the development section in the [reactory-docs](https://github.com/reactorynet/reactory-docs) project.
+
+
+***Disclaimer: The authors of this source code provide it "as is" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the authors be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software. Use at your own risk.***
