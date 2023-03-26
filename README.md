@@ -9,7 +9,7 @@ The client is an open-source application built for the Reactory server and canno
 
 ## Install and Configuration
 
-The configuration for the Reactory client is much simpler than the server. After cloning the code from GitHub or Bitbucket, run `npm i` to install dependencies. Then, configure your client by creating a folder for your application in the `config/env` folder. For example, if your application key/code is "acme", create the following folder structure: `config/env/acme`. Check the [`config/env/README.MD`](config/env/README.MD) for sample configuration setup and options.
+The configuration for the Reactory client is much simpler than the server. After cloning the code from GitHub or Bitbucket, run `npm i` to install dependencies. Then, configure your client by creating a folder for your application in the `config/env` folder. For example, if your application key/code is "acme", create the following folder structure: `config/env/acme`. Check the [`config/env/README.MD`](config/env/README.MD) for sample configuration setup and more details around application hydration.
 
 ## Develop
 
@@ -41,8 +41,8 @@ i.e.
 
 Pull requests are accepted and appreciated where components are updated, cleaned up, refactored, and in line with the direction of the application development.
 
-## Build and Deployment
+## Develop, Build and Deployment
 
-The Reactory Client has several utilities in the `bin/` folder that you can use to build and deploy your application. Refer to the readme file for more details.
+The Reactory Client has several utilities in the `bin/` folder that you can use to build and deploy your application. Refer to the [readme file](bin/README.MD) for more details.
 
-For more information on the schema forms and components, see the `docs/development/schema` folder.
+For more information on the schema forms and components, see the development section in the [reactory-docs](https://github.com/reactorynet/reactory-docs) project.
