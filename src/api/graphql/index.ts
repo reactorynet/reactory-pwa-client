@@ -361,6 +361,47 @@ const apiStatus = gql`
       applicationRoles
       when
       status
+      loggedIn {
+        user {
+          id
+          firstName
+          lastName
+        }
+        organization {
+          id
+          name
+          logo
+        }
+        team {
+          id
+          name
+        }
+        businessUnit {
+          id
+          name
+          avatar
+        }
+        roles
+        altRoles
+        memberships {
+          id
+          client {
+            id
+            name
+          }
+          organization {
+            id
+            name
+            logo
+          }
+          businessUnit {
+            id
+            name
+            avatar
+          }
+          roles
+        }
+      }
       firstName
       lastName
       email
@@ -448,11 +489,12 @@ const apiStatus = gql`
         componentFqn
         exact
         redirect
+        componentProps
         args {
           key
           value
         }
-        component {
+        components {
           nameSpace
           name
           version

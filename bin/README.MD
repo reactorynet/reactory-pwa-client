@@ -12,6 +12,15 @@ After loading the environment variables, the script uses npx babel-node to run t
 
 The last line of the script is commented out, but it is an alternative command that can be used to start the script using Node.js directly. It sets the memory limit to 4GB.
 
+Once the application is started, you can access it by navigating to http://localhost:3000 in your browser and you should see a screen similar to the following:
+
+![Reactory Client](/branding/default-client-login.png)
+
+Login with the default reactory user and password to get the reactory dashboard screen.
+
+![Reactory Client](/branding/default-client.png)
+
+
 ** debug.sh just starts the client with the debugging enabled. This is for debugging the node process, debugging your application you can do using chrome debugger or similar with react-devtools extions enabled.
 
 ## build.sh 
