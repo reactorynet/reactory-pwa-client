@@ -178,10 +178,20 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
           let componentArgs = {};
 
-          if(routeDef.props) {
-            componentArgs = {...routeDef.props}
+          /**
+           * If the route has props, we add them to the component args
+           * this is the preferred way of setting the props.
+           */
+          if(routeDef.componentProps) {
+            componentArgs = {...routeDef.componentProps}
           }
 
+          /**
+           * If the route has args, we add them to the component args
+           * this is the secondary method of setting the props, provides
+           * additional meta data about the props to allow for potential 
+           * future features.
+           */
           if (isArray(routeDef.args)) {
             routeDef.args.forEach((arg) => {
               componentArgs[arg.key] = arg.value[arg.key];

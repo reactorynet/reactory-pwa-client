@@ -1,13 +1,14 @@
 import { useReactory } from "@reactory/client-core/api";
+import { ReactoryStaticContentComponent } from "@reactory/client-core/components/shared/StaticContent";
 
 export const StaticContent = (props: any) => {
 
-  const { formData, formContext, idSchema, uiSchema } = props;
+  const { idSchema, uiSchema, onChange } = props;
   const reactory = useReactory();
   const {
     StaticContent,
     React
-  } = reactory.getComponents(['core.StaticContent', 'material-ui.MaterialCore', 'react.React']);
+  } = reactory.getComponents<{ React: Reactory.React, StaticContent: ReactoryStaticContentComponent }>(['core.StaticContent', 'material-ui.MaterialCore', 'react.React']);
 
   const DefaultOptions: any = { 
     editAction: "inline",

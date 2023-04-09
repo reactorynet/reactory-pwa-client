@@ -7,6 +7,8 @@ Users are provided with a list of server-side forms that are available based on 
 
 The client is an open-source application built for the Reactory server and cannot be used in isolation without the server.
 
+![Reactory Client](/branding/default-client-login.png)
+
 ## Install and Configuration
 
 The configuration for the Reactory client is much simpler than the server. After cloning the code from GitHub or Bitbucket, run `npm i` to install dependencies. Then, configure your client by creating a folder for your application in the `config/env` folder. For example, if your application key/code is "acme", create the following folder structure: `config/env/acme`. Check the [`config/env/README.MD`](config/env/README.MD) for sample configuration setup and more details around application hydration.
@@ -46,6 +48,7 @@ Pull requests are accepted and appreciated where components are updated, cleaned
 The Reactory Client has several utilities in the `bin/` folder that you can use to build and deploy your application. Refer to the [readme file](bin/README.MD) for more details.
 
 For more information on the schema forms and components, see the development section in the [reactory-docs](https://github.com/reactorynet/reactory-docs) project.
+
 
 
 ***Disclaimer: The authors of this source code provide it "as is" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the authors be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software. Use at your own risk.***

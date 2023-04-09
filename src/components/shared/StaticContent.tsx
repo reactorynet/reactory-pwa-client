@@ -7,17 +7,22 @@ import moment, { Moment } from 'moment';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import classNames from 'classnames';
 import ReactDOM from 'react-dom';
+import { useNavigate, useParams } from 'react-router';
 
-interface ReactoryStaticContentProps {
+export interface ReactoryStaticContentProps {
   id: string,
-  reactory: Reactory.Client.IReactoryApi,
+  reactory?: Reactory.Client.IReactoryApi,
   classes?: any,
-  showTitle: boolean,
-  title: string,
+  showTitle?: boolean,
+  title?: string,
   published?: boolean,
   slug: string,
   slugSource?: string,
-  slugSourceProps?: any,
+  slugSourceProps?: { 
+    paramId: string,  
+    slugPrefix?: string
+  },
+  defaultSlug?: string,
   defaultValue?: any,
   placeHolder?: string,
   propertyBag?: any,
@@ -41,7 +46,7 @@ interface ReactoryStaticContentProps {
 
 }
 
-interface ReactoryStaticContent {
+export interface ReactoryStaticContent {
   title: string,
   content: string,
   createdBy?: {
@@ -53,7 +58,7 @@ interface ReactoryStaticContent {
   published?: boolean,
 }
 
-interface ReactoryStaticContentState {
+export interface ReactoryStaticContentState {
   content: ReactoryStaticContent,
   original: string | null,
   editing: boolean,
@@ -61,25 +66,27 @@ interface ReactoryStaticContentState {
   [key: string]: any
 };
 
-interface ComponentMountInfo {
+export interface ComponentMountInfo {
   id: string,
   component: string,
   props: any,
   content: string
 }
 
+export type ReactoryStaticContentComponent = React.FC<Partial<ReactoryStaticContentProps>>;
 
 /**
  * Static Content Component. Used for editing static content using a wysiwig editor
  * @param props 
  * @returns 
  */
-const StaticContent = (props: ReactoryStaticContentProps) => {
+const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStaticContentProps) => {
 
   const { reactory } = props;
 
   const { MaterialCore } = reactory.getComponents<any>(['material-ui.MaterialCore'])
-
+  const navigate = useNavigate();
+  const params = useParams();
   const {
     classes,
     viewRoles,
@@ -92,6 +99,7 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
     published,
     slugSource,
     slugSourceProps,
+    defaultSlug,
     match,
     propertyBag = {},
     defaultValue = ""
@@ -126,10 +134,11 @@ const StaticContent = (props: ReactoryStaticContentProps) => {
 
   const getSlug = () => {
     if (slugSource === 'property' || slugSource === null || slugSource === undefined) return slug;
-
-    if (slugSource === 'route' && typeof slugSourceProps === 'object') {
-      const { paramId } = slugSourceProps;
-      return match.params[paramId];
+    if (slugSource === 'route' && typeof slugSourceProps === 'object' && params) {
+      const { paramId, slugPrefix } = slugSourceProps;
+      const routeValue = params[paramId];
+      if (routeValue) return `${slugPrefix}${routeValue}`;
+      if (defaultSlug) return `${slugPrefix}${defaultSlug}`;
     }
 
     return props.slug
