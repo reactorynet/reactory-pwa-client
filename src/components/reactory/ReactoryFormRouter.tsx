@@ -9,6 +9,10 @@ import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
 import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
 import { ReactoryForm } from './ReactoryFormComponent';
 
+type ReactoryFormRouterDependecies = {
+  MaterialCore: Reactory.Client.Web.MaterialCore;
+}
+
 const RouteBoundForm = () => {
 
   const { formId, mode = 'view', id = null } = useParams<any>();
@@ -37,9 +41,8 @@ const ReactoryFormRouter = (props) => {
   const navigate = useNavigate();
 
   const {
-    AlertDialog,
     MaterialCore,
-  } = reactory.getComponents(['core.AlertDialog', 'material-ui.MaterialCore',]);
+  } = reactory.getComponents<ReactoryFormRouterDependecies>(['material-ui.MaterialCore']);
 
   const {
     Tooltip

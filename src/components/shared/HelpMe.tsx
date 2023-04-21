@@ -11,15 +11,23 @@ interface IHelpMeProps {
   topics: string[],
   theme: Theme,
   open: boolean,
+  showSupport?: boolean,
   title?: string,
   onClose: () => void,
+}
+
+interface IHelpMeDepencdies {
+  FullScreenModal: any,
+  StaticContent: Reactory.Client.Components.StaticContentWidget,
+  MaterialCore: Reactory.Client.Web.MaterialCore,
+  SupportForm: any,
 }
 
 const HelpMe = (props: IHelpMeProps) => {
   
 const { reactory, topics, theme, formContext, onClose, title = 'Help' } = props;
 
-const { FullScreenModal, StaticContent, MaterialCore, SupportForm } = reactory.getComponents(['core.FullScreenModal', 'core.StaticContent', 'core.SupportForm', 'material-ui.MaterialCore']);
+const { FullScreenModal, StaticContent, MaterialCore, SupportForm } = reactory.getComponents<IHelpMeDepencdies>(['core.FullScreenModal', 'core.StaticContent', 'core.SupportForm', 'material-ui.MaterialCore']);
 const { Typography } = MaterialCore;
 
     const helpItems = topics.map((topic, index) => {

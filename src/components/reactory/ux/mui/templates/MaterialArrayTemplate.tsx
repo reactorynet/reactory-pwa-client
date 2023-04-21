@@ -31,7 +31,7 @@ interface ArrayTemplateState {
   isDirty: boolean
   expanded: boolean[],
   selected: boolean[],
-  onChangeTimer: number
+  onChangeTimer: any
 }
 
 interface ArrayTemplateProps {

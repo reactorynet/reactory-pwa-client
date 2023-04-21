@@ -46,7 +46,7 @@ const Cropper = (props: ICropProps) => {
   const [imageRef, setImageRef] = useState<any>(null);
   const [crop, setCrop] = useState(props.crop || DEFAULT_CROP);
 
-  const { StaticContent } = reactory.getComponents(["core.StaticContent"]);
+  const { StaticContent } = reactory.getComponents<any>(["core.StaticContent"]);
 
   // this.onImageLoaded = this.onImageLoaded.bind(this)
   // this.onCropComplete = this.onCropComplete.bind(this)
