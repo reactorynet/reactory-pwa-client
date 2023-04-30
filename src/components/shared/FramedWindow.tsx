@@ -43,11 +43,12 @@ class FramedWindow extends Component<any, any> {
   static defaultProps = {
     containerProps: {
       style: {
-        display: 'block',
         position: 'fixed',
-        top: '65px',
+        top: '48px',
         bottom: '0px',
-        width: '100%',        
+        width: '101%',
+        display: 'flex',
+        justifyContent: 'center',
       },
       width: '100%',
     },

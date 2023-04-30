@@ -1011,10 +1011,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       refresh: (args = { autoQueryDisabled: true }) => {
         setAutoQueryDisabled(args.autoQueryDisabled);
         getData(formData);
-
       },
       setFormData: (formData: any, callback = () => { }) => {
-        
         setFormData(formData);
         callback();
       },
@@ -2042,8 +2040,6 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
 
   const getDeveloperOptions = () => {
-
-
     // if (reactory.hasRole(["DEVELOPER"]) === true) {
     //   if (formDef && formDef.name) {
     //     if (formDef.name.indexOf("$GLOBAL$") >= 0) return null;
@@ -2059,20 +2055,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     return null;
   }
-  /*
-  React.useEffect(() => {
-
-    getData(formData);
-
-  }, [queryComplete])
-  */
-
   
-
-
   return (
     <IntersectionVisible>{renderForm()}</IntersectionVisible>
   )
-
 };
 
