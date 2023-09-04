@@ -11,7 +11,7 @@ import { useNavigate, useParams } from 'react-router';
 
 export interface ReactoryStaticContentProps {
   id: string,
-  reactory?: Reactory.Client.IReactoryApi,
+  reactory?: Reactory.Client.ReactorySDK,
   classes?: any,
   showTitle?: boolean,
   title?: string,
@@ -285,7 +285,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
           content: {
             content: `Content for content: "${getSlug()}" does not exists, please create it.`,
             title: title || "Not Found",
-            createdBy: { id: user.id, fullName: user.fullName },
+            createdBy: { id: user.id, fullName: user.loggedIn.user.firstName },
             createdAt: moment(),
             published: published || false,
             topics: ["new content"],

@@ -20,14 +20,14 @@ const noHandler = (evt, menuItem) => {
 export const DropDownMenu = (props: Reactory.UX.IDropDownMenuProps) => {
 
   const [open, setIsOpen] = React.useState(false);
-  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [anchorEl, setAnchorEl] = React.useState<unknown>(null);
   const handleMenu = (evt) => {
     setIsOpen(!open);
     setAnchorEl(evt.currentTarget);
   }
 
   const { menus, tooltip } = props;
-  const ariaId = props.id || uuid();
+  const ariaId: string = `${props.id || uuid()}`;
   const menuItems = []; 
 
   let _menus = menus;
@@ -61,7 +61,9 @@ export const DropDownMenu = (props: Reactory.UX.IDropDownMenuProps) => {
                 <Icon
                   color="primary"
                   style={
+                    //@ts-ignore
                     menu.iconProps && menu.iconProps.style
+                    //@ts-ignore
                       ? menu.iconProps.style
                       : {}
                   }
@@ -90,8 +92,8 @@ export const DropDownMenu = (props: Reactory.UX.IDropDownMenuProps) => {
       <Icon style={props.iconStyle}>{props.icon || "keyboard_arrow_down"}</Icon>
       <Menu
         open={open === true}
-        id={ariaId}
-        anchorEl={anchorEl}
+        id={ariaId as string}
+        anchorEl={anchorEl as Element}
         anchorOrigin={{
           vertical: "top",
           horizontal: "right",

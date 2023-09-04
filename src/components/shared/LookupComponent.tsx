@@ -193,13 +193,13 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
   } = options;
 
 
-  let ChildComponent = reactory.getComponent(componentFqn);
+  let ChildComponent: React.JSXElementConstructor<unknown> = reactory.getComponent(componentFqn) as React.JSXElementConstructor<unknown>;
   let componentFound = true;
   let childprops = {};
 
   if (ChildComponent === null || ChildComponent === undefined) {
     componentFound = false;
-    ChildComponent = reactory.getComponent("core.NotFound");
+    ChildComponent = reactory.getComponent("core.NotFound") as React.JSXElementConstructor<unknown>;
     childprops = {
       message: `The component you specified ${componentFqn} could not be found`,
     };

@@ -1,9 +1,7 @@
 import React from "react";
-
 import i18next, { i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-
 import ReactDOM from 'react-dom';
 import PropTypes from "prop-types";
 import EventEmitter from 'eventemitter3';
@@ -14,10 +12,8 @@ import { BrowserRouter as Router, } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions, MutationResult, FetchResult } from '@apollo/client';
 import localForage from 'localforage';
-
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider as MuiThemeProvider } from '@mui/styles';
-
 import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
@@ -309,7 +305,7 @@ const FORM_QUERY_SEGMENTS = {
 
 class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
-  $windowSize: WindowSizeSpec = null;
+  $windowSize: Reactory.Client.IWindowSizeSpec = null;
   $user: any;
   history: any;
   params: any;
@@ -320,19 +316,19 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   //@ts-ignore
   client: ApolloClient<NormalizedCacheObject>;
   login: (username: string, password: string) => Promise<Reactory.Client.ILoginResult>;
-  register: Function = null;
-  reset: Function = null;
-  forgot: Function = null;
-  utils: Reactory.Client.IReactoryApiUtils = null;
-  companyWithId: Function = null;
-  $func: Object;
+  register: (username: string, password: string) => void;
+  reset: (email: string, password: string) => void;
+  forgot: (email: string) => void;
+  utils: Reactory.Client.IReactoryApiUtils;
+  companyWithId: (id: string) => Promise<Reactory.Models.IOrganization>;
+  $func: { [key: string]: (kwargs: unknown[]) => unknown; };
   rest: Object = null;
   tokenValidated: boolean = false;
   lastValidation: number;
   tokenValid: boolean = false;
-  getAvatar: Function;
-  getOrganizationLogo: Function;
-  getUserFullName: Function;
+  getAvatar: (profile: Reactory.Models.IUser, alt?: string) => string;
+  getOrganizationLogo: (organizationId: string, file: string) => string;
+  getUserFullName: (user: Reactory.Models.IUser) => string;
   getThemeResource: (path?: string) => string;
   getCDNResource: (path: string) => string;
   CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
@@ -343,7 +339,19 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   formValidationMaps: any;
   formTranslationMaps: any;
   formSchemaLastFetch: moment.Moment = null;
-  assets: Object = null;
+  assets: { 
+    logo: string; 
+    avatar: string; 
+    icons: { 
+      16: string; 
+      32: string; 
+      44: string; 
+      64: string; 
+      144: string; 
+      192: string; 
+      512: string; 
+    }; 
+  } = null;
   amq: any = null;
   statistics: any = null;
   __form_instances: any = null;
@@ -354,7 +362,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   muiTheme: any;
   queryObject: any;
   queryString: any;
-  objectToQueryString: Function;
+  objectToQueryString: (obj: unknown) => string;
   clearCache: () => void;
   ws_link: any;
   $development_mode: boolean = false;
@@ -490,6 +498,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       logo: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/logo.png`,
       avatar: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/avatar.png`,
       icons: {
+        16: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-16.png`,
+        32: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-32.png`,
+        44: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-44.png`,
+        64: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-64.png`,
         144: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-144.png`,
         192: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-192.png`,
         512: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-512.png`,
@@ -1076,7 +1088,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
         that.graphqlQuery<any, any>(FORMS_QUERY, {}, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
           const { ReactoryForms } = data;
-          const ReactoryFormComponent = that.getComponent('core.ReactoryForm');
+          const ReactoryFormComponent = that.getComponent('core.ReactoryForm') as React.FunctionComponent<Reactory.Client.IReactoryFormProps>;
 
           if (ReactoryForms && ReactoryForms.length > 0) {
             that.formSchemas = [];
@@ -1282,7 +1294,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       return true;
 
     if (userRoles === null) {
-      const loggedInUser = this.getUser();
+      const loggedInUser = this.getUser().loggedIn;;
 
       if (organization === null || organization === undefined) {
         comparedRoles = loggedInUser.roles;
@@ -1301,7 +1313,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
               if ((business_unit === null || business_unit === undefined) && membership.businessUnit === null) return true;
 
               //we comapre the business units if there is one of either element
-              if (business_unit && business_unit.id && membership.businessUnit) {
+              //@ts-ignore
+              if (business_unit && business_unit.id && membership.businessUnit && membership.businessUnit.id) {
+                //@ts-ignore
                 return business_unit.id === membership.businessUnit.id;
               }
               //not enough information for us to determine there is a match,
@@ -1346,22 +1360,17 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return menus || [];
   }
 
-  getTheme() {
-
+  getTheme(): Reactory.UX.IReactoryTheme {
     try {
-
       const user = this.getUser();
-      const { activeTheme = {} } = user;
+      const { activeTheme } = user;
       //add theme extension
-      const extensions = {
+      const extensions: any = {
         reactory: {
           icons
         }
       };
-
-
-      return { ...activeTheme, extensions };
-
+      return { ...(activeTheme as Reactory.UX.IReactoryTheme), extensions };
     } catch (error) {
       this.log(`Error getting theme for the logged in user: ${error.message}`, error, 'error');
       throw error;
@@ -1375,9 +1384,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return routes || [];
   }
 
-  getApplicationRoles() {
-    const user = this.getUser();
-    const { roles } = user;
+  getApplicationRoles(): string[] {
+    const { roles } = this.getUser()?.loggedIn;
     return roles || [];
   }
 
@@ -1493,18 +1501,18 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return componentMap;
   }
 
-  getComponent(fqn) {
+  getComponent<T>(fqn): T {
     if (fqn === undefined)
       throw new Error('NO NULL FQN');
     try {
       const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
       if (found && found.component)
-        return found.component;
+        return found.component as T;
       return null; //we must return null, because the component is not found, we cannot automatically return the not found component, that is the responsibility of the component
     } catch (err) {
       this.log(`Bad component name ${err.message}`, fqn, 'error');
       if (this.componentRegister && this.componentRegister['core.NotFound@1.0.0']) {
-        return this.getNotFoundComponent();
+        return this.getNotFoundComponent() as T;
       }
     }
   }
@@ -1530,16 +1538,16 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0'): Reactory.Client.ValidComponent<any, any, any> {
     if (this.componentRegister && this.componentRegister[notFoundComponent]) {
-      return this.componentRegister[notFoundComponent].component;
+      return this.componentRegister[notFoundComponent].component as Reactory.Client.ValidComponent<any, any, any>;
     } else {
-      return (props, context) => (
+      return () => (
         <div>Component Find Failure, please check component registry and component name requested</div>);
     }
   }
 
-  getNotAllowedComponent(notAllowedComponentFqn = 'core.NotAllowed@1.0.0') {
+  getNotAllowedComponent(notAllowedComponentFqn = 'core.NotAllowed@1.0.0'): Reactory.Client.ValidComponent<any, any, any> {
     if (this.componentRegister && this.componentRegister[notAllowedComponentFqn]) {
-      return this.componentRegister[notAllowedComponentFqn].component;
+      return this.componentRegister[notAllowedComponentFqn].component as Reactory.Client.ValidComponent<any, any, any>;
     } else {
       return (React.forwardRef((props, context) => (<div>Access Denied</div>)));
     }
@@ -1549,20 +1557,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     const that = this;
 
     if (theme === true) {
-      ReactDOM.createPortal(<ComponentToMount {...props} />, domNode);
-      // ReactDOM.render(<React.Fragment>        
-      //   <Provider store={that.reduxStore}>
-      //     <ApolloProvider client={that.client}>
-      //       <MuiThemeProvider theme={that.muiTheme}>
-      //         <Router>
-      //           <ReactoryProvider reactory={that}>
-      //             <ComponentToMount {...props} />
-      //           </ReactoryProvider>
-      //         </Router>
-      //       </MuiThemeProvider>
-      //     </ApolloProvider>
-      //   </Provider>
-      // </React.Fragment>, domNode, callback);
+      ReactDOM.createPortal(<ComponentToMount {...props} />, domNode);      
     } else {
       ReactDOM.render(<ComponentToMount {...props} />, domNode, callback);
     }
@@ -1575,7 +1570,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   showModalWithComponent(title = '', ComponentToMount, props, modalProps: any = {}, domNode = null, theme = true, callback) {
     const that = this;
-    const FullScreenModal = that.getComponent('core.FullScreenModal');
+    const FullScreenModal = that.getComponent<React.FC>('core.FullScreenModal');
     const _modalProps: any = { ...modalProps };
     if (modalProps.open === null || modalProps.open === undefined) _modalProps.open = true;
     else _modalProps.open = modalProps.open === true;
@@ -1628,7 +1623,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return this.tokenValidated;
   }
 
-  getUser() {
+  getUser(): Reactory.Models.IApiStatus {
     if (!this.$user) this.$user = ReactoryLoggedInUser();
     return this.$user;
   }
@@ -1676,7 +1671,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       emitLogin: options?.emitLogin === true || false,
       forceLogout: options?.forceLogout === true || false,
       mode: options?.mode || that.getThemeMode(),
-      theme: options?.theme || current_user?.theme || "reactory"
+      theme: options?.theme || (current_user?.theme) as string || "reactory"
     }
 
     return new Promise((resolve, reject) => {
@@ -1716,20 +1711,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
                 that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, status: 'API OFFLINE', offline: true });
               }
             }).catch((clientErr) => {
-
+              that.log(`Error occurred while executing the query ${clientErr.message}`, { clientErr }, 'error');
               resolve(current_user);
-
-              // if(options.forceLogout !== false) {
-              //   that.logout(false);
-              //   resolve({ ...anonUser, status: 'API OFFLINE', offline: true, offlineError: true });
-              // } else {
-              // }
-
-              // that.emit(ReactoryApiEventNames.onApiStatusUpdate, { status: 'API OFFLINE', offline: true, clientError: clientErr });
-
             });
           } else {
-
             setTimeout(() => {
               getStatus();
             }, 1000);
@@ -1765,7 +1750,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           reject(new Error('No Data'));
         }
       }).catch((passwordUpdateError) => {
-        console.error(passwordUpdateError);
+        that.log(`Error occurred while executing the query ${passwordUpdateError.message}`, { passwordUpdateError }, 'error')
         reject(passwordUpdateError);
       });
     });

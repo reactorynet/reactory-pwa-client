@@ -6,11 +6,6 @@ import { compose } from 'redux';
 import ReactoryApi from "./ReactoryApi";
 import { withErrorBoundary } from './ErrorBoundary';
 
-export interface ApiProviderProps {
-    api: ReactoryApi,
-    history: History
-}
-
 export const ReactoryProvider = ({ children, reactory }) => {
 
     return (<ReactoryContext.Provider value={reactory}>
@@ -18,7 +13,7 @@ export const ReactoryProvider = ({ children, reactory }) => {
     </ReactoryContext.Provider>)
 };
 
-export const ReactoryContext = createContext<Reactory.Client.IReactoryApi>(null);
+export const ReactoryContext = createContext<Reactory.Client.ReactorySDK>(null);
 
 export const withReactory = (ComponentToWrap: any | React.Component | Function, id = 'not-set') => {
 
@@ -55,12 +50,9 @@ export const withReactory = (ComponentToWrap: any | React.Component | Function, 
 };
 
 
-export const useReactory = (): Reactory.Client.IReactoryApi => {
+export const useReactory = (): Reactory.Client.ReactorySDK => {
     const reactory = useContext(ReactoryContext);
     return reactory;
 }
-
-
-
 
 export default ReactoryProvider;

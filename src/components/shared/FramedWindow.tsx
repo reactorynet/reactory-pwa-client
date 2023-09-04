@@ -488,7 +488,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
       }
 
       const wb = new ExcelJS.Workbook();            
-      const excelOptions: Reactory.Excel.IExcelExportOptions = exportDefinition.exportOptions;
+      const excelOptions: Reactory.Excel.IExcelExportOptions = exportDefinition.exportOptions as Reactory.Excel.IExcelExportOptions;
             
       const options: Partial<ExcelJS.XlsxWriteOptions> = {
         filename: `${that.props.reactory.utils.template(excelOptions.filename)({ formData: this.props.data, moment: moment })}`,
@@ -502,7 +502,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
           const headerCell = ws.getCell(`${cols[columnIndex]}1`);          
           ws.columns[columnIndex].width = column.width;
           if(column.style) {
-            ws.columns[columnIndex].style = { ...column.style }
+            ws.columns[columnIndex].style = { ...column.style as Partial<ExcelJS.Style> }
           }
           
           let titleText: ExcelJS.CellValue = {
@@ -526,7 +526,7 @@ class ReportViewer extends Component<ReportViewerProperties, ReportViewerState> 
           };          
 
           headerCell.style = {
-            ...column.style,
+            ...column.style as Object,
             font: {
               color: {
                 argb: `FF${theme.palette.primary.contrastText.replace('#', "")}`,

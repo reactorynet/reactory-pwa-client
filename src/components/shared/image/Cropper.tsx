@@ -102,7 +102,7 @@ const Cropper = (props: ICropProps) => {
       const croppedImageUrl = await getCroppedImg(
         imageRef,
         crop,
-        `${reactory.$user.id}_avatar.png`
+        `${reactory.getUser().loggedIn.id}_avatar.png`
       );
       setCroppedImage(croppedImageUrl);
     }

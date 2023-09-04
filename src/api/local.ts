@@ -9,6 +9,7 @@ export const anonUser: Reactory.Models.IApiStatus = {
   firstName: '',
   lastName: '',
   avatar: '',
+  email: '',
   anon: true,
   roles: ['ANON'],
   menus: [],
@@ -16,7 +17,9 @@ export const anonUser: Reactory.Models.IApiStatus = {
   status: 'API OK',
   when: new Date(),
   navigationComponents: [],
-
+  activeTheme: null,
+  routes: null,
+  theme: null,
 };
 
 export const storageKeys = {

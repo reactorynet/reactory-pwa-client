@@ -1,3 +1,5 @@
+/* tslint:disable */
+/* eslint-disable */
 import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties, Ref } from 'react';
 import Reactory from '@reactory/reactory-core';
 import PropTypes, { any, ReactNodeArray, string } from 'prop-types';
@@ -336,7 +338,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     return {
       id: 'default',
       key: 'default',
-      uiSchema: formDef.uiSchema || {},
+      uiSchema: (formDef.uiSchema as Reactory.Schema.IFormUISchema) || {},
       description: "Default active menu item",
       title: "Default",
       icon: "form",
@@ -450,12 +452,10 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       setFormDefinition({ ...props.formDef, __complete__: true });    
     } else {
       let $id = props.formId;
-      if (!$id && props.formDef && props.formDef.id) $id = props.formData.$id;
+      if (!$id && props.formDef && props.formDef.id) $id = props.formDef.$id as string;
       const $formDef = reactory.form($id, (nextFormDef, error) => {
-        
         if (error) {
           setFormDefinition(ReactoryErrorForm);
-          
           setFormData({ error })
         } else {
           setFormDefinition(nextFormDef);          
@@ -544,17 +544,16 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   const getActiveUiOptions = (): Reactory.Schema.IFormUIOptions => {
 
     let _options = { showSchemaSelectorInToolbar: true };
-    let _uiSchema: Reactory.Schema.IFormUISchema = getActiveUiSchema();
+    let _uiSchema: Reactory.Schema.IFormUISchema = getActiveUiSchema() as Reactory.Schema.IFormUISchema;
 
     if (_uiSchema && _uiSchema['ui:form']) {
       _options = { ..._options, ..._uiSchema['ui:form'] };
     } else {
       //fallback
-      if(_uiSchema && _uiSchema['ui:options']) {
+      if(_uiSchema && _uiSchema['ui:options'] && typeof _uiSchema['ui:options'] === 'object') {
         _options = { ..._options, ..._uiSchema['ui:options'] };
       }
     }
-       
     return _options;
   }
 
@@ -623,7 +622,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     let cancel: boolean = false;
 
     if (props.onSubmit) {
-      cancel = props.onSubmit(form) || false;
+      const _cancel = props.onSubmit(form);
+      if (_cancel === true) cancel = true;
+      else cancel = false;
     }
 
     if (cancel === true) return;
@@ -667,15 +668,13 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         };
 
         if (props.onBeforeMutation) {
-          do_mutation = props.onBeforeMutation(mutation_props, form, getFormContext());
+          do_mutation = props.onBeforeMutation(mutation_props, form, getFormContext()) !== false;
         }
 
         if (do_mutation) {
           reactory.graphqlMutation(mutation.text, mutation_props.variables, mutation_props.refetchQueries).then((mutation_result: ApolloQueryResult<any>) => {
             const { data, error, errors = [] } = mutation_result;
-
             reactory.log(`🧐 Mutation Response ${mutation.name}`, { data, error }, 'debug');
-
             if (error) {
               // ADDED: DREW
               // Show message returned from resolver
@@ -699,9 +698,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                   });
               }
             }
-
             if (errors && errors.length > 0) {
-
               if (props.onError) props.onError(errors, getFormContext());
               else {
                 reactory.createNotification('Could not execute the action.  Server responded with errors', { type: 'warning', showInAppNotification: true })
@@ -741,9 +738,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                 }
               }
 
-              if (mutation.onSuccessMethod === "notification") {
+              if (mutation.onSuccessMethod === "notification" && mutation.notification) {
                 const dataObject = { formData, resultData: data[mutation.name], formContext: getFormContext() };
-
+                
                 reactory.createNotification(
                   template(mutation.notification.title)(templateProps),
                   {
@@ -751,8 +748,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                     type: 'success',
                     props: {
                       ...dataObject,
-                      ...mutation.notification.props
-                    }
+                      ...(mutation.notification?.props || {}) as Object,
+                    },
                   }
                 );
               }
@@ -765,7 +762,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                 if (mutation.onSuccessMethod.indexOf(":") > 0) {
                   let eventName = mutation.onSuccessMethod.split(':')[1];
                   if (typeof props[eventName] === "function") {
-                    props[eventName]({ formData: data[mutation.name] })
+                    (props[eventName] as Function)({ formData: data[mutation.name] })
                   } else {
                     reactory.amq.raiseFormCommand(eventName, {
                       form: {},
@@ -775,7 +772,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                 } else {
                   if (mutation.onSuccessEvent && mutation.onSuccessEvent.name) {
                     if (typeof props[mutation.onSuccessEvent.name] === 'function') {
-                      props[mutation.onSuccessEvent.name]({ formData: mutation.onSuccessEvent.dataMap ? reactory.utils.objectMapper(data[mutation.name], mutation.onSuccessEvent.dataMap) : data[mutation.name] });
+                      (props[mutation.onSuccessEvent.name] as Function)({ formData: mutation.onSuccessEvent.dataMap ? reactory.utils.objectMapper(data[mutation.name], mutation.onSuccessEvent.dataMap) : data[mutation.name] });
                     }
                   }
                 }
@@ -866,7 +863,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           do_mutation = dirty === true
 
           if (props.onBeforeMutation && do_mutation === true) {
-            do_mutation = props.onBeforeMutation({}, form, getFormContext());
+            do_mutation = props.onBeforeMutation({}, form, getFormContext()) !== false;
           }
 
           if (do_mutation === true) {
@@ -889,7 +886,6 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         }
 
         if (formDef && formDef.refresh && formDef.refresh.onChange) {
-
           if (trigger_onChange === true) fire();
         } else {
           

@@ -1,10 +1,5 @@
 import React, { useEffect } from 'react';
-import MomentUtils from '@date-io/moment';
-import { ApolloClient, ApolloProvider } from '@apollo/client';
-import {
-  useMatch,
-  useParams,
-} from 'react-router';
+import { ApolloProvider } from '@apollo/client';
 import {
   BrowserRouter as Router,
   Route,
@@ -12,7 +7,7 @@ import {
   useNavigate,
   useLocation
 } from 'react-router-dom';
-import { isNil, isArray, isFunction } from 'lodash';
+import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
 import configureStore from './models/redux';
 
@@ -59,7 +54,7 @@ const getTheme = () => {
 }
 
 //@ts-ignore
-const reactory: Reactory.Client.IReactoryApi = new ReactoryApi({
+const reactory: Reactory.Client.ReactorySDK = new ReactoryApi({
   clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
   clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
   $version: `${packageInfo.version}-${license.version}`,
@@ -117,7 +112,7 @@ interface ReactoryHOCProps {
 };
 
 interface ReactoryRouterProps {
-  reactory: Reactory.Client.IReactoryApi,
+  reactory: Reactory.Client.ReactorySDK,
   auth_validated: boolean,
   user: Reactory.Models.IUser,
   authenticating: boolean
@@ -149,8 +144,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     setVersion(v + 1);
   };
 
-  reactory.on(ReactoryApiEventNames.onLogout, onLogout)
-  reactory.on(ReactoryApiEventNames.onLogin, onLogin)
+  reactory.on(ReactoryApiEventNames.onLogout, onLogout);
+  reactory.on(ReactoryApiEventNames.onLogin, onLogin);
 
   reactory.navigation = navigation;
   reactory.location = location;
@@ -206,7 +201,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500} ></NotFound>)
           } else {
 
-            const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().roles) === true;
+            const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().loggedIn.roles) === true;
 
             if (reactory.isAnon() === false && hasRolesForRoute === false) {
               return <NotFound message="You don't have sufficient permissions to access this route." link={routeDef.path} wait={500} />
@@ -235,8 +230,6 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
                 if (hasRefreshed === false && reactory.isAnon() === true) {
                   const qs = queryString.parse(location.search);
                   if (qs['auth_token']) delete qs.auth_token;
-
-
                   localStorage.setItem('$reactory.onlogin.redirect$', `${location.pathname}?${queryString.stringify(qs)}`);
                   // setTimeout(() => {
                   //   //@ts-ignore
@@ -532,7 +525,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
   const applyTheme = () => {    
-    let activeTheme = reactory.getTheme();
+    let activeTheme: Reactory.UX.IReactoryTheme = reactory.getTheme();
     if (isNil(activeTheme)) activeTheme = { ...props.appTheme };
     if (Object.keys(activeTheme).length === 0) activeTheme = { ...props.appTheme };
 
@@ -542,53 +535,17 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
     const {
       type = 'material',
-      options = {}
     } = activeTheme;
-
-    // let themeMode = 'light';
-
-    // const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
-
-    // if (localStorage) {
-    //   themeMode = localStorage.getItem("$reactory$theme_mode")
-    //   if (!themeMode) {
-    //     themeMode = isDarkMode === true ? 'dark' : 'light'
-    //   }
-    // }
-
-    // let $theme = lodash.cloneDeep(options || activeTheme);
-    // $theme.extensions = extensions;
-
-    // if (type === 'material') {
-    //   if ($theme.palette) $theme.palette.mode = themeMode;
-    //   else {
-    //     $theme.palette = {
-    //       mode: themeMode
-    //     }
-    //   }
-    // }
-
-    // return $theme;
-
-    //using new mechanism.      
+    //additional theme support will be added here.
     switch (type) {
-
       case 'material':
       default: {
-        if (activeTheme.options) {
-          muiTheme = createTheme(activeTheme.options);
-        } else {
-          //backward compat while in progress
-          muiTheme = createTheme(activeTheme);
-        }
+        muiTheme = createTheme(activeTheme.options);
       }
 
-    }
-
+    }    
     reactory.muiTheme = muiTheme;
     setTheme(muiTheme);
-    //setSizeSpec(api.getSizeSpec());
-
   };
 
   /**
@@ -646,7 +603,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
 
     window.addEventListener('resize', onWindowResize);
-    window.matchMedia("(prefers-color-scheme: dark)").addListener((evt) => {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change',(evt) => {
       if (evt.matches === true) {
         localStorage.setItem('$reactory$theme_mode', 'dark');
         setVersion(version + 1);
