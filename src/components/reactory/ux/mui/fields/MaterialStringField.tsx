@@ -185,8 +185,8 @@ const MaterialStringFieldWidget = (props) => {
 
     } else {
       let themeDefaults: any = {};
-      if (reactory?.theme?.MaterialInput) {
-        themeDefaults = reactory?.theme?.MaterialInput;
+      if (reactory?.muiTheme?.MaterialInput) {
+        themeDefaults = reactory?.muiTheme?.MaterialInput;
       }
 
       let COMPONENT = Input;

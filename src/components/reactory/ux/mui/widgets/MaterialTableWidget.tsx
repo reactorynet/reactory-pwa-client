@@ -347,7 +347,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   } = props;
 
   const uiOptions: Reactory.Client.Components.IMaterialTableWidgetOptions = uiSchema['ui:options'] || {};
-  const AlertDialog = reactory.getComponent('core.AlertDialog@1.0.0');
+  const AlertDialog = reactory.getComponent<React.FC<any>>('core.AlertDialog@1.0.0');
   const DropDownMenu: Reactory.Client.Components.DropDownMenu = reactory.getComponent('core.DropDownMenu@1.0.0');
 
   const [activeAction, setActiveAction] = useState<{
@@ -427,7 +427,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
 
     if (uiOptions.componentMap.DetailsPanel) {
-      const DetailsPanelComponent = reactory.getComponent(uiOptions.componentMap.DetailsPanel);
+      const DetailsPanelComponent = reactory.getComponent<React.FC<{formContext: any, tableRef: any}>>(uiOptions.componentMap.DetailsPanel);
 
       if (DetailsPanelComponent) {
         detailsPanel = (detail_props: MaterialTableDetailPanelProps) => {
@@ -559,9 +559,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     let _mergeColumns = false;
     let _columns = uiOptions.columns;
 
-
     if (isNil(uiOptions.columnsProperty) === false) {
-
       _columns = [...formContext.formData[uiOptions.columnsProperty]];
       if (isNil(uiOptions.columnsPropertyMap) === false) {
         _columns = reactory.utils.objectMapper(_columns, uiOptions.columnsPropertyMap)
@@ -572,12 +570,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     _columns.forEach(coldef => {
 
-      const def = {
+      const def: Reactory.Client.Components.MaterialTableWidgetColumnDefinition = {
         ...coldef
       };
 
       if (isNil(def.component) === false && def.component !== undefined) {
-        const ColRenderer = reactory.getComponent(def.component);
+        const ColRenderer = reactory.getComponent<React.FC<any>>(def.component);
         // @ts-ignore       
         def.renderCell = (cellData, cellIndex, rowData, rowIndex) => {
 
@@ -610,7 +608,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
           const childrenComponents = (components || []).map((componentDef, componentIndex) => {
 
-            const ComponentToRender = reactory.getComponent(componentDef.component);
+            const ComponentToRender = reactory.getComponent<React.FC>(componentDef.component);
 
             let props = { formData: formContext.$formData, rowData, api: reactory, key: componentIndex, formContext };
             let mappedProps = {};
@@ -642,7 +640,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         def.render = (rowData) => {
           const buttonProps = def.props.actionButton;
           if (buttonProps.icon) {
-            return <Fab color={buttonProps.color ? buttonProps.color : "default"} size={buttonProps.size ? buttonProps.size : "small"}><Icon style={{ color: "#fff" }}>{buttonProps.icon}</Icon></Fab>
+            //@ts-ignore
+            return <Fab 
+                    color={buttonProps?.color || "default"} 
+                    size={buttonProps.size ? buttonProps.size : "small"}>
+                      <Icon style={{ color: "#fff" }}>
+                        {buttonProps.icon}
+                      </Icon>
+                   </Fab>
           } else {
             return <Button>{buttonProps.text}</Button>
           }
@@ -994,7 +999,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     let rowActions: Reactory.Client.Components.IMaterialTableWidgetAction[] = [];
 
     if (uiOptions.actions) {
-      rowActions = reactory.utils.lodash.filter(uiOptions, (action: Reactory.Client.Components.IMaterialTableWidgetAction) => {
+      rowActions = reactory.utils.lodash.filter(uiOptions.actions, (action: Reactory.Client.Components.IMaterialTableWidgetAction) => {
         return action.isFreeAction === false || action.isFreeAction === undefined || action.isFreeAction === null
       })
     }
@@ -1098,6 +1103,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       $body_rows.push((
         <TableRow key={0}>
           <TableCell colSpan={columns.length}>
+            {/* @ts-ignore */}
             <Typography variant={"body2"} style={{ height: '200px', paddingTop: '90px', textAlign: 'center' }}>{uiOptions?.localization?.body?.emptyDataSourceMessage || "No data available."}</Typography>
           </TableCell>
         </TableRow>
@@ -1292,10 +1298,10 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           const [onClickComponent, onClickName] = onClick.split("/");
           const $component = reactory.getComponent(onClickComponent);
           if ($component && typeof $component[onClickName] === "function") {
-            let $props = { ...onClickProps };
+            let $props = { ...(onClickProps as Object) };
             if (Object.keys(onClickPropsMap).length > 0) {
               $props = reactory.utils.objectMapper({ rowsState, rows: $rows }, onClickPropsMap);
-              $props = { ...onClickProps, ...$props }
+              $props = { ...(onClickProps as Object), ...$props }
             }
             $component[onClickName]($props);
           }
@@ -1315,7 +1321,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     if (uiOptions?.allowDelete === true) {
       deleteButton = (
-        <IconButton onClick={callDelete}><Icon>{uiOptions?.deleteButton?.icon || "trash"}</Icon></IconButton>
+        <IconButton onClick={callDelete}><Icon>{uiOptions?.deleteButtonProps?.icon || "trash"}</Icon></IconButton>
       )
     }
 

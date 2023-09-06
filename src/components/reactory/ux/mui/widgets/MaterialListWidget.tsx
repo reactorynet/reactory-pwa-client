@@ -195,7 +195,7 @@ const DefaultListOptions: IMaterialListWidgetOptions<any> = {
 type ListType<T> = T[]
 
 interface IMateriaListWidgetProps<T> {
-  reactory: Reactory.Client.IReactoryApi,
+  reactory: Reactory.Client.ReactorySDK,
   formData: ListType<TAny>,
   schema: Reactory.Schema.IArraySchema,
   uiSchema: any,

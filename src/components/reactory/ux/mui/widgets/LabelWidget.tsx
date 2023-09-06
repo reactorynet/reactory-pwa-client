@@ -44,7 +44,7 @@ interface LabelWidgetProperties {
   [key: string]: any,
   value?: any,
   formData?: any,
-  uiSchema?: Reactory.Schema.IUILabelWidgetOptions,
+  uiSchema?: Partial<Reactory.Schema.IUILabelWidgetOptions>,
   schema?: any,
 };
 
@@ -53,21 +53,22 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 
   const { classes, reactory, formData, value, uiSchema, idSchema, formContext } = props;
 
-  const getOptions = () => {
-    if (props.uiSchema && props.uiSchema["ui:options"]) return props.uiSchema["ui:options"];
+  const getOptions = (): Partial<Reactory.Schema.IUILabelWidgetOptions> => {
+    if (props.uiSchema && props.uiSchema["ui:options"]) return props.uiSchema["ui:options"] as Partial<Reactory.Schema.IUILabelWidgetOptions>;
     return {};
   };
 
   const initialLabelText = () => {
     const options = getOptions();
-
+    //@ts-ignore
     if (options.$format && typeof reactory.$func[options.$format] === 'function') {
+      //@ts-ignore
       return reactory.$func[options.$format](props);
     }
 
-    if (options && options.format) {
+    if (options && options.format && typeof options.format === 'string') {
       try {
-        if (options.format !== '$LOOKUP$') return template(options.format)({ ...props })
+        if (options.format !== '$LOOKUP$') return template(options.format as string)({ ...props })
         else return '🕘';
       } catch (e) {
         return `Template Error (${e.message})`;
@@ -163,10 +164,11 @@ const LabelWidget = (props: LabelWidgetProperties) => {
       componentProps = {},
       componentPropsMap = {},
       copyToClipboard = false
-    } = props.uiSchema["ui:options"];
+    } = props.uiSchema["ui:options"] as Partial<Reactory.Schema.IUILabelWidgetOptions>;
 
+    //@ts-ignore
     if (containerProps.style) {
-      labelContainerProps.style = { ...labelContainerProps.style, ...containerProps.style };
+      labelContainerProps.style = { ...labelContainerProps.style, ...(containerProps as any).style };
     }
 
     labelTitleProps = titleProps;
@@ -185,7 +187,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     if (renderHtml) _renderHtml = renderHtml;
 
     if (icon) {
-      let _iconProps = {
+      let _iconProps: any = {
         style:
         {
           marginLeft: _iconPosition === 'right' ? theme.spacing(1) : 'unset',
@@ -204,11 +206,11 @@ const LabelWidget = (props: LabelWidgetProperties) => {
       }
 
       const _custom = iconType
-      let IconComponent = _custom !== undefined ? theme.extensions[_custom].icons[icon] : null;
+      let IconComponent = _custom !== undefined ? theme.extensions[_custom].icons[icon as string] : null;
 
-      let $icon = props.uiSchema["ui:options"].icon;
+      let $icon = (props.uiSchema["ui:options"] as Partial<Reactory.Schema.IUILabelWidgetOptions>)?.icon;
 
-      if (_iconProps.icon) {
+      if (_iconProps?.icon) {
         $icon = _iconProps.icon;
       }
 
@@ -284,7 +286,8 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     if (options && options.format) {
 
       try {
-        if (options.format !== '$LOOKUP$') _labelText = template(options.format)({ ...props })
+        if (options.format !== '$LOOKUP$' && typeof options.format === 'string') 
+          _labelText = template(options.format as string)({ ...props })
         else _labelText = '🕘';
       } catch (e) {
         _labelText = `Template Error (${e.message})`;
@@ -297,7 +300,9 @@ const LabelWidget = (props: LabelWidgetProperties) => {
       }
     }
 
+    //@ts-ignore
     if (options.$format && typeof reactory.$func[options.$format] === 'function') {
+      //@ts-ignore
       _labelText = reactory.$func[options.$format](props);
     }
 

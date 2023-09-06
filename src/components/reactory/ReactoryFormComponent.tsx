@@ -1062,7 +1062,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const setFormContext = () => {
       if (!_formDef.formContext) _formDef.formContext = {};
       //we combine the form context from the getter function, with the formContext property / object on the _formDef
-      _formDef.formContext = { ...getFormContext(), ..._formDef.formContext };
+      _formDef.formContext = { ...getFormContext(), ..._formDef.formContext as Object };
     };
 
     const setFields = () => {
@@ -1345,7 +1345,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         case "object": {
           _formData = { ...formData };          
           if (formData === undefined || formData === null && formDef.defaultFormValue) {
-            _formData = { ...formDef.defaultFormValue };
+            _formData = { ...formDef.defaultFormValue as Object };
           }
           if (defaultInputData && typeof defaultInputData === 'object') _formData = { ..._formData, ...defaultInputData }
           break;
@@ -1382,12 +1382,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         if(typeof formDef.schema === "object") {
           switch (formDef.schema.type) {
             case "object": {
-              _formData = { ...__staticFormData, ..._formData };
+              _formData = { ...__staticFormData as Object, ..._formData };
               break;
             }
             case "array": {
               _formData = [];
-              if (isArray(__staticFormData) === true) _formData = [...__staticFormData];
+              if (isArray(__staticFormData) === true) _formData = [...__staticFormData as Array<any>, ..._formData];
               if (isArray(formData) === true) _formData = [...formData];
               break;
             }
@@ -1411,7 +1411,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         const _variables: any = reactory.utils.omitDeep(objectMapper(_input_mapping_params, query.variables || {}));
         reactory.log(`Variables for query`, { variables: _variables }, 'debug');
 
-        let $options = query.options ? { ...query.options } : { fetchPolicy: 'network-only' }
+        let $options = query.options ? { ...query.options as Object } : { fetchPolicy: 'network-only' }
 
         //error handler function
         const handleErrors = (errors) => {
@@ -1595,7 +1595,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
         let _errors = [...errors];
         if (props.transformErrors && typeof props.transformErrors === 'function') {
-          _errors = props.transformErrors(errors, this);
+          _errors = props.transformErrors(errors, this) as unknown[];
         }
 
         if (reactory.formTranslationMaps && reactory.formTranslationMaps[formfqn]) {
@@ -1618,9 +1618,10 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         }
       }
   
-      if (formDef.uiSchema && formDef.uiSchema['ui:options']) {
-        if (formDef.uiSchema['ui:options'].submitIcon) {
-          icon = formDef.uiSchema['ui:options'].submitIcon
+      if (formDef.uiSchema && formDef.uiSchema['ui:options'] !== null 
+          && typeof formDef.uiSchema['ui:options'] === 'object') {
+        if ((formDef.uiSchema['ui:options'] as any).submitIcon) {
+          icon = (formDef.uiSchema['ui:options'] as any).submitIcon
         }
       }
     }
@@ -1643,7 +1644,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       delete _props.iconAlign;
       _props.onClick = $submitForm;
 
-      submitTooltip = reactory.utils.template(tooltip)({
+      submitTooltip = reactory.utils.template(tooltip as string)({
         props: props,
         state: { formData }
       });
@@ -1848,12 +1849,14 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             });
           }
 
+  
           uiSchemaSelector = (
             //@ts-ignore
             <div {...p}>
               {_before}
               {
                 _formUiOptions.schemaSelector.buttonVariant ?
+                  //@ts-ignore
                   <Button
                     id="schemaButton"
                     onClick={onSelectUiSchema}
@@ -1865,6 +1868,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                     id="schemaButton"
                     style={{ fontWeight: 'bold', fontSize: '1rem' }}
                     onClick={onSelectUiSchema}
+                    //@ts-ignore
                     color={_formUiOptions.schemaSelector.activeColor ? _formUiOptions.schemaSelector.activeColor : "primary"}
                   >{_formUiOptions.schemaSelector.buttonTitle}</Button>
               }
@@ -1895,7 +1899,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     let _additionalButtons = [];
     if (buttons && buttons.length) {
-      _additionalButtons = buttons.map((button, buttonIndex) => {
+      _additionalButtons = buttons.map((button: any, buttonIndex) => {
         const { buttonProps, iconProps, type, handler, component } = button;
 
         if (component && typeof component === "function") return component;
@@ -1903,7 +1907,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         const onButtonClicked = () => {
           reactory.log(`OnClickButtonFor Additional Buttons`);
           if (props[handler] && typeof props[handler] === 'function') {
-            props[handler]({ reactoryForm: this, button })
+            (props[handler] as Function)({ reactoryForm: this, button })
           } else {
             reactory.createNotification(`No handler '${handler}' for ${buttonProps.title} button`, { showInAppNotification: true, type: 'error' })
           }

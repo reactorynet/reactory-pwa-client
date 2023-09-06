@@ -1297,10 +1297,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       const loggedInUser = this.getUser().loggedIn;;
 
       if (organization === null || organization === undefined) {
-        comparedRoles = loggedInUser.roles;
+        comparedRoles = loggedInUser?.roles || this.getUser().roles;
       } else {
         //if there is a organization_id, we check if there is a membership that has the organization id
-        let $memberships = user_memberships || loggedInUser.memberships;
+        let $memberships = user_memberships || loggedInUser?.memberships;
         if ($memberships && $memberships.length > 0) {
           const matched_memberships: Reactory.Models.IMembership[] = lodash.filter($memberships, (membership: Reactory.Models.IMembership) => {
 

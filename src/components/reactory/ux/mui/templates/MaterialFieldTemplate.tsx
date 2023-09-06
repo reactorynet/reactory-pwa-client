@@ -144,7 +144,7 @@ const MaterialFieldTemplateFunction = (props) => {
 
   let themeVariant = 'standard';
   if (theme && theme.MaterialInput) {
-    themeVariant = theme.MaterialInput.variant || themeVariant;
+    themeVariant = (theme.MaterialInput as any)?.variant || themeVariant;
   }
 
   let formControlProps: FormControlProps = {

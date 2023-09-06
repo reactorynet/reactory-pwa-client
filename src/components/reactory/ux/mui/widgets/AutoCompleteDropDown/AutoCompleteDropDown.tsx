@@ -1,9 +1,20 @@
-import Reactory from '@reactory/reactory-core';
+import Reactory, { ObjectMap } from '@reactory/reactory-core';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 import { Chip } from '@mui/material';
 
 'use strict';
 const dependencies = ['react.React', 'material-ui.MaterialCore', 'material-ui.MaterialLab'];
+export interface AutoCompleteDropDownUIProps  {
+    multiSelect: boolean;
+    onChangePropsMap: ObjectMap;
+    nullValue: any;
+    filterSelectedOptions: boolean;
+    keyField: string;
+    labelField: string;
+    matchField: string;
+    displayField: string;
+    title: string;
+};
 
 /**
  * A Material-UI Autocomplete component that fetches a list of options from a GraphQL API
@@ -13,10 +24,12 @@ const dependencies = ['react.React', 'material-ui.MaterialCore', 'material-ui.Ma
 function AutoCompleteDropDown<
     TData extends unknown | unknown[],
     TSchema extends Reactory.Schema.AnySchema,
-    TUISchema,
+    TUISchema extends Reactory.Schema.IUISchema,
     TContext extends Reactory.Client.IReactoryFormContext<unknown>>(props: Reactory.Schema.IAutoCompleteWidgetProps<TData, TSchema, TUISchema, TContext>) {
 
     const reactory = useReactory();
+    
+    type TProps = Reactory.Schema.IAutoCompleteWidgetProps<TData, TSchema, TUISchema, TContext> & AutoCompleteDropDownUIProps;
 
     const DefaultUIOptions = {
         // multiSelect
@@ -45,11 +58,11 @@ function AutoCompleteDropDown<
         }
     } = props;
 
-    const $props = uiSchema['ui:props'] || {};
+    const $props = (uiSchema['ui:props'] || {}) as TProps;
 
     let user = reactory.$user;
 
-    FormQuery = uiSchema["ui:graphql"];
+    FormQuery = uiSchema["ui:graphql"] as Reactory.Forms.IReactoryFormQuery;
 
     const { React, MaterialCore, MaterialLab } = reactory.getComponents<{
         React: Reactory.React;
