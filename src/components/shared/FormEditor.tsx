@@ -3,14 +3,11 @@ const {
     useState
 } = React;
 
+/** 
+ * Deprecated
+ */
 const FormEditor = (props) => {
-
-
-    return (
-        <React.Fragment>
-            <p>Form Editor { name }</p>
-        </React.Fragment>
-    )
+    return null
 }
 
 export default FormEditor;

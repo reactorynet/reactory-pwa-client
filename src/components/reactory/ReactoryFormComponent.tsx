@@ -239,6 +239,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   
   const { mode = 'view' } = props;
   const location = useLocation();
+  const params = useParams();
   const navigate = useNavigate();
 
   
@@ -531,9 +532,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     if (Array.isArray(formDef.uiSchemas) === true && formDef.uiSchemas.length === 0) return formDef.uiSchema || {};
 
     let allowed_schemas = AllowedSchemas(formDef.uiSchemas, mode, getScreenSize());
-
+    const qargs = queryString.parse(location.search);
     let matched_schema = allowed_schemas.find((menu_item, index) => {
-      return menu_item.key === props.uiSchemaKey || menu_item.id === props.uiSchemaId;
+      return menu_item.key === props.uiSchemaKey || menu_item.id === props.uiSchemaId || qargs.uiSchemaKey === menu_item.key || qargs.uiSchemaId === menu_item.id;
     });
 
     if (matched_schema) return matched_schema.uiSchema;
@@ -611,8 +612,20 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     if (props.helpTopics) topics = [...props.helpTopics, ...topics];
     const closeHelp = e => setShowHelpModal(false);
 
+    const allowSupportRequest = () => { 
+      const _activeSchema = getActiveUiSchema();
+      if(_activeSchema && _activeSchema['ui:form'] && _activeSchema['ui:form'].allowSupportRequest === false) return false;
+      return true;
+    }
+
     return (
-      <HelpMe topics={topics} tags={formDef.tags} title={props.helpTitle || formDef.title} open={showHelpModal === true} onClose={closeHelp}>
+      <HelpMe 
+        topics={topics} 
+        tags={formDef.tags} 
+        title={props.helpTitle || formDef.title} 
+        open={showHelpModal === true} 
+        allowSupportRequest={allowSupportRequest()}
+        onClose={closeHelp}>
       </HelpMe>
     )
   };
@@ -758,10 +771,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
               if (props.onMutateComplete) props.onMutateComplete(data[mutation.name], getFormContext(), mutation_result);
 
               if (typeof mutation.onSuccessMethod === "string" && mutation.onSuccessMethod.indexOf('event') >= 0) {
-
                 if (mutation.onSuccessMethod.indexOf(":") > 0) {
                   let eventName = mutation.onSuccessMethod.split(':')[1];
-                  if (typeof props[eventName] === "function") {
+                  if (typeof props[eventName] === "function") {                    
                     (props[eventName] as Function)({ formData: data[mutation.name] })
                   } else {
                     reactory.amq.raiseFormCommand(eventName, {
@@ -774,6 +786,11 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                     if (typeof props[mutation.onSuccessEvent.name] === 'function') {
                       (props[mutation.onSuccessEvent.name] as Function)({ formData: mutation.onSuccessEvent.dataMap ? reactory.utils.objectMapper(data[mutation.name], mutation.onSuccessEvent.dataMap) : data[mutation.name] });
                     }
+                  } else {
+                    reactory.amq.raiseFormCommand(mutation.onSuccessEvent.name, {
+                      form: {},
+                      result: data[mutation.name]
+                    });
                   }
                 }
               }
@@ -1018,6 +1035,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       screenBreakPoint: getScreenSize(),
       i18n: reactory.i18n,
       reactory,
+      setState: setCustomState,
+      state: customState,
       ...inputContext,
     }
 
@@ -1405,7 +1424,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         const _input_mapping_params: any = {
           formContext,
           formData: _formData,
-          $route: props.$route
+          $route: props.$route,
+          props: query.props ? { ...query.props } : {},
         };
         
         const _variables: any = reactory.utils.omitDeep(objectMapper(_input_mapping_params, query.variables || {}));

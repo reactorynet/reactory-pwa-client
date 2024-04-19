@@ -39,3 +39,4 @@ export { default as AutoCompleteDropDown } from './AutoCompleteDropDown/AutoComp
 export { StaticContent } from './StaticContentWidget';
 export { default as FroalaWidget } from './Froala/FroalaWidget';
 export { DateWidget } from './DateSelector';
+export { default as ReactoryD3Widget } from './D3/ReactoryD3Renderer';

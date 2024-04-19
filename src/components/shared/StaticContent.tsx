@@ -354,9 +354,6 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
       if(!portalContainer || MountableComponent === null) return null
             
       return ReactDOM.createPortal(<MountableComponent  { ...mountInfo.props }/>, portalContainer);
-      // reactory.mountComponent(component, {reactory, ...mountInfo.props }, portalContainer, true, () => {
-      //   reactory.log(`component ${mountInfo.component} mounted at ${mountInfo.id}`)
-      // });
     })
 
     return (

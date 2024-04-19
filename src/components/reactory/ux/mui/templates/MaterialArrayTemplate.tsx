@@ -384,7 +384,6 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
     const uiWidget: string = uiSchema['ui:widget'] || null
     const definitions = registry.definitions;
     let ArrayComponent = null
-    
     let componentProps: any = {};
     if (uiWidget !== null) {
       if (registry.widgets[uiWidget]) ArrayComponent = registry.widgets[uiWidget]

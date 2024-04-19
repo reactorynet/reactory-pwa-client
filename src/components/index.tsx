@@ -2,6 +2,15 @@
 import React from 'react';
 
 import lodash from 'lodash';
+import * as d3 from "d3";
+import d3array from "d3-array";
+import d33d from "d3-3d";
+import d3force from "d3-force";
+import d3cloud from "d3-cloud";
+import d3color from "d3-color";
+import d3delaunay from "d3-delaunay";
+
+
 import * as MaterialCore from '@mui/material'
 import * as MaterialCoreStyles from '@mui/styles'
 import * as MaterialIcons from '@mui/icons-material'
@@ -15,6 +24,7 @@ import * as ReactRouter from 'react-router';
 import * as ReactRouterDom from 'react-router-dom';
 
 import * as ReactBigCalendar from 'react-big-calendar';
+
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 //import * as OrganizationComponents from './organization/index';
@@ -560,6 +570,20 @@ export const componentRegistery = [
     name: 'Recompose',
     version: '1.0.0',
     component: compose,
+  },
+  {
+    nameSpace: 'd3',
+    name: 'Package',
+    version: '1.0.0',
+    component: {
+      d3,
+      d3array,
+      d33d,
+      d3cloud,
+      d3color,
+      d3delaunay,
+      d3force
+    }
   },
   ...Forms
 ];

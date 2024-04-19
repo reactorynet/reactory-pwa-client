@@ -50,6 +50,8 @@ import Reactory from '@reactory/reactory-core';
 
 import { cloneDeep } from "@apollo/client/utilities";
 import { ReactoryForm } from "../components/reactory";
+import { deprecate } from "util";
+import { compose } from "redux";
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -712,7 +714,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }
 
     if (options.props) {
-      defaultNotificationProps.config = { ...defaultNotificationProps.config, ...options.config }
+      defaultNotificationProps.config = { ...defaultNotificationProps.config, ...options?.config }
     }
 
     if (options.showInAppNotification !== false) {
@@ -857,7 +859,11 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, [], 'debug');
       const entries = this.statistics.__keys.map(key => ({ key, stat: this.statistics.items[key] }));
       this.graphqlMutation(gql`mutation PublishStatistics($entries: [StatisticsInput]!){
-                CorePublishStatistics(entries: $entries)
+                CorePublishStatistics(entries: $entries) {
+                  id
+                  reference
+                  createdAt
+                }
             }`, {
         entries
       }).then((publishResult) => {
@@ -1410,6 +1416,11 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     localStorage.getItem(storageKeys.LastLoggedInEmail);
   }
 
+
+  private ensureVersion(fqn: Reactory.FQN): Reactory.FQN {
+    return `${fqn.trim()}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`;
+  }
+
   registerComponent(
     nameSpace: string,
     name: string,
@@ -1419,7 +1430,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     roles: string[] = ['*'],
     wrapWithApi: boolean = false,
     connectors: any[] = [],
-    componentType: string = 'component') {
+    componentType: string = 'component',
+    errorBoundary: boolean = true) {
     const fqn = `${nameSpace}.${name}@${version}`;
     if (isEmpty(nameSpace))
       throw new Error(`nameSpace is required for component registration: ${fqn}`);
@@ -1427,17 +1439,17 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       throw new Error(`name is required for component registration: ${fqn}`);
     if (isNil(component))
       throw new Error(`component is required to register component: ${fqn}`);
-
-
-
+    
     this.componentRegister[fqn] = {
       nameSpace,
       name,
       version,
-      component: wrapWithApi === false ? component : withReactory(component, fqn),
+      component,
       tags,
       roles,
       connectors,
+      useReactory: wrapWithApi === true,
+      useErrorBoundary: errorBoundary === true,
       componentType
     };
     this.emit('componentRegistered', fqn);
@@ -1457,6 +1469,28 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   };
 
+  getComponent<T>(fqn): T {
+    if (fqn === undefined)
+      throw new Error('NO NULL FQN');
+    try {
+      const found = this.componentRegister[this.ensureVersion(fqn)];
+      if (found && found.component) {
+        let ComponentToReturn = found.component as T;
+        if(found.useReactory === true) { 
+          ComponentToReturn = compose(withReactory)(ComponentToReturn) as T;
+        }
+        return ComponentToReturn as T;
+      }
+      return null; //we must return null, because the component is not found, we cannot automatically return the not found component, that is the responsibility of the component
+    } catch (err) {
+      this.log(`Bad component name ${err.message}`, fqn, 'error');
+      if (this.componentRegister && this.componentRegister['core.NotFound@1.0.0']) {
+        return this.getNotFoundComponent() as T;
+      }
+    }
+  }
+
+
   getComponents(componentFqns = []): any {
     let componentMap = {};
     const that = this;
@@ -1464,12 +1498,15 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       let component = null;
       let $name: string = '';
       if (typeof fqn === 'string') {
-        component = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
+        component = that.componentRegister[`${fqn.trim()}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
         try {
           if (component) {
             const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
             $name = component.name;
             componentMap[component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
+            if(component.useReactory === true) {
+              componentMap[$name] = compose(withReactory)(componentMap[$name]);
+            } 
           } else {
             $name = componentPartsFromFqn(fqn).name;
             componentMap[$name] = this.getNotFoundComponent();
@@ -1490,8 +1527,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
             } else {
               componentMap[componentPartsFromFqn(fqn.componentFqn).name] = that.getNotFoundComponent();
             }
-
-
           } catch (e) {
             that.log('Error Occured Loading Component Fqns', fqn.componentFqn, 'error');
           }
@@ -1501,21 +1536,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return componentMap;
   }
 
-  getComponent<T>(fqn): T {
-    if (fqn === undefined)
-      throw new Error('NO NULL FQN');
-    try {
-      const found = this.componentRegister[`${fqn}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
-      if (found && found.component)
-        return found.component as T;
-      return null; //we must return null, because the component is not found, we cannot automatically return the not found component, that is the responsibility of the component
-    } catch (err) {
-      this.log(`Bad component name ${err.message}`, fqn, 'error');
-      if (this.componentRegister && this.componentRegister['core.NotFound@1.0.0']) {
-        return this.getNotFoundComponent() as T;
-      }
-    }
-  }
+  
 
   getGlobalComponents() {
     const components = [];

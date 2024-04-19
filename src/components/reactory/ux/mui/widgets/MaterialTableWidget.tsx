@@ -478,7 +478,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }
 
         reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
-        let variables = reactory.utils.objectMapper({ formContext, query }, uiOptions.variables || queryDefinition.variables);
+        let variables = reactory.utils.objectMapper({ formContext, query, props: queryDefinition.props || {} }, uiOptions.variables || queryDefinition.variables);
 
         variables = { ...variables, paging: { page: query.page, pageSize: query.pageSize } };
         reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
@@ -505,7 +505,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           setError("Error executing query");
         }
         //show a loader error
-        if (queryResult?.data) {          
+        if (queryResult?.data) {
           const $data: any = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
           if ($data) {
             if (isArray($data) === true) response.data = $data;
@@ -513,14 +513,15 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               if ($data.data && isArray($data.data) === true) response.data = $data.data;
               if ($data.paging) response.paging = $data.paging
             }
-            // if($data.data && $data.paging) {
-            //   response.data = $data.data
-            //   response.paging = $data.paging
-            // } else {
-            //   if( isArray($data) ) {
-            //     response.data = $data;
-            //   }
-            // }            
+
+            if($data.data && $data.paging) {
+              response.data = $data.data
+              response.paging = $data.paging
+            } else {
+              if( isArray($data) ) {
+                response.data = $data;
+              }
+            }            
           }
 
           if (uiOptions.disablePaging === true) {
@@ -1260,7 +1261,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       }
 
       if (action.event.via === "component" && action.event.component) {
-        debugger
         const component = reactory.getComponent(action.event.component);
         if (typeof component[action.event.name] === "function") {
           await component[action.event.name](__formData)
@@ -1342,7 +1342,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }}
         onKeyPress={(evt)=>{
           if(evt.key === "Enter") {
-            setQuery({ ...query, search: searchInput})            
+            setData({
+              ...data,
+              paging: {
+                ...data.paging,
+                page: 0
+              }
+            })
+            setQuery({ ...query, search: searchInput});                        
           }
         }}
       />);

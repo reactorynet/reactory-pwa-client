@@ -19,6 +19,7 @@ interface ErrorBoundaryPropsWithComponent {
   fallback?: never
   FallbackComponent: React.ComponentType<FallbackProps>
   fallbackRender?: never
+  id?: string
 }
 
 declare function FallbackRender(
@@ -39,6 +40,7 @@ interface ErrorBoundaryPropsWithRender {
   fallback?: never
   FallbackComponent?: never
   fallbackRender: typeof FallbackRender
+  id?: string
 }
 
 interface ErrorBoundaryPropsWithFallback {
@@ -55,6 +57,7 @@ interface ErrorBoundaryPropsWithFallback {
   > | null
   FallbackComponent?: never
   fallbackRender?: never
+  id?: string
 }
 
 type ErrorBoundaryProps =
@@ -143,7 +146,8 @@ function withErrorBoundary<P>(
   Component: React.ComponentType<P>,
   errorBoundaryProps: ErrorBoundaryProps,
 ): React.ComponentType<P> {
-  const Wrapped: React.ComponentType<P> = props => {
+  //@ts-ignore
+  const Wrapped: React.ComponentType<P> = (props: any) => {
     return (
       <ErrorBoundary {...errorBoundaryProps}>
         <Component {...props} />
