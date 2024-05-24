@@ -251,12 +251,17 @@ class TabbedNavComponent extends Component<any, any> {
         });
 
         let newPanel = (tab.id || index) === state.activeTab ? (
-          <TabPanel value={state.activeTab} index={(tab.id || index)} key={`panel_${(tab.id || index)}`}>
+          <TabPanel 
+            value={state.activeTab} 
+            index={(tab.id || index)} 
+            key={`panel_${(tab.id || index)}`}>
             <MainComponentToMount {...mainComponentProps} />
             {additionalComponentsToMount}
           </TabPanel>) : (
-          <TabPanel value={state.activeTab} index={(tab.id || index)} key={`panel_${(tab.id || index)}`}>
-            <Typography>Not Visible Yet</Typography>
+          <TabPanel 
+            value={state.activeTab} 
+            index={(tab.id || index)} 
+            key={`panel_${(tab.id || index)}`}>
           </TabPanel>);
 
         _tabPannels.push(newPanel);

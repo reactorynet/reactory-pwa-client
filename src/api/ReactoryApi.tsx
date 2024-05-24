@@ -789,11 +789,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   goto(where = "/", state = { __t: new Date().valueOf() }) {
-
-    // if (this.history && this.history) {
-    //   this.history.replace({ pathname: where, state });
-    //   this.emit(ReactoryApiEventNames.onRouteChanged, { path: where, state, where });
-    // }
+    // redirect the user to the specified location
+    this.history.push(where, state);
   }
 
   registerFunction(fqn, functionReference, requiresApi = false, signature = '< signature-not-set />') {
@@ -1195,16 +1192,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   async raiseFormCommand(commandId, commandDef, formProps) {
-
-
-    this.log(`______ RAISE FORM COMMAND ______ `, 'debug');
-    this.log(`______ ACTION ______ ${commandDef.action || 'NOPE'}`, 'debug');
-    this.log(`______ GRAPHQL ______ ${commandDef.hasOwnProperty('graphql') || 'NOPE'}`, 'debug');
-    this.log(`______ MUTATION ______ ${commandDef.hasOwnProperty('mutation') || 'NOPE'}`, 'debug');
-
     const self = this;
-
-
     if (commandDef.action && commandDef.action === 'component') {
       const componentToMount = commandDef.component.componentFqn;
       const _formData = formProps.formData || formProps.formContext.formData;
@@ -1799,16 +1787,5 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     client: PropTypes.instanceOf(ApolloClient).isRequired
   };
 }
-
-/*
-export const login = ReactoryApi.login
-export const companyWithId = ReactoryApi.companyWithId
-export const register = ReactoryApi.register
-export const forgot = ReactoryApi.forgot
-export const reset = ReactoryApi.reset
-export const forms = ReactoryApi.forms
-*/
-
-
 
 export default ReactoryApi;
