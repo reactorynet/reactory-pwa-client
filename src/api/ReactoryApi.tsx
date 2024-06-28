@@ -8,7 +8,7 @@ import EventEmitter from 'eventemitter3';
 import inspector from 'schema-inspector';
 import { v4 as uuid } from 'uuid';
 import classNames from 'classnames';
-import { BrowserRouter as Router, } from 'react-router-dom';
+import { NavigateFunction, BrowserRouter as Router, } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions, MutationResult, FetchResult } from '@apollo/client';
 import localForage from 'localforage';
@@ -52,6 +52,12 @@ import { cloneDeep } from "@apollo/client/utilities";
 import { ReactoryForm } from "../components/reactory";
 import { deprecate } from "util";
 import { compose } from "redux";
+import { is } from "immutable";
+
+const {
+  REACTORY_APPLICATION_ANONUSER_EMAIL = 'anonymous@reactory.local',
+  REACTORY_APPLICATION_ANONUSER_PASSWORD = 'anonymous-password',
+} = process.env;
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -371,7 +377,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   __uuid: string;
   React: typeof React;
   i18n: i18n = i18next;
-
   constructor(props) {
     super();
 
@@ -548,10 +553,24 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       this.__uuid = uuid();
       localStorage.setItem("$reactory_instance_id$", this.__uuid);
     }
-    //this.status();
+  }
+
+  /**
+   * Used to retrieve a anonymous JWT token for use in the application
+   * when the user is not logged in, or when the user logs out.
+   */
+  private async getAnonToken() {
+    const result = await this.login(REACTORY_APPLICATION_ANONUSER_EMAIL, REACTORY_APPLICATION_ANONUSER_PASSWORD);
+    if (result && result.user.token) {
+      this.setAuthToken(result.user.token);
+    }
   }
 
   async init() {
+    if ( isNil(this.getAuthToken()) == true) {
+      await this.getAnonToken();
+    } 
+
     const {
       client,
       ws_link,
@@ -790,7 +809,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   goto(where = "/", state = { __t: new Date().valueOf() }) {
     // redirect the user to the specified location
-    this.history.push(where, state);
+    window.location.href = where;
   }
 
   registerFunction(fqn, functionReference, requiresApi = false, signature = '< signature-not-set />') {
@@ -1348,7 +1367,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return true;
   }
 
-  getMenus(target) {
+  getMenus() {
     const user = this.getUser();
     const { menus } = user;
     return menus || [];
@@ -1606,22 +1625,23 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return ReactDOM.unmountComponentAtNode(node);
   }
 
+  isLoggingOut = false;
   async logout(refreshStatus = true) {
-    const user = this.getUser();
+    if (this.isLoggingOut === true) return;
+    this.isLoggingOut = true;
     localStorage.removeItem(storageKeys.AuthToken);
-    this.clearStoreAndCache();
-
-    const { client } = await ReactoryApolloClient();
-    this.client = client;
-    this.setUser({ ...user, ...anonUser });
-
-    if (refreshStatus === true) {
-      this.status({ emitLogin: false, forceLogout: true }).then((apiStatus) => {
+      this.clearStoreAndCache();
+      await this.getAnonToken();
+      const { client } = await ReactoryApolloClient();
+      this.client = client;
+      if (refreshStatus === true) {
+        this.status({ emitLogin: false, forceLogout: true }).then(() => {
+          this.emit(ReactoryApiEventNames.onLogout);
+        });
+      } else {
         this.emit(ReactoryApiEventNames.onLogout);
-      });
-    } else {
-      this.emit(ReactoryApiEventNames.onLogout);
-    }
+      }
+      this.isLoggingOut = false;
   }
 
   getLastValidation() {

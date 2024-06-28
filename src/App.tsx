@@ -10,6 +10,7 @@ import {
   createBrowserRouter,
   RouteObject,
   RouteProps,
+  useNavigation,
 } from 'react-router-dom';
 import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
@@ -62,6 +63,7 @@ const reactory: Reactory.Client.ReactorySDK = new ReactoryApi({
   clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
   clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
   $version: `${packageInfo.version}-${license.version}`,
+  useNavigation
 });
 
 reactory.init().then();
@@ -76,7 +78,7 @@ reactory.$windowSize = reactory.getSizeSpec();
 const store = configureStore(null);
 reactory.reduxStore = store;
 window.reactory = {
-  api: reactory
+  api: reactory,
 };
 
 export interface NewNotification {
@@ -257,6 +259,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     //     }
     //   }
 
+    //   // @ts-ignore
     //   $routes.push(routeProps);
     // });
 

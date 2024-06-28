@@ -24,7 +24,7 @@ import BackIcon from '@mui/icons-material/ArrowBack';
 import PowerSettingIcon from '@mui/icons-material/PowerSettingsNew';
 import { getAvatar } from '../util';
 import moment from 'moment';
-import { withReactory, ReactoryApiEventNames } from '@reactory/client-core/api';
+import ReactoryApi, { withReactory, ReactoryApiEventNames } from '@reactory/client-core/api';
 import license from '@reactory/client-core/license';
 import { useNavigate } from 'react-router';
 import Reactory from '@reactory/reactory-core';
@@ -201,7 +201,7 @@ const ToggleDevelopComponent = compose(withReactory)(ToggleDevelopMode);
  * This example is taking advantage of the composability of the `AppBar`
  * to render different components depending on the application state.
  */
-const ApplicationHeader = (props) => {
+const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
 
   const { reactory, theme } = props;
 
@@ -217,8 +217,6 @@ const ApplicationHeader = (props) => {
     'forms.HelpListForm'
   ]);
 
-
-  const [logged, setLogged] = React.useState<boolean>(true);
   const [drawerOpen, setDrawerOpen] = React.useState<boolean>(false);
   const [menuOpen, setMenuOpen] = React.useState<boolean>(false);
   const [menuAnchor, setMenuAnchor] = React.useState<any>(null);
@@ -402,7 +400,7 @@ const ApplicationHeader = (props) => {
    */
   const renderHelpInterface = () => {
     const { show, searchInput } = search;
-    const HelpListForm = reactory.getComponent('forms.HelpListForm@1.0.0');
+    const HelpListForm = reactory.getComponent<React.FC>('forms.HelpListForm@1.0.0');
     if (show !== true) return null;
     const closeSearch = e => setSearch({ searchInput: '', show: false })
     return (
@@ -509,6 +507,7 @@ const ApplicationHeader = (props) => {
         </Tooltip>
       </ListItemIcon>
       <ListItemText
+        //@ts-ignore
         primary={<span className={classes.versionPrimary}>Client ver: {reactory.props.$version}</span>}
         secondary={<span className={classes.version}>📡&nbsp;{server && server.id ? server.id : 'development'} ver: {server && server.version ? server.version : 'waiting'} </span>}
       />
@@ -643,14 +642,14 @@ const ApplicationHeader = (props) => {
 
           <>
             <Typography variant="caption">
-              {reactory.$user.id === "anon" ? 'LOGIN' : 'LOGOUT'}
+              {reactory.hasRole(['ANON']) ? 'LOGIN' : 'LOGOUT'}
             </Typography>
             <IconButton
               aria-owns={menuOpen ? 'top-right' : null}
               aria-haspopup="true"
               onClick={handleMenu}
               style={{ 
-                color: reactory.$user.id === "anon" ? "inherit" : reactory && reactory.muiTheme ? reactory.muiTheme.palette.success.main : "inherit"
+                color: reactory.hasRole(['ANON']) ? "inherit" : reactory && reactory.muiTheme ? reactory.muiTheme.palette.success.main : "inherit"
               }}
               size="large">
               <PowerSettingIcon />
