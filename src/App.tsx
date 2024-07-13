@@ -103,6 +103,11 @@ const Globals = ({ reactory }) => {
 
   const globals = reactory.getGlobalComponents();
 
+  const [version, setVersion] = React.useState(0);
+
+  reactory.on('onLogout', () => { setVersion(version + 1) });
+  reactory.on('onLogin', () => { setVersion(version + 1) });
+
   return (
     <div data-v={`1`} data-globals-container="true" style={{ height: 0, width: 0, position: "absolute", left: 0, top: 0, display: 'none' }}>
       {globals.map((GLOBALFORM, gidx) => {
@@ -161,108 +166,6 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const configureRouting = () => {
     reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
     const $routes = [...reactory.getRoutes()];
-    
-
-    // reactory.getRoutes().forEach((routeDef: Reactory.Routing.IReactoryRoute) => {
-
-    //   const routeProps: Reactory.Client.IReactoryClientRoute = {
-    //     key: routeDef.key || routeDef.id || reactory.utils.uuid(),
-    //     path: routeDef.path,
-    //     element: (): JSX.Element =>  {        
-          
-    //       //const match = useMatch(routeDef.path);
-    //       reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: props }, 'debug');          
-    //       if (routeDef.redirect) {
-    //         //return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
-    //         navigation(routeDef.redirect, { state: { from: location }, replace: true })
-    //       }
-
-    //       let componentArgs = {};
-
-    //       /**
-    //        * If the route has props, we add them to the component args
-    //        * this is the preferred way of setting the props.
-    //        */
-    //       if(routeDef.componentProps) {
-    //         componentArgs = {...routeDef.componentProps}
-    //       }
-
-    //       /**
-    //        * If the route has args, we add them to the component args
-    //        * this is the secondary method of setting the props, provides
-    //        * additional meta data about the props to allow for potential 
-    //        * future features.
-    //        */
-    //       if (isArray(routeDef.args)) {
-    //         routeDef.args.forEach((arg) => {
-    //           componentArgs[arg.key] = arg.value[arg.key];
-    //         })
-    //       }
-      
-    //       const ReactoryComponent = reactory.getComponent<any>(routeDef.componentFqn)
-    //       const NotFound = reactory.getComponent<any>("core.NotFound");
-    //       if(routeDef.componentFqn === "core.Login@1.0.0" && ReactoryComponent !== null) debugger;
-    //       if (routeDef.public === true) {
-    //         if (ReactoryComponent) { 
-    //           reactory.log(`Mounting public component for route ${routeDef.title}`, { routeDef, componentArgs }, 'debug');
-    //           return (<ReactoryComponent {...componentArgs} />);
-    //         }
-    //         else return <NotFound 
-    //           message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} 
-    //           waitingFor={routeDef.componentFqn} args={componentArgs} 
-    //           wait={500}
-    //           onFound={()=>{setVersion(v+1)}} 
-    //         ></NotFound>
-    //       } else {
-
-    //         const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().loggedIn.roles) === true;
-
-    //         if (reactory.isAnon() === false && hasRolesForRoute === false) {
-    //           return <NotFound message="You don't have sufficient permissions to access this route." link={routeDef.path} wait={500} />
-    //         }
-
-    //         if (auth_validated === true && hasRolesForRoute === true) {
-    //           if (ReactoryComponent) { 
-    //             reactory.log(`Mounting component for route ${routeDef.title}`, routeDef, 'debug');
-    //             return (<ReactoryComponent {...componentArgs} />)
-    //           }
-    //           else return (<NotFound message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} waitingFor={routeDef.componentFqn} args={componentArgs} wait={500}></NotFound>)
-    //         } else {
-
-    //           const hasRefreshed: boolean = localStorage.getItem('hasRefreshed') === 'true';
-
-    //           //auth token not validated yet in process of checking
-    //           if (auth_validated === false || authenticating === true) {
-    //             return <Typography style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem' }} variant='h5'>Please wait while we validate your access token...</Typography>
-    //           } else {
-
-
-    //             if (hasRefreshed === true && reactory.isAnon() === true && routeDef.path !== "/login") {
-    //               localStorage.removeItem('hasRefreshed');
-    //               //return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
-    //               navigation("/login", { state: { from: location }, replace: true })
-    //             }
-
-    //           }
-    //         }
-
-    //         return (
-    //           <div style={{ display: 'flex', justifyContent: 'center' }}>
-    //             <div style={{ margin: 'auto', display: 'flex', flexDirection: 'column', justifyContent: "center" }}>
-    //               <Typography variant="h4" style={{ marginTop: '40px' }}>Validating access to route</Typography>
-    //               <Typography variant="h6" style={{ marginTop: '40px', textAlign: 'center' }}>{routeDef.path}</Typography>
-    //               <Icon style={{ fontSize: '48px', margin: 'auto', marginTop: '40px', }}>security</Icon>
-    //             </div>
-    //           </div>
-    //         )
-    //       }
-    //     }
-    //   }
-
-    //   // @ts-ignore
-    //   $routes.push(routeProps);
-    // });
-
     setRoutes($routes);
     setVersion(v + 1);
   }
@@ -739,6 +642,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.ws_link = cli.ws_link;
         cli.clearCache();
         getApiStatus();
+        // strip the auth token from the url bar
+        setTimeout(() => { window.history.replaceState({}, document.title, window.location.pathname) }, 500);
       });
       setIsAuthenticating(true);
     } else {

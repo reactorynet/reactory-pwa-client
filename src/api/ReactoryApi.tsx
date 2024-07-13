@@ -53,6 +53,8 @@ import { ReactoryForm } from "../components/reactory";
 import { deprecate } from "util";
 import { compose } from "redux";
 import { is } from "immutable";
+import { ApiStatus as ApiStatusQueryFactory } from './graphql/graph/queries';
+import { ApiStatusQueryScope } from "./graphql/graph/queries/ApiStatus";
 
 const {
   REACTORY_APPLICATION_ANONUSER_EMAIL = 'anonymous@reactory.local',
@@ -548,6 +550,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.isDevelopmentMode = this.isDevelopmentMode.bind(this);
     this.setDevelopmentMode = this.setDevelopmentMode.bind(this);
     this.hydrate = this.hydrate.bind(this);
+    this.getApiStatus = this.getApiStatus.bind(this);
     this.__uuid = localStorage.getItem("$reactory_instance_id$");
     if (this.__uuid === null) {
       this.__uuid = uuid();
@@ -566,11 +569,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }
   }
 
-  async init() {
-    if ( isNil(this.getAuthToken()) == true) {
-      await this.getAnonToken();
-    } 
-
+  async init(): Promise<void> {    
     const {
       client,
       ws_link,
@@ -580,6 +579,20 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.clearCache = clearCache;
     this.client = client;
     this.ws_link = ws_link;
+
+    if (isNil(this.getAuthToken()) == true) {
+      await this.getAnonToken();
+    } else {
+      try { 
+        await this.getApiStatus();
+      } catch (error) {
+        if (error.message === 'Unauthorized') {
+          await this.logout();
+        } else {
+          this.log('Error fetching API status', error, 'error');          
+        }
+      }
+    }     
 
     await this.hydrate();
     await this.initi18n();
@@ -1012,7 +1025,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }).catch((clientErr) => {
         that.log(`Error occurred while executing the query ${clientErr.message}`, { query, clientErr }, 'error');
         reject(clientErr)
-        // resolve({ data: null, loading: false, errors: [clientErr] });
       });
     });
   }
@@ -1077,90 +1089,79 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
    * the server.
    * @returns - Promise that contains the formSchemas for the user logged in user.
    */
-  forms(bypassCache: boolean = false) {
+  async forms(bypassCache: boolean = false): Promise<Reactory.Forms.IReactoryForm[]> {
     const that = this;
-    return new Promise((resolve) => {
-      const refresh = () => {
+    const refresh = async () => {
 
-        const FORMS_QUERY = `
-        query ReactoryForms {
-          ReactoryForms {
-            ${FORM_QUERY_SEGMENTS.FORM_CORE_ELEMENTS}          
-          }
+      const FORMS_QUERY = `
+      query ReactoryForms {
+        ReactoryForms {
+          ${FORM_QUERY_SEGMENTS.FORM_CORE_ELEMENTS}          
         }
-        `;
+      }
+      `;
 
-
-        const tempSchema = {
-          schema: {
-            type: 'string',
-            title: ''
+      const tempSchema = {
+        schema: {
+          type: 'string',
+          title: ''
+        },
+        uiSchema: {
+          'ui:widget': 'HiddenWidget',
+          'ui:options': {
+            showSubmit: false,
+            style: {
+              display: 'none',
+              height: '0px',
+            }
           },
-          uiSchema: {
-            'ui:widget': 'HiddenWidget',
-            'ui:options': {
-              showSubmit: false,
-              style: {
-                display: 'none',
-                height: '0px',
-              }
-            },
-          },
-        }
+        },
+      }
 
-        that.graphqlQuery<any, any>(FORMS_QUERY, {}, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
-          const { ReactoryForms } = data;
-          const ReactoryFormComponent = that.getComponent('core.ReactoryForm') as React.FunctionComponent<Reactory.Client.IReactoryFormProps>;
+      const result = await that.graphqlQuery<{ ReactoryForms: Reactory.Forms.IReactoryForm[] }, any>(FORMS_QUERY, {}, { fetchPolicy: 'network-only' });
+      const { errors = [], data = { ReactoryForms: [] } } = result;
+      const { ReactoryForms } = data;
 
-          if (ReactoryForms && ReactoryForms.length > 0) {
-            that.formSchemas = [];
-            ReactoryForms.forEach(($formDef: Reactory.Forms.IReactoryForm, formDefIndex) => {
-
-              const formDef = { ...$formDef, ...tempSchema };
-              that.formSchemas.push(formDef);
-              // A form must explicitly be set to false 
-              // to not register as a component.
-              if (formDef.registerAsComponent !== false) {
-                const FormComponent = (props: any, context: any) => {
-                  return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={`${formDefIndex}`}
-                    onSubmit={props.onSubmit} onChange={props.onChange}
-                    formData={formDef.defaultFormValue || props.formData || props.data}
-                    before={props.before}
-                    {...props}
-                    context={context}
-                  >{props.children}
-                  </ReactoryFormComponent>, formDef.wrap === true);
-                };
-                that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent, formDef.tags, formDef.roles, true, [], 'form');
-              }
-            });
-            that.formSchemaLastFetch = moment();
-            resolve(ReactoryForms);
+      if (errors.length > 0) {
+        errors.forEach((err, erridx) => {
+          that.log(`GraphQL ReactoryForms result error #${erridx}`, { err }, 'error');
+        })
+      }
+      
+      const ReactoryFormComponent = that.getComponent('core.ReactoryForm') as React.FunctionComponent<Reactory.Client.IReactoryFormProps>;
+      if (ReactoryForms && ReactoryForms.length > 0) {
+        that.formSchemas = [];
+        ReactoryForms.forEach(($formDef: Reactory.Forms.IReactoryForm, formDefIndex) => {
+          const formDef = { ...$formDef, ...tempSchema };
+          that.formSchemas.push(formDef);
+          // A form must explicitly be set to false 
+          // to not register as a component.
+          if (formDef.registerAsComponent !== false) {
+            const FormComponent = (props: any, context: any) => {
+              return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={`${formDefIndex}`}
+                onSubmit={props.onSubmit} onChange={props.onChange}
+                formData={formDef.defaultFormValue || props.formData || props.data}
+                before={props.before}
+                {...props}
+                context={context}
+              >{props.children}
+              </ReactoryFormComponent>, formDef.wrap === true);
+            };
+            that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent, formDef.tags, formDef.roles, true, [], 'form');
           }
-
-          if (errors.length > 0) {
-            errors.forEach((err, erridx) => {
-              that.log(`GraphQL ReactoryForms result error #${erridx}`, { err }, 'error');
-            })
-          }
-
-        }).catch((err) => {
-          that.log('🚨 Unabled to process query', err, 'error');
-          resolve([]);
         });
+        that.formSchemaLastFetch = moment();
+        return ReactoryForms;
+      }
+    };
 
+    if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined && bypassCache === false) {
+      if (moment(that.formSchemaLastFetch).add(5, 'minutes').isBefore(moment())) {
+        await refresh();
+      }
+    } else { await refresh() };
 
-      };
-
-      if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined && bypassCache === false) {
-
-        if (moment(that.formSchemaLastFetch).add(5, 'minutes').isBefore(moment())) {
-          refresh();
-        } else {
-          resolve(that.formSchemas);
-        }
-      } else refresh();
-    });
+    return that.formSchemas;
   }
 
   /**
@@ -1632,6 +1633,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     localStorage.removeItem(storageKeys.AuthToken);
       this.clearStoreAndCache();
       await this.getAnonToken();
+      await this.forms(true);
       const { client } = await ReactoryApolloClient();
       this.client = client;
       if (refreshStatus === true) {
@@ -1692,6 +1694,26 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     else await localForage.removeItem(key);
   }
 
+  private async getApiStatus(scope: ApiStatusQueryScope[] = ['application']): Promise<Partial<Reactory.Models.IApiStatus>>{
+    const that = this;
+    const query = ApiStatusQueryFactory(scope);
+    const variables = { theme: that.$user?.theme, mode: that.getThemeMode() };
+    try {
+      return await that.graphqlQuery<Partial<Reactory.Models.IApiStatus>, { }>(query, variables, { fetchPolicy: 'network-only' });    
+    } catch (apiStatusError) {      
+      //check if the error is a network error
+      if (apiStatusError.networkError) {
+        const { networkError } = apiStatusError;
+        if (networkError.statusCode === 401) {
+          throw new Error('Unauthorized');
+        }
+      } else {
+        that.log(`Error occurred while fetching the API status: ${apiStatusError.message}`, { apiStatusError }, 'error');
+        throw apiStatusError;
+      }
+    }
+  }
+
   status(options?: Reactory.Client.IApiStatusRequestOptions): Promise<Reactory.Models.IApiStatus> {
     const that = this;
     const current_user = this.$user as Reactory.Models.IApiStatus;
@@ -1741,6 +1763,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
               }
             }).catch((clientErr) => {
               that.log(`Error occurred while executing the query ${clientErr.message}`, { clientErr }, 'error');
+
               resolve(current_user);
             });
           } else {
@@ -1754,7 +1777,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     });
   }
 
-  validateToken(token) {
+  private validateToken(token: string) {
     this.setAuthToken(token);
     return this.status();
   }

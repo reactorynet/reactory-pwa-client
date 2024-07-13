@@ -21,7 +21,6 @@ const {
   REACT_APP_CLIENT_KEY,
   REACT_APP_CLIENT_PASSWORD,
   REACT_APP_API_ENDPOINT,
-  REACT_APP_ANON_TOKEN = anonToken,
   REACT_APP_APP_TITLE = packageInfo.displayName
 } = process.env;
 
@@ -35,7 +34,7 @@ if (localStorage) {
 
 export default async () => {
   // get the authentication token from local storage if it exists
-  const token = localStorage.getItem('auth_token') || anonToken;
+  const token = localStorage.getItem('auth_token');
 
   let persistedCache: any = null;
   let cache: any = null;

@@ -43,7 +43,9 @@ export const getCache = async (debug: boolean = true) => {
         debug,
         trigger: 'write',
         key: 'reactory_apollo_cache',
-        maxSize: false
+        maxSize: false,
+        // @ts-ignore
+        serialize: false
     });
 
     await reactory_persistor.restore().then();
