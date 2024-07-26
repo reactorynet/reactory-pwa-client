@@ -1,7 +1,5 @@
-import React, { Fragment, Component, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from '@reactory/client-core/components/reactory/form/utils';
-import { pullAt, isNil, template, isString } from 'lodash';
+import React, { useEffect } from 'react';
+import { isNil, template, isString } from 'lodash';
 import { useNavigate } from 'react-router'
 
 import * as uuid from 'uuid';
@@ -29,6 +27,7 @@ import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux';
 import { withStyles, withTheme, makeStyles } from '@mui/styles';
 import Reactory from '@reactory/reactory-core';
+import { ReactoryFormUtilities } from 'components/reactory/form/types';
 
 
 function LinkIconButton(link, icon) {
@@ -237,11 +236,13 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
     return _options;
   }
 
+  const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
+
   const [data, setData] = React.useState<ListType<TAny>>(reactory.utils.lodash.isNil(formData) === true ? [] : formData);
   const [error, setError] = React.useState<string>(null);
   const [paging, setPaging] = React.useState<any>(DefaultPaging)
   const [listening, setListening] = React.useState<boolean>(false);
-  const registry: any = props.registry || getDefaultRegistry();
+  const registry: any = props.registry || utils.getDefaultRegistry();
   const options: IMaterialListWidgetOptions<any> = getOptions();
 
   const getGraphDefinition = () => {
@@ -341,7 +342,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
   if (options.allowAdd === true) {
 
     const addItem = () => {
-      const newItem = getDefaultFormState(schema.items, undefined, registry.definitions)
+      const newItem = utils.getDefaultFormState(schema.items, undefined, registry.definitions)
       if (props.onChange) props.onChange([...formData, newItem])
     };
 

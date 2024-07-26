@@ -1,18 +1,9 @@
 import React, { Component, Fragment } from "react";
 import PropTypes from "prop-types";
 import  UnsupportedField from "@reactory/client-core/components/reactory/form/components/fields/UnsupportedField";
-import {
-  isMultiSelect,
-  retrieveSchema,
-  toIdSchema,
-  getDefaultRegistry,
-  mergeObjects,
-  getUiOptions,
-  isFilesArray,  
-  getSchemaType,
-  ADDITIONAL_PROPERTY_FLAG
-} from "@reactory/client-core/components/reactory/form/utils";
 import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
+import { ReactoryFormUtilities } from "components/reactory/form/types";
+import { useReactory, withReactory } from "@reactory/client-core/api/ApiProvider";
 
 const REQUIRED_FIELD_SYMBOL = "*";
 
@@ -30,7 +21,7 @@ const COMPONENT_TYPES = {
   date: "DateField"
 };
 
-function getFieldComponent(schema, uiSchema = {}, idSchema, fields) {
+function getFieldComponent(schema, uiSchema = {}, idSchema, fields, utils: ReactoryFormUtilities) {
   const field = uiSchema["ui:field"];
   if (typeof field === "function") {
     return field;
@@ -39,7 +30,7 @@ function getFieldComponent(schema, uiSchema = {}, idSchema, fields) {
     return fields[field];
   }
 
-  const componentName = COMPONENT_TYPES[getSchemaType(schema)];
+  const componentName = COMPONENT_TYPES[utils.getSchemaType(schema)];
   return componentName in fields
     ? fields[componentName]
     : () => {
@@ -114,6 +105,7 @@ function ErrorList(props) {
 }
 
 function DefaultTemplate(props) {
+  const utils = props.reactory.getComponent('core.ReactoryFormUtilities');
   const {
     id,
     classNames,
@@ -130,7 +122,7 @@ function DefaultTemplate(props) {
   if (hidden) {
     return children;
   }
-  const additional = props.schema.hasOwnProperty(ADDITIONAL_PROPERTY_FLAG);
+  const additional = props.schema.hasOwnProperty(utils.ADDITIONAL_PROPERTY_FLAG);
   const keyLabel = `${label} Key`;
 
   return (
@@ -184,6 +176,8 @@ DefaultTemplate.defaultProps = {
 };
 
 function SchemaFieldRender(props) {
+  const reactory = useReactory();
+  const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
   const {
     uiSchema = {},
     formData,
@@ -194,22 +188,22 @@ function SchemaFieldRender(props) {
     required,
     onFocus,
     onBlur,
-    registry = getDefaultRegistry(),
+    registry = utils.getDefaultRegistry(),
   } = props;
   const {
     definitions,
     fields,
     formContext,
-    FieldTemplate = DefaultTemplate,
+    FieldTemplate = withReactory(DefaultTemplate),
   } = registry;
   let idSchema = props.idSchema;
-  const schema = retrieveSchema(props.schema, definitions, formData);
-  idSchema = mergeObjects(
-    toIdSchema(schema, null, definitions, formData, idPrefix),
+  const schema = utils.retrieveSchema(props.schema, definitions, formData);
+  idSchema = utils.mergeObjects(
+    utils.toIdSchema(schema, null, definitions, formData, idPrefix),
     idSchema
   );
 
-  const FieldComponent = getFieldComponent(schema, uiSchema, idSchema, fields);
+  const FieldComponent = getFieldComponent(schema, uiSchema, idSchema, fields, utils);
   const { DescriptionField } = fields;
   const disabled = Boolean(props.disabled || uiSchema["ui:disabled"]);
   const readonly = Boolean(props.readonly || uiSchema["ui:readonly"]);
@@ -220,12 +214,12 @@ function SchemaFieldRender(props) {
     return <div />;
   }
 
-  const uiOptions = getUiOptions(uiSchema);
+  const uiOptions = utils.getUiOptions(uiSchema);
   let { label: displayLabel = true } = uiOptions;
   if (schema.type === "array") {
     displayLabel =
-      isMultiSelect(schema, definitions) ||
-      isFilesArray(schema, uiSchema, definitions);
+      utils.isMultiSelect(schema, definitions) ||
+      utils.isFilesArray(schema, uiSchema, definitions);
   }
   if (schema.type === "object") {
     displayLabel = false;

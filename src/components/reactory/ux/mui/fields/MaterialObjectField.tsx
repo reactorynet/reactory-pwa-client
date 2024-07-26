@@ -1,35 +1,24 @@
 
-import React, { Component } from "react";
-import PropTypes from "prop-types";
+import React from "react";
 import {
   IconButton,
   Icon,
-  Fab,
-  Paper,
-  Grid,
-  Button,
-  Toolbar,
-  Typography,
 } from '@mui/material';
 import lodash from 'lodash';
-import { withStyles, withTheme } from '@mui/styles';
+import { withReactory } from "@reactory/client-core/api/ApiProvider";
+import { ReactoryFormUtilities } from "@reactory/client-core/components/reactory/form/types";
 
-import {
-  orderProperties,
-  retrieveSchema,
 
-  getDefaultRegistry,
-  getUiOptions,
-} from "@reactory/client-core/components/reactory/form/utils";
-
-function DefaultObjectFieldTemplate(props: any) {
-
+export function DefaultObjectFieldTemplate(props: any) {
+  const { reactory } = this.props;
+  const utils = reactory.getComponent('core.ReactoryFormUtils') as ReactoryFormUtilities;
+  
   const canExpand = function canExpand() {
     const { formData, schema, uiSchema } = props;
     if (!schema.additionalProperties) {
       return false;
     }
-    const { expandable } = getUiOptions(uiSchema);
+    const { expandable } = utils.getUiOptions(uiSchema);
     if (expandable === false) {
       return expandable;
     }
@@ -75,7 +64,7 @@ function DefaultObjectFieldTemplate(props: any) {
   );
 }
 
-class MaterialObjectField extends React.Component<any, any, any> {
+export class MaterialObjectField extends React.Component<any, any, any> {
   static defaultProps = {
     uiSchema: {},
     formData: {},
@@ -86,9 +75,16 @@ class MaterialObjectField extends React.Component<any, any, any> {
     readonly: false,
   };
 
-  state = {
-    additionalProperties: {},
-  };
+  utils: ReactoryFormUtilities
+  
+  constructor(props: any) { 
+    super(props);
+    this.state = { additionalProperties: {} };
+
+    const { reactory } = this.props.formContext;
+    const utils = reactory.getComponent('core.ReactoryFormUtilities') as ReactoryFormUtilities;
+    this.utils = utils;
+  }
 
   isRequired(name) {
     const schema = this.props.schema;
@@ -172,6 +168,7 @@ class MaterialObjectField extends React.Component<any, any, any> {
   };
 
   render() {
+    
     const {
       uiSchema,
       formData,
@@ -184,12 +181,13 @@ class MaterialObjectField extends React.Component<any, any, any> {
       idPrefix,
       onBlur,
       onFocus,
-      registry = getDefaultRegistry(),
+      registry = this.utils.getDefaultRegistry(),
       onChange
     } = this.props;
     const { definitions, fields, formContext } = registry;
     const { SchemaField, TitleField, DescriptionField } = fields;
-    const schema = retrieveSchema(this.props.schema, definitions, formData);
+    debugger;
+    const schema = this.utils.retrieveSchema(this.props.schema, definitions, formData);
     // const uiSchema = retrieve
     // this.props.formContext.reactory.log(`MaterialObjectField.render ${idSchema.id}`)
 
@@ -207,7 +205,7 @@ class MaterialObjectField extends React.Component<any, any, any> {
 
     try {
       const properties = Object.keys(schema.properties);
-      orderedProperties = orderProperties(properties, uiSchema["ui:order"]);
+      orderedProperties = this.utils.orderProperties(properties, uiSchema["ui:order"]);
     } catch (err) {
       return (
         <div>
@@ -273,6 +271,5 @@ class MaterialObjectField extends React.Component<any, any, any> {
     return <Template {...templateProps} onAddClick={this.handleAddClick} />;
   }
 }
-
 
 export default MaterialObjectField;

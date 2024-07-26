@@ -11,20 +11,8 @@
 #$RANDOM - Returns a different random number each time is it referred to.
 #$LINENO - Returns the current line number in the Bash script.
 
-
-# Get the project key and target from the command line arguments
-# project_key="${1:-reactory}"
-# target="${2:-local}"
-
 # # Get additional options from the command line arguments
 additional_options="${@:3}"
 
-# echo "Starting Reactory Web Client key: [$project_key] target: $target with additional options: $additional_options"
-
-# # Build the command string
-# command="env-cmd -f ./config/env/$project_key/.env.$target npx babel-node scripts/start.ts --presets @babel/env --extensions \".js,.ts\" --max_old_space_size=2000000 $additional_options"
-
-# # Run the command
-# eval $command
 echo "Starting Reactory Web Client key: [$project_key] target: $target with additional options: $additional_options"
 env-cmd -f ./config/env/${1:-reactory}/.env.${2:-local} npx babel-node scripts/start.ts --presets @babel/env --extensions ".js,.ts" --max_old_space_size=2000000

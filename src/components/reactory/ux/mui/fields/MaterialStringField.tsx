@@ -40,7 +40,7 @@ const MaterialStringFieldWidget = (props) => {
     onChange = () => {},
     onFocus = () => { },
     rawErrors,
-    readOnly,
+    readOnly = false,
     registry,
     required,
     schema,
@@ -63,7 +63,7 @@ const MaterialStringFieldWidget = (props) => {
 
     let inputLabelProps: InputLabelProps = {}
 
-    const uiOptions = uiSchema['ui:options'] || { readOnly: false, props: {} };
+    const uiOptions = uiSchema['ui:options'] || { readOnly, props: {} };
     let args: any = uiOptions && uiOptions.props ? { ...uiOptions.props } : {};
 
     const {
@@ -92,6 +92,10 @@ const MaterialStringFieldWidget = (props) => {
       case "password": args.type = "password"; break;
       case "email": args.type = "email"; break;
       default: args.type = schema.format || "text"; break;
+    }
+
+    if (schema.readonly === true) { 
+      uiOptions.readOnly = true
     }
 
 

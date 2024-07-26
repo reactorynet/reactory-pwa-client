@@ -47,12 +47,7 @@ import { withReactory, ReactoryProvider } from './ApiProvider';
 import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
 import Reactory from '@reactory/reactory-core';
-
-import { cloneDeep } from "@apollo/client/utilities";
-import { ReactoryForm } from "../components/reactory";
-import { deprecate } from "util";
 import { compose } from "redux";
-import { is } from "immutable";
 import { ApiStatus as ApiStatusQueryFactory } from './graphql/graph/queries';
 import { ApiStatusQueryScope } from "./graphql/graph/queries/ApiStatus";
 
@@ -1078,7 +1073,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
    * @param form 
    */
   reactoryForm(form: Reactory.Forms.IReactoryForm): React.ReactElement {
-    return <ReactoryForm formDef={form} />
+    const ReactoryFormComponent = this.getComponent('core.ReactoryForm') as React.FunctionComponent<Reactory.Client.IReactoryFormProps>;
+    return <ReactoryFormComponent formDef={form} />
   }
 
   /**
@@ -1699,7 +1695,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     const query = ApiStatusQueryFactory(scope);
     const variables = { theme: that.$user?.theme, mode: that.getThemeMode() };
     try {
-      return await that.graphqlQuery<Partial<Reactory.Models.IApiStatus>, { }>(query, variables, { fetchPolicy: 'network-only' });    
+      const result = await that.graphqlQuery<Partial<Reactory.Models.IApiStatus>, { }>(query, variables, { fetchPolicy: 'network-only' });
+      return result.data;
     } catch (apiStatusError) {      
       //check if the error is a network error
       if (apiStatusError.networkError) {

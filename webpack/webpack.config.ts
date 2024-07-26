@@ -6,17 +6,14 @@ const fs = require('fs');
 const isWsl = require('is-wsl');
 const path = require('path');
 const webpack = require('webpack');
-const resolve = require('resolve');
-const PnpWebpackPlugin = require('pnp-webpack-plugin');
 import HtmlWebpackPlugin, { Options as HtmlWebpackOptions } from 'html-webpack-plugin';
 
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
+const CircularDependencyPlugin = require('circular-dependency-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-// const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const CssMinimizerWebpackPlugin = require("css-minimizer-webpack-plugin");
-const safePostCssParser = require('postcss-safe-parser');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
@@ -28,9 +25,6 @@ const modules = require('../config/modules');
 const getClientEnvironment = require('../config/env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
 const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
-// const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
-const postcssNormalize = require('postcss-normalize');
-
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
 // Some apps do not need the benefits of saving a web request, so not inlining the chunk
@@ -307,6 +301,10 @@ export default function(webpackEnv): WebpackConfiguration {
         {
           name: "url",
           alias: "url"
+        },
+        {
+          name: "vm",
+          alias: "vm-browserify"
         }
       ],
       // These are the reasonable defaults supported by the Node ecosystem.
@@ -324,10 +322,7 @@ export default function(webpackEnv): WebpackConfiguration {
         'react-native': 'react-native-web',
         '@reactory/client-core': paths.appSrc
       },
-      plugins: [
-        // Adds support for installing with Plug'n'Play, leading to faster installs and adding
-        // guards against forgotten dependencies and such.
-        PnpWebpackPlugin,
+      plugins: [        
         // Prevents users from importing files from outside of src/ (or node_modules/).
         // This often causes confusion because we only process files within src/ with babel.
         // To fix this, we prevent you from importing files out of src/ -- if you'd like to,
@@ -340,31 +335,12 @@ export default function(webpackEnv): WebpackConfiguration {
       plugins: [
         // Also related to Plug'n'Play, but this time it tells Webpack to load its loaders
         // from the current package.
-        PnpWebpackPlugin.moduleLoader(module),
+        // PnpWebpackPlugin.moduleLoader(module),
       ],
     },
     module: {
       strictExportPresence: true,
-      rules: [
-        // Disable require.ensure as it's not a standard language feature.
-        // { parser: { requireEnsure: false } },
-
-        // First, run the linter.
-        // It's important to do this before Babel processes the JS.
-        // {
-        //   test: /\.(js|mjs|jsx|ts|tsx)$/,
-        //   enforce: 'pre',
-        //   use: [
-        //     {
-        //       options: {
-        //         formatter: require.resolve('react-dev-utils/eslintFormatter'),
-        //         eslintPath: require.resolve('eslint'),                
-        //       },
-        //       loader: require.resolve('eslint-loader'),
-        //     },
-        //   ],
-        //   include: paths.appSrc,
-        // },
+      rules: [        
         {
           test: [/\.ejs$/, /.html$/],
           loader: 'ejs-loader',          
@@ -387,7 +363,7 @@ export default function(webpackEnv): WebpackConfiguration {
               loader: require.resolve('url-loader'),
               options: {
                 limit: 10000,
-                name: 'static/media/[name].[hash:8].[ext]',
+                name: 'static/media/[name].[contenthash:8].[ext]',
               },
             },
             // Process application JS with Babel.
@@ -506,7 +482,7 @@ export default function(webpackEnv): WebpackConfiguration {
               // by webpacks internal loaders.
               exclude: [/\.(js|mjs|jsx|ts|tsx)$/, /\.html$/, /\.json$/],
               options: {
-                name: 'static/media/[name].[hash:8].[ext]',
+                name: 'static/media/[name].[contenthash:8].[ext]',
               },
             },
             // ** STOP ** Are you adding a new loader?
@@ -516,6 +492,19 @@ export default function(webpackEnv): WebpackConfiguration {
       ],
     },
     plugins: [
+      new CircularDependencyPlugin({
+        // exclude detection of files based on a RegExp
+        exclude: /a\.js|node_modules/,
+        // include specific files based on a RegExp
+        // include: /dir/,
+        // add errors to webpack instead of warnings
+        failOnError: true,
+        // allow import cycles that include an asyncronous import,
+        // e.g. via import(/* webpackMode: "weak" */ './file.js')
+        allowAsyncCycles: false,
+        // set the current working directory for displaying module paths
+        cwd: process.cwd(),
+      }),
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin(getHtmlWebpackOptions()),
       new ESLintPlugin(),
@@ -600,15 +589,9 @@ export default function(webpackEnv): WebpackConfiguration {
       useTypeScript &&
         new ForkTsCheckerWebpackPlugin({
           typescript: {
-            // resolve.sync('typescript', {
-            // basedir: paths.appNodeModules,            
             typescriptPath: require.resolve('typescript')
           },
-          async: isEnvDevelopment,                              
-          //watch: paths.appSrc,
-          //silent: true,
-          // The formatter is invoked directly in WebpackDevServerUtils during development
-          //formatter: isEnvProduction ? typescriptFormatter : undefined,
+          async: isEnvDevelopment,
         }),
     ].filter(Boolean),
     // Some libraries import Node modules but don't use them in the browser.

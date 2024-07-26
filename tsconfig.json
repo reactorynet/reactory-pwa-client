@@ -24,7 +24,6 @@
     "baseUrl": ".",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "watch": true,
     "paths": {
       "*": [
         "src/*"
@@ -41,7 +40,8 @@
       "@reactory/config/*": ["config/*"],
       "@rjsf/material-ui/*": [
         "node_modules/@rjsf/material-ui/dist/*"
-      ]
+      ],
+      "react": [ "./node_modules/@types/react" ]
     },
     "pretty": true,
     "typeRoots": [

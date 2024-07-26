@@ -9,7 +9,7 @@ import {
   Paper,
   Typography,  
 } from '@mui/material';
-import uuid from 'uuid';
+import * as uuid from 'uuid';
 import { compose } from 'redux'
 import lodash, { isNull, isArray } from 'lodash';
 import { withStyles, withTheme } from '@mui/styles';
@@ -290,6 +290,7 @@ class FunnelChartWidget extends PureComponent<any> {
     const { formData, contentRect } = this.props;
 
     if(lodash.isArray(formData) === true) data = formData;
+    // @ts-ignore
     if(lodash.isObject(formData) === true && lodash.isArray(formData.data) === true) data = formData.data; 
     
     return (

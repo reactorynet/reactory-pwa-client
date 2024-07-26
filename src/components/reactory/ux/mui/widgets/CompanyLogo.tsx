@@ -1,5 +1,4 @@
 import React, { Fragment, Component } from 'react'
-import Loadable from 'react-loadable'
 import PropTypes from 'prop-types'
 import lodash, { isString } from 'lodash'
 import classNames from 'classnames';

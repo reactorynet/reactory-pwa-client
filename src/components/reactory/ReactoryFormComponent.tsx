@@ -45,27 +45,6 @@ import MuiReactoryPackage from './ux/mui';
 import { WidgetNotAvailable } from './ux/mui/widgets';
 
 
-
-// const {
-//   MaterialArrayField,
-//   MaterialBooleanField,
-//   MaterialStringField,
-//   MaterialTitleField,
-//   MaterialDescriptionField,
-//   MaterialGridField,
-//   BootstrapGridField,
-//   MaterialObjectField,
-//   MaterialSchemaField,
-//   MaterialTabbedField,
-// } = Fields;
-
-// const {
-//   MaterialObjectTemplate,
-//   MaterialFieldTemplate,
-//   MaterialArrayFieldTemplate,
-//   MaterialErrorListTemplate
-// } = MaterialTemplates;
-
 const DefaultLoadingSchema = {
   "title": "Starting",
   "type": "string",

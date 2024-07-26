@@ -1,19 +1,11 @@
 import React, { Component, Fragment } from 'react';
-import PropTypes from 'prop-types';
 import { compose } from 'redux';
-import { throttle } from 'lodash';
 import {  
-  Toolbar,
-  Tooltip, 
-  IconButton,
   Icon,
   Typography
 } from '@mui/material';
 import { withStyles, withTheme } from '@mui/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import { reactoryDomNode } from 'api/ReactoryApi';
-
-
 class WidgetNotAvailable extends Component<any, any> {
 
   constructor(props){

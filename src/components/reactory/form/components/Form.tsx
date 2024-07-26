@@ -1,5 +1,4 @@
-import React, { Component, Fragment } from "react";
-import PropTypes from "prop-types";
+import React, { Component } from "react";
 import { default as DefaultErrorList } from "./ErrorList";
 import {
   getDefaultFormState,
@@ -7,20 +6,14 @@ import {
   shouldRender,
   toIdSchema,
   setState,
-  getDefaultRegistry,
   deepEquals,
+  getDefaultRegistry,
+  validateFormData,
+  toErrorList
 } from "../utils";
-import validateFormData, { toErrorList } from "../validate";
-import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider'
 import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
-
-import fields from './fields';
-import widgets from './widgets';
 import templates from './templates';
 
-
-
-import { withTheme } from '@rjsf/core';
 // Make modifications to the theme with your own fields and widgets
 
 

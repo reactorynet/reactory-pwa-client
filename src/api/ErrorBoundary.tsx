@@ -1,4 +1,4 @@
-import * as React from 'react'
+import React from 'react'
 
 const changedArray = (a: Array<unknown> = [], b: Array<unknown> = []) =>
   a.length !== b.length || a.some((item, index) => !Object.is(item, b[index]))

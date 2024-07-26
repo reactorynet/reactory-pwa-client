@@ -49,7 +49,7 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
   const onDrop = useCallback(acceptedFiles => {
     fileDropped(acceptedFiles);
   }, []);
-  const { getRootProps, getInputProps, acceptedFiles, isFileDialogActive, isDragActive, rejectedFiles } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps, acceptedFiles, isFileDialogActive, isDragActive, fileRejections } = useDropzone({ onDrop });
   const rootProps = getRootProps();
   const inputProps = getInputProps();
 
@@ -59,7 +59,7 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
     icon = (<Icon color={iconProps.color || "primary"}>{iconProps.icon}</Icon>)
   }
 
-  reactory.log(`DropZoneReactorFormWidget`, { acceptedFiles, isFileDialogActive, isDragActive, rejectedFiles });
+  reactory.log(`DropZoneReactorFormWidget`, { acceptedFiles, isFileDialogActive, isDragActive, fileRejections });
 
   return (
     <div {...rootProps} className={props.className} style={style}>

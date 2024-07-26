@@ -2,8 +2,7 @@ import React from 'react'
 import { compose } from 'redux';
 import { template } from 'lodash';
 
-import MaterialObjectField from './MaterialObjectField';
-import { retrieveSchema } from '@reactory/client-core/components/reactory/form/utils';
+import { MaterialObjectField } from './MaterialObjectField';
 import { Grid, Paper, Typography } from '@mui/material'
 
 import { withStyles, withTheme } from '@mui/styles';
@@ -56,7 +55,7 @@ class MaterialGridField extends MaterialObjectField {
     const { definitions, fields, formContext } = this.props.registry
     const { reactory } = formContext;
     const { SchemaField, TitleField, DescriptionField } = fields
-    const schema = retrieveSchema(this.props.schema, definitions)
+    const schema = this.utils.retrieveSchema(this.props.schema, definitions)
     const title = (schema.title === undefined) ? '' : schema.title
 
     const layout = uiSchema['ui:grid-layout'];

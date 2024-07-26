@@ -3,13 +3,12 @@ import React from 'react';
 
 import lodash from 'lodash';
 import * as d3 from "d3";
-import d3array from "d3-array";
-import d33d from "d3-3d";
-import d3force from "d3-force";
-import d3cloud from "d3-cloud";
-import d3color from "d3-color";
-import d3delaunay from "d3-delaunay";
-
+import * as d3array from "d3-array";
+import * as d33d from "d3-3d";
+import * as d3force from "d3-force";
+import * as d3cloud from "d3-cloud";
+import * as d3color from "d3-color";
+import * as d3delaunay from "d3-delaunay";
 
 import * as MaterialCore from '@mui/material'
 import * as MaterialCoreStyles from '@mui/styles'
@@ -22,20 +21,16 @@ import * as MaterialGrid from '@mui/x-data-grid';
 import * as DropZone from 'react-dropzone';
 import * as ReactRouter from 'react-router';
 import * as ReactRouterDom from 'react-router-dom';
-
 import * as ReactBigCalendar from 'react-big-calendar';
 
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-
-//import * as OrganizationComponents from './organization/index';
-
-
 import IntersectionVisible from './utility/IntersectionVisible';
 
 import Loading from './shared/Loading';
 import LinkComponent from './shared/Link';
 import ReactoryRouterComponent from './reactory/ReactoryFormRouter'
 import { ReactoryForm } from './reactory/ReactoryFormComponent';
+import * as ReactoryFormUtilities from './reactory/form/utils';
 import DateSelector from './dates/DateSelector';
 import Calendar from './dates/Calendar';
 import { LayoutThemed, SingleColumnLayout, TwoColumnGrid, BasicContainer } from './shared/Layout';
@@ -374,7 +369,13 @@ export const componentRegistery = [
     name: 'ReactoryForm',
     component: ReactoryForm,
     version: '1.0.0',
-  },  
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactoryFormUtilities',
+    component: ReactoryFormUtilities,
+    version: '1.0.0',
+  },
   {
     nameSpace: 'core',
     name: 'Layout',

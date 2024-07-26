@@ -105,29 +105,9 @@ async function main() {
         proxyConfig,
         urls.lanUrlForConfig
       );
-      const devServer = new WebpackDevServer(compiler, serverConfig);
+      const devServer = new WebpackDevServer(serverConfig, compiler);
       // Launch WebpackDevServer.
-      devServer.listen(port, HOST, err => {
-        if (err) {
-          return console.log(err);
-        }
-        if (isInteractive) {
-          clearConsole();
-        }
-
-        // We used to support resolving modules according to `NODE_PATH`.
-        // This now has been deprecated in favor of jsconfig/tsconfig.json
-        // This lets you use absolute paths in imports inside large monorepos:
-        if (process.env.NODE_PATH) {
-          console.log(            
-              'Setting NODE_PATH to resolve modules absolutely has been deprecated in favor of setting baseUrl in jsconfig.json (or tsconfig.json if you are using TypeScript) and will be removed in a future major release of create-react-app.'            
-          );
-          console.log();
-        }
-
-        console.log('Starting the development server...\n');
-        openBrowser(urls.localUrlForBrowser);
-      });
+      devServer.start();
 
       ['SIGINT', 'SIGTERM'].forEach(function (sig) {
         process.on(sig, function () {
