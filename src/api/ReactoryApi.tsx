@@ -1097,8 +1097,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
       `;
 
-      const tempSchema = {
-        schema: {
+      const tempSchema:Partial<Reactory.Forms.IReactoryForm> = {
+        schema: {          
           type: 'string',
           title: ''
         },

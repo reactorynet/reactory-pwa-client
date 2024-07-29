@@ -43,6 +43,7 @@ import IntersectionVisible from '../utility/IntersectionVisible';
 import { ErrorBoundary } from '@reactory/client-core/api/ErrorBoundary';
 import MuiReactoryPackage from './ux/mui';
 import { WidgetNotAvailable } from './ux/mui/widgets';
+import ErrorList from './form/components/ErrorList';
 
 
 const DefaultLoadingSchema = {
@@ -1578,7 +1579,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       onChange: onChange,
       onError: props.onError ? props.onError : (error) => { },
       formData: formData,
-      ErrorList: (error_props) => (<MuiReactoryPackage.templates.MaterialErrorListTemplate {...error_props} />),
+      ErrorList: (error_props) => (<ErrorList {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,
       ref: (form: any) => {
         if (formRef.current === null || formRef.current === undefined) { 

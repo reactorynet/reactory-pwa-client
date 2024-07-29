@@ -28,7 +28,6 @@ export const withReactory = (ComponentToWrap: any | React.Component | Function, 
 
 
     return (props: any) => {
-        if(id === 'core.LogingCard@1.0.0') debugger;
         const reactory = useContext(ReactoryContext);
                 
         if(!ComponentToWrap) throw new Error("Component to wrap cannot be null")

@@ -1,12 +1,7 @@
-import React from 'react'
-import { compose } from 'redux';
-import { template } from 'lodash';
-
-import { MaterialObjectField } from './MaterialObjectField';
+import React from 'react';
 import { Grid, Paper, Typography } from '@mui/material'
-
-import { withStyles, withTheme } from '@mui/styles';
-import { withReactory } from '@reactory/client-core/api/ApiProvider';
+import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
+import { useReactory } from '@reactory/client-core/api';
 
 function DefaultObjectFieldTemplate(props) {
   const { TitleField, DescriptionField } = props;
@@ -32,13 +27,38 @@ function DefaultObjectFieldTemplate(props) {
   );
 }
 
-class MaterialGridField extends MaterialObjectField {
+class MaterialGridFieldClass extends React.Component<any, any, any> {
 
   static styles = theme => ({
     root: {
       padding: theme.spacing(1)
     }
   });
+
+  isRequired(name) {
+    const schema = this.props.schema;
+    return (
+      Array.isArray(schema.required) && schema.required.indexOf(name) !== -1
+    );
+  }
+
+  onPropertyChange = name => {
+    
+    return (value, errorSchema) => {
+
+      this.props.formContext.reactory.log(`onPropertyChange ${name}`, {value})
+
+      const newFormData = { ...this.props.formData, [name]: value };
+      this.props.onChange(
+        newFormData,
+        errorSchema &&
+        this.props.errorSchema && {
+          ...this.props.errorSchema,
+          [name]: errorSchema,
+        }
+      );
+    };
+  };
 
   render() {
     const {
@@ -50,12 +70,13 @@ class MaterialGridField extends MaterialObjectField {
       readonly,
       onBlur,
       classes,
-      formData
+      reactory,
+      formData,
     } = this.props
     const { definitions, fields, formContext } = this.props.registry
-    const { reactory } = formContext;
     const { SchemaField, TitleField, DescriptionField } = fields
-    const schema = this.utils.retrieveSchema(this.props.schema, definitions)
+    const utils = reactory.getComponent('core.ReactoryFormUtils') as ReactoryFormUtilities;
+    const schema = utils.retrieveSchema(this.props.schema, definitions)
     const title = (schema.title === undefined) ? '' : schema.title
 
     const layout = uiSchema['ui:grid-layout'];
@@ -193,6 +214,11 @@ class MaterialGridField extends MaterialObjectField {
   }
 }
 
-// export const MaterialGridFieldComponent = compose(withReactory, withStyles(MaterialGridField.styles), withTheme)(MaterialGridField);
+const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object, Reactory.Schema.IObjectSchema, Reactory.Schema.IUISchema> = (props: any) => { 
+  const reactory = useReactory();
+  const nextProps = { ...props, reactory };
+  return <MaterialGridFieldClass { ...nextProps } />;
+}
+
 
 export default MaterialGridField;

@@ -5,10 +5,13 @@ import MaterialDateFieldTemplate from './MaterialDateFieldTemplate';
 import MaterialErrorListTemplate from './MaterialFormErrorList';
 import MaterialObjectTemplate from './MaterialObjectTemplate';
 
-export default {
-  MaterialObjectTemplate,
-  MaterialFieldTemplate,
-  MaterialDateFieldTemplate,
-  MaterialArrayFieldTemplate,
-  MaterialErrorListTemplate,
+const templates: Reactory.Forms.IReactoryTemplates = { 
+  ArrayFieldTemplate: MaterialArrayFieldTemplate,
+  FieldTemplate: MaterialFieldTemplate,
+  DateFieldTemplate: MaterialDateFieldTemplate,
+  ErrorListTemplate: MaterialErrorListTemplate,
+  ObjectTemplate: MaterialObjectTemplate,
+  FormErrorList: MaterialErrorListTemplate,  
 }
+
+export default templates;

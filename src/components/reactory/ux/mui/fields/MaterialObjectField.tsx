@@ -5,12 +5,12 @@ import {
   Icon,
 } from '@mui/material';
 import lodash from 'lodash';
-import { withReactory } from "@reactory/client-core/api/ApiProvider";
+import { useReactory } from "@reactory/client-core/api/ApiProvider";
 import { ReactoryFormUtilities } from "@reactory/client-core/components/reactory/form/types";
 
 
 export function DefaultObjectFieldTemplate(props: any) {
-  const { reactory } = this.props;
+  const reactory  = useReactory();
   const utils = reactory.getComponent('core.ReactoryFormUtils') as ReactoryFormUtilities;
   
   const canExpand = function canExpand() {
@@ -64,7 +64,7 @@ export function DefaultObjectFieldTemplate(props: any) {
   );
 }
 
-export class MaterialObjectField extends React.Component<any, any, any> {
+class MaterialObjectFieldClass extends React.Component<any, any, any> {
   static defaultProps = {
     uiSchema: {},
     formData: {},
@@ -80,10 +80,8 @@ export class MaterialObjectField extends React.Component<any, any, any> {
   constructor(props: any) { 
     super(props);
     this.state = { additionalProperties: {} };
-
-    const { reactory } = this.props.formContext;
-    const utils = reactory.getComponent('core.ReactoryFormUtilities') as ReactoryFormUtilities;
-    this.utils = utils;
+    if(!props || !props.reactory) debugger;
+    this.utils = props.reactory.getComponent('core.ReactoryFormUtilities') as ReactoryFormUtilities;
   }
 
   isRequired(name) {
@@ -186,7 +184,6 @@ export class MaterialObjectField extends React.Component<any, any, any> {
     } = this.props;
     const { definitions, fields, formContext } = registry;
     const { SchemaField, TitleField, DescriptionField } = fields;
-    debugger;
     const schema = this.utils.retrieveSchema(this.props.schema, definitions, formData);
     // const uiSchema = retrieve
     // this.props.formContext.reactory.log(`MaterialObjectField.render ${idSchema.id}`)
@@ -231,6 +228,7 @@ export class MaterialObjectField extends React.Component<any, any, any> {
       description,
       TitleField,
       DescriptionField,
+      reactory: formContext.reactory,
       properties: orderedProperties.map(name => {
         return {
           content: (
@@ -270,6 +268,12 @@ export class MaterialObjectField extends React.Component<any, any, any> {
     };
     return <Template {...templateProps} onAddClick={this.handleAddClick} />;
   }
+}
+
+const MaterialObjectField: Reactory.Forms.ReactoryFieldComponent<object, Reactory.Schema.IObjectSchema, Reactory.Schema.IUISchema> = (props: any) => { 
+  const reactory = useReactory();
+  const nextProps = { ...props, reactory };
+  return <MaterialObjectFieldClass { ...nextProps } />;
 }
 
 export default MaterialObjectField;

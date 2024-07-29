@@ -2,7 +2,7 @@ import React from 'react';
 import Reactory from '@reactory/reactory-core';
 import { useNavigate } from 'react-router';
 
-const formSchema: Reactory.Schema.ISchema = {
+const formSchema: Reactory.Schema.IArraySchema = {
   type: 'array',
   title: 'Forms',
   items: {

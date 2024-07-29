@@ -1,9 +1,11 @@
 import React from "react";
 import _ from "lodash";
+import { v4 as uuid } from "uuid";
 import Ajv from "ajv";
 import fill from "lodash/fill";
-import FormFields from './components/fields';
-import FormWidgets from './components/widgets';
+import fields from './components/fields';
+import widgets from './components/widgets';
+import templates from './components/templates';
 
 export const ADDITIONAL_PROPERTY_FLAG = "__additional_property";
 
@@ -58,12 +60,27 @@ const widgetMap = {
   },
 };
 
-export function getDefaultRegistry() {
+export function getDefaultRegistry(): Reactory.Forms.IReactoryFormUtilitiesRegistry {
   return {
-    fields: FormFields,
-    widgets: FormWidgets,
+    fields: fields,
+    widgets: widgets,
+    templates,
     definitions: {},
-    formContext: {},
+    formContext: {
+      $ref: "#",
+      formData: null,
+      formDef: null,
+      formInstanceId: uuid(),
+      getData: () => {},
+      graphql: null,
+      query: null,
+      refresh: () => {},
+      reset: () => {},
+      screenBreakPoint: "md",
+      setFormData: () => {},
+      signature: null,
+      version: -1,
+    },
   };
 }
 

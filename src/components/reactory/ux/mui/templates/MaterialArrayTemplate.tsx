@@ -6,26 +6,19 @@ import Draggable from 'react-draggable';
 import { pullAt } from 'lodash';
 // import { getDefaultFormState, retrieveSchema, toIdSchema, getDefaultRegistry } from '@reactory/client-core/components/reactory/form/utils';
 
-import {
-  AppBar,
-  Button,
-  Fab,
+import {  
   Icon,
   IconButton,
   Typography,
   Card,
-  CardContent,
-  FormControl,
-  Grid,
-  InputLabel,
-  Input,
+  Grid,  
   Paper,
-  Toolbar,
-  Tooltip,
+  Toolbar,  
 } from '@mui/material'
 
 import { withReactory } from '@reactory/client-core/api/ApiProvider'
 import { ReactoryFormUtilities } from 'components/reactory/form/types';
+import Reactory from '@reactory/reactory-core';
 
 interface ArrayTemplateState {
   formData: any[],
@@ -35,17 +28,18 @@ interface ArrayTemplateState {
   onChangeTimer: any
 }
 
-interface ArrayTemplateProps {
-  reactory: Reactory.Client.ReactorySDK,
+interface ArrayTemplateProps<TData = Array<unknown>> {
   schema: Reactory.Schema.IArraySchema,
   uiSchema: Reactory.Schema.IUISchema,
   formContext: any,
-  registry: any,
-  formData?: any[]
+  registry: Reactory.Forms.IReactoryFormUtilitiesRegistry,
+  formData?: TData
   idSchema: Reactory.Schema.IDSchema
+  onChange: (formData: TData) => void
+
   [key: string]: any
 }
-class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
+class ArrayTemplateClass extends Component<ArrayTemplateProps, ArrayTemplateState> {
 
   static styles: any = (theme) => ({
     root: {
@@ -79,17 +73,18 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
     formData: []
   }
 
-  registry: any;
+  registry: Reactory.Forms.IReactoryFormUtilitiesRegistry ;
   onReorderClick: any;
   utils: ReactoryFormUtilities;
 
   constructor(props: ArrayTemplateProps) {
     super(props)
-    this.utils = props.reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
+    // this.utils = props.reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
     this.onAddClicked = this.onAddClicked.bind(this)
     this.renderNormalArray = this.renderNormalArray.bind(this)
     this.renderArrayFieldItem = this.renderArrayFieldItem.bind(this)
-    this.registry = props.registry || this.utils.getDefaultRegistry();
+    // @ts-ignore
+    this.registry = (props.registry as Reactory.Forms.IReactoryFormUtilitiesRegistry) || this.utils.getDefaultRegistry();
     this.onChangeForIndex = this.onChangeForIndex.bind(this);
     this.startOnChangeTimer = this.startOnChangeTimer.bind(this);
     
@@ -159,11 +154,12 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
   }
 
   onChangeForIndex(value, index, errorSchema) {
-    //console.info('index item change', { index, value, errorSchema })
+    this.props.reactory.log('index item change', { index, value, errorSchema }, 'debug')
     //this.props.onChange(formData.map())
     const that = this;
     const newData = this.props.formData.map((item, idx) => {
       if (idx === index) {
+        // @ts-ignore
         return { ...item, ...value };      
       } 
       return item;
@@ -249,7 +245,7 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
       //this.setState({ selected: { ...this.state.selected, index: selected[index] === true ? false : true } });
     }
 
-    const SchemaField = this.registry.fields.SchemaField;
+    const SchemaField: React.FC<any> = this.registry.fields.SchemaField as React.FC;
     const schemaFieldProps = {
       schema: itemSchema,
       uiSchema: itemUiSchema,
@@ -257,7 +253,9 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
       errorSchema: itemErrorSchema,
       idSchema: itemIdSchema,
       required: itemSchema.type !== "null" || itemSchema.type !== null,
-      onChange: changeForIndex,
+      onChange: (formData: any, errorSchema: any) => {
+        changeForIndex(formData, errorSchema);
+      },
       onBlur: (id, e) => {
         // formContext.$focus = null;
         if(onBlur) onBlur(id, e)
@@ -337,7 +335,10 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
     
     return (      
       <Grid {...gridProps}>
-        <SchemaField {...schemaFieldProps} containerProps={containerProps} toolbar={toolbar}>
+        <SchemaField 
+          {...schemaFieldProps} 
+          containerProps={containerProps} 
+          toolbar={toolbar}>
         </SchemaField>
         {toolbar}
       </Grid>
@@ -387,7 +388,7 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
     
     const uiOptions: any = uiSchema['ui:options'] || null
     const uiWidget: string = uiSchema['ui:widget'] || null
-    const definitions = registry.definitions;
+    const definitions = (registry as Reactory.Forms.IReactoryFormUtilitiesRegistry).definitions;
     let ArrayComponent = null
     let componentProps: any = {};
     if (uiWidget !== null) {
@@ -521,6 +522,7 @@ class ArrayTemplate extends Component<ArrayTemplateProps, ArrayTemplateState> {
   }
 }
 
-const MaterialArrayTemplate = withReactory(ArrayTemplate);
+
+const MaterialArrayTemplate = withReactory(ArrayTemplateClass);
 
 export default MaterialArrayTemplate;

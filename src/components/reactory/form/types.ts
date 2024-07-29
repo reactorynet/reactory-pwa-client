@@ -3,10 +3,19 @@ export type ReactoryFormUtilities = {
   ADDITIONAL_PROPERTY_FLAG: string;
   allowAdditionalItems: (schema: Reactory.Schema.ISchema) => boolean;
   getDefaultRegistry: () => {
-    fields: any;
-    widgets: any;
-    definitions: any;
-    formContext: any;
+    fields: {
+      [key: string]: React.ComponentType<any>; 
+    };
+    widgets: { 
+      [key: string]: React.ComponentType<any>;
+    };
+    tempaltes: {
+      [key: string]: React.ComponentType<any>;
+    },
+    definitions: {
+      [key: string]: Reactory.Schema.ISchema;
+    };
+    formContext: Reactory.Forms.ReactoryFormContext<unknown, any>;
   };
   getSchemaType: (schema: any) => string;
   getWidget: (
