@@ -35,7 +35,7 @@ const MaterialTabbedField = (props) => {
   const theme = useTheme<DefaultTheme>();
   const reactory = useReactory();
 
-  const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtils');
+  const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
 
   const {
     uiSchema,

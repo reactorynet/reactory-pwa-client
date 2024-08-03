@@ -1,3 +1,4 @@
+import UnsupportedField from "@reactory/client-core/components/reactory/form/components/fields/UnsupportedField";
 import React from "react";
 import _ from "lodash";
 import { v4 as uuid } from "uuid";
@@ -6,6 +7,9 @@ import fill from "lodash/fill";
 import fields from './components/fields';
 import widgets from './components/widgets';
 import templates from './components/templates';
+import { useReactory } from "@reactory/client-core/api";
+import Reactory from "@reactory/reactory-core";
+import TitleField from "./components/fields/TitleField";
 
 export const ADDITIONAL_PROPERTY_FLAG = "__additional_property";
 
@@ -63,21 +67,23 @@ const widgetMap = {
 export function getDefaultRegistry(): Reactory.Forms.IReactoryFormUtilitiesRegistry {
   return {
     fields: fields,
+    // @ts-ignore
     widgets: widgets,
-    templates,
+    templates: templates,
+    ...templates,
     definitions: {},
     formContext: {
       $ref: "#",
       formData: null,
       formDef: null,
       formInstanceId: uuid(),
-      getData: () => {},
+      getData: () => { },
       graphql: null,
       query: null,
-      refresh: () => {},
-      reset: () => {},
+      refresh: () => { },
+      reset: () => { },
       screenBreakPoint: "md",
-      setFormData: () => {},
+      setFormData: () => { },
       signature: null,
       version: -1,
     },
@@ -853,7 +859,7 @@ export function rangeSpec(schema) {
 
 const toPath = _.toPath;
 
-const ajv = new Ajv({ 
+const ajv = new Ajv({
   allErrors: true,
   multipleOfPrecision: 8,
 });
@@ -866,8 +872,6 @@ ajv.addFormat(
   "color",
   /^(#?([0-9A-Fa-f]{3}){1,2}\b|aqua|black|blue|fuchsia|gray|green|lime|maroon|navy|olive|orange|purple|red|silver|teal|white|yellow|(rgb\(\s*\b([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\b\s*,\s*\b([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\b\s*,\s*\b([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\b\s*\))|(rgb\(\s*(\d?\d%|100%)+\s*,\s*(\d?\d%|100%)+\s*,\s*(\d?\d%|100%)+\s*\)))$/
 );
-
-
 
 function toErrorSchema(errors) {
   // Transforms a ajv validation errors list:
@@ -920,7 +924,7 @@ function toErrorSchema(errors) {
 export function toErrorList(errorSchema, fieldName = "root", formData?, schema?) {
   // TODO: We should transform fieldName as a full field path string.  
   let errorList = [];
-  if ("__errors" in errorSchema) {    
+  if ("__errors" in errorSchema) {
     errorList = errorList.concat(
       errorSchema.__errors.map(stack => {
         return {
@@ -980,7 +984,7 @@ function transformAjvErrors(errors = []) {
     return [];
   }
 
-  return errors.map(e => {    
+  return errors.map(e => {
     const { dataPath, keyword, message, params } = e;
     let property = `${dataPath}`;
 
@@ -1005,9 +1009,9 @@ export function validateFormData(
   schema,
   customValidate?,
   transformErrors?,
-  via?  
+  via?
 ) {
-  
+
   try {
     ajv.validate(schema, formData);
   } catch (e) {
@@ -1016,7 +1020,7 @@ export function validateFormData(
   }
 
   let errors = transformAjvErrors(ajv.errors);
-  
+
   if (typeof transformErrors === "function") {
     errors = transformErrors(errors);
   }
@@ -1026,7 +1030,7 @@ export function validateFormData(
     return { errors, errorSchema };
   }
 
-  const errorHandler =  customValidate(formData, createErrorHandler(formData), via);
+  const errorHandler = customValidate(formData, createErrorHandler(formData), via);
   const userErrorSchema = unwrapErrorHandler(errorHandler);
   const newErrorSchema = mergeObjects(errorSchema, userErrorSchema, true);
   // XXX: The errors list produced is not fully compliant with the format

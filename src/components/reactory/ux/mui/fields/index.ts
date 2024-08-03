@@ -3,7 +3,7 @@ import MaterialBooleanField from "./MaterialBooleanField";
 import MaterialDescriptionField from "./MaterialDescriptionField";
 import MaterialGridField from './MaterialGridField';
 import MaterialNumberfield from "./MaterialNumberfield";
-import MaterialObjectFieldClass from "./MaterialObjectField";
+import MaterialObjectField from "./MaterialObjectField";
 import MaterialSchemaField from './MaterialSchemaField';
 import MaterialStringField from './MaterialStringField';
 import MaterialTabbedField from "./MaterialTabbedField";
@@ -11,12 +11,13 @@ import MaterialTitleField from "./MaterialTitleField";
 import MaterialUnsupportedField from './MaterialUnsupportedField';
 
 const fields: Reactory.Forms.IReactoryFields = {
+  // @ts-ignore
   ArrayField: MaterialArrayField,
   BooleanField: MaterialBooleanField,
   DescriptionField: MaterialDescriptionField,
   GridLayout: MaterialGridField,  
   NumberField: MaterialNumberfield,
-  ObjectField: MaterialObjectFieldClass,
+  ObjectField: MaterialObjectField,
   SchemaField: MaterialSchemaField,
   StringField: MaterialStringField,
   TabbedLayout: MaterialTabbedField,

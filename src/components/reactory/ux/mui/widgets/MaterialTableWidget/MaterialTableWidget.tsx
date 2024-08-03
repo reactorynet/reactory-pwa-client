@@ -1355,8 +1355,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     if (numSelected > 0 && uiOptions?.actions?.length > 0) {
       let $menus: Reactory.UX.IDataDropDownMenuItem<Reactory.Client.Components.IMaterialTableWidgetAction>[] = [];
 
-
-
       uiOptions.actions.forEach((action, actionIndex) => {
         const {
           key,
@@ -1503,9 +1501,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     reactory.log(`Error rendering MaterialTable:\n${err.message}`, {error: err}, 'error');
     return <>Something went wrong during the render of the data table, please <Button onClick={() => { setVersion(version + 1) }}>Retry</Button></>
   }
-
-
-
 };
 
 const MaterialTableWidgetComponent = compose(withReactory, withTheme, withStyles(ReactoryMaterialTableStyles))(ReactoryMaterialTable)

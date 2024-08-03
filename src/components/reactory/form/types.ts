@@ -2,21 +2,7 @@ import Reactory from '@reactory/reactory-core';
 export type ReactoryFormUtilities = {
   ADDITIONAL_PROPERTY_FLAG: string;
   allowAdditionalItems: (schema: Reactory.Schema.ISchema) => boolean;
-  getDefaultRegistry: () => {
-    fields: {
-      [key: string]: React.ComponentType<any>; 
-    };
-    widgets: { 
-      [key: string]: React.ComponentType<any>;
-    };
-    tempaltes: {
-      [key: string]: React.ComponentType<any>;
-    },
-    definitions: {
-      [key: string]: Reactory.Schema.ISchema;
-    };
-    formContext: Reactory.Forms.ReactoryFormContext<unknown, any>;
-  };
+  getDefaultRegistry: () => Reactory.Forms.IReactoryFormUtilitiesRegistry;
   getSchemaType: (schema: any) => string;
   getWidget: (
     schema: any,

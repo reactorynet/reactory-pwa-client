@@ -15,6 +15,7 @@ import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
 import templates from './templates';
 import { useReactory } from "@reactory/client-core/api";
 import { Html } from "@mui/icons-material";
+import FormClass from './FormClass';
 
 export type FormToolbarPosition = 'top' | 'bottom' | 'both' | 'none';
 export interface ISchemaForm<TData, TError, TAdditionContext extends unknown[]> {
@@ -28,9 +29,9 @@ export interface ISchemaForm<TData, TError, TAdditionContext extends unknown[]> 
     [key: string]: Reactory.Client.AnyValidComponent
   },
   fields?: object,
-  ArrayFieldTemplate?: () => Reactory.Forms.ReactoryFieldComponent<any, any, any>,
-  ObjectFieldTemplate?: () => Reactory.Forms.ReactoryFieldComponent<any, any, any>,
-  FieldTemplate?: () => Reactory.Forms.ReactoryFieldComponent<any, any, any>,
+  ArrayFieldTemplate?: Reactory.Forms.ReactoryFieldComponent<any[]>,
+  ObjectFieldTemplate?:  Reactory.Forms.ReactoryFieldComponent<any>,
+  FieldTemplate?: Reactory.Forms.ReactoryFieldComponent<any>,
   ErrorList?: React.FC<any>,
   onBlur?: (...args: any) => void
   onFocus?: (...args: any) => void,
@@ -159,13 +160,14 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
   const getRegistry = () => {
     // For BC, accept passed SchemaField and TitleField props and pass them to
     // the "fields" registry one.
-    const { fields, widgets } = getDefaultRegistry();
+    const defaultRegistry = getDefaultRegistry();
     let registery: any = {
-      fields: { ...fields, ...props.fields },
-      widgets: { ...widgets, ...props.widgets },
-      ArrayFieldTemplate,
-      ObjectFieldTemplate,
-      FieldTemplate,
+      ...defaultRegistry,
+      // fields: { ...fields, ...props.fields },
+      // widgets: { ...widgets, ...props.widgets },
+      // ArrayFieldTemplate,
+      // ObjectFieldTemplate,
+      // FieldTemplate,
       definitions: schema.definitions || {},
       formContext: formContext || {},
     };
@@ -267,8 +269,6 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     return null;
   }
 
-
-
   const onBlur = (...args) => {
     if (props.onBlur) {
       props.onBlur(...args);
@@ -314,7 +314,11 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
   }
   
   const registry = getRegistry();
-  const _SchemaField = registry.fields.SchemaField;
+  const { SchemaField } = registry.fields;
+
+  if (!SchemaField) { 
+    return <div>SchemaField not found in registry</div>
+  }
 
   let componentType = 'form';
   let formUiOptions: any = {};
@@ -330,7 +334,7 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     {renderErrors()}
     {props.toolbarPosition && props.toolbarPosition.indexOf('top') >= 0 ? (children) : null}
     <ErrorBoundary FallbackComponent={(props) => (<>{idSchema.$id} Field Error: {props.error}</>)}>
-      <_SchemaField
+      <SchemaField
         schema={schema}
         uiSchema={uiSchema}
         errorSchema={props.errorSchema}
@@ -370,19 +374,18 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
   //   );
   // }
 
-  // if (componentType === 'div') {
   //   //@ts-ignore
-    return (<div
-      className={className ? className : null}
-      id={id}
-      ref={(form: HTMLDivElement) => {
-        formElement.current = form;
-      }}>
-      {$children}
-    </div>)
-  //}
+    return (
+      <div
+        className={className ? className : undefined}
+        id={id}
+        ref={(form: HTMLDivElement) => {
+          formElement.current = form;
+        }}>
+        {$children}
+      </div>);
+
 
 }
 
 export default Form;
-// export default FormClass;

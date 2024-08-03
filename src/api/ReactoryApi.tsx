@@ -1561,18 +1561,18 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return components;
   }
 
-  getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0'): Reactory.Client.ValidComponent<any, any, any> {
+  getNotFoundComponent(notFoundComponent = 'core.NotFound@1.0.0'): Reactory.Client.ValidComponent<any> {
     if (this.componentRegister && this.componentRegister[notFoundComponent]) {
-      return this.componentRegister[notFoundComponent].component as Reactory.Client.ValidComponent<any, any, any>;
+      return this.componentRegister[notFoundComponent].component as Reactory.Client.ValidComponent<any>;
     } else {
       return () => (
         <div>Component Find Failure, please check component registry and component name requested</div>);
     }
   }
 
-  getNotAllowedComponent(notAllowedComponentFqn = 'core.NotAllowed@1.0.0'): Reactory.Client.ValidComponent<any, any, any> {
+  getNotAllowedComponent(notAllowedComponentFqn = 'core.NotAllowed@1.0.0'): Reactory.Client.ValidComponent<any> {
     if (this.componentRegister && this.componentRegister[notAllowedComponentFqn]) {
-      return this.componentRegister[notAllowedComponentFqn].component as Reactory.Client.ValidComponent<any, any, any>;
+      return this.componentRegister[notAllowedComponentFqn].component as Reactory.Client.ValidComponent<any>;
     } else {
       return (React.forwardRef((props, context) => (<div>Access Denied</div>)));
     }

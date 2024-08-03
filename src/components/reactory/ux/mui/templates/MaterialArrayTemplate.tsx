@@ -20,6 +20,7 @@ import { withReactory } from '@reactory/client-core/api/ApiProvider'
 import { ReactoryFormUtilities } from 'components/reactory/form/types';
 import Reactory from '@reactory/reactory-core';
 
+
 interface ArrayTemplateState {
   formData: any[],
   isDirty: boolean

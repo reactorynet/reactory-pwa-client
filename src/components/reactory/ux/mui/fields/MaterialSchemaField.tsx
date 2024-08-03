@@ -7,6 +7,16 @@ import { useReactory, withReactory } from "@reactory/client-core/api/ApiProvider
 
 const REQUIRED_FIELD_SYMBOL = "*";
 
+export enum SchemaFieldType {
+  array = 'ArrayField',
+  boolean = 'BooleanField',
+  integer = 'NumberField',
+  number = 'NumberField',
+  object = 'ObjectField',
+  string = 'StringField',
+  date = 'DateField',
+}
+
 /**
  * The component types that is inferred
  * from the schema field type.
@@ -21,27 +31,38 @@ const COMPONENT_TYPES = {
   date: "DateField"
 };
 
-function getFieldComponent(schema, uiSchema = {}, idSchema, fields, utils: ReactoryFormUtilities) {
+function getFieldComponent(
+    schema: Reactory.Schema.AnySchema, 
+    uiSchema: Reactory.Schema.IUISchema = {}, 
+    idSchema: Reactory.Schema.IDSchema, 
+    fields: Reactory.Forms.IReactoryFields, 
+    utils: ReactoryFormUtilities,
+    reactory: Reactory.Client.ReactorySDK): React.ComponentType<any> {
   const field = uiSchema["ui:field"];
   if (typeof field === "function") {
     return field;
   }
-  if (typeof field === "string" && field in fields) {
-    return fields[field];
+  if (typeof field === "string" && field in fields) {    
+    return fields[field] as React.ComponentType<any>;
+  }
+  if (typeof field === "string" && field.indexOf('.') > -1) { 
+    return reactory.getComponent(field);
   }
 
   const componentName = COMPONENT_TYPES[utils.getSchemaType(schema)];
-  return componentName in fields
-    ? fields[componentName]
-    : () => {
-        return (
-          <UnsupportedField
-            schema={schema}
-            idSchema={idSchema}
-            reason={`Unknown field type ${schema.type}`}
-          />
-        );
-      };
+  if (componentName in fields) {
+    return fields[componentName] as React.ComponentType<any>;
+  }
+  
+  // @ts-ignore
+  return (
+    <UnsupportedField
+      schema={schema}
+      idSchema={idSchema}
+      reason={`Unknown field type ${schema.type}`}
+    />
+  );
+      
 }
 
 function Label(props) {
@@ -175,7 +196,7 @@ DefaultTemplate.defaultProps = {
   displayLabel: true,
 };
 
-function SchemaFieldRender(props) {
+const MaterialSchemaField: Reactory.Forms.ReactorySchemaFieldComponent = (props) => {
   const reactory = useReactory();
   const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
   const {
@@ -194,7 +215,7 @@ function SchemaFieldRender(props) {
     definitions,
     fields,
     formContext,
-    FieldTemplate = withReactory(DefaultTemplate),
+    templates,
   } = registry;
   let idSchema = props.idSchema;
   const schema = utils.retrieveSchema(props.schema, definitions, formData);
@@ -203,7 +224,7 @@ function SchemaFieldRender(props) {
     idSchema
   );
 
-  const FieldComponent = getFieldComponent(schema, uiSchema, idSchema, fields, utils);
+  const FieldComponent = getFieldComponent(schema, uiSchema, idSchema, fields, utils, reactory);
   const { DescriptionField } = fields;
   const disabled = Boolean(props.disabled || uiSchema["ui:disabled"]);
   const readonly = Boolean(props.readonly || uiSchema["ui:readonly"]);
@@ -233,12 +254,15 @@ function SchemaFieldRender(props) {
 
   const { __errors, ...fieldErrorSchema } = errorSchema || { __errors: [], fieldErrorSchema: {} };
   if(FieldComponent === undefined ||  FieldComponent === null) {
-    console.error('Component resolved to null', { schema, uiSchema, idSchema, fields })    
+    reactory.log('FieldComponent resolved to null', { schema, uiSchema, idSchema, fields }, 'error');    
   }
   
-  // See #439: uiSchema: Don't pass consumed class names to child components
   const field = (
-    <ErrorBoundary onError={()=>{}} FallbackComponent={(props)=>(<>ERR on Field: {idSchema.$id}</>)}>
+    <ErrorBoundary 
+      onError={(error, info)=>{
+        reactory.log('Error on Field', { error, info, schema, uiSchema, idSchema, fields }, 'error');
+      }} 
+      FallbackComponent={()=>(<>ERR on Field: {idSchema.$id}</>)}>
       <FieldComponent
         {...props}
         idSchema={idSchema}
@@ -255,13 +279,12 @@ function SchemaFieldRender(props) {
       />
     </ErrorBoundary>
   );
-
+  const FieldTemplate = registry.templates.FieldTemplate;
   const { type } = schema;
   const id = idSchema.$id;
   const label =
     uiSchema["ui:title"] || props.schema.title || schema.title;
   const description =
-    uiSchema["ui:description"] ||
     props.schema.description ||
     schema.description;
   const errors = __errors;
@@ -280,7 +303,10 @@ function SchemaFieldRender(props) {
   const fieldProps = {
     description: (
       <DescriptionField
+        // @ts-ignore
         id={id + "__description"}
+        schema={schema}
+        idSchema={idSchema}
         description={description}
         formContext={formContext}
       />
@@ -305,10 +331,11 @@ function SchemaFieldRender(props) {
     fields,
     schema,
     uiSchema,
-    formData
+    formData,
+    idSchema,
   };
 
   return <FieldTemplate {...fieldProps}>{field}</FieldTemplate>;
 }
 
-export default SchemaFieldRender;
+export default MaterialSchemaField;

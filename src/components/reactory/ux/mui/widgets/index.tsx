@@ -22,7 +22,7 @@ export { ProgressWidgetComponent as ProgressWidget } from './ProgressWidget';
 export const UserListItemWidget = (props, context) => {
   return (<>Complete Import from reactory-user pluging</>)
 };
-export { default as MaterialTableWidget } from './MaterialTableWidget';
+export { MaterialTableWidget } from './MaterialTableWidget';
 export { default as StepperWidget } from './StepperWidget';
 export { default as MaterialListWidget } from './MaterialListWidget';
 export { default as SearchWidget } from './SearchWidget';

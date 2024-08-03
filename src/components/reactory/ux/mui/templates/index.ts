@@ -1,6 +1,6 @@
 
 import MaterialFieldTemplate from './MaterialFieldTemplate';
-import MaterialArrayFieldTemplate from './MaterialArrayField';
+import MaterialArrayFieldTemplate from './MaterialArrayTemplate';
 import MaterialDateFieldTemplate from './MaterialDateFieldTemplate';
 import MaterialErrorListTemplate from './MaterialFormErrorList';
 import MaterialObjectTemplate from './MaterialObjectTemplate';

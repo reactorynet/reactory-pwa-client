@@ -1561,24 +1561,26 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   
   const renderForm = () => {    
     reactory.log(`Rendering ${signature}`, { props: props, formData }, 'debug');
-    
     if(formDef === undefined) return null
     const filter_props = () => {
       return props;
     };
 
-    const _formUiOptions: Reactory.Schema.IFormUIOptions = getActiveUiOptions();
+    // if (!formData && !props.formData) {
+    //   debugger;
+    // }
 
+    const _formUiOptions: Reactory.Schema.IFormUIOptions = getActiveUiOptions();
+    const _definition = formDefinition();
     const DropDownMenu = componentDefs["DropDownMenu"];
     const formProps: any = {
       id: instance_id,
       key: instance_id,
-      // ...filter_props(),
-      ...formDefinition(),      
+      ..._definition,      
       validate: formValidation,
       onChange: onChange,
       onError: props.onError ? props.onError : (error) => { },
-      formData: formData,
+      formData: formData || props.formData,
       ErrorList: (error_props) => (<ErrorList {...error_props} />),
       onSubmit: props.onSubmit || onSubmit,
       ref: (form: any) => {
