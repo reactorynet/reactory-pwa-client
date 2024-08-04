@@ -152,7 +152,7 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
       };
       $nextState.formData[index] = nextData;
       setState($nextState);
-      // onChange($nextState.formData);
+      onChange($nextState.formData);
     }
 
     const expandForIndex = (index: number) => {

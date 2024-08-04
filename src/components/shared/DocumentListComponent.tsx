@@ -129,7 +129,7 @@ class DocumentListWidget extends Component<any, any> {
     const { label } = this.props.uiSchema['ui:options'];
     let _label = label || '';
 
-    this.props.api.log('RENDERING DOCUMENTS LIST COMPONENT', {}, 'debug');
+    this.props.api.log('RENDERING DOCUMENTS LIST COMPONENT', {});
 
     return (
       <>

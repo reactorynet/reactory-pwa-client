@@ -155,7 +155,7 @@ class ArrayTemplateClass extends Component<ArrayTemplateProps, ArrayTemplateStat
   }
 
   onChangeForIndex(value, index, errorSchema) {
-    this.props.reactory.log('index item change', { index, value, errorSchema }, 'debug')
+    this.props.reactory.log('index item change', { index, value, errorSchema });
     //this.props.onChange(formData.map())
     const that = this;
     const newData = this.props.formData.map((item, idx) => {

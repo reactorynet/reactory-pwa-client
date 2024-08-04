@@ -14,6 +14,7 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
     disabled,
     readonly,
     onBlur,
+    onChange,
     formData,
   } = props
   const { definitions, fields, formContext } = props.registry
@@ -35,9 +36,9 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
   const onPropertyChange = (name: string) => {
     
     return (value, errorSchema) => {
-      reactory.log(`onPropertyChange ${name}`, {value})
+      reactory.debug(`MaterialGridField.onPropertyChange ${name}`, {value})
       const newFormData = { ...props.formData, [name]: value };
-      props.onChange(
+      onChange(
         newFormData,
         errorSchema &&
         props.errorSchema && {

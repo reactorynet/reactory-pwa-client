@@ -299,7 +299,7 @@ const FroalaWidget = (props) => {
   const _id = uuid.v4();
 
   const onEditorInitialized = ($editor, config) => {
-    reactory.log(`Froala Editor is Initialized`, { $editor, config }, 'debug');
+    reactory.log(`Froala Editor is Initialized`, { $editor, config });
     setEditor($editor);
   };
 

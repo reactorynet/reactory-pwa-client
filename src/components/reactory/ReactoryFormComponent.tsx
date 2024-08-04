@@ -272,7 +272,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         }
         case "array": {
   
-          if (formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === false) reactory.log(`🚨 ${signature} Schema type and Default Form Value do not match.`, { formDef }, 'error');
+          if (formDef.defaultFormValue && Array.isArray(formDef.defaultFormValue) === false) reactory.log(`🚨 ${signature} Schema type and Default Form Value do not match.`, { formDef });
   
           if (reactory.utils.lodash.isArray(props.data) === true) return props.data;
           if (reactory.utils.lodash.isArray(props.formData) === true) return props.formData;
@@ -473,7 +473,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   React.useEffect(() => {
     //let next_version = version + 1;
     setVersion(0);
-    reactory.log(`${signature} Incoming Properties Changed`, { formData, version }, 'debug');
+    reactory.log(`${signature} Incoming Properties Changed`, { formData, version });
     getData();
 
   }, watchList)
@@ -568,7 +568,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   }
 
   const onPluginLoaded = (plugin: any) => {
-    reactory.log(` ${signature} Plugin loaded, activating component`, { plugin }, 'debug');
+    reactory.log(` ${signature} Plugin loaded, activating component`, { plugin });
     try {
 
       let _component = plugin.component(props, getFormContext());
@@ -580,7 +580,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       }
       setVersion(version + 1);
     } catch (pluginFailure) {
-      reactory.log(`${signature} An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure }, 'error');
+      reactory.log(`${signature} An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure });
     }
   }
 
@@ -611,7 +611,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   };
 
   const onSubmit = (form: any) => {
-    reactory.log(`${signature} ↩ onSubmit`, { form }, 'debug');
+    reactory.log(`${signature} ↩ onSubmit`, { form });
     let cancel: boolean = false;
 
     if (props.onSubmit) {
@@ -635,7 +635,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
        if (mutation === null || mutation === undefined) {
          //check if we need to rerun the query with the updated formData.
-         reactory.log(`No mutations available for configured mode}`, {}, 'warning')
+         reactory.log(`No mutations available for configured mode}`, {});
          return;
         }
                 
@@ -667,7 +667,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         if (do_mutation) {
           reactory.graphqlMutation(mutation.text, mutation_props.variables, mutation_props.refetchQueries).then((mutation_result: ApolloQueryResult<any>) => {
             const { data, error, errors = [] } = mutation_result;
-            reactory.log(`🧐 Mutation Response ${mutation.name}`, { data, error }, 'debug');
+            reactory.log(`🧐 Mutation Response ${mutation.name}`, { data, error });
             if (error) {
               // ADDED: DREW
               // Show message returned from resolver
@@ -727,7 +727,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                   }, mutation.onSuccessRedirectTimeout || 500);
                 } catch (exception) {
                   reactory.createNotification('Cannot redirect form, template error', { type: 'warning' });
-                  reactory.log('ReactoryForm Mutation Cannot redirect using redirect method as the template caused an error.', { templateError: exception }, 'error')
+                  reactory.log('ReactoryForm Mutation Cannot redirect using redirect method as the template caused an error.', { templateError: exception });
                 }
               }
 
@@ -795,7 +795,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
               props.onError(mutation_error, getFormContext(), 'mutation');
             }
 
-            reactory.log(`Error Executing Mutation ${mutation_error.message}`, { mutation_error }, 'error');
+            reactory.log(`Error Executing Mutation ${mutation_error.message}`, { mutation_error });
             setError({ error: mutation_error, errorType: "runtime" });
             setQueryComplete(true);
             setVersion(version + 1);
@@ -824,7 +824,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
       if (deepEquals(formData, form.formData) === false) {
 
-        //reactory.log(`${formDef.name}[${instance_id}].onChange`, { data: form.formData }, 'debug');
+        //reactory.log(`${formDef.name}[${instance_id}].onChange`, { data: form.formData });
 
         const $onChange = props.onChange;
 
@@ -853,7 +853,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           $onChange(form.formData, form.errorSchema, { before: changed, after: rchanged, self });
         }
 
-        //reactory.log(`${signature} => onChange DELTA =>`, { changed, rchanged }, 'debug');
+        //reactory.log(`${signature} => onChange DELTA =>`, { changed, rchanged });
 
         if (_graphql && _graphql.mutation && _graphql.mutation['onChange']) {
 
@@ -870,13 +870,13 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
             //let throttled_call = throttle(() => {
             reactory.graphqlMutation(onChangeMutation.text, variables, onChangeMutation.options).then((mutationResult) => {
-              reactory.log(`${signature} => onChange => onChangeMutation result`, { mutationResult }, 'debug');
+              reactory.log(`${signature} => onChange => onChangeMutation result`, { mutationResult });
 
               if (props.onMutateComplete) props.onMutateComplete(form.formData, getFormContext(), mutationResult);
             }).catch((mutationError) => {
 
               if (props.onMutateComplete) props.onMutateComplete(form.formData, getFormContext(), null, mutationError);
-              reactory.log(`${signature} => onChange => onChangeMutation error`, { mutationError }, 'error');
+              reactory.log(`${signature} => onChange => onChangeMutation error`, { mutationError });
             });
 
           }
@@ -951,7 +951,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         }
       } catch (submitError) {
         reactory.createNotification(`The Form ${signature} could not submit`, { type: "warning", showInAppNotification: true, canDismis: true });
-        reactory.log(`Could not submit the form`, submitError, 'error')
+        reactory.log(`Could not submit the form`, submitError);
       }
     }
   }
@@ -1020,7 +1020,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       ...inputContext,
     }
 
-    // reactory.log(`<${formDef.nameSpace}.${formDef.name}@${formDef.version} /> -> getFormContext()`, { _context }, 'debug');
+    // reactory.log(`<${formDef.nameSpace}.${formDef.name}@${formDef.version} /> -> getFormContext()`, { _context });
     return _context;
   }
 
@@ -1078,7 +1078,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     if (isArray(_formDef.fieldMap) === true) {
       _formDef.fieldMap.forEach((map) => {
-        //reactory.log(`${signature} (init) Mapping ${map.field} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
+        //reactory.log(`${signature} (init) Mapping ${map.field} to ${map.componentFqn || map.component} ${_formDef.id}`, map);
         let mapped = false;
 
         if (map.component && typeof map.component === 'string') {
@@ -1090,12 +1090,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                 if (component && Object.keys(component).length > 0) component = component[pathArray[pi]]
               }
               _formDef.fields[map.field] = component;
-              //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component }, 'debug')
+              //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component });
               mapped = true;
             } else {
               _formDef.widgets[map.field] = componentDefs[map.component];
               if (_formDef.widgets[map.field]) {
-                //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.field] }, 'debug')
+                //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.field] });
                 mapped = true;
               }
             }
@@ -1106,7 +1106,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           if (typeof map.componentFqn === 'string' && typeof map.field === 'string') {
             _formDef.widgets[map.field] = reactory.getComponent(map.componentFqn);
             if (_formDef.widgets[map.field]) {
-              //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.field] }, 'debug')
+              //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.field] });
               mapped = true;
             }
           }
@@ -1118,7 +1118,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             return (<MuiReactoryPackage.widgets.WidgetNotAvailable {...props} map={map} />)
 
           }
-          //reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.field}`, { map }, 'warning')
+          //reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.field}`, { map });
         }
       });
     }
@@ -1135,7 +1135,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       if (!_formDef.widgets) _formDef.widgets = {};
       if (isArray(_formDef.widgetMap) === true) {
         _formDef.widgetMap.forEach((map) => {          
-          //reactory.log(`${signature} (init) Mapping ${map.widget} to ${map.componentFqn || map.component} ${_formDef.id}`, map, 'debug');
+          //reactory.log(`${signature} (init) Mapping ${map.widget} to ${map.componentFqn || map.component} ${_formDef.id}`, map);
           let mapped = false;
 
           if (map.component && typeof map.component === 'string') {
@@ -1147,12 +1147,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                   if (component && Object.keys(component).length > 0) component = component[pathArray[pi]]
                 }
                 _formDef.widgets[map.widget] = component;
-                //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component }, 'debug')
+                //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component });
                 mapped = true;
               } else {
                 _formDef.widgets[map.widget] = componentDefs[map.component];
                 if (_formDef.widgets[map.widget]) {
-                  //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
+                  //reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.component} successfully mapped`, { component: _formDef.widgets[map.widget] });
                   mapped = true;
                 }
               }
@@ -1163,7 +1163,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             if (typeof map.componentFqn === 'string' && typeof map.widget === 'string') {
               _formDef.widgets[map.widget] = reactory.getComponent(map.componentFqn);
               if (_formDef.widgets[map.widget]) {
-                // reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.widget] }, 'debug')
+                // reactory.log(`${signature} (init) Component: ${_formDef.id}, ${map.componentFqn} successfully mapped`, { component: _formDef.widgets[map.widget] });
                 mapped = true;
               }
             }
@@ -1177,7 +1177,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
               //return (<>loading ...{map.widget}</>)
 
             }
-            // reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.widget}`, { map }, 'warning')
+            // reactory.log(`${signature} (init) Component could not be mapped for Form: ${_formDef.id}, ${map.widget}`, { map });
           }
         });
       }
@@ -1236,7 +1236,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                   break;
                 }
                 default: {
-                  reactory.log(`ReactoryFormComponent.form() - injectResources() Resource Type ${resource.type}, not supported.`, { resource }, 'warn');
+                  reactory.warning(`ReactoryFormComponent.form() - injectResources() Resource Type ${resource.type}, not supported.`, { resource });
                   break;
                 }
               }
@@ -1259,7 +1259,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   const formValidation = ($formData: any, $errors: any, via = 'onChange') => {
 
     let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
-    reactory.log(`Executing custom validations for ${formfqn}`, { $formData, $errors }, 'debug');
+    reactory.log(`Executing custom validations for ${formfqn}`, { $formData, $errors });
     let validationFunctionKey = `${formfqn}_validate`;
     let validationResult = [];
     let validationFunction = null;
@@ -1277,7 +1277,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       try {
         validationResult = validationFunction($formData, $errors, getFormReference(), via);
       } catch (ex) {
-        reactory.log(`Error While Executing Custom Validation`, { ex }, 'error');
+        reactory.log(`Error While Executing Custom Validation`, { ex });
       }
     }
 
@@ -1335,7 +1335,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
   const getData = (defaultInputData?: any) => {
     if(formDef === undefined || formDef.id === "ReactoryLoadingForm") return null
-    reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef }, 'debug');
+    reactory.log(`<${fqn} /> getData(defaultInputData?: any)`, { defaultInputData, formData, formDef });
     const _graphql: Reactory.Forms.IFormGraphDefinition = getActiveGraphDefinitions();
     let _formData = null;
 
@@ -1409,7 +1409,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         };
         
         const _variables: any = reactory.utils.omitDeep(objectMapper(_input_mapping_params, query.variables || {}));
-        reactory.log(`Variables for query`, { variables: _variables }, 'debug');
+        reactory.log(`Variables for query`, { variables: _variables });
 
         let $options = query.options ? { ...query.options as Object } : { fetchPolicy: 'network-only' }
 
@@ -1424,7 +1424,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
                 try {
                   componentInstance[_graphql.query.onError.method](errors);
                 } catch (err) {
-                  reactory.log(err.message, err, 'error');
+                  reactory.log(err.message, err);
                 }
               }
             }
@@ -1489,11 +1489,11 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
               //});
             } catch (unhandledErr) {
-              reactory.log(`ReactoryComponent -> Error on setting state`, unhandledErr, 'error')
+              reactory.log(`ReactoryComponent -> Error on setting state`, unhandledErr);
             }
           }).catch((queryError) => {
 
-            reactory.log(`Error Executing Form Query`, { queryError }, 'error')
+            reactory.log(`Error Executing Form Query`, { queryError });
             const query_end = new Date().valueOf();
             
             setFormData(_formData);
@@ -1527,12 +1527,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
               // only use on when the use case is explicit for it's use. Otherwise it is recommended
               // to use once 
               reactory.on(eventDefinition.name, (evt) => {
-                reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt, signature }, 'debug')
+                reactory.log(`🔔 Refresh of query triggred via refresh event`, { eventDefinition, evt, signature });
                 setTimeout(getData, query.autoQueryDelay || 500)
               });
             } else {
               reactory.once(eventDefinition.name, (evt) => {
-                reactory.log(`🔔 Refresh of query triggred via ONCE refresh event`, { eventDefinition, evt, signature }, 'debug')
+                reactory.log(`🔔 Refresh of query triggred via ONCE refresh event`, { eventDefinition, evt, signature });
                 setTimeout(() => {
                   getData();
 
@@ -1560,7 +1560,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
   };
   
   const renderForm = () => {    
-    reactory.log(`Rendering ${signature}`, { props: props, formData }, 'debug');
+    reactory.log(`Rendering ${signature}`, { props: props, formData });
     if(formDef === undefined) return null
     const filter_props = () => {
       return props;
@@ -1593,7 +1593,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
       },
       transformErrors: (errors = []) => {
-        reactory.log(`Transforming error message`, { errors }, 'debug');
+        reactory.log(`Transforming error message`, { errors });
         let formfqn = `${formDef.nameSpace}.${formDef.name}@${formDef.version}`;
         let _errors = [...errors];
         if (props.transformErrors && typeof props.transformErrors === 'function') {
@@ -1711,7 +1711,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           }
         } else {
           //the uiSchema is null? now what?
-          reactory.log(`Null uiSchema?`, { menuItem }, 'warning');
+          reactory.log(`Null uiSchema?`, { menuItem });;
         }
         
         setActiveUiSchemaMenuItem(menuItem);
@@ -1753,7 +1753,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
           const GetSchemaSelectorMenus = () => {
             const allowed_schema = AllowedSchemas(formDef.uiSchemas, props.mode, null)
-            reactory.log(`<${fqn} /> GetSchemaSelectorMenus`, { allowed_schema }, 'debug');
+            reactory.log(`<${fqn} /> GetSchemaSelectorMenus`, { allowed_schema });
 
             // allowed_schema.forEach((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
             const schemaButtons = allowed_schema.map((uiSchemaItem: Reactory.Forms.IUISchemaMenuItem, index: number) => {
@@ -1943,7 +1943,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     if (isArray(formDef.reports) === true) {
 
       const onDropDownSelect = (evt, menuItem: any) => {
-        reactory.log('Report Item Selected', { evt, menuItem }, 'debug');
+        reactory.log('Report Item Selected', { evt, menuItem });
         // setShowReport(menuItem.data);
       };
 
@@ -1976,7 +1976,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     if (isArray(formDef.exports) === true) {
 
       const onDropDownSelect = (evt, menuItem: any) => {
-        reactory.log('Export Item Selected', { evt, menuItem }, 'debug');
+        reactory.log('Export Item Selected', { evt, menuItem });
         //showExcelModal(menuItem.data);
       };
 

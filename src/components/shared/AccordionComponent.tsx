@@ -156,9 +156,9 @@ class AccordionWidget extends Component<any, any> {
                   if (formContext.$submit) {
                     try {
                       let done = formContext.$submit();
-                      api.log(`Form submitted: ${done}`, {}, 'debug')
+                      api.log(`Form submitted: ${done}`, {});
                     } catch (submitError) {
-                      that.props.api.log(`Could not submit the form`, submitError, 'error')
+                      that.props.api.log(`Could not submit the form`, submitError);
                     }
                   }
                 }

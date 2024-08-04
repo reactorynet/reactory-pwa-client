@@ -144,7 +144,7 @@ class ReactoryDropZone extends Component<any, any> {
             try {
               _v = reactory.utils.templateObject(ReactoryDropZoneProps.mutation.variables, that);
             } catch (templateErr) {
-              reactory.log(`🚨🚨🚨 Error processing mapping 🚨🚨🚨`, { templateErr }, 'error');
+              reactory.log(`🚨🚨🚨 Error processing mapping 🚨🚨🚨`, { templateErr });
             }
 
             const variables = {
@@ -170,7 +170,7 @@ class ReactoryDropZone extends Component<any, any> {
                     }
                   });
 
-                  reactory.log(`Could not upload document`, { errors }, 'error')
+                  reactory.log(`Could not upload document`, { errors });
 
                   return;
                 }
@@ -218,7 +218,7 @@ class ReactoryDropZone extends Component<any, any> {
 
               })
 
-              reactory.log(`Could not upload document`, { docError }, 'error')
+              reactory.log(`Could not upload document`, { docError });
 
             });
           }

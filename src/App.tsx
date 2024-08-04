@@ -79,7 +79,23 @@ const store = configureStore(null);
 reactory.reduxStore = store;
 window.reactory = {
   api: reactory,
+  reactory,
+  logging: {
+    debug: true,
+    log: true,
+    error: true,
+    warn: true,
+    info: true
+  }
 };
+
+if (process.env.NODE_ENV === 'production') { 
+  window.reactory.logging.debug = false;
+  window.reactory.logging.warn = false;
+  window.reactory.logging.error = false;
+  window.reactory.logging.info = false;
+  window.reactory.logging.log = false;
+}
 
 export interface NewNotification {
   id: string,
@@ -164,7 +180,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
 
   const configureRouting = () => {
-    reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
+    reactory.log('Configuring Routing', { auth_validated, user });
     const $routes = [...reactory.getRoutes()];
     setRoutes($routes);
     setVersion(v + 1);
@@ -186,7 +202,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const ChildRoutes = [];
   routes.forEach((routeDef: Reactory.Routing.IReactoryRoute) => {
     //const match = useMatch(routeDef.path);
-    reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: props }, 'debug');          
+    reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: props });          
     if (routeDef.redirect) {
       //return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
       navigation(routeDef.redirect, { state: { from: location }, replace: true })
@@ -222,7 +238,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     if (routeDef.public === true) {
       // public access we don't have to check roles or auth
       if (ReactoryComponent) { 
-        reactory.log(`Mounting public component for route ${routeDef.title}`, { routeDef, componentArgs }, 'debug');
+        reactory.log(`Mounting public component for route ${routeDef.title || routeDef.path}`, { routeDef, componentArgs });
         children.push(<ReactoryComponent {...componentArgs} />);
       }
       else {
@@ -242,7 +258,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
       } else {
         if (auth_validated === true && hasRolesForRoute === true) {
           if (ReactoryComponent) { 
-            reactory.log(`Mounting private component for route ${routeDef.title}`, routeDef, 'debug');
+            reactory.log(`Mounting private component for route ${routeDef.title || routeDef.path}`, routeDef);
             children.push(<ReactoryComponent {...componentArgs} />)
           }
           else  {
@@ -391,9 +407,9 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
         getApiStatus();
       }, timeoutMS);
 
-      reactory.log(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS }, 'debug');
+      reactory.log(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS });
     }).catch((statusError) => {
-      reactory.log(`Error while fetching api status`, { error: statusError }, 'error');
+      reactory.log(`Error while fetching api status`, { error: statusError });
       setOfflineStatus(true);
       onOfflineChanged(true);
 
@@ -497,12 +513,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   }
 
   const onLogin = () => {
-    reactory.log('App.onLogin handler', {}, 'debug')
+    reactory.log('App.onLogin handler', {});
     setUser(reactory.getUser());    
   };
 
   const onLogout = () => {
-    reactory.log('App.onLogout handler', {}, 'debug')
+    reactory.log('App.onLogout handler', {});
     setUser(reactory.getUser());
   };
 
@@ -566,7 +582,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
       }
     } else {
-      reactory.log(`apiStaus returned null value`, { status }, 'warning');
+      reactory.log(`apiStaus returned null value`, { status });;
     }
   }
 

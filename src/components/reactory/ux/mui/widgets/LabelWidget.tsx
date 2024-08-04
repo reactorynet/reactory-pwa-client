@@ -125,7 +125,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
       const variables = reactory.utils.objectMapper(props, lookupGraphql.variables);
 
       reactory.graphqlQuery(lookupGraphql.text, variables, lookupGraphql.options).then((lookupResult) => {
-        reactory.log(`Lookup result ${formContext ? formContext.signature : 'NO CONTEXT'}[${props.idSchema.$id}]`, { lookupResult }, 'debug');
+        reactory.log(`Lookup result ${formContext ? formContext.signature : 'NO CONTEXT'}[${props.idSchema.$id}]`, { lookupResult });
 
         if (lookupResult.data && lookupResult.data[lookupGraphql.name]) {
           const _lookupResult = reactory.utils.objectMapper(lookupResult.data[lookupGraphql.name], lookupGraphql.resultMap);
@@ -139,7 +139,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
           setError(null);
         }
       }).catch((lookupError) => {
-        reactory.log(`Lookup Query Error`, { lookupError }, 'error');
+        reactory.log(`Lookup Query Error`, { lookupError });
         setError(lookupError);
       });
     }
@@ -233,7 +233,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
         try {
           LabelBody = (<LabelComponentToMount {...$componentProps} />);
         } catch (componentErr) {
-          props.api.log('Error activating component for label value', { componentErr }, 'error');
+          props.api.log('Error activating component for label value', { componentErr });
           LabelBody = (<Typography>{componentErr.message}</Typography>)
         }
       }

@@ -78,7 +78,7 @@ export default (reactory: Reactory.Client.IReactoryApi) => ({
                   }, graphElement.resultMap);
 
                 } catch (mappError) {
-                  reactory.log("Could not map the object data", { mappError }, 'error')
+                  reactory.log("Could not map the object data", { mappError });
                 }
 
               } 
@@ -99,7 +99,7 @@ export default (reactory: Reactory.Client.IReactoryApi) => ({
                     }, graphElement.resultMap);
 
                   } catch (mappError) {                    
-                    reactory.log("Could not map the object data", { mappError }, 'error')
+                    reactory.log("Could not map the object data", { mappError });
                   }
 
                 } else {

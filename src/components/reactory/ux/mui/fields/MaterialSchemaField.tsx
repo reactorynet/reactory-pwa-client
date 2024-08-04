@@ -254,13 +254,13 @@ const MaterialSchemaField: Reactory.Forms.ReactorySchemaFieldComponent = (props)
 
   const { __errors, ...fieldErrorSchema } = errorSchema || { __errors: [], fieldErrorSchema: {} };
   if(FieldComponent === undefined ||  FieldComponent === null) {
-    reactory.log('FieldComponent resolved to null', { schema, uiSchema, idSchema, fields }, 'error');    
+    reactory.log('FieldComponent resolved to null', { schema, uiSchema, idSchema, fields });    
   }
   
   const field = (
     <ErrorBoundary 
       onError={(error, info)=>{
-        reactory.log('Error on Field', { error, info, schema, uiSchema, idSchema, fields }, 'error');
+        reactory.log('Error on Field', { error, info, schema, uiSchema, idSchema, fields });
       }} 
       FallbackComponent={()=>(<>ERR on Field: {idSchema.$id}</>)}>
       <FieldComponent

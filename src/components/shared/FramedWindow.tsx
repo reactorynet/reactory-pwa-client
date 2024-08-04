@@ -150,7 +150,7 @@ class FramedWindow extends Component<any, any> {
                 try {
                   activeHandlers[handlerKey](data, origin, source, this.props);
                 }catch(messageHanlderError) {
-                  reactory.log(`Could not execute message handler`, { error: messageHanlderError }, 'error');
+                  reactory.log(`Could not execute message handler`, { error: messageHanlderError });
                 }
               }
             });

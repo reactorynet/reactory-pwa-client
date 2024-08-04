@@ -456,7 +456,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const getData = async (): Promise<MaterialTableRemoteDataReponse> => {
 
-    reactory.log('core.ReactoryMaterialTable data query', { query }, 'debug')
+    reactory.debug('core.ReactoryMaterialTable data query', { query });
 
     let response: MaterialTableRemoteDataReponse = {
       ...data
@@ -469,14 +469,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         let queryDefinition: Reactory.Forms.IReactoryFormQuery = graphqlDefinitions.query;
         if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
           queryDefinition = graphqlDefinitions.queries[uiOptions.query];
-          reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
+          reactory.debug(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition);
         }
 
-        reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
+        reactory.debug(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query });
         let variables = reactory.utils.objectMapper({ formContext, query, props: queryDefinition.props || {} }, uiOptions.variables || queryDefinition.variables);
 
         variables = { ...variables, paging: { page: query.page, pageSize: query.pageSize } };
-        reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
+        reactory.debug('MaterialTableWidget - Mapped variables for query', { query, variables });
 
         let options = queryDefinition.options ? { fetchPolicy: 'network-only', ...queryDefinition.options } : { fetchPolicy: 'network-only' };
         if (query && query.options) {
@@ -496,7 +496,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         try {
           queryResult = await reactory.graphqlQuery(queryDefinition.text, variables, options).then();
         } catch (e) {
-          reactory.log(`Error running query for grid`, { e }, 'error');
+          reactory.log(`Error running query for grid`, { e });
           setError("Error executing query");
         }
         //show a loader error
@@ -533,17 +533,17 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           }
           //response.paging.page = response.paging.page - 1;
         } else {
-          reactory.log(`Query returned null data`, { queryResult }, 'warning')
+          reactory.log(`Query returned null data`, { queryResult });
           setError("No data returned from query")
         }
 
         if (queryResult?.errors && queryResult.errors.length > 0) {
-          reactory.log('Query contains errors', { queryResult }, 'error');
+          reactory.log('Query contains errors', { queryResult });
         }
       }
 
     } catch (remoteDataError) {
-      reactory.log(`Error getting remote data`, { remoteDataError }, 'error');
+      reactory.log(`Error getting remote data`, { remoteDataError });
       return response;
     }
     setData(response);
@@ -655,7 +655,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         const shouldBreak = useMediaQuery(theme.breakpoints.down(def.breakpoint));
 
         if (shouldBreak === false) {
-          reactory.log('MaterialTableWidget ==> Skipping column render', { shouldBreak, def }, 'debug');
+          reactory.log('MaterialTableWidget ==> Skipping column render', { shouldBreak, def });
           columns.push(def)
         }
       } else {
@@ -734,7 +734,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           }
         }
       } catch (tErr) {
-        reactory.log(`core.MaterialTableWidget template render failed for search input`, { searchText: options.searchText, error: tErr }, 'error');
+        reactory.log(`core.MaterialTableWidget template render failed for search input`, { searchText: options.searchText, error: tErr });
       }
     }
   }
@@ -743,7 +743,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const refreshHandler = (eventName: string, eventData: any) => {
     const uiOptions = uiSchema['ui:options'] || {};
-    reactory.log(`MaterialTableWidget - Handled ${eventName}`, eventData, 'debug');
+    reactory.log(`MaterialTableWidget - Handled ${eventName}`, eventData);
     if (uiOptions.remoteData === true) {
       if (tableRef.current && tableRef.current.onQueryChange) {
         tableRef.current.onQueryChange()
@@ -809,12 +809,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
       if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
         queryDefinition = graphqlDefinitions.queries[uiOptions.query];
-        reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
+        reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition);
       }
 
       if (queryDefinition && queryDefinition.refreshEvents) {
         queryDefinition.refreshEvents.forEach((reactoryEvent) => {
-          reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
+          reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined);
           reactory.on(reactoryEvent.name, onEventRefreshHandler);
         });
       }
@@ -854,7 +854,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       //for now we just do a force refresh which will trigger re-rendering
       //logic in the widget.
       uiOptions.refreshEvents.forEach((reactoryEvent) => {
-        reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
+        reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined);
         reactory.on(reactoryEvent.name, refresh);
       });
     };
@@ -1200,7 +1200,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             try {
               formContext[mutationDefinition.onSuccessEvent.name](_method_props);
             } catch (notHandledByForm) {
-              reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm, props: _method_props }, 'warning')
+              reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm, props: _method_props });
             }
 
             reactory.emit(mutationDefinition.onSuccessEvent.name, _method_props);
@@ -1498,7 +1498,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       </>
     )
   } catch (err) {
-    reactory.log(`Error rendering MaterialTable:\n${err.message}`, {error: err}, 'error');
+    reactory.log(`Error rendering MaterialTable:\n${err.message}`, {error: err});
     return <>Something went wrong during the render of the data table, please <Button onClick={() => { setVersion(version + 1) }}>Retry</Button></>
   }
 };

@@ -48,7 +48,7 @@ const ReactoryFormRouter = (props) => {
     Tooltip
   } = MaterialCore
 
-  reactory.log('ReactoryFormRouter:render', { props: props }, 'debug');
+  reactory.log('ReactoryFormRouter:render', { props: props });
 
   
   const user = reactory.getUser();
@@ -64,7 +64,7 @@ const ReactoryFormRouter = (props) => {
   if(formId) {
     return (<ReactoryForm formId={formId} mode={mode || 'view'} formContext={{ routeParams: params }} />)
   } else {
-    return (<ReactoryForm formDef={$formDef} mode='view' data={{ forms: reactory.formSchemas }} />)
+    return (<ReactoryForm formDef={$formDef} mode='view' formData={{ forms: reactory.formSchemas }} />)
   }    
 };
 

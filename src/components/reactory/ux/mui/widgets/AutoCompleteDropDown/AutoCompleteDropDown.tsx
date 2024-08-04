@@ -94,7 +94,7 @@ function AutoCompleteDropDown<
                     setAvailable(_result_data || []);
                 }
             }).catch((err) => {
-                reactory.log(`Error Getting Items for ${schema.title}`, { err }, 'error');
+                reactory.log(`Error Getting Items for ${schema.title}`, { err });
                 setOptions([]);
             });
         }
@@ -107,7 +107,7 @@ function AutoCompleteDropDown<
      * @param {*} reason: One of "create-option", "select-option", "remove-option", "blur" or "clear".
      */
     const onChange = (evt, value, reason) => {
-        reactory.log(`Selection Changed AutoComplete`, { value, reason }, 'debug');
+        reactory.log(`Selection Changed AutoComplete`, { value, reason });
         let multiSelect = $props.multiSelect === true ? true : false;
         if (props.onChange && reason === "select-option") {
             if (value === null || value === undefined) {

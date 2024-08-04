@@ -35,7 +35,7 @@ export const withReactory = (ComponentToWrap: any | React.Component | Function, 
         const ComponentWithErrorBoundary = withErrorBoundary(ComponentToWrap, {
             FallbackComponent: ErrorFallback,
             onError: (error, info) => {
-                reactory.log(`Error in component ${id}`, {error, info}, 'error');
+                reactory.log(`Error in component ${id}`, {error, info});
             },
             id
         });

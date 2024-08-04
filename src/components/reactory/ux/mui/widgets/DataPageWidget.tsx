@@ -67,7 +67,7 @@ class DataPageWidget extends Component<DataPageWidgetProps, DataPageWidgetState>
   }
 
   onPrevious(){
-    this.props.api.log('onPrevious()', null, 'debug');
+    this.props.api.log('onPrevious()', null);
     const _formData: PagingResult = { ...this.props.formData } 
 
     _formData.page = _formData.page - 1;
@@ -76,20 +76,20 @@ class DataPageWidget extends Component<DataPageWidgetProps, DataPageWidgetState>
       ...this.props.formContext.formData 
     };
 
-    this.props.api.log('Root Form Data', rootFormData, 'debug');    
+    this.props.api.log('Root Form Data', rootFormData);    
     rootFormData.paging = _formData;
 
     this.props.formContext.setFormData(rootFormData, this.props.formContext.refresh);
   }
 
   onNext(){
-    this.props.api.log('onNext()', {props: this.props}, 'debug');    
+    this.props.api.log('onNext()', {props: this.props});    
     const _paging: PagingResult = { ...this.props.formData } 
     _paging.page = _paging.page + 1;
     const rootFormData = { 
       ...this.props.formContext.formData 
     };
-    this.props.api.log('Root Form Data', rootFormData, 'debug');
+    this.props.api.log('Root Form Data', rootFormData);
     rootFormData.paging = _paging;
 
     this.props.formContext.setFormData(rootFormData, this.props.formContext.refresh);
@@ -97,7 +97,7 @@ class DataPageWidget extends Component<DataPageWidgetProps, DataPageWidgetState>
 
   onPageNumberKeyPress(evt){
     const self = this;
-    self.props.api.log('onPageNumberKeyPress', { evt, charCode: evt.charCode, keyCode: evt.keyCode }, 'debug');    
+    self.props.api.log('onPageNumberKeyPress', { evt, charCode: evt.charCode, keyCode: evt.keyCode });    
     self.setState({ 
       currentPageInput: parseInt(evt.target.value)
      });
@@ -110,14 +110,14 @@ class DataPageWidget extends Component<DataPageWidgetProps, DataPageWidgetState>
         ...self.props.formContext.formData 
       };
 
-      self.props.api.log('Root Form Data', rootFormData, 'debug');
+      self.props.api.log('Root Form Data', rootFormData);
       rootFormData.paging = _paging;    
       self.props.formContext.setFormData(rootFormData, self.props.formContext.refresh);
      }
   }
   
   onPageNumberChange(evt){
-    this.props.api.log('Page number change on data set', { value: evt.target.value }, 'debug');
+    this.props.api.log('Page number change on data set', { value: evt.target.value });
     this.setState({ 
       currentPageInput: parseInt(evt.target.value)
     }); 

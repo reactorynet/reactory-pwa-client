@@ -64,7 +64,7 @@ const uiSchema = {
       //   return null;
       // },
       // avatarAlt: (item) => {
-      //   // reactory.log(`Getting avatar alt for item`, { item }, 'debug');
+      //   // reactory.log(`Getting avatar alt for item`, { item });
       //   if (item.event.organization && item.event.organization.avatar) {
       //     return item.event.organization.name
       //   }
