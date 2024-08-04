@@ -3,18 +3,15 @@ import { default as DefaultErrorList } from "./ErrorList";
 import {
   getDefaultFormState,
   retrieveSchema,
-  shouldRender,
   toIdSchema,
-  setState,
   deepEquals,
   getDefaultRegistry,
   validateFormData,
   toErrorList
 } from "../utils";
 import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
-import templates from './templates';
 import { useReactory } from "@reactory/client-core/api";
-import { Html } from "@mui/icons-material";
+
 import FormClass from './FormClass';
 
 export type FormToolbarPosition = 'top' | 'bottom' | 'both' | 'none';
@@ -80,21 +77,7 @@ interface FormState {
 const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
 
   const formElement = React.useRef<HTMLFormElement | HTMLDivElement>(null);
-  
-  //let $formElement: any;
-
   const reactory = useReactory();
-
-    //   static defaultProps = {
-  //   uiSchema: {},
-  //   noValidate: false,
-  //   liveValidate: false,
-  //   disabled: false,
-  //   safeRenderCompletion: false,
-  //   noHtml5Validate: false,
-  //   ErrorList: DefaultErrorList,
-  // };
-
   const {
     id,      
     formContext,
@@ -120,6 +103,8 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     uiSchema = {},
   } = props;
 
+  reactory.debug('Form', { props });
+  
   const [idSchema, setIdSchema] = React.useState<Reactory.Schema.IDSchema>({ $id: "root" });
   const [formData, setFormData] = React.useState<any>(null);
   const [edit, setEdit] = React.useState<boolean>(false);
@@ -330,50 +315,11 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     style = formUiOptions.style ? { ...style, ...formUiOptions.style } : style;
   }
 
-  const $children = (<>
-    {renderErrors()}
-    {props.toolbarPosition && props.toolbarPosition.indexOf('top') >= 0 ? (children) : null}
-    <ErrorBoundary FallbackComponent={(props) => (<>{idSchema.$id} Field Error: {props.error}</>)}>
-      <SchemaField
-        schema={schema}
-        uiSchema={uiSchema}
-        errorSchema={props.errorSchema}
-        idSchema={idSchema}
-        idPrefix={idPrefix}
-        formData={formData}
-        onChange={onChange}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        registry={registry}
-        safeRenderCompletion={safeRenderCompletion}
-        disabled={disabled} />
-    </ErrorBoundary>
-    {props.toolbarPosition && props.toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
+  const $children = (<>    
+    
     </>);
 
-  // if (componentType === 'form') {
-  //   return (
-  //     <form
-  //       className={className}
-  //       id={id}
-  //       name={name}
-  //       method={method}
-  //       target={target}
-  //       action={action}
-  //       autoComplete={autocomplete}
-  //       encType={enctype}
-  //       acceptCharset={acceptcharset}
-  //       noValidate={noHtml5Validate}
-  //       onSubmit={onSubmit}
-  //       style={style}
-  //       ref={(form: HTMLFormElement) => {
-  //         formElement.current = form;
-  //       }}>
-  //       {$children}
-  //     </form>
-  //   );
-  // }
-
+  
   //   //@ts-ignore
     return (
       <div
@@ -382,7 +328,24 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
         ref={(form: HTMLDivElement) => {
           formElement.current = form;
         }}>
-        {$children}
+        <ErrorBoundary FallbackComponent={(props) => (<>{idSchema.$id} Field Error: {props.error}</>)}>
+        {renderErrors()}
+        {props.toolbarPosition && props.toolbarPosition.indexOf('top') >= 0 ? (children) : null}
+        <SchemaField
+          schema={schema}
+          uiSchema={uiSchema}
+          errorSchema={props.errorSchema}
+          idSchema={idSchema}
+          idPrefix={idPrefix}
+          formData={formData}
+          onChange={onChange}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          registry={registry}
+          safeRenderCompletion={safeRenderCompletion}
+          disabled={disabled} />
+          {props.toolbarPosition && props.toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
+        </ErrorBoundary>
       </div>);
 
 

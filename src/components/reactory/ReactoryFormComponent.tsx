@@ -1576,7 +1576,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const formProps: any = {
       id: instance_id,
       key: instance_id,
-      ..._definition,      
+      ..._definition,
       validate: formValidation,
       onChange: onChange,
       onError: props.onError ? props.onError : (error) => { },
@@ -2023,18 +2023,26 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       //{toolbarPosition !== 'none' ? formtoolbar : null}
       //@ts-ignore
       
-      let $fp: ISchemaForm = { ...{ ...formProps, toolbarPosition: toolbarPosition } };      
-      return (
-        <div id={`reactory_container::${instance_id}`}>          
-          {toolbarPosition.indexOf("top") >= 0 ? formtoolbar : null}
-          {isBusy() === true && <LinearProgress />}
-          <Form {...$fp}>
-            {toolbarPosition.indexOf("form") >= 0 ? formtoolbar : null}
-          </Form>
-          {toolbarPosition.indexOf("bottom") >= 0 ? formtoolbar : null}
-          {getHelpScreen()}
-        </div>
-      )
+      let $fp: ISchemaForm = { ...{ ...formProps, toolbarPosition: toolbarPosition } };
+
+      if (formDef.__complete__ === true) { 
+        return (
+          <div id={`reactory_container::${instance_id}`}>          
+            {toolbarPosition.indexOf("top") >= 0 ? formtoolbar : null}
+            {isBusy() === true && <LinearProgress />}
+            <Form {...$fp}>
+              {toolbarPosition.indexOf("form") >= 0 ? formtoolbar : null}
+            </Form>
+            {toolbarPosition.indexOf("bottom") >= 0 ? formtoolbar : null}
+            {getHelpScreen()}
+          </div>
+        )
+      }
+
+      return (<div id={`reactory_container::${instance_id}`}>          
+       ...
+      </div>)
+      
     } catch (err) {
       return <>{err.message}</>
     }

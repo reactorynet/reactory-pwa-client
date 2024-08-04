@@ -517,11 +517,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
     };
     
-    this.log = console.log.bind(window.console);
-    this.debug = console.debug.bind(window.console);
-    this.warning = console.warn.bind(window.console);
-    this.error = console.error.bind(window.console);
-    this.info = console.info.bind(window.console);
+    
+    this.log = window.reactory.logging.log ? console.log.bind(window.console) : () => { };
+    this.debug = window.reactory.logging.debug ? console.debug.bind(window.console) : () => { };
+    this.warning = window.reactory.logging.debug ? console.warn.bind(window.console) : () => { };
+    this.error = window.reactory.logging.error ? console.error.bind(window.console) : () => { };
+    this.info = window.reactory.logging.info ? console.info.bind(window.console): () => { };
     this.stat = this.stat.bind(this);
     this.flushstats = this.flushstats.bind(this);
     this.publishstats = this.publishstats.bind(this);
@@ -561,6 +562,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       this.__uuid = uuid();
       localStorage.setItem("$reactory_instance_id$", this.__uuid);
     }
+    this.on(ReactoryApiEventNames.onApiStatusUpdate, this.loadPlugins.bind(this));
   }
 
   /**
@@ -842,42 +844,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }
   };
 
-  // log(message, params: any = [], kind = 'log', formatting = "") {
-  //   try {
-  //     const dolog = () => {
-  //       let logFunction = (message: string, params?: any, formatting?: any) => {};
-  //       switch (kind) {
-  //         case 'error':
-  //           formatting = "color: red; font-weight: bold;"
-  //           logFunction = this.error;
-  //           break;
-  //         case 'warn':
-  //           formatting = "color: yellow, font-weight: bold;"
-  //             logFunction = this.warning;
-  //           break;
-  //         case 'info':
-  //           formatting = "color: blue"
-  //           logFunction = this.info;
-  //           break;
-  //         default: {
-  //           kind = 'debug';
-  //           formatting = "color: grey;"
-  //           logFunction = this._log;
-  //           break;
-  //         }
-  //       }
-  //       logFunction(`%cReactory::${message}`, formatting, params);
-  //     }
-
-  //     if (window.reactory && window.reactory.logging && window.reactory.logging[kind] === true) {
-  //       dolog();
-  //     }
-  //   } catch (err) {
-  //     // do nothing, it could be that we have a problem with console
-  //     console.error(err);
-  //   }
-  // }
-
   publishstats() {
     this.publishingStats = true;
     if (this.statistics.__delta > 0) {
@@ -1134,17 +1100,42 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           // A form must explicitly be set to false 
           // to not register as a component.
           if (formDef.registerAsComponent !== false) {
-            const FormComponent = (props: any, context: any) => {
-              return that.renderForm(<ReactoryFormComponent formId={formDef.id} key={`${formDefIndex}`}
-                onSubmit={props.onSubmit} onChange={props.onChange}
-                formData={formDef.defaultFormValue || props.formData || props.data}
-                before={props.before}
-                {...props}
-                context={context}
-              >{props.children}
-              </ReactoryFormComponent>, formDef.wrap === true);
+            
+            const ReactoryComponent = (props: any, context: any) => {
+              
+              try {
+                const renderedCompnent = that.renderForm(
+                  <ReactoryFormComponent 
+                    formId={formDef.id} 
+                    key={`${formDefIndex}`}
+                    onSubmit={props.onSubmit} 
+                    onChange={props.onChange}
+                    formData={formDef.defaultFormValue || props.formData || props.data}
+                    before={props.before}
+                    {...props}
+                    context={context}
+                  >{props.children}
+                  </ReactoryFormComponent>, formDef.wrap === true);
+                  that.debug(`Rendering form ${formDef.id}`, { formDef, props, context });
+                  if (renderedCompnent) {
+                    return renderedCompnent;
+                  } else {
+                    return <Typography>{formDef.id} returned empty</Typography>
+                  }
+              } catch (error) { 
+                return <Typography>{formDef.id} returned an error</Typography>
+              }
             };
-            that.registerComponent(formDef.nameSpace, formDef.name, formDef.version, FormComponent, formDef.tags, formDef.roles, true, [], 'form');
+            that.registerComponent(
+              formDef.nameSpace, 
+              formDef.name, 
+              formDef.version, 
+              ReactoryComponent, 
+              formDef.tags, 
+              formDef.roles, 
+              true, 
+              [], 
+              'form');
           }
         });
         that.formSchemaLastFetch = moment();
@@ -1458,6 +1449,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       componentType
     };
     this.emit('componentRegistered', fqn);
+    this.debug(`Component Registered: ${fqn}`, this.componentRegister[fqn]);
   }
 
   // @ts-ignore
@@ -1697,6 +1689,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     const variables = { theme: that.$user?.theme, mode: that.getThemeMode() };
     try {
       const result = await that.graphqlQuery<Partial<Reactory.Models.IApiStatus>, {}>(query, variables, { fetchPolicy: 'network-only' });
+      that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, offline: false, scope });
       return result.data;
     } catch (apiStatusError) {
       //check if the error is a network error
@@ -1706,7 +1699,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           throw new Error('Unauthorized');
         }
       } else {
-        that.log(`Error occurred while fetching the API status: ${apiStatusError.message}`, { apiStatusError });
+        that.error(`Error occurred while fetching the API status: ${apiStatusError.message}`, { apiStatusError });
         throw apiStatusError;
       }
     }
@@ -1804,6 +1797,71 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         reject(passwordUpdateError);
       });
     });
+  }
+
+
+  public injectResource(resource: any): void {
+    if (document) {      
+      const resourceId = `${resource.type}_${resource.id}`;            
+      if (nil(document.getElementById(resourceId)) === false) { 
+        document.getElementById(resourceId).remove();  
+      }
+      switch (resource.type) {
+        case 'style': {
+          let styleLink = document.createElement('link');
+          styleLink.id = resourceId;
+          styleLink.href = resource.uri;
+          styleLink.rel = 'stylesheet';
+          document.head.append(styleLink)
+          break;
+        }
+        case 'script': {
+          let scriptLink = document.createElement('script');
+          scriptLink.id = resourceId;
+          scriptLink.src = resource.uri;
+          scriptLink.type = 'text/javascript';
+          document.body.append(scriptLink)
+          break;
+        }
+        default: {
+          this.warning(`ReactoryFormComponent.form() - injectResources() Resource Type ${resource.type}, not supported.`, { resource });
+          break;
+        }
+      }
+    }
+  };
+
+  private async loadPlugins() {
+    if (this.$user && this.$user.plugins && this.$user.plugins.length > 0) {
+      this.$user.plugins.forEach((plugin: Reactory.Platform.IReactoryApplicationPlugin) => {
+        const {
+          nameSpace,
+          name,
+          version,
+          url,
+          loader,
+          mimeType,
+          id,
+          platform,
+          enabled = true,
+          roles,
+        } = plugin;
+        if (roles && roles.length > 0) { 
+          if (this.hasRole(roles) === false) return;
+        }
+        if (enabled === true) {
+          const fqn = `${nameSpace}.${name}@${version}`;          
+            this.injectResource({
+              type: 'script',
+              uri: url,
+              id: `${nameSpace}_${name}_${version}`,
+              mimeType,
+              loader,
+              platform
+            });
+          }
+      });
+    }
   }
 
   setViewContext(context = {}) {

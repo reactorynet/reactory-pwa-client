@@ -58,45 +58,6 @@ const getTheme = () => {
   return localStorage.getItem('theme')
 }
 
-//@ts-ignore
-const reactory: Reactory.Client.ReactorySDK = new ReactoryApi({
-  clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
-  clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
-  $version: `${packageInfo.version}-${license.version}`,
-  useNavigation
-});
-
-reactory.init().then();
-//register built-in components
-componentRegistery.forEach((componentDef) => {
-  const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
-  reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
-});
-
-reactory.$windowSize = reactory.getSizeSpec();
-
-const store = configureStore(null);
-reactory.reduxStore = store;
-window.reactory = {
-  api: reactory,
-  reactory,
-  logging: {
-    debug: true,
-    log: true,
-    error: true,
-    warn: true,
-    info: true
-  }
-};
-
-if (process.env.NODE_ENV === 'production') { 
-  window.reactory.logging.debug = false;
-  window.reactory.logging.warn = false;
-  window.reactory.logging.error = false;
-  window.reactory.logging.info = false;
-  window.reactory.logging.log = false;
-}
-
 export interface NewNotification {
   id: string,
   title: string,
@@ -156,8 +117,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   
   const navigation = useNavigate();
   const location = useLocation();
-    
-  const { auth_validated, user, reactory, authenticating = false } = props;
+  const reactory = useReactory();
+  const { auth_validated, user, authenticating = false } = props;
   const [routes, setRoutes] = React.useState<Reactory.Routing.IReactoryRoute[]>([]);
   const [v, setVersion] = React.useState<number>(0);
 
@@ -288,7 +249,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     }
     
     ChildRoutes.push(<Route 
-      key={routeDef.key}
+      key={routeDef.path}
       path={routeDef.path}
       element={children}
       />)
@@ -333,6 +294,7 @@ const AppLoading = (props) => {
 const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
   const TM_BASE_DEFAULT: number = 45000;
+  const reactory = useReactory();
   const { onOfflineChanged } = props;
   const [timeout_base, setTimeoutBase] = React.useState<number>(TM_BASE_DEFAULT);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
@@ -473,6 +435,7 @@ const dependencies = [
 
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
+  //@ts-ignore
   const [isReady, setIsReady] = React.useState<boolean>(false);
   const [auth_validated, setIsValidated] = React.useState<boolean>(false);
   const [user, setUser] = React.useState<any | Reactory.Models.IUser>(null);
@@ -484,6 +447,15 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
   const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
+  //@ts-ignore
+  const [reactory] = React.useState<Reactory.Client.ReactorySDK>(new ReactoryApi({
+    clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
+    clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
+    $version: `${packageInfo.version}-${license.version}`,
+    useNavigation
+  }));
+
+  const [store] = React.useState<any>(configureStore(null));
 
   const components: any = reactory.getComponents(dependencies);
   const { NotificationComponent, Footer } = components;
@@ -579,10 +551,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           setUser(user)
           setOfflineStatus(false);
         }
-
       }
     } else {
-      reactory.log(`apiStaus returned null value`, { status });;
+      reactory.warning(`apiStatus returned null value`, { status });;
     }
   }
 
@@ -600,6 +571,17 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const willMount = () => {
 
+    reactory.init().then(() => {
+      //register built-in components
+      componentRegistery.forEach((componentDef) => {
+        const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
+        reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
+      });
+
+      reactory.$windowSize = reactory.getSizeSpec();  
+      reactory.reduxStore = store;
+    });
+  
 
     window.addEventListener('resize', onWindowResize);
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change',(evt) => {
@@ -643,11 +625,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.queryString = window.location.search;
     reactory.objectToQueryString = queryString.stringify;
 
-    if (window && !window.reactory) {
-      window.reactory = {
-        api: reactory,
-      };
-    }
+    window.reactory.api = reactory;
 
 
     if (query.auth_token) {
@@ -743,8 +721,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                     elevation={0} 
                     className={classes.root_paper}>
                     {offline === false && 
-                      <React.Fragment>
-                        <Globals reactory={reactory} />
+                      <React.Fragment>                      
                         {header}      
                         <NotificationComponent />
                         <ReactoryRouter 

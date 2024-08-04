@@ -60,7 +60,7 @@ export const Logged = (props) => {
   if (menus && menus.length) {
     menus.map((menu) => {
       if (menu.target === 'top-right') {
-        menu.entries.map((menuItem) => {
+        menu.entries.map((menuItem, idx) => {
           let allow = true;
           if (isArray(menuItem.roles) && isArray(user.roles)) {
             allow = reactory.hasRole(menuItem.roles, user.roles)
@@ -70,7 +70,7 @@ export const Logged = (props) => {
               navigate(menuItem.link)
             };
             menuItems.push((
-              <MenuItem key={menuItem.id} onClick={goto}>
+              <MenuItem key={menuItem.id || `menu_item_${idx}`} onClick={goto}>
                 <ListItemIcon><Icon color="primary">{menuItem.icon}</Icon></ListItemIcon>
                 {menuItem.title}
               </MenuItem>));

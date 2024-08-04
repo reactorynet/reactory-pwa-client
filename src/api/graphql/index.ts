@@ -226,6 +226,19 @@ const apiStatus = gql`
       applicationRoles
       when
       status
+      plugins {
+        id
+        nameSpace
+        name
+        version
+        description
+        platform
+        url
+        loader
+        options
+        enabled
+        roles
+      } 
       loggedIn {
         user {
           id
