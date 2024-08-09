@@ -10,7 +10,7 @@ import { v4 as uuid } from 'uuid';
 import classNames from 'classnames';
 import { NavigateFunction, BrowserRouter as Router, } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions, MutationResult, FetchResult } from '@apollo/client';
+import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions, MutationResult, FetchResult, ApolloError, ServerError } from '@apollo/client';
 import localForage from 'localforage';
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider as MuiThemeProvider } from '@mui/styles';
@@ -100,7 +100,6 @@ export const reactoryDomNode = () => {
   domNode.id = `reactory_modal_widget_${uuid().replace("-", "_")}`;
   return domNode;
 }
-
 /**
  * This function allows you to pass in a templated object definition.
  * The function iterates over every propery of the object and then
@@ -516,13 +515,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         512: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-512.png`,
       }
     };
-    
-    
+
+
     this.log = window.reactory.logging.log ? console.log.bind(window.console) : () => { };
     this.debug = window.reactory.logging.debug ? console.debug.bind(window.console) : () => { };
     this.warning = window.reactory.logging.debug ? console.warn.bind(window.console) : () => { };
     this.error = window.reactory.logging.error ? console.error.bind(window.console) : () => { };
-    this.info = window.reactory.logging.info ? console.info.bind(window.console): () => { };
+    this.info = window.reactory.logging.info ? console.info.bind(window.console) : () => { };
     this.stat = this.stat.bind(this);
     this.flushstats = this.flushstats.bind(this);
     this.publishstats = this.publishstats.bind(this);
@@ -593,11 +592,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       try {
         await this.getApiStatus();
       } catch (error) {
-        if (error.message === 'Unauthorized') {
-          await this.logout();
-        } else {
-          this.log('Error fetching API status', error);
-        }
+        // this should be handled in the application
       }
     }
     await this.hydrate();
@@ -612,9 +607,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.$development_mode = await localForage.getItem<boolean>(storageKeys.developmentMode).then();
   }
 
-
+  /**
+   * Initializes the i18n instance for the application
+   */
   async initi18n() {
-
     const TRANSLATIONS = `
        query ReactoryTranslation($lang: String) {
         ReactoryTranslation(lang: $lang) {
@@ -631,8 +627,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     const { data, error }: QueryResult = await this.graphqlQuery(TRANSLATIONS, {}).then()
 
     let $resources: any = {};
-
-
     if (data && data.ReactoryTranslation) {
       const { i18n, id } = data.ReactoryTranslation;
       if (i18n && lodash.isArray(i18n) === true) {
@@ -941,13 +935,11 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     });
   }
 
-  graphqlQuery<T, V>(query,
+  async graphqlQuery<T, V>(query,
     variables: V,
     options: any = { fetchPolicy: 'network-only' },
     queryDefinition: Reactory.Forms.IReactoryFormQuery = null): Promise<ApolloQueryResult<T>> {
-
     const that = this;
-
     let $query = null;
     if (typeof query === 'string') {
       try {
@@ -958,47 +950,37 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
     } else $query = query;
 
-    return new Promise((resolve, reject) => {
-      that.client.query<T, V>({
-        query: $query,
-        variables,
-        fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
-      }).then((result: ApolloQueryResult<T>) => {
-        const { errors = [], data } = result;
-        if (errors.length > 0) {
-          errors.forEach((error) => {
-            if (error) {
-              const { extensions, path = [] } = error;
-              if (extensions) {
-                const { code, exception } = extensions;
-                if (code === 'INTERNAL_SERVER_ERROR') {
-                  //we know for certain the server had an unhandled error in the resolver chain.
-                  //the client may not cater for these errors, so we can by default warn the user
-                  //that the server reported an error - we should log and report the error
-                  //to the server side error reporting and tracing.
-                  that.log(`🚨 Server reported an internal error. This is should not occur, all errors need to be gracefully handled, with support info`, { error, variables, options, query, queryDefinition });
-                  // that.createNotification(`The query at path ${path.map(p => `${p}:`)} has encountered a server error. The administrators have been notified.`, { type: 'error', showInAppNotification: true, timeout: 4500 });
-                }
-              }
-            }
-          });
-        }
-        resolve(result);
-      }).catch((clientErr) => {
-        that.log(`Error occurred while executing the query ${clientErr.message}`, { query, clientErr });
-        reject(clientErr)
-      });
+    const result = await that.client.query<T, V>({
+      query: $query,
+      variables,
+      fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
     });
+    const { errors = [] } = result;
+    if (errors.length > 0) {
+      errors.forEach((error) => {
+        if (error) {
+          const { extensions } = error;
+          if (extensions) {
+            const { code } = extensions;
+            if (code === 'INTERNAL_SERVER_ERROR') {
+              //we know for certain the server had an unhandled error in the resolver chain.
+              //the client may not cater for these errors, so we can by default warn the user
+              //that the server reported an error - we should log and report the error
+              //to the server side error reporting and tracing.
+              that.error(`🚨 Server reported an internal error. This is should not occur, all errors need to be gracefully handled, with support info`, { error, variables, options, query, queryDefinition });              
+            }
+          }
+        }
+      });
+    }
+    return result;
   }
 
   async afterLogin(loginResult: Reactory.Client.ILoginResult): Promise<Reactory.Models.IApiStatus> {
-    //this.setUser(user);
     this.setAuthToken(loginResult.user.token);
     const { client, ws_link, clearCache } = await ReactoryApolloClient();
     this.client = client;
     this.clearCache = clearCache;
-    //this.$ws_link = ws_link;
-    //this.forms(true).then();
     return this.status({ emitLogin: true, forceLogout: true });
   }
 
@@ -1100,15 +1082,15 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           // A form must explicitly be set to false 
           // to not register as a component.
           if (formDef.registerAsComponent !== false) {
-            
+
             const ReactoryComponent = (props: any, context: any) => {
-              
+
               try {
                 const renderedCompnent = that.renderForm(
-                  <ReactoryFormComponent 
-                    formId={formDef.id} 
+                  <ReactoryFormComponent
+                    formId={formDef.id}
                     key={`${formDefIndex}`}
-                    onSubmit={props.onSubmit} 
+                    onSubmit={props.onSubmit}
                     onChange={props.onChange}
                     formData={formDef.defaultFormValue || props.formData || props.data}
                     before={props.before}
@@ -1116,25 +1098,25 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
                     context={context}
                   >{props.children}
                   </ReactoryFormComponent>, formDef.wrap === true);
-                  that.debug(`Rendering form ${formDef.id}`, { formDef, props, context });
-                  if (renderedCompnent) {
-                    return renderedCompnent;
-                  } else {
-                    return <Typography>{formDef.id} returned empty</Typography>
-                  }
-              } catch (error) { 
+                that.debug(`Rendering form ${formDef.id}`, { formDef, props, context });
+                if (renderedCompnent) {
+                  return renderedCompnent;
+                } else {
+                  return <Typography>{formDef.id} returned empty</Typography>
+                }
+              } catch (error) {
                 return <Typography>{formDef.id} returned an error</Typography>
               }
             };
             that.registerComponent(
-              formDef.nameSpace, 
-              formDef.name, 
-              formDef.version, 
-              ReactoryComponent, 
-              formDef.tags, 
-              formDef.roles, 
-              true, 
-              [], 
+              formDef.nameSpace,
+              formDef.name,
+              formDef.version,
+              ReactoryComponent,
+              formDef.tags,
+              formDef.roles,
+              true,
+              [],
               'form');
           }
         });
@@ -1533,8 +1515,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     return componentMap;
   }
 
-
-
   getGlobalComponents() {
     const components = [];
     const that = this;
@@ -1683,94 +1663,105 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     else await localForage.removeItem(key);
   }
 
-  private async getApiStatus(scope: ApiStatusQueryScope[] = ['application']): Promise<Partial<Reactory.Models.IApiStatus>> {
+  private async getApiStatus(scope: ApiStatusQueryScope[] = ['application'], theme?: string, mode?: string): Promise<Partial<Reactory.Models.IApiStatus> | Reactory.Models.IApiStatus> {
     const that = this;
     const query = ApiStatusQueryFactory(scope);
-    const variables = { theme: that.$user?.theme, mode: that.getThemeMode() };
+    const variables = { 
+      theme: theme || that.$user?.theme, 
+      mode: mode || that.getThemeMode() 
+    };
     try {
-      const result = await that.graphqlQuery<Partial<Reactory.Models.IApiStatus>, {}>(query, variables, { fetchPolicy: 'network-only' });
+      const result = await that.graphqlQuery<Partial<{ apiStatus: Reactory.Models.IApiStatus }>, {}>(query, variables, { fetchPolicy: 'network-only' });
       that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, offline: false, scope });
-      return result.data;
+      return result.data.apiStatus;
     } catch (apiStatusError) {
-      //check if the error is a network error
-      if (apiStatusError.networkError) {
-        const { networkError } = apiStatusError;
-        if (networkError.statusCode === 401) {
-          throw new Error('Unauthorized');
+      //check if the error is a network error    
+      if (apiStatusError.name && apiStatusError.name === 'ApolloError') {
+        const {
+          networkError,
+          graphQLErrors,
+          protocolErrors,
+        } = apiStatusError as ApolloError;
+
+        if (networkError && (networkError as ServerError).statusCode === 401) {
+          await that.logout(false);
+          that.setUser(anonUser);
+          return anonUser;          
         }
-      } else {
-        that.error(`Error occurred while fetching the API status: ${apiStatusError.message}`, { apiStatusError });
-        throw apiStatusError;
+
+        if (graphQLErrors && graphQLErrors.length > 0) {
+          graphQLErrors.forEach((gqlError) => {
+            that.error(`GraphQL Error: ${gqlError.message}`, gqlError);
+          });
+        }
+
+        if (protocolErrors && protocolErrors.length > 0) {
+          protocolErrors.forEach((protocolError) => {
+            that.error(`Protocol Error: ${protocolError.message}`, protocolError);
+          });
+        }
       }
+      if (apiStatusError.name === 'ApolloClientNotReady') {
+        that.error('ApolloClient not ready, check the client configuration', { apiStatusError });
+      } else {
+        that.error(`${apiStatusError?.name || 'Unspecified'} Error occurred while fetching the API status: ${apiStatusError.message}`, { apiStatusError });
+      }
+      that.error(`Error occurred while fetching the API status: ${apiStatusError?.message}`, { apiStatusError });
+      throw apiStatusError;
     }
   }
 
-  status(options?: Reactory.Client.IApiStatusRequestOptions): Promise<Reactory.Models.IApiStatus> {
+  async status(options?: Reactory.Client.IApiStatusRequestOptions): Promise<Reactory.Models.IApiStatus> {
     const that = this;
-    const current_user = this.$user as Reactory.Models.IApiStatus;
+    const currentStatus = this.$user as Reactory.Models.IApiStatus;
+    if (!this.client) throw new Error('ApolloClient not ready')
 
-    const variables: Reactory.Client.IApiStatusRequestOptions = {
-      emitLogin: options?.emitLogin === true || false,
-      forceLogout: options?.forceLogout === true || false,
-      mode: options?.mode || that.getThemeMode(),
-      theme: options?.theme || (current_user?.theme) as string || "reactory"
-    }
+    try {
+      const apiStatus: Reactory.Models.IApiStatus = await this.getApiStatus([
+        'application', 
+        'loggedIn',
+        'colorSchemes',
+        'menus',
+        'messages',
+        'routes',
+        'theme',
+        'navigationComponents',
+        'plugins'
+      ], options.theme, options.mode) as Reactory.Models.IApiStatus;
+      if(!apiStatus) {
+        return currentStatus;
+      }
 
-    return new Promise((resolve, reject) => {
-      that.forms(true).then(() => {
-        const getStatus = () => {
-          if (that.client) {
-            that.client.query({
-              query: that.queries.System.apiStatus,
-              variables: { theme: that.$user?.theme, mode: that.getThemeMode() },
-              fetchPolicy: 'network-only'
-            }).then((result) => {
-              if (result.data.apiStatus.status === "API OK") {
-                that.setUser({ ...result.data.apiStatus });
-                that.lastValidation = moment().valueOf();
-                that.tokenValidated = true;
-
-                if (options.emitLogin === true)
-                  that.emit(ReactoryApiEventNames.onLogin, that.getUser());
-                if (result.data.apiStatus.messages && isArray(result.data.apiStatus.messages)) {
-                  result.data.apiStatus.messages.forEach((message) => {
-                    that.createNotification(message.title, message);
-                  });
-                }
-
-                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, offline: false });
-                resolve(that.getUser());
-              } else {
-
-                if (options.forceLogout !== false) {
-                  that.logout(false);
-                  that.setUser(anonUser);
-                  resolve(anonUser);
-                } else {
-                  resolve(current_user);
-                }
-
-                that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...result, status: 'API OFFLINE', offline: true });
-              }
-            }).catch((clientErr) => {
-              that.log(`Error occurred while executing the query ${clientErr.message}`, { clientErr });
-
-              resolve(current_user);
-            });
-          } else {
-            setTimeout(() => {
-              getStatus();
-            }, 1000);
-          }
-        };
-        getStatus()
-      })
-    });
+      if (apiStatus.status === "API OK") {
+        that.setUser({ ...apiStatus });
+        that.lastValidation = moment().valueOf();
+        that.tokenValidated = true;
+      
+        if (options.emitLogin === true)
+          that.emit(ReactoryApiEventNames.onLogin, that.getUser());
+        if (apiStatus.messages && isArray(apiStatus.messages)) {
+          apiStatus.messages.forEach((message) => {
+            that.createNotification(message.title, message);
+          });
+        }
+        that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...apiStatus, offline: false });      
+        return apiStatus;
+      } else {
+        if (options.forceLogout !== false) {
+          that.logout(false);
+          that.setUser(anonUser);
+          that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...apiStatus, status: 'API OFFLINE', offline: true });
+        }
+      }
+    } catch (clientError) {
+      
+      return currentStatus;
+    }    
   }
 
   private validateToken(token: string) {
     this.setAuthToken(token);
-    return this.status();
+    this.status();
   }
 
   resetPassword({ password, confirmPassword }) {
@@ -1801,10 +1792,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
 
   public injectResource(resource: any): void {
-    if (document) {      
-      const resourceId = `${resource.type}_${resource.id}`;            
-      if (nil(document.getElementById(resourceId)) === false) { 
-        document.getElementById(resourceId).remove();  
+    if (document) {
+      const resourceId = `${resource.type}_${resource.id}`;
+      if (nil(document.getElementById(resourceId)) === false) {
+        document.getElementById(resourceId).remove();
       }
       switch (resource.type) {
         case 'style': {
@@ -1846,20 +1837,20 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           enabled = true,
           roles,
         } = plugin;
-        if (roles && roles.length > 0) { 
+        if (roles && roles.length > 0) {
           if (this.hasRole(roles) === false) return;
         }
         if (enabled === true) {
-          const fqn = `${nameSpace}.${name}@${version}`;          
-            this.injectResource({
-              type: 'script',
-              uri: url,
-              id: `${nameSpace}_${name}_${version}`,
-              mimeType,
-              loader,
-              platform
-            });
-          }
+          const fqn = `${nameSpace}.${name}@${version}`;
+          this.injectResource({
+            type: 'script',
+            uri: url,
+            id: `${nameSpace}_${name}_${version}`,
+            mimeType,
+            loader,
+            platform
+          });
+        }
       });
     }
   }

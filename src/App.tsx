@@ -304,14 +304,13 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
   let last_slow = null;
 
 
-  const getApiStatus = () => {
-
+  const getApiStatus = async (): Promise<void> => {
     const started = Date.now();
 
-    reactory.status({ emitLogin: false, forceLogout: false }).then((apiStatus: any) => {
+    try { 
+      const apiStatus = await reactory.status({ emitLogin: false, forceLogout: false });
       const done = Date.now();
       const api_ok = apiStatus.status === 'API OK'
-
       setOfflineStatus(!api_ok);
       if (offline !== !api_ok) {
         onOfflineChanged(!api_ok);
@@ -342,13 +341,8 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       if (totals.total > 5) {
         let avg: number = (totals.ok * 100) / totals.total;
         if (avg > 90) next_tm_base = TM_BASE_DEFAULT * 1.30
-
-
         if (avg > 95) next_tm_base = TM_BASE_DEFAULT * 1.5;
-
-
         if (avg > 98) next_tm_base = TM_BASE_DEFAULT * 2.5;
-
       }
 
       const newTotals = {
@@ -366,12 +360,12 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       if (next_tm_base !== timeout_base) setTimeoutBase(next_tm_base);
 
       setTimeout(() => {
-        getApiStatus();
+        void getApiStatus();
       }, timeoutMS);
 
-      reactory.log(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS });
-    }).catch((statusError) => {
-      reactory.log(`Error while fetching api status`, { error: statusError });
+      reactory.debug(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS });
+    } catch (error) {
+      reactory.error(`Error while fetching api status`, { error: error });
       setOfflineStatus(true);
       onOfflineChanged(true);
 
@@ -383,23 +377,17 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       };
 
       setTimeout(() => {
-        getApiStatus();
+        void getApiStatus();
       }, timeoutMS);
-    });
-
-
+    }
   };
 
 
   useEffect(() => {
-
-    getApiStatus();
-
+    void getApiStatus();
   }, []);
 
-
   if (offline === false) return null;
-
   return (
     <React.Fragment>
       <Box style={{ margin: 'auto', textAlign: 'center', paddingTop: '100px' }}>
@@ -431,10 +419,7 @@ const dependencies = [
   'reactory.Footer@1.0.0',
 ];
 
-
-
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
-
   //@ts-ignore
   const [isReady, setIsReady] = React.useState<boolean>(false);
   const [auth_validated, setIsValidated] = React.useState<boolean>(false);
@@ -460,23 +445,24 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const components: any = reactory.getComponents(dependencies);
   const { NotificationComponent, Footer } = components;
 
-  const getApiStatus = (emitLogin = true) => {
+  const getApiStatus = async (emitLogin = true): Promise<void> => {
 
-    reactory.status({ emitLogin, forceLogout: false }).then((user: any) => {
+    try { 
+      const apiStatus = await reactory.status({ emitLogin, forceLogout: false });
       setIsValidated(true);
-      setOfflineStatus(user.offline === true)
-      setUser(user);
+      setOfflineStatus(false);
+      setUser(apiStatus);
       setIsReady(true);
       setIsAuthenticating(false);
       applyTheme();
-    }).catch((validationError) => {
+    } catch (err) {
       setIsValidated(true);
       setUser(null);
       setOfflineStatus(true)
-      setError(validationError);
+      setError(err);
       setIsAuthenticating(false);
       setIsReady(false);
-    });
+    }
   };
 
 
@@ -535,12 +521,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const onApiStatusUpdate = (status) => {
 
     if (!(status === null || status === undefined)) {
-      reactory.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
+      reactory.debug('App.onApiStatusUpdate(status)', { status });
       let isOffline = status.offline === true;
 
       if (isOffline === true) {
         setOfflineStatus(isOffline);
-        setTimeout(() => { getApiStatus() }, 3500);
+        setTimeout(() => { void getApiStatus() }, 3500);
       } else {
         let user = reactory.utils.lodash.cloneDeep(reactory.getUser());
         delete user.when;
@@ -567,7 +553,23 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
 
-  const willUnmount = () => { };
+  const willUnmount = () => { 
+    window.removeEventListener('resize', onWindowResize);
+    window.matchMedia("(prefers-color-scheme: dark)").removeEventListener('change', (evt) => {
+      if (evt.matches === true) {
+        localStorage.setItem('$reactory$theme_mode', 'dark');
+        setVersion(version + 1);
+      } else {
+        localStorage.setItem('$reactory$theme_mode', 'light');
+        setVersion(version + 1);
+      }
+    });
+    reactory.off(ReactoryApiEventNames.onLogout, onLogout)
+    reactory.off(ReactoryApiEventNames.onLogin, onLogin)
+    reactory.off(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
+    reactory.off(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+    reactory.off(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
+  };
 
   const willMount = () => {
 
@@ -580,11 +582,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
       reactory.$windowSize = reactory.getSizeSpec();  
       reactory.reduxStore = store;
-    });
-  
 
-    window.addEventListener('resize', onWindowResize);
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change',(evt) => {
+      window.addEventListener('resize', onWindowResize);
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change',(evt) => {
       if (evt.matches === true) {
         localStorage.setItem('$reactory$theme_mode', 'dark');
         setVersion(version + 1);
@@ -602,14 +602,6 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           localStorage.removeItem('$reactory.last.attempted.route$');
           location.assign(lastRoute);
         }
-      }
-    }
-
-    const waitForClient = () => {
-      if (reactory.client === null || reactory.client === undefined) {
-        setTimeout(waitForClient, 100);
-      } else {
-        getApiStatus();
       }
     }
 
@@ -635,21 +627,21 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         reactory.client = cli.client;
         reactory.ws_link = cli.ws_link;
         cli.clearCache();
-        getApiStatus();
+        void getApiStatus();
         // strip the auth token from the url bar
         setTimeout(() => { window.history.replaceState({}, document.title, window.location.pathname) }, 500);
       });
       setIsAuthenticating(true);
     } else {
       setIsAuthenticating(true);
-      waitForClient();
+      void getApiStatus();
     }
+    });
 
     return willUnmount;
   };
 
   useEffect(willMount, []);
-
 
   const useStyles = makeStyles(() => {
 
