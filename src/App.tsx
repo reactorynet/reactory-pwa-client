@@ -21,7 +21,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { makeStyles } from '@mui/styles';
 import queryString from './components/utility/query-string';
 import './App.css';
-import Header from '@reactory/client-core/components/shared/DefaultHeader';
+import { ReactoryHeader as Header } from '@reactory/client-core/components/shared/header';
 import {
   componentRegistery
 } from './components/index';
@@ -105,6 +105,7 @@ interface ReactoryRouterProps {
   user: Reactory.Models.IUser,
   authenticating: boolean,
   header: React.ReactElement
+  footer: React.ReactElement
 };
 
 const ReactoryRoute = (routeDef: Reactory.Routing.IReactoryRoute, auth_validated: boolean = false, authenticating: boolean = false) => {
@@ -118,10 +119,20 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const navigation = useNavigate();
   const location = useLocation();
   const reactory = useReactory();
+  const { 
+    utils,
+    debug,
+    error,
+    warning,
+  } = reactory;
+
+  const {
+    objectMapper,
+  } = utils;
   const { auth_validated, user, authenticating = false } = props;
   const [routes, setRoutes] = React.useState<Reactory.Routing.IReactoryRoute[]>([]);
   const [v, setVersion] = React.useState<number>(0);
-
+  
 
   const onLogin = () => {
     configureRouting();
@@ -141,7 +152,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
 
   const configureRouting = () => {
-    reactory.log('Configuring Routing', { auth_validated, user });
+    debug('Configuring Routing', { auth_validated, user });
     const $routes = [...reactory.getRoutes()];
     setRoutes($routes);
     setVersion(v + 1);
@@ -162,15 +173,12 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
   const ChildRoutes = [];
   routes.forEach((routeDef: Reactory.Routing.IReactoryRoute) => {
-    //const match = useMatch(routeDef.path);
     reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: props });          
     if (routeDef.redirect) {
-      //return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
       navigation(routeDef.redirect, { state: { from: location }, replace: true })
     }
 
     let componentArgs = {};
-
     /**
      * If the route has props, we add them to the component args
      * this is the preferred way of setting the props.
@@ -195,6 +203,33 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     const NotFound = reactory.getComponent<any>("core.NotFound");
     
     let children = [];
+
+    if(props.header && routeDef.header) {
+      const {
+        componentFqn,
+        show = true,
+        props = {},
+        propsMap
+      } = routeDef.header;
+
+      if (show === true) {
+        const Header = reactory.getComponent<any>(componentFqn);
+        if (Header) {
+          let $props = {...props};
+          if (propsMap) {
+            $props = {...props, }
+          }
+          children.push(<Header {...$props } />);
+        } else {
+          // use the default header
+          children.push(props.header);
+        }
+      }
+    } else {
+      if (props.header) {
+        children.push(props.header);
+      }
+    }
     
     if (routeDef.public === true) {
       // public access we don't have to check roles or auth
@@ -247,11 +282,39 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         }
       }
     }
+
+    if(props.footer && routeDef.footer) {
+      const {
+        componentFqn,
+        show = true,
+        props = {},
+        propsMap
+      } = routeDef.footer;
+
+      if (show === true) {
+        const Footer = reactory.getComponent<any>(componentFqn);
+        if (Footer) {
+          let $props = {...props};
+          if (propsMap) {
+            $props = {...props, }
+          }
+          children.push(<Footer {...$props } />);
+        } else {
+          // use the default footer
+          children.push(props.footer);
+        }
+      }
+    } else {
+      if (props.footer) {
+        children.push(props.footer);
+      }
+    }
+
     
     ChildRoutes.push(<Route 
       key={routeDef.path}
       path={routeDef.path}
-      element={children}
+      element={<React.Fragment>{children}</React.Fragment>}
       />)
   });
 
@@ -425,10 +488,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [auth_validated, setIsValidated] = React.useState<boolean>(false);
   const [user, setUser] = React.useState<any | Reactory.Models.IUser>(null);
   const [error, setError] = React.useState<Error>(null);
-  const [apiStatus, setApiStatus] = React.useState<any>(null);
+  //  const [apiStatus, setApiStatus] = React.useState<any>(null);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
   const [theme, setTheme] = React.useState<any>(createTheme({ palette: { mode: "dark" } }));
-  const [statusInterval, setStatusInterval] = React.useState<any>(null);
+  //  const [statusInterval, setStatusInterval] = React.useState<any>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
   const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
@@ -698,7 +761,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   if (isReady === false) return <AppLoading message={"Loading..."} />;
   //@ts-ignore
   let header = isAuthenticating === false ? (<Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />) : null;
-
+  let footer = isAuthenticating === false ? (<Footer />) : null;
   return (
     <Router>
       <React.Fragment>
@@ -713,19 +776,18 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                     elevation={0} 
                     className={classes.root_paper}>
                     {offline === false && 
-                      <React.Fragment>                      
-                        {header}      
+                      <React.Fragment>
                         <NotificationComponent />
                         <ReactoryRouter 
+                          header={header}
                           reactory={reactory} 
                           user={user} 
                           auth_validated={auth_validated} 
                           authenticating={isAuthenticating}
-                          header={header} 
+                          footer={footer} 
                         />
                       </React.Fragment>}                    
-                    <Offline onOfflineChanged={onOfflineChanged} />
-                  <Footer />
+                    <Offline onOfflineChanged={onOfflineChanged} />                  
                   </Paper>
                 </ReactoryProvider>
               </React.StrictMode>

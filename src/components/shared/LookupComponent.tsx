@@ -207,7 +207,7 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
 
   if (componentPropertyMap && open === true && componentFound === true) {
     childprops = { onChange: onLookupValueChanged };
-    reactory.utils.objectMapper({ LookupComponent: { props } }, childprops, componentPropertyMap);
+    reactory.utils.objectMapper.merge({ LookupComponent: { props } }, childprops, componentPropertyMap);
   }
 
   return (

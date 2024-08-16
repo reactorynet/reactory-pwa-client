@@ -17,7 +17,6 @@ import { ThemeProvider as MuiThemeProvider } from '@mui/styles';
 import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
 import objectMapper from 'object-mapper';
-
 import {
   attachComponent,
   getAvatar,
@@ -50,6 +49,8 @@ import Reactory from '@reactory/reactory-core';
 import { compose } from "redux";
 import { ApiStatus as ApiStatusQueryFactory } from './graphql/graph/queries';
 import { ApiStatusQueryScope } from "./graphql/graph/queries/ApiStatus";
+import { ReactoryResourceLoader } from "./ReactoryResourceLoader";
+import { ReactoryPluginLoader } from './ReactoryPluginLoader';
 
 const {
   REACTORY_APPLICATION_ANONUSER_EMAIL = 'anonymous@reactory.local',
@@ -308,7 +309,8 @@ const FORM_QUERY_SEGMENTS = {
 }
 
 class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
-
+  x
+  [key: string]: unknown;
   $windowSize: Reactory.Client.IWindowSizeSpec = null;
   $user: any;
   history: any;
@@ -378,12 +380,37 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   __uuid: string;
   React: typeof React;
   i18n: i18n = i18next;
+  navigation: NavigateFunction;
+  location: any;
   constructor(props) {
     super();
 
     this.history = null;
     this.props = props;
-    this.componentRegister = {};
+    this.componentRegister = {
+      "core.ReactoryResourceLoader@1.0.0": {
+        component: ReactoryResourceLoader,
+        nameSpace: 'core',
+        name: 'ReactoryResourceLoader',
+        version: '1.0.0',
+        description: 'Default Reactory Resource Loader',
+        componentType: 'function',
+        roles: ['ADMIN', 'USER', 'ANON'],
+        tags: ['core', 'resource', 'loader'],
+        title: 'Reactory Resource Loader',
+      },
+      "core.ReactoryPluginLoader@1.0.0": {
+        component: ReactoryPluginLoader,
+        nameSpace: 'core',
+        name: 'ReactoryPluginLoader',
+        version: '1.0.0',
+        description: 'Default Reactory Plugin Loader',
+        componentType: 'function',
+        roles: ['ADMIN', 'USER', 'ANON'],
+        tags: ['core', 'plugin', 'loader'],
+        title: 'Reactory Plugin Loader',
+      }
+    };
     this.queries = GraphQL.queries;
     this.mutations = GraphQL.mutations;
     this.login = RestApi.login.bind(this);
@@ -501,7 +528,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.getUserLoginCredentials = this.getUserLoginCredentials.bind(this);
     this.setAuthToken = this.setAuthToken.bind(this);
     this.getAuthToken = this.getAuthToken.bind(this);
-
     this.assets = {
       logo: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/logo.png`,
       avatar: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/avatar.png`,
@@ -515,8 +541,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         512: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-512.png`,
       }
     };
-
-
     this.log = window.reactory.logging.log ? console.log.bind(window.console) : () => { };
     this.debug = window.reactory.logging.debug ? console.debug.bind(window.console) : () => { };
     this.warning = window.reactory.logging.debug ? console.warn.bind(window.console) : () => { };
@@ -562,7 +586,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       localStorage.setItem("$reactory_instance_id$", this.__uuid);
     }
     this.on(ReactoryApiEventNames.onApiStatusUpdate, this.loadPlugins.bind(this));
+    this.on(ReactoryApiEventNames.onApiStatusUpdate, this.forms.bind(this));
   }
+  
 
   /**
    * Used to retrieve a anonymous JWT token for use in the application
@@ -1036,6 +1062,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
    */
   async forms(bypassCache: boolean = false): Promise<Reactory.Forms.IReactoryForm[]> {
     const that = this;
+    const { debug } = this;
     const refresh = async () => {
 
       const FORMS_QUERY = `
@@ -1069,14 +1096,16 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
       if (errors.length > 0) {
         errors.forEach((err, erridx) => {
-          that.log(`GraphQL ReactoryForms result error #${erridx}`, { err });
+          debug(`GraphQL ReactoryForms result error #${erridx}`, { err });
         })
       }
 
       const ReactoryFormComponent = that.getComponent('core.ReactoryForm') as React.FunctionComponent<Reactory.Client.IReactoryFormProps>;
       if (ReactoryForms && ReactoryForms.length > 0) {
+
         that.formSchemas = [];
         ReactoryForms.forEach(($formDef: Reactory.Forms.IReactoryForm, formDefIndex) => {
+          debug(`Processing form ${$formDef.id}`, { $formDef });
           const formDef = { ...$formDef, ...tempSchema };
           that.formSchemas.push(formDef);
           // A form must explicitly be set to false 
@@ -1273,15 +1302,18 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
    */
   hasRole(itemRoles = [], userRoles = null, organization?: Reactory.Models.IOrganization, business_unit?: Reactory.Models.IBusinessUnit, user_memberships?: Reactory.Models.IMembership[]) {
     let comparedRoles = userRoles || [];
+    const {
+      debug,
+    } = this;
 
     if (itemRoles.length === 1 && itemRoles[0] === '*')
       return true;
 
     if (userRoles === null) {
-      const loggedInUser = this.getUser().loggedIn;;
+      const loggedInUser = this.getUser().loggedIn;
 
       if (organization === null || organization === undefined) {
-        comparedRoles = loggedInUser?.roles || this.getUser().roles;
+        comparedRoles = loggedInUser?.roles;
       } else {
         //if there is a organization_id, we check if there is a membership that has the organization id
         let $memberships = user_memberships || loggedInUser?.memberships;
@@ -1304,6 +1336,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
               }
               //not enough information for us to determine there is a match,
               //so return false.
+              debug('hasRole() -> false|Not enough information to determine if the user has the role', { business_unit, membership });
               return false;
             }
           });
@@ -1434,18 +1467,14 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.debug(`Component Registered: ${fqn}`, this.componentRegister[fqn]);
   }
 
-  // @ts-ignore
-  getComponentsByType(componentType: string = 'component'): any[] {
-
-    let _components = [];
+  getComponentsByType(componentType: string = 'component'): Reactory.Client.IReactoryComponentRegister {
+    let _components: Reactory.Client.IReactoryComponentRegister = {};
     Object.keys(this.componentRegister).forEach((fqn) => {
       if (this.componentRegister[fqn].componentType === componentType) {
-        _components.push(this.componentRegister[fqn]);
+        _components[fqn] = this.componentRegister[fqn];
       }
-    })
-
+    });
     return _components;
-
   };
 
   getComponent<T>(fqn): T {
@@ -1759,7 +1788,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }    
   }
 
-  private validateToken(token: string) {
+  validateToken(token: string) {
     this.setAuthToken(token);
     this.status();
   }
@@ -1791,65 +1820,57 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
 
-  public injectResource(resource: any): void {
-    if (document) {
-      const resourceId = `${resource.type}_${resource.id}`;
-      if (nil(document.getElementById(resourceId)) === false) {
-        document.getElementById(resourceId).remove();
-      }
-      switch (resource.type) {
-        case 'style': {
-          let styleLink = document.createElement('link');
-          styleLink.id = resourceId;
-          styleLink.href = resource.uri;
-          styleLink.rel = 'stylesheet';
-          document.head.append(styleLink)
-          break;
-        }
-        case 'script': {
-          let scriptLink = document.createElement('script');
-          scriptLink.id = resourceId;
-          scriptLink.src = resource.uri;
-          scriptLink.type = 'text/javascript';
-          document.body.append(scriptLink)
-          break;
-        }
-        default: {
-          this.warning(`ReactoryFormComponent.form() - injectResources() Resource Type ${resource.type}, not supported.`, { resource });
-          break;
-        }
+  public injectResource(resource: Reactory.Forms.IReactoryFormResource): void {
+    let Loader: Reactory.Forms.ReactoryResourceLoader 
+      = this.componentRegister["core.ReactoryResourceLoader@1.0.0"]?.component as Reactory.Forms.ReactoryResourceLoader;
+    
+    if (resource.loader) {
+      Loader = this.getComponent<Reactory.Forms.ReactoryResourceLoader>(resource.loader);
+      if (!Loader) { 
+        this.error(`Resource expect custom loader: ${resource.loader} not found`, { resource });
+        throw new Error(`Resource expect custom loader: ${resource.loader} not found`);
       }
     }
+
+    if (Loader) {
+      // @ts-ignore
+      void Loader({ resource, reactory: this });
+    }   
   };
+
+  public injectPlugin(plugin: Reactory.Platform.IReactoryApplicationPlugin): void { 
+    let Loader: Reactory.Forms.ReactoryResourceLoader 
+      = this.componentRegister["core.ReactoryPluginLoader@1.0.0"]?.component as Reactory.Forms.ReactoryResourceLoader;
+
+    if (plugin.loader) { 
+      Loader = this.getComponent<Reactory.Forms.ReactoryResourceLoader>(plugin.loader);
+      if (!Loader) { 
+        this.error(`Plugin expect custom loader: ${plugin.loader} not found`, { plugin });
+        throw new Error(`Plugin expect custom loader: ${plugin.loader} not found`);
+      }
+    }
+
+    if (Loader) {
+      this.debug('Injecting Plugin', plugin);
+      // @ts-ignore
+      void Loader({ plugin, reactory: this });
+    }
+  }
 
   private async loadPlugins() {
     if (this.$user && this.$user.plugins && this.$user.plugins.length > 0) {
       this.$user.plugins.forEach((plugin: Reactory.Platform.IReactoryApplicationPlugin) => {
         const {
-          nameSpace,
-          name,
-          version,
-          url,
-          loader,
-          mimeType,
-          id,
-          platform,
           enabled = true,
           roles,
         } = plugin;
         if (roles && roles.length > 0) {
-          if (this.hasRole(roles) === false) return;
+          if (this.hasRole(roles) === false) { 
+            return;
+          }
         }
-        if (enabled === true) {
-          const fqn = `${nameSpace}.${name}@${version}`;
-          this.injectResource({
-            type: 'script',
-            uri: url,
-            id: `${nameSpace}_${name}_${version}`,
-            mimeType,
-            loader,
-            platform
-          });
+        if (enabled === true) {          
+          this.injectPlugin(plugin);
         }
       });
     }

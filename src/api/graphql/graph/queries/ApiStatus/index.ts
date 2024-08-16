@@ -10,19 +10,6 @@ const FRAGMENTS = {
     applicationRoles
     when
     status
-    plugins {
-      id
-      nameSpace
-      name
-      version
-      description
-      platform
-      url
-      loader
-      options
-      enabled
-      roles
-    }
   `,
   loggedIn: `
     loggedIn {
@@ -30,6 +17,7 @@ const FRAGMENTS = {
         id
         firstName
         lastName
+        avatar
       }
       organization {
         id
@@ -216,7 +204,8 @@ const FRAGMENTS = {
       version
       description
       platform
-      url
+      uri
+      mimeType
       loader
       options
       enabled

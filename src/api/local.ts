@@ -25,6 +25,15 @@ export const anonUser: Reactory.Models.IApiStatus = {
   activeTheme: null,
   routes: null,
   theme: null,
+  applicationAvatar: '',
+  applicationName: 'Reactory',
+  applicationRoles: ['ANON'],
+  colorSchemes: [],
+  messages: [],
+  plugins: [],
+  publicKey: '',
+  signature: '',
+  themes: [],
 };
 
 
