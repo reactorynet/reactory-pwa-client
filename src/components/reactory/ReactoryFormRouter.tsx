@@ -7,7 +7,7 @@ import { useReactory, withReactory } from '../../api/ApiProvider';
 
 import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
 import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
-import { ReactoryForm } from './ReactoryFormComponent';
+import { ReactoryForm } from './ReactoryForm';
 
 type ReactoryFormRouterDependecies = {
   MaterialCore: Reactory.Client.Web.MaterialCore;

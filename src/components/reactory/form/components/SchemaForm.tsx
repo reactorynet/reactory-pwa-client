@@ -70,10 +70,6 @@ interface FormState {
   errorSchema: any,
 }
 
-// const RenderFunction: ForwardRefRenderFunction<HTMLFormElement | HTMLDivElement, ISchemaForm> = (props, ref) => {
-//   return <FormClass {...props} ref={ref} />
-// }
-
 const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
 
   const formElement = React.useRef<HTMLFormElement | HTMLDivElement>(null);
@@ -81,6 +77,7 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
   const {
     id,      
     formContext,
+    container = 'form',
     ArrayFieldTemplate,
     FieldTemplate,
     ObjectFieldTemplate,
@@ -209,9 +206,8 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     };
   }
 
-
   const onChange = (formData: any, newErrorSchema: any) => {
-    const mustValidate = !props.noValidate && props.liveValidate;    
+    const mustValidate = true; //!props.noValidate && props.liveValidate;    
     let $errorSchema = null;
     let $errors = null;
     if (mustValidate) {
@@ -315,12 +311,6 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     style = formUiOptions.style ? { ...style, ...formUiOptions.style } : style;
   }
 
-  const $children = (<>    
-    
-    </>);
-
-  
-  //   //@ts-ignore
     return (
       <div
         className={className ? className : undefined}

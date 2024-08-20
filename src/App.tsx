@@ -711,7 +711,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     return {
 
       root_paper: {
-        minHeight: window.innerHeight,
+        minHeight: screen.availHeight,
+        maxHeight: screen.availHeight,
         borderRadius: 0,
         margin: 0,
         padding: 0,
