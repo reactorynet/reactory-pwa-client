@@ -1,4 +1,25 @@
+import { ApolloError } from "@apollo/client";
+
+import { Breakpoint } from '@mui/material';
+
+export interface ReactoryComponentError {
+  errorType: string | "graph" | "runtime",
+  error: Error | ApolloError
+}
+
+export type ScreenSizeKey = Breakpoint | number;
+
 export type InitialStateFunction<TData> = (props?: any) => Promise<any>;
+
+export type DefaultComponentMap = {
+  Loading: React.ComponentType<{}>,
+  Logo: React.ComponentType<{}>,
+  FullScreenModal: React.ComponentType<{}>,
+  DropDownMenu: React.ComponentType<{}>,
+  HelpMe: React.ComponentType<{}>,
+  ReportViewer: React.ComponentType<{}>,
+  ReactorFormEditor: React.ComponentType<{}>
+}
 
 export type ReactoryFormDataManagerProps<TData> = {
   formContext: Reactory.Forms.ReactoryFormContext<TData, unknown[]>, 
@@ -8,13 +29,31 @@ export type ReactoryFormDataManagerProps<TData> = {
 export type ReactoryFormDataManagerHookResult<TData> = { 
   formData: TData,
   loading: boolean,
+  onSubmit: (data: TData) => void,
   onChange: (data: TData) => void, 
   reset: () => void
 }
 
-export type ReactoryFormContextHook<TData> = (props:  Reactory.Client.IReactoryFormProps) => Reactory.Forms.ReactoryFormContext<TData, unknown[]>;
+export type ReactoryFormDefinitionHook = <TData>(props: Reactory.Client.IReactoryFormProps<TData>) => { 
+  formDefinition: Reactory.Forms.IReactoryForm, 
+  resetFormDefinition: () => void 
+};
 
-export type ReactoryFormDataManagerHook<TData> = (props: Reactory.Client.IReactoryFormProps) => ReactoryFormDataManagerHookResult<TData>
+export type ReactoryFormContextHook<TData> = (props:  Reactory.Client.IReactoryFormProps<TData>) => Reactory.Forms.ReactoryFormContext<TData, unknown[]>;
+
+export type ReactoryFormDataManagerHook<TData> = (props: Reactory.Client.IReactoryFormProps<TData>) => ReactoryFormDataManagerHookResult<TData>
+
+export type ReactoryFormUISchemaManagerHook<TData> = (props: Reactory.Client.IReactoryFormProps<TData>) => ReactoryFormUISchemaManagerHookResult;
+
+export type ReactoryFormComponentsHook<TComponents> = (dependencies: Reactory.Client.ComponentDependency[]) => TComponents;
+
+export type ReactoryFormUISchemaManagerHookResult = { 
+  uiSchema: Reactory.Schema.IFormUISchema,
+  availableSchemas: Reactory.Forms.IUISchemaMenuItem[],
+  loading: boolean,
+  onSelectUISChema: (key: string) => void, 
+  reset: () => void
+}
 
 export interface ReactoryFormState {
   loading: boolean,

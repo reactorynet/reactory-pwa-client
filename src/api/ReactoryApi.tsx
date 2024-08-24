@@ -1499,14 +1499,22 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
 
-  getComponents(componentFqns = []): any {
-    let componentMap = {};
-    const that = this;
+  getComponents<TComponents>(componentFqns: Reactory.Client.ComponentDependency[] = []): TComponents {
+    //@ts-ignore
+    let componentMap: TComponents = {};
+    const { 
+      componentRegister, 
+      log, 
+      getNotFoundComponent,
+      getNotAllowedComponent,
+      hasRole 
+    } = this;
+
     componentFqns.forEach(fqn => {
       let component = null;
       let $name: string = '';
       if (typeof fqn === 'string') {
-        component = that.componentRegister[`${fqn.trim()}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
+        component = componentRegister[`${fqn.trim()}${fqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
         try {
           if (component) {
             const canUserCreateComponent = isArray(component.roles) === true ? this.hasRole(component.roles) : true;
@@ -1520,24 +1528,26 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
             componentMap[$name] = this.getNotFoundComponent();
           }
         } catch (e) {
-          that.log('Error Occured Loading Component Fqns', [fqn]);
+          log('Error Occured Loading Component Fqns', [fqn]);
         }
       }
-      if (typeof fqn === 'object') {
-        if (typeof fqn.componentFqn === 'string') {
-          component = this.componentRegister[`${fqn.componentFqn}${fqn.componentFqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
-          try {
-            if (component) {
-              const canUserCreateComponent = isArray(component.roles) === true ? that.hasRole(component.roles) : true;
-              $name = typeof fqn.alias === 'string' ? fqn.alias : component.name;
-              componentMap[$name] = canUserCreateComponent === true ? component.component : that.getNotAllowedComponent(component.name);
-
-            } else {
-              componentMap[componentPartsFromFqn(fqn.componentFqn).name] = that.getNotFoundComponent();
+      if (typeof fqn === 'object') { 
+        const lookupFqn = fqn.fqn || fqn.id;
+        component = componentRegister[`${lookupFqn.trim()}${lookupFqn.indexOf('@') > 0 ? '' : '@1.0.0'}`];
+        try {
+          if (component) {
+            const canUserCreateComponent = isArray(component.roles) === true ? hasRole(component.roles) : true;
+            $name = component.name;
+            componentMap[$name] = canUserCreateComponent === true ? component.component : getNotAllowedComponent(component.name);
+            if (component.useReactory === true) {
+              componentMap[$name] = compose(withReactory)(componentMap[$name]);
             }
-          } catch (e) {
-            that.log('Error Occured Loading Component Fqns', fqn.componentFqn);
+          } else {
+            $name = componentPartsFromFqn(lookupFqn).name;
+            componentMap[$name] = getNotFoundComponent();
           }
+        } catch (e) {
+          log('Error Occured Loading Component Fqns', [lookupFqn]);
         }
       }
     });
