@@ -1,6 +1,8 @@
 import { ApolloError } from "@apollo/client";
 
 import { Breakpoint } from '@mui/material';
+import Reactory from "@reactory/reactory-core";
+import { Params } from "react-router";
 
 export interface ReactoryComponentError {
   errorType: string | "graph" | "runtime",
@@ -26,12 +28,28 @@ export type ReactoryFormDataManagerProps<TData> = {
   initialData: TData | InitialStateFunction<TData>
 };
 
-export type ReactoryFormDataManagerHookResult<TData> = { 
+export type ReactoryFormDataPaging = {
+  page: number,
+  pageSize: number,
+  total: number,
+  totalPages: number,
+}
+
+export type ReactoryFormDataManagerHookResult<TData> = {
+  canRefresh: boolean,
   formData: TData,
   loading: boolean,
   onSubmit: (data: TData) => void,
   onChange: (data: TData) => void, 
   reset: () => void
+  refresh: () => void
+  RefreshButton: React.FC<{}>
+  validate: Reactory.Forms.SchemaFormValidationFunction<TData>
+  errorSchema?: Reactory.Schema.IErrorSchema
+  errors: any[]
+  SubmitButton: React.FC<{}>
+  paging: ReactoryFormDataPaging
+  PagingWidget: React.FC<{}>  
 }
 
 export type ReactoryFormDefinitionHook = <TData>(props: Reactory.Client.IReactoryFormProps<TData>) => { 
@@ -43,17 +61,67 @@ export type ReactoryFormContextHook<TData> = (props:  Reactory.Client.IReactoryF
 
 export type ReactoryFormDataManagerHook<TData> = (props: Reactory.Client.IReactoryFormProps<TData>) => ReactoryFormDataManagerHookResult<TData>
 
-export type ReactoryFormUISchemaManagerHook<TData> = (props: Reactory.Client.IReactoryFormProps<TData>) => ReactoryFormUISchemaManagerHookResult;
-
 export type ReactoryFormComponentsHook<TComponents> = (dependencies: Reactory.Client.ComponentDependency[]) => TComponents;
 
-export type ReactoryFormUISchemaManagerHookResult = { 
+export type ReactoryFormUISchemaManagerHookResult = {
+  uiOptions: Reactory.Schema.IFormUIOptions, 
   uiSchema: Reactory.Schema.IFormUISchema,
-  availableSchemas: Reactory.Forms.IUISchemaMenuItem[],
+  uiSchemaActiveMenuItem: Reactory.Forms.IUISchemaMenuItem,
+  uiSchemasAvailable: Reactory.Forms.IUISchemaMenuItem[],
+  uiSchemaActiveGraphDefintion?: Reactory.Forms.IFormGraphDefinition,
+  SchemaSelector: React.FC<{}>
   loading: boolean,
   onSelectUISChema: (key: string) => void, 
   reset: () => void
 }
+
+export type ReactoryFormUISchemaManagerHook<TData> = (props: {
+  formDefinition: Reactory.Forms.IReactoryForm,
+  uiSchemaKey?: string,
+  mode?: string | "edit" | "view" | "create" | "delete",
+  params?: Readonly<Params<string>>
+}) => ReactoryFormUISchemaManagerHookResult;
+
+export type ReactoryFormSchemaHookResult = { 
+  schema:  Reactory.Schema.AnySchema,
+  busy: boolean,
+}
+
+export type ReactoryFormSchemaHook<TData> = 
+  (props: { 
+    schema?: Reactory.Schema.AnySchema,
+    uiSchemaActiveMenuItem?: Reactory.Forms.IUISchemaMenuItem,
+    formId?: string | Reactory.FQN, 
+  }) => ReactoryFormSchemaHookResult
+
+export type ReactoryFormHelpHookResult = { 
+  HelpModal: React.FC<{ }>,
+  HelpButton: React.FC<{ }>
+}
+
+export type ReactoryFormHelpHook = (props: {
+  formDefinition: Reactory.Forms.IReactoryForm,
+}) => ReactoryFormHelpHookResult;
+
+export type ReactoryFormReportsHookResult = { 
+  ReportModal: React.FC<{ }>,
+  ReportButton: React.FC<{ }>
+}
+
+export type ReactoryFormReportsHook = (props: {
+  formDefinition: Reactory.Forms.IReactoryForm,
+}) => ReactoryFormReportsHookResult;
+
+export type ReactoryFormExportHookResult = { 
+  ExportModal: React.FC<{ }>,
+  ExportButton: React.FC<{ }>
+}
+
+export type ReactoryFormExportHook = (props: { 
+  formDefinition: Reactory.Forms.IReactoryForm,
+  formData: any
+}) => ReactoryFormExportHookResult;
+   
 
 export interface ReactoryFormState {
   loading: boolean,

@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { v4 } from "uuid";
+import { ApolloQueryResult } from '@apollo/client'
 import {
   ReactoryFormDataManagerHook,
   ReactoryFormDataManagerHookResult,
   ReactoryFormDataManagerProps,
 } from "./types";
+import objectMapper from 'object-mapper';
+import { diff } from 'deep-object-diff';
+
 import { useReactory } from "@reactory/client-core/api";
 
 const formValidation = ($formData: any, $errors: any, via = 'onChange') => {
@@ -43,7 +47,12 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   const { formDefinition } = formContext;
 
   const [loading, setIsLoading] = useState<boolean>(false);
+  const [dirty, setIsDirty] = useState(false);
+  const [queryComplete, setQueryComplete] = useState<boolean>(false);
+  const [refreshInterval, setRefreshInterval] = useState(null);
+  const [allowRefresh, setAllowRefresh] = useState<boolean>(false);
   const { formData, setFormData } = formContext;
+  const [last_query_exec, setLastQueryExecution] = useState(null);
   const [instance] = useState(v4());
 
 
@@ -758,20 +767,35 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
 
   };
 
-  const onChange = (data: any) => {
-    setFormData(data);
-  };
-
   const reset = () => {
     setFormData(initialData);
   };
 
+  // Refreshes the form data
+  const refresh = () => { };
+
+  const validate = () => { };
+
+  const SubmitButton = () => {
+    return (
+      <button
+        onClick={() => onSubmit(formData)}
+        disabled={loading}
+      >
+        Submit
+      </button>
+    );
+  }
+
   return {
+    canReferesh,
     loading,
     formData,
     onChange,
     reset,
     validate,
+    refresh,
+    SubmitButton
   };
 };
 

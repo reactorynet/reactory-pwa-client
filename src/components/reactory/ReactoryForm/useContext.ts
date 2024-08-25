@@ -1,3 +1,5 @@
+import gql from 'graphql-tag';
+
 import { 
   ReactoryFormContextHook
 } from './types';
