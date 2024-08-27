@@ -1024,6 +1024,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   renderForm(componentView, wrap: boolean = true) {
     const that = this;
 
+    // if wrap is false, we will not wrap the component in the
+    // we just return the component view.
     if (wrap === false) return (<React.Fragment>{componentView}</React.Fragment>)
 
     return (<React.Fragment>
@@ -1100,34 +1102,33 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         })
       }
 
-      const ReactoryFormComponent = that.getComponent('core.ReactoryForm') as React.FunctionComponent<Reactory.Client.IReactoryFormProps>;
+      const ReactoryForm = that.getComponent('core.ReactoryForm') as React.FC<Reactory.Client.IReactoryFormProps<unknown>>;
       if (ReactoryForms && ReactoryForms.length > 0) {
 
         that.formSchemas = [];
-        ReactoryForms.forEach(($formDef: Reactory.Forms.IReactoryForm, formDefIndex) => {
-          debug(`Processing form ${$formDef.id}`, { $formDef });
-          const formDef = { ...$formDef, ...tempSchema };
+        ReactoryForms.forEach((formDef: Reactory.Forms.IReactoryForm, formDefIndex) => {         
           that.formSchemas.push(formDef);
           // A form must explicitly be set to false 
           // to not register as a component.
           if (formDef.registerAsComponent !== false) {
-
-            const ReactoryComponent = (props: any, context: any) => {
-
+            debug(`Registering form ${formDef.id} as component in registry`, { formDef });
+            const ReactoryComponent: React.FC<any> = (props: any) => {
+              that.debug(`Rendering form ${formDef.id}`, { formDef, props });
               try {
+                let $children = null;
+                if (props.children) {
+                  $children = props.children;
+                  delete props.children;
+                }
                 const renderedCompnent = that.renderForm(
-                  <ReactoryFormComponent
+                  <ReactoryForm
                     formId={formDef.id}
                     key={`${formDefIndex}`}
-                    onSubmit={props.onSubmit}
-                    onChange={props.onChange}
                     formData={formDef.defaultFormValue || props.formData || props.data}
                     before={props.before}
-                    {...props}
-                    context={context}
-                  >{props.children}
-                  </ReactoryFormComponent>, formDef.wrap === true);
-                that.debug(`Rendering form ${formDef.id}`, { formDef, props, context });
+                    {...props}                    
+                  >{$children}
+                  </ReactoryForm>, formDef.wrap === true);                
                 if (renderedCompnent) {
                   return renderedCompnent;
                 } else {
@@ -1165,6 +1166,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   /**
    * Returns a form with the specific id.
+   * 
+   * Before calling this function ensure that the forms function has been called. Otherwise 
+   * the function will throw and error.
    * @param id - string id.
    * @returns 
    */
@@ -1172,9 +1176,11 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     const that = this;
     const { formSchemas = [] } = this;
 
-    if (formSchemas.length === 0) return undefined;
-
-
+    if (formSchemas.length === 0) {
+      that.error('No forms have been loaded. Ensure the forms function is called before calling form(id)');
+      throw new Error('No forms have been loaded. Ensure the forms function has been called before calling form(id)');
+    }
+      
     let $formDef = lodash.find(formSchemas, { id });
 
     if (!$formDef) return null;

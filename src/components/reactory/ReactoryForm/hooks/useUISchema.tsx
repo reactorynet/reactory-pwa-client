@@ -1,7 +1,12 @@
 import { useReactory } from "@reactory/client-core/api";
-import { ReactoryFormUISchemaManagerHook, ScreenSizeKey } from "./types";
+import { ReactoryFormUISchemaManagerHook, ScreenSizeKey } from "../types";
 
-export const useUISchemaManager: ReactoryFormUISchemaManagerHook<unknown> = ({  
+/**
+ * 
+ * @param param0 
+ * @returns 
+ */
+export const useUISchema: ReactoryFormUISchemaManagerHook<unknown> = ({  
   formDefinition,
   uiSchemaKey = 'default',
   mode = 'view',
@@ -208,7 +213,7 @@ const AllowedSchemas = (uiSchemaItems: Reactory.Forms.IUISchemaMenuItem[],
     uiSchemaActiveGraphDefintion: getActiveGraphDefinitions(),
     uiSchemaSelectorButtons: GetSchemaSelectorMenus(),
     onUISchemaSelect: onSchemaSelect,
-    uiSchemaSelector: null,
+    SchemaSelector: null,
   };
 };
 

@@ -5,39 +5,39 @@ import {
   ReactoryFormDataManagerHook,
   ReactoryFormDataManagerHookResult,
   ReactoryFormDataManagerProps,
-} from "./types";
+} from "../types";
 import objectMapper from 'object-mapper';
 import { diff } from 'deep-object-diff';
 
 import { useReactory } from "@reactory/client-core/api";
 
-const formValidation = ($formData: any, $errors: any, via = 'onChange') => {
+// const formValidation = ($formData: any, $errors: any, via = 'onChange') => {
 
-  let formfqn = `${formDefinition.nameSpace}.${formDefinition.name}@${formDefinition.version}`;
-  reactory.log(`Executing custom validations for ${formfqn}`, { $formData, $errors });
-  let validationFunctionKey = `${formfqn}_validate`;
-  let validationResult = [];
-  let validationFunction = null;
-  let selectedKey = validationFunctionKey;
+//   let formfqn = `${formDefinition.nameSpace}.${formDefinition.name}@${formDefinition.version}`;
+//   reactory.log(`Executing custom validations for ${formfqn}`, { $formData, $errors });
+//   let validationFunctionKey = `${formfqn}_validate`;
+//   let validationResult = [];
+//   let validationFunction = null;
+//   let selectedKey = validationFunctionKey;
 
-  if (reactory.formValidationMaps && reactory.formValidationMaps[formfqn]) {
-    validationFunction = reactory.formValidationMaps[formfqn];
-  }
+//   if (reactory.formValidationMaps && reactory.formValidationMaps[formfqn]) {
+//     validationFunction = reactory.formValidationMaps[formfqn];
+//   }
 
-  if (typeof props.validate === 'function') {
-    validationFunction = props.validate;
-  }
+//   if (typeof props.validate === 'function') {
+//     validationFunction = props.validate;
+//   }
 
-  if (typeof validationFunction === 'function') {
-    try {
-      validationResult = validationFunction($formData, $errors, getFormReference(), via);
-    } catch (ex) {
-      reactory.log(`Error While Executing Custom Validation`, { ex });
-    }
-  }
+//   if (typeof validationFunction === 'function') {
+//     try {
+//       validationResult = validationFunction($formData, $errors, getFormReference(), via);
+//     } catch (ex) {
+//       reactory.log(`Error While Executing Custom Validation`, { ex });
+//     }
+//   }
 
-  return $errors;
-};
+//   return $errors;
+// };
 
 export const useDataManager: ReactoryFormDataManagerHook<any> = (
   options: ReactoryFormDataManagerProps<any>

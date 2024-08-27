@@ -1,10 +1,10 @@
 import { useState } from "react";
-import ReactoryFormListDefinition from '../formDefinitions/ReactoryFormList';
-import ReactoryNewFormInput from '../formDefinitions/ReactoryNewFormInput';
-import { ReactoryDefaultForm } from "./constants";
-import ReactoryUxPackages from '../ux';
+import ReactoryFormListDefinition from '../../formDefinitions/ReactoryFormList';
+import ReactoryNewFormInput from '../../formDefinitions/ReactoryNewFormInput';
+import { ReactoryDefaultForm } from "../constants";
+import ReactoryUxPackages from '../../ux';
 import { useReactory } from "@reactory/client-core/api";
-import { ReactoryFormDefinitionHook } from "./types";
+import { ReactoryFormDefinitionHook } from "../types";
 
 
  /**
@@ -244,12 +244,12 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props: Reactory.Cl
   const [formDefinition, setFormDefinition] =
     useState<Reactory.Forms.IReactoryForm>(ReactoryDefaultForm);
 
-  const {
-    uiSchema,
-    getActiveGraphDefinitions,
-    getActiveSchema,
-    getFormContext,
-  } = useUISchemaManager(props);
+  // const {
+  //   uiSchema,
+  //   getActiveGraphDefinitions,
+  //   getActiveSchema,
+  //   getFormContext,
+  // } = useUISchemaManager(props);
 
   if (formDefinition.__complete__ === false) return ReactoryDefaultForm;
 

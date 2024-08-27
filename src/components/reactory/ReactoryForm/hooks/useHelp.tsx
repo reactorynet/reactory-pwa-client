@@ -2,7 +2,35 @@ import React from 'react';
 import { useReactory } from '@reactory/client-core/api';
 import {
   ReactoryFormHelpHook
-} from './types';
+} from '../types';
+
+
+
+// const getHelpScreen = () => {
+
+//   const { HelpMe } = componentDefs;
+//   let topics = [];
+//   if (formDefinition.helpTopics) topics = [...formDefinition.helpTopics]
+//   if (props.helpTopics) topics = [...props.helpTopics, ...topics];
+//   const closeHelp = e => setShowHelpModal(false);
+
+//   const allowSupportRequest = () => {
+//     uiSchema;
+//     if (uiSchema && uiSchema['ui:form'] && uiSchema['ui:form'].allowSupportRequest === false) return false;
+//     return true;
+//   }
+
+//   return (
+//     <HelpMe
+//       topics={topics}
+//       tags={formDefinition.tags}
+//       title={props.helpTitle || formDefinition.title}
+//       open={showHelpModal === true}
+//       allowSupportRequest={allowSupportRequest()}
+//       onClose={closeHelp}>
+//     </HelpMe>
+//   )
+// };
 
 interface HelpComponents {
   FullScreenModal: React.FC<{ 

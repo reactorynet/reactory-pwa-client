@@ -11,7 +11,7 @@ export interface ReactoryComponentError {
 
 export type ScreenSizeKey = Breakpoint | number;
 
-export type InitialStateFunction<TData> = (props?: any) => Promise<any>;
+export type InitialStateFunction<TData> = (props?: any) => Promise<TData>;
 
 export type DefaultComponentMap = {
   Loading: React.ComponentType<{}>,
@@ -24,7 +24,7 @@ export type DefaultComponentMap = {
 }
 
 export type ReactoryFormDataManagerProps<TData> = {
-  formContext: Reactory.Forms.ReactoryFormContext<TData, unknown[]>, 
+  formContext: Reactory.Client.IReactoryFormContext<TData>, 
   initialData: TData | InitialStateFunction<TData>
 };
 
@@ -38,13 +38,21 @@ export type ReactoryFormDataPaging = {
 export type ReactoryFormDataManagerHookResult<TData> = {
   canRefresh: boolean,
   formData: TData,
-  loading: boolean,
-  onSubmit: (data: TData) => void,
-  onChange: (data: TData) => void, 
+  isDataLoading: boolean,
+  onSubmit: (
+    data: TData, 
+    errorSchema?: Reactory.Schema.IErrorSchema,
+    errors?: any[],
+  ) => void,
+  onChange: ( 
+    data: TData, 
+    errorSchema?: Reactory.Schema.IErrorSchema,
+    errors?: any[],) => void, 
   reset: () => void
   refresh: () => void
   RefreshButton: React.FC<{}>
-  validate: Reactory.Forms.SchemaFormValidationFunction<TData>
+  isValidating: boolean,
+  validate: Reactory.Forms.SchemaFormValidationFunctionSync<TData> | Reactory.Forms.SchemaFormValidationFunctionAsync<TData>
   errorSchema?: Reactory.Schema.IErrorSchema
   errors: any[]
   SubmitButton: React.FC<{}>
@@ -57,7 +65,8 @@ export type ReactoryFormDefinitionHook = <TData>(props: Reactory.Client.IReactor
   resetFormDefinition: () => void 
 };
 
-export type ReactoryFormContextHook<TData> = (props:  Reactory.Client.IReactoryFormProps<TData>) => Reactory.Forms.ReactoryFormContext<TData, unknown[]>;
+
+export type ReactoryFormContextHook<TData> = (props:  Reactory.Client.IReactoryFormProps<TData>) => Reactory.Client.IReactoryFormContext<TData>;
 
 export type ReactoryFormDataManagerHook<TData> = (props: Reactory.Client.IReactoryFormProps<TData>) => ReactoryFormDataManagerHookResult<TData>
 
@@ -121,8 +130,16 @@ export type ReactoryFormExportHook = (props: {
   formDefinition: Reactory.Forms.IReactoryForm,
   formData: any
 }) => ReactoryFormExportHookResult;
-   
 
+export type ReactoryFormToolbarHookResult = { 
+  Toolbar: React.FC<{}>  
+}
+
+export type ReactoryFormToolbarHook = (props: {
+  formDefinition: Reactory.Forms.IReactoryForm,
+  formData: any
+}) => ReactoryFormToolbarHookResult;  
+   
 export interface ReactoryFormState {
   loading: boolean,
   allowRefresh?: boolean,

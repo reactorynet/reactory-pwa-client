@@ -2,16 +2,31 @@ import { useEffect, useState } from 'react';
 import { useReactory } from '@reactory/client-core/api';
 import {
   ReactoryFormSchemaHook,
-} from './types';
+} from '../types';
 import {
   DefaultLoadingSchema
-} from './constants';
+} from '../constants';
 
-export const useSchema: ReactoryFormSchemaHook<unknown> = ({
-  schema: initialSchema,
-  uiSchemaActiveMenuItem,
-  formId,
-}) => {
+
+/**
+ * returns a schema object for the form. Form requires
+ * either a schema input, or a form id to fetch the schema
+ * from the reactory server.
+ * 
+ * A schema can also be provided via the uiSchemaActiveMenuItem.
+ * 
+ * Translations and other schema transformations are applied 
+ * here.
+ * @param props - the props object: { schema, uiSchemaActiveMenuItem, formId } 
+ * @returns 
+ */
+export const useSchema: ReactoryFormSchemaHook<unknown> = (props) => {
+
+  const {
+    schema: initialSchema,
+    uiSchemaActiveMenuItem,
+    formId,
+  } = props;
 
   const reactory = useReactory();
   

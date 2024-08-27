@@ -1,5 +1,37 @@
 import React, { useState } from 'react';
 import { useReactory } from '@reactory/client-core/api';
+
+
+/**
+ * 
+ * @returns 
+ */
+// const getPdfWidget = () => {
+//   const { ReportViewer, FullScreenModal } = componentDefs;
+//   const formDef = formDefinition();
+//   let _activeReportDefinition = activeReportDefinition || formDef.defaultPdfReport;
+//   if (_activeReportDefinition === null || _activeReportDefinition === undefined) return null;
+
+//   const closeReport = () => {
+//     setShowReportModal(false);
+//     setActiveReportDefinition(null);
+//   }
+
+//   let data = { ...formData }
+//   if (_activeReportDefinition && _activeReportDefinition.dataMap) {
+//     data = reactory.utils.objectMapper(data, _activeReportDefinition.dataMap);
+//   }
+
+//   return (
+//     <FullScreenModal open={showReportModal === true} onClose={closeReport}>
+//       {activeReportDefinition ? (
+//         <ReportViewer
+//           {...{ ...activeReportDefinition, data }}
+//         />) : null}
+//     </FullScreenModal>
+//   )
+// };
+
 interface ReportComponents {
   FullScreenModal: React.FC<{ 
     open: boolean,
@@ -19,7 +51,8 @@ const DEPENDENCIES = [
   'material-ui.Material'
 ];
 
-export const useReports = ({ formDefinition }) => { 
+export const useReports = (props) => { 
+  const { formDefinition } = props;
   const reactory = useReactory();
   const { 
     getComponents
@@ -62,7 +95,7 @@ export const useReports = ({ formDefinition }) => {
         key: index,
         id: `exportButton_${index}`,
         data: reportDef,
-        disabled: reactory.utils.template(reportDef.disabled || "false")({ props: props, state: { formData } }) === 'true',
+        disabled: reactory.utils.template(reportDef.disabled || "false")({ props: props }) === 'true',
       }
     });      
     ReportButton = reportMenus.length > 0 ? 

@@ -2,7 +2,31 @@ import React, { useState } from 'react';
 import { useReactory } from '@reactory/client-core/api';
 import {  
   ReactoryFormExportHook
-} from './types';
+} from '../types';
+
+
+/**
+ * 
+ * @returns 
+ */
+// const getExcelWidget = () => {
+//   const { ReportViewer, FullScreenModal } = componentDefs;
+//   const formDef: Reactory.Forms.IReactoryForm = formDefinition();
+//   if (formDef !== undefined) {
+//     const closeReport = (e: React.SyntheticEvent): void => { setShowExportModal(false); }
+//     return (
+//       <FullScreenModal open={showExportModal === true} onClose={closeReport}>
+//         <ReportViewer
+//           engine={'excel'}
+//           formDef={formDef}
+//           exportDefinition={activeExportDefinition || formDef.defaultExport}
+//           useClient={true}
+//           data={formData}
+//         />
+//       </FullScreenModal>
+//     )
+//   }
+// };
 
 interface ExportComponents {
   FullScreenModal: React.FC<{ 

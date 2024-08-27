@@ -1,6 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
-import React, { Component, Fragment, ReactNode, DOMElement, CSSProperties, Ref } from 'react';
+import React, { useCallback } from 'react';
 import Reactory from '@reactory/reactory-core';
 import SchemaForm, { ISchemaForm } from '../form/components/SchemaForm';
 
@@ -13,18 +13,9 @@ import { useReactory } from '@reactory/client-core/api/ApiProvider';
 import {
   Card,
   Grid,
-  Button,
-  Fab,
-  Typography,
-  IconButton,
-  Icon,
   Paper,
-  Input,
-  Toolbar,
   LinearProgress,
-  Theme,
-  Breakpoint,
-  Tooltip
+  Breakpoint
 } from '@mui/material';
 
 import IntersectionVisible from '../../utility/IntersectionVisible';
@@ -37,14 +28,17 @@ import {
   ReactoryComponentError
 } from './types';
 
-import { useContext } from './useContext';
-import { useSchema } from './useSchema';
-import { useDataManager } from './useDataManager';
-import { useFormDefinition } from './useFormDefinition';
-import { useUISchemaManager } from './useUISchemaManager';
-import { useExports } from './useExports';
-import { useReports } from './useReports';
-import { useHelp } from './useHelp';
+import { 
+  useContext,
+  useDataManager,
+  useExports,
+  useFormDefinition,
+  useHelp,
+  useReports,
+  useSchema,
+  useUISchema,
+  useToolbar,
+ } from './hooks';
 
 
 const DEFAULT_DEPENDENCIES = [
@@ -64,6 +58,13 @@ const DEFAULT_UI_FRAMEWORK = 'material';
 export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryFormProps<unknown>>
   = (props: Reactory.Client.IReactoryFormProps<unknown>) => {
     // #region Props & Locals
+    const reactory = useReactory();
+    const {
+      debug,
+      warning,
+      getComponents
+    } = reactory;
+
     const {
       formId,
       formDef,
@@ -100,17 +101,12 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       route,
     } = props;
     
-    const params: Readonly<Params<string>> = useParams();
-
+    const params: Readonly<Params<string>> = useParams();  
     const [instanceId] = React.useState(uuid.v4())
-    const fqn = `${formDef?.nameSpace || 'unknown'}.${formDef?.name || 'unknown'}@${formDef?.version || '0.0.0'}`;
-    const signature = `${formDef === undefined ? '🔸' : ''}<${fqn} instance={${instanceId} />`;
-    const reactory = useReactory();
-    const {
-      debug,
-      warning,
-      getComponents
-    } = reactory;
+    const [form, setForm] = React.useState<Reactory.Forms.IReactoryForm>(formDef);
+    const FQN = `${formDef?.nameSpace || 'unknown'}.${formDef?.name || 'unknown'}@${formDef?.version || '0.0.0'}`;
+    const SIGN = `${formDef === undefined ? '🔸' : ''}<${FQN} instance={${instanceId} />`;
+    
     // #endregion
 
     // #region hooks
@@ -123,8 +119,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       uiSchemaActiveGraphDefintion,
       uiSchemasAvailable,
       SchemaSelector,
-    } = useUISchemaManager({
-      formDefinition: formDef,
+    } = useUISchema({
+      formDefinition: form,
       uiSchemaKey,
       params,
       mode,
@@ -135,7 +131,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       schema,
     } = useSchema({ 
       formId,
-      schema: formDef?.schema as Reactory.Schema.AnySchema, 
+      schema: form?.schema as Reactory.Schema.AnySchema, 
       uiSchemaActiveMenuItem,
     });
 
@@ -143,12 +139,13 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     // Next we get the data manager
     const {
       canRefresh,
-      loading: isFormDataLoading,
+      isDataLoading,
       formData,      
       onChange,
       reset,
       onSubmit,
       validate,
+      isValidating,
       errorSchema,
       errors,
       refresh,
@@ -157,7 +154,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       PagingWidget,
       paging,
     } = useDataManager({
-      ...props,
+      initialData: props.formData || props.data,
       schema,
       uiSchema,
       uiSchemaActiveGraphDefintion
@@ -173,24 +170,35 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     });
     
     // Get helper components for the form
+    const {
+      Toolbar
+    } = useToolbar({ 
+      formDefinition: form,
+      formData,
+     });
     const { 
       ExportButton,
       ExportModal,
     } = useExports({ 
-      formDefinition,
+      formDefinition: form,
       formData, 
     });
 
     const { 
       ReportButton,
       ReportModal,
-    } = useReports({ formDefinition });
+    } = useReports({ 
+      formDefinition: form,
+    });
 
     const { 
       HelpButton,
       HelpModal,
-    } = useHelp({ formDefinition });
+    } = useHelp({ formDefinition: form });
     
+    // form context puts all the elements together
+    // and provides a context for the form
+    const context: Reactory.Client.IReactoryFormContext<unknown> = useContext({...props});
     // #endregion
 
     const getInitialDepencyState = () => {
@@ -230,14 +238,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
       return _dependency_state;
     };
-    
-
     // #region State
 
-    const [componentDefs, setComponents] = React.useState<DefaultComponentMap>(reactory.getComponents(DEFAULT_DEPENDENCIES));    
-    const [showExportModal, setShowExportModal] = React.useState<boolean>(false)
-    const [showHelpModal, setShowHelpModal] = React.useState<boolean>(false)
-    const [error, setError] = React.useState<ReactoryComponentError>(null);        
+    const [componentDefs, setComponents] = React.useState<DefaultComponentMap>(reactory.getComponents(DEFAULT_DEPENDENCIES));
     //used for internal tracking of updates / changes since first load
     const [version, setVersion] = React.useState<number>(0);
     const [dependencies, setDepencies] = React.useState<any>(getInitialDepencyState().dependencies);
@@ -262,11 +265,6 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     // };
 
     const onReactoryFormUnmount = () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-        setInterval(null);
-      }
-
       // if (props.formId) {
       //   reactory.removeListener(`onReactoryFormDefinitionUpdate::${props.formId}`, setFormDefinition)
       // }
@@ -302,9 +300,9 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     }
 
     const onPluginLoaded = (plugin: any) => {
-      reactory.log(` ${signature} Plugin loaded, activating component`, { plugin });
+      reactory.log(` ${SIGN} Plugin loaded, activating component`, { plugin });
       try {
-        let _component = plugin.component(props, getFormContext());
+        let _component = plugin.component(props, context);
         if (dependencies[plugin.componentFqn]) {
           let _depends = { ...dependencies };
           _depends[plugin.componentFqn].available = true;
@@ -313,7 +311,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         }
         setVersion(version + 1);
       } catch (pluginFailure) {
-        reactory.log(`${signature} An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure });
+        reactory.log(`${SIGN} An error occured loading plugin ${plugin.componentFqn}`, { plugin, pluginFailure });
       }
     }
     // #endregion
@@ -322,10 +320,10 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     React.useEffect(onReactoryFormMounted, []);
 
-    React.useEffect(() => {
-      getData();
-      reactory.utils.localForage.setItem(`${fqn}::preferred_uiSchema`, activeUiSchemaMenuItem);
-    }, [activeUiSchemaMenuItem])
+    // React.useEffect(() => {
+    //   //getData();
+    //   reactory.utils.localForage.setItem(`${fqn}::preferred_uiSchema`, activeUiSchemaMenuItem);
+    // }, [activeUiSchemaMenuItem])
 
     const watchList = [props.formData, props.formDef, props.formId];
 
@@ -348,149 +346,15 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     // #endregion
 
-    const getHelpScreen = () => {
-
-      const { HelpMe } = componentDefs;
-      let topics = [];
-      if (formDefinition.helpTopics) topics = [...formDefinition.helpTopics]
-      if (props.helpTopics) topics = [...props.helpTopics, ...topics];
-      const closeHelp = e => setShowHelpModal(false);
-
-      const allowSupportRequest = () => {
-        uiSchema;
-        if (uiSchema && uiSchema['ui:form'] && uiSchema['ui:form'].allowSupportRequest === false) return false;
-        return true;
-      }
-
-      return (
-        <HelpMe
-          topics={topics}
-          tags={formDefinition.tags}
-          title={props.helpTitle || formDefinition.title}
-          open={showHelpModal === true}
-          allowSupportRequest={allowSupportRequest()}
-          onClose={closeHelp}>
-        </HelpMe>
-      )
-    };
-
     // #region Event handlers
 
 
     // #endregion
 
-    const $submitForm = () => {
-      // if (isNil(formRef) === false && formRef.current) {
-      //   try {
-      //     if (formRef.current && formRef.current.onSubmit) {
-
-      //       formRef.current.onSubmit(null);
-      //     }
-      //   } catch (submitError) {
-      //     reactory.createNotification(`The Form ${signature} could not submit`, { type: "warning", showInAppNotification: true, canDismis: true });
-      //     reactory.log(`Could not submit the form`, submitError);
-      //   }
-      // }
-      onSubmit({ formData });
-    }
-
-    // const getFormReference = () => {
-    //   return {
-    //     setState,
-    //     forceUpdate: () => { setVersion(version + 1) },
-    //     props,
-    //     setFormDefinition,
-    //     submit: $submitForm,
-    //     state: getState(),
-    //     validate: () => {
-    //       if (formRef && formRef.current) {
-    //         formRef.current.validate(formData);
-    //       }
-    //     },
-    //     formRef,
-    //     onChange,
-    //     refresh: (args = { autoQueryDisabled: true }) => {
-    //       setAutoQueryDisabled(args.autoQueryDisabled);
-    //       getData(formData);
-    //     },
-    //   }
-    // }
-
-    const getPdfWidget = () => {
-      const { ReportViewer, FullScreenModal } = componentDefs;
-      const formDef = formDefinition();
-      let _activeReportDefinition = activeReportDefinition || formDef.defaultPdfReport;
-
-      if (_activeReportDefinition === null || _activeReportDefinition === undefined) return null;
-
-      const closeReport = () => {
-        setShowReportModal(false);
-        setActiveReportDefinition(null);
-      }
-
-
-      let data = { ...formData }
-      if (_activeReportDefinition && _activeReportDefinition.dataMap) {
-        data = reactory.utils.objectMapper(data, _activeReportDefinition.dataMap);
-      }
-
-      return (
-        <FullScreenModal open={showReportModal === true} onClose={closeReport}>
-          {activeReportDefinition ? (
-            <ReportViewer
-              {...{ ...activeReportDefinition, data }}
-            />) : null}
-        </FullScreenModal>
-      )
-    };
-
-    const getExcelWidget = () => {
-      const { ReportViewer, FullScreenModal } = componentDefs;
-      const formDef: Reactory.Forms.IReactoryForm = formDefinition();
-      if (formDef !== undefined) {
-        const closeReport = (e: React.SyntheticEvent): void => { setShowExportModal(false); }
-        return (
-          <FullScreenModal open={showExportModal === true} onClose={closeReport}>
-            <ReportViewer
-              engine={'excel'}
-              formDef={formDef}
-              exportDefinition={activeExportDefinition || formDef.defaultExport}
-              useClient={true}
-              data={formData}
-            />
-          </FullScreenModal>
-        )
-      }
-    };
-
-   
-
-    const getDeveloperOptions = () => {
-      // if (reactory.hasRole(["DEVELOPER"]) === true) {
-      //   if (formDef && formDef.name) {
-      //     if (formDef.name.indexOf("$GLOBAL$") >= 0) return null;
-      //   }
-
-      //   return (
-      //     <>
-      //       <IconButton size="small" onClick={() => { setShowEditor(true) }} style={{ float: 'right', position: 'relative', marginTop: '-8px' }}>
-      //         <Icon style={{ fontSize: '0.9rem' }}>build</Icon>
-      //       </IconButton>
-      //     </>)
-      // }
-
-      return null;
-    }
-
+    
 
     if (formDefinition === undefined) return <>No form definition available</>
-    // @ts-ignore
-    const DropDownMenu: React.ComponentType<{
-      menus: Reactory.Forms.IUISchemaMenuItem[],
-      onSelect: (menuItem: Reactory.Forms.IUISchemaMenuItem) => void,
-      selected: Reactory.Forms.IUISchemaMenuItem
-    }> = componentDefs["DropDownMenu"];
-
+    
     // #region ISchemaForm Props
     // @ts-ignore
     const formProps: Reactory.Forms.ISchemaFormProps<unknown> = {
@@ -515,7 +379,6 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           //@ts-ignore
           formRef.current = form;
         }
-
         // if (props.refCallback) props.refCallback(getFormReference())
         // if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
       },
@@ -526,7 +389,6 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         // if (props.transformErrors && typeof props.transformErrors === 'function') {
         //   _errors = props.transformErrors(errors, this) as unknown[];
         // }
-
         if (reactory.formTranslationMaps && reactory.formTranslationMaps[formfqn]) {
           _errors = reactory.formTranslationMaps[formfqn](errors, this);
         }
@@ -536,141 +398,32 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     };
     // #endregion
 
-    reactory.log(`Form Props: ${signature}`, { formProps })
-
-    let icon = 'save';
-
-    // BACKWARDS COMPATIBLE SCHEMA OBJECTS
-    if (typeof formDefinition.uiSchema === "object") {
-      if (formDefinition.uiSchema && formDefinition.uiSchema.submitIcon) {
-        if (typeof formDefinition.uiSchema.submitIcon === 'string') {
-          icon = formDefinition.uiSchema.submitIcon
-        }
-      }
-
-      if (formDefinition.uiSchema && formDefinition.uiSchema['ui:options'] !== null
-        && typeof formDefinition.uiSchema['ui:options'] === 'object') {
-        if ((formDefinition.uiSchema['ui:options'] as any).submitIcon) {
-          icon = (formDefinition.uiSchema['ui:options'] as any).submitIcon
-        }
-      }
-    }
-
-    if (uiOptions?.submitIcon) icon = uiOptions.submitIcon;
-    let iconProps = uiOptions?.submitIconProps || {};
-    let iconWidget = (icon === '$none' ? null : <Icon {...iconProps}>{icon}</Icon>);
-    let showSubmit = true;
-    let showRefresh = true;
-    let showHelp = true;
-    let submitButton = null;
-    
-    let submitTooltip = 'Click to submit the form';
-
-    const { submitProps, buttons } = uiOptions;
-    if (typeof submitProps === 'object' && showSubmit === true) {
-      const { variant = 'fab', iconAlign = 'left', tooltip = submitTooltip } = submitProps;
-      const _props = { ...submitProps };
-      delete _props.iconAlign;
-      _props.onClick = $submitForm;
-
-      submitTooltip = reactory.utils.template(tooltip as string)({
-        props: props,
-        state: { formData }
-      });
-
-
-      if (variant && typeof variant === 'string' && showSubmit === true) {
-        switch (variant) {
-          case 'fab':
-            {
-              delete _props.variant;
-              //@ts-ignore
-              submitButton = (<Fab {..._props}>{iconWidget}</Fab>);
-              break;
-            }
-          default: {
-            //@ts-ignore
-            submitButton = (<Button {..._props}>{iconAlign === 'left' && iconWidget}{template(_props.text)({ props: props, formData, formDef: formDefinition, reactory })}{iconAlign === 'right' && iconWidget}</Button>);
-            break;
-          }
-        }
-      }
-    }
-
-    if (uiOptions && isNil(uiOptions.showSubmit) === false) {
-      showSubmit = uiOptions.showSubmit === true;
-    }
-
-    if (uiOptions && isNil(uiOptions.showHelp) === false) {
-      showHelp = uiOptions.showHelp === true;
-    }
-
-    if (uiOptions && isNil(uiOptions.showRefresh) === false) {
-      showRefresh = uiOptions.showRefresh === true;
-    }
-
-    let additionalButtons = [];
-    if (buttons && buttons.length) {
-      additionalButtons = buttons.map((button: any, buttonIndex) => {
-        const { buttonProps, iconProps, type, handler, component } = button;
-
-        if (component && typeof component === "function") return component;
-
-        const onButtonClicked = () => {
-          reactory.log(`OnClickButtonFor Additional Buttons`);
-          if (props[handler] && typeof props[handler] === 'function') {
-            (props[handler] as Function)({ reactoryForm: this, button })
-          } else {
-            reactory.createNotification(`No handler '${handler}' for ${buttonProps.title} button`, { showInAppNotification: true, type: 'error' })
-          }
-        }
-
-        let buttonIcon = null;
-        if (iconProps) {
-          buttonIcon = <Icon {...iconProps}>{iconProps.icon}</Icon>
-        }
-
-        return (
-          <Button {...buttonProps} key={buttonIndex} onClick={onButtonClicked}>{iconProps.placement === 'left' && buttonIcon}{buttonProps.title}{iconProps.placement === 'right' && buttonIcon}</Button>
-        )
-      });
-    }
-
-    let formtoolbar = (
-      <Toolbar style={uiOptions.toolbarStyle || {}}>
-        {uiOptions.showSchemaSelectorInToolbar && !uiOptions.showSchemaSelectorInToolbar === false ? uiSchemaSelector : null}
-        {showSubmit === true && submitButton ? (<Tooltip title={submitTooltip}>{submitButton}</Tooltip>) : null}
-        {additionalButtons}
-        {<RefreshButton />}        
-        {formDefinition.backButton && <Button variant="text" onClick={() => { history.back() }} color="primary">BACK <Icon>keyboard_arrow_left</Icon></Button>}
-        {formDefinition.helpTopics && showHelp === true && <Button variant="text" onClick={() => { setShowHelpModal(true) }} color="primary"><Icon>help</Icon></Button>}
-      </Toolbar>
-    );
-
-    let toolbarPosition = uiOptions.toolbarPosition || 'bottom'
+    reactory.log(`Form Props: ${SIGN}`, { formProps })
 
     const isFormBusy = () => {
       if (busy === true) return true;
-      if (isFormDataLoading === true) return true;
+      if (isDataLoading === true) return true;
 
       return false;
     }
 
     let renderedComponent: React.ReactNode;
-
+    const {
+      toolbarPosition = 'bottom',
+    } = uiOptions; 
     // #region Form Render
     try {
       //@ts-ignore            
       const schemaFormProps: ISchemaForm<> = {
-        ...{ ...formProps, toolbarPosition: toolbarPosition }
+        ...{ ...formProps, toolbarPosition }
       };
 
       if (formDefinition.__complete__ === true) {
         const formChildren: any[] = [];
-        if (toolbarPosition.indexOf("top") >= 0 || toolbarPosition.indexOf("both") >= 0) formChildren.push(formtoolbar);
+        if (uiOptions.toolbarPosition.indexOf("top") >= 0 || uiOptions.toolbarPosition.indexOf("both") >= 0) formChildren.push(<Toolbar />);
         if (isFormBusy()) formChildren.push(<LinearProgress />);
         formChildren.push(<SchemaForm {...schemaFormProps} />);
-        if (toolbarPosition.indexOf("bottom") >= 0 || toolbarPosition.indexOf("both") >= 0) formChildren.push(formtoolbar);
+        if (toolbarPosition.indexOf("bottom") >= 0 || toolbarPosition.indexOf("both") >= 0) formChildren.push(<Toolbar />);
         formChildren.push(<PagingWidget />);
         formChildren.push(<HelpModal />);
 
@@ -722,7 +475,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       renderedComponent = <>{err.message}</>;
     }
 
-    debug(`Rendering ${signature}`);
+    debug(`Rendering ${SIGN}`);
     return <IntersectionVisible>{renderedComponent}</IntersectionVisible>
     // #endregion
   };
