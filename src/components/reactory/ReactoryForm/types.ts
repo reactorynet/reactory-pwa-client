@@ -11,7 +11,10 @@ export interface ReactoryComponentError {
 
 export type ScreenSizeKey = Breakpoint | number;
 
-export type InitialStateFunction<TData> = (props?: any) => Promise<TData>;
+/**
+ * A function that returns a promise of the initial data for a form.
+ */
+export type InitialDataFunction<TData> = (props?: any) => Promise<TData>;
 
 export type DefaultComponentMap = {
   Loading: React.ComponentType<{}>,
@@ -25,7 +28,7 @@ export type DefaultComponentMap = {
 
 export type ReactoryFormDataManagerProps<TData> = {
   formContext: Reactory.Client.IReactoryFormContext<TData>, 
-  initialData: TData | InitialStateFunction<TData>
+  initialData: TData | InitialDataFunction<TData>
 };
 
 export type ReactoryFormDataPaging = {
@@ -52,7 +55,8 @@ export type ReactoryFormDataManagerHookResult<TData> = {
   refresh: () => void
   RefreshButton: React.FC<{}>
   isValidating: boolean,
-  validate: Reactory.Forms.SchemaFormValidationFunctionSync<TData> | Reactory.Forms.SchemaFormValidationFunctionAsync<TData>
+  validate: Reactory.Forms.SchemaFormValidationFunctionSync<TData> | 
+    Reactory.Forms.SchemaFormValidationFunctionAsync<TData>,
   errorSchema?: Reactory.Schema.IErrorSchema
   errors: any[]
   SubmitButton: React.FC<{}>
@@ -60,15 +64,43 @@ export type ReactoryFormDataManagerHookResult<TData> = {
   PagingWidget: React.FC<{}>  
 }
 
-export type ReactoryFormDefinitionHook = <TData>(props: Reactory.Client.IReactoryFormProps<TData>) => { 
-  formDefinition: Reactory.Forms.IReactoryForm, 
-  resetFormDefinition: () => void 
+export type ReactoryFormDefinitionHook = <TData>(props: {
+  formId: string | Reactory.FQN,
+  formDefinition: Reactory.Forms.IReactoryForm,
+  extendSchema?: (definition: Reactory.Forms.IReactoryForm) => Reactory.Forms.IReactoryForm,
+  uiSchema: Reactory.Schema.IUISchema,
+  schema: Reactory.Schema.AnySchema,
+  context: Reactory.Client.IReactoryFormContext<TData>,
+}) => { 
+  formDefinition: Reactory.Forms.IReactoryForm,
 };
 
 
 export type ReactoryFormContextHook<TData> = (props:  Reactory.Client.IReactoryFormProps<TData>) => Reactory.Client.IReactoryFormContext<TData>;
 
-export type ReactoryFormDataManagerHook<TData> = (props: Reactory.Client.IReactoryFormProps<TData>) => ReactoryFormDataManagerHookResult<TData>
+export type ReactoryFormDataManagerHook<TData> = (props: {
+  formId: string | Reactory.FQN,
+  formDefinition: Reactory.Forms.IReactoryForm,
+  FQN: string | Reactory.FQN,
+  SIGN: string,
+  route: Reactory.Routing.IReactoryRoute,
+  context: Reactory.Client.IReactoryFormContext<TData>,
+  initialData: TData | InitialDataFunction<TData>,
+  /**
+   * A custom graph definition to use for the form.
+   * This could be provided by the active uiSchema.
+   */
+  graphDefinition?: Reactory.Forms.IFormGraphDefinition,
+  onBeforeQuery?: (data: TData, context: Reactory.Client.IReactoryFormContext<TData>) => boolean,
+  onBeforeSubmit?: (data: TData, context: Reactory.Client.IReactoryFormContext<TData>) => boolean,
+  onBeforeMutation?: (data: TData, context: Reactory.Client.IReactoryFormContext<TData>) => boolean,
+  onSubmit?: (data: TData, 
+    errors: any[],
+    errorSchema: Reactory.Schema.IErrorSchema, 
+    context: Reactory.Client.IReactoryFormContext<TData>) => void,
+  mode: string | "edit" | "view" | "create" | "delete",
+  onError: (errors: any[], errorSchema: Reactory.Schema.IErrorSchema) => void,
+}) => ReactoryFormDataManagerHookResult<TData>
 
 export type ReactoryFormComponentsHook<TComponents> = (dependencies: Reactory.Client.ComponentDependency[]) => TComponents;
 
@@ -87,8 +119,11 @@ export type ReactoryFormUISchemaManagerHookResult = {
 export type ReactoryFormUISchemaManagerHook<TData> = (props: {
   formDefinition: Reactory.Forms.IReactoryForm,
   uiSchemaKey?: string,
+  uiSchemaId?: string,
   mode?: string | "edit" | "view" | "create" | "delete",
   params?: Readonly<Params<string>>
+  FQN: string | Reactory.FQN,
+  SIGN: string,
 }) => ReactoryFormUISchemaManagerHookResult;
 
 export type ReactoryFormSchemaHookResult = { 
@@ -100,7 +135,9 @@ export type ReactoryFormSchemaHook<TData> =
   (props: { 
     schema?: Reactory.Schema.AnySchema,
     uiSchemaActiveMenuItem?: Reactory.Forms.IUISchemaMenuItem,
-    formId?: string | Reactory.FQN, 
+    formId?: string | Reactory.FQN,
+    FQN: string | Reactory.FQN,
+    SIGN: string, 
   }) => ReactoryFormSchemaHookResult
 
 export type ReactoryFormHelpHookResult = { 

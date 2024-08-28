@@ -23,7 +23,7 @@ import ErrorList from '../form/components/ErrorList';
 
 import {
   DefaultComponentMap,
-  InitialStateFunction,
+  InitialDataFunction,
   ReactoryFormState,
   ReactoryComponentError
 } from './types';
@@ -39,16 +39,6 @@ import {
   useUISchema,
   useToolbar,
  } from './hooks';
-
-
-const DEFAULT_DEPENDENCIES = [
-  'core.Loading',
-  'core.Logo',
-  'core.FullScreenModal',
-  'core.DropDownMenu',
-  'core.HelpMe',
-  'core.ReportViewer',
-  'core.ReactoryFormEditor'];
 
 type ScreenSizeKey = Breakpoint | number;
 
@@ -87,6 +77,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       onError,
       onBeforeMutation,
       onMutateComplete,
+      onBeforeSubmit,
       onBeforeQuery,
       onQueryComplete,
       queryOnFormDataChange = false,
@@ -105,12 +96,20 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const [instanceId] = React.useState(uuid.v4())
     const [form, setForm] = React.useState<Reactory.Forms.IReactoryForm>(formDef);
     const FQN = `${formDef?.nameSpace || 'unknown'}.${formDef?.name || 'unknown'}@${formDef?.version || '0.0.0'}`;
-    const SIGN = `${formDef === undefined ? '🔸' : ''}<${FQN} instance={${instanceId} />`;
+    const SIGN = `${FQN}:${instanceId}`;
     
     // #endregion
 
     // #region hooks
+
+    // form context puts all the elements together
+    // and provides a context for the form
+    const context: Reactory.Client.IReactoryFormContext<unknown> = useContext({
+      ...props,
+    });
+
     // First we get the ui schema information.
+    // use the useUISchema hook to get the ui schema information.
     const {
       loading: isUiSchemaLoading,
       uiOptions,
@@ -122,20 +121,37 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     } = useUISchema({
       formDefinition: form,
       uiSchemaKey,
+      uiSchemaId,
       params,
       mode,
+      FQN,
+      SIGN
     });
 
     // Next we get the schema information
+    // The schema can change depending on
+    // the active ui schema definition
     const {
       schema,
     } = useSchema({ 
+      FQN,
+      SIGN,
       formId,
       schema: form?.schema as Reactory.Schema.AnySchema, 
       uiSchemaActiveMenuItem,
     });
 
-   
+     // Next we get the form definition
+     const {
+      formDefinition,
+    } = useFormDefinition({
+      formId,
+      formDefinition: form,
+      schema,
+      uiSchema,
+      context,
+    });
+
     // Next we get the data manager
     const {
       canRefresh,
@@ -155,20 +171,24 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       paging,
     } = useDataManager({
       initialData: props.formData || props.data,
-      schema,
-      uiSchema,
-      uiSchemaActiveGraphDefintion
-    });
-
-    // Next we get the form definition
-    const {
       formDefinition,
-      resetFormDefinition
-    } = useFormDefinition({
-      schema,
-      uiSchema,
+      FQN,
+      SIGN,
+      formId,
+      route,
+      // schema,
+      // uiSchema,
+      graphDefinition: uiSchemaActiveGraphDefintion,
+      //@ts-ignore
+      onBeforeQuery,
+      onBeforeMutation,
+      onBeforeSubmit,
+      onSubmit: props.onSubmit,
+      context,
+      mode: mode,
+      onError,
     });
-    
+ 
     // Get helper components for the form
     const {
       Toolbar
@@ -194,11 +214,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const { 
       HelpButton,
       HelpModal,
-    } = useHelp({ formDefinition: form });
-    
-    // form context puts all the elements together
-    // and provides a context for the form
-    const context: Reactory.Client.IReactoryFormContext<unknown> = useContext({...props});
+    } = useHelp({ formDefinition: form });    
     // #endregion
 
     const getInitialDepencyState = () => {
@@ -240,7 +256,6 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     };
     // #region State
 
-    const [componentDefs, setComponents] = React.useState<DefaultComponentMap>(reactory.getComponents(DEFAULT_DEPENDENCIES));
     //used for internal tracking of updates / changes since first load
     const [version, setVersion] = React.useState<number>(0);
     const [dependencies, setDepencies] = React.useState<any>(getInitialDepencyState().dependencies);

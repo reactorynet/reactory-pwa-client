@@ -4,7 +4,8 @@ import ReactoryNewFormInput from '../../formDefinitions/ReactoryNewFormInput';
 import { ReactoryDefaultForm } from "../constants";
 import ReactoryUxPackages from '../../ux';
 import { useReactory } from "@reactory/client-core/api";
-import { ReactoryFormDefinitionHook } from "../types";
+import { DefaultComponentMap, ReactoryFormDefinitionHook } from "../types";
+import MuiReactoryPackage from "components/reactory/ux/mui";
 
 
  /**
@@ -232,17 +233,28 @@ import { ReactoryFormDefinitionHook } from "../types";
     //   return _formDef
     // }
 
+  const DEFAULT_DEPENDENCIES = [
+    'core.Loading',
+    'core.Logo',
+    'core.FullScreenModal',
+    'core.DropDownMenu',
+    'core.HelpMe',
+    'core.ReportViewer',
+    'core.ReactoryFormEditor'];
 
 /**
  * Build the form definition from current props and state.
  * Returns active form definition
  */
-export const useFormDefinition: ReactoryFormDefinitionHook = (props: Reactory.Client.IReactoryFormProps) => {
+// @ts-ignore
+export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
   const reactory = useReactory();
   const { utils } = reactory;
   const { nil, lodash } = utils;
   const [formDefinition, setFormDefinition] =
     useState<Reactory.Forms.IReactoryForm>(ReactoryDefaultForm);
+
+    const [componentDefs, setComponents] = useState<DefaultComponentMap>(reactory.getComponents(DEFAULT_DEPENDENCIES));
 
   // const {
   //   uiSchema,
@@ -254,20 +266,20 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props: Reactory.Cl
   if (formDefinition.__complete__ === false) return ReactoryDefaultForm;
 
   const { 
-    extendSchema, 
-    uiSchemaKey, 
-    uiSchemaId, 
-    uiFramework 
+    extendSchema,
+    schema,
+    uiSchema,
+    context, 
   } = props;
 
   let _formDef: Reactory.Forms.IReactoryForm = lodash.cloneDeep(formDefinition);
   if (extendSchema && typeof extendSchema === "function")
     _formDef = extendSchema(_formDef);
 
-  if (_formDef.uiFramework !== "schema") {
-    //we are not using the schema define ui framework we are assigning a different one
-    _formDef.uiFramework = uiFramework;
-  }
+  // if (_formDef.uiFramework !== "schema") {
+  //   //we are not using the schema define ui framework we are assigning a different one
+  //   _formDef.uiFramework = uiFramework;
+  // }
 
   // set noHtml5Validation if not set by schema
   if (nil(_formDef.noHtml5Validate)) _formDef.noHtml5Validate = true;
@@ -277,14 +289,14 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props: Reactory.Cl
   //or via UX element.
   _formDef.uiSchema = uiSchema;
   _formDef.graphql = getActiveGraphDefinitions();
-  _formDef.schema = getActiveSchema(_formDef.schema);
+  _formDef.schema = schema;
 
   // #region setup functions
   const setFormContext = () => {
     if (!_formDef.formContext) _formDef.formContext = {};
     //we combine the form context from the getter function, with the formContext property / object on the _formDef
     _formDef.formContext = {
-      ...getFormContext(),
+      ...context,
       ...(_formDef.formContext as Object),
     };
   };
@@ -368,7 +380,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props: Reactory.Cl
     }
 
     if (!_formDef.widgets) _formDef.widgets = {};
-    if (isArray(_formDef.widgetMap) === true) {
+    if (reactory.utils.lodash.isArray(_formDef.widgetMap) === true) {
       _formDef.widgetMap.forEach((map) => {
         //reactory.log(`${signature} (init) Mapping ${map.widget} to ${map.componentFqn || map.component} ${_formDef.id}`, map);
         let mapped = false;
@@ -412,7 +424,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props: Reactory.Cl
 
         if (mapped === false) {
           _formDef.widgets[map.widget] = (props, context) => {
-            return <WidgetNotAvailable {...props} map={map} />;
+            return <MuiReactoryPackage.widgets.WidgetNotAvailable {...props} map={map} />;
             //setTimeout(() => { setVersion(version + 1) }, 777);
             //return (<>loading ...{map.widget}</>)
           };
@@ -498,6 +510,5 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props: Reactory.Cl
 
   return { 
     formDefinition,
-    resetFormDefinition: () => setFormDefinition(ReactoryDefaultForm) 
   };
 };

@@ -1,21 +1,40 @@
+import React from 'react'
 import { useReactory } from "@reactory/client-core/api";
 import { ReactoryFormUISchemaManagerHook, ScreenSizeKey } from "../types";
+import queryString from '@reactory/client-core/components/utility/query-string';
+import { useLocation } from 'react-router';
+import Reactory from '@reactory/reactory-core';
+import { Icon, IconButton } from '@mui/material';
 
 /**
  * 
  * @param param0 
  * @returns 
  */
-export const useUISchema: ReactoryFormUISchemaManagerHook<unknown> = ({  
-  formDefinition,
-  uiSchemaKey = 'default',
-  mode = 'view',
-  params = {},
-}) => {
+
+// @ts-ignore
+export const useUISchema: ReactoryFormUISchemaManagerHook<unknown> = (props) => {
+  const {  
+    formDefinition,
+    uiSchemaKey = 'default',
+    uiSchemaId = 'default',
+    mode = 'view',
+    params = {},
+    FQN,
+    SIGN
+  } = props;
   const reactory = useReactory();
+  
+  const location = useLocation();
+  
   const queryData: any =
     reactory.utils.queryString.parse(window.location.search) || {};
-  
+
+  const [activeUiSchemaMenuItem, setActiveUiSchemaMenuItem] = React.useState<Reactory.Forms.IUISchemaMenuItem>(null);
+  const [isQueryComplete, setIsQueryComplete] = React.useState<boolean>(false);
+  const [isBusy, setIsBusy] = React.useState<boolean>(false);
+  const [isDirty, setIsDirty] = React.useState<boolean>(false);
+
   const { 
     uiSchemas,
   } = formDefinition; 
@@ -138,7 +157,15 @@ const AllowedSchemas = (uiSchemaItems: Reactory.Forms.IUISchemaMenuItem[],
   };
 
   const getActiveUiOptions = (): Reactory.Schema.IFormUIOptions => {
-    let _options = { showSchemaSelectorInToolbar: true };
+    let _options: Reactory.Schema.IFormUIOptions = {
+      schemaSelector: {
+        variant: "icon-button",
+        showTitle: true,
+        activeColor: "primary",
+        buttonTitle: "View",
+        // buttonTooltip: "Select a different view",
+      },
+    };
     let _uiSchema: Reactory.Schema.IFormUISchema =
       getActiveUiSchema() as Reactory.Schema.IFormUISchema;
 
@@ -161,22 +188,26 @@ const AllowedSchemas = (uiSchemaItems: Reactory.Forms.IUISchemaMenuItem[],
 
   const GetSchemaSelectorMenus = () => {
     const allowed_schema = AllowedSchemas(formDefinition.uiSchemas, props.mode, null)
-    reactory.log(`<${fqn} /> GetSchemaSelectorMenus`, { allowed_schema });
+    reactory.log(`${SIGN}:GetSchemaSelectorMenus()`, { allowed_schema });
 
     // allowed_schema.forEach((uiSchemaItem: Reactory.IUISchemaMenuItem, index: number) => {
     const schemaButtons = allowed_schema.map((uiSchemaItem: Reactory.Forms.IUISchemaMenuItem, index: number) => {
       /**  We hook uip the event handler for each of the schema selection options. */
       const onSelectUiSchema = () => {
         // self.setState({ activeUiSchemaMenuItem: uiSchemaItem })
-        reactory.log(`<${fqn} /> UI Schema Selector onSchemaSelect "${uiSchemaItem.title}" selected`, { uiSchemaItem });
+        reactory.log(`${SIGN}:onSchemaSelect(uiSchemaItem):UI Schema Selector "${uiSchemaItem.title}" selected`, { uiSchemaItem });
         setActiveUiSchemaMenuItem(uiSchemaItem);
       };
 
-      return <IconButton onClick={onSelectUiSchema} key={`schema_selector_${index}`} size="large"><Icon>{uiSchemaItem.icon}</Icon></IconButton>;
+      return (<IconButton 
+        onClick={onSelectUiSchema} 
+        key={`schema_selector_${index}`} 
+        size="large">
+          <Icon>{uiSchemaItem.icon}</Icon>
+        </IconButton>);
     });
 
     return schemaButtons;
-
   };
 
   // Even handler for the schema selector menu
@@ -197,7 +228,7 @@ const AllowedSchemas = (uiSchemaItems: Reactory.Forms.IUISchemaMenuItem[],
 
     setActiveUiSchemaMenuItem(menuItem);
     if (doQuery === true) {
-      setQueryComplete(false);
+      setIsQueryComplete(false);
       setIsBusy(false);
       setIsDirty(false);
     }
@@ -212,8 +243,10 @@ const AllowedSchemas = (uiSchemaItems: Reactory.Forms.IUISchemaMenuItem[],
     uiSchemasAvailable: AllowedSchemas(uiSchemas),
     uiSchemaActiveGraphDefintion: getActiveGraphDefinitions(),
     uiSchemaSelectorButtons: GetSchemaSelectorMenus(),
-    onUISchemaSelect: onSchemaSelect,
     SchemaSelector: null,
+    loading: false,
+    onSelectUISChema: onSchemaSelect,
+    reset: () => { }
   };
 };
 
