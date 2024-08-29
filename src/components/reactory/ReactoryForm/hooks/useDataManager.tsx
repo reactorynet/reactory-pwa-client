@@ -11,6 +11,7 @@ import { diff } from 'deep-object-diff';
 
 import { useReactory } from "@reactory/client-core/api";
 import { deepEquals } from "@reactory/client-core/components/util";
+import { useDataManagerProvider } from "../DataManagers";
 
 // const formValidation = ($formData: any, $errors: any, via = 'onChange') => {
 
@@ -55,11 +56,14 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     onBeforeSubmit,
     onBeforeMutation,
     onBeforeQuery,
+    onError,
     formId,
     route,
     context,
     mode,
   } = props;
+  const { dataManagers } = useDataManagerProvider(formDefinition);
+  const [ defaultDataManager ] = dataManagers;
   const [loading, setIsLoading] = useState<boolean>(false);
   const [dirty, setIsDirty] = useState(false);
   const [isBusy, setIsBusy] = useState<boolean>(false);
@@ -73,7 +77,11 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   const [version, setVersion] = useState(0);
 
   
-  const getData = (data?: any) => { };
+  const getData = async (data?: any) => { 
+    if (defaultDataManager) {
+      const result = await defaultDataManager.getData(data);
+    }    
+  };
 
   const onSubmit = (form: any) => {
     reactory.log(`${SIGN} ↩ onSubmit`, { form });

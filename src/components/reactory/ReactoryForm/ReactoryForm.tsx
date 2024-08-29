@@ -490,7 +490,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       renderedComponent = <>{err.message}</>;
     }
 
-    debug(`Rendering ${SIGN}`);
+    debug(`${SIGN}:render`);
     return <IntersectionVisible>{renderedComponent}</IntersectionVisible>
     // #endregion
   };
