@@ -218,7 +218,16 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
     FullScreenModal,
     Loading,
     HelpListForm
-  } = reactory.getComponents([
+  } = reactory.getComponents<{
+    SystemStatus: React.FC,
+    FullScreenModal: React.FC<{ 
+      open: boolean,
+      onClose: (e: any) => void,
+      title: string, 
+    }>,
+    Loading: React.FC,
+    HelpListForm: React.FC
+  }>([
     'core.SystemStatus',
     'core.FullScreenModal',
     'core.Loading',

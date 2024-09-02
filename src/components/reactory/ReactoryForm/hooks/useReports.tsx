@@ -53,6 +53,15 @@ const DEPENDENCIES = [
 
 export const useReports = (props) => { 
   const { formDefinition } = props;
+
+  if (!formDefinition) {
+    return {
+      ReportButton: null,
+      ReportModal: null,
+      toggleReport: () => {}
+    }
+  }
+
   const reactory = useReactory();
   const { 
     getComponents

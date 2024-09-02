@@ -38,13 +38,13 @@ export const useSchema: ReactoryFormSchemaHook<unknown> = (props) => {
   }, [formId]);
 
   useEffect(() => {
-    setIsBusy(formDefinition.__complete__ === false);
+    setIsBusy(formDefinition?.__complete__ === false);
   }, [formDefinition]);
 
-  let _schema = initialSchema || DefaultLoadingSchema;
-  if (formDefinition.__complete__ === true) { 
-    _schema = formDefinition.schema as Reactory.Schema.AnySchema;
-  }
+  let _schema: Reactory.Schema.AnySchema = 
+    formDefinition?.schema as Reactory.Schema.AnySchema || 
+    initialSchema || 
+    DefaultLoadingSchema;
 
   if (uiSchemaActiveMenuItem) {
     const {

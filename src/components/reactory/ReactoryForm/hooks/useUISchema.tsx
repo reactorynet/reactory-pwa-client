@@ -35,6 +35,22 @@ export const useUISchema: ReactoryFormUISchemaManagerHook<unknown> = (props) => 
   const [isBusy, setIsBusy] = React.useState<boolean>(false);
   const [isDirty, setIsDirty] = React.useState<boolean>(false);
 
+  if (!formDefinition) { 
+    reactory.log(`${SIGN}:useUISchema()`, { formDefinition });
+    return {
+      uiSchema: {},
+      uiOptions: {},
+      uiSchemaActiveMenuItem: null,
+      uiSchemasAvailable: [],
+      uiSchemaActiveGraphDefintion: {},
+      uiSchemaSelectorButtons: [],
+      SchemaSelector: null,
+      loading: false,
+      onSelectUISChema: () => { },
+      reset: () => { }
+    };
+  }
+
   const { 
     uiSchemas,
   } = formDefinition; 

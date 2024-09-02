@@ -84,7 +84,8 @@ export const ReactoryApiEventNames = {
   onShowNotification: 'onShowNotification',
   onThemeChanged: 'onThemeChanged',
   onHideMenu: 'onHideMenu',
-  onShowMenu: 'onShowMenu'
+  onShowMenu: 'onShowMenu',
+  onComponentRegistered: 'onComponentRegistered',
 };
 
 export const EmptyComponent = (fqn) => {
@@ -349,7 +350,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   formSchemas: Reactory.Forms.IReactoryForm[]
   formValidationMaps: any;
   formTranslationMaps: any;
-  formSchemaLastFetch: moment.Moment = null;
+  formSchemaLastFetch: Date = null;
   assets: {
     logo: string;
     avatar: string;
@@ -1050,7 +1051,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
    * @param form 
    */
   reactoryForm(form: Reactory.Forms.IReactoryForm): React.ReactElement {
-    const ReactoryFormComponent = this.getComponent('core.ReactoryForm') as React.FunctionComponent<Reactory.Client.IReactoryFormProps>;
+    const ReactoryFormComponent = this.getComponent('core.ReactoryForm') as React.FunctionComponent<Reactory.Client.IReactoryFormProps<unknown>>;
     return <ReactoryFormComponent formDef={form} />
   }
 
@@ -1150,7 +1151,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
               'form');
           }
         });
-        that.formSchemaLastFetch = moment();
+        that.formSchemaLastFetch = new Date();
         return ReactoryForms;
       }
     };
@@ -1469,7 +1470,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       useErrorBoundary: errorBoundary === true,
       componentType
     };
-    this.emit('componentRegistered', fqn);
+    this.emit(ReactoryApiEventNames.onComponentRegistered, { fqn, component: this.componentRegister[fqn] });
     this.debug(`Component Registered: ${fqn}`, this.componentRegister[fqn]);
   }
 

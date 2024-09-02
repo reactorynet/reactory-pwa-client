@@ -64,15 +64,83 @@ export type ReactoryFormDataManagerHookResult<TData> = {
   PagingWidget: React.FC<{}>  
 }
 
-export type ReactoryFormDefinitionHook = <TData>(props: {
-  formId: string | Reactory.FQN,
-  formDefinition: Reactory.Forms.IReactoryForm,
-  extendSchema?: (definition: Reactory.Forms.IReactoryForm) => Reactory.Forms.IReactoryForm,
-  uiSchema: Reactory.Schema.IUISchema,
+export type ReactoryFormDefinitionHook = <TData>(props: Reactory.Client.IReactoryFormProps<unknown>) => ReactoryFormDataManagerHookResult<TData> & {
+  instanceId: string,
+
   schema: Reactory.Schema.AnySchema,
-  context: Reactory.Client.IReactoryFormContext<TData>,
-}) => { 
-  formDefinition: Reactory.Forms.IReactoryForm,
+
+  uiSchema: Reactory.Schema.IFormUISchema,
+
+  uiOptions: Reactory.Schema.IFormUIOptions,
+
+  isUiSchemaLoading: boolean,
+
+  errorSchema: Reactory.Schema.IErrorSchema,
+
+  /**
+   * Updates the form definition.
+   * @param form 
+   * @returns 
+   */
+  setForm: (form: Reactory.Forms.IReactoryForm) => void, 
+  /**
+   * The form definition.
+   */
+  form: Reactory.Forms.IReactoryForm,
+  /**
+   * The form data.
+   */
+  formData: TData,
+
+  isDataLoading: boolean,
+
+  /**
+   * The form FQN.
+   */
+  FQN: string | Reactory.FQN,
+  /**
+   * The form signature. (includes instance id and version)
+   */
+  SIGN: string,
+  /**
+   * A customer graph definition to use for the form.
+   */
+  graphDefinition?: Reactory.Forms.IFormGraphDefinition,
+  /**
+   * The form context object.
+   */
+  formContext: Reactory.Client.IReactoryFormContext<TData>,
+  /**
+   * The form validation function
+   */
+  validate: Reactory.Forms.SchemaFormValidationFunctionSync<TData> | 
+    Reactory.Forms.SchemaFormValidationFunctionAsync<TData>,
+
+  /**
+   * 
+   * @param data 
+   * @param errors 
+   * @param errorSchema 
+   * @returns 
+   */
+  onChange: (data: TData, errors: any[], errorSchema: Reactory.Schema.IErrorSchema) => Promise<void>,
+
+  /**
+   * 
+   * @param data 
+   * @param errors 
+   * @param errorSchema 
+   * @returns 
+   */
+  onSubmit: (data: TData, errors: any[], errorSchema: Reactory.Schema.IErrorSchema) => Promise<void>,
+
+  /**
+   * 
+   * @param errors 
+   * @param errorSchema 
+   * @returns 
+   */
+  onError: (errors: any[], errorSchema: Reactory.Schema.IErrorSchema) => Promise<void>,
 };
 
 
@@ -84,20 +152,26 @@ export type ReactoryFormDataManagerHook<TData> = (props: {
   FQN: string | Reactory.FQN,
   SIGN: string,
   route: Reactory.Routing.IReactoryRoute,
-  context: Reactory.Client.IReactoryFormContext<TData>,
+  formContext: Reactory.Client.IReactoryFormContext<TData>,
   initialData: TData | InitialDataFunction<TData>,
   /**
    * A custom graph definition to use for the form.
    * This could be provided by the active uiSchema.
    */
   graphDefinition?: Reactory.Forms.IFormGraphDefinition,
-  onBeforeQuery?: (data: TData, context: Reactory.Client.IReactoryFormContext<TData>) => boolean,
-  onBeforeSubmit?: (data: TData, context: Reactory.Client.IReactoryFormContext<TData>) => boolean,
-  onBeforeMutation?: (data: TData, context: Reactory.Client.IReactoryFormContext<TData>) => boolean,
+  /**
+   * 
+   * @param data 
+   * @param formContext 
+   * @returns 
+   */
+  onBeforeQuery?: (data: TData, formContext: Reactory.Client.IReactoryFormContext<TData>) => boolean,
+  onBeforeSubmit?: (data: TData, formContext: Reactory.Client.IReactoryFormContext<TData>) => boolean,
+  onBeforeMutation?: (data: TData, formContext: Reactory.Client.IReactoryFormContext<TData>) => boolean,
   onSubmit?: (data: TData, 
     errors: any[],
     errorSchema: Reactory.Schema.IErrorSchema, 
-    context: Reactory.Client.IReactoryFormContext<TData>) => void,
+    formContext: Reactory.Client.IReactoryFormContext<TData>) => void,
   mode: string | "edit" | "view" | "create" | "delete",
   onError: (errors: any[], errorSchema: Reactory.Schema.IErrorSchema) => void,
 }) => ReactoryFormDataManagerHookResult<TData>

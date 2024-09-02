@@ -6,7 +6,7 @@ import SchemaForm, { ISchemaForm } from '../form/components/SchemaForm';
 
 import { find, template, isArray, isNil, isString, isEmpty, throttle, filter } from 'lodash';
 import { useNavigate, useLocation, useParams, Params } from 'react-router';
-import * as uuid from 'uuid';
+
 import queryString from '@reactory/client-core/components/utility/query-string';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 
@@ -52,143 +52,35 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const {
       debug,
       warning,
+      error,
       getComponents
     } = reactory;
-
-    const {
-      formId,
-      formDef,
-      data,
-      formData: propsFormData,
-      uiSchemaKey,
-      uiSchemaId,
-      mode = 'view',
-      autoQueryDisabled = false,
-      refCallback,
-      ref,
-      uiFramework = DEFAULT_UI_FRAMEWORK,
-      children,
-      events = {},
-      before,
-      after,
-      extendSchema,
-      helpTopics,
-      helpTitle,
-      onError,
-      onBeforeMutation,
-      onMutateComplete,
-      onBeforeSubmit,
-      onBeforeQuery,
-      onQueryComplete,
-      queryOnFormDataChange = false,
-      queryOnFormMount = false,
-      routePrefix = '',
-      transformErrors,
-      query,
-      onCommand,
-      formContext,
-      componentType,
-      busy,
-      route,
-    } = props;
-    
-    const params: Readonly<Params<string>> = useParams();  
-    const [instanceId] = React.useState(uuid.v4())
-    const [form, setForm] = React.useState<Reactory.Forms.IReactoryForm>(formDef);
-    const FQN = `${formDef?.nameSpace || 'unknown'}.${formDef?.name || 'unknown'}@${formDef?.version || '0.0.0'}`;
-    const SIGN = `${FQN}:${instanceId}`;
-    
     // #endregion
 
     // #region hooks
 
-    // form context puts all the elements together
-    // and provides a context for the form
-    const context: Reactory.Client.IReactoryFormContext<unknown> = useContext({
-      ...props,
-    });
-
-    // First we get the ui schema information.
-    // use the useUISchema hook to get the ui schema information.
     const {
-      loading: isUiSchemaLoading,
-      uiOptions,
-      uiSchema,
-      uiSchemaActiveMenuItem,
-      uiSchemaActiveGraphDefintion,
-      uiSchemasAvailable,
-      SchemaSelector,
-    } = useUISchema({
-      formDefinition: form,
-      uiSchemaKey,
-      uiSchemaId,
-      params,
-      mode,
-      FQN,
-      SIGN
-    });
-
-    // Next we get the schema information
-    // The schema can change depending on
-    // the active ui schema definition
-    const {
-      schema,
-    } = useSchema({ 
-      FQN,
+      instanceId,
       SIGN,
-      formId,
-      schema: form?.schema as Reactory.Schema.AnySchema, 
-      uiSchemaActiveMenuItem,
-    });
-
-     // Next we get the form definition
-     const {
-      formDefinition,
-    } = useFormDefinition({
-      formId,
-      formDefinition: form,
+      form,
+      formData,
+      isDataLoading,
+      setForm,
+      formContext,
       schema,
       uiSchema,
-      context,
-    });
-
-    // Next we get the data manager
-    const {
-      canRefresh,
-      isDataLoading,
-      formData,      
-      onChange,
-      reset,
-      onSubmit,
-      validate,
-      isValidating,
+      uiOptions,
       errorSchema,
-      errors,
-      refresh,
+      validate,
+      onChange,
+      onSubmit,
+      onError,
       RefreshButton,
       SubmitButton,
+      isValidating,
       PagingWidget,
-      paging,
-    } = useDataManager({
-      initialData: props.formData || props.data,
-      formDefinition,
-      FQN,
-      SIGN,
-      formId,
-      route,
-      // schema,
-      // uiSchema,
-      graphDefinition: uiSchemaActiveGraphDefintion,
-      //@ts-ignore
-      onBeforeQuery,
-      onBeforeMutation,
-      onBeforeSubmit,
-      onSubmit: props.onSubmit,
-      context,
-      mode: mode,
-      onError,
-    });
- 
+    } = useFormDefinition(props);
+
     // Get helper components for the form
     const {
       Toolbar
@@ -221,24 +113,24 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       let _dependency_state = { passed: true, dependencies: {} }
 
       let _all_dependencies = [];
-      if (formDefinition?.widgetMap) {
-        formDefinition.widgetMap.forEach((map) => {
+      if (form?.widgetMap) {
+        form.widgetMap.forEach((map) => {
           if (map.componentFqn) {
             if (_all_dependencies.indexOf(map.componentFqn) < 0) _all_dependencies.push(map.componentFqn);
           }
         })
       }
 
-      if (formDefinition?.components) {
-        formDefinition.components.forEach((component) => {
+      if (form?.components) {
+        form.components.forEach((component) => {
           if (component.indexOf("@") > 1 && component.indexOf(".") > 0) {
             if (_all_dependencies.indexOf(component) < 0) _all_dependencies.push(component);
           }
         })
       }
 
-      if (formDefinition?.dependencies && formDefinition.dependencies.length > 0) {
-        formDefinition.dependencies.forEach((_dep: Reactory.Forms.IReactoryComponentDefinition) => {
+      if (form?.dependencies && form.dependencies.length > 0) {
+        form.dependencies.forEach((_dep: Reactory.Forms.IReactoryComponentDefinition) => {
           _dependency_state.dependencies[_dep.fqn] = {
             available: reactory.componentRegister[_dep.fqn] !== null && reactory.componentRegister[_dep.fqn] !== undefined,
             component: null
@@ -317,7 +209,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const onPluginLoaded = (plugin: any) => {
       reactory.log(` ${SIGN} Plugin loaded, activating component`, { plugin });
       try {
-        let _component = plugin.component(props, context);
+        let _component = plugin.component(props, formContext);
         if (dependencies[plugin.componentFqn]) {
           let _depends = { ...dependencies };
           _depends[plugin.componentFqn].available = true;
@@ -366,17 +258,15 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
 
     // #endregion
 
-    
-
-    if (formDefinition === undefined) return <>No form definition available</>
-    
+    if (form === undefined) return <>No form definition available</>
+  
     // #region ISchemaForm Props
     // @ts-ignore
     const formProps: Reactory.Forms.ISchemaFormProps<unknown> = {
       id: instanceId,
       key: instanceId,
-      schema,
-      uiSchema,
+      schema: schema as Reactory.Schema.ISchema,
+      uiSchema: uiSchema as Reactory.Schema.IFormUISchema,
       formContext,
       acceptcharset: 'UTF-8',
       enctype: 'multipart/form-data',
@@ -384,31 +274,28 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       liveValidate: false,
       errorSchema,
       validate,
+      // @ts-ignore
       onChange,
-      onError: props.onError ? props.onError : (error) => { },
+      onError,
       formData,
       ErrorList: (error_props) => (<ErrorList {...error_props} />),
       onSubmit,
       ref: (form: any) => {
-        if (formRef.current === null || formRef.current === undefined) {
-          //@ts-ignore
-          formRef.current = form;
-        }
-        // if (props.refCallback) props.refCallback(getFormReference())
-        // if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
+        throw new Error('Form reference deprecated');
       },
-      transformErrors: (errors = [], erroSchema) => {
+      //@ts-ignore
+      transformErrors: async (errors = [], errorSchema) => {
         reactory.log(`Transforming error message`, { errors });
-        let formfqn = `${formDefinition.nameSpace}.${formDefinition.name}@${formDefinition.version}`;
+        let formfqn = `${form.nameSpace}.${form.name}@${form.version}`;
         let _errors = [...errors];
         // if (props.transformErrors && typeof props.transformErrors === 'function') {
         //   _errors = props.transformErrors(errors, this) as unknown[];
         // }
         if (reactory.formTranslationMaps && reactory.formTranslationMaps[formfqn]) {
-          _errors = reactory.formTranslationMaps[formfqn](errors, this);
+          _errors = reactory.formTranslationMaps[formfqn](errors);
         }
 
-        return { errors: _errors, errorSchema: erroSchema };
+        return { errors: _errors, errorSchema };
       }
     };
     // #endregion
@@ -416,9 +303,8 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     reactory.log(`Form Props: ${SIGN}`, { formProps })
 
     const isFormBusy = () => {
-      if (busy === true) return true;
       if (isDataLoading === true) return true;
-
+      if (isValidating === true) return true;
       return false;
     }
 
@@ -429,22 +315,22 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     // #region Form Render
     try {
       //@ts-ignore            
-      const schemaFormProps: ISchemaForm<> = {
+      const schemaFormProps: ISchemaForm<unknown> = {
         ...{ ...formProps, toolbarPosition }
       };
 
-      if (formDefinition.__complete__ === true) {
+      if (form.__complete__ === true) {
         const formChildren: any[] = [];
-        if (uiOptions.toolbarPosition.indexOf("top") >= 0 || uiOptions.toolbarPosition.indexOf("both") >= 0) formChildren.push(<Toolbar />);
-        if (isFormBusy()) formChildren.push(<LinearProgress />);
+        if ((toolbarPosition?.indexOf("top") >= 0 || toolbarPosition?.indexOf("both") >= 0) && Toolbar) formChildren.push(<Toolbar />);
+        if (isFormBusy() === true) formChildren.push(<LinearProgress />);
         formChildren.push(<SchemaForm {...schemaFormProps} />);
-        if (toolbarPosition.indexOf("bottom") >= 0 || toolbarPosition.indexOf("both") >= 0) formChildren.push(<Toolbar />);
-        formChildren.push(<PagingWidget />);
-        formChildren.push(<HelpModal />);
+        if ((toolbarPosition?.indexOf("bottom") >= 0 || toolbarPosition?.indexOf("both") >= 0) && Toolbar) formChildren.push(<Toolbar />);
+        if (PagingWidget) formChildren.push(<PagingWidget />);
+        if (HelpModal) formChildren.push(<HelpModal />);
 
         let componentProps = {
           id: `reactory_container::${instanceId}`,
-          name: `${formDefinition.name}`,
+          name: `${form.name}`,
           key: `reactory_container::${instanceId}`,
           className: uiOptions?.className || '',
           style: uiOptions?.style || {},
@@ -453,24 +339,38 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         switch (uiOptions?.componentType) {
           case 'div': {
             renderedComponent = <div {...componentProps}>{formChildren}</div>;
+            debug(`${SIGN}:render - div`);
+            break;
           }
           case 'article': {          
             renderedComponent = <article {...componentProps}>{formChildren}</article>;
+            debug(`${SIGN}:render - article`);
+            break;
           }
           case 'section': {
             renderedComponent = <section {...componentProps}>{formChildren}</section>
+            debug(`${SIGN}:render - section`);
+            break;
           }
           case 'card': {
             renderedComponent = <Card {...componentProps}>{formChildren}</Card>
+            debug(`${SIGN}:render - Card`);
+            break;
           }
           case 'grid': {
             renderedComponent = <Grid {...componentProps}>{formChildren}</Grid>
+            debug(`${SIGN}:render - Grid`);
+            break;
           }
           case 'paper': {
             renderedComponent = <Paper {...componentProps}>{formChildren}</Paper>
+            debug(`${SIGN}:render - Paper`);
+            break;
           }
           case 'paragraph': {
             renderedComponent = <p {...componentProps}>{formChildren}</p>
+            debug(`${SIGN}:render - p`);
+            break;
           }
           default: {
             renderedComponent = <form
@@ -481,16 +381,17 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
               >
               {formChildren}
             </form>
+            debug(`${SIGN}:render - form`);            
           }
         }
       } else {
         renderedComponent = <LinearProgress />
+        debug(`${SIGN}:render - loading`);
       }
     } catch (err) {
       renderedComponent = <>{err.message}</>;
+      error(`${SIGN}:render`, err);
     }
-
-    debug(`${SIGN}:render`);
     return <IntersectionVisible>{renderedComponent}</IntersectionVisible>
     // #endregion
   };

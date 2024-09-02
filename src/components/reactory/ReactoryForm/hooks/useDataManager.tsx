@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { v4 } from "uuid";
 import { ApolloQueryResult } from '@apollo/client'
 import {
@@ -59,7 +59,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     onError,
     formId,
     route,
-    context,
+    formContext,
     mode,
   } = props;
   const { dataManagers } = useDataManagerProvider(formDefinition);
@@ -70,7 +70,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   const [queryComplete, setQueryComplete] = useState<boolean>(false);
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [allowRefresh, setAllowRefresh] = useState<boolean>(false);
-  const [formData, setFormData] = useState<any>(null);
+  const [formData, setFormData] = useState<any>(initialData);
   const [errors, setErrors] = useState<any[]>([]);
   const [errorSchema, setErrorSchema] = useState<any>({});
   const [last_query_exec, setLastQueryExecution] = useState(null);
@@ -80,7 +80,9 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   const getData = async (data?: any) => { 
     if (defaultDataManager) {
       const result = await defaultDataManager.getData(data);
-    }    
+    }
+    
+    return formData;
   };
 
   const onSubmit = (form: any) => {
@@ -91,7 +93,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
         form,
         errors,
         errorSchema,
-        context);
+        formContext);
 
       return;
     }
@@ -124,6 +126,10 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
       </button>
     );
   }
+
+  useEffect(() => { 
+    setFormData(initialData);
+  }, [initialData]);
 
   return {
     canRefresh: allowRefresh,

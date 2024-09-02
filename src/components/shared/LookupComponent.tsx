@@ -60,7 +60,13 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
   const dependencies = ['material-ui.Material', 'core.AlertDialog', 'core.FullScreenModal'];
   const { reactory, formContext, uiSchema, schema, idSchema, formData, onChange, classes } = props;
   const { lodash } = reactory.utils;
-  const { Material, FullScreenModal } = reactory.getComponents(dependencies);
+  const { Material, FullScreenModal } = reactory.getComponents<{
+    Material: Reactory.Client.Web.IMaterialModule,
+    FullScreenModal: React.FC<{ 
+      open: boolean, 
+      onClose: () => void, 
+      title: string}>
+  }>(dependencies);
   const [open, setOpen] = React.useState<boolean>(false)
   const [version, setVersion] = React.useState(0);
 
