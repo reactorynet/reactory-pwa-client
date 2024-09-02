@@ -62,7 +62,16 @@ export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoa
   
   const resourceId = `${id}`; 
   if (nil(document.getElementById(resourceId)) === false) {
-    document.getElementById(resourceId).remove();
+    const existingResource = document.getElementById(resourceId);
+    if (existingResource.attributes['data-plugin-version'] === version) {
+      const lastUpdate = new Date(existingResource.attributes['data-plugin-last-update']);
+      if (new Date().getTime() - lastUpdate.getTime() < 1000 * 60 * 15) {
+        debug(`Plugin ${name} already loaded. Skipping...`);
+        return;
+      } else {
+        document.getElementById(resourceId).remove();
+      }
+    }
   }
 
   switch (mimeType.toLowerCase()) {  
@@ -72,6 +81,12 @@ export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoa
       let scriptLink = document.createElement('script');
       scriptLink.id = resourceId;
       scriptLink.src = uri;
+      scriptLink.attributes['data-plugin-id'] = id;
+      scriptLink.attributes['data-plugin-name'] = name;
+      scriptLink.attributes['data-plugin-namespace'] = nameSpace;
+      scriptLink.attributes['data-plugin-version'] = version;
+      scriptLink.attributes['data-plugin-platform'] = platform;
+      scriptLink.attributes['data-plugin-last-update'] = new Date().toISOString();
       scriptLink.type = 'text/javascript';
       scriptLink.onload = () => { 
         debug(`Plugin ${name} injected. Waiting for components to be loaded...`);
