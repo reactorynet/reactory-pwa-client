@@ -383,6 +383,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
       },
       signature: SIGN,
       version: 0,
+      reactory,
     }
   };
 
@@ -608,6 +609,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     _form = setWidgets(_form);
     _form = setObjectTemplate(_form);
     _form = setFieldTemplate(_form);
+    _form.__complete__ = true;
     return _form;
   }
 

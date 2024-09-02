@@ -965,6 +965,7 @@ function createErrorHandler(formData) {
 }
 
 function unwrapErrorHandler(errorHandler) {
+  if (!errorHandler) return {};
   return Object.keys(errorHandler).reduce((acc, key) => {
     if (key === "addError") {
       return acc;
