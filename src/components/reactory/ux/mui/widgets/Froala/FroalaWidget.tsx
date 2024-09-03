@@ -381,7 +381,7 @@ const FroalaWidget = (props) => {
 
   //console.log('>> FROALA CONFIG', config);
   let placeHolder = 'Click here and start typing';
-  if (props.formContext && props.formContext.$ref.props.placeHolder) {
+  if (props?.formContext && props?.formContext?.$ref?.props?.placeHolder) {
     config.placeholderText = props.formContext.$ref.props.placeHolder;
   }
 
@@ -432,7 +432,6 @@ const FroalaWidget = (props) => {
     // The start point for your plugin.
     const _init = () => {
       // You can access any option from documentation or your custom options.
-      debugger
       reactory.log(`Options for editor is`, editor.opts);
 
       // Call any method from documentation.

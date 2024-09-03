@@ -368,7 +368,9 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
 
   const getFormContext = (): Reactory.Client.IReactoryFormContext<unknown> => {
     return {
-      $ref: null,
+      $ref: {
+        props: { }
+      },
       formData,
       formDef: form,
       formInstanceId: instanceId,
@@ -598,6 +600,10 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
       setForm(formDef);
     }
   }, [formDef]);
+
+  useEffect(() => {
+    setVersion(v + 1);
+  }, [formData])
 
   useEffect(injectResources, [form.uiResources])
 

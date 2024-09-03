@@ -3,7 +3,7 @@ import {
   ReactoryFormDataManagerHook,
 } from './types';
 
-export const useRESTDataManager: ReactoryFormDataManagerHook  = (form: Reactory.Forms.IReactoryForm) => { 
+export const useRESTDataManager: ReactoryFormDataManagerHook  = (props) => { 
   
   const onSubmit = async <TData>(data: TData): Promise<TData> => {
     return data;

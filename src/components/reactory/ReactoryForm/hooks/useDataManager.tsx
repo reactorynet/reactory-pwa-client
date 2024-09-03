@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { v4 } from "uuid";
 import { ApolloQueryResult } from '@apollo/client'
 import {
@@ -12,6 +12,7 @@ import { diff } from 'deep-object-diff';
 import { useReactory } from "@reactory/client-core/api";
 import { deepEquals } from "@reactory/client-core/components/util";
 import { useDataManagerProvider } from "../DataManagers";
+import { Button, Icon } from "@mui/material";
 
 // const formValidation = ($formData: any, $errors: any, via = 'onChange') => {
 
@@ -62,27 +63,40 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     formContext,
     mode,
   } = props;
-  const { dataManagers } = useDataManagerProvider(formDefinition);
-  const [ defaultDataManager ] = dataManagers;
-  const [loading, setIsLoading] = useState<boolean>(false);
-  const [dirty, setIsDirty] = useState(false);
-  const [isBusy, setIsBusy] = useState<boolean>(false);
-  const [queryComplete, setQueryComplete] = useState<boolean>(false);
-  const [refreshInterval, setRefreshInterval] = useState(null);
-  const [allowRefresh, setAllowRefresh] = useState<boolean>(false);
-  const [formData, setFormData] = useState<any>(initialData);
-  const [errors, setErrors] = useState<any[]>([]);
-  const [errorSchema, setErrorSchema] = useState<any>({});
-  const [last_query_exec, setLastQueryExecution] = useState(null);
-  const [version, setVersion] = useState(0);
+  const { 
+    graphqlDataManager,
+    // localDataManager, 
+  } = useDataManagerProvider({
+    form: formDefinition,
+    formData: initialData,
+    formContext,
+    graphDefinition: graphDefinition || formDefinition.graphql,
+  });
+  const defaultDataManager = graphqlDataManager
+  const [ isDataLoading, setIsDataLoading ] = useState<boolean>(false);
+  const [ isValidating, setIsValidating ] = useState<boolean>(false);
+  const [ isDirty, setIsDirty] = useState(false);
+  const [ isBusy, setIsBusy ] = useState<boolean>(false);
+  const [ isQueryComplete, setIsQueryComplete] = useState<boolean>(false);
+  const [ refreshInterval, setRefreshInterval] = useState(null);
+  const [ isRefeshAllowed, setIsRefreshAllowed ] = useState<boolean>(false);
+  const [ formData, setFormData ] = useState<any>(null);
+  const [ errors, setErrors] = useState<any[]>([]);
+  const [ errorSchema, setErrorSchema] = useState<any>({});
+  const [ lastDataFetch, setLastQueryExecution] = useState(null);
+  const [ version, setVersion ] = useState(0);
 
-  
-  const getData = async (data?: any) => { 
+  const getData = async () => { 
     if (defaultDataManager) {
-      const result = await defaultDataManager.getData(data);
+      const result = await graphqlDataManager.getData({
+        formData,
+        formContext,
+      });
+
+      if (result) {
+        setFormData(result);
+      }
     }
-    
-    return formData;
   };
 
   const onSubmit = (form: any) => {
@@ -98,17 +112,22 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
       return;
     }
 
+    //@ts-ignore
     getData(form.formData);
-    setQueryComplete(false);
+    setIsQueryComplete(false);
     setVersion(version + 1);
   };
 
   const onChange = (form: any, errorSchema: any) => {
-    const hasDelta = deepEquals(formData, form.formData) === false;    
+    const hasDelta = deepEquals(formData, form.formData) === false;  
+    if (hasDelta) {
+      setIsDirty(true);
+    }  
   };
 
   const reset = () => {
     setFormData(initialData);
+    setIsDirty(false);
   };
 
   // Refreshes the form data
@@ -118,25 +137,30 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
 
   const SubmitButton = () => {
     return (
-      <button
+      <Button
         onClick={() => onSubmit(formData)}
-        disabled={loading}
+        disabled={isDataLoading}
       >
-        Submit
-      </button>
+        <Icon>save</Icon>
+      </Button>
     );
   }
 
   useEffect(() => { 
+    reactory.debug(`useDataManager: ${SIGN} initialData change`, { initialData });
     setFormData(initialData);
   }, [initialData]);
 
+  const getEffectiveData = () => {
+    return formData;
+  }
+
   return {
-    canRefresh: allowRefresh,
+    canRefresh: isRefeshAllowed,
     errors: [],
     errorSchema: {},
-    isDataLoading: loading,
-    isValidating: false,
+    isDataLoading,
+    isValidating,
     onSubmit,
     paging: {
       page: 1,
@@ -146,7 +170,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     },
     PagingWidget: () => null,
     RefreshButton: () => null,    
-    formData,
+    formData: getEffectiveData(),
     onChange,
     reset,
     // @ts-ignore

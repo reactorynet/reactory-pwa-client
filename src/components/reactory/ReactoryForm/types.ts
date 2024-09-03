@@ -71,6 +71,8 @@ export type ReactoryFormDefinitionHook = <TData>(props: Reactory.Client.IReactor
 
   uiSchema: Reactory.Schema.IFormUISchema,
 
+  SchemaSelector: React.FC<{}>,
+
   uiOptions: Reactory.Schema.IFormUIOptions,
 
   isUiSchemaLoading: boolean,
@@ -216,7 +218,8 @@ export type ReactoryFormSchemaHook<TData> =
 
 export type ReactoryFormHelpHookResult = { 
   HelpModal: React.FC<{ }>,
-  HelpButton: React.FC<{ }>
+  HelpButton: React.FC<{ }>,
+  toggleHelp: () => void
 }
 
 export type ReactoryFormHelpHook = (props: {
@@ -249,6 +252,14 @@ export type ReactoryFormToolbarHookResult = {
 export type ReactoryFormToolbarHook = (props: {
   formDefinition: Reactory.Forms.IReactoryForm,
   formData: any
+  uiOptions: Reactory.Schema.IFormUIOptions,
+  onSubmit: (data: any, errorSchema?: Reactory.Schema.IErrorSchema, errors?: any[]) => void,
+  refresh: () => void,
+  toggleHelp: () => void,
+  errorSchema: Reactory.Schema.IErrorSchema,
+  errors: any[],
+  SchemaSelector: React.FC<{}>
+  SubmitButton: React.FC<{}>
 }) => ReactoryFormToolbarHookResult;  
    
 export interface ReactoryFormState {

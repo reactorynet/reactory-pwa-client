@@ -7,15 +7,28 @@ export interface IReactoryFormDataManagerHookResult {
   refresh: () => void
 }
 
-export type ReactoryFormDataManagerHook = (form: Reactory.Forms.IReactoryForm) => IReactoryFormDataManagerHookResult
 
 export interface ReactoryFormDataManagerProviderHookResult {
-  dataManagers: IReactoryFormDataManagerHookResult[]
+  graphqlDataManager: IReactoryFormDataManagerHookResult,
+  restDataManager: IReactoryFormDataManagerHookResult,
+  localDataManager: IReactoryFormDataManagerHookResult,
+  grpcDataManager: IReactoryFormDataManagerHookResult,
+  socketDataManager: IReactoryFormDataManagerHookResult
 }
 
-export interface ReactoryFormDataManagerProviderHookProps {
-  formDefinition: Reactory.Forms.IReactoryForm
+
+export interface ReactoryFormDataManagerHookProps {
+  form: Reactory.Forms.IReactoryForm,
+  formContext: Reactory.Client.IReactoryFormContext<any>,
+  formData: any
 }
+
+export interface ReactoryFormDataManagerProviderHookProps extends ReactoryFormDataManagerHookProps {
+  graphDefinition?: Reactory.Forms.IFormGraphDefinition,
+  grpcDefintion?: Reactory.Forms.IFormGrpcDefinition,
+  restDefinition?: Reactory.Forms.IFormRESTDefinition,
+}
+
+export type ReactoryFormDataManagerHook = (propds: ReactoryFormDataManagerProviderHookProps) => IReactoryFormDataManagerHookResult
 
 export type ReactoryFormDataManagerProviderHook = (props: ReactoryFormDataManagerProviderHookProps) => ReactoryFormDataManagerProviderHookResult
-

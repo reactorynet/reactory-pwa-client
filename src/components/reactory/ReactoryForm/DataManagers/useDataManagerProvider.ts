@@ -1,13 +1,24 @@
-import { ReactoryFormDataManagerProviderHookResult } from "./types";
+import { 
+  ReactoryFormDataManagerProviderHook,
+  ReactoryFormDataManagerProviderHookResult 
+} from "./types";
 import { useLocalStoreDataManager } from "./useLocalStoreDataManager";
 import { useGraphQLDataManager } from "./useGraphQLDataManager";
 
 
-export const useDataManagerProvider = (form: any): ReactoryFormDataManagerProviderHookResult => {
-  const dataManagers = [];
-  dataManagers.push(useLocalStoreDataManager(form));
-  dataManagers.push(useGraphQLDataManager(form));
+export const useDataManagerProvider: ReactoryFormDataManagerProviderHook = (props): ReactoryFormDataManagerProviderHookResult => {
+  const {
+    form,
+    formData,
+    formContext,
+  } = props;
+  
   return {
-    dataManagers,
+    localDataManager: useLocalStoreDataManager(props),
+    graphqlDataManager: useGraphQLDataManager(props),
+    restDataManager: useGraphQLDataManager(props),
+    grpcDataManager: useGraphQLDataManager(props),
+    socketDataManager: useGraphQLDataManager(props),
+
   };
 };

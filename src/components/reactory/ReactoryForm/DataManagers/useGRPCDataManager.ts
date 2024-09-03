@@ -3,7 +3,7 @@ import {
   ReactoryFormDataManagerHook,
 } from './types';
 
-export const useGRPCDataManager: ReactoryFormDataManagerHook  = (form: Reactory.Forms.IReactoryForm) => { 
+export const useGRPCDataManager: ReactoryFormDataManagerHook  = (props) => { 
   
   const onSubmit = async <TData>(data: TData): Promise<TData> => {
     return data;

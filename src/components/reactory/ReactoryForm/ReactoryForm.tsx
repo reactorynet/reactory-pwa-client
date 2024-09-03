@@ -69,25 +69,21 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       formContext,
       schema,
       uiSchema,
+      SchemaSelector,
       uiOptions,
       errorSchema,
+      errors,
       validate,
       onChange,
       onSubmit,
       onError,
+      refresh,
       RefreshButton,
       SubmitButton,
       isValidating,
       PagingWidget,
     } = useFormDefinition(props);
 
-    // Get helper components for the form
-    const {
-      Toolbar
-    } = useToolbar({ 
-      formDefinition: form,
-      formData,
-     });
     const { 
       ExportButton,
       ExportModal,
@@ -101,12 +97,29 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       ReportModal,
     } = useReports({ 
       formDefinition: form,
-    });
+    });   
 
+    // Get helper components for the form
     const { 
       HelpButton,
       HelpModal,
-    } = useHelp({ formDefinition: form });    
+      toggleHelp,
+    } = useHelp({ formDefinition: form });
+
+    const {
+      Toolbar
+    } = useToolbar({
+      formDefinition: form,
+      formData,
+      errors,
+      errorSchema,
+      onSubmit,
+      uiOptions,
+      refresh,
+      toggleHelp,
+      SchemaSelector,
+      SubmitButton,
+     });         
     // #endregion
 
     const getInitialDepencyState = () => {

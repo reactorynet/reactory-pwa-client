@@ -3,9 +3,16 @@ import {
   IReactoryFormDataManagerHookResult,
   ReactoryFormDataManagerHook,
 } from './types';
+import { useReactory } from '@reactory/client-core/api';
 
-export const useLocalStoreDataManager: ReactoryFormDataManagerHook  = (form: Reactory.Forms.IReactoryForm) => { 
+export const useLocalStoreDataManager: ReactoryFormDataManagerHook  = (props) => { 
 
+  const reactory = useReactory();
+  const { 
+    form,
+    formData,
+    formContext,
+  } = props;
   const [localData, setLocalData] = useState<unknown>()
 
   const onSubmit = async <TData>(data: TData): Promise<TData> => {

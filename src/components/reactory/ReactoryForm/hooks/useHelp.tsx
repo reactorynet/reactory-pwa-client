@@ -72,8 +72,8 @@ export const useHelp: ReactoryFormHelpHook = ({ formDefinition }) => {
         onClose={() => setIsOpen(false)}
         >
         <div>
-          <h1>Report</h1>
-          <p>Report content goes here</p>
+          <h1>Help</h1>
+          <p>Help content goes here</p>
         </div>
         </FullScreenModal>)
   }
@@ -87,7 +87,12 @@ export const useHelp: ReactoryFormHelpHook = ({ formDefinition }) => {
       </Button>);
   }
 
+  const toggleHelp = () => { 
+    setIsOpen(!isOpen);
+  }
+
   return {
+    toggleHelp,
     HelpModal,
     HelpButton,
   }
