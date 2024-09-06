@@ -14,6 +14,7 @@ export const useLocalStoreDataManager: ReactoryFormDataManagerHook  = (props) =>
     formContext,
   } = props;
   const [localData, setLocalData] = useState<unknown>()
+  const [isBusy, setIsBusy] = useState<boolean>(false);
 
   const onSubmit = async <TData>(data: TData): Promise<TData> => {
     setLocalData(data);
@@ -38,6 +39,7 @@ export const useLocalStoreDataManager: ReactoryFormDataManagerHook  = (props) =>
     onSubmit,
     onChange,
     getData,
-    refresh
+    refresh,
+    isBusy
   } as IReactoryFormDataManagerHookResult;
 };

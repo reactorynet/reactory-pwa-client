@@ -1,6 +1,7 @@
 
 export interface IReactoryFormDataManagerHookResult {
-  type: string | 'graphql' | 'rest' | 'local' | 'grpc' | 'socket'  
+  type: string | 'graphql' | 'rest' | 'local' | 'grpc' | 'socket'
+  isBusy: boolean  
   onSubmit: <TData>(data: TData) => Promise<TData>
   onChange: <TData>(data: TData) => Promise<TData>
   getData: <TData>(props: any) => Promise<TData>
@@ -20,7 +21,8 @@ export interface ReactoryFormDataManagerProviderHookResult {
 export interface ReactoryFormDataManagerHookProps {
   form: Reactory.Forms.IReactoryForm,
   formContext: Reactory.Client.IReactoryFormContext<any>,
-  formData: any
+  formData: any,
+  mode: string | 'view' | 'edit' | 'new' | 'onChange' | 'onSubmit' | 'onError' | 'onLoad';
 }
 
 export interface ReactoryFormDataManagerProviderHookProps extends ReactoryFormDataManagerHookProps {

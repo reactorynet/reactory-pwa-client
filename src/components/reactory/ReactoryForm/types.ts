@@ -38,19 +38,23 @@ export type ReactoryFormDataPaging = {
   totalPages: number,
 }
 
+export type SchemaFormOnChangeEventProps<TData> = {
+  formData: TData,
+  schema: Reactory.Schema.AnySchema,
+  idSchema: Reactory.Schema.IDSchema,
+  edit: boolean,
+  errors: any[],
+  errorSchema: Reactory.Schema.IErrorSchema,
+}
+
+export type SchemaFormOnSubmitEventProps<TData> = SchemaFormOnChangeEventProps<TData> & { }
+
 export type ReactoryFormDataManagerHookResult<TData> = {
   canRefresh: boolean,
   formData: TData,
   isDataLoading: boolean,
-  onSubmit: (
-    data: TData, 
-    errorSchema?: Reactory.Schema.IErrorSchema,
-    errors?: any[],
-  ) => void,
-  onChange: ( 
-    data: TData, 
-    errorSchema?: Reactory.Schema.IErrorSchema,
-    errors?: any[],) => void, 
+  onSubmit: (props: SchemaFormOnSubmitEventProps<TData>) => void,
+  onChange: (props: SchemaFormOnChangeEventProps<TData>) => void, 
   reset: () => void
   refresh: () => void
   RefreshButton: React.FC<{}>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   IReactoryFormDataManagerHookResult,
   ReactoryFormDataManagerHook,
@@ -5,6 +6,8 @@ import {
 
 export const useGRPCDataManager: ReactoryFormDataManagerHook  = (props) => { 
   
+  const [isBusy, setIsBusy] = useState<boolean>(false);
+
   const onSubmit = async <TData>(data: TData): Promise<TData> => {
     return data;
   }
@@ -26,6 +29,7 @@ export const useGRPCDataManager: ReactoryFormDataManagerHook  = (props) => {
     onSubmit,
     onChange,
     getData,
-    refresh
+    refresh,
+    isBusy
   } as IReactoryFormDataManagerHookResult;
 };

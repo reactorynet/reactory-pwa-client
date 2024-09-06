@@ -5,6 +5,8 @@ import {
   ReactoryFormDataManagerHook,
   ReactoryFormDataManagerHookResult,
   ReactoryFormDataManagerProps,
+  SchemaFormOnChangeEventProps,
+  SchemaFormOnSubmitEventProps,
 } from "../types";
 import objectMapper from 'object-mapper';
 import { diff } from 'deep-object-diff';
@@ -13,6 +15,7 @@ import { useReactory } from "@reactory/client-core/api";
 import { deepEquals } from "@reactory/client-core/components/util";
 import { useDataManagerProvider } from "../DataManagers";
 import { Button, Icon } from "@mui/material";
+import { Schema } from "ajv";
 
 // const formValidation = ($formData: any, $errors: any, via = 'onChange') => {
 
@@ -65,12 +68,16 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   } = props;
   const { 
     graphqlDataManager,
-    // localDataManager, 
+    localDataManager,
+    grpcDataManager,
+    restDataManager,
+    socketDataManager,
   } = useDataManagerProvider({
     form: formDefinition,
     formData: initialData,
     formContext,
     graphDefinition: graphDefinition || formDefinition.graphql,
+    mode
   });
   const defaultDataManager = graphqlDataManager
   const [ isDataLoading, setIsDataLoading ] = useState<boolean>(false);
@@ -99,29 +106,59 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     }
   };
 
-  const onSubmit = (form: any) => {
-    reactory.log(`${SIGN} ↩ onSubmit`, { form });
+  const onSubmit = (submitEvent: SchemaFormOnSubmitEventProps<unknown>) => {
+    reactory.log(`${SIGN} ↩ onSubmit`, submitEvent);
+
+    if (onBeforeSubmit) {
+      const shouldSubmit = onBeforeSubmit(submitEvent.formData, formContext);
+      if (shouldSubmit === false) {
+        return;
+      }
+    }
 
     if (props.onSubmit) {
       props.onSubmit(
-        form,
+        submitEvent.formData,
         errors,
         errorSchema,
         formContext);
-
       return;
     }
 
+    if (localDataManager) {
+      void localDataManager.onSubmit(props);
+    }
+
+    if (graphqlDataManager) {
+      void graphqlDataManager.onSubmit(props);
+    }
+
+    if (restDataManager) {
+      void restDataManager.onSubmit(props);
+    }
+
+    if (grpcDataManager) {
+      void grpcDataManager.onSubmit(props);
+    }
+
+    if (socketDataManager) {
+      void socketDataManager.onSubmit(props);
+    }
+
     //@ts-ignore
-    getData(form.formData);
-    setIsQueryComplete(false);
+    // getData();
+    // setIsQueryComplete(false);
     setVersion(version + 1);
   };
 
-  const onChange = (form: any, errorSchema: any) => {
-    const hasDelta = deepEquals(formData, form.formData) === false;  
+  const onChange = (props: SchemaFormOnChangeEventProps<unknown>) => {
+    const {
+      formData: nextFormData,
+    } = props;
+    const hasDelta = deepEquals(formData, nextFormData) === false;  
     if (hasDelta) {
       setIsDirty(true);
+      setFormData(nextFormData);
     }  
   };
 
@@ -139,7 +176,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     return (
       <Button
         onClick={() => onSubmit(formData)}
-        disabled={isDataLoading}
+        disabled={isDataLoading || isDirty === false}
       >
         <Icon>save</Icon>
       </Button>
