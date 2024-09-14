@@ -209,6 +209,7 @@ const MaterialSchemaField: Reactory.Forms.ReactorySchemaFieldComponent = (props)
     required,
     onFocus,
     onBlur,
+    onChange,
     registry = utils.getDefaultRegistry(),
   } = props;
   const {
@@ -271,6 +272,7 @@ const MaterialSchemaField: Reactory.Forms.ReactorySchemaFieldComponent = (props)
         disabled={disabled}
         onFocus={onFocus}
         onBlur={onBlur}
+        onChange={onChange}
         readonly={readonly}
         autofocus={autofocus}
         errorSchema={fieldErrorSchema}

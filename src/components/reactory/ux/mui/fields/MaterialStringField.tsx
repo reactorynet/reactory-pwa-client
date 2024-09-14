@@ -51,7 +51,7 @@ const MaterialStringFieldWidget = (props) => {
   } = props;
 
   const reactory = useReactory();
-
+  const $id = idSchema.$id
   try {
     const inputProps: any = {
       value: '',
@@ -61,6 +61,7 @@ const MaterialStringFieldWidget = (props) => {
       autofocus
     };
 
+    const $id = idSchema.$id;
 
     let inputLabelProps: InputLabelProps = {}
 
@@ -84,8 +85,18 @@ const MaterialStringFieldWidget = (props) => {
       args = { ...args, ...props };
     }
 
+    const onInputChanged = (evt) => {
+      evt.persist();
+      let _v = `${evt.target.value}`;
+      if (args.toLowerCase === true) {
+        _v = _v.toLowerCase();
+      }
+      onChange(_v);
+    }
+
     if (uiSchema["ui:widget"]) {
       const Widget = registry.widgets[uiSchema["ui:widget"]]
+      reactory.debug(`MaterialStringFieldWidget: ${$id} using custom widget ${uiSchema["ui:widget"]}`, { args });
       if (Widget) return (<Widget {...args} />)
     }
 
@@ -102,7 +113,7 @@ const MaterialStringFieldWidget = (props) => {
 
 
     if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
-      reactory.debug(`MaterialStringFieldWidget: ${id} is empty`, { formData, schema, uiSchema, args });
+      reactory.debug(`MaterialStringFieldWidget: ${$id} formData is empty`, { formData, schema, uiSchema });
       inputLabelProps.shrink = false;
     } else {
       inputLabelProps.shrink = true;
@@ -112,15 +123,6 @@ const MaterialStringFieldWidget = (props) => {
     }
 
     inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
-
-    const onInputChanged = (evt) => {
-      evt.persist();
-      let _v = `${evt.target.value}`;
-      if (args.toLowerCase === true) {
-        _v = _v.toLowerCase();
-      }
-      onChange(_v);
-    }
 
     const onKeyDown = evt => {
       const { reactory } = props;

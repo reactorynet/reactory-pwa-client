@@ -34,7 +34,9 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
         case 'array': 
           nextData = [ ...data[fieldName] ];
           break;
-        default: 
+        default:
+          // these are for scalar types
+          // number, string, boolean, etc. 
           nextData = data;
           break;
       }
@@ -79,8 +81,9 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
   const [isBusy, setIsBusy] = useState<boolean>(false);
 
   const onSubmit = async <TData>(data: TData): Promise<TData> => {
+    debug('useGraphQLDataManager:onSubmit', { data });
     setLocalData(data);
-
+    setIsBusy(true);
     if (graphql && (graphql?.mutation || Object.keys(graphql?.mutation).length > 0)) { 
       if (graphql.mutation[mode]) { 
         const mutation = graphql.mutation[mode];
@@ -93,7 +96,8 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
         let variables = {};
         if (variableMap) {
           const kwargs = {
-            ...form,
+            form,
+            formData: data,
             formContext,          
             reactory,
             api: reactory,
@@ -112,7 +116,7 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
         }
 
         const { 
-          data, 
+          data: resultData, 
           errors, 
           extensions 
         } = await reactory.graphqlMutation(mutationText, variables);
@@ -121,13 +125,14 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
           reactory.error(`Error in GraphQL Mutation: ${mutationText}`, errors);
         }
 
-        if (data) {
-          return transformData(data, name, resultMap) as TData;
+        if (resultData) {
+          return transformData(resultData, name, resultMap) as TData;
         }
 
       }
     }
 
+    setIsBusy(false);
     return data;
   }
 

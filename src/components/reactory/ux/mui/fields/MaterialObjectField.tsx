@@ -91,11 +91,15 @@ const MaterialObjectField: Reactory.Forms.ReactoryObjectFieldComponent = (props)
   };
 
   const onPropertyChange = name => {
-    return (value, errorSchema) => {
-      reactory.log(`onPropertyChange ${name}`, {value})
-      const newFormData = { ...formData, [name]: value };
+    return (value: any, errorSchema: Reactory.Schema.IErrorSchema) => {
+      reactory.debug(`onPropertyChange ${name}`, { value });
+      let nextFormData = {};
+      if (formData) {
+        nextFormData = { ...formData };
+      }
+      nextFormData[name] = value;
       onChange(
-        newFormData,
+        nextFormData,
         errorSchema &&
         errorSchema && {
           ...errorSchema,

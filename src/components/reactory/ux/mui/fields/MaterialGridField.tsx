@@ -6,20 +6,25 @@ import Reactory from '@reactory/reactory-core';
 
 const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props) => { 
   const reactory = useReactory();
+  const utils = reactory.getComponent('core.ReactoryFormUtilities') as ReactoryFormUtilities;
   const {
     uiSchema,
+    formData,
     errorSchema,
     idSchema,
+    name,
     required,
     disabled,
     readonly,
+    idPrefix,
     onBlur,
+    onFocus,
+    registry = utils.getDefaultRegistry(),
     onChange,
-    formData,
   } = props
   const { definitions, fields, formContext } = props.registry
   const { SchemaField, TitleField, DescriptionField } = fields
-  const utils = reactory.getComponent('core.ReactoryFormUtilities') as ReactoryFormUtilities;
+  
   if (!utils) return <></>
   const schema = utils.retrieveSchema(props.schema, definitions)
   const title = (schema.title === undefined) ? '' : schema.title
@@ -36,10 +41,14 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
   const onPropertyChange = (name: string) => {
     
     return (value, errorSchema) => {
-      reactory.debug(`MaterialGridField.onPropertyChange ${name}`, {value})
-      const newFormData = { ...props.formData, [name]: value };
+      reactory.debug(`onPropertyChange ${name}`, { value });
+      let nextFormData = {};
+      if (formData) {
+        nextFormData = { ...formData };
+      }
+      nextFormData[name] = value;
       onChange(
-        newFormData,
+        nextFormData,
         errorSchema &&
         props.errorSchema && {
           ...props.errorSchema,
@@ -72,6 +81,33 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
   if (uiSchema['ui:grid-options']) {
     gridOptions = { ...gridOptions, ...uiSchema['ui:grid-options'] };
   }
+
+  const getAvailableKey = (preferredKey, formData) => {
+    var index = 0;
+    var newKey = preferredKey;
+    while (formData.hasOwnProperty(newKey)) {
+      newKey = `${preferredKey}-${++index}`;
+    }
+    return newKey;
+  };
+
+  const onKeyChange = (oldValue) => {
+    return (value, errorSchema) => {
+      value = getAvailableKey(value, formData);
+      const newFormData = { ...formData };
+      const property = newFormData[oldValue];
+      delete newFormData[oldValue];
+      newFormData[value] = property;
+      onChange(
+        newFormData,
+        errorSchema &&
+        errorSchema && {
+          ...errorSchema,
+          [value]: errorSchema,
+        }
+      );
+    };
+  };
 
 
   const grid_content = (
@@ -114,16 +150,20 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
                 return (
                   <Grid {...rowProps} item key={index} style={style}>
                     <SchemaField
+                      key={name}
                       name={name}
                       required={isRequired(name)}
                       schema={schema.properties[name]}
                       uiSchema={uiSchema[name] as Reactory.Schema.IUISchema}
                       errorSchema={errorSchema[name]}
                       idSchema={idSchema[name]}
-                      formData={formData ? formData[name] : undefined}
+                      idPrefix={idPrefix}
+                      formData={formData && formData[name] ? formData[name] : null}
+                      onKeyChange={onKeyChange(name)}
                       onChange={onPropertyChange(name)}
                       onBlur={onBlur}
-                      registry={props.registry}
+                      onFocus={onFocus}
+                      registry={registry}
                       disabled={disabled}
                       readonly={readonly} />
                   </Grid>
@@ -142,14 +182,23 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
                   numberOfVisibleItems += 1;
                   return (
                     <Grid {...rowProps} item key={index} style={style}>
-                      <UIComponent
-                        name={name}
-                        formData={formData}
-                        errorSchema={errorSchema}
-                        uiSchema={uiSchema}
-                        schema={schema}
-                        registry={props.registry}
-                      />
+                      <SchemaField
+                      key={name}
+                      name={name}
+                      required={isRequired(name)}
+                      schema={schema.properties[name]}
+                      uiSchema={uiSchema[name] as Reactory.Schema.IUISchema}
+                      errorSchema={errorSchema[name]}
+                      idSchema={idSchema[name]}
+                      idPrefix={idPrefix}
+                      formData={formData && formData[name] ? formData[name] : null}
+                      onKeyChange={onKeyChange(name)}
+                      onChange={onPropertyChange(name)}
+                      onBlur={onBlur}
+                      onFocus={onFocus}
+                      registry={registry}
+                      disabled={disabled}
+                      readonly={readonly} />
                     </Grid>)
                 }
 

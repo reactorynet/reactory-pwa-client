@@ -69,6 +69,7 @@ export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoa
         debug(`Plugin ${name} already loaded. Skipping...`);
         return;
       } else {
+        debug(`Plugin ${name} timeout expired. Reloading...`);
         document.getElementById(resourceId).remove();
       }
     }

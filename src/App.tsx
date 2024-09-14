@@ -154,8 +154,10 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const configureRouting = () => {
     debug('Configuring Routing', { auth_validated, user });
     const $routes = [...reactory.getRoutes()];
-    setRoutes($routes);
-    setVersion(v + 1);
+    if (reactory.utils.hashCode(JSON.stringify($routes)) !== reactory.utils.hashCode(JSON.stringify(routes))) { 
+      setRoutes($routes);
+      setVersion(v + 1);
+    }
   }
 
 
@@ -173,7 +175,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
   const ChildRoutes = [];
   routes.forEach((routeDef: Reactory.Routing.IReactoryRoute) => {
-    reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: props });          
+    reactory.log(`Configuring Route ${routeDef.path}`, { routeDef, props: props });          
     if (routeDef.redirect) {
       navigation(routeDef.redirect, { state: { from: location }, replace: true })
     }
@@ -234,7 +236,6 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     if (routeDef.public === true) {
       // public access we don't have to check roles or auth
       if (ReactoryComponent) { 
-        reactory.log(`Mounting public component for route ${routeDef.title || routeDef.path}`, { routeDef, componentArgs });
         children.push(<ReactoryComponent {...componentArgs} />);
       }
       else {
@@ -253,8 +254,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         children.push(<NotFound message="You don't have sufficient permissions to access this route." link={routeDef.path} wait={500} />);
       } else {
         if (auth_validated === true && hasRolesForRoute === true) {
-          if (ReactoryComponent) { 
-            reactory.log(`Mounting private component for route ${routeDef.title || routeDef.path}`, routeDef);
+          if (ReactoryComponent) {             
             children.push(<ReactoryComponent {...componentArgs} />)
           }
           else  {

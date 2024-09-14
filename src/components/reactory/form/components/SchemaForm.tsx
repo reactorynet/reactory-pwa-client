@@ -7,7 +7,7 @@ import {
   deepEquals,
   getDefaultRegistry,
   validateFormData,
-  toErrorList
+  toErrorList,  
 } from "../utils";
 import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
 import { useReactory } from "@reactory/client-core/api";
@@ -100,8 +100,6 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     uiSchema = {},
   } = props;
 
-  reactory.debug('Form', { props });
-  
   const [idSchema, setIdSchema] = React.useState<Reactory.Schema.IDSchema>({ $id: "root" });
   const [formData, setFormData] = React.useState<any>(null);
   const [edit, setEdit] = React.useState<boolean>(false);
@@ -252,12 +250,14 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
 
   const onBlur = (...args) => {
     if (props.onBlur) {
+      reactory.debug('SchemaForm:onBlur', args);
       props.onBlur(...args);
     }
   };
 
   const onFocus = (...args) => {
     if (props.onFocus) {
+      reactory.debug('SchemaForm:onFocus', args);
       props.onFocus(...args);
     }
   };

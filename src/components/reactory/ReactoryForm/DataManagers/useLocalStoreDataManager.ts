@@ -13,7 +13,7 @@ export const useLocalStoreDataManager: ReactoryFormDataManagerHook  = (props) =>
     formData,
     formContext,
   } = props;
-  const [localData, setLocalData] = useState<unknown>()
+  const [localData, setLocalData] = useState<unknown>(undefined)
   const [isBusy, setIsBusy] = useState<boolean>(false);
 
   const onSubmit = async <TData>(data: TData): Promise<TData> => {
@@ -23,6 +23,8 @@ export const useLocalStoreDataManager: ReactoryFormDataManagerHook  = (props) =>
 
   const onChange = async <TData>(data: TData): Promise<TData> => {
     setLocalData(data);
+    // use a local store to store the data.    
+    // consider what the correct key should be.
     return data;
   }
 

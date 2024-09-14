@@ -222,11 +222,11 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const onPluginLoaded = (plugin: any) => {
       reactory.log(` ${SIGN} Plugin loaded, activating component`, { plugin });
       try {
-        let _component = plugin.component(props, formContext);
+        // let _component = plugin.component(props, formContext);
         if (dependencies[plugin.componentFqn]) {
           let _depends = { ...dependencies };
           _depends[plugin.componentFqn].available = true;
-          _depends[plugin.componentFqn].component = _component;
+          _depends[plugin.componentFqn].component = plugin.component;
           setDepencies(_depends);
         }
         setVersion(version + 1);
@@ -313,7 +313,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     };
     // #endregion
 
-    reactory.log(`Form Props: ${SIGN}`, { formProps })
+    reactory.debug(`Form Props: ${SIGN}`, formProps);
 
     const isFormBusy = () => {
       if (isDataLoading === true) return true;

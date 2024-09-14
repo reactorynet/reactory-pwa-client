@@ -13,6 +13,7 @@ import { useSchema } from "./useSchema";
 import { useContext } from "./useContext";
 import { useDataManager } from "./useDataManager";
 import { ReactoryApiEventNames } from "@reactory/client-core/api/ReactoryApi";
+import { toIdSchema } from "@reactory/client-core/components/reactory/form/utils";
 
 
 /**
@@ -616,6 +617,11 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     _form = setObjectTemplate(_form);
     _form = setFieldTemplate(_form);
     _form.__complete__ = true;
+    _form.idSchema = toIdSchema(schema, 
+      _form.id, 
+      _form.definitions, 
+      formData, 
+      _form.idPrefix as string);
     return _form;
   }
 

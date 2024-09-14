@@ -310,7 +310,6 @@ const FORM_QUERY_SEGMENTS = {
 }
 
 class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
-  x
   [key: string]: unknown;
   $windowSize: Reactory.Client.IWindowSizeSpec = null;
   $user: any;
@@ -348,6 +347,17 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
   CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
   formSchemas: Reactory.Forms.IReactoryForm[]
+  /**
+   * This is a map of form schemas that have been loaded from the server
+   */
+  formSchemaMap: {
+    [key: string]: { 
+      form: Reactory.Forms.IReactoryForm,
+      lastFetch: Date,
+      hash: number,
+      index: number,
+    }
+  }
   formValidationMaps: any;
   formTranslationMaps: any;
   formSchemaLastFetch: Date = null;
@@ -514,6 +524,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.CLIENT_KEY = process.env.REACT_APP_CLIENT_KEY;
     this.CLIENT_PWD = process.env.REACT_APP_CLIENT_PASSWORD;
     this.formSchemas = [];
+    this.formSchemaMap = {};
     this.formValidationMaps = {};
     this.formTranslationMaps = {};
     this.formSchemaLastFetch = null;
@@ -1105,14 +1116,38 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
       const ReactoryForm = that.getComponent('core.ReactoryForm') as React.FC<Reactory.Client.IReactoryFormProps<unknown>>;
       if (ReactoryForms && ReactoryForms.length > 0) {
-
-        that.formSchemas = [];
-        ReactoryForms.forEach((formDef: Reactory.Forms.IReactoryForm, formDefIndex) => {         
-          that.formSchemas.push(formDef);
+        let modified: boolean = false;
+        // that.formSchemas = [];
+        ReactoryForms.forEach((formDef: Reactory.Forms.IReactoryForm, formDefIndex) => {    
+          if (that.formSchemaMap[formDef.id]) {  
+            const _hash = that.utils.hashCode(JSON.stringify(formDef));
+            if (that.formSchemaMap[formDef.id].hash === _hash) {
+              // continue to the next form
+              // there is no change in the form structure, so we can skip
+              return;
+            } else {
+              that.formSchemaMap[formDef.id] = { 
+                form: formDef, 
+                lastFetch: new Date(), 
+                hash: _hash,
+                index: that.formSchemaMap[formDef.id].index                 
+              };
+              modified = true;
+            }
+          }  else {
+            const index = that.formSchemas.push(formDef);
+            that.formSchemaMap[formDef.id] = { 
+              form: formDef, 
+              lastFetch: new Date(), 
+              hash: that.utils.hashCode(JSON.stringify(formDef)),
+              index: index - 1
+            };
+            modified = true;
+          }  
+          
           // A form must explicitly be set to false 
           // to not register as a component.
-          if (formDef.registerAsComponent !== false) {
-            debug(`Registering form ${formDef.id} as component in registry`, { formDef });
+          if (formDef.registerAsComponent !== false && modified === true) {            
             const ReactoryComponent: React.FC<any> = (props: any) => {
               that.debug(`Rendering form ${formDef.id}`, { formDef, props });
               try {
@@ -1471,7 +1506,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       componentType
     };
     this.emit(ReactoryApiEventNames.onComponentRegistered, { fqn, component: this.componentRegister[fqn] });
-    this.debug(`Component Registered: ${fqn}`, this.componentRegister[fqn]);
   }
 
   getComponentsByType(componentType: string = 'component'): Reactory.Client.IReactoryComponentRegister {
@@ -1868,7 +1902,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }
 
     if (Loader) {
-      this.debug('Injecting Plugin', plugin);
       // @ts-ignore
       void Loader({ plugin, reactory: this });
     }

@@ -48,7 +48,7 @@ const ReactoryFormRouter = (props) => {
     Tooltip
   } = MaterialCore
 
-  reactory.log('ReactoryFormRouter:render', { props: props });
+  reactory.log('ReactoryFormRouter:render',  props);
 
   
   const user = reactory.getUser();

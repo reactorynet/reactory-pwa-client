@@ -87,11 +87,13 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   const [ isQueryComplete, setIsQueryComplete] = useState<boolean>(false);
   const [ refreshInterval, setRefreshInterval] = useState(null);
   const [ isRefeshAllowed, setIsRefreshAllowed ] = useState<boolean>(false);
-  const [ formData, setFormData ] = useState<any>(null);
+  const [ formData, setFormData ] = useState<any>(initialData);
   const [ errors, setErrors] = useState<any[]>([]);
   const [ errorSchema, setErrorSchema] = useState<any>({});
   const [ lastDataFetch, setLastQueryExecution] = useState(null);
   const [ version, setVersion ] = useState(0);
+
+  const { schema } = formDefinition;
 
   const getData = async () => { 
     if (defaultDataManager) {
@@ -126,23 +128,23 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     }
 
     if (localDataManager) {
-      void localDataManager.onSubmit(props);
+      void localDataManager.onSubmit(submitEvent.formData);
     }
 
     if (graphqlDataManager) {
-      void graphqlDataManager.onSubmit(props);
+      void graphqlDataManager.onSubmit(submitEvent.formData);
     }
 
     if (restDataManager) {
-      void restDataManager.onSubmit(props);
+      void restDataManager.onSubmit(submitEvent.formData);
     }
 
     if (grpcDataManager) {
-      void grpcDataManager.onSubmit(props);
+      void grpcDataManager.onSubmit(submitEvent.formData);
     }
 
     if (socketDataManager) {
-      void socketDataManager.onSubmit(props);
+      void socketDataManager.onSubmit(submitEvent.formData);
     }
 
     //@ts-ignore
@@ -159,6 +161,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     if (hasDelta) {
       setIsDirty(true);
       setFormData(nextFormData);
+      reactory.debug(`useDataManager: ${SIGN} onChange`, { nextFormData });
     }  
   };
 
@@ -173,9 +176,22 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   const validate = () => { };
 
   const SubmitButton = () => {
+    
+    const onClick = () => { 
+      const evt: SchemaFormOnSubmitEventProps<unknown> = { 
+        edit: true,
+        errors,
+        errorSchema,
+        schema: schema as Reactory.Schema.AnySchema,
+        idSchema: formDefinition?.idSchema as Reactory.Schema.IDSchema, 
+        formData
+      }
+      onSubmit(evt); 
+    }
+
     return (
       <Button
-        onClick={() => onSubmit(formData)}
+        onClick={onClick}
         disabled={isDataLoading || isDirty === false}
       >
         <Icon>save</Icon>
