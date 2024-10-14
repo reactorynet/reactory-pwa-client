@@ -5,7 +5,7 @@ import 'react-quill/dist/quill.snow.css'; // Import base styles
 import 'react-quill/dist/quill.bubble.css'; // Import bubble theme
 import { color } from 'd3';
 import { borderRadius } from '@mui/system';
-import { FormControl } from '@mui/material';
+import { FormControl, InputLabel } from '@mui/material';
 
 const useStyles = makeStyles((theme: any) => { 
   const { palette } = theme;
@@ -27,12 +27,14 @@ const useStyles = makeStyles((theme: any) => {
     editor: {
       minHeight: '200px',
       fontFamily: theme.typography.fontFamily,
-      padding: theme.spacing(2),
+      // padding: theme.spacing(2),
+      marginTop: theme.spacing(2),
+      zIndex: 1,
       '& .ql-toolbar': {
-        backgroundColor: theme.palette.background.default,
+        backgroundColor: theme.palette.background.paper,
         borderBottom: `1px solid ${theme.palette.divider}`,
         color: theme.palette.text.primary,
-        backgroundImage: `linear-gradient(to bottom, ${backgroundImageBlur}, ${backgroundImageBlur})`,
+        // backgroundImage: `linear-gradient(to bottom, ${backgroundImageBlur}, ${backgroundImageBlur})`,
       },
       '& .ql-toolbar .ql-stroke': { 
         stroke: theme.palette.text.primary,
@@ -47,7 +49,7 @@ const useStyles = makeStyles((theme: any) => {
         fontSize: theme.typography.body1.fontSize,
         backgroundColor: theme.palette.background.paper,
         color: theme.palette.text.primary,
-        backgroundImage: `linear-gradient(to bottom, ${backgroundImageBlur}, ${backgroundImageBlur})`,
+        // backgroundImage: `linear-gradient(to bottom, ${backgroundImageBlur}, ${backgroundImageBlur})`,
       },
       '& .ql-editor': {
         minHeight: '150px',
@@ -73,15 +75,14 @@ const RichTextEditor = (props: any) => {
   };
 
   return (
-    <FormControl classes={props?.classes?.formControl} fullWidth>
-      <ReactQuill
-        value={editorContent}
-        onChange={handleEditorChange}
-        theme="snow"
-        placeholder="Start typing here..."
-        className={classes.editor}
-      />
-    </FormControl>
+    <ReactQuill
+      id={props.idSchema.$id}
+      value={editorContent}
+      onChange={handleEditorChange}
+      theme="snow"
+      placeholder={props.schema.title}
+      className={classes.editor}
+    />
   );
 };
 

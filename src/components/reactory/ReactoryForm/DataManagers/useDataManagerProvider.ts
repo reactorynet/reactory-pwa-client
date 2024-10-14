@@ -8,13 +8,13 @@ import { useRESTDataManager } from "./useRESTDataManager";
 import { useGRPCDataManager } from "./useGRPCDataManager";
 import { useSocketDataManager } from "./useSocketDataManager";
 
+/**
+ * DataManagerProvider hook instanciates all the data managers
+ * and provides them to the form.
+ * @param props 
+ * @returns 
+ */
 export const useDataManagerProvider: ReactoryFormDataManagerProviderHook = (props): ReactoryFormDataManagerProviderHookResult => {
-  const {
-    form,
-    formData,
-    formContext,
-  } = props;
-  
   return {
     localDataManager: useLocalStoreDataManager(props),
     graphqlDataManager: useGraphQLDataManager(props),

@@ -1,3 +1,5 @@
+import { ApolloError } from "@apollo/client"
+import { GraphQLError } from "graphql"
 
 export interface IReactoryFormDataManagerHookResult {
   type: string | 'graphql' | 'rest' | 'local' | 'grpc' | 'socket'
@@ -15,6 +17,15 @@ export interface ReactoryFormDataManagerProviderHookResult {
   localDataManager: IReactoryFormDataManagerHookResult,
   grpcDataManager: IReactoryFormDataManagerHookResult,
   socketDataManager: IReactoryFormDataManagerHookResult
+}
+
+export interface ReactoryErrorHandlerProps {
+  errors: GraphQLError[],
+  extensions: any,
+  data: any,
+  form: Reactory.Forms.IReactoryForm,
+  formContext: Reactory.Client.IReactoryFormContext<any>,
+  reactory: Reactory.Client.ReactorySDK
 }
 
 

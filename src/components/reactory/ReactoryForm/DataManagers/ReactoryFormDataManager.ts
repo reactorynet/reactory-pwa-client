@@ -107,14 +107,9 @@ export default (reactory: Reactory.Client.ReactorySDK) => ({
                 }
               }
           }
-
-
         }
       }
     }
-
     return nextFormData;
-
   }
-
 });
