@@ -6,6 +6,7 @@ import {
   ReactoryFormDataManagerHook,
 } from './types';
 import { cloneDeep } from 'lodash';
+import { useNavigate } from 'react-router';
 
 /**
  * GraphQL Data Manager Hook for Reactory Forms.
@@ -18,6 +19,9 @@ import { cloneDeep } from 'lodash';
  */
 export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => { 
   const reactory = useReactory();
+  const navigate = useNavigate();
+  const { template } = reactory.utils;
+  const { t } = reactory.i18n;
   const { 
     debug,
   } = reactory;
@@ -125,6 +129,7 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
     onSuccessRedirectTimeout: number,
     onSuccessUrl: string,
     onSuccessComponentRef?: string,
+    notification?: Reactory.Forms.IReactoryNotification,
   }) => { 
     const { 
       method,
@@ -133,6 +138,7 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
       onSuccessRedirectTimeout,
       onSuccessUrl,
       onSuccessComponentRef,
+      notification,
     } = options
     switch (method) { 
       case "refresh": {
@@ -142,7 +148,9 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
       }
       case "redirect": {
         if (onSuccessUrl) { 
-          setTimeout(() => {}, onSuccessRedirectTimeout || 0);
+          setTimeout(() => {            
+            navigate(onSuccessUrl, { replace: true });
+          }, onSuccessRedirectTimeout || 0);
         }
         break;
       }
@@ -173,6 +181,17 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
           }
         }
         break;
+      }
+      case "notification": {
+        reactory.createNotification(template(t(notification.title, { 
+          defaultValue: notification.title,         
+        }))({
+          formData: result,
+        }), { 
+          type: "success", 
+          showInAppNotification: true 
+        });
+        break
       }
       case "none": {
         break;
@@ -241,12 +260,13 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
           variables: variableMap,
           resultMap,
           name,
-        onSuccessMethod,
+          onSuccessMethod,
           onSuccessEvent,
           onSuccessRedirectTimeout,
           onSuccessUrl,
           onError,
           componentRef,
+          notification,
         } = mutation;
         let variables = {};
         if (variableMap) {
@@ -327,6 +347,7 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
                 onSuccessEvent,
                 onSuccessRedirectTimeout,
                 onSuccessUrl,
+                notification
               });
             });
           } else {
@@ -337,6 +358,7 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
               onSuccessRedirectTimeout,
               onSuccessUrl,
               onSuccessComponentRef: componentRef,
+              notification,
             });
           }
         }
