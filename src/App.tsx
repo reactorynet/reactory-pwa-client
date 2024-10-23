@@ -635,71 +635,86 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
   const willMount = () => {
-
-    reactory.init().then(() => {
-      //register built-in components
-      componentRegistery.forEach((componentDef) => {
-        const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
-        reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
+    let failedCount = 0;
+    const doInit = async () => { 
+      reactory.init().then(() => {
+        //register built-in components
+        componentRegistery.forEach((componentDef) => {
+          const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
+          reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
+        });
+  
+        reactory.$windowSize = reactory.getSizeSpec();  
+        reactory.reduxStore = store;
+  
+        window.addEventListener('resize', onWindowResize);
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change',(evt) => {
+        if (evt.matches === true) {
+          localStorage.setItem('$reactory$theme_mode', 'dark');
+          setVersion(version + 1);
+        } else {
+          localStorage.setItem('$reactory$theme_mode', 'light');
+          setVersion(version + 1);
+        }
       });
-
-      reactory.$windowSize = reactory.getSizeSpec();  
-      reactory.reduxStore = store;
-
-      window.addEventListener('resize', onWindowResize);
-      window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change',(evt) => {
-      if (evt.matches === true) {
-        localStorage.setItem('$reactory$theme_mode', 'dark');
-        setVersion(version + 1);
-      } else {
-        localStorage.setItem('$reactory$theme_mode', 'light');
-        setVersion(version + 1);
-      }
-    });
-
-    if (localStorage) {
-      let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
-      if (lastRoute !== null) {
-        lastRoute = lastRoute.trim();
-        if (window.location.pathname.indexOf('reset-password') === -1) {
-          localStorage.removeItem('$reactory.last.attempted.route$');
-          location.assign(lastRoute);
+  
+      if (localStorage) {
+        let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
+        if (lastRoute !== null) {
+          lastRoute = lastRoute.trim();
+          if (window.location.pathname.indexOf('reset-password') === -1) {
+            localStorage.removeItem('$reactory.last.attempted.route$');
+            location.assign(lastRoute);
+          }
         }
       }
-    }
-
-    reactory.on(ReactoryApiEventNames.onLogout, onLogout)
-    reactory.on(ReactoryApiEventNames.onLogin, onLogin)
-    reactory.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
-    reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
-    reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
-
-    const query = queryString.parse(window.location.search);
-
-    reactory.queryObject = query;
-    reactory.queryString = window.location.search;
-    reactory.objectToQueryString = queryString.stringify;
-
-    window.reactory.api = reactory;
-
-
-    if (query.auth_token) {
-      localStorage.setItem('auth_token', query.auth_token);
-      ReactoryApolloClient().then((cli) => {
-        //@ts-ignore
-        reactory.client = cli.client;
-        reactory.ws_link = cli.ws_link;
-        cli.clearCache();
+  
+      reactory.on(ReactoryApiEventNames.onLogout, onLogout)
+      reactory.on(ReactoryApiEventNames.onLogin, onLogin)
+      reactory.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
+      reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+      reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
+  
+      const query = queryString.parse(window.location.search);
+  
+      reactory.queryObject = query;
+      reactory.queryString = window.location.search;
+      reactory.objectToQueryString = queryString.stringify;
+  
+      window.reactory.api = reactory;
+  
+  
+      if (query.auth_token) {
+        localStorage.setItem('auth_token', query.auth_token);
+        ReactoryApolloClient().then((cli) => {
+          //@ts-ignore
+          reactory.client = cli.client;
+          reactory.ws_link = cli.ws_link;
+          cli.clearCache();
+          void getApiStatus();
+          // strip the auth token from the url bar
+          setTimeout(() => { window.history.replaceState({}, document.title, window.location.pathname) }, 500);
+        });
+        setIsAuthenticating(true);
+      } else {
+        setIsAuthenticating(true);
         void getApiStatus();
-        // strip the auth token from the url bar
-        setTimeout(() => { window.history.replaceState({}, document.title, window.location.pathname) }, 500);
-      });
-      setIsAuthenticating(true);
-    } else {
-      setIsAuthenticating(true);
-      void getApiStatus();
+      }
+      }).catch((err) => { 
+        reactory.log('Error initializing Reactory', { err }, 'error');
+        if (failedCount < 3) {
+          failedCount++;
+          setTimeout(() => { doInit() }, 750 * failedCount);
+        } else {
+          reactory.log('Failed to initialize Reactory', { err },
+            'error');
+          setError(err);
+          setIsReady(false);
+        }
+      });      
     }
-    });
+    
+    void doInit();
 
     return willUnmount;
   };

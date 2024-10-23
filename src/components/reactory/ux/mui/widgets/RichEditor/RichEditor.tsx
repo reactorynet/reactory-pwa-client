@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactQuill from 'react-quill';
 import { makeStyles } from '@mui/styles';
 import 'react-quill/dist/quill.snow.css'; // Import base styles
@@ -6,6 +6,8 @@ import 'react-quill/dist/quill.bubble.css'; // Import bubble theme
 import { color } from 'd3';
 import { borderRadius } from '@mui/system';
 import { FormControl, InputLabel } from '@mui/material';
+import { use } from 'i18next';
+import { useReactory } from '@reactory/client-core/api';
 
 const useStyles = makeStyles((theme: any) => { 
   const { palette } = theme;
@@ -64,20 +66,32 @@ const useStyles = makeStyles((theme: any) => {
 });
 
 const RichTextEditor = (props: any) => {
-  const [editorContent, setEditorContent] = useState(props.formData);
+  const [content, setContent] = useState();
   const classes = useStyles();
+  const reactory = useReactory();
 
-  const handleEditorChange = (content) => {
-    setEditorContent(content);
-    if (props.onChange) {
-      props.onChange(content);
+  useEffect(() => { 
+    if (props.formData && props.formData !== content) {
+      setContent(props.formData);
     }
-  };
+  }, [props.formData]);
 
+  useEffect(() => { 
+    if (props.onChange) {
+      if (content && content !== props.formData) {
+        props.onChange(content);
+      }
+    }
+  }, [content]);
+
+  const handleEditorChange = (content) => {    
+    setContent(content);
+  };
+  
   return (
     <ReactQuill
       id={props.idSchema.$id}
-      value={editorContent}
+      value={content}
       onChange={handleEditorChange}
       theme="snow"
       placeholder={props.schema.title}

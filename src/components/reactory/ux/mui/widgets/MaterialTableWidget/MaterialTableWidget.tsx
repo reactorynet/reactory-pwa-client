@@ -1223,6 +1223,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       }
       //reactory.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });
 
+      setActiveAction({ show: false, action: null, rowsSelected: [] });
       return;
     }
 
@@ -1246,6 +1247,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }
 
         await handler(__formData);
+        setActiveAction({ show: false, action: null, rowsSelected: [] });
       };
 
       if (action.event.via === 'api') {
@@ -1255,19 +1257,27 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }
 
         await handler();
+        setActiveAction({ show: false, action: null, rowsSelected: [] });
       }
 
       if (action.event.via === "component" && action.event.component) {
         const component = reactory.getComponent(action.event.component);
         if (typeof component[action.event.name] === "function") {
           await component[action.event.name](__formData)
+          setActiveAction({ show: false, action: null, rowsSelected: [] });
+        } else {
+          reactory.error(`Could not find method ${action.event.name} in component ${action.event.component}`, { component });
+          reactory.createNotification(`Could not find method ${action.event.name} in component ${action.event.component}`, { 
+            type: 'error',
+            showInAppNotification: true,            
+          });
         }
-
-        return;
+        
+        setActiveAction({ show: false, action: null, rowsSelected: [] });
       }
     }
 
-    setActiveAction({ show: false, action: null, rowsSelected: [] });
+    
   }
 
   const getToolbar = () => {

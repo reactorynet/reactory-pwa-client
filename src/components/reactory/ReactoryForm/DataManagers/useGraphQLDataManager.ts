@@ -383,7 +383,7 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook  = (props) => {
     if (graphql && (graphql?.query || Object.keys(graphql?.queries).length > 0)) {
       let query: Reactory.Forms.IReactoryFormQuery = null;
       
-      if (Object.keys(graphql.queries).length > 0 && queryKey) {
+      if (graphql.queries && Object.keys(graphql.queries).length > 0 && queryKey) {
         const queries = graphql.queries;
         for (const key in queries) {
           query = queries[key];
