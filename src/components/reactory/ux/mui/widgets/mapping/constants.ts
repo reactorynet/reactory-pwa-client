@@ -5,7 +5,7 @@ const DEFAULT_MAP_CENTER_STATIC = { lat: parseFloat(process.env.MAPPING_DEFAULT_
  */
 const DEFAULT_ERROR_HANDLER: PositionErrorCallback = (error: GeolocationPositionError) => {
   if (window && window.reactory) {
-    window.reactory.api.log(`Could not get position "${error.message}"`, { error }, 'warning');
+    window.reactory.api.log(`Could not get position "${error.message}"`, { error });;
   }
 };
 

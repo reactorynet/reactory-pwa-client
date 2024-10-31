@@ -146,7 +146,7 @@ class TabbedNavComponent extends Component<any, any> {
   }
 
   componentDidCatch(error) {
-    this.props.api.log(`Caught out of boundary error TabbedNavigation Component`, { error }, 'error')
+    this.props.api.log(`Caught out of boundary error TabbedNavigation Component`, { error });
   }
 
 
@@ -209,7 +209,7 @@ class TabbedNavComponent extends Component<any, any> {
 
     if (_tabs.length > 0) {
       _tabComponents = _tabs.map((tab, index) => {
-        api.log('TabbedNavigationComponent: TAB', tab, 'debug');
+        api.log('TabbedNavigationComponent: TAB', tab);
         let MainComponentToMount = api.getComponent(tab.componentFqn);
         let componentFound = true;
         if (MainComponentToMount === null || MainComponentToMount === undefined) {
@@ -224,7 +224,7 @@ class TabbedNavComponent extends Component<any, any> {
           if (tab.componentPropsMap) {
             mainComponentProps = { ...mainComponentProps, ...api.utils.objectMapper(props, tab.componentPropsMap) };
           }
-          api.log('TabbedNavigationComponent: COMPONENT', { MainComponentToMount, mainComponentProps }, 'debug');
+          api.log('TabbedNavigationComponent: COMPONENT', { MainComponentToMount, mainComponentProps });
         } else {
           mainComponentProps.message = `Could not find the component ${tab.componentFqn} as MainComponent`;
         }
@@ -233,7 +233,7 @@ class TabbedNavComponent extends Component<any, any> {
         const additionalComponents = tab.additionalComponents || [];
         const additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, componentPropsMap }, additionalComponentIndex) => {
           let ComponentToMount = api.getComponent(componentFqn);
-          api.log('TabbedNavigationComponent: ADDITIONALCOMPONENT', { componentProps, componentFqn }, 'debug');
+          api.log('TabbedNavigationComponent: ADDITIONALCOMPONENT', { componentProps, componentFqn });
           let additionalComponentFound = true;
           if (ComponentToMount === null || ComponentToMount === undefined) {
             additionalComponentFound = false;

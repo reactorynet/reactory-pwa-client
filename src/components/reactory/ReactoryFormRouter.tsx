@@ -7,7 +7,7 @@ import { useReactory, withReactory } from '../../api/ApiProvider';
 
 import ReactoryFormListDefinition from './formDefinitions/ReactoryFormList';
 import ReactoryNewFormInput from './formDefinitions/ReactoryNewFormInput';
-import { ReactoryForm } from './ReactoryFormComponent';
+import { ReactoryForm } from './ReactoryForm';
 
 type ReactoryFormRouterDependecies = {
   MaterialCore: Reactory.Client.Web.MaterialCore;
@@ -48,7 +48,7 @@ const ReactoryFormRouter = (props) => {
     Tooltip
   } = MaterialCore
 
-  reactory.log('ReactoryFormRouter:render', { props: props }, 'debug');
+  reactory.log('ReactoryFormRouter:render',  props);
 
   
   const user = reactory.getUser();
@@ -64,7 +64,7 @@ const ReactoryFormRouter = (props) => {
   if(formId) {
     return (<ReactoryForm formId={formId} mode={mode || 'view'} formContext={{ routeParams: params }} />)
   } else {
-    return (<ReactoryForm formDef={$formDef} mode='view' data={{ forms: reactory.formSchemas }} />)
+    return (<ReactoryForm formDef={$formDef} mode='view' formData={{ forms: reactory.formSchemas }} />)
   }    
 };
 

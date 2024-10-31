@@ -1,6 +1,6 @@
 import { Theme } from "@rjsf/material-ui";
 
-export type ApiStatusQueryScope = 'application' | 'loggedIn' | 'theme' | 'server' | 'colorSchemes' | 'routes' | 'menus' | 'messages' | 'navigationComponents';
+export type ApiStatusQueryScope = 'application' | 'loggedIn' | 'theme' | 'server' | 'colorSchemes' | 'routes' | 'menus' | 'messages' | 'navigationComponents' | 'plugins';
 
 const FRAGMENTS = {
   application: `
@@ -17,6 +17,7 @@ const FRAGMENTS = {
         id
         firstName
         lastName
+        avatar
       }
       organization {
         id
@@ -193,6 +194,22 @@ const FRAGMENTS = {
       componentKey
       componentContext
       contextType
+    }
+  `,
+  plugins: `
+    plugins {
+      id
+      nameSpace
+      name
+      version
+      description
+      platform
+      uri
+      mimeType
+      loader
+      options
+      enabled
+      roles
     }
   `
 };

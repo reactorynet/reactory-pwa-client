@@ -22,13 +22,14 @@ import { List, ListItemIcon, ListItemText } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import BackIcon from '@mui/icons-material/ArrowBack';
 import PowerSettingIcon from '@mui/icons-material/PowerSettingsNew';
-import { getAvatar } from '../util';
+import { getAvatar } from '../../util';
 import moment from 'moment';
 import ReactoryApi, { withReactory, ReactoryApiEventNames } from '@reactory/client-core/api';
 import license from '@reactory/client-core/license';
 import { useNavigate } from 'react-router';
 import Reactory from '@reactory/reactory-core';
 import localForage from 'localforage';
+import { ReactoryAvatar } from './AvatarComponent';
 
 export class ISearchConfig {
   show: boolean = false;
@@ -51,26 +52,33 @@ localForage.config({
 
 const defaultSearchConfig = new ISearchConfig()
 
-export const Logged = (props) => {
+export const Logged = (props: {
+  id: any,
+  apiStatus: Reactory.Models.IApiStatus,
+  reactory: Reactory.Client.IReactoryApi,
+  open: boolean,
+  anchorEl: any
+}) => {
 
-  const { menus, reactory, user } = props;
+  const { reactory, apiStatus, open, anchorEl } = props;
+  const { menus, loggedIn } = apiStatus;
   const navigate = useNavigate();
   const menuItems = [];
 
   if (menus && menus.length) {
     menus.map((menu) => {
       if (menu.target === 'top-right') {
-        menu.entries.map((menuItem) => {
+        menu.entries.map((menuItem, idx) => {
           let allow = true;
-          if (isArray(menuItem.roles) && isArray(user.roles)) {
-            allow = reactory.hasRole(menuItem.roles, user.roles)
+          if (isArray(menuItem.roles) && isArray(loggedIn.roles)) {
+            allow = reactory.hasRole(menuItem.roles, loggedIn.roles)
           }
           if (allow === true) {
             const goto = () => {
               navigate(menuItem.link)
             };
             menuItems.push((
-              <MenuItem key={menuItem.id} onClick={goto}>
+              <MenuItem key={menuItem.id || `menu_item_${idx}`} onClick={goto}>
                 <ListItemIcon><Icon color="primary">{menuItem.icon}</Icon></ListItemIcon>
                 {menuItem.title}
               </MenuItem>));
@@ -82,9 +90,9 @@ export const Logged = (props) => {
   }
 
   return (<Menu
-    open={props.open}
+    open={open}
     id='top-right'
-    anchorEl={props.anchorEl}
+    anchorEl={anchorEl}
     anchorOrigin={{
       vertical: 'top',
       horizontal: 'right',
@@ -210,7 +218,16 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
     FullScreenModal,
     Loading,
     HelpListForm
-  } = reactory.getComponents([
+  } = reactory.getComponents<{
+    SystemStatus: React.FC,
+    FullScreenModal: React.FC<{ 
+      open: boolean,
+      onClose: (e: any) => void,
+      title: string, 
+    }>,
+    Loading: React.FC,
+    HelpListForm: React.FC
+  }>([
     'core.SystemStatus',
     'core.FullScreenModal',
     'core.Loading',
@@ -224,7 +241,7 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
   const [expanded, setExpanded] = React.useState<any>({});
   const [version, setVersion] = React.useState<number>(0);
   const [search, setSearch] = React.useState<any>({ show: false, searchInput: '' });
-  const [apiStatus, setApiStatus] = React.useState({
+  const [apiMetrics, setApiStatus] = React.useState({
     error: 0,
     slow: 0,
     ok: 0,
@@ -347,9 +364,6 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
   }
 
   const navigateTo = (where = '/', toggleDrawer = false) => {
-    //console.log('Need to redirect', where);
-
-
     const nav = () => {
       if (where.trim().indexOf('http') === 0) {
         window.open(where, '_new');
@@ -361,7 +375,6 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
     if (toggleDrawer === true) {
       setDrawerOpen(!drawerOpen);
     }
-
     nav();
   }
 
@@ -421,8 +434,8 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
             let expandButton = null;
             let allow = false;
 
-            if (isArray(menuItem.roles) && isArray(user.roles) === true) {
-              allow = reactory.hasRole(menuItem.roles, user.roles);
+            if (isArray(menuItem.roles) && isArray(apiStatus.loggedIn.roles) === true) {
+              allow = reactory.hasRole(menuItem.roles, apiStatus.loggedIn.roles);
             }
 
             if (allow === true) {
@@ -452,8 +465,8 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
 
                           if (!menu.roles || menu.roles.length === 0) return sub_item;
 
-                          if (isArray(menu.roles) && isArray(user.roles) === true) {
-                            if (reactory.hasRole(menu.roles, user.roles) === true)
+                          if (isArray(menu.roles) && isArray(apiStatus.loggedIn.roles) === true) {
+                            if (reactory.hasRole(menu.roles, apiStatus.loggedIn.roles) === true)
                               return sub_item;
                           }
                         })
@@ -537,7 +550,7 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
     }
   }, []);
 
-  const user = reactory.$user;
+  const apiStatus: Reactory.Models.IApiStatus = reactory.$user as Reactory.Models.IApiStatus;
   const menus = reactory.getMenus();
 
   const setSearchText = e => setSearch({ ...search, searchInput: e.target.value });
@@ -557,71 +570,19 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
     reactory.emit('onThemeChanged');
   }
 
-
-
-
   const getNavigationComponents = () => {
-    if (user) {
-      return user.navigationComponents || [];
+    if (apiStatus) {
+      return apiStatus.navigationComponents || [];
     }
     return [];
   }
 
-  const avatarComponent = (profileLink) => {
-    let AvatarComponentDef = find(getNavigationComponents(), { contextType: 'DEFAULT_HEADER_AVATAR' });
-    let AvatarComponent: any = null;
-
-    let styles = {
-      height: 120,
-      width: 120,
-      margin: 20,
-      marginLeft: 'auto',
-      marginRight: 'auto'
-    }
-
-    if (AvatarComponentDef && AvatarComponentDef.componentFqn) {
-      AvatarComponent = reactory.getComponent(AvatarComponentDef.componentFqn);
-      if (AvatarComponent) {
-        //@ts-ignore
-        // AvatarComponent = styled(AvatarComponent)(styles);
-
-        return (<AvatarComponent  {...{ user, profileLink, ...AvatarComponentDef.componentProps }} />)
-      }
-    }
-
-    
-    // AvatarComponent = styled(Avatar)(styles);
-    return <Avatar sx={{ width: 120, height: 120 }} src={getAvatar(user, `${user.firstName} ${user.lastName}`)} className={classes.loggedInUserAvatar} />
-  }
-
-  const avatarTitle = () => {
-    let TitleComponentDef = find(getNavigationComponents(), { contextType: 'DEFAULT_HEADER_TITLE' });
-    let TitleComponent = null;
-
-    if (TitleComponentDef && TitleComponentDef.componentFqn) {
-      TitleComponent = reactory.getComponent(TitleComponentDef.componentFqn);
-      if (TitleComponent) {
-        return (<TitleComponent {...{ user, ...TitleComponentDef.componentProps }} />);
-      }
-    }
-
-    return (
-      <Typography
-        variant="subtitle1"
-        color="secondary"
-        style={{
-          textAlign: 'center',
-          marginTop: '20px'
-        }}>{reactory.getUserFullName(user)}
-      </Typography>
-    );
-  };
-
+  
   const { server } = reactory.$user;
-  const { isSlow, total } = apiStatus;
+  const { isSlow, total } = apiMetrics;
   const menuItems = Menus();
 
-  let title = reactory.i18n.t(user.applicationName)
+  let title = reactory.i18n.t(apiStatus.applicationName)
 
   return (
     <Fragment>
@@ -636,11 +597,14 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
           </IconButton>
           <Typography variant="body2" color="inherit" style={{ flex: 1 }}>
             <span>{ title }</span>
-            {apiStatus.api_ok === false && <span style={{ color: theme.palette.error.main }}> - OFFLINE</span>}
+            {apiMetrics.api_ok === false && <span style={{ color: theme.palette.error.main }}> - OFFLINE</span>}
             {isSlow === true && total > 2 && <span style={{ color: theme.palette.warning.main }}><Icon>sensors</Icon></span>}
           </Typography>
 
           <>
+            <IconButton onClick={toggleDarkMode} size="large">
+              <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
+            </IconButton>
             <Typography variant="caption">
               {reactory.hasRole(['ANON']) ? 'LOGIN' : 'LOGOUT'}
             </Typography>
@@ -655,11 +619,10 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
               <PowerSettingIcon />
               <Logged open={menuOpen === true}
                 id={'top-right'}
-                anchorEl={menuAnchor}
-                menus={menus}
+                anchorEl={menuAnchor}                
                 reactory={reactory}
-                user={user}
-                self={self} />
+                apiStatus={apiStatus}
+                />
             </IconButton>
           </>
         </Toolbar>
@@ -669,16 +632,8 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
           <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer} size="large">
             <BackIcon />
           </IconButton>
-
-          <IconButton onClick={toggleDarkMode} size="large">
-            <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
-          </IconButton>
-
-          <Avatar src={user.applicationAvatar} style={{ marginTop: '2px' }} imgProps={{ style: { width: '32px', objectFit: "contain" } }} />
-        </div>
-        <Divider />
-        {avatarTitle()}
-        {user.anon ? null : avatarComponent("/profile/")}
+          <ReactoryAvatar />
+        </div>        
         <Divider />
         <List className={classes.menuItems}>
           {menuItems}
@@ -688,8 +643,6 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
     </Fragment>
   );
 };
-
-
 
 const ApplicationHeaderComponent = compose(  
   withReactory,

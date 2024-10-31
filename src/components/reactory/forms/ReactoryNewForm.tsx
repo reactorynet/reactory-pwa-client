@@ -3,7 +3,7 @@ import Form from '../form';
 import ObjectFieldTemplate, { MaterialPaperObjectTemplate } from '../ux/mui/templates/MaterialObjectTemplate'
 import FieldTemplate from '../ux/mui/templates/MaterialFieldTemplate';
 import ReactoryNewForm from '../formDefinitions/ReactoryNewFormInput';
-import { ReactoryForm } from '../ReactoryFormComponent'
+import { ReactoryForm } from '../ReactoryForm'
 
 export default () => {
 

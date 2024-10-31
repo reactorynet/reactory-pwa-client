@@ -545,7 +545,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
             listItemTextProps.primary = template(reactory.i18n.t($primaryText))({ props: props, item, reactory, itemIndex, data });
           }
           catch (templateError) {
-            reactory.log(`Error parsing primary text template ${$primaryText}`, { options }, 'error')
+            reactory.log(`Error parsing primary text template ${$primaryText}`, { options });
             listItemTextProps.primary = `Bad Template ${templateError.message}`;
           }
 
@@ -555,7 +555,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
             listItemTextProps.secondary = template($secondaryText)({ props: props, item, reactory });
           }
           catch (templateError) {
-            reactory.log(`Error parsing secondary text template ${$secondaryText}`, { options }, 'error')
+            reactory.log(`Error parsing secondary text template ${$secondaryText}`, { options });
             listItemTextProps.secondary = `Bad Template ${templateError.message}`;
           }
 
@@ -648,7 +648,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
                 const path = template($link)({ item, props: props, data });
 
                 const actionClick = () => {
-                  reactory.log('Secondary Action Clicked For List Item', item, 'debug');
+                  reactory.log('Secondary Action Clicked For List Item', item);
                   if (typeof action === 'string' && action.indexOf('event:') === 0) {
                     //raise an event via AMQ / the form
                     const eventName = action.split(':')[1];

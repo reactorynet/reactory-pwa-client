@@ -1,7 +1,7 @@
 import { useReactory } from "@reactory/client-core/api";
 import { ReactoryStaticContentComponent } from "@reactory/client-core/components/shared/StaticContent";
 
-export const StaticContent = (props: any) => {
+export const StaticContentWidget = (props: any) => {
 
   const { idSchema, uiSchema, onChange } = props;
   const reactory = useReactory();
@@ -30,7 +30,7 @@ export default {
   name: 'StaticContentWidget',
   nameSpace: 'reactory',
   version: '1.0.0',
-  component: StaticContent,
+  component: StaticContentWidget,
   roles: ['USER'],
   tags: ['user', 'homepage']
 };

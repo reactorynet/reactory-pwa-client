@@ -138,7 +138,7 @@ const MaterialObjectTemplate = (props) => {
     let signature = `${formContext.signature}\n\t<${_componentName} id=${idSchema.$id} />`;
 
     
-    // reactory.log(`MaterialObjectTemplate ${signature}`, { props }, 'debug');
+    // reactory.log(`MaterialObjectTemplate ${signature}`, { props });
 
     let ContainerComponent = Paper;
     let ContainerStyles = {};

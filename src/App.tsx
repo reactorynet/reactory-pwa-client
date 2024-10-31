@@ -21,7 +21,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { makeStyles } from '@mui/styles';
 import queryString from './components/utility/query-string';
 import './App.css';
-import Header from '@reactory/client-core/components/shared/DefaultHeader';
+import { ReactoryHeader as Header } from '@reactory/client-core/components/shared/header';
 import {
   componentRegistery
 } from './components/index';
@@ -57,29 +57,6 @@ const setTheme = (theme) => {
 const getTheme = () => {
   return localStorage.getItem('theme')
 }
-
-//@ts-ignore
-const reactory: Reactory.Client.ReactorySDK = new ReactoryApi({
-  clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
-  clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
-  $version: `${packageInfo.version}-${license.version}`,
-  useNavigation
-});
-
-reactory.init().then();
-//register built-in components
-componentRegistery.forEach((componentDef) => {
-  const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
-  reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
-});
-
-reactory.$windowSize = reactory.getSizeSpec();
-
-const store = configureStore(null);
-reactory.reduxStore = store;
-window.reactory = {
-  api: reactory,
-};
 
 export interface NewNotification {
   id: string,
@@ -128,6 +105,7 @@ interface ReactoryRouterProps {
   user: Reactory.Models.IUser,
   authenticating: boolean,
   header: React.ReactElement
+  footer: React.ReactElement
 };
 
 const ReactoryRoute = (routeDef: Reactory.Routing.IReactoryRoute, auth_validated: boolean = false, authenticating: boolean = false) => {
@@ -140,11 +118,21 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   
   const navigation = useNavigate();
   const location = useLocation();
-    
-  const { auth_validated, user, reactory, authenticating = false } = props;
+  const reactory = useReactory();
+  const { 
+    utils,
+    debug,
+    error,
+    warning,
+  } = reactory;
+
+  const {
+    objectMapper,
+  } = utils;
+  const { auth_validated, user, authenticating = false } = props;
   const [routes, setRoutes] = React.useState<Reactory.Routing.IReactoryRoute[]>([]);
   const [v, setVersion] = React.useState<number>(0);
-
+  
 
   const onLogin = () => {
     configureRouting();
@@ -164,10 +152,12 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
 
   const configureRouting = () => {
-    reactory.log('Configuring Routing', { auth_validated, user }, 'debug');
+    debug('Configuring Routing', { auth_validated, user });
     const $routes = [...reactory.getRoutes()];
-    setRoutes($routes);
-    setVersion(v + 1);
+    if (reactory.utils.hashCode(JSON.stringify($routes)) !== reactory.utils.hashCode(JSON.stringify(routes))) { 
+      setRoutes($routes);
+      setVersion(v + 1);
+    }
   }
 
 
@@ -185,15 +175,12 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
   const ChildRoutes = [];
   routes.forEach((routeDef: Reactory.Routing.IReactoryRoute) => {
-    //const match = useMatch(routeDef.path);
-    reactory.log(`Rendering Route ${routeDef.path}`, { routeDef, props: props }, 'debug');          
+    reactory.log(`Configuring Route ${routeDef.path}`, { routeDef, props: props });          
     if (routeDef.redirect) {
-      //return <Redirect to={{ pathname: routeDef.redirect, state: { from: route_props.location } }} />
       navigation(routeDef.redirect, { state: { from: location }, replace: true })
     }
 
     let componentArgs = {};
-
     /**
      * If the route has props, we add them to the component args
      * this is the preferred way of setting the props.
@@ -218,11 +205,37 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     const NotFound = reactory.getComponent<any>("core.NotFound");
     
     let children = [];
+
+    if(props.header && routeDef.header) {
+      const {
+        componentFqn,
+        show = true,
+        props = {},
+        propsMap
+      } = routeDef.header;
+
+      if (show === true) {
+        const Header = reactory.getComponent<any>(componentFqn);
+        if (Header) {
+          let $props = {...props};
+          if (propsMap) {
+            $props = {...props, }
+          }
+          children.push(<Header {...$props } />);
+        } else {
+          // use the default header
+          children.push(props.header);
+        }
+      }
+    } else {
+      if (props.header) {
+        children.push(props.header);
+      }
+    }
     
     if (routeDef.public === true) {
       // public access we don't have to check roles or auth
       if (ReactoryComponent) { 
-        reactory.log(`Mounting public component for route ${routeDef.title}`, { routeDef, componentArgs }, 'debug');
         children.push(<ReactoryComponent {...componentArgs} />);
       }
       else {
@@ -241,8 +254,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         children.push(<NotFound message="You don't have sufficient permissions to access this route." link={routeDef.path} wait={500} />);
       } else {
         if (auth_validated === true && hasRolesForRoute === true) {
-          if (ReactoryComponent) { 
-            reactory.log(`Mounting private component for route ${routeDef.title}`, routeDef, 'debug');
+          if (ReactoryComponent) {             
             children.push(<ReactoryComponent {...componentArgs} />)
           }
           else  {
@@ -270,11 +282,39 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         }
       }
     }
+
+    if(props.footer && routeDef.footer) {
+      const {
+        componentFqn,
+        show = true,
+        props = {},
+        propsMap
+      } = routeDef.footer;
+
+      if (show === true) {
+        const Footer = reactory.getComponent<any>(componentFqn);
+        if (Footer) {
+          let $props = {...props};
+          if (propsMap) {
+            $props = {...props, }
+          }
+          children.push(<Footer {...$props } />);
+        } else {
+          // use the default footer
+          children.push(props.footer);
+        }
+      }
+    } else {
+      if (props.footer) {
+        children.push(props.footer);
+      }
+    }
+
     
     ChildRoutes.push(<Route 
-      key={routeDef.key}
+      key={routeDef.path}
       path={routeDef.path}
-      element={children}
+      element={<React.Fragment>{children}</React.Fragment>}
       />)
   });
 
@@ -317,6 +357,7 @@ const AppLoading = (props) => {
 const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
   const TM_BASE_DEFAULT: number = 45000;
+  const reactory = useReactory();
   const { onOfflineChanged } = props;
   const [timeout_base, setTimeoutBase] = React.useState<number>(TM_BASE_DEFAULT);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
@@ -326,14 +367,13 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
   let last_slow = null;
 
 
-  const getApiStatus = () => {
-
+  const getApiStatus = async (): Promise<void> => {
     const started = Date.now();
 
-    reactory.status({ emitLogin: false, forceLogout: false }).then((apiStatus: any) => {
+    try { 
+      const apiStatus = await reactory.status({ emitLogin: false, forceLogout: false });
       const done = Date.now();
       const api_ok = apiStatus.status === 'API OK'
-
       setOfflineStatus(!api_ok);
       if (offline !== !api_ok) {
         onOfflineChanged(!api_ok);
@@ -364,13 +404,8 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       if (totals.total > 5) {
         let avg: number = (totals.ok * 100) / totals.total;
         if (avg > 90) next_tm_base = TM_BASE_DEFAULT * 1.30
-
-
         if (avg > 95) next_tm_base = TM_BASE_DEFAULT * 1.5;
-
-
         if (avg > 98) next_tm_base = TM_BASE_DEFAULT * 2.5;
-
       }
 
       const newTotals = {
@@ -388,12 +423,12 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       if (next_tm_base !== timeout_base) setTimeoutBase(next_tm_base);
 
       setTimeout(() => {
-        getApiStatus();
+        void getApiStatus();
       }, timeoutMS);
 
-      reactory.log(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS }, 'debug');
-    }).catch((statusError) => {
-      reactory.log(`Error while fetching api status`, { error: statusError }, 'error');
+      reactory.debug(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS });
+    } catch (error) {
+      reactory.error(`Error while fetching api status`, { error: error });
       setOfflineStatus(true);
       onOfflineChanged(true);
 
@@ -405,23 +440,17 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
       };
 
       setTimeout(() => {
-        getApiStatus();
+        void getApiStatus();
       }, timeoutMS);
-    });
-
-
+    }
   };
 
 
   useEffect(() => {
-
-    getApiStatus();
-
+    void getApiStatus();
   }, []);
 
-
   if (offline === false) return null;
-
   return (
     <React.Fragment>
       <Box style={{ margin: 'auto', textAlign: 'center', paddingTop: '100px' }}>
@@ -453,42 +482,50 @@ const dependencies = [
   'reactory.Footer@1.0.0',
 ];
 
-
-
 export const ReactoryHOC = (props: ReactoryHOCProps) => {
-
+  //@ts-ignore
   const [isReady, setIsReady] = React.useState<boolean>(false);
   const [auth_validated, setIsValidated] = React.useState<boolean>(false);
   const [user, setUser] = React.useState<any | Reactory.Models.IUser>(null);
   const [error, setError] = React.useState<Error>(null);
-  const [apiStatus, setApiStatus] = React.useState<any>(null);
+  //  const [apiStatus, setApiStatus] = React.useState<any>(null);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
   const [theme, setTheme] = React.useState<any>(createTheme({ palette: { mode: "dark" } }));
-  const [statusInterval, setStatusInterval] = React.useState<any>(null);
+  //  const [statusInterval, setStatusInterval] = React.useState<any>(null);
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
   const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
+  //@ts-ignore
+  const [reactory] = React.useState<Reactory.Client.ReactorySDK>(new ReactoryApi({
+    clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
+    clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
+    $version: `${packageInfo.version}-${license.version}`,
+    useNavigation
+  }));
+
+  const [store] = React.useState<any>(configureStore(null));
 
   const components: any = reactory.getComponents(dependencies);
   const { NotificationComponent, Footer } = components;
 
-  const getApiStatus = (emitLogin = true) => {
+  const getApiStatus = async (emitLogin = true): Promise<void> => {
 
-    reactory.status({ emitLogin, forceLogout: false }).then((user: any) => {
+    try { 
+      const apiStatus = await reactory.status({ emitLogin, forceLogout: false });
       setIsValidated(true);
-      setOfflineStatus(user.offline === true)
-      setUser(user);
+      setOfflineStatus(false);
+      setUser(apiStatus);
       setIsReady(true);
       setIsAuthenticating(false);
       applyTheme();
-    }).catch((validationError) => {
+    } catch (err) {
       setIsValidated(true);
       setUser(null);
       setOfflineStatus(true)
-      setError(validationError);
+      setError(err);
       setIsAuthenticating(false);
       setIsReady(false);
-    });
+    }
   };
 
 
@@ -497,12 +534,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   }
 
   const onLogin = () => {
-    reactory.log('App.onLogin handler', {}, 'debug')
+    reactory.log('App.onLogin handler', {});
     setUser(reactory.getUser());    
   };
 
   const onLogout = () => {
-    reactory.log('App.onLogout handler', {}, 'debug')
+    reactory.log('App.onLogout handler', {});
     setUser(reactory.getUser());
   };
 
@@ -547,12 +584,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const onApiStatusUpdate = (status) => {
 
     if (!(status === null || status === undefined)) {
-      reactory.log('App.onApiStatusUpdate(status)', { status }, status.offline === true ? 'error' : 'debug');
+      reactory.debug('App.onApiStatusUpdate(status)', { status });
       let isOffline = status.offline === true;
 
       if (isOffline === true) {
         setOfflineStatus(isOffline);
-        setTimeout(() => { getApiStatus() }, 3500);
+        setTimeout(() => { void getApiStatus() }, 3500);
       } else {
         let user = reactory.utils.lodash.cloneDeep(reactory.getUser());
         delete user.when;
@@ -563,10 +600,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           setUser(user)
           setOfflineStatus(false);
         }
-
       }
     } else {
-      reactory.log(`apiStaus returned null value`, { status }, 'warning');
+      reactory.warning(`apiStatus returned null value`, { status });;
     }
   }
 
@@ -580,13 +616,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
 
-  const willUnmount = () => { };
-
-  const willMount = () => {
-
-
-    window.addEventListener('resize', onWindowResize);
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change',(evt) => {
+  const willUnmount = () => { 
+    window.removeEventListener('resize', onWindowResize);
+    window.matchMedia("(prefers-color-scheme: dark)").removeEventListener('change', (evt) => {
       if (evt.matches === true) {
         localStorage.setItem('$reactory$theme_mode', 'dark');
         setVersion(version + 1);
@@ -595,74 +627,107 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         setVersion(version + 1);
       }
     });
+    reactory.off(ReactoryApiEventNames.onLogout, onLogout)
+    reactory.off(ReactoryApiEventNames.onLogin, onLogin)
+    reactory.off(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
+    reactory.off(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+    reactory.off(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
+  };
 
-    if (localStorage) {
-      let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
-      if (lastRoute !== null) {
-        lastRoute = lastRoute.trim();
-        if (window.location.pathname.indexOf('reset-password') === -1) {
-          localStorage.removeItem('$reactory.last.attempted.route$');
-          location.assign(lastRoute);
+  const willMount = () => {
+    let failedCount = 0;
+    const doInit = async () => { 
+      reactory.init().then(() => {
+        //register built-in components
+        componentRegistery.forEach((componentDef) => {
+          const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
+          reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
+        });
+  
+        reactory.$windowSize = reactory.getSizeSpec();  
+        reactory.reduxStore = store;
+  
+        window.addEventListener('resize', onWindowResize);
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change',(evt) => {
+        if (evt.matches === true) {
+          localStorage.setItem('$reactory$theme_mode', 'dark');
+          setVersion(version + 1);
+        } else {
+          localStorage.setItem('$reactory$theme_mode', 'light');
+          setVersion(version + 1);
+        }
+      });
+  
+      if (localStorage) {
+        let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
+        if (lastRoute !== null) {
+          lastRoute = lastRoute.trim();
+          if (window.location.pathname.indexOf('reset-password') === -1) {
+            localStorage.removeItem('$reactory.last.attempted.route$');
+            location.assign(lastRoute);
+          }
         }
       }
-    }
-
-    const waitForClient = () => {
-      if (reactory.client === null || reactory.client === undefined) {
-        setTimeout(waitForClient, 100);
+  
+      reactory.on(ReactoryApiEventNames.onLogout, onLogout)
+      reactory.on(ReactoryApiEventNames.onLogin, onLogin)
+      reactory.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
+      reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+      reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
+  
+      const query = queryString.parse(window.location.search);
+  
+      reactory.queryObject = query;
+      reactory.queryString = window.location.search;
+      reactory.objectToQueryString = queryString.stringify;
+  
+      window.reactory.api = reactory;
+  
+  
+      if (query.auth_token) {
+        localStorage.setItem('auth_token', query.auth_token);
+        ReactoryApolloClient().then((cli) => {
+          //@ts-ignore
+          reactory.client = cli.client;
+          reactory.ws_link = cli.ws_link;
+          cli.clearCache();
+          void getApiStatus();
+          // strip the auth token from the url bar
+          setTimeout(() => { window.history.replaceState({}, document.title, window.location.pathname) }, 500);
+        });
+        setIsAuthenticating(true);
       } else {
-        getApiStatus();
+        setIsAuthenticating(true);
+        void getApiStatus();
       }
+      }).catch((err) => { 
+        reactory.log('Error initializing Reactory', { err }, 'error');
+        if (failedCount < 3) {
+          failedCount++;
+          setTimeout(() => { doInit() }, 750 * failedCount);
+        } else {
+          reactory.log('Failed to initialize Reactory', { err },
+            'error');
+          setError(err);
+          setIsReady(false);
+        }
+      });      
     }
-
-    reactory.on(ReactoryApiEventNames.onLogout, onLogout)
-    reactory.on(ReactoryApiEventNames.onLogin, onLogin)
-    reactory.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
-    reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
-    reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
-
-    const query = queryString.parse(window.location.search);
-
-    reactory.queryObject = query;
-    reactory.queryString = window.location.search;
-    reactory.objectToQueryString = queryString.stringify;
-
-    if (window && !window.reactory) {
-      window.reactory = {
-        api: reactory,
-      };
-    }
-
-
-    if (query.auth_token) {
-      localStorage.setItem('auth_token', query.auth_token);
-      ReactoryApolloClient().then((cli) => {
-        //@ts-ignore
-        reactory.client = cli.client;
-        reactory.ws_link = cli.ws_link;
-        cli.clearCache();
-        getApiStatus();
-        // strip the auth token from the url bar
-        setTimeout(() => { window.history.replaceState({}, document.title, window.location.pathname) }, 500);
-      });
-      setIsAuthenticating(true);
-    } else {
-      setIsAuthenticating(true);
-      waitForClient();
-    }
+    
+    void doInit();
 
     return willUnmount;
   };
 
   useEffect(willMount, []);
 
-
   const useStyles = makeStyles(() => {
 
     return {
 
       root_paper: {
-        minHeight: window.innerHeight,
+        minHeight: screen.availHeight,
+        maxHeight: screen.availHeight,
         borderRadius: 0,
         margin: 0,
         padding: 0,
@@ -712,7 +777,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   if (isReady === false) return <AppLoading message={"Loading..."} />;
   //@ts-ignore
   let header = isAuthenticating === false ? (<Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />) : null;
-
+  let footer = isAuthenticating === false ? (<Footer />) : null;
   return (
     <Router>
       <React.Fragment>
@@ -728,19 +793,17 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                     className={classes.root_paper}>
                     {offline === false && 
                       <React.Fragment>
-                        <Globals reactory={reactory} />
-                        {header}      
                         <NotificationComponent />
                         <ReactoryRouter 
+                          header={header}
                           reactory={reactory} 
                           user={user} 
                           auth_validated={auth_validated} 
                           authenticating={isAuthenticating}
-                          header={header} 
+                          footer={footer} 
                         />
                       </React.Fragment>}                    
-                    <Offline onOfflineChanged={onOfflineChanged} />
-                  <Footer />
+                    <Offline onOfflineChanged={onOfflineChanged} />                  
                   </Paper>
                 </ReactoryProvider>
               </React.StrictMode>

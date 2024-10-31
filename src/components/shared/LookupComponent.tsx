@@ -60,7 +60,13 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
   const dependencies = ['material-ui.Material', 'core.AlertDialog', 'core.FullScreenModal'];
   const { reactory, formContext, uiSchema, schema, idSchema, formData, onChange, classes } = props;
   const { lodash } = reactory.utils;
-  const { Material, FullScreenModal } = reactory.getComponents(dependencies);
+  const { Material, FullScreenModal } = reactory.getComponents<{
+    Material: Reactory.Client.Web.IMaterialModule,
+    FullScreenModal: React.FC<{ 
+      open: boolean, 
+      onClose: () => void, 
+      title: string}>
+  }>(dependencies);
   const [open, setOpen] = React.useState<boolean>(false)
   const [version, setVersion] = React.useState(0);
 
@@ -120,16 +126,16 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
     if (open === true) setOpen(false);
 
     if (options.handleOnChange === false) {
-      reactory.log(`👣 onChange not handled by LookupComponent`, {}, 'debug');
+      reactory.log(`👣 onChange not handled by LookupComponent`, {});
       return;
     }
 
     if (onChange === null || onChange === undefined || typeof onChange !== "function") {
-      reactory.log(`🚨 Invalid onChange for LookupComponent`, { onChange }, 'error');
+      reactory.error(`🚨 Invalid onChange for LookupComponent`, { onChange });
       return;
     }
 
-    reactory.log(`LookupComponent onLookupValueChanged`, { value, errorSchema }, 'debug')
+    reactory.log(`LookupComponent onLookupValueChanged`, { value, errorSchema });
 
     //check if the value is coming back as a form data object, then assign _value
     //to the value.formData
@@ -139,7 +145,7 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
       _value = value.formData;
     }
 
-    reactory.log(`LookupWidget.onChange(onLookupValueChange)`, { _value }, 'debug');
+    reactory.log(`LookupWidget.onChange(onLookupValueChange)`, { _value });
     let did_change = false;
 
     if (options.eventMaps.onChange) {
@@ -165,7 +171,7 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
    */
   const onFormSubmit = (formData) => {
     const { reactory } = props;
-    reactory.log(`LookupWidget.onFormSubmit(formData)`, { formData }, 'debug');
+    reactory.log(`LookupWidget.onFormSubmit(formData)`, { formData });
   }
 
 
@@ -207,7 +213,7 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
 
   if (componentPropertyMap && open === true && componentFound === true) {
     childprops = { onChange: onLookupValueChanged };
-    reactory.utils.objectMapper({ LookupComponent: { props } }, childprops, componentPropertyMap);
+    reactory.utils.objectMapper.merge({ LookupComponent: { props } }, childprops, componentPropertyMap);
   }
 
   return (

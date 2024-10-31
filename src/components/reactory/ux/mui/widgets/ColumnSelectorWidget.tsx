@@ -137,7 +137,7 @@ class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSe
                 ];
 
                 const onMenuItemSelect = (evt, menuItem) => {
-                  reactory.log(`${menuItem.id} selected`, { menuItem }, 'debug');
+                  reactory.log(`${menuItem.id} selected`, { menuItem });
                   switch(menuItem.id) {
                     case 'toggle_selected': {
                       const { columns } = this.state;

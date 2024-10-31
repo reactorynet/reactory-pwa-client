@@ -22,7 +22,7 @@ export { ProgressWidgetComponent as ProgressWidget } from './ProgressWidget';
 export const UserListItemWidget = (props, context) => {
   return (<>Complete Import from reactory-user pluging</>)
 };
-export { default as MaterialTableWidget } from './MaterialTableWidget';
+export { MaterialTableWidget } from './MaterialTableWidget';
 export { default as StepperWidget } from './StepperWidget';
 export { default as MaterialListWidget } from './MaterialListWidget';
 export { default as SearchWidget } from './SearchWidget';
@@ -36,7 +36,7 @@ export { default as ReactoryGoogleMapWidget } from './mapping/GoogleMapWidget';
 export { default as ReactoryImageWidget } from './ImageWidget';
 export { default as ReactoryColorPicker } from './ReactoryColorPicker';
 export { default as AutoCompleteDropDown } from './AutoCompleteDropDown/AutoCompleteDropDown';
-export { StaticContent } from './StaticContentWidget';
+export { StaticContentWidget } from './StaticContentWidget';
 export { default as FroalaWidget } from './Froala/FroalaWidget';
 export { DateWidget } from './DateSelector';
 export { default as ReactoryD3Widget } from './D3/ReactoryD3Renderer';

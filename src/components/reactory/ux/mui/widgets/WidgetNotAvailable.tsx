@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { withStyles, withTheme } from '@mui/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
+import { ReactoryApiEventNames } from '@reactory/client-core/api/ReactoryApi';
 class WidgetNotAvailable extends Component<any, any> {
 
   constructor(props){
@@ -23,9 +24,9 @@ class WidgetNotAvailable extends Component<any, any> {
     },        
   });
 
-  onComponentRegistered(componentFqn: string) {
+  onComponentRegistered({ fqn, component }) {
     const { map } = this.props;
-    if (componentFqn === map.componentFqn) {      
+    if (fqn === map.componentFqn) {      
       this.setState({ componentLoaded: true });
       this.forceUpdate();
     }
@@ -34,17 +35,16 @@ class WidgetNotAvailable extends Component<any, any> {
   componentDidMount(): void {
     const that = this;
     const { reactory } = that.props;
-    reactory.on('componentRegistered', this.onComponentRegistered);
+    reactory.on(ReactoryApiEventNames.onComponentRegistered, this.onComponentRegistered);
   }
 
   componentWillUnmount(): void {
     const { reactory } = this.props;
-    reactory.removeListener('componentRegistered', this.onComponentRegistered);
+    reactory.removeListener(ReactoryApiEventNames.onComponentRegistered, this.onComponentRegistered);
   }
     
   render() {
-    const { uiSchema, api, formData, formContext, classes, map, reactory } = this.props;
-    const { componentLoaded } = this.state;
+    const { map, reactory } = this.props;
     const ComponentToMount = reactory.getComponent(map.componentFqn);
     if(ComponentToMount !== null && ComponentToMount !== undefined) {
       return (<ComponentToMount {...this.props} />);

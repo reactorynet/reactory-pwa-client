@@ -3,18 +3,16 @@ import { default as DefaultErrorList } from "./ErrorList";
 import {
   getDefaultFormState,
   retrieveSchema,
-  shouldRender,
   toIdSchema,
-  setState,
   deepEquals,
   getDefaultRegistry,
   validateFormData,
-  toErrorList
+  toErrorList,  
 } from "../utils";
 import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
-import templates from './templates';
 import { useReactory } from "@reactory/client-core/api";
-import { Html } from "@mui/icons-material";
+
+import FormClass from './FormClass';
 
 export type FormToolbarPosition = 'top' | 'bottom' | 'both' | 'none';
 export interface ISchemaForm<TData, TError, TAdditionContext extends unknown[]> {
@@ -28,9 +26,9 @@ export interface ISchemaForm<TData, TError, TAdditionContext extends unknown[]> 
     [key: string]: Reactory.Client.AnyValidComponent
   },
   fields?: object,
-  ArrayFieldTemplate?: () => Reactory.Forms.ReactoryFieldComponent<any, any, any>,
-  ObjectFieldTemplate?: () => Reactory.Forms.ReactoryFieldComponent<any, any, any>,
-  FieldTemplate?: () => Reactory.Forms.ReactoryFieldComponent<any, any, any>,
+  ArrayFieldTemplate?: Reactory.Forms.ReactoryFieldComponent<any[]>,
+  ObjectFieldTemplate?:  Reactory.Forms.ReactoryFieldComponent<any>,
+  FieldTemplate?: Reactory.Forms.ReactoryFieldComponent<any>,
   ErrorList?: React.FC<any>,
   onBlur?: (...args: any) => void
   onFocus?: (...args: any) => void,
@@ -72,31 +70,14 @@ interface FormState {
   errorSchema: any,
 }
 
-// const RenderFunction: ForwardRefRenderFunction<HTMLFormElement | HTMLDivElement, ISchemaForm> = (props, ref) => {
-//   return <FormClass {...props} ref={ref} />
-// }
-
 const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
 
   const formElement = React.useRef<HTMLFormElement | HTMLDivElement>(null);
-  
-  //let $formElement: any;
-
   const reactory = useReactory();
-
-    //   static defaultProps = {
-  //   uiSchema: {},
-  //   noValidate: false,
-  //   liveValidate: false,
-  //   disabled: false,
-  //   safeRenderCompletion: false,
-  //   noHtml5Validate: false,
-  //   ErrorList: DefaultErrorList,
-  // };
-
   const {
     id,      
     formContext,
+    container = 'form',
     ArrayFieldTemplate,
     FieldTemplate,
     ObjectFieldTemplate,
@@ -159,13 +140,14 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
   const getRegistry = () => {
     // For BC, accept passed SchemaField and TitleField props and pass them to
     // the "fields" registry one.
-    const { fields, widgets } = getDefaultRegistry();
+    const defaultRegistry = getDefaultRegistry();
     let registery: any = {
-      fields: { ...fields, ...props.fields },
-      widgets: { ...widgets, ...props.widgets },
-      ArrayFieldTemplate,
-      ObjectFieldTemplate,
-      FieldTemplate,
+      ...defaultRegistry,
+      // fields: { ...fields, ...props.fields },
+      // widgets: { ...widgets, ...props.widgets },
+      // ArrayFieldTemplate,
+      // ObjectFieldTemplate,
+      // FieldTemplate,
       definitions: schema.definitions || {},
       formContext: formContext || {},
     };
@@ -222,9 +204,8 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     };
   }
 
-
   const onChange = (formData: any, newErrorSchema: any) => {
-    const mustValidate = !props.noValidate && props.liveValidate;    
+    const mustValidate = true; //!props.noValidate && props.liveValidate;    
     let $errorSchema = null;
     let $errors = null;
     if (mustValidate) {
@@ -267,16 +248,16 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     return null;
   }
 
-
-
   const onBlur = (...args) => {
     if (props.onBlur) {
+      reactory.debug('SchemaForm:onBlur', args);
       props.onBlur(...args);
     }
   };
 
   const onFocus = (...args) => {
     if (props.onFocus) {
+      reactory.debug('SchemaForm:onFocus', args);
       props.onFocus(...args);
     }
   };
@@ -314,7 +295,11 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
   }
   
   const registry = getRegistry();
-  const _SchemaField = registry.fields.SchemaField;
+  const { SchemaField } = registry.fields;
+
+  if (!SchemaField) { 
+    return <div>SchemaField not found in registry</div>
+  }
 
   let componentType = 'form';
   let formUiOptions: any = {};
@@ -326,63 +311,34 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     style = formUiOptions.style ? { ...style, ...formUiOptions.style } : style;
   }
 
-  const $children = (<>
-    {renderErrors()}
-    {props.toolbarPosition && props.toolbarPosition.indexOf('top') >= 0 ? (children) : null}
-    <ErrorBoundary FallbackComponent={(props) => (<>{idSchema.$id} Field Error: {props.error}</>)}>
-      <_SchemaField
-        schema={schema}
-        uiSchema={uiSchema}
-        errorSchema={props.errorSchema}
-        idSchema={idSchema}
-        idPrefix={idPrefix}
-        formData={formData}
-        onChange={onChange}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        registry={registry}
-        safeRenderCompletion={safeRenderCompletion}
-        disabled={disabled} />
-    </ErrorBoundary>
-    {props.toolbarPosition && props.toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
-    </>);
+    return (
+      <div
+        className={className ? className : undefined}
+        id={id}
+        ref={(form: HTMLDivElement) => {
+          formElement.current = form;
+        }}>
+        <ErrorBoundary FallbackComponent={(props) => (<>{idSchema.$id} Field Error: {props.error}</>)}>
+        {renderErrors()}
+        {props.toolbarPosition && props.toolbarPosition.indexOf('top') >= 0 ? (children) : null}
+        <SchemaField
+          schema={schema}
+          uiSchema={uiSchema}
+          errorSchema={props.errorSchema}
+          idSchema={idSchema}
+          idPrefix={idPrefix}
+          formData={formData}
+          onChange={onChange}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          registry={registry}
+          safeRenderCompletion={safeRenderCompletion}
+          disabled={disabled} />
+          {props.toolbarPosition && props.toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
+        </ErrorBoundary>
+      </div>);
 
-  // if (componentType === 'form') {
-  //   return (
-  //     <form
-  //       className={className}
-  //       id={id}
-  //       name={name}
-  //       method={method}
-  //       target={target}
-  //       action={action}
-  //       autoComplete={autocomplete}
-  //       encType={enctype}
-  //       acceptCharset={acceptcharset}
-  //       noValidate={noHtml5Validate}
-  //       onSubmit={onSubmit}
-  //       style={style}
-  //       ref={(form: HTMLFormElement) => {
-  //         formElement.current = form;
-  //       }}>
-  //       {$children}
-  //     </form>
-  //   );
-  // }
-
-  // if (componentType === 'div') {
-  //   //@ts-ignore
-    return (<div
-      className={className ? className : null}
-      id={id}
-      ref={(form: HTMLDivElement) => {
-        formElement.current = form;
-      }}>
-      {$children}
-    </div>)
-  //}
 
 }
 
 export default Form;
-// export default FormClass;

@@ -29,7 +29,7 @@ import IntersectionVisible from './utility/IntersectionVisible';
 import Loading from './shared/Loading';
 import LinkComponent from './shared/Link';
 import ReactoryRouterComponent from './reactory/ReactoryFormRouter'
-import { ReactoryForm } from './reactory/ReactoryFormComponent';
+import { ReactoryForm } from './reactory/ReactoryForm';
 import * as ReactoryFormUtilities from './reactory/form/utils';
 import DateSelector from './dates/DateSelector';
 import Calendar from './dates/Calendar';

@@ -165,17 +165,17 @@ const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipI
 });
 
 const ReactoryMaterialTablePagination = (props) => {
-  const { 
-    reactory, 
-    theme, 
-    schema, 
-    idShema, 
-    formContext, 
-    uiSchema, 
-    formData, 
-    rowsPerPageOptions = [5, 10, 25, 50, 100], 
-    tableRef, 
-    classes, 
+  const {
+    reactory,
+    theme,
+    schema,
+    idShema,
+    formContext,
+    uiSchema,
+    formData,
+    rowsPerPageOptions = [5, 10, 25, 50, 100],
+    tableRef,
+    classes,
   } = props;
 
   const { DropDownMenu } = reactory.getComponents(['core.DropDownMenu']);
@@ -184,7 +184,7 @@ const ReactoryMaterialTablePagination = (props) => {
   const { useState, useEffect } = React;
   const [version, setVersion] = useState<number>(0);
 
-  
+
   const sizeSpec = useSizeSpec();
 
   formContext.$page = props.page;
@@ -225,13 +225,13 @@ const ReactoryMaterialTablePagination = (props) => {
   const has_data = data.length > 0;
 
   const rowsPerPageDropDownProps: Reactory.UX.IDropDownMenuProps = {
-    menus: rowsPerPageOptions ? rowsPerPageOptions.map((i) => ({ 
-      key: i, 
+    menus: rowsPerPageOptions ? rowsPerPageOptions.map((i) => ({
+      key: i,
       title: `${i}`,
-      selected: i === (props.rowsPerPage || 10) 
+      selected: i === (props.rowsPerPage || 10)
     })) : [],
     onSelect: onMenuItemSelect,
-    tooltip: "Click here to change the rows per page",    
+    tooltip: "Click here to change the rows per page",
   }
 
   return (
@@ -296,7 +296,7 @@ const ReactoryMaterialTablePagination = (props) => {
               <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
             </Grid>
             <Grid item sm={2}>
-              <DropDownMenu {...rowsPerPageDropDownProps } />
+              <DropDownMenu {...rowsPerPageDropDownProps} />
             </Grid>
           </Grid>
           <Grid item sm={6} md={4}>
@@ -329,16 +329,16 @@ const ReactoryMaterialTableWaitForRenderer = (props) => {
 
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
-  const { 
+  const {
     reactory,
-    theme, 
-    schema, 
-    idSchema, 
-    onChange, 
-    uiSchema = {}, 
-    formContext = {}, 
-    formData = [], 
-    searchText = "" 
+    theme,
+    schema,
+    idSchema,
+    onChange,
+    uiSchema = {},
+    formContext = {},
+    formData = [],
+    searchText = ""
   } = props;
 
   const uiOptions: Reactory.Client.Components.IMaterialTableWidgetOptions = uiSchema['ui:options'] || {};
@@ -422,7 +422,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
 
     if (uiOptions.componentMap.DetailsPanel) {
-      const DetailsPanelComponent = reactory.getComponent<React.FC<{formContext: any, tableRef: any}>>(uiOptions.componentMap.DetailsPanel);
+      const DetailsPanelComponent = reactory.getComponent<React.FC<{ formContext: any, tableRef: any }>>(uiOptions.componentMap.DetailsPanel);
 
       if (DetailsPanelComponent) {
         detailsPanel = (detail_props: MaterialTableDetailPanelProps) => {
@@ -456,7 +456,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const getData = async (): Promise<MaterialTableRemoteDataReponse> => {
 
-    reactory.log('core.ReactoryMaterialTable data query', { query }, 'debug')
+    reactory.debug('core.ReactoryMaterialTable data query', { query });
 
     let response: MaterialTableRemoteDataReponse = {
       ...data
@@ -469,14 +469,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         let queryDefinition: Reactory.Forms.IReactoryFormQuery = graphqlDefinitions.query;
         if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
           queryDefinition = graphqlDefinitions.queries[uiOptions.query];
-          reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
+          reactory.debug(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition);
         }
 
-        reactory.log(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query }, 'debug')
+        reactory.debug(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query });
         let variables = reactory.utils.objectMapper({ formContext, query, props: queryDefinition.props || {} }, uiOptions.variables || queryDefinition.variables);
 
         variables = { ...variables, paging: { page: query.page, pageSize: query.pageSize } };
-        reactory.log('MaterialTableWidget - Mapped variables for query', { query, variables }, 'debug');
+        reactory.debug('MaterialTableWidget - Mapped variables for query', { query, variables });
 
         let options = queryDefinition.options ? { fetchPolicy: 'network-only', ...queryDefinition.options } : { fetchPolicy: 'network-only' };
         if (query && query.options) {
@@ -496,7 +496,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         try {
           queryResult = await reactory.graphqlQuery(queryDefinition.text, variables, options).then();
         } catch (e) {
-          reactory.log(`Error running query for grid`, { e }, 'error');
+          reactory.log(`Error running query for grid`, { e });
           setError("Error executing query");
         }
         //show a loader error
@@ -509,14 +509,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               if ($data.paging) response.paging = $data.paging
             }
 
-            if($data.data && $data.paging) {
+            if ($data.data && $data.paging) {
               response.data = $data.data
               response.paging = $data.paging
             } else {
-              if( isArray($data) ) {
+              if (isArray($data)) {
                 response.data = $data;
               }
-            }            
+            }
           }
 
           if (uiOptions.disablePaging === true) {
@@ -533,17 +533,17 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           }
           //response.paging.page = response.paging.page - 1;
         } else {
-          reactory.log(`Query returned null data`, { queryResult }, 'warning')
+          reactory.log(`Query returned null data`, { queryResult });
           setError("No data returned from query")
         }
 
         if (queryResult?.errors && queryResult.errors.length > 0) {
-          reactory.log('Query contains errors', { queryResult }, 'error');
+          reactory.log('Query contains errors', { queryResult });
         }
       }
 
     } catch (remoteDataError) {
-      reactory.log(`Error getting remote data`, { remoteDataError }, 'error');
+      reactory.log(`Error getting remote data`, { remoteDataError });
       return response;
     }
     setData(response);
@@ -637,13 +637,13 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           const buttonProps = def.props.actionButton;
           if (buttonProps.icon) {
             //@ts-ignore
-            return <Fab 
-                    color={buttonProps?.color || "default"} 
-                    size={buttonProps.size ? buttonProps.size : "small"}>
-                      <Icon style={{ color: "#fff" }}>
-                        {buttonProps.icon}
-                      </Icon>
-                   </Fab>
+            return <Fab
+              color={buttonProps?.color || "default"}
+              size={buttonProps.size ? buttonProps.size : "small"}>
+              <Icon style={{ color: "#fff" }}>
+                {buttonProps.icon}
+              </Icon>
+            </Fab>
           } else {
             return <Button>{buttonProps.text}</Button>
           }
@@ -655,7 +655,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         const shouldBreak = useMediaQuery(theme.breakpoints.down(def.breakpoint));
 
         if (shouldBreak === false) {
-          reactory.log('MaterialTableWidget ==> Skipping column render', { shouldBreak, def }, 'debug');
+          reactory.log('MaterialTableWidget ==> Skipping column render', { shouldBreak, def });
           columns.push(def)
         }
       } else {
@@ -734,7 +734,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           }
         }
       } catch (tErr) {
-        reactory.log(`core.MaterialTableWidget template render failed for search input`, { searchText: options.searchText, error: tErr }, 'error');
+        reactory.log(`core.MaterialTableWidget template render failed for search input`, { searchText: options.searchText, error: tErr });
       }
     }
   }
@@ -743,7 +743,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const refreshHandler = (eventName: string, eventData: any) => {
     const uiOptions = uiSchema['ui:options'] || {};
-    reactory.log(`MaterialTableWidget - Handled ${eventName}`, eventData, 'debug');
+    reactory.log(`MaterialTableWidget - Handled ${eventName}`, eventData);
     if (uiOptions.remoteData === true) {
       if (tableRef.current && tableRef.current.onQueryChange) {
         tableRef.current.onQueryChange()
@@ -809,12 +809,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
       if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
         queryDefinition = graphqlDefinitions.queries[uiOptions.query];
-        reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition, 'debug');
+        reactory.log(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition);
       }
 
       if (queryDefinition && queryDefinition.refreshEvents) {
         queryDefinition.refreshEvents.forEach((reactoryEvent) => {
-          reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
+          reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined);
           reactory.on(reactoryEvent.name, onEventRefreshHandler);
         });
       }
@@ -822,7 +822,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   }
 
-  React.useEffect(()=>{
+  React.useEffect(() => {
     getData()
   }, [query])
 
@@ -854,7 +854,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       //for now we just do a force refresh which will trigger re-rendering
       //logic in the widget.
       uiOptions.refreshEvents.forEach((reactoryEvent) => {
-        reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined, 'debug');
+        reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined);
         reactory.on(reactoryEvent.name, refresh);
       });
     };
@@ -888,7 +888,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     setRowState(newRowsState);
 
   }, [allChecked])
-  
+
   React.useEffect(() => {
 
     const newRowsState: MaterialTableRowState = { ...rowsState };
@@ -971,11 +971,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
     return (
-      <thead>
+      <TableHead>
         <TableRow>
           {$headers}
         </TableRow>
-      </thead>)
+      </TableHead>)
   }
 
   /**
@@ -1020,8 +1020,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     const $cols = [];
 
-    if(detailsPanel) {
-      
+    if (detailsPanel) {
+
       const toggleDetailsPanel = (evt) => {
         let newRowState = { ...rowsState };
         if (!newRowState[rid]) newRowState[rid] = { expanded: false, selected: false };
@@ -1052,7 +1052,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
 
     const rowActionComponents = [];
-    if (rowActions?.length > 0) {      
+    if (rowActions?.length > 0) {
     }
 
     columns.forEach((column: MaterialTableColumn<any>, columnIndex: number) => {
@@ -1137,33 +1137,35 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   const getPagination = () => {
-    
+
     return (
       <Table id={`${idSchema.$id}_paging_table`}>
-        <TableRow key={`${idSchema.$id}_pagination`}>
-          <TableCell colSpan={columns.length}>
-            <TablePagination
-              count={data?.paging?.total || 0}
-              page={query.page - 1}
-              rowsPerPage={query?.pageSize || 10}
-              component={"div"}
-              rowsPerPageOptions={uiOptions?.options?.pageSizeOptions || [5,10,25,50,100]}
-              onRowsPerPageChange={(evt) => {                 
-                setQuery({
-                  ...query,
-                  pageSize: parseInt(evt.target.value)
-                })
-              }}
-              onPageChange={(evt, nextPage) => {                 
-                setQuery({
-                  ...query,
-                  page: nextPage + 1
-                })
-              }}
-            >
-            </TablePagination>
-          </TableCell>
-        </TableRow>
+        <TableBody>
+          <TableRow key={`${idSchema.$id}_pagination`}>
+            <TableCell colSpan={columns.length}>
+              <TablePagination
+                count={data?.paging?.total || 0}
+                page={query.page - 1}
+                rowsPerPage={query?.pageSize || 10}
+                component={"div"}
+                rowsPerPageOptions={uiOptions?.options?.pageSizeOptions || [5, 10, 25, 50, 100]}
+                onRowsPerPageChange={(evt) => {
+                  setQuery({
+                    ...query,
+                    pageSize: parseInt(evt.target.value)
+                  })
+                }}
+                onPageChange={(evt, nextPage) => {
+                  setQuery({
+                    ...query,
+                    page: nextPage + 1
+                  })
+                }}
+              >
+              </TablePagination>
+            </TableCell>
+          </TableRow>
+        </TableBody>
       </Table>)
   }
 
@@ -1200,7 +1202,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             try {
               formContext[mutationDefinition.onSuccessEvent.name](_method_props);
             } catch (notHandledByForm) {
-              reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm, props: _method_props }, 'warning')
+              reactory.log(`${formContext.signature} function handler for event ${mutationDefinition.onSuccessEvent.name} threw an unhandled error`, { notHandledByForm, props: _method_props });
             }
 
             reactory.emit(mutationDefinition.onSuccessEvent.name, _method_props);
@@ -1221,6 +1223,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       }
       //reactory.createNotification(`Could not execute action ${rejectedError.message}`, { showInAppNotification: true, type: 'error' });
 
+      setActiveAction({ show: false, action: null, rowsSelected: [] });
       return;
     }
 
@@ -1244,6 +1247,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }
 
         await handler(__formData);
+        setActiveAction({ show: false, action: null, rowsSelected: [] });
       };
 
       if (action.event.via === 'api') {
@@ -1253,19 +1257,27 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }
 
         await handler();
+        setActiveAction({ show: false, action: null, rowsSelected: [] });
       }
 
       if (action.event.via === "component" && action.event.component) {
         const component = reactory.getComponent(action.event.component);
         if (typeof component[action.event.name] === "function") {
           await component[action.event.name](__formData)
+          setActiveAction({ show: false, action: null, rowsSelected: [] });
+        } else {
+          reactory.error(`Could not find method ${action.event.name} in component ${action.event.component}`, { component });
+          reactory.createNotification(`Could not find method ${action.event.name} in component ${action.event.component}`, { 
+            type: 'error',
+            showInAppNotification: true,            
+          });
         }
-
-        return;
+        
+        setActiveAction({ show: false, action: null, rowsSelected: [] });
       }
     }
 
-    setActiveAction({ show: false, action: null, rowsSelected: [] });
+    
   }
 
   const getToolbar = () => {
@@ -1310,13 +1322,21 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     if (uiOptions?.allowAdd === true) {
       addButton = (
-        <Tooltip title={reactory.i18n.t(uiOptions?.addButtonProps?.tooltip || `Click to add a new entry`)}><IconButton onClick={callAdd}><Icon>{uiOptions?.addButtonProps?.icon || "add"}</Icon></IconButton></Tooltip>
+        <Tooltip title={reactory.i18n.t(uiOptions?.addButtonProps?.tooltip || `Click to add a new entry`)}>
+          <IconButton onClick={callAdd}>
+            <Icon>{uiOptions?.addButtonProps?.icon || "add"}</Icon>
+          </IconButton>
+        </Tooltip>
       )
     }
 
     if (uiOptions?.allowDelete === true) {
       deleteButton = (
-        <IconButton onClick={callDelete}><Icon>{uiOptions?.deleteButtonProps?.icon || "trash"}</Icon></IconButton>
+        <Tooltip title={reactory.i18n.t(uiOptions?.deleteButtonProps?.tooltip || `Click to delete entry`)}>
+          <IconButton onClick={callDelete}>
+            <Icon>{uiOptions?.deleteButtonProps?.icon || "trash"}</Icon>
+          </IconButton>
+        </Tooltip>
       )
     }
 
@@ -1324,38 +1344,36 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     if (uiOptions?.search) {
       const searchLableText = reactory.i18n.t("reactory:common.search", "Search", {})
       searchField = (
-      <TextField
-        style={{ minWidth: 200 }}
-        key={"search"} 
-        title={searchLableText}
-        label={searchLableText} 
-        size="small"
-        placeholder={searchLableText}
-        value={searchInput}
-        onChange={(evt)=>{
-          setSearchInput(evt.target.value);
-        }}
-        onKeyPress={(evt)=>{
-          if(evt.key === "Enter") {
-            setData({
-              ...data,
-              paging: {
-                ...data.paging,
-                page: 0
-              }
-            })
-            setQuery({ ...query, search: searchInput});                        
-          }
-        }}
-      />);
+        <TextField
+          style={{ minWidth: 200 }}
+          key={"search"}
+          title={searchLableText}
+          label={searchLableText}
+          size="small"
+          placeholder={searchLableText}
+          value={searchInput}
+          onChange={(evt) => {
+            setSearchInput(evt.target.value);
+          }}
+          onKeyPress={(evt) => {
+            if (evt.key === "Enter") {
+              setData({
+                ...data,
+                paging: {
+                  ...data.paging,
+                  page: 0
+                }
+              })
+              setQuery({ ...query, search: searchInput });
+            }
+          }}
+        />);
     }
 
     let actions = null;
 
     if (numSelected > 0 && uiOptions?.actions?.length > 0) {
       let $menus: Reactory.UX.IDataDropDownMenuItem<Reactory.Client.Components.IMaterialTableWidgetAction>[] = [];
-
-
 
       uiOptions.actions.forEach((action, actionIndex) => {
         const {
@@ -1402,46 +1420,48 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     return (
       <Table id={`${idSchema.$id}_toolbar`}>
-        <TableRow>
-          <TableCell colSpan={columns.length}>
-            <Toolbar sx={{
-              pl: { sm: 2 },
-              pr: { xs: 1, sm: 1 },
-              ...(numSelected > 0 && {
-                bgcolor: (theme) =>
-                  alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
-              }),
-            }}>
-              {actions}
-              {numSelected > 0 ? (
-                <>
-                  <Typography
-                    sx={{ flex: '1 1 100%' }}
-                    color="inherit"
-                    variant="subtitle1"
-                    component="div"
-                  >
-                    {numSelected} selected
-                  </Typography>
-                  {deleteButton}
-                </>
-              ) : (
-                <>
-                  <Typography
-                    sx={{ flex: '1 1 100%' }}
-                    variant="h6"
-                    id="tableTitle"
-                    component="div"
-                  >
-                    {schema.title}
-                  </Typography>
-                  {searchField}
-                  {addButton}
-                </>
-              )}
-            </Toolbar>
-          </TableCell>
-        </TableRow>
+        <TableBody>
+          <TableRow>
+            <TableCell colSpan={columns.length}>
+              <Toolbar sx={{
+                pl: { sm: 2 },
+                pr: { xs: 1, sm: 1 },
+                ...(numSelected > 0 && {
+                  bgcolor: (theme) =>
+                    alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
+                }),
+              }}>
+                {actions}
+                {numSelected > 0 ? (
+                  <>
+                    <Typography
+                      sx={{ flex: '1 1 100%' }}
+                      color="inherit"
+                      variant="subtitle1"
+                      component="div"
+                    >
+                      {numSelected} selected
+                    </Typography>
+                    {deleteButton}
+                  </>
+                ) : (
+                  <>
+                    <Typography
+                      sx={{ flex: '1 1 100%' }}
+                      variant="h6"
+                      id="tableTitle"
+                      component="div"
+                    >
+                      {schema.title}
+                    </Typography>
+                    {searchField}
+                    {addButton}
+                  </>
+                )}
+              </Toolbar>
+            </TableCell>
+          </TableRow>
+        </TableBody>
       </Table>
     )
   }
@@ -1500,12 +1520,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       </>
     )
   } catch (err) {
-    reactory.log(`Error rendering MaterialTable:\n${err.message}`, {error: err}, 'error');
+    reactory.log(`Error rendering MaterialTable:\n${err.message}`, { error: err });
     return <>Something went wrong during the render of the data table, please <Button onClick={() => { setVersion(version + 1) }}>Retry</Button></>
   }
-
-
-
 };
 
 const MaterialTableWidgetComponent = compose(withReactory, withTheme, withStyles(ReactoryMaterialTableStyles))(ReactoryMaterialTable)

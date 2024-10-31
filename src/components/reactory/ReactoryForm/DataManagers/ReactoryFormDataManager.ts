@@ -2,7 +2,7 @@ import ReactoryApi from "@reactory/client-core/api/ReactoryApi";
 import { isArray } from "lodash";
 import Reactory from "@reactory/reactory-core";
 
-export default (reactory: Reactory.Client.IReactoryApi) => ({
+export default (reactory: Reactory.Client.ReactorySDK) => ({
   /**
    * Returns the next data set from the input params
    */
@@ -78,7 +78,7 @@ export default (reactory: Reactory.Client.IReactoryApi) => ({
                   }, graphElement.resultMap);
 
                 } catch (mappError) {
-                  reactory.log("Could not map the object data", { mappError }, 'error')
+                  reactory.log("Could not map the object data", { mappError });
                 }
 
               } 
@@ -99,7 +99,7 @@ export default (reactory: Reactory.Client.IReactoryApi) => ({
                     }, graphElement.resultMap);
 
                   } catch (mappError) {                    
-                    reactory.log("Could not map the object data", { mappError }, 'error')
+                    reactory.log("Could not map the object data", { mappError });
                   }
 
                 } else {
@@ -107,14 +107,9 @@ export default (reactory: Reactory.Client.IReactoryApi) => ({
                 }
               }
           }
-
-
         }
       }
     }
-
     return nextFormData;
-
   }
-
 });
