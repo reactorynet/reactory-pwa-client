@@ -1322,13 +1322,21 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     if (uiOptions?.allowAdd === true) {
       addButton = (
-        <Tooltip title={reactory.i18n.t(uiOptions?.addButtonProps?.tooltip || `Click to add a new entry`)}><IconButton onClick={callAdd}><Icon>{uiOptions?.addButtonProps?.icon || "add"}</Icon></IconButton></Tooltip>
+        <Tooltip title={reactory.i18n.t(uiOptions?.addButtonProps?.tooltip || `Click to add a new entry`)}>
+          <IconButton onClick={callAdd}>
+            <Icon>{uiOptions?.addButtonProps?.icon || "add"}</Icon>
+          </IconButton>
+        </Tooltip>
       )
     }
 
     if (uiOptions?.allowDelete === true) {
       deleteButton = (
-        <IconButton onClick={callDelete}><Icon>{uiOptions?.deleteButtonProps?.icon || "trash"}</Icon></IconButton>
+        <Tooltip title={reactory.i18n.t(uiOptions?.deleteButtonProps?.tooltip || `Click to delete entry`)}>
+          <IconButton onClick={callDelete}>
+            <Icon>{uiOptions?.deleteButtonProps?.icon || "trash"}</Icon>
+          </IconButton>
+        </Tooltip>
       )
     }
 
