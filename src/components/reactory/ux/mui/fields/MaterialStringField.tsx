@@ -20,6 +20,7 @@ import {
   TextField,
   InputLabelProps,
   InputProps,
+  TextFieldProps,
 } from '@mui/material';
 
 import { withTheme } from '@mui/styles';
@@ -40,7 +41,7 @@ const MaterialStringFieldWidget = (props) => {
     onChange = () => {},
     onFocus = () => { },
     rawErrors,
-    readOnly,
+    readOnly = false,
     registry,
     required,
     schema,
@@ -50,7 +51,7 @@ const MaterialStringFieldWidget = (props) => {
   } = props;
 
   const reactory = useReactory();
-
+  const $id = idSchema.$id
   try {
     const inputProps: any = {
       value: '',
@@ -60,10 +61,11 @@ const MaterialStringFieldWidget = (props) => {
       autofocus
     };
 
+    const $id = idSchema.$id;
 
     let inputLabelProps: InputLabelProps = {}
 
-    const uiOptions = uiSchema['ui:options'] || { readOnly: false, props: {} };
+    const uiOptions = uiSchema['ui:options'] || { readOnly, props: {} };
     let args: any = uiOptions && uiOptions.props ? { ...uiOptions.props } : {};
 
     const {
@@ -83,8 +85,18 @@ const MaterialStringFieldWidget = (props) => {
       args = { ...args, ...props };
     }
 
+    const onInputChanged = (evt) => {
+      evt.persist();
+      let _v = `${evt.target.value}`;
+      if (args.toLowerCase === true) {
+        _v = _v.toLowerCase();
+      }
+      onChange(_v);
+    }
+
     if (uiSchema["ui:widget"]) {
       const Widget = registry.widgets[uiSchema["ui:widget"]]
+      reactory.debug(`MaterialStringFieldWidget: ${$id} using custom widget ${uiSchema["ui:widget"]}`, { args });
       if (Widget) return (<Widget {...args} />)
     }
 
@@ -94,9 +106,14 @@ const MaterialStringFieldWidget = (props) => {
       default: args.type = schema.format || "text"; break;
     }
 
+    if (schema.readonly === true) { 
+      uiOptions.readOnly = true
+    }
+
 
 
     if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
+      reactory.debug(`MaterialStringFieldWidget: ${$id} formData is empty`, { formData, schema, uiSchema });
       inputLabelProps.shrink = false;
     } else {
       inputLabelProps.shrink = true;
@@ -106,15 +123,6 @@ const MaterialStringFieldWidget = (props) => {
     }
 
     inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
-
-    const onInputChanged = (evt) => {
-      evt.persist();
-      let _v = `${evt.target.value}`;
-      if (args.toLowerCase === true) {
-        _v = _v.toLowerCase();
-      }
-      onChange(_v);
-    }
 
     const onKeyDown = evt => {
       const { reactory } = props;
@@ -166,14 +174,15 @@ const MaterialStringFieldWidget = (props) => {
       }
 
 
-      let componentProps = {
+      let componentProps: Partial<TextFieldProps> = {
         defaultValue: `${formData || schema.default}`.replace("undefined", ""),
         variant: themeDefaults.variant || uiOptions.variant || "standard",
         InputProps: inputProps,
         label: `${schema.title}${required ? ' *' : ''}`,
         value: `${formData || schema.default}`.replace("undefined", ""),
         fullWidth: true,
-        key: props.key || idSchema.$id || id
+        key: props.key || idSchema.$id || id,
+        InputLabelProps: inputLabelProps,
       }
 
       if (uiOptions.componentProps) {
@@ -213,7 +222,7 @@ const MaterialStringFieldWidget = (props) => {
           id={idSchema.$id}
           autoFocus={idSchema.id === props.formContext.$focus && props.formContext.$focus !== undefined}
           readOnly={uiOptions.readOnly === true} 
-          value={formData || schema.default}
+          value={formData || schema.defaultValue || schema.default}
           onFocus={onFocus && (e => onFocus(id, e.target.value))}
           onBlur={onBlur && (e => onFocus(id, e.target.value))}
           onChange={onInputChanged} />
@@ -222,7 +231,7 @@ const MaterialStringFieldWidget = (props) => {
 
   } catch (renderError) {
     if (reactory) {
-      reactory.log(`💥 MaterialString Field Error`, { renderError }, 'error')
+      reactory.log(`💥 MaterialString Field Error`, { renderError });
     }
     return <>💥 Could not render field</>
   }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { DefaultTheme, makeStyles, useTheme } from '@mui/styles';
 import AppBar from '@mui/material/AppBar';
@@ -7,10 +7,8 @@ import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
 import Icon from '@mui/material/Icon';
 import { Theme } from '@mui/material'
-
-import { retrieveSchema } from '@reactory/client-core/components/reactory/form/utils';
-import { Typography } from '@mui/material';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
+import { ReactoryFormUtilities } from 'components/reactory/form/types';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -36,6 +34,8 @@ const MaterialTabbedField = (props) => {
   const classes = useStyles();
   const theme = useTheme<DefaultTheme>();
   const reactory = useReactory();
+
+  const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
 
   const {
     uiSchema,
@@ -109,7 +109,7 @@ const MaterialTabbedField = (props) => {
 
   const { definitions, fields, formContext } = props.registry
   const { SchemaField, TitleField, DescriptionField } = fields
-  const schema = retrieveSchema(props.schema, definitions)
+  const schema = utils.retrieveSchema(props.schema, definitions)
   const title = (schema.title === undefined) ? '' : schema.title
 
   const DefaultTabProps = {

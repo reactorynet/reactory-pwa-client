@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import ReactCrop from "react-image-crop";
+import ReactCrop, { Crop } from "react-image-crop";
 import {
   Button,
   ButtonGroup,
@@ -16,7 +16,7 @@ import ReactoryApi, { useReactory } from "@reactory/client-core/api";
 export interface ICropProps {
   src?: string,
   crop?: {
-    unit?: string,
+    unit?: "%" | "px",
     width?: number,
     aspect?: number,
   },
@@ -44,7 +44,8 @@ const Cropper = (props: ICropProps) => {
   const [fileUrl, setFileUrl] = useState<string>(null);
   const [croppedImage, setCroppedImage] = useState<string>(null);
   const [imageRef, setImageRef] = useState<any>(null);
-  const [crop, setCrop] = useState(props.crop || DEFAULT_CROP);
+  // @ts-ignore
+  const [crop, setCrop] = useState<Crop>(props.crop || DEFAULT_CROP);
 
   const { StaticContent } = reactory.getComponents<any>(["core.StaticContent"]);
 
@@ -142,12 +143,16 @@ const Cropper = (props: ICropProps) => {
               <Grid item xs={12} sm={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
               {src && (
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <ReactCrop
-                    src={src}
-                    crop={crop}
-                    onImageLoaded={onImageLoaded}
-                    onComplete={onCropComplete}
+                  <ReactCrop                  
                     onChange={onCropChange}
+                    onComplete={onCropComplete}
+                    crop={{
+                      unit: crop.unit,
+                      width: crop.width,
+                      height: crop.height,
+                      x: crop.x,
+                      y: crop.y,
+                    }}
                   />
                 </div>
               )}

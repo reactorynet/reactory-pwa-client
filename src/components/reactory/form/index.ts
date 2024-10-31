@@ -1,3 +1,3 @@
-import Form from "./components/Form";
+import Form from "./components/SchemaForm";
 
 export default Form;

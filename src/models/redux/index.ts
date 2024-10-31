@@ -22,7 +22,7 @@ export default function configureStore(initialState) {
 	// 	)(createStore);
 
 	// //@ts-ignore
-	const store =  createStore(rootReducer) //createPersistentStore(rootReducer, initialState);
+	const store =  createStore(rootReducer);
 
 	return store;
 }

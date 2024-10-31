@@ -12,6 +12,7 @@ interface IHelpMeProps {
   theme: Theme,
   open: boolean,
   showSupport?: boolean,
+  allowSupportRequest?: boolean,
   title?: string,
   onClose: () => void,
 }
@@ -25,7 +26,7 @@ interface IHelpMeDepencdies {
 
 const HelpMe = (props: IHelpMeProps) => {
   
-const { reactory, topics, theme, formContext, onClose, title = 'Help' } = props;
+const { reactory, topics, theme, onClose, title = 'Help', allowSupportRequest = true } = props;
 
 const { FullScreenModal, StaticContent, MaterialCore, SupportForm } = reactory.getComponents<IHelpMeDepencdies>(['core.FullScreenModal', 'core.StaticContent', 'core.SupportForm', 'material-ui.MaterialCore']);
 const { Typography } = MaterialCore;
@@ -41,10 +42,10 @@ const { Typography } = MaterialCore;
     return (
       <FullScreenModal title={title} open={props.open === true} onClose={onClose}>
         {helpItems}
-        <hr />
+        {allowSupportRequest === true ? <><hr />
         <Typography>Request support</Typography>
         
-        <SupportForm />
+        <SupportForm /></> : null}        
       </FullScreenModal>
     )
 }

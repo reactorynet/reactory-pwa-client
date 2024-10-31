@@ -21,8 +21,7 @@ export const withReactory = (ComponentToWrap: any | React.Component | Function, 
         return (
             <div role="alert">
                 <p>Something went wrong:</p>
-                <pre>{error.message}</pre>
-                <button onClick={resetErrorBoundary}>Try again</button>
+                <pre>{error.message}</pre>                
             </div>
         )
     }
@@ -36,11 +35,13 @@ export const withReactory = (ComponentToWrap: any | React.Component | Function, 
         const ComponentWithErrorBoundary = withErrorBoundary(ComponentToWrap, {
             FallbackComponent: ErrorFallback,
             onError: (error, info) => {
-                reactory.log(`Error in component ${id}`, {error, info}, 'error');
-            }
+                reactory.log(`Error in component ${id}`, {error, info});
+            },
+            id
         });
 
         try {
+            if(id === 'core.Loging@1.0.0') debugger
             return <ComponentWithErrorBoundary {...props} reactory={reactory} />
         } catch (error) {
             return <span>Component: {id}: error: {error.message}</span>

@@ -1,15 +1,20 @@
 import Reactory from "@reactory/reactory-core";
 
+const {
+  REACTORY_APPLICATION_ANONUSER_EMAIL = 'anonymous@reactory.local',
+  REACTORY_APPLICATION_ANONUSER_PASSWORD = 'anonymous-password',
+} = process.env;
+
 /**
  * The default user when no user is logged is returned 
  * as the anon user.
  */
 export const anonUser: Reactory.Models.IApiStatus = {
   id: '',
-  firstName: '',
-  lastName: '',
+  firstName: 'Anonymous',
+  lastName: 'User',
   avatar: '',
-  email: '',
+  email: REACTORY_APPLICATION_ANONUSER_EMAIL,
   anon: true,
   roles: ['ANON'],
   menus: [],
@@ -20,7 +25,17 @@ export const anonUser: Reactory.Models.IApiStatus = {
   activeTheme: null,
   routes: null,
   theme: null,
+  applicationAvatar: '',
+  applicationName: 'Reactory',
+  applicationRoles: ['ANON'],
+  colorSchemes: [],
+  messages: [],
+  plugins: [],
+  publicKey: '',
+  signature: '',
+  themes: [],
 };
+
 
 export const storageKeys = {
   LoggedInUser: 'loggedInUser',

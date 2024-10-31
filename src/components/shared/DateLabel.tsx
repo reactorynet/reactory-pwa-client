@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { withStyles, withTheme } from '@mui/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';

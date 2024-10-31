@@ -150,7 +150,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
           }
 
         }).catch((query_error) => {
-          reactory.log(`Error Getting Data For Lookup`, { query_error }, 'error');
+          reactory.log(`Error Getting Data For Lookup`, { query_error });
           setError(query_error);
         });
       };
@@ -167,7 +167,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       }
 
       React.useEffect(() => {
-        reactory.log('Rendering SelectWithData', { formContext, formData, menuItems, key_map, version }, 'debug');
+        reactory.log('Rendering SelectWithData', { formContext, formData, menuItems, key_map, version });
         getData();
       }, []);
 
@@ -190,7 +190,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
             <InputComponent id={idSchema.$id} value={typeof formData === 'string' ? formData.trim() : ""} />
           }
           renderValue={(_value: any) => {
-            reactory.log(`Rendering value for ${_value}`, { formData, key_map, menuItems }, 'debug')
+            reactory.log(`Rendering value for ${_value}`, { formData, key_map, menuItems });
             if (_value === null || _value === undefined || _value.length === 0) {
               return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{menuItems[0].id === 'loading' ? 'Loading' : 'Select'}</span>;
             }

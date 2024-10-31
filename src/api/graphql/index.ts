@@ -1,18 +1,6 @@
 import { gql } from '@apollo/client';
 
-const allScales = gql`
-  query ScalesQuery {
-    allScales {
-      id
-      title
-      key
-      entries {
-        description
-        rating
-      }
-    }
-  }
-`
+
 const allOrganizations = gql`
   query OrganizationQuery {
       allOrganizations {
@@ -170,129 +158,6 @@ const setPassword = gql`
   }
 `;
 
-const surveyDetail = gql`
-  query SurveyDetail($surveyId: String!){
-    surveyDetail(surveyId: $surveyId){
-      id
-			status
-      leadershipBrand {
-        id
-        title
-        description
-        scale {
-          id
-          title
-          entries {
-            rating
-            description
-          }
-        }
-        qualities {
-          id
-          title
-          behaviours {
-            ordinal
-            description
-          }
-        }
-      }
-      organization {
-        id
-        name
-        logo
-      }
-      title
-      startDate
-      endDate
-      mode
-			delegates {
-				delegate {
-					id
-					firstName
-					lastName
-					email
-					avatar
-				}
-				assessments {
-					assessor {
-						id
-						firstName
-						lastName
-            email
-						avatar
-					}
-				}
-				complete
-				launched
-				removed
-			}
-      calendar {
-        entryType
-        title
-        start
-        end
-        hasTask
-        taskResult
-        taskError
-      }
-      timeline {
-        when
-        eventType
-        eventDetail
-        who {
-          firstName
-          lastName
-          avatar
-        }
-      }
-    }
-  }
-`
-
-const surveysForOrganization = gql`
-  query SurveysForOrganization($organizationId: String!){
-    surveysForOrganization(organizationId: $organizationId){
-      id
-      organization {
-        id
-        name
-        logo
-      }
-      leadershipBrand {
-        id
-        title
-        description
-      }
-      title
-      startDate
-      endDate
-      mode
-    }
-  }
-`;
-
-const surveysList = gql`
-  query SurveysList{
-    surveysList{
-      id
-      organization {
-        id
-        name
-        logo
-      }
-      leadershipBrand {
-        id
-        title
-        description
-      }
-      title
-      startDate
-      endDate
-      mode
-    }
-  }
-`;
-
 const userProfile = gql`
   query userProfile($profileId: String!){
     userWithId(id: $profileId){
@@ -361,6 +226,19 @@ const apiStatus = gql`
       applicationRoles
       when
       status
+      plugins {
+        id
+        nameSpace
+        name
+        version
+        description
+        platform
+        url
+        loader
+        options
+        enabled
+        roles
+      } 
       loggedIn {
         user {
           id
@@ -949,21 +827,6 @@ const graphql = {
     Templates: {
       templateForOrganization: null,
       defaultTemplates: null
-    },
-    Surveys: {
-      allScales,
-      surveysForOrganization,
-      surveyDetail,
-      surveysForUser,
-      surveysList,
-      calendarForSurvey: null,
-      reportsForUser,
-      reportDetailForUser
-    },
-    Assessments: {
-      assessmentsForSurvey: null,
-      assessmentsForUser: null,
-      assessmentWithId: assessmentWithId
     },
     Notifications: {
       notificationsForUser: null,

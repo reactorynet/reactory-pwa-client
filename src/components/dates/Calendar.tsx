@@ -1,7 +1,7 @@
 
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import BigCalendar from 'react-big-calendar';
+import { Calendar as BigCalendar } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import moment from 'moment';
 import { Theme } from '@mui/material';

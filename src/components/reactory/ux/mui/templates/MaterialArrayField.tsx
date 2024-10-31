@@ -9,26 +9,10 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import PropTypes from "prop-types";
 import includes from "lodash/includes";
-
 import UnsupportedField from '@reactory/client-core/components/reactory/form/components/fields/UnsupportedField';
-
-import {
-  getWidget,
-  getDefaultFormState,
-  getUiOptions,
-  isMultiSelect,
-  isFilesArray,
-  isFixedItems,
-  allowAdditionalItems,
-  optionsList,
-  retrieveSchema,
-  toIdSchema,
-  getDefaultRegistry,
-} from "@reactory/client-core/components/reactory/form/utils";
-
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
+import { ReactoryFormUtilities } from "components/reactory/form/types";
 
 function ArrayFieldTitle({ TitleField, idSchema, title, required }) {
   if (!title) {
@@ -50,13 +34,6 @@ function ArrayFieldDescription({ DescriptionField, idSchema, description }) {
 
 // Used in the two templates
 function DefaultArrayItem(props) {
-  //console.log('Rendering Default Array Item', props);
-  const btnStyle = {
-    //flex: 1,
-    //paddingLeft: 6,
-    //paddingRight: 6,
-    //fontWeight: "bold",
-  };
   return (
     <Paper key={props.index} className={props.className}>
       <Fragment>
@@ -185,7 +162,18 @@ function DefaultNormalArrayFieldTemplate(props) {
   );
 }
 
-class ArrayField extends Component<any, any> {
+interface ArrayFieldProps {
+  reactory: Reactory.Client.ReactorySDK,
+  schema: Reactory.Schema.IArraySchema,
+  uiSchema: Reactory.Schema.IUISchema,
+  formContext: any,
+  registry: any,
+  formData?: any[]
+  idSchema: Reactory.Schema.IDSchema
+  [key: string]: any
+}
+
+class ArrayField extends Component<ArrayFieldProps, any> {
   static defaultProps = {
     uiSchema: {},
     formData: [],
@@ -197,9 +185,16 @@ class ArrayField extends Component<any, any> {
   };
 
   static propTypes: {
-    schema: PropTypes.Validator<object>;
-    uiSchema: PropTypes.Requireable<PropTypes.InferProps<{ "ui:options": PropTypes.Requireable<PropTypes.InferProps<{ addable: PropTypes.Requireable<boolean>; orderable: PropTypes.Requireable<boolean>; removable: PropTypes.Requireable<boolean>; }>>; }>>; idSchema: PropTypes.Requireable<object>; errorSchema: PropTypes.Requireable<object>; onChange: PropTypes.Validator<(...args: any[]) => any>; onBlur: PropTypes.Requireable<(...args: any[]) => any>; onFocus: PropTypes.Requireable<(...args: any[]) => any>; formData: PropTypes.Requireable<any[]>; required: PropTypes.Requireable<boolean>; disabled: PropTypes.Requireable<boolean>; readonly: PropTypes.Requireable<boolean>; autofocus: PropTypes.Requireable<boolean>; registry: PropTypes.Requireable<PropTypes.InferProps<{ widgets: PropTypes.Validator<{ [x: string]: object; }>; fields: PropTypes.Validator<{ [x: string]: (...args: any[]) => any; }>; definitions: PropTypes.Validator<object>; formContext: PropTypes.Validator<object>; }>>;
+    schema: Reactory.Schema.IArraySchema;
+    uiSchema: Reactory.Schema.IUISchema;
   };
+
+  utils: ReactoryFormUtilities;
+
+  constructor(props: ArrayFieldProps) {
+    super(props);
+    this.utils = props.reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
+  }
 
   get itemTitle() {
     const { schema } = this.props;
@@ -218,11 +213,13 @@ class ArrayField extends Component<any, any> {
 
   canAddItem(formItems) {
     const { schema, uiSchema } = this.props;
-    let { addable } = getUiOptions(uiSchema);
+    let { addable } = this.utils.getUiOptions(uiSchema);
     if (addable !== false) {
       // if ui:options.addable was not explicitly set to false, we can add
       // another item if we have not exceeded maxItems yet
+      // @ts-ignore
       if (schema.maxItems !== undefined) {
+        // @ts-ignore
         addable = formItems.length < schema.maxItems;
       } else {
         addable = true;
@@ -233,15 +230,16 @@ class ArrayField extends Component<any, any> {
 
   onAddClick = event => {
     event.preventDefault();
-    const { schema, formData, registry = getDefaultRegistry() } = this.props;
+    const { schema, formData, registry = this.utils.getDefaultRegistry() } = this.props;
     const { definitions } = registry;
     let itemSchema = schema.items;
-    if (isFixedItems(schema) && allowAdditionalItems(schema)) {
+    if (this.utils.isFixedItems(schema) && this.utils.allowAdditionalItems(schema)) {
+      // @ts-ignore
       itemSchema = schema.additionalItems;
     }
     this.props.onChange([
       ...formData,
-      getDefaultFormState(itemSchema, undefined, definitions),
+      this.utils.getDefaultFormState(itemSchema, undefined, definitions),
     ]);
   };
 
@@ -336,7 +334,7 @@ class ArrayField extends Component<any, any> {
       schema,
       uiSchema,
       idSchema,
-      registry = getDefaultRegistry(),
+      registry = this.utils.getDefaultRegistry(),
     } = this.props;
     const { definitions } = registry;
     if (!schema.hasOwnProperty("items")) {
@@ -348,13 +346,13 @@ class ArrayField extends Component<any, any> {
         />
       );
     }
-    if (isFixedItems(schema)) {
+    if (this.utils.isFixedItems(schema)) {
       return this.renderFixedArray();
     }
-    if (isFilesArray(schema, uiSchema, definitions)) {
+    if (this.utils.isFilesArray(schema, uiSchema, definitions)) {
       return this.renderFiles();
     }
-    if (isMultiSelect(schema, definitions)) {
+    if (this.utils.isMultiSelect(schema, definitions)) {
       return this.renderMultiSelect();
     }
     return this.renderNormalArray();
@@ -373,7 +371,7 @@ class ArrayField extends Component<any, any> {
       disabled,
       readonly,
       autofocus,
-      registry = getDefaultRegistry(),
+      registry = this.utils.getDefaultRegistry(),
       onBlur,
       onFocus,
       idPrefix,
@@ -381,7 +379,7 @@ class ArrayField extends Component<any, any> {
       onChange,
       api,
     } = this.props;
-    
+
     let toolbar = null;
     const title = schema.title === undefined ? name : schema.title;
     let { ArrayFieldTemplate, definitions, fields } = registry;
@@ -397,22 +395,29 @@ class ArrayField extends Component<any, any> {
         ArrayFieldTemplate = formContext.reactory.getComponent(uiSchema['ui:widget']);
       }
 
+      // @ts-ignore
       if (uiOptions && uiOptions.componentProps) {  //map properties to the component
         Object.keys(componentProps).map(property => {
+          // @ts-ignore
           componentProps[property] = formData[uiOptions.componentProps[property]]
         })
       }
 
-
+      // @ts-ignore
       if (uiOptions && uiOptions.componentPropsMap) {
+        // @ts-ignore
         mapped_props = api.utils.objectMapper(this.props, uiOptions.componentPropsMap)
       }
 
+      // @ts-ignore
       if (uiOptions && uiOptions.container) {
         //resolve Container from API
+        // @ts-ignore
         const Container = formContext.reactory.getComponent(uiOptions.container)
         let containerProps = {}
+        // @ts-ignore
         if (uiOptions.containerProps) {
+          // @ts-ignore
           containerProps = { ...uiOptions.containerProps }
         }
         if (Container) {
@@ -431,14 +436,14 @@ class ArrayField extends Component<any, any> {
       }
     }
     const { TitleField, DescriptionField } = fields;
-    const itemsSchema = retrieveSchema(schema.items, definitions);
+    const itemsSchema = this.utils.retrieveSchema(schema.items, definitions);
     const arrayProps = {
       canAdd: this.canAddItem(formData),
       items: (formData || []).map((item, index) => {
-        const itemSchema = retrieveSchema(schema.items, definitions, item);
+        const itemSchema = this.utils.retrieveSchema(schema.items, definitions, item);
         const itemErrorSchema = errorSchema ? errorSchema[index] : undefined;
         const itemIdPrefix = idSchema.$id + "_" + index;
-        const itemIdSchema = toIdSchema(
+        const itemIdSchema = this.utils.toIdSchema(
           itemSchema,
           itemIdPrefix,
           definitions,
@@ -498,18 +503,18 @@ class ArrayField extends Component<any, any> {
       autofocus,
       onBlur,
       onFocus,
-      registry = getDefaultRegistry(),
+      registry = this.utils.getDefaultRegistry(),
       rawErrors,
     } = this.props;
     const items = this.props.formData;
     const { widgets, definitions, formContext } = registry;
-    const itemsSchema = retrieveSchema(schema.items, definitions, formData);
-    const enumOptions = optionsList(itemsSchema);
+    const itemsSchema = this.utils.retrieveSchema(schema.items, definitions, formData);
+    const enumOptions = this.utils.optionsList(itemsSchema);
     const { widget = "select", ...options } = {
-      ...getUiOptions(uiSchema),
+      ...this.utils.getUiOptions(uiSchema),
       enumOptions,
     };
-    const Widget = getWidget(schema, widget, widgets);
+    const Widget = this.utils.getWidget(schema, widget, widgets);
     return (
       <Widget
         id={idSchema && idSchema.$id}
@@ -530,6 +535,7 @@ class ArrayField extends Component<any, any> {
   }
 
   renderFiles() {
+    const { utils } = this;
     const {
       schema,
       uiSchema,
@@ -540,14 +546,14 @@ class ArrayField extends Component<any, any> {
       autofocus,
       onBlur,
       onFocus,
-      registry = getDefaultRegistry(),
+      registry = utils.getDefaultRegistry(),
       rawErrors,
     } = this.props;
     const title = schema.title || name;
     const items = this.props.formData;
     const { widgets, formContext } = registry;
-    const { widget = "files", ...options } = getUiOptions(uiSchema);
-    const Widget = getWidget(schema, widget, widgets);
+    const { widget = "files", ...options } = utils.getUiOptions(uiSchema);
+    const Widget = utils.getWidget(schema, widget, widgets);
     return (
       <Widget
         options={options}
@@ -569,6 +575,7 @@ class ArrayField extends Component<any, any> {
   }
 
   renderFixedArray() {
+    const { utils } = this;
     const {
       schema,
       uiSchema,
@@ -581,7 +588,7 @@ class ArrayField extends Component<any, any> {
       disabled,
       readonly,
       autofocus,
-      registry = getDefaultRegistry(),
+      registry = utils.getDefaultRegistry(),
       onBlur,
       onFocus,
       rawErrors,
@@ -590,11 +597,13 @@ class ArrayField extends Component<any, any> {
     let items = this.props.formData;
     const { ArrayFieldTemplate, definitions, fields, formContext } = registry;
     const { TitleField } = fields;
+    // @ts-ignore
     const itemSchemas = schema.items.map((item, index) =>
-      retrieveSchema(item, definitions, formData[index])
+      utils.retrieveSchema(item, definitions, formData[index])
     );
-    const additionalSchema = allowAdditionalItems(schema)
-      ? retrieveSchema(schema.additionalItems, definitions, formData)
+    const additionalSchema = utils.allowAdditionalItems(schema)
+      //@ts-ignore
+      ? utils.retrieveSchema(schema.additionalItems, definitions, formData)
       : null;
 
     if (!items || items.length < itemSchemas.length) {
@@ -606,6 +615,7 @@ class ArrayField extends Component<any, any> {
     // These are the props passed into the render function
     const arrayProps = {
       canAdd: this.canAddItem(items) && additionalSchema,
+      // @ts-ignore
       className: this.props.classes && this.props.uiSchema && uiSchema['className'] ? this.props.classes[uiSchema['className']] : null,
       disabled,
       idSchema,
@@ -613,10 +623,11 @@ class ArrayField extends Component<any, any> {
       items: items.map((item, index) => {
         const additional = index >= itemSchemas.length;
         const itemSchema = additional
-          ? retrieveSchema(schema.additionalItems, definitions, item)
+          // @ts-ignore
+          ? utils.retrieveSchema(schema.additionalItems, definitions, item)
           : itemSchemas[index];
         const itemIdPrefix = idSchema.$id + "_" + index;
-        const itemIdSchema = toIdSchema(
+        const itemIdSchema = utils.toIdSchema(
           itemSchema,
           itemIdPrefix,
           definitions,
@@ -681,7 +692,7 @@ class ArrayField extends Component<any, any> {
       disabled,
       readonly,
       uiSchema,
-      registry = getDefaultRegistry(),
+      registry = this.utils.getDefaultRegistry(),
     } = this.props;
     const {
       fields: { SchemaField },
@@ -689,6 +700,7 @@ class ArrayField extends Component<any, any> {
     const { orderable = true, removable = true } = {
       orderable: true,
       removable: true,
+      // @ts-ignore
       ...uiSchema["ui:options"],
     };
     const has: any = {
@@ -717,6 +729,7 @@ class ArrayField extends Component<any, any> {
           rawErrors={rawErrors}
         />
       ),
+      //@ts-ignore
       className: props.classes && props.uiSchema && uiSchema['className'] ? props.classes[uiSchema['className']] : null,
       disabled,
       hasToolbar: has.toolbar,
@@ -729,37 +742,6 @@ class ArrayField extends Component<any, any> {
       readonly,
     };
   }
-}
-
-if (process.env.NODE_ENV !== "production") {
-  ArrayField.propTypes = {
-    schema: PropTypes.object.isRequired,
-    uiSchema: PropTypes.shape({
-      "ui:options": PropTypes.shape({
-        addable: PropTypes.bool,
-        orderable: PropTypes.bool,
-        removable: PropTypes.bool,
-      }),
-    }),
-    idSchema: PropTypes.object,
-    errorSchema: PropTypes.object,
-    onChange: PropTypes.func.isRequired,
-    onBlur: PropTypes.func,
-    onFocus: PropTypes.func,
-    formData: PropTypes.array,
-    required: PropTypes.bool,
-    disabled: PropTypes.bool,
-    readonly: PropTypes.bool,
-    autofocus: PropTypes.bool,
-    registry: PropTypes.shape({
-      widgets: PropTypes.objectOf(
-        PropTypes.oneOfType([PropTypes.func, PropTypes.object])
-      ).isRequired,
-      fields: PropTypes.objectOf(PropTypes.func).isRequired,
-      definitions: PropTypes.object.isRequired,
-      formContext: PropTypes.object.isRequired,
-    }),
-  };
 }
 
 export default withReactory(ArrayField);

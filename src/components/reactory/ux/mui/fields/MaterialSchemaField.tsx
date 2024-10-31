@@ -1,20 +1,21 @@
 import React, { Component, Fragment } from "react";
 import PropTypes from "prop-types";
 import  UnsupportedField from "@reactory/client-core/components/reactory/form/components/fields/UnsupportedField";
-import {
-  isMultiSelect,
-  retrieveSchema,
-  toIdSchema,
-  getDefaultRegistry,
-  mergeObjects,
-  getUiOptions,
-  isFilesArray,  
-  getSchemaType,
-  ADDITIONAL_PROPERTY_FLAG
-} from "@reactory/client-core/components/reactory/form/utils";
 import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
+import { ReactoryFormUtilities } from "components/reactory/form/types";
+import { useReactory, withReactory } from "@reactory/client-core/api/ApiProvider";
 
 const REQUIRED_FIELD_SYMBOL = "*";
+
+export enum SchemaFieldType {
+  array = 'ArrayField',
+  boolean = 'BooleanField',
+  integer = 'NumberField',
+  number = 'NumberField',
+  object = 'ObjectField',
+  string = 'StringField',
+  date = 'DateField',
+}
 
 /**
  * The component types that is inferred
@@ -30,27 +31,38 @@ const COMPONENT_TYPES = {
   date: "DateField"
 };
 
-function getFieldComponent(schema, uiSchema = {}, idSchema, fields) {
+function getFieldComponent(
+    schema: Reactory.Schema.AnySchema, 
+    uiSchema: Reactory.Schema.IUISchema = {}, 
+    idSchema: Reactory.Schema.IDSchema, 
+    fields: Reactory.Forms.IReactoryFields, 
+    utils: ReactoryFormUtilities,
+    reactory: Reactory.Client.ReactorySDK): React.ComponentType<any> {
   const field = uiSchema["ui:field"];
   if (typeof field === "function") {
     return field;
   }
-  if (typeof field === "string" && field in fields) {
-    return fields[field];
+  if (typeof field === "string" && field in fields) {    
+    return fields[field] as React.ComponentType<any>;
+  }
+  if (typeof field === "string" && field.indexOf('.') > -1) { 
+    return reactory.getComponent(field);
   }
 
-  const componentName = COMPONENT_TYPES[getSchemaType(schema)];
-  return componentName in fields
-    ? fields[componentName]
-    : () => {
-        return (
-          <UnsupportedField
-            schema={schema}
-            idSchema={idSchema}
-            reason={`Unknown field type ${schema.type}`}
-          />
-        );
-      };
+  const componentName = COMPONENT_TYPES[utils.getSchemaType(schema)];
+  if (componentName in fields) {
+    return fields[componentName] as React.ComponentType<any>;
+  }
+  
+  // @ts-ignore
+  return (
+    <UnsupportedField
+      schema={schema}
+      idSchema={idSchema}
+      reason={`Unknown field type ${schema.type}`}
+    />
+  );
+      
 }
 
 function Label(props) {
@@ -114,6 +126,7 @@ function ErrorList(props) {
 }
 
 function DefaultTemplate(props) {
+  const utils = props.reactory.getComponent('core.ReactoryFormUtilities');
   const {
     id,
     classNames,
@@ -130,7 +143,7 @@ function DefaultTemplate(props) {
   if (hidden) {
     return children;
   }
-  const additional = props.schema.hasOwnProperty(ADDITIONAL_PROPERTY_FLAG);
+  const additional = props.schema.hasOwnProperty(utils.ADDITIONAL_PROPERTY_FLAG);
   const keyLabel = `${label} Key`;
 
   return (
@@ -183,7 +196,9 @@ DefaultTemplate.defaultProps = {
   displayLabel: true,
 };
 
-function SchemaFieldRender(props) {
+const MaterialSchemaField: Reactory.Forms.ReactorySchemaFieldComponent = (props) => {
+  const reactory = useReactory();
+  const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
   const {
     uiSchema = {},
     formData,
@@ -194,22 +209,23 @@ function SchemaFieldRender(props) {
     required,
     onFocus,
     onBlur,
-    registry = getDefaultRegistry(),
+    onChange,
+    registry = utils.getDefaultRegistry(),
   } = props;
   const {
     definitions,
     fields,
     formContext,
-    FieldTemplate = DefaultTemplate,
+    templates,
   } = registry;
   let idSchema = props.idSchema;
-  const schema = retrieveSchema(props.schema, definitions, formData);
-  idSchema = mergeObjects(
-    toIdSchema(schema, null, definitions, formData, idPrefix),
+  const schema = utils.retrieveSchema(props.schema, definitions, formData);
+  idSchema = utils.mergeObjects(
+    utils.toIdSchema(schema, null, definitions, formData, idPrefix),
     idSchema
   );
 
-  const FieldComponent = getFieldComponent(schema, uiSchema, idSchema, fields);
+  const FieldComponent = getFieldComponent(schema, uiSchema, idSchema, fields, utils, reactory);
   const { DescriptionField } = fields;
   const disabled = Boolean(props.disabled || uiSchema["ui:disabled"]);
   const readonly = Boolean(props.readonly || uiSchema["ui:readonly"]);
@@ -220,12 +236,12 @@ function SchemaFieldRender(props) {
     return <div />;
   }
 
-  const uiOptions = getUiOptions(uiSchema);
+  const uiOptions = utils.getUiOptions(uiSchema);
   let { label: displayLabel = true } = uiOptions;
   if (schema.type === "array") {
     displayLabel =
-      isMultiSelect(schema, definitions) ||
-      isFilesArray(schema, uiSchema, definitions);
+      utils.isMultiSelect(schema, definitions) ||
+      utils.isFilesArray(schema, uiSchema, definitions);
   }
   if (schema.type === "object") {
     displayLabel = false;
@@ -239,12 +255,15 @@ function SchemaFieldRender(props) {
 
   const { __errors, ...fieldErrorSchema } = errorSchema || { __errors: [], fieldErrorSchema: {} };
   if(FieldComponent === undefined ||  FieldComponent === null) {
-    console.error('Component resolved to null', { schema, uiSchema, idSchema, fields })    
+    reactory.log('FieldComponent resolved to null', { schema, uiSchema, idSchema, fields });    
   }
   
-  // See #439: uiSchema: Don't pass consumed class names to child components
   const field = (
-    <ErrorBoundary onError={()=>{}} FallbackComponent={(props)=>(<>ERR on Field: {idSchema.$id}</>)}>
+    <ErrorBoundary 
+      onError={(error, info)=>{
+        reactory.log('Error on Field', { error, info, schema, uiSchema, idSchema, fields });
+      }} 
+      FallbackComponent={()=>(<>ERR on Field: {idSchema.$id}</>)}>
       <FieldComponent
         {...props}
         idSchema={idSchema}
@@ -253,6 +272,7 @@ function SchemaFieldRender(props) {
         disabled={disabled}
         onFocus={onFocus}
         onBlur={onBlur}
+        onChange={onChange}
         readonly={readonly}
         autofocus={autofocus}
         errorSchema={fieldErrorSchema}
@@ -261,13 +281,12 @@ function SchemaFieldRender(props) {
       />
     </ErrorBoundary>
   );
-
+  const FieldTemplate = registry.templates.FieldTemplate;
   const { type } = schema;
   const id = idSchema.$id;
   const label =
     uiSchema["ui:title"] || props.schema.title || schema.title;
   const description =
-    uiSchema["ui:description"] ||
     props.schema.description ||
     schema.description;
   const errors = __errors;
@@ -286,7 +305,10 @@ function SchemaFieldRender(props) {
   const fieldProps = {
     description: (
       <DescriptionField
+        // @ts-ignore
         id={id + "__description"}
+        schema={schema}
+        idSchema={idSchema}
         description={description}
         formContext={formContext}
       />
@@ -311,10 +333,11 @@ function SchemaFieldRender(props) {
     fields,
     schema,
     uiSchema,
-    formData
+    formData,
+    idSchema,
   };
 
   return <FieldTemplate {...fieldProps}>{field}</FieldTemplate>;
 }
 
-export default SchemaFieldRender;
+export default MaterialSchemaField;

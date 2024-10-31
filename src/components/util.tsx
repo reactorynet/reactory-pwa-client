@@ -255,6 +255,9 @@ export const getAvatar = (profile, alt?) => {
   if (nil(profile)) return CDNProfileResource();
   if (nil(profile.avatar)) return CDNProfileResource();
   if (profile.anon === true) return CDNProfileResource();
+  if(profile.avatar.startsWith('data:image')) return profile.avatar;
+  if(profile.avatar.startsWith('http')) return profile.avatar;
+  
   return CDNProfileResource(profile.id, profile.avatar) || alt;
   //return profile.avatar
 };

@@ -1,35 +1,23 @@
 
-import React, { Component } from "react";
-import PropTypes from "prop-types";
+import React from "react";
 import {
   IconButton,
   Icon,
-  Fab,
-  Paper,
-  Grid,
-  Button,
-  Toolbar,
-  Typography,
 } from '@mui/material';
 import lodash from 'lodash';
-import { withStyles, withTheme } from '@mui/styles';
+import { useReactory } from "@reactory/client-core/api/ApiProvider";
+import { ReactoryFormUtilities } from "@reactory/client-core/components/reactory/form/types";
 
-import {
-  orderProperties,
-  retrieveSchema,
-
-  getDefaultRegistry,
-  getUiOptions,
-} from "@reactory/client-core/components/reactory/form/utils";
-
-function DefaultObjectFieldTemplate(props: any) {
-
+export function DefaultObjectFieldTemplate(props: any) {
+  const reactory  = useReactory();
+  const utils = reactory.getComponent('core.ReactoryFormUtilities') as ReactoryFormUtilities;
+  
   const canExpand = function canExpand() {
     const { formData, schema, uiSchema } = props;
     if (!schema.additionalProperties) {
       return false;
     }
-    const { expandable } = getUiOptions(uiSchema);
+    const { expandable } = utils.getUiOptions(uiSchema);
     if (expandable === false) {
       return expandable;
     }
@@ -75,74 +63,80 @@ function DefaultObjectFieldTemplate(props: any) {
   );
 }
 
-class MaterialObjectField extends React.Component<any, any, any> {
-  static defaultProps = {
-    uiSchema: {},
-    formData: {},
-    errorSchema: {},
-    idSchema: {},
-    required: false,
-    disabled: false,
-    readonly: false,
-  };
+const MaterialObjectField: Reactory.Forms.ReactoryObjectFieldComponent = (props) => { 
+  const reactory = useReactory();
+  const utils = reactory.getComponent('core.ReactoryFormUtilities') as ReactoryFormUtilities;
+  const {
+    uiSchema,
+    formData,
+    errorSchema,
+    idSchema,
+    name,
+    required,
+    disabled,
+    readonly,
+    idPrefix,
+    onBlur,
+    onFocus,
+    registry = utils.getDefaultRegistry(),
+    onChange,
+  } = props;
 
-  state = {
-    additionalProperties: {},
-  };
 
-  isRequired(name) {
-    const schema = this.props.schema;
+  const isRequired = (name) => {
+    const schema = props.schema;
     return (
       Array.isArray(schema.required) && schema.required.indexOf(name) !== -1
     );
-  }
+  };
 
-  onPropertyChange = name => {
-    
-    return (value, errorSchema) => {
-
-      this.props.formContext.reactory.log(`onPropertyChange ${name}`, {value})
-
-      const newFormData = { ...this.props.formData, [name]: value };
-      this.props.onChange(
-        newFormData,
+  const onPropertyChange = name => {
+    return (value: any, errorSchema: Reactory.Schema.IErrorSchema) => {
+      reactory.debug(`onPropertyChange ${name}`, { value });
+      let nextFormData = {};
+      if (formData) {
+        nextFormData = { ...formData };
+      }
+      nextFormData[name] = value;
+      onChange(
+        nextFormData,
         errorSchema &&
-        this.props.errorSchema && {
-          ...this.props.errorSchema,
+        errorSchema && {
+          ...errorSchema,
           [name]: errorSchema,
         }
       );
     };
   };
 
-  getAvailableKey = (preferredKey, formData) => {
+  const getAvailableKey = (preferredKey, formData) => {
     var index = 0;
     var newKey = preferredKey;
-    while (this.props.formData.hasOwnProperty(newKey)) {
+    while (formData.hasOwnProperty(newKey)) {
       newKey = `${preferredKey}-${++index}`;
     }
     return newKey;
   };
 
-  onKeyChange = oldValue => {
+  const onKeyChange = (oldValue) => {
     return (value, errorSchema) => {
-      value = this.getAvailableKey(value, this.props.formData);
-      const newFormData = { ...this.props.formData };
+      value = getAvailableKey(value, formData);
+      const newFormData = { ...formData };
       const property = newFormData[oldValue];
       delete newFormData[oldValue];
       newFormData[value] = property;
-      this.props.onChange(
+      onChange(
         newFormData,
         errorSchema &&
-        this.props.errorSchema && {
-          ...this.props.errorSchema,
+        errorSchema && {
+          ...errorSchema,
           [value]: errorSchema,
         }
       );
     };
   };
 
-  getDefaultValue(type) {
+  const getDefaultValue = (type: string) => {
     switch (type) {
       case "string":
         return "New Value";
@@ -162,117 +156,141 @@ class MaterialObjectField extends React.Component<any, any, any> {
     }
   }
 
-  handleAddClick = schema => () => {
-    const type = schema.additionalProperties.type;
-    const newFormData = { ...this.props.formData };
+  const handleAddClick = () => {
+    const type: string = schema.additionalProperties.type as string;
+    const newFormData = { ...formData };
     newFormData[
-      this.getAvailableKey("newKey", newFormData)
-    ] = this.getDefaultValue(type);
-    this.props.onChange(newFormData);
+      getAvailableKey("newKey", newFormData)
+    ] = getDefaultValue(type);
+    onChange(newFormData);
   };
 
-  render() {
-    const {
-      uiSchema,
-      formData,
-      errorSchema,
-      idSchema,
-      name,
-      required,
-      disabled,
-      readonly,
-      idPrefix,
-      onBlur,
-      onFocus,
-      registry = getDefaultRegistry(),
-      onChange
-    } = this.props;
-    const { definitions, fields, formContext } = registry;
-    const { SchemaField, TitleField, DescriptionField } = fields;
-    const schema = retrieveSchema(this.props.schema, definitions, formData);
-    // const uiSchema = retrieve
-    // this.props.formContext.reactory.log(`MaterialObjectField.render ${idSchema.id}`)
-
-    const title = schema.title === undefined ? name : schema.title;
-    const description = uiSchema["ui:description"] || schema.description;
-    const widget = uiSchema["ui:widget"]
-
-    let $props = {};
-
-    if (uiSchema['ui:props']) {
-      $props = { ...uiSchema['ui:props'] }
-    }
-
-    let orderedProperties;
-
-    try {
-      const properties = Object.keys(schema.properties);
-      orderedProperties = orderProperties(properties, uiSchema["ui:order"]);
-    } catch (err) {
-      return (
-        <div>
-          <p className="config-error" style={{ color: "red" }}>
-            Invalid {name || "root"} object field configuration:
-            <em>{err.message}</em>.
-          </p>
-          <pre>{JSON.stringify(schema)}</pre>
-        </div>
-      );
-    }
-
-    let Template = registry.ObjectFieldTemplate || DefaultObjectFieldTemplate;
-
-    if (lodash.isString(widget) && lodash.isFunction(registry.widgets[widget])) {
-      //console.log('Set new Template for schema object', Template);
-      Template = registry.widgets[widget];
-
-    }
-
-    const templateProps = {
-      title: uiSchema["ui:title"] || title,
-      description,
-      TitleField,
-      DescriptionField,
-      properties: orderedProperties.map(name => {
-        return {
-          content: (
-            <SchemaField
-              key={name}
-              name={name}
-              required={this.isRequired(name)}
-              schema={schema.properties[name]}
-              uiSchema={uiSchema[name]}
-              errorSchema={errorSchema[name]}
-              idSchema={idSchema[name]}
-              idPrefix={idPrefix}
-              formData={formData && formData[name] ? formData[name] : null}
-              onKeyChange={this.onKeyChange(name)}
-              onChange={this.onPropertyChange(name)}
-              onBlur={onBlur}
-              onFocus={onFocus}
-              registry={registry}
-              disabled={disabled}
-              readonly={readonly}
-            />
-          ),
-          name,
-          readonly,
-          disabled,
-          required,
-        };
-      }),
-      required,
-      idSchema,
-      uiSchema,
-      schema,
-      formData,
-      formContext,
-      onChange,
-      ...$props
-    };
-    return <Template {...templateProps} onAddClick={this.handleAddClick} />;
+  const { definitions, fields, formContext } = registry;
+  const { SchemaField, TitleField, DescriptionField } = fields;
+  const schema = utils.retrieveSchema(props.schema, definitions, formData);
+  
+  let titleOptions = { formData, formContext, reactory };
+  if (uiSchema["ui:title"] && typeof uiSchema["ui:title"] === 'string') { 
+    schema.title = uiSchema["ui:title"];
+  } else if (uiSchema["ui:title"] && typeof uiSchema["ui:title"] === 'object') { 
+    if (typeof uiSchema["ui:title"].title === "string") schema.title = uiSchema["ui:title"].title;
+    if (typeof uiSchema["ui:title"].title === "object") { 
+      schema.title = uiSchema["ui:title"].title.key;
+      titleOptions = { ...titleOptions, ...uiSchema["ui:title"].title.options };
+    }    
   }
-}
 
+  let descriptionOptions = { formData, formContext, reactory };
+  if (uiSchema["ui:description"] && typeof uiSchema["ui:description"] === 'string') { 
+    schema.description = uiSchema["ui:description"];
+  } else if (uiSchema["ui:description"] && typeof uiSchema["ui:description"] === 'object') { 
+    if (typeof uiSchema["ui:description"].title === "string") schema.description = uiSchema["ui:description"].title;
+    if (typeof uiSchema["ui:description"].title === "object") { 
+      schema.description = uiSchema["ui:description"].title.key;
+      descriptionOptions = { ...descriptionOptions, ...uiSchema["ui:description"].title.options };
+    }
+  }
+
+  const title = reactory.i18n.t(schema.title, titleOptions);
+  const description = reactory.i18n.t(schema.description, descriptionOptions);
+  const widget = uiSchema["ui:widget"]
+
+  let $props = {};
+
+  if (uiSchema['ui:props']) {
+    $props = { ...uiSchema['ui:props'] }
+  }
+
+  let orderedProperties;
+
+  try {
+    const properties = Object.keys(schema.properties);
+    orderedProperties = utils.orderProperties(properties, uiSchema["ui:order"]);
+  } catch (err) {
+    return (
+      <div>
+        <p className="config-error" style={{ color: "red" }}>
+          Invalid {name || "root"} object field configuration:
+          <em>{err.message}</em>.
+        </p>
+        <pre>{JSON.stringify(schema)}</pre>
+      </div>
+    );
+  }
+
+  const templateProps = {
+    title,
+    description,
+    TitleField,
+    DescriptionField,
+    reactory: reactory,
+    properties: orderedProperties.map(name => {
+      return {
+        content: (
+          <SchemaField
+            key={name}
+            name={name}
+            required={isRequired(name)}
+            schema={schema.properties[name]}
+            uiSchema={uiSchema[name] as Reactory.Schema.IUISchema}
+            errorSchema={errorSchema[name]}
+            idSchema={idSchema[name]}
+            idPrefix={idPrefix}
+            formData={formData && formData[name] ? formData[name] : null}
+            onKeyChange={onKeyChange(name)}
+            onChange={onPropertyChange(name)}
+            onBlur={onBlur}
+            onFocus={onFocus}
+            registry={registry}
+            disabled={disabled}
+            readonly={readonly}
+          />
+        ),
+        name,
+        readonly,
+        disabled,
+        required,
+      };
+    }),
+    required,
+    idSchema,
+    uiSchema,
+    schema,
+    formData,
+    formContext,
+    onChange,
+    ...$props
+  };
+
+  let Template = registry.templates.ObjectTemplate;
+
+  if (!Template) { 
+    return (<>Check registry has ObjectFieldTemplate</>)
+  }
+
+  if (typeof widget === 'string' ) {
+    if (widget.indexOf('.') > -1) {
+      Template = reactory.getComponent(widget);
+      if (!Template) {
+        const WaitingForLoad = reactory.getComponent('core.NotFound@1.0.0') as React.FC<any>;
+        return <WaitingForLoad 
+          waitingFor={widget}
+          args={templateProps} 
+          />;
+      }
+    }  
+    if (!Template && registry.widgets[widget]) {
+      // @ts-ignore
+      Template = registry.widgets[widget];
+    }
+  }
+
+  if (typeof widget === 'function') { 
+    Template = widget;
+  }
+
+  // @ts-ignore
+  return <Template {...templateProps} onAddClick={handleAddClick} />;
+}
 
 export default MaterialObjectField;

@@ -139,7 +139,7 @@ class ColumnFilterWidget extends Component<ColumnFilterWidgetProps, ColumnFilter
 
 
                 const onMenuItemSelect = (evt, menuItem) => {
-                  api.log(`${menuItem.id} selected`, { menuItem }, 'debug');
+                  api.log(`${menuItem.id} selected`, { menuItem });
                   switch(menuItem.id) {
                     case 'remove_filter': {
                       const { columns } = this.state;

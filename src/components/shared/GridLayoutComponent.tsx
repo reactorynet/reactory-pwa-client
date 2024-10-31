@@ -78,7 +78,7 @@ class GridLayoutWidget extends Component<any, any> {
             variables = { ...this.state.variables, paging: { page: this.state.page, pageSize: this.state.pageSize } }
           }
 
-          api.log('GRIDLAYOUTWIDGET - Mapped variables for query', { variables }, 'debug');
+          api.log('GRIDLAYOUTWIDGET - Mapped variables for query', { variables });
 
           const queryResult = await api.graphqlQuery(queryDefinition.text, variables).then();
 

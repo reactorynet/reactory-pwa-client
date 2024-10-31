@@ -79,7 +79,9 @@ const FullScreenDialog = (props) => {
     title,
     showAppBar = true,
     appBarProps = {},
-    toolbarProps = { variant: "dense" },
+    toolbarProps = { 
+      variant: "dense" 
+    },
     containerProps = {},
     slide = 'up',
     fullScreen = true,
@@ -178,7 +180,7 @@ const FullScreenDialog = (props) => {
     <Fragment>
       <Dialog className={classes.dialog_root} {...dialogProps} >
         {
-          showAppBar && <AppBar className={classes.appBar} color={"transparent"} {...appBarProps}>
+          showAppBar && <AppBar className={classes.appBar} {...appBarProps}>
             <Toolbar {...toolbarProps} variant={"dense"}>
               <IconButton color="inherit" onClick={handleClose} aria-label="Close" size="large">
                 <Icon>{props.closeButtonIcon || 'close'}</Icon>

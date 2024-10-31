@@ -49,7 +49,7 @@ class SubmissionComponent extends Component<any, any> {
 
     const submit = () => {      
       if(props.formContext && isFunction(props.formContext.$submit) === true) {
-        props.api.log('Submitting Form, via Submission Component', {props}, 'debug');
+        props.api.log('Submitting Form, via Submission Component', {props});
         props.formContext.$submit()
         props.formContext.refresh(); 
       }

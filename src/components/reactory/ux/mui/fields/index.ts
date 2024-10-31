@@ -1,4 +1,4 @@
-import { MaterialArrayField } from "./MaterialArrayField";
+import MaterialArrayField from "./MaterialArrayField";
 import MaterialBooleanField from "./MaterialBooleanField";
 import MaterialDescriptionField from "./MaterialDescriptionField";
 import MaterialGridField from './MaterialGridField';
@@ -10,7 +10,8 @@ import MaterialTabbedField from "./MaterialTabbedField";
 import MaterialTitleField from "./MaterialTitleField";
 import MaterialUnsupportedField from './MaterialUnsupportedField';
 
-const fields = {
+const fields: Reactory.Forms.IReactoryFields = {
+  // @ts-ignore
   ArrayField: MaterialArrayField,
   BooleanField: MaterialBooleanField,
   DescriptionField: MaterialDescriptionField,

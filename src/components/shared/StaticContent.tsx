@@ -8,6 +8,7 @@ import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import classNames from 'classnames';
 import ReactDOM from 'react-dom';
 import { useNavigate, useParams } from 'react-router';
+import { margin } from '@mui/system';
 
 export interface ReactoryStaticContentProps {
   id: string,
@@ -75,6 +76,39 @@ export interface ComponentMountInfo {
 
 export type ReactoryStaticContentComponent = React.FC<Partial<ReactoryStaticContentProps>>;
 
+
+const StaticContentStyles = (theme: any): any => {
+  const { palette } = theme;
+
+  return {
+    editIcon: {
+      float: 'right',
+      margin: '10px',
+      fontSize: '18px'
+    },
+    contentContainer: {
+      margin: theme.spacing(1),
+    },
+    buttonContainer: {
+      minHeight: '40px'
+    },
+    staticContentContainer: {
+      display: 'flex',
+      justifyContent: 'centre',
+      minHeight: '40px',      
+      padding: theme.spacing(1),
+      margin: theme.spacing(1),
+      marginBottom: '50px'
+    },
+    staticContainerDeveloper: {
+      '&:hover': {
+        outline: `1px solid ${palette.primary.main}`,
+        cursor: 'pointer'
+      }
+    },
+  }
+};
+
 /**
  * Static Content Component. Used for editing static content using a wysiwig editor
  * @param props 
@@ -106,6 +140,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
   } = props;
 
   const [state, setState] = React.useState<ReactoryStaticContentState>({
+    id: null,
     content: {
       title: title || `Loading`,
       content: 'Loading',
@@ -129,8 +164,10 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
 
   const containerProps = {};
   const {
-
-    editing, found, content } = state;
+    editing,
+    found, 
+    content 
+  } = state;
 
   const getSlug = () => {
     if (slugSource === 'property' || slugSource === null || slugSource === undefined) return slug;
@@ -329,8 +366,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
 
   };
 
-  const onDevelopmentModeChanged = (isDevelopmentMode: boolean) => {
-    
+  const onDevelopmentModeChanged = () => {
     setVersion(version + 1);
   }
 
@@ -354,9 +390,6 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
       if(!portalContainer || MountableComponent === null) return null
             
       return ReactDOM.createPortal(<MountableComponent  { ...mountInfo.props }/>, portalContainer);
-      // reactory.mountComponent(component, {reactory, ...mountInfo.props }, portalContainer, true, () => {
-      //   reactory.log(`component ${mountInfo.component} mounted at ${mountInfo.id}`)
-      // });
     })
 
     return (
@@ -387,6 +420,8 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
   };
 
   useEffect(() => {
+    // this call ensures we are loading the ContentCapture form
+    // for the logged in user.
     reactory.form("ContentCapture");
     getData();
     reactory.on("onReactoryDevelopmentModeChanged", onDevelopmentModeChanged);
@@ -420,37 +455,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
 
 };
 
-const StaticContentStyles = (theme: any): any => {
-  const { palette } = theme;
 
-  return {
-    editIcon: {
-      float: 'right',
-      margin: '10px',
-      fontSize: '18px'
-    },
-    contentContainer: {
-
-    },
-    buttonContainer: {
-      minHeight: '40px'
-    },
-    staticContentContainer: {
-      display: 'flex',
-      justifyContent: 'centre',
-      minHeight: '40px',      
-      padding: theme.spacing(1),
-      margin: theme.spacing(1),
-      marginBottom: '50px'
-    },
-    staticContainerDeveloper: {
-      '&:hover': {
-        outline: `1px solid ${palette.primary.main}`,
-        cursor: 'pointer'
-      }
-    },
-  }
-};
 
 const StaticContentComponent: any = compose(withReactory, withTheme, withStyles(StaticContentStyles))(StaticContent);
 

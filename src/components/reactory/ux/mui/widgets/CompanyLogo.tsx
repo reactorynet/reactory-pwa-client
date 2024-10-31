@@ -1,5 +1,4 @@
 import React, { Fragment, Component } from 'react'
-import Loadable from 'react-loadable'
 import PropTypes from 'prop-types'
 import lodash, { isString } from 'lodash'
 import classNames from 'classnames';
@@ -93,7 +92,7 @@ class CompanyLogoWidget extends Component<any, any> {
       if(typeof variables.id !== 'string') {
         if(variables.id.id) variables.id = variables.id.id;
         else {
-          this.props.api.log('CompanyLogo component expecting a string id or an object with an id', { formData }, 'warn');
+          this.props.api.warn('CompanyLogo component expecting a string id or an object with an id', { formData });
         }
       }
 

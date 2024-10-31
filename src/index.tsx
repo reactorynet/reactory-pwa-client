@@ -14,6 +14,31 @@ const props = {
 };
 
 
+if (process.env.NODE_ENV !== 'production') {
+  window.reactory = {
+    api: null,
+    logging: {
+      log: true,
+      debug: true,
+      error: true,
+      warn: true,
+      info: true,
+    }
+  }
+} else {
+  window.reactory = {
+    api: null,
+    logging: {
+      log: false,
+      debug: false,
+      error: false,
+      warn: false,
+      info: false,
+    }
+  }
+}
+
+
 const rootElement = document.getElementById('root')
 if(rootElement.classList.contains('loading')) rootElement.classList.remove('loading')
 ReactDOM.render(<ReactoryHOC {...props} />, rootElement);

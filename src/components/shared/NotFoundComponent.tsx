@@ -10,6 +10,7 @@ interface NotFoundProps {
   link?: string,
   theme?: any,
   location?: any
+  onFound?: () => void;
 };
 
 const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) => {
@@ -33,12 +34,16 @@ const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) 
       } else {
         //this.setState({ found: true, mustCheck: false })    
         setFound(true);
+        if(props.onFound) {
+          props.onFound();
+        }
       }
     }
   }
 
   React.useEffect(() => { checkComponentLoaded() }, [])
   
+
   if(unavailable === true) {
     if(reactory.isDevelopmentMode() === true && reactory.hasRole(["DEVELOPER"]) === true) {
       

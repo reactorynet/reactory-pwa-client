@@ -246,7 +246,4 @@ const MaterialFieldTemplateFunction = (props) => {
 
 };
 
-// const MaterialFieldTemplateComponent = compose(withReactory, withTheme, withStyles(MaterialFieldStyles))(MaterialFieldTemplateFunction);
-//export default MaterialFieldTemplateComponent as Reactory.Client.AnyValidComponent;
-
 export default MaterialFieldTemplateFunction;

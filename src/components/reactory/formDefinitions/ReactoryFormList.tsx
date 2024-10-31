@@ -2,7 +2,7 @@ import React from 'react';
 import Reactory from '@reactory/reactory-core';
 import { useNavigate } from 'react-router';
 
-const formSchema: Reactory.Schema.ISchema = {
+const formSchema: Reactory.Schema.IArraySchema = {
   type: 'array',
   title: 'Forms',
   items: {
@@ -64,7 +64,7 @@ const uiSchema = {
       //   return null;
       // },
       // avatarAlt: (item) => {
-      //   // reactory.log(`Getting avatar alt for item`, { item }, 'debug');
+      //   // reactory.log(`Getting avatar alt for item`, { item });
       //   if (item.event.organization && item.event.organization.avatar) {
       //     return item.event.organization.name
       //   }

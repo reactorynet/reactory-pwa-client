@@ -103,7 +103,7 @@ class NotificationHOC extends Component<any, any> {
       const additionalComponents = config.components || [];
       additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, propsMap }, additionalComponentIndex) => {
         let ComponentToMount = reactory.getComponent(componentFqn);
-        reactory.log('NOTIFICATION __ ADITIONAL COMPONENT:: ', { componentProps, componentFqn }, 'debug');
+        reactory.log('NOTIFICATION __ ADITIONAL COMPONENT:: ', { componentProps, componentFqn });
         let additionalComponentFound = true;
         if (ComponentToMount === null || ComponentToMount === undefined) {
           additionalComponentFound = false;

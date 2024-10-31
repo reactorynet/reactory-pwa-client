@@ -1,6 +1,5 @@
 import React, { Fragment, Component } from 'react'
 import PropTypes from 'prop-types'
-import { pullAt, find } from 'lodash'
 import {
   Button,
   Icon,

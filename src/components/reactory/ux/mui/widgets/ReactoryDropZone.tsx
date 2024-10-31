@@ -49,7 +49,7 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
   const onDrop = useCallback(acceptedFiles => {
     fileDropped(acceptedFiles);
   }, []);
-  const { getRootProps, getInputProps, acceptedFiles, isFileDialogActive, isDragActive, rejectedFiles } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps, acceptedFiles, isFileDialogActive, isDragActive, fileRejections } = useDropzone({ onDrop });
   const rootProps = getRootProps();
   const inputProps = getInputProps();
 
@@ -59,7 +59,7 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
     icon = (<Icon color={iconProps.color || "primary"}>{iconProps.icon}</Icon>)
   }
 
-  reactory.log(`DropZoneReactorFormWidget`, { acceptedFiles, isFileDialogActive, isDragActive, rejectedFiles });
+  reactory.log(`DropZoneReactorFormWidget`, { acceptedFiles, isFileDialogActive, isDragActive, fileRejections });
 
   return (
     <div {...rootProps} className={props.className} style={style}>
@@ -144,7 +144,7 @@ class ReactoryDropZone extends Component<any, any> {
             try {
               _v = reactory.utils.templateObject(ReactoryDropZoneProps.mutation.variables, that);
             } catch (templateErr) {
-              reactory.log(`🚨🚨🚨 Error processing mapping 🚨🚨🚨`, { templateErr }, 'error');
+              reactory.log(`🚨🚨🚨 Error processing mapping 🚨🚨🚨`, { templateErr });
             }
 
             const variables = {
@@ -170,7 +170,7 @@ class ReactoryDropZone extends Component<any, any> {
                     }
                   });
 
-                  reactory.log(`Could not upload document`, { errors }, 'error')
+                  reactory.log(`Could not upload document`, { errors });
 
                   return;
                 }
@@ -218,7 +218,7 @@ class ReactoryDropZone extends Component<any, any> {
 
               })
 
-              reactory.log(`Could not upload document`, { docError }, 'error')
+              reactory.log(`Could not upload document`, { docError });
 
             });
           }
