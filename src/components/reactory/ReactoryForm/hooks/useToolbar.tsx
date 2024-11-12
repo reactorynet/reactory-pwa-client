@@ -49,6 +49,13 @@ if (typeof formDefinition.uiSchema === "object") {
       icon = (formDefinition.uiSchema['ui:options'] as any).submitIcon
     }
   }
+
+  if (formDefinition.uiSchema && formDefinition.uiSchema['ui:form'] !== null
+    && typeof formDefinition.uiSchema['ui:form'] === 'object') {
+    if ((formDefinition.uiSchema['ui:form'] as any).submitIcon) {
+      icon = (formDefinition.uiSchema['ui:form'] as any).submitIcon
+    }
+  }
 }
 
 if (uiOptions?.submitIcon) icon = uiOptions.submitIcon;

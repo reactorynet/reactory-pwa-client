@@ -1208,7 +1208,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
    * @param id - string id.
    * @returns 
    */
-  form(id: string, onFormUpdated: (formDef: Reactory.Forms.IReactoryForm, error?: Error) => void = null) {
+  form(id: string, 
+    onFormUpdated: (formDef: Reactory.Forms.IReactoryForm, error?: Error) => void = null,
+    options?: any
+  ) {
     const that = this;
     const { formSchemas = [] } = this;
 
@@ -1222,8 +1225,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     if (!$formDef) return null;
 
     const FORM_QUERY = `
-    query ReactoryFormGetById($id: String!) {
-      ReactoryFormGetById(id: $id) {
+    query ReactoryFormGetById($id: String!, $options: Any) {
+      ReactoryFormGetById(id: $id, options: $options) {
         ${FORM_QUERY_SEGMENTS.FORM_CORE_ELEMENTS}
         ${FORM_QUERY_SEGMENTS.FORM_SCHEMAS}        
         ${FORM_QUERY_SEGMENTS.ADDITIONAL}
@@ -1231,7 +1234,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }`;
 
     if (!$formDef.__complete__) {
-      that.graphqlQuery<any, any>(FORM_QUERY, { id }, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
+      that.graphqlQuery<any, any>(FORM_QUERY, { id, options }, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
         if (data && data.ReactoryFormGetById) {
           let index = lodash.findIndex(this.formSchemas, { id });
 

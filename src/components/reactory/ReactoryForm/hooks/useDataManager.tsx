@@ -14,6 +14,7 @@ import { diff } from 'deep-object-diff';
 import { useReactory } from "@reactory/client-core/api";
 import { deepEquals } from "@reactory/client-core/components/util";
 import { useDataManagerProvider } from "../DataManagers";
+import { useUISchema } from "./useUISchema";
 import { Button, Icon } from "@mui/material";
 import { Schema } from "ajv";
 
@@ -79,6 +80,16 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     graphDefinition: graphDefinition || formDefinition.graphql,
     mode
   });
+
+  const {
+    uiOptions,
+  } = useUISchema({
+    formDefinition,
+    FQN,
+    SIGN,
+    mode,    
+  });
+
   const defaultDataManager = graphqlDataManager
   const [ isDataLoading, setIsDataLoading ] = useState<boolean>(false);
   const [ isValidating, setIsValidating ] = useState<boolean>(false);
@@ -189,12 +200,17 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
       onSubmit(evt); 
     }
 
+
+    let icon = 'save';
+    let iconProps = uiOptions?.submitIconProps || {};
+    let iconWidget = (icon === '$none' ? null : <Icon {...iconProps}>{icon}</Icon>);
+
     return (
       <Button
         onClick={onClick}
         disabled={isDataLoading || isDirty === false}
       >
-        <Icon>save</Icon>
+        {iconWidget}
       </Button>
     );
   }
