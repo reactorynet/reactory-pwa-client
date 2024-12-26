@@ -68,7 +68,7 @@ export default async () => {
   });
 
   const uploadLink = createUploadLink({
-    uri: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`,
+    uri: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/graph`,
     fetch: fetch
   });
 
@@ -76,7 +76,7 @@ export default async () => {
   let resolvers: Resolvers[] = [];
 
   createClient({  
-    url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`.replace('http', 'ws'),    
+    url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/graph`.replace('http', 'ws'),    
     retryAttempts: 5,
     connectionParams: {
       Authorization: `Bearer ${token}`,
@@ -85,7 +85,7 @@ export default async () => {
   })
 
   const ws_client = createClient({
-    url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/api`.replace('http', 'ws'),
+    url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/graph`.replace('http', 'ws'),
     retryAttempts: 5,
     connectionParams: {
       Authorization: `Bearer ${token}`,

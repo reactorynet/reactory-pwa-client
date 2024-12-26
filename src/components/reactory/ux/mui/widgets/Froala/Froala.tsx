@@ -424,6 +424,6 @@ class FroalaEditor extends Component<any, any> {
     )
   }
 }
-
+//@ts-ignore
 const FroalaWired = compose(withReactory, withTheme, withStyles(FroalaEditor.styles))(FroalaEditor);
 export default FroalaWired;

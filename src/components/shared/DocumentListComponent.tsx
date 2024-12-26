@@ -157,6 +157,7 @@ class DocumentListWidget extends Component<any, any> {
     )
   }
 }
+// @ts-ignore
 const DocumentListComponent = compose(withReactory, withTheme, withStyles(DocumentListWidget.styles))(DocumentListWidget)
 export default DocumentListComponent;
 
