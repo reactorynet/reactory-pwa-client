@@ -10,4 +10,4 @@
 #$SECONDS - The number of seconds since the script was started.
 #$RANDOM - Returns a different random number each time is it referred to.
 #$LINENO - Returns the current line number in the Bash script.
-NODE_PATH=./src env-cmd -f ./config/env/${1:-reactory}/.env.${2:-local} node --max_old_space_size=4096 scripts/build.js
+NODE_PATH=./src env-cmd -f ./config/env/${1:-reactory}/.env.${2:-local} npx babel-node scripts/build.ts --presets @babel/env --extensions ".js,.ts" --max_old_space_size=2000000
