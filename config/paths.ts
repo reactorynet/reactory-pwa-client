@@ -100,4 +100,5 @@ export const paths = {
   appNodeModules: resolveApp('node_modules'),
   publicUrl: getPublicUrl(resolveApp('package.json')),
   servedPath: getServedPath(resolveApp('package.json')),
+  appTemplate: resolveApp('public/index.ejs'),
 };

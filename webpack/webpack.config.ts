@@ -571,20 +571,27 @@ export default function(webpackEnv): WebpackConfiguration {
       // new webpack.IgnorePlugin({ checkResource: (res, context) => res.match(ignoreCheckResourceRegExp) || context.match(ignoreCheckResourceRegExp) }),
       // Generate a service worker script that will precache, and keep up to date,
       // the HTML & assets that are part of the Webpack build.
-      isEnvProduction &&
-        new WorkboxWebpackPlugin.GenerateSW({
-          clientsClaim: true,
-          exclude: [/\.map$/, /asset-manifest\.json$/],
-          importWorkboxFrom: 'cdn',
-          navigateFallback: publicUrl + '/index.html',
-          navigateFallbackBlacklist: [
-            // Exclude URLs starting with /_, as they're likely an API call
-            new RegExp('^/_'),
-            // Exclude URLs containing a dot, as they're likely a resource in
-            // public/ and not a SPA route
-            new RegExp('/[^/]+\\.[^/]+$'),
-          ],
-        }),
+      // isEnvProduction &&
+      //   new WorkboxWebpackPlugin.GenerateSW({
+      //     clientsClaim: true,
+      //     exclude: [/\.map$/, /asset-manifest\.json$/],
+      //     // importWorkboxFrom: 'cdn',
+      //     navigateFallbackAllowlist: { 
+            
+      //     },
+      //     // navigateFallbackBlacklist: [
+      //     //   // Exclude URLs starting with /_, as they're likely an API call
+      //     //   new RegExp('^/_'),
+      //     //   // Exclude URLs containing a dot, as they're likely a resource in
+      //     //   // public/ and not a SPA route
+      //     //   new RegExp('/[^/]+\\.[^/]+$'),
+      //     // ],
+      //   }),
+      isEnvProduction && new WorkboxWebpackPlugin.InjectManifest({ 
+        swSrc: './src/service-worker.ts', // Path to your custom service worker
+        swDest: 'service-worker.js', // Output file name for the service worker
+        exclude: [/\.map$/, /asset-manifest\.json$/], // Exclude specific files from being precached
+      }),
       // TypeScript type checking
       useTypeScript &&
         new ForkTsCheckerWebpackPlugin({

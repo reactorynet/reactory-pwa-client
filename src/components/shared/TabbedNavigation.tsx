@@ -328,6 +328,6 @@ class TabbedNavComponent extends Component<any, any> {
     }
   }
 };
-
+//@ts-ignore
 const TabbedNavigationComponent = compose(withReactory, withTheme, withStyles(TabbedNavComponent.styles))(TabbedNavComponent);
 export default TabbedNavigationComponent;

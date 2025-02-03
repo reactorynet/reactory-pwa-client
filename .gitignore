@@ -29,4 +29,8 @@ yarn.lock
 !/config/env/README.MD
 !/config/env/reactory.local
 
+# certificates
+/certificates/*
+!/certificates/readme.md
+
 *.tgz

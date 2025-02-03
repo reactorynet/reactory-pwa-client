@@ -238,5 +238,5 @@ class ReactoryDropZone extends Component<any, any> {
   }
 
 }
-
+//@ts-ignore
 export default compose(withReactory, withTheme, withStyles(ReactoryDropZone.styles))(ReactoryDropZone);

@@ -1,28 +1,25 @@
-import { useEffect, useState } from "react";
-import * as uuid from 'uuid';
-import { useNavigate, useLocation, useParams, Params } from 'react-router';
-import ReactoryFormListDefinition from '../../formDefinitions/ReactoryFormList';
-import ReactoryNewFormInput from '../../formDefinitions/ReactoryNewFormInput';
-import { ReactoryDefaultForm } from "../constants";
-import ReactoryUxPackages from '../../ux';
-import ReactoryApi, { useReactory } from "@reactory/client-core/api";
-import { DefaultComponentMap, ReactoryFormDefinitionHook } from "../types";
-import MuiReactoryPackage from "@reactory/client-core/components/reactory/ux/mui";
-import { useUISchema } from "./useUISchema";
-import { useSchema } from "./useSchema";
-import { useContext } from "./useContext";
-import { useDataManager } from "./useDataManager";
-import { ReactoryApiEventNames } from "@reactory/client-core/api/ReactoryApi";
+import { useReactory } from "@reactory/client-core/api";
 import { toIdSchema } from "@reactory/client-core/components/reactory/form/utils";
+import MuiReactoryPackage from "@reactory/client-core/components/reactory/ux/mui";
+import React, { useEffect, useState } from "react";
+import { Params, useParams } from "react-router";
+import * as uuid from "uuid";
+import ReactoryUxPackages from "../../ux";
+import { ReactoryDefaultForm } from "../constants";
+import { DefaultComponentMap, ReactoryFormDefinitionHook } from "../types";
+import { useDataManager } from "./useDataManager";
+import { useSchema } from "./useSchema";
+import { useUISchema } from "./useUISchema";
 
 const DEFAULT_DEPENDENCIES = [
-  'core.Loading',
-  'core.Logo',
-  'core.FullScreenModal',
-  'core.DropDownMenu',
-  'core.HelpMe',
-  'core.ReportViewer',
-  'core.ReactoryFormEditor'];
+  "core.Loading",
+  "core.Logo",
+  "core.FullScreenModal",
+  "core.DropDownMenu",
+  "core.HelpMe",
+  "core.ReportViewer",
+  "core.ReactoryFormEditor",
+];
 
 /**
  * Build the form definition from current props and state.
@@ -35,7 +32,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     uiSchemaId,
     uiSchemaKey,
     formDef,
-    mode = 'view',
+    mode = "view",
     extendSchema,
     route,
     onBeforeMutation,
@@ -46,13 +43,17 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
   const reactory = useReactory();
   const { utils, debug, warning, error } = reactory;
   const { nil, lodash } = utils;
-  const [instanceId] = useState(uuid.v4())
+  const [instanceId] = useState(uuid.v4());
   const params: Readonly<Params<string>> = useParams();
 
   const [formContext, setFormContext] = useState<any>({});
-  const [form, setForm] = useState<Reactory.Forms.IReactoryForm | undefined>(formDef || ReactoryDefaultForm);
+  const [form, setForm] = useState<Reactory.Forms.IReactoryForm | undefined>(
+    formDef || ReactoryDefaultForm
+  );
   const [v, setVersion] = useState(0);
-  const FQN = `${form?.nameSpace || 'unknown'}.${form?.name || 'unknown'}@${form?.version || '0.0.0'}`;
+  const FQN = `${form?.nameSpace || "unknown"}.${form?.name || "unknown"}@${
+    form?.version || "0.0.0"
+  }`;
   const SIGN = `${FQN}:${instanceId}`;
 
   const {
@@ -70,15 +71,13 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     params,
     mode,
     FQN,
-    SIGN
+    SIGN,
   });
 
   // Next we get the schema information
   // The schema can change depending on
   // the active ui schema definition
-  const {
-    schema,
-  } = useSchema({
+  const { schema } = useSchema({
     FQN,
     SIGN,
     formId,
@@ -122,8 +121,9 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     onError,
   });
 
-  const [componentDefs, setComponents] = useState<DefaultComponentMap>(reactory.getComponents(DEFAULT_DEPENDENCIES));
-
+  const [componentDefs, setComponents] = useState<DefaultComponentMap>(
+    reactory.getComponents(DEFAULT_DEPENDENCIES)
+  );
 
   const getForm = () => {
     let _form = formDef;
@@ -139,29 +139,29 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
         setForm(_form);
       }
     }
-  }
+  };
 
   const getFormContext = (): Reactory.Client.IReactoryFormContext<unknown> => {
     return {
       $ref: {
-        props: { }
+        props: {},
       },
       formData,
       formDef: form,
       formInstanceId: instanceId,
-      getData: async (props: any) => { return formData },
+      getData: async (props: any) => {
+        return formData;
+      },
       graphql: form.graphql,
       query: null,
       refresh,
       reset,
-      screenBreakPoint: 'md',
-      setFormData: async (data: any) => { 
-      
-      },
+      screenBreakPoint: "md",
+      setFormData: async (data: any) => {},
       signature: SIGN,
       version: 0,
       reactory,
-    }
+    };
   };
 
   const injectResources = () => {
@@ -169,7 +169,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
       if (form.uiResources && form.uiResources.length) {
         form.uiResources.forEach((resource) => {
           const resourceId = `${resource.type}_${resource.id}`;
-          if (nil(document.getElementById(resourceId)) === true) {              
+          if (nil(document.getElementById(resourceId)) === true) {
             switch (resource.type) {
               case "style": {
                 let styleLink = document.createElement("link");
@@ -189,7 +189,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
                 debug(`${SIGN} Injecting script`, { resource });
                 setTimeout(() => {
                   setVersion(v + 1);
-                }, 500)
+                }, 500);
                 break;
               }
               default: {
@@ -206,7 +206,9 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     }
   };
 
-  const setFields = (_formDef: Reactory.Forms.IReactoryForm): Reactory.Forms.IReactoryForm => {
+  const setFields = (
+    _formDef: Reactory.Forms.IReactoryForm
+  ): Reactory.Forms.IReactoryForm => {
     if (
       ReactoryUxPackages[_formDef.uiFramework] &&
       ReactoryUxPackages[_formDef.uiFramework].fields
@@ -232,7 +234,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
               mapped = true;
             } else {
               _formDef.fields[map.field] = componentDefs[map.component];
-              if (_formDef.fields[map.field]) {            
+              if (_formDef.fields[map.field]) {
                 mapped = true;
               }
             }
@@ -244,8 +246,10 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
             typeof map.componentFqn === "string" &&
             typeof map.field === "string"
           ) {
-            _formDef.widgets[map.field] = reactory.getComponent(map.componentFqn);
-            if (_formDef.widgets[map.field]) {            
+            _formDef.widgets[map.field] = reactory.getComponent(
+              map.componentFqn
+            );
+            if (_formDef.widgets[map.field]) {
               mapped = true;
             }
           }
@@ -260,7 +264,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
                 map={map}
               />
             );
-          };          
+          };
         }
       });
     }
@@ -268,7 +272,9 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     return _formDef;
   };
 
-  const setWidgets = (_formDef: Reactory.Forms.IReactoryForm): Reactory.Forms.IReactoryForm => {
+  const setWidgets = (
+    _formDef: Reactory.Forms.IReactoryForm
+  ): Reactory.Forms.IReactoryForm => {
     if (
       ReactoryUxPackages[_formDef.uiFramework] &&
       ReactoryUxPackages[_formDef.uiFramework].widgets
@@ -323,7 +329,10 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
 
         if (mapped === false) {
           _formDef.widgets[map.widget] = (props, context) => {
-            return <MuiReactoryPackage.widgets.WidgetNotAvailable {...props} map={map} />;
+            return React.createElement(
+              MuiReactoryPackage.widgets.WidgetNotAvailable,
+              { ...props, map }
+            );
             //setTimeout(() => { setVersion(version + 1) }, 777);
             //return (<>loading ...{map.widget}</>)
           };
@@ -335,7 +344,9 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     return _formDef;
   };
 
-  const setFieldTemplate = (_formDef: Reactory.Forms.IReactoryForm): Reactory.Forms.IReactoryForm => {
+  const setFieldTemplate = (
+    _formDef: Reactory.Forms.IReactoryForm
+  ): Reactory.Forms.IReactoryForm => {
     switch (_formDef.uiFramework) {
       case "material": {
         _formDef.FieldTemplate =
@@ -353,7 +364,9 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     return _formDef;
   };
 
-  const setObjectTemplate = (_formDef: Reactory.Forms.IReactoryForm): Reactory.Forms.IReactoryForm => {
+  const setObjectTemplate = (
+    _formDef: Reactory.Forms.IReactoryForm
+  ): Reactory.Forms.IReactoryForm => {
     switch (_formDef.uiFramework) {
       case "material": {
         _formDef.ObjectFieldTemplate =
@@ -369,35 +382,38 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     return _formDef;
   };
 
-  useEffect(getForm,[formId]);
+  useEffect(getForm, [formId]);
   useEffect(() => {
-    if(formDef && formDef.__complete__ === true) {
+    if (formDef && formDef.__complete__ === true) {
       setForm(formDef);
     }
   }, [formDef]);
 
   useEffect(() => {
     setVersion(v + 1);
-  }, [formData])
+  }, [formData]);
 
-  useEffect(injectResources, [form.uiResources])
+  useEffect(injectResources, [form.uiResources]);
 
-  const getEffectiveForm = () => { 
+  const getEffectiveForm = () => {
     let _form = lodash.cloneDeep(form);
-    if (extendSchema && typeof extendSchema === 'function') _form = extendSchema(_form);
+    if (extendSchema && typeof extendSchema === "function")
+      _form = extendSchema(_form);
 
     _form = setFields(_form);
     _form = setWidgets(_form);
     _form = setObjectTemplate(_form);
     _form = setFieldTemplate(_form);
     _form.__complete__ = true;
-    _form.idSchema = toIdSchema(schema, 
-      _form.id, 
-      _form.definitions, 
-      formData, 
-      _form.idPrefix as string);
+    _form.idSchema = toIdSchema(
+      schema,
+      _form.id,
+      _form.definitions,
+      formData,
+      _form.idPrefix as string
+    );
     return _form;
-  }
+  };
 
   return {
     instanceId,
