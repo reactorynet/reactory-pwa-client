@@ -73,12 +73,14 @@ const resolveModule = (resolveFn, filePath) => {
   return resolveFn(`${filePath}.js`);
 };
 
-const appPackageJson = resolveApp('package.json');
-const buildPath = resolveApp('build');
-const client_key = process.env.REACT_APP_CLIENT_KEY
+const {
+REACTORY_CONFIG_ID = 'reactory',
+REACTORY_ENV_ID = 'local',
+} = process.env;
 
+const appPackageJson = resolveApp('package.json');
 const package_json = require(appPackageJson)
-const appBuild = path.join(buildPath, client_key);
+const appBuild = resolveApp(`build/${REACTORY_CONFIG_ID}/${REACTORY_ENV_ID}`);
 
 
 export const paths = {
