@@ -63,6 +63,7 @@ import NotFoundComponent from './shared/NotFoundComponent';
 import DocumentListComponent from './shared/DocumentListComponent';
 import DocumentUploadComponent from './shared/DocumentUploadComponents';
 import Cropper from './shared/image/Cropper';
+import ReactorChat from './shared/ReactorChat/ReactorChat';
 
 import * as utils from './util';
 import { compose } from 'redux';
@@ -585,6 +586,12 @@ export const componentRegistery = [
       d3delaunay,
       d3force
     }
+  },
+  {
+    nameSpace: 'reactory',
+    name: 'ReactorChat',
+    version: '1.0.0',
+    component: ReactorChat,
   },
   ...Forms
 ];

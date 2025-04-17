@@ -29,6 +29,22 @@ const styles = (theme: any): any => ({
   },
 });
 
+interface SelectWithDataOptions {
+  query: string;
+  propertyMap?: any;
+  resultsMap?: any;
+  resultItem: string;
+  multiSelect?: boolean;
+  selectProps?: any;
+  labelStyle?: React.CSSProperties;
+  labelProps?: {
+    visible: boolean;
+    [key: string]: any;
+  };
+  formControlProps?: any;
+  size?: 'small' | 'medium' | undefined;
+  readOnly?: boolean;
+}
 
 interface SelectWithDataProperties {
   formData: any,
@@ -107,7 +123,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         formControlProps = {},
         size,
         readOnly
-      } = uiSchema['ui:options'];
+      } = uiSchema['ui:options'] as SelectWithDataOptions;
 
 
       const onSelectChanged = (evt) => {
