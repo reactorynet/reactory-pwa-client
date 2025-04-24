@@ -1,11 +1,13 @@
-import { ChatMessage } from '../types';
+import { UXChatMessage } from '../types';
+import useContentRender from './useContentRender';
 
 const ChatList = (props: {
   reactory: Reactory.Client.ReactorySDK,
-  messages: ChatMessage[]
+  messages: UXChatMessage[]
 }) => {
 
   const { messages, reactory } = props;
+  const { renderContent } = useContentRender(reactory);
 
   const {
     React,
@@ -66,6 +68,18 @@ const ChatList = (props: {
     scrollToBottom();
   }, [props.messages]);
 
+
+  const renderComponent = (message: UXChatMessage) => {
+    if (message.component) {
+      const Component = reactory.getComponent(message.component);
+      if (Component) {
+        //@ts-ignore
+        return (<Component {...{...message.props, reactory}} />);
+      }
+    }
+    return null;
+  };
+
   return (
     <div
       ref={listRef}
@@ -93,7 +107,7 @@ const ChatList = (props: {
               elevation={1}
               sx={{
                 p: 2,
-                maxWidth: '70%',
+                maxWidth: '95%',
                 backgroundColor: message.role === 'assistant' ? background.default : background.paper,
               }}
             >
@@ -105,7 +119,8 @@ const ChatList = (props: {
                 </Grid>
                 <Grid item xs>
                   <Typography variant="body1">
-                    {message.content}
+                    {renderContent(message.content as string)}
+                    {renderComponent(message)}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
                     {(message as any)?.timestamp.toLocaleTimeString()}

@@ -79,8 +79,8 @@ export interface IAIPersona {
   features: string;
   appearance?: IAIAppearance;
   prompts?: IAIPersonaPromptTemplate[]
-  tools?: any[]
-  macros?: any[]
+  tools?: MacroToolDefinition[]
+  macros?: MacroComponentDefinition<unknown>[]
 }
 
 export interface IProps {
@@ -96,7 +96,7 @@ export interface ChatCompletionResponseMessageStore extends OpenAI.Chat.ChatComp
   tool_results: any[]
 }
 
-export type ReactorConversationHistory = ChatCompletionResponseMessageStore[]
+export type ReactorConversationHistory = UXChatMessage[]
 
 // Tool approval modes
 export enum ToolApprovalMode {
@@ -105,7 +105,7 @@ export enum ToolApprovalMode {
   SAFE_AUTO = "safe_auto" // Auto-approve safe tools, prompt for potentially dangerous ones
 }
 
-export type Macro<TResult> = (params: any[], state: ChatState) => Promise<TResult>
+export type Macro<TResult> = (params: any[], state: ChatState, reactory: Reactory.Client.ReactorySDK) => Promise<TResult>
 
 export type MacroFunctions = {
   [macro: string]: Macro<unknown>
@@ -114,6 +114,8 @@ export type MacroFunctions = {
 export type MacroToolDefinition = {
   type: "function",
   propsMap?: Record<string, string>,
+  runat?: "server" | "client",
+  roles?: string[],
   function: {
     name: string;
     description?: string;
@@ -135,6 +137,7 @@ export type MacroToolDefinition = {
 
 export type MacroComponentDefinition<TMacro> = Reactory.IReactoryComponentDefinition<TMacro> & {
   mcp?: any
+  runat?: "server" | "client"
   tools?: MacroToolDefinition[]
   /**
    * An alias for a macro. The name of the macro and the alias won't always match.
@@ -142,6 +145,10 @@ export type MacroComponentDefinition<TMacro> = Reactory.IReactoryComponentDefini
    */
   alias?: string
 };
+
+export type MacroComponentDefinitionRegistry = {
+  [key: string]: MacroComponentDefinition<unknown>
+}
 
 export type KnownCannedMessages =
   "welcome" |
@@ -159,7 +166,20 @@ export type RatedChatCompletionResponseMessage = OpenAI.ChatCompletionMessage & 
 export type ChatMessage = OpenAI.ChatCompletionMessage | 
   OpenAI.ChatCompletionDeveloperMessageParam |
   OpenAI.ChatCompletionMessageParam |
-  RatedChatCompletionResponseMessage;
+  OpenAI.ChatCompletionMessageToolCall;
+  //RatedChatCompletionResponseMessage;
+
+export type UXChatMessage = ChatMessage & {
+  id: string;
+  role: "user" | "assistant" | "system" | "tool" | "error";
+  content?: string;
+  sessionId: string;
+  timestamp: Date;
+  component?: string;
+  tool_calls?: any[];
+  props?: any
+  rating?: number | null;
+}
 
 export interface MCPClient {
   id: string
@@ -213,15 +233,15 @@ export type ChatState = {
   /**
    * The OpenAI API key used for the chat session.
    */
-  apiKey: string
+  apiKey?: string
   /**
    * The OpenAI API organization used for the chat session.
    */
-  apiOrg: string
+  apiOrg?: string
   /**
    * The OpenAI API model used for the chat session.
    */
-  modelId: string
+  modelId?: string
   /**
    * The history of the chat session.
    */
@@ -229,7 +249,7 @@ export type ChatState = {
   /**
    * The OpenAI API instance used for the chat session.
    */
-  ai: OpenAI
+  ai?: OpenAI
   /**
    * The authentication token for the chat session, this is for authentication 
    * against the reactory server.
@@ -272,7 +292,16 @@ export type ChatState = {
   /**
    * A list of MCP Clients
    */
-  mcpClients?: MCPClient[]
+  mcpClients?: MCPClient[],
+  
+  /**
+   * Send message is attached to the chat state and can be used to send messages 
+   * as part of an async operation.
+   * @param message 
+   * @param sessionId 
+   * @returns 
+   */
+  sendMessage: (message: string, sessionId?: string) => Promise<void>
 }
 
 export interface QuestionHandlerResponse {
@@ -314,3 +343,57 @@ export interface IToolCallResponse {
   content: string
   tool_call_id: string
 }
+
+/**
+ * The ToolsHook is used to manage the tools that are available for the chat session.
+ */
+export interface ToolsHookResults {
+  tools: MacroToolDefinition[]
+  addTool: (tool: MacroToolDefinition) => void
+  removeTool: (tool: MacroToolDefinition) => void
+  updateTool: (tool: MacroToolDefinition) => void
+  getToolById: (id: string) => MacroToolDefinition | undefined
+  getToolsByType: (type: string) => MacroToolDefinition[]
+  executeTool: (tool: MacroToolDefinition, args: any) => Promise<any>
+}
+
+export interface ToolsHookProps {
+  reactory: Reactory.Client.ReactorySDK
+  chatState: ChatState
+  setChatState: (state: ChatState) => void
+  onToolCallResult: (tool: IToolCallResponse, state: ChatState) => void
+  onToolCallError: (tool: IToolCallRequest, state: ChatState) => void
+}
+
+export type ToolsHook = (props: ToolsHookProps) => ToolsHookResults
+export type ToolCallHandler = (tool: IToolCallRequest, state: ChatState) => Promise<IToolCallResponse>
+
+export interface MacrosHookResults {
+  /**
+   * The macros that are available for the chat session.
+   */ 
+  macros: MacroComponentDefinition<unknown>[]
+  addMacro: (macro: MacroComponentDefinition<unknown>) => void
+  removeMacro: (macro: MacroComponentDefinition<unknown>) => void
+  updateMacro: (macro: MacroComponentDefinition<unknown>) => void
+  getMacroById: (id: string) => MacroComponentDefinition<unknown> | undefined
+  parseMacro: (text: string) => {
+    macro: MacroComponentDefinition<unknown> | null
+    args: any
+  } | null
+  /**
+   * Responsible for processing and executing the macro.
+   * @param macroText 
+   * @returns 
+   */
+  executeMacro: (macro: MacroComponentDefinition<unknown>, args?: any) => Promise<UXChatMessage | null>
+}
+
+export interface MacrosHookProps {
+  reactory: Reactory.Client.ReactorySDK
+  chatState: ChatState
+  onMacroCallResult: (result: any, state: ChatState) => void
+  onMacroCallError: (error: Error, macro: MacroComponentDefinition<unknown>, state: ChatState) => void
+}
+
+export type MacrosHook = (props: MacrosHookProps) => MacrosHookResults

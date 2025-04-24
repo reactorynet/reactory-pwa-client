@@ -2,17 +2,19 @@ import { useReactory } from "@reactory/client-core/api";
 import usePersonas from './hooks/usePersonas';
 import useChatFactory from './hooks/useChatFactory';
 import useScrollToBottom from './hooks/useScrollToBottom';
+import useMacros from './hooks/useMacros';
+// import useTools from './hooks/useTools';
+
 import {
   IAIPersona,
   ChatMessage,
-  IProps
+  IProps,
+  UXChatMessage
 } from './types';
+import { on } from "process";
 
 
-type UXChatMessage = ChatMessage & {
-  id: string;
-  timestamp: Date;
-}
+
 
 export default (props) => {
   const { formData } = props;
@@ -42,13 +44,35 @@ export default (props) => {
 
   const { useState } = React;
 
+  const onMessage = (message: UXChatMessage) => {
+    if (message.content === undefined || message.content === null) return;
+    // handle incoming messages here
+    const newMessage: UXChatMessage = {
+      ...message,
+    } as UXChatMessage;
+
+    newMessage.id ??= reactory.utils.uuid();
+    newMessage.timestamp ??= new Date();
+    newMessage.role ??= 'assistant';
+
+    // setMessages(prevMessages => [...prevMessages, newMessage]);
+  }
+
+  const onError = (error: Error) => {     
+    
+  };
+  
   const {
     personas,
     loading: personasLoading,
     error: personasError,
     selectPersona,
     activePersona: selectedPersona
-  } = usePersonas(reactory);
+  } = usePersonas({ 
+    reactory,
+    onMessage,
+    onError,
+  });
 
   const scrollToBottom = (message: any) => {
     const doScroll = () => {
@@ -58,7 +82,7 @@ export default (props) => {
       }
     }
 
-    if (message.role === 'assistant') {
+    if (message?.role === 'assistant') {
       // add a delay before scrolling to the bottom
       setTimeout(doScroll, 1000);
     } else {
@@ -75,70 +99,40 @@ export default (props) => {
   } = useChatFactory({
     reactory,
     persona: selectedPersona,
-    protocol: 'graphql',
-    onMessage: (message) => {
-      debugger
-      // add the message to the chat history
-      // @ts-ignore
-      const newMessage: UXChatMessage = {
-        id: reactory.utils.uuid(),
-        content: message.content,
-        role: message.role,
-        // @ts-ignore
-        refusal: message.refusal,
-        // @ts-ignore
-        annotations: message.annotations,
-        // @ts-ignore
-        audio: message.audio,
-        // @ts-ignore
-        tool_calls: message.tool_calls,
-        timestamp: new Date(),
-      };
-      setMessages(prevMessages => [...prevMessages, newMessage]);
-    },
-    onError: (error) => {
-      if (reactory.hasRole(['DEVELOPER']) === true) {
-        // create a debug message for the developer in the chat
-        const newMessage: UXChatMessage = {
-          id: reactory.utils.uuid(),
-          content: error.message,
-          role: 'system',
-          //refusal: null,
-          //annotations: [],
-          //audio: null,
-          //tool_calls: [],
-          timestamp: new Date(),
-        };
-        setMessages(prevMessages => [...prevMessages, newMessage]);      
-      } else {
-        // create a generic error message for the user
-        const newMessage: UXChatMessage = {
-          id: reactory.utils.uuid(),
-          content: 'An error occurred. Please try again later.',
-          role: 'assistant',
-          refusal: null,
-          annotations: [],
-          audio: null,
-          tool_calls: [],
-          timestamp: new Date(),
-        };
-        setMessages(prevMessages => [...prevMessages, newMessage]);        
-      }
-    },
-    onToolCall: (tool) => {
-      // handle tool calls here. these tools
-      // will be specific to the client which is the 
-      // browser. Other tools for the persona is 
-      // handled on the server side
-
-    },
-    onMacroCall: (macro) => {
-      // handle macro calls here. these macros
-      // will be specific to the client which is the
-      // browser. Other macros for the persona is
-      // handled on the server side
-    }
+    protocol: 'graphql',    
   });
+
+
+  const {
+    executeMacro
+  } = useMacros({ 
+    reactory,
+    chatState,
+    onMacroCallResult: (result) => {
+      // handle macro call result here
+      // const newMessage: UXChatMessage = {
+      //   id: reactory.utils.uuid(),
+      //   content: result.content,
+      //   role: 'assistant',
+      //   refusal: null,
+      //   annotations: [],
+      //   audio: null,
+      //   tool_calls: [],
+      //   timestamp: new Date(),
+      // };
+      // setMessages(prevMessages => [...prevMessages, newMessage]);
+    },
+    onMacroCallError: (error) => { 
+      // handle macro call error here
+      // const newMessage: UXChatMessage = {
+      //   id: reactory.utils.uuid(),
+      //   content: error.message,
+      //   role: 'system',
+      //   timestamp: new Date(),
+      // };
+      // setMessages(prevMessages => [...prevMessages, newMessage]);
+    }
+  })
 
   const {
     Button,
@@ -164,23 +158,27 @@ export default (props) => {
     Person
   } = Material.MaterialIcons;
 
-  const [messages, setMessages] = useState<UXChatMessage[]>([
-    { 
-      id: reactory.utils.uuid(),
-      content: selectedPersona?.defaultGreeting || 'Hello! How can I assist you today?',
-      role: 'assistant',
-      refusal: null,
-      annotations: [],
-      audio: null,
-      tool_calls: [],
-      timestamp: new Date(),
-    }
-  ]);
-
+  
+  const [messages, setMessages] = useState<UXChatMessage[]>([]);
+  
   // use effect to check hen the messages length changes
   React.useEffect(() => { 
     scrollToBottom(messages[messages.length - 1]);
   }, [ messages ]);
+
+  React.useEffect(() => { 
+    if (chatState?.history) {
+      const newMessages = chatState.history.map((message: ChatMessage) => ({
+        ...message,
+        id: reactory.utils.uuid(),
+        timestamp: new Date(),
+        // @ts-ignore
+        role: message.role || 'assistant'
+      })) as UXChatMessage[];
+
+      setMessages(newMessages);
+    }
+  }, [ chatState?.history ]);
 
   const [userInput, setUserInput] = useState<string>('');  
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -196,38 +194,13 @@ export default (props) => {
   };
 
   const handlePersonaSelect = (persona: Partial<IAIPersona>) => {
-    selectPersona(persona.id);
-    if (persona.defaultGreeting) {
-      const newMessage: UXChatMessage = {
-        id: reactory.utils.uuid(),
-        content: persona.defaultGreeting,
-        role: 'assistant',
-        refusal: null,
-        annotations: [],
-        audio: null,
-        tool_calls: [],
-        timestamp: new Date()
-      };
-      setMessages(prevMessages => [...prevMessages, newMessage]);
-    }  
+    selectPersona(persona.id);  
     handleModelMenuClose();
   };
 
   const handleSendMessage = () => {
     if (userInput.trim() === '') return;
-
-    // Add user message
-    const newUserMessage: UXChatMessage = {            
-      role: 'user',
-      name: `${user?.firstName} ${user?.lastName}`,
-      content: userInput,
-      id: reactory.utils.uuid(),
-      timestamp: new Date(),
-    };
-
-    setMessages([...messages, newUserMessage]);
     setUserInput('');
-
     // Send message to the chat factory
     sendMessage(userInput, chatState?.id);
   };
@@ -299,7 +272,7 @@ export default (props) => {
           <Grid item xs>
             <TextField
               fullWidth
-              placeholder="Type your message here..."
+              placeholder="Type your message here or use /@ to execute a macro"
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               onKeyPress={handleKeyPress}

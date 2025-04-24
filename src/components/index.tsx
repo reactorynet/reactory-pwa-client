@@ -73,7 +73,10 @@ import { ErrorBoundary } from '../api/ErrorBoundary';
 
 import Forms from './reactory/forms';
 
-import *  as MaterialReactoryWidgets from '@reactory/client-core/components/reactory/ux/mui/widgets'
+import *  as MaterialReactoryWidgets from '@reactory/client-core/components/reactory/ux/mui/widgets';
+import Markdown from 'react-markdown';
+import DomPurify from 'dompurify';
+import PrismCode from 'react-prism';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -593,5 +596,23 @@ export const componentRegistery = [
     version: '1.0.0',
     component: ReactorChat,
   },
-  ...Forms
+  ...Forms,
+  {
+    nameSpace: 'core',
+    name: 'Markdown',
+    version: '1.0.0',
+    component: Markdown,
+  },
+  {
+    nameSpace: 'core',
+    name: 'DOMPurify',
+    version: '1.0.0',
+    component: DomPurify,
+  },
+  {
+    nameSpace: 'core',
+    name: 'PrismCode',
+    version: '1.0.0',
+    component: PrismCode,
+  }
 ];

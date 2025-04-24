@@ -1,5 +1,5 @@
 import React from 'react';
-import { IAIPersona } from '../types';
+import { IAIPersona, UXChatMessage } from '../types';
 
 interface ReactorPersonasHookResult {
   personas: IAIPersona[];
@@ -10,7 +10,15 @@ interface ReactorPersonasHookResult {
   activePersona: IAIPersona | null;
 }
 
-type ReactorPersonasHook = (reactory: Reactory.Client.ReactorySDK) => ReactorPersonasHookResult; 
+interface ReactorPersonasHookOptions { 
+  reactory: Reactory.Client.ReactorySDK
+  onMessage: (message: UXChatMessage) => void
+  onError: (error: Error) => void
+  onToolCall?: (message: string) => void
+  onMacroCall?: (message: string) => void
+}
+
+type ReactorPersonasHook = (props: ReactorPersonasHookOptions) => ReactorPersonasHookResult; 
 
 const PERSONAS_QUERY = `
   query GetReactorPersonas {
@@ -44,7 +52,15 @@ const PERSONAS_QUERY = `
     }
   }
 `;
-const usePersonas: ReactorPersonasHook = (reactory: Reactory.Client.ReactorySDK) => { 
+const usePersonas: ReactorPersonasHook = (props) => { 
+
+  const { 
+    reactory, 
+    onMessage, 
+    onError, 
+    onToolCall, 
+    onMacroCall 
+  } = props;
 
 const [personas, setPersonas] = React.useState<IAIPersona[]>([]);
 const [isLoaded, setIsLoaded] = React.useState<boolean>(false);
@@ -77,10 +93,11 @@ const fetchPersonas = async () => {
 
 React.useEffect(() => {
     fetchPersonas();
-    reactory.log(`usePersonas hook initialized`, 'info');
+    reactory.info(`usePersonas hook initialized`);
   }, []);
 
-  return {
+
+return {
     personas,
     loading,
     isLoaded,
