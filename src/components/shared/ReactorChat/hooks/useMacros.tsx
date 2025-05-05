@@ -20,6 +20,9 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
       const macroKey = `${macro.nameSpace}.${macro.name}@${macro.version}`;
       acc[macroKey] = macro;
       if (macro.alias) {
+        // If an alias is provided, add it to the registry
+        // and remove the original macro key
+        delete acc[macroKey];
         acc[macro.alias] = macro;
       }
       return acc;

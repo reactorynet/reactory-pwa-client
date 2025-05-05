@@ -25,9 +25,8 @@ const PERSONAS_QUERY = `
     ReactorPersonas {
       id
       name
-      modelId
-      description
       defaultGreeting
+      description
       macros {
         id
         name
@@ -39,14 +38,7 @@ const PERSONAS_QUERY = `
         type
         propsMap
         runat
-      }
-      prompts {
-        id
-        content
-        role
-        variables
-        personaId
-      }
+      }      
       createdAt
       updatedAt
     }

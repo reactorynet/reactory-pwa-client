@@ -80,7 +80,11 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
         );
         
       case ContentType.MARKDOWN:
-        return <Markdown>{content}</Markdown>;
+        return (
+          <div style={{ width: '100%', height: '100%', overflow: 'auto' }}>
+            <Markdown>{content}</Markdown>
+          </div>
+        );
         
       case ContentType.CODE:
         // For code blocks, extract and highlight them

@@ -43,6 +43,7 @@ const FormMacroDefintion: MacroComponentDefinition<typeof FormMacro> = {
   nameSpace: "core",
   roles: ['ANON', 'USER'],
   alias: 'form',
+  runat: 'client',
   tools: [
     {
       type: "function",

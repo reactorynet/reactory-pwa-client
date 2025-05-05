@@ -62,6 +62,7 @@ const LoginMacroDefinition: MacroComponentDefinition<typeof LoginMacro> = {
   nameSpace: "core",
   roles: ['ANON'],
   alias: 'login',
+  runat: 'client',
   tools: [
     {
       type: "function",

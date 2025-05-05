@@ -276,7 +276,12 @@ export type ChatState = {
    * 
    * The macros that are available for the chat session.
    * */
-  macros: MacroComponentDefinition<unknown>[]
+  macros?: MacroComponentDefinition<unknown>[]
+
+  /**
+   * The tools that are available for the chat session.
+   * */
+  tools?: MacroToolDefinition[]
   
   /**
    * Variables that are available for the chat session.

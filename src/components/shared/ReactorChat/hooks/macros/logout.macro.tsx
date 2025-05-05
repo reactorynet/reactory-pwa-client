@@ -35,6 +35,7 @@ const LogoutMacroDefinition: MacroComponentDefinition<typeof LogoutMacro> = {
   nameSpace: "core",
   roles: ['USER'], // Only logged-in users can logout
   alias: 'logout',
+  runat: 'client',
   tools: [
     {
       type: "function",

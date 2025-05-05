@@ -84,7 +84,8 @@ const ChatList = (props: {
     <div
       ref={listRef}
       style={{
-        height: '400px',
+        height: '100%',
+        minHeight: 0,
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',

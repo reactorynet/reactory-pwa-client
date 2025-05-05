@@ -3,7 +3,7 @@ import usePersonas from './hooks/usePersonas';
 import useChatFactory from './hooks/useChatFactory';
 import useScrollToBottom from './hooks/useScrollToBottom';
 import useMacros from './hooks/useMacros';
-// import useTools from './hooks/useTools';
+import { useEffect, useRef } from 'react';
 
 import {
   IAIPersona,
@@ -12,9 +12,7 @@ import {
   UXChatMessage
 } from './types';
 import { on } from "process";
-
-
-
+import ChatHeader from './ChatHeader';
 
 export default (props) => {
   const { formData } = props;
@@ -46,7 +44,6 @@ export default (props) => {
 
   const onMessage = (message: UXChatMessage) => {
     if (message.content === undefined || message.content === null) return;
-    // handle incoming messages here
     const newMessage: UXChatMessage = {
       ...message,
     } as UXChatMessage;
@@ -54,8 +51,6 @@ export default (props) => {
     newMessage.id ??= reactory.utils.uuid();
     newMessage.timestamp ??= new Date();
     newMessage.role ??= 'assistant';
-
-    // setMessages(prevMessages => [...prevMessages, newMessage]);
   }
 
   const onError = (error: Error) => {     
@@ -83,7 +78,6 @@ export default (props) => {
     }
 
     if (message?.role === 'assistant') {
-      // add a delay before scrolling to the bottom
       setTimeout(doScroll, 1000);
     } else {
       doScroll();
@@ -95,13 +89,15 @@ export default (props) => {
     busy,
     sendMessage,
     newChat,
-    listChats
+    listChats,
+    chats,
+    setChats,
+    deleteChat
   } = useChatFactory({
     reactory,
     persona: selectedPersona,
     protocol: 'graphql',    
   });
-
 
   const {
     executeMacro
@@ -109,28 +105,8 @@ export default (props) => {
     reactory,
     chatState,
     onMacroCallResult: (result) => {
-      // handle macro call result here
-      // const newMessage: UXChatMessage = {
-      //   id: reactory.utils.uuid(),
-      //   content: result.content,
-      //   role: 'assistant',
-      //   refusal: null,
-      //   annotations: [],
-      //   audio: null,
-      //   tool_calls: [],
-      //   timestamp: new Date(),
-      // };
-      // setMessages(prevMessages => [...prevMessages, newMessage]);
     },
     onMacroCallError: (error) => { 
-      // handle macro call error here
-      // const newMessage: UXChatMessage = {
-      //   id: reactory.utils.uuid(),
-      //   content: error.message,
-      //   role: 'system',
-      //   timestamp: new Date(),
-      // };
-      // setMessages(prevMessages => [...prevMessages, newMessage]);
     }
   })
 
@@ -161,7 +137,6 @@ export default (props) => {
   
   const [messages, setMessages] = useState<UXChatMessage[]>([]);
   
-  // use effect to check hen the messages length changes
   React.useEffect(() => { 
     scrollToBottom(messages[messages.length - 1]);
   }, [ messages ]);
@@ -183,8 +158,25 @@ export default (props) => {
   const [userInput, setUserInput] = useState<string>('');  
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
+  const [headerOpen, setHeaderOpen] = useState<boolean>(false);
+  const [chatMenuAnchor, setChatMenuAnchor] = useState<null | HTMLElement>(null);
 
-  // Handler functions
+  useEffect(() => {
+    (async () => {
+      const chatList = await listChats({});
+      setChats(chatList);
+    })();
+  }, [selectedPersona]);
+
+  const handleHeaderToggle = () => setHeaderOpen((open) => !open);
+
+  const handleChatMenuOpen = (event: React.MouseEvent<HTMLElement>) => setChatMenuAnchor(event.currentTarget);
+  const handleChatMenuClose = () => setChatMenuAnchor(null);
+
+  const handleChatSelect = (chat) => {
+    handleChatMenuClose();
+  };
+
   const handleModelMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -201,7 +193,6 @@ export default (props) => {
   const handleSendMessage = () => {
     if (userInput.trim() === '') return;
     setUserInput('');
-    // Send message to the chat factory
     sendMessage(userInput, chatState?.id);
   };
 
@@ -211,66 +202,80 @@ export default (props) => {
       handleSendMessage();
     }
   };
-  return (
-    <Box sx={{ height: '600px', display: 'flex', flexDirection: 'column', maxWidth: 800, mx: 'auto', p: 2 }}>
-      {/* Header with persona selection */}
-      <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-        <Grid container alignItems="center" spacing={2}>
-          <Grid item>
-            <SmartToy fontSize="large" color="primary" />
-          </Grid>
-          <Grid item xs>
-            <Typography variant="h6">AI Chat Assistant</Typography>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              onClick={handleModelMenuOpen}
-              endIcon={<ArrowDropDown />}
-            >
-              {selectedPersona?.name}
-            </Button>
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleModelMenuClose}
-            >
-              {personas.map((persona) => (
-                <MenuItem
-                  key={persona.id}
-                  onClick={() => handlePersonaSelect(persona)}
-                  selected={persona.id === selectedPersona?.id}
-                >
-                  {persona?.name}
-                </MenuItem>
-              ))}
-            </Menu>
-          </Grid>
-        </Grid>
-      </Paper>
 
-      {/* Chat messages list */}
+  return (
+    <Box
+      sx={{
+        height: 'calc(100vh - 64px)',
+        display: 'flex',
+        flexDirection: 'column',
+        maxWidth: 800,
+        mx: 'auto',
+        p: 2,
+        minHeight: 0,
+      }}
+    >
+      <ChatHeader
+        headerOpen={headerOpen}
+        handleHeaderToggle={handleHeaderToggle}
+        selectedPersona={selectedPersona}
+        personas={personas}
+        handleModelMenuOpen={handleModelMenuOpen}
+        anchorEl={anchorEl}
+        handleModelMenuClose={handleModelMenuClose}
+        handlePersonaSelect={handlePersonaSelect}
+        handleChatMenuOpen={handleChatMenuOpen}
+        chatMenuAnchor={chatMenuAnchor}
+        handleChatMenuClose={handleChatMenuClose}
+        chats={chats}
+        handleChatSelect={handleChatSelect}
+        Material={Material}
+        deleteChat={deleteChat}
+      />
+
+      {!headerOpen && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 80,
+            right: 0,
+            zIndex: 1201,            
+            borderRadius: '0 8px 8px 0',
+            boxShadow: 2,
+          }}
+        >
+          <IconButton onClick={handleHeaderToggle}>
+            <Material.MaterialIcons.ChevronLeft />
+          </IconButton>
+        </Box>
+      )}
+
       <Paper
         elevation={3}
         sx={{
           flexGrow: 1,
           mb: 2,
           overflow: 'auto',
-          p: 2
+          p: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
         }}
         style={{
           padding: '0',
-          overflow: 'hidden',      
+          overflow: 'hidden',
+          flexGrow: 1,
+          minHeight: 0,
         }}
       >
         {useScrollToBottom({reactory,messages})}
       </Paper>
 
-      {/* Input area */}
       <Paper elevation={3} sx={{ p: 2 }}>
         <Grid container spacing={2}>
           <Grid item xs>
             <TextField
+              size="small"            
               fullWidth
               placeholder="Type your message here or use /@ to execute a macro"
               value={userInput}
@@ -279,18 +284,23 @@ export default (props) => {
               multiline
               maxRows={4}
               variant="outlined"
+              disabled={busy}
             />
           </Grid>
           <Grid item>
             <Button
+              size="small"
               variant="contained"
-              color="primary"
-              endIcon={<Send />}
+              color="primary"              
               onClick={handleSendMessage}
-              disabled={userInput.trim() === ''}
-              sx={{ height: '100%' }}
+              disabled={userInput.trim() === '' || busy}
+              sx={{ height: '100%'}}
             >
-              Send
+              {busy ? (
+                <Material.MaterialCore.CircularProgress size={20} sx={{ mr: 1 }} />
+              ) : (
+                  <Material.MaterialIcons.SendOutlined />                
+              )}
             </Button>
           </Grid>
         </Grid>

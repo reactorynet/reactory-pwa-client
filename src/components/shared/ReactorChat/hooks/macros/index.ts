@@ -10,7 +10,7 @@ const macros: MacroComponentDefinition<unknown>[] = [
   LogoutMacro,
   GreetingMacro,
   FormMacro,
-  // ComponentMacro,
+  ComponentMacro,
 ];
 
 export default macros;

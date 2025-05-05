@@ -16,6 +16,7 @@ const GreetingMacroDefinition: MacroComponentDefinition<typeof GreetingMacro> = 
   nameSpace: "core",
   roles: ['ANON', 'USER'],
   alias: 'greet',
+  runat: 'client',
   tools: [
     {
       type: "function",
