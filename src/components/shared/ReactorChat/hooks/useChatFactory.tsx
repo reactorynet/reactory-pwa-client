@@ -12,6 +12,8 @@ interface ChatFactoryHookResult {
   busy: boolean
   // function used to send a message to the active chat.
   sendMessage: (message: string, sessionId?: string) => Promise<void>
+  // loads a chat session by id
+  loadChat: (chatSessionId: string) => Promise<void>
   // starts a new chat session
   newChat: () => Promise<void>
   // function use to return all the available chats for the
@@ -22,7 +24,13 @@ interface ChatFactoryHookResult {
   // expose setChats function
   setChats: React.Dispatch<React.SetStateAction<any[]>>
   // function to delete a chat by id
-  deleteChat: (chatId: string) => Promise<void>
+  deleteChat: (chatSessionId: string) => Promise<void>
+  // sends an audio file to the chat session
+  sendAudio: (audio: File | Blob, chatSessionId: string) => Promise<void>
+  // uploads a file to the chat session
+  uploadFile: (file: File, chatSessionId: string) => Promise<void>
+  // sets the tool approval mode for the chat session
+  setToolApprovalMode: (mode: ToolApprovalMode) => Promise<void>
 }
 
 interface ChatFactorHookOptions {
@@ -37,12 +45,16 @@ const INITIALIZE_CHAT_MUTATION = gql`
   mutation ReactorStartChatSession($initSession: ReactorInitSession!) {
     ReactorStartChatSession(initSession: $initSession) {
       id
+      created
+      toolApprovalMode
       tools {
         id
         type
         propsMap
+        roles
         function {
           name
+          icon
           description
           parameters
         }
@@ -53,8 +65,10 @@ const INITIALIZE_CHAT_MUTATION = gql`
         nameSpace
         name
         version
+        icon
         description
         alias
+        roles
         params
         runat
       }
@@ -159,12 +173,70 @@ const EXEC_TOOL_CALL_MUTATION = `
     }
   }
 `;
-const EXEC_CONVERSATION_QUERY = `
-  query ReactoryConversations($filter: ReactorConversationFilter) {
+const EXEC_CONVERSATION_QUERY = gql`
+  query ReactorConversation($id: String!) {
+    ReactorConversation(id: $id) {
+      ... on ReactorChatState {
+        id
+        personaId
+        created
+        user {
+          id
+          firstName
+          lastName
+        }
+        history {
+          id
+          role
+          content
+          timestamp
+          tool_calls
+        }
+        vars
+        tools {
+          id
+          type
+          propsMap
+          roles
+          function {
+            name
+            icon
+            description
+            parameters
+          }
+          runat
+        }
+        macros {
+          id
+          nameSpace
+          name
+          version
+          icon
+          description
+          alias
+          roles
+          params
+          runat
+        }
+        toolApprovalMode
+      }
+      ... on ReactorErrorResponse {
+        code
+        message
+        details
+        timestamp
+        recoverable
+        suggestion
+      }
+    }
+  }
+`
+
+const EXEC_CONVERSATIONS_QUERY = gql`query ReactoryConversations($filter: ReactorConversationFilter) {
     ReactorConversations(filter: $filter) {
       id
       personaId
-      started
+      created
       user {
         id
         firstName
@@ -176,11 +248,14 @@ const EXEC_CONVERSATION_QUERY = `
         content
         timestamp
         tool_calls
+        tool_results
+        toolApproval
+        refusal
       }
       vars
     }
   }
-`
+  `
 
 interface SendMesageInput {
   message: string
@@ -215,7 +290,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const persona = React.useMemo(() => rawPersona, [rawPersona?.id]);
 
   
-
+  /**
+   * 
+   * @param message 
+   * @param chatSessionId 
+   * @returns 
+   */
   const sendMessage = async (message: string, chatSessionId: string) => { 
     setBusy(true);
     try {
@@ -232,7 +312,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         // strip the contol switch from the message
         const macro = parseMacro(message.substring(1));
         if (!macro) {
-          const error = new Error("Invalid macro");
+          const error = new Error(`Macro not found: ${message}`);
           onError(error);
           setBusy(false);
           return;
@@ -263,7 +343,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         const response = await reactory.graphqlMutation<{ ReactorSendMessage: ReactorSendMessageResponse }, { message: SendMesageInput }>(SEND_MESSAGE_MUTATION,
           {
             message: {
-              message,
+              message: message,
               personaId: persona.id,
               chatSessionId
             }
@@ -287,34 +367,59 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           }
 
           const message = response.data.ReactorSendMessage as UXChatMessage;
-          
+
+          const { toolApprovalMode } = chatState;
+          let tool_results = [];
           // check if the message is a macro execution / tool call
           if (message.tool_calls && message.tool_calls.length > 0) {
-            // execute the tool call
-            message.tool_calls.forEach(async (toolCall) => { 
+            for (const toolCall of message.tool_calls) {
               let macro: MacroComponentDefinition<unknown> | null = null;
-              if (toolCall.type === 'function' && toolCall.function) { 
+              if (toolCall.type === 'function' && toolCall.function) {
                 const { id } = toolCall;
                 const { name } = toolCall.function;
                 macro = getMacroById(name);
                 if (macro) {
                   try {
-                    await executeMacro(macro, toolCall.function.arguments);
+                    let args = JSON.parse(toolCall.function.arguments);
+                    if (args.args) {
+                      args = args.args;
+                    }
+                    let approved = true;
+                    if (toolApprovalMode === ToolApprovalMode.PROMPT) {
+                      approved = await new Promise<boolean>((resolve) => {
+                        onToolCallPrompt(macro.name, args, chatState, (approved: boolean) => {
+                          resolve(approved);
+                        });
+                      });
+                    }
+                    if (!approved) {
+                      // User denied tool call, stop further invocations
+                      break;
+                    }
+                    const toolCallResult = await executeMacro(macro, args);
+                    tool_results.push({
+                      id: reactory.utils.uuid(),
+                      role: "assistant",
+                      content: toolCallResult?.content || toolCallResult,
+                      timestamp: new Date(),
+                      tool_calls: [],
+                      sessionId: chatState.id,
+                    } as UXChatMessage);
                   } catch (error) {
-                    onError(error);
+                    reactory.error(`ChatFactory: Error executing macro ${macro.name}`, error);
+                    onError(new Error(`Error executing macro ${macro.name}: ${error.message}`));
                   }
                 } else {
                   onError(new Error(`Macro not found: ${name}`));
                 }
               }
-            })
-              
+            }
           }
           if (message.sessionId) {          
             setChatState((prevState) => ({
                         ...prevState,
                         id: message.sessionId,
-                        history: [...prevState.history, message as any],
+                        history: [...prevState.history, message as any, tool_results],
                         updated: new Date(),
                       }));
           }
@@ -390,11 +495,41 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   });
 
+
+  /**
+   * Initializes the chat session with a given persona.
+   * This is important to call when the chat session is first created so that the 
+   * backend is aware of the persona and which tools the client has available to 
+   * call on the front end.
+   * @param persona 
+   */
   const initializeChat = async (persona) => { 
   
     // get the client macros from the macro registry
     const clientMacros = Object.values(macros).filter((macro) => macro.runat === "client");
-
+    // get the client tools from the macro registry
+    let clientTools = [];
+    macros.forEach((macro) => { 
+      if (macro.runat === "client" && macro.tools) {
+        macro.tools.forEach((tool) => {
+          if (tool.type === "function") {
+            const toolDef = tool as MacroToolDefinition;
+            clientTools.push({               
+              type: toolDef.type,
+              propsMap: toolDef.propsMap,
+              roles: toolDef.roles,
+              function: {
+                icon: toolDef.function.icon,
+                name: toolDef.function.name,
+                roles: toolDef.roles,
+                description: toolDef.function.description,
+                parameters: toolDef.function.parameters,
+              }            
+            } as MacroToolDefinition);
+          }
+        });
+      }
+    });
     reactory.graphqlMutation<{ ReactorStartChatSession : Partial<ChatState> }, { initSession: ReactorInitSession }>(INITIALIZE_CHAT_MUTATION,
       {
         initSession: {
@@ -405,9 +540,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             name: macro.name,
             version: macro.version,
             description: macro.description,
-            alias: macro.alias,          
+            alias: macro.alias,  
+            roles: macro.roles,        
           })) ?? [],
-          tools: [],
+          tools: [...clientTools],
         }
       }).then((response) => {
         if (response?.data?.ReactorStartChatSession) {
@@ -477,6 +613,64 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
+  /**
+   * Use the onToolCallPrompt to handle tool calls that require user confirmation or additional input.
+   * @param toolCall 
+   * @param state 
+   */
+  const onToolCallPrompt = (toolCall: string, args: any, state: ChatState, callBack: (approved: boolean) => void) => {
+    const { Material } = reactory.getComponents<{ Material: Reactory.Client.Web.IMaterialModule }>([
+      "material-ui.Material",
+    ]);
+    const { MaterialCore, MaterialIcons } = Material;
+    const { Card, CardContent, CardActions, Typography, IconButton, Tooltip } = MaterialCore;
+    const { Check, Close } = MaterialIcons;
+
+    // Create the prompt as a React element
+    const ToolPromptElement: React.FC = () => (
+      <Card sx={{ maxWidth: 400, margin: '16px auto', background: '#f9f9f9' }}>
+        <CardContent>
+          <Typography variant="subtitle2" color="textSecondary">Tool Call</Typography>
+          <Typography variant="h6" sx={{ mb: 1 }}>{toolCall}</Typography>
+          <Typography
+            variant="body2"
+            sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', mb: 1 }}
+          >
+            {JSON.stringify(args, null, 2)}
+          </Typography>
+        </CardContent>
+        <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
+          <Tooltip title="Approve">
+            <IconButton size="small" color="success" onClick={() => callBack(true)}>
+              <Check fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Cancel">
+            <IconButton size="small" color="error" onClick={() => callBack(false)}>
+              <Close fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </CardActions>
+      </Card>
+    );
+
+    
+
+    onMessage({
+      id: reactory.utils.uuid(),
+      timestamp: new Date(),
+      role: "assistant",
+      content: `Run ${toolCall}?`,
+      component: ToolPromptElement,
+      tool_calls: [],
+      rating: 0,
+      refusal: null,
+      annotations: [],
+      audio: null,
+      sessionId: state.id,
+    });
+  }
+
 
   const newChat = async () => { 
     setBusy(true);
@@ -512,7 +706,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const fetchConversations = async (filter: any) => { 
     try {
-      const response = await reactory.graphqlQuery<{ ReactorConversations: any[] }, { filter: any }>(EXEC_CONVERSATION_QUERY, { filter });
+      const response = await reactory.graphqlQuery<{ ReactorConversations: any[] }, { filter: any }>(EXEC_CONVERSATIONS_QUERY, { filter });
       // Save chats to state
       setChats(response?.data?.ReactorConversations || []);
       return response?.data?.ReactorConversations || [];
@@ -523,7 +717,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
-  const deleteChat = async (id: string) => {
+  const deleteChat = async (id: string | string[]) => {
     try {
       await reactory.graphqlMutation(DELETE_CHAT_MUTATION, { id });
       await fetchConversations({}); // Refresh the chat list after deletion
@@ -532,15 +726,182 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   };
 
+  const UPLOAD_FILE_MUTATION = gql`
+    mutation ReactorAttachFile($file: Upload!, $chatSessionId: String!) {
+      ReactorAttachFile(file: $file, chatSessionId: $chatSessionId) {
+        ... on ReactorChatMessage {
+          sessionId
+          id
+          role
+          content
+          rating
+          timestamp
+          tool_calls
+        }
+        ... on ReactorErrorResponse {
+          code
+          message
+          details
+          timestamp
+          recoverable
+          suggestion
+        }
+      }
+    }
+  `;
+
+  const SEND_AUDIO_MUTATION = gql`
+    mutation ReactorAskQuestionAudio($audio: Upload!, $chatSessionId: String!) {
+      ReactorAskQuestionAudio(audio: $audio, chatSessionId: $chatSessionId) {
+        ... on ReactorChatMessage {
+          sessionId
+          id
+          role
+          content
+          rating
+          timestamp
+          tool_calls
+        }
+        ... on ReactorErrorResponse {
+          code
+          message
+          details
+          timestamp
+          recoverable
+          suggestion
+        }
+      }
+    }
+  `;
+
+  // Upload file to chat session
+  const uploadFile = async (file: File, chatSessionId: string) => {
+    setBusy(true);
+    try {
+      const response = await reactory.graphqlMutation<any, { file: File, chatSessionId: string }>(
+        UPLOAD_FILE_MUTATION,
+        { file, chatSessionId }
+      );
+      const result = response?.data?.ReactorAttachFile;
+      if (result) {
+        if (result.__typename === 'ReactorErrorResponse') {
+          onError(new Error(result.message));
+        } else {
+          onMessage(result);
+        }
+      }
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Send audio to chat session
+  const sendAudio = async (audio: File | Blob, chatSessionId: string) => {
+    setBusy(true);
+    try {
+      const response = await reactory.graphqlMutation<any, { audio: File | Blob, chatSessionId: string }>(
+        SEND_AUDIO_MUTATION,
+        { audio, chatSessionId }
+      );
+      const result = response?.data?.ReactorAskQuestionAudio;
+      if (result) {
+        if (result.__typename === 'ReactorErrorResponse') {
+          onError(new Error(result.message));
+        } else {
+          onMessage(result);
+        }
+      }
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setToolApprovalMode = async (mode: ToolApprovalMode) => { 
+    setBusy(true);
+    try {
+      const response = await reactory.graphqlMutation<{ 
+        ReactorSetChatToolApprovalMode: ChatState 
+        }, 
+        { mode: ToolApprovalMode, chatSessionId: string }>(
+        gql`
+          mutation ReactorSetChatToolApprovalMode($mode: ReactorToolApprovalMode!, $chatSessionId: String!) {
+            ReactorSetChatToolApprovalMode(mode: $mode, chatSessionId: $chatSessionId) {
+              id
+              toolApprovalMode
+            }
+          }
+        `,
+        { mode, chatSessionId: chatState.id }
+      );
+      if (response?.data?.ReactorSetChatToolApprovalMode) {
+        setChatState((prevState) => ({
+          ...prevState,
+          toolApprovalMode: response.data.ReactorSetChatToolApprovalMode.toolApprovalMode,
+        }));
+
+        onMessage({
+          id: reactory.utils.uuid(),
+          timestamp: new Date(),
+          role: "assistant",
+          content: `Tool approval mode set to ${mode}`,
+          sessionId: chatState.id,
+        });
+      } else {
+        throw new Error("No response from server");
+      }
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const loadChat = async (chatSessionId: string) => {
+    setBusy(true);
+    try {
+      const response = await reactory.graphqlQuery<any, { id: string }>(EXEC_CONVERSATION_QUERY, { id: chatSessionId });
+      const result = response?.data?.ReactorConversation;      
+      if (result) {
+        if (result.__typename === 'ReactorErrorResponse') {
+          onError(new Error(result.message));
+        } else {
+          // Update chatState with the loaded chat session
+          setChatState((prevState) => ({
+            ...prevState,
+            ...result,
+            history: result.history ?? [],
+            tools: result.tools ?? [],
+            macros: result.macros ?? [],
+            vars: result.vars ?? {},
+            updated: new Date(),
+          }));
+        }
+      }
+    } catch (error) {
+      reactory.error(`ChatFactory: Error loading chat session ${chatSessionId}`, error);
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return {
     busy,
     chatState,
     newChat,
     sendMessage,
+    loadChat,
     listChats: fetchConversations,
+    setToolApprovalMode,
     chats,
     setChats,
     deleteChat,
+    uploadFile,
+    sendAudio,
   }
 };
 

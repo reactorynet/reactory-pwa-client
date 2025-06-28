@@ -1,12 +1,15 @@
-import { UXChatMessage } from '../types';
+import { ChatState, IAIPersona, UXChatMessage } from '../types';
 import useContentRender from './useContentRender';
 
 const ChatList = (props: {
   reactory: Reactory.Client.ReactorySDK,
-  messages: UXChatMessage[]
+  messages: UXChatMessage[],
+  personas?: IAIPersona[],
+  selectedPersona?: IAIPersona | null,
+  chatState?: ChatState
 }) => {
 
-  const { messages, reactory } = props;
+  const { messages, reactory, personas, selectedPersona, chatState } = props;
   const { renderContent } = useContentRender(reactory);
 
   const {
@@ -35,6 +38,7 @@ const ChatList = (props: {
   const {
     Button,
     IconButton,
+    Icon,
     TextField,
     Grid,
     Typography,
@@ -70,15 +74,58 @@ const ChatList = (props: {
 
 
   const renderComponent = (message: UXChatMessage) => {
-    if (message.component) {
+    if (typeof message.component === 'string') {
       const Component = reactory.getComponent(message.component);
       if (Component) {
         //@ts-ignore
-        return (<Component {...{...message.props, reactory}} />);
+        return (<Component {...{ ...message.props, reactory }} />);
       }
+    } else {
+      // assume it is a React component
+      const Component = message.component as React.ComponentType<any>;
+      if (Component) {
+        return <Component {...{ ...message?.props, reactory }} />;
+      } 
     }
     return null;
   };
+
+  const hasComponent = (message: UXChatMessage) => {
+    if (!message || !message.component) return false;
+    if (typeof message.component === 'string') {
+      return message.component && reactory.getComponent(message.component) !== undefined;
+    }
+    if (React.isValidElement(message.component)) {
+      return true;
+    }
+    return false;
+  };
+
+  const getMessageAvatar = (message: UXChatMessage, reactory: Reactory.Client.ReactorySDK) => {    
+    if (message.role === 'user' && reactory.getUser()?.loggedIn?.user?.avatar) {
+      return reactory.getAvatar(reactory.getUser()?.loggedIn?.user as Reactory.Models.IUser);
+    } else if (message.role === 'assistant' && selectedPersona?.avatar) {
+      return selectedPersona.avatar;
+    } 
+  }
+
+  const getMessageText = (message: UXChatMessage) => {
+    if (typeof message.content === 'string' && message.content.trim().length > 0) {
+      return message.content;
+    }
+
+    if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+      return reactory.i18n.t('reactor.client.chat.callingTools', {
+        count: message.tool_calls.length,
+        tools: message.tool_calls.map((call) => call.name).join(', '),
+        defaultValue: 'Calling {count} tool(s): {tools}'
+      });
+    }
+
+    return reactory.i18n.t('reactor.client.chat.noContent', {
+      defaultValue: 'No content available for this message.'
+    });
+  }
 
   return (
     <div
@@ -96,40 +143,85 @@ const ChatList = (props: {
     >
       <List className="chat-container">
         {messages.map((message, idx) => (
-          <ListItem
-            key={idx}
-            alignItems="flex-start"
-            sx={{
-              justifyContent: message.role === 'assistant' ? 'flex-start' : 'flex-end',
-              mb: 2
-            }}
-          >
-            <Paper
-              elevation={1}
+          <React.Fragment key={idx}>
+            <ListItem
+              alignItems="flex-start"
               sx={{
-                p: 2,
-                maxWidth: '95%',
-                backgroundColor: message.role === 'assistant' ? background.default : background.paper,
+                justifyContent: message.role === 'assistant' ? 'flex-start' : 'flex-end',
+                mb: 2
               }}
             >
-              <Grid container spacing={1}>
-                <Grid item>
-                  <Avatar sx={{ bgcolor: message.role === 'user' ? 'primary.main' : 'secondary.main' }}>
-                    {message.role === 'user' ? <Person /> : <SmartToy />}
-                  </Avatar>
+              <Paper
+                elevation={1}
+                sx={{
+                  p: 2,
+                  maxWidth: '95%',
+                  backgroundColor: message.role === 'assistant' ? background.default : background.paper,
+                }}
+              >
+                <Grid container spacing={1}>
+                  <Grid item>
+                    <Avatar 
+                      sx={{ bgcolor: message.role === 'user' ? 'primary.main' : 'secondary.main' }}
+                      aria-label={message.role}
+                      src={getMessageAvatar(message, reactory)}>                     
+                    </Avatar>
+                  </Grid>
+                  <Grid item xs>
+                    <Typography variant="body1">
+                      {renderContent(getMessageText(message))}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {typeof (message as any)?.timestamp === 'string' ?
+                        new Date(message.timestamp).toLocaleTimeString() :
+                        message.timestamp?.toLocaleTimeString()}
+                    </Typography>
+                    {idx > 0 && message.role === 'assistant' && <IconButton                    
+                      sx={{ fontSize: '1rem' }}                                           
+                    >
+                      <Icon sx={{ fontSize: '1rem' }}>thumb_up</Icon>
+                    </IconButton>}
+                    {idx >0 && message.role === 'assistant' && <IconButton                                         
+                      sx={{ fontSize: '1rem' }}                                           
+                      >
+                      <Icon sx={{ fontSize: '1rem' }}>thumb_down</Icon>
+                    </IconButton>}
+                    {idx >0 && message.role === 'assistant' && <IconButton                                         
+                      sx={{ fontSize: '1rem' }}                                           
+                      >
+                      <Icon sx={{ fontSize: '1rem' }}>content_copy</Icon>
+                    </IconButton>}
+                  </Grid>
                 </Grid>
-                <Grid item xs>
-                  <Typography variant="body1">
-                    {renderContent(message.content as string)}
+              </Paper>
+            </ListItem>
+            {hasComponent(message) && (
+              <ListItem
+                sx={{
+                  justifyContent: 'center',
+                  display: 'flex',
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                  <Paper
+                    elevation={1}
+                    sx={{
+                      p: 2,
+                      maxWidth: '95%',
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      backgroundColor: background.paper,
+                    }}
+                  >
                     {renderComponent(message)}
-                  </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    {(message as any)?.timestamp.toLocaleTimeString()}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-          </ListItem>
+                  </Paper>
+                </Box>
+              </ListItem>
+            )}
+          </React.Fragment>
         ))}
       </List>
     </div>

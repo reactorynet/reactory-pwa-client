@@ -196,13 +196,16 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
         schema: schema as Reactory.Schema.AnySchema,
         idSchema: formDefinition?.idSchema as Reactory.Schema.IDSchema, 
         formData
-      }
+      }      
       onSubmit(evt); 
     }
 
-
     let icon = 'save';
-    let iconProps = uiOptions?.submitIconProps || {};
+    let iconProps: any = uiOptions?.submitIconProps || {};
+    if (iconProps.icon) {
+      icon = iconProps.icon;
+      delete iconProps.icon;
+    } 
     let iconWidget = (icon === '$none' ? null : <Icon {...iconProps}>{icon}</Icon>);
 
     return (

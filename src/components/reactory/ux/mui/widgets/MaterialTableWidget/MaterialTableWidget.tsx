@@ -56,11 +56,15 @@ export interface ReactoryMaterialTableProps {
   theme: any,
   schema: Reactory.Schema.IArraySchema,
   uiSchema: ReactoryMaterialTableUISchema,
-  idSchema: any,
+  idSchema: Reactory.Schema.IDSchema,
   formData: any[],
   formContext: any,
   paging: any,
   searchText: any,
+  registry: {
+    fields: { [key: string]: any },
+    widgets: { [key: string]: any },
+  },
   onChange: (formData: any[]) => void
 }
 
@@ -338,7 +342,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     uiSchema = {},
     formContext = {},
     formData = [],
-    searchText = ""
+    searchText = "",
+    registry
   } = props;
 
   const uiOptions: Reactory.Client.Components.IMaterialTableWidgetOptions = uiSchema['ui:options'] || {};
@@ -568,10 +573,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
       const def: Reactory.Client.Components.MaterialTableWidgetColumnDefinition = {
         ...coldef
-      };
+      };      
 
-      if (isNil(def.component) === false && def.component !== undefined) {
-        const ColRenderer = reactory.getComponent<React.FC<any>>(def.component);
+      if (isNil(def.component) === false && def.component !== undefined) {        
+        const ColRenderer = def.component.indexOf('.') > 0 ? 
+          reactory.getComponent<React.FC<any>>(def.component) : 
+          registry.widgets[def.component];        
         // @ts-ignore       
         def.renderCell = (cellData, cellIndex, rowData, rowIndex) => {
 
@@ -604,9 +611,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
           const childrenComponents = (components || []).map((componentDef, componentIndex) => {
 
-            const ComponentToRender = reactory.getComponent<React.FC>(componentDef.component);
+            const ComponentToRender = componentDef.component.indexOf('.') ? 
+              reactory.getComponent<React.FC>(componentDef.component) :
+              registry.widgets[componentDef.component];
 
-            let props = { formData: formContext.$formData, rowData, api: reactory, key: componentIndex, formContext };
+            let props = { formData: formContext.$formData, rowData, api: reactory, key: componentIndex, formContext, registry, };
             let mappedProps = {};
 
             if (componentDef.props) {

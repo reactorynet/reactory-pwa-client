@@ -12,8 +12,6 @@ import {
 import { ErrorBoundary } from "@reactory/client-core/api/ErrorBoundary";
 import { useReactory } from "@reactory/client-core/api";
 
-import FormClass from './FormClass';
-
 export type FormToolbarPosition = 'top' | 'bottom' | 'both' | 'none';
 export interface ISchemaForm<TData, TError, TAdditionContext extends unknown[]> {
   idSchema?: Reactory.Schema.IDSchema,

@@ -1,3 +1,4 @@
+import React from "react";
 import OpenAI from "openai";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse";
@@ -80,6 +81,7 @@ export interface IAIPersona {
   appearance?: IAIAppearance;
   prompts?: IAIPersonaPromptTemplate[]
   tools?: MacroToolDefinition[]
+  avatar?: string;
   macros?: MacroComponentDefinition<unknown>[]
 }
 
@@ -116,9 +118,11 @@ export type MacroToolDefinition = {
   propsMap?: Record<string, string>,
   runat?: "server" | "client",
   roles?: string[],
+  enabled?: boolean;
   function: {
     name: string;
     description?: string;
+    icon?: string;
     parameters: {
       type: "object";
       properties: Record<string, {
@@ -144,6 +148,8 @@ export type MacroComponentDefinition<TMacro> = Reactory.IReactoryComponentDefini
    * We use this to provide a more human readable name for the macro.
    */
   alias?: string
+  icon?: string
+  enabled?: boolean
 };
 
 export type MacroComponentDefinitionRegistry = {
@@ -175,8 +181,9 @@ export type UXChatMessage = ChatMessage & {
   content?: string;
   sessionId: string;
   timestamp: Date;
-  component?: string;
+  component?: string | React.FC | React.ComponentType<any> | React.ReactNode;
   tool_calls?: any[];
+  tool_results?: any[];
   props?: any
   rating?: number | null;
 }
@@ -382,6 +389,7 @@ export interface MacrosHookResults {
   removeMacro: (macro: MacroComponentDefinition<unknown>) => void
   updateMacro: (macro: MacroComponentDefinition<unknown>) => void
   getMacroById: (id: string) => MacroComponentDefinition<unknown> | undefined
+  findMacroByAlias: (alias: string) => MacroComponentDefinition<unknown> | undefined
   parseMacro: (text: string) => {
     macro: MacroComponentDefinition<unknown> | null
     args: any
@@ -391,7 +399,7 @@ export interface MacrosHookResults {
    * @param macroText 
    * @returns 
    */
-  executeMacro: (macro: MacroComponentDefinition<unknown>, args?: any) => Promise<UXChatMessage | null>
+  executeMacro: (macro: MacroComponentDefinition<unknown>, args?: any, calledBy?: string, callId?: string) => Promise<UXChatMessage | null>
 }
 
 export interface MacrosHookProps {

@@ -16,6 +16,7 @@ const GreetingMacroDefinition: MacroComponentDefinition<typeof GreetingMacro> = 
   nameSpace: "core",
   roles: ['ANON', 'USER'],
   alias: 'greet',
+  icon: 'handshake',
   runat: 'client',
   tools: [
     {
@@ -23,6 +24,7 @@ const GreetingMacroDefinition: MacroComponentDefinition<typeof GreetingMacro> = 
       function: {
         name: "greet",
         description: "Get the default greeting for the user",
+        icon: "handshake",
         parameters: {
           type: "object",
           properties: {

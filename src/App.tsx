@@ -181,6 +181,24 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     }
 
     let componentArgs = {};
+
+    // check if the path contains property placeholders
+    // if it does, we get the value from the location state
+    // and we add them to component args
+    if (routeDef.path && routeDef.path.indexOf(':') > -1) {
+      const pathParts = routeDef.path.split('/');
+      pathParts.forEach((part, idx) => {
+        if (part.startsWith(':')) {
+          const key = part.substring(1);
+          if (location.state?.[key]) {
+            componentArgs[key] = location.state[key];
+          }
+        }
+      });      
+    }
+
+
+    
     /**
      * If the route has props, we add them to the component args
      * this is the preferred way of setting the props.

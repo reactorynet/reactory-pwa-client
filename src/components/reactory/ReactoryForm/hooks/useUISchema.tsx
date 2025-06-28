@@ -35,8 +35,7 @@ export const useUISchema: ReactoryFormUISchemaManagerHook<unknown> = (props) => 
   const [isBusy, setIsBusy] = React.useState<boolean>(false);
   const [isDirty, setIsDirty] = React.useState<boolean>(false);
 
-  if (!formDefinition) { 
-    reactory.log(`${SIGN}:useUISchema()`, { formDefinition });
+  if (!formDefinition) {     
     return {
       uiSchema: {},
       uiOptions: {},

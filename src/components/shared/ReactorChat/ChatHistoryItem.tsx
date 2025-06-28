@@ -1,10 +1,9 @@
 import React from 'react';
-import { IconButton, ListItem, ListItemText } from '@mui/material';
+import { IconButton, ListItem, ListItemText, Avatar, ListItemAvatar } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const ChatHistoryItem = ({ label, onSelect, onDelete, chat }) => (
-  <ListItem
-    button
+const ChatHistoryItem = ({ label, onSelect, onDelete, chat, persona }) => (
+  <ListItem alignItems='flex-start'        
     onClick={() => onSelect(chat)}
     secondaryAction={
       <IconButton edge="end" aria-label="delete" onClick={(e) => { e.stopPropagation(); onDelete(chat.id); }}>
@@ -12,8 +11,18 @@ const ChatHistoryItem = ({ label, onSelect, onDelete, chat }) => (
       </IconButton>
     }
     sx={{ pr: 6 }}
-  >
-    <ListItemText primary={label} />
+  > 
+    <ListItemAvatar>
+      <Avatar
+        sizes='small' 
+        src={persona?.avatar}
+        alt={persona?.name}
+      />
+    </ListItemAvatar>
+    <ListItemText 
+      primary={persona.name}  
+      secondary={label}
+      />
   </ListItem>
 );
 

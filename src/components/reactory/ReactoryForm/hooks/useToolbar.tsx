@@ -54,7 +54,7 @@ export const useToolbar: ReactoryFormToolbarHook = (props) => {
       }
     }
   }
-
+  
   if (uiOptions?.submitIcon) icon = uiOptions.submitIcon;
   let iconProps = uiOptions?.submitIconProps || {};
   let iconWidget =

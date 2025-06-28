@@ -7,6 +7,7 @@ interface ReactorPersonasHookResult {
   loading: boolean;
   error: Error | null;
   selectPersona: (personaId: string) => void;
+  getPersona: (personaId: string) => IAIPersona | undefined;
   activePersona: IAIPersona | null;
 }
 
@@ -21,26 +22,34 @@ interface ReactorPersonasHookOptions {
 type ReactorPersonasHook = (props: ReactorPersonasHookOptions) => ReactorPersonasHookResult; 
 
 const PERSONAS_QUERY = `
-  query GetReactorPersonas {
+query GetReactorPersonas {
     ReactorPersonas {
       id
       name
       defaultGreeting
       description
+      avatar          
+      createdAt
+      updatedAt
       macros {
         id
         name
-        params
-        runat
+        nameSpace
+        version
+        description
+        icon
       }
       tools {
         id
         type
         propsMap
-        runat
-      }      
-      createdAt
-      updatedAt
+        function {
+          name
+          icon
+          description
+          parameters 
+        }
+      }
     }
   }
 `;
@@ -83,6 +92,12 @@ const fetchPersonas = async () => {
   }
 }
 
+  const getPersona = (personaId: string): IAIPersona | undefined => {
+    return personas.find(persona => persona.id === personaId);
+  };
+
+  // Fetch personas on mount
+
 React.useEffect(() => {
     fetchPersonas();
     reactory.info(`usePersonas hook initialized`);
@@ -101,7 +116,8 @@ return {
         setActivePersona(selectedPersona);
       }
     },
-    activePersona
+    activePersona,
+    getPersona,
   }
 };
 

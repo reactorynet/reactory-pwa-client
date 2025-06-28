@@ -1235,7 +1235,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
     if (!$formDef.__complete__) {
       that.graphqlQuery<any, any>(FORM_QUERY, { id, options }, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
-        if (data && data.ReactoryFormGetById) {
+        if (data?.ReactoryFormGetById) {
           let index = lodash.findIndex(this.formSchemas, { id });
 
           that.formSchemas[index] = { ...data.ReactoryFormGetById, __complete__: true };

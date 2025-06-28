@@ -71,12 +71,23 @@ const LinkFieldWidget: React.FunctionComponent = (props: any) => {
   let $component = null;
   switch (_component.toLowerCase()) {
     case 'fab': {
-      $component = (<Fragment><Fab id={uioptions.id} name={uioptions.name} onClick={goto}>{linkIcon}</Fab></Fragment>);
+      $component = (<Fab 
+        id={uioptions.id} 
+        name={uioptions.name} 
+        size={uioptions.size || 'small'}
+        onClick={goto}>{linkIcon}</Fab>);
       break;
     }
     case 'button':
     default: {
-      $component = (<Fragment><Button id={uioptions.id} name={uioptions.name} onClick={goto} variant={_variant}>{_iconPosition === 'left' ? linkIcon : null}{linkTitle}{_iconPosition === 'right' ? linkIcon : null}</Button></Fragment>)
+      $component = (<Button 
+        id={uioptions.id} 
+        name={uioptions.name} 
+        onClick={goto} 
+        size={uioptions.size || 'small'}
+        variant={_variant}>
+          {_iconPosition === 'left' ? linkIcon : null}{linkTitle}{_iconPosition === 'right' ? linkIcon : null}
+      </Button>)
       break;
     }
   }
