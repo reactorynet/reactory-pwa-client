@@ -30,6 +30,7 @@ export const useSocketDataManager: ReactoryFormDataManagerHook  = (props) => {
     onChange,
     getData,
     refresh,
-    isBusy
+    isBusy,
+    available: false, // Socket data manager is not implemented yet
   } as IReactoryFormDataManagerHookResult;
 };

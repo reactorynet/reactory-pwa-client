@@ -17,6 +17,8 @@ import { useDataManagerProvider } from "../DataManagers";
 import { useUISchema } from "./useUISchema";
 import { Button, Icon } from "@mui/material";
 import { Schema } from "ajv";
+import { get } from "lodash";
+import { getDefaultFormState } from "@reactory/client-core/components/reactory/form/utils";
 
 // const formValidation = ($formData: any, $errors: any, via = 'onChange') => {
 
@@ -78,11 +80,13 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     formData: initialData,
     formContext,
     graphDefinition: graphDefinition || formDefinition.graphql,
-    mode
+    mode,
+    props: props?.props,
   });
 
   const {
     uiOptions,
+    uiSchema,
   } = useUISchema({
     formDefinition,
     FQN,
@@ -107,16 +111,89 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   const { schema } = formDefinition;
 
   const getData = async () => { 
-    if (defaultDataManager) {
-      const result = await graphqlDataManager.getData({
+    reactory.debug(`${SIGN} getData`, { formData, formContext, props });
+    setIsDataLoading(true);
+
+    //for each of the data managers, call the getData method
+    let localResult = null;
+    let graphqlResult = null;
+    let restResult = null;
+    let grpcResult = null;
+    let socketResult = null;
+
+    if (localDataManager?.available) {
+      // this should always return the default form state
+      localResult = await localDataManager.getData({
         formData,
         formContext,
+        props,
       });
-
-      if (result) {
-        setFormData(result);
-      }
     }
+
+    if (graphqlDataManager?.available) {
+      graphqlResult = await graphqlDataManager.getData({
+        formData,
+        formContext,
+        props,
+      });
+    }
+
+    if (restDataManager?.available) {
+      restResult = await restDataManager.getData({
+        formData,
+        formContext,
+        props,
+      });
+    }
+
+    if (grpcDataManager?.available) {
+      grpcResult = await grpcDataManager.getData({
+        formData,
+        formContext,
+        props,
+      });
+    }
+
+    if (socketDataManager?.available) {
+      socketResult = await socketDataManager.getData({
+        formData,
+        formContext,
+        props,
+      });
+    }
+
+    let nextData = null;
+    if (localResult) {
+      nextData = localResult;
+    } 
+
+    // Start with localResult as the base data
+    let mergedData = localResult;
+
+    // Helper to merge based on schema type
+    const mergeData = (current: any, next: any) => {
+      if (!next) return current;
+      if ((schema as Reactory.Schema.AnySchema).type === 'object') {
+      return { ...(current || {}), ...(next || {}) };
+      }
+      if ((schema as Reactory.Schema.AnySchema).type === 'array') {
+      return [ ...(current || []), ...(next || []) ];
+      }
+      // fallback: just return next if type is unknown
+      return next;
+    };
+
+    // Merge in order: graphql, rest, grpc, socket
+    mergedData = mergeData(mergedData, graphqlResult);
+    mergedData = mergeData(mergedData, restResult);
+    mergedData = mergeData(mergedData, grpcResult);
+    mergedData = mergeData(mergedData, socketResult);
+
+    if (mergedData !== undefined && mergedData !== null) {
+      setFormData(mergedData);
+    }
+
+    setIsDataLoading(false);
   };
 
   const onSubmit = (submitEvent: SchemaFormOnSubmitEventProps<unknown>) => {
@@ -182,7 +259,9 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   };
 
   // Refreshes the form data
-  const refresh = () => { };
+  const refresh = () => { 
+    getData();
+  };
 
   const validate = () => { };
 
@@ -201,7 +280,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     }
 
     let icon = 'save';
-    let iconProps: any = uiOptions?.submitIconProps || {};
+    let iconProps: any = uiSchema["ui:form"]?.submitIconProps || uiOptions?.submitIconProps || {};
     if (iconProps.icon) {
       icon = iconProps.icon;
       delete iconProps.icon;
@@ -222,6 +301,32 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     reactory.debug(`useDataManager: ${SIGN} initialData change`, { initialData });
     setFormData(initialData);
   }, [initialData]);
+
+  useEffect(() => {
+    reactory.debug(`useDataManager: ${SIGN} formData change`, { formData });
+    if (isDirty) {
+      setIsDirty(true);
+    }
+  }, [formData]);
+
+  useEffect(() => {
+    reactory.debug(`useDataManager: ${SIGN} isDirty change`, { isDirty });
+    if (isDirty) {
+      setIsRefreshAllowed(true);
+    } else {
+      setIsRefreshAllowed(false);
+    }
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (formDefinition.__complete__ === true) {
+      //debugger;
+      //if (!isDataLoading) { 
+      getData();
+      //} 
+    }
+  }, [formDefinition, props.props, props.formId]);
+
 
   const getEffectiveData = () => {
     return formData;

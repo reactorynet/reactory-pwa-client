@@ -111,23 +111,24 @@ const SelectWidget = (props)=> {
 
     const onSelectChanged = (evt) => {
       const {value, name} = evt.target
-      onChange(value)
+      if (value === '') {
+        onChange(null)
+      } else {
+        onChange(value)
+      }
     }
 
     const renderSelectedValue = (value) => {
-
-
-
       if (value == null || value.length == 0){
         return null//<span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Select</span>;
       }
 
       let option = matchOption(value);
       return (
-        <>
-          {option.icon ? <Icon {...(option.iconProps || { style: { margin: '0px', verticalAlign: 'middle' } })}>{option.icon}</Icon> : null}
-          <Typography >{option.label}</Typography>
-        </>
+        <span style={{ paddingLeft: '12px', paddingTop: '8px', display: 'inline-flex', alignItems: 'center' }}>
+          {option?.icon ? <Icon {...(option.iconProps || { style: { margin: '0px', verticalAlign: 'middle' } })}>{option.icon}</Icon> : null}
+          <Typography component="span" style={{ marginLeft: option?.icon ? 4 : 0 }}>{option?.label || value}</Typography>
+        </span>
       )
     };
 
@@ -148,7 +149,8 @@ const SelectWidget = (props)=> {
         displayEmpty={true}
         disabled = {disabled || readonly}
         renderValue={renderSelectedValue}
-        input={<InputComponent id={props.idSchema.$id} value={formData || ""} />}>
+        // input={<InputComponent id={props.idSchema.$id} value={formData || ""} />}
+        >
         {required === false ? <MenuItem value=""><em>None</em></MenuItem> : null}
         {elements}
       </Select>

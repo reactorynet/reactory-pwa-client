@@ -113,8 +113,8 @@ class UserWidgetWithSearch extends Component<any, any> {
   render(){
     //console.log('rendering User Widget with search');
     const self = this
-    const { UserWithQuery, SurveyDelegateWidget } = this.componentDefs;
-    const { formData, uiSchema } = this.props;
+    const { UserWithQuery } = this.componentDefs;
+    const { formData } = this.props;
 
     const showModal = () => {      
       self.setState({ modal: !self.state.modal })

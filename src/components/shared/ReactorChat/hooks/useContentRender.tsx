@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
 import Reactory from '@reactory/reactory-core';
+import { useReactory } from '@reactory/client-core/api';
 /**
  * Content types that can be rendered
  */
 export enum ContentType {
   PLAIN_TEXT = 'text/plain',
+
   HTML = 'text/html',
   MARKDOWN = 'text/markdown',
   CODE = 'application/code',
@@ -19,14 +21,16 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
   const {
     Material,
     Markdown,
+    MarkdownGfm,
     DOMPurify,
     PrismCode,
   } = reactory.getComponents<{
     Material: Reactory.Client.Web.IMaterialModule 
     Markdown: any,
+    MarkdownGfm: any,
     DOMPurify: any,
     PrismCode: any,
-  }>(["material-ui.Material", "core.Markdown", "core.DOMPurify", "core.PrismCode"]);
+  }>(["material-ui.Material", "core.Markdown", "core.MarkdownGfm", "core.DOMPurify", "core.PrismCode"]);
 
   // Mermaid re-init logic
   const mermaidRef = useRef<HTMLDivElement>(null);
@@ -48,7 +52,7 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
    * Detects the type of content
    */
   const detectContentType = (content: string): ContentType => {
-    if (!content) return ContentType.PLAIN_TEXT;
+    if (!content) return ContentType.MARKDOWN;
 
     // Detect Mermaid code block
     if (/```mermaid[\s\S]*?```/i.test(content)) {
@@ -65,6 +69,7 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
       /^> /, // Blockquotes
       /`{3}[\s\S]*`{3}/, // Code blocks
       /!\[.+\]\(.+\)/, // Images
+      /^\|.+\|\n\|[-:|]+\|/, // Tables
     ];
     
     if (markdownPatterns.some(pattern => pattern.test(content))) {
@@ -75,13 +80,18 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
     if (/<[a-z][\s\S]*>/i.test(content)) {
       return ContentType.HTML;
     }
+
+    // Check for XML-like content
+    if (/^\s*<\?xml[\s\S]*\?>/i.test(content)) {
+      return ContentType.HTML; // Treat XML as HTML for rendering
+    }
     
     // Check for code blocks
     if (/```[\s\S]*```/.test(content)) {
       return ContentType.CODE;
     }
     
-    return ContentType.PLAIN_TEXT;
+    return ContentType.MARKDOWN;
   };
 
   // Card wrapper for Mermaid diagrams with dynamic actions
@@ -143,7 +153,13 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
    */
   const renderContent = (content: string) => {
     if (!content) return null;
-
+    const reactory = useReactory();
+    // get the the theme from reactory
+    const theme = reactory.muiTheme;
+    const { palette } = theme;
+    const { mode } = palette;
+    const { primary, secondary, error, warning, info, success } = palette;
+    
     // Regex to match code, mermaid, and markdown blocks
     const blockRegex = /(```mermaid[\s\S]*?```|```[a-zA-Z]*[\s\S]*?```)/g;
     const blocks: string[] = [];
@@ -183,21 +199,29 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
         }
         const code = codeBlock.replace(language, '').trim();
         return (
-          <pre style={{ backgroundColor: '#f5f5f5', padding: '10px', borderRadius: '4px', overflowX: 'auto' }} key={`code-${idx}`}>
+          <pre style={{ backgroundColor: mode === 'dark' ? '#121212' : '#f5f5f5', padding: '10px', borderRadius: '4px', overflowX: 'auto' }} key={`code-${idx}`}>
             <code dangerouslySetInnerHTML={{
-              __html: PrismCode ? PrismCode.highlight(code, PrismCode.languages[language] || PrismCode.languages.javascript, language) : code
+              __html: code
             }} />
           </pre>
         );
       }
       // Markdown block (if it looks like markdown)
-      if (/^\s*#|\*\*|\*|\[.+\]\(.+\)|^- |^> |!\[.+\]\(.+\)/m.test(block)) {
+      if (detectContentType(block) === ContentType.MARKDOWN) {
         return (
           <div style={{ width: '100%', height: '100%', overflow: 'auto' }} key={`md-${idx}`}>
-            <Markdown>{block}</Markdown>
+            <Markdown plugins={[[MarkdownGfm, {singleTilde: false}]]}>{block}</Markdown>
           </div>
         );
       }
+      // // Check for markdown table spec
+      // if (/^\|.+\|\n\|[-:|]+\|/.test(block)) {
+      //   return (
+      //     <div style={{ width: '100%', height: '100%', overflow: 'auto' }} key={`table-${idx}`}>
+      //       <Markdown>{block}</Markdown>
+      //     </div>
+      //   );
+      // }
       // HTML block
       if (/<[a-z][\s\S]*>/i.test(block)) {
         return (

@@ -141,11 +141,6 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
     const defaultRegistry = getDefaultRegistry();
     let registery: any = {
       ...defaultRegistry,
-      // fields: { ...fields, ...props.fields },
-      // widgets: { ...widgets, ...props.widgets },
-      // ArrayFieldTemplate,
-      // ObjectFieldTemplate,
-      // FieldTemplate,
       definitions: schema.definitions || {},
       formContext: formContext || {},
     };
@@ -330,13 +325,12 @@ const Form: React.FC<ISchemaForm<any, any, unknown[]>> = (props) => {
           onBlur={onBlur}
           onFocus={onFocus}
           registry={registry}
+          formContext={formContext}
           safeRenderCompletion={safeRenderCompletion}
           disabled={disabled} />
           {props.toolbarPosition && props.toolbarPosition.indexOf('bottom') >= 0 ? (children) : null}
         </ErrorBoundary>
       </div>);
-
-
 }
 
 export default Form;

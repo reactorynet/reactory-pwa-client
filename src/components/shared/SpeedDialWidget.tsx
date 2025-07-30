@@ -58,101 +58,71 @@ const actions = [
 type TDirection = "up" | "down" | "left" | "right";
 
 
-class SpeedDials extends React.Component<any, any> {
+const SpeedDials = (props: any) => {
+  const { classes, icon, actions, style = {}, buttonStyle = {} } = props;
+  const [direction, setDirection] = React.useState<TDirection>('up');
+  const [hidden, setHidden] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
 
-  static propTypes = {
-    classes: PropTypes.object.isRequired,
-    actions: PropTypes.array,
-    icon: PropTypes.object,
-    onClick: PropTypes.func
-  }
-
-  static defaultProps = {
-    actions,
-    icon: SpeedDialIcon,
-    onClick: evt => { return false; }
-  }
-  
-  
-
-  state = {
-    direction: 'up',
-    open: false,
-    hidden: false,
-  };
-
-  handleClick = (evt) => {
-    const that = this;
+  const handleClick = (evt: React.MouseEvent) => {
     if(isFunction(evt.persist)) evt.persist();    
-    this.setState(state => ({
-      open: !state.open,
-    }), () => {
-      if(isFunction(that.props.onClick) === true) that.props.onClick(evt);
-    });
+    setOpen(!open);
+    if(isFunction(props.onClick) === true) props.onClick(evt);
   };
 
-  handleDirectionChange = (event, value) => {
-    this.setState({
-      direction: value,
-    });
+  const handleDirectionChange = (event: React.ChangeEvent<{}>, value: TDirection) => {
+    setDirection(value);
   };
 
-  handleHiddenChange = (event, hidden) => {
-    this.setState(state => ({
-      hidden,
-      // hidden implies !open
-      open: hidden ? false : state.open,
-    }));
+  const handleHiddenChange = (event: React.ChangeEvent<{}>, hidden: boolean) => {
+    setHidden(hidden);
+    // hidden implies !open
+    setOpen(hidden ? false : open);
   };
 
-  handleClose = () => {
-    this.setState({ open: false });
+  const handleClose = () => {
+    setOpen(false);
   };
 
-  handleOpen = () => {
-    this.setState({ open: true });
+  const handleOpen = () => {
+    setOpen(true);
   };
 
-  render() {
-    const { classes, icon, actions, style = {}, buttonStyle = {} } = this.props;
-    const { direction, hidden, open } = this.state;
+  const speedDialClassName = classNames(
+    classes.speedDial,
+    classes[`direction${capitalize(direction)}`],
+  );
 
-    const speedDialClassName = classNames(
-      classes.speedDial,
-      classes[`direction${capitalize(direction)}`],
-    );
-
-    return (
-      <Fragment>        
-        <div className={classes.exampleWrapper} style={style}>
-          <SpeedDial
-            ariaLabel="QuickPick"
-            className={speedDialClassName}
-            hidden={hidden}
-            icon={ icon || <SpeedDialIcon />}
-            onBlur={this.handleClose}
-            onClick={this.handleClick}
-            onClose={this.handleClose}
-            onFocus={this.handleOpen}
-            onMouseEnter={this.handleOpen}
-            onMouseLeave={this.handleClose}
-            open={open}
-            direction={direction as TDirection}
-            style={buttonStyle}
-          >
-            {actions.map(action => (
-              <SpeedDialAction
-                key={action.key}
-                icon={action.icon}
-                title={action.title}                
-                onClick={ action.clickHandler || this.handleClick }
-              />
-            ))}
-          </SpeedDial>
-        </div>
-      </Fragment>
-    );
-  }
+  return (
+    <Fragment>        
+      <div className={classes.exampleWrapper} style={style}>
+        <SpeedDial
+          ariaLabel="QuickPick"
+          className={speedDialClassName}
+          hidden={hidden}
+          icon={ icon || <SpeedDialIcon />}
+          onBlur={handleClose}
+          onClick={handleClick}
+          onClose={handleClose}
+          onFocus={handleOpen}
+          onMouseEnter={handleOpen}
+          onMouseLeave={handleClose}
+          open={open}
+          direction={direction as TDirection}
+          style={buttonStyle}
+        >
+          {actions.map(action => (
+            <SpeedDialAction
+              key={action.key}
+              icon={action.icon}
+              title={action.title}                
+              onClick={ action.clickHandler || handleClick }
+            />
+          ))}
+        </SpeedDial>
+      </div>
+    </Fragment>
+  );
 }
 
 

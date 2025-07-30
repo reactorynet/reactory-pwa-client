@@ -64,6 +64,7 @@ import DocumentListComponent from './shared/DocumentListComponent';
 import DocumentUploadComponent from './shared/DocumentUploadComponents';
 import Cropper from './shared/image/Cropper';
 import ReactorChat from './shared/ReactorChat/ReactorChat';
+import { ReactorChatButton } from './shared/ReactorChat';
 
 import * as utils from './util';
 import { compose } from 'redux';
@@ -75,8 +76,11 @@ import Forms from './reactory/forms';
 
 import *  as MaterialReactoryWidgets from '@reactory/client-core/components/reactory/ux/mui/widgets';
 import Markdown from 'react-markdown';
+import MarkdownGfm from 'remark-gfm';
 import DomPurify from 'dompurify';
 import PrismCode from 'react-prism';
+import * as Three from 'three';
+
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -591,10 +595,16 @@ export const componentRegistery = [
     }
   },
   {
-    nameSpace: 'reactory',
+    nameSpace: 'reactor',
     name: 'ReactorChat',
     version: '1.0.0',
     component: ReactorChat,
+  },
+  {
+    nameSpace: 'reactor',
+    name: 'ReactorChatButton',
+    version: '1.0.0',
+    component: ReactorChatButton,
   },
   ...Forms,
   {
@@ -602,6 +612,12 @@ export const componentRegistery = [
     name: 'Markdown',
     version: '1.0.0',
     component: Markdown,
+  },
+  {
+    nameSpace: 'core',
+    name: 'MarkdownGfm',
+    version: '1.0.0',
+    component: MarkdownGfm,
   },
   {
     nameSpace: 'core',
@@ -614,5 +630,11 @@ export const componentRegistery = [
     name: 'PrismCode',
     version: '1.0.0',
     component: PrismCode,
-  }
+  },
+  {
+    nameSpace: 'three',
+    name: 'Three',
+    version: '1.0.0',
+    component: Three
+  },
 ];

@@ -4,16 +4,21 @@ import {
   ReactoryFormDataManagerHook,
 } from './types';
 import { useReactory } from '@reactory/client-core/api';
+import { getDefaultFormState } from "@reactory/client-core/components/reactory/form/utils";
 
 export const useLocalStoreDataManager: ReactoryFormDataManagerHook  = (props) => { 
 
-  const reactory = useReactory();
   const { 
     form,
     formData,
-    formContext,
   } = props;
-  const [localData, setLocalData] = useState<unknown>(undefined)
+
+  const EmptySchema = {
+    type: 'object',
+    properties: {}
+  }
+
+  const [localData, setLocalData] = useState<unknown>(getDefaultFormState(form?.schema || EmptySchema, formData));
   const [isBusy, setIsBusy] = useState<boolean>(false);
 
   const onSubmit = async <TData>(data: TData): Promise<TData> => {
@@ -42,6 +47,7 @@ export const useLocalStoreDataManager: ReactoryFormDataManagerHook  = (props) =>
     onChange,
     getData,
     refresh,
-    isBusy
+    isBusy,
+    available: true
   } as IReactoryFormDataManagerHookResult;
 };

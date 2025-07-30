@@ -21,6 +21,11 @@ const fields: Reactory.Forms.IReactoryFields = {
   SchemaField: MaterialSchemaField,
   StringField: MaterialStringField,
   TabbedLayout: MaterialTabbedField,
+  AccordionLayout: MaterialTabbedField,
+  SteppedLayout: MaterialTabbedField,
+  ListLayout: MaterialTabbedField,
+  ColumnLayout: MaterialGridField,
+  PageLayout: MaterialGridField,
   TitleField: MaterialTitleField,
   UnsupportedField: MaterialUnsupportedField,
 };

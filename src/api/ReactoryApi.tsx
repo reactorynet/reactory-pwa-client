@@ -16,7 +16,9 @@ import { CssBaseline } from '@mui/material';
 import { ThemeProvider as MuiThemeProvider } from '@mui/styles';
 import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
+// import objectMapper from './objectMapper';
 import objectMapper from 'object-mapper';
+import { parseObjectMapperFunction } from './objectMapper/parseObjectMapper';
 import {
   attachComponent,
   getAvatar,
@@ -141,6 +143,40 @@ export function parseTemplateObject(templateObject: Object, props: any): any {
 
   return _$ret;
 }
+
+const transformFunctionBuiltInId = (value, sourceObject, destinationObject, destinationKey, transform: string, reactory: Reactory.Client.IReactoryApi) => {
+  switch (transform) {
+    case 'toInt':
+      return parseInt(value);
+    case 'toString':
+      return String(value);
+    case 'toDate':
+      return new Date(value);
+    case 'toBoolean':
+      return Boolean(value);
+    case 'toFloat':
+      return parseFloat(value);
+    case 'toNumber':
+      return Number(value);
+    case 'toObject':
+      return JSON.parse(value);
+    default: 
+      {
+        //check if the transform is a function reference on the reactory 
+        const transformFunction = reactory.$func[transform] ? reactory.$func[transform] : reactory.getComponent<Function>(transform);
+        if (transformFunction) {
+          return transformFunction(value, sourceObject, destinationObject, destinationKey);
+        } else {
+          return value;
+        }
+      }
+
+  }
+}
+
+// Use the new parseObjectMapperFunction from the objectMapper directory
+const parseObjectMapper = parseObjectMapperFunction;
+
 
 
 export const componentPartsFromFqn = (fqn: string) => {
@@ -462,6 +498,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       slugify: makeSlug,
       deepEquals,
       templateObject: parseTemplateObject,
+      parseObjectMap: (objectMap: Reactory.ObjectMap) => {
+        return parseObjectMapper(objectMap, this);
+      },
       classNames,
       uuid,
       collectData: (forms: any[], shape: any) => {
@@ -1148,8 +1187,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           // A form must explicitly be set to false 
           // to not register as a component.
           if (formDef.registerAsComponent !== false && modified === true) {            
-            const ReactoryComponent: React.FC<any> = (props: any) => {
-              that.debug(`Rendering form ${formDef.id}`, { formDef, props });
+            const ReactoryComponent: React.FC<any> = (props: any) => {              
               try {
                 let $children = null;
                 if (props.children) {
@@ -1247,7 +1285,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           that.emit(`onReactoryFormDefinitionUpdate::${id}`, that.formSchemas[index]);
         }
       }).catch((err) => {
-        onFormUpdated(null, err);
+        if (onFormUpdated) onFormUpdated(null, err);
         that.error('Could not get the form component data', { err })
       });
     }

@@ -1,5 +1,7 @@
 import React from 'react';
 import { IAIPersona, UXChatMessage } from '../types';
+import { useNavigate, useParams } from 'react-router';
+import { useSearchParams } from 'react-router-dom';
 
 interface ReactorPersonasHookResult {
   personas: IAIPersona[];
@@ -17,6 +19,7 @@ interface ReactorPersonasHookOptions {
   onError: (error: Error) => void
   onToolCall?: (message: string) => void
   onMacroCall?: (message: string) => void
+  intialPersonaId?: string | null
 }
 
 type ReactorPersonasHook = (props: ReactorPersonasHookOptions) => ReactorPersonasHookResult; 
@@ -60,7 +63,8 @@ const usePersonas: ReactorPersonasHook = (props) => {
     onMessage, 
     onError, 
     onToolCall, 
-    onMacroCall 
+    onMacroCall,
+    intialPersonaId = null,  
   } = props;
 
 const [personas, setPersonas] = React.useState<IAIPersona[]>([]);
@@ -68,6 +72,10 @@ const [isLoaded, setIsLoaded] = React.useState<boolean>(false);
 const [loading, setLoading] = React.useState<boolean>(true);
 const [error, setError] = React.useState<Error | null>(null);
 const [activePersona, setActivePersona] = React.useState<IAIPersona | null>(null);
+const navigate = useNavigate();
+const [searchParams, setSearchParams] = useSearchParams();
+const personaId = intialPersonaId || searchParams.get('personaId');
+
 const fetchPersonas = async () => {
   try {
     setLoading(true);
@@ -82,7 +90,15 @@ const fetchPersonas = async () => {
     setIsLoaded(true);
     setPersonas(response.data.ReactorPersonas);
     if (response.data.ReactorPersonas.length > 0) {
-      setActivePersona(response.data.ReactorPersonas[0]);
+      if (personaId) {
+        const persona = response.data.ReactorPersonas.find(p => p.id === personaId);
+        if (persona) {
+          setActivePersona(persona);
+        }
+      } 
+      else {
+        setActivePersona(response.data.ReactorPersonas[0]);
+      }
     }
     reactory.log(`usePersonas: ${response?.data?.ReactorPersonas.length} personas loaded`, 'info');
     setLoading(false);
@@ -114,6 +130,8 @@ return {
       const selectedPersona = personas.find(persona => persona.id === personaId);
       if (selectedPersona) {
         setActivePersona(selectedPersona);
+        // Note: Don't call setSearchParams here as it will cause loops
+        // The URL management should be handled by the parent component
       }
     },
     activePersona,

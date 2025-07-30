@@ -8,7 +8,9 @@ import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import classNames from 'classnames';
 import ReactDOM from 'react-dom';
 import { useNavigate, useParams } from 'react-router';
+import { useContentRender } from '@reactory/client-core/components/shared/ReactorChat/hooks/useContentRender'
 import { margin } from '@mui/system';
+import { use } from 'i18next';
 
 export interface ReactoryStaticContentProps {
   id: string,
@@ -21,7 +23,8 @@ export interface ReactoryStaticContentProps {
   slugSource?: string,
   slugSourceProps?: { 
     paramId: string,  
-    slugPrefix?: string
+    slugPrefix?: string,
+    basePath?: string
   },
   defaultSlug?: string,
   defaultValue?: any,
@@ -43,8 +46,16 @@ export interface ReactoryStaticContentProps {
   helpTitle?: string,
   throttle?: number,
   showEditIcon?: boolean,
-  isEditing?: boolean
-
+  isEditing?: boolean,
+  useExpanded?: boolean,
+  expanded?: boolean,
+  container?: string | "Box" | "Paper" | React.ComponentType<any>,
+  containerProps?: {
+    sx?: any,
+    className?: string,
+    [key: string]: any,
+  },
+  aipersona?: Reactory.Schema.UIAIOptions 
 }
 
 export interface ReactoryStaticContent {
@@ -64,6 +75,7 @@ export interface ReactoryStaticContentState {
   original: string | null,
   editing: boolean,
   found: boolean,
+  expanded: boolean,
   [key: string]: any
 };
 
@@ -88,22 +100,55 @@ const StaticContentStyles = (theme: any): any => {
     },
     contentContainer: {
       margin: theme.spacing(1),
+      position: 'relative',
     },
     buttonContainer: {
-      minHeight: '40px'
+      minHeight: '40px',
+      display: 'flex',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      marginTop: theme.spacing(-3),
     },
     staticContentContainer: {
-      display: 'flex',
-      justifyContent: 'centre',
+      display: 'block',
       minHeight: '40px',      
       padding: theme.spacing(1),
       margin: theme.spacing(1),
-      marginBottom: '50px'
+      marginBottom: '50px',
+      position: 'relative',
     },
     staticContainerDeveloper: {
       '&:hover': {
         outline: `1px solid ${palette.primary.main}`,
         cursor: 'pointer'
+      }
+    },
+    expandButton: {
+      position: 'absolute !important',
+      top: theme.spacing(2) + ' !important',
+      right: theme.spacing(1) + ' !important',
+      zIndex: 10,
+      minWidth: 'auto !important',
+      width: '32px !important',
+      height: '32px !important',
+    },
+    expandButtonExpanded: {
+      top: 'auto',
+      bottom: theme.spacing(1),
+    },
+    collapsedContent: {
+      maxHeight: '200px',
+      overflow: 'hidden',
+      position: 'relative',
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '40px',
+        background: `linear-gradient(transparent, ${theme.palette.background.paper})`,
+        pointerEvents: 'none',
       }
     },
   }
@@ -118,9 +163,18 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
 
   const { reactory } = props;
 
-  const { MaterialCore } = reactory.getComponents<any>(['material-ui.MaterialCore'])
+  const { 
+    MaterialCore,
+    ReactorChat,
+    ReactorChatButton    
+  } = reactory.getComponents<any>([
+      'material-ui.MaterialCore', 
+      'reactor.ReactorChat',
+      'reactor.ReactorChatButton'
+    ])
   const navigate = useNavigate();
   const params = useParams();
+  const { renderContent } = useContentRender(reactory);
   const {
     classes,
     viewRoles,
@@ -136,7 +190,10 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
     defaultSlug,
     match,
     propertyBag = {},
-    defaultValue = ""
+    defaultValue = "",
+    useExpanded = false,
+    container = "Box",
+    containerProps = {},
   } = props;
 
   const [state, setState] = React.useState<ReactoryStaticContentState>({
@@ -155,14 +212,14 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
     editing: props.isEditing === true,
     original: null,
     found: false,
-    parsed_content: null
+    parsed_content: null,
+    expanded: props.expanded !== undefined ? props.expanded : (useExpanded ? false : true)
   });
 
   const [version, setVersion] = React.useState<number>(0)
   const [allowEdit, setAllowEdit] = React.useState<boolean>(false);
   const [components, setComponents] = React.useState<ComponentMountInfo[]>([]);
 
-  const containerProps = {};
   const {
     editing,
     found, 
@@ -274,11 +331,17 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
     return $content;
   }
 
+  const getOptions = () => {
+    return {
+      basePath: slugSourceProps?.basePath || "content/static-content"
+    }
+  }
+
   const getData = () => {
     if(state.found === true) return;
     reactory.graphqlQuery(`
-      query ReactoryGetContentBySlug($slug: String!) {
-        ReactoryGetContentBySlug(slug: $slug) {
+      query ReactoryGetContentBySlug($slug: String!, $options: ReactoryGetContentOptionsInput) {
+        ReactoryGetContentBySlug(slug: $slug, options: $options) {
           id
           slug
           title
@@ -292,7 +355,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
           createdAt
         }
       }
-    `, { slug: getSlug() }, { fetchPolicy: 'network-only' }).then((result: any) => {
+    `, { slug: getSlug(), options: getOptions() }, { fetchPolicy: 'network-only' }).then((result: any) => {
       if (result.data && result.data.ReactoryGetContentBySlug) {
         const staticContent: ReactoryStaticContent = result.data.ReactoryGetContentBySlug;
         try {
@@ -309,7 +372,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
             if (nextState.content.title === null && title !== null) nextState.content.title = title;
             if (nextState.content.published === null && published !== null) nextState.content.published = published;
 
-            setState(nextState);
+            setState({ ...nextState, expanded: state.expanded });
           }          
         } catch (err) { }
 
@@ -366,6 +429,10 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
 
   };
 
+  const toggleExpanded = () => {
+    setState({ ...state, expanded: !state.expanded });
+  };
+
   const onDevelopmentModeChanged = () => {
     setVersion(version + 1);
   }
@@ -392,10 +459,65 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
       return ReactDOM.createPortal(<MountableComponent  { ...mountInfo.props }/>, portalContainer);
     })
 
+    // <div {...containerProps} ref={ref => contentRef.current = ref} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>
+
+    const contentBoxClass = classNames(
+      classes.staticContentContainer, 
+      { 
+        [classes.staticContainerDeveloper]: getIsDeveloper(),
+      }
+    );
+
+    const contentClass = classNames({
+      [classes.collapsedContent]: useExpanded && !state.expanded
+    });
+
+    let Container = MaterialCore.Box;
+
+    switch(container) {
+      case "Paper":
+        Container = MaterialCore.Paper;
+        break;
+      default:
+        Container = MaterialCore.Box;
+    }
+
+    let AIComponent = null;
+
+    if (props.aipersona) {
+      AIComponent = <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <ReactorChatButton 
+          chatProps={props.aipersona}
+          display="button"
+          buttonProps={{
+            color: "primary",
+          }}
+        />
+      </div>
+    }
+
     return (
-    <React.Fragment>      
-        <div {...containerProps} ref={ref => contentRef.current = ref} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>
-        {portals}
+    <React.Fragment>
+      <Container className={contentBoxClass} sx={{ margin: 2, padding: 2, position: 'relative' }}>
+        <div style={{ position: 'relative' }} className={contentClass}>
+          {state.parsed_content ? renderContent(state.parsed_content) : <MaterialCore.Typography variant="body1" color="textSecondary">{default_content}</MaterialCore.Typography>}
+          {useExpanded && (
+            <IconButton 
+              onClick={toggleExpanded} 
+              color="primary" 
+              size="small" 
+              className={classNames(classes.expandButton, {
+                [classes.expandButtonExpanded]: state.expanded
+              })}
+              aria-label={state.expanded ? 'Collapse content' : 'Expand content'}
+            >
+              <Icon>{state.expanded ? 'expand_less' : 'expand_more'}</Icon>
+            </IconButton>
+          )}
+          {AIComponent}
+        </div>
+      </Container>
+      {portals}
     </React.Fragment>)  
   }
 
@@ -442,10 +564,8 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
   }, [props.propertyBag])
 
   return (        
-    <>
-      <div className={`${classes.contentContainer}`}>
-        {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}
-      </div>
+    <>      
+      {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}      
       <div className={`${classes.buttonContainer}`}>
         {getCanEdit() === true && getIsDeveloper() === true && editWidget}
       </div>
@@ -464,8 +584,8 @@ StaticContentComponent.meta = {
   name: 'StaticContent',
   version: '1.0.0',
   component: StaticContentComponent,
-  tags: ['static content', 'html'],
-  description: 'A simple html container component',
+  tags: ['static content', 'html', 'expandable'],
+  description: 'A simple html container component with optional expand/collapse functionality',
 };
 
 export default StaticContentComponent;

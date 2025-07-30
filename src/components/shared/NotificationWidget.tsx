@@ -11,97 +11,21 @@ import classNames from 'classnames';
 import { ReactoryApiEventNames } from '../../api'
 import { v1 as uuidV1 } from 'uuid';
 
-class NotificationHOC extends Component<any, any> {
-
-  timer = null;
-  interval = 3000;
-  canDismiss = true;
-  components = [];
-
-  constructor(props, context) {
-    super(props);
-  }
-
-  static styles = (theme: Theme): any => {
-    return {
-      root: {
-        display: 'flex',
-        justifyContent: 'space-between'
-      },
-      messageColumn: {
-        display: 'flex',
-        alignItems: 'center'
-      },
-      componentColumn: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end'
-      },
-      container: {
-        position: 'relative',
-        zIndex: 2000,
-        display: 'block'
-      },
-      notification: {
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: '1rem',
-        margin: '1rem',
-        borderRadius: '8px',
-        boxShadow: '1px 1px 1px 0px rgba(0,0,0,0.3)',
-        color: '#fff',
-        '& p': {
-          color: '#fff',
-          fontSize: '0.9rem',
-          margin: 0,
-          marginLeft: '1rem'
-        },
-      },
-      info: {
-        backgroundColor: theme.palette.info.main,
-      },
-      success: {
-        backgroundColor: theme.palette.success.main,
-      },
-      error: {
-        backgroundColor: theme.palette.error.main,
-      },
-      warning: {
-        backgroundColor: theme.palette.warning.main,
-      },
+const styles = (theme: Theme) => {
+  return {
+    notification: {
+      backgroundColor: theme.palette.background.paper,
     }
   }
+}
 
-  componentDidMount = () => {
-    if (this.props.config) {
-      let { config } = this.props;
-      this.interval = config.timeOut || config.timeout || 3000;
-      this.canDismiss = config.canDismiss;
-      this.components = config.components || [];
-    }
+const NotificationHOC = ({ reactory, title, type, config, deleteNotification, classes }) => {
+  const [additionalComponentsToMount, setAdditionalComponentsToMount] = React.useState(null);
 
-    this.timer = setTimeout(() => {
-      this.props.deleteNotification(this.props.id);
-    }, this.interval);
-  }
-
-  clickHandler = () => {
-    if (!this.canDismiss)
-      return;
-    clearTimeout(this.timer);
-    this.props.deleteNotification(this.props.id);
-  }
-
-  render() {
-    let { props } = this;
-    const { reactory, title, type, config, classes } = props;
-    let additionalComponentsToMount = null;
-
-
+  React.useEffect(() => {
     if (config && config.components && config.components.length > 0) {
       const additionalComponents = config.components || [];
-      additionalComponentsToMount = additionalComponents.map(({ componentFqn, componentProps, propsMap }, additionalComponentIndex) => {
+      const mountedComponents = additionalComponents.map(({ componentFqn, componentProps, propsMap }, additionalComponentIndex) => {
         let ComponentToMount = reactory.getComponent(componentFqn);
         reactory.log('NOTIFICATION __ ADITIONAL COMPONENT:: ', { componentProps, componentFqn });
         let additionalComponentFound = true;
@@ -112,98 +36,85 @@ class NotificationHOC extends Component<any, any> {
 
         let mappedProps = {};
         if (propsMap)
-          mappedProps = reactory.utils.objectMapper({ ...props.config, reactory }, propsMap)
+          mappedProps = reactory.utils.objectMapper({ ...config, reactory }, propsMap)
 
         if (additionalComponentFound === true)
           return <ComponentToMount {...{ ...componentProps, ...mappedProps, key: additionalComponentIndex }} />
         else
           return <ComponentToMount message={`Could not load component ${componentFqn}, please check your registry loaders and namings`} key={additionalComponentIndex} />
       });
-
+      setAdditionalComponentsToMount(mountedComponents);
     }
+  }, [config, reactory]);
 
-    return (
-      <div onClick={this.clickHandler} className={classNames(classes.notification, classes[type])}>
-        <Grid container className={classes.root} spacing={2}>
-          <Grid item className={classes.messageColumn}>
-            <Icon>done</Icon>
-            <p>{title}</p>
-          </Grid>
+  const clickHandler = () => {
+    if (!config.canDismiss)
+      return;
+    deleteNotification(config.id);
+  }
 
-          {
-            config && config.components && config.components.length > 0 &&
-            <Grid item xs={4} className={classes.componentColumn}>
-              {additionalComponentsToMount}
-            </Grid>
-          }
-
-          {config.children &&
-            <Grid item xs={4} className={classes.componentColumn}>
-              {config.children}
-            </Grid>}
-
-
+  return (
+    <div onClick={clickHandler} className={classNames(classes.notification, classes[type])}>
+      <Grid container className={classes.root} spacing={2}>
+        <Grid item className={classes.messageColumn}>
+          <Icon>done</Icon>
+          <p>{title}</p>
         </Grid>
-      </div>
-    )
-  }
-}
 
-const NotificationHOCComponent = compose(withTheme, withReactory, withStyles(NotificationHOC.styles))(NotificationHOC);
-
-class NotificationWidget extends Component<any, any> {
-  constructor(props, context) {
-    super(props, context);
-
-    this.state = { notifications: [] }
-    this.props.reactory.on(ReactoryApiEventNames.onShowNotification, this.onShowNotification);
-  }
-
-  static styles = (theme: Theme): any => {
-    return {
-      container: {       
-        zIndex: 2000,
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        left: 0
-      }
-    }
-  }
-
-  onShowNotification = ({ title, type, config }) => {
-    this.setState(prevState => ({ notifications: [...prevState.notifications, { id: uuidV1(), title, type, config: config }] }));
-  }
-
-  deleteNotificationHandler = (id) => {
-    this.setState(prevState => ({ notifications: prevState.notifications.filter(i => i.id !== id) }));
-  }
-
-  render() {
-    let {
-      classes
-    } = this.props;
-
-    return (
-      <div className={classes.container}>
         {
-          this.state.notifications.map((message, index) => {
-            return (
-            <NotificationHOCComponent
-              key={message.id}
-              id={message.id}
-              title={message.title}
-              type={message.type}
-              config={message.config}
-              deleteNotification={this.deleteNotificationHandler}>
-            </NotificationHOCComponent>
-          )})
+          config && config.components && config.components.length > 0 &&
+          <Grid item xs={4} className={classes.componentColumn}>
+            {additionalComponentsToMount}
+          </Grid>
         }
-      </div>
-    )
-  }
+
+        {config.children &&
+          <Grid item xs={4} className={classes.componentColumn}>
+            {config.children}
+          </Grid>}
+
+
+      </Grid>
+    </div>
+  )
 }
 
-const NotificationComponent = compose(withTheme, withReactory, withStyles(NotificationWidget.styles))(NotificationWidget);
+const NotificationHOCComponent = compose(withTheme, withReactory, withStyles(styles))(NotificationHOC);
+
+const NotificationWidget = ({ reactory, classes }) => {
+  const [notifications, setNotifications] = React.useState([]);
+
+  React.useEffect(() => {
+    const onShowNotification = ({ title, type, config }) => {
+      setNotifications(prevState => ([...prevState, { id: uuidV1(), title, type, config: config }]));
+    };
+    reactory.on(ReactoryApiEventNames.onShowNotification, onShowNotification);
+    return () => reactory.off(ReactoryApiEventNames.onShowNotification, onShowNotification);
+  }, [reactory]);
+
+  const deleteNotificationHandler = (id) => {
+    setNotifications(prevState => prevState.filter(i => i.id !== id));
+  }
+
+  return (
+    <div className={classes.container}>
+      {
+        notifications.map((message, index) => {
+          return (
+          <NotificationHOCComponent
+            key={message.id}
+            id={message.id}
+            title={message.title}
+            type={message.type}
+            config={message.config}
+            deleteNotification={deleteNotificationHandler}>
+          </NotificationHOCComponent>
+        )})
+      }
+    </div>
+  )
+}
+
+const NotificationComponent = compose(withTheme, withReactory, withStyles(styles))(NotificationWidget);
 
 export default NotificationComponent;

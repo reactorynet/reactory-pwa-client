@@ -104,13 +104,18 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       HelpButton,
       HelpModal,
       toggleHelp,
-    } = useHelp({ formDefinition: form });
+    } = useHelp({ 
+      formDefinition: form,
+      formContext,
+      formData,
+    });
 
     const {
       Toolbar
     } = useToolbar({
       formDefinition: form,
       formData,
+      formContext,
       errors,
       errorSchema,
       onSubmit,
@@ -344,7 +349,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           name: `${form.name}`,
           key: `reactory_container::${instanceId}`,
           className: uiOptions?.className || '',
-          style: uiOptions?.style || {},
+          style: uiOptions?.style || { },
         }
 
         switch (uiOptions?.componentType) {

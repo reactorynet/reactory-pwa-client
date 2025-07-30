@@ -73,6 +73,7 @@ export interface IAIPersonaPromptTemplate {
 export interface IAIPersona {
   id: string;
   modelId?: string;
+  maxTokens?: number;
   name: string;
   description?: string;
   defaultGreeting?: string;
@@ -184,6 +185,7 @@ export type UXChatMessage = ChatMessage & {
   component?: string | React.FC | React.ComponentType<any> | React.ReactNode;
   tool_calls?: any[];
   tool_results?: any[];
+  tool_errors?: any[];
   props?: any
   rating?: number | null;
 }
@@ -314,6 +316,11 @@ export type ChatState = {
    * @returns 
    */
   sendMessage: (message: string, sessionId?: string) => Promise<void>
+
+  tokenCount?: number
+  maxTokens?: number
+  tokenPressure?: number
+  truncatedHistory?: ReactorConversationHistory
 }
 
 export interface QuestionHandlerResponse {

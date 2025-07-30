@@ -3,8 +3,9 @@ import { gql } from "@apollo/client"
 import { IAIPersona, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition } from "../types"
 import useMacros from "./useMacros"
 import { exec } from "child_process"
+import ToolPrompt from './ToolPrompt';
 
-interface ChatFactoryHookResult { 
+interface ChatFactoryHookResult {
   // represents the chat state
   chatState: ChatState
   // indicates if the chat is busy loading or waiting 
@@ -60,6 +61,9 @@ const INITIALIZE_CHAT_MUTATION = gql`
         }
         runat
       }
+      tokenCount
+      maxTokens
+      tokenPressure
       macros {
         id
         nameSpace
@@ -115,7 +119,7 @@ const DELETE_CHAT_MUTATION = gql`
 `;
 
 // define a type for each of the possible responses
-type ReactorChatMessage = { 
+type ReactorChatMessage = {
   __typename: "ReactorChatMessage"
   sessionId: string
   id: string
@@ -219,6 +223,9 @@ const EXEC_CONVERSATION_QUERY = gql`
           runat
         }
         toolApprovalMode
+        tokenCount
+        maxTokens
+        tokenPressure
       }
       ... on ReactorErrorResponse {
         code
@@ -247,10 +254,6 @@ const EXEC_CONVERSATIONS_QUERY = gql`query ReactoryConversations($filter: Reacto
         role
         content
         timestamp
-        tool_calls
-        tool_results
-        toolApproval
-        refusal
       }
       vars
     }
@@ -269,7 +272,7 @@ interface ReactorChatHistory {
   content: string
   timestamp: Date
   tool_calls: string[]
-  rating: number 
+  rating: number
 }
 
 interface ReactorInitSession {
@@ -284,19 +287,19 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const {
     reactory,
     persona: rawPersona,
-    protocol = 'graphql',    
+    protocol = 'graphql',
   } = props;
 
   const persona = React.useMemo(() => rawPersona, [rawPersona?.id]);
 
-  
+
   /**
    * 
    * @param message 
    * @param chatSessionId 
    * @returns 
    */
-  const sendMessage = async (message: string, chatSessionId: string) => { 
+  const sendMessage = async (message: string, chatSessionId: string) => {
     setBusy(true);
     try {
       // check if the message is empty
@@ -317,17 +320,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           setBusy(false);
           return;
         }
-        
+
         try {
-          await executeMacro(macro.macro, macro.args); 
+          await executeMacro(macro.macro, macro.args);
           setBusy(false);
-          return;     
-        } catch (error) { 
+          return;
+        } catch (error) {
           onError(error);
           setBusy(false);
           return;
         }
-        
+
       } else {
         onMessage({
           id: reactory.utils.uuid(),
@@ -339,7 +342,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       }
 
 
-      try {      
+      try {
         const response = await reactory.graphqlMutation<{ ReactorSendMessage: ReactorSendMessageResponse }, { message: SendMesageInput }>(SEND_MESSAGE_MUTATION,
           {
             message: {
@@ -359,69 +362,28 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             return;
           }
 
-          if (response.data.ReactorSendMessage.__typename === "ReactorInitiateSSE") { 
+          if (response.data.ReactorSendMessage.__typename === "ReactorInitiateSSE") {
             // handle SSE response
             const { sessionId, endpoint, token, status, expiry, headers } = response.data.ReactorSendMessage;
-            
+
             initSSE({ sessionId, endpoint, token, headers, status, expiry });
           }
 
           const message = response.data.ReactorSendMessage as UXChatMessage;
 
-          const { toolApprovalMode } = chatState;
-          let tool_results = [];
-          // check if the message is a macro execution / tool call
-          if (message.tool_calls && message.tool_calls.length > 0) {
-            for (const toolCall of message.tool_calls) {
-              let macro: MacroComponentDefinition<unknown> | null = null;
-              if (toolCall.type === 'function' && toolCall.function) {
-                const { id } = toolCall;
-                const { name } = toolCall.function;
-                macro = getMacroById(name);
-                if (macro) {
-                  try {
-                    let args = JSON.parse(toolCall.function.arguments);
-                    if (args.args) {
-                      args = args.args;
-                    }
-                    let approved = true;
-                    if (toolApprovalMode === ToolApprovalMode.PROMPT) {
-                      approved = await new Promise<boolean>((resolve) => {
-                        onToolCallPrompt(macro.name, args, chatState, (approved: boolean) => {
-                          resolve(approved);
-                        });
-                      });
-                    }
-                    if (!approved) {
-                      // User denied tool call, stop further invocations
-                      break;
-                    }
-                    const toolCallResult = await executeMacro(macro, args);
-                    tool_results.push({
-                      id: reactory.utils.uuid(),
-                      role: "assistant",
-                      content: toolCallResult?.content || toolCallResult,
-                      timestamp: new Date(),
-                      tool_calls: [],
-                      sessionId: chatState.id,
-                    } as UXChatMessage);
-                  } catch (error) {
-                    reactory.error(`ChatFactory: Error executing macro ${macro.name}`, error);
-                    onError(new Error(`Error executing macro ${macro.name}: ${error.message}`));
-                  }
-                } else {
-                  onError(new Error(`Macro not found: ${name}`));
-                }
-              }
-            }
-          }
-          if (message.sessionId) {          
+          // Update chat state with the message FIRST
+          if (message.sessionId) {
             setChatState((prevState) => ({
-                        ...prevState,
-                        id: message.sessionId,
-                        history: [...prevState.history, message as any, tool_results],
-                        updated: new Date(),
-                      }));
+              ...prevState,
+              id: message.sessionId,
+              history: [...prevState.history, message as any],
+              updated: new Date(),
+            }));
+          }
+
+          // THEN process tool calls if present
+          if (message.tool_calls && message.tool_calls.length > 0) {
+            await processToolCalls(message.tool_calls, message);
           }
         } else {
           throw new Error("No response from server");
@@ -435,7 +397,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }
 
 
-  const getInitialChatState = (): ChatState => { 
+  const getInitialChatState = (): ChatState => {
     let history: UXChatMessage[] = [];
     if (persona && persona.defaultGreeting) {
       history = [
@@ -448,6 +410,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }
       ]
     }
+    
+    // Deduplicate persona tools by name
+    const uniquePersonaTools = persona?.tools ? persona.tools.filter((tool, index, self) => 
+      index === self.findIndex(t => t.function?.name === tool.function?.name)
+    ) : [];
+    
     return {
       id: null,
       botId: persona?.id || 'reactor',
@@ -462,7 +430,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       mcpClients: [],
       toolApprovalMode: ToolApprovalMode.PROMPT,
       macros: persona?.macros || [],
-      tools: persona?.tools || [],
+      tools: uniquePersonaTools,
+      tokenCount: 0,
+      maxTokens: persona?.maxTokens || 8000,
+      tokenPressure: 0,
       sendMessage
     }
   };
@@ -473,23 +444,23 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
 
-  const { getMacroById, executeMacro, parseMacro, macros } = useMacros({ 
+  const { getMacroById, executeMacro, parseMacro, macros, findMacroByAlias } = useMacros({
     reactory,
     chatState,
-    onMacroCallResult: (result: any, state: ChatState) => {  
+    onMacroCallResult: (result: any, state: ChatState) => {
       // use onMessage to update the chat state with the result
-      const message = { 
+      const message = {
         id: result?.id ?? reactory.utils.uuid(),
         role: result?.role ?? "assistant",
         content: result?.content,
         component: result?.component,
         props: result?.props,
         timestamp: result?.timestamp ?? new Date(),
-        sessionId: state.id,  
+        sessionId: state.id,
       } as UXChatMessage;
       onMessage(message);
     },
-    onMacroCallError: (error, macro, state: ChatState) => { 
+    onMacroCallError: (error, macro, state: ChatState) => {
       reactory.error(`ChatFactory: Error executing macro ${error}`);
       onError(error);
     }
@@ -503,34 +474,43 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * call on the front end.
    * @param persona 
    */
-  const initializeChat = async (persona) => { 
-  
+  const initializeChat = async (persona) => {
+
     // get the client macros from the macro registry
     const clientMacros = Object.values(macros).filter((macro) => macro.runat === "client");
     // get the client tools from the macro registry
     let clientTools = [];
-    macros.forEach((macro) => { 
+    const toolNames = new Set(); // Track tool names to prevent duplicates
+    
+    macros.forEach((macro) => {
       if (macro.runat === "client" && macro.tools) {
         macro.tools.forEach((tool) => {
           if (tool.type === "function") {
             const toolDef = tool as MacroToolDefinition;
-            clientTools.push({               
-              type: toolDef.type,
-              propsMap: toolDef.propsMap,
-              roles: toolDef.roles,
-              function: {
-                icon: toolDef.function.icon,
-                name: toolDef.function.name,
-                roles: toolDef.roles,
-                description: toolDef.function.description,
-                parameters: toolDef.function.parameters,
-              }            
-            } as MacroToolDefinition);
+            const toolName = toolDef.function?.name;
+            
+            // Only add the tool if we haven't seen this name before
+            if (toolName && !toolNames.has(toolName)) {
+              toolNames.add(toolName);
+              clientTools.push({
+                type: toolDef.type,
+                propsMap: toolDef.propsMap,
+                roles: toolDef.roles,                
+                function: {
+                  icon: toolDef.function.icon,
+                  name: toolDef.function.name,
+                  roles: toolDef.roles,
+                  description: toolDef.function.description,
+                  parameters: toolDef.function.parameters,
+                }
+              } as MacroToolDefinition);
+            }
           }
         });
       }
     });
-    reactory.graphqlMutation<{ ReactorStartChatSession : Partial<ChatState> }, { initSession: ReactorInitSession }>(INITIALIZE_CHAT_MUTATION,
+    
+    reactory.graphqlMutation<{ ReactorStartChatSession: Partial<ChatState> }, { initSession: ReactorInitSession }>(INITIALIZE_CHAT_MUTATION,
       {
         initSession: {
           personaId: persona.id,
@@ -540,8 +520,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             name: macro.name,
             version: macro.version,
             description: macro.description,
-            alias: macro.alias,  
-            roles: macro.roles,        
+            alias: macro.alias,
+            roles: macro.roles,            
           })) ?? [],
           tools: [...clientTools],
         }
@@ -551,7 +531,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           if (chatState.id) {
             setChatState((prevState) => ({
               ...prevState,
-              id: chatState.id, 
+              id: chatState.id,
               updated: new Date(),
               macros: chatState.macros,
               tools: chatState.tools,
@@ -560,12 +540,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         } else {
           throw new Error("No response from server");
         }
-      }).catch((error) => { 
+      }).catch((error) => {
         onError(error);
       });
   }
 
-  useEffect(() => { 
+  useEffect(() => {
     let isMounted = true;
 
     // initialize the chat state with the persona
@@ -584,11 +564,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }, [persona])
 
   // placeholder for SSE session initialization
-  const initSSE = async (sseProps: {sessionId: string, endpoint: string, token: string, status: string, headers: any, expiry: Date}) => { 
+  const initSSE = async (sseProps: { sessionId: string, endpoint: string, token: string, status: string, headers: any, expiry: Date }) => {
 
   }
 
-  const onMessage = (message: UXChatMessage) => { 
+  const onMessage = (message: UXChatMessage) => {
     setChatState((prevState) => ({
       ...prevState,
       history: [...prevState.history, message as any],
@@ -598,11 +578,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const onError = (error: Error) => {
     if (reactory.hasRole(['ADMIN', 'DEVELOPER'])) {
-      onMessage({ 
+      onMessage({
         id: reactory.utils.uuid(),
         timestamp: new Date(),
         role: "assistant",
-        content: error.message,
+        content: 'Error: ' + error.message,
         tool_calls: [],
         rating: 0,
         refusal: null,
@@ -615,68 +595,46 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   /**
    * Use the onToolCallPrompt to handle tool calls that require user confirmation or additional input.
+   * Instead of creating a new message, we'll update the existing message with tool_calls to include the prompt component
    * @param toolCall 
    * @param state 
    */
   const onToolCallPrompt = (toolCall: string, args: any, state: ChatState, callBack: (approved: boolean) => void) => {
-    const { Material } = reactory.getComponents<{ Material: Reactory.Client.Web.IMaterialModule }>([
-      "material-ui.Material",
-    ]);
-    const { MaterialCore, MaterialIcons } = Material;
-    const { Card, CardContent, CardActions, Typography, IconButton, Tooltip } = MaterialCore;
-    const { Check, Close } = MaterialIcons;
-
-    // Create the prompt as a React element
-    const ToolPromptElement: React.FC = () => (
-      <Card sx={{ maxWidth: 400, margin: '16px auto', background: '#f9f9f9' }}>
-        <CardContent>
-          <Typography variant="subtitle2" color="textSecondary">Tool Call</Typography>
-          <Typography variant="h6" sx={{ mb: 1 }}>{toolCall}</Typography>
-          <Typography
-            variant="body2"
-            sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', mb: 1 }}
-          >
-            {JSON.stringify(args, null, 2)}
-          </Typography>
-        </CardContent>
-        <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
-          <Tooltip title="Approve">
-            <IconButton size="small" color="success" onClick={() => callBack(true)}>
-              <Check fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Cancel">
-            <IconButton size="small" color="error" onClick={() => callBack(false)}>
-              <Close fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </CardActions>
-      </Card>
-    );
-
-    
-
-    onMessage({
-      id: reactory.utils.uuid(),
-      timestamp: new Date(),
-      role: "assistant",
-      content: `Run ${toolCall}?`,
-      component: ToolPromptElement,
-      tool_calls: [],
-      rating: 0,
-      refusal: null,
-      annotations: [],
-      audio: null,
-      sessionId: state.id,
+    // Find the most recent message with tool_calls and update it with the approval component
+    setChatState((prevState) => {
+      const history = [...prevState.history];
+      
+      // Find the last message with tool_calls (manual reverse search for compatibility)
+      let lastMessageIndex = -1;
+      for (let i = history.length - 1; i >= 0; i--) {
+        const msg = history[i];
+        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+          lastMessageIndex = i;
+          break;
+        }
+      }
+      
+      if (lastMessageIndex >= 0) {
+        history[lastMessageIndex] = {
+          ...history[lastMessageIndex],
+          component: () => <ToolPrompt toolName={toolCall} args={args} onDecision={callBack} />,
+        };
+      }
+      
+      return {
+        ...prevState,
+        history,
+        updated: new Date(),
+      };
     });
   }
 
 
-  const newChat = async () => { 
+  const newChat = async () => {
     setBusy(true);
     try {
       const response = await reactory.graphqlMutation<{ ReactorNewChat: UXChatMessage }, { message: SendMesageInput }>(SEND_MESSAGE_MUTATION,
-         {
+        {
           message: {
             message: "",
             personaId: persona.id,
@@ -704,7 +662,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
-  const fetchConversations = async (filter: any) => { 
+  const fetchConversations = async (filter: any) => {
     try {
       const response = await reactory.graphqlQuery<{ ReactorConversations: any[] }, { filter: any }>(EXEC_CONVERSATIONS_QUERY, { filter });
       // Save chats to state
@@ -820,14 +778,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   };
 
-  const setToolApprovalMode = async (mode: ToolApprovalMode) => { 
+  const setToolApprovalMode = async (mode: ToolApprovalMode) => {
     setBusy(true);
     try {
-      const response = await reactory.graphqlMutation<{ 
-        ReactorSetChatToolApprovalMode: ChatState 
-        }, 
+      const response = await reactory.graphqlMutation<{
+        ReactorSetChatToolApprovalMode: ChatState
+      },
         { mode: ToolApprovalMode, chatSessionId: string }>(
-        gql`
+          gql`
           mutation ReactorSetChatToolApprovalMode($mode: ReactorToolApprovalMode!, $chatSessionId: String!) {
             ReactorSetChatToolApprovalMode(mode: $mode, chatSessionId: $chatSessionId) {
               id
@@ -835,8 +793,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             }
           }
         `,
-        { mode, chatSessionId: chatState.id }
-      );
+          { mode, chatSessionId: chatState.id }
+        );
       if (response?.data?.ReactorSetChatToolApprovalMode) {
         setChatState((prevState) => ({
           ...prevState,
@@ -864,17 +822,22 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setBusy(true);
     try {
       const response = await reactory.graphqlQuery<any, { id: string }>(EXEC_CONVERSATION_QUERY, { id: chatSessionId });
-      const result = response?.data?.ReactorConversation;      
+      const result = response?.data?.ReactorConversation;
       if (result) {
         if (result.__typename === 'ReactorErrorResponse') {
           onError(new Error(result.message));
         } else {
+          // Deduplicate tools by name to prevent duplicates
+          const uniqueTools = result.tools ? result.tools.filter((tool, index, self) => 
+            index === self.findIndex(t => t.function?.name === tool.function?.name)
+          ) : [];
+          
           // Update chatState with the loaded chat session
           setChatState((prevState) => ({
             ...prevState,
             ...result,
             history: result.history ?? [],
-            tools: result.tools ?? [],
+            tools: uniqueTools,
             macros: result.macros ?? [],
             vars: result.vars ?? {},
             updated: new Date(),
@@ -886,6 +849,356 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onError(error);
     } finally {
       setBusy(false);
+    }
+  };
+
+  /**
+   * Enhanced tool call processing with recursive handling for multiple tool calls
+   */
+  const processToolCalls = async (toolCalls: any[], message: UXChatMessage, depth: number = 0): Promise<{ toolResults: any[], toolErrors: any[] }> => {
+    const { toolApprovalMode } = chatState;
+    const toolResults = [];
+    const toolErrors = [];
+    
+    // Prevent infinite recursion (max 10 levels deep)
+    const MAX_RECURSION_DEPTH = 10;
+    if (depth >= MAX_RECURSION_DEPTH) {
+      toolErrors.push({
+        error: `Maximum tool call recursion depth (${MAX_RECURSION_DEPTH}) exceeded`,
+        timestamp: new Date()
+      });
+      return { toolResults, toolErrors };
+    }
+
+    // The message with tool_calls is already added to the chat history by sendMessage
+    // We don't need to add another "Calling tool..." message here
+    // The UI will show "Calling tool..." based on the tool_calls array in the message
+
+    // Group tools by approval requirements
+    const toolsRequiringApproval = toolApprovalMode === ToolApprovalMode.PROMPT ? toolCalls : [];
+    const toolsForAutoExecution = toolApprovalMode === ToolApprovalMode.AUTO ? toolCalls : [];
+
+    // Handle tools requiring approval
+    if (toolsRequiringApproval.length > 0) {
+      await processToolsWithApproval(toolsRequiringApproval, toolResults, toolErrors);
+    }
+
+    // Handle auto-execution tools
+    if (toolsForAutoExecution.length > 0) {
+      await processToolsAutomatically(toolsForAutoExecution, toolResults, toolErrors);
+    }
+
+    // Update chat state with tool results
+    if (toolResults.length > 0 || toolErrors.length > 0) {
+      updateChatStateWithToolResults(message, toolResults, toolErrors);
+    }
+
+    // Send tool results back to AI provider and check for recursive tool calls
+    if (toolResults.length > 0) {
+      try {
+        const consolidatedResults = consolidateToolResults(toolResults, toolErrors);
+        const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors);
+        
+        // Check if the AI response contains new tool calls
+        if (aiResponse && aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
+          // Recursively process the new tool calls
+          const recursiveResults = await processToolCalls(aiResponse.tool_calls, aiResponse, depth + 1);
+          
+          // Merge results from recursive calls
+          toolResults.push(...recursiveResults.toolResults);
+          toolErrors.push(...recursiveResults.toolErrors);
+        }
+      } catch (error) {
+        toolErrors.push({
+          error: `Error sending tool results to AI: ${error.message}`,
+          timestamp: new Date()
+        });
+      }
+    }
+
+    return { toolResults, toolErrors };
+  };
+
+  /**
+   * Consolidate tool results into a single message for the AI provider
+   */
+  const consolidateToolResults = (toolResults: any[], toolErrors: any[]): string => {
+    const results = toolResults.map((result, index) => {
+      const content = result.content || JSON.stringify(result);
+      return `Tool ${index + 1} (${result.name}): ${content}`;
+    }).join('\n\n');
+
+    const errors = toolErrors.map((error, index) => {
+      return `Error ${index + 1}: ${error.error || error.name}`;
+    }).join('\n');
+
+    let consolidated = '';
+    if (results) {
+      consolidated += `Tool execution results:\n\n${results}`;
+    }
+    if (errors) {
+      consolidated += `\n\nTool execution errors:\n${errors}`;
+    }
+
+    return consolidated || 'No tool results available';
+  };
+
+  /**
+   * Send tool results back to the AI provider and get the response
+   */
+  const sendToolResultsToAI = async (consolidatedResults: string, toolResults: any[], toolErrors: any[]): Promise<UXChatMessage | null> => {
+    try {
+      const response = await reactory.graphqlMutation<{ ReactorSendMessage: ReactorSendMessageResponse }, { message: SendMesageInput }>(
+        SEND_MESSAGE_MUTATION,
+        {
+          message: {
+            message: consolidatedResults,
+            personaId: persona.id,
+            chatSessionId: chatState.id
+          }
+        }
+      );
+
+      if (response?.data?.ReactorSendMessage) {
+        if (response.data.ReactorSendMessage.__typename === "ReactorErrorResponse") {
+          throw new Error(response.data.ReactorSendMessage.message);
+        }
+
+        const aiMessage = response.data.ReactorSendMessage as UXChatMessage;
+        
+        // Add the AI response to chat history
+        if (aiMessage.sessionId) {
+          setChatState((prevState) => ({
+            ...prevState,
+            history: [...prevState.history, aiMessage as any],
+            updated: new Date(),
+          }));
+        }
+
+        return aiMessage;
+      }
+      
+      return null;
+    } catch (error) {
+      reactory.error('Error sending tool results to AI', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Helper function to clean up approval component from the message with tool_calls
+   */
+  const cleanupApprovalComponent = () => {
+    setChatState((prevState) => {
+      const history = [...prevState.history];
+      
+      // Find the last message with tool_calls and remove the component
+      let lastMessageIndex = -1;
+      for (let i = history.length - 1; i >= 0; i--) {
+        const msg = history[i];
+        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+          lastMessageIndex = i;
+          break;
+        }
+      }
+      
+      if (lastMessageIndex >= 0) {
+        const { component, ...messageWithoutComponent } = history[lastMessageIndex];
+        history[lastMessageIndex] = messageWithoutComponent;
+      }
+      
+      return {
+        ...prevState,
+        history,
+        updated: new Date(),
+      };
+    });
+  };
+
+  /**
+   * Process tools that require user approval
+   */
+  const processToolsWithApproval = async (toolCalls: any[], toolResults: any[], toolErrors: any[]) => {
+    for (const toolCall of toolCalls) {
+      if (toolCall.type === 'function' && toolCall.function) {
+        const { id, function: func } = toolCall;
+        const { name, arguments: args } = func;
+        
+        // Try to find the macro by alias first, then by name
+        let macro = findMacroByAlias(name);
+        if (!macro) {
+          // If not found by alias, try to find by name in the macros array
+          macro = chatState.macros?.find(m => m.name === name || m.alias === name);
+        }
+
+        if (!macro) {
+          toolErrors.push({
+            id,
+            name,
+            error: `Macro not found: ${name}`,
+            timestamp: new Date()
+          });
+          continue;
+        }
+
+        try {
+          await new Promise<void>((resolve, reject) => {
+            onToolCallPrompt(macro.name, args, chatState, async (approved: boolean) => {
+              // Clean up the approval component
+              cleanupApprovalComponent();
+              
+              if (approved) {
+                try {
+                  const result = await executeMacro(macro, args);
+                  toolResults.push({
+                    id,
+                    name,
+                    role: "tool",
+                    content: result?.content || result,
+                    timestamp: new Date(),
+                    sessionId: chatState.id,
+                  });
+                  resolve();
+                } catch (error) {
+                  toolErrors.push({
+                    id,
+                    name,
+                    error: error.message,
+                    timestamp: new Date()
+                  });
+                  reject(error);
+                }
+              } else {
+                toolErrors.push({
+                  id,
+                  name,
+                  error: `Tool call declined: ${name}`,
+                  timestamp: new Date()
+                });
+                resolve();
+              }
+            });
+          });
+        } catch (error) {
+          reactory.error(`Error processing approved tool: ${name}`, error);
+        }
+      }
+    }
+  };
+
+  /**
+   * Process tools automatically without user approval
+   */
+  const processToolsAutomatically = async (toolCalls: any[], toolResults: any[], toolErrors: any[]) => {
+    // Execute tools in parallel for better performance
+    const toolPromises = toolCalls.map(async (toolCall) => {
+      if (toolCall.type === 'function' && toolCall.function) {
+        const { id, function: func } = toolCall;
+        const { name, arguments: args } = func;
+        
+        // Try to find the macro by alias first, then by name
+        let macro = findMacroByAlias(name);
+        if (!macro) {
+          // If not found by alias, try to find by name in the macros array
+          macro = chatState.macros?.find(m => m.name === name || m.alias === name);
+        }
+
+        if (!macro) {
+          return {
+            id,
+            name,
+            error: `Macro not found: ${name}`,
+            timestamp: new Date()
+          };
+        }
+
+        try {
+          const result = await executeMacro(macro, args);
+          return {
+            id,
+            name,
+            role: "tool",
+            content: result?.content || result,
+            timestamp: new Date(),
+            sessionId: chatState.id,
+          };
+        } catch (error) {
+          reactory.error(`Error executing tool: ${name}`, error);
+          return {
+            id,
+            name,
+            error: error.message,
+            timestamp: new Date()
+          };
+        }
+      }
+      return null;
+    });
+
+    const results = await Promise.allSettled(toolPromises);
+    
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value) {
+        if (result.value.error) {
+          toolErrors.push(result.value);
+        } else {
+          toolResults.push(result.value);
+        }
+      } else if (result.status === 'rejected') {
+        toolErrors.push({
+          error: result.reason?.message || 'Unknown error',
+          timestamp: new Date()
+        });
+      }
+    });
+  };
+
+  /**
+   * Update chat state with tool execution results
+   */
+  const updateChatStateWithToolResults = (message: UXChatMessage, toolResults: any[], toolErrors: any[]) => {
+    setChatState((prevState) => {
+      const history = [...prevState.history];
+      // Find the last 'Calling' message (role: 'assistant', tool_calls present, content: '')
+      const callingIndex = history
+        .slice()
+        .reverse()
+        .findIndex(msg => msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0 && !msg.content);
+      const actualIndex = callingIndex >= 0 ? history.length - 1 - callingIndex : -1;
+
+      if (actualIndex >= 0) {
+        // Update the 'Calling' message with tool results
+        history[actualIndex] = {
+          ...history[actualIndex],
+          tool_results: toolResults,
+          tool_errors: toolErrors,
+        };
+      } else if (history.length > 0) {
+        // Fallback: update the last message
+        history[history.length - 1] = {
+          ...history[history.length - 1],
+          tool_results: toolResults,
+          tool_errors: toolErrors,
+        };
+      }
+
+      return {
+        ...prevState,
+        history,
+        updated: new Date(),
+      };
+    });
+
+    // Show error messages if any tools failed
+    if (toolErrors.length > 0) {
+      const errorMessage = `Some tools failed to execute: ${toolErrors.map(e => e.name || e.error).join(', ')}`;
+      onMessage({
+        id: reactory.utils.uuid(),
+        role: "system",
+        content: errorMessage,
+        timestamp: new Date(),
+        sessionId: chatState.id,
+      } as UXChatMessage);
     }
   };
 

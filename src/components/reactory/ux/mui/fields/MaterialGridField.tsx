@@ -59,10 +59,10 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
   };
 
   let gridOptions: any = {
-    spacing: 8,
+    spacing: 1,
     container: 'Paper',
     containerStyles: {
-      padding: reactory.muiTheme.spacing(1)
+      padding: reactory?.muiTheme?.spacing(1) || '8px',
     }
   };
 
@@ -223,15 +223,16 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
     </>
   );
 
-
-  let Container = null
   switch (gridOptions.container) {
     case "div": {
       return (<div style={gridOptions.containerStyles}>{grid_content}</div>)
     }
     case "Paper":
     default: {
-      return (<Paper style={gridOptions.containerStyles} elevation={gridOptions.elevation || 1}>{grid_content}</Paper>)
+      return (<Paper 
+        style={gridOptions.containerStyles} 
+        elevation={gridOptions.elevation || 1} 
+        {...gridOptions.containerProps}>{grid_content}</Paper>)
     }
   }
 }

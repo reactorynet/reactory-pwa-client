@@ -415,7 +415,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
   let emptyListItem = null;
   if (data.length === 0 && options.showEmptyListItem !== false) emptyListItem = (<ListItem><ListItemText>{options.emptyListItemText || "No Data"}</ListItemText></ListItem>)
   return (
-    <div className={classes[options.className || "root"]}>
+    <div className={classes[options.className]}>
       {widgetsBefore}
       <List {...listProps} className={classes[listProps.className || "list"]}>
         {emptyListItem}

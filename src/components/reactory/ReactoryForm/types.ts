@@ -180,6 +180,7 @@ export type ReactoryFormDataManagerHook<TData> = (props: {
     formContext: Reactory.Client.IReactoryFormContext<TData>) => void,
   mode: string | "edit" | "view" | "create" | "delete",
   onError: (errors: any[], errorSchema: Reactory.Schema.IErrorSchema) => void,
+  props: any
 }) => ReactoryFormDataManagerHookResult<TData>
 
 export type ReactoryFormComponentsHook<TComponents> = (dependencies: Reactory.Client.ComponentDependency[]) => TComponents;
@@ -228,6 +229,8 @@ export type ReactoryFormHelpHookResult = {
 
 export type ReactoryFormHelpHook = (props: {
   formDefinition: Reactory.Forms.IReactoryForm,
+  formContext: Reactory.Client.IReactoryFormContext<any>,
+  formData: any,
 }) => ReactoryFormHelpHookResult;
 
 export type ReactoryFormReportsHookResult = { 
@@ -255,7 +258,8 @@ export type ReactoryFormToolbarHookResult = {
 
 export type ReactoryFormToolbarHook = (props: {
   formDefinition: Reactory.Forms.IReactoryForm,
-  formData: any
+  formData: any,
+  formContext: Reactory.Client.IReactoryFormContext<any>,
   uiOptions: Reactory.Schema.IFormUIOptions,
   onSubmit: (data: any, errorSchema?: Reactory.Schema.IErrorSchema, errors?: any[]) => void,
   refresh: () => void,

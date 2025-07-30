@@ -30,6 +30,8 @@ const MaterialTabbedField = (props) => {
 
   const navigate = useNavigate();
   const params = useParams();
+  const pathQuery = new URLSearchParams(window.location.search);
+  
 
   const classes = useStyles();
   const theme = useTheme<DefaultTheme>();
@@ -46,15 +48,35 @@ const MaterialTabbedField = (props) => {
     readonly,
     onBlur,
     formData,
+    formContext,
   } = props;
 
-
+  
   const layout = uiSchema['ui:tab-layout'] || [];
   const uiOptions = uiSchema['ui:tab-options'] || {};
 
 
-  const getTabIndex = () => {
-    const index = reactory.utils.lodash.findIndex(layout, { field: props.activeTab });
+  const getActiveTabIndex = () => {
+     if (uiSchema["ui:options"] && uiSchema["ui:options"].activeTab) {
+      switch (uiSchema["ui:options"].activeTab) { 
+        case "params":
+          if (params[uiSchema["ui:options"].activeTabKey]) {                    
+            return getTabIndex(params[uiSchema["ui:options"].activeTabKey]);
+          }
+          break;
+        case "query":
+          if (pathQuery.get(uiSchema["ui:options"].activeTabKey)) {
+            return getTabIndex(pathQuery.get(uiSchema["ui:options"].activeTabKey));
+          }
+          break;
+        default:
+          break;
+      }      
+    }
+  }
+
+  const getTabIndex = (field: string) => {
+    const index = reactory.utils.lodash.findIndex(layout, { field });
     if (index < 0) return 0;
     return index || 0;
   }
@@ -63,11 +85,12 @@ const MaterialTabbedField = (props) => {
     return layout[index].field
   }
 
-  const [value, setValue] = React.useState(getTabIndex());
+  const [value, setValue] = React.useState(getActiveTabIndex());
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     if (uiOptions.useRouter === true) {
-      const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')({ props, tab_id: getTabKey(newValue) });
+      const templateProps = { ...props, tab_id: getTabKey(newValue) }
+      const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')(templateProps);
       navigate(new_path);
     } else {
       setValue(newValue);
@@ -107,12 +130,10 @@ const MaterialTabbedField = (props) => {
 
 
 
-  const { definitions, fields, formContext } = props.registry
+  const { definitions, fields } = props.registry
   const { SchemaField, TitleField, DescriptionField } = fields
-  const schema = utils.retrieveSchema(props.schema, definitions)
-  const title = (schema.title === undefined) ? '' : schema.title
-
-  const DefaultTabProps = {
+  const schema = utils.retrieveSchema(props.schema, definitions)  
+  const DefaultTabProps: Reactory.Schema.ITabOptions = {
     useRouter: false,
     tabsProps: {
       indicatorColor: "primary",
@@ -161,27 +182,6 @@ const MaterialTabbedField = (props) => {
 
     };
   };
-
-  React.useEffect(() => {
-    //determine default tab
-    if (uiSchema["ui:options"] && uiSchema["ui:options"].activeTab === 'params') {
-      if (uiSchema["ui:options"].activeTabKey) {
-        let tab_param = uiSchema["ui:options"].activeTabKey;
-        if (params[tab_param]) {
-          let activeIndex = 0;
-
-          layout.forEach((tabDef, tindex) => {
-            if (schema.properties[params["tab_param"]]) {
-              activeIndex = tindex;
-            }
-          });
-
-          setValue(activeIndex);
-        }
-      }
-    }
-  }, [])
-
 
   const TabsProps = {
     ...options.tabsProps,
@@ -235,7 +235,8 @@ const MaterialTabbedField = (props) => {
                 uiSchema={uiSchema[tabDef.field]}
                 errorSchema={errorSchema[tabDef.field]}
                 idSchema={idSchema[tabDef.field]}
-                formData={formData[tabDef.field]}
+                formData={formData?.[tabDef.field]}
+                formContext={formContext}
                 onChange={onPropertyChange(tabDef.field)}
                 onBlur={onBlur}
                 registry={props.registry}

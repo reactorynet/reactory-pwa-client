@@ -100,7 +100,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     RefreshButton,
     SubmitButton,
     PagingWidget,
-    paging,
+    paging,    
   } = useDataManager({
     initialData: form?.defaultFormValue || props.formData || props.data,
     formDefinition: form,
@@ -119,6 +119,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     formContext,
     mode: mode,
     onError,
+    props: props,
   });
 
   const [componentDefs, setComponents] = useState<DefaultComponentMap>(
@@ -132,7 +133,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
         if (nextForm && !error) {
           setForm(nextForm);
         }
-      });
+      }, props.loadOptions || {});
       if (nil(_form)) {
         warning(`Form not found: ${formId}`);
       } else {
@@ -161,6 +162,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
       signature: SIGN,
       version: 0,
       reactory,
+      props
     };
   };
 

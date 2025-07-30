@@ -3,6 +3,7 @@ import { useReactory } from "@reactory/client-core/api";
 import { template } from "lodash";
 import React, { useCallback } from "react";
 import { ReactoryFormToolbarHook } from "../types";
+import { useNavigate } from "react-router";
 
 /**
  *
@@ -10,7 +11,7 @@ import { ReactoryFormToolbarHook } from "../types";
  */
 export const useToolbar: ReactoryFormToolbarHook = (props) => {
   const {
-    formDefinition,
+    formDefinition,    
     uiOptions,
     onSubmit,
     SubmitButton,
@@ -23,6 +24,7 @@ export const useToolbar: ReactoryFormToolbarHook = (props) => {
   } = props;
 
   const reactory = useReactory();
+  const navigate = useNavigate();
 
   let icon = "save";
 
@@ -142,34 +144,69 @@ export const useToolbar: ReactoryFormToolbarHook = (props) => {
   }
 
   let additionalButtons = [];
-  if (buttons && buttons.length) {
-    additionalButtons = buttons.map((button: any, buttonIndex) => {
-      const { buttonProps, iconProps, type, handler, component } = button;
+  if (buttons?.length > 0) {
+    
+    additionalButtons = buttons.map((
+      button: Reactory.Schema.UIFieldToolbarButton & {[key: string]: any}, 
+      buttonIndex: number) => {
 
+      const {                 
+        tooltip,
+        icon: buttonIconName,
+        iconOptions = {},
+        color,
+        className,
+        component,
+        command,
+        id,
+        handler = "onClick",
+        sx,
+        buttonProps
+      } = button;
+
+    
       if (component && typeof component === "function") return component;
 
       const onButtonClicked = () => {
         reactory.log(`OnClickButtonFor Additional Buttons`);
         if (props[handler] && typeof props[handler] === "function") {
           (props[handler] as Function)({ reactoryForm: this, button });
-        } else {
-          reactory.createNotification(
-            `No handler '${handler}' for ${buttonProps.title} button`,
-            { showInAppNotification: true, type: "error" }
-          );
+          return;
+        } 
+        
+        if(command) {
+          if (command.startsWith("nav://")) {
+            let path = command.replace("nav://", "/");
+            if(path.includes("${")) {
+              path = reactory.utils.template(path)({
+                ...props,
+                reactory,
+              });
+            }
+            navigate(path);
+            return;
+          }          
         }
+        
+        reactory.createNotification(
+          `No handler '${handler}' for ${buttonProps.title} button`,
+          { showInAppNotification: true, type: "error" }
+        );
+        
       };
 
       let buttonIcon = null;
-      if (iconProps) {
-        buttonIcon = <Icon {...iconProps}>{iconProps.icon}</Icon>;
+      if (iconProps && icon) {
+        // @ts-ignore
+        buttonIcon = <Icon {...iconOptions}>{buttonIconName}</Icon>;
       }
 
       return (
         <Button {...buttonProps} key={buttonIndex} onClick={onButtonClicked}>
-          {iconProps.placement === "left" && buttonIcon}
-          {buttonProps.title}
-          {iconProps.placement === "right" && buttonIcon}
+          {iconOptions?.position === "left" && buttonIcon}
+          {reactory.i18n.t(buttonProps?.title) ||
+            reactory.i18n.t(buttonProps?.text) || ""}
+          {iconOptions?.position === "right" && buttonIcon}
         </Button>
       );
     });

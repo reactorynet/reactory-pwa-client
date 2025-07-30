@@ -5,13 +5,12 @@ import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
-export function DateWidget({ formData, onChange }) {
+export function DateWidget({ formData, onChange, schema, idSchema, uiSchema, ...props }) {
 
   return (
-    <LocalizationProvider dateAdapter={AdapterMoment}>
-      <p>sdfsdaf</p>
+    <LocalizationProvider dateAdapter={AdapterMoment}>      
       <DatePicker
-        label="Basic example"
+        label={schema?.title || idSchema?.title}
         value={formData}
         onChange={(newValue) => {
           onChange(newValue)

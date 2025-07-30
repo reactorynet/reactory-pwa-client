@@ -52,6 +52,7 @@ export const useUISchema: ReactoryFormUISchemaManagerHook<unknown> = (props) => 
 
   const { 
     uiSchemas,
+    graphql,
   } = formDefinition; 
 
   const getScreenSize = () => {
@@ -122,6 +123,7 @@ const AllowedSchemas = (uiSchemaItems: Reactory.Forms.IUISchemaMenuItem[],
       description: "Default active menu item",
       title: "Default",
       icon: "form",
+      graphql
     };
   };
 
@@ -199,7 +201,27 @@ const AllowedSchemas = (uiSchemaItems: Reactory.Forms.IUISchemaMenuItem[],
     return _options;
   };
 
-  const getActiveGraphDefinitions = () => { };
+  const getActiveGraphDefinitions = () => { 
+    if (formDefinition === undefined) return {};
+
+    if (activeUiSchemaMenuItem?.graphql) {
+      return activeUiSchemaMenuItem.graphql;
+    }
+
+    if (
+      formDefinition.uiSchemas === null ||
+      formDefinition.uiSchemas === undefined
+    )
+      return formDefinition.graphql || {};
+    
+    if (
+      Array.isArray(formDefinition.uiSchemas) === true &&
+      formDefinition.uiSchemas.length === 0
+    )
+      return formDefinition.graphql || {};
+    
+    return formDefinition.graphql || {};
+  };
 
   const GetSchemaSelectorMenus = () => {
     const allowed_schema = AllowedSchemas(formDefinition.uiSchemas, props.mode, null)

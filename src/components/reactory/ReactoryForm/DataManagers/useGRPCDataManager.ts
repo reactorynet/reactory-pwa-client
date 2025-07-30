@@ -30,6 +30,7 @@ export const useGRPCDataManager: ReactoryFormDataManagerHook  = (props) => {
     onChange,
     getData,
     refresh,
-    isBusy
+    isBusy,
+    available: false,
   } as IReactoryFormDataManagerHookResult;
 };

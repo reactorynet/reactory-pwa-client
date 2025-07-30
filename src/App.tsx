@@ -3,14 +3,11 @@ import { ApolloProvider } from '@apollo/client';
 import {
   BrowserRouter as Router,
   Route,
-  RouterProvider,
   Routes,
   useNavigate,
   useLocation,
-  createBrowserRouter,
-  RouteObject,
-  RouteProps,
   useNavigation,
+  useParams
 } from 'react-router-dom';
 import { isNil, isArray } from 'lodash';
 import { Provider } from 'react-redux';
@@ -76,24 +73,7 @@ export interface AppState {
   currentRoute: any
 }
 
-const Globals = ({ reactory }) => {
 
-  const globals = reactory.getGlobalComponents();
-
-  const [version, setVersion] = React.useState(0);
-
-  reactory.on('onLogout', () => { setVersion(version + 1) });
-  reactory.on('onLogin', () => { setVersion(version + 1) });
-
-  return (
-    <div data-v={`1`} data-globals-container="true" style={{ height: 0, width: 0, position: "absolute", left: 0, top: 0, display: 'none' }}>
-      {globals.map((GLOBALFORM, gidx) => {
-        return (<GLOBALFORM key={gidx} />)
-      })}
-    </div>
-  );
-
-};
 
 interface ReactoryHOCProps {
   [key: string]: any,
@@ -110,16 +90,151 @@ interface ReactoryRouterProps {
 
 const ReactoryRoute = (routeDef: Reactory.Routing.IReactoryRoute, auth_validated: boolean = false, authenticating: boolean = false) => {
 
-  
+
 }
 
+/**
+ * Wrapper component that renders inside each route to access params
+ * and process componentProps templates
+ */
+const RouteComponentWrapper = ({ routeDef, reactory, componentArgs, children, onComponentLoad, hasHeader = false, headerHeight = 48 }) => {
+  const params = useParams();
+  const location = useLocation();
+
+  // Process componentProps templates with actual route params
+  let processedArgs = { ...componentArgs };
+
+  // Add route params directly to component args
+  Object.keys(params).forEach(paramKey => {
+    processedArgs[paramKey] = params[paramKey];
+  });
+
+  if (routeDef.componentProps) {
+    processedArgs = { ...routeDef.componentProps };
+
+    // Process template strings in componentProps
+    Object.keys(processedArgs).forEach(key => {
+      const value = processedArgs[key];
+      if (typeof value === 'string' && value.includes('${')) {
+        try {
+          if (value.includes('::')) {
+            const [_value, transform] = value.split('::');
+            processedArgs[key] = reactory.utils.template(_value)({ route: params, location });
+            if (transform) {
+              switch (transform) {
+                case 'toInt':
+                  processedArgs[key] = parseInt(processedArgs[key]);
+                  break;
+                case 'toString':
+                  processedArgs[key] = String(processedArgs[key]);
+                  break;
+                case 'toDate':
+                  processedArgs[key] = new Date(processedArgs[key]);
+                  break;
+                case 'toBoolean':
+                  processedArgs[key] = Boolean(processedArgs[key]);
+                  break;
+                default:
+                  processedArgs[key] = processedArgs[key];
+              }
+            }
+          } else {
+            // Replace ${route.paramName} with actual param values
+            processedArgs[key] = reactory.utils.template(value)({ route: params, location });
+          }
+        } catch (error) {
+          reactory.warning(`Error processing template ${value}:`, error);
+          processedArgs[key] = value; // fallback to original value
+        }
+      }
+    });
+  }
+
+
+
+  const ReactoryComponent = reactory.getComponent(routeDef.componentFqn);
+  const NotFound = reactory.getComponent("core.NotFound");
+
+  // Calculate margin-top based on header presence and height
+  const wrapperStyle = hasHeader ? { marginTop: `${headerHeight}px` } : {};
+
+  // Add additional safety checks for component loading
+  if (!ReactoryComponent) {
+    return (
+      <div>
+        {children}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem', marginTop: `${headerHeight}px` }}>
+          <span>Loading component...</span>
+        </div>
+      </div>
+    );
+  }
+
+  try {
+    if (ReactoryComponent) {
+
+      const componentProps = {
+        ...processedArgs,
+        style: {
+          marginTop: `${headerHeight}px`,
+          ...processedArgs?.style,
+        }
+      }
+
+      return (
+        <div>
+          {children}
+          <ReactoryComponent {...componentProps} key={routeDef.id} />
+        </div>
+      );
+    } else {
+      // Component not found - show loading state with retry mechanism
+      return (
+        <div>
+          {children}
+          <NotFound
+            key={routeDef.id}
+            message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`}
+            waitingFor={routeDef.componentFqn}
+            args={processedArgs}
+            wait={500}
+            onFound={onComponentLoad}
+            style={{ marginTop: `${headerHeight}px` }}
+          />
+        </div>
+      );
+    }
+  } catch (routeError) {
+    reactory.error(`Error rendering component ${routeDef.componentFqn} for route ${routeDef.path}`, {
+      error: routeError,
+      routeDef,
+      params,
+      location
+    });
+    return (
+      <div>
+        {children}
+        <NotFound
+          key={routeDef.id}
+          message={`Error rendering component ${routeDef.componentFqn} for route ${routeDef.path}`}
+          waitingFor={routeDef.componentFqn}
+          args={processedArgs}
+          wait={500}
+          onFound={onComponentLoad}
+          style={{ marginTop: `${headerHeight}px` }}
+        />
+      </div>
+    );
+  }
+};
 
 const ReactoryRouter = (props: ReactoryRouterProps) => {
-  
+
   const navigation = useNavigate();
   const location = useLocation();
   const reactory = useReactory();
-  const { 
+  // Remove useParams from here - it won't work at router level
+  const {
     utils,
     debug,
     error,
@@ -132,16 +247,22 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const { auth_validated, user, authenticating = false } = props;
   const [routes, setRoutes] = React.useState<Reactory.Routing.IReactoryRoute[]>([]);
   const [v, setVersion] = React.useState<number>(0);
-  
+
 
   const onLogin = () => {
-    configureRouting();
-    setVersion(v + 1);
+    // Add a small delay to ensure the main app state has been updated
+    setTimeout(() => {
+      configureRouting();
+      setVersion(v + 1);
+    }, 100);
   };
 
 
   const onLogout = () => {
-    setVersion(v + 1);
+    // Add a small delay to ensure the main app state has been updated
+    setTimeout(() => {
+      setVersion(v + 1);
+    }, 100);
   };
 
   reactory.on(ReactoryApiEventNames.onLogout, onLogout);
@@ -153,8 +274,17 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
 
   const configureRouting = () => {
     debug('Configuring Routing', { auth_validated, user });
+
+    // Add safety checks to prevent route configuration during transitions
+    if (authenticating) {
+      debug('Skipping route configuration - authenticating', {
+        authenticating
+      });
+      return;
+    }
+
     const $routes = [...reactory.getRoutes()];
-    if (reactory.utils.hashCode(JSON.stringify($routes)) !== reactory.utils.hashCode(JSON.stringify(routes))) { 
+    if (reactory.utils.hashCode(JSON.stringify($routes)) !== reactory.utils.hashCode(JSON.stringify(routes))) {
       setRoutes($routes);
       setVersion(v + 1);
     }
@@ -174,38 +304,13 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   }
 
   const ChildRoutes = [];
-  routes.forEach((routeDef: Reactory.Routing.IReactoryRoute) => {
-    reactory.log(`Configuring Route ${routeDef.path}`, { routeDef, props: props });          
+  routes.forEach((routeDef: Reactory.Routing.IReactoryRoute, index: number) => {
+    reactory.log(`Configuring Route ${routeDef.path}`, { routeDef, props: props });
     if (routeDef.redirect) {
       navigation(routeDef.redirect, { state: { from: location }, replace: true })
     }
 
     let componentArgs = {};
-
-    // check if the path contains property placeholders
-    // if it does, we get the value from the location state
-    // and we add them to component args
-    if (routeDef.path && routeDef.path.indexOf(':') > -1) {
-      const pathParts = routeDef.path.split('/');
-      pathParts.forEach((part, idx) => {
-        if (part.startsWith(':')) {
-          const key = part.substring(1);
-          if (location.state?.[key]) {
-            componentArgs[key] = location.state[key];
-          }
-        }
-      });      
-    }
-
-
-    
-    /**
-     * If the route has props, we add them to the component args
-     * this is the preferred way of setting the props.
-     */
-    if(routeDef.componentProps) {
-      componentArgs = {...routeDef.componentProps}
-    }
 
     /**
      * If the route has args, we add them to the component args
@@ -218,90 +323,132 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         componentArgs[arg.key] = arg.value[arg.key];
       })
     }
-      
-    const ReactoryComponent = reactory.getComponent<any>(routeDef.componentFqn)
-    const NotFound = reactory.getComponent<any>("core.NotFound");
-    
-    let children = [];
 
-    if(props.header && routeDef.header) {
+    let children = [];
+    let hasHeader = false;
+    let headerHeight = 48; // Default header height
+
+    // Determine header configuration
+    if (routeDef.header) {
       const {
         componentFqn,
         show = true,
-        props = {},
         propsMap
       } = routeDef.header;
+
+      const headerProps: { height?: number } = routeDef.header.props || {
+        height: 48
+      };
 
       if (show === true) {
         const Header = reactory.getComponent<any>(componentFqn);
         if (Header) {
-          let $props = {...props};
+          let $props = { ...headerProps };
           if (propsMap) {
-            $props = {...props, }
+            $props = { ...headerProps, }
           }
-          children.push(<Header {...$props } />);
+          children.push(<Header {...$props} />);
+          hasHeader = true;
+          headerHeight = headerProps?.height || 48;
         } else {
-          // use the default header
-          children.push(props.header);
+          // Fallback to default header if custom header component not found
+          if (props.header) {
+            children.push(props.header);
+            hasHeader = true;
+            headerHeight = 48; // Default header height
+          }
         }
       }
-    } else {
-      if (props.header) {
-        children.push(props.header);
-      }
+    } else if (props.header) {
+      children.push(props.header);
+      hasHeader = true;
+      headerHeight = 48; // Default header height
     }
-    
+
     if (routeDef.public === true) {
       // public access we don't have to check roles or auth
-      if (ReactoryComponent) { 
-        children.push(<ReactoryComponent {...componentArgs} />);
-      }
-      else {
-        children.push(<NotFound 
-          message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} 
-          waitingFor={routeDef.componentFqn} args={componentArgs} 
-          wait={500}
-          onFound={()=>{setVersion(v+1)}} 
-        />)
-      } 
+      ChildRoutes.push(
+        <Route
+          key={index}
+          path={routeDef.path}
+          element={
+            <RouteComponentWrapper
+              routeDef={routeDef}
+              reactory={reactory}
+              componentArgs={componentArgs}
+              children={children}
+              onComponentLoad={() => setVersion(v + 1)}
+              hasHeader={hasHeader}
+              headerHeight={headerHeight}
+            />
+          }
+        />
+      );
     } else {
-
       const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().loggedIn.roles) === true;
 
       if (reactory.isAnon() === false && hasRolesForRoute === false) {
-        children.push(<NotFound message="You don't have sufficient permissions to access this route." link={routeDef.path} wait={500} />);
+        const NotFoundComponent = reactory.getComponent("core.NotFound");
+        if (NotFoundComponent) {
+          children.push(React.createElement(NotFoundComponent as any, {
+            key: "not-found-permissions",
+            message: "You don't have sufficient permissions to access this route.",
+            link: routeDef.path,
+            wait: 500
+          }));
+        }
+        ChildRoutes.push(
+          <Route
+            key={index}
+            path={routeDef.path}
+            element={<React.Fragment>{children}</React.Fragment>}
+          />
+        );
       } else {
         if (auth_validated === true && hasRolesForRoute === true) {
-          if (ReactoryComponent) {             
-            children.push(<ReactoryComponent {...componentArgs} />)
-          }
-          else  {
-            children.push(<NotFound 
-              message={`Component ${routeDef.componentFqn} not found for route ${routeDef.path}`} 
-              waitingFor={routeDef.componentFqn} 
-              args={componentArgs} 
-              wait={500}/>)
-          }
+          ChildRoutes.push(
+            <Route
+              key={index}
+              path={routeDef.path}
+              element={
+                <RouteComponentWrapper
+                  routeDef={routeDef}
+                  reactory={reactory}
+                  componentArgs={componentArgs}
+                  children={children}
+                  onComponentLoad={() => setVersion(v + 1)}
+                  hasHeader={hasHeader}
+                  headerHeight={headerHeight}
+                />
+              }
+            />
+          );
         } else {
-
           const hasRefreshed: boolean = localStorage.getItem('hasRefreshed') === 'true';
 
           //auth token not validated yet in process of checking
           //@ts-ignore
           if (auth_validated === false || authenticating === true) {
-            return <Typography style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem' }} variant='h5'>Please wait while we validate your access token...</Typography>
+            children.push(<Typography style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem' }} variant='h5'>Please wait while we validate your access token...</Typography>);
           } else {
             if (hasRefreshed === true && reactory.isAnon() === true && routeDef.path !== "/login") {
               localStorage.removeItem('hasRefreshed');
-              //return <Redirect to={{ pathname: '/login', state: { from: routeDef.path } }} />
               navigation("/login", { state: { from: location }, replace: true })
             }
           }
+
+          ChildRoutes.push(
+            <Route
+              key={index}
+              path={routeDef.path}
+              element={<React.Fragment>{children}</React.Fragment>}
+            />
+          );
         }
       }
     }
 
-    if(props.footer && routeDef.footer) {
+    if (props.footer && routeDef.footer) {
       const {
         componentFqn,
         show = true,
@@ -312,35 +459,24 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
       if (show === true) {
         const Footer = reactory.getComponent<any>(componentFqn);
         if (Footer) {
-          let $props = {...props};
+          let $props = { ...props };
           if (propsMap) {
-            $props = {...props, }
+            $props = { ...props, }
           }
-          children.push(<Footer {...$props } />);
+          // Footer should be added to children in RouteComponentWrapper if needed
         } else {
           // use the default footer
-          children.push(props.footer);
+          // Footer should be added to children in RouteComponentWrapper if needed
         }
       }
-    } else {
-      if (props.footer) {
-        children.push(props.footer);
-      }
     }
-
-    
-    ChildRoutes.push(<Route 
-      key={routeDef.path}
-      path={routeDef.path}
-      element={<React.Fragment>{children}</React.Fragment>}
-      />)
   });
 
   const NotFoundElement = reactory.getComponent<any>("core.NotFound");
-  ChildRoutes.push(<Route path="*" element={<NotFoundElement />} />)
+  ChildRoutes.push(<Route key={ChildRoutes.length + 1} path="*" element={<NotFoundElement />} />)
   return (
-    <Routes>
-      {ChildRoutes}      
+    <Routes key={'reactory-router-routes-' + v}>
+      {ChildRoutes}
     </Routes>
   )
 }
@@ -388,7 +524,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
   const getApiStatus = async (): Promise<void> => {
     const started = Date.now();
 
-    try { 
+    try {
       const apiStatus = await reactory.status({ emitLogin: false, forceLogout: false });
       const done = Date.now();
       const api_ok = apiStatus.status === 'API OK'
@@ -513,6 +649,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [current_route, setCurrentRoute] = React.useState<string>("/");
   const [version, setVersion] = React.useState(0);
   const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
+  // Add flag to prevent re-rendering loops during auth transitions
+  const [isAuthTransitioning, setIsAuthTransitioning] = React.useState<boolean>(false);
   //@ts-ignore
   const [reactory] = React.useState<Reactory.Client.ReactorySDK>(new ReactoryApi({
     clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
@@ -528,11 +666,22 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const getApiStatus = async (emitLogin = true): Promise<void> => {
 
-    try { 
+    try {
       const apiStatus = await reactory.status({ emitLogin, forceLogout: false });
       setIsValidated(true);
       setOfflineStatus(false);
       setUser(apiStatus);
+
+      // Load forms after successful status check
+      if (apiStatus.status === 'API OK') {
+        try {
+          await (reactory as any).forms(true);
+          reactory.log('Forms loaded during initialization');
+        } catch (formError) {
+          reactory.error('Error loading forms during initialization:', formError);
+        }
+      }
+
       setIsReady(true);
       setIsAuthenticating(false);
       applyTheme();
@@ -553,16 +702,105 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const onLogin = () => {
     reactory.log('App.onLogin handler', {});
-    setUser(reactory.getUser());    
+    // Set flags to prevent re-rendering loops during auth transition
+    setIsAuthTransitioning(true);
+    setIsAuthenticating(true);
+
+    // Ensure forms are refreshed when login state changes
+    const refreshFormsAndComponents = async () => {
+      try {
+        // Force refresh forms cache to get forms for the logged-in user
+        await (reactory as any).forms(true);
+
+        // Re-register built-in components after forms are loaded
+        componentRegistery.forEach((componentDef) => {
+          const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
+          reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
+        });
+
+        reactory.log('Forms and components refreshed after login');
+      } catch (error) {
+        reactory.error('Error refreshing forms and components after login:', error);
+      }
+    };
+
+    // Get the current user data directly without triggering additional API calls
+    const currentUser = reactory.getUser();
+    if (currentUser && currentUser.loggedIn) {
+      setUser(currentUser);
+      setIsValidated(true);
+      applyTheme();
+
+      // Refresh forms and components after login, then set ready state
+      refreshFormsAndComponents().then(() => {
+        setIsAuthenticating(false);
+        setIsReady(true);
+        // Clear the transition flag after a short delay
+        setTimeout(() => setIsAuthTransitioning(false), 100);
+      });
+    } else {
+      // If user data is not immediately available, set a timeout to retry
+      setTimeout(async () => {
+        const retryUser = reactory.getUser();
+        setUser(retryUser);
+        setIsValidated(true);
+        applyTheme();
+
+        // Refresh forms and components after login, then set ready state
+        await refreshFormsAndComponents();
+        setIsAuthenticating(false);
+        setIsReady(true);
+
+        // Clear the transition flag
+        setIsAuthTransitioning(false);
+      }, 500);
+    }
   };
 
   const onLogout = () => {
     reactory.log('App.onLogout handler', {});
-    setUser(reactory.getUser());
+
+    // Set flag to prevent re-rendering loops during auth transition
+    setIsAuthTransitioning(true);
+
+    // Clear forms cache and component registrations to prevent stale data
+    const cleanupFormsAndComponents = async () => {
+      try {
+        // Clear form schemas cache
+        reactory.formSchemas = [];
+        reactory.formSchemaMap = {};
+        reactory.formSchemaLastFetch = null;
+
+        // Clear the component registry for forms that may no longer be accessible
+        // This helps prevent components from being rendered with stale permissions
+        Object.keys(reactory.componentRegister).forEach((key) => {
+          const component = reactory.componentRegister[key];
+          if (component && component.componentType === 'form') {
+            delete reactory.componentRegister[key];
+          }
+        });
+
+        reactory.log('Forms and components cleaned up after logout');
+      } catch (error) {
+        reactory.error('Error cleaning up forms and components after logout:', error);
+      }
+    };
+
+    // Clear user data and reset authentication state
+    setUser(null);
+    setIsValidated(false);
+    setIsAuthenticating(false);
+    setIsReady(false);
+
+    // Cleanup forms and components
+    void cleanupFormsAndComponents();
+
+    // Clear the transition flag after a short delay
+    setTimeout(() => setIsAuthTransitioning(false), 100);
   };
 
 
-  const applyTheme = () => {    
+  const applyTheme = () => {
     let activeTheme: Reactory.UX.IReactoryTheme = reactory.getTheme();
     if (isNil(activeTheme)) activeTheme = { ...props.appTheme };
     if (Object.keys(activeTheme).length === 0) activeTheme = { ...props.appTheme };
@@ -581,7 +819,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
         muiTheme = createTheme(activeTheme.options);
       }
 
-    }    
+    }
     reactory.muiTheme = muiTheme;
     setTheme(muiTheme);
   };
@@ -603,6 +841,13 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
     if (!(status === null || status === undefined)) {
       reactory.debug('App.onApiStatusUpdate(status)', { status });
+
+      // Skip updates during auth transitions to prevent loops
+      if (isAuthTransitioning) {
+        reactory.debug('Skipping API status update during auth transition');
+        return;
+      }
+
       let isOffline = status.offline === true;
 
       if (isOffline === true) {
@@ -630,11 +875,11 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.$windowSize = _size_spec;
     reactory.log('ReactoryHOC Resize', _size_spec);
     reactory.emit('onWindowResize', _size_spec);
-    setVersion(version + 1)    
+    setVersion(version + 1)
   };
 
 
-  const willUnmount = () => { 
+  const willUnmount = () => {
     window.removeEventListener('resize', onWindowResize);
     window.matchMedia("(prefers-color-scheme: dark)").removeEventListener('change', (evt) => {
       if (evt.matches === true) {
@@ -654,71 +899,71 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   const willMount = () => {
     let failedCount = 0;
-    const doInit = async () => { 
+    const doInit = async () => {
       reactory.init().then(() => {
         //register built-in components
         componentRegistery.forEach((componentDef) => {
           const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
           reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
         });
-  
-        reactory.$windowSize = reactory.getSizeSpec();  
+
+        reactory.$windowSize = reactory.getSizeSpec();
         reactory.reduxStore = store;
-  
+
         window.addEventListener('resize', onWindowResize);
-        window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change',(evt) => {
-        if (evt.matches === true) {
-          localStorage.setItem('$reactory$theme_mode', 'dark');
-          setVersion(version + 1);
-        } else {
-          localStorage.setItem('$reactory$theme_mode', 'light');
-          setVersion(version + 1);
-        }
-      });
-  
-      if (localStorage) {
-        let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
-        if (lastRoute !== null) {
-          lastRoute = lastRoute.trim();
-          if (window.location.pathname.indexOf('reset-password') === -1) {
-            localStorage.removeItem('$reactory.last.attempted.route$');
-            location.assign(lastRoute);
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change', (evt) => {
+          if (evt.matches === true) {
+            localStorage.setItem('$reactory$theme_mode', 'dark');
+            setVersion(version + 1);
+          } else {
+            localStorage.setItem('$reactory$theme_mode', 'light');
+            setVersion(version + 1);
+          }
+        });
+
+        if (localStorage) {
+          let lastRoute: string | null = localStorage.getItem('$reactory.last.attempted.route$');
+          if (lastRoute !== null) {
+            lastRoute = lastRoute.trim();
+            if (window.location.pathname.indexOf('reset-password') === -1) {
+              localStorage.removeItem('$reactory.last.attempted.route$');
+              location.assign(lastRoute);
+            }
           }
         }
-      }
-  
-      reactory.on(ReactoryApiEventNames.onLogout, onLogout)
-      reactory.on(ReactoryApiEventNames.onLogin, onLogin)
-      reactory.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
-      reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
-      reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
-  
-      const query = queryString.parse(window.location.search);
-  
-      reactory.queryObject = query;
-      reactory.queryString = window.location.search;
-      reactory.objectToQueryString = queryString.stringify;
-  
-      window.reactory.api = reactory;
-  
-  
-      if (query.auth_token) {
-        localStorage.setItem('auth_token', query.auth_token);
-        ReactoryApolloClient().then((cli) => {
-          //@ts-ignore
-          reactory.client = cli.client;
-          reactory.ws_link = cli.ws_link;
-          cli.clearCache();
+
+        reactory.on(ReactoryApiEventNames.onLogout, onLogout)
+        reactory.on(ReactoryApiEventNames.onLogin, onLogin)
+        reactory.on(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
+        reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
+        reactory.on(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
+
+        const query = queryString.parse(window.location.search);
+
+        reactory.queryObject = query;
+        reactory.queryString = window.location.search;
+        reactory.objectToQueryString = queryString.stringify;
+
+        window.reactory.api = reactory;
+
+
+        if (query.auth_token) {
+          localStorage.setItem('auth_token', query.auth_token);
+          ReactoryApolloClient().then((cli) => {
+            //@ts-ignore
+            reactory.client = cli.client;
+            reactory.ws_link = cli.ws_link;
+            cli.clearCache();
+            void getApiStatus();
+            // strip the auth token from the url bar
+            setTimeout(() => { window.history.replaceState({}, document.title, window.location.pathname) }, 500);
+          });
+          setIsAuthenticating(true);
+        } else {
+          setIsAuthenticating(true);
           void getApiStatus();
-          // strip the auth token from the url bar
-          setTimeout(() => { window.history.replaceState({}, document.title, window.location.pathname) }, 500);
-        });
-        setIsAuthenticating(true);
-      } else {
-        setIsAuthenticating(true);
-        void getApiStatus();
-      }
-      }).catch((err) => { 
+        }
+      }).catch((err) => {
         reactory.log('Error initializing Reactory', { err }, 'error');
         if (failedCount < 3) {
           failedCount++;
@@ -729,9 +974,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
           setError(err);
           setIsReady(false);
         }
-      });      
+      });
     }
-    
+
     void doInit();
 
     return willUnmount;
@@ -745,7 +990,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
       root_paper: {
         minHeight: screen.availHeight,
-        maxHeight: screen.availHeight,
+        //maxHeight: screen.availHeight,
         borderRadius: 0,
         margin: 0,
         padding: 0,
@@ -793,6 +1038,17 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   };
 
   if (isReady === false) return <AppLoading message={"Loading..."} />;
+
+  // Add additional check for authentication transition
+  if (isAuthenticating === true || isAuthTransitioning === true) {
+    return <AppLoading message={"Authenticating..."} />;
+  }
+
+  // Add check for user state during authentication transitions
+  if (auth_validated === false && user === null) {
+    return <AppLoading message={"Validating authentication..."} />;
+  }
+
   //@ts-ignore
   let header = isAuthenticating === false ? (<Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />) : null;
   let footer = isAuthenticating === false ? (<Footer />) : null;
@@ -805,23 +1061,23 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             <ApolloProvider client={reactory.client as any}>
               <React.StrictMode>
                 <ReactoryProvider reactory={reactory}>
-                  <Paper 
+                  <Paper
                     id='reactory_paper_root'
-                    elevation={0} 
+                    elevation={0}
                     className={classes.root_paper}>
-                    {offline === false && 
+                    {offline === false &&
                       <React.Fragment>
                         <NotificationComponent />
-                        <ReactoryRouter 
+                        <ReactoryRouter
                           header={header}
-                          reactory={reactory} 
-                          user={user} 
-                          auth_validated={auth_validated} 
+                          reactory={reactory}
+                          user={user}
+                          auth_validated={auth_validated}
                           authenticating={isAuthenticating}
-                          footer={footer} 
+                          footer={footer}
                         />
-                      </React.Fragment>}                    
-                    <Offline onOfflineChanged={onOfflineChanged} />                  
+                      </React.Fragment>}
+                    <Offline onOfflineChanged={onOfflineChanged} />
                   </Paper>
                 </ReactoryProvider>
               </React.StrictMode>

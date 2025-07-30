@@ -30,6 +30,7 @@ export const useRESTDataManager: ReactoryFormDataManagerHook  = (props) => {
     onChange,
     getData,
     refresh,
-    isBusy
+    isBusy,
+    available: false, // REST data manager is not implemented yet
   } as IReactoryFormDataManagerHookResult;
 };

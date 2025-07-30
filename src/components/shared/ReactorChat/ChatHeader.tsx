@@ -1,8 +1,10 @@
 import React from 'react';
-import ChatHistoryItem from './ChatHistoryItem';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { IAIPersona } from './types';
-import { Form } from 'react-router-dom';
-import { debug } from 'console';
+import { getDefaultFormState } from '@reactory/client-core/components/reactory/form/utils';
+import PersonaSelector from './PersonaSelector';
+import PersonaDetailsDialog from './PersonaDetailsDialog';
+import { toCamelCaseLabel, getSchemaFromArgs, getUiSchemaFromSchema } from './utils';
 
 const ChatHeader = ({
   headerOpen,
@@ -12,7 +14,7 @@ const ChatHeader = ({
   handleModelMenuOpen,
   anchorEl,
   handleModelMenuClose,
-  handlePersonaSelect,
+  handlePersonaSelect: _handlePersonaSelect,
   handleChatMenuOpen,
   chatMenuAnchor,
   handleChatMenuClose,
@@ -26,14 +28,17 @@ const ChatHeader = ({
   setToolApprovalMode,
   uploadFile,
   sendAudio,
+  enablePersonaSelection = true,
 }) => {
+  // Add navigation and search params hooks
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const {
     Button,
     Avatar,
     Box,  
     Icon,
-    IconButton,
     Grid,
     Menu,
     MenuItem,
@@ -42,6 +47,7 @@ const ChatHeader = ({
     DialogTitle,
     DialogContent,
     DialogActions,
+    LinearProgress,
   } = Material.MaterialCore as Reactory.Client.Web.MaterialCore;
   const {
     ArrowDropDown,
@@ -52,9 +58,12 @@ const ChatHeader = ({
   const [toolArgSchema, setToolArgSchema] = React.useState(null);
   const [toolArgUiSchema, setToolArgUiSchema] = React.useState(null);
   const [toolArgFormData, setToolArgFormData] = React.useState({});
+  const [customSubmitButton, setCustomSubmitButton] = React.useState(null);
   const [toolApprovalAnchor, setToolApprovalAnchor] = React.useState(null);
+  const [personaDetailsDialog, setPersonaDetailsDialog] = React.useState<{ open: boolean; persona: IAIPersona | null }>({ open: false, persona: null });
   const il8n = reactory.i18n;
   let FormEngine: React.FunctionComponent<Reactory.Client.IReactoryFormProps<unknown>> = reactory.getComponent('core.ReactoryForm@1.0.0');
+  
   const handleToolsMenuOpen = (event) => {
     setToolsMenuAnchor(event.currentTarget);
   };
@@ -74,68 +83,46 @@ const ChatHeader = ({
     setToolApprovalAnchor(null);
   };
 
+
+  const handlePersonaDetailsOpen = (persona: IAIPersona) => {
+    setPersonaDetailsDialog({ open: true, persona });
+  };
+
+  const handlePersonaDetailsClose = () => {
+    setPersonaDetailsDialog({ open: false, persona: null });
+  };
+
+  // Persona selection handler that updates the URL to remove sessionId and set personaId
+  const handlePersonaSelect = (persona) => {
+    // Remove sessionId from query params, set personaId
+    const params = new URLSearchParams(searchParams);
+    params.delete('sessionId');
+    if (persona?.id) {
+      params.set('personaId', persona.id);
+    } else {
+      params.delete('personaId');
+    }
+    navigate({ pathname: '/reactor/chat', search: params.toString() ? `?${params.toString()}` : '' });
+    // Call any original handler if needed
+    if (_handlePersonaSelect) _handlePersonaSelect(persona);
+  };
+
   // Helper to get tools for the selected persona
   const getTools = () => {
-    return chatState?.tools ?? [];
+    const tools = chatState?.tools ?? [];
+    
+    // Deduplicate tools by function name to prevent duplicates in UI
+    return tools.filter((tool, index, self) => 
+      index === self.findIndex(t => t.function?.name === tool.function?.name)
+    );
   };
 
-  // Helper to convert camelCase or PascalCase to 'Camel Case'
-  const toCamelCaseLabel = (str) => {
-    if (!str) return '';
-    return str
-      .replace(/([a-z])([A-Z])/g, '$1 $2')
-      .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')
-      .replace(/^./, (s) => s.toUpperCase());
-  };
-
-  // Helper to generate a JSON schema from argument shape
-  const getSchemaFromArgs = (argsShape) => {
-    if (!argsShape || typeof argsShape !== 'object') return null;
-    // If already a JSON schema, return as is
-    if (argsShape.type && argsShape.properties) return argsShape;
-    // Otherwise, try to infer a simple schema
-    const properties = {};
-    Object.entries(argsShape).forEach(([key, value]) => {
-      let schemaType = 'string';
-      if (Array.isArray(value)) schemaType = 'array';
-      else if (typeof value === 'number') schemaType = 'number';
-      else if (typeof value === 'boolean') schemaType = 'boolean';
-      else if (typeof value === 'object' && value !== null) schemaType = 'object';
-      properties[key] = { type: schemaType };
-    });
-    return {
-      type: 'object',
-      properties,
-      required: Object.keys(properties),
-    };
-  };
-
-  // Helper to generate a UI schema from argument shape
-  const getUiSchemaFromSchema = (argsShape) => {
-    if (!argsShape || typeof argsShape !== 'object') return {};
-    const uiSchema: Reactory.Schema.IFormUISchema = {      
-      "ui:form": {
-        showRefresh: false,
-        showSubmit: true,
-        submitIconProps: {
-          fontSize: 'small',
-          icon: 'run_circle',
-          color: 'primary',
-        }
-      }
-    };
-    Object.entries(argsShape).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        uiSchema[key] = { 'ui:widget': 'select' }; // Example for arrays
-      } else if (typeof value === 'number') {
-        uiSchema[key] = { 'ui:widget': 'updown' }; // Example for numbers
-      } else if (typeof value === 'boolean') {
-        uiSchema[key] = { 'ui:widget': 'checkbox' }; // Example for booleans
-      } else if (typeof value === 'object' && value !== null) {
-        uiSchema[key] = { 'ui:widget': 'object' }; // Example for objects
-      }
-    });
-    return uiSchema;
+  // Helper to get color based on token pressure
+  const getTokenPressureColor = (pressure: number) => {
+    if (pressure <= 0.25) return 'success'; // Green
+    if (pressure <= 0.5) return 'warning'; // Yellow
+    if (pressure <= 0.75) return 'error'; // Orange (using error color)
+    return 'error'; // Red
   };
 
   // Handle tool button click
@@ -159,11 +146,34 @@ const ChatHeader = ({
     
     const schema = getSchemaFromArgs(argsShape);
     const uiSchema = getUiSchemaFromSchema(schema);
+    
+    // Store the custom submit button in state (moved out of parent component below)
+    setCustomSubmitButton(() => (props) => (
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={props.onClick}
+        startIcon={getToolIcon(tool)}
+        sx={{ minWidth: 120 }}
+      >
+        {il8n?.t('reactor.client.tools.execute', { defaultValue: 'Execute' })}
+      </Button>
+    ));
+    
+    // Create a custom UI schema that includes the custom submit button
+    const customUiSchema = {
+      ...uiSchema,
+      "ui:options": {
+        ...uiSchema["ui:options"],
+        showSubmit: false, // Hide the default submit button
+      }
+    };
+    
     if (schema && schema.properties && Object.keys(schema.properties).length > 0) {
       setSelectedTool(tool);
       setToolArgSchema(schema);
-      setToolArgUiSchema(uiSchema); // Optionally customize
-      setToolArgFormData({});
+      setToolArgUiSchema(customUiSchema);
+      setToolArgFormData(getDefaultFormState(schema, {}));
     } else {
       // No parameters needed, execute immediately
       exec({});
@@ -171,7 +181,8 @@ const ChatHeader = ({
   };
 
   // Handle form submit for tool arguments
-  const handleToolFormSubmit = (formData) => {    
+  const handleToolFormSubmit = (formData) => { 
+    debugger;   
     if (selectedTool && onToolExecute) {
       onToolExecute({ ...selectedTool, args: formData, calledBy: 'user'});
     }
@@ -179,6 +190,7 @@ const ChatHeader = ({
     setToolArgSchema(null);
     setToolArgUiSchema(null);
     setToolArgFormData({});
+    setCustomSubmitButton(null);
     handleToolsMenuClose();
   };
 
@@ -211,13 +223,27 @@ const ChatHeader = ({
       height: headerOpen ? 'auto' : 0, 
       overflow: 'hidden', 
       transition: 'height 0.3s ease-in-out',
-      px: 1,
-      py: 0.5,
       background: (theme) => theme.palette.background.paper,
       borderBottom: 1,
       borderColor: 'divider',
     }}>
-      <Grid container alignItems="center" spacing={1} wrap="nowrap" sx={{ minHeight: 48 }}>
+      {/* Token Pressure Progress Bar */}
+      {chatState?.tokenPressure !== undefined && (
+        <LinearProgress
+          variant="determinate"
+          value={(chatState.tokenPressure || 0) * 100}
+          color={getTokenPressureColor(chatState.tokenPressure || 0)}
+          sx={{
+            height: 2,
+            borderRadius: 0,
+            '& .MuiLinearProgress-bar': {
+              transition: 'transform 0.3s ease-in-out',
+            },
+          }}
+        />
+      )}
+      <Box sx={{ px: 1, py: 0.5 }}>
+        <Grid container alignItems="center" spacing={1} wrap="nowrap" sx={{ minHeight: 48 }}>
         {/* Persona selection */}
         <Grid item>
           <Button
@@ -237,48 +263,21 @@ const ChatHeader = ({
             open={Boolean(anchorEl)}
             onClose={handleModelMenuClose}
             sx={{
-              p: 2,
-              '.MuiPaper-root': {
-                maxHeight: 400,
-                minWidth: 240,
-                overflowY: 'auto',
-                mt: 0,
-                mb: 1,
-              },
+              p: 2,              
             }}
-            anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-            transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
           >
-            {personas.length > 0 ? (
-              <Grid container columns={personas.length < 4 ? personas.length : 4} spacing={1} sx={{ px: 1 }}>
-                {personas
-                  .slice()
-                  .sort((a, b) => (a.name?.toLowerCase() ?? '').localeCompare(b.name?.toLowerCase() ?? ''))
-                  .map((persona) => (
-                    <Grid item xs={1} key={persona.id}>
-                      <Tooltip title={persona.name}>
-                        <Button
-                          variant="text"
-                          fullWidth
-                          startIcon={<Avatar src={persona.avatar} alt={persona.name} sx={{ width: 24, height: 24 }} />}
-                          sx={{
-                             textTransform: 'none',
-                            justifyContent: 'flex-start',
-                            minWidth: 0,
-                            px: 1.5,
-                            py: 1,
-                            gap: 1.5,
-                            alignItems: 'center',
-                            fontSize: 16,
-                          }}
-                          onClick={() => handlePersonaSelect(persona)}                          
-                        >
-                          {persona.name}
-                        </Button>
-                      </Tooltip>
-                    </Grid>
-                  ))}
-              </Grid>
+            {personas.length > 0 && enablePersonaSelection === true ? (
+              <PersonaSelector
+                personas={personas}
+                selectedPersona={selectedPersona}
+                onPersonaSelect={handlePersonaSelect}
+                onPersonaDetails={handlePersonaDetailsOpen}
+                Material={Material}
+                toCamelCaseLabel={toCamelCaseLabel}
+                il8n={il8n}
+              />
             ) : (
               <MenuItem disabled>No personas available</MenuItem>
             )}
@@ -307,7 +306,7 @@ const ChatHeader = ({
             sx={{
               p: 2,
               '.MuiPaper-root': {
-                maxHeight: 400,
+                maxHeight: 600,
                 minWidth: 320,
                 overflowY: 'auto',
                 mt: 0,
@@ -388,50 +387,97 @@ const ChatHeader = ({
           </Menu>
         </Grid>       
       </Grid>
+      </Box>
       {/* Tool Parameter Dialog */}
       <Dialog open={!!selectedTool && !!toolArgSchema} onClose={() => {
         setSelectedTool(null);
         setToolArgSchema(null);
         setToolArgUiSchema(null);
         setToolArgFormData({});
-      }} maxWidth="sm" fullWidth>
+        setCustomSubmitButton(null);
+      }} maxWidth="md" fullWidth
+        PaperProps={{
+          sx: {
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+          }
+        }}
+      >
         <DialogTitle>
           {selectedTool ? toCamelCaseLabel(selectedTool.function?.name ?? 'Tool') : ''} Parameters
         </DialogTitle>
-        <DialogContent>
+        <DialogContent
+          sx={{
+            flex: 1,
+            overflow: 'auto',
+            minHeight: 0,
+            maxHeight: 'calc(80vh - 140px)', // Account for title and actions
+            display: 'flex',
+            flexDirection: 'column',
+            '& .MuiFormControl-root': {
+              mb: 2
+            },
+            '& .MuiOutlinedInput-root': {
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word'
+            },
+            '& .MuiTypography-root': {
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word'
+            }
+          }}
+        >
           {FormEngine && toolArgSchema && (
-            <FormEngine
-              formDef={{
-                id: `tool-args-form-${selectedTool?.function?.name}`,
-                name: `${selectedTool?.function?.name}Arguments`,
-                nameSpace: 'reactor-ui-tools',
-                version: 'v1.0.0',
-                schema: toolArgSchema,
-                uiSchema: toolArgUiSchema,
-                __complete__: true,
-              }}
-              formData={toolArgFormData}
-              onSubmit={handleToolFormSubmit}
-              onCancel={() => {
-                setSelectedTool(null);
-                setToolArgSchema(null);
-                setToolArgUiSchema(null);
-                setToolArgFormData({});
-              }}                                
-            />
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
+              <FormEngine
+                formDef={{
+                  id: `tool-args-form-${selectedTool?.function?.name}`,
+                  name: `${selectedTool?.function?.name}Arguments`,
+                  nameSpace: 'reactor-ui-tools',
+                  version: 'v1.0.0',
+                  defaultFormValue: getDefaultFormState(toolArgSchema, toolArgFormData),
+                  schema: toolArgSchema,
+                  uiSchema: toolArgUiSchema,
+                  __complete__: true,
+                }}
+                formData={toolArgFormData}
+                onSubmit={handleToolFormSubmit}
+                onCancel={() => {
+                  setSelectedTool(null);
+                  setToolArgSchema(null);
+                  setToolArgUiSchema(null);
+                  setToolArgFormData({});
+                  setCustomSubmitButton(null);
+                }}                                
+              />
+            </Box>
           )}
         </DialogContent>
-        <DialogActions>            
-          <Button onClick={() => {
-            setSelectedTool(null);
-            setToolArgSchema(null);
-            setToolArgUiSchema(null);
-            setToolArgFormData({});
-          }}>
-            Cancel
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3, py: 2 }}>
+          <Button 
+            onClick={() => {
+              setSelectedTool(null);
+              setToolArgSchema(null);
+              setToolArgUiSchema(null);
+              setToolArgFormData({});
+              setCustomSubmitButton(null);
+            }}
+            variant="outlined"
+          >
+            {il8n?.t('reactor.client.tools.cancel', { defaultValue: 'Cancel' })}
           </Button>
+          {customSubmitButton && React.createElement(customSubmitButton, { onClick: () => handleToolFormSubmit(toolArgFormData) })}
         </DialogActions>
       </Dialog>
+      {/* Persona Details Dialog */}
+      <PersonaDetailsDialog
+        open={personaDetailsDialog.open}
+        onClose={handlePersonaDetailsClose}
+        persona={personaDetailsDialog.persona}
+        Material={Material}
+        toCamelCaseLabel={toCamelCaseLabel}
+      />
     </Box>
   );
 };

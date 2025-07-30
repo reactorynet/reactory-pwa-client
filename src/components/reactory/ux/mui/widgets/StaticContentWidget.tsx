@@ -3,7 +3,7 @@ import { ReactoryStaticContentComponent } from "@reactory/client-core/components
 
 export const StaticContentWidget = (props: any) => {
 
-  const { idSchema, uiSchema, onChange } = props;
+  const { idSchema, uiSchema, formContext, formData, schema } = props;
   const reactory = useReactory();
   const {
     StaticContent,
@@ -17,12 +17,41 @@ export const StaticContentWidget = (props: any) => {
   };
 
   const options = uiSchema && uiSchema['ui:options'] ? { ...DefaultOptions, ...uiSchema['ui:options'] } : DefaultOptions;
+  let aipersona = { ...(uiSchema?.['ui:ai'] || null) };
 
+  if (aipersona) { 
+    if(aipersona.propsMap) {
+      let aiProps = {...aipersona.props};
+      const mappedProps = reactory.utils.objectMapper.merge({
+        formContext, 
+        reactory, 
+        formData,
+        uiSchema,
+        schema,
+        aiProps, 
+      }, aipersona.propsMap);      
+
+      aipersona.props = {
+        ...aiProps,
+        ...mappedProps
+      };
+    }
+  }
+
+  const slugSourceProps = options.slugSourceProps ? { 
+    ...options.slugSourceProps, 
+    basePath: reactory.utils.template(options.slugSourceProps.basePath)({ ...props, reactory }) } : null;
   return (<StaticContent 
     id={idSchema.$id}
     slug={reactory.utils.template(options.slug)({ ...props, reactory })} 
+    slugSourceProps={slugSourceProps}
     propertyBag={{ ...props, reactory }} 
     editAction={ options.editAction } 
+    useExpanded={ options.useExpanded || false }
+    expanded={ options.expanded || false }
+    container={options.container || 'Box' }
+    containerProps={options.containerProps || {}}
+    aipersona={aipersona}
     />);
 }
 

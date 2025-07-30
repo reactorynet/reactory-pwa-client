@@ -41,9 +41,13 @@ interface SelectWithDataOptions {
     visible: boolean;
     [key: string]: any;
   };
+  labelFormat?: string;
+  labelKey?: string;
+  valueKey?: string;
   formControlProps?: any;
   size?: 'small' | 'medium' | undefined;
   readOnly?: boolean;
+  allowNullSelect?: boolean;
 }
 
 interface SelectWithDataProperties {
@@ -92,16 +96,6 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
     switch (variant) {
       case 'outlined': {
         InputComponent = OutlinedInput;
-        if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
-          inputLabelProps.shrink = false;
-        } else {
-          inputLabelProps.shrink = true;
-          inputLabelProps.style = {
-            backgroundColor: theme.palette.background.paper,
-            // marginTop: '4px',
-            padding: '4px'
-          };
-        }
         break;
       }
       case 'filled': {
@@ -119,24 +113,53 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         multiSelect,
         selectProps = {},
         labelStyle = {},
+        labelKey = 'key',
+        valueKey = 'value',
+        labelFormat = '${option.label}',
         labelProps = { visible: true },
         formControlProps = {},
         size,
-        readOnly
+        readOnly,
+        allowNullSelect = true,
       } = uiSchema['ui:options'] as SelectWithDataOptions;
 
+      const graphql: Reactory.Forms.IReactoryFormQuery = uiSchema['ui:graphql'];
 
       const onSelectChanged = (evt) => {
-        reactory.log('Raising onChange for data select', { v: evt.target.value });
-        props.onChange(evt.target.value)
+        const value = evt.target.value;
+        reactory.log('Raising onChange for data select', { v: value, target: evt.target });
+        
+        // Convert empty string to null when allowNullSelect is true
+        const finalValue = (value === '' && allowNullSelect) ? null : value;
+        props.onChange(finalValue);
       }
 
 
       const getData = () => {
-        const variables = propertyMap ? objectMapper(props, propertyMap) : null;
+        
         setMenuItems([]);
-        setError(null);
-        reactory.graphqlQuery(query, variables).then((query_result: any) => {
+        setError(null);      
+        let graphqlQuery: Reactory.Forms.IReactoryFormQuery  = null;
+        if (graphql?.text && graphql?.name){
+          graphqlQuery = graphql;        
+        } else {
+          // backwards compatibility
+          graphqlQuery = {
+            name: resultItem,
+            text: query,
+            variables: propertyMap,
+            resultMap: resultsMap,
+          }
+        }
+
+        let graphqlStaticProps = { };
+        if (graphql.props) {
+          graphqlStaticProps = { ...graphql.props };
+        }
+
+        const variables = objectMapper({ ...props, ...graphqlStaticProps }, graphqlQuery.variables);
+
+        reactory.graphqlQuery(graphqlQuery.text, variables).then((query_result: any) => {
           const { data, errors = [] } = query_result;
 
           if (errors.length > 0) {
@@ -144,21 +167,25 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
             setVersion(version + 1);
           } else {
 
-            if (data && data[resultItem]) {
+            if (data && data[graphqlQuery.name]) {
               let _key_map: any = {};
               let _menuItems: any[] = [];
-              try {
-                _menuItems = resultsMap ? objectMapper(data, resultsMap) : data[resultItem]
-              } catch (err) {
-
+              let resultMap = graphqlQuery.resultMap || {};
+              // check if the graphqlQuery has typename handlers
+              if (graphqlQuery?.responseHandlers?.[data[graphqlQuery.name].__typename]) {
+                resultMap = graphqlQuery.responseHandlers[data[graphqlQuery.name]]?.resultMap || resultMap;
               }
-
+              try {
+                _menuItems = graphqlQuery.resultMap ? 
+                  objectMapper(data[graphqlQuery.name],resultMap) : 
+                  data[resultItem]
+              } catch  {}
+              
               _menuItems.forEach((menu_item: any) => {
                 if (menu_item.key) {
                   _key_map[menu_item.key] = menu_item;
                 }
               });
-
               setKeyMap(_key_map);
               setMenuItems(_menuItems);
               setVersion(version + 1);
@@ -172,15 +199,33 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
       };
 
 
-      const emptySelect = required === false ? <MenuItem value="">
-        <em>None</em>
-      </MenuItem> : null;
+
 
       inputLabelProps.style = { ...inputLabelProps.style, ...labelStyle }
 
-      if (formData !== null && formData !== undefined && formData !== '') {
+      // Ensure label shrinks when formData has a value (including 0)
+      const hasValue = formData !== null && formData !== undefined && formData !== '';
+      if (hasValue) {
         inputLabelProps.shrink = true;
+        
+        // Add specific styling for outlined variant when label is shrunk
+        if (variant === 'outlined') {
+          inputLabelProps.style = {
+            ...inputLabelProps.style,
+            backgroundColor: theme.palette.background.paper,
+            padding: '4px'
+          };
+        }
       }
+      
+      // Debug logging for label shrink behavior
+      reactory.log('SelectWithData label shrink logic', { 
+        formData, 
+        formDataType: typeof formData, 
+        hasValue, 
+        shrink: inputLabelProps.shrink,
+        variant 
+      });
 
       React.useEffect(() => {
         reactory.log('Rendering SelectWithData', { formContext, formData, menuItems, key_map, version });
@@ -197,28 +242,40 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         <Select
           {...selectProps}
           multiple={multiSelect === true}
-          value={formData || ''}
+          value={formData || ""}
           onChange={readOnly === true ? () => { } : onSelectChanged}
           name={idSchema.$id}
           variant={variant}
           data-version={version}
-          input={
-            <InputComponent id={idSchema.$id} value={typeof formData === 'string' ? formData.trim() : ""} />
-          }
+          // input={
+          //   <InputComponent 
+          //     id={idSchema.$id}
+          //     type="text"                    
+          //     value={formData !== null && formData !== undefined ? (typeof formData === 'string' ? formData.trim() : `${formData}`) : ''} />
+          // }
           renderValue={(_value: any) => {
             reactory.log(`Rendering value for ${_value}`, { formData, key_map, menuItems });
-            if (_value === null || _value === undefined || _value.length === 0) {
+            if (key_map.loading) return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>Loading</span>;
+            
+            // Handle null/empty value selection
+            if (_value === null || _value === undefined || _value === '' || (Array.isArray(_value) && _value.length === 0)) {
+              if (_value === '' && allowNullSelect) {
+                return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>None</span>;
+              }
               return <span style={{ color: 'rgba(150, 150, 150, 0.8)' }}>{menuItems[0].id === 'loading' ? 'Loading' : 'Select'}</span>;
             }
 
             if (Array.isArray(_value))
               return _value.join(', ');
             else {
-              if (key_map[_value] && key_map[_value].label) {
-                return key_map[_value].label;
+              if (labelFormat) {
+                return reactory.utils.template(labelFormat)({ option: key_map[_value] });
+              } else {
+                if (key_map[_value] && key_map[_value].label) {
+                  return reactory.utils.template(key_map[_value].label)({ option: key_map[_value] });
+                }
+                return _value;
               }
-
-              return _value;
             }
 
           }}>
@@ -227,13 +284,31 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
             error ? <MenuItem>Error Loading Data</MenuItem> : undefined
           }
 
+          {/* Add null/empty option when allowNullSelect is true */}
+          {allowNullSelect && !multiSelect ? (
+            <MenuItem value="">
+              <em>None</em>
+            </MenuItem>
+          ) : null}
+
           {
             menuItems.map((option: any, index: number) => {
+              let label = option.label || labelFormat
+              if (labelFormat && typeof labelFormat === 'string' && labelFormat.startsWith('${')) {
+                try {
+                  label = reactory.utils.template(labelFormat)({ option, index });
+                } catch (templateErr) {
+                  label = `💥 ${templateErr.message}`;
+                }
+              }
+              // Add null checks for option, option[valueKey], and option[labelKey]
+              const optionValue = option && option[valueKey] ? option[valueKey] : '';
+              const optionKey = option && option[labelKey] !== undefined ? option[labelKey] : index;
               return (
-                <MenuItem key={option.key || index} value={`${option.value}`}>
-                  {option.icon ? <Icon>{option.icon}</Icon> : null}
-                  {option.label}
-                  {option.key === formData ? <Icon style={{ marginLeft: '8px' }}>check_circle</Icon> : null}
+                <MenuItem key={optionKey} value={optionValue}>
+                  {option && option.icon ? <Icon>{option.icon}</Icon> : null}
+                  {label}
+                  {option && option[valueKey] === formData ? <Icon style={{ marginLeft: '8px' }}>check_circle</Icon> : null}
                 </MenuItem>)
             })
           }
@@ -251,9 +326,9 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         </MenuItem>
       </Select>)
     }
-
   } catch (renderError) {
-    setError(error);
+    // Do NOT call setError here, just render a fallback UI
+    return <div style={{ color: 'red' }}>Error rendering select: {String(renderError)}</div>;
   }
 }
 const SelectWithDataWidgetComponent = compose(withReactory, withTheme, withStyles(styles))(SelectWithDataWidget)

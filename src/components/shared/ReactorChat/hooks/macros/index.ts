@@ -4,6 +4,9 @@ import FormMacro from './form.macro';
 import ComponentMacro from './component.macro';
 import GreetingMacro from './hello.macro';
 import RuntimeMacro from './runtime.macro';
+import ChartMacro from './chart.macro';
+import D3Macro from './d3.macro';
+import ImageMacro from './image.macro';
 import { MacroComponentDefinition } from '../../types';
 
 
@@ -13,7 +16,10 @@ const macros: MacroComponentDefinition<unknown>[] = [
   GreetingMacro,
   FormMacro,
   ComponentMacro,
-  RuntimeMacro
+  RuntimeMacro,
+  ChartMacro,
+  D3Macro,
+  ImageMacro,
 ];
 
 export default macros;

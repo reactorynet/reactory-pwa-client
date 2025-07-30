@@ -59,7 +59,7 @@ const MaterialFieldTemplateFunction = (props) => {
 
   // reactory.log(`MaterialFieldTemplate Rendering field ${id}`, props);
 
-  const { signature } = formContext;
+  const { signature } = formContext || {};
 
 
   const isObject = schema.type === 'object'
@@ -230,10 +230,9 @@ const MaterialFieldTemplateFunction = (props) => {
 
       if (uiOptions && uiOptions.component === 'TextField') return (<>{children}</>);
 
-      if (uiWidget === 'LabelWidget' && uiOptions !== null && uiOptions !== undefined && (uiOptions.showLabel === null || uiOptions.showLabel === undefined)) showLabel = false;
-
+      if (uiWidget === 'LabelWidget' && uiOptions !== null && uiOptions !== undefined && (uiOptions.showLabel === null || uiOptions.showLabel === undefined)) showLabel = false;      
       return (
-        <FormControl {...formControlProps}>
+        <FormControl {...formControlProps}>          
           {showLabel !== false ? labelComponent : null}
           {children}
           {isNil(rawDescription) === false ? <FormHelperText id={`${id}_helper`}>{rawDescription}</FormHelperText> : null}

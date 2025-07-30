@@ -1,4 +1,67 @@
 'use strict'
+/**
+ * ReactoryCoreDialog Component
+ * 
+ * A flexible, reusable dialog component for the Reactory platform that provides:
+ * - Responsive design with automatic full-screen on mobile
+ * - Configurable app bar with title and close button
+ * - Breadcrumb navigation support
+ * - Event-driven closing mechanism
+ * - Material-UI theming integration
+ * - Customizable styling and behavior
+ * 
+ * @example
+ * // Basic usage
+ * <ReactoryCoreDialog
+ *   open={isOpen}
+ *   title="My Dialog"
+ *   onClose={() => setIsOpen(false)}
+ * >
+ *   <div>Dialog content here</div>
+ * </ReactoryCoreDialog>
+ * 
+ * @example
+ * // With breadcrumb navigation
+ * <ReactoryCoreDialog
+ *   open={isOpen}
+ *   title="User Details"
+ *   backNavigationItems={['Users', 'User Management', 'John Doe']}
+ *   onClose={() => setIsOpen(false)}
+ * >
+ *   <UserDetailsComponent />
+ * </ReactoryCoreDialog>
+ * 
+ * @example
+ * // With custom styling and event-driven closing
+ * <ReactoryCoreDialog
+ *   open={isOpen}
+ *   title="Form Dialog"
+ *   showAppBar={true}
+ *   fullScreen={false}
+ *   maxWidth="md"
+ *   closeOnEvents={['form:submitted', 'form:cancelled']}
+ *   appBarProps={{ color: 'primary' }}
+ *   containerProps={{
+ *     PaperProps: { style: { borderRadius: 16 } }
+ *   }}
+ *   onClose={() => setIsOpen(false)}
+ * >
+ *   <MyFormComponent />
+ * </ReactoryCoreDialog>
+ * 
+ * @example
+ * // Mobile-optimized dialog
+ * <ReactoryCoreDialog
+ *   open={isOpen}
+ *   title="Mobile Dialog"
+ *   breakpoint="md"
+ *   fullScreen={true}
+ *   onClose={() => setIsOpen(false)}
+ * >
+ *   <MobileOptimizedContent />
+ * </ReactoryCoreDialog>
+ */
+
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
@@ -14,6 +77,10 @@ import {
   IconButton,
   Button,
   Slide,
+  DialogProps,
+  AppBarProps,
+  ToolbarProps,
+  Theme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
@@ -21,6 +88,53 @@ import { deepEquals } from '../reactory/form/utils';
 import {
   useMediaQuery
 } from '@mui/material';
+
+// TypeScript interfaces for better type safety
+export interface IReactoryCoreDialogProps {
+  /** Whether the dialog is open */
+  open?: boolean;
+  /** Dialog title displayed in the app bar */
+  title?: string;
+  /** Whether to show the app bar */
+  showAppBar?: boolean;
+  /** Props to pass to the AppBar component */
+  appBarProps?: Partial<AppBarProps>;
+  /** Props to pass to the Toolbar component */
+  toolbarProps?: Partial<ToolbarProps>;
+  /** Props to pass to the Dialog component */
+  containerProps?: Partial<DialogProps> & {
+    /** Custom style for the navigation container */
+    navContainerStyle?: React.CSSProperties;
+  };
+  /** Slide direction for the transition */
+  slide?: 'up' | 'down' | 'left' | 'right';
+  /** Whether the dialog should be full screen */
+  fullScreen?: boolean;
+  /** Whether the dialog should be full width */
+  fullWidth?: boolean;
+  /** Maximum width of the dialog */
+  maxWidth?: false | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Breakpoint at which to switch to full screen */
+  breakpoint?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Array of navigation items for breadcrumb navigation */
+  backNavigationItems?: string[];
+  /** Custom component to render in the back navigation area */
+  backNavComponent?: React.ReactNode;
+  /** Icon to use for the close button */
+  closeButtonIcon?: string;
+  /** Array of event names that should trigger dialog close */
+  closeOnEvents?: string[];
+  /** Callback function when dialog closes */
+  onClose?: () => void;
+  /** Dialog content */
+  children?: React.ReactNode;
+  /** Theme object from Material-UI */
+  theme?: Theme;
+  /** Reactory API instance */
+  reactory?: any;
+  /** CSS classes from withStyles HOC */
+  classes?: any;
+}
 
 const FullScreenDialogStyles = (theme): any => {
   return {
@@ -71,7 +185,21 @@ const Transition = React.forwardRef(function Transition(props: any, ref) {
 });
 
 
-const FullScreenDialog = (props) => {
+/**
+ * ReactoryCoreDialog - A flexible, reusable dialog component for the Reactory platform
+ * 
+ * Features:
+ * - Responsive design with automatic full-screen on mobile
+ * - Configurable app bar with title and close button
+ * - Breadcrumb navigation support
+ * - Event-driven closing mechanism
+ * - Material-UI theming integration
+ * - Customizable styling and behavior
+ * 
+ * @param props - Component props
+ * @returns React component
+ */
+const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
 
   const {
     classes,
@@ -113,52 +241,75 @@ const FullScreenDialog = (props) => {
 
   const onMount = () => {
     const { closeOnEvents = [] } = props;
-    closeOnEvents.map((eventName) => reactory.on(eventName, handleClose))
+    if (reactory && closeOnEvents.length > 0) {
+      closeOnEvents.forEach((eventName) => {
+        try {
+          reactory.on(eventName, handleClose);
+        } catch (error) {
+          console.warn(`Failed to register event listener for ${eventName}:`, error);
+        }
+      });
+    }
   }
 
   const onUnmount = () => {
     const { closeOnEvents = [] } = props;
-    closeOnEvents.map((eventName) => reactory.removeListener(eventName, handleClose))
+    if (reactory && closeOnEvents.length > 0) {
+      closeOnEvents.forEach((eventName) => {
+        try {
+          reactory.removeListener(eventName, handleClose);
+        } catch (error) {
+          console.warn(`Failed to remove event listener for ${eventName}:`, error);
+        }
+      });
+    }
   }
 
   useEffect(() => {
-
     onMount();
-
     return onUnmount;
-
-  });
+  }, [props.closeOnEvents, reactory, onClose]);
 
 
 
   let BackNavigation = null;
 
-  // NOTE - THIS NEEDS TO BE RESTRUCTURED TO USE A GRID LAYOUT - MOBILE FRIENDLY
+  // BackNavigation component with improved mobile responsiveness
   if (backNavigationItems && backNavigationItems.length > 0) {
-    BackNavigation = (props) => {
+    BackNavigation = () => {
       return (
-        <div className={classes.backNavContainer} style={containerProps.navContainerStyle ? { ...containerProps.navContainerStyle } : {}} key={'back-nav'}>
-          <div style={{ display: 'flex', cursor: 'pointer' }} onClick={handleClose} key={'chevron'}>
-            <Icon style={{ fontSize: 30 }}>chevron_left</Icon>
-            <Typography variant="h6" classes={{ root: classes.backButtonText }}>Back</Typography>
-          </div>
-          <div className={classes.linkContainer} key={'container'}>
-            {
-              backNavigationItems.map((navItem, ind) => {
-                if ((ind + 1) < backNavigationItems.length)
-                  return <Typography variant="h6" classes={{ root: classes.linkText }} key={ind}>{navItem} /</Typography>
-
-                return <Typography variant="h6" classes={{ root: classes.linkTextLast }} key={ind}>{navItem}</Typography>
-              })
-            }
-          </div>
-          {
-            backNavComponent && <div className={classes.backNavComponent} key={'component'}>
-              {backNavComponent}
-            </div>
-          }
+        <div className={classes.backNavContainer} style={containerProps.navContainerStyle ? { ...containerProps.navContainerStyle } : {}}>
+          <Grid container spacing={1} alignItems="center">
+            <Grid item>
+              <div style={{ display: 'flex', cursor: 'pointer' }} onClick={handleClose}>
+                <Icon style={{ fontSize: 30 }}>chevron_left</Icon>
+                <Typography variant="h6" classes={{ root: classes.backButtonText }}>Back</Typography>
+              </div>
+            </Grid>
+            <Grid item xs>
+              <div className={classes.linkContainer}>
+                {backNavigationItems.map((navItem, ind) => (
+                  <React.Fragment key={`nav-item-${ind}`}>
+                    <Typography variant="h6" classes={{ root: classes.linkText }}>
+                      {navItem}
+                    </Typography>
+                    {(ind + 1) < backNavigationItems.length && (
+                      <Typography variant="h6" classes={{ root: classes.linkText }}>/</Typography>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </Grid>
+            {backNavComponent && (
+              <Grid item>
+                <div className={classes.backNavComponent}>
+                  {backNavComponent}
+                </div>
+              </Grid>
+            )}
+          </Grid>
         </div>
-      )
+      );
     };
   }
 
@@ -172,7 +323,7 @@ const FullScreenDialog = (props) => {
     TransitionComponent: Transition,
     ...containerProps,
     style: {
-      overflowX: 'hidden'
+      overflowX: 'hidden' as const
     }
   }
 
@@ -204,6 +355,38 @@ const FullScreenDialog = (props) => {
 
 FullScreenDialog.propTypes = {
   classes: PropTypes.object.isRequired,
+  open: PropTypes.bool,
+  title: PropTypes.string,
+  showAppBar: PropTypes.bool,
+  appBarProps: PropTypes.object,
+  toolbarProps: PropTypes.object,
+  containerProps: PropTypes.object,
+  slide: PropTypes.oneOf(['up', 'down', 'left', 'right']),
+  fullScreen: PropTypes.bool,
+  fullWidth: PropTypes.bool,
+  backNavigationItems: PropTypes.arrayOf(PropTypes.string),
+  backNavComponent: PropTypes.node,
+  maxWidth: PropTypes.oneOf([false, 'xs', 'sm', 'md', 'lg', 'xl']),
+  breakpoint: PropTypes.oneOf(['xs', 'sm', 'md', 'lg', 'xl']),
+  closeButtonIcon: PropTypes.string,
+  closeOnEvents: PropTypes.arrayOf(PropTypes.string),
+  onClose: PropTypes.func,
+  children: PropTypes.node,
+  theme: PropTypes.object,
+  reactory: PropTypes.object,
+};
+
+FullScreenDialog.defaultProps = {
+  open: false,
+  showAppBar: true,
+  slide: 'up',
+  fullScreen: true,
+  fullWidth: true,
+  backNavigationItems: [],
+  breakpoint: 'sm',
+  closeButtonIcon: 'close',
+  closeOnEvents: [],
+  children: [],
 };
 
 export default compose(withReactory, withTheme, withStyles(FullScreenDialogStyles))(FullScreenDialog);

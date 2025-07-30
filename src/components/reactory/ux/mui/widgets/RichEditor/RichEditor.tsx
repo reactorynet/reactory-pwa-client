@@ -87,6 +87,23 @@ const RichTextEditor = (props: any) => {
   const handleEditorChange = (content) => {    
     setContent(content);
   };
+
+  let modules = {
+    toolbar: [
+      [{ 'header': [1, 2, false] }],
+      ['bold', 'italic', 'underline','strike', 'blockquote'],
+      [{'list': 'ordered'}, {'list': 'bullet'}, {'indent': '-1'}, {'indent': '+1'}],
+      ['link', 'image'],
+      ['clean']
+    ],
+  };
+
+  let formats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet', 'indent',
+    'link', 'image'
+  ];
   
   return (
     <ReactQuill
@@ -96,6 +113,8 @@ const RichTextEditor = (props: any) => {
       theme="snow"
       placeholder={props.schema.title}
       className={classes.editor}
+      modules={modules}
+      formats={formats}
     />
   );
 };

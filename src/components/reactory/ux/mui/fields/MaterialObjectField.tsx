@@ -170,35 +170,46 @@ const MaterialObjectField: Reactory.Forms.ReactoryObjectFieldComponent = (props)
   const schema = utils.retrieveSchema(props.schema, definitions, formData);
   
   let titleOptions = { formData, formContext, reactory };
+  let title: string = schema.title;
   if (uiSchema["ui:title"] && typeof uiSchema["ui:title"] === 'string') { 
-    schema.title = uiSchema["ui:title"];
+    title = uiSchema?.["ui:title"];
   } else if (uiSchema["ui:title"] && typeof uiSchema["ui:title"] === 'object') { 
-    if (typeof uiSchema["ui:title"].title === "string") schema.title = uiSchema["ui:title"].title;
+    if (typeof uiSchema["ui:title"].title === "string") title = uiSchema["ui:title"].title;
     if (typeof uiSchema["ui:title"].title === "object") { 
-      schema.title = uiSchema["ui:title"].title.key;
+      title = uiSchema["ui:title"].title.key;
       titleOptions = { ...titleOptions, ...uiSchema["ui:title"].title.options };
     }    
   }
 
   let descriptionOptions = { formData, formContext, reactory };
+  let description: string = schema.description;
   if (uiSchema["ui:description"] && typeof uiSchema["ui:description"] === 'string') { 
-    schema.description = uiSchema["ui:description"];
+    description = uiSchema["ui:description"];
   } else if (uiSchema["ui:description"] && typeof uiSchema["ui:description"] === 'object') { 
-    if (typeof uiSchema["ui:description"].title === "string") schema.description = uiSchema["ui:description"].title;
+    if (typeof uiSchema["ui:description"].title === "string") description = uiSchema["ui:description"].title;
     if (typeof uiSchema["ui:description"].title === "object") { 
-      schema.description = uiSchema["ui:description"].title.key;
+      description = uiSchema["ui:description"].title.key;
       descriptionOptions = { ...descriptionOptions, ...uiSchema["ui:description"].title.options };
     }
   }
 
-  const title = reactory.i18n.t(schema.title, titleOptions);
-  const description = reactory.i18n.t(schema.description, descriptionOptions);
+  title = reactory.i18n.t(title, titleOptions);
+  description = reactory.i18n.t(description, descriptionOptions);
   const widget = uiSchema["ui:widget"]
 
   let $props = {};
+  let mergeStrategy = 'merge';
 
   if (uiSchema['ui:props']) {
     $props = { ...uiSchema['ui:props'] }
+  }
+
+  if (uiSchema['ui:props-map']) { 
+    reactory.utils.objectMapper.merge({...props}, $props, uiSchema['ui:props-map'], $props);
+  }
+
+  if (uiSchema['ui:props-options']) {
+    mergeStrategy = (uiSchema['ui:props-options'] as any)?.mergeStrategy || 'merge';
   }
 
   let orderedProperties;
@@ -218,7 +229,7 @@ const MaterialObjectField: Reactory.Forms.ReactoryObjectFieldComponent = (props)
     );
   }
 
-  const templateProps = {
+  let templateProps: any = {
     title,
     description,
     TitleField,
@@ -259,13 +270,18 @@ const MaterialObjectField: Reactory.Forms.ReactoryObjectFieldComponent = (props)
     formData,
     formContext,
     onChange,
-    ...$props
+  };
+
+  if (mergeStrategy === 'merge') { 
+    templateProps = { ...templateProps, ...$props };
+  } else if (mergeStrategy === 'replace') { 
+    templateProps = { ...$props };
   };
 
   let Template = registry.templates.ObjectTemplate;
 
   if (!Template) { 
-    return (<>Check registry has ObjectFieldTemplate</>)
+    return (<>Check that the registry has ObjectFieldTemplate</>)
   }
 
   if (typeof widget === 'string' ) {

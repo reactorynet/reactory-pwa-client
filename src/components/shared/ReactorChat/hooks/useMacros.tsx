@@ -277,7 +277,32 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
   // use effect to monitor changes on the chatState for macros
   useEffect(() => {
     if (chatState.macros) {
-      const newMacros = createRegistry([...chatState.macros, ...clientMacros]);
+      // Create a combined array of macros, but ensure uniqueness
+      const allMacros = [...chatState.macros, ...clientMacros];
+      
+      // Deduplicate macros by nameSpace.name@version or alias
+      const uniqueMacros = allMacros.filter((macro, index, self) => {
+        if (macro === null || macro === undefined) {
+          reactory.warning(`Invalid macro found in chatState: ${macro}`);
+          return false; // Skip null or undefined macros
+        }
+        if (!macro.nameSpace || !macro.name || !macro.version) {
+          reactory.warning(`Macro ${macro.name} is missing required fields: nameSpace, name, or version`);
+          return false; // Skip invalid macros
+        }
+        const macroKey = `${macro.nameSpace}.${macro.name}@${macro.version}`;
+        const aliasKey = macro.alias;
+        
+        // Find first occurrence of this macro
+        const firstIndex = self.findIndex(m => {
+          const mKey = `${m.nameSpace}.${m.name}@${m.version}`;
+          return mKey === macroKey || (aliasKey && m.alias === aliasKey);
+        });
+        
+        return index === firstIndex;
+      });
+      
+      const newMacros = createRegistry(uniqueMacros);
       setMacros(prevMacros => ({
         ...prevMacros,
         ...newMacros

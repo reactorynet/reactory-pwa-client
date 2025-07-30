@@ -1,5 +1,5 @@
 import React, { Component, Fragment, useState } from 'react';
-import { Button, Typography, Icon, Tooltip } from '@mui/material';
+import { Button, Typography, Icon, Tooltip, Box } from '@mui/material';
 import { compose } from 'redux';
 import { withTheme, withStyles } from '@mui/styles';
 import { template, isNil } from 'lodash';
@@ -36,6 +36,12 @@ const LabelWidgetStyle = (theme): any => {
       display: 'flex',
       alignItems: 'center',
       '& span': {}
+    },
+    // Add styling to ensure label is always rendered properly
+    labelContainer: {
+      '& .MuiInputLabel-shrink': {
+        transform: 'translate(0, 1.5px) scale(0.75)',
+      }
     }
   }
 }
@@ -68,14 +74,28 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 
     if (options && options.format && typeof options.format === 'string') {
       try {
-        if (options.format !== '$LOOKUP$') return template(options.format as string)({ ...props })
-        else return '🕘';
+        if (options.format !== '$LOOKUP$') {
+          // Always process the template even if formData is null/empty
+          // This allows for conditional rendering in the template string
+          return template(options.format as string)({ ...props });
+        } else return '🕘';
       } catch (e) {
         return `Template Error (${e.message})`;
       }
     } else {
       try {
-        return props.formData ? template('${formData}')({ ...props }) : props.value;
+        // Handle boolean values specially to avoid double rendering
+        if (typeof props.formData === 'boolean' || props.schema?.type === 'boolean') {
+          const booleanOptions: any = props.uiSchema?.['ui:options'] || {};
+          const yesLabel = booleanOptions.yesLabel || 'Yes';
+          const noLabel = booleanOptions.noLabel || 'No';
+          return props.formData ? yesLabel : noLabel;
+        } else {
+          // Always return a string value even if formData is null/undefined
+          return props.formData !== null && props.formData !== undefined ? 
+            template('${formData}')({ ...props }) : 
+            props.value || (options.emptyText || 'No data available');
+        }
       } catch (e) {
         return `Template Error (${e.message})`;
       }
@@ -88,20 +108,43 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 
   const options = getOptions();
 
+  // Add a class to the parent schema field to ensure proper label positioning
+  React.useEffect(() => {
+    // Find the parent schema field element that contains the InputLabel
+    try {
+      if (idSchema && idSchema.$id) {
+        const parentEl = document.getElementById(idSchema.$id)?.closest('.MuiFormControl-root');
+        if (parentEl) {
+          // Add a class that we can target with CSS to force label shrinking
+          parentEl.classList.add('reactory-label-widget');
+          
+          // Find any InputLabel within this parent and force it to shrink
+          const inputLabel = parentEl.querySelector('.MuiInputLabel-root');
+          if (inputLabel) {
+            inputLabel.classList.add('MuiInputLabel-shrink');
+          }
+        }
+      }
+    } catch (err) {
+      // Ignore errors, just a DOM manipulation
+    }
+  }, [idSchema?.$id]);
 
   if (error) {
     return (<span>🚨 {error.message}</span>)
   }
 
-  let labelTitle = props.uiSchema.title;
+  let labelTitle = props?.uiSchema?.["ui:title"] || props?.schema?.title;
   let labelIcon = null;
   let _iconPosition = 'right';
   let _variant: any = 'h6';
   let theme = props.theme;
-  let labelContainerStyles = {
+  let labelContainerStyles: any = {
     display: 'flex',
     justifyContent: 'flex-start',
-    alignItems: 'center'
+    alignItems: 'center',
+    position: 'relative' as const, // Type assertion to fix Position issue
+    minHeight: '24px' // Ensure minimum height even when empty
   };
   let labelTitleProps = {};
   let labelBodyProps = {};
@@ -208,16 +251,51 @@ const LabelWidget = (props: LabelWidgetProperties) => {
       const _custom = iconType
       let IconComponent = _custom !== undefined ? theme.extensions[_custom].icons[icon as string] : null;
 
-      let $icon = (props.uiSchema["ui:options"] as Partial<Reactory.Schema.IUILabelWidgetOptions>)?.icon;
+      let $icon: string = (props.uiSchema["ui:options"] as Partial<Reactory.Schema.IUILabelWidgetOptions>)?.icon as string;
 
       if (_iconProps?.icon) {
         $icon = _iconProps.icon;
+      }
+
+      if ($icon?.includes('${')) {
+        $icon = template($icon)({ ...props });
       }
 
       if (IconComponent) {
         labelIcon = <IconComponent {..._iconProps} />
       } else {
         labelIcon = <Icon {..._iconProps}>{$icon}</Icon>
+      }
+    }
+
+    // Handle boolean field icons if no explicit icon is set
+    if (!icon && (typeof props.formData === 'boolean' || props.schema?.type === 'boolean')) {
+      const booleanOptions: any = props.uiSchema?.['ui:options'] || {};
+      const yesIcon = booleanOptions.yesIcon;
+      const noIcon = booleanOptions.noIcon;
+      const yesIconOptions = booleanOptions.yesIconOptions || {};
+      const noIconOptions = booleanOptions.noIconOptions || {};
+      
+      if (yesIcon || noIcon) {
+        const currentIcon = props.formData ? yesIcon : noIcon;
+        const currentIconOptions = props.formData ? yesIconOptions : noIconOptions;
+        
+        if (currentIcon) {
+          labelIcon = (
+            <Icon 
+              sx={currentIconOptions.sx} 
+              color={currentIconOptions.color} 
+              style={{ 
+                color: currentIconOptions.color, 
+                fontSize: currentIconOptions.fontSize,
+                marginLeft: _iconPosition === 'right' ? theme.spacing(1) : 'unset',
+                marginRight: _iconPosition === 'left' ? theme.spacing(1) : 'unset',
+              }}
+            >
+              {currentIcon}
+            </Icon>
+          );
+        }
       }
     }
 
@@ -253,7 +331,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
   }
 
   const copy = () => {
-    var tempInput = document.createElement('input');
+    const tempInput = document.createElement('input');
     tempInput.value = labelText;
     document.body.appendChild(tempInput)
     tempInput.select()
@@ -263,38 +341,45 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     reactory.createNotification('Copied To Clipboard!', { body: `'${labelText}' successfully copied to your clipboard.`, showInAppNotification: true, type: 'success' });
   }
 
-
-
   React.useEffect(() => {
-
-
     if (lookupGraphql && options.format === "$LOOKUP$") {
       getLookupValue();
     }
   }, []);
 
   React.useEffect(() => {
-
     if (lookupGraphql && options.format === "$LOOKUP$") {
       getLookupValue();
     }
 
     let _labelText = props.formData;
 
-
-
     if (options && options.format) {
-
       try {
-        if (options.format !== '$LOOKUP$' && typeof options.format === 'string') 
-          _labelText = template(options.format as string)({ ...props })
-        else _labelText = '🕘';
+        if (options.format !== '$LOOKUP$' && typeof options.format === 'string') {
+          // Always process the template even if formData is null/empty
+          // This allows for conditional rendering in the template string
+          _labelText = template(options.format as string)({ ...props });
+        } else {
+          _labelText = '🕘';
+        }
       } catch (e) {
         _labelText = `Template Error (${e.message})`;
       }
     } else {
       try {
-        _labelText = props.formData ? template('${formData}')({ ...props }) : props.value;
+        // Handle boolean values specially to avoid double rendering
+        if (typeof props.formData === 'boolean' || props.schema?.type === 'boolean') {
+          const booleanOptions: any = props.uiSchema?.['ui:options'] || {};
+          const yesLabel = booleanOptions.yesLabel || 'Yes';
+          const noLabel = booleanOptions.noLabel || 'No';
+          _labelText = props.formData ? yesLabel : noLabel;
+        } else {
+          // Ensure we always have a non-empty string for display purposes
+          _labelText = props.formData !== null && props.formData !== undefined ? 
+            template('${formData}')({ ...props }) : 
+            props.value || (options.emptyText || 'No data available');
+        }
       } catch (e) {
         _labelText = `Template Error (${e.message})`;
       }
@@ -307,24 +392,22 @@ const LabelWidget = (props: LabelWidgetProperties) => {
     }
 
     setLabelText(_labelText);
-
   }, [props]);
 
 
   return (
-    <div {...labelContainerProps}>
+    <Box {...labelContainerProps} className={`${classes.labelContainer} reactory-label-widget-container`}>
       {_iconPosition === 'left' ? labelIcon : null}
-      <div {...labelBodyProps}>
-        {labelTitle != '' && <label {...labelTitleProps}>{labelTitle}</label>}
+      <Box sx={{padding: 2}} {...labelBodyProps} data-has-value={labelText !== null && labelText !== undefined && labelText !== ''}>        
         {LabelBody}
-      </div>
+      </Box>
       {_iconPosition === 'right' ? labelIcon : null}
       {_copyToClip &&
         <Tooltip title="Copy to clipboard" placement="right">
           <Icon color="primary" onClick={copy} className={classes.copyIcon}>assignment</Icon>
         </Tooltip>
       }
-    </div>
+    </Box>
   )
 };
 

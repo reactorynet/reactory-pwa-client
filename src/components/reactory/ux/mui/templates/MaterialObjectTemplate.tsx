@@ -63,10 +63,10 @@ const MaterialObjectTemplate = (props) => {
     // //console.log('Object template field', { props: this.props, uiSchema });
     let titleText = title && title.indexOf("$") >= 0 ? template(title)({formData: props.formData}) : title;    
             
-    const uiOptions = uiSchema['ui:options'] || null;
-    const uiWidget = uiSchema['ui:widget'] || null;
-    const uiToolbar = uiSchema['ui:toolbar'] || null;
-    const uiTitle = uiSchema['ui:title'];
+    const uiOptions = uiSchema?.['ui:options'] || null;
+    const uiWidget = uiSchema?.['ui:widget'] || null;
+    const uiToolbar = uiSchema?.['ui:toolbar'] || null;
+    const uiTitle = uiSchema?.['ui:title'];
         
     if(uiTitle === null || uiTitle === '') {
       //means the value has been specfically set to null or empty
@@ -135,15 +135,10 @@ const MaterialObjectTemplate = (props) => {
       return (<Widget {..._props} />)
     }
 
-    let signature = `${formContext.signature}\n\t<${_componentName} id=${idSchema.$id} />`;
-
-    
-    // reactory.log(`MaterialObjectTemplate ${signature}`, { props });
-
     let ContainerComponent = Paper;
     let ContainerStyles = {};
 
-    if(uiOptions && uiOptions.container) {      
+    if(uiOptions?.container) {      
       if( typeof uiOptions.containerStyles === 'object') {
         ContainerStyles = { ...uiOptions.containerStyles }
       }      
@@ -172,12 +167,12 @@ const MaterialObjectTemplate = (props) => {
       }
     }
 
-    if(uiOptions && uiOptions.style) {
+    if(uiOptions?.style) {
       ContainerStyles = { ...uiOptions.style, ...ContainerStyles }
     }
             
     return (
-      <ContainerComponent className={classes.root} key={key} style={ContainerStyles}>
+      <ContainerComponent className={classes.root} key={key} style={ContainerStyles}>        
         {isNil(titleText) === false && isEmpty(titleText) === false ? <Typography gutterBottom>{titleText}</Typography> : null }
         {isNil(description) === false ? <Typography gutterBottom component="p">{template(description)({ formData: props.formData })}</Typography> : null }
         {toolbar}
