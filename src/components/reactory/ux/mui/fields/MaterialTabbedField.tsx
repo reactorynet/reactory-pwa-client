@@ -8,7 +8,7 @@ import Box from '@mui/material/Box';
 import Icon from '@mui/material/Icon';
 import { Theme } from '@mui/material'
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
-import { ReactoryFormUtilities } from 'components/reactory/form/types';
+import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 
 interface TabPanelProps {
   children?: React.ReactNode;

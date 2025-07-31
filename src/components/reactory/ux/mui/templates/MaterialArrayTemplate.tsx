@@ -17,7 +17,7 @@ import {
 } from '@mui/material'
 
 import { withReactory } from '@reactory/client-core/api/ApiProvider'
-import { ReactoryFormUtilities } from 'components/reactory/form/types';
+import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 import Reactory from '@reactory/reactory-core';
 
 

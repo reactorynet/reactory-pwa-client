@@ -39,7 +39,7 @@ import SlideOutLauncher from './shared/SlideOutLauncher';
 import BasicModal from './shared/BasicModal';
 import SpeedDialWidget from './shared/SpeedDialWidget';
 import FullScreenDialog from './shared/ReactoryCoreDialog';
-import FramedWindow, { ReportViewerComponent, GraphiqlWindow } from './shared/FramedWindow';
+import { FramedWindow, ReportViewerComponent, GraphiqlWindow } from './shared/FramedWindow';
 
 import TabbedNavigation from './shared/TabbedNavigation';
 import ChipLabel from './shared/ChipLabel';
@@ -66,11 +66,19 @@ import Cropper from './shared/image/Cropper';
 import ReactorChat from './shared/ReactorChat/ReactorChat';
 import { ReactorChatButton } from './shared/ReactorChat';
 
+import CurrencyLabel from './shared/currency/CurrencyLabel';
+import DateLabel from './shared/DateLabel';
+import { ReactoryStaticContentComponent as StaticContent } from './shared/StaticContent';
+import Label from './shared/Label';
+import AlertDialog from './shared/AlertDialog';
+import HelpMe from './shared/HelpMe';
+import { Footer } from './shared/Footer';
+
 import * as utils from './util';
 import { compose } from 'redux';
 import { DropDownMenuComponent } from './shared/menus/DropDownMenu';
 
-import { ErrorBoundary } from '../api/ErrorBoundary';
+import { ErrorBoundary } from '@reactory/client-core/api/ErrorBoundary';
 
 import Forms from './reactory/forms';
 
@@ -338,7 +346,7 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'HelpMe',
     version: '1.0.0',
-    component: require('../components/shared/HelpMe').default
+    component: HelpMe
   },
   
   {
@@ -493,11 +501,36 @@ export const componentRegistery = [
   },
   GraphiqlWindow.meta,
   SlideOutLauncher.meta,
-  require('./shared/currency/CurrencyLabel').default,
-  require('./shared/DateLabel').default,
-  require('./shared/StaticContent').default.meta,
-  require('./shared/Label').default,
-  require('./shared/AlertDialog').default,  
+  {
+    nameSpace: 'core',
+    name: 'CurrencyLabel',
+    version: '1.0.0',
+    component: CurrencyLabel
+  },
+  {
+    nameSpace: 'core',
+    name: 'DateLabel',
+    version: '1.0.0',
+    component: DateLabel
+  },
+  {
+    nameSpace: 'core',
+    name: 'StaticContent',
+    version: '1.0.0',
+    component: StaticContent
+  },
+  {
+    nameSpace: 'core',
+    name: 'Label',
+    version: '1.0.0',
+    component: Label
+  },
+  {
+    nameSpace: 'core',
+    name: 'AlertDialog',
+    version: '1.0.0',
+    component: AlertDialog
+  },  
   {
     nameSpace: 'reactory-core',
     name: 'ReactBeautifulDnD',
@@ -541,7 +574,7 @@ export const componentRegistery = [
   {
     nameSpace: 'reactory',
     name: 'Footer',
-    component: require('./shared/Footer').Footer,
+    component: Footer,
     version: '1.0.0',
   },
   {

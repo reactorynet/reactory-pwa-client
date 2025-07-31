@@ -28,6 +28,9 @@
       "*": [
         "src/*"
       ],
+      "@reactory/client-storybook/*": [
+        ".storybook/*"
+      ],
       "@reactory/client-core/*": [
         "src/*"
       ],

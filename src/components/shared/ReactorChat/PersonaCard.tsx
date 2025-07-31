@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IAIPersona } from './types';
+import PersonaDetailsDialog from './PersonaDetailsDialog';
 
 interface PersonaCardProps {
   persona: IAIPersona;
@@ -34,11 +35,12 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
     Info,
   } = Material.MaterialIcons;
 
+  const [showDetails, setShowDetails] = useState(false);
+  
+
   return (
     <Card 
-      sx={{ 
-        width: 320,
-        maxWidth: 320,
+      sx={{         
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -138,11 +140,18 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
           variant="outlined"
           size="small"
           startIcon={<Info />}
-          onClick={() => onDetails(persona)}
+          onClick={() => setShowDetails(true)}
         >
           Details
         </Button>
       </CardActions>
+      <PersonaDetailsDialog
+        open={showDetails}
+        onClose={() => setShowDetails(false)}
+        persona={persona}
+        Material={Material}
+        toCamelCaseLabel={toCamelCaseLabel}
+      />
     </Card>
   );
 };

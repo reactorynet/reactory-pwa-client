@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useContentRender } from '@reactory/client-core/components/shared/ReactorChat/hooks/useContentRender'
+import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender'
 import { useReactory } from '@reactory/client-core/api'
 
 const ContentWidget = (props) => {

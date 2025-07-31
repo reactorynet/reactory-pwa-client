@@ -3,7 +3,7 @@ import { compose } from 'redux';
 import { makeStyles, withStyles, withTheme } from '@mui/styles';
 import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider';
 import { template, isNil, isEmpty, isArray } from 'lodash';
-import * as Widgets from '../widgets';
+import * as Widgets from '@reactory/client-core/components/reactory/ux/mui/widgets';
 import {
   Button,
   Typography,

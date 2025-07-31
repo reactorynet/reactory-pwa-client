@@ -14,7 +14,7 @@ import {
   Section,
   Article,
   Paragraph
-} from '../HtmlContainers'
+} from '@reactory/client-core/components/reactory/ux/mui/fields/HtmlContainers'
 
 const DEFAULT_OPTIONS: Reactory.Schema.IUISchemaOptions = {
   container: 'Paper',

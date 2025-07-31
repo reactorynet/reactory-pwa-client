@@ -11,9 +11,6 @@ const ChatHeader = ({
   handleHeaderToggle,
   selectedPersona,
   personas,
-  handleModelMenuOpen,
-  anchorEl,
-  handleModelMenuClose,
   handlePersonaSelect: _handlePersonaSelect,
   handleChatMenuOpen,
   chatMenuAnchor,
@@ -127,95 +124,80 @@ const ChatHeader = ({
 
   // Handle tool button click
   const handleToolClick = (tool) => {
-    // Try to get argument shape from tool.function?.parameters ?? tool.paramters
-    const argsShape = tool.function?.parameters;
-    
-    const exec = (args) => {
-      if (onToolExecute) onToolExecute({ ...tool, args, calledBy: 'user' });
-      setSelectedTool(null);
-      setToolArgSchema(null);
-      setToolArgUiSchema(null);
-      setToolArgFormData({});
-      handleToolsMenuClose();
-    }
+    setSelectedTool(tool);
+    setToolsMenuAnchor(null);
 
-    if (!argsShape) {      
-      exec({});
-      return;
-    }
-    
-    const schema = getSchemaFromArgs(argsShape);
-    const uiSchema = getUiSchemaFromSchema(schema);
-    
-    // Store the custom submit button in state (moved out of parent component below)
-    setCustomSubmitButton(() => (props) => (
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={props.onClick}
-        startIcon={getToolIcon(tool)}
-        sx={{ minWidth: 120 }}
-      >
-        {il8n?.t('reactor.client.tools.execute', { defaultValue: 'Execute' })}
-      </Button>
-    ));
-    
-    // Create a custom UI schema that includes the custom submit button
-    const customUiSchema = {
-      ...uiSchema,
-      "ui:options": {
-        ...uiSchema["ui:options"],
-        showSubmit: false, // Hide the default submit button
-      }
-    };
-    
-    if (schema && schema.properties && Object.keys(schema.properties).length > 0) {
-      setSelectedTool(tool);
+    // Generate schema from tool arguments
+    if (tool.function?.parameters?.properties) {
+      const schema = getSchemaFromArgs(tool.function.parameters.properties);
+      const uiSchema = getUiSchemaFromSchema(schema);
+      const formData = getDefaultFormState(schema, {});
+
       setToolArgSchema(schema);
-      setToolArgUiSchema(customUiSchema);
-      setToolArgFormData(getDefaultFormState(schema, {}));
+      setToolArgUiSchema(uiSchema);
+      setToolArgFormData(formData);
     } else {
-      // No parameters needed, execute immediately
+      // No parameters, execute immediately
+      const exec = (args) => {
+        onToolExecute({
+          function: tool.function,
+          args: args || {},
+          calledBy: 'user',
+          callId: reactory.utils.uuid(),
+        });
+      };
       exec({});
     }
   };
 
-  // Handle form submit for tool arguments
   const handleToolFormSubmit = (formData) => { 
-    debugger;   
-    if (selectedTool && onToolExecute) {
-      onToolExecute({ ...selectedTool, args: formData, calledBy: 'user'});
+    if (selectedTool) {
+      onToolExecute({
+        function: selectedTool.function,
+        args: formData,
+        calledBy: 'user',
+        callId: reactory.utils.uuid(),
+      });
     }
     setSelectedTool(null);
     setToolArgSchema(null);
     setToolArgUiSchema(null);
     setToolArgFormData({});
-    setCustomSubmitButton(null);
-    handleToolsMenuClose();
   };
 
   const getToolIcon = (tool) => {    
-    if (tool.function?.icon) { 
-      if (tool.function?.icon.startsWith('http://') || 
-        tool.function?.icon.startsWith('https://') || 
-        tool.function?.icon.startsWith('blob:')) {
-        return <img src={tool.function.icon} alt={tool.function.name} style={{ width: 24, height: 24 }} />;
-      }
-    }
-    return <Icon>{tool.function?.icon ?? 'build'}</Icon>        
-  }
+    const toolName = tool.function?.name?.toLowerCase() || '';
+    
+    // Map tool names to icons
+    if (toolName.includes('search') || toolName.includes('find')) return <Icon fontSize="small">search</Icon>;
+    if (toolName.includes('read') || toolName.includes('file')) return <Icon fontSize="small">description</Icon>;
+    if (toolName.includes('write') || toolName.includes('create')) return <Icon fontSize="small">edit</Icon>;
+    if (toolName.includes('delete') || toolName.includes('remove')) return <Icon fontSize="small">delete</Icon>;
+    if (toolName.includes('send') || toolName.includes('email')) return <Icon fontSize="small">send</Icon>;
+    if (toolName.includes('calculate') || toolName.includes('math')) return <Icon fontSize="small">calculate</Icon>;
+    if (toolName.includes('translate')) return <Icon fontSize="small">translate</Icon>;
+    if (toolName.includes('weather')) return <Icon fontSize="small">wb_sunny</Icon>;
+    if (toolName.includes('time') || toolName.includes('date')) return <Icon fontSize="small">schedule</Icon>;
+    if (toolName.includes('location') || toolName.includes('map')) return <Icon fontSize="small">location_on</Icon>;
+    if (toolName.includes('image') || toolName.includes('photo')) return <Icon fontSize="small">image</Icon>;
+    if (toolName.includes('video')) return <Icon fontSize="small">video_library</Icon>;
+    if (toolName.includes('audio') || toolName.includes('sound')) return <Icon fontSize="small">audiotrack</Icon>;
+    if (toolName.includes('database') || toolName.includes('db')) return <Icon fontSize="small">storage</Icon>;
+    if (toolName.includes('api') || toolName.includes('http')) return <Icon fontSize="small">api</Icon>;
+    if (toolName.includes('code') || toolName.includes('script')) return <Icon fontSize="small">code</Icon>;
+    if (toolName.includes('test') || toolName.includes('validate')) return <Icon fontSize="small">bug_report</Icon>;
+    if (toolName.includes('backup') || toolName.includes('export')) return <Icon fontSize="small">backup</Icon>;
+    if (toolName.includes('import') || toolName.includes('load')) return <Icon fontSize="small">upload</Icon>;
+    
+    // Default tool icon
+    return <Icon fontSize="small">build</Icon>;
+  };
 
   const toolApprovalModes = [
-    { value: 'auto', label: il8n?.t('reactor.client.tools.approval.auto', { defaultValue: 'Auto-Approve' }) },
+    { value: 'auto', label: il8n?.t('reactor.client.tools.approval.auto', { defaultValue: 'Auto' }) },
+    { value: 'manual', label: il8n?.t('reactor.client.tools.approval.manual', { defaultValue: 'Manual' }) },
     { value: 'prompt', label: il8n?.t('reactor.client.tools.approval.prompt', { defaultValue: 'Prompt' }) },
-    { value: 'safe_auto', label: il8n?.t('reactor.client.tools.approval.disabled', { defaultValue: 'Safe Auto' }) },
   ];
-
-  if (!FormEngine) {
-    FormEngine = () => {
-      return <div>{il8n?.t('reactor.client.form.engine.not.found', { defaultValue: 'Form Engine component not found' })}</div>;
-    }
-  }
 
   return (
     <Box sx={{ 
@@ -227,62 +209,8 @@ const ChatHeader = ({
       borderBottom: 1,
       borderColor: 'divider',
     }}>
-      {/* Token Pressure Progress Bar */}
-      {chatState?.tokenPressure !== undefined && (
-        <LinearProgress
-          variant="determinate"
-          value={(chatState.tokenPressure || 0) * 100}
-          color={getTokenPressureColor(chatState.tokenPressure || 0)}
-          sx={{
-            height: 2,
-            borderRadius: 0,
-            '& .MuiLinearProgress-bar': {
-              transition: 'transform 0.3s ease-in-out',
-            },
-          }}
-        />
-      )}
       <Box sx={{ px: 1, py: 0.5 }}>
         <Grid container alignItems="center" spacing={1} wrap="nowrap" sx={{ minHeight: 48 }}>
-        {/* Persona selection */}
-        <Grid item>
-          <Button
-            variant="text"
-            size="small"
-            onClick={handleModelMenuOpen}
-            startIcon={<Avatar src={selectedPersona?.avatar} alt={selectedPersona?.name} sx={{ width: 24, height: 24 }} />}
-            endIcon={<ArrowDropDown fontSize="small" />}
-            sx={{ minWidth: 0, px: 1, py: 0.5, textTransform: 'none' }}
-            title={il8n?.t('reactor.client.persona.select', { defaultValue: 'Select persona' })}
-            disabled={!personas.length}
-          >          
-            {selectedPersona?.name}
-          </Button>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleModelMenuClose}
-            sx={{
-              p: 2,              
-            }}
-            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-            transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          >
-            {personas.length > 0 && enablePersonaSelection === true ? (
-              <PersonaSelector
-                personas={personas}
-                selectedPersona={selectedPersona}
-                onPersonaSelect={handlePersonaSelect}
-                onPersonaDetails={handlePersonaDetailsOpen}
-                Material={Material}
-                toCamelCaseLabel={toCamelCaseLabel}
-                il8n={il8n}
-              />
-            ) : (
-              <MenuItem disabled>No personas available</MenuItem>
-            )}
-          </Menu>
-        </Grid>
         {/* Tools Dropdown Button */}
         <Grid item>
           <Button
@@ -389,92 +317,45 @@ const ChatHeader = ({
       </Grid>
       </Box>
       {/* Tool Parameter Dialog */}
-      <Dialog open={!!selectedTool && !!toolArgSchema} onClose={() => {
-        setSelectedTool(null);
-        setToolArgSchema(null);
-        setToolArgUiSchema(null);
-        setToolArgFormData({});
-        setCustomSubmitButton(null);
-      }} maxWidth="md" fullWidth
-        PaperProps={{
-          sx: {
-            maxHeight: '80vh',
-            display: 'flex',
-            flexDirection: 'column',
-          }
+      <Dialog
+        open={Boolean(selectedTool)}
+        onClose={() => {
+          setSelectedTool(null);
+          setToolArgSchema(null);
+          setToolArgUiSchema(null);
+          setToolArgFormData({});
         }}
+        maxWidth="sm"
+        fullWidth
       >
         <DialogTitle>
-          {selectedTool ? toCamelCaseLabel(selectedTool.function?.name ?? 'Tool') : ''} Parameters
+          {il8n?.t('reactor.client.tools.parameters.title', { defaultValue: 'Tool Parameters' })}: {selectedTool?.function?.name}
         </DialogTitle>
-        <DialogContent
-          sx={{
-            flex: 1,
-            overflow: 'auto',
-            minHeight: 0,
-            maxHeight: 'calc(80vh - 140px)', // Account for title and actions
-            display: 'flex',
-            flexDirection: 'column',
-            '& .MuiFormControl-root': {
-              mb: 2
-            },
-            '& .MuiOutlinedInput-root': {
-              wordBreak: 'break-word',
-              overflowWrap: 'break-word'
-            },
-            '& .MuiTypography-root': {
-              wordBreak: 'break-word',
-              overflowWrap: 'break-word'
-            }
-          }}
-        >
-          {FormEngine && toolArgSchema && (
-            <Box sx={{ flex: 1, overflow: 'auto' }}>
-              <FormEngine
-                formDef={{
-                  id: `tool-args-form-${selectedTool?.function?.name}`,
-                  name: `${selectedTool?.function?.name}Arguments`,
-                  nameSpace: 'reactor-ui-tools',
-                  version: 'v1.0.0',
-                  defaultFormValue: getDefaultFormState(toolArgSchema, toolArgFormData),
-                  schema: toolArgSchema,
-                  uiSchema: toolArgUiSchema,
-                  __complete__: true,
-                }}
-                formData={toolArgFormData}
-                onSubmit={handleToolFormSubmit}
-                onCancel={() => {
-                  setSelectedTool(null);
-                  setToolArgSchema(null);
-                  setToolArgUiSchema(null);
-                  setToolArgFormData({});
-                  setCustomSubmitButton(null);
-                }}                                
-              />
-            </Box>
+        <DialogContent>
+          {toolArgSchema && FormEngine && (
+            <FormEngine
+              schema={toolArgSchema}
+              uiSchema={toolArgUiSchema}
+              formData={toolArgFormData}
+              onSubmit={handleToolFormSubmit}
+              onCancel={() => {
+                setSelectedTool(null);
+                setToolArgSchema(null);
+                setToolArgUiSchema(null);
+                setToolArgFormData({});
+              }}
+              submitButtonText={il8n?.t('reactor.client.tools.execute', { defaultValue: 'Execute Tool' })}
+              cancelButtonText={il8n?.t('reactor.client.tools.cancel', { defaultValue: 'Cancel' })}
+            />
           )}
         </DialogContent>
-        <DialogActions sx={{ justifyContent: 'space-between', px: 3, py: 2 }}>
-          <Button 
-            onClick={() => {
-              setSelectedTool(null);
-              setToolArgSchema(null);
-              setToolArgUiSchema(null);
-              setToolArgFormData({});
-              setCustomSubmitButton(null);
-            }}
-            variant="outlined"
-          >
-            {il8n?.t('reactor.client.tools.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          {customSubmitButton && React.createElement(customSubmitButton, { onClick: () => handleToolFormSubmit(toolArgFormData) })}
-        </DialogActions>
       </Dialog>
+      
       {/* Persona Details Dialog */}
       <PersonaDetailsDialog
         open={personaDetailsDialog.open}
-        onClose={handlePersonaDetailsClose}
         persona={personaDetailsDialog.persona}
+        onClose={handlePersonaDetailsClose}
         Material={Material}
         toCamelCaseLabel={toCamelCaseLabel}
       />

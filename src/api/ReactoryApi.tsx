@@ -34,14 +34,14 @@ import {
   isValidPassword,
   nil,
   nilStr,
-} from '../components/util';
+} from '@reactory/client-core/components/util';
 
-import amq from '../amq';
+import amq from '@reactory/client-core/amq';
 import * as RestApi from './RestApi';
 import GraphQL from '@reactory/client-core/api/graphql';
 import { Theme, Typography } from "@mui/material";
-import icons from '../assets/icons';
-import * as queryString from '../components/utility/query-string';
+import icons from '@reactory/client-core/assets/icons';
+import * as queryString from '@reactory/client-core/components/utility/query-string';
 import humanNumber from 'human-number';
 import humanDate from 'human-date';
 import { withReactory, ReactoryProvider } from './ApiProvider';

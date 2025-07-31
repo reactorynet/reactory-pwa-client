@@ -22,7 +22,7 @@ import { List, ListItemIcon, ListItemText } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import BackIcon from '@mui/icons-material/ArrowBack';
 import PowerSettingIcon from '@mui/icons-material/PowerSettingsNew';
-import { getAvatar } from '../../util';
+import { getAvatar } from '@reactory/client-core/components/util';
 import moment from 'moment';
 import ReactoryApi, { withReactory, ReactoryApiEventNames } from '@reactory/client-core/api';
 import license from '@reactory/client-core/license';

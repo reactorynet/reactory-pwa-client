@@ -34,3 +34,6 @@ yarn.lock
 !/certificates/readme.md
 
 *.tgz
+
+*storybook.log
+storybook-static

@@ -2,7 +2,7 @@
 /* eslint-disable */
 import React, { useCallback } from 'react';
 import Reactory from '@reactory/reactory-core';
-import SchemaForm, { ISchemaForm } from '../form/components/SchemaForm';
+import SchemaForm, { ISchemaForm } from '@reactory/client-core/components/reactory/form/components/SchemaForm';
 
 import { find, template, isArray, isNil, isString, isEmpty, throttle, filter } from 'lodash';
 import { useNavigate, useLocation, useParams, Params } from 'react-router';
@@ -18,8 +18,8 @@ import {
   Breakpoint
 } from '@mui/material';
 
-import IntersectionVisible from '../../utility/IntersectionVisible';
-import ErrorList from '../form/components/ErrorList';
+import IntersectionVisible from '@reactory/client-core/components/utility/IntersectionVisible';
+import ErrorList from '@reactory/client-core/components/reactory/form/components/ErrorList';
 
 import {
   DefaultComponentMap,

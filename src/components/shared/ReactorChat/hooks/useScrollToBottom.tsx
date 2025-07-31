@@ -1,6 +1,6 @@
 import { Tooltip } from '@mui/material';
 import { ChatState, IAIPersona, UXChatMessage } from '../types';
-import useContentRender from './useContentRender';
+import useContentRender from '../../hooks/useContentRender';
 
 const ChatList = (props: {
   reactory: Reactory.Client.ReactorySDK,
