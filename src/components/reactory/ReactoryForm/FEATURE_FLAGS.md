@@ -30,6 +30,7 @@ export const REACTORY_FORM_FEATURE_FLAGS = {
   REACTORY_FORM_COLLABORATION: 'REACTORY_FORM_COLLABORATION',
   REACTORY_FORM_VALIDATION_V2: 'REACTORY_FORM_VALIDATION_V2',
   REACTORY_FORM_BUILDER: 'REACTORY_FORM_BUILDER',
+  REACTORY_FORM_EDITOR: 'REACTORY_FORM_EDITOR',
   
   // Phase 5: Developer Experience
   REACTORY_FORM_TESTING_V2: 'REACTORY_FORM_TESTING_V2',
@@ -50,25 +51,78 @@ export type ReactoryFormFeatureFlag = typeof REACTORY_FORM_FEATURE_FLAGS[keyof t
 ```typescript
 // hooks/useFeatureFlag.ts
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
+import { ApiFeatureFlagProvider, MemoryFeatureFlagProvider } from '@zepz/feature-flags-ts';
+
+// Create provider instance
+const createProvider = () => {
+  if (process.env.REACT_APP_FEATURE_FLAGS_API_URL) {
+    return new ApiFeatureFlagProvider({
+      baseUrl: process.env.REACT_APP_FEATURE_FLAGS_API_URL,
+      apiKey: process.env.REACT_APP_FEATURE_FLAGS_API_KEY,
+      timeout: 5000,
+      cacheEnabled: true,
+      cacheTTL: 30000
+    });
+  } else {
+    // Fallback to memory provider for development
+    return new MemoryFeatureFlagProvider();
+  }
+};
 
 export const useFeatureFlag = (flag: ReactoryFormFeatureFlag): boolean => {
   const reactory = useReactory();
-  
-  // Check environment variable
-  const envFlag = process.env[flag];
-  if (envFlag === 'true') return true;
-  if (envFlag === 'false') return false;
-  
-  // Check Reactory configuration
-  const configFlag = reactory.config?.featureFlags?.[flag];
-  if (configFlag !== undefined) return configFlag;
-  
-  // Check user preferences
-  const userFlag = reactory.user?.preferences?.featureFlags?.[flag];
-  if (userFlag !== undefined) return userFlag;
-  
-  // Default to false for new features
-  return false;
+  const [provider] = useState(() => createProvider());
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    const initializeProvider = async () => {
+      try {
+        await provider.initialize();
+        setInitialized(true);
+      } catch (error) {
+        console.error('Failed to initialize feature flag provider:', error);
+        setInitialized(true); // Continue with disabled state
+      }
+    };
+
+    if (!initialized) {
+      initializeProvider();
+    }
+  }, [provider, initialized]);
+
+  useEffect(() => {
+    if (initialized) {
+      const checkFlag = async () => {
+        try {
+          const enabled = provider.isFeatureEnabled(flag);
+          setIsEnabled(enabled);
+        } catch (error) {
+          console.error(`Failed to check feature flag ${flag}:`, error);
+          setIsEnabled(false);
+        }
+      };
+
+      checkFlag();
+    }
+  }, [flag, provider, initialized]);
+
+  // Fallback to environment variables and Reactory config
+  if (!initialized) {
+    const envFlag = process.env[flag];
+    if (envFlag === 'true') return true;
+    if (envFlag === 'false') return false;
+    
+    const configFlag = reactory.config?.featureFlags?.[flag];
+    if (configFlag !== undefined) return configFlag;
+    
+    const userFlag = reactory.user?.preferences?.featureFlags?.[flag];
+    if (userFlag !== undefined) return userFlag;
+    
+    return false;
+  }
+
+  return isEnabled;
 };
 
 // Hook for multiple flags
@@ -192,6 +246,93 @@ const useEnhancedPerformance = () => {
     memoization,
     lazyLoading,
     performanceMonitoring,
+  };
+};
+```
+
+### Form Editor Component
+
+```typescript
+// components/FormEditor/FormEditor.tsx
+import { useFeatureFlag } from '../hooks/useFeatureFlag';
+import { REACTORY_FORM_EDITOR } from '../FEATURE_FLAGS';
+
+export const FormEditor = (props: FormEditorProps) => {
+  const isFormEditorEnabled = useFeatureFlag(REACTORY_FORM_EDITOR);
+  
+  if (isFormEditorEnabled) {
+    return <EnhancedFormEditor {...props} />;
+  } else {
+    return <LegacyFormEditor {...props} />;
+  }
+};
+
+const EnhancedFormEditor = (props: FormEditorProps) => {
+  const {
+    schemaEditor,
+    uiSchemaEditor,
+    validationEditor,
+    actionsEditor,
+    preview,
+    importExport,
+    templates,
+    collaboration,
+    versionControl,
+    testing,
+    deployment,
+    analytics,
+    accessibility
+  } = useFormEditorFeatures();
+
+  return (
+    <FormEditorLayout>
+      <SchemaEditor {...schemaEditor} />
+      <UISchemaEditor {...uiSchemaEditor} />
+      <ValidationEditor {...validationEditor} />
+      <ActionsEditor {...actionsEditor} />
+      <FormPreview {...preview} />
+      <ImportExport {...importExport} />
+      <TemplateManager {...templates} />
+      <CollaborationTools {...collaboration} />
+      <VersionControl {...versionControl} />
+      <FormTesting {...testing} />
+      <DeploymentPanel {...deployment} />
+      <AnalyticsPanel {...analytics} />
+      <AccessibilityChecker {...accessibility} />
+    </FormEditorLayout>
+  );
+};
+
+// hooks/useFormEditorFeatures.ts
+export const useFormEditorFeatures = () => {
+  const schemaEditor = useSchemaEditor();
+  const uiSchemaEditor = useUISchemaEditor();
+  const validationEditor = useValidationEditor();
+  const actionsEditor = useActionsEditor();
+  const preview = useFormPreview();
+  const importExport = useImportExport();
+  const templates = useTemplateManager();
+  const collaboration = useCollaborationTools();
+  const versionControl = useVersionControl();
+  const testing = useFormTesting();
+  const deployment = useDeploymentPanel();
+  const analytics = useAnalyticsPanel();
+  const accessibility = useAccessibilityChecker();
+
+  return {
+    schemaEditor,
+    uiSchemaEditor,
+    validationEditor,
+    actionsEditor,
+    preview,
+    importExport,
+    templates,
+    collaboration,
+    versionControl,
+    testing,
+    deployment,
+    analytics,
+    accessibility
   };
 };
 ```

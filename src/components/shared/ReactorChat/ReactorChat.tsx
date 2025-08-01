@@ -1,6 +1,7 @@
 import { useReactory } from "@reactory/client-core/api";
 import usePersonas from './hooks/usePersonas';
 import useChatFactory from './hooks/useChatFactory';
+import useStreamingChatFactory from './hooks/useStreamingChatFactory';
 import ChatList from './hooks/useScrollToBottom';
 import useMacros from './hooks/useMacros';
 import { useEffect, useRef, useMemo, useCallback } from 'react';
@@ -11,7 +12,8 @@ import {
   IProps,
   UXChatMessage,
   MacroToolDefinition,
-  ToolApprovalMode
+  ToolApprovalMode,
+  ChatState
 } from './types';
 import { on } from "process";
 import ChatHeader from './ChatHeader';
@@ -93,6 +95,26 @@ export default (props) => {
     }
   }, []);
 
+  // Streaming toggle state
+  const [streamingEnabled, setStreamingEnabled] = useState<boolean>(false);
+
+  // Non-streaming chat factory
+  const nonStreamingChatFactory = useChatFactory({
+    reactory,
+    persona: selectedPersona,
+    protocol: 'graphql',
+  });
+
+  // Streaming chat factory  
+  const streamingChatFactory = useStreamingChatFactory({
+    reactory,
+    persona: selectedPersona,
+    protocol: 'sse',
+    onMessage,
+    onError,
+  });
+
+  // Use the appropriate chat factory based on streaming toggle
   const {
     chatState,
     busy,
@@ -105,12 +127,15 @@ export default (props) => {
     setToolApprovalMode,
     chats,
     setChats,
-    deleteChat
-  } = useChatFactory({
-    reactory,
-    persona: selectedPersona,
-    protocol: 'graphql',
-  });
+    deleteChat,
+    // Streaming-specific properties (will be undefined for non-streaming)
+    isStreaming = false,
+    currentStreamingMessage = '',
+  } = streamingEnabled ? streamingChatFactory : {
+    ...nonStreamingChatFactory,
+    isStreaming: false,
+    currentStreamingMessage: '',
+  };
 
   const {
     findMacroByAlias,
@@ -164,61 +189,64 @@ export default (props) => {
 
   // Memoize the filtered messages to prevent unnecessary re-renders
   const processedMessages = useMemo(() => {
-    if (!chatState?.history) return [];
-
-    // Debug logging: check what roles are coming from backend
-    console.log('ReactorChat: Raw history from backend:', chatState.history.map(msg => ({
-      id: msg.id,
-      role: msg.role,
-      content: typeof msg.content === 'string' ? msg.content.substring(0, 100) : msg.content
-    })));
+    if (!chatState?.history) {
+      // If streaming and we have a partial message, show it
+      if (isStreaming && currentStreamingMessage) {
+        return [{
+          id: 'streaming-temp',
+          timestamp: new Date(),
+          role: 'assistant',
+          content: currentStreamingMessage,
+          sessionId: chatState?.id,
+          isStreaming: true, // Flag to identify streaming message
+        } as UXChatMessage];
+      }
+      return [];
+    }
 
     const newMessages = chatState.history.map((message: UXChatMessage) => ({
       ...message,
       id: message.id || reactory.utils.uuid(),
-      timestamp: new Date(),
-      // @ts-ignore
-      role: message.role || 'assistant'
-    })) as UXChatMessage[];
+      timestamp: message.timestamp || new Date(),
+    }));
 
     // filter out any system messages and tool result messages
     const filteredMessages = newMessages.filter((msg) => {
       // Filter out system messages
       if (msg.role === 'system') return false;
-
+      
       // Filter out tool result messages (role 'tool')
-      if (msg.role === 'tool') {
-        console.log('ReactorChat: Filtering out tool message:', msg.content?.substring(0, 100));
-        return false;
-      }
-
+      if (msg.role === 'tool') return false;
+      
       // Filter out messages that look like tool execution results but have wrong role
-      if (msg.content && typeof msg.content === 'string' &&
-        msg.content.startsWith('Tool execution results:')) {
-        console.warn('Found tool result message with incorrect role:', msg.role, msg.content.substring(0, 50));
-        return false;
-      }
-
-      // Check for consolidated tool results pattern
-      if (msg.content && typeof msg.content === 'string' &&
+      if (msg.role === 'assistant' && msg.content && typeof msg.content === 'string' && 
         (msg.content.includes('Tool 1 (') || msg.content.includes('Multiple tools executed successfully:'))) {
-        console.warn('Found consolidated tool result with role:', msg.role, msg.content.substring(0, 100));
         return false;
       }
-
+      
       return true;
     });
 
     console.log('ReactorChat: Filtered messages:', filteredMessages.map(msg => ({
       id: msg.id,
       role: msg.role,
-      content: typeof msg.content === 'string' ? msg.content.substring(0, 50) : msg.content
+      content: typeof msg.content === 'string' ? msg.content.substring(0, 50) + '...' : msg.content
     })));
 
-    return filteredMessages;
-  }, [chatState?.history, reactory.utils.uuid]);
+    // Add streaming message if active
+    if (isStreaming && currentStreamingMessage) {
+      filteredMessages.push({
+        id: 'streaming-temp',
+        timestamp: new Date(),
+        role: 'assistant',
+        content: currentStreamingMessage,
+        sessionId: chatState?.id,
+        isStreaming: true, // Flag to identify streaming message
+      } as UXChatMessage);
+    }
 
-  // Update messages only when processedMessages changes
+    return filteredMessages;
+  }, [chatState?.history, reactory.utils.uuid, isStreaming, currentStreamingMessage, chatState?.id]);  // Update messages only when processedMessages changes
   React.useEffect(() => {
     setMessages(processedMessages);
   }, [processedMessages]);
@@ -333,7 +361,7 @@ export default (props) => {
     (async () => {
       reactory.log(`ReactorChat: Refreshing chat list for persona: ${selectedPersona?.name || 'none'}`);
       const chatList = await listChats({});
-      setChats(chatList);
+      setChats(chatList as ChatState[]);
     })();
   }, [selectedPersona?.id, busy, listChats, setChats]);
 
@@ -449,6 +477,18 @@ export default (props) => {
   const handleSendMessage = useCallback((message: string) => {
     sendMessage(message, chatState?.id);
   }, [sendMessage, chatState?.id]);
+
+  const handleStreamingToggle = useCallback((enabled: boolean) => {
+    setStreamingEnabled(enabled);
+    reactory.info(`Streaming mode ${enabled ? 'enabled' : 'disabled'}`);
+    
+    // Show user feedback
+    if (enabled) {
+      reactory.log('Streaming Enabled: Messages will now stream in real-time as they are generated');
+    } else {
+      reactory.log('Streaming Disabled: Messages will be delivered after complete generation');
+    }
+  }, [reactory]);
 
   const onToolExecute = useCallback(async (toolCall: MacroToolDefinition & { args?: any, calledBy?: string, callId?: string }) => {
     if (!toolCall.function) return;
@@ -744,6 +784,45 @@ export default (props) => {
                 {il8n?.t('reactor.client.tools.approval.manual', { defaultValue: 'Manual' })}
               </Typography>
             </Box>
+          </Box>
+
+          {/* Streaming Mode Toggle */}
+          <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+              {il8n?.t('reactor.client.streaming.mode', { defaultValue: 'Streaming Mode' })}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                {il8n?.t('reactor.client.streaming.standard', { defaultValue: 'Standard' })}
+              </Typography>
+              <Switch
+                checked={streamingEnabled}
+                onChange={(e) => handleStreamingToggle(e.target.checked)}
+                size="small"
+                color="primary"
+              />
+              <Typography variant="body2" color="text.secondary">
+                {il8n?.t('reactor.client.streaming.realtime', { defaultValue: 'Real-time' })}
+              </Typography>
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              {streamingEnabled 
+                ? il8n?.t('reactor.client.streaming.description.enabled', { 
+                    defaultValue: 'Messages stream in real-time as they are generated' 
+                  })
+                : il8n?.t('reactor.client.streaming.description.disabled', { 
+                    defaultValue: 'Messages are delivered after complete generation' 
+                  })
+              }
+            </Typography>
+            {isStreaming && (
+              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LinearProgress sx={{ flexGrow: 1, height: 2 }} />
+                <Typography variant="caption" color="primary">
+                  {il8n?.t('reactor.client.streaming.active', { defaultValue: 'Streaming...' })}
+                </Typography>
+              </Box>
+            )}
           </Box>
 
           {/* Tools Grid */}
@@ -1192,8 +1271,9 @@ export default (props) => {
         onToolsToggle={handleToolsPanelToggle}
         onHistoryToggle={handleChatHistoryPanelToggle}
         onFileUpload={React.useCallback(async (file: File) => {
-          if (chatState?.id) {
-            await uploadFile && uploadFile(file, chatState.id);
+          // Let uploadFile handle session initialization if needed
+          if (uploadFile) {
+            await uploadFile(file, chatState?.id || '');
           }
         }, [uploadFile, chatState?.id])}
       />

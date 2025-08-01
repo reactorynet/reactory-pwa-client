@@ -222,7 +222,7 @@ This document outlines a systematic approach to upgrading the ReactoryForm compo
 - Feature flag: `REACTORY_FORM_ACCESSIBILITY_V2`
 - Fallback to existing accessibility
 
-## Phase 4: Advanced Features (Weeks 13-16)
+## Phase 4: Advanced Features (Weeks 13-20)
 
 ### 4.1 Real-time Collaboration
 **Status**: 🔴 Not Started  
@@ -290,7 +290,47 @@ This document outlines a systematic approach to upgrading the ReactoryForm compo
 - Feature flag: `REACTORY_FORM_BUILDER`
 - Disable form builder features
 
-## Phase 5: Developer Experience (Weeks 17-20)
+### 4.4 Form Editor Component
+**Status**: 🔴 Not Started  
+**Priority**: Medium  
+**Estimated Time**: 6 weeks
+
+#### Tasks
+- [ ] Create FormEditor component architecture
+- [ ] Implement visual form definition editor
+- [ ] Add schema property editor
+- [ ] Add UI schema editor
+- [ ] Add form validation editor
+- [ ] Add form actions editor
+- [ ] Implement real-time preview
+- [ ] Add form definition import/export
+- [ ] Add form template management
+- [ ] Add collaborative editing features
+- [ ] Implement version control for form definitions
+- [ ] Add form testing within editor
+- [ ] Add form deployment functionality
+- [ ] Implement form analytics integration
+- [ ] Add form accessibility checker
+- [ ] Create form editor documentation
+
+#### Success Criteria
+- Visual form editor fully functional
+- Real-time preview working
+- Import/export functionality complete
+- Template system operational
+- Collaborative editing working
+- Version control implemented
+- Form testing integrated
+- Deployment pipeline working
+- Analytics tracking functional
+- Accessibility compliance verified
+
+#### Rollback Strategy
+- Feature flag: `REACTORY_FORM_EDITOR`
+- Disable form editor features
+- Fallback to manual form definition editing
+
+## Phase 5: Developer Experience (Weeks 21-24)
 
 ### 5.1 Testing Infrastructure
 **Status**: 🔴 Not Started  
@@ -358,7 +398,7 @@ This document outlines a systematic approach to upgrading the ReactoryForm compo
 - Feature flag: `REACTORY_FORM_DEV_TOOLS`
 - Disable developer tools
 
-## Phase 6: Architecture Improvements (Weeks 21-24)
+## Phase 6: Architecture Improvements (Weeks 25-28)
 
 ### 6.1 Hook Simplification
 **Status**: 🔴 Not Started  

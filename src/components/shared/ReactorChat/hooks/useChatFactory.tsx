@@ -840,6 +840,26 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const setToolApprovalMode = async (mode: ToolApprovalMode) => {
     setBusy(true);
     try {
+      // Initialize chat session on first tool approval mode change if not already initialized
+      let sessionId = chatState.id;
+      
+      if (!isInitialized && persona?.id) {
+        reactory.info(`ChatFactory: Initializing chat session on tool approval mode change with persona ${persona.id}`);
+        try {
+          const newSessionId = await initializeChat(persona);
+          setIsInitialized(true);
+          sessionId = newSessionId; // Use the session ID from initialization
+        } catch (error) {
+          onError(error);
+          setBusy(false);
+          return;
+        }
+      }
+
+      if (!sessionId) {
+        throw new Error('No active chat session available');
+      }
+
       const response = await reactory.graphqlMutation<{
         ReactorSetChatToolApprovalMode: ChatState
       },
@@ -852,7 +872,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             }
           }
         `,
-          { mode, chatSessionId: chatState.id }
+          { mode, chatSessionId: sessionId }
         );
       if (response?.data?.ReactorSetChatToolApprovalMode) {
         setChatState((prevState) => ({

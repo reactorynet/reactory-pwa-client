@@ -300,6 +300,40 @@ This document tracks the progress of the ReactoryForm upgrade plan. Update this 
 
 ---
 
+#### 4.4 Form Editor Component
+- **Status**: 🔴 Not Started
+- **Progress**: 0%
+- **Assignee**: [TBD]
+- **Start Date**: [TBD]
+- **End Date**: [TBD]
+
+**Tasks Completed:**
+- [ ] Create FormEditor component architecture
+- [ ] Implement visual form definition editor
+- [ ] Add schema property editor
+- [ ] Add UI schema editor
+- [ ] Add form validation editor
+- [ ] Add form actions editor
+- [ ] Implement real-time preview
+- [ ] Add form definition import/export
+- [ ] Add form template management
+- [ ] Add collaborative editing features
+- [ ] Implement version control for form definitions
+- [ ] Add form testing within editor
+- [ ] Add form deployment functionality
+- [ ] Implement form analytics integration
+- [ ] Add form accessibility checker
+- [ ] Create form editor documentation
+
+**Blockers:**
+- None currently
+
+**Notes:**
+- Priority: Medium
+- Estimated time: 6 weeks
+
+---
+
 ### Phase 5: Developer Experience (Weeks 17-20)
 
 #### 5.1 Testing Infrastructure
