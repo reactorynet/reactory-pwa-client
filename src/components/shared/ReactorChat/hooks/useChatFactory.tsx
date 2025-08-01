@@ -310,6 +310,22 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         return;
       }
 
+      // Initialize chat session on first message if not already initialized
+      let sessionId = chatState.id || chatSessionId;
+      
+      if (!isInitialized && persona?.id) {
+        reactory.info(`ChatFactory: Initializing chat session on first message with persona ${persona.id}`);
+        try {
+          const newSessionId = await initializeChat(persona);
+          setIsInitialized(true);
+          sessionId = newSessionId; // Use the session ID from initialization
+        } catch (error) {
+          onError(error);
+          setBusy(false);
+          return;
+        }
+      }
+
       // check if the message is a macro execution by the user:
       if (message.startsWith("/@")) {
         // strip the contol switch from the message
@@ -343,12 +359,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
 
       try {
+        reactory.info(`ChatFactory: Sending message with sessionId: ${sessionId}, personaId: ${persona.id}`);
+        
         const response = await reactory.graphqlMutation<{ ReactorSendMessage: ReactorSendMessageResponse }, { message: SendMesageInput }>(SEND_MESSAGE_MUTATION,
           {
             message: {
               message: message,
               personaId: persona.id,
-              chatSessionId
+              chatSessionId: sessionId
             }
           });
 
@@ -440,6 +458,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const [chatState, setChatState] = React.useState<ChatState>(getInitialChatState());
   const [busy, setBusy] = React.useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = React.useState<boolean>(false);
 
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
@@ -510,7 +529,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       }
     });
     
-    reactory.graphqlMutation<{ ReactorStartChatSession: Partial<ChatState> }, { initSession: ReactorInitSession }>(INITIALIZE_CHAT_MUTATION,
+    return reactory.graphqlMutation<{ ReactorStartChatSession: Partial<ChatState> }, { initSession: ReactorInitSession }>(INITIALIZE_CHAT_MUTATION,
       {
         initSession: {
           personaId: persona.id,
@@ -529,6 +548,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         if (response?.data?.ReactorStartChatSession) {
           const chatState = response.data.ReactorStartChatSession;
           if (chatState.id) {
+            reactory.info(`ChatFactory: Initialized chat session with ID: ${chatState.id}`);
             setChatState((prevState) => ({
               ...prevState,
               id: chatState.id,
@@ -536,26 +556,30 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
               macros: chatState.macros,
               tools: chatState.tools,
             }));
+            return chatState.id; // Return the session ID
+          } else {
+            reactory.error(`ChatFactory: No session ID in initialization response`);
+            throw new Error("No session ID in initialization response");
           }
         } else {
+          reactory.error(`ChatFactory: No response from server during initialization`);
           throw new Error("No response from server");
         }
       }).catch((error) => {
         onError(error);
+        throw error; // Re-throw to be caught by the caller
       });
   }
 
   useEffect(() => {
     let isMounted = true;
 
-    // initialize the chat state with the persona
+    // Only set up initial chat state, don't initialize session until first message
     if (persona?.id) {
-      reactory.info(`ChatFactory: Initializing chat state with persona ${persona.id}`);
+      reactory.info(`ChatFactory: Setting up initial chat state with persona ${persona.id}`);
       const initialState = getInitialChatState();
       setChatState(initialState);
-      void initializeChat(initialState.persona).catch((error) => {
-        if (isMounted) onError(error);
-      });
+      setIsInitialized(false); // Reset initialization flag when persona changes
     }
 
     return () => {
@@ -651,6 +675,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             history: [...prevState.history, message as any],
             updated: new Date(),
           }));
+          
+          // Mark as initialized since we're creating a new session
+          setIsInitialized(true);
         }
       } else {
         throw new Error("No response from server");
@@ -736,9 +763,25 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const uploadFile = async (file: File, chatSessionId: string) => {
     setBusy(true);
     try {
+      // Initialize chat session on first file upload if not already initialized
+      let sessionId = chatState.id || chatSessionId;
+      
+      if (!isInitialized && persona?.id) {
+        reactory.info(`ChatFactory: Initializing chat session on first file upload with persona ${persona.id}`);
+        try {
+          const newSessionId = await initializeChat(persona);
+          setIsInitialized(true);
+          sessionId = newSessionId; // Use the session ID from initialization
+        } catch (error) {
+          onError(error);
+          setBusy(false);
+          return;
+        }
+      }
+      
       const response = await reactory.graphqlMutation<any, { file: File, chatSessionId: string }>(
         UPLOAD_FILE_MUTATION,
-        { file, chatSessionId }
+        { file, chatSessionId: sessionId }
       );
       const result = response?.data?.ReactorAttachFile;
       if (result) {
@@ -759,9 +802,25 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const sendAudio = async (audio: File | Blob, chatSessionId: string) => {
     setBusy(true);
     try {
+      // Initialize chat session on first audio message if not already initialized
+      let sessionId = chatState.id || chatSessionId;
+      
+      if (!isInitialized && persona?.id) {
+        reactory.info(`ChatFactory: Initializing chat session on first audio message with persona ${persona.id}`);
+        try {
+          const newSessionId = await initializeChat(persona);
+          setIsInitialized(true);
+          sessionId = newSessionId; // Use the session ID from initialization
+        } catch (error) {
+          onError(error);
+          setBusy(false);
+          return;
+        }
+      }
+      
       const response = await reactory.graphqlMutation<any, { audio: File | Blob, chatSessionId: string }>(
         SEND_AUDIO_MUTATION,
-        { audio, chatSessionId }
+        { audio, chatSessionId: sessionId }
       );
       const result = response?.data?.ReactorAskQuestionAudio;
       if (result) {
@@ -842,6 +901,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             vars: result.vars ?? {},
             updated: new Date(),
           }));
+          
+          // Mark as initialized since we're loading an existing session
+          setIsInitialized(true);
         }
       }
     } catch (error) {

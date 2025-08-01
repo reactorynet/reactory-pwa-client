@@ -23,6 +23,9 @@ const ChatList = (props: {
     React: Reactory.React,
     Material: Reactory.Client.Web.IMaterialModule
   }>(["react.React", "material-ui.Material"]);
+  
+  // Memoize the renderContent function to prevent unnecessary re-renders
+  const memoizedRenderContent = React.useCallback(renderContent, [renderContent]);
 
   const user = reactory.getUser()?.loggedIn?.user;
   const theme: Reactory.UX.IReactoryTheme = reactory.getTheme();
@@ -74,7 +77,7 @@ const ChatList = (props: {
 
   React.useEffect(() => {
     scrollToBottom();
-  }, [props.messages]);
+  }, [props.messages.length]); // Only trigger on length change, not content change
 
 
   const renderComponent = (message: UXChatMessage) => {
@@ -283,7 +286,7 @@ const ChatList = (props: {
     >
       <List className="chat-container">
         {messages.map((message, idx) => (
-          <React.Fragment key={idx}>
+          <React.Fragment key={message.id || idx}>
             <ListItem
               alignItems="flex-start"
               sx={{
@@ -312,7 +315,7 @@ const ChatList = (props: {
                   </Grid>
                   <Grid item xs>
                     <Typography variant="body1">
-                      {renderContent(getMessageText(message))}
+                      {memoizedRenderContent(getMessageText(message))}
                     </Typography>
                     {/* Render tool errors if present */}
                     {Array.isArray(message.tool_errors) && message.tool_errors.length > 0 && (

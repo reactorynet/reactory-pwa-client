@@ -3,7 +3,7 @@ import usePersonas from './hooks/usePersonas';
 import useChatFactory from './hooks/useChatFactory';
 import ChatList from './hooks/useScrollToBottom';
 import useMacros from './hooks/useMacros';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import ChatHistoryItem from './ChatHistoryItem';
 import {
   IAIPersona,
@@ -17,6 +17,7 @@ import { on } from "process";
 import ChatHeader from './ChatHeader';
 import ChatHistoryDrawer from './ChatHistoryDrawer';
 import PersonaCard from './PersonaCard';
+import ChatInput from './components/ChatInput';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default (props) => {
@@ -46,9 +47,9 @@ export default (props) => {
     Material: Reactory.Client.Web.IMaterialModule
   }>(["core.FullScreenModal", "material-ui.Material", "react.React"])
 
-  const { useState } = React;
+  const { useState, useMemo, useCallback } = React;
 
-  const onMessage = (message: UXChatMessage) => {
+  const onMessage = useCallback((message: UXChatMessage) => {
     if (message.content === undefined || message.content === null) return;
     const newMessage: UXChatMessage = {
       ...message,
@@ -57,11 +58,11 @@ export default (props) => {
     newMessage.id ??= reactory.utils.uuid();
     newMessage.timestamp ??= new Date();
     newMessage.role ??= 'assistant';
-  }
+  }, [reactory.utils.uuid]);
 
-  const onError = (error: Error) => {
+  const onError = useCallback((error: Error) => {
 
-  };
+  }, []);
 
   const {
     personas,
@@ -77,7 +78,7 @@ export default (props) => {
     intialPersonaId: props?.personaId || null,
   });
 
-  const scrollToBottom = (message: any) => {
+  const scrollToBottom = useCallback((message: any) => {
     const doScroll = () => {
       const chatContainer = document.querySelector('.chat-container');
       if (chatContainer) {
@@ -90,7 +91,7 @@ export default (props) => {
     } else {
       doScroll();
     }
-  }
+  }, []);
 
   const {
     chatState,
@@ -127,7 +128,6 @@ export default (props) => {
     Button,
     Icon,
     IconButton,
-    TextField,
     Grid,
     Typography,
     Box,
@@ -153,75 +153,84 @@ export default (props) => {
   } = Material.MaterialIcons;
 
   // Helper to get color based on token pressure
-  const getTokenPressureColor = (pressure: number) => {
+  const getTokenPressureColor = useCallback((pressure: number) => {
     if (pressure <= 0.25) return 'success'; // Green
     if (pressure <= 0.5) return 'warning'; // Yellow
     if (pressure <= 0.75) return 'error'; // Orange (using error color)
     return 'error'; // Red
-  };
+  }, []);
 
   const [messages, setMessages] = useState<UXChatMessage[]>([]);
 
+  // Memoize the filtered messages to prevent unnecessary re-renders
+  const processedMessages = useMemo(() => {
+    if (!chatState?.history) return [];
+
+    // Debug logging: check what roles are coming from backend
+    console.log('ReactorChat: Raw history from backend:', chatState.history.map(msg => ({
+      id: msg.id,
+      role: msg.role,
+      content: typeof msg.content === 'string' ? msg.content.substring(0, 100) : msg.content
+    })));
+
+    const newMessages = chatState.history.map((message: UXChatMessage) => ({
+      ...message,
+      id: message.id || reactory.utils.uuid(),
+      timestamp: new Date(),
+      // @ts-ignore
+      role: message.role || 'assistant'
+    })) as UXChatMessage[];
+
+    // filter out any system messages and tool result messages
+    const filteredMessages = newMessages.filter((msg) => {
+      // Filter out system messages
+      if (msg.role === 'system') return false;
+
+      // Filter out tool result messages (role 'tool')
+      if (msg.role === 'tool') {
+        console.log('ReactorChat: Filtering out tool message:', msg.content?.substring(0, 100));
+        return false;
+      }
+
+      // Filter out messages that look like tool execution results but have wrong role
+      if (msg.content && typeof msg.content === 'string' &&
+        msg.content.startsWith('Tool execution results:')) {
+        console.warn('Found tool result message with incorrect role:', msg.role, msg.content.substring(0, 50));
+        return false;
+      }
+
+      // Check for consolidated tool results pattern
+      if (msg.content && typeof msg.content === 'string' &&
+        (msg.content.includes('Tool 1 (') || msg.content.includes('Multiple tools executed successfully:'))) {
+        console.warn('Found consolidated tool result with role:', msg.role, msg.content.substring(0, 100));
+        return false;
+      }
+
+      return true;
+    });
+
+    console.log('ReactorChat: Filtered messages:', filteredMessages.map(msg => ({
+      id: msg.id,
+      role: msg.role,
+      content: typeof msg.content === 'string' ? msg.content.substring(0, 50) : msg.content
+    })));
+
+    return filteredMessages;
+  }, [chatState?.history, reactory.utils.uuid]);
+
+  // Update messages only when processedMessages changes
   React.useEffect(() => {
-    scrollToBottom(messages[messages.length - 1]);
-  }, [messages]);
+    setMessages(processedMessages);
+  }, [processedMessages]);
 
+  // Only scroll when messages actually change
   React.useEffect(() => {
-    if (chatState?.history) {
-      // Debug logging: check what roles are coming from backend
-      console.log('ReactorChat: Raw history from backend:', chatState.history.map(msg => ({
-        id: msg.id,
-        role: msg.role,
-        content: typeof msg.content === 'string' ? msg.content.substring(0, 100) : msg.content
-      })));
-
-      const newMessages = chatState.history.map((message: UXChatMessage) => ({
-        ...message,
-        id: message.id || reactory.utils.uuid(),
-        timestamp: new Date(),
-        // @ts-ignore
-        role: message.role || 'assistant'
-      })) as UXChatMessage[];
-
-      // filter out any system messages and tool result messages
-      const filteredMessages = newMessages.filter((msg) => {
-        // Filter out system messages
-        if (msg.role === 'system') return false;
-
-        // Filter out tool result messages (role 'tool')
-        if (msg.role === 'tool') {
-          console.log('ReactorChat: Filtering out tool message:', msg.content?.substring(0, 100));
-          return false;
-        }
-
-        // Filter out messages that look like tool execution results but have wrong role
-        if (msg.content && typeof msg.content === 'string' &&
-          msg.content.startsWith('Tool execution results:')) {
-          console.warn('Found tool result message with incorrect role:', msg.role, msg.content.substring(0, 50));
-          return false;
-        }
-
-        // Check for consolidated tool results pattern
-        if (msg.content && typeof msg.content === 'string' &&
-          (msg.content.includes('Tool 1 (') || msg.content.includes('Multiple tools executed successfully:'))) {
-          console.warn('Found consolidated tool result with role:', msg.role, msg.content.substring(0, 100));
-          return false;
-        }
-
-        return true;
-      });
-
-      console.log('ReactorChat: Filtered messages:', filteredMessages.map(msg => ({
-        id: msg.id,
-        role: msg.role,
-        content: typeof msg.content === 'string' ? msg.content.substring(0, 50) : msg.content
-      })));
-
-      setMessages(filteredMessages);
+    if (messages.length > 0) {
+      scrollToBottom(messages[messages.length - 1]);
     }
-  }, [chatState?.history]);
+  }, [messages.length, scrollToBottom]);
 
-  const [userInput, setUserInput] = useState<string>('');
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [personaPanelOpen, setPersonaPanelOpen] = useState<boolean>(false);
   const [toolsPanelOpen, setToolsPanelOpen] = useState<boolean>(false);
@@ -276,7 +285,7 @@ export default (props) => {
         selectPersona(found.id);
       }
     }
-  }, [personas, queryParams.personaId, selectedPersona?.id]);
+  }, [personas, queryParams.personaId, selectedPersona?.id, selectPersona]);
 
   // Optionally, load chat session if sessionId is present
   React.useEffect(() => {
@@ -300,7 +309,7 @@ export default (props) => {
       reactory.log(`ReactorChat: Loading chat from URL param: ${queryParams.sessionId}`);
       loadChat(queryParams.sessionId);
     }
-  }, [queryParams.sessionId, chatState?.id, busy]);
+  }, [queryParams.sessionId, chatState?.id, busy, loadChat]);
 
   useEffect(() => {
     console.log('ReactorChat: Chat list refresh useEffect triggered', {
@@ -326,19 +335,19 @@ export default (props) => {
       const chatList = await listChats({});
       setChats(chatList);
     })();
-  }, [selectedPersona?.id, busy]);
+  }, [selectedPersona?.id, busy, listChats, setChats]);
 
-  const handleHeaderToggle = () => setHeaderOpen((open) => !open);
+  const handleHeaderToggle = useCallback(() => setHeaderOpen((open) => !open), []);
 
-  const handleChatMenuOpen = (event: React.MouseEvent<HTMLElement>) => setChatMenuAnchor(event.currentTarget);
-  const handleChatMenuClose = (cb?: () => void) => {
+  const handleChatMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>) => setChatMenuAnchor(event.currentTarget), []);
+  const handleChatMenuClose = useCallback((cb?: () => void) => {
     setChatMenuAnchor(null);
     if (cb) {
       cb();
     }
-  };
+  }, []);
 
-  const handleChatSelect = (chat) => {
+  const handleChatSelect = useCallback((chat) => {
     console.log('ReactorChat: handleChatSelect called', {
       chatId: chat.id,
       currentChatId: chatState?.id,
@@ -379,29 +388,25 @@ export default (props) => {
         console.log('ReactorChat: Manual navigation flag reset');
       }, 500); // Increased from 100ms to 500ms
     });
+  }, [chatState?.id, busy, queryParams.personaId, navigate, location.pathname, handleChatMenuClose]);
 
-
-
-
-  };
-
-  const handlePersonaPanelToggle = () => {
+  const handlePersonaPanelToggle = useCallback(() => {
     setPersonaPanelOpen(!personaPanelOpen);
-  };
+  }, [personaPanelOpen]);
 
-  const handlePersonaPanelClose = () => {
+  const handlePersonaPanelClose = useCallback(() => {
     setPersonaPanelOpen(false);
-  };
+  }, []);
 
-  const handleToolsPanelToggle = () => {
+  const handleToolsPanelToggle = useCallback(() => {
     setToolsPanelOpen(!toolsPanelOpen);
-  };
+  }, [toolsPanelOpen]);
 
-  const handleToolsPanelClose = () => {
+  const handleToolsPanelClose = useCallback(() => {
     setToolsPanelOpen(false);
-  };
+  }, []);
 
-  const handleToolToggle = (toolName: string) => {
+  const handleToolToggle = useCallback((toolName: string) => {
     setEnabledTools(prev => {
       const newSet = new Set(prev);
       if (newSet.has(toolName)) {
@@ -411,25 +416,25 @@ export default (props) => {
       }
       return newSet;
     });
-  };
+  }, []);
 
-  const handleChatHistoryPanelToggle = () => {
+  const handleChatHistoryPanelToggle = useCallback(() => {
     setChatHistoryPanelOpen(!chatHistoryPanelOpen);
-  };
+  }, [chatHistoryPanelOpen]);
 
-  const handleChatHistoryPanelClose = () => {
+  const handleChatHistoryPanelClose = useCallback(() => {
     setChatHistoryPanelOpen(false);
-  };
+  }, []);
 
-  const handleRecordingPanelToggle = () => {
+  const handleRecordingPanelToggle = useCallback(() => {
     setRecordingPanelOpen(!recordingPanelOpen);
-  };
+  }, [recordingPanelOpen]);
 
-  const handleRecordingPanelClose = () => {
+  const handleRecordingPanelClose = useCallback(() => {
     setRecordingPanelOpen(false);
-  };
+  }, []);
 
-  const handlePersonaSelect = (persona: Partial<IAIPersona>) => {
+  const handlePersonaSelect = useCallback((persona: Partial<IAIPersona>) => {
     selectPersona(persona.id);
     setPersonaPanelOpen(false);
     
@@ -439,23 +444,13 @@ export default (props) => {
       pathname: location.pathname,
       search: searchQuery
     });
-  };
+  }, [selectPersona, navigate, location.pathname]);
 
-  const handleSendMessage = () => {
-    if (userInput.trim() === '') return;
-    setUserInput('');
-    sendMessage(userInput, chatState?.id);
-  };
+  const handleSendMessage = useCallback((message: string) => {
+    sendMessage(message, chatState?.id);
+  }, [sendMessage, chatState?.id]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-
-  const onToolExecute = async (toolCall: MacroToolDefinition & { args?: any, calledBy?: string, callId?: string }) => {
+  const onToolExecute = useCallback(async (toolCall: MacroToolDefinition & { args?: any, calledBy?: string, callId?: string }) => {
     if (!toolCall.function) return;
     try {
       const macro = findMacroByAlias(toolCall.function.name);
@@ -466,19 +461,19 @@ export default (props) => {
     } catch (error) {
       reactory.error(`Error executing tool: ${error.message}`, { toolCall, error });
     }
-  }
+  }, [findMacroByAlias, executeMacro, reactory]);
 
   // Utility function to convert camelCase to readable labels
-  const toCamelCaseLabel = (str: string) => {
+  const toCamelCaseLabel = useCallback((str: string) => {
     if (!str) return '';
     return str
       .replace(/([A-Z])/g, ' $1')
       .replace(/^./, (str) => str.toUpperCase())
       .trim();
-  };
+  }, []);
 
   // Helper function to get tool icon
-  const getToolIcon = (tool) => {
+  const getToolIcon = useCallback((tool) => {
     const toolName = tool.function?.name?.toLowerCase() || '';
 
     // Map tool names to icons
@@ -504,7 +499,7 @@ export default (props) => {
 
     // Default tool icon
     return 'build';
-  };
+  }, []);
 
   return (
     <Box
@@ -614,18 +609,18 @@ export default (props) => {
             personas={personas}
             selectedPersona={selectedPersona}
             chatState={chatState}
-            onRetryMessage={(message) => {
+            onRetryMessage={React.useCallback((message) => {
               // Retry the user's message by sending it again
               if (message.content) {
                 sendMessage(message.content);
               }
-            }}
-            onRateMessage={(message, rating) => {
+            }, [sendMessage])}
+            onRateMessage={React.useCallback((message, rating) => {
               // Handle rating functionality
               reactory.log(`Message rated: ${rating}`, { message });
               // TODO: Implement actual rating API call
-            }}
-            onCopyMessage={(message) => {
+            }, [reactory])}
+            onCopyMessage={React.useCallback((message) => {
               // Copy message content to clipboard
               if (message.content && navigator.clipboard) {
                 navigator.clipboard.writeText(message.content).then(() => {
@@ -635,7 +630,7 @@ export default (props) => {
                   reactory.error('Failed to copy message', err);
                 });
               }
-            }}
+            }, [reactory])}
           />
         </Paper>
 
@@ -1189,100 +1184,19 @@ export default (props) => {
         </Paper>
       </Box>
 
-      <Paper elevation={3} sx={{ p: 2 }}>
-        <Grid container spacing={1} columns={4} alignItems="center">
-          <Grid item>
-            <IconButton
-              size="small"
-              onClick={handleChatHistoryPanelToggle}
-              color="primary"
-              aria-label={il8n?.t('reactor.client.chat.history', { defaultValue: 'Chat History' })}
-              title={il8n?.t('reactor.client.chat.history', { defaultValue: 'Chat History' })}
-              sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 40 }}
-            >
-              <Material.MaterialIcons.History />
-            </IconButton>
-          </Grid>
-          <Grid item xs sx={{ display: 'flex', alignItems: 'center' }}>
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="Ask me anything..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              multiline
-              maxRows={4}
-              autoFocus={true}
-              variant="outlined"
-              disabled={busy}
-              InputProps={{
-                sx: {
-                  fontSize: 14,
-                  py: 0.5,
-                },
-                startAdornment: (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: 0.5 }}>
-                    <IconButton
-                      aria-label="Attach file"
-                      component="label"
-                      color="primary"
-                      disabled={busy}
-                      sx={{ p: 0.1, fontSize: '1rem', display: 'flex', alignItems: 'center' }}
-                    >
-                      <Material.MaterialIcons.AttachFile fontSize="small" />
-                      <input
-                        type="file"
-                        hidden
-                        accept="audio/*,image/*,application/pdf,text/plain"
-                        onChange={async (event) => {
-                          const file = event.target.files?.[0];
-                          if (file && chatState?.id) {
-                            await uploadFile && uploadFile(file, chatState.id);
-                          }
-                          event.target.value = '';
-                        }}
-                      />
-                    </IconButton>
-                  </Box>
-                ),
-                endAdornment: (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 0.5 }}>
-                    <IconButton
-                      aria-label="Record audio"
-                      color="primary"
-                      onClick={handleRecordingPanelToggle}
-                      disabled={busy}
-                      sx={{ p: 0.1, fontSize: '1rem', display: 'flex', alignItems: 'center' }}
-                    >
-                      <Material.MaterialIcons.Mic fontSize="small" />
-                    </IconButton>
-
-                    <Tooltip title={il8n?.t('reactor.client.chat.opentools', { defaultValue: 'Open tools menu' })}>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        aria-label={il8n?.t('reactor.client.chat.opentools', { defaultValue: 'Open tools menu' })}
-                        title={il8n?.t('reactor.client.chat.opentools', { defaultValue: 'Open tools menu' })}
-                        sx={{ p: 0.1, fontSize: '1rem', display: 'flex', alignItems: 'center' }}
-                        onClick={handleToolsPanelToggle}
-                      >
-                        <Icon fontSize="small">construction</Icon>
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                ),
-              }}
-              sx={{
-                fontSize: 14,
-                pr: 0.5,
-                pl: 0.1,
-                py: 0.5,
-              }}
-            />
-          </Grid>          
-        </Grid>
-      </Paper>
+      <ChatInput
+        onSendMessage={handleSendMessage}
+        disabled={busy}
+        placeholder="Ask me anything..."
+        onRecordingToggle={handleRecordingPanelToggle}
+        onToolsToggle={handleToolsPanelToggle}
+        onHistoryToggle={handleChatHistoryPanelToggle}
+        onFileUpload={React.useCallback(async (file: File) => {
+          if (chatState?.id) {
+            await uploadFile && uploadFile(file, chatState.id);
+          }
+        }, [uploadFile, chatState?.id])}
+      />
     </Box>
   );
 }
