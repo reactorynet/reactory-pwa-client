@@ -32,12 +32,18 @@ interface ChatFactoryHookResult {
   uploadFile: (file: File, chatSessionId: string) => Promise<void>
   // sets the tool approval mode for the chat session
   setToolApprovalMode: (mode: ToolApprovalMode) => Promise<void>
+  // indicates if the chat session has been initialized
+  isInitialized: boolean
 }
 
 interface ChatFactorHookOptions {
   reactory: Reactory.Client.ReactorySDK
   persona: IAIPersona
   protocol: 'graphql' | 'sse' | 'websocket' | 'stdio' | 'rest'
+  existingSession?: {
+    chatState?: ChatState;
+    isInitialized?: boolean;
+  };
 }
 
 type ChatFactoryHook = (props: ChatFactorHookOptions) => ChatFactoryHookResult
@@ -288,6 +294,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     reactory,
     persona: rawPersona,
     protocol = 'graphql',
+    existingSession,
   } = props;
 
   const persona = React.useMemo(() => rawPersona, [rawPersona?.id]);
@@ -456,9 +463,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   };
 
-  const [chatState, setChatState] = React.useState<ChatState>(getInitialChatState());
+  const [chatState, setChatState] = React.useState<ChatState>(
+    existingSession?.chatState || getInitialChatState()
+  );
   const [busy, setBusy] = React.useState<boolean>(false);
-  const [isInitialized, setIsInitialized] = React.useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = React.useState<boolean>(
+    existingSession?.isInitialized || false
+  );
 
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
@@ -586,6 +597,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       isMounted = false;
     };
   }, [persona])
+
+  // Update session state when existingSession changes (when switching between factories)
+  useEffect(() => {
+    if (existingSession?.chatState) {
+      setChatState(existingSession.chatState);
+      setIsInitialized(existingSession.isInitialized || false);
+      
+      reactory.info(`ChatFactory: Inherited existing session ${existingSession.chatState.id}`);
+    }
+  }, [existingSession, reactory]);
 
   // placeholder for SSE session initialization
   const initSSE = async (sseProps: { sessionId: string, endpoint: string, token: string, status: string, headers: any, expiry: Date }) => {
@@ -1297,6 +1318,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     deleteChat,
     uploadFile,
     sendAudio,
+    isInitialized,
   }
 };
 

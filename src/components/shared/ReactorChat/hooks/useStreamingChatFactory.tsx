@@ -9,6 +9,10 @@ export interface StreamingChatFactoryHookOptions {
   protocol?: 'sse' | 'websocket';
   onMessage?: (message: any) => void;
   onError?: (error: any) => void;
+  existingSession?: {
+    chatState?: ChatState;
+    isInitialized?: boolean;
+  };
 }
 
 export interface StreamingChatFactoryHookResult {
@@ -142,23 +146,26 @@ const useStreamingChatFactory: StreamingChatFactoryHook = ({
   persona,
   protocol = 'sse',
   onMessage,
-  onError
+  onError,
+  existingSession
 }) => {
-  const [chatState, setChatState] = useState<ChatState>({
-    id: undefined,
-    botId: persona?.id || '',
-    persona: persona || {} as IAIPersona,
-    started: new Date(),
-    history: [] as ReactorConversationHistory,
-    vars: {},
-    tools: [],
-    macros: [],
-    sendMessage: async () => {}
-  });
+  const [chatState, setChatState] = useState<ChatState>(
+    existingSession?.chatState || {
+      id: undefined,
+      botId: persona?.id || '',
+      persona: persona || {} as IAIPersona,
+      started: new Date(),
+      history: [] as ReactorConversationHistory,
+      vars: {},
+      tools: [],
+      macros: [],
+      sendMessage: async () => {}
+    }
+  );
   
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState<string>('');
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(existingSession?.isInitialized || false);
   const [chats, _setChats] = useState<ChatState[]>([]);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   
@@ -694,6 +701,16 @@ const useStreamingChatFactory: StreamingChatFactoryHook = ({
     setCurrentStreamingMessage('');
     streamingSessionRef.current = null;
   }, [chatState.id, reactory]);
+
+  // Update session state when existingSession changes (when switching between factories)
+  useEffect(() => {
+    if (existingSession?.chatState) {
+      setChatState(existingSession.chatState);
+      setIsInitialized(existingSession.isInitialized || false);
+      
+      reactory.log(`StreamingChatFactory: Inherited existing session ${existingSession.chatState.id}`, 'info');
+    }
+  }, [existingSession, reactory]);
 
   // Cleanup on unmount or persona change
   useEffect(() => {
