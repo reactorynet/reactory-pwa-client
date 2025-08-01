@@ -2,57 +2,310 @@
 
 `ReactoryForm` is a dynamic, extensible form rendering engine for the Reactory platform, built on top of JSON Schema Form principles. It is designed to support enterprise-grade, multi-tenant applications with a plugin architecture, advanced UI customization, and deep integration with the Reactory ecosystem.
 
-## Key Features
+## Architecture Overview
 
-- **Dynamic Form Rendering**: Renders forms based on JSON schema and UI schema definitions, supporting runtime configuration and updates.
-- **Plugin & Dependency Management**: Automatically loads and tracks required component dependencies and plugins, updating the form when plugins become available.
-- **Multi-Tenancy & Context Awareness**: Integrates with Reactory's multi-tenant context and supports per-tenant customization.
-- **Toolbar, Help, Export, and Report Integration**: Provides hooks for toolbars, help modals, export/report actions, and custom UI extensions.
-- **Busy/Loading State Handling**: Displays progress indicators when loading data or validating.
-- **Flexible Container Rendering**: Renders the form inside various container types (div, article, section, card, grid, paper, paragraph, or form) based on UI schema options.
-- **Error Handling & Translation**: Integrates error lists and supports error message transformation and translation.
-- **Paging & Advanced Widgets**: Supports paging and other advanced widgets via hooks and UI schema.
+The ReactoryForm component follows a modular architecture with clear separation of concerns:
 
-## Lifecycle & Hooks
+### Core Component Structure
+- **Main Component**: `ReactoryForm.tsx` - Orchestrates the entire form lifecycle
+- **Type System**: `types.ts` - Comprehensive TypeScript definitions for all form-related interfaces
+- **Hooks System**: `hooks/` - Modular hooks for different form functionalities
+- **Data Managers**: `DataManagers/` - Pluggable data management strategies
+- **Constants**: `constants.ts` - Default configurations and fallback schemas
 
-- **Initialization**: On mount, the component registers for plugin load events and initializes dependencies based on the form definition.
-- **Dependency Tracking**: Tracks required components/plugins and updates state as they become available.
-- **Form Definition Loading**: Uses the `useFormDefinition` hook to load and manage the form schema, UI schema, data, validation, and actions.
-- **Toolbar/Help/Export/Report**: Uses dedicated hooks (`useToolbar`, `useHelp`, `useExports`, `useReports`) to inject UI actions and modals.
-- **Rendering**: Renders the form and associated UI elements according to the loaded schema and UI options. Supports top/bottom/both toolbar positions and busy/loading overlays.
+### Hook-Based Architecture
 
-## Usage
+The component uses a sophisticated hook system to manage different aspects of form functionality:
 
-```tsx
-import { ReactoryForm } from '.../ReactoryForm';
+#### Core Hooks
+- **`useFormDefinition`**: Manages form schema, UI schema, and form context
+- **`useDataManager`**: Handles data operations (CRUD, validation, paging)
+- **`useUISchema`**: Manages UI schema selection and customization
+- **`useToolbar`**: Provides toolbar functionality with actions and buttons
+- **`useHelp`**: Manages help modal and documentation
+- **`useExports`**: Handles data export functionality
+- **`useReports`**: Manages report generation and viewing
+- **`useSchema`**: Manages schema loading and validation
+- **`useContext`**: Provides form context and routing integration
 
-<ReactoryForm
-  formId="..." // or formDef={...}
-  formData={...}
-  watchList={[...]} // optional, for extra prop watching
-  // ...other props
-/>
+#### Data Manager Hooks
+- **`useGraphQLDataManager`**: GraphQL-based data operations
+- **`useLocalStoreDataManager`**: Local storage data management
+- **`useSocketDataManager`**: Real-time socket-based data
+- **`useRESTDataManager`**: REST API data operations
+- **`useGRPCDataManager`**: gRPC data operations
+
+## Form Definition Structure
+
+### Core Types
+
+```typescript
+interface ReactoryFormDefinitionHook<TData> {
+  // Form metadata
+  instanceId: string;
+  FQN: string | Reactory.FQN;
+  SIGN: string;
+  form: Reactory.Forms.IReactoryForm;
+  
+  // Schema and UI
+  schema: Reactory.Schema.AnySchema;
+  uiSchema: Reactory.Schema.IFormUISchema;
+  uiOptions: Reactory.Schema.IFormUIOptions;
+  SchemaSelector: React.FC<{}>;
+  
+  // Data management
+  formData: TData;
+  isDataLoading: boolean;
+  onChange: (data: TData, errors: any[], errorSchema: Reactory.Schema.IErrorSchema) => Promise<void>;
+  onSubmit: (data: TData, errors: any[], errorSchema: Reactory.Schema.IErrorSchema) => Promise<void>;
+  onError: (errors: any[], errorSchema: Reactory.Schema.IErrorSchema) => Promise<void>;
+  
+  // Validation and state
+  validate: Reactory.Forms.SchemaFormValidationFunctionSync<TData> | Reactory.Forms.SchemaFormValidationFunctionAsync<TData>;
+  errorSchema: Reactory.Schema.IErrorSchema;
+  errors: any[];
+  
+  // UI components
+  refresh: () => void;
+  RefreshButton: React.FC<{}>;
+  SubmitButton: React.FC<{}>;
+  PagingWidget: React.FC<{}>;
+}
 ```
 
-- Pass either a `formId` (to load a form definition) or a `formDef` object directly.
-- `formData` provides the initial data for the form.
-- The component will handle loading, validation, and rendering automatically.
+### Form Properties
+
+The component accepts these key properties:
+
+```typescript
+interface IReactoryFormProps<TData> {
+  formId?: string | Reactory.FQN;           // Form identifier to load
+  formDef?: Reactory.Forms.IReactoryForm;   // Direct form definition
+  formData?: TData;                         // Initial form data
+  watchList?: string[];                     // Properties to watch for changes
+  mode?: "edit" | "view" | "create" | "delete";
+  debug?: boolean;
+  warning?: boolean;
+  error?: boolean;
+}
+```
+
+## Component Lifecycle
+
+### 1. Initialization Phase
+- Component mounts and registers for plugin load events
+- Initializes dependency tracking for required components
+- Loads form definition via `useFormDefinition` hook
+- Sets up form context and routing integration
+
+### 2. Dependency Resolution
+- Tracks required components and plugins
+- Updates state as dependencies become available
+- Manages component registration and availability
+
+### 3. Data Loading
+- Uses appropriate data manager based on form configuration
+- Handles initial data loading and validation
+- Manages loading states and error handling
+
+### 4. Rendering
+- Renders form based on schema and UI schema
+- Applies container type (div, card, paper, etc.)
+- Positions toolbars (top, bottom, both)
+- Handles busy states and progress indicators
+
+### 5. Interaction Handling
+- Manages form changes and validation
+- Handles submissions and error processing
+- Provides refresh and reset functionality
 
 ## UI Customization
 
-- Use the `uiSchema` to control layout, widgets, and container type (e.g., `componentType: 'card'`).
-- Toolbars, help, export, and report features are enabled/disabled via form definition and UI schema options.
+### Container Types
+The form can be rendered in different container types:
+- `div` - Standard div container
+- `article` - Semantic article container
+- `section` - Semantic section container
+- `card` - Material-UI Card component
+- `grid` - Material-UI Grid component
+- `paper` - Material-UI Paper component
+- `paragraph` - HTML paragraph element
+- `form` - HTML form element (default)
+
+### Toolbar Positioning
+- `top` - Toolbar above form
+- `bottom` - Toolbar below form
+- `both` - Toolbars above and below form
+
+### UI Schema Options
+```typescript
+interface IFormUIOptions {
+  componentType?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  toolbarPosition?: 'top' | 'bottom' | 'both';
+  showSubmit?: boolean;
+  showRefresh?: boolean;
+  toolbarStyle?: React.CSSProperties;
+}
+```
+
+## Data Management
+
+### Data Manager Types
+- **GraphQL**: Full GraphQL integration with queries and mutations
+- **REST**: Standard REST API operations
+- **Local Store**: Browser storage-based data management
+- **Socket**: Real-time WebSocket data operations
+- **gRPC**: Protocol buffer-based data operations
+
+### Data Manager Features
+- Automatic CRUD operations
+- Real-time data synchronization
+- Paging and pagination support
+- Error handling and retry logic
+- Data validation and transformation
+- Optimistic updates
 
 ## Error Handling
 
-- Errors are displayed using the `ErrorList` component.
-- Error messages can be transformed/translated via the Reactory translation map or custom logic.
+### Error Types
+- **Validation Errors**: Schema validation failures
+- **Network Errors**: API communication issues
+- **Runtime Errors**: JavaScript execution errors
+- **GraphQL Errors**: GraphQL-specific errors
 
-## Advanced
+### Error Display
+- Uses `ErrorList` component for error display
+- Supports error message transformation
+- Integrates with translation system
+- Provides error recovery mechanisms
 
-- The component supports plugin-based extension: new widgets/components can be registered and loaded at runtime.
-- Paging and other advanced features are available via UI schema and hooks.
+## Plugin System
+
+### Component Dependencies
+- Tracks required components via FQN (Fully Qualified Name)
+- Automatically loads dependencies as they become available
+- Updates form when new plugins are loaded
+- Manages component registration and availability
+
+### Plugin Integration
+- Supports dynamic plugin loading
+- Handles plugin lifecycle events
+- Manages plugin dependencies
+- Provides plugin configuration options
+
+## Advanced Features
+
+### Multi-tenancy Support
+- Per-tenant form customization
+- Tenant-specific UI schemas
+- Tenant-aware data operations
+- Multi-tenant context integration
+
+### Real-time Updates
+- WebSocket-based real-time data
+- Live form updates
+- Collaborative editing support
+- Real-time validation
+
+### Export and Reporting
+- Data export functionality
+- PDF report generation
+- Custom export formats
+- Scheduled report generation
+
+### Help and Documentation
+- Context-sensitive help
+- Documentation integration
+- Help modal system
+- Tutorial and guidance support
+
+## Performance Optimizations
+
+### Lazy Loading
+- Component dependencies loaded on-demand
+- Schema loading optimization
+- Data manager lazy initialization
+
+### Caching
+- Form definition caching
+- Schema caching
+- Data caching strategies
+- Component caching
+
+### Memoization
+- Hook result memoization
+- Component re-render optimization
+- Expensive computation caching
+
+## Usage Examples
+
+### Basic Form
+```tsx
+<ReactoryForm
+  formId="user.registration@1.0.0"
+  formData={initialData}
+  mode="create"
+/>
+```
+
+### Advanced Form with Customization
+```tsx
+<ReactoryForm
+  formDef={customFormDefinition}
+  formData={userData}
+  mode="edit"
+  watchList={['email', 'phone']}
+  debug={true}
+/>
+```
+
+### Form with Custom Container
+```tsx
+<ReactoryForm
+  formId="product.edit@1.0.0"
+  formData={productData}
+  uiOptions={{
+    componentType: 'card',
+    toolbarPosition: 'both',
+    className: 'custom-form-class'
+  }}
+/>
+```
+
+## Current Limitations and Areas for Improvement
+
+### Known Issues
+1. **Type Safety**: Some TypeScript issues with complex type intersections
+2. **Performance**: Large forms can have performance issues with complex schemas
+3. **Error Handling**: Error recovery could be more robust
+4. **Accessibility**: ARIA support needs improvement
+5. **Mobile Responsiveness**: Some UI components need better mobile support
+
+### Technical Debt
+1. **Legacy Code**: Some deprecated patterns still in use
+2. **Hook Complexity**: Some hooks are overly complex and could be simplified
+3. **State Management**: Form state management could be more predictable
+4. **Testing**: Comprehensive test coverage needed
+5. **Documentation**: API documentation needs expansion
+
+## Integration Points
+
+### Reactory Ecosystem
+- **Core API**: Deep integration with Reactory core
+- **Plugin System**: Extensible plugin architecture
+- **Routing**: React Router integration
+- **State Management**: Context-based state management
+- **Translation**: i18n integration
+
+### External Dependencies
+- **Material-UI**: UI component library
+- **JSON Schema Form**: Form rendering engine
+- **Apollo Client**: GraphQL client
+- **Lodash**: Utility functions
+- **React Router**: Routing library
 
 ---
 
-For more details, see the code in `ReactoryForm.tsx` and the Reactory documentation.
+For more details, see the code in `ReactoryForm.tsx`, `types.ts`, and the hooks directory.

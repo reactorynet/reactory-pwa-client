@@ -12,6 +12,7 @@ if (typeof window !== 'undefined') {
 // Import your actual themes
 import { defaultTheme } from '../src/themes/index.js';
 import { ThemeWrapper } from './ThemeWrapper';
+import { ReactoryDecorator } from './ReactoryDecorator';
 
 // Create theme instances based on your actual themes
 const createAppTheme = (themeConfig) => {
@@ -141,10 +142,12 @@ const preview = {
   },
   decorators: [
     (Story) => (
-      <ThemeWrapper showThemeSelector={false}>
-        <CssBaseline />
-        <Story />
-      </ThemeWrapper>
+      <ReactoryDecorator>
+        <ThemeWrapper showThemeSelector={false}>
+          <CssBaseline />
+          <Story />
+        </ThemeWrapper>
+      </ReactoryDecorator>
     ),
   ],
 };
