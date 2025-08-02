@@ -4,23 +4,18 @@ import useChatFactory from './hooks/useChatFactory';
 import useStreamingChatFactory from './hooks/useStreamingChatFactory';
 import ChatList from './hooks/useScrollToBottom';
 import useMacros from './hooks/useMacros';
-import { useEffect, useRef, useMemo, useCallback } from 'react';
-import ChatHistoryItem from './ChatHistoryItem';
+import { useEffect} from 'react';
+
 import {
-  IAIPersona,
-  ChatMessage,
-  IProps,
+  IAIPersona,  
   UXChatMessage,
   MacroToolDefinition,
   ToolApprovalMode,
   ChatState
 } from './types';
-import { on } from "process";
-import ChatHeader from './ChatHeader';
-import ChatHistoryDrawer from './ChatHistoryDrawer';
-import PersonaCard from './PersonaCard';
+import PersonaCard from './components/PersonaCard';
 import ChatInput from './components/ChatInput';
-import FilesPanel from './FilesPanel';
+import FilesPanel from './components/FilesPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default (props) => {

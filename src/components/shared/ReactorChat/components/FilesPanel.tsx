@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { IAIPersona, ChatState } from './types';
+import { IAIPersona, ChatState } from '../types';
 
 interface FilesPanelProps {
   open: boolean;

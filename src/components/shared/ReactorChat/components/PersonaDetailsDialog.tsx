@@ -1,5 +1,5 @@
 import React from 'react';
-import { IAIPersona } from './types';
+import { IAIPersona } from '../types';
 
 interface PersonaDetailsDialogProps {
   open: boolean;

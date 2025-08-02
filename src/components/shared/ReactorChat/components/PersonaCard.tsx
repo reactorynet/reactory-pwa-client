@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IAIPersona } from './types';
+import { IAIPersona } from '../types';
 import PersonaDetailsDialog from './PersonaDetailsDialog';
 
 interface PersonaCardProps {

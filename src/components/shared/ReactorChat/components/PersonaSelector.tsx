@@ -1,5 +1,5 @@
 import React from 'react';
-import { IAIPersona } from './types';
+import { IAIPersona } from '../types';
 import PersonaCard from './PersonaCard';
 
 interface PersonaSelectorProps {
