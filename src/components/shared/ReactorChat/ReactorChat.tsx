@@ -20,6 +20,7 @@ import ChatHeader from './ChatHeader';
 import ChatHistoryDrawer from './ChatHistoryDrawer';
 import PersonaCard from './PersonaCard';
 import ChatInput from './components/ChatInput';
+import FilesPanel from './FilesPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default (props) => {
@@ -39,7 +40,7 @@ export default (props) => {
     secondary,
     background,
     text,
-  } = (options as any)?.palette as Reactory.UX.IThemePalette;
+  } = reactory.muiTheme.palette;
 
   const {
     React,
@@ -115,6 +116,42 @@ export default (props) => {
   });
 
   // Use the appropriate chat factory based on streaming toggle
+  // If we have an active session, prioritize keeping it active regardless of streaming mode
+  const activeFactory = React.useMemo(() => {
+    const hasNonStreamingSession = nonStreamingChatFactory.chatState?.id && nonStreamingChatFactory.isInitialized;
+    const hasStreamingSession = streamingChatFactory.chatState?.id && streamingChatFactory.isInitialized;
+
+    if (streamingEnabled) {
+      // User wants streaming mode
+      if (hasStreamingSession) {
+        // Streaming factory already has a session, use it
+        return streamingChatFactory;
+      } else if (hasNonStreamingSession) {
+        // Non-streaming has a session but user wants streaming
+        // TODO: We could implement a session transfer mechanism here
+        reactory.log('ReactorChat: User wants streaming but non-streaming has active session. Consider implementing session transfer.', 'warn');
+        return nonStreamingChatFactory; // For now, keep the active session
+      } else {
+        // No active session, use streaming factory
+        return streamingChatFactory;
+      }
+    } else {
+      // User wants non-streaming mode
+      if (hasNonStreamingSession) {
+        // Non-streaming factory already has a session, use it
+        return nonStreamingChatFactory;
+      } else if (hasStreamingSession) {
+        // Streaming has a session but user wants non-streaming
+        // TODO: We could implement a session transfer mechanism here
+        reactory.log('ReactorChat: User wants non-streaming but streaming has active session. Consider implementing session transfer.', 'warn');
+        return streamingChatFactory; // For now, keep the active session
+      } else {
+        // No active session, use non-streaming factory
+        return nonStreamingChatFactory;
+      }
+    }
+  }, [streamingEnabled, nonStreamingChatFactory, streamingChatFactory, reactory]);
+
   const {
     chatState,
     busy,
@@ -131,7 +168,7 @@ export default (props) => {
     // Streaming-specific properties (will be undefined for non-streaming)
     isStreaming = false,
     currentStreamingMessage = '',
-  } = streamingEnabled ? streamingChatFactory : {
+  } = activeFactory === streamingChatFactory ? streamingChatFactory : {
     ...nonStreamingChatFactory,
     isStreaming: false,
     currentStreamingMessage: '',
@@ -214,16 +251,16 @@ export default (props) => {
     const filteredMessages = newMessages.filter((msg) => {
       // Filter out system messages
       if (msg.role === 'system') return false;
-      
+
       // Filter out tool result messages (role 'tool')
       if (msg.role === 'tool') return false;
-      
+
       // Filter out messages that look like tool execution results but have wrong role
-      if (msg.role === 'assistant' && msg.content && typeof msg.content === 'string' && 
+      if (msg.role === 'assistant' && msg.content && typeof msg.content === 'string' &&
         (msg.content.includes('Tool 1 (') || msg.content.includes('Multiple tools executed successfully:'))) {
         return false;
       }
-      
+
       return true;
     });
 
@@ -265,6 +302,7 @@ export default (props) => {
   const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set());
   const [chatHistoryPanelOpen, setChatHistoryPanelOpen] = useState<boolean>(false);
   const [recordingPanelOpen, setRecordingPanelOpen] = useState<boolean>(false);
+  const [filesPanelOpen, setFilesPanelOpen] = useState<boolean>(false);
 
   const [headerOpen, setHeaderOpen] = useState<boolean>(false);
   const [chatMenuAnchor, setChatMenuAnchor] = useState<null | HTMLElement>(null);
@@ -462,10 +500,18 @@ export default (props) => {
     setRecordingPanelOpen(false);
   }, []);
 
+  const handleFilesPanelToggle = useCallback(() => {
+    setFilesPanelOpen(!filesPanelOpen);
+  }, [filesPanelOpen]);
+
+  const handleFilesPanelClose = useCallback(() => {
+    setFilesPanelOpen(false);
+  }, []);
+
   const handlePersonaSelect = useCallback((persona: Partial<IAIPersona>) => {
     selectPersona(persona.id);
     setPersonaPanelOpen(false);
-    
+
     // Navigate to current location with only personaId parameter
     const searchQuery = `?personaId=${persona.id}`;
     navigate({
@@ -481,7 +527,7 @@ export default (props) => {
   const handleStreamingToggle = useCallback((enabled: boolean) => {
     setStreamingEnabled(enabled);
     reactory.info(`Streaming mode ${enabled ? 'enabled' : 'disabled'}`);
-    
+
     // Show user feedback
     if (enabled) {
       reactory.log('Streaming Enabled: Messages will now stream in real-time as they are generated');
@@ -541,93 +587,109 @@ export default (props) => {
     return 'build';
   }, []);
 
+  // check the max width of the screen
+  const isNarrowScreen = useMemo(() => {
+    const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    return width < 600; // Adjust this value as needed for your design
+  }, []);
+
+  // get the theme colors 
+  const themeColors = useMemo(() => {
+    return {
+      primary: (typeof primary === 'string' ? primary : primary?.main) || '#1976d2',
+      secondary: (typeof secondary === 'string' ? secondary : secondary?.main) || '#dc004e',
+      background: (typeof background === 'string' ? background : background?.default) || '#f5f5f5',
+      text: (typeof text === 'string' ? text : text?.primary) || '#000000',
+    };
+  }, [primary, secondary, background, text]);
+
+  const backgroundSVG = useMemo(() => {
+    // Create a simplified SVG pattern that should work reliably in data URLs
+    const svg = `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" fill="${themeColors.background}"/>
+      <circle cx="10" cy="10" r="2.5" fill="${themeColors.primary}" opacity="0.3"/>
+      <circle cx="30" cy="30" r="2" fill="${themeColors.secondary}" opacity="0.4"/>
+      <rect x="25" y="3" width="5" height="5" fill="${themeColors.primary}" opacity="0.25"/>
+      <rect x="3" y="25" width="4" height="4" fill="${themeColors.secondary}" opacity="0.2"/>
+      <circle cx="35" cy="7" r="1.5" fill="${themeColors.primary}" opacity="0.3"/>
+      <circle cx="20" cy="20" r="1" fill="${themeColors.secondary}" opacity="0.25"/>
+      <line x1="10" y1="10" x2="16" y2="16" stroke="${themeColors.primary}" stroke-width="0.5" opacity="0.2"/>
+      <line x1="30" y1="30" x2="24" y2="24" stroke="${themeColors.secondary}" stroke-width="0.5" opacity="0.25"/>
+    </svg>`;
+    
+    // Remove all whitespace and newlines for better data URL compatibility
+    return svg.replace(/\s+/g, ' ').trim();
+  }, [themeColors]);
+
   return (
     <Box
       sx={{
         height: 'calc(100vh - 64px)',
         display: 'flex',
         flexDirection: 'column',
-        maxWidth: '95%',
+        maxWidth: isNarrowScreen ? '95%' : '100%',
         mx: 'auto',
-        p: 2,
+        p: isNarrowScreen ? 0 : 2,
         minHeight: 0,
         position: 'relative',
       }}
     >
-      {/* Token Pressure Progress Bar - Moved to top */}
-      {chatState?.tokenPressure !== undefined && !busy && (
-        <LinearProgress
-          variant="determinate"
-          value={(chatState.tokenPressure || 0) * 100}
-          color={getTokenPressureColor(chatState.tokenPressure || 0)}
-          sx={{
-            height: 3,
-            borderRadius: 0,
-            mb: 1,
-            '& .MuiLinearProgress-bar': {
-              transition: 'transform 0.3s ease-in-out',
-            },
-          }}
-        />
-      )}
-
-      {busy && (
-        <LinearProgress
-          variant="indeterminate"
-          color="primary"
-          sx={{
-            height: 3,
-            borderRadius: 0,
-            mb: 1,
-            '& .MuiLinearProgress-bar': {
-              transition: 'transform 0.3s ease-in-out',
-            },
-          }}
-        />
-      )}
-
-      {/* Persona FAB Button - Left Side */}
-      <Fab
-        color="primary"
-        size="small"
-        onClick={handlePersonaPanelToggle}
+      <Box
         sx={{
-          position: 'absolute',
-          top: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 8 : 16,
-          left: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 8 : 16,
-          zIndex: 1000,
-          width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 40 : 48,
-          height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 40 : 48,
-          transition: 'all 0.3s ease-in-out',
+          position: 'relative',
+          flexGrow: 1,
+          marginBottom: 1,
+          overflow: 'hidden',
+          backgroundColor: themeColors.background,
+          backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
+          backgroundSize: '40px 40px',
+          backgroundRepeat: 'repeat',
+          opacity: 0.8,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              radial-gradient(circle at 20% 20%, ${themeColors.primary}08 0%, transparent 60%),
+              radial-gradient(circle at 80% 80%, ${themeColors.secondary}08 0%, transparent 60%)
+            `,
+            backdropFilter: 'blur(1px)',
+            pointerEvents: 'none',
+            zIndex: 0,
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              radial-gradient(circle at 25% 25%, ${themeColors.secondary}06 0%, transparent 60%),
+              radial-gradient(circle at 75% 75%, ${themeColors.primary}06 0%, transparent 60%)
+            `,
+            backdropFilter: 'blur(0.5px)',
+            pointerEvents: 'none',
+            zIndex: 0,
+          }
         }}
-        aria-label={il8n?.t('reactor.client.persona.select', { defaultValue: 'Select persona' })}
       >
-        <Avatar
-          src={selectedPersona?.avatar}
-          alt={selectedPersona?.name}
-          sx={{
-            width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
-            height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
-            transition: 'all 0.3s ease-in-out',
-          }}
-        />
-      </Fab>
-
-
-      <Box sx={{ position: 'relative', flexGrow: 1, mb: 2, overflow: 'hidden' }}>
         {/* Chat List Panel */}
         <Paper
-          elevation={3}
+          elevation={0}
           sx={{
             position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            transform: personaPanelOpen 
-              ? 'translateX(100%)' 
-              : toolsPanelOpen 
-                ? 'translateX(-100%)' 
+            transform: personaPanelOpen
+              ? 'translateX(100%)'
+              : toolsPanelOpen
+                ? 'translateX(-100%)'
                 : 'translateX(0)',
             transition: 'transform 0.3s ease-in-out',
             overflow: 'auto',
@@ -635,6 +697,11 @@ export default (props) => {
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
+            zIndex: 1,
+            backgroundColor: themeColors.background,
+          backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
+          backgroundSize: '60px 60px',
+          backgroundRepeat: 'repeat',
           }}
           style={{
             padding: '0',
@@ -690,6 +757,8 @@ export default (props) => {
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
+            zIndex: 2,            
+            backdropFilter: 'blur(10px) saturate(150%)',
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -751,6 +820,8 @@ export default (props) => {
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
+            zIndex: 2,            
+            backdropFilter: 'blur(15px) saturate(120%)',
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -806,13 +877,13 @@ export default (props) => {
               </Typography>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              {streamingEnabled 
-                ? il8n?.t('reactor.client.streaming.description.enabled', { 
-                    defaultValue: 'Messages stream in real-time as they are generated' 
-                  })
-                : il8n?.t('reactor.client.streaming.description.disabled', { 
-                    defaultValue: 'Messages are delivered after complete generation' 
-                  })
+              {streamingEnabled
+                ? il8n?.t('reactor.client.streaming.description.enabled', {
+                  defaultValue: 'Messages stream in real-time as they are generated'
+                })
+                : il8n?.t('reactor.client.streaming.description.disabled', {
+                  defaultValue: 'Messages are delivered after complete generation'
+                })
               }
             </Typography>
             {isStreaming && (
@@ -948,14 +1019,16 @@ export default (props) => {
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
+            zIndex: 3,            
+            backdropFilter: 'blur(15px) saturate(120%)',
           }}
         >
           {/* Header */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            p: 2, 
-            borderBottom: 1, 
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            p: 2,
+            borderBottom: 1,
             borderColor: 'divider',
             bgcolor: 'background.paper'
           }}>
@@ -974,9 +1047,9 @@ export default (props) => {
           {/* Content - Split Layout */}
           <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
             {/* Left Side - Chat List */}
-            <Box sx={{ 
-              width: '40%', 
-              borderRight: 1, 
+            <Box sx={{
+              width: '40%',
+              borderRight: 1,
               borderColor: 'divider',
               overflow: 'auto',
               p: 2
@@ -995,7 +1068,7 @@ export default (props) => {
                         : null;
                       const persona = getPersona ? getPersona(chat.personaId) : null;
                       const label = firstUserMsg?.content ?? il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
-                      
+
                       return (
                         <ListItem
                           key={chat.id || `chat-${chat.created}`}
@@ -1039,9 +1112,9 @@ export default (props) => {
                                   {label.substring(0, 50)}{label.length > 50 ? '...' : ''}
                                 </Typography>
                                 {persona && (
-                                  <Chip 
-                                    label={persona.name} 
-                                    size="small" 
+                                  <Chip
+                                    label={persona.name}
+                                    size="small"
                                     variant="outlined"
                                     sx={{ fontSize: '0.7rem' }}
                                   />
@@ -1068,8 +1141,8 @@ export default (props) => {
             </Box>
 
             {/* Right Side - Preview */}
-            <Box sx={{ 
-              flex: 1, 
+            <Box sx={{
+              flex: 1,
               overflow: 'auto',
               p: 2
             }}>
@@ -1088,7 +1161,7 @@ export default (props) => {
                           {message.role === 'user' ? 'You' : 'Assistant'}
                         </Typography>
                         <Typography variant="body2">
-                          {typeof message.content === 'string' 
+                          {typeof message.content === 'string'
                             ? message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '')
                             : 'Message content not available'
                           }
@@ -1108,161 +1181,237 @@ export default (props) => {
           </Box>
         </Paper>
 
-        {/* Recording Panel - Slides down from top */}
+        {/* Files Panel */}
+        <FilesPanel
+          open={filesPanelOpen}
+          onClose={handleFilesPanelClose}
+          reactory={reactory}
+          chatState={chatState}
+          selectedPersona={selectedPersona}
+          onFileUpload={uploadFile}
+          il8n={il8n}
+        />
+
+        {/* Recording Audio Bar - Slides up from bottom */}
         <Paper
-          elevation={3}
+          elevation={0}
           sx={{
             position: 'absolute',
-            top: 0,
+            bottom: 0,
             left: 0,
             right: 0,
-            bottom: 0,
-            transform: recordingPanelOpen ? 'translateY(0)' : 'translateY(-100%)',
+            height: 80,
+            transform: recordingPanelOpen ? 'translateY(0)' : 'translateY(100%)',
             transition: 'transform 0.3s ease-in-out',
-            overflow: 'hidden',
+            background: `linear-gradient(135deg, 
+              ${themeColors.primary}20 0%, 
+              ${themeColors.secondary}20 100%)`,
+            backdropFilter: 'blur(20px) saturate(180%)',
+            borderRadius: '16px 16px 0 0',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.1)',
             display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            bgcolor: 'background.paper',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            opacity: 0.95,
           }}
         >
-          {/* Header */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            p: 2, 
-            borderBottom: 1, 
-            borderColor: 'divider',
-            bgcolor: 'background.paper'
+          {/* Recording Content - Compact horizontal layout */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3,
+            px: 3
           }}>
+            {/* Close Button */}
             <IconButton
               onClick={handleRecordingPanelClose}
-              sx={{ mr: 2 }}
+              sx={{
+                color: 'white',
+                opacity: 0.8,
+                '&:hover': {
+                  opacity: 1,
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+              size="small"
               aria-label="Close recording"
             >
-              <Material.MaterialIcons.ArrowBack />
+              <Material.MaterialIcons.Close />
             </IconButton>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-              {il8n?.t('reactor.client.recording.title', { defaultValue: 'Voice Recording' })}
-            </Typography>
-          </Box>
 
-          {/* Recording Content */}
-          <Box sx={{ 
-            flex: 1, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            p: 4
-          }}>
-            {/* Big Mic Icon with Ripple Effect */}
-            <Box sx={{ 
+            {/* Recording Mic Icon with Pulse Effect */}
+            <Box sx={{
               position: 'relative',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 120,
-              height: 120,
             }}>
-              {/* Ripple Circles */}
+              {/* Pulse Circles */}
               <Box sx={{
                 position: 'absolute',
-                width: '100%',
-                height: '100%',
+                width: 60,
+                height: 60,
                 borderRadius: '50%',
-                border: '2px solid',
-                borderColor: 'primary.main',
-                opacity: 0.3,
-                animation: 'ripple 2s infinite',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: '-10px',
-                  left: '-10px',
-                  right: '-10px',
-                  bottom: '-10px',
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: 'primary.main',
-                  opacity: 0.2,
-                  animation: 'ripple 2s infinite 0.5s',
-                },
-                '&::after': {
-                  content: '""',
-                  position: 'absolute',
-                  top: '-20px',
-                  left: '-20px',
-                  right: '-20px',
-                  bottom: '-20px',
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: 'primary.main',
-                  opacity: 0.1,
-                  animation: 'ripple 2s infinite 1s',
-                },
-                '@keyframes ripple': {
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                animation: 'pulse 2s infinite',
+                '@keyframes pulse': {
                   '0%': {
                     transform: 'scale(0.8)',
+                    opacity: 0.7,
+                  },
+                  '50%': {
+                    transform: 'scale(1.1)',
                     opacity: 0.3,
                   },
                   '100%': {
-                    transform: 'scale(1.2)',
+                    transform: 'scale(1.3)',
                     opacity: 0,
                   },
                 },
               }} />
-              
-              {/* Main Mic Icon */}
+
+              {/* Main Mic Button */}
               <IconButton
                 sx={{
-                  width: 80,
-                  height: 80,
-                  bgcolor: 'primary.main',
+                  width: 48,
+                  height: 48,
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
                   color: 'white',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
                   '&:hover': {
-                    bgcolor: 'primary.dark',
+                    bgcolor: 'rgba(255, 255, 255, 0.3)',
+                    transform: 'scale(1.05)',
                   },
                   '&:active': {
                     transform: 'scale(0.95)',
                   },
+                  transition: 'all 0.2s ease-in-out',
                 }}
                 onClick={() => {
                   // TODO: Start/stop recording logic
                   reactory.log('Recording button clicked');
                 }}
               >
-                <Material.MaterialIcons.Mic sx={{ fontSize: 40 }} />
+                <Material.MaterialIcons.Mic sx={{ fontSize: 24 }} />
               </IconButton>
             </Box>
 
-            {/* Instructions */}
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                mt: 3, 
-                textAlign: 'center',
-                color: 'text.secondary'
-              }}
-            >
-              {il8n?.t('reactor.client.recording.instructions', { defaultValue: 'Tap the microphone to start recording' })}
-            </Typography>
-            
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                mt: 1, 
-                textAlign: 'center',
-                color: 'text.secondary',
-                opacity: 0.7
-              }}
-            >
-              {il8n?.t('reactor.client.recording.tip', { defaultValue: 'Speak clearly and tap again to stop' })}
-            </Typography>
+            {/* Recording Status Text */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  color: 'white',
+                  fontWeight: 'bold',
+                  mb: 0.5
+                }}
+              >
+                {il8n?.t('reactor.client.recording.listening', { defaultValue: 'Listening...' })}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '0.75rem'
+                }}
+              >
+                {il8n?.t('reactor.client.recording.tip.compact', { defaultValue: 'Tap mic to stop' })}
+              </Typography>
+            </Box>
+
+            {/* Optional: Recording Duration */}
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              ml: 'auto'
+            }}>
+              <Box sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: '#ff4444',
+                animation: 'blink 1s infinite',
+                '@keyframes blink': {
+                  '0%, 50%': { opacity: 1 },
+                  '51%, 100%': { opacity: 0.3 },
+                },
+              }} />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'white',
+                  fontFamily: 'monospace',
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                00:00
+              </Typography>
+            </Box>
           </Box>
         </Paper>
       </Box>
 
+      {/* Persona FAB Button - Left Side */}
+      <Fab
+        color="primary"
+        size="small"
+        onClick={handlePersonaPanelToggle}
+        sx={{
+          position: 'absolute',
+          bottom: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 68 : 80,
+          right: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 4 : 8,
+          zIndex: 1000,
+          width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 40 : 48,
+          height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 40 : 48,
+          transition: 'all 0.3s ease-in-out',
+        }}
+        aria-label={il8n?.t('reactor.client.persona.select', { defaultValue: 'Select persona' })}
+      >
+        <Avatar
+          src={selectedPersona?.avatar}
+          alt={selectedPersona?.name}
+          sx={{
+            width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
+            height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
+            transition: 'all 0.3s ease-in-out',
+          }}
+        />
+      </Fab>
+      {/* Token Pressure Progress Bar - Moved to top */}
+      {chatState?.tokenPressure !== undefined && !busy && (
+        <LinearProgress
+          variant="determinate"
+          value={(chatState.tokenPressure || 0) * 100}
+          color={getTokenPressureColor(chatState.tokenPressure || 0)}
+          sx={{
+            height: 3,
+            borderRadius: 0,
+            mb: 1,
+            '& .MuiLinearProgress-bar': {
+              transition: 'transform 0.3s ease-in-out',
+            },
+          }}
+        />
+      )}
+
+      {busy && (
+        <LinearProgress
+          variant="indeterminate"
+          color="primary"
+          sx={{
+            height: 3,
+            borderRadius: 0,
+            mb: 1,
+            '& .MuiLinearProgress-bar': {
+              transition: 'transform 0.3s ease-in-out',
+            },
+          }}
+        />
+      )}
       <ChatInput
         onSendMessage={handleSendMessage}
         disabled={busy}
@@ -1270,6 +1419,7 @@ export default (props) => {
         onRecordingToggle={handleRecordingPanelToggle}
         onToolsToggle={handleToolsPanelToggle}
         onHistoryToggle={handleChatHistoryPanelToggle}
+        onFilesToggle={handleFilesPanelToggle}
         onFileUpload={React.useCallback(async (file: File) => {
           // Let uploadFile handle session initialization if needed
           if (uploadFile) {

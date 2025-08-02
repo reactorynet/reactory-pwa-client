@@ -9,6 +9,7 @@ interface ChatInputProps {
   onToolsToggle?: () => void;
   onFileUpload?: (file: File) => void;
   onHistoryToggle?: () => void;
+  onFilesToggle?: () => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -18,7 +19,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onRecordingToggle,
   onToolsToggle,
   onFileUpload,
-  onHistoryToggle
+  onHistoryToggle,
+  onFilesToggle
 }) => {
   const reactory = useReactory();
   const il8n = reactory.i18n;
@@ -120,25 +122,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 fontSize: 14,
                 py: 0.5,
               },
-              startAdornment: (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: 0.5 }}>
-                  <IconButton
-                    aria-label="Attach file"
-                    component="label"
-                    color="primary"
-                    disabled={disabled}
-                    sx={{ p: 0.1, fontSize: '1rem', display: 'flex', alignItems: 'center' }}
-                  >
-                    <AttachFile fontSize="small" />
-                    <input
-                      type="file"
-                      hidden
-                      accept="audio/*,image/*,application/pdf,text/plain"
-                      onChange={handleFileUpload}
-                    />
-                  </IconButton>
-                </Box>
-              ),
               endAdornment: (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 0.5 }}>
                   <IconButton
@@ -150,6 +133,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   >
                     <Mic fontSize="small" />
                   </IconButton>
+
+                  <Tooltip title={il8n?.t('reactor.client.chat.openfiles', { defaultValue: 'Open files panel' })}>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      aria-label={il8n?.t('reactor.client.chat.openfiles', { defaultValue: 'Open files panel' })}
+                      title={il8n?.t('reactor.client.chat.openfiles', { defaultValue: 'Open files panel' })}
+                      sx={{ p: 0.1, fontSize: '1rem', display: 'flex', alignItems: 'center' }}
+                      onClick={onFilesToggle}
+                    >
+                      <Icon fontSize="small">attach</Icon>
+                    </IconButton>
+                  </Tooltip>
 
                   <Tooltip title={il8n?.t('reactor.client.chat.opentools', { defaultValue: 'Open tools menu' })}>
                     <IconButton

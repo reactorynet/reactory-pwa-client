@@ -280,8 +280,7 @@ const ChatList = (props: {
         display: 'flex',
         flexDirection: 'column',
         // hide the scrollbars
-        scrollbarWidth: 'none',
-        backgroundColor: background.default,
+        scrollbarWidth: 'none',        
       }}
     >
       <List className="chat-container">
