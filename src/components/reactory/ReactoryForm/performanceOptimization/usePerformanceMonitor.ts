@@ -85,7 +85,7 @@ export const usePerformanceMonitor = (
   const {
     enabled = true,
     trackRenderTime = true,
-    trackMemoryUsage = true,
+    trackMemoryUsage: shouldTrackMemoryUsage = true,
     trackNetworkRequests = true,
     alertThresholds = {
       renderTime: 100,
@@ -300,16 +300,16 @@ export const usePerformanceMonitor = (
    * Track memory usage
    */
   const trackMemoryUsage = useCallback(() => {
-    if (!enabled || !trackMemoryUsage) return;
+    if (!enabled || !shouldTrackMemoryUsage) return;
 
-    const memoryInfo = globalThis.performance.memory;
+    const memoryInfo = (globalThis.performance as any).memory;
     if (memoryInfo) {
       setMetrics(prev => ({
         ...prev,
         memoryUsage: memoryInfo.usedJSHeapSize
       }));
     }
-  }, [enabled, trackMemoryUsage]);
+  }, [enabled, shouldTrackMemoryUsage]);
 
   /**
    * Track network request performance
@@ -396,14 +396,14 @@ export const usePerformanceMonitor = (
 
   // Periodic memory tracking
   useEffect(() => {
-    if (!enabled || !trackMemoryUsage) return;
+    if (!enabled || !shouldTrackMemoryUsage) return;
 
     const interval = setInterval(() => {
       trackMemoryUsage();
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [enabled, trackMemoryUsage, trackMemoryUsage]);
+  }, [enabled, shouldTrackMemoryUsage, trackMemoryUsage]);
 
   // Periodic report generation
   useEffect(() => {
@@ -418,10 +418,10 @@ export const usePerformanceMonitor = (
 
   // Initial memory tracking
   useEffect(() => {
-    if (enabled && trackMemoryUsage) {
+    if (enabled && shouldTrackMemoryUsage) {
       trackMemoryUsage();
     }
-  }, [enabled, trackMemoryUsage, trackMemoryUsage]);
+  }, [enabled, shouldTrackMemoryUsage, trackMemoryUsage]);
 
   return {
     metrics,
