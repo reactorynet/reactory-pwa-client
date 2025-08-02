@@ -143,7 +143,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                       sx={{ p: 0.1, fontSize: '1rem', display: 'flex', alignItems: 'center' }}
                       onClick={onFilesToggle}
                     >
-                      <Icon fontSize="small">attach</Icon>
+                      <Icon fontSize="small">attach_file</Icon>
                     </IconButton>
                   </Tooltip>
 

@@ -480,10 +480,4 @@ export const runAllTypeTests = (): void => {
     console.error('❌ Type System Tests Failed:', error);
     throw error;
   }
-};
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-// All exports are already declared above 
+}; 
