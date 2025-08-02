@@ -321,6 +321,10 @@ export type ChatState = {
   maxTokens?: number
   tokenPressure?: number
   truncatedHistory?: ReactorConversationHistory
+  /**
+   * Files attached to the chat session
+   */
+  files?: Reactory.Models.IReactoryFile[]
 }
 
 export interface QuestionHandlerResponse {

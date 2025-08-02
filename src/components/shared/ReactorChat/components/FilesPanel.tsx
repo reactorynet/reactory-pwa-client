@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { gql } from '@apollo/client';
 import { IAIPersona, ChatState } from '../types';
 
 interface FilesPanelProps {
@@ -10,6 +11,41 @@ interface FilesPanelProps {
   onFileUpload?: (file: File, chatSessionId: string ) => Promise<void>;
   il8n: any;
 }
+
+const GET_CONVERSATION_FILES = gql`
+  query ReactorConversation($id: String!) {
+    ReactorConversation(id: $id) {
+      ... on ReactorChatState {
+        id
+        files {
+          id
+          filename
+          mimetype
+          size
+          uploadedBy {
+            id
+            firstName
+            lastName
+            email
+            avatar
+          }
+          created
+          link
+          alias
+          uploadContext
+        }
+      }
+      ... on ReactorErrorResponse {
+        code
+        message
+        details
+        timestamp
+        recoverable
+        suggestion
+      }
+    }
+  }
+`;
 
 interface DocumentPreview {
   id: string;
@@ -85,48 +121,69 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     Refresh
   } = Material.MaterialIcons;
 
-  // Load documents when panel opens
-  useEffect(() => {
-    if (open && chatState?.id) {
-      loadDocuments();
-    }
-  }, [open, chatState?.id]);
-
   const loadDocuments = useCallback(async () => {
+    if (!chatState?.id) {
+      setDocuments([]);
+      return;
+    }
+
     setLoading(true);
     try {
-      // Mock data for now - replace with actual API call
-      const mockDocs: DocumentPreview[] = [
-        {
-          id: '1',
-          name: 'Project Requirements.pdf',
-          type: 'application/pdf',
-          size: 2048576,
-          uploadDate: new Date(Date.now() - 86400000),
-        },
-        {
-          id: '2', 
-          name: 'Design Mockups.png',
-          type: 'image/png',
-          size: 1024000,
-          uploadDate: new Date(Date.now() - 172800000),
-        },
-        {
-          id: '3',
-          name: 'Meeting Notes.docx',
-          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          size: 45600,
-          uploadDate: new Date(Date.now() - 259200000),
+      // Query the ReactorConversation with files field to get the attached files
+      const response = await reactory.graphqlQuery<{
+        ReactorConversation: {
+          id: string;
+          files?: Reactory.Models.IReactoryFile[];
+        } | {
+          code: string;
+          message: string;
         }
-      ];
-      
-      setDocuments(mockDocs);
+      }, { id: string }>(GET_CONVERSATION_FILES, { id: chatState.id });
+
+      if (response?.data?.ReactorConversation) {
+        const conversation = response.data.ReactorConversation;
+        
+        // Check if it's an error response
+        if ('code' in conversation) {
+          reactory.error(`Failed to load files: ${conversation.message}`);
+          setDocuments([]);
+          return;
+        }
+
+        // Map the files to DocumentPreview format
+        if (conversation.files && conversation.files.length > 0) {
+          const docs: DocumentPreview[] = conversation.files.map(file => ({
+            id: file.id || String(file._id || ''),
+            name: file.filename || file.alias || 'Unknown File',
+            type: file.mimetype || 'application/octet-stream',
+            size: file.size || 0,
+            url: file.link,
+            uploadDate: file.created ? new Date(file.created) : new Date(),
+          }));
+          
+          setDocuments(docs);
+        } else {
+          // No files attached to this chat session
+          setDocuments([]);
+        }
+      } else {
+        reactory.error('Failed to load conversation files');
+        setDocuments([]);
+      }
     } catch (error) {
       reactory.error('Failed to load documents', error);
+      setDocuments([]);
     } finally {
       setLoading(false);
     }
   }, [chatState?.id, reactory]);
+
+  // Load documents when panel opens or when chat session changes
+  useEffect(() => {
+    if (open && chatState?.id) {
+      loadDocuments();
+    }
+  }, [open, chatState?.id, loadDocuments]);
 
   const handleDocumentSelect = useCallback(async (doc: DocumentPreview) => {
     setSelectedDocument(doc);
@@ -165,22 +222,17 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
           await onFileUpload(file, chatState?.id || '');
         }
         
-        // Add to local state
-        const newDoc: DocumentPreview = {
-          id: Date.now().toString(),
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          uploadDate: new Date(),
-        };
-        
-        setDocuments(prev => [newDoc, ...prev]);
         reactory.info(`Uploaded: ${file.name}`);
       } catch (error) {
         reactory.error(`Failed to upload ${file.name}`, error);
       }
     }
-  }, [onFileUpload, reactory]);
+    
+    // Refresh the file list after upload to show the new files
+    if (chatState?.id) {
+      await loadDocuments();
+    }
+  }, [onFileUpload, chatState?.id, reactory, loadDocuments]);
 
   const handleDeleteDocument = useCallback(async (docId: string) => {
     try {
