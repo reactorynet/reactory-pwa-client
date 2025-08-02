@@ -451,13 +451,13 @@ export const useStateDebugger = (
   }, [logLevel]);
 
   const time = useCallback((label: string) => {
-    timersRef.current.set(label, performance.now());
+    timersRef.current.set(label, globalThis.performance.now());
   }, []);
 
   const timeEnd = useCallback((label: string) => {
     const startTime = timersRef.current.get(label);
     if (startTime) {
-      const duration = performance.now() - startTime;
+      const duration = globalThis.performance.now() - startTime;
       log(`${label}: ${duration.toFixed(2)}ms`);
       timersRef.current.delete(label);
     }

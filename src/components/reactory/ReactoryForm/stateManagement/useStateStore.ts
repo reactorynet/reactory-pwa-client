@@ -244,21 +244,21 @@ export const useStateStore = (
     }
 
     // Simple migration logic - can be extended
-    const migratedState = { ...state };
+    const migratedState = { ...state } as ReactoryFormState;
     
     // Add missing fields for newer versions
     if (targetVersion === '1.0.0') {
       if (!('isValid' in migratedState)) {
-        migratedState.isValid = true;
+        (migratedState as any).isValid = true;
       }
       if (!('lastValidated' in migratedState)) {
-        migratedState.lastValidated = new Date();
+        (migratedState as any).lastValidated = new Date();
       }
       if (!('lastModified' in migratedState)) {
-        migratedState.lastModified = new Date();
+        (migratedState as any).lastModified = new Date();
       }
       if (!('metadata' in migratedState)) {
-        migratedState.metadata = {};
+        (migratedState as any).metadata = {};
       }
     }
 
@@ -286,7 +286,7 @@ export const useStateStore = (
   // ============================================================================
 
   const setState = useCallback((updates: Partial<ReactoryFormState>) => {
-    const startTime = performance.now();
+    const startTime = globalThis.performance.now();
     lastActionRef.current = 'setState';
 
     // Validate updates
@@ -317,7 +317,7 @@ export const useStateStore = (
 
     // Update performance metrics
     if (enablePerformanceMonitoring) {
-      const endTime = performance.now();
+      const endTime = globalThis.performance.now();
       const updateTime = endTime - startTime;
       
       setPerformance(prev => ({
