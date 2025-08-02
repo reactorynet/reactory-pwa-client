@@ -29,6 +29,7 @@ const GET_CONVERSATION_FILES = gql`
             email
             avatar
           }
+          path
           created
           link
           alias
@@ -158,6 +159,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
             type: file.mimetype || 'application/octet-stream',
             size: file.size || 0,
             url: file.link,
+            path: file.path,
             uploadDate: file.created ? new Date(file.created) : new Date(),
           }));
           
@@ -193,18 +195,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     setMobileView('preview');
     
     try {
-      // Mock preview loading - replace with actual preview logic
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Set mock content based on file type
-      if (doc.type.startsWith('text/')) {
-        doc.content = 'This is a preview of the text document content...';
-      } else if (doc.type === 'application/pdf') {
-        doc.content = 'PDF preview would be rendered here...';
-      } else if (doc.type.startsWith('image/')) {
-        doc.url = '/path/to/image/preview'; // Mock image URL
-      }
-      
+      // Mock preview loading - replace with actual preview logic      
       setSelectedDocument({...doc});
     } catch (error) {
       reactory.error('Failed to load document preview', error);
