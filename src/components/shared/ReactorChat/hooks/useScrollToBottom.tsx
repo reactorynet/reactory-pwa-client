@@ -109,11 +109,6 @@ const ChatList = (props: {
   };
 
   const getMessageAvatar = (message: UXChatMessage, reactory: Reactory.Client.ReactorySDK) => {
-    // Check if this is a tool message (assistant message with tool_calls)
-    if (message.role === 'assistant' && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
-      return null; // We'll use an icon instead
-    }
-
     if (message.role === 'user' && reactory.getUser()?.loggedIn?.user?.avatar) {
       return reactory.getAvatar(reactory.getUser()?.loggedIn?.user as Reactory.Models.IUser);
     } else if (message.role === 'assistant' && selectedPersona?.avatar) {
@@ -149,13 +144,8 @@ const ChatList = (props: {
   }
 
   const getMessageBackgroundColor = (message: UXChatMessage) => {
-    // Tool messages get a special background color
-    if (message.role === 'assistant' && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
-      return 'action.hover'; // Slightly different background for tool messages
-    }
-
-    // Regular message backgrounds
-    return message.role === 'assistant' ? background.default : background.paper;
+    // define palette for user, assistant and tool messages
+    return background.paper; // Default background color for all messages
   }
 
   const getMessageAvatarColor = (message: UXChatMessage) => {
@@ -283,20 +273,23 @@ const ChatList = (props: {
         scrollbarWidth: 'none',        
       }}
     >
-      <List className="chat-container">
+      <List sx={{
+        padding: 0.5,
+      }}>
         {messages.map((message, idx) => (
           <React.Fragment key={message.id || idx}>
             <ListItem
               alignItems="flex-start"
               sx={{
                 justifyContent: getMessageAlignment(message),
-                mb: 2
+                mb: 0.5,
+                padding: 1,
               }}
             >
               <Paper
                 elevation={1}
                 sx={{
-                  p: 2,
+                  p: 0.5,                  
                   maxWidth: '95%',
                   backgroundColor: getMessageBackgroundColor(message),
                 }}
@@ -305,6 +298,7 @@ const ChatList = (props: {
                   <Grid item>
                     <Avatar
                       sx={{ bgcolor: getMessageAvatarColor(message) }}
+                      sizes='small'
                       aria-label={message.role}
                       src={getMessageAvatar(message, reactory)}>
                       {!getMessageAvatar(message, reactory) && (

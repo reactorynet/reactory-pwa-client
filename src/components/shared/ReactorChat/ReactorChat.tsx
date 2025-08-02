@@ -13,7 +13,9 @@ import {
   ToolApprovalMode,
   ChatState
 } from './types';
-import PersonaCard from './components/PersonaCard';
+import PersonaSelectionPanel from './components/PersonaSelectionPanel';
+import ToolsPanel from './components/ToolsPanel';
+import ChatHistoryPanel from './components/ChatHistoryPanel';
 import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -737,444 +739,47 @@ export default (props) => {
         </Paper>
 
         {/* Persona Selection Panel */}
-        <Paper
-          elevation={3}
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            transform: personaPanelOpen ? 'translateX(0)' : 'translateX(-100%)',
-            transition: 'transform 0.3s ease-in-out',
-            overflow: 'auto',
-            p: 2,
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            zIndex: 2,            
-            backdropFilter: 'blur(10px) saturate(150%)',
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <IconButton
-              onClick={handlePersonaPanelClose}
-              sx={{ mr: 2 }}
-              aria-label="Close persona selection"
-            >
-              <Material.MaterialIcons.ArrowBack />
-            </IconButton>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-              {il8n?.t('reactor.client.persona.select.title', { defaultValue: 'Select a Persona' })}
-            </Typography>
-          </Box>
-
-          {personas.length > 0 ? (
-            <Grid container spacing={2}>
-              {personas
-                .slice()
-                .sort((a, b) => (a.name?.toLowerCase() ?? '').localeCompare(b.name?.toLowerCase() ?? ''))
-                .map((persona) => (
-                  <Grid item xs={12} sm={12} md={6} lg={4} xl={3} key={persona.id}>
-                    <PersonaCard
-                      persona={persona}
-                      isSelected={selectedPersona?.id === persona.id}
-                      onSelect={handlePersonaSelect}
-                      onDetails={(persona) => {
-                        // show details using PersonaDetailsDialog
-
-                      }}
-                      Material={Material}
-                      toCamelCaseLabel={toCamelCaseLabel}
-                    />
-                  </Grid>
-                ))}
-            </Grid>
-          ) : (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                {il8n?.t('reactor.client.persona.none', { defaultValue: 'No personas available' })}
-              </Typography>
-            </Box>
-          )}
-        </Paper>
+        <PersonaSelectionPanel
+          open={personaPanelOpen}
+          onClose={handlePersonaPanelClose}
+          personas={personas}
+          selectedPersona={selectedPersona}
+          onPersonaSelect={handlePersonaSelect}
+          Material={Material}
+          il8n={il8n}
+          toCamelCaseLabel={toCamelCaseLabel}
+        />
 
         {/* Tools Panel */}
-        <Paper
-          elevation={3}
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            transform: toolsPanelOpen ? 'translateX(0)' : 'translateX(100%)',
-            transition: 'transform 0.3s ease-in-out',
-            overflow: 'auto',
-            p: 2,
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            zIndex: 2,            
-            backdropFilter: 'blur(15px) saturate(120%)',
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <IconButton
-              onClick={handleToolsPanelClose}
-              sx={{ mr: 2 }}
-              aria-label="Close tools panel"
-            >
-              <Material.MaterialIcons.ArrowBack />
-            </IconButton>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-              {il8n?.t('reactor.client.tools.title', { defaultValue: 'Tools' })}
-            </Typography>
-          </Box>
-
-          {/* Tool Approval Mode Header */}
-          <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-              {il8n?.t('reactor.client.tools.approval.mode', { defaultValue: 'Tool Approval Mode' })}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                {il8n?.t('reactor.client.tools.approval.auto', { defaultValue: 'Auto' })}
-              </Typography>
-              <Switch
-                checked={chatState?.toolApprovalMode === ToolApprovalMode.PROMPT}
-                onChange={(e) => setToolApprovalMode(e.target.checked ? ToolApprovalMode.PROMPT : ToolApprovalMode.AUTO)}
-                size="small"
-              />
-              <Typography variant="body2" color="text.secondary">
-                {il8n?.t('reactor.client.tools.approval.manual', { defaultValue: 'Manual' })}
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Streaming Mode Toggle */}
-          <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-              {il8n?.t('reactor.client.streaming.mode', { defaultValue: 'Streaming Mode' })}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                {il8n?.t('reactor.client.streaming.standard', { defaultValue: 'Standard' })}
-              </Typography>
-              <Switch
-                checked={streamingEnabled}
-                onChange={(e) => handleStreamingToggle(e.target.checked)}
-                size="small"
-                color="primary"
-              />
-              <Typography variant="body2" color="text.secondary">
-                {il8n?.t('reactor.client.streaming.realtime', { defaultValue: 'Real-time' })}
-              </Typography>
-            </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              {streamingEnabled
-                ? il8n?.t('reactor.client.streaming.description.enabled', {
-                  defaultValue: 'Messages stream in real-time as they are generated'
-                })
-                : il8n?.t('reactor.client.streaming.description.disabled', {
-                  defaultValue: 'Messages are delivered after complete generation'
-                })
-              }
-            </Typography>
-            {isStreaming && (
-              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <LinearProgress sx={{ flexGrow: 1, height: 2 }} />
-                <Typography variant="caption" color="primary">
-                  {il8n?.t('reactor.client.streaming.active', { defaultValue: 'Streaming...' })}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-
-          {/* Tools Grid */}
-          {chatState?.tools && chatState.tools.length > 0 ? (
-            <Grid container spacing={2}>
-              {chatState.tools
-                .slice()
-                .sort((a, b) => {
-                  const nameA = a.function?.name?.toLowerCase() ?? '';
-                  const nameB = b.function?.name?.toLowerCase() ?? '';
-                  return nameA.localeCompare(nameB);
-                })
-                .map((tool) => {
-                  const toolName = tool.function?.name;
-                  const isEnabled = toolName ? enabledTools.has(toolName) : false;
-
-                  return (
-                    <Grid item xs={12} sm={6} md={4} key={toolName ?? JSON.stringify(tool)}>
-                      <Paper
-                        sx={{
-                          p: 2,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease-in-out',
-                          border: 1,
-                          borderColor: isEnabled ? 'primary.main' : 'divider',
-                          opacity: isEnabled ? 1 : 0.6,
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: 4,
-                            borderColor: 'primary.main',
-                          }
-                        }}
-                        onClick={() => {
-                          // Handle tool execution
-                          if (tool.function?.parameters?.properties) {
-                            // TODO: Show tool parameters dialog
-                            reactory.log('Tool requires parameters:', tool);
-                          } else {
-                            // Execute tool immediately
-                            onToolExecute({
-                              ...tool,
-                              args: {},
-                              calledBy: 'user',
-                              callId: reactory.utils.uuid(),
-                            });
-                          }
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Checkbox
-                            checked={isEnabled}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              if (toolName) {
-                                handleToolToggle(toolName);
-                              }
-                            }}
-                            size="small"
-                            sx={{ mr: 1 }}
-                          />
-                          <Icon sx={{ mr: 1, color: 'primary.main' }}>
-                            {getToolIcon(tool)}
-                          </Icon>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                            {toCamelCaseLabel(toolName ?? 'Tool')}
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          {tool.function?.description || 'No description available'}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          {tool.function?.parameters?.properties && (
-                            <Chip
-                              label="Requires Parameters"
-                              size="small"
-                              variant="outlined"
-                              sx={{ fontSize: '0.7rem' }}
-                            />
-                          )}
-                          {isEnabled && (
-                            <Tooltip title={il8n?.t('reactor.client.tools.invoke', { defaultValue: `Execute ${toCamelCaseLabel(toolName)} tool` })}>
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // TODO: Implement manual tool invocation
-                                  reactory.log('Manual tool invocation:', toolName);
-                                }}
-                                disabled={!isEnabled}
-                                sx={{ ml: 'auto' }}
-                              >
-                                <Material.MaterialIcons.PlayArrow />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  );
-                })}
-            </Grid>
-          ) : (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                {il8n?.t('reactor.client.tools.none', { defaultValue: 'No tools available' })}
-              </Typography>
-            </Box>
-          )}
-        </Paper>
-
+        <ToolsPanel
+          open={toolsPanelOpen}
+          onClose={handleToolsPanelClose}
+          chatState={chatState}
+          streamingEnabled={streamingEnabled}
+          isStreaming={isStreaming}
+          enabledTools={enabledTools}
+          onStreamingToggle={handleStreamingToggle}
+          onToolApprovalModeChange={setToolApprovalMode}
+          onToolToggle={handleToolToggle}
+          onToolExecute={onToolExecute}
+          getToolIcon={getToolIcon}
+          Material={Material}
+          il8n={il8n}
+          toCamelCaseLabel={toCamelCaseLabel}
+          reactory={reactory}
+        />
         {/* Chat History Panel - Slides up from bottom */}
-        <Paper
-          elevation={3}
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            transform: chatHistoryPanelOpen ? 'translateY(0)' : 'translateY(100%)',
-            transition: 'transform 0.3s ease-in-out',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            zIndex: 3,            
-            backdropFilter: 'blur(15px) saturate(120%)',
-          }}
-        >
-          {/* Header */}
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            p: 2,
-            borderBottom: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.paper'
-          }}>
-            <IconButton
-              onClick={handleChatHistoryPanelClose}
-              sx={{ mr: 2 }}
-              aria-label="Close chat history"
-            >
-              <Material.MaterialIcons.ArrowBack />
-            </IconButton>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-              {il8n?.t('reactor.client.chat.history.title', { defaultValue: 'Chat History' })}
-            </Typography>
-          </Box>
-
-          {/* Content - Split Layout */}
-          <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-            {/* Left Side - Chat List */}
-            <Box sx={{
-              width: '40%',
-              borderRight: 1,
-              borderColor: 'divider',
-              overflow: 'auto',
-              p: 2
-            }}>
-              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
-                {il8n?.t('reactor.client.chat.history.conversations', { defaultValue: 'Conversations' })}
-              </Typography>
-              {chats && chats.length > 0 ? (
-                <List sx={{ p: 0 }}>
-                  {chats
-                    .slice()
-                    .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
-                    .map((chat) => {
-                      const firstUserMsg = Array.isArray(chat.history)
-                        ? chat.history.find((item) => item.role === 'user')
-                        : null;
-                      const persona = getPersona ? getPersona(chat.personaId) : null;
-                      const label = firstUserMsg?.content ?? il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
-
-                      return (
-                        <ListItem
-                          key={chat.id || `chat-${chat.created}`}
-                          sx={{
-                            cursor: 'pointer',
-                            borderRadius: 1,
-                            mb: 1,
-                            border: chatState?.id === chat.id ? 2 : 1,
-                            borderColor: chatState?.id === chat.id ? 'primary.main' : 'divider',
-                            bgcolor: chatState?.id === chat.id ? 'primary.light' : 'transparent',
-                            '&:hover': {
-                              bgcolor: 'action.hover',
-                            }
-                          }}
-                          onClick={() => handleChatSelect(chat)}
-                          secondaryAction={
-                            <IconButton
-                              edge="end"
-                              aria-label="Delete chat"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteChat(chat.id);
-                              }}
-                              size="small"
-                              color="error"
-                              sx={{
-                                opacity: 0.7,
-                                '&:hover': {
-                                  opacity: 1,
-                                }
-                              }}
-                            >
-                              <Material.MaterialIcons.Delete />
-                            </IconButton>
-                          }
-                        >
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                  {label.substring(0, 50)}{label.length > 50 ? '...' : ''}
-                                </Typography>
-                                {persona && (
-                                  <Chip
-                                    label={persona.name}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ fontSize: '0.7rem' }}
-                                  />
-                                )}
-                              </Box>
-                            }
-                            secondary={
-                              <Typography variant="caption" color="text.secondary">
-                                {new Date(chat.created).toLocaleDateString()}
-                              </Typography>
-                            }
-                          />
-                        </ListItem>
-                      );
-                    })}
-                </List>
-              ) : (
-                <Box sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {il8n?.t('reactor.client.chat.history.empty', { defaultValue: 'No chats found' })}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-
-            {/* Right Side - Preview */}
-            <Box sx={{
-              flex: 1,
-              overflow: 'auto',
-              p: 2
-            }}>
-              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
-                {il8n?.t('reactor.client.chat.history.preview', { defaultValue: 'Preview' })}
-              </Typography>
-              {chatState?.history && chatState.history.length > 0 ? (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {il8n?.t('reactor.client.chat.history.messages', { defaultValue: 'Messages' })}: {chatState.history.length}
-                  </Typography>
-                  <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-                    {chatState.history.slice(-5).map((message, index) => (
-                      <Box key={index} sx={{ mb: 1, p: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                          {message.role === 'user' ? 'You' : 'Assistant'}
-                        </Typography>
-                        <Typography variant="body2">
-                          {typeof message.content === 'string'
-                            ? message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '')
-                            : 'Message content not available'
-                          }
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              ) : (
-                <Box sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {il8n?.t('reactor.client.chat.history.noPreview', { defaultValue: 'No messages to preview' })}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          </Box>
-        </Paper>
+        <ChatHistoryPanel
+          open={chatHistoryPanelOpen}
+          onClose={handleChatHistoryPanelClose}
+          chats={chats}
+          chatState={chatState}
+          getPersona={getPersona}
+          onChatSelect={handleChatSelect}
+          onDeleteChat={deleteChat}
+          Material={Material}
+          il8n={il8n}
+        />
 
         {/* Files Panel */}
         <FilesPanel
