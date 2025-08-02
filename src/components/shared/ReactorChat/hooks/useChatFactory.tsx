@@ -227,18 +227,7 @@ const EXEC_CONVERSATION_QUERY = gql`
           roles
           params
           runat
-        }
-        files {
-          id
-          filename
-          mimetype
-          size
-          uploadedBy
-          created
-          link
-          alias
-          uploadContext
-        }
+        }        
         toolApprovalMode
         tokenCount
         maxTokens

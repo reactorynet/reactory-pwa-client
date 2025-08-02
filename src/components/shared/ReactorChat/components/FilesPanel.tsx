@@ -48,12 +48,52 @@ const GET_CONVERSATION_FILES = gql`
   }
 `;
 
+const DELETE_FILE_MUTATION = gql`
+  mutation ReactoryDeleteFile($id: String!) {
+    ReactoryDeleteFile(id: $id) {
+      ... on ReactorFileDeleteSuccess {
+        success
+        id
+      }
+      ... on ReactoryFileDeleteError {
+        error
+        message
+      }
+    }
+  }
+`;
+
+const UPDATE_FILE_MUTATION = gql`
+  mutation ReactoryUpdateFile($id: String!, $alias: String, $path: String, $filename: String, $mimetype: String, $size: Int) {
+    ReactoryUpdateFile(id: $id, alias: $alias, path: $path, filename: $filename, mimetype: $mimetype, size: $size) {
+      ... on ReactorFileUpdateSuccess {
+        success
+        file {
+          id
+          filename
+          mimetype
+          size
+          alias
+          path
+          created
+          link
+        }
+      }
+      ... on ReactoryFileUpdateError {
+        error
+        message
+      }
+    }
+  }
+`;
+
 interface DocumentPreview {
   id: string;
   name: string;
   type: string;
   size: number;
   url?: string;
+  path?: string;
   content?: string;
   uploadDate: Date;
 }
@@ -72,6 +112,17 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   const [loading, setLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'preview'>('list');
+  const [renameDialog, setRenameDialog] = useState<{
+    open: boolean;
+    fileId: string;
+    currentName: string;
+    newName: string;
+  }>({
+    open: false,
+    fileId: '',
+    currentName: '',
+    newName: ''
+  });
 
   const {
     React,
@@ -102,7 +153,11 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     CardActions,
     Avatar,
     Tooltip,
-    Fab
+    Fab,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions
   } = Material.MaterialCore;
 
   const {
@@ -119,7 +174,8 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     Download,
     Visibility,
     CloudUpload,
-    Refresh
+    Refresh,
+    Edit
   } = Material.MaterialIcons;
 
   const loadDocuments = useCallback(async () => {
@@ -154,7 +210,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
         // Map the files to DocumentPreview format
         if (conversation.files && conversation.files.length > 0) {
           const docs: DocumentPreview[] = conversation.files.map(file => ({
-            id: file.id || String(file._id || ''),
+            id: file.id || (file._id ? file._id.toString() : ''),
             name: file.filename || file.alias || 'Unknown File',
             type: file.mimetype || 'application/octet-stream',
             size: file.size || 0,
@@ -227,18 +283,145 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
 
   const handleDeleteDocument = useCallback(async (docId: string) => {
     try {
-      // Replace with actual API call
-      setDocuments(prev => prev.filter(doc => doc.id !== docId));
-      
-      if (selectedDocument?.id === docId) {
-        setSelectedDocument(null);
+      // Call the GraphQL mutation to delete the file
+      const response = await reactory.graphqlMutation<{
+        ReactoryDeleteFile: {
+          success: boolean;
+          id: string;
+        } | {
+          error: string;
+          message: string;
+        }
+      }, { id: string }>(DELETE_FILE_MUTATION, { id: docId });
+
+      if (response?.data?.ReactoryDeleteFile) {
+        const result = response.data.ReactoryDeleteFile;
+        
+        // Check if it's an error response
+        if ('error' in result) {
+          reactory.error(`Failed to delete file: ${result.message}`);
+          return;
+        }
+
+        // Success - remove from local state and refresh from server
+        if (selectedDocument?.id === docId) {
+          setSelectedDocument(null);
+        }
+        
+        // Refresh the file list to ensure consistency with server
+        await loadDocuments();
+        
+        reactory.info('Document deleted successfully');
+      } else {
+        reactory.error('Failed to delete document - no response from server');
       }
-      
-      reactory.info('Document deleted successfully');
     } catch (error) {
       reactory.error('Failed to delete document', error);
     }
-  }, [selectedDocument, reactory]);
+  }, [selectedDocument, reactory, loadDocuments]);
+
+  const handleUpdateDocument = useCallback(async (docId: string, updates: {
+    filename?: string;
+    alias?: string;
+    path?: string;
+    mimetype?: string;
+    size?: number;
+  }) => {
+    try {
+      // Call the GraphQL mutation to update the file
+      const response = await reactory.graphqlMutation<{
+        ReactoryUpdateFile: {
+          success: boolean;
+          file: {
+            id: string;
+            filename: string;
+            mimetype: string;
+            size: number;
+            alias: string;
+            path: string;
+            created: string;
+            link: string;
+          };
+        } | {
+          error: string;
+          message: string;
+        }
+      }, { 
+        id: string;
+        alias?: string;
+        path?: string;
+        filename?: string;
+        mimetype?: string;
+        size?: number;
+      }>(UPDATE_FILE_MUTATION, { 
+        id: docId,
+        ...updates
+      });
+
+      if (response?.data?.ReactoryUpdateFile) {
+        const result = response.data.ReactoryUpdateFile;
+        
+        // Check if it's an error response
+        if ('error' in result) {
+          reactory.error(`Failed to update file: ${result.message}`);
+          return false;
+        }
+
+        // Success - refresh the file list to show updates
+        await loadDocuments();
+        
+        // Update selected document if it's the one we updated
+        if (selectedDocument?.id === docId) {
+          const updatedFile = result.file;
+          setSelectedDocument(prev => prev ? {
+            ...prev,
+            name: updatedFile.filename || updatedFile.alias || prev.name,
+            type: updatedFile.mimetype || prev.type,
+            size: updatedFile.size || prev.size,
+            url: updatedFile.link || prev.url,
+            uploadDate: updatedFile.created ? new Date(updatedFile.created) : prev.uploadDate,
+          } : null);
+        }
+        
+        reactory.info('Document updated successfully');
+        return true;
+      } else {
+        reactory.error('Failed to update document - no response from server');
+        return false;
+      }
+    } catch (error) {
+      reactory.error('Failed to update document', error);
+      return false;
+    }
+  }, [reactory, loadDocuments, selectedDocument]);
+
+  const handleRenameDocument = useCallback((docId: string, currentName: string) => {
+    setRenameDialog({
+      open: true,
+      fileId: docId,
+      currentName,
+      newName: currentName
+    });
+  }, []);
+
+  const handleRenameConfirm = useCallback(async () => {
+    if (!renameDialog.newName.trim() || renameDialog.newName === renameDialog.currentName) {
+      setRenameDialog(prev => ({ ...prev, open: false }));
+      return;
+    }
+
+    const success = await handleUpdateDocument(renameDialog.fileId, {
+      filename: renameDialog.newName.trim()
+    });
+
+    if (success) {
+      setRenameDialog({ open: false, fileId: '', currentName: '', newName: '' });
+    }
+  }, [renameDialog, handleUpdateDocument]);
+
+  const handleRenameCancel = useCallback(() => {
+    setRenameDialog({ open: false, fileId: '', currentName: '', newName: '' });
+  }, []);
 
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return <Image />;
@@ -487,22 +670,36 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
                         }
                       />
                     </ListItemButton>
-                    <IconButton
-                      edge="end"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteDocument(doc.id);
-                      }}
-                      size="small"
-                      color="error"
-                      sx={{ 
-                        ml: 1,
-                        minWidth: { xs: 44, md: 'auto' },
-                        minHeight: { xs: 44, md: 'auto' }
-                      }}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRenameDocument(doc.id, doc.name);
+                        }}
+                        size="small"
+                        color="primary"
+                        sx={{ 
+                          minWidth: { xs: 40, md: 'auto' },
+                          minHeight: { xs: 40, md: 'auto' }
+                        }}
+                      >
+                        <Edit fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDocument(doc.id);
+                        }}
+                        size="small"
+                        color="error"
+                        sx={{ 
+                          minWidth: { xs: 40, md: 'auto' },
+                          minHeight: { xs: 40, md: 'auto' }
+                        }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Box>
                   </ListItem>
                 ))}
               </List>
@@ -704,6 +901,17 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
                     Download
                   </Button>
                   <Button
+                    startIcon={<Edit />}
+                    size="small"
+                    onClick={() => handleRenameDocument(selectedDocument.id, selectedDocument.name)}
+                    sx={{ 
+                      fontSize: { xs: '0.75rem', md: '0.875rem' },
+                      minWidth: { xs: 'auto', md: 64 }
+                    }}
+                  >
+                    Rename
+                  </Button>
+                  <Button
                     startIcon={<Delete />}
                     size="small"
                     color="error"
@@ -783,6 +991,48 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
       >
         <CloudUpload />
       </Fab>
+
+      {/* Rename Dialog */}
+      <Dialog
+        open={renameDialog.open}
+        onClose={handleRenameCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {il8n?.t('reactor.client.files.rename', { defaultValue: 'Rename File' })}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="File Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={renameDialog.newName}
+            onChange={(e) => setRenameDialog(prev => ({ ...prev, newName: e.target.value }))}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleRenameConfirm();
+              }
+            }}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleRenameCancel}>
+            {il8n?.t('reactor.client.files.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button 
+            onClick={handleRenameConfirm} 
+            variant="contained"
+            disabled={!renameDialog.newName.trim() || renameDialog.newName === renameDialog.currentName}
+          >
+            {il8n?.t('reactor.client.files.rename', { defaultValue: 'Rename' })}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };

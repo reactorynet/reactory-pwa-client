@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { IAIPersona } from '../types';
 import PersonaDetailsDialog from './PersonaDetailsDialog';
+import { Icon, IconButton } from '@mui/material';
+import { Star, StarOutline } from '@mui/icons-material';
 
 interface PersonaCardProps {
   persona: IAIPersona;
@@ -36,7 +38,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
   } = Material.MaterialIcons;
 
   const [showDetails, setShowDetails] = useState(false);
-  
+  const [isFavourite, setIsFavourite] = useState(false);
 
   return (
     <Card 
@@ -55,7 +57,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
       }}
     >
       <CardContent sx={{ flexGrow: 1, p: 2, overflow: 'hidden' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>          
           <Avatar 
             src={persona.avatar} 
             alt={persona.name} 
@@ -81,6 +83,19 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
               />
             )}
           </Box>
+          <IconButton
+            size="small"
+            sx={{
+              mr: 1,
+              color: isFavourite ? 'primary.main' : 'text.secondary',
+            }}
+            onClick={() => {
+              // trigger on favourite
+              setIsFavourite(!isFavourite);
+            }}
+          >
+            {isFavourite ? <Star /> : <StarOutline />}
+          </IconButton>
         </Box>
         
         <Typography 
