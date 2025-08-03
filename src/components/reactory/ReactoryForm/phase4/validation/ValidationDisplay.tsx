@@ -148,9 +148,9 @@ export const ValidationDisplay: React.FC<ValidationDisplayProps> = ({
     return (
       <motion.div
         key={error.id}
-        initial={enableAnimations ? { opacity: 0, x: -20 } : false}
-        animate={enableAnimations ? { opacity: 1, x: 0 } : false}
-        exit={enableAnimations ? { opacity: 0, x: 20 } : false}
+        initial={enableAnimations ? { opacity: 0, x: -20 } : undefined}
+        animate={enableAnimations ? { opacity: 1, x: 0 } : undefined}
+        exit={enableAnimations ? { opacity: 0, x: 20 } : undefined}
         transition={{ duration: 0.3, delay: index * 0.1 }}
       >
         <Alert
@@ -199,9 +199,9 @@ export const ValidationDisplay: React.FC<ValidationDisplayProps> = ({
     return (
       <motion.div
         key={warning.id}
-        initial={enableAnimations ? { opacity: 0, x: -20 } : false}
-        animate={enableAnimations ? { opacity: 1, x: 0 } : false}
-        exit={enableAnimations ? { opacity: 0, x: 20 } : false}
+        initial={enableAnimations ? { opacity: 0, x: -20 } : undefined}
+        animate={enableAnimations ? { opacity: 1, x: 0 } : undefined}
+        exit={enableAnimations ? { opacity: 0, x: 20 } : undefined}
         transition={{ duration: 0.3, delay: index * 0.1 }}
       >
         <Alert
@@ -346,9 +346,9 @@ export const ValidationDisplay: React.FC<ValidationDisplayProps> = ({
 
     return (
       <motion.div
-        initial={enableAnimations ? { opacity: 0 } : false}
-        animate={enableAnimations ? { opacity: 1 } : false}
-        exit={enableAnimations ? { opacity: 0 } : false}
+        initial={enableAnimations ? { opacity: 0 } : undefined}
+        animate={enableAnimations ? { opacity: 1 } : undefined}
+        exit={enableAnimations ? { opacity: 0 } : undefined}
       >
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" color="text.secondary" gutterBottom>

@@ -277,7 +277,7 @@ export const useAdvancedValidation = (config: AdvancedValidationConfig = {}) => 
           isValid = await rule.validator(value, formData);
         } else if (rule.type in builtInValidators) {
           const validator = builtInValidators[rule.type as keyof typeof builtInValidators];
-          isValid = validator(value, rule.params);
+          isValid = validator(value, rule.params as any);
         } else {
           isValid = true;
         }
