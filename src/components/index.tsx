@@ -30,6 +30,7 @@ import Loading from './shared/Loading';
 import LinkComponent from './shared/Link';
 import ReactoryRouterComponent from './reactory/ReactoryFormRouter'
 import { ReactoryForm } from './reactory/ReactoryForm';
+import { ReactoryFormEnhanced as ReactoryFormV2 } from './reactory/ReactoryForm/ReactoryFormEnhanced';
 import * as ReactoryFormUtilities from './reactory/form/utils';
 import DateSelector from './dates/DateSelector';
 import Calendar from './dates/Calendar';
@@ -383,8 +384,14 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'ReactoryForm',
-    component: ReactoryForm,
+    component: ReactoryFormV2,
     version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactoryForm',
+    component: ReactoryFormV2,
+    version: '2.0.0',
   },
   {
     nameSpace: 'core',

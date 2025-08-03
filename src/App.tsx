@@ -161,7 +161,7 @@ const RouteComponentWrapper = ({ routeDef, reactory, componentArgs, children, on
   // Add additional safety checks for component loading
   if (!ReactoryComponent) {
     return (
-      <div>
+      <div key={`route-loading-${routeDef.id}`}>
         {children}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem', marginTop: `${headerHeight}px` }}>
           <span>Loading component...</span>
@@ -182,7 +182,7 @@ const RouteComponentWrapper = ({ routeDef, reactory, componentArgs, children, on
       }
 
       return (
-        <div>
+        <div key={`route-${routeDef.id}`}>
           {children}
           <ReactoryComponent {...componentProps} key={routeDef.id} />
         </div>
@@ -190,7 +190,7 @@ const RouteComponentWrapper = ({ routeDef, reactory, componentArgs, children, on
     } else {
       // Component not found - show loading state with retry mechanism
       return (
-        <div>
+        <div key={`route-not-found-${routeDef.id}`}>
           {children}
           <NotFound
             key={routeDef.id}
@@ -212,7 +212,7 @@ const RouteComponentWrapper = ({ routeDef, reactory, componentArgs, children, on
       location
     });
     return (
-      <div>
+      <div key={`route-error-${routeDef.id}`}>
         {children}
         <NotFound
           key={routeDef.id}
