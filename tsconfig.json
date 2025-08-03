@@ -5,7 +5,7 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "allowJs": false,
-    "target": "es6",
+    "target": "es2020",
     "jsx": "preserve",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
@@ -14,12 +14,13 @@
     "skipLibCheck": true,
     "strict": false,
     "lib": [
-      "es6",
+      "es2020",
       "dom"
     ],
     "types": [
       "webpack-env",
-      "markerclustererplus"
+      "markerclustererplus",
+      "jest"
     ],
     "baseUrl": ".",
     "noUnusedLocals": false,

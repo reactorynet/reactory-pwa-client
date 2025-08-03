@@ -19,6 +19,8 @@ import ChatHistoryPanel from './components/ChatHistoryPanel';
 import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
+import RecordingAudioBar from "./components/RecordingAudioBar";
+import SpeedDialWidget from '../SpeedDialWidget/SpeedDialWidget';
 
 export default (props) => {
   const { formData } = props;
@@ -209,6 +211,9 @@ export default (props) => {
   const {
     Tune,
     Person,
+    Chat,
+    Description,
+    Star,
   } = Material.MaterialIcons;
 
   // Helper to get color based on token pressure
@@ -517,6 +522,24 @@ export default (props) => {
     });
   }, [selectPersona, navigate, location.pathname]);
 
+  const handleNewChat = useCallback(() => {
+    // Create a new chat with the existing persona
+    if (selectedPersona) {
+      reactory.log(`Creating new chat with persona: ${selectedPersona.name}`);
+      newChat();
+    }
+  }, [selectedPersona, newChat, reactory]);
+
+  const handleCannedPrompts = useCallback(() => {
+    // TODO: Implement canned prompts logic
+    reactory.log('Canned prompts feature - to be implemented');
+  }, [reactory]);
+
+  const handleFavoritePersona = useCallback(() => {
+    // TODO: Implement favorite persona logic
+    reactory.log(`Favorite persona: ${selectedPersona?.name} - to be implemented`);
+  }, [selectedPersona, reactory]);
+
   const handleSendMessage = useCallback((message: string) => {
     sendMessage(message, chatState?.id);
   }, [sendMessage, chatState?.id]);
@@ -599,6 +622,28 @@ export default (props) => {
       text: (typeof text === 'string' ? text : text?.primary) || '#000000',
     };
   }, [primary, secondary, background, text]);
+
+  // SpeedDial actions for persona
+  const personaSpeedDialActions = useMemo(() => [
+    {
+      key: 'newChat',
+      icon: <Chat />,
+      title: il8n?.t('reactor.client.persona.newChat', { defaultValue: 'New Chat' }),
+      clickHandler: handleNewChat,
+    },
+    {
+      key: 'cannedPrompts',
+      icon: <Description />,
+      title: il8n?.t('reactor.client.persona.cannedPrompts', { defaultValue: 'Canned Prompts' }),
+      clickHandler: handleCannedPrompts,
+    },
+    {
+      key: 'favorite',
+      icon: <Star />,
+      title: il8n?.t('reactor.client.persona.favorite', { defaultValue: 'Favorite' }),
+      clickHandler: handleFavoritePersona,
+    },
+  ], [Chat, Description, Star, il8n, handleNewChat, handleCannedPrompts, handleFavoritePersona]);
 
   const backgroundSVG = useMemo(() => {
     // Create a simplified SVG pattern that should work reliably in data URLs
@@ -793,194 +838,41 @@ export default (props) => {
         />
 
         {/* Recording Audio Bar - Slides up from bottom */}
-        <Paper
-          elevation={0}
-          sx={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 80,
-            transform: recordingPanelOpen ? 'translateY(0)' : 'translateY(100%)',
-            transition: 'transform 0.3s ease-in-out',
-            background: `linear-gradient(135deg, 
-              ${themeColors.primary}20 0%, 
-              ${themeColors.secondary}20 100%)`,
-            backdropFilter: 'blur(20px) saturate(180%)',
-            borderRadius: '16px 16px 0 0',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-            opacity: 0.95,
-          }}
-        >
-          {/* Recording Content - Compact horizontal layout */}
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 3,
-            px: 3
-          }}>
-            {/* Close Button */}
-            <IconButton
-              onClick={handleRecordingPanelClose}
-              sx={{
-                color: 'white',
-                opacity: 0.8,
-                '&:hover': {
-                  opacity: 1,
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                }
-              }}
-              size="small"
-              aria-label="Close recording"
-            >
-              <Material.MaterialIcons.Close />
-            </IconButton>
-
-            {/* Recording Mic Icon with Pulse Effect */}
-            <Box sx={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              {/* Pulse Circles */}
-              <Box sx={{
-                position: 'absolute',
-                width: 60,
-                height: 60,
-                borderRadius: '50%',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                animation: 'pulse 2s infinite',
-                '@keyframes pulse': {
-                  '0%': {
-                    transform: 'scale(0.8)',
-                    opacity: 0.7,
-                  },
-                  '50%': {
-                    transform: 'scale(1.1)',
-                    opacity: 0.3,
-                  },
-                  '100%': {
-                    transform: 'scale(1.3)',
-                    opacity: 0,
-                  },
-                },
-              }} />
-
-              {/* Main Mic Button */}
-              <IconButton
-                sx={{
-                  width: 48,
-                  height: 48,
-                  bgcolor: 'rgba(255, 255, 255, 0.2)',
-                  color: 'white',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  '&:hover': {
-                    bgcolor: 'rgba(255, 255, 255, 0.3)',
-                    transform: 'scale(1.05)',
-                  },
-                  '&:active': {
-                    transform: 'scale(0.95)',
-                  },
-                  transition: 'all 0.2s ease-in-out',
-                }}
-                onClick={() => {
-                  // TODO: Start/stop recording logic
-                  reactory.log('Recording button clicked');
-                }}
-              >
-                <Material.MaterialIcons.Mic sx={{ fontSize: 24 }} />
-              </IconButton>
-            </Box>
-
-            {/* Recording Status Text */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <Typography
-                variant="subtitle2"
-                sx={{
-                  color: 'white',
-                  fontWeight: 'bold',
-                  mb: 0.5
-                }}
-              >
-                {il8n?.t('reactor.client.recording.listening', { defaultValue: 'Listening...' })}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '0.75rem'
-                }}
-              >
-                {il8n?.t('reactor.client.recording.tip.compact', { defaultValue: 'Tap mic to stop' })}
-              </Typography>
-            </Box>
-
-            {/* Optional: Recording Duration */}
-            <Box sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              ml: 'auto'
-            }}>
-              <Box sx={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                bgcolor: '#ff4444',
-                animation: 'blink 1s infinite',
-                '@keyframes blink': {
-                  '0%, 50%': { opacity: 1 },
-                  '51%, 100%': { opacity: 0.3 },
-                },
-              }} />
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'white',
-                  fontFamily: 'monospace',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold'
-                }}
-              >
-                00:00
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+        <RecordingAudioBar
+          open={recordingPanelOpen}
+          onClose={handleRecordingPanelClose}
+          il8n={il8n}
+          reactory={reactory}
+        />
+import RecordingAudioBar from './components/RecordingAudioBar';
       </Box>
 
-      {/* Persona FAB Button - Left Side */}
-      <Fab
-        color="primary"
-        size="small"
-        onClick={handlePersonaPanelToggle}
+      {/* Persona SpeedDial - Bottom Right */}
+      <SpeedDialWidget
+        actions={personaSpeedDialActions}
         sx={{
-          position: 'absolute',
-          bottom: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 68 : 80,
-          right: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 4 : 8,
-          zIndex: 1000,
-          width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 40 : 48,
-          height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 40 : 48,
-          transition: 'all 0.3s ease-in-out',
-        }}
-        aria-label={il8n?.t('reactor.client.persona.select', { defaultValue: 'Select persona' })}
-      >
-        <Avatar
-          src={selectedPersona?.avatar}
-          alt={selectedPersona?.name}
-          sx={{
-            width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
-            height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
-            transition: 'all 0.3s ease-in-out',
-          }}
-        />
-      </Fab>
+        position: 'absolute',
+        bottom: 70,
+        right: 16,       
+        zIndex: 1000,
+        transition: 'all 0.3s ease-in-out',
+      }}
+        icon={
+          <Avatar            
+            src={selectedPersona?.avatar}
+            alt={selectedPersona?.name}
+            sx={{
+              width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
+              height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
+              transition: 'all 0.3s ease-in-out',
+            }}
+          />
+        }
+        onClick={handlePersonaPanelToggle}
+        style={{
+          height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 60 : 80,
+        }}        
+      />      
       {/* Token Pressure Progress Bar - Moved to top */}
       {chatState?.tokenPressure !== undefined && !busy && (
         <LinearProgress

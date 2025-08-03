@@ -1,18 +1,13 @@
 import classNames from 'classnames';
-import React, { Component, Fragment } from 'react';
-import PropTypes from 'prop-types';
+import React, { Fragment, useState } from 'react';
 import { withStyles } from '@mui/styles';
 import { isFunction } from 'lodash';
 import capitalize from '@mui/utils/capitalize';
 import SpeedDial from '@mui/lab/SpeedDial';
 import SpeedDialIcon from '@mui/lab/SpeedDialIcon';
 import SpeedDialAction from '@mui/lab/SpeedDialAction';
-import FileCopyIcon from '@mui/icons-material/FileCopyOutlined';
-import SaveIcon from '@mui/icons-material/Save';
-import PrintIcon from '@mui/icons-material/Print';
-import ShareIcon from '@mui/icons-material/Share';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { Theme } from '@mui/material';
+import { Theme, Fade, Box } from '@mui/material';
+import { SxProps } from '@mui/system';
 import { compose } from 'redux';
 
 
@@ -47,15 +42,25 @@ const styles = (theme:Theme): any => ({
   directionLeft: {},
 });
 
-const actions = [
-  { icon: <FileCopyIcon />, name: 'Copy' },
-  { icon: <SaveIcon />, name: 'Save' },
-  { icon: <PrintIcon />, name: 'Print' },
-  { icon: <ShareIcon />, name: 'Share' },
-  { icon: <DeleteIcon />, name: 'Delete' },
-];
+export interface SpeedDialAction {
+  key: string;
+  icon: React.ReactNode;
+  title: string;
+  clickHandler?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+}
 
 type TDirection = "up" | "down" | "left" | "right";
+
+export type SpeedDialWidgetProps = {
+  classes: any;
+  icon?: React.ReactNode;
+  actions: SpeedDialAction[];
+  style?: React.CSSProperties;
+  buttonStyle?: React.CSSProperties;
+  sx?: SxProps<Theme>;  
+  onClick?: (event: React.SyntheticEvent) => void;
+  onActionClick?: (action: SpeedDialAction, event: React.SyntheticEvent) => void;
+}
 
 
 const SpeedDials = (props: any) => {
@@ -63,11 +68,37 @@ const SpeedDials = (props: any) => {
   const [direction, setDirection] = React.useState<TDirection>('up');
   const [hidden, setHidden] = React.useState(false);
   const [open, setOpen] = React.useState(false);
+  const longPressTimeout = React.useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggered = React.useRef(false);
 
+  // Mouse click handler (desktop)
   const handleClick = (evt: React.MouseEvent) => {
-    if(isFunction(evt.persist)) evt.persist();    
+    if (isFunction(evt.persist)) evt.persist();
     setOpen(!open);
-    if(isFunction(props.onClick) === true) props.onClick(evt);
+    if (isFunction(props.onClick) === true) props.onClick(evt);
+  };
+
+  // Touch start handler (mobile)
+  const handleTouchStart = (evt: React.TouchEvent) => {
+    longPressTriggered.current = false;
+    if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
+    longPressTimeout.current = setTimeout(() => {
+      setOpen(true);
+      longPressTriggered.current = true;
+    }, 500); // 500ms for long press
+  };
+
+  // Touch end handler (mobile)
+  const handleTouchEnd = (evt: React.TouchEvent) => {
+    if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
+    if (!longPressTriggered.current) {
+      setOpen((prev) => !prev);
+    }
+  };
+
+  // Touch move/cancel handler (mobile)
+  const handleTouchMove = () => {
+    if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
   };
 
   const handleDirectionChange = (event: React.ChangeEvent<{}>, value: TDirection) => {
@@ -76,7 +107,6 @@ const SpeedDials = (props: any) => {
 
   const handleHiddenChange = (event: React.ChangeEvent<{}>, hidden: boolean) => {
     setHidden(hidden);
-    // hidden implies !open
     setOpen(hidden ? false : open);
   };
 
@@ -94,34 +124,34 @@ const SpeedDials = (props: any) => {
   );
 
   return (
-    <Fragment>        
-      <div className={classes.exampleWrapper} style={style}>
-        <SpeedDial
-          ariaLabel="QuickPick"
-          className={speedDialClassName}
-          hidden={hidden}
-          icon={ icon || <SpeedDialIcon />}
-          onBlur={handleClose}
-          onClick={handleClick}
-          onClose={handleClose}
-          onFocus={handleOpen}
-          onMouseEnter={handleOpen}
-          onMouseLeave={handleClose}
-          open={open}
-          direction={direction as TDirection}
-          style={buttonStyle}
-        >
-          {actions.map(action => (
-            <SpeedDialAction
-              key={action.key}
-              icon={action.icon}
-              title={action.title}                
-              onClick={ action.clickHandler || handleClick }
-            />
-          ))}
-        </SpeedDial>
-      </div>
-    </Fragment>
+      <SpeedDial        
+        ariaLabel="QuickPick"
+        className={speedDialClassName}
+        hidden={hidden}
+        icon={icon || <SpeedDialIcon />}
+        onBlur={handleClose}
+        onClick={handleClick}
+        onClose={handleClose}
+        onFocus={handleOpen}
+        onMouseEnter={handleOpen}
+        onMouseLeave={handleClose}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
+        onTouchCancel={handleTouchMove}
+        open={open}
+        direction={direction}        
+        sx={props.sx || {}}
+      >
+        {actions.map(action => (
+          <SpeedDialAction
+            key={action.key}
+            icon={action.icon}
+            title={action.title}
+            onClick={action.clickHandler || handleClick}
+          />
+        ))}
+      </SpeedDial>
   );
 }
 
