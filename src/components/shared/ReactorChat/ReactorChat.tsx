@@ -459,6 +459,12 @@ export default (props) => {
   }, [chatState?.id, busy, queryParams.personaId, navigate, location.pathname, handleChatMenuClose]);
 
   const handlePersonaPanelToggle = useCallback(() => {
+    // Close other panels first
+    setToolsPanelOpen(false);
+    setChatHistoryPanelOpen(false);
+    setRecordingPanelOpen(false);
+    setFilesPanelOpen(false);
+    // Then toggle persona panel
     setPersonaPanelOpen(!personaPanelOpen);
   }, [personaPanelOpen]);
 
@@ -467,6 +473,12 @@ export default (props) => {
   }, []);
 
   const handleToolsPanelToggle = useCallback(() => {
+    // Close other panels first
+    setPersonaPanelOpen(false);
+    setChatHistoryPanelOpen(false);
+    setRecordingPanelOpen(false);
+    setFilesPanelOpen(false);
+    // Then toggle tools panel
     setToolsPanelOpen(!toolsPanelOpen);
   }, [toolsPanelOpen]);
 
@@ -487,6 +499,12 @@ export default (props) => {
   }, []);
 
   const handleChatHistoryPanelToggle = useCallback(() => {
+    // Close other panels first
+    setPersonaPanelOpen(false);
+    setToolsPanelOpen(false);
+    setRecordingPanelOpen(false);
+    setFilesPanelOpen(false);
+    // Then toggle chat history panel
     setChatHistoryPanelOpen(!chatHistoryPanelOpen);
   }, [chatHistoryPanelOpen]);
 
@@ -495,6 +513,12 @@ export default (props) => {
   }, []);
 
   const handleRecordingPanelToggle = useCallback(() => {
+    // Close other panels first
+    setPersonaPanelOpen(false);
+    setToolsPanelOpen(false);
+    setChatHistoryPanelOpen(false);
+    setFilesPanelOpen(false);
+    // Then toggle recording panel
     setRecordingPanelOpen(!recordingPanelOpen);
   }, [recordingPanelOpen]);
 
@@ -503,6 +527,12 @@ export default (props) => {
   }, []);
 
   const handleFilesPanelToggle = useCallback(() => {
+    // Close other panels first
+    setPersonaPanelOpen(false);
+    setToolsPanelOpen(false);
+    setChatHistoryPanelOpen(false);
+    setRecordingPanelOpen(false);
+    // Then toggle files panel
     setFilesPanelOpen(!filesPanelOpen);
   }, [filesPanelOpen]);
 
@@ -850,9 +880,14 @@ export default (props) => {
       <SpeedDialWidget
         actions={personaSpeedDialActions}
         position="bottom-right"
-        offsetBottom={personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 82 : 90}
-        offsetRight={16}
-        size={personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 'small' : 'medium'}
+        offsetBottom={
+          personaPanelOpen || 
+          toolsPanelOpen || 
+          chatHistoryPanelOpen || 
+          recordingPanelOpen ||
+          filesPanelOpen ? 86 : 94}
+        offsetRight={8}
+        size={'small'}
         elevation={3}
         sx={{
           zIndex: 1000,
@@ -863,8 +898,8 @@ export default (props) => {
             src={selectedPersona?.avatar}
             alt={selectedPersona?.name}
             sx={{
-              width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
-              height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
+              width: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
+              height: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
               transition: 'all 0.3s ease-in-out',
             }}
           />
@@ -910,6 +945,10 @@ export default (props) => {
         onToolsToggle={handleToolsPanelToggle}
         onHistoryToggle={handleChatHistoryPanelToggle}
         onFilesToggle={handleFilesPanelToggle}
+        recordingPanelOpen={recordingPanelOpen}
+        toolsPanelOpen={toolsPanelOpen}
+        chatHistoryPanelOpen={chatHistoryPanelOpen}
+        filesPanelOpen={filesPanelOpen}
         onFileUpload={React.useCallback(async (file: File) => {
           // Let uploadFile handle session initialization if needed
           if (uploadFile) {
