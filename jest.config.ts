@@ -10,7 +10,11 @@ export default async (): Promise<JestConfigWithTsJest> => {
     testEnvironment: 'jsdom',
     detectOpenHandles: true,
     transform: {
-      '^.+\\.[jt]sx?$': 'ts-jest',
+      '^.+\\.[jt]sx?$': ['ts-jest', {
+        tsconfig: {
+          jsx: 'react-jsx',
+        },
+      }],
     },
     moduleNameMapper: {
       '^@reactory/client-core/(.*)$': '<rootDir>/src/$1',
@@ -19,7 +23,7 @@ export default async (): Promise<JestConfigWithTsJest> => {
       '^@reactory/webpack/(.*)$': '<rootDir>/webpack/$1',
       '^@reactory/config/(.*)$': '<rootDir>/config/$1',
       '^@rjsf/material-ui/(.*)$': '<rootDir>/node_modules/@rjsf/material-ui/dist/$1',
-      '^react$': '<rootDir>/node_modules/@types/react',
+      '^react$': '<rootDir>/node_modules/react',
       '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     },
     setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
