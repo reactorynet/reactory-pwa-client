@@ -101,7 +101,7 @@
     "stream-browserify": "3.0.0",
     "styled-components": "6.1.12",
     "three": "^0.178.0",
-    "uuid": "10.0.0",
+    "uuid": "^11.1.0",
     "vm-browserify": "1.1.2",
     "whatwg-fetch": "3.6.20",
     "zod": "3.24.2"
@@ -173,7 +173,7 @@
     "@types/react-redux": "^7.1.23",
     "@types/react-router-dom": "5.3.3",
     "@types/three": "^0.178.1",
-    "@types/uuid": "8.3.4",
+    "@types/uuid": "^10.0.0",
     "@types/webpack": "5.28.5",
     "@types/webpack-env": "1.18.5",
     "@types/webpack-sources": "3.2.3",
