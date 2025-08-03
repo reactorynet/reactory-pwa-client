@@ -24,4 +24,14 @@ global.requestAnimationFrame = (callback: FrameRequestCallback) => {
   const id = setTimeout(callback, 0);
   return id as unknown as number;
 };
-global.cancelAnimationFrame = (id: number) => clearTimeout(id as unknown as NodeJS.Timeout); 
+global.cancelAnimationFrame = (id: number) => clearTimeout(id as unknown as NodeJS.Timeout);
+
+// Mock process for browser environment
+if (typeof global.process === 'undefined') {
+  global.process = {
+    env: {
+      NODE_ENV: 'development',
+      REACT_APP_TITLE: 'Reactory Client',
+    },
+  } as any;
+} 

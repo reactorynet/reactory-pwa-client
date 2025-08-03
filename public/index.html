@@ -3,6 +3,17 @@
 
 <head>
   <script src="http://localhost:8097"></script>
+  <script>
+    // Polyfill for process in browser environment
+    if (typeof window.process === 'undefined') {
+      window.process = {
+        env: {
+          NODE_ENV: 'development',
+          REACT_APP_TITLE: 'Reactory Client'
+        }
+      };
+    }
+  </script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="theme-color" content="#000000">
