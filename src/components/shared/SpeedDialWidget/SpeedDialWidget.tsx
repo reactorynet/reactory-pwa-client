@@ -11,7 +11,7 @@ import { SxProps } from '@mui/system';
 import { compose } from 'redux';
 
 
-const styles = (theme: Theme, props: SpeedDialWidgetProps): any => ({
+const styles = (theme: Theme): any => ({
   root: {
     width: '100%',
   },
@@ -26,15 +26,15 @@ const styles = (theme: Theme, props: SpeedDialWidgetProps): any => ({
     margin: `${theme.spacing(1)} 0`,
   },
   speedDial: {
-    position: 'absolute',
-    '&$directionUp, &$directionLeft': {
-      bottom: theme.spacing(2),
-      right: theme.spacing(2),
-    },
-    '&$directionDown, &$directionRight': {
-      top: theme.spacing(2),
-      left: theme.spacing(3),
-    },
+    // Remove hardcoded positioning to allow dynamic positioning to work
+    // '&$directionUp, &$directionLeft': {
+    //   bottom: theme.spacing(2),
+    //   right: theme.spacing(2),
+    // },
+    // '&$directionDown, &$directionRight': {
+    //   top: theme.spacing(2),
+    //   left: theme.spacing(3),
+    // },
     '& .MuiFab-root': {
       transition: theme.transitions.create(['transform', 'box-shadow'], {
         duration: theme.transitions.duration.short,
@@ -59,7 +59,6 @@ const styles = (theme: Theme, props: SpeedDialWidgetProps): any => ({
         transform: 'scale(0.95)',
       },
     },
-    ...props.sx,
   },
   '@keyframes ripple': {
     '0%': {
@@ -85,6 +84,7 @@ export interface SpeedDialAction {
 }
 
 type TDirection = "up" | "down" | "left" | "right";
+type TPosition = 'absolute' | 'top-left' | 'top-right' | 'top-center' | 'bottom-left' | 'bottom-right' | 'bottom-center' | 'center-left' | 'center-right' | 'center';
 
 export type SpeedDialWidgetProps = {
   classes: any;
@@ -100,6 +100,16 @@ export type SpeedDialWidgetProps = {
   color?: 'default' | 'primary' | 'secondary';
   disabled?: boolean;
   ariaLabel?: string;
+  position?: TPosition;
+  offsetLeft?: number;
+  offsetRight?: number;
+  offsetTop?: number;
+  offsetBottom?: number;
+  // Legacy props for backward compatibility
+  left?: number | string;
+  right?: number | string;
+  top?: number | string;
+  bottom?: number | string;
 }
 
 
@@ -118,6 +128,16 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
     sx = {},
     onClick,
     onActionClick,
+    position = 'bottom-right',
+    offsetLeft = 16,
+    offsetRight = 16,
+    offsetTop = 16,
+    offsetBottom = 16,
+    // Legacy props for backward compatibility
+    left,
+    right,
+    top,
+    bottom,
   } = props;
   const [direction, setDirection] = React.useState<TDirection>('up');
   const [hidden, setHidden] = React.useState(false);
@@ -133,19 +153,112 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
     large: { width: 72, height: 72 },
   };
 
+  // Generate positioning styles based on position prop
+  const getPositionStyles = React.useMemo(() => {
+    // If legacy props are used, fall back to old behavior
+    if (left !== undefined || right !== undefined || top !== undefined || bottom !== undefined) {
+      const positionStyle: React.CSSProperties = {
+        position: 'absolute',
+      };
+      if (left !== undefined) positionStyle.left = typeof left === 'number' ? `${left}px` : left;
+      if (right !== undefined) positionStyle.right = typeof right === 'number' ? `${right}px` : right;
+      if (top !== undefined) positionStyle.top = typeof top === 'number' ? `${top}px` : top;
+      if (bottom !== undefined) positionStyle.bottom = typeof bottom === 'number' ? `${bottom}px` : bottom;
+      return positionStyle;
+    }
+
+    // New position-based logic
+    const positionStyle: React.CSSProperties = {
+      position: position === 'absolute' ? 'absolute' : 'fixed',
+    };
+
+    switch (position) {
+      case 'top-left':
+        positionStyle.top = `${offsetTop}px`;
+        positionStyle.left = `${offsetLeft}px`;
+        break;
+      case 'top-right':
+        positionStyle.top = `${offsetTop}px`;
+        positionStyle.right = `${offsetRight}px`;
+        break;
+      case 'top-center':
+        positionStyle.top = `${offsetTop}px`;
+        positionStyle.left = '50%';
+        positionStyle.transform = 'translateX(-50%)';
+        break;
+      case 'bottom-left':
+        positionStyle.bottom = `${offsetBottom}px`;
+        positionStyle.left = `${offsetLeft}px`;
+        break;
+      case 'bottom-right':
+        positionStyle.bottom = `${offsetBottom}px`;
+        positionStyle.right = `${offsetRight}px`;
+        break;
+      case 'bottom-center':
+        positionStyle.bottom = `${offsetBottom}px`;
+        positionStyle.left = '50%';
+        positionStyle.transform = 'translateX(-50%)';
+        break;
+      case 'center-left':
+        positionStyle.top = '50%';
+        positionStyle.left = `${offsetLeft}px`;
+        positionStyle.transform = 'translateY(-50%)';
+        break;
+      case 'center-right':
+        positionStyle.top = '50%';
+        positionStyle.right = `${offsetRight}px`;
+        positionStyle.transform = 'translateY(-50%)';
+        break;
+      case 'center':
+        positionStyle.top = '50%';
+        positionStyle.left = '50%';
+        positionStyle.transform = 'translate(-50%, -50%)';
+        break;
+      case 'absolute':
+      default:
+        // Default to bottom-right if position is 'absolute' without other props
+        positionStyle.bottom = `${offsetBottom}px`;
+        positionStyle.right = `${offsetRight}px`;
+        break;
+    }
+
+    return positionStyle;
+  }, [position, offsetLeft, offsetRight, offsetTop, offsetBottom, left, right, top, bottom]);
+
+  // Auto-determine direction based on position
+  React.useEffect(() => {
+    if (position?.includes('bottom')) {
+      setDirection('up');
+    } else if (position?.includes('top')) {
+      setDirection('down');
+    } else if (position?.includes('right')) {
+      setDirection('left');
+    } else if (position?.includes('left')) {
+      setDirection('right');
+    } else {
+      setDirection('up'); // Default
+    }
+  }, [position]);
+
   // Dynamic styles based on props
   const dynamicSx = React.useMemo(() => ({
+    // Force positioning styles with higher specificity to override className styles
+    ...getPositionStyles,
+    // Ensure positioning is not overridden by other styles
+    '&&': {
+      ...getPositionStyles,
+    },
     '& .MuiFab-root': {
       width: sizeMap[size].width,
       height: sizeMap[size].height,
       boxShadow: isHovered ? `0px ${elevation + 2}px ${(elevation + 2) * 2}px rgba(0,0,0,0.2)` : `0px ${elevation}px ${elevation * 2}px rgba(0,0,0,0.1)`,
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       '&:hover': {
-        transform: 'scale(1.05)',
+        transform: `${getPositionStyles.transform || ''} scale(1.05)`.trim(),
         boxShadow: `0px ${elevation + 4}px ${(elevation + 4) * 2}px rgba(0,0,0,0.25)`,
       },
       '&:active': {
-        transform: 'scale(0.95)',
+        transform: `${getPositionStyles.transform || ''} scale(0.95)`.trim(),
       },
       ...(disabled && {
         opacity: 0.6,
@@ -160,7 +273,7 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
       },
     },
     ...sx,
-  }), [size, elevation, isHovered, disabled, sx]);
+  }), [getPositionStyles, size, elevation, isHovered, disabled, sx]);
 
   // Mouse click handler (desktop)
   const handleClick = (evt: React.MouseEvent) => {

@@ -101,6 +101,27 @@ const meta = {
       control: 'boolean',
       description: 'Whether the SpeedDial is disabled',
     },
+    position: {
+      control: { type: 'select' },
+      options: ['absolute', 'top-left', 'top-right', 'top-center', 'bottom-left', 'bottom-right', 'bottom-center', 'center-left', 'center-right', 'center'],
+      description: 'Predefined position with automatic CSS positioning',
+    },
+    offsetLeft: {
+      control: { type: 'number' },
+      description: 'Left offset in pixels',
+    },
+    offsetRight: {
+      control: { type: 'number' },
+      description: 'Right offset in pixels',
+    },
+    offsetTop: {
+      control: { type: 'number' },
+      description: 'Top offset in pixels',
+    },
+    offsetBottom: {
+      control: { type: 'number' },
+      description: 'Bottom offset in pixels',
+    },
   },
   decorators: [
     (Story) => (
@@ -155,10 +176,103 @@ export const Disabled: Story = {
   },
 };
 
+export const FixedPositioning: Story = {
+  args: {
+    actions,
+    position: 'bottom-right',
+    offsetBottom: 50,
+    offsetRight: 50,
+    size: 'medium',
+    elevation: 12,
+  },
+};
+
+export const TopLeftPositioned: Story = {
+  args: {
+    actions,
+    position: 'top-left',
+    offsetTop: 50,
+    offsetLeft: 50,
+    size: 'small',
+    color: 'secondary',
+  },
+};
+
+export const TopCenterPositioned: Story = {
+  args: {
+    actions,
+    position: 'top-center',
+    offsetTop: 60,
+    size: 'medium',
+    color: 'primary',
+  },
+};
+
+export const CenterPositioned: Story = {
+  args: {
+    actions,
+    position: 'center',
+    size: 'large',
+    elevation: 20,
+  },
+};
+
+export const CenterLeftPositioned: Story = {
+  args: {
+    actions,
+    position: 'center-left',
+    offsetLeft: 80,
+    size: 'medium',
+    color: 'secondary',
+  },
+};
+
 export const ThemeComparison: Story = {
   render: () => (
     <ThemeWrapper showThemeSelector={true}>
       <SpeedDialWidget actions={actions} />
     </ThemeWrapper>
   ),
+};
+
+export const OffsetComparison: Story = {
+  render: () => (
+    <div style={{ position: 'relative', height: '500px', width: '100%', border: '1px dashed #ccc' }}>
+      <SpeedDialWidget 
+        actions={actions.slice(0, 2)} 
+        position="bottom-right" 
+        offsetBottom={16} 
+        offsetRight={16} 
+        size="small"
+        color="primary"
+      />
+      <SpeedDialWidget 
+        actions={actions.slice(2, 4)} 
+        position="bottom-right" 
+        offsetBottom={80} 
+        offsetRight={80} 
+        size="medium"
+        color="secondary"
+      />
+      <SpeedDialWidget 
+        actions={actions.slice(0, 1)} 
+        position="top-left" 
+        offsetTop={16} 
+        offsetLeft={16} 
+        size="small"
+        color="primary"
+      />
+      <SpeedDialWidget 
+        actions={actions.slice(1, 2)} 
+        position="top-left" 
+        offsetTop={80} 
+        offsetLeft={80} 
+        size="medium"
+        color="secondary"
+      />
+    </div>
+  ),
+  parameters: {
+    layout: 'fullscreen',
+  },
 };

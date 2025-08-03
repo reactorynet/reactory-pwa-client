@@ -844,16 +844,18 @@ export default (props) => {
           il8n={il8n}
           reactory={reactory}
         />
-        import RecordingAudioBar from './components/RecordingAudioBar';
       </Box>
 
       {/* Persona SpeedDial - Bottom Right */}
       <SpeedDialWidget
         actions={personaSpeedDialActions}
+        position="bottom-right"
+        offsetBottom={personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 82 : 90}
+        offsetRight={16}
+        size={personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 'small' : 'medium'}
+        elevation={3}
         sx={{
-          position: 'absolute',          
           zIndex: 1000,
-          size: 'small',
           transition: 'all 0.3s ease-in-out',
         }}
         icon={
@@ -868,10 +870,6 @@ export default (props) => {
           />
         }
         onClick={handlePersonaPanelToggle}
-        style={{
-          height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 60 : 80,
-          width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 60 : 80,
-        }}
       />
       {/* Token Pressure Progress Bar - Moved to top */}
       {chatState?.tokenPressure !== undefined && !busy && (
