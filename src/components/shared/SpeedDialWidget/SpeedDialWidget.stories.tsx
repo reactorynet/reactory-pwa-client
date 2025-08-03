@@ -83,6 +83,24 @@ const meta = {
       control: false,
       description: 'Style for the SpeedDial button',
     },
+    size: {
+      control: { type: 'select' },
+      options: ['small', 'medium', 'large'],
+      description: 'Size of the SpeedDial button',
+    },
+    elevation: {
+      control: { type: 'range', min: 0, max: 24, step: 1 },
+      description: 'Shadow elevation level',
+    },
+    color: {
+      control: { type: 'select' },
+      options: ['default', 'primary', 'secondary'],
+      description: 'Color theme of the button',
+    },
+    disabled: {
+      control: 'boolean',
+      description: 'Whether the SpeedDial is disabled',
+    },
   },
   decorators: [
     (Story) => (
@@ -106,6 +124,34 @@ export const WithCustomIcon: Story = {
   args: {
     actions,
     icon: <SaveIcon />,
+    size: 'medium',
+    elevation: 8,
+    color: 'secondary',
+  },
+};
+
+export const SmallSize: Story = {
+  args: {
+    actions,
+    size: 'small',
+    elevation: 4,
+  },
+};
+
+export const LargeWithHighElevation: Story = {
+  args: {
+    actions,
+    size: 'large',
+    elevation: 16,
+    color: 'primary',
+  },
+};
+
+export const Disabled: Story = {
+  args: {
+    actions,
+    disabled: true,
+    size: 'medium',
   },
 };
 

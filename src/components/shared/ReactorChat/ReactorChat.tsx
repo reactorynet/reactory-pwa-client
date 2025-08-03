@@ -4,10 +4,10 @@ import useChatFactory from './hooks/useChatFactory';
 import useStreamingChatFactory from './hooks/useStreamingChatFactory';
 import ChatList from './hooks/useScrollToBottom';
 import useMacros from './hooks/useMacros';
-import { useEffect} from 'react';
+import { useEffect } from 'react';
 
 import {
-  IAIPersona,  
+  IAIPersona,
   UXChatMessage,
   MacroToolDefinition,
   ToolApprovalMode,
@@ -658,7 +658,7 @@ export default (props) => {
       <line x1="10" y1="10" x2="16" y2="16" stroke="${themeColors.primary}" stroke-width="0.5" opacity="0.2"/>
       <line x1="30" y1="30" x2="24" y2="24" stroke="${themeColors.secondary}" stroke-width="0.5" opacity="0.25"/>
     </svg>`;
-    
+
     // Remove all whitespace and newlines for better data URL compatibility
     return svg.replace(/\s+/g, ' ').trim();
   }, [themeColors]);
@@ -741,9 +741,9 @@ export default (props) => {
             minHeight: 0,
             zIndex: 1,
             backgroundColor: themeColors.background,
-          backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
-          backgroundSize: '60px 60px',
-          backgroundRepeat: 'repeat',
+            backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
+            backgroundSize: '60px 60px',
+            backgroundRepeat: 'repeat',
           }}
           style={{
             padding: '0',
@@ -844,21 +844,20 @@ export default (props) => {
           il8n={il8n}
           reactory={reactory}
         />
-import RecordingAudioBar from './components/RecordingAudioBar';
+        import RecordingAudioBar from './components/RecordingAudioBar';
       </Box>
 
       {/* Persona SpeedDial - Bottom Right */}
       <SpeedDialWidget
         actions={personaSpeedDialActions}
         sx={{
-        position: 'absolute',
-        bottom: 70,
-        right: 16,       
-        zIndex: 1000,
-        transition: 'all 0.3s ease-in-out',
-      }}
+          position: 'absolute',          
+          zIndex: 1000,
+          size: 'small',
+          transition: 'all 0.3s ease-in-out',
+        }}
         icon={
-          <Avatar            
+          <Avatar
             src={selectedPersona?.avatar}
             alt={selectedPersona?.name}
             sx={{
@@ -871,8 +870,9 @@ import RecordingAudioBar from './components/RecordingAudioBar';
         onClick={handlePersonaPanelToggle}
         style={{
           height: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 60 : 80,
-        }}        
-      />      
+          width: personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 60 : 80,
+        }}
+      />
       {/* Token Pressure Progress Bar - Moved to top */}
       {chatState?.tokenPressure !== undefined && !busy && (
         <LinearProgress
