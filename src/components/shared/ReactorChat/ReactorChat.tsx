@@ -332,6 +332,21 @@ export default (props) => {
     }
   }, [chatState?.tools, selectedPersona?.id]);
 
+  // Clear panel states when persona or chat session changes
+  React.useEffect(() => {
+    // Close all panels when persona or session changes
+    setPersonaPanelOpen(false);
+    setToolsPanelOpen(false);
+    setChatHistoryPanelOpen(false);
+    setRecordingPanelOpen(false);
+    setFilesPanelOpen(false);
+    
+    // Clear other session-related states
+    setSelectedChats([]);
+    setChatMenuAnchor(null);
+    setHeaderOpen(false);
+  }, [selectedPersona?.id, chatState?.id]);
+
   const navigate = useNavigate();
   const location = useLocation();
 

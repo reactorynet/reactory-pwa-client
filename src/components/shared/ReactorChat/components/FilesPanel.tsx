@@ -13,8 +13,8 @@ interface FilesPanelProps {
 }
 
 const GET_CONVERSATION_FILES = gql`
-  query ReactorConversation($id: String!) {
-    ReactorConversation(id: $id) {
+  query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOptions) {
+    ReactorConversation(id: $id, loadOptions: $loadOptions) {
       ... on ReactorChatState {
         id
         files {
@@ -112,6 +112,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   const [loading, setLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'preview'>('list');
+  const [showAllFiles, setShowAllFiles] = useState(false);
   const [renameDialog, setRenameDialog] = useState<{
     open: boolean;
     fileId: string;
@@ -157,7 +158,9 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     Dialog,
     DialogTitle,
     DialogContent,
-    DialogActions
+    DialogActions,
+    Switch,
+    FormControlLabel
   } = Material.MaterialCore;
 
   const {
@@ -184,6 +187,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
       return;
     }
 
+    reactory.info(`Loading documents for chat session: ${chatState.id}, showAllFiles: ${showAllFiles}`);
     setLoading(true);
     try {
       // Query the ReactorConversation with files field to get the attached files
@@ -195,7 +199,12 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
           code: string;
           message: string;
         }
-      }, { id: string }>(GET_CONVERSATION_FILES, { id: chatState.id });
+      }, { id: string; loadOptions: { showAllFiles?: boolean } }>(GET_CONVERSATION_FILES, { 
+        id: chatState.id,
+        loadOptions: {
+          showAllFiles: showAllFiles
+        }
+      });
 
       if (response?.data?.ReactorConversation) {
         const conversation = response.data.ReactorConversation;
@@ -222,6 +231,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
           setDocuments(docs);
         } else {
           // No files attached to this chat session
+          reactory.info('No files found for this chat session');
           setDocuments([]);
         }
       } else {
@@ -234,14 +244,45 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [chatState?.id, reactory]);
+  }, [chatState?.id, showAllFiles, reactory]);
 
-  // Load documents when panel opens or when chat session changes
+  // Load documents when panel opens, when chat session changes, or when showAllFiles toggle changes
   useEffect(() => {
     if (open && chatState?.id) {
       loadDocuments();
     }
-  }, [open, chatState?.id, loadDocuments]);
+  }, [open, chatState?.id, showAllFiles, loadDocuments]);
+
+  // Clear internal state when persona changes or chat session changes
+  useEffect(() => {
+    // Clear documents and selected document when chat session changes
+    setDocuments([]);
+    setSelectedDocument(null);
+    setPreviewLoading(false);
+    setMobileView('list');
+    setShowAllFiles(false);
+    setRenameDialog({
+      open: false,
+      fileId: '',
+      currentName: '',
+      newName: ''
+    });
+  }, [chatState?.id, selectedPersona?.id]);
+
+  // Clear state when panel closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedDocument(null);
+      setPreviewLoading(false);
+      setMobileView('list');
+      setRenameDialog({
+        open: false,
+        fileId: '',
+        currentName: '',
+        newName: ''
+      });
+    }
+  }, [open]);
 
   const handleDocumentSelect = useCallback(async (doc: DocumentPreview) => {
     setSelectedDocument(doc);
@@ -262,24 +303,115 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
 
   const handleFileUpload = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
+    let uploadSuccess = true;
     
     for (const file of fileArray) {
       try {
         if (onFileUpload) {
-          await onFileUpload(file, chatState?.id || '');
+          reactory.info(`Starting upload for: ${file.name}`);
+          const uploadPromise = onFileUpload(file, chatState?.id || '');
+          if (uploadPromise && typeof uploadPromise.then === 'function') {
+            await uploadPromise;
+            reactory.info(`Upload completed for: ${file.name}`);
+          } else {
+            reactory.info(`onFileUpload for ${file.name} did not return a Promise`);
+          }
+        } else {
+          reactory.info('No onFileUpload handler provided');
         }
         
         reactory.info(`Uploaded: ${file.name}`);
       } catch (error) {
         reactory.error(`Failed to upload ${file.name}`, error);
+        uploadSuccess = false;
       }
     }
     
-    // Refresh the file list after upload to show the new files
-    if (chatState?.id) {
-      await loadDocuments();
+    // Only refresh if upload was successful and we have a chat session
+    if (uploadSuccess && chatState?.id) {
+      reactory.info('All uploads completed, now refreshing file list...');
+      
+      // For the first file upload, we need to wait longer because the chat session
+      // might be getting initialized and the file association might take time
+      const isFirstUpload = documents.length === 0;
+      const initialDelay = isFirstUpload ? 3000 : 1000; // 3 seconds for first upload, 1 second for subsequent
+      
+      // Wait a moment for the server to process the upload before refreshing
+      setTimeout(async () => {
+        if (chatState?.id) {
+          reactory.info('Starting file list refresh after upload delay...');
+          await loadDocuments();
+          
+          // Implement a retry mechanism that checks if files were actually added
+          const maxRetries = 3;
+          let retryCount = 0;
+          
+          const retryLoadDocuments = async () => {
+            if (retryCount >= maxRetries) {
+              reactory.info('Max retries reached for file list refresh');
+              return;
+            }
+            
+            retryCount++;
+            reactory.info(`Retrying file list refresh (attempt ${retryCount}/${maxRetries})...`);
+            
+            // Load documents and check if any new files were found
+            try {
+              const response = await reactory.graphqlQuery<{
+                ReactorConversation: {
+                  id: string;
+                  files?: Reactory.Models.IReactoryFile[];
+                } | {
+                  code: string;
+                  message: string;
+                }
+              }, { id: string; showAllFiles?: boolean }>(GET_CONVERSATION_FILES, { 
+                id: chatState.id,
+                showAllFiles: showAllFiles
+              });
+              
+              if (response?.data?.ReactorConversation) {
+                const conversation = response.data.ReactorConversation;
+                
+                if ('code' in conversation) {
+                  reactory.error(`Failed to load files: ${conversation.message}`);
+                  return;
+                }
+                
+                const newFileCount = conversation.files?.length || 0;
+                reactory.info(`Found ${newFileCount} files in conversation`);
+                
+                // Update the documents state
+                if (conversation.files && conversation.files.length > 0) {
+                  const docs: DocumentPreview[] = conversation.files.map(file => ({
+                    id: file.id || (file._id ? file._id.toString() : ''),
+                    name: file.filename || file.alias || 'Unknown File',
+                    type: file.mimetype || 'application/octet-stream',
+                    size: file.size || 0,
+                    url: file.link,
+                    path: file.path,
+                    uploadDate: file.created ? new Date(file.created) : new Date(),
+                  }));
+                  
+                  setDocuments(docs);
+                  reactory.info(`File list refresh successful after ${retryCount} attempts`);
+                } else {
+                  // If no files found, try again
+                  setTimeout(retryLoadDocuments, initialDelay);
+                }
+              }
+            } catch (error) {
+              reactory.error('Failed to load documents during retry', error);
+              setTimeout(retryLoadDocuments, initialDelay);
+            }
+          };
+          
+          // Start the retry mechanism after the initial delay
+          setTimeout(retryLoadDocuments, initialDelay);
+        }
+      }, 500); // Wait 500ms for the upload to be processed by the server
     }
-  }, [onFileUpload, chatState?.id, reactory, loadDocuments]);
+  }, [onFileUpload, chatState?.id, reactory, loadDocuments, documents.length]);
 
   const handleDeleteDocument = useCallback(async (docId: string) => {
     try {
@@ -551,6 +683,33 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
             }}>
               {il8n?.t('reactor.client.files.upload', { defaultValue: 'Upload Files' })}
             </Typography>
+            
+            {/* Show All Files Toggle */}
+            <Box sx={{ mb: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showAllFiles}
+                    onChange={(e) => setShowAllFiles(e.target.checked)}
+                    size="small"
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ 
+                    fontSize: { xs: '0.75rem', md: '0.875rem' },
+                    fontWeight: 'medium'
+                  }}>
+                    Show all files and folders
+                  </Typography>
+                }
+                sx={{ 
+                  m: 0,
+                  '& .MuiFormControlLabel-label': {
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }
+                  }
+                }}
+              />
+            </Box>
             
             {/* Simple File Upload Area */}
             <Box

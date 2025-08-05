@@ -484,7 +484,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
 
     let AIComponent = null;
 
-    if (props.aipersona) {
+    if (props.aipersona !== null && props.aipersona !== undefined) {
       AIComponent = <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <ReactorChatButton 
           chatProps={props.aipersona}
