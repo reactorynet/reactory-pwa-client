@@ -230,8 +230,16 @@ export const useToolbar: ReactoryFormToolbarHook = (props) => {
     return null;
   };
 
+  const theme = reactory.muiTheme;
+
+  const toolbarSx = uiOptions.toolbarSx || {
+    backgroundColor: theme.palette.background.paper,
+  };
+
   const FormToolbar = () => (
-    <Toolbar style={uiOptions.toolbarStyle || {}}>
+    <Toolbar 
+      style={uiOptions.toolbarStyle || {}}
+      sx={toolbarSx}>
       {uiOptions.showSchemaSelectorInToolbar &&
       !uiOptions.showSchemaSelectorInToolbar === false &&
       SchemaSelector ? (

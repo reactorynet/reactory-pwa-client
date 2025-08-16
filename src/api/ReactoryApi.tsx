@@ -591,12 +591,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         192: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-192.png`,
         512: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-512.png`,
       }
-    };
-    this.log = window.reactory.logging.log ? console.log.bind(window.console) : () => { };
-    this.debug = window.reactory.logging.debug ? console.debug.bind(window.console) : () => { };
-    this.warning = window.reactory.logging.debug ? console.warn.bind(window.console) : () => { };
-    this.error = window.reactory.logging.error ? console.error.bind(window.console) : () => { };
-    this.info = window.reactory.logging.info ? console.info.bind(window.console) : () => { };
+    };    
+    this.log = window?.reactory?.logging?.log ? console.log : () => { };
+    this.debug = window?.reactory?.logging?.debug ? console.debug : () => { };
+    this.warning = window?.reactory?.logging?.warning ? console.warn : () => { };
+    this.error = window?.reactory?.logging?.error ? console.error : () => { };
+    this.info = window?.reactory?.logging?.info ? console.info : () => { };
     this.stat = this.stat.bind(this);
     this.flushstats = this.flushstats.bind(this);
     this.publishstats = this.publishstats.bind(this);
@@ -1007,6 +1007,33 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         resolve(result);
       }).catch((clientErr) => {
         that.log(`Error occured executing the mutation: ${clientErr.message}`, { $mutation, clientErr });
+        const { graphQLErrors, networkError } = clientErr;
+        if (graphQLErrors && graphQLErrors.length > 0) {
+          graphQLErrors.forEach((error) => {
+            that.error(`GraphQL Error: ${error.message}`, { error, variables, options, mutation });
+          });
+        }
+        if (networkError) {
+          that.error(`Network Error: ${networkError.message}`, { networkError, variables, options, mutation });
+
+          const { result, statusCode } = networkError;
+
+          if (statusCode === 401 || statusCode === 403) {
+            that.createNotification(`🚨 Unauthorized or Forbidden Error, clearing auth token and reloading the page`, { type: 'error', canDismiss: true, timeout: 4000, showInAppNotification: true });
+            that.log(`Unauthorized or Forbidden Error, clearing auth token and reloading the page`, { networkError, variables, options, mutation });
+            that.setAuthToken(null);
+            that.clearStoreAndCache();
+            
+            setTimeout(() => {
+              that.emit(ReactoryApiEventNames.onLogout, { reason: 'Unauthorized or Forbidden Error', networkError, variables, options, mutation });
+            }, 1000);
+            //window.location.reload();
+          } else {
+            that.createNotification(`🚨 Network Error: ${networkError.message}`, { type: 'error', canDismiss: true, timeout: 4000, showInAppNotification: true });
+          }
+
+        }
+        
         reject(clientErr);
       });
     });

@@ -30,6 +30,8 @@ export const ReactoryDecorator: React.FC<ReactoryDecoratorProps> = ({ children }
         baseUrl: process.env.REACT_APP_REACTORY_API_URL || 'http://localhost:4000/graphql',
         clientId: process.env.REACT_APP_REACTORY_CLIENT_ID || 'default-client-id',
       });
+      // @ts-ignore
+      window.reactory = reactoryInstance; // Expose to global for debugging
       await reactoryInstance.init();
       // 2. Create Redux store
       const storeInstance = configureStore(null);

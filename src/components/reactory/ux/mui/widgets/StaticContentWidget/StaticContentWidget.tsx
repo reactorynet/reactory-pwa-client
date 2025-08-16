@@ -17,7 +17,7 @@ export const StaticContentWidget = (props: any) => {
   };
 
   const options = uiSchema && uiSchema['ui:options'] ? { ...DefaultOptions, ...uiSchema['ui:options'] } : DefaultOptions;
-  let aipersona = { ...(uiSchema?.['ui:ai'] || null) };
+  let aipersona = uiSchema?.['ui:ai'] || null;
 
   if (aipersona) { 
     if(aipersona.propsMap) {
@@ -51,7 +51,7 @@ export const StaticContentWidget = (props: any) => {
     expanded={ options.expanded || false }
     container={options.container || 'Box' }
     containerProps={options.containerProps || {}}
-    aipersona={aipersona}
+    aipersona={aipersona || null}
     />);
 }
 

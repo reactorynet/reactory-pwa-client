@@ -1,9 +1,10 @@
 import React, { useEffect } from "react"
-import { gql } from "@apollo/client"
 import { IAIPersona, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition } from "../types"
 import useMacros from "./useMacros"
 import { exec } from "child_process"
 import ToolPrompt from './ToolPrompt';
+import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
+import useSSE, { CompletionStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent } from './useSSE';
 
 interface ChatFactoryHookResult {
   // represents the chat state
@@ -34,6 +35,9 @@ interface ChatFactoryHookResult {
   setToolApprovalMode: (mode: ToolApprovalMode) => Promise<void>
   // indicates if the chat session has been initialized
   isInitialized: boolean
+  // streaming state (when protocol is 'sse')
+  isStreaming?: boolean
+  currentStreamingMessage?: string
 }
 
 interface ChatFactorHookOptions {
@@ -44,85 +48,14 @@ interface ChatFactorHookOptions {
     chatState?: ChatState;
     isInitialized?: boolean;
   };
+  onStreamToken?: (token: string) => void;
+  onStreamMessage?: (message: UXChatMessage) => void;
+  onStreamError?: (error: any) => void;
 }
 
 type ChatFactoryHook = (props: ChatFactorHookOptions) => ChatFactoryHookResult
 
-const INITIALIZE_CHAT_MUTATION = gql`
-  mutation ReactorStartChatSession($initSession: ReactorInitSession!) {
-    ReactorStartChatSession(initSession: $initSession) {
-      id
-      created
-      toolApprovalMode
-      tools {
-        id
-        type
-        propsMap
-        roles
-        function {
-          name
-          icon
-          description
-          parameters
-        }
-        runat
-      }
-      tokenCount
-      maxTokens
-      tokenPressure
-      macros {
-        id
-        nameSpace
-        name
-        version
-        icon
-        description
-        alias
-        roles
-        params
-        runat
-      }
-    }
-  }
-`
-
-const SEND_MESSAGE_MUTATION = gql`
-  mutation ReactorSendMessage($message: ReactorSendMessageInput!) {
-    ReactorSendMessage(message: $message) {
-      ... on ReactorChatMessage {
-        sessionId
-        id
-        role
-        content
-        rating
-        timestamp
-        tool_calls
-      }
-      ... on ReactorInitiateSSE {
-        sessionId
-        endpoint
-        token
-        status
-        expiry
-        headers
-      }
-      ... on ReactorErrorResponse {
-        code
-        message
-        details
-        timestamp
-        recoverable
-        suggestion
-      }
-    }
-  }
-`;
-
-const DELETE_CHAT_MUTATION = gql`
-  mutation ReactorDeleteChatSession($id: String!) {
-    ReactorDeleteChatSession(id: $id) 
-  }
-`;
+// Graph operations are centralized in useGraph
 
 // define a type for each of the possible responses
 type ReactorChatMessage = {
@@ -183,88 +116,7 @@ const EXEC_TOOL_CALL_MUTATION = `
     }
   }
 `;
-const EXEC_CONVERSATION_QUERY = gql`
-  query ReactorConversation($id: String!) {
-    ReactorConversation(id: $id) {
-      ... on ReactorChatState {
-        id
-        personaId
-        created
-        user {
-          id
-          firstName
-          lastName
-        }
-        history {
-          id
-          role
-          content
-          timestamp
-          tool_calls
-        }
-        vars
-        tools {
-          id
-          type
-          propsMap
-          roles
-          function {
-            name
-            icon
-            description
-            parameters
-          }
-          runat
-        }
-        macros {
-          id
-          nameSpace
-          name
-          version
-          icon
-          description
-          alias
-          roles
-          params
-          runat
-        }        
-        toolApprovalMode
-        tokenCount
-        maxTokens
-        tokenPressure
-      }
-      ... on ReactorErrorResponse {
-        code
-        message
-        details
-        timestamp
-        recoverable
-        suggestion
-      }
-    }
-  }
-`
-
-const EXEC_CONVERSATIONS_QUERY = gql`query ReactoryConversations($filter: ReactorConversationFilter) {
-    ReactorConversations(filter: $filter) {
-      id
-      personaId
-      created
-      user {
-        id
-        firstName
-        lastName
-      }      
-      history {
-        id
-        role
-        content
-        timestamp
-      }
-      vars
-    }
-  }
-  `
+// Queries are handled by useGraph
 
 interface SendMesageInput {
   message: string
@@ -299,6 +151,71 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const persona = React.useMemo(() => rawPersona, [rawPersona?.id]);
 
+  const onTokenReceived = (token: TokenStreamingEvent) => {
+    setChatState((prevState) => {
+      const lastMessage = prevState.history[prevState.history.length - 1];
+      if (lastMessage && lastMessage.role === "assistant") {
+        if (waitingForResponse) {
+          lastMessage.content = token.data.content;
+        } else {
+          lastMessage.content += token.data.content;
+        }
+      }
+
+      const newHistory = [...prevState.history];
+      newHistory[newHistory.length - 1] = lastMessage;
+
+      return { ...prevState,
+        history: newHistory,        
+      }
+    });
+    setIsStreaming(true);
+    setWaitingForResponse(false);
+  };
+
+  const onSSEMessageReceived = (message: CompletionStreamingEvent) => {
+    if (message.type === StreamingEventType.COMPLETE) {
+      // update the chat state with the new message
+      
+      setChatState((prevState) => {
+        const lastMessage = prevState.history[prevState.history.length - 1];
+        if (lastMessage && lastMessage.role === "assistant") {
+          lastMessage.content = message.data.content;
+        }
+  
+        const newHistory = [...prevState.history];
+        newHistory[newHistory.length - 1] = lastMessage;
+  
+        return { ...prevState,
+          history: newHistory,        
+        }
+      });
+      setIsStreaming(false);
+      setWaitingForResponse(false);
+    }
+  }
+
+  const onToolCallReceived = async (toolCall: ToolCallStreamingEvent) => {
+    console.log('onToolCallReceived', toolCall);
+    // create tool call construct
+    const toolCallMessage = {
+      id: toolCall.data.callId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+      sessionId: chatState.id,
+      tool_calls: [{
+        id: toolCall.data.callId,
+        type: "function",
+        function: {
+          name: toolCall.data.toolName,          
+          arguments: typeof toolCall.data.arguments === 'string' ? JSON.parse(toolCall.data.arguments) : toolCall.data.arguments,
+        },
+      }],
+    } as UXChatMessage;
+    await processToolCalls([toolCallMessage], chatState.history[chatState.history.length - 1] as UXChatMessage);
+  }
+
 
   /**
    * 
@@ -306,6 +223,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * @param chatSessionId 
    * @returns 
    */
+  const graph = useGraph({ reactory });
+  const sse = useSSE({
+    reactory,
+    onToken: onTokenReceived,
+    onToolCall: onToolCallReceived,
+    onMessage: onSSEMessageReceived,
+    onError: (e) => { onError(e); props.onStreamError?.(e); },
+  });
+
   const sendMessage = async (message: string, chatSessionId: string) => {
     setBusy(true);
     try {
@@ -319,7 +245,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       // Initialize chat session on first message if not already initialized
       let sessionId = chatState.id || chatSessionId;
-      
+
       if (!isInitialized && persona?.id) {
         reactory.info(`ChatFactory: Initializing chat session on first message with persona ${persona.id}`);
         try {
@@ -367,54 +293,77 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       try {
         reactory.info(`ChatFactory: Sending message with sessionId: ${sessionId}, personaId: ${persona.id}`);
-        
-        const response = await reactory.graphqlMutation<{ ReactorSendMessage: ReactorSendMessageResponse }, { message: SendMesageInput }>(SEND_MESSAGE_MUTATION,
-          {
-            message: {
-              message: message,
-              personaId: persona.id,
-              chatSessionId: sessionId
-            }
-          });
 
-        if (response?.data?.ReactorSendMessage) {
-          // check the response type
-          if (response.data.ReactorSendMessage.__typename === "ReactorErrorResponse") {
-            // handle error response
-            const error = new Error(response.data.ReactorSendMessage.message);
-            onError(error);
-            setBusy(false);
-            return;
+        // if the streaming is sse, we add a blank message to the history
+        // so that the user sees as a message is being sent.
+        if (protocol === 'sse') {        
+          // if the protocol is sse, we add a blank message to the history
+          setChatState((prevState) => ({
+            ...prevState,
+            history: [...prevState.history, {
+              id: reactory.utils.uuid(),
+              timestamp: new Date(),
+              role: "assistant",
+              content: "Thinking...",
+            } as UXChatMessage],
+          }));
+
+          setIsStreaming(true);
+          setWaitingForResponse(true);
+
+        }
+
+        const resp = await graph.sendMessage({
+          personaId: persona.id,
+          chatSessionId: sessionId,
+          message,
+          streamingMode: protocol === 'sse' ? 'SSE' : 'NONE',
+        } as ReactorSendMessageInput);
+
+        if (!resp) throw new Error('No response from server');
+
+        if (resp.__typename === 'ReactorErrorResponse') {
+          onError(new Error(resp.message));
+          setBusy(false);
+          return;
+        }
+
+        if (resp.__typename === 'ReactorInitiateSSE') {
+          if (!sse.connected) {
+            sse.connect({ 
+              endpoint: resp.endpoint, 
+              sessionId: resp.sessionId,
+              onConnectionOpened: async () => {
+                await graph.sendMessage({
+                  personaId: persona.id,
+                  chatSessionId: sessionId,
+                  message,
+                  streamingMode: 'SSE'
+                });
+              }
+            });
+            
+            return; 
           }
+        }
 
-          if (response.data.ReactorSendMessage.__typename === "ReactorInitiateSSE") {
-            // handle SSE response
-            const { sessionId, endpoint, token, status, expiry, headers } = response.data.ReactorSendMessage;
-
-            initSSE({ sessionId, endpoint, token, headers, status, expiry });
-          }
-
-          const message = response.data.ReactorSendMessage as UXChatMessage;
-
-          // Update chat state with the message FIRST
-          if (message.sessionId) {
+        if (resp.__typename === 'ReactorChatMessage') {
+          const msg = resp as unknown as UXChatMessage;
+          if (msg.sessionId && protocol === 'graphql') {
             setChatState((prevState) => ({
               ...prevState,
-              id: message.sessionId,
-              history: [...prevState.history, message as any],
+              id: msg.sessionId,
+              history: [...prevState.history, msg as any],
               updated: new Date(),
             }));
           }
 
-          // THEN process tool calls if present
-          if (message.tool_calls && message.tool_calls.length > 0) {
-            await processToolCalls(message.tool_calls, message);
+          if (protocol === 'graphql' && msg.tool_calls && (msg.tool_calls as any[]).length > 0) {
+            await processToolCalls(msg.tool_calls as any[], msg);
           }
-        } else {
-          throw new Error("No response from server");
         }
       } catch (error) {
-        onError(error);
+        onError(error as Error);
       }
     } finally {
       setBusy(false);
@@ -435,12 +384,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }
       ]
     }
-    
+
     // Deduplicate persona tools by name
-    const uniquePersonaTools = persona?.tools ? persona.tools.filter((tool, index, self) => 
+    const uniquePersonaTools = persona?.tools ? persona.tools.filter((tool, index, self) =>
       index === self.findIndex(t => t.function?.name === tool.function?.name)
     ) : [];
-    
+
     return {
       id: null,
       botId: persona?.id || 'reactor',
@@ -470,6 +419,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [isInitialized, setIsInitialized] = React.useState<boolean>(
     existingSession?.isInitialized || false
   );
+
+  const [isStreaming, setIsStreaming] = React.useState<boolean>(false);
+  const [waitingForResponse, setWaitingForResponse] = React.useState<boolean>(false);
 
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
@@ -511,21 +463,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // get the client tools from the macro registry
     let clientTools = [];
     const toolNames = new Set(); // Track tool names to prevent duplicates
-    
+
     macros.forEach((macro) => {
       if (macro.runat === "client" && macro.tools) {
         macro.tools.forEach((tool) => {
           if (tool.type === "function") {
             const toolDef = tool as MacroToolDefinition;
             const toolName = toolDef.function?.name;
-            
+
             // Only add the tool if we haven't seen this name before
             if (toolName && !toolNames.has(toolName)) {
               toolNames.add(toolName);
               clientTools.push({
                 type: toolDef.type,
                 propsMap: toolDef.propsMap,
-                roles: toolDef.roles,                
+                roles: toolDef.roles,
                 function: {
                   icon: toolDef.function.icon,
                   name: toolDef.function.name,
@@ -539,47 +491,64 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         });
       }
     });
-    
-    return reactory.graphqlMutation<{ ReactorStartChatSession: Partial<ChatState> }, { initSession: ReactorInitSession }>(INITIALIZE_CHAT_MUTATION,
-      {
-        initSession: {
-          personaId: persona.id,
-          message: "",
-          macros: clientMacros?.map((macro) => ({
-            nameSpace: macro.nameSpace,
-            name: macro.name,
-            version: macro.version,
-            description: macro.description,
-            alias: macro.alias,
-            roles: macro.roles,            
-          })) ?? [],
-          tools: [...clientTools],
+
+    const initSession: ReactorInitSessionInput = {
+      personaId: persona.id,
+      message: '',
+      macros: clientMacros?.map((macro) => ({
+        nameSpace: macro.nameSpace,
+        name: macro.name,
+        version: macro.version,
+        description: macro.description,
+        alias: macro.alias,
+        roles: macro.roles,
+      })) ?? [],
+      tools: [...clientTools],
+      streamingMode: protocol === 'sse' ? 'SSE' : 'NONE',
+    };
+
+    try {
+      const result = await graph.startChatSession(initSession);
+      if (result?.__typename === 'ReactorChatState') {
+        const chat = result as unknown as Partial<ChatState>;
+        if (chat.id) {
+          reactory.info(`ChatFactory: Initialized chat session with ID: ${chat.id}`);
+          setChatState((prevState) => ({
+            ...prevState,
+            id: chat.id as string,
+            updated: new Date(),
+            macros: (chat as any).macros,
+            tools: (chat as any).tools,
+          }));
+          return chat.id as string;
         }
-      }).then((response) => {
-        if (response?.data?.ReactorStartChatSession) {
-          const chatState = response.data.ReactorStartChatSession;
-          if (chatState.id) {
-            reactory.info(`ChatFactory: Initialized chat session with ID: ${chatState.id}`);
-            setChatState((prevState) => ({
-              ...prevState,
-              id: chatState.id,
-              updated: new Date(),
-              macros: chatState.macros,
-              tools: chatState.tools,
-            }));
-            return chatState.id; // Return the session ID
-          } else {
-            reactory.error(`ChatFactory: No session ID in initialization response`);
-            throw new Error("No session ID in initialization response");
-          }
-        } else {
-          reactory.error(`ChatFactory: No response from server during initialization`);
-          throw new Error("No response from server");
-        }
-      }).catch((error) => {
-        onError(error);
-        throw error; // Re-throw to be caught by the caller
-      });
+        throw new Error('No session ID in initialization response');
+      }
+
+      if (result?.__typename === 'ReactorInitiateSSE') {
+        // Some providers may require immediate SSE after init; connect now
+        sse.connect({
+          endpoint: (result as any).endpoint,
+          sessionId: (result as any).sessionId,
+          headers: (result as any).headers,
+          token: (result as any).token,
+          expiry: (result as any).expiry,
+        });
+        setChatState((prevState) => ({
+          ...prevState,
+          id: (result as any).sessionId as string,
+          updated: new Date(),
+          macros: (result as any).chatState.macros,
+          tools: (result as any).chatState.tools,
+        }));
+        return (result as any).sessionId as string;
+      }
+
+      throw new Error('No response from server');
+    } catch (error) {
+      onError(error as Error);
+      throw error;
+    }
   }
 
   useEffect(() => {
@@ -603,15 +572,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     if (existingSession?.chatState) {
       setChatState(existingSession.chatState);
       setIsInitialized(existingSession.isInitialized || false);
-      
+
       reactory.info(`ChatFactory: Inherited existing session ${existingSession.chatState.id}`);
     }
   }, [existingSession, reactory]);
-
-  // placeholder for SSE session initialization
-  const initSSE = async (sseProps: { sessionId: string, endpoint: string, token: string, status: string, headers: any, expiry: Date }) => {
-
-  }
 
   const onMessage = (message: UXChatMessage) => {
     setChatState((prevState) => ({
@@ -648,7 +612,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // Find the most recent message with tool_calls and update it with the approval component
     setChatState((prevState) => {
       const history = [...prevState.history];
-      
+
       // Find the last message with tool_calls (manual reverse search for compatibility)
       let lastMessageIndex = -1;
       for (let i = history.length - 1; i >= 0; i--) {
@@ -658,14 +622,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           break;
         }
       }
-      
+
       if (lastMessageIndex >= 0) {
         history[lastMessageIndex] = {
           ...history[lastMessageIndex],
           component: () => <ToolPrompt toolName={toolCall} args={args} onDecision={callBack} />,
         };
       }
-      
+
       return {
         ...prevState,
         history,
@@ -678,30 +642,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const newChat = async () => {
     setBusy(true);
     try {
-      const response = await reactory.graphqlMutation<{ ReactorNewChat: UXChatMessage }, { message: SendMesageInput }>(SEND_MESSAGE_MUTATION,
-        {
-          message: {
-            message: "",
-            personaId: persona.id,
-            chatSessionId: ""
-          }
-        });
-
-      if (response?.data?.ReactorNewChat) {
-        const message = response.data.ReactorNewChat;
-        if (message.sessionId) {
-          setChatState((prevState) => ({
-            ...prevState,
-            id: message.sessionId,
-            history: [...prevState.history, message as any],
-            updated: new Date(),
-          }));
-          
-          // Mark as initialized since we're creating a new session
-          setIsInitialized(true);
-        }
+      // Initialize a brand new session
+      const newSessionId = await initializeChat(persona);
+      if (newSessionId) {
+        setIsInitialized(true);
       } else {
-        throw new Error("No response from server");
+        throw new Error('Failed to initialize new chat');
       }
     } catch (error) {
       onError(error);
@@ -712,10 +658,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const fetchConversations = async (filter: any) => {
     try {
-      const response = await reactory.graphqlQuery<{ ReactorConversations: any[] }, { filter: any }>(EXEC_CONVERSATIONS_QUERY, { filter });
-      // Save chats to state
-      setChats(response?.data?.ReactorConversations || []);
-      return response?.data?.ReactorConversations || [];
+      const list = await graph.listConversations(filter);
+      setChats(list || []);
+      return list || [];
     } catch (error) {
       onError(error);
       setChats([]);
@@ -725,60 +670,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const deleteChat = async (id: string | string[]) => {
     try {
-      await reactory.graphqlMutation(DELETE_CHAT_MUTATION, { id });
+      // Only single id supported by schema
+      const deleteId = Array.isArray(id) ? id[0] : id;
+      await graph.deleteChatSession(deleteId);
       await fetchConversations({}); // Refresh the chat list after deletion
     } catch (error) {
       onError(error);
     }
   };
-
-  const UPLOAD_FILE_MUTATION = gql`
-    mutation ReactorAttachFile($file: Upload!, $chatSessionId: String!) {
-      ReactorAttachFile(file: $file, chatSessionId: $chatSessionId) {
-        ... on ReactorChatMessage {
-          sessionId
-          id
-          role
-          content
-          rating
-          timestamp
-          tool_calls
-        }
-        ... on ReactorErrorResponse {
-          code
-          message
-          details
-          timestamp
-          recoverable
-          suggestion
-        }
-      }
-    }
-  `;
-
-  const SEND_AUDIO_MUTATION = gql`
-    mutation ReactorAskQuestionAudio($audio: Upload!, $chatSessionId: String!) {
-      ReactorAskQuestionAudio(audio: $audio, chatSessionId: $chatSessionId) {
-        ... on ReactorChatMessage {
-          sessionId
-          id
-          role
-          content
-          rating
-          timestamp
-          tool_calls
-        }
-        ... on ReactorErrorResponse {
-          code
-          message
-          details
-          timestamp
-          recoverable
-          suggestion
-        }
-      }
-    }
-  `;
 
   // Upload file to chat session
   const uploadFile = async (file: File, chatSessionId: string) => {
@@ -786,7 +685,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     try {
       // Initialize chat session on first file upload if not already initialized
       let sessionId = chatState.id || chatSessionId;
-      
+
       if (!isInitialized && persona?.id) {
         reactory.info(`ChatFactory: Initializing chat session on first file upload with persona ${persona.id}`);
         try {
@@ -799,17 +698,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           return;
         }
       }
-      
-      const response = await reactory.graphqlMutation<any, { file: File, chatSessionId: string }>(
-        UPLOAD_FILE_MUTATION,
-        { file, chatSessionId: sessionId }
-      );
-      const result = response?.data?.ReactorAttachFile;
+
+      const result = await graph.attachFile(file, sessionId);
       if (result) {
-        if (result.__typename === 'ReactorErrorResponse') {
-          onError(new Error(result.message));
+        if ((result as any).__typename === 'ReactorErrorResponse') {
+          onError(new Error((result as any).message));
         } else {
-          onMessage(result);
+          onMessage(result as unknown as UXChatMessage);
         }
       }
     } catch (error) {
@@ -825,7 +720,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     try {
       // Initialize chat session on first audio message if not already initialized
       let sessionId = chatState.id || chatSessionId;
-      
+
       if (!isInitialized && persona?.id) {
         reactory.info(`ChatFactory: Initializing chat session on first audio message with persona ${persona.id}`);
         try {
@@ -838,17 +733,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           return;
         }
       }
-      
-      const response = await reactory.graphqlMutation<any, { audio: File | Blob, chatSessionId: string }>(
-        SEND_AUDIO_MUTATION,
-        { audio, chatSessionId: sessionId }
-      );
-      const result = response?.data?.ReactorAskQuestionAudio;
+
+      const result = await graph.askQuestionAudio(audio as Blob, sessionId);
       if (result) {
-        if (result.__typename === 'ReactorErrorResponse') {
-          onError(new Error(result.message));
+        if ((result as any).__typename === 'ReactorErrorResponse') {
+          onError(new Error((result as any).message));
         } else {
-          onMessage(result);
+          onMessage(result as unknown as UXChatMessage);
         }
       }
     } catch (error) {
@@ -863,7 +754,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     try {
       // Initialize chat session on first tool approval mode change if not already initialized
       let sessionId = chatState.id;
-      
+
       if (!isInitialized && persona?.id) {
         reactory.info(`ChatFactory: Initializing chat session on tool approval mode change with persona ${persona.id}`);
         try {
@@ -881,24 +772,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         throw new Error('No active chat session available');
       }
 
-      const response = await reactory.graphqlMutation<{
-        ReactorSetChatToolApprovalMode: ChatState
-      },
-        { mode: ToolApprovalMode, chatSessionId: string }>(
-          gql`
-          mutation ReactorSetChatToolApprovalMode($mode: ReactorToolApprovalMode!, $chatSessionId: String!) {
-            ReactorSetChatToolApprovalMode(mode: $mode, chatSessionId: $chatSessionId) {
-              id
-              toolApprovalMode
-            }
-          }
-        `,
-          { mode, chatSessionId: sessionId }
-        );
-      if (response?.data?.ReactorSetChatToolApprovalMode) {
+      const response = await graph.setChatToolApprovalMode(sessionId, mode);
+      if (response) {
         setChatState((prevState) => ({
           ...prevState,
-          toolApprovalMode: response.data.ReactorSetChatToolApprovalMode.toolApprovalMode,
+          toolApprovalMode: response.toolApprovalMode,
         }));
 
         onMessage({
@@ -921,28 +799,27 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const loadChat = async (chatSessionId: string) => {
     setBusy(true);
     try {
-      const response = await reactory.graphqlQuery<any, { id: string }>(EXEC_CONVERSATION_QUERY, { id: chatSessionId });
-      const result = response?.data?.ReactorConversation;
+      const result = await graph.getConversation(chatSessionId);
       if (result) {
-        if (result.__typename === 'ReactorErrorResponse') {
-          onError(new Error(result.message));
+        if ((result as any).__typename === 'ReactorErrorResponse') {
+          onError(new Error((result as any).message));
         } else {
           // Deduplicate tools by name to prevent duplicates
-          const uniqueTools = result.tools ? result.tools.filter((tool, index, self) => 
-            index === self.findIndex(t => t.function?.name === tool.function?.name)
+          const uniqueTools = (result as any).tools ? (result as any).tools.filter((tool, index, self) =>
+            index === self.findIndex((t: any) => t.function?.name === tool.function?.name)
           ) : [];
-          
+
           // Update chatState with the loaded chat session
           setChatState((prevState) => ({
             ...prevState,
             ...result,
-            history: result.history ?? [],
+            history: (result as any).history ?? [],
             tools: uniqueTools,
-            macros: result.macros ?? [],
-            vars: result.vars ?? {},
+            macros: (result as any).macros ?? [],
+            vars: (result as any).vars ?? {},
             updated: new Date(),
           }));
-          
+
           // Mark as initialized since we're loading an existing session
           setIsInitialized(true);
         }
@@ -962,7 +839,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const { toolApprovalMode } = chatState;
     const toolResults = [];
     const toolErrors = [];
-    
+
     // Prevent infinite recursion (max 10 levels deep)
     const MAX_RECURSION_DEPTH = 10;
     if (depth >= MAX_RECURSION_DEPTH) {
@@ -1001,12 +878,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       try {
         const consolidatedResults = consolidateToolResults(toolResults, toolErrors);
         const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors);
-        
+
         // Check if the AI response contains new tool calls
         if (aiResponse && aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
           // Recursively process the new tool calls
           const recursiveResults = await processToolCalls(aiResponse.tool_calls, aiResponse, depth + 1);
-          
+
           // Merge results from recursive calls
           toolResults.push(...recursiveResults.toolResults);
           toolErrors.push(...recursiveResults.toolErrors);
@@ -1051,24 +928,20 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    */
   const sendToolResultsToAI = async (consolidatedResults: string, toolResults: any[], toolErrors: any[]): Promise<UXChatMessage | null> => {
     try {
-      const response = await reactory.graphqlMutation<{ ReactorSendMessage: ReactorSendMessageResponse }, { message: SendMesageInput }>(
-        SEND_MESSAGE_MUTATION,
-        {
-          message: {
-            message: consolidatedResults,
-            personaId: persona.id,
-            chatSessionId: chatState.id
-          }
-        }
-      );
+      const resp = await graph.sendMessage({
+        message: consolidatedResults,
+        personaId: persona.id,
+        chatSessionId: chatState.id,
+        streamingMode: 'NONE',
+      });
 
-      if (response?.data?.ReactorSendMessage) {
-        if (response.data.ReactorSendMessage.__typename === "ReactorErrorResponse") {
-          throw new Error(response.data.ReactorSendMessage.message);
+      if (resp) {
+        if (resp.__typename === "ReactorErrorResponse") {
+          throw new Error((resp as any).message);
         }
 
-        const aiMessage = response.data.ReactorSendMessage as UXChatMessage;
-        
+        const aiMessage = resp as unknown as UXChatMessage;
+
         // Add the AI response to chat history
         if (aiMessage.sessionId) {
           setChatState((prevState) => ({
@@ -1080,7 +953,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
         return aiMessage;
       }
-      
+
       return null;
     } catch (error) {
       reactory.error('Error sending tool results to AI', error);
@@ -1094,7 +967,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const cleanupApprovalComponent = () => {
     setChatState((prevState) => {
       const history = [...prevState.history];
-      
+
       // Find the last message with tool_calls and remove the component
       let lastMessageIndex = -1;
       for (let i = history.length - 1; i >= 0; i--) {
@@ -1104,12 +977,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           break;
         }
       }
-      
+
       if (lastMessageIndex >= 0) {
         const { component, ...messageWithoutComponent } = history[lastMessageIndex];
         history[lastMessageIndex] = messageWithoutComponent;
       }
-      
+
       return {
         ...prevState,
         history,
@@ -1126,7 +999,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       if (toolCall.type === 'function' && toolCall.function) {
         const { id, function: func } = toolCall;
         const { name, arguments: args } = func;
-        
+
         // Try to find the macro by alias first, then by name
         let macro = findMacroByAlias(name);
         if (!macro) {
@@ -1149,7 +1022,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             onToolCallPrompt(macro.name, args, chatState, async (approved: boolean) => {
               // Clean up the approval component
               cleanupApprovalComponent();
-              
+
               if (approved) {
                 try {
                   const result = await executeMacro(macro, args);
@@ -1198,7 +1071,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       if (toolCall.type === 'function' && toolCall.function) {
         const { id, function: func } = toolCall;
         const { name, arguments: args } = func;
-        
+
         // Try to find the macro by alias first, then by name
         let macro = findMacroByAlias(name);
         if (!macro) {
@@ -1239,7 +1112,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     });
 
     const results = await Promise.allSettled(toolPromises);
-    
+
     results.forEach((result) => {
       if (result.status === 'fulfilled' && result.value) {
         if (result.value.error) {
@@ -1319,6 +1192,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     uploadFile,
     sendAudio,
     isInitialized,
+    isStreaming: (sse as any).isStreaming,
+    currentStreamingMessage: (sse as any).currentStreamingMessage,
   }
 };
 

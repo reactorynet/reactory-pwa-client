@@ -1,0 +1,61 @@
+fragment ReactorChatStateFields on ReactorChatState {
+  id
+  created
+  toolApprovalMode
+  tools {
+    id
+    type
+    propsMap
+    roles
+    function {
+      name
+      icon
+      description
+      parameters
+    }
+    runat
+  }
+  tokenCount
+  maxTokens
+  tokenPressure
+  macros {
+    id
+    nameSpace
+    name
+    version
+    icon
+    description
+    alias
+    roles
+    params
+    runat
+  }
+}
+
+mutation ReactorStartChatSession($initSession: ReactorInitSession!) {
+  ReactorStartChatSession(initSession: $initSession) {
+    __typename
+    ... on ReactorChatState {
+      ...ReactorChatStateFields
+    }
+    ... on ReactorInitiateSSE {
+      sessionId
+      endpoint
+      token
+      status
+      expiry
+      headers
+      chatState {
+        ...ReactorChatStateFields
+      }
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

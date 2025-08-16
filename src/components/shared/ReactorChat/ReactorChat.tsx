@@ -1,7 +1,7 @@
 import { useReactory } from "@reactory/client-core/api";
 import usePersonas from './hooks/usePersonas';
 import useChatFactory from './hooks/useChatFactory';
-import useStreamingChatFactory from './hooks/useStreamingChatFactory';
+// Streaming is now handled via useChatFactory with protocol 'sse'
 import ChatList from './hooks/useScrollToBottom';
 import useMacros from './hooks/useMacros';
 import { useEffect } from 'react';
@@ -17,7 +17,7 @@ import PersonaSelectionPanel from './components/PersonaSelectionPanel';
 import ToolsPanel from './components/ToolsPanel';
 import ChatHistoryPanel from './components/ChatHistoryPanel';
 import ChatInput from './components/ChatInput';
-import FilesPanel from './components/FilesPanel';
+import FilesPanel from './components/FilesPanel/FilesPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
 import SpeedDialWidget from '../SpeedDialWidget/SpeedDialWidget';
@@ -99,57 +99,12 @@ export default (props) => {
   const [streamingEnabled, setStreamingEnabled] = useState<boolean>(false);
 
   // Non-streaming chat factory
-  const nonStreamingChatFactory = useChatFactory({
+  const chatFactory = useChatFactory({
     reactory,
     persona: selectedPersona,
-    protocol: 'graphql',
+    protocol: streamingEnabled ? 'sse' : 'graphql',
   });
 
-  // Streaming chat factory  
-  const streamingChatFactory = useStreamingChatFactory({
-    reactory,
-    persona: selectedPersona,
-    protocol: 'sse',
-    onMessage,
-    onError,
-  });
-
-  // Use the appropriate chat factory based on streaming toggle
-  // If we have an active session, prioritize keeping it active regardless of streaming mode
-  const activeFactory = React.useMemo(() => {
-    const hasNonStreamingSession = nonStreamingChatFactory.chatState?.id && nonStreamingChatFactory.isInitialized;
-    const hasStreamingSession = streamingChatFactory.chatState?.id && streamingChatFactory.isInitialized;
-
-    if (streamingEnabled) {
-      // User wants streaming mode
-      if (hasStreamingSession) {
-        // Streaming factory already has a session, use it
-        return streamingChatFactory;
-      } else if (hasNonStreamingSession) {
-        // Non-streaming has a session but user wants streaming
-        // TODO: We could implement a session transfer mechanism here
-        reactory.log('ReactorChat: User wants streaming but non-streaming has active session. Consider implementing session transfer.', 'warn');
-        return nonStreamingChatFactory; // For now, keep the active session
-      } else {
-        // No active session, use streaming factory
-        return streamingChatFactory;
-      }
-    } else {
-      // User wants non-streaming mode
-      if (hasNonStreamingSession) {
-        // Non-streaming factory already has a session, use it
-        return nonStreamingChatFactory;
-      } else if (hasStreamingSession) {
-        // Streaming has a session but user wants non-streaming
-        // TODO: We could implement a session transfer mechanism here
-        reactory.log('ReactorChat: User wants non-streaming but streaming has active session. Consider implementing session transfer.', 'warn');
-        return streamingChatFactory; // For now, keep the active session
-      } else {
-        // No active session, use non-streaming factory
-        return nonStreamingChatFactory;
-      }
-    }
-  }, [streamingEnabled, nonStreamingChatFactory, streamingChatFactory, reactory]);
 
   const {
     chatState,
@@ -163,12 +118,11 @@ export default (props) => {
     setToolApprovalMode,
     chats,
     setChats,
-    deleteChat,
-    // Streaming-specific properties (will be undefined for non-streaming)
+    deleteChat,    
     isStreaming = false,
     currentStreamingMessage = '',
-  } = activeFactory === streamingChatFactory ? streamingChatFactory : {
-    ...nonStreamingChatFactory,
+  } = {
+    ...chatFactory,
     isStreaming: false,
     currentStreamingMessage: '',
   };

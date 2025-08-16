@@ -2,7 +2,10 @@ import React, { Component, Fragment } from 'react';
 import {
   Icon,
   Grid,
-  Theme
+  Theme,
+  Snackbar,
+  Alert,
+  AlertTitle
 } from '@mui/material';
 import { compose } from 'redux';
 import { withStyles, withTheme } from '@mui/styles';
@@ -15,11 +18,17 @@ const styles = (theme: Theme) => {
   return {
     notification: {
       backgroundColor: theme.palette.background.paper,
+    },
+    snackbar: {
+      '& .MuiSnackbarContent-root': {
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+      }
     }
   }
 }
 
-const NotificationHOC = ({ reactory, title, type, config, deleteNotification, classes }) => {
+const NotificationHOC = ({ reactory, title, type, config, deleteNotification, classes, open, onClose }) => {
   const [additionalComponentsToMount, setAdditionalComponentsToMount] = React.useState(null);
 
   React.useEffect(() => {
@@ -47,35 +56,52 @@ const NotificationHOC = ({ reactory, title, type, config, deleteNotification, cl
     }
   }, [config, reactory]);
 
-  const clickHandler = () => {
-    if (!config.canDismiss)
+  const handleClose = (event, reason) => {
+    if (reason === 'clickaway' && !config.canDismiss) {
       return;
-    deleteNotification(config.id);
+    }
+    onClose();
+  }
+
+  const getSeverity = (type) => {
+    switch (type) {
+      case 'error': return 'error';
+      case 'warning': return 'warning';
+      case 'success': return 'success';
+      case 'info': return 'info';
+      default: return 'info';
+    }
   }
 
   return (
-    <div onClick={clickHandler} className={classNames(classes.notification, classes[type])}>
-      <Grid container className={classes.root} spacing={2}>
-        <Grid item className={classes.messageColumn}>
-          <Icon>done</Icon>
-          <p>{title}</p>
-        </Grid>
-
-        {
-          config && config.components && config.components.length > 0 &&
-          <Grid item xs={4} className={classes.componentColumn}>
-            {additionalComponentsToMount}
-          </Grid>
+    <Snackbar
+      open={open}
+      autoHideDuration={config?.autoHideDuration || 6000}
+      onClose={handleClose}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      className={classNames(classes.snackbar, classes[type])}
+    >
+      <Alert 
+        onClose={(event) => handleClose(event, 'close')} 
+        severity={getSeverity(type)}
+        variant="filled"
+        className={classNames(classes.notification, classes[type])}
+        action={
+          config && config.components && config.components.length > 0 && (
+            <div style={{ marginLeft: 16 }}>
+              {additionalComponentsToMount}
+            </div>
+          )
         }
-
-        {config.children &&
-          <Grid item xs={4} className={classes.componentColumn}>
+      >
+        <AlertTitle>{title}</AlertTitle>
+        {config?.children && (
+          <div style={{ marginTop: 8 }}>
             {config.children}
-          </Grid>}
-
-
-      </Grid>
-    </div>
+          </div>
+        )}
+      </Alert>
+    </Snackbar>
   )
 }
 
@@ -107,7 +133,9 @@ const NotificationWidget = ({ reactory, classes }) => {
             title={message.title}
             type={message.type}
             config={message.config}
-            deleteNotification={deleteNotificationHandler}>
+            deleteNotification={deleteNotificationHandler}
+            open={true}
+            onClose={() => deleteNotificationHandler(message.id)}>
           </NotificationHOCComponent>
         )})
       }

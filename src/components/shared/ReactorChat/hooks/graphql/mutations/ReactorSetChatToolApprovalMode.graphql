@@ -1,0 +1,7 @@
+mutation ReactorSetChatToolApprovalMode($chatSessionId: String!, $mode: ReactorToolApprovalMode!) {
+  ReactorSetChatToolApprovalMode(chatSessionId: $chatSessionId, mode: $mode) {
+    id
+    toolApprovalMode
+  }
+}
+

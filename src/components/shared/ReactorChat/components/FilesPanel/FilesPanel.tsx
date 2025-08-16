@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { gql } from '@apollo/client';
-import { IAIPersona, ChatState } from '../types';
+import { IAIPersona, ChatState } from '../../types';
+import UserHomeFolder from '../../../UserHomeFolder/UserHomeFolder';
+
+// Import SelectedItem interface from UserHomeFolder
+interface SelectedItem {
+  id: string;
+  name: string;
+  path: string;
+  type: 'file' | 'folder';
+  item: any; // FileItem | FolderItem from UserHomeFolder
+}
 
 interface FilesPanelProps {
   open: boolean;
@@ -87,6 +97,50 @@ const UPDATE_FILE_MUTATION = gql`
   }
 `;
 
+const ATTACH_USER_FILE_MUTATION = gql`
+  mutation ReactorAttachUserFileToSession($params: ReactorAttachUserFileParam!) {
+    ReactorAttachUserFileToSession(params: $params) {
+      ... on ReactorAttachFileResponse {
+        success
+        message
+        sessionId
+        fileId
+        path
+      }
+      ... on ReactorErrorResponse {
+        code
+        message
+        details
+        timestamp
+        recoverable
+        suggestion
+      }
+    }
+  }
+`;
+
+const DETACH_USER_FILE_MUTATION = gql`
+  mutation ReactorDetachUserFileFromSession($params: ReactorDetachUserFileParam!) {
+    ReactorDetachUserFileFromSession(params: $params) {
+      ... on ReactorDetachFileResponse {
+        success
+        message
+        sessionId
+        fileId
+        path
+      }
+      ... on ReactorErrorResponse {
+        code
+        message
+        details
+        timestamp
+        recoverable
+        suggestion
+      }
+    }
+  }
+`;
+
 interface DocumentPreview {
   id: string;
   name: string;
@@ -113,6 +167,10 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'preview'>('list');
   const [showAllFiles, setShowAllFiles] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showUserHomeFolder, setShowUserHomeFolder] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<SelectedItem[]>([]);
+  const [slidingItems, setSlidingItems] = useState<Set<string>>(new Set());
   const [renameDialog, setRenameDialog] = useState<{
     open: boolean;
     fileId: string;
@@ -178,7 +236,8 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     Visibility,
     CloudUpload,
     Refresh,
-    Edit
+    Edit,
+    LinkOff
   } = Material.MaterialIcons;
 
   const loadDocuments = useCallback(async () => {
@@ -261,6 +320,10 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     setPreviewLoading(false);
     setMobileView('list');
     setShowAllFiles(false);
+    setIsTransitioning(false);
+    setShowUserHomeFolder(false);
+    setSelectedFiles([]);
+    setSlidingItems(new Set());
     setRenameDialog({
       open: false,
       fileId: '',
@@ -275,6 +338,10 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
       setSelectedDocument(null);
       setPreviewLoading(false);
       setMobileView('list');
+      setIsTransitioning(false);
+      setShowUserHomeFolder(false);
+      setSelectedFiles([]);
+      setSlidingItems(new Set());
       setRenameDialog({
         open: false,
         fileId: '',
@@ -413,45 +480,6 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     }
   }, [onFileUpload, chatState?.id, reactory, loadDocuments, documents.length]);
 
-  const handleDeleteDocument = useCallback(async (docId: string) => {
-    try {
-      // Call the GraphQL mutation to delete the file
-      const response = await reactory.graphqlMutation<{
-        ReactoryDeleteFile: {
-          success: boolean;
-          id: string;
-        } | {
-          error: string;
-          message: string;
-        }
-      }, { id: string }>(DELETE_FILE_MUTATION, { id: docId });
-
-      if (response?.data?.ReactoryDeleteFile) {
-        const result = response.data.ReactoryDeleteFile;
-        
-        // Check if it's an error response
-        if ('error' in result) {
-          reactory.error(`Failed to delete file: ${result.message}`);
-          return;
-        }
-
-        // Success - remove from local state and refresh from server
-        if (selectedDocument?.id === docId) {
-          setSelectedDocument(null);
-        }
-        
-        // Refresh the file list to ensure consistency with server
-        await loadDocuments();
-        
-        reactory.info('Document deleted successfully');
-      } else {
-        reactory.error('Failed to delete document - no response from server');
-      }
-    } catch (error) {
-      reactory.error('Failed to delete document', error);
-    }
-  }, [selectedDocument, reactory, loadDocuments]);
-
   const handleUpdateDocument = useCallback(async (docId: string, updates: {
     filename?: string;
     alias?: string;
@@ -555,6 +583,307 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     setRenameDialog({ open: false, fileId: '', currentName: '', newName: '' });
   }, []);
 
+  const handleSlideToggle = useCallback((docId: string) => {
+    setSlidingItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(docId)) {
+        newSet.delete(docId);
+      } else {
+        newSet.add(docId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleUnlinkDocument = useCallback(async (doc: DocumentPreview) => {
+    if (!chatState?.id) {
+      return;
+    }
+
+    try {
+      reactory.info(`Unlinking file ${doc.name} from chat session`);
+      
+      const response = await reactory.graphqlMutation<{
+        ReactorDetachUserFileFromSession: {
+          success?: boolean;
+          message?: string;
+          sessionId?: string;
+          fileId?: string;
+          path?: string;
+        } | {
+          code: string;
+          message: string;
+          details?: any;
+          timestamp: string;
+          recoverable: boolean;
+          suggestion?: string;
+        }
+      }, { params: { sessionId: string; fileId: string; path: string; delete?: boolean } }>(
+        DETACH_USER_FILE_MUTATION, 
+        { 
+          params: {
+            sessionId: chatState.id,
+            fileId: doc.id,
+            path: doc.path || '',
+            delete: false
+          }
+        }
+      );
+
+      if (response?.data?.ReactorDetachUserFileFromSession) {
+        const result = response.data.ReactorDetachUserFileFromSession;
+        
+        // Check if it's an error response
+        if ('code' in result) {
+          reactory.error(`Failed to unlink file: ${result.message}`);
+          return;
+        }
+
+        // Success - remove from sliding state and refresh the file list
+        setSlidingItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(doc.id);
+          return newSet;
+        });
+        
+        await loadDocuments();
+        reactory.info(`File ${doc.name} unlinked successfully`);
+      } else {
+        reactory.error('Failed to unlink file - no response from server');
+      }
+    } catch (error) {
+      reactory.error(`Failed to unlink file ${doc.name}`, error);
+    }
+  }, [chatState?.id, reactory, loadDocuments]);
+
+  const handleDeleteDocument = useCallback(async (doc: DocumentPreview) => {
+    if (!chatState?.id) {
+      return;
+    }
+
+    try {
+      reactory.info(`Deleting file ${doc.name} from chat session`);
+      
+      const response = await reactory.graphqlMutation<{
+        ReactorDetachUserFileFromSession: {
+          success?: boolean;
+          message?: string;
+          sessionId?: string;
+          fileId?: string;
+          path?: string;
+        } | {
+          code: string;
+          message: string;
+          details?: any;
+          timestamp: string;
+          recoverable: boolean;
+          suggestion?: string;
+        }
+      }, { params: { sessionId: string; fileId: string; path: string; delete?: boolean } }>(
+        DETACH_USER_FILE_MUTATION, 
+        { 
+          params: {
+            sessionId: chatState.id,
+            fileId: doc.id,
+            path: doc.path || '',
+            delete: true
+          }
+        }
+      );
+
+      if (response?.data?.ReactorDetachUserFileFromSession) {
+        const result = response.data.ReactorDetachUserFileFromSession;
+        
+        // Check if it's an error response
+        if ('code' in result) {
+          reactory.error(`Failed to delete file: ${result.message}`);
+          return;
+        }
+
+        // Success - remove from sliding state and selected document if needed
+        setSlidingItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(doc.id);
+          return newSet;
+        });
+        
+        if (selectedDocument?.id === doc.id) {
+          setSelectedDocument(null);
+        }
+        
+        await loadDocuments();
+        reactory.info(`File ${doc.name} deleted successfully`);
+      } else {
+        reactory.error('Failed to delete file - no response from server');
+      }
+    } catch (error) {
+      reactory.error(`Failed to delete file ${doc.name}`, error);
+    }
+  }, [chatState?.id, selectedDocument, reactory, loadDocuments]);
+
+  const handleShowAllFilesToggle = useCallback(async (checked: boolean) => {
+    if (checked) {
+      // Start transition to UserHomeFolder
+      setIsTransitioning(true);
+      setShowAllFiles(true);
+      
+      // Wait for transition to complete before showing UserHomeFolder
+      setTimeout(() => {
+        setShowUserHomeFolder(true);
+        setIsTransitioning(false);
+      }, 300);
+    } else {
+      // Transition back to FilesPanel
+      setIsTransitioning(true);
+      setShowUserHomeFolder(false);
+      
+      // Wait for transition to complete before updating showAllFiles
+      setTimeout(() => {
+        setShowAllFiles(false);
+        setIsTransitioning(false);
+        setSelectedFiles([]); // Clear selected files when returning
+      }, 300);
+    }
+  }, []);
+
+  const handleFileSelection = useCallback((selectedItems: SelectedItem[]) => {
+    setSelectedFiles(selectedItems);
+    
+    // Optionally add selected files to chat context
+    if (selectedItems.length > 0) {
+      reactory.info(`Selected ${selectedItems.length} files for chat context:`, selectedItems);
+      
+      // You can implement logic here to add files to the chat context
+      // For example, upload them or reference them in the conversation
+    }
+  }, [reactory]);
+
+  const handleUserHomeFolderFileUpload = useCallback(async (files: File[], path: string) => {
+    // Handle file upload from UserHomeFolder
+    if (onFileUpload && chatState?.id) {
+      for (const file of files) {
+        try {
+          await onFileUpload(file, chatState.id);
+          reactory.info(`Uploaded ${file.name} from ${path} to chat`);
+        } catch (error) {
+          reactory.error(`Failed to upload ${file.name}`, error);
+        }
+      }
+      
+      // Refresh the chat files list
+      await loadDocuments();
+    }
+  }, [onFileUpload, chatState?.id, reactory, loadDocuments]);
+
+  const onFileSelect = useCallback(async (item: SelectedItem) => {
+    if (!chatState?.id || item.type !== 'file') {
+      return;
+    }
+
+    try {
+      reactory.info(`Attaching file ${item.name} to chat session`);
+      
+      const response = await reactory.graphqlMutation<{
+        ReactorAttachUserFileToSession: {
+          success?: boolean;
+          message?: string;
+          sessionId?: string;
+          fileId?: string;
+          path?: string;
+        } | {
+          code: string;
+          message: string;
+          details?: any;
+          timestamp: string;
+          recoverable: boolean;
+          suggestion?: string;
+        }
+      }, { params: { sessionId: string; fileId: string; path: string } }>(
+        ATTACH_USER_FILE_MUTATION, 
+        { 
+          params: {
+            sessionId: chatState.id,
+            fileId: item.id,
+            path: item.path
+          }
+        }
+      );
+
+      if (response?.data?.ReactorAttachUserFileToSession) {
+        const result = response.data.ReactorAttachUserFileToSession;
+        
+        // Check if it's an error response
+        if ('code' in result) {
+          reactory.error(`Failed to attach file: ${result.message}`);
+          return;
+        }
+
+        // Success - refresh the file list
+        await loadDocuments();
+        reactory.info(`File ${item.name} attached successfully`);
+      } else {
+        reactory.error('Failed to attach file - no response from server');
+      }
+    } catch (error) {
+      reactory.error(`Failed to attach file ${item.name}`, error);
+    }
+  }, [chatState?.id, reactory, loadDocuments]);
+
+  const onFileDeselect = useCallback(async (item: SelectedItem) => {
+    if (!chatState?.id || item.type !== 'file') {
+      return;
+    }
+
+    try {
+      reactory.info(`Detaching file ${item.name} from chat session`);
+      
+      const response = await reactory.graphqlMutation<{
+        ReactorDetachUserFileFromSession: {
+          success?: boolean;
+          message?: string;
+          sessionId?: string;
+          fileId?: string;
+          path?: string;
+        } | {
+          code: string;
+          message: string;
+          details?: any;
+          timestamp: string;
+          recoverable: boolean;
+          suggestion?: string;
+        }
+      }, { params: { sessionId: string; fileId: string; path: string; delete?: boolean } }>(
+        DETACH_USER_FILE_MUTATION, 
+        { 
+          params: {
+            sessionId: chatState.id,
+            fileId: item.id,
+            path: item.path,
+            delete: false
+          }
+        }
+      );
+
+      if (response?.data?.ReactorDetachUserFileFromSession) {
+        const result = response.data.ReactorDetachUserFileFromSession;
+        
+        // Check if it's an error response
+        if ('code' in result) {
+          reactory.error(`Failed to detach file: ${result.message}`);
+          return;
+        }
+
+        // Success - refresh the file list
+        await loadDocuments();
+        reactory.info(`File ${item.name} detached successfully`);
+      } else {
+        reactory.error('Failed to detach file - no response from server');
+      }
+    } catch (error) {
+      reactory.error(`Failed to detach file ${item.name}`, error);
+    }
+  }, [chatState?.id, reactory, loadDocuments]);
+
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return <Image />;
     if (type === 'application/pdf') return <PictureAsPdf />;
@@ -575,6 +904,11 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   };
 
   const getMobileTitle = () => {
+    if (showUserHomeFolder) {
+      return selectedFiles.length > 0 
+        ? `Browse Files (${selectedFiles.length} selected)`
+        : il8n?.t('reactor.client.files.browse', { defaultValue: 'Browse Files' });
+    }
     if (mobileView === 'preview' && selectedDocument) {
       return selectedDocument.name.length > 20 
         ? selectedDocument.name.substring(0, 20) + '...'
@@ -584,23 +918,36 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   };
 
   return (
-    <Paper
-      elevation={3}
+    <Box
       sx={{
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
+        overflow: 'hidden',
         transform: open ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.3s ease-in-out',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: 2,        
-        backdropFilter: 'blur(10px) saturate(120%)',
+        zIndex: 2,
       }}
     >
+      {/* FilesPanel - Slides out to the left when UserHomeFolder is shown */}
+      <Paper
+        elevation={3}
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          transform: showUserHomeFolder ? 'translateX(-100%)' : 'translateX(0)',
+          transition: 'transform 0.3s ease-in-out',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          backdropFilter: 'blur(10px) saturate(120%)',
+        }}
+      >
       {/* Header */}
       <Box sx={{
         display: 'flex',
@@ -639,9 +986,58 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
           </Box>
           {/* Desktop: Always show main title */}
           <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-            {il8n?.t('reactor.client.files.title', { defaultValue: 'File Management' })}
+            {showUserHomeFolder 
+              ? il8n?.t('reactor.client.files.browse', { defaultValue: 'Browse Files' })
+              : il8n?.t('reactor.client.files.title', { defaultValue: 'File Management' })
+            }
           </Box>
         </Typography>
+
+        {/* Show selected files count when in UserHomeFolder mode */}
+        {showUserHomeFolder && selectedFiles.length > 0 && (
+          <Chip
+            label={`${selectedFiles.length} selected`}
+            color="primary"
+            size="small"
+            sx={{ mr: 1 }}
+          />
+        )}
+
+        {/* Add to Chat button when files are selected in UserHomeFolder mode */}
+        {showUserHomeFolder && selectedFiles.length > 0 && (
+          <Tooltip title="Add selected files to chat context">
+            <Button
+              variant="contained"
+              size="small"
+              onClick={async () => {
+                // Process selected files and add them to chat context
+                for (const selectedItem of selectedFiles) {
+                  if (selectedItem.type === 'file') {
+                    try {
+                      // Create a File object from the selected file path
+                      // This would need to be implemented based on your file system access
+                      reactory.info(`Adding ${selectedItem.name} to chat context`);
+                      
+                      // You could implement file fetching and adding to chat here
+                      // For now, we'll just log the action
+                    } catch (error) {
+                      reactory.error(`Failed to add ${selectedItem.name} to chat`, error);
+                    }
+                  }
+                }
+                
+                // Optionally clear selection after adding
+                setSelectedFiles([]);
+                
+                // Switch back to FilesPanel to show the updated chat files
+                handleShowAllFilesToggle(false);
+              }}
+              sx={{ mr: 1, fontSize: '0.75rem' }}
+            >
+              Add to Chat
+            </Button>
+          </Tooltip>
+        )}
         
         <Tooltip title="Refresh file list">
           <IconButton onClick={loadDocuments} disabled={loading}>
@@ -686,29 +1082,22 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
             
             {/* Show All Files Toggle */}
             <Box sx={{ mb: 2 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showAllFiles}
-                    onChange={(e) => setShowAllFiles(e.target.checked)}
-                    size="small"
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ 
-                    fontSize: { xs: '0.75rem', md: '0.875rem' },
-                    fontWeight: 'medium'
-                  }}>
-                    Show all files and folders
-                  </Typography>
-                }
-                sx={{ 
-                  m: 0,
-                  '& .MuiFormControlLabel-label': {
-                    fontSize: { xs: '0.75rem', md: '0.875rem' }
-                  }
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleShowAllFilesToggle(true)}
+                disabled={isTransitioning}
+                startIcon={<CloudUpload />}
+                fullWidth
+                sx={{
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                  fontWeight: 'medium',
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }
                 }}
-              />
+              >
+                My Files
+              </Button>
             </Box>
             
             {/* Simple File Upload Area */}
@@ -774,95 +1163,157 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
               {il8n?.t('reactor.client.files.list', { defaultValue: 'Uploaded Files' })} ({documents.length})
             </Typography>
             
-            {loading ? (
+            {loading && (
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                 <CircularProgress />
               </Box>
-            ) : documents.length > 0 ? (
+            )}
+            
+            {!loading && documents.length > 0 && (
               <List sx={{ p: 0 }}>
-                {documents.map((doc) => (
-                  <ListItem key={doc.id} sx={{ 
-                    px: { xs: 1, md: 2 },
-                    py: { xs: 0.5, md: 0 }
-                  }}>
-                    <ListItemButton
-                      onClick={() => handleDocumentSelect(doc)}
-                      selected={selectedDocument?.id === doc.id}
-                      sx={{ 
-                        borderRadius: 1,
-                        minHeight: { xs: 64, md: 'auto' },
-                        py: { xs: 1, md: 0.5 }
-                      }}
-                    >
-                      <ListItemIcon sx={{ minWidth: { xs: 36, md: 56 } }}>
-                        {getFileIcon(doc.type)}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Typography variant="body2" sx={{ 
-                            fontWeight: 'medium',
-                            fontSize: { xs: '0.8rem', md: '0.875rem' }
-                          }}>
-                            {doc.name.length > 25 ? doc.name.substring(0, 25) + '...' : doc.name}
-                          </Typography>
-                        }
-                        secondary={
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 1, 
-                            mt: 0.5,
-                            flexWrap: 'wrap'
-                          }}>
-                            <Chip 
-                              label={formatFileSize(doc.size)} 
-                              size="small" 
-                              variant="outlined"
-                              sx={{ fontSize: { xs: '0.6rem', md: '0.75rem' } }}
-                            />
-                            <Typography variant="caption" color="text.secondary" sx={{
-                              fontSize: { xs: '0.6rem', md: '0.75rem' }
-                            }}>
-                              {doc.uploadDate.toLocaleDateString()}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </ListItemButton>
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRenameDocument(doc.id, doc.name);
-                        }}
-                        size="small"
-                        color="primary"
-                        sx={{ 
-                          minWidth: { xs: 40, md: 'auto' },
-                          minHeight: { xs: 40, md: 'auto' }
-                        }}
-                      >
-                        <Edit fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteDocument(doc.id);
-                        }}
-                        size="small"
-                        color="error"
-                        sx={{ 
-                          minWidth: { xs: 40, md: 'auto' },
-                          minHeight: { xs: 40, md: 'auto' }
-                        }}
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </ListItem>
-                ))}
+                {documents.map((doc) => {
+                  const isSliding = slidingItems.has(doc.id);
+                  
+                  return (
+                    <ListItem key={doc.id} sx={{ 
+                      px: { xs: 1, md: 2 },
+                      py: { xs: 0.5, md: 0 },
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      {/* Main content that slides */}
+                      <Box sx={{
+                        display: 'flex',
+                        width: '100%',
+                        transform: isSliding ? 'translateX(-75%)' : 'translateX(0)',
+                        transition: 'transform 0.3s ease-in-out',
+                        alignItems: 'center'
+                      }}>
+                        <ListItemButton
+                          onClick={() => handleDocumentSelect(doc)}
+                          selected={selectedDocument?.id === doc.id}
+                          sx={{ 
+                            borderRadius: 1,
+                            minHeight: { xs: 64, md: 'auto' },
+                            py: { xs: 1, md: 0.5 },
+                            flex: 1
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: { xs: 36, md: 56 } }}>
+                            {getFileIcon(doc.type)}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Typography variant="body2" sx={{ 
+                                fontWeight: 'medium',
+                                fontSize: { xs: '0.8rem', md: '0.875rem' }
+                              }}>
+                                {doc.name.length > 25 ? doc.name.substring(0, 25) + '...' : doc.name}
+                              </Typography>
+                            }
+                            secondary={
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 1, 
+                                mt: 0.5,
+                                flexWrap: 'wrap'
+                              }}>
+                                <Chip 
+                                  label={formatFileSize(doc.size)} 
+                                  size="small" 
+                                  variant="outlined"
+                                  sx={{ fontSize: { xs: '0.6rem', md: '0.75rem' } }}
+                                />
+                                <Typography variant="caption" color="text.secondary" sx={{
+                                  fontSize: { xs: '0.6rem', md: '0.75rem' }
+                                }}>
+                                  {doc.uploadDate.toLocaleDateString()}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                        </ListItemButton>
+                        
+                        {/* Action buttons */}
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRenameDocument(doc.id, doc.name);
+                            }}
+                            size="small"
+                            color="primary"
+                            sx={{ 
+                              minWidth: { xs: 40, md: 'auto' },
+                              minHeight: { xs: 40, md: 'auto' }
+                            }}
+                          >
+                            <Edit fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSlideToggle(doc.id);
+                            }}
+                            size="small"
+                            color="warning"
+                            sx={{ 
+                              minWidth: { xs: 40, md: 'auto' },
+                              minHeight: { xs: 40, md: 'auto' }
+                            }}
+                          >
+                            <LinkOff fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                      
+                      {/* Hidden action buttons revealed when sliding */}
+                      <Box sx={{
+                        position: 'absolute',
+                        right: { xs: 8, md: 16 },
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        display: 'flex',
+                        gap: 1,
+                        opacity: isSliding ? 1 : 0,
+                        transition: 'opacity 0.3s ease-in-out',
+                        pointerEvents: isSliding ? 'auto' : 'none'
+                      }}>
+                        <Button
+                          variant="contained"
+                          color="warning"
+                          size="small"
+                          startIcon={<LinkOff />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUnlinkDocument(doc);
+                          }}
+                          sx={{ minWidth: 80 }}
+                        >
+                          Unlink
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="error"
+                          size="small"
+                          startIcon={<Delete />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDocument(doc);
+                          }}
+                          sx={{ minWidth: 80 }}
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                    </ListItem>
+                  );
+                })}
               </List>
-            ) : (
+            )}
+            
+            {!loading && documents.length === 0 && (
               <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
                   {il8n?.t('reactor.client.files.empty', { defaultValue: 'No files uploaded yet' })}
@@ -1074,7 +1525,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
                     startIcon={<Delete />}
                     size="small"
                     color="error"
-                    onClick={() => handleDeleteDocument(selectedDocument.id)}
+                    onClick={() => handleDeleteDocument(selectedDocument)}
                     sx={{ 
                       fontSize: { xs: '0.75rem', md: '0.875rem' },
                       minWidth: { xs: 'auto', md: 64 }
@@ -1192,7 +1643,49 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
-    </Paper>
+      </Paper>
+
+      {/* UserHomeFolder - Slides in from the right when showAllFiles is toggled */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          transform: showUserHomeFolder ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.3s ease-in-out',
+          zIndex: 3,
+        }}
+      >
+        <UserHomeFolder
+          open={showUserHomeFolder}
+          onClose={() => handleShowAllFilesToggle(false)}
+          reactory={reactory}
+          onFileUpload={handleUserHomeFolderFileUpload}
+          onSelectionChanged={handleFileSelection}
+          selectedItems={documents?.filter(d => d.path).map(d => ({
+            id: d.id,
+            name: d.name,
+            path: d.path,
+            type: 'file' as const,
+            item: {
+              id: d.id,
+              name: d.name,
+              type: 'file' as const,
+              mimetype: d.type || 'application/octet-stream',
+              size: d.size,
+              url: d.url,
+              path: d.path,
+              uploadDate: d.uploadDate
+            }
+          })) || []}
+          onItemSelect={onFileSelect}
+          onItemDeselect={onFileDeselect}
+          il8n={il8n}
+        />
+      </Box>
+    </Box>
   );
 };
 

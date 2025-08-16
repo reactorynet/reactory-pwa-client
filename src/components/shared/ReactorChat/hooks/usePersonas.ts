@@ -34,17 +34,17 @@ query GetReactorPersonas {
       avatar          
       createdAt
       updatedAt
-      macros {
-        id
+      macros {      
         name
         nameSpace
         version
         description
         icon
+        runat
+        alias
       }
-      tools {
-        id
-        type
+      tools {        
+        type        
         propsMap
         function {
           name

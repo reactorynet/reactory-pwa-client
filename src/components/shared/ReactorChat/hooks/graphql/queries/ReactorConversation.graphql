@@ -1,0 +1,36 @@
+query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOptions) {
+  ReactorConversation(id: $id, loadOptions: $loadOptions) {
+    __typename
+    ... on ReactorChatState {
+      id
+      personaId
+      created
+      updated
+      user { id firstName lastName }
+      history { id role content timestamp tool_calls }
+      vars
+      tools {
+        id
+        type
+        propsMap
+        roles
+        function { name icon description parameters }        
+      }
+      macros { id nameSpace name version icon description alias roles params runat }
+      toolApprovalMode
+      tokenCount
+      maxTokens
+      tokenPressure
+      files { id filename mimetype size }
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}
+

@@ -1,0 +1,30 @@
+mutation ReactorExecuteTool($toolInput: ReactorToolDefinitionInput!) {
+  ReactorExecuteTool(toolInput: $toolInput) {
+    __typename
+    ... on ReactorChatMessage {
+      sessionId
+      id
+      role
+      content
+      timestamp
+      tool_calls
+    }
+    ... on ReactorInitiateSSE {
+      sessionId
+      endpoint
+      token
+      status
+      expiry
+      headers
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}
+

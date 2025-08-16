@@ -7,6 +7,7 @@ import {
 import lodash from 'lodash';
 import { useReactory } from "@reactory/client-core/api/ApiProvider";
 import { ReactoryFormUtilities } from "@reactory/client-core/components/reactory/form/types";
+import SchemaMerge from 'json-schema-merge-allof';
 
 export function DefaultObjectFieldTemplate(props: any) {
   const reactory  = useReactory();
@@ -215,8 +216,38 @@ const MaterialObjectField: Reactory.Forms.ReactoryObjectFieldComponent = (props)
   let orderedProperties;
 
   try {
-    const properties = Object.keys(schema.properties);
-    orderedProperties = utils.orderProperties(properties, uiSchema["ui:order"]);
+    // check if schema.properties is defined
+    let properties = [];
+    if (!schema.properties) {
+      // check if there is any anyOf
+      if (schema.anyOf) {
+        // If anyOf is present, we need to handle it
+        const anyOfSchema = utils.retrieveSchema(schema, definitions, formData);
+        orderedProperties = utils.orderProperties(Object.keys(anyOfSchema.properties), uiSchema["ui:order"]);
+      }
+
+      if (schema.oneOf) {
+        // If oneOf is present, we need to handle it
+        const oneOfSchema = utils.retrieveSchema(schema, definitions, formData);
+        orderedProperties = utils.orderProperties(Object.keys(oneOfSchema.properties), uiSchema["ui:order"]);
+      }
+
+      if (schema.allOf) { 
+        // If allOf is present, we need to handle it
+        const allOfSchema = SchemaMerge.mergeAllOf(schema.allOf, definitions, formData);
+        orderedProperties = utils.orderProperties(Object.keys(allOfSchema.properties), uiSchema["ui:order"]);
+      }
+
+      if (!orderedProperties) {
+        // If no properties are defined, we can return an empty array
+        orderedProperties = [];
+      } else {
+        properties = Object.keys(orderedProperties);
+      }
+    } else {
+      properties = Object.keys(schema.properties);
+      orderedProperties = utils.orderProperties(properties, uiSchema["ui:order"]);
+    }
   } catch (err) {
     return (
       <div>

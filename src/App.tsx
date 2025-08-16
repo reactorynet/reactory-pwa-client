@@ -88,11 +88,6 @@ interface ReactoryRouterProps {
   footer: React.ReactElement
 };
 
-const ReactoryRoute = (routeDef: Reactory.Routing.IReactoryRoute, auth_validated: boolean = false, authenticating: boolean = false) => {
-
-
-}
-
 /**
  * Wrapper component that renders inside each route to access params
  * and process componentProps templates
@@ -289,7 +284,6 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
       setVersion(v + 1);
     }
   }
-
 
   useEffect(() => {
     configureRouting();
@@ -821,6 +815,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
     }
     reactory.muiTheme = muiTheme;
+    // set the background color on the body to the background color of the theme
+    document.body.style.backgroundColor = muiTheme.palette.background.default;
     setTheme(muiTheme);
   };
 
@@ -987,17 +983,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const useStyles = makeStyles(() => {
 
     return {
-
       root_paper: {
-        minHeight: screen.availHeight,
-        //maxHeight: screen.availHeight,
-        borderRadius: 0,
-        margin: 0,
-        padding: 0,
-        overflowX: "hidden",
-        overflowY: "auto"
+        minHeight: '100vh',
+        maxHeight: '100vh',        
       },
-
       selectedMenuLabel: {
         color: theme.palette.primary.main,
         paddingRight: theme.spacing(1.5),
@@ -1064,7 +1053,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                   <Paper
                     id='reactory_paper_root'
                     elevation={0}
-                    className={classes.root_paper}>
+                    square={true}                     
+                    classes={{ root: classes.root_paper }}
+                    >
                     {offline === false &&
                       <React.Fragment>
                         <NotificationComponent />
