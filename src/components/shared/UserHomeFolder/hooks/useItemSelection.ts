@@ -3,9 +3,9 @@ import { SelectedItem, FileItem, FolderItem } from '../types';
 
 export const useItemSelection = (
   multiSelectEnabled: boolean,
-  onSelectionChanged?: (selectedItems: SelectedItem[]) => void,
-  onItemSelect?: (item: SelectedItem) => Promise<void>,
-  onItemDeselect?: (item: SelectedItem) => Promise<void>,
+  onSelectionChanged?: (selectedItems: SelectedItem[], selectionMode: 'single' | 'multi') => void,
+  onItemSelect?: (item: SelectedItem, selectionMode: 'single' | 'multi') => Promise<void>,
+  onItemDeselect?: (item: SelectedItem, selectionMode: 'single' | 'multi') => Promise<void>,
   reactory?: Reactory.Client.ReactorySDK,
   externalSelectedItems: SelectedItem[] = []
 ) => {
@@ -27,13 +27,13 @@ export const useItemSelection = (
       // Handle external selection/deselection via callbacks
       if (isSelected && onItemSelect) {
         try {
-          await onItemSelect(selectedItem);
+          await onItemSelect(selectedItem, multiSelectEnabled ? 'multi' : 'single');
         } catch (error) {
           reactory?.error('Failed to select item', error);
         }
       } else if (!isSelected && onItemDeselect) {
         try {
-          await onItemDeselect(selectedItem);
+          await onItemDeselect(selectedItem, multiSelectEnabled ? 'multi' : 'single');
         } catch (error) {
           reactory?.error('Failed to deselect item', error);
         }
@@ -57,7 +57,7 @@ export const useItemSelection = (
 
       // Call selection changed callback
       if (onSelectionChanged) {
-        onSelectionChanged(newSelection);
+        onSelectionChanged(newSelection, multiSelectEnabled ? 'multi' : 'single');
       }
 
       return newSelection;
@@ -97,16 +97,16 @@ export const useItemSelection = (
 
     setSelectedItems(allItems);
     if (onSelectionChanged) {
-      onSelectionChanged(allItems);
+      onSelectionChanged(allItems, multiSelectEnabled ? 'multi' : 'single');
     }
-  }, [onSelectionChanged]);
+  }, [onSelectionChanged, multiSelectEnabled]);
 
   const handleClearSelection = useCallback(() => {
     setSelectedItems([]);
     if (onSelectionChanged) {
-      onSelectionChanged([]);
+      onSelectionChanged([], multiSelectEnabled ? 'multi' : 'single');
     }
-  }, [onSelectionChanged]);
+  }, [onSelectionChanged, multiSelectEnabled]);
 
   const clearLocalSelection = useCallback(() => {
     setSelectedItems([]);

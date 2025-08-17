@@ -38,6 +38,8 @@ interface ChatFactoryHookResult {
   // streaming state (when protocol is 'sse')
   isStreaming?: boolean
   currentStreamingMessage?: string
+  // sets the chat state
+  setChatState: React.Dispatch<React.SetStateAction<ChatState>>
 }
 
 interface ChatFactorHookOptions {
@@ -692,6 +694,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           const newSessionId = await initializeChat(persona);
           setIsInitialized(true);
           sessionId = newSessionId; // Use the session ID from initialization
+          
+          // Wait a moment for the chat session to be fully established
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Update the chat state with the new session ID
+          setChatState(prev => ({
+            ...prev,
+            id: newSessionId
+          }));
         } catch (error) {
           onError(error);
           setBusy(false);
@@ -699,12 +710,71 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }
       }
 
+      // Ensure we have a valid session ID
+      if (!sessionId) {
+        throw new Error('No valid chat session ID available for file upload');
+      }
+
+      reactory.info(`ChatFactory: Attaching file ${file.name} to session ${sessionId}`);
+      
       const result = await graph.attachFile(file, sessionId);
       if (result) {
         if ((result as any).__typename === 'ReactorErrorResponse') {
           onError(new Error((result as any).message));
         } else {
           onMessage(result as unknown as UXChatMessage);
+          
+          // Wait a moment for the file to be properly attached
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Refresh the chat state to include the new file
+          if (chatState?.id) {
+            try {
+              const response = await reactory.graphqlQuery<{
+                ReactorConversation: {
+                  id: string;
+                  files?: Reactory.Models.IReactoryFile[];
+                } | {
+                  code: string;
+                  message: string;
+                }
+              }, { id: string }>(`
+                query ReactorConversation($id: String!) {
+                  ReactorConversation(id: $id) {
+                    ... on ReactorChatState {
+                      id
+                      files {
+                        id
+                        filename
+                        mimetype
+                        size
+                        path
+                        created
+                        link
+                        alias
+                      }
+                    }
+                    ... on ReactorErrorResponse {
+                      code
+                      message
+                    }
+                  }
+                }
+              `, { id: chatState.id });
+
+              if (response?.data?.ReactorConversation && !('code' in response.data.ReactorConversation)) {
+                const conversation = response.data.ReactorConversation;
+                // Update the chat state with the new file information
+                setChatState(prev => ({
+                  ...prev,
+                  files: conversation.files || []
+                }));
+                reactory.info(`ChatFactory: File ${file.name} successfully attached and chat state updated`);
+              }
+            } catch (error) {
+              reactory.error('Failed to refresh chat state after file upload', error);
+            }
+          }
         }
       }
     } catch (error) {
@@ -1194,6 +1264,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     isInitialized,
     isStreaming: (sse as any).isStreaming,
     currentStreamingMessage: (sse as any).currentStreamingMessage,
+    setChatState,
   }
 };
 

@@ -316,10 +316,21 @@ export type ChatState = {
    * @returns 
    */
   sendMessage: (message: string, sessionId?: string) => Promise<void>
-
+  /**
+   * The number of tokens used in the chat session.
+   */
   tokenCount?: number
+  /**
+   * The maximum number of tokens allowed for the chat session.
+   */
   maxTokens?: number
+  /**
+   * The pressure on the token count.
+   */
   tokenPressure?: number
+  /**
+   * A truncated version of the history of the chat session.
+   */
   truncatedHistory?: ReactorConversationHistory
   /**
    * Files attached to the chat session

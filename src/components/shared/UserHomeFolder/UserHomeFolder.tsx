@@ -41,6 +41,25 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
   const folderStateRef = useRef(folderState);
   folderStateRef.current = folderState;
 
+  // Handle selection changes with auto-close logic
+  const handleSelectionChanged = useCallback((selectedItems: SelectedItem[], selectionMode: 'single' | 'multi') => {
+    // Auto-close panel when a file is selected in single mode
+    if (selectionMode === 'single' && selectedItems.length > 0) {
+      const selectedItem = selectedItems[0];
+      if (selectedItem.type === 'file') {
+        // Close the panel after a short delay to allow the selection to be processed
+        setTimeout(() => {
+          onClose();
+        }, 100);
+      }
+    }
+    
+    // Call the original onSelectionChanged if provided
+    if (onSelectionChanged) {
+      onSelectionChanged(selectedItems, selectionMode);
+    }
+  }, [onClose, onSelectionChanged]);
+
   // Separate state for current path files
   const [currentPathFiles, setCurrentPathFiles] = useState<FileItem[]>([]);
 
@@ -90,7 +109,7 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
     clearLocalSelection: originalClearLocalSelection
   } = useItemSelection(
     multiSelectEnabled,
-    onSelectionChanged,
+    handleSelectionChanged,
     onItemSelect,
     onItemDeselect,
     reactory,
@@ -468,6 +487,19 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
     setMenuItem(null);
   };
 
+  // Enhanced item selection with auto-select logic for single mode
+  const handleEnhancedItemSelection = useCallback(async (item: FileItem | FolderItem, isSelected: boolean) => {
+    // In single mode, automatically select files when clicked
+    if (!multiSelectEnabled && item.type === 'file') {
+      // Always select the file in single mode
+      await handleItemSelection(item, true);
+      return;
+    }
+    
+    // For multi-mode or folders, use normal selection logic
+    await handleItemSelection(item, isSelected);
+  }, [multiSelectEnabled, handleItemSelection]);
+
   // Recursive folder item component
   const FolderItem = useCallback(React.memo(({ folder, level = 0 }: { folder: HierarchicalFolderItem; level?: number }) => {
     const isExpanded = folderStateRef.current.isExpanded(folder.path);
@@ -485,7 +517,7 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
     const handleSelect = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (multiSelectEnabled) {
-        handleItemSelection(folder, !isItemSelected(folder));
+        handleEnhancedItemSelection(folder, !isItemSelected(folder));
       } else {
         // Navigate into the folder
         handleFolderSelect(folder);
@@ -517,7 +549,7 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
                 <IconButton
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleItemSelection(folder, !isItemSelected(folder));
+                    handleEnhancedItemSelection(folder, !isItemSelected(folder));
                   }}
                   size="small"
                 >
@@ -580,7 +612,7 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
         )}
       </Box>
     );
-  }), [multiSelectEnabled, handleFolderToggle, handleItemSelection, isItemSelected, handleFolderSelect, folderState.currentPath]);
+  }), [multiSelectEnabled, handleFolderToggle, handleEnhancedItemSelection, isItemSelected, handleFolderSelect, folderState.currentPath]);
 
   // Format file size helper
   const formatFileSize = (bytes: number) => {
@@ -635,6 +667,13 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
         fontSize: { xs: '0.7rem', md: '0.8rem' }
       }}>
         Upload files
+      </Typography>
+      <Typography variant="caption" color="text.secondary" sx={{
+        fontSize: { xs: '0.6rem', md: '0.7rem' },
+        mt: 0.5,
+        fontStyle: 'italic'
+      }}>
+        Files will be added to chat context
       </Typography>
     </Box>
   );
@@ -784,12 +823,21 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
                   />
                 }
                 label={
-                  <Typography variant="body2" sx={{
-                    fontSize: { xs: '0.75rem', md: '0.875rem' },
-                    fontWeight: 'medium'
-                  }}>
-                    Multi-select
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" sx={{
+                      fontSize: { xs: '0.75rem', md: '0.875rem' },
+                      fontWeight: 'medium'
+                    }}>
+                      Multi-select
+                    </Typography>
+                    <Chip
+                      label={multiSelectEnabled ? 'Multi' : 'Single'}
+                      size="small"
+                      color={multiSelectEnabled ? 'primary' : 'default'}
+                      variant="outlined"
+                      sx={{ fontSize: '0.6rem', height: 16 }}
+                    />
+                  </Box>
                 }
                 sx={{
                   m: 0,
@@ -798,6 +846,17 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
                   }
                 }}
               />
+              <Typography variant="caption" color="text.secondary" sx={{
+                fontSize: { xs: '0.6rem', md: '0.7rem' },
+                display: 'block',
+                mt: 0.5,
+                ml: 4
+              }}>
+                {multiSelectEnabled 
+                  ? 'Select multiple files and folders' 
+                  : 'Click files to select and auto-close panel'
+                }
+              </Typography>
             </Box>
 
             {/* Upload Area */}
@@ -949,7 +1008,18 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
                             boxShadow: 3
                           }
                         }}
-                        onClick={() => !multiSelectEnabled ? setMobileView('files') : handleItemSelection(item, !isCurrentItemSelected(item))}
+                        onClick={() => {
+                          if (!multiSelectEnabled && item.displayType === 'file') {
+                            // In single mode, clicking a file automatically selects it
+                            handleEnhancedItemSelection(item, true);
+                          } else if (multiSelectEnabled) {
+                            // In multi mode, toggle selection
+                            handleEnhancedItemSelection(item, !isCurrentItemSelected(item));
+                          } else {
+                            // In single mode, clicking a folder navigates into it
+                            setMobileView('files');
+                          }
+                        }}
                       >
                         <CardContent sx={{ p: 1.5, textAlign: 'center' }}>
                           {multiSelectEnabled && (
@@ -957,7 +1027,7 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
                               <IconButton
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleItemSelection(item, !isCurrentItemSelected(item));
+                                  handleEnhancedItemSelection(item, !isCurrentItemSelected(item));
                                 }}
                                 size="small"
                               >
@@ -1051,8 +1121,8 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
           reactory={reactory}
         />
         
-        {/* Debug info for menu positioning */}
-        {anchorEl && (
+        {/* Debug info for menu positioning - DISABLED */}
+        {false && anchorEl && (
           <Box sx={{
             position: 'fixed',
             top: 10,

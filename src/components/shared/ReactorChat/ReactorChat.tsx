@@ -20,7 +20,7 @@ import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel/FilesPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
-import SpeedDialWidget from '../SpeedDialWidget/SpeedDialWidget';
+import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
 
 export default (props) => {
   const { formData } = props;
@@ -118,9 +118,10 @@ export default (props) => {
     setToolApprovalMode,
     chats,
     setChats,
-    deleteChat,    
+    deleteChat,
     isStreaming = false,
     currentStreamingMessage = '',
+    setChatState,
   } = {
     ...chatFactory,
     isStreaming: false,
@@ -159,7 +160,8 @@ export default (props) => {
     Tooltip,
     Chip,
     Switch,
-    Checkbox
+    Checkbox,
+    Badge
   } = Material.MaterialCore;
 
   const {
@@ -168,6 +170,9 @@ export default (props) => {
     Chat,
     Description,
     Star,
+    History,
+    AttachFile,
+    Construction,
   } = Material.MaterialIcons;
 
   // Helper to get color based on token pressure
@@ -294,7 +299,7 @@ export default (props) => {
     setChatHistoryPanelOpen(false);
     setRecordingPanelOpen(false);
     setFilesPanelOpen(false);
-    
+
     // Clear other session-related states
     setSelectedChats([]);
     setChatMenuAnchor(null);
@@ -509,6 +514,57 @@ export default (props) => {
     setFilesPanelOpen(false);
   }, []);
 
+  // Function to refresh chat state to update file count badge
+  const handleRefreshChatState = useCallback(async () => {
+    if (chatState?.id) {
+      try {
+        // Refresh the chat state to get updated file information
+        const response = await reactory.graphqlQuery<{
+          ReactorConversation: {
+            id: string;
+            files?: Reactory.Models.IReactoryFile[];
+          } | {
+            code: string;
+            message: string;
+          }
+        }, { id: string }>(`
+          query ReactorConversation($id: String!) {
+            ReactorConversation(id: $id) {
+              ... on ReactorChatState {
+                id
+                files {
+                  id
+                  filename
+                  mimetype
+                  size
+                  path
+                  created
+                  link
+                  alias
+                }
+              }
+              ... on ReactorErrorResponse {
+                code
+                message
+              }
+            }
+          }
+        `, { id: chatState.id });
+
+        if (response?.data?.ReactorConversation && !('code' in response.data.ReactorConversation)) {
+          const conversation = response.data.ReactorConversation;
+          // Update the chat state with the new file information
+          setChatState(prev => ({
+            ...prev,
+            files: conversation.files || []
+          }));
+        }
+      } catch (error) {
+        reactory.error('Failed to refresh chat state', error);
+      }
+    }
+  }, [chatState?.id, reactory]);
+
   const handlePersonaSelect = useCallback((persona: Partial<IAIPersona>) => {
     selectPersona(persona.id);
     setPersonaPanelOpen(false);
@@ -622,27 +678,53 @@ export default (props) => {
     };
   }, [primary, secondary, background, text]);
 
-  // SpeedDial actions for persona
-  const personaSpeedDialActions = useMemo(() => [
+  // SpeedDial actions for persona and chat tools
+  const personaSpeedDialActions = useMemo(() => [   
+    {
+      key: 'files',
+      icon: (
+        <Badge badgeContent={chatState?.files?.length || 0} color="primary">
+          <AttachFile />
+        </Badge>
+      ),
+      title: il8n?.t('reactor.client.chat.openfiles', { defaultValue: 'Open files panel' }),
+      clickHandler: handleFilesPanelToggle,
+    },
+    {
+      key: 'tools',
+      icon: (
+        <Badge badgeContent={enabledTools.size} color="primary">
+          <Construction />
+        </Badge>
+      ),
+      title: il8n?.t('reactor.client.chat.opentools', { defaultValue: 'Open tools menu' }),
+      clickHandler: handleToolsPanelToggle,
+    },
     {
       key: 'newChat',
       icon: <Chat />,
       title: il8n?.t('reactor.client.persona.newChat', { defaultValue: 'New Chat' }),
       clickHandler: handleNewChat,
     },
+    // {
+    //   key: 'cannedPrompts',
+    //   icon: <Description />,
+    //   title: il8n?.t('reactor.client.persona.cannedPrompts', { defaultValue: 'Canned Prompts' }),
+    //   clickHandler: handleCannedPrompts,
+    // },
+    // {
+    //   key: 'favorite',
+    //   icon: <Star />,
+    //   title: il8n?.t('reactor.client.persona.favorite', { defaultValue: 'Favorite' }),
+    //   clickHandler: handleFavoritePersona,
+    // },
     {
-      key: 'cannedPrompts',
-      icon: <Description />,
-      title: il8n?.t('reactor.client.persona.cannedPrompts', { defaultValue: 'Canned Prompts' }),
-      clickHandler: handleCannedPrompts,
+      key: 'chatHistory',
+      icon: <History />,
+      title: il8n?.t('reactor.client.chat.history', { defaultValue: 'Chat History' }),
+      clickHandler: handleChatHistoryPanelToggle,
     },
-    {
-      key: 'favorite',
-      icon: <Star />,
-      title: il8n?.t('reactor.client.persona.favorite', { defaultValue: 'Favorite' }),
-      clickHandler: handleFavoritePersona,
-    },
-  ], [Chat, Description, Star, il8n, handleNewChat, handleCannedPrompts, handleFavoritePersona]);
+  ], [chatState, enabledTools, Person, Chat, Description, Star, History, AttachFile, Construction, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle]);
 
   const backgroundSVG = useMemo(() => {
     // Create a simplified SVG pattern that should work reliably in data URLs
@@ -833,6 +915,16 @@ export default (props) => {
           chatState={chatState}
           selectedPersona={selectedPersona}
           onFileUpload={uploadFile}
+          onInitializeChat={React.useCallback(async () => {
+            // Initialize a new chat session if none exists
+            if (!chatState?.id && selectedPersona) {
+              reactory.log('Initializing new chat session for file operations');
+              await newChat();
+              return true; // Indicate success
+            }
+            return false; // Chat already exists
+          }, [chatState?.id, selectedPersona, newChat, reactory])}
+          onRefreshChatState={handleRefreshChatState}
           il8n={il8n}
         />
 
@@ -845,24 +937,16 @@ export default (props) => {
         />
       </Box>
 
-      {/* Persona SpeedDial - Bottom Right */}
-      <SpeedDialWidget
-        actions={personaSpeedDialActions}
-        position="bottom-right"
-        offsetBottom={
-          personaPanelOpen || 
-          toolsPanelOpen || 
-          chatHistoryPanelOpen || 
-          recordingPanelOpen ||
-          filesPanelOpen ? 86 : 94}
-        offsetRight={8}
-        size={'small'}
-        elevation={3}
-        sx={{
-          zIndex: 1000,
-          transition: 'all 0.3s ease-in-out',
-        }}
-        icon={
+      {/* Persona RadialFab - Bottom Right */}
+      <RadialFab
+        mainSize="small"
+        actions={personaSpeedDialActions.map(action => ({
+          icon: action.icon,
+          label: action.title,
+          onClick: action.clickHandler,
+          color: 'primary' as const,
+        }))}
+        mainIcon={
           <Avatar
             src={selectedPersona?.avatar}
             alt={selectedPersona?.name}
@@ -873,7 +957,23 @@ export default (props) => {
             }}
           />
         }
-        onClick={handlePersonaPanelToggle}
+        mainLabel="Persona Actions"
+        mainColor="primary"
+        onMainClick={handlePersonaPanelToggle}
+        mainClickLabel="Select Persona"
+        position="bottom-right"
+        spacing={16}
+        radius={70}
+        sx={{
+          zIndex: 1000,
+          transition: 'all 0.3s ease-in-out',
+          bottom: personaPanelOpen ||
+            toolsPanelOpen ||
+            chatHistoryPanelOpen ||
+            recordingPanelOpen ||
+            filesPanelOpen ? 86 : 94,
+          right: 8,
+        }}
       />
       {/* Token Pressure Progress Bar - Moved to top */}
       {chatState?.tokenPressure !== undefined && !busy && (
@@ -911,19 +1011,14 @@ export default (props) => {
         disabled={busy}
         placeholder="Ask me anything..."
         onRecordingToggle={handleRecordingPanelToggle}
-        onToolsToggle={handleToolsPanelToggle}
-        onHistoryToggle={handleChatHistoryPanelToggle}
-        onFilesToggle={handleFilesPanelToggle}
         recordingPanelOpen={recordingPanelOpen}
-        toolsPanelOpen={toolsPanelOpen}
-        chatHistoryPanelOpen={chatHistoryPanelOpen}
-        filesPanelOpen={filesPanelOpen}
         onFileUpload={React.useCallback(async (file: File) => {
           // Let uploadFile handle session initialization if needed
           if (uploadFile) {
             await uploadFile(file, chatState?.id || '');
           }
         }, [uploadFile, chatState?.id])}
+        chatState={chatState}
       />
     </Box>
   );

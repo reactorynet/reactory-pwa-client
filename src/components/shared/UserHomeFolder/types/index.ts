@@ -3,9 +3,9 @@ export interface UserHomeFolderProps {
   onClose: () => void;
   reactory: Reactory.Client.ReactorySDK;
   onFileUpload?: (files: File[], path: string) => Promise<void>;
-  onSelectionChanged?: (selectedItems: SelectedItem[]) => void;
-  onItemSelect?: (item: SelectedItem) => Promise<void>;
-  onItemDeselect?: (item: SelectedItem) => Promise<void>;
+  onSelectionChanged?: (selectedItems: SelectedItem[], selectionMode: 'single' | 'multi') => void;
+  onItemSelect?: (item: SelectedItem, selectionMode: 'single' | 'multi') => Promise<void>;
+  onItemDeselect?: (item: SelectedItem, selectionMode: 'single' | 'multi') => Promise<void>;
   il8n: any;
   rootPath?: string;
   selectedItems?: SelectedItem[];

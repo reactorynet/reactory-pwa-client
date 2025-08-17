@@ -60,7 +60,7 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
           <Material.MaterialIcons.ArrowBack />
         </IconButton>
         <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-          {il8n?.t('reactor.client.persona.select.title', { defaultValue: 'Select a Persona' })}
+          {il8n?.t('reactor.client.persona.select.title', { defaultValue: 'Select an Agent' })}
         </Typography>
       </Box>
 

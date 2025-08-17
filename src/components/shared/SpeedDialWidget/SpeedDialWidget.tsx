@@ -70,6 +70,16 @@ const styles = (theme: Theme): any => ({
       opacity: 0,
     },
   },
+  '@keyframes radialGlow': {
+    '0%, 100%': {
+      opacity: 0.3,
+      transform: 'scale(1)',
+    },
+    '50%': {
+      opacity: 0.6,
+      transform: 'scale(1.1)',
+    },
+  },
   directionUp: {},
   directionRight: {},
   directionDown: {},
@@ -80,7 +90,7 @@ export interface SpeedDialAction {
   key: string;
   icon: React.ReactNode;
   title: string;
-  clickHandler?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  clickHandler?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 type TDirection = "up" | "down" | "left" | "right";
@@ -94,7 +104,7 @@ export type SpeedDialWidgetProps = {
   buttonStyle?: React.CSSProperties;
   sx?: SxProps<Theme>;  
   onClick?: (event: React.SyntheticEvent) => void;
-  onActionClick?: (action: SpeedDialAction, event: React.SyntheticEvent) => void;
+  onActionClick?: (action: SpeedDialAction, event: React.MouseEvent<HTMLDivElement>) => void;
   size?: 'small' | 'medium' | 'large';
   elevation?: number;
   color?: 'default' | 'primary' | 'secondary';
@@ -105,6 +115,10 @@ export type SpeedDialWidgetProps = {
   offsetRight?: number;
   offsetTop?: number;
   offsetBottom?: number;
+  // Custom direction override for radial layouts
+  direction?: TDirection;
+  // Enable radial fan layout
+  radialFan?: boolean;
   // Legacy props for backward compatibility
   left?: number | string;
   right?: number | string;
@@ -133,6 +147,10 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
     offsetRight = 16,
     offsetTop = 16,
     offsetBottom = 16,
+    // Custom direction override
+    direction: customDirection,
+    // Enable radial fan layout
+    radialFan = false,
     // Legacy props for backward compatibility
     left,
     right,
@@ -222,12 +240,22 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
         break;
     }
 
+    // Debug logging for positioning
+    console.log('SpeedDialWidget positioning:', {
+      position,
+      positionStyle,
+      offsetBottom,
+      offsetRight
+    });
+    
     return positionStyle;
   }, [position, offsetLeft, offsetRight, offsetTop, offsetBottom, left, right, top, bottom]);
 
-  // Auto-determine direction based on position
+  // Auto-determine direction based on position, or use custom direction if provided
   React.useEffect(() => {
-    if (position?.includes('bottom')) {
+    if (customDirection) {
+      setDirection(customDirection);
+    } else if (position?.includes('bottom')) {
       setDirection('up');
     } else if (position?.includes('top')) {
       setDirection('down');
@@ -238,7 +266,7 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
     } else {
       setDirection('up'); // Default
     }
-  }, [position]);
+  }, [position, customDirection]);
 
   // Dynamic styles based on props
   const dynamicSx = React.useMemo(() => ({
@@ -248,6 +276,13 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
     '&&': {
       ...getPositionStyles,
     },
+    // Additional positioning enforcement
+    position: getPositionStyles.position,
+    bottom: getPositionStyles.bottom,
+    right: getPositionStyles.right,
+    top: getPositionStyles.top,
+    left: getPositionStyles.left,
+    transform: getPositionStyles.transform,
     '& .MuiFab-root': {
       width: sizeMap[size].width,
       height: sizeMap[size].height,
@@ -271,6 +306,51 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
         transform: 'scale(1.1)',
         boxShadow: `0px 4px 12px rgba(0,0,0,0.2)`,
       },
+    },
+    // Custom radial fan layout styles
+    '& .MuiSpeedDial-actions': {
+      // Create a circular layout for the actions
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      // Add some spacing between actions for better visual separation
+      gap: '8px',
+    },
+    
+    // Target SpeedDialAction components directly for radial fan layout
+    '&.radial-fan .MuiSpeedDialAction-root': {
+      position: 'absolute !important',
+      transformOrigin: 'center !important',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important',
+      // Reset any MUI transforms
+      transform: 'none !important',
+      // Hover effects for each action
+      '&:hover': {
+        transform: 'scale(1.15) !important',
+        zIndex: 10,
+      },
+    },   
+    '&.radial-fan .MuiSpeedDialAction-root:nth-of-type(1)': {
+      transform: 'translateY(-80px) rotate(-15deg) !important',
+    },
+    '&.radial-fan .MuiSpeedDialAction-root:nth-of-type(2)': {
+      transform: 'translateY(-60px) translateX(-40px) rotate(-10deg) !important',
+    },
+    '&.radial-fan .MuiSpeedDialAction-root:nth-of-type(3)': {
+      transform: 'translateY(-40px) translateX(-60px) rotate(-5deg) !important',
+    },
+    '&.radial-fan .MuiSpeedDialAction-root:nth-of-type(4)': {
+      transform: 'translateY(-20px) translateX(-70px) !important',
+    },
+    '&.radial-fan .MuiSpeedDialAction-root:nth-of-type(5)': {
+      transform: 'translateY(-40px) translateX(-60px) rotate(5deg) !important',
+    },
+    '&.radial-fan .MuiSpeedDialAction-root:nth-of-type(6)': {
+      transform: 'translateY(-60px) translateX(-40px) rotate(10deg) !important',
+    },
+    '&.radial-fan .MuiSpeedDialAction-root:nth-of-type(7)': {
+      transform: 'translateY(-80px) rotate(15deg) !important',
     },
     ...sx,
   }), [getPositionStyles, size, elevation, isHovered, disabled, sx]);
@@ -323,7 +403,7 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
   };
 
   // Action click handler
-  const handleActionClick = (action: SpeedDialAction) => (evt: React.MouseEvent<HTMLButtonElement>) => {
+  const handleActionClick = (action: SpeedDialAction) => (evt: React.MouseEvent<HTMLDivElement>) => {
     if (disabled) return;
     if (isFunction(action.clickHandler)) {
       action.clickHandler(evt);
@@ -354,7 +434,21 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
   const speedDialClassName = classNames(
     classes.speedDial,
     classes[`direction${capitalize(direction)}`],
+    {
+      'radial-fan': radialFan,
+    }
   );
+
+  // Debug logging for radial fan
+  console.log('SpeedDialWidget className:', {
+    speedDialClassName,
+    radialFan,
+    direction,
+    classes: classes.speedDial
+  });
+
+  // Determine the correct size for FabProps
+  const fabSize: 'small' | 'medium' | 'large' = size === 'large' ? 'large' : size === 'small' ? 'small' : 'medium';
 
   return (
       <SpeedDial        
@@ -375,9 +469,18 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
         open={open}
         direction={direction}        
         sx={dynamicSx}
+        style={{
+          // Fallback inline styles to ensure positioning
+          position: getPositionStyles.position,
+          bottom: getPositionStyles.bottom,
+          right: getPositionStyles.right,
+          top: getPositionStyles.top,
+          left: getPositionStyles.left,
+          transform: getPositionStyles.transform,
+        }}
         FabProps={{
           color: color,
-          size: size === 'large' ? 'large' : size === 'small' ? 'small' : 'medium',
+          size: fabSize,
           style: {
             ...buttonStyle,
           },
@@ -388,7 +491,7 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
             key={action.key}
             icon={action.icon}
             title={action.title}
-            onClick={() => handleActionClick(action)}           
+            onClick={handleActionClick(action)}           
           />
         ))}
       </SpeedDial>

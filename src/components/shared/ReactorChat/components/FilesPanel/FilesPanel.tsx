@@ -19,6 +19,8 @@ interface FilesPanelProps {
   chatState?: ChatState;
   selectedPersona?: IAIPersona | null;
   onFileUpload?: (file: File, chatSessionId: string ) => Promise<void>;
+  onInitializeChat?: () => Promise<boolean>;
+  onRefreshChatState?: () => Promise<void>;
   il8n: any;
 }
 
@@ -159,6 +161,8 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   chatState,
   selectedPersona,
   onFileUpload,
+  onInitializeChat,
+  onRefreshChatState,
   il8n
 }) => {
   const [selectedDocument, setSelectedDocument] = useState<DocumentPreview | null>(null);
@@ -171,6 +175,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   const [showUserHomeFolder, setShowUserHomeFolder] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<SelectedItem[]>([]);
   const [slidingItems, setSlidingItems] = useState<Set<string>>(new Set());
+  const [isInitializingChat, setIsInitializingChat] = useState(false);
   const [renameDialog, setRenameDialog] = useState<{
     open: boolean;
     fileId: string;
@@ -305,12 +310,87 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     }
   }, [chatState?.id, showAllFiles, reactory]);
 
+  // Force refresh function that bypasses memoization issues
+  const forceRefreshDocuments = useCallback(async () => {
+    if (!chatState?.id) {
+      setDocuments([]);
+      return;
+    }
+
+    reactory.info(`Force refreshing documents for chat session: ${chatState.id}`);
+    setLoading(true);
+    try {
+      // Clear current documents first
+      setDocuments([]);
+      
+      // Query the ReactorConversation with files field to get the attached files
+      const response = await reactory.graphqlQuery<{
+        ReactorConversation: {
+          id: string;
+          files?: Reactory.Models.IReactoryFile[];
+        } | {
+          code: string;
+          message: string;
+        }
+      }, { id: string; loadOptions: { showAllFiles?: boolean } }>(GET_CONVERSATION_FILES, { 
+        id: chatState.id,
+        loadOptions: {
+          showAllFiles: showAllFiles
+        }
+      });
+
+      if (response?.data?.ReactorConversation) {
+        const conversation = response.data.ReactorConversation;
+        
+        // Check if it's an error response
+        if ('code' in conversation) {
+          reactory.error(`Failed to refresh files: ${conversation.message}`);
+          setDocuments([]);
+          return;
+        }
+
+        // Map the files to DocumentPreview format
+        if (conversation.files && conversation.files.length > 0) {
+          const docs: DocumentPreview[] = conversation.files.map(file => ({
+            id: file.id || (file._id ? file._id.toString() : ''),
+            name: file.filename || file.alias || 'Unknown File',
+            type: file.mimetype || 'application/octet-stream',
+            size: file.size || 0,
+            url: file.link,
+            path: file.path,
+            uploadDate: file.created ? new Date(file.created) : new Date(),
+          }));
+          
+          setDocuments(docs);
+          reactory.info(`Force refresh successful: ${docs.length} files loaded`);
+        } else {
+          // No files attached to this chat session
+          reactory.info('Force refresh: no files found for this chat session');
+          setDocuments([]);
+        }
+      } else {
+        reactory.error('Failed to refresh conversation files');
+        setDocuments([]);
+      }
+    } catch (error) {
+      reactory.error('Failed to force refresh documents', error);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [chatState?.id, showAllFiles, reactory]);
+
   // Load documents when panel opens, when chat session changes, or when showAllFiles toggle changes
   useEffect(() => {
     if (open && chatState?.id) {
       loadDocuments();
+      
+      // Also refresh the chat state to ensure file count badge is up to date
+      if (onRefreshChatState) {
+        onRefreshChatState();
+      }
     }
-  }, [open, chatState?.id, showAllFiles, loadDocuments]);
+  }, [open, chatState?.id, showAllFiles, loadDocuments, onRefreshChatState]);
 
   // Clear internal state when persona changes or chat session changes
   useEffect(() => {
@@ -371,6 +451,26 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   const handleFileUpload = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     let uploadSuccess = true;
+    
+    // Ensure chat session is initialized before uploading files
+    if (!chatState?.id && onInitializeChat) {
+      try {
+        reactory.info('No chat session found, initializing before file upload...');
+        setIsInitializingChat(true);
+        const initialized = await onInitializeChat();
+        if (!initialized) {
+          reactory.error('Failed to initialize chat session for file upload');
+          setIsInitializingChat(false);
+          return;
+        }
+        reactory.info('Chat session initialized successfully for file upload');
+        setIsInitializingChat(false);
+      } catch (error) {
+        reactory.error('Failed to initialize chat session', error);
+        setIsInitializingChat(false);
+        return;
+      }
+    }
     
     for (const file of fileArray) {
       try {
@@ -462,6 +562,11 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
                   
                   setDocuments(docs);
                   reactory.info(`File list refresh successful after ${retryCount} attempts`);
+                  
+                  // Also refresh the chat state to update the file count badge
+                  if (onRefreshChatState) {
+                    await onRefreshChatState();
+                  }
                 } else {
                   // If no files found, try again
                   setTimeout(retryLoadDocuments, initialDelay);
@@ -746,37 +851,84 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     }
   }, []);
 
-  const handleFileSelection = useCallback((selectedItems: SelectedItem[]) => {
-    setSelectedFiles(selectedItems);
-    
-    // Optionally add selected files to chat context
-    if (selectedItems.length > 0) {
-      reactory.info(`Selected ${selectedItems.length} files for chat context:`, selectedItems);
-      
-      // You can implement logic here to add files to the chat context
-      // For example, upload them or reference them in the conversation
-    }
-  }, [reactory]);
+
 
   const handleUserHomeFolderFileUpload = useCallback(async (files: File[], path: string) => {
     // Handle file upload from UserHomeFolder
-    if (onFileUpload && chatState?.id) {
-      for (const file of files) {
-        try {
-          await onFileUpload(file, chatState.id);
-          reactory.info(`Uploaded ${file.name} from ${path} to chat`);
-        } catch (error) {
-          reactory.error(`Failed to upload ${file.name}`, error);
-        }
-      }
-      
-      // Refresh the chat files list
-      await loadDocuments();
+    if (!onFileUpload) {
+      reactory.error('No file upload handler provided');
+      return;
     }
-  }, [onFileUpload, chatState?.id, reactory, loadDocuments]);
+
+    // Ensure chat session is initialized before uploading files
+    if (!chatState?.id && onInitializeChat) {
+      try {
+        reactory.info('No chat session found, initializing before UserHomeFolder file upload...');
+        setIsInitializingChat(true);
+        const initialized = await onInitializeChat();
+        if (!initialized) {
+          reactory.error('Failed to initialize chat session for UserHomeFolder file upload');
+          setIsInitializingChat(false);
+          return;
+        }
+        reactory.info('Chat session initialized successfully for UserHomeFolder file upload');
+        setIsInitializingChat(false);
+        // Wait a moment for the chat state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        reactory.error('Failed to initialize chat session', error);
+        setIsInitializingChat(false);
+        return;
+      }
+    }
+
+    if (!chatState?.id) {
+      reactory.error('Chat session still not available after initialization');
+      return;
+    }
+
+    for (const file of files) {
+      try {
+        await onFileUpload(file, chatState.id);
+        reactory.info(`Uploaded ${file.name} from ${path} to chat`);
+      } catch (error) {
+        reactory.error(`Failed to upload ${file.name}`, error);
+      }
+    }
+    
+    // Refresh the chat files list
+    await loadDocuments();
+  }, [onFileUpload, onInitializeChat, chatState?.id, reactory, loadDocuments]);
 
   const onFileSelect = useCallback(async (item: SelectedItem) => {
-    if (!chatState?.id || item.type !== 'file') {
+    if (item.type !== 'file') {
+      return;
+    }
+
+    // Ensure chat session is initialized before attaching files
+    if (!chatState?.id && onInitializeChat) {
+      try {
+        reactory.info('No chat session found, initializing before file attachment...');
+        setIsInitializingChat(true);
+        const initialized = await onInitializeChat();
+        if (!initialized) {
+          reactory.error('Failed to initialize chat session for file attachment');
+          setIsInitializingChat(false);
+          return;
+        }
+        reactory.info('Chat session initialized successfully for file attachment');
+        setIsInitializingChat(false);
+        // Wait a moment for the chat state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        reactory.error('Failed to initialize chat session', error);
+        setIsInitializingChat(false);
+        return;
+      }
+    }
+
+    if (!chatState?.id) {
+      reactory.error('Chat session still not available after initialization');
       return;
     }
 
@@ -830,7 +982,12 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   }, [chatState?.id, reactory, loadDocuments]);
 
   const onFileDeselect = useCallback(async (item: SelectedItem) => {
-    if (!chatState?.id || item.type !== 'file') {
+    if (item.type !== 'file') {
+      return;
+    }
+
+    if (!chatState?.id) {
+      reactory.info('No chat session to detach file from');
       return;
     }
 
@@ -873,16 +1030,79 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
           return;
         }
 
-        // Success - refresh the file list
-        await loadDocuments();
-        reactory.info(`File ${item.name} detached successfully`);
+        // Success - refresh the file list with retry mechanism
+        reactory.info(`File ${item.name} detached successfully, refreshing file list...`);
+        
+        // Immediately remove the file from local state for better UX
+        setDocuments(prev => prev.filter(doc => doc.id !== item.id));
+        reactory.info(`File ${item.name} removed from local state immediately`);
+        
+        // Wait a moment for the server to process the detachment
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Force refresh the file list using the dedicated refresh function
+        // This bypasses memoization issues and ensures fresh data
+        try {
+          reactory.info('Force refreshing file list after detachment...');
+          await forceRefreshDocuments();
+        } catch (refreshError) {
+          reactory.error('Failed to force refresh file list', refreshError);
+          // Fallback to the memoized loadDocuments function
+          await loadDocuments();
+        }
+        
+        // Also refresh the chat state to update the file count badge
+        if (onRefreshChatState) {
+          await onRefreshChatState();
+        }
+        
+        reactory.info('File list and chat state refreshed after detachment');
       } else {
         reactory.error('Failed to detach file - no response from server');
       }
     } catch (error) {
       reactory.error(`Failed to detach file ${item.name}`, error);
     }
-  }, [chatState?.id, reactory, loadDocuments]);
+  }, [chatState?.id, reactory, loadDocuments, onRefreshChatState, showAllFiles, forceRefreshDocuments]);
+
+  const handleFileSelection = useCallback(async (selectedItems: SelectedItem[], selectionMode: 'single' | 'multi') => {
+    setSelectedFiles(selectedItems);
+    
+    // Optionally add selected files to chat context
+    if (selectedItems.length > 0) {
+      reactory.info(`Selected ${selectedItems.length} files for chat context (${selectionMode} mode):`, selectedItems);
+      
+      // Ensure chat session is initialized before processing file selections
+      if (!chatState?.id && onInitializeChat) {
+        try {
+          reactory.info('No chat session found, initializing before file selection processing...');
+          setIsInitializingChat(true);
+          const initialized = await onInitializeChat();
+          if (!initialized) {
+            reactory.error('Failed to initialize chat session for file selection processing');
+            setIsInitializingChat(false);
+            return;
+          }
+          reactory.info('Chat session initialized successfully for file selection processing');
+          setIsInitializingChat(false);
+          // Wait a moment for the chat state to update
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          reactory.error('Failed to initialize chat session', error);
+          setIsInitializingChat(false);
+          return;
+        }
+      }
+
+      // Add selected files to chat context
+      for (const item of selectedItems) {
+        if (item.type === 'file') {
+          await onFileSelect(item);
+        }
+      }
+      
+    }
+  }, [reactory, chatState?.id, onInitializeChat, onFileSelect]);
 
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return <Image />;
@@ -1040,7 +1260,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
         )}
         
         <Tooltip title="Refresh file list">
-          <IconButton onClick={loadDocuments} disabled={loading}>
+          <IconButton onClick={forceRefreshDocuments} disabled={loading}>
             {loading ? <CircularProgress size={20} /> : <Refresh />}
           </IconButton>
         </Tooltip>
@@ -1149,6 +1369,28 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
               }}>
                 or drag and drop
               </Typography>
+              {!chatState?.id && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                  {isInitializingChat ? (
+                    <>
+                      <CircularProgress size={12} />
+                      <Typography variant="caption" color="warning.main" sx={{
+                        fontSize: { xs: '0.6rem', md: '0.75rem' },
+                        fontStyle: 'italic'
+                      }}>
+                        Creating chat session...
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography variant="caption" color="warning.main" sx={{
+                      fontSize: { xs: '0.6rem', md: '0.75rem' },
+                      fontStyle: 'italic'
+                    }}>
+                      Chat session will be created automatically
+                    </Typography>
+                  )}
+                </Box>
+              )}
             </Box>
           </Box>
 
