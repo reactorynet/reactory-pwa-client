@@ -951,7 +951,6 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
           </IconButton>
         </Tooltip>
       </Box>
-
       {/* Content */}
       <Box sx={{ 
         display: 'flex', 
@@ -1308,7 +1307,7 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
             ) : filteredFiles.length > 0 ? (
               viewMode === 'grid' ? (
                 // Grid View
-                <Grid container spacing={2}>
+                (<Grid container spacing={2}>
                   {filteredFiles.map((file) => (
                     <Grid item xs={6} sm={4} md={3} lg={2} key={file.id}>
                       <Card
@@ -1357,10 +1356,10 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
                       </Card>
                     </Grid>
                   ))}
-                </Grid>
+                </Grid>)
               ) : viewMode === 'list' ? (
                 // List View
-                <List sx={{ p: 0 }}>
+                (<List sx={{ p: 0 }}>
                   {filteredFiles.map((file) => (
                     <ListItem key={file.id} sx={{ mb: 1 }}>
                       <ListItemButton
@@ -1397,10 +1396,10 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
                       </IconButton>
                     </ListItem>
                   ))}
-                </List>
+                </List>)
               ) : (
                 // Table View (simplified - could be enhanced with proper table)
-                <Box sx={{ overflowX: 'auto' }}>
+                (<Box sx={{ overflowX: 'auto' }}>
                   <List sx={{ p: 0 }}>
                     {filteredFiles.map((file) => (
                       <ListItem key={file.id} divider>
@@ -1438,7 +1437,7 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
                       </ListItem>
                     ))}
                   </List>
-                </Box>
+                </Box>)
               )
             ) : (
               <Box sx={{ 
@@ -1451,7 +1450,7 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
                 <Box sx={{ textAlign: 'center' }}>
                   {searchQuery ? (
                     // No search results
-                    <>
+                    (<>
                       <Search sx={{ 
                         fontSize: { xs: 48, md: 64 }, 
                         color: 'text.secondary', 
@@ -1481,10 +1480,10 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
                       >
                         Clear Search
                       </Button>
-                    </>
+                    </>)
                   ) : (
                     // No files in folder
-                    <>
+                    (<>
                       <InsertDriveFile sx={{ 
                         fontSize: { xs: 48, md: 64 }, 
                         color: 'text.secondary', 
@@ -1505,7 +1504,7 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
                           defaultValue: 'Upload files to this folder to see them here'
                         })}
                       </Typography>
-                    </>
+                    </>)
                   )}
                 </Box>
               </Box>
@@ -1513,7 +1512,6 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
           </Box>
         </Box>
       </Box>
-      
       {/* Mobile FAB for quick upload */}
       <Fab
         color="primary"
@@ -1544,7 +1542,6 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
       >
         <CloudUpload />
       </Fab>
-
       {/* Mobile Toggle FAB for switching between folders and files */}
       <Fab
         color="secondary"
@@ -1560,7 +1557,6 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
       >
         {mobileView === 'folders' ? <InsertDriveFile /> : <Folder />}
       </Fab>
-
       {/* Rename Dialog */}
       <Dialog
         open={renameDialog.open}
@@ -1602,7 +1598,6 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Context Menu for Files and Folders */}
       <Menu
         anchorEl={anchorEl}
@@ -1711,7 +1706,6 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
           </MenuList>
         )}
       </Menu>
-
       {/* Create Folder Dialog */}
       <Dialog
         open={createFolderDialog.open}

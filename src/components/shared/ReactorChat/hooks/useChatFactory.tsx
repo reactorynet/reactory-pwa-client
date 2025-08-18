@@ -153,86 +153,79 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const persona = React.useMemo(() => rawPersona, [rawPersona?.id]);
 
-  const onTokenReceived = (token: TokenStreamingEvent) => {
-    setChatState((prevState) => {
-      const lastMessage = prevState.history[prevState.history.length - 1];
-      if (lastMessage && lastMessage.role === "assistant") {
-        if (waitingForResponse) {
-          lastMessage.content = token.data.content;
-        } else {
-          lastMessage.content += token.data.content;
-        }
-      }
-
-      const newHistory = [...prevState.history];
-      newHistory[newHistory.length - 1] = lastMessage;
-
-      return { ...prevState,
-        history: newHistory,        
-      }
+  // Debug persona changes
+  useEffect(() => {
+    console.log('🔧 [useChatFactory] Persona changed:', {
+      personaId: persona?.id,
+      personaName: persona?.name,
+      personaToolsCount: persona?.tools?.length || 0,
+      personaMacrosCount: persona?.macros?.length || 0,
+      timestamp: new Date().toISOString()
     });
-    setIsStreaming(true);
-    setWaitingForResponse(false);
-  };
+  }, [persona]);  
 
   const onSSEMessageReceived = (message: CompletionStreamingEvent) => {
     if (message.type === StreamingEventType.COMPLETE) {
+      console.log('🔧 [useChatFactory] onSSEMessageReceived called:', {
+        messageType: message.type,
+        messageContent: message.data.content?.substring(0, 100),
+        currentHistoryLength: chatState.history?.length || 0,
+        currentChatStateId: chatState.id
+      });
+
       // update the chat state with the new message
-      
-      setChatState((prevState) => {
-        const lastMessage = prevState.history[prevState.history.length - 1];
-        if (lastMessage && lastMessage.role === "assistant") {
-          lastMessage.content = message.data.content;
+      setChatState((prevState) => {                
+        const history = [...prevState.history];
+        const lastIndex = history.length - 1;
+        
+        console.log('🔧 [useChatFactory] onSSEMessageReceived state update:', {
+          historyLength: history.length,
+          lastIndex,
+          lastMessage: lastIndex >= 0 ? history[lastIndex] : null,
+          toolsCount: prevState.tools?.length || 0,
+          macrosCount: prevState.macros?.length || 0
+        });
+        
+        if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+          // Update the last assistant message with the final content
+          // This handles both "Processing..." and "Calling tool:" messages
+          const lastMessage = history[lastIndex];
+          
+          if (lastMessage.content === "Processing..." || lastMessage.content.startsWith("Calling tool:")) {
+            // Replace the placeholder content with the final AI response
+            history[lastIndex] = {
+              ...lastMessage,
+              content: message.data.content,
+              timestamp: new Date(),
+            };
+            
+            console.log('🔧 [useChatFactory] Updated streaming message with final content:', {
+              oldContent: lastMessage.content,
+              newContent: message.data.content,
+              messageId: lastMessage.id
+            });
+          } else {
+            // Regular message update
+            lastMessage.content = message.data.content;
+          }
         }
   
-        const newHistory = [...prevState.history];
-        newHistory[newHistory.length - 1] = lastMessage;
-  
-        return { ...prevState,
-          history: newHistory,        
-        }
+        const newState = { ...prevState,
+          history: history,        
+        };
+
+        console.log('🔧 [useChatFactory] onSSEMessageReceived final state:', {
+          newHistoryLength: newState.history.length,
+          toolsCount: newState.tools?.length || 0,
+          macrosCount: newState.macros?.length || 0
+        });
+                
+        return newState;
       });
       setIsStreaming(false);
       setWaitingForResponse(false);
     }
   }
-
-  const onToolCallReceived = async (toolCall: ToolCallStreamingEvent) => {
-    console.log('onToolCallReceived', toolCall);
-    // create tool call construct
-    const toolCallMessage = {
-      id: toolCall.data.callId,
-      role: "assistant",
-      content: "",
-      timestamp: new Date(),
-      sessionId: chatState.id,
-      tool_calls: [{
-        id: toolCall.data.callId,
-        type: "function",
-        function: {
-          name: toolCall.data.toolName,          
-          arguments: typeof toolCall.data.arguments === 'string' ? JSON.parse(toolCall.data.arguments) : toolCall.data.arguments,
-        },
-      }],
-    } as UXChatMessage;
-    await processToolCalls([toolCallMessage], chatState.history[chatState.history.length - 1] as UXChatMessage);
-  }
-
-
-  /**
-   * 
-   * @param message 
-   * @param chatSessionId 
-   * @returns 
-   */
-  const graph = useGraph({ reactory });
-  const sse = useSSE({
-    reactory,
-    onToken: onTokenReceived,
-    onToolCall: onToolCallReceived,
-    onMessage: onSSEMessageReceived,
-    onError: (e) => { onError(e); props.onStreamError?.(e); },
-  });
 
   const sendMessage = async (message: string, chatSessionId: string) => {
     setBusy(true);
@@ -300,19 +293,20 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         // so that the user sees as a message is being sent.
         if (protocol === 'sse') {        
           // if the protocol is sse, we add a blank message to the history
+          // Use a more descriptive placeholder that won't interfere with tool call processing
           setChatState((prevState) => ({
             ...prevState,
             history: [...prevState.history, {
               id: reactory.utils.uuid(),
               timestamp: new Date(),
               role: "assistant",
-              content: "Thinking...",
+              content: "Processing...", // Changed from "Thinking..." to avoid conflicts
+              sessionId: chatState.id,
             } as UXChatMessage],
           }));
 
           setIsStreaming(true);
           setWaitingForResponse(true);
-
         }
 
         const resp = await graph.sendMessage({
@@ -354,14 +348,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           if (msg.sessionId && protocol === 'graphql') {
             setChatState((prevState) => ({
               ...prevState,
-              id: msg.sessionId,
+              id: msg.sessionId || chatState.id,
               history: [...prevState.history, msg as any],
               updated: new Date(),
             }));
           }
 
           if (protocol === 'graphql' && msg.tool_calls && (msg.tool_calls as any[]).length > 0) {
-            await processToolCalls(msg.tool_calls as any[], msg);
+            await processToolCallsMemoized(msg.tool_calls as any[], msg);
           }
         }
       } catch (error) {
@@ -392,6 +386,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       index === self.findIndex(t => t.function?.name === tool.function?.name)
     ) : [];
 
+    // Include persona macros
+    const personaMacros = persona?.macros || [];
+
     return {
       id: null,
       botId: persona?.id || 'reactor',
@@ -405,13 +402,78 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       user: reactory.getUser(),
       mcpClients: [],
       toolApprovalMode: ToolApprovalMode.PROMPT,
-      macros: persona?.macros || [],
-      tools: uniquePersonaTools,
+      macros: personaMacros,  // Include persona macros
+      tools: uniquePersonaTools,  // Include persona tools
       tokenCount: 0,
       maxTokens: persona?.maxTokens || 8000,
       tokenPressure: 0,
       sendMessage
     }
+  };
+
+  /**
+   * Helper function to protect critical chat state properties only when needed
+   * This prevents accidental loss of tools and macros without blocking legitimate updates
+   */
+  const protectCriticalState = (updates: Partial<ChatState>) => {
+    return (prevState: ChatState): ChatState => {
+      const newState = {
+        ...prevState,
+        ...updates,
+      };
+
+      // Only protect tools and macros if they're being explicitly set to empty/undefined
+      // and we have existing ones to protect
+      if (updates.tools !== undefined && (!updates.tools || updates.tools.length === 0) && 
+          prevState.tools && prevState.tools.length > 0) {
+        console.warn('⚠️ [useChatFactory] Attempted to clear tools, preserving existing ones');
+        newState.tools = prevState.tools;
+      }
+
+      if (updates.macros !== undefined && (!updates.macros || updates.macros.length === 0) && 
+          prevState.macros && prevState.macros.length > 0) {
+        console.warn('⚠️ [useChatFactory] Attempted to clear macros, preserving existing ones');
+        newState.macros = prevState.macros;
+      }
+
+      // Only protect ID if it's being explicitly cleared and we have an existing one
+      if (updates.id !== undefined && !updates.id && prevState.id) {
+        console.warn('⚠️ [useChatFactory] Attempted to clear chat ID, preserving existing one');
+        newState.id = prevState.id;
+      }
+
+      return newState;
+    };
+  };
+
+  /**
+   * State validation helper to ensure critical properties are never lost
+   */
+  const validateChatState = (state: ChatState): ChatState => {
+    const validated = { ...state };
+  
+    // Ensure critical properties are never undefined
+    if (!validated.tools || validated.tools.length === 0) {
+      console.warn('⚠️ [useChatFactory] Tools were lost, restoring from persona');
+      validated.tools = persona?.tools || [];
+    }
+  
+    if (!validated.macros || validated.macros.length === 0) {
+      console.warn('⚠️ [useChatFactory] Macros were lost, restoring from persona');
+      validated.macros = persona?.macros || [];
+    }
+  
+    return validated;
+  };
+
+  /**
+   * Enhanced setChatState that automatically validates and preserves state
+   */
+  const setChatStateWithValidation = (updater: React.SetStateAction<ChatState>) => {
+    setChatState((prevState) => {
+      const newState = typeof updater === 'function' ? updater(prevState) : updater;
+      return validateChatState(newState);
+    });
   };
 
   const [chatState, setChatState] = React.useState<ChatState>(
@@ -450,6 +512,259 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   });
 
+
+  // Debug specific macro lookup
+  const runtimeMacro = findMacroByAlias('macros');
+  console.log('🔧 [useChatFactory] RuntimeMacro lookup:', {
+    found: !!runtimeMacro,
+    macro: runtimeMacro,
+    macroName: runtimeMacro?.name,
+    macroAlias: runtimeMacro?.alias,
+    macroRunat: runtimeMacro?.runat
+  });
+
+
+  const onToolCallReceived = React.useCallback(async (toolCall: ToolCallStreamingEvent) => {
+
+    const validSessionId = chatState.id || toolCall.conversationId || toolCall.sessionId;
+    if (!validSessionId) {
+      console.error('❌ [useChatFactory] Tool call missing sessionId:', toolCall);
+      return;
+    }
+    
+    // Validate tool call data
+    if (!toolCall.data) {
+      console.error('❌ [useChatFactory] Tool call missing data field:', toolCall);
+      return;
+    }
+    
+    // The server sends 'name', not 'toolName'
+    if (!toolCall.data.name) {
+      console.error('❌ [useChatFactory] Tool call missing name:', toolCall.data);
+      return;
+    }
+    
+    // The server sends 'id' in the data, not 'callId'
+    if (!toolCall.data.id) {
+      console.error('❌ [useChatFactory] Tool call missing id:', toolCall.data);
+      return;
+    }
+    
+    console.log('🔧 [useChatFactory] Tool call validation passed:', {
+      name: toolCall.data.name,
+      id: toolCall.data.id,
+      arguments: toolCall.data.arguments
+    });
+    
+    // Check if the requested tool/macro exists
+    console.log('🔧 [useChatFactory] Available macros in chat state:', {
+      macrosCount: chatState.macros?.length || 0,
+      macros: chatState.macros?.map(m => ({ name: m.name, alias: m.alias, runat: m.runat })),
+      toolsCount: chatState.tools?.length || 0,
+      tools: chatState.tools?.map(t => ({ name: t.function?.name, type: t.type, runat: t.runat }))
+    });
+    
+    // Check if the specific tool exists
+    const requestedTool = chatState.tools?.find(t => t.function?.name === toolCall.data.name);
+    const requestedMacro = chatState.macros?.find(m => m.name === toolCall.data.name || m.alias === toolCall.data.name);
+    
+    console.log('🔧 [useChatFactory] Tool lookup results:', {
+      requestedToolName: toolCall.data.name,
+      foundTool: !!requestedTool,
+      foundMacro: !!requestedMacro,
+      toolDetails: requestedTool,
+      macroDetails: requestedMacro
+    });
+    
+    // create tool call construct
+    const toolCallMessage = {
+      id: toolCall.data.id,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+      sessionId: validSessionId,
+      tool_calls: [{
+        id: toolCall.data.id,
+        type: "function",
+        function: {
+          name: toolCall.data.name,          
+          arguments: typeof toolCall.data.arguments === 'string' ? JSON.parse(toolCall.data.arguments) : toolCall.data.arguments,
+        },
+      }],
+    } as UXChatMessage;
+    
+    console.log('🔧 [useChatFactory] Created tool call message:', toolCallMessage);
+    console.log('🔧 [useChatFactory] Tool call message structure:', {
+      hasId: !!toolCallMessage.id,
+      hasRole: !!toolCallMessage.role,
+      hasSessionId: !!toolCallMessage.sessionId,
+      hasToolCalls: !!toolCallMessage.tool_calls,
+      toolCallsLength: toolCallMessage.tool_calls?.length,
+      firstToolCall: toolCallMessage.tool_calls?.[0]
+    });
+    
+    // Update the current streaming message to include the tool calls
+    // This ensures the UI shows the tool calls properly
+    setChatState((prevState) => {
+      
+      const history = [...prevState.history];
+      const lastIndex = history.length - 1;
+      
+      console.log('🔧 [useChatFactory] onToolCallReceived - updating history:', {
+        historyLength: history.length,
+        lastIndex,
+        lastMessage: lastIndex >= 0 ? history[lastIndex] : null,
+        toolCallName: toolCall.data.name,
+        toolCallId: toolCall.data.id,
+        // Show the current history structure
+        currentHistory: history.map((msg, idx) => ({
+          index: idx,
+          role: msg.role,
+          content: msg.content,
+          hasToolCalls: !!(msg.tool_calls && msg.tool_calls.length > 0),
+          toolCallsCount: msg.tool_calls?.length || 0,
+          isProcessing: msg.content === "Processing...",
+          isCallingTool: msg.content.startsWith("Calling tool:")
+        }))
+      });
+      
+      if (lastIndex >= 0 && history[lastIndex].role === 'assistant' && history[lastIndex].content === 'Processing...') {
+        // Replace the "Processing..." message with the tool call message
+        history[lastIndex] = {
+          ...history[lastIndex],
+          content: `Calling tool: ${toolCall.data.name}`,
+          tool_calls: toolCallMessage.tool_calls,
+          timestamp: new Date(),
+        };
+        
+        console.log('🔧 [useChatFactory] Updated streaming message with tool calls:', {
+          index: lastIndex,
+          oldContent: "Processing...",
+          newContent: `Calling tool: ${toolCall.data.name}`,
+          toolCalls: toolCallMessage.tool_calls
+        });
+      } else {
+        // Add the tool call message to history if no streaming message found
+        history.push(toolCallMessage);
+        console.log('🔧 [useChatFactory] Added tool call message to history:', {
+          index: history.length - 1,
+          message: toolCallMessage
+        });
+      }
+      
+      const newState = {
+        ...prevState,
+        id: prevState.id || validSessionId,
+        history,
+        updated: new Date(),
+      };
+      
+      console.log('🔧 [useChatFactory] onToolCallReceived - new state:', {
+        newHistoryLength: newState.history.length,
+        newHistory: newState.history.map((msg, idx) => ({
+          index: idx,
+          role: msg.role,
+          content: msg.content,
+          hasToolCalls: !!(msg.tool_calls && msg.tool_calls.length > 0),
+          toolCallsCount: msg.tool_calls?.length || 0
+        })),
+        toolsCount: newState.tools?.length || 0,
+        macrosCount: newState.macros?.length || 0
+      });
+            
+      return newState;
+    });
+    
+    console.log('🔧 [useChatFactory] Processing tool calls for message:', toolCallMessage);
+    
+    try {
+      console.log('🔧 [useChatFactory] About to call processToolCalls');
+      
+      // Use the tool call message directly instead of relying on stale state
+      // This ensures we have the most up-to-date information
+      const result = await processToolCallsMemoized(toolCallMessage.tool_calls, toolCallMessage);
+      console.log('🔧 [useChatFactory] Tool calls processed successfully:', result);
+    } catch (error) {
+      console.error('❌ [useChatFactory] Error processing tool calls:', error);
+      console.error('❌ [useChatFactory] Error details:', {
+        errorMessage: error.message,
+        errorStack: error.stack,
+        errorName: error.name
+      });
+      onError(error as Error);
+    }
+  }, [chatState?.id]);
+
+
+
+  const onTokenReceived = React.useCallback((token: TokenStreamingEvent) => {
+    setChatState((prevState) => {
+      const validSessionId = prevState.id || token.sessionId;
+      if (!validSessionId) {
+        console.error('❌ [useChatFactory] Token received with no sessionId:', token);
+        return prevState;
+      }
+      
+      const history = [...prevState.history];
+      const lastIndex = history.length - 1;
+      
+      if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+        const lastMessage = history[lastIndex];
+        
+        // Handle different types of streaming messages
+        if (lastMessage.content === "Processing...") {
+          // Start building content from the first token
+          history[lastIndex] = {
+            ...lastMessage,
+            content: token.data.content,
+            timestamp: new Date(),
+          };
+        } else if (lastMessage.content.startsWith("Calling tool:")) {
+          // Keep the tool call message as is, don't update with tokens
+          // The final content will come from the completion event
+        } else {
+          // Regular token accumulation
+          if (waitingForResponse) {
+            lastMessage.content = token.data.content;
+          } else {
+            lastMessage.content += token.data.content;
+          }
+          
+          history[lastIndex] = {
+            ...lastMessage,
+            timestamp: new Date(),
+          };
+        }
+      }
+
+      const newState = { 
+        ...prevState,
+        id: validSessionId,
+        history: history,        
+      };
+                
+      return newState;
+    });
+    setIsStreaming(true);
+    setWaitingForResponse(false);
+  }, [chatState?.id, waitingForResponse]);
+
+
+
+    /**
+   * 
+   * @param message 
+   * @param chatSessionId 
+   * @returns 
+   */
+    const graph = useGraph({ reactory });
+    const sse = useSSE({
+      reactory,
+      onToken: onTokenReceived,
+      onToolCall: onToolCallReceived,
+      onMessage: onSSEMessageReceived,
+      onError: (e) => { onError(e); props.onStreamError?.(e); },
+    });
 
   /**
    * Initializes the chat session with a given persona.
@@ -515,12 +830,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         const chat = result as unknown as Partial<ChatState>;
         if (chat.id) {
           reactory.info(`ChatFactory: Initialized chat session with ID: ${chat.id}`);
+          console.log('🔧 [useChatFactory] ReactorChatState response details:', {
+            chatId: chat.id,
+            chatMacrosCount: (chat as any).macros?.length || 0,
+            chatToolsCount: (chat as any).tools?.length || 0,
+            prevStateMacrosCount: chatState.macros?.length || 0,
+            prevStateToolsCount: chatState.tools?.length || 0
+          });
+          
           setChatState((prevState) => ({
             ...prevState,
-            id: chat.id as string,
+            id: chat.id as string || chatState.id,
             updated: new Date(),
-            macros: (chat as any).macros,
-            tools: (chat as any).tools,
+            // Only update macros and tools if they're actually provided, otherwise preserve existing ones
+            macros: (chat as any).macros || prevState.macros || [],
+            tools: (chat as any).tools || prevState.tools || [],
           }));
           return chat.id as string;
         }
@@ -529,6 +853,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       if (result?.__typename === 'ReactorInitiateSSE') {
         // Some providers may require immediate SSE after init; connect now
+        console.log('🔧 [useChatFactory] ReactorInitiateSSE response details:', {
+          sessionId: (result as any).sessionId,
+          chatStateMacrosCount: (result as any).chatState?.macros?.length || 0,
+          chatStateToolsCount: (result as any).chatState?.tools?.length || 0,
+          prevStateMacrosCount: chatState.macros?.length || 0,
+          prevStateToolsCount: chatState.tools?.length || 0
+        });
+        
         sse.connect({
           endpoint: (result as any).endpoint,
           sessionId: (result as any).sessionId,
@@ -536,13 +868,6 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           token: (result as any).token,
           expiry: (result as any).expiry,
         });
-        setChatState((prevState) => ({
-          ...prevState,
-          id: (result as any).sessionId as string,
-          updated: new Date(),
-          macros: (result as any).chatState.macros,
-          tools: (result as any).chatState.tools,
-        }));
         return (result as any).sessionId as string;
       }
 
@@ -556,35 +881,145 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   useEffect(() => {
     let isMounted = true;
 
-    // Only set up initial chat state, don't initialize session until first message
-    if (persona?.id) {
+    // Only set up initial chat state if no chat session exists
+    // This prevents overwriting server-loaded tools and macros
+    if (persona?.id && !chatState.id) {
       reactory.info(`ChatFactory: Setting up initial chat state with persona ${persona.id}`);
-      const initialState = getInitialChatState();
-      setChatState(initialState);
+      
+      setChatState((prevState) => {
+        console.log('🔧 [useChatFactory] Persona useEffect - prevState details:', {
+          prevStateToolsCount: prevState.tools?.length || 0,
+          prevStateMacrosCount: prevState.macros?.length || 0,
+          prevStateKeys: Object.keys(prevState),
+          prevStateTools: prevState.tools?.map(t => ({ name: t.function?.name, type: t.type })),
+          prevStateMacros: prevState.macros?.map(m => ({ name: m.name, alias: m.alias })),
+          hasChatStateId: !!prevState.id
+        });
+        
+        // Only initialize if we truly have no state or no tools/macros
+        if (!prevState.id && (!prevState.tools || prevState.tools.length === 0)) {
+          console.log('🔧 [useChatFactory] Setting up initial chat state with new persona');
+          const initialState = getInitialChatState();
+          
+          console.log('🔧 [useChatFactory] Persona useEffect - initialState details:', {
+            initialStateToolsCount: initialState.tools?.length || 0,
+            initialStateMacrosCount: initialState.macros?.length || 0,
+            initialStateKeys: Object.keys(initialState)
+          });
+          
+          return initialState;
+        } else {
+          // We already have tools and macros loaded, just update the persona
+          console.log('🔧 [useChatFactory] Preserving existing tools and macros, updating persona only');
+          const newState = {
+            ...prevState,
+            persona,
+            updated: new Date(),
+          };
+          
+          console.log('🔧 [useChatFactory] Persona useEffect - newState details:', {
+            newStateToolsCount: newState.tools?.length || 0,
+            newStateMacrosCount: newState.macros?.length || 0,
+            newStateKeys: Object.keys(newState)
+          });
+          
+          return newState;
+        }
+      });
+      
       setIsInitialized(false); // Reset initialization flag when persona changes
     }
 
     return () => {
       isMounted = false;
     };
-  }, [persona])
+  }, [persona?.id]); // Only depend on persona ID, not tools/macros
 
   // Update session state when existingSession changes (when switching between factories)
   useEffect(() => {
-    if (existingSession?.chatState) {
+    if (existingSession?.chatState) {            
       setChatState(existingSession.chatState);
       setIsInitialized(existingSession.isInitialized || false);
-
       reactory.info(`ChatFactory: Inherited existing session ${existingSession.chatState.id}`);
     }
   }, [existingSession, reactory]);
 
+  // Monitor changes to tools and macros to help debug state issues
+  useEffect(() => {
+    // Only log if we have tools or macros, or if we're going from having them to not having them
+    const currentToolsCount = chatState.tools?.length || 0;
+    const currentMacrosCount = chatState.macros?.length || 0;
+    
+    console.log('🔧 [useChatFactory] Tools and macros state changed:', {
+      toolsCount: currentToolsCount,
+      macrosCount: currentMacrosCount,
+      tools: currentToolsCount > 0 ? chatState.tools?.map(t => ({ name: t.function?.name, type: t.type })) : [],
+      macros: currentMacrosCount > 0 ? chatState.macros?.map(m => ({ name: m.name, alias: m.alias })) : [],
+      chatStateId: chatState.id,
+      isInitialized,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Enhanced state validation
+    if (currentToolsCount === 0 || currentMacrosCount === 0) {
+      console.warn('⚠️ [useChatFactory] Tools or macros were cleared!', {
+        toolsCount: currentToolsCount,
+        macrosCount: currentMacrosCount,
+        chatStateId: chatState.id,
+        isInitialized,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Log the current state structure for debugging
+      console.log('🔧 [useChatFactory] Current state structure:', {
+        stateKeys: Object.keys(chatState),
+        hasPersona: !!chatState.persona,
+        personaToolsCount: chatState.persona?.tools?.length || 0,
+        personaMacrosCount: chatState.persona?.macros?.length || 0,
+        historyLength: chatState.history?.length || 0
+      });
+    }
+    
+    // Validate state integrity
+    if (!chatState.id && isInitialized) {
+      console.warn('⚠️ [useChatFactory] Chat is initialized but has no ID!');
+    }
+    
+    if (chatState.id && (!chatState.tools || chatState.tools.length === 0)) {
+      console.warn('⚠️ [useChatFactory] Chat has ID but no tools!');
+    }
+    
+    if (chatState.id && (!chatState.macros || chatState.macros.length === 0)) {
+      console.warn('⚠️ [useChatFactory] Chat has ID but no macros!');
+    }
+  }, [chatState.tools, chatState.macros, chatState.id, isInitialized]);
+
   const onMessage = (message: UXChatMessage) => {
-    setChatState((prevState) => ({
-      ...prevState,
-      history: [...prevState.history, message as any],
-      updated: new Date(),
-    }));
+    console.log('🔧 [useChatFactory] onMessage called:', {
+      messageId: message.id,
+      messageRole: message.role,
+      messageContent: message.content?.substring(0, 100),
+      currentHistoryLength: chatState.history?.length || 0,
+      currentChatStateId: chatState.id
+    });
+
+    setChatState((prevState) => {
+      const newState = {
+        ...prevState,
+        history: [...prevState.history, message as any],
+        updated: new Date(),
+      };
+
+      console.log('🔧 [useChatFactory] onMessage state update:', {
+        oldHistoryLength: prevState.history?.length || 0,
+        newHistoryLength: newState.history?.length || 0,
+        newMessageAdded: message,
+        toolsCount: newState.tools?.length || 0,
+        macrosCount: newState.macros?.length || 0
+      });
+
+      return newState;
+    });
   }
 
   const onError = (error: Error) => {
@@ -610,26 +1045,64 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * @param toolCall 
    * @param state 
    */
-  const onToolCallPrompt = (toolCall: string, args: any, state: ChatState, callBack: (approved: boolean) => void) => {
+  const onToolCallPrompt = React.useCallback((toolCall: string, args: any, state: ChatState, callBack: (approved: boolean) => void) => {
     // Find the most recent message with tool_calls and update it with the approval component
     setChatState((prevState) => {
       const history = [...prevState.history];
 
       // Find the last message with tool_calls (manual reverse search for compatibility)
+      // Skip "processing" and "calling tool" messages and look for actual tool call messages
       let lastMessageIndex = -1;
       for (let i = history.length - 1; i >= 0; i--) {
         const msg = history[i];
-        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+        if (msg.role === 'assistant' && 
+            msg.tool_calls && 
+            msg.tool_calls.length > 0 && 
+            msg.content !== "Processing..." && 
+            !msg.content.startsWith("Calling tool:")) { // Skip processing and calling messages
           lastMessageIndex = i;
           break;
         }
       }
 
+      console.log('🔧 [useChatFactory] onToolCallPrompt - message search:', {
+        historyLength: history.length,
+        lastMessageIndex,
+        foundMessage: lastMessageIndex >= 0 ? history[lastMessageIndex] : null,
+        toolCall,
+        args,
+        // Debug the history to see what messages we have
+        historyMessages: history.map((msg, idx) => ({
+          index: idx,
+          role: msg.role,
+          content: msg.content,
+          hasToolCalls: !!(msg.tool_calls && msg.tool_calls.length > 0),
+          toolCallsCount: msg.tool_calls?.length || 0,
+          // Show the actual tool_calls content for debugging
+          toolCalls: msg.tool_calls?.map(tc => ({
+            id: tc.id,
+            type: tc.type,
+            functionName: tc.function?.name
+          }))
+        })),
+        // Show the specific message we're looking for
+        targetMessage: {
+          role: 'assistant',
+          needsToolCalls: true,
+          notProcessing: true,
+          notCallingTool: true
+        }
+      });
+
       if (lastMessageIndex >= 0) {
+        console.log('🔧 [useChatFactory] onToolCallPrompt - updating message at index:', lastMessageIndex);
         history[lastMessageIndex] = {
           ...history[lastMessageIndex],
           component: () => <ToolPrompt toolName={toolCall} args={args} onDecision={callBack} />,
         };
+      } else {
+        console.warn('⚠️ [useChatFactory] No message with tool_calls found for prompt');
+        console.warn('⚠️ [useChatFactory] This might indicate a message positioning issue during streaming');
       }
 
       return {
@@ -638,7 +1111,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         updated: new Date(),
       };
     });
-  }
+  }, [chatState.history, chatState.tools, chatState.macros]);
 
 
   const newChat = async () => {
@@ -701,7 +1174,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           // Update the chat state with the new session ID
           setChatState(prev => ({
             ...prev,
-            id: newSessionId
+            id: newSessionId || prev.id
           }));
         } catch (error) {
           onError(error);
@@ -882,11 +1355,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           // Update chatState with the loaded chat session
           setChatState((prevState) => ({
             ...prevState,
-            ...result,
+            // Only update specific properties, don't spread the entire result
+            id: (result as any).id,
+            started: (result as any).started,
             history: (result as any).history ?? [],
             tools: uniqueTools,
             macros: (result as any).macros ?? [],
             vars: (result as any).vars ?? {},
+            tokenCount: (result as any).tokenCount,
+            maxTokens: (result as any).maxTokens,
+            toolApprovalMode: (result as any).toolApprovalMode,
             updated: new Date(),
           }));
 
@@ -903,76 +1381,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   };
 
   /**
-   * Enhanced tool call processing with recursive handling for multiple tool calls
-   */
-  const processToolCalls = async (toolCalls: any[], message: UXChatMessage, depth: number = 0): Promise<{ toolResults: any[], toolErrors: any[] }> => {
-    const { toolApprovalMode } = chatState;
-    const toolResults = [];
-    const toolErrors = [];
-
-    // Prevent infinite recursion (max 10 levels deep)
-    const MAX_RECURSION_DEPTH = 10;
-    if (depth >= MAX_RECURSION_DEPTH) {
-      toolErrors.push({
-        error: `Maximum tool call recursion depth (${MAX_RECURSION_DEPTH}) exceeded`,
-        timestamp: new Date()
-      });
-      return { toolResults, toolErrors };
-    }
-
-    // The message with tool_calls is already added to the chat history by sendMessage
-    // We don't need to add another "Calling tool..." message here
-    // The UI will show "Calling tool..." based on the tool_calls array in the message
-
-    // Group tools by approval requirements
-    const toolsRequiringApproval = toolApprovalMode === ToolApprovalMode.PROMPT ? toolCalls : [];
-    const toolsForAutoExecution = toolApprovalMode === ToolApprovalMode.AUTO ? toolCalls : [];
-
-    // Handle tools requiring approval
-    if (toolsRequiringApproval.length > 0) {
-      await processToolsWithApproval(toolsRequiringApproval, toolResults, toolErrors);
-    }
-
-    // Handle auto-execution tools
-    if (toolsForAutoExecution.length > 0) {
-      await processToolsAutomatically(toolsForAutoExecution, toolResults, toolErrors);
-    }
-
-    // Update chat state with tool results
-    if (toolResults.length > 0 || toolErrors.length > 0) {
-      updateChatStateWithToolResults(message, toolResults, toolErrors);
-    }
-
-    // Send tool results back to AI provider and check for recursive tool calls
-    if (toolResults.length > 0) {
-      try {
-        const consolidatedResults = consolidateToolResults(toolResults, toolErrors);
-        const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors);
-
-        // Check if the AI response contains new tool calls
-        if (aiResponse && aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
-          // Recursively process the new tool calls
-          const recursiveResults = await processToolCalls(aiResponse.tool_calls, aiResponse, depth + 1);
-
-          // Merge results from recursive calls
-          toolResults.push(...recursiveResults.toolResults);
-          toolErrors.push(...recursiveResults.toolErrors);
-        }
-      } catch (error) {
-        toolErrors.push({
-          error: `Error sending tool results to AI: ${error.message}`,
-          timestamp: new Date()
-        });
-      }
-    }
-
-    return { toolResults, toolErrors };
-  };
-
-  /**
    * Consolidate tool results into a single message for the AI provider
    */
-  const consolidateToolResults = (toolResults: any[], toolErrors: any[]): string => {
+  const consolidateToolResults = React.useCallback((toolResults: any[], toolErrors: any[]): string => {
     const results = toolResults.map((result, index) => {
       const content = result.content || JSON.stringify(result);
       return `Tool ${index + 1} (${result.name}): ${content}`;
@@ -991,12 +1402,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
 
     return consolidated || 'No tool results available';
-  };
+  }, []);
 
   /**
    * Send tool results back to the AI provider and get the response
    */
-  const sendToolResultsToAI = async (consolidatedResults: string, toolResults: any[], toolErrors: any[]): Promise<UXChatMessage | null> => {
+  const sendToolResultsToAI = React.useCallback(async (consolidatedResults: string, toolResults: any[], toolErrors: any[]): Promise<UXChatMessage | null> => {
     try {
       const resp = await graph.sendMessage({
         message: consolidatedResults,
@@ -1029,28 +1440,49 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       reactory.error('Error sending tool results to AI', error);
       throw error;
     }
-  };
+  }, [graph, persona?.id, chatState?.id]);
 
   /**
    * Helper function to clean up approval component from the message with tool_calls
    */
-  const cleanupApprovalComponent = () => {
+  const cleanupApprovalComponent = React.useCallback(() => {
     setChatState((prevState) => {
       const history = [...prevState.history];
 
       // Find the last message with tool_calls and remove the component
+      // Skip "processing" and "calling tool" messages and look for actual tool call messages
       let lastMessageIndex = -1;
       for (let i = history.length - 1; i >= 0; i--) {
         const msg = history[i];
-        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+        if (msg.role === 'assistant' && 
+            msg.tool_calls && 
+            msg.tool_calls.length > 0 && 
+            msg.content !== "Processing..." && 
+            !msg.content.startsWith("Calling tool:")) { // Skip processing and calling messages
           lastMessageIndex = i;
           break;
         }
       }
 
+      console.log('🔧 [useChatFactory] cleanupApprovalComponent - message search:', {
+        historyLength: history.length,
+        lastMessageIndex,
+        foundMessage: lastMessageIndex >= 0 ? history[lastMessageIndex] : null,
+        // Debug the history to see what messages we have
+        historyMessages: history.map((msg, idx) => ({
+          index: idx,
+          role: msg.role,
+          content: msg.content,
+          hasToolCalls: !!(msg.tool_calls && msg.tool_calls.length > 0),
+          toolCallsCount: msg.tool_calls?.length || 0
+        }))
+      });
+
       if (lastMessageIndex >= 0) {
         const { component, ...messageWithoutComponent } = history[lastMessageIndex];
         history[lastMessageIndex] = messageWithoutComponent;
+      } else {
+        console.warn('⚠️ [useChatFactory] No message with tool_calls found for cleanup');
       }
 
       return {
@@ -1059,12 +1491,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         updated: new Date(),
       };
     });
-  };
+  }, [chatState?.history, chatState?.tools, chatState?.macros]);
 
   /**
    * Process tools that require user approval
    */
-  const processToolsWithApproval = async (toolCalls: any[], toolResults: any[], toolErrors: any[]) => {
+  const processToolsWithApproval = React.useCallback(async (toolCalls: any[], toolResults: any[], toolErrors: any[]) => {
     for (const toolCall of toolCalls) {
       if (toolCall.type === 'function' && toolCall.function) {
         const { id, function: func } = toolCall;
@@ -1130,17 +1562,40 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }
       }
     }
-  };
+  }, [
+    // Use specific primitive dependencies instead of entire chatState object
+    chatState.macros?.length,
+    chatState.id,
+    findMacroByAlias,
+    onToolCallPrompt,
+    cleanupApprovalComponent,
+    executeMacro
+  ]);
 
   /**
    * Process tools automatically without user approval
    */
-  const processToolsAutomatically = async (toolCalls: any[], toolResults: any[], toolErrors: any[]) => {
+  const processToolsAutomatically = React.useCallback(async (toolCalls: any[], toolResults: any[], toolErrors: any[]) => {
+    console.log('🔧 [useChatFactory] processToolsAutomatically called with:', {
+      toolCallsCount: toolCalls.length,
+      toolCalls: toolCalls.map(tc => ({
+        id: tc.id,
+        type: tc.type,
+        hasFunction: !!tc.function,
+        functionName: tc.function?.name,
+        functionArgs: tc.function?.arguments
+      }))
+    });
+    
     // Execute tools in parallel for better performance
     const toolPromises = toolCalls.map(async (toolCall) => {
+      console.log('🔧 [useChatFactory] Processing tool call:', toolCall);
+      
       if (toolCall.type === 'function' && toolCall.function) {
         const { id, function: func } = toolCall;
         const { name, arguments: args } = func;
+        
+        console.log('🔧 [useChatFactory] Tool call details:', { id, name, args });
 
         // Try to find the macro by alias first, then by name
         let macro = findMacroByAlias(name);
@@ -1148,8 +1603,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           // If not found by alias, try to find by name in the macros array
           macro = chatState.macros?.find(m => m.name === name || m.alias === name);
         }
+        
+        console.log('🔧 [useChatFactory] Macro found:', {
+          hasMacro: !!macro,
+          macroName: macro?.name,
+          macroAlias: macro?.alias,
+          availableMacros: chatState.macros?.map(m => ({ name: m.name, alias: m.alias }))
+        });
 
         if (!macro) {
+          console.error('❌ [useChatFactory] Macro not found for tool call:', { name, availableMacros: chatState.macros?.map(m => m.name) });
           return {
             id,
             name,
@@ -1159,7 +1622,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }
 
         try {
+          console.log('🔧 [useChatFactory] Executing macro:', macro.name);
+          console.log('🔧 [useChatFactory] Macro execution details:', {
+            macroName: macro.name,
+            macroAlias: macro.alias,
+            macroRunat: macro.runat,
+            args: args,
+            argsType: typeof args
+          });
+          
           const result = await executeMacro(macro, args);
+          console.log('✅ [useChatFactory] Macro executed successfully:', { name: macro.name, result });
           return {
             id,
             name,
@@ -1169,6 +1642,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             sessionId: chatState.id,
           };
         } catch (error) {
+          console.error('❌ [useChatFactory] Error executing macro:', { name: macro.name, error });
+          console.error('❌ [useChatFactory] Error details:', {
+            errorMessage: error.message,
+            errorStack: error.stack,
+            errorName: error.name
+          });
           reactory.error(`Error executing tool: ${name}`, error);
           return {
             id,
@@ -1197,30 +1676,67 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         });
       }
     });
-  };
+    
+    console.log('🔧 [useChatFactory] processToolsAutomatically completed:', {
+      toolResultsCount: toolResults.length,
+      toolErrorsCount: toolErrors.length
+    });
+  }, [
+    // Use specific primitive dependencies instead of entire chatState object
+    chatState.macros?.length,
+    chatState.id,
+    findMacroByAlias,
+    executeMacro
+  ]);
 
   /**
    * Update chat state with tool execution results
    */
-  const updateChatStateWithToolResults = (message: UXChatMessage, toolResults: any[], toolErrors: any[]) => {
+  const updateChatStateWithToolResults = React.useCallback((message: UXChatMessage, toolResults: any[], toolErrors: any[]) => {
     setChatState((prevState) => {
       const history = [...prevState.history];
-      // Find the last 'Calling' message (role: 'assistant', tool_calls present, content: '')
-      const callingIndex = history
-        .slice()
-        .reverse()
-        .findIndex(msg => msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0 && !msg.content);
-      const actualIndex = callingIndex >= 0 ? history.length - 1 - callingIndex : -1;
+      
+      // Find the last message with tool_calls (role: 'assistant', tool_calls present)
+      // Skip "thinking" messages and look for actual tool call messages
+      let lastMessageIndex = -1;
+      for (let i = history.length - 1; i >= 0; i--) {
+        const msg = history[i];
+        if (msg.role === 'assistant' && 
+            msg.tool_calls && 
+            msg.tool_calls.length > 0 && 
+            msg.content !== "Processing..." && 
+            !msg.content.startsWith("Calling tool:")) { // Skip processing and calling messages
+          lastMessageIndex = i;
+          break;
+        }
+      }
 
-      if (actualIndex >= 0) {
-        // Update the 'Calling' message with tool results
-        history[actualIndex] = {
-          ...history[actualIndex],
+      console.log('🔧 [useChatFactory] updateChatStateWithToolResults - message search:', {
+        historyLength: history.length,
+        lastMessageIndex,
+        foundMessage: lastMessageIndex >= 0 ? history[lastMessageIndex] : null,
+        toolResultsCount: toolResults.length,
+        toolErrorsCount: toolErrors.length,
+        // Debug the history to see what messages we have
+        historyMessages: history.map((msg, idx) => ({
+          index: idx,
+          role: msg.role,
+          content: msg.content,
+          hasToolCalls: !!(msg.tool_calls && msg.tool_calls.length > 0),
+          toolCallsCount: msg.tool_calls?.length || 0
+        }))
+      });
+
+      if (lastMessageIndex >= 0) {
+        // Update the message with tool_calls with tool results
+        history[lastMessageIndex] = {
+          ...history[lastMessageIndex],
           tool_results: toolResults,
           tool_errors: toolErrors,
         };
       } else if (history.length > 0) {
         // Fallback: update the last message
+        console.warn('⚠️ [useChatFactory] No message with tool_calls found, updating last message');
         history[history.length - 1] = {
           ...history[history.length - 1],
           tool_results: toolResults,
@@ -1246,7 +1762,112 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         sessionId: chatState.id,
       } as UXChatMessage);
     }
-  };
+  }, [
+    // Use specific primitive dependencies instead of entire chatState object
+    chatState.history?.length,
+    chatState.id,
+    consolidateToolResults
+  ]);
+
+  /**
+   * Enhanced tool call processing with recursive handling for multiple tool calls
+   * Memoized version to prevent stale closures and improve performance
+   */
+  const processToolCallsMemoized = React.useCallback(async (toolCalls: any[], message: UXChatMessage, depth: number = 0): Promise<{ toolResults: any[], toolErrors: any[] }> => {
+    // Access toolApprovalMode from the current state to avoid stale closures
+    const toolApprovalMode = chatState.toolApprovalMode;
+    const toolResults = [];
+    const toolErrors = [];
+
+    console.log('🔧 [useChatFactory] processToolCallsMemoized called:', {
+      toolCallsCount: toolCalls.length,
+      toolApprovalMode,
+      depth,
+      messageId: message.id,
+      messageRole: message.role,
+      currentChatStateId: chatState.id
+    });
+
+    // Prevent infinite recursion (max 10 levels deep)
+    const MAX_RECURSION_DEPTH = 10;
+    if (depth >= MAX_RECURSION_DEPTH) {
+      toolErrors.push({
+        error: `Maximum tool call recursion depth (${MAX_RECURSION_DEPTH}) exceeded`,
+        timestamp: new Date()
+      });
+      return { toolResults, toolErrors };
+    }
+
+    // The message with tool_calls is already added to the chat history by sendMessage
+    // We don't need to add another "Calling tool..." message here
+    // The UI will show "Calling tool..." based on the tool_calls array in the message
+
+    // Group tools by approval requirements
+    const toolsRequiringApproval = toolApprovalMode === ToolApprovalMode.PROMPT ? toolCalls : [];
+    const toolsForAutoExecution = toolApprovalMode === ToolApprovalMode.AUTO ? toolCalls : [];
+    
+    console.log('🔧 [useChatFactory] Tool grouping:', {
+      toolsRequiringApproval: toolsRequiringApproval.length,
+      toolsForAutoExecution: toolsForAutoExecution.length,
+      toolApprovalMode,
+      toolApprovalModeType: typeof toolApprovalMode,
+      ToolApprovalMode_PROMPT: ToolApprovalMode.PROMPT,
+      ToolApprovalMode_AUTO: ToolApprovalMode.AUTO,
+      isPromptMode: toolApprovalMode === ToolApprovalMode.PROMPT,
+      isAutoMode: toolApprovalMode === ToolApprovalMode.AUTO
+    });
+
+    // Handle tools requiring approval
+    if (toolsRequiringApproval.length > 0) {
+      console.log('🔧 [useChatFactory] Processing tools requiring approval');
+      await processToolsWithApproval(toolsRequiringApproval, toolResults, toolErrors);
+    }
+
+    // Handle auto-execution tools
+    if (toolsForAutoExecution.length > 0) {
+      console.log('🔧 [useChatFactory] Processing tools for auto-execution');
+      await processToolsAutomatically(toolsForAutoExecution, toolResults, toolErrors);
+    }
+
+    // Update chat state with tool results
+    if (toolResults.length > 0 || toolErrors.length > 0) {
+      updateChatStateWithToolResults(message, toolResults, toolErrors);
+    }
+
+    // Send tool results back to AI provider and check for recursive tool calls
+    if (toolResults.length > 0) {
+      try {
+        const consolidatedResults = consolidateToolResults(toolResults, toolErrors);
+        const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors);
+
+        // Check if the AI response contains new tool calls
+        if (aiResponse && aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
+          // Recursively process the new tool calls
+          const recursiveResults = await processToolCallsMemoized(aiResponse.tool_calls, aiResponse, depth + 1);
+
+          // Merge results from recursive calls
+          toolResults.push(...recursiveResults.toolResults);
+          toolErrors.push(...recursiveResults.toolErrors);
+        }
+      } catch (error) {
+        toolErrors.push({
+          error: `Error sending tool results to AI: ${error.message}`,
+          timestamp: new Date()
+        });
+      }
+    }
+
+    return { toolResults, toolErrors };
+  }, [
+    // Use specific primitive dependencies instead of entire chatState object
+    chatState.toolApprovalMode,
+    chatState.id,
+    processToolsWithApproval,
+    processToolsAutomatically,
+    updateChatStateWithToolResults,
+    consolidateToolResults,
+    sendToolResultsToAI
+  ]);
 
   return {
     busy,
@@ -1265,6 +1886,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     isStreaming: (sse as any).isStreaming,
     currentStreamingMessage: (sse as any).currentStreamingMessage,
     setChatState,
+    // Debug helpers
+    protectCriticalState,
+    validateChatState,
+    setChatStateWithValidation,
   }
 };
 

@@ -764,7 +764,6 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
         onMobileBack={() => setMobileView('folders')}
         il8n={il8n}
       />
-
       {/* Content */}
       <Box sx={{
         display: 'flex',
@@ -996,7 +995,7 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
             ) : currentPathItems.length > 0 ? (
               viewMode === 'grid' ? (
                 // Grid View
-                <Grid container spacing={2}>
+                (<Grid container spacing={2}>
                   {currentPathItems.map((item) => (
                     <Grid item xs={6} sm={4} md={3} lg={2} key={getItemKey(item)}>
                       <Card
@@ -1064,14 +1063,14 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
                       </Card>
                     </Grid>
                   ))}
-                </Grid>
+                </Grid>)
               ) : (
                 // List and table views would go here - simplified for now
-                <Box sx={{ textAlign: 'center', p: 3 }}>
+                (<Box sx={{ textAlign: 'center', p: 3 }}>
                   <Typography variant="body2" color="text.secondary">
                     List and table views are available in the full implementation
                   </Typography>
-                </Box>
+                </Box>)
               )
             ) : (
               <Box sx={{ 
@@ -1144,7 +1143,6 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
           </Box>
         )}
       </Box>
-
       {/* Mobile FABs */}
       <MobileFabs
         mobileView={mobileView}
@@ -1152,7 +1150,6 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
         onToggleView={() => setMobileView(mobileView === 'folders' ? 'files' : 'folders')}
         reactory={reactory}
       />
-
       {/* Dialogs and Menus */}
       <RenameDialog
         open={fileOperations.renameDialog.open}
@@ -1165,7 +1162,6 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
         il8n={il8n}
         reactory={reactory}
       />
-
       <CreateFolderDialog
         open={fileOperations.createFolderDialog.open}
         folderName={fileOperations.createFolderDialog.folderName}

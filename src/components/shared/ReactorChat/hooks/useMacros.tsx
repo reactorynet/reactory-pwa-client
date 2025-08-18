@@ -86,18 +86,22 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
   
   
   const createRegistry = (macros: MacroComponentDefinition<unknown>[]) => { 
-    return macros.reduce((acc, macro) => {
+    console.log('🔧 [useMacros] createRegistry called with macros:', macros.length);
+    
+    
+    return macros.reduce((acc, macro) => {    
       
       if(macro.roles && macro.roles.length > 0) { 
         // check if the user has a role that matches the macro
-        const userRoles = reactory.getUser().loggedIn.roles || ['ANON'];
+        const userRoles = reactory.getUser().loggedIn.roles || ['ANON'];                
         if (!macro.roles.some(role => userRoles.includes(role))) {
-          reactory.warning(`Macro ${macro.name} is not accessible for user roles: ${userRoles.join(', ')}`);
+          reactory.warning(`Macro ${macro.name} is not accessible for user roles: ${userRoles.join(', ')}`);          
           return acc; // Skip adding this macro if roles do not match
         }
       }
       
       const macroKey = `${macro.nameSpace}.${macro.name}@${macro.version}`;
+      
       
       acc[macroKey] = macro;
       if (macro.alias) {
@@ -106,7 +110,7 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
         delete acc[macroKey];
         acc[macro.alias] = macro;
       }
-      
+            
       return acc;
     }, {} as MacroComponentDefinitionRegistry);
   };
@@ -115,6 +119,11 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
 
   // Initialize state with an empty object of macro definitions
   const [macros, setMacros] = useState<MacroComponentDefinitionRegistry>(createRegistry(clientMacros));
+
+  // Debug user roles
+  const userRoles = reactory.getUser().loggedIn.roles || ['ANON'];
+  console.log('🔧 [useMacros] Current user roles:', userRoles);
+  console.log('🔧 [useMacros] User logged in:', reactory.getUser().loggedIn);
 
   // Function to register a new macro
   const registerMacro = useCallback((macro: MacroComponentDefinition<unknown>) => {
@@ -136,8 +145,8 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
     }));
   }, []);
 
-  const findMacroByAlias = useCallback((alias: string): MacroComponentDefinition<unknown> | null => {
-    const macro = Object.values(macros).find(m => m.alias === alias);
+  const findMacroByAlias = useCallback((alias: string): MacroComponentDefinition<unknown> | null => {            
+    const macro = Object.values(macros).find(m => m.alias === alias);    
     return macro || null;
   }, [macros]);
 
@@ -276,6 +285,8 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
   
   // use effect to monitor changes on the chatState for macros
   useEffect(() => {
+    
+    
     if (chatState.macros) {
       // Create a combined array of macros, but ensure uniqueness
       const allMacros = [...chatState.macros, ...clientMacros];
@@ -302,11 +313,16 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
         return index === firstIndex;
       });
       
-      const newMacros = createRegistry(uniqueMacros);
-      setMacros(prevMacros => ({
-        ...prevMacros,
-        ...newMacros
-      }));
+      
+      const newMacros = createRegistry(uniqueMacros);      
+      
+      setMacros(prevMacros => {
+        const updatedMacros = {
+          ...prevMacros,
+          ...newMacros
+        };        
+        return updatedMacros;
+      });
     }
   }
   , [chatState?.macros]);

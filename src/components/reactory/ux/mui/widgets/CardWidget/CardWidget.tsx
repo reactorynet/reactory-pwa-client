@@ -117,7 +117,6 @@ const CardWidget = (props: any) => {
         subheader={cardData?.description} 
         sx={uiOptions?.headerOptions?.sx}
         />
-
       {cardData?.image && (
         <Box sx={{
           display: imageOptions.display || 'flex',

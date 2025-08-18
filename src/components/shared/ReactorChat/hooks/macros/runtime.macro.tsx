@@ -2,7 +2,26 @@ import { Macro, MacroComponentDefinition, UXChatMessage } from "../../types";
 
 //@ts-ignore
 const RuntimeMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
-  const [ action, macro, tool ] = args || [];
+  console.log('🔧 [RuntimeMacro] Called with args:', args, 'type:', typeof args);
+  
+  // Handle both array and object argument formats
+  let action, macro, tool;
+  
+  if (Array.isArray(args)) {
+    [action, macro, tool] = args || [];
+  } else if (typeof args === 'object' && args !== null) {
+    // Handle object format: {"action": "list"}
+    //@ts-ignore
+    action = args.action;
+    //@ts-ignore
+    macro = args.macro;
+    //@ts-ignore
+    tool = args.tool;
+  } else {
+    action = args;
+  }
+  
+  console.log('🔧 [RuntimeMacro] Parsed arguments:', { action, macro, tool });
 
   if (action === "list") {
     const macros = chatState.macros || [];
