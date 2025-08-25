@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { styled, useTheme } from '@mui/material/styles';
 import { isNil, template, isString } from 'lodash';
 import { useNavigate } from 'react-router'
 
@@ -25,9 +26,30 @@ import {
 
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux';
-import { withStyles, withTheme, makeStyles } from '@mui/styles';
 import Reactory from '@reactory/reactory-core';
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
+
+
+const PREFIX = 'MaterialListWidgetComponent';
+
+const classes = {
+  root: `${PREFIX}-root`,
+  chip: `${PREFIX}-chip`,
+  newChipInput: `${PREFIX}-newChipInput`
+};
+
+const Root = styled('div')(({ theme }: { theme: Theme }) => ({
+  [`& .${classes.root}`]: {
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  [`& .${classes.chip}`]: {
+    margin: theme.spacing(1),
+  },
+  [`& .${classes.newChipInput}`]: {
+    margin: theme.spacing(1)
+  }
+}));
 
 
 function LinkIconButton(link, icon) {
@@ -178,7 +200,7 @@ interface IMaterialListWidgetOptions<T> {
     propsMap?: any
   },
   [key: string]: any
-};
+}
 
 const DefaultListOptions: IMaterialListWidgetOptions<any> = {
   primaryText: "${item.title}",
@@ -222,8 +244,8 @@ const DefaultPaging = {
 
 //@ts-ignore
 function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
-
-  const { theme, history, formData, schema, uiSchema = {}, idSchema, reactory, formContext } = props;
+  const theme = useTheme();
+  const { history, formData, schema, uiSchema = {}, idSchema, reactory, formContext } = props;
 
   const getOptions = (): IMaterialListWidgetOptions<any> => {
     let uiOptions: any = uiSchema['ui:options'] || {};
@@ -307,27 +329,6 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
   }
 
 
-  let sheet = {
-    root: {
-      display: 'flex',
-      justifyContent: 'center',
-    },
-    chip: {
-      margin: theme.spacing(1),
-    },
-    newChipInput: {
-      margin: theme.spacing(1)
-    }
-  };
-
-  if (options.jss) {
-    sheet = { ...sheet, ...options.jss };
-  }
-
-  const useStyles = makeStyles(sheet);
-
-  const classes = useStyles(props)
-
   const widgetsBefore = [];
   const widgetsAfter = [];
 
@@ -366,9 +367,9 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
         setPaging({ ...paging, page });
       }
 
-      widgetsAfter.push(<div style={{ display: 'flex', justifyContent: 'center' }}>
+      widgetsAfter.push(<Root style={{ display: 'flex', justifyContent: 'center' }}>
         <Pagination count={pageCount} page={paging.page} onChange={onPageChanged} shape="rounded" />
-      </div>)
+      </Root>)
     }
   }
 
@@ -417,7 +418,7 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
   return (
     <div className={classes[options.className]}>
       {widgetsBefore}
-      <List {...listProps} className={classes[listProps.className || "list"]}>
+      <List {...listProps} className={listProps.className || "list"}>
         {emptyListItem}
         {data?.map && data.map((item: TAny, itemIndex) => {
           //Create a list item entry using the uiOptions for the widget
@@ -737,12 +738,14 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
             listItemProps.style = { ...options.listItemStyle };
           }
 
-          if (options && typeof options.listItemSelectedStyle)
+          if (options && typeof options.listItemSelectedStyle) {
+            // Handle selected style logic here if needed
+          }
 
-            if (options && options.variant === 'button') {
-              //@ts-ignore
-              listItemProps.button = true;
-            }
+          if (options && options.variant === 'button') {
+            //@ts-ignore
+            listItemProps.button = true;
+          }
 
           return (
             <ListItem {...listItemProps}>
@@ -759,5 +762,5 @@ function MaterialListWidget<T>(props: IMateriaListWidgetProps<T>) {
 }
 
 //@ts-ignore
-const MaterialListWidgetComponent = compose(withReactory, withTheme)(MaterialListWidget)
+const MaterialListWidgetComponent = compose(withReactory)(MaterialListWidget)
 export default MaterialListWidgetComponent

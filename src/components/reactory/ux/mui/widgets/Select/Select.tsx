@@ -1,4 +1,5 @@
 import React, { Fragment } from 'react';
+import { styled, useTheme } from '@mui/material/styles';
 import PropTypes from 'prop-types';
 import { pullAt, find, isArray, isNil, isEmpty } from 'lodash';
 import {
@@ -15,21 +16,32 @@ import {
 } from '@mui/material';
 
 import { compose } from 'redux';
-import { withStyles, withTheme } from '@mui/styles';
 
-const styles = (theme):any => ({
-  root: {
+const PREFIX = 'SelectWidgetComponent';
+
+const classes = {
+  root: `${PREFIX}-root`,
+  formControl: `${PREFIX}-formControl`,
+  selectEmpty: `${PREFIX}-selectEmpty`
+};
+
+const StyledSelect = styled(Select)(({ theme }) => ({
+  [`& .${classes.root}`]: {
     display: 'flex',
     flexWrap: 'wrap',
   },
-  formControl: {
+
+  [`& .${classes.formControl}`]: {
     minWidth: 120,
   },
-  selectEmpty: {
+
+  [`& .${classes.selectEmpty}`]: {
     marginTop: theme.spacing(2),
-  },
-});
-const SelectWidget = (props)=> {
+  }
+}));
+
+const SelectWidget = (props) => {
+  const theme = useTheme();
 
     let elements = null
     let allowNull = true;
@@ -39,10 +51,8 @@ const SelectWidget = (props)=> {
       uiSchema,
       formData,
       formContext,
-      required,
-      classes, 
+      required,       
       onChange,
-      theme,
     } = props;
 
     let controlProps = {
@@ -61,9 +71,10 @@ const SelectWidget = (props)=> {
       selectProps = {}
     } = uiOptions;
 
-    let variant = 'standard'
-    if (theme.MaterialInput) {
-      variant = theme.MaterialInput.variant || variant;
+    let variant = 'standard' as 'standard' | 'outlined' | 'filled'
+    if (theme.components?.MuiInput) {
+      // TODO fix the variant type
+      //variant = (theme.components.MuiInput.variants[0]?.props as 'standard' | 'outlined' | 'filled' || variant;
     }
 
     let InputComponent = Input;
@@ -141,7 +152,7 @@ const SelectWidget = (props)=> {
      * 
      */
     return (
-      <Select
+      <StyledSelect
         {...selectProps}
         value={formData || ""}
         onChange={onSelectChanged}
@@ -153,8 +164,8 @@ const SelectWidget = (props)=> {
         >
         {required === false ? <MenuItem value=""><em>None</em></MenuItem> : null}
         {elements}
-      </Select>
-    )
+      </StyledSelect>
+    );
 }
 SelectWidget.propTypes = {
   formData: PropTypes.any,
@@ -168,5 +179,5 @@ SelectWidget.defaultProps = {
   formData: [],
   readOnly: false
 }
-const SelectWidgetComponent = compose(withTheme, withStyles(styles))(SelectWidget)
+const SelectWidgetComponent = compose()(SelectWidget)
 export default SelectWidgetComponent

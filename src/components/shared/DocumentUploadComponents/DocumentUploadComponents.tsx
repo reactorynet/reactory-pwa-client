@@ -1,22 +1,32 @@
 import React, { useState, useMemo } from 'react'
-import PropTypes from 'prop-types'
+import { styled } from '@mui/material/styles';
+
 import {
   Icon,
   Typography
 } from '@mui/material';
 import { compose } from 'redux'
-import { withStyles, withTheme, StyleRulesCallback } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { template } from 'lodash';
 
-const styles: StyleRulesCallback<any, any, string> = (theme) => ({
-  root: {
+const PREFIX = 'DocumentUploadComponent';
+
+const classes = {
+  root: `${PREFIX}-root`
+};
+
+// TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
+const Root = styled('div')(({ theme }: { theme: Theme }) => ({
+  [`& .${classes.root}`]: {
     display: 'flex',
     flexWrap: 'wrap' as 'wrap',
-  },
-});
+  }
+}));
 
 function DocumentUploadWidget(props: any) {
+  const theme = useTheme();
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -34,7 +44,7 @@ function DocumentUploadWidget(props: any) {
   }, [props.reactory]);
 
   const { StaticContent } = componentDefs;
-  const { classes, theme, reactory, uiSchema } = props;
+  const { reactory, uiSchema } = props;
 
   let _slug = '';
   let _title = '';
@@ -99,14 +109,13 @@ function DocumentUploadWidget(props: any) {
   }
 
   return (
-    <>
+    <Root>
       <StaticContent {...staticContentProps} />
-    </>
+    </Root>
   );
 }
 
-const DocumentUploadComponent = compose(withReactory, withTheme, withStyles(styles))(DocumentUploadWidget)
-export default DocumentUploadComponent;
+export default DocumentUploadWidget;
 
 
 

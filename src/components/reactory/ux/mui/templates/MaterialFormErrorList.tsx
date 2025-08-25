@@ -1,4 +1,5 @@
-import React, { Component } from 'react';
+import React, { useState } from 'react';
+import { styled, useTheme } from '@mui/material/styles';
 import { compose } from 'redux';
 import {
   List,
@@ -15,44 +16,34 @@ import {
   Theme,
 } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import { withStyles, withTheme, styled } from '@mui/styles';
 import Reactory from '@reactory/reactory-core';
 
-const PopOverStyles = (theme: Theme): any => {
+const PREFIX = 'MaterialFormErrorTemplate';
 
-  return {
-    errorForm: {
-      padding: theme.spacing(1)
-    },
-    errorButton:
-    {
-      position: "relative",
-      top: '0px',
-      left: '0px',
-      color: theme.palette.error.main
-    }
-  }
+const classes = {
+  errorForm: `${PREFIX}-errorForm`,
+  errorButton: `${PREFIX}-errorButton`,
+  popover: `${PREFIX}-popover`,
+  paper: `${PREFIX}-paper`,
 };
 
-
+const StyledErrorPopover = styled('div')(({ theme }) => ({
+  [`& .${classes.errorForm}`]: {
+    padding: theme.spacing(1)
+  },
+  [`& .${classes.errorButton}`]: {
+    position: "relative",
+    top: '0px',
+    left: '0px',
+    color: theme.palette.error.main
+  }
+}));
 
 const ErrorPopover = (props) => {
-
-  // constructor(props, context) {
-  //   super(props, context);
-  //   this.state = {
-  //     anchorEl: null,
-  //   };
-  // }
-
-  const { useState } = React;
-
+  const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
 
-  // render() {
-
-  const { children, classes, color = 'inherit', theme } = props;
-
+  const { children, color = 'inherit' } = props;
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
     setAnchorEl(event.currentTarget);
@@ -98,24 +89,11 @@ const ErrorPopover = (props) => {
       </Popover>
     </React.Fragment>
   );
-
-};
-
-const ThemedErrorPopover = compose(withTheme, withStyles(PopOverStyles))(ErrorPopover);
-
-const TemplateErrorStyles = (theme) => {
-  return {
-    errorForm: {
-      padding: theme.spacing(1)
-    },
-  };
 };
 
 const MaterialFormErrorTemplate = (props) => {
-
+  const theme = useTheme();
   const { errors = [], uiSchema, schema, formContext, errorSchema } = props;
-
-  
 
   if(uiSchema && uiSchema['ui-options']) {
     if(uiSchema['ui-options'].showErrorList === false) return null;
@@ -124,7 +102,6 @@ const MaterialFormErrorTemplate = (props) => {
   if (errors.length === 0) return null;
 
   const renderSingleError = () => {
-
     const errorComponent = (
       <React.Fragment>
         <List>
@@ -139,15 +116,13 @@ const MaterialFormErrorTemplate = (props) => {
       </React.Fragment>
     );
 
-    return (<ThemedErrorPopover {...props}>{errorComponent}</ThemedErrorPopover>)
+    return (<StyledErrorPopover {...props}>{errorComponent}</StyledErrorPopover>);
   }
 
   const renderMultipleErrors = () => {
-
     let $schemaErrors = [];
 
     const collate_errors_for_property = (element: any, propertyName = 'root', $errorSchema: any, parent?: Reactory.Schema.AnySchema) => {
-
       let $item_errors = []
 
       if (element === null || element === undefined) return [];
@@ -156,7 +131,6 @@ const MaterialFormErrorTemplate = (props) => {
         case "string":
         case "number":
         case "date": {
-
           if (propertyName !== 'root') {
             //this is a child element.
             if ($errorSchema[propertyName] && $errorSchema[propertyName].__errors && $errorSchema[propertyName].__errors.length > 0) {
@@ -178,16 +152,12 @@ const MaterialFormErrorTemplate = (props) => {
               });
             }
           }
-
           break;
         }
         case "array": {
-          //
-
           break;
         }
         case "object": {
-
           //For each child element provide collate the errors from the element.
           Object.keys(element.properties).forEach((childPropertyName) => {
             let errorsForProperty = collate_errors_for_property(element.properties[childPropertyName], childPropertyName, $errorSchema, element);
@@ -198,7 +168,6 @@ const MaterialFormErrorTemplate = (props) => {
 
       return $item_errors;
     };
-
 
     $schemaErrors = collate_errors_for_property(schema, 'root', errorSchema, null);
 
@@ -221,13 +190,13 @@ const MaterialFormErrorTemplate = (props) => {
       </List>
     );
 
-    return (<ThemedErrorPopover {...props}>
+    return (<ErrorPopover {...props}>
       <>
         <Typography variant={'h6'} color='error' style={{ marginLeft: '10%' }}>Form Errors</Typography>
         <hr />
         {errorComponent}
       </>
-    </ThemedErrorPopover>)
+    </ErrorPopover>)
   }
 
   let errorComponent = errors.length > 1 ? renderMultipleErrors() : renderSingleError();
@@ -235,9 +204,5 @@ const MaterialFormErrorTemplate = (props) => {
   return errorComponent;
 }
 
-
 export default MaterialFormErrorTemplate
-
-// export const MaterialFormTemplateComponent = compose(withReactory, withStyles(TemplateErrorStyles), withTheme)(MaterialFormErrorTemplate);
-// export default MaterialFormTemplateComponent;
 

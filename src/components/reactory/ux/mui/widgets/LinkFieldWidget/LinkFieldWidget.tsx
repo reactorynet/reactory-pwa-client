@@ -1,12 +1,24 @@
 import React, { Fragment } from 'react';
 import { Button, Icon, Fab, IconButton, Typography, Link as MuiLink, Box, InputLabel, FormControl } from '@mui/material';
 import { compose } from 'redux';
-import { propsToClassKey, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { template } from 'lodash';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { jsx } from '@emotion/react';
 
+interface ExtendedTheme extends Theme {
+  extensions?: {
+    [key: string]: {
+      icons: {
+        [key: string]: React.ComponentType<any>;
+      };
+    };
+  };
+}
+
 const LinkFieldWidget: React.FunctionComponent = (props: any) => {
+  const theme = useTheme() as ExtendedTheme;
   
   const { idSchema, formData, schema, uiSchema } = props;
 
@@ -15,7 +27,6 @@ const LinkFieldWidget: React.FunctionComponent = (props: any) => {
   let labelTitle = props.schema?.title || props.idSchema?.$id;
   let linkIcon = null;
   let _iconPosition = 'right';
-  let theme = props.theme;
   let _variant: any = "text";
   let _component = 'button';
   let uioptions = props.uiSchema && props.uiSchema["ui:options"] ? props.uiSchema["ui:options"] : null;
@@ -238,6 +249,6 @@ const LinkFieldWidget: React.FunctionComponent = (props: any) => {
   }
 }
 
-const LinkFieldComponent = compose(withTheme)(LinkFieldWidget)
+const LinkFieldComponent = compose()(LinkFieldWidget)
 
 export default LinkFieldComponent;

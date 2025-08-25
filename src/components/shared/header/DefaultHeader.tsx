@@ -1,8 +1,7 @@
-import React, { Component, Fragment, SyntheticEvent } from 'react';
-import PropTypes, { any } from 'prop-types';
+import React, { useState, useEffect } from 'react';
 import { compose } from 'redux';
-import { isArray, find } from 'lodash';
-import { withTheme, makeStyles, styled } from '@mui/styles';
+import { isArray } from 'lodash';
+import { useTheme } from '@mui/material/styles';
 import {
   Avatar,
   AppBar,
@@ -16,9 +15,14 @@ import {
   ListItemSecondaryAction,
   Collapse,
   Typography,
+  Box,
+  List,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  InputBase,
 } from '@mui/material';
-import { Menu, MenuItem, InputBase } from '@mui/material';
-import { List, ListItemIcon, ListItemText } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import BackIcon from '@mui/icons-material/ArrowBack';
 import PowerSettingIcon from '@mui/icons-material/PowerSettingsNew';
@@ -31,217 +35,31 @@ import Reactory from '@reactory/reactory-core';
 import localForage from 'localforage';
 import { ReactoryAvatar } from './AvatarComponent';
 
-export class ISearchConfig {
-  show: boolean = false;
-  placeholder: string = "Search";
-
-  constructor(params: { show: boolean, placeholder: string } = { show: false, placeholder: 'Search' }) {
-    this.show = params.show || true;
-    this.placeholder = params.placeholder || 'Search';
-  }
-}
-
+// Configure localForage
 localForage.config({
-  driver: localForage.INDEXEDDB, // Force WebSQL; same as using setDriver()
+  driver: localForage.INDEXEDDB,
   name: 'reactory',
   version: 1.0,
-  //size: 4980736, // Size of database, in bytes. WebSQL-only for now.
-  storeName: 'reactory_client', // Should be alphanumeric, with underscores.
+  storeName: 'reactory_client',
   description: 'Reactory Client local database.'
 });
 
-const defaultSearchConfig = new ISearchConfig()
-
-export const Logged = (props: {
-  id: any,
-  apiStatus: Reactory.Models.IApiStatus,
-  reactory: Reactory.Client.IReactoryApi,
-  open: boolean,
-  anchorEl: any
-}) => {
-
-  const { reactory, apiStatus, open, anchorEl } = props;
-  const { menus, loggedIn } = apiStatus;
-  const navigate = useNavigate();
-  const menuItems = [];
-
-  if (menus && menus.length) {
-    menus.map((menu) => {
-      if (menu.target === 'top-right') {
-        menu.entries.map((menuItem, idx) => {
-          let allow = true;
-          if (isArray(menuItem.roles) && isArray(loggedIn.roles)) {
-            allow = reactory.hasRole(menuItem.roles, loggedIn.roles)
-          }
-          if (allow === true) {
-            const goto = () => {
-              navigate(menuItem.link)
-            };
-            menuItems.push((
-              <MenuItem key={menuItem.id || `menu_item_${idx}`} onClick={goto}>
-                <ListItemIcon><Icon color="primary">{menuItem.icon}</Icon></ListItemIcon>
-                {menuItem.title}
-              </MenuItem>));
-          }
-        });
-      }
-
-    });
-  }
-
-  return (<Menu
-    open={open}
-    id='top-right'
-    anchorEl={anchorEl}
-    anchorOrigin={{
-      vertical: 'top',
-      horizontal: 'right',
-    }}
-    transformOrigin={{
-      vertical: 'top',
-      horizontal: 'right',
-    }}>
-    {menuItems}
-  </Menu>)
-}
-
-Logged.muiName = 'IconMenu';
-
-const SubMenus = (props) => {
-  const { items = [], user, reactory, self, classes } = props;
-
-  const submenus = [];
-
-  const navigate = useNavigate();
-
-  items.forEach((menu, index) => {
-    let allow = true;
-    if (isArray(menu.roles) && isArray(user.roles) === true) {
-      allow = reactory.hasRole(menu.roles, user.roles);
-    }
-
-    if (allow === true) {
-      const goto = () => navigate(menu.link);
-      submenus.push(
-        <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer' }}>
-          <ListItemIcon>
-            {
-              menu.icon ?
-                (<Icon color="primary">{menu.icon}</Icon>)
-                : null
-            }
-          </ListItemIcon>
-          {menu.title}
-        </ListItem>)
-    }
-  });
-
-  return submenus;
+// CSS classes for styling
+const classes = {
+  version: 'version',
+  versionPrimary: 'version-primary'
 };
 
-const CacheButton = (props) => {
-
-  const { reactory, classes } = props;
-  const [version, setVersion] = React.useState(0);
-  const [cacheSize, setCacheSize] = React.useState<string>('0.00');
-
-  const clearCache = () => {
-
-    reactory.clearStoreAndCache();
-    setVersion(version + 1);    
-  }
-
-  React.useEffect(() => {
-    localForage.getItem('reactory_apollo_cache').then(( data: string ) => {      
-      const bytes: string = ((new TextEncoder().encode(data)).length / 100000).toPrecision(2);
-      setCacheSize(bytes);
-    });
-
-  })
-
-  return (
-    (<ListItem key={'reactory.cache'} onClick={clearCache} button>
-      <ListItemIcon>
-        <Icon color="primary">storage</Icon>
-      </ListItemIcon>
-      <ListItemText
-        primary={<span className={classes.versionPrimary}>Using {reactory.utils.humanNumber(cacheSize)} MB of local storage</span>}
-        secondary={<span className={classes.version}>🚮&nbsp; Click to clear your cache</span>}
-      />
-    </ListItem>)
-  )
-
-}
-
-const CacheComponent = compose(withReactory)(CacheButton);
-
-const ToggleDevelopMode = (props: Reactory.IReactoryComponentProps) => {  
-  const { reactory } = props;
-
-  const [version, setVersion] = React.useState(0)
-  const data = localStorage.getItem('') || "";
-
-  const toggle = () => {
-    reactory.setDevelopmentMode(!reactory.$development_mode);
-    reactory.emit('onReactoryDevelopmentModeChanged', reactory.isDevelopmentMode());
-    setVersion(version + 1);
-  }
-
-  if(reactory.hasRole(["DEVELOPER"]) === false) {
-    return null;
-  }
-
-
-  return (<ListItem key={'reactory.development_mode'} onClick={toggle} button>
-    <ListItemIcon>
-      <Icon color="primary">build</Icon>
-    </ListItemIcon>
-    <ListItemText
-      primary={<span>DEVELOPMENT</span>}
-      secondary={<span>{reactory.$development_mode === true ? '(enabled)' : '(disabled)'}</span>}
-    />
-  </ListItem>)
-};
-
-const ToggleDevelopComponent = compose(withReactory)(ToggleDevelopMode);
-
-/**
- * This example is taking advantage of the composability of the `AppBar`
- * to render different components depending on the application state.
- */
-const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
-
-  const { reactory, theme } = props;
-
-  const {
-    SystemStatus,
-    FullScreenModal,
-    Loading,
-    HelpListForm
-  } = reactory.getComponents<{
-    SystemStatus: React.FC,
-    FullScreenModal: React.FC<{ 
-      open: boolean,
-      onClose: (e: any) => void,
-      title: string, 
-    }>,
-    Loading: React.FC,
-    HelpListForm: React.FC
-  }>([
-    'core.SystemStatus',
-    'core.FullScreenModal',
-    'core.Loading',
-    'forms.HelpListForm'
-  ]);
-
-  const [drawerOpen, setDrawerOpen] = React.useState<boolean>(false);
-  const [menuOpen, setMenuOpen] = React.useState<boolean>(false);
-  const [menuAnchor, setMenuAnchor] = React.useState<any>(null);
-  const [show, setShow] = React.useState<boolean>(window === window.top);
-  const [expanded, setExpanded] = React.useState<any>({});
-  const [version, setVersion] = React.useState<number>(0);
-  const [search, setSearch] = React.useState<any>({ show: false, searchInput: '' });
-  const [apiMetrics, setApiStatus] = React.useState({
+// Custom hook for menu state management
+const useMenuState = () => {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [show, setShow] = useState(window === window.top);
+  const [expanded, setExpanded] = useState({});
+  const [version, setVersion] = useState(0);
+  const [search, setSearch] = useState({ show: false, searchInput: '' });
+  const [apiMetrics, setApiStatus] = useState({
     error: 0,
     slow: 0,
     ok: 0,
@@ -251,117 +69,202 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
     session: []
   });
 
-  const navigate = useNavigate();
+  return {
+    drawerOpen, setDrawerOpen,
+    menuOpen, setMenuOpen,
+    menuAnchor, setMenuAnchor,
+    show, setShow,
+    expanded, setExpanded,
+    version, setVersion,
+    search, setSearch,
+    apiMetrics, setApiStatus
+  };
+};
 
-  const classes: any = makeStyles((theme: any): any => {
-    return {
-      drawerHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        minWidth: '260px',
-        padding: `0 ${theme.spacing(1)}`,
-      },
-      nested: {
-        paddingLeft: theme.spacing(4),
-      },
-      loggedInUserAvatar: {
-        height: 120,
-        width: 120,
-        margin: 20,
-        marginLeft: 'auto',
-        marginRight: 'auto'
-      },
-      busyIndicator: {
-        outline: '1px solid black',
-      },
-      version: {
-        fontSize: '10px',
-      },
-      versionPrimary: {
-        fontSize: '12px',
-      },
-      root: {
-        width: '100%',
-      },
-      grow: {
-        flexGrow: 1,
-      },
-      menuItem: {
-        cursor: 'pointer'
-      },
-      menuButton: {
-        marginLeft: -12,
-        marginRight: 20,
-      },
-      title: {
-        display: 'none',
-        [theme.breakpoints.up('sm')]: {
-          display: 'block',
-        },
-      },
-      search: {
-        position: 'relative',
-        borderRadius: theme.shape.borderRadius,
-        
-        marginLeft: 0,
-        width: '100%',
-        [theme.breakpoints.up('sm')]: {
-          marginLeft: theme.spacing(1),
-          width: 'auto',
-        },
-      },
-      searchIcon: {
-        width: theme.spacing(9),
-        height: '100%',
-        position: 'absolute',
-        pointerEvents: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      },
-      inputRoot: {
-        color: 'inherit',
-        width: '100%',
-      },
-      inputInput: {
-        paddingTop: theme.spacing(1),
-        paddingRight: theme.spacing(1),
-        paddingBottom: theme.spacing(1),
-        paddingLeft: theme.spacing(10),
-        transition: theme.transitions.create('width'),
-        width: '100%',
-        [theme.breakpoints.up('sm')]: {
-          width: 120,
-          '&:focus': {
-            width: 200,
-          },
-        },
+// Cache component with proper theming
+const CacheComponent = ({ reactory, classes }) => {
+  const [cacheSize, setCacheSize] = useState('0.00');
+  const theme = useTheme();
+
+  const clearCache = () => {
+    reactory.clearStoreAndCache();
+  };
+
+  useEffect(() => {
+    localForage.getItem('reactory_apollo_cache').then((data: any) => {
+      if (data) {
+        const bytes = ((new TextEncoder().encode(data)).length / 100000).toPrecision(2);
+        setCacheSize(bytes);
       }
-    }
-  })();
+    });
+  }, []);
 
-  const onShowMenu = () => {
-    setShow(true);
+  return (
+    <ListItem 
+      key="reactory.cache" 
+      onClick={clearCache}       
+      sx={{
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        '&:hover': {
+          backgroundColor: theme.palette.action.hover,
+        },
+        '&:focus': {
+          outline: 'none',
+        },
+      }}
+    >
+      <ListItemIcon>
+        <Icon color="primary">storage</Icon>
+      </ListItemIcon>
+      <ListItemText
+        primary={
+          <span className={classes.versionPrimary}>
+            {reactory.utils.humanNumber(cacheSize)} MB
+          </span>
+        }
+        secondary={
+          <span className={classes.version}>
+            🚮&nbsp; Click to clear your cache
+          </span>
+        }
+      />
+    </ListItem>
+  );
+};
+
+// Development mode toggle component
+const ToggleDevelopComponent = ({ reactory, classes }) => {
+  const theme = useTheme();
+  const [version, setVersion] = useState(0);
+
+  const toggle = () => {
+    reactory.setDevelopmentMode(!reactory.$development_mode);
+    reactory.emit('onReactoryDevelopmentModeChanged', reactory.isDevelopmentMode());
+    setVersion(version + 1);
   };
 
-  const onHideMenu = () => {
-    setShow(false);
-  };
+  if (reactory.hasRole(["DEVELOPER"]) === false) {
+    return null;
+  }
 
+  return (
+    <ListItem 
+      key="reactory.development_mode" 
+      onClick={toggle}       
+      sx={{
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        borderBottom: 'none',
+        '&:hover': {
+          backgroundColor: theme.palette.action.hover,
+        },
+        '&:focus': {
+          outline: 'none',
+        },
+      }}
+    >
+      <ListItemIcon>
+        <Icon color="primary">build</Icon>
+      </ListItemIcon>
+      <ListItemText
+        primary={<span>DEVELOPMENT</span>}
+        secondary={<span>{reactory.$development_mode === true ? '(enabled)' : '(disabled)'}</span>}
+      />
+    </ListItem>
+  );
+};
 
+// Top-right menu component
+const Logged = ({ id, apiStatus, reactory, open, anchorEl }) => {
+  const { menus, loggedIn } = apiStatus;
+  const navigate = useNavigate();
+  const menuItems = [];
+
+  if (menus && menus.length) {
+    menus.forEach((menu) => {
+      if (menu.target === 'top-right') {
+        menu.entries.forEach((menuItem, idx) => {
+          let allow = true;
+          if (isArray(menuItem.roles) && isArray(loggedIn.roles)) {
+            allow = reactory.hasRole(menuItem.roles, loggedIn.roles);
+          }
+          if (allow === true) {
+            const goto = () => navigate(menuItem.link);
+            menuItems.push((
+              <MenuItem key={menuItem.id || `menu_item_${idx}`} onClick={goto}>
+                <ListItemIcon>
+                  <Icon color="primary">{menuItem.icon}</Icon>
+                </ListItemIcon>
+                {menuItem.title}
+              </MenuItem>
+            ));
+          }
+        });
+      }
+    });
+  }
+
+  return (
+    <Menu
+      open={open}
+      id={id}
+      anchorEl={anchorEl}
+      anchorOrigin={{
+        vertical: 'top',
+        horizontal: 'right',
+      }}
+      transformOrigin={{
+        vertical: 'top',
+        horizontal: 'right',
+      }}
+    >
+      {menuItems}
+    </Menu>
+  );
+};
+
+Logged.muiName = 'IconMenu';
+
+// Main header component
+const ApplicationHeader = ({ reactory, theme: propTheme }) => {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  
+  const {
+    SystemStatus,
+    FullScreenModal,
+    Loading,
+    HelpListForm
+  } = reactory.getComponents([
+    'core.SystemStatus',
+    'core.FullScreenModal',
+    'core.Loading',
+    'forms.HelpListForm'
+  ]);
+
+  const {
+    drawerOpen, setDrawerOpen,
+    menuOpen, setMenuOpen,
+    menuAnchor, setMenuAnchor,
+    show, setShow,
+    expanded, setExpanded,
+    version, setVersion,
+    search, setSearch,
+    apiMetrics, setApiStatus
+  } = useMenuState();
+
+  // Event handlers
+  const onShowMenu = () => setShow(true);
+  const onHideMenu = () => setShow(false);
   const onRouteChanged = (routeProps) => {
     reactory.log('ApiPath changed, handle in header app', routeProps);
-    const { actionData, path } = routeProps;
+    const { path } = routeProps;
     navigateTo(path);
-  }
-
-  const onLoginEvent = (evt) => {
-    setVersion(version + 1);
-  }
-
-  const onApiStatusTotalsChanged = (totals: any) => {
-    setApiStatus(totals);
-  }
+  };
+  const onLoginEvent = () => setVersion(version + 1);
+  const onApiStatusTotalsChanged = (totals) => setApiStatus(totals);
 
   const navigateTo = (where = '/', toggleDrawer = false) => {
     const nav = () => {
@@ -370,115 +273,100 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
       } else {
         navigate(where);
       }
-    }
+    };
 
     if (toggleDrawer === true) {
       setDrawerOpen(!drawerOpen);
     }
     nav();
-  }
-
-  const toggleDrawer = () => {
-    setDrawerOpen(!drawerOpen);
   };
 
-  const handleMenu = (evt: SyntheticEvent) => {
-    setMenuAnchor(evt.currentTarget)
+  const toggleDrawer = () => setDrawerOpen(!drawerOpen);
+  const handleMenu = (evt) => {
+    setMenuAnchor(evt.currentTarget);
     setMenuOpen(!menuOpen);
   };
 
-  const loginClicked = (evt) => {
-    navigateTo('/login', false);
-  };
-
-  const signOutClicked = (evt) => {
-    reactory.logout();
-    navigateTo('/', false)
-  };
-
-
-  const statusRefresh = e => {
-    reactory.status().catch(e => {
-      reactory.createNotification('Unable to refresh API status. API may be offline.', { type: 'warning' });
-    });
+  const toggleDarkMode = () => {
+    if (theme.palette.mode === 'dark') {
+      localStorage.setItem("$reactory$theme_mode", 'light');
+    } else {
+      localStorage.setItem("$reactory$theme_mode", 'dark');
+    }
+    reactory.emit('onThemeChanged');
   };
 
   const doSearch = () => {
-    setSearch({ ...search, show: true });
-  }
+    if (search.searchInput && search.searchInput.trim().length > 0) {
+      reactory.emit('onSearch', { query: search.searchInput.trim() });
+    }
+  };
 
-  /**
-   * This is the main render entry point for the help interface.
-   * Accessible to all, use the search input as keyword filter.
-   */
-  const renderHelpInterface = () => {
-    const { show, searchInput } = search;
-    const HelpListForm = reactory.getComponent<React.FC>('forms.HelpListForm@1.0.0');
-    if (show !== true) return null;
-    const closeSearch = e => setSearch({ searchInput: '', show: false })
-    return (
-      <FullScreenModal open={show === true} onClose={closeSearch} title={`Searching For: ${searchInput}`}>
-        <HelpListForm />
-      </FullScreenModal>
-    );
-  }
+  const closeSearch = () => setSearch({ ...search, show: false });
 
-  const Menus = () => {
-    // const { menus = [], target = 'left-nav', user, reactory, self, classes, append, expanded } = props;    
-    let menuItems = [];
-    if (menus && menus.length) {
-      menus.map((menu, menu_id) => {
+  // Menu rendering function
+  const renderMenuItems = () => {
+    const menuItems = [];
+    const apiStatus = reactory.$user;
+    const { server } = apiStatus;
+
+    if (apiStatus?.menus?.length) {
+      apiStatus.menus.forEach((menu) => {
         if (menu.target === 'left-nav') {
-          menu.entries.map((menuItem: any, mid: number) => {
-            let subnav = null;
-            let expandButton = null;
-            let allow = false;
-
-            if (isArray(menuItem.roles) && isArray(apiStatus.loggedIn.roles) === true) {
+          menu.entries.forEach((menuItem, mid) => {
+            let allow = true;
+            if (isArray(menuItem.roles) && isArray(apiStatus.loggedIn.roles)) {
               allow = reactory.hasRole(menuItem.roles, apiStatus.loggedIn.roles);
             }
 
             if (allow === true) {
-              const goto = () => {
-                navigateTo(menuItem.link, true);
-              };
+              const goto = () => navigateTo(menuItem.link, true);
+              let expandButton = null;
+              let subnav = null;
 
-              if (isArray(menuItem.items) === true && menuItem.items.length > 0) {
+              if (menuItem.items && menuItem.items.length > 0) {
                 const isExpanded = expanded[menuItem.id] && expanded[menuItem.id].value === true;
+                
                 subnav = (
-                  <Collapse in={isExpanded === true} timeout="auto" unmountOnExit key={`${menuItem.id || mid}-collapse`} >
+                  <Collapse in={isExpanded} timeout="auto" unmountOnExit key={`${menuItem.id || mid}-collapse`}>
                     <List component="div" disablePadding>
-                      {
-                        menuItem.items.map((menu, index) => {
-                          const goto = () => navigate(menu.link);
-                          const sub_item = (
-                            <ListItem key={menu.id || index} onClick={goto} style={{ cursor: 'pointer', paddingLeft: theme.spacing(4) }}>
-                              <ListItemIcon>
-                                {
-                                  menu.icon ?
-                                    (<Icon color="primary">{menu.icon}</Icon>)
-                                    : null
-                                }
-                              </ListItemIcon>
-                              {menu.title}
-                            </ListItem>);
+                      {menuItem.items.map((menu, index) => {
+                        const goto = () => navigateTo(menu.link);
+                        const sub_item = (
+                          <ListItem 
+                            key={menu.id || index} 
+                            onClick={goto}
+                            sx={{
+                              backgroundColor: theme.palette.background.default,
+                              color: theme.palette.text.primary,
+                              paddingLeft: theme.spacing(4),
+                              '&:hover': {
+                                backgroundColor: theme.palette.action.hover,
+                              },
+                            }}
+                          >
+                            <ListItemIcon>
+                              {menu.icon && <Icon color="primary">{menu.icon}</Icon>}
+                            </ListItemIcon>
+                            <ListItemText primary={menu.title} />
+                          </ListItem>
+                        );
 
-                          if (!menu.roles || menu.roles.length === 0) return sub_item;
-
-                          if (isArray(menu.roles) && isArray(apiStatus.loggedIn.roles) === true) {
-                            if (reactory.hasRole(menu.roles, apiStatus.loggedIn.roles) === true)
-                              return sub_item;
+                        if (!menu.roles || menu.roles.length === 0) return sub_item;
+                        if (isArray(menu.roles) && isArray(apiStatus.loggedIn.roles)) {
+                          if (reactory.hasRole(menu.roles, apiStatus.loggedIn.roles)) {
+                            return sub_item;
                           }
-                        })
-                      }
+                        }
+                        return null;
+                      })}
                     </List>
                   </Collapse>
                 );
 
-                const toggleMenu = (e) => {
+                const toggleMenu = () => {
                   let currentToggle = expanded[menuItem.id];
                   if (!currentToggle) currentToggle = { value: false };
-
                   currentToggle.value = !currentToggle.value;
                   const $expanded = { ...expanded };
                   $expanded[menuItem.id] = currentToggle;
@@ -486,22 +374,39 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
                 };
 
                 expandButton = (
-                  <IconButton key={`${menuItem.id}`} onClick={toggleMenu} size="large">
-                    <Icon>{isExpanded === true ? 'keyboard_arrow_down' : 'keyboard_arrow_right'}</Icon>
+                  <IconButton key={menuItem.id} onClick={toggleMenu} size="large">
+                    <Icon>{isExpanded ? 'keyboard_arrow_down' : 'keyboard_arrow_right'}</Icon>
                   </IconButton>
-                )
+                );
               }
 
               menuItems.push(
-                <ListItem key={menuItem.id || mid} onClick={goto} button>
+                <ListItem 
+                  key={menuItem.id || mid} 
+                  onClick={goto}                   
+                  sx={{
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                    borderBottom: `1px solid ${theme.palette.divider}`,
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.hover,
+                    },
+                    '&:focus': {
+                      outline: 'none',
+                    },
+                  }}
+                >
                   <ListItemIcon>
                     <Icon color="primary">{menuItem.icon}</Icon>
                   </ListItemIcon>
-                  {menuItem.title}
-                  {expandButton ? <ListItemSecondaryAction>
-                    {expandButton}
-                  </ListItemSecondaryAction> : null}
-                </ListItem>);
+                  <ListItemText primary={menuItem.title} />
+                  {expandButton && (
+                    <ListItemSecondaryAction>
+                      {expandButton}
+                    </ListItemSecondaryAction>
+                  )}
+                </ListItem>
+              );
 
               if (subnav) {
                 menuItems.push(subnav);
@@ -512,34 +417,48 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
       });
     }
 
-    //if (append) menuItems.push(append);
-    menuItems.push(<ListItem key={'reactory.status'} onClick={statusRefresh} >
-      <ListItemIcon>
-        <Tooltip title={`Api Available @ ${moment(reactory.getUser().when).format('HH:mm:ss')} click to refresh`}>
-          <Icon color="primary">rss_feed</Icon>
-        </Tooltip>
-      </ListItemIcon>
-      <ListItemText
-        //@ts-ignore
-        primary={<span className={classes.versionPrimary}>Client ver: {reactory.props.$version}</span>}
-        secondary={<span className={classes.version}>📡&nbsp;{server && server.id ? server.id : 'development'} ver: {server && server.version ? server.version : 'waiting'} </span>}
-      />
-    </ListItem>);
+    // Status item
+    menuItems.push(
+      <ListItem 
+        key="reactory.status" 
+        onClick={() => setVersion(version + 1)}
+        sx={{
+          backgroundColor: theme.palette.background.paper,
+          color: theme.palette.text.primary,          
+          '&:hover': {
+            backgroundColor: theme.palette.action.hover,
+          },
+        }}
+      >
+        <ListItemIcon>
+          <Tooltip title={`Api Available @ ${moment(reactory.getUser().when).format('HH:mm:ss')} click to refresh`}>
+            <Icon color="primary">rss_feed</Icon>
+          </Tooltip>
+        </ListItemIcon>
+        <ListItemText
+          primary={<span className={classes.versionPrimary}>Client ver: {reactory.props.$version}</span>}
+          secondary={
+            <span className={classes.version}>
+              📡&nbsp;{server && server.id ? server.id : 'development'} ver: {server && server.version ? server.version : 'waiting'}
+            </span>
+          }
+        />
+      </ListItem>
+    );
 
-    menuItems.push(<CacheComponent classes={classes} />);
-    menuItems.push(<ToggleDevelopComponent classes={classes} />);
+    // Cache and development components
+    menuItems.push(<CacheComponent key="cache" reactory={reactory} classes={{}} />);
+    menuItems.push(<ToggleDevelopComponent key="dev" reactory={reactory} classes={{}} />);
 
-    return (<>{menuItems.map((menu) => menu)}</>);
+    return menuItems;
   };
 
-
-
-
-  React.useEffect(() => {
+  // Effects
+  useEffect(() => {
     reactory.on(ReactoryApiEventNames.onHideMenu, onHideMenu);
     reactory.on(ReactoryApiEventNames.onShowMenu, onShowMenu);
     reactory.on(ReactoryApiEventNames.onLogin, onLoginEvent);
-    reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged)
+    reactory.on(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
     reactory.on('onApiStatusTotalsChange', onApiStatusTotalsChanged);
 
     return () => {
@@ -547,107 +466,168 @@ const ApplicationHeader = (props: {reactory: ReactoryApi, theme: any}) => {
       reactory.removeListener(ReactoryApiEventNames.onShowMenu, onShowMenu);
       reactory.removeListener(ReactoryApiEventNames.onLogin, onLoginEvent);
       reactory.removeListener(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
-    }
+    };
   }, []);
 
-  const apiStatus: Reactory.Models.IApiStatus = reactory.$user as Reactory.Models.IApiStatus;
-  const menus = reactory.getMenus();
-
-  const setSearchText = e => setSearch({ ...search, searchInput: e.target.value });
-  const onSearchTextKeyPress = e => {
-    if (e.charCode === 13) {
-      doSearch();
-    }
+  // Render functions
+  const renderHelpInterface = () => {
+    if (search.show === false) return null;
+    
+    return (
+      <FullScreenModal open={search.show} onClose={closeSearch} title={`Searching For: ${search.searchInput}`}>
+        <HelpListForm />
+      </FullScreenModal>
+    );
   };
 
-  const toggleDarkMode = () => {
-    if (theme.palette.mode === 'dark') {
-      localStorage.setItem("$reactory$theme_mode", 'light');
-    } else {
-      localStorage.setItem("$reactory$theme_mode", 'dark');
-    }
+  const renderSearchInterface = () => {
+    if (search.show === false) return null;
+    
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', width: 400 }}>
+        <InputBase
+          placeholder="Search..."
+          value={search.searchInput}
+          onChange={(e) => setSearch({ ...search, searchInput: e.target.value })}
+          onKeyPress={(e) => e.charCode === 13 && doSearch()}
+          sx={{ flex: 1, color: 'inherit' }}
+        />
+        <IconButton onClick={doSearch} size="large">
+          <Icon>search</Icon>
+        </IconButton>
+      </Box>
+    );
+  };
 
-    reactory.emit('onThemeChanged');
-  }
-
-  const getNavigationComponents = () => {
-    if (apiStatus) {
-      return apiStatus.navigationComponents || [];
-    }
-    return [];
-  }
-
-  
-  const { server } = reactory.$user;
+  const apiStatus = reactory.$user;
+  const { server } = apiStatus;
   const { isSlow, total } = apiMetrics;
-  const menuItems = Menus();
-
-  let title = reactory.i18n.t(apiStatus.applicationName)
+  const menuItems = renderMenuItems();
+  const title = reactory.i18n.t(apiStatus.applicationName);
 
   return (
-    <Fragment>
+    <Box sx={{ width: '100%' }}>
       <AppBar 
         position="sticky" 
         color="inherit" 
         id="reactory_default_app_bar" 
-        style={{ visibility: show === true ? 'visible' : 'collapse' }}>
+        sx={{ visibility: show ? 'visible' : 'collapse' }}
+      >
         <Toolbar variant="dense">
           <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer} size="large">
             <MenuIcon />
           </IconButton>
-          <Typography variant="body2" color="inherit" style={{ flex: 1 }}>
-            <span>{ title }</span>
-            {apiMetrics.api_ok === false && <span style={{ color: theme.palette.error.main }}> - OFFLINE</span>}
-            {isSlow === true && total > 2 && <span style={{ color: theme.palette.warning.main }}><Icon>sensors</Icon></span>}
+          
+          <Typography variant="body2" color="inherit" sx={{ flex: 1 }}>
+            <span>{title}</span>
+            {apiMetrics.api_ok === false && (
+              <span style={{ color: theme.palette.error.main }}> - OFFLINE</span>
+            )}
+            {isSlow === true && total > 2 && (
+              <span style={{ color: theme.palette.warning.main }}>
+                <Icon>sensors</Icon>
+              </span>
+            )}
           </Typography>
 
-          <>
-            <IconButton onClick={toggleDarkMode} size="large">
-              <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
-            </IconButton>
-            <Typography variant="caption">
-              {reactory.hasRole(['ANON']) ? 'LOGIN' : 'LOGOUT'}
-            </Typography>
-            <IconButton
-              aria-owns={menuOpen ? 'top-right' : null}
-              aria-haspopup="true"
-              onClick={handleMenu}
-              style={{ 
-                color: reactory.hasRole(['ANON']) ? "inherit" : reactory && reactory.muiTheme ? reactory.muiTheme.palette.success.main : "inherit"
-              }}
-              size="large">
-              <PowerSettingIcon />
-              <Logged open={menuOpen === true}
-                id={'top-right'}
-                anchorEl={menuAnchor}                
-                reactory={reactory}
-                apiStatus={apiStatus}
-                />
-            </IconButton>
-          </>
+          {renderSearchInterface()}
+
+          <IconButton onClick={toggleDarkMode} size="large">
+            <Icon>{theme.palette.mode === 'dark' ? 'dark_mode' : 'light_mode'}</Icon>
+          </IconButton>
+          
+          <Typography variant="caption">
+            {reactory.hasRole(['ANON']) ? 'LOGIN' : 'LOGOUT'}
+          </Typography>
+          
+          <IconButton
+            aria-owns={menuOpen ? 'top-right' : null}
+            aria-haspopup="true"
+            onClick={handleMenu}
+            sx={{ 
+              color: reactory.hasRole(['ANON']) ? "inherit" : 
+                (reactory && reactory.muiTheme ? reactory.muiTheme.palette.success.main : "inherit")
+            }}
+            size="large"
+          >
+            <PowerSettingIcon />
+            <Logged 
+              open={menuOpen} 
+              id="top-right" 
+              anchorEl={menuAnchor}                
+              reactory={reactory} 
+              apiStatus={apiStatus} 
+            />
+          </IconButton>
         </Toolbar>
       </AppBar>
-      <Drawer variant={'temporary'} open={drawerOpen === true} className={classes.drawer} PaperProps={{ style: { width: '320px', maxWidth: '320px', overflowX: 'hidden' } }}>
-        <div className={classes.drawerHeader}>
+
+      <Drawer 
+        variant="temporary" 
+        open={drawerOpen} 
+        onClose={toggleDrawer}
+        anchor="left"
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: 320,
+            maxWidth: 320,
+            overflowX: 'hidden',
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+          },
+        }}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          minWidth: 260, 
+          padding: theme.spacing(0, 1),
+          backgroundColor: theme.palette.background.default,
+          color: theme.palette.text.primary,
+        }}>
           <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer} size="large">
             <BackIcon />
           </IconButton>
           <ReactoryAvatar />
-        </div>        
+        </Box>
+        
         <Divider />
-        <List className={classes.menuItems}>
+        
+        <List sx={{ 
+          paddingTop: 0,
+          paddingBottom: 0,
+          backgroundColor: theme.palette.background.paper,
+          '& .MuiListItem-root': {
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            '&:hover': {
+              backgroundColor: theme.palette.action.hover,
+            },
+            '&:focus': {
+              outline: 'none',
+            },
+          },
+          // Version text styling
+          '& .version-primary': {
+            fontSize: theme.typography.body2.fontSize,
+            fontWeight: theme.typography.body2.fontWeight,
+          },
+          '& .version': {
+            fontSize: theme.typography.caption.fontSize,
+            color: theme.palette.text.secondary,
+          },
+        }}>
           {menuItems}
         </List>
       </Drawer>
+      
       {renderHelpInterface()}
-    </Fragment>
+    </Box>
   );
 };
 
-const ApplicationHeaderComponent = compose(  
-  withReactory,
-  withTheme
-)(ApplicationHeader);
+const ApplicationHeaderComponent = compose(withReactory)(ApplicationHeader);
 
 export default ApplicationHeaderComponent;
 

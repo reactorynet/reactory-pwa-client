@@ -1,4 +1,5 @@
 import React, {  } from 'react'
+import { styled } from '@mui/material/styles';
 import { isNil, isEmpty } from 'lodash'
 import objectMapper from 'object-mapper'
 import {
@@ -11,23 +12,33 @@ import {
 } from '@mui/material';
 
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import ReactoryApi from '@reactory/client-core/api/ReactoryApi';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/reactory-core';
 
-const styles = (theme: any): any => ({
-  root: {
+const PREFIX = 'SelectWithDataWidgetComponent';
+
+const classes = {
+  root: `${PREFIX}-root`,
+  formControl: `${PREFIX}-formControl`,
+  selectEmpty: `${PREFIX}-selectEmpty`
+};
+
+const Root = styled('div')(({ theme }) => ({
+  [`& .${classes.root}`]: {
     display: 'flex',
     flexWrap: 'wrap',
   },
-  formControl: {
+
+  [`& .${classes.formControl}`]: {
     minWidth: 120,
   },
-  selectEmpty: {
+
+  [`& .${classes.selectEmpty}`]: {
     marginTop: theme.spacing(2),
-  },
-});
+  }
+}));
 
 interface SelectWithDataOptions {
   query: string;
@@ -62,13 +73,13 @@ interface SelectWithDataProperties {
 }
 
 const SelectWithDataWidget = (props: SelectWithDataProperties) => {
-
+  const theme = useTheme();
 
   const defaultProps = {
     readOnly: false
   }
 
-  const { classes, formContext, formData, required, reactory, theme, schema, idSchema, uiSchema, onChange } = props;
+  const {  formContext, formData, required, reactory, schema, idSchema, uiSchema, onChange } = props;
   const [error, setError] = React.useState(null);
   const [menuItems, setMenuItems] = React.useState<any[]>([{
     id: 'loading',
@@ -85,9 +96,10 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
   const [version, setVersion] = React.useState(0);
 
   try {
-    let variant: string | "standard" | "oulined" | "filled" = 'standard'
-    if (theme.MaterialInput) {
-      variant = theme.MaterialInput.variant || variant;
+    let variant: string | "standard" | "outlined" | "filled" = 'standard'
+    if (theme.components?.MuiInput) {
+      // TODO fix the variant type
+      //variant = (theme.components.MuiInput.variants[0]?.props as 'standard' | 'outlined' | 'filled') || variant;
     }
 
     let InputComponent = Input;
@@ -328,8 +340,8 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
     }
   } catch (renderError) {
     // Do NOT call setError here, just render a fallback UI
-    return <div style={{ color: 'red' }}>Error rendering select: {String(renderError)}</div>;
+    return <Root style={{ color: 'red' }}>Error rendering select: {String(renderError)}</Root>;
   }
 }
-const SelectWithDataWidgetComponent = compose(withReactory, withTheme, withStyles(styles))(SelectWithDataWidget)
+const SelectWithDataWidgetComponent = compose(withReactory)(SelectWithDataWidget)
 export default SelectWithDataWidgetComponent

@@ -1,50 +1,40 @@
-import React, { Fragment, Component } from 'react';
+import React, { Fragment, useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types'
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
+import { styled, useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
+const PREFIX = 'UserWidgetWithSearch';
 
-class UserWidgetWithSearch extends Component<any, any> {
+const classes = {
+  root: `${PREFIX}-root`,
+  formControl: `${PREFIX}-formControl`,
+  selectEmpty: `${PREFIX}-selectEmpty`,
+};
+
+const Root = styled('div')(({ theme }) => ({
+  [`& .${classes.root}`]: {
+    display: 'flex',
+    flexWrap: 'wrap',
+  },
+  [`& .${classes.formControl}`]: {
+    minWidth: 120,
+  },
+  [`& .${classes.selectEmpty}`]: {
+    marginTop: theme.spacing(2),
+  },
+}));
+
+const UserWidgetWithSearch = (props: any) => {
+  const theme = useTheme();
+  const [modal, setModal] = useState(false);
+  const [user, setUser] = useState(null);
+  const [showNewUser, setShowNewUser] = useState(false);
   
-  static styles = (theme):any => ({
-    root: {
-      display: 'flex',
-      flexWrap: 'wrap',
-    },
-    formControl: {
-      minWidth: 120,
-    },
-    selectEmpty: {
-      marginTop: theme.spacing(2),
-    },
-  });
+  const componentDefs = useRef(null);
 
-  static propTypes = {
-    formData: PropTypes.string,
-    onChange: PropTypes.func,
-    onSubmit: PropTypes.func,
-    readOnly: PropTypes.bool,
-    schema: PropTypes.object,
-    uiSchema: PropTypes.object
-  }
-
-  static defaultProps = {
-    formData: null,
-    readOnly: false
-  }
-
-  componentDefs: any
-
-  constructor(props){
-    super(props)
-    this.state = {
-      modal: false,
-      user: null,
-      showNewUser: false,
-    };
-    this.getModal = this.getModal.bind(this);
-    this.componentDefs = props.api.getComponents([
+  useEffect(() => {
+    componentDefs.current = props.api.getComponents([
       'core.Logo',
       'core.UserWithQuery',
       'core.FullScreenModal',
@@ -53,29 +43,25 @@ class UserWidgetWithSearch extends Component<any, any> {
       'core.UserListWithSearch',
       'core.CreateProfile', 
       'towerstone.SurveyDelegateWidget'
-    ])
-  }
+    ]);
+  }, [props.api]);
 
-  getModal(){
-    const that = this;
-    const { FullScreenModal, UserListWithSearch, BasicDialog, CreateProfile } = this.componentDefs;
-    const { showNewUser } = this.state;
-    const { formContext, formData, onChange, uiSchema } = this.props;
+  const getModal = () => {
+    const { FullScreenModal, UserListWithSearch, BasicDialog, CreateProfile } = componentDefs.current;
+    const { formContext, formData, onChange, uiSchema } = props;
 
     const closeModal = () => { 
-      this.setState({modal: false});
-      this.forceUpdate();
+      setModal(false);
     }    
 
     const userSelected = (user) => {
-      this.setState({ user }, ()=>{
-        onChange(user.id)
-        closeModal()
-      })
+      setUser(user);
+      onChange(user.id);
+      closeModal();
     };
 
     const newUserClicked = () => {
-      that.setState({ showNewUser: true });
+      setShowNewUser(true);
     };
 
     let newUserModal = null;
@@ -104,36 +90,34 @@ class UserWidgetWithSearch extends Component<any, any> {
     }
 
     return (
-      <FullScreenModal open={this.state.modal === true} onClose={closeModal} title="Employees">
+      <FullScreenModal open={modal === true} onClose={closeModal} title="Employees">
         <UserListWithSearch { ...userlistProps } />
       </FullScreenModal>
     )
   }
 
-  render(){
-    //console.log('rendering User Widget with search');
-    const self = this
-    const { UserWithQuery } = this.componentDefs;
-    const { formData } = this.props;
+  //console.log('rendering User Widget with search');
+  const { UserWithQuery } = componentDefs.current || {};
+  const { formData } = props;
 
-    const showModal = () => {      
-      self.setState({ modal: !self.state.modal })
-    }
-    let userId = formData
-    if(typeof formData === "object" && formData.id) userId = formData.id;
-
-    const modal = this.getModal();    
-    return (
-      <Fragment> 
-        {modal}
-        <UserWithQuery userId={userId} onClick={showModal} />        
-      </Fragment>
-    )     
+  const showModal = () => {      
+    setModal(!modal);
   }
+  
+  let userId = formData
+  if(typeof formData === "object" && formData.id) userId = formData.id;
+
+  const modalComponent = getModal();    
+  
+  return (
+    <Root> 
+      {modalComponent}
+      <UserWithQuery userId={userId} onClick={showModal} />        
+    </Root>     
+  )
 }
+
 const UserWidgetWithSearchComponent = compose(
-  withReactory,
-  withTheme,
-  withStyles(UserWidgetWithSearch.styles)
-  )(UserWidgetWithSearch)
+  withReactory
+)(UserWidgetWithSearch)
 export default UserWidgetWithSearchComponent

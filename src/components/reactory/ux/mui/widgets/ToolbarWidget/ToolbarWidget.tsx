@@ -1,5 +1,4 @@
-import React, { Component, Fragment } from 'react';
-import PropTypes from 'prop-types';
+import React, { Fragment } from 'react';
 import { compose } from 'redux';
 import { throttle } from 'lodash';
 import {  
@@ -8,7 +7,9 @@ import {
   IconButton,
   Icon,
 } from '@mui/material';
-import { withStyles, withTheme } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 interface IToolbarWidgetProps {
@@ -23,35 +24,10 @@ interface IToolbarWidgetState {
   formContext: any;
 }
 
-class ToolbarWidget extends Component<IToolbarWidgetProps, IToolbarWidgetState> {
-
-  constructor(props) {
-    super(props);
-    this.state = {
-      formData: props.formData,
-      formContext: props.formContext,
-    }
-  }
-
-  static styles = theme => ({
-    root: {
-      width: '85%',
-    },
-    slider: {
-      padding: '22px 0px',
-      margin: 'auto'
-    },    
-  });
-
-  static propTypes = {
-    uiSchema: PropTypes.object,
-    reactory: PropTypes.object,
-    formData: PropTypes.object,
-    formContext: PropTypes.object,
-  }
-     
-  render() {
-    const { uiSchema, reactory, formData, formContext } = this.props;
+const ToolbarWidget = (props: IToolbarWidgetProps) => {
+  const theme = useTheme();
+  
+  const { uiSchema, reactory, formData, formContext } = props;
     let options = { commands: [] };
     if(uiSchema['ui:options']) options = {...options, ...uiSchema['ui:options']}
     const buttons = options.commands.map((command) => {
@@ -74,8 +50,6 @@ class ToolbarWidget extends Component<IToolbarWidgetProps, IToolbarWidgetState> 
         {buttons}    
       </Toolbar>
     );
-  }
-}
+};
 
-export const ToolbarWidgetComponent = compose(withReactory, withStyles(ToolbarWidget.styles), withTheme)(ToolbarWidget);
-export default ToolbarWidgetComponent;
+export default ToolbarWidget;

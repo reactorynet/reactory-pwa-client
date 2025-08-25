@@ -1,10 +1,58 @@
-import React, { Component, Fragment, useState } from 'react';
-import { Button, Typography, Icon, Tooltip, Box } from '@mui/material';
+import React, { Fragment, useState } from 'react';
+import { styled } from '@mui/material/styles';
+import { Button, Typography, Icon, Tooltip, Box, Theme } from '@mui/material';
 import { compose } from 'redux';
-import { withTheme, withStyles } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { template, isNil } from 'lodash';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/reactory-core';
+
+interface ExtendedTheme extends Theme {
+  extensions?: {
+    [key: string]: {
+      icons: {
+        [key: string]: React.ComponentType<any>;
+      };
+    };
+  };
+}
+
+const PREFIX = 'LabelFieldComponent';
+
+const classes = {
+  labelText: `${PREFIX}-labelText`,
+  copyIcon: `${PREFIX}-copyIcon`,
+  inlineDiv: `${PREFIX}-inlineDiv`,
+  labelContainer: `${PREFIX}-labelContainer`
+};
+
+const StyledBox = styled(Box)((
+  {
+    theme
+  }
+): any => {
+  return {
+    [`& .${classes.labelText}`]: {
+      marginLeft: theme.spacing(1),
+      wordBreak: 'normal'
+    },
+    [`& .${classes.copyIcon}`]: {
+      marginLeft: '10px',
+      fontSize: '1rem'
+    },
+    [`& .${classes.inlineDiv}`]: {
+      display: 'flex',
+      alignItems: 'center',
+      '& span': {}
+    },
+    // Add styling to ensure label is always rendered properly
+    [`& .${classes.labelContainer}`]: {
+      '& .MuiInputLabel-shrink': {
+        transform: 'translate(0, 1.5px) scale(0.75)',
+      }
+    }
+  };
+});
 
 function formatMoney(amount, decimalCount = 2, decimal = ".", thousands = ",") {
   try {
@@ -22,42 +70,19 @@ function formatMoney(amount, decimalCount = 2, decimal = ".", thousands = ",") {
   }
 }
 
-const LabelWidgetStyle = (theme): any => {
-  return {
-    labelText: {
-      marginLeft: theme.spacing(1),
-      wordBreak: 'normal'
-    },
-    copyIcon: {
-      marginLeft: '10px',
-      fontSize: '1rem'
-    },
-    inlineDiv: {
-      display: 'flex',
-      alignItems: 'center',
-      '& span': {}
-    },
-    // Add styling to ensure label is always rendered properly
-    labelContainer: {
-      '& .MuiInputLabel-shrink': {
-        transform: 'translate(0, 1.5px) scale(0.75)',
-      }
-    }
-  }
-}
-
 interface LabelWidgetProperties {
   [key: string]: any,
   value?: any,
   formData?: any,
   uiSchema?: Partial<Reactory.Schema.IUILabelWidgetOptions>,
   schema?: any,
-};
+}
 
 
 const LabelWidget = (props: LabelWidgetProperties) => {
+  const theme = useTheme() as ExtendedTheme;
 
-  const { classes, reactory, formData, value, uiSchema, idSchema, formContext } = props;
+  const {  reactory, formData, value, uiSchema, idSchema, formContext } = props;
 
   const getOptions = (): Partial<Reactory.Schema.IUILabelWidgetOptions> => {
     if (props.uiSchema && props.uiSchema["ui:options"]) return props.uiSchema["ui:options"] as Partial<Reactory.Schema.IUILabelWidgetOptions>;
@@ -138,7 +163,6 @@ const LabelWidget = (props: LabelWidgetProperties) => {
   let labelIcon = null;
   let _iconPosition = 'right';
   let _variant: any = 'h6';
-  let theme = props.theme;
   let labelContainerStyles: any = {
     display: 'flex',
     justifyContent: 'flex-start',
@@ -396,7 +420,7 @@ const LabelWidget = (props: LabelWidgetProperties) => {
 
 
   return (
-    <Box {...labelContainerProps} className={`${classes.labelContainer} reactory-label-widget-container`}>
+    <StyledBox {...labelContainerProps} className={`${classes.labelContainer} reactory-label-widget-container`}>
       {_iconPosition === 'left' ? labelIcon : null}
       <Box sx={{padding: 2}} {...labelBodyProps} data-has-value={labelText !== null && labelText !== undefined && labelText !== ''}>        
         {LabelBody}
@@ -407,12 +431,12 @@ const LabelWidget = (props: LabelWidgetProperties) => {
           <Icon color="primary" onClick={copy} className={classes.copyIcon}>assignment</Icon>
         </Tooltip>
       }
-    </Box>
-  )
+    </StyledBox>
+  );
 };
 
 
-const LabelFieldComponent: any = compose(withReactory, withTheme, withStyles(LabelWidgetStyle))(LabelWidget)
+const LabelFieldComponent: any = compose(withReactory)(LabelWidget)
 
 LabelFieldComponent.meta = {
   nameSpace: "core",

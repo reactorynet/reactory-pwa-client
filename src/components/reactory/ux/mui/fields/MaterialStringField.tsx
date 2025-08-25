@@ -23,10 +23,12 @@ import {
   TextFieldProps,
 } from '@mui/material';
 
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 
 
 const MaterialStringFieldWidget = (props) => {
+  const theme = useTheme();
+  
   const {
     id,
     autofocus,

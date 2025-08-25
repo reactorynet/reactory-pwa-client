@@ -5,6 +5,7 @@ import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { SxProps, Theme } from '@mui/material';
+import moment from 'moment';
 
 // TypeScript interfaces for better type safety
 interface DateWidgetProps {
@@ -45,26 +46,15 @@ export function DateWidget({
   const maxDate = uiOptions.maxDate;
   const disabledDates = uiOptions.disabledDates || [];
 
-  return (
-    <LocalizationProvider dateAdapter={AdapterMoment}>      
+  return (        
       <DatePicker
         label={label}
-        value={formData}
+        value={formData ? moment(formData) : null}
         onChange={(newValue) => {
-          onChange(newValue);
-        }}
-        // Use new slotProps pattern for MUI X v6 (backward compatible)
-        slotProps={{
-          leftArrowIcon: {},
-          rightArrowIcon: {},
-          textField: {
-            variant: uiOptions.variant || 'outlined',
-            size: uiOptions.size || 'medium',
-            fullWidth: uiOptions.fullWidth !== false,
-            placeholder: placeholder,
-            sx: sx,
-          }
-        }}
+          // the value will be a moment object, so we need to convert it to a string
+          const dateStr = newValue.format('YYYY-MM-DD');
+          onChange(dateStr);
+        }}        
         // Additional date picker options
         format={dateFormat}
         // Add validation constraints if provided
@@ -78,8 +68,7 @@ export function DateWidget({
             return disabledDates.includes(dateStr);
           }
         })}
-        {...props}
-      />
-    </LocalizationProvider>
+        sx={sx}
+      />    
   );
 }

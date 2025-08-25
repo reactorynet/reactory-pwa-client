@@ -4,7 +4,7 @@ import {
   Typography,
 } from '@mui/material';
 import { compose } from 'redux';
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { withContentRect } from 'react-measure';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import {
@@ -78,6 +78,7 @@ const CustomTooltip = ({ active, payload, label, reactory }: any) => {
 };
 
 const BarChartWidget: React.FC<BarChartWidgetProps> = ({ formData, schema, uiSchema, api: reactory }) => {
+  const theme = useTheme();
   const defaultOptions = getDefaultOptionsFromSchema(schema, uiSchema);
   const options = { ...defaultOptions, ...(formData?.options ?? {}) };
   const data = (formData?.data && Array.isArray(formData.data) && formData.data.length > 0)
@@ -113,7 +114,6 @@ const BarChartWidget: React.FC<BarChartWidgetProps> = ({ formData, schema, uiSch
 };
 
 export default compose(
-  withTheme,
   withReactory,
   withContentRect('bounds')
 )(BarChartWidget);

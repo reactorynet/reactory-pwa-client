@@ -1,5 +1,4 @@
-import React, { Component } from 'react';
-import PropTypes, { any } from 'prop-types';
+import React from 'react';
 import { compose } from 'redux';
 import {
   Typography,
@@ -7,14 +6,17 @@ import {
   Paper,
   Theme
 } from '@mui/material';
-import { withTheme, withStyles } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import coreStyles from '@reactory/client-core/components/shared/styles';
 import { CenteredContainer } from '@reactory/client-core/components/shared/Layout';
 import Logo from '@reactory/client-core/components/shared/logo'
 
-class Loading extends Component<any, any> {
-
-  static styles = (theme: Theme): any => { 
+const Loading = (props: any) => {
+  const theme = useTheme();
+  const { icon, message, spinIcon, nologo, children } = props;
+  
+  const styles = (theme: Theme): any => { 
     const core = coreStyles(theme);
     return {
       ...core,
@@ -33,40 +35,18 @@ class Loading extends Component<any, any> {
     };
   };
 
-  render(){
-    const { classes, icon, message, spinIcon, nologo } = this.props;
-    return ( 
-        <CenteredContainer>          
-          <Paper className={`${classes.root600} ${classes.paper} ${nologo === true ? classes.nologo : ''}`}>
-            { nologo === true ? null : <Logo /> }
-            <Typography variant={'h6'}>{message} &nbsp;<Icon className={spinIcon === true ? classes.spinning: ''}>{icon}</Icon></Typography>
-            {this.props.children}
-          </Paper>
-        </CenteredContainer>
-      );
-  }
-
-  static propTypes = {
-    message: PropTypes.string,
-    classes: PropTypes.object,
-    icon: PropTypes.string,
-    spinIcon: PropTypes.bool,
-    nologo: PropTypes.bool
-  }
+  const classes = styles(theme);
   
-  static defaultProps = {
-    message: "Loading please stand by...",
-    icon: 'cached',
-    spinIcon: true,
-    nologo: false
-  }
+  return ( 
+      <CenteredContainer>          
+        <Paper className={`${classes.root600} ${classes.paper} ${nologo === true ? classes.nologo : ''}`}>
+          { nologo === true ? null : <Logo /> }
+          <Typography variant={'h6'}>{message} &nbsp;<Icon className={spinIcon === true ? classes.spinning: ''}>{icon}</Icon></Typography>
+          {children}
+        </Paper>
+      </CenteredContainer>
+    );
+};
 
-}
 
-
-const ThemedLoading = compose(
-  withTheme,
-  withStyles(Loading.styles)
-)(Loading)
-
-export default ThemedLoading;
+export default Loading;

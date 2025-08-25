@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Route, Routes, useParams, useNavigate, useMatch } from 'react-router-dom';
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { compose } from 'redux';
 import { useReactory, withReactory } from '../../api/ApiProvider';
 
@@ -29,9 +29,8 @@ const RouteBoundForm = () => {
   return <ReactoryForm {...fprops} />
 }
 
-
 const ReactoryFormRouter = (props) => {
-
+  const theme = useTheme();
   const reactory = useReactory();
 
   const { routePrefix } = props;
@@ -50,7 +49,6 @@ const ReactoryFormRouter = (props) => {
 
   reactory.log('ReactoryFormRouter:render',  props);
 
-  
   const user = reactory.getUser();
  
   const $formDef = {
@@ -69,7 +67,7 @@ const ReactoryFormRouter = (props) => {
 };
 
 export const ReactoryFormRouterComponent = compose(
-  withReactory,
-  withTheme)(ReactoryFormRouter);
+  withReactory
+)(ReactoryFormRouter);
 
 export default ReactoryFormRouterComponent;

@@ -1,4 +1,4 @@
-import React, { Fragment, Component } from 'react'
+import React, { Fragment, useState } from 'react'
 import PropTypes from 'prop-types'
 import { pullAt, forEach, isArray, intersection } from 'lodash'
 import {
@@ -15,64 +15,45 @@ import {
   StepLabel
 } from '@mui/material';
 
-
+import { styled, useTheme } from '@mui/material/styles';
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
 
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import ReactoryApi from "@reactory/client-core/api/ReactoryApi";
 import _ from 'lodash';
 
-class StepperWidget extends Component<any, any> {
-  
-  static styles = (theme):any => ({
-    root: {
-      display: 'flex',
-      justifyContent: 'center',
-      flexWrap: 'wrap',
-    },
-    chip: {
-      margin: theme.spacing(1),
-    },
-    newChipInput: {
-      margin: theme.spacing(1)
-    }
-  });
+const PREFIX = 'StepperWidget';
 
-  static propTypes = {
-    api: PropTypes.instanceOf(ReactoryApi),
-    formData: PropTypes.number,
-    onChange: PropTypes.func,
-    onSubmit: PropTypes.func,
-    readOnly: PropTypes.bool,
-    schema: PropTypes.object,
-    uiSchema: PropTypes.object
+const classes = {
+  root: `${PREFIX}-root`,
+  chip: `${PREFIX}-chip`,
+  newChipInput: `${PREFIX}-newChipInput`,
+};
+
+const Root = styled('div')(({ theme }) => ({
+  [`& .${classes.root}`]: {
+    display: 'flex',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  [`& .${classes.chip}`]: {
+    margin: theme.spacing(1),
+  },
+  [`& .${classes.newChipInput}`]: {
+    margin: theme.spacing(1)
   }
+}));
 
-  static defaultProps = {
-    formData: 0,
-    readOnly: false
-  }
+const StepperWidget = (props: any) => {
+  const theme = useTheme();
+  const [activeStep, setActiveStep] = useState(props.formData || 0);
 
-  constructor(props){
-    super(props)
-    this.getSteps = this.getSteps.bind(this);
-
-    this.state = {
-      activeStep : props.formData || 0,
-    };
-  }
-
-  getSteps() {
-    
-    const that = this;
-
-    const { onChange, uiSchema, api, schema, idSchema } = that.props;
+  const getSteps = () => {
+    const { onChange, uiSchema, api, schema, idSchema } = props;
     const options = uiSchema['ui:options'];
     const objectMapper = api.utils.objectMapper;
     
-    api.log('Getting steps for stepper', { props: that.props }, 'debug' );
-
+    api.log('Getting steps for stepper', { props }, 'debug' );
 
     let _options: any = {
       filter: {
@@ -94,7 +75,6 @@ class StepperWidget extends Component<any, any> {
         {
           group: 'default', key: 'five', value: 5, label: 'Step 5', step: 5
         },
-
       ],
     };    
 
@@ -111,46 +91,16 @@ class StepperWidget extends Component<any, any> {
             if(_options.filter.predicate[property].indexOf('$ref://') === 0) {
               let __map = {};
               __map[`${_options.filter.predicate[property].replace('$ref://', '')}`] = '_v';
-              const mapped = objectMapper(self, __map);                                
+              const mapped = objectMapper(props, __map);                                
               _options.filter.predicate[property] = mapped._v;
             } else {
-              _options.filter.predicate[property] = _.template( _options.filter.predicate[property], { variable: 'props' } )(that.props);                                    
+              _options.filter.predicate[property] = _.template( _options.filter.predicate[property], { variable: 'props' } )(props);                                    
             }            
             api.log(`Predicate Resolved For ${idSchema.$id}`, { predicate: _options.filter.predicate }, 'debug' );  
           } catch (templateError) {             
             api.log('core.StepperWidget Could not create generate predicate for filter', { predicate: _options.filter.predicate[property],  property }, 'warning' )
           }          
         }
-
-        /**
-        if(allowedFilters.indexOf(property) >= 0) {
-          if(property === '$func') {
-            api.log('calling api registered function');          
-            if(api.$func[_options.filter.predicate.$func]) {
-              _options.filter.predicate = api.$func[_options.filter.predicate.$func].bind(self);
-            } else {
-              _options.filter.predicate = api.$func['core.NullFunction'];
-            }          
-          } 
-          else 
-          {
-            if(typeof _options.filter.predicate[property] === 'string') {
-              try { 
-                if(_options.filter.predicate[property].indexOf('$ref://') === 0) {
-                  let __map = {};
-                  __map[`${_options.filter.predicate[property].replace('$ref://', '')}`] = '_v';
-                  const mapped = objectMapper(self, __map);                                
-                  _options.filter.predicate[property] = mapped._v;
-                } else {
-                  _options.filter.predicate[property] = _.template( _options.filter.predicate[property], { variable: 'props' } )(self.props);                                    
-                }            
-                api.log(`Predicate Resolved For ${idSchema.$id}`, { predicate: _options.filter.predicate }, 'debug' );  
-              } catch (templateError) {             
-                api.log('core.StepperWidget Could not create generate predicate for filter', { predicate: _options.filter.predicate[property],  property }, 'warning' )
-              }          
-            }
-          }          
-        }*/
       });        
       //predicate resolves                        
       const originalSteps: any[] = [..._options.steps];
@@ -176,20 +126,18 @@ class StepperWidget extends Component<any, any> {
     let stepElements = [];
     forEach( _options.steps, (step, stepIndex)=> {      
         if(step) {
-
           const selectStep = () => {  
-            that.setState({ activeStep: step.step }, ()=>{
-              if(that.props.onChange && typeof that.props.onChange === 'function') {
-                that.props.onChange(step.value);
-              };
-            });          
+            setActiveStep(step.step);
+            if(props.onChange && typeof props.onChange === 'function') {
+              props.onChange(step.value);
+            };
           };  
           
           stepElements.push((
             <Step key={step.key}>
               <StepButton
                 onClick={ selectStep }>
-                  {step.label}
+                {step.label}
               </StepButton>            
             </Step>
           ));      
@@ -199,25 +147,20 @@ class StepperWidget extends Component<any, any> {
     return stepElements;
   }
 
+  const { schema, uiSchema } = props;
   
-
-  render(){
-    const self = this;
-    const step = 0;    
-    const { schema, uiSchema } = this.props;
-    
-    let title = (<Typography variant="caption">{schema.title}</Typography>)
-    let description = (<Typography variant="caption">{schema.description || `Select ${schema.title} step`}</Typography>)
-    return (
-      <Fragment>
-        {title}
-        <Stepper alternativeLabel nonLinear activeStep={step}>
-        {self.getSteps()}
-        </Stepper>
-      </Fragment>
-    )
-    
-  }
+  let title = (<Typography variant="caption">{schema.title}</Typography>)
+  let description = (<Typography variant="caption">{schema.description || `Select ${schema.title} step`}</Typography>)
+  
+  return (
+    <Root>
+      {title}
+      <Stepper alternativeLabel nonLinear activeStep={activeStep}>
+        {getSteps()}
+      </Stepper>
+    </Root>
+  )
 }
-const StepperWidgetComponent = compose(withReactory, withTheme, withStyles(StepperWidget.styles))(StepperWidget)
+
+const StepperWidgetComponent = compose(withReactory)(StepperWidget)
 export default StepperWidgetComponent

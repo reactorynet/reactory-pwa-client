@@ -13,7 +13,6 @@ export { ComposedChartWidgetComponent as ComposedChartWidget} from './ChartWidge
 export { default as DataPageWidget } from './DataPageWidget';
 export { default as DateSelectorWidget } from '@reactory/client-core/components/dates/DateSelector';
 export { DateWidget } from './DateSelector';
-export { default as FroalaWidget } from './Froala/FroalaWidget';
 export { FunnelChartWidgetComponent as FunnelChartWidget} from './ChartWidget';
 export const HiddenWidget = (props, context) => (<input type="hidden" name={props.name} value={props.formData} />);
 export { default as LabelWidget } from './LabelWidget';
@@ -23,7 +22,7 @@ export { default as LinkFieldWidget } from './LinkFieldWidget';
 export { default as MaterialListWidget } from './MaterialListWidget';
 export { MaterialTableWidget } from './MaterialTableWidget';
 export { PieChartWidgetComponent as PieChartWidget } from './ChartWidget';
-export { ProgressWidgetComponent as ProgressWidget } from './ProgressWidget';
+export { default as ProgressWidget } from './ProgressWidget';
 export { default as ReactoryColorPicker } from './ReactoryColorPicker';
 export { default as ReactoryD3Widget } from './D3/ReactoryD3Renderer';
 export { default as ReactoryDropZoneWidget } from './ReactoryDropZone';

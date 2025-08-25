@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Radio,
   RadioGroup,
@@ -6,34 +6,27 @@ import {
   FormControl
 } from '@mui/material';
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
-class RadioGroupWidget extends Component<any, any> {
-  static styles: (theme: any) => { label: { color: string; fontSize: string; fontWeight: number; }; };
-
-  constructor(props, context) {
-    super(props, context)
-    this.state = {
-      selectedValue: null
-    }
-  }
-
-  componentDidMount() {
-    if (this.props.formData && this.props.formData != '')
-      this.setState({ selectedValue: this.props.formData });
-  }
-
-  render() {
-    const {
-      api,
-      formData,
-      uiSchema,
-      classes,
-      onChange
-    } = this.props;
-    const { selectedValue } = this.state;
+const RadioGroupWidget = (props: any) => {
+  const theme = useTheme();
+  const [selectedValue, setSelectedValue] = useState(null);
+  
+  const {
+    api,
+    formData,
+    uiSchema,
+    onChange
+  } = props;
     let _selectedValue = selectedValue;
+
+    useEffect(() => {
+      if (formData && formData != '') {
+        setSelectedValue(formData);
+      }
+    }, [formData]);
 
     if (formData && formData != '')
       _selectedValue = formData;
@@ -41,14 +34,12 @@ class RadioGroupWidget extends Component<any, any> {
     const uiOptions = uiSchema['ui:options'];
     let labelTitle = uiOptions.label || '';
 
-    const self = this;
     const handleChange = event => {
       const value = event.target.value;
-      self.setState({ selectedValue: value }, () => {
-        if (onChange && typeof onChange === 'function') {
-          this.props.onChange(value);
-        }
-      });
+      setSelectedValue(value);
+      if (onChange && typeof onChange === 'function') {
+        props.onChange(value);
+      }
     };
 
     return (
@@ -69,20 +60,7 @@ class RadioGroupWidget extends Component<any, any> {
           }
         </RadioGroup>
       </FormControl>
-    )
-
-  }
-}
-
-RadioGroupWidget.styles = (theme) => {
-  return {
-    label: {      
-      fontSize: '13px',
-      fontWeight: 400,
-      color: 'rgba(0,0,0,0.54)'
-    }
-  }
+    );
 };
 
-const RadioGroupComponent = compose(withTheme, withReactory, withStyles(RadioGroupWidget.styles))(RadioGroupWidget)
-export default RadioGroupComponent
+export default RadioGroupWidget;

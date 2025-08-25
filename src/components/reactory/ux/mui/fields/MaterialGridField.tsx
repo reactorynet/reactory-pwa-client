@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Paper, Typography } from '@mui/material'
+import { Grid2 as Grid, Paper, Typography } from '@mui/material'
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 import { useReactory } from '@reactory/client-core/api';
 import Reactory from '@reactory/reactory-core';
@@ -134,6 +134,42 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
           let items = Object.keys(row).map((name, index) => {              
 
             const { doShow, ...rowProps } = row[name] as Reactory.Schema.IGridFieldLayout;
+            let sizeProps: any = { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 };
+            if (rowProps.size) {
+              sizeProps = { ...sizeProps, ...rowProps.size };
+            } else {
+              // backwards compatibility
+              // @ts-ignore
+              if (rowProps.xs) {
+                // @ts-ignore
+                sizeProps.xs = rowProps.xs;
+                delete rowProps.xs;
+              }
+              // @ts-ignore
+              if (rowProps.sm) {
+                // @ts-ignore
+                sizeProps.sm = rowProps.sm;
+                delete rowProps.sm;
+              }
+              // @ts-ignore
+              if (rowProps.md) {
+                // @ts-ignore
+                sizeProps.md = rowProps.md;
+                delete rowProps.md;
+              }
+              // @ts-ignore
+              if (rowProps.lg) {
+                // @ts-ignore
+                sizeProps.lg = rowProps.lg;
+                delete rowProps.lg;
+              }
+              // @ts-ignore
+              if (rowProps.xl) {
+                // @ts-ignore
+                sizeProps.xl = rowProps.xl;
+                delete rowProps.xl;
+              }
+            }
             let style = {}
             if (row.style)
               style = { ...row.style };
@@ -148,7 +184,7 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
             if(schema.type !== "array") {
               if (schema.properties[name]) {
                 return (
-                  <Grid {...rowProps} item key={index} style={style}>
+                  <Grid {...rowProps} size={sizeProps} key={index} style={style} sx={rowProps.sx}>
                     <SchemaField
                       key={name}
                       name={name}
@@ -181,7 +217,7 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
                 if (hide === false) {
                   numberOfVisibleItems += 1;
                   return (
-                    <Grid {...rowProps} item key={index} style={style}>
+                    <Grid {...rowProps} key={index} style={style}>
                       <SchemaField
                       key={name}
                       name={name}
@@ -205,7 +241,7 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
                 return null;
               }
             } else {
-              return (<Grid {...rowProps} item key={index} style={style}>
+              return (<Grid {...rowProps} key={index} style={style}>
                 <Typography variant="h6">Grid Layout not available for array types. Arrays are by default wrapped in a grid container.</Typography>
                 </Grid>)
             }

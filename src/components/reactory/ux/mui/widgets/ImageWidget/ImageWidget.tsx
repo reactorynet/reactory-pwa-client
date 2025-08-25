@@ -37,10 +37,7 @@ export default ({ formData, uiSchema, idSchema, schema, formContext }) => {
   const { React } = reactory.getComponents<{React: React}>(['react.React']);
   const { Material } = reactory.getComponents<{ Material: Reactory.Client.Web.IMaterialModule }>(['material-ui.Material']);
   const { MaterialStyles, MaterialCore } = Material;
-  const jssStyles = MaterialStyles.makeStyles((theme) => jss)({ 
-    formData, idSchema, schema, uiSchema, formContext 
-  });
-
+  
   let $uploader = reactory.getComponent<ImageUploaderHook>(uploader)
   const useUploader = uploader !== 'NullUploader' && $uploader ? $uploader : NullUploader;
 

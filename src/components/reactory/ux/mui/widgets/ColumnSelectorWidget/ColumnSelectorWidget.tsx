@@ -1,4 +1,4 @@
-import React, { Component, Fragment } from 'react';
+import React, { Fragment, useState, useEffect } from 'react';
 import { compose } from 'redux';
 import {
   AppBar, 
@@ -13,7 +13,9 @@ import {
   Switch,
   Toolbar   
 } from '@mui/material';
-import { withStyles, withTheme } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/reactory-core';
 import { Typography } from '@mui/material';
@@ -37,77 +39,47 @@ export interface ColumnSelectorWidgetState {
   expanded: boolean
 };
 
-class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSelectorWidgetState> {
-  componentDefs: any;
-
-  constructor(props, context){
-    super(props, context);
-
-    this.state = {
-      columns: props.formData || [],
-      expanded: false,
-    };
-
-    this.toggleSelector = this.toggleSelector.bind(this);
-    this.acceptSelection = this.acceptSelection.bind(this);
-
-    this.componentDefs = props.api.getComponents([
-      'core.FullScreenModal',
-      'core.DropDownMenu',
-    ]);
-  }
+const ColumnSelectorWidget = (props: ColumnSelectorWidgetProps) => {
+  const theme = useTheme();
   
-  static styles = (theme) => {
-    return {
-      ColumnSelectorContainer: {
-        
-      },
-      IncludedColumn: {
-        backgroundColor: '#C4DECB'
-      },
-      ExcludedColumn: {
-        backgroundColor: 'inherit'
-      },
+  const [columns, setColumns] = useState<ColumnDefinition[]>(props.formData || []);
+  const [expanded, setExpanded] = useState<boolean>(false);
+  
+  const componentDefs = props.reactory.getComponents<{
+    FullScreenModal: any,
+    DropDownMenu: any
+  }>([
+    'core.FullScreenModal',
+    'core.DropDownMenu',
+  ]);
+
+  const toggleSelector = () => {
+    setExpanded(!expanded);
+  };
+
+  const acceptSelection = () => {
+    const { onChange } = props;
+    setExpanded(!expanded);
+    if(onChange && typeof onChange === 'function') {
+      onChange(columns);
     }
   };
-
-  static defaultProps = {
-    formData: []
-  };
-
-  toggleSelector(){
-    this.setState({ expanded: !this.state.expanded });
-  }
-
-  acceptSelection(){
-    const { onChange } = this.props
-    const { columns } = this.state
-    this.setState({ expanded: !this.state.expanded }, ()=>{
-      if(onChange && typeof onChange === 'function') {
-        onChange(columns);
-      }      
-    });
-  }
   
-  render(){
-
-    const { FullScreenModal, DropDownMenu } = this.componentDefs;    
-    const { columns } = this.state;
-    const { reactory, classes } = this.props;
-    let activeUiSchemaMenuItem = null;
-    const that = this;
+  const { FullScreenModal, DropDownMenu } = componentDefs;    
+  const { reactory, classes } = props;
+  let activeUiSchemaMenuItem = null;
     return (
       <div>
-        <IconButton onClick={this.toggleSelector} size="large">
+        <IconButton onClick={toggleSelector} size="large">
           <Icon>view_column</Icon>
         </IconButton>
-        <FullScreenModal open={this.state.expanded} onClose={this.toggleSelector}>
+        <FullScreenModal open={expanded} onClose={toggleSelector}>
           <AppBar title="Column Selection">
             <Toolbar>
-              <IconButton onClick={this.acceptSelection} size="large">
+              <IconButton onClick={acceptSelection} size="large">
                 <Icon>check_circle_outline</Icon>
               </IconButton>
-              <IconButton onClick={this.toggleSelector} size="large">
+              <IconButton onClick={toggleSelector} size="large">
                 <Icon>cancel</Icon>
               </IconButton>
               <Typography>Column Selection</Typography>
@@ -117,10 +89,9 @@ class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSe
             {
               columns.map(( columnDefinition: ColumnDefinition, index: number ) => {
                 const changeColumnDefinition = () => {
-                  const { columns } = this.state;
                   const _columns = [...columns];
                   _columns[index].selected = !_columns[index].selected;
-                  that.setState({ columns: _columns });
+                  setColumns(_columns);
                 };
 
                 const columnMenus = [
@@ -140,17 +111,15 @@ class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSe
                   reactory.log(`${menuItem.id} selected`, { menuItem });
                   switch(menuItem.id) {
                     case 'toggle_selected': {
-                      const { columns } = this.state;
                       const _columns = [...columns];
                       _columns[index].selected = !_columns[index].selected;
-                      that.setState({ columns: _columns });
+                      setColumns(_columns);
                       break;
                     }
                     case 'widget_select': {
-                      const { columns } = this.state;
                       const _columns = [...columns];
                       _columns[index].widget = 'Widget XYZ';
-                      that.setState({ columns: _columns });
+                      setColumns(_columns);
                       break;
                     }
                   }
@@ -162,7 +131,7 @@ class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSe
                     <ListItemText 
                       primary={columnDefinition.title} 
                       secondary={`${columnDefinition.title} renders using ${columnDefinition.widget || 'default'} widget`} 
-                      className={columnDefinition.selected ? this.props.classes.Included : this.props.classes.Excluded}/>
+                      style={{ backgroundColor: columnDefinition.selected ? '#C4DECB' : 'inherit' }}/>
                     <ListItemSecondaryAction>
                       <DropDownMenu 
                         menus={columnMenus} 
@@ -172,19 +141,12 @@ class ColumnSelectorWidget extends Component<ColumnSelectorWidgetProps, ColumnSe
                 );
               })
             }
-          </List>
+                      </List>
         </FullScreenModal> 
       </div>
     );
-  }
-}
+};
 
 
 
-const ColumnSelectorWidgetComponent = compose(
-  withTheme, 
-  withStyles(ColumnSelectorWidget.styles),
-  withReactory
-)(ColumnSelectorWidget)
-
-export default ColumnSelectorWidgetComponent;
+export default ColumnSelectorWidget;

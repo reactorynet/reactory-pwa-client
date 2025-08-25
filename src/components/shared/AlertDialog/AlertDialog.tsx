@@ -6,17 +6,18 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
-const ThemedAlertDialog = compose(withTheme, withReactory)((props: any) => {
+const ThemedAlertDialog = compose(withReactory)((props: any) => {
+    const theme = useTheme();
 
     const {
         open,
         onClose,
         onAccept,
         id,
-        theme,
         confirmProps = {},
         cancelProps = {},
         contentProps = {},

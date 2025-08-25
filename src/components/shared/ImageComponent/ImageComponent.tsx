@@ -1,15 +1,16 @@
-import React, { Component, Fragment } from 'react';
+import React, { Fragment } from 'react';
 import { Avatar } from '@mui/material';
 import { compose } from 'redux';
-import { withTheme, withStyles } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 
 
 type AvatarVariant = "square" | "circular" | "rounded";
 
-class ImageWidget extends Component<any, any> {
-
-  render() {
-    const { value, theme, formData } = this.props
+const ImageWidget = (props: any) => {
+  const theme = useTheme();
+  
+  const { value, formData } = props;
 
     let url = value ? value : formData;
     let variant: AvatarVariant = 'rounded';
@@ -21,7 +22,7 @@ class ImageWidget extends Component<any, any> {
       }
     }
 
-    let uiOptions = this.props['ui:options'];
+    let uiOptions = props['ui:options'];
     if (uiOptions) {
       if (uiOptions.variant) {
         variant = uiOptions.variant
@@ -50,10 +51,8 @@ class ImageWidget extends Component<any, any> {
 
     return (
       <Avatar src={url} {...avatarProps} variant={variant} />
-    )
-  }
-}
+    );
+};
 
 
-const ImageComponent = compose(withTheme)(ImageWidget)
-export default ImageComponent;
+export default ImageWidget;

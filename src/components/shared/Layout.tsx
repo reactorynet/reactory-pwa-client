@@ -1,5 +1,4 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import React from 'react';
 import { compose } from 'redux';
 import { isNil } from 'lodash';
 import {
@@ -8,7 +7,8 @@ import {
   Paper,
 } from '@mui/material';
 
-import { withTheme, withStyles } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '../../api/ApiProvider'
 
 
@@ -35,25 +35,12 @@ const defaultLayout = {
   }
 };  
 
-class Layout extends Component<any, any> {
-
-  static styles = theme => ({
-    spinning: {
-
-    }
-  });
-
-  static propTypes = {
-    layout: PropTypes.object
-  }
-
-  static defaultProps = {
-    layout: defaultLayout
-  }
-
-  render(){
-    const layoutDef = this.props.layout
-    const { api } = this.props;
+const Layout = (props: any) => {
+  const theme = useTheme();
+  const { layout = defaultLayout, api } = props;
+  
+  const renderLayout = () => {
+    const layoutDef = layout;
     const components = Object.keys(layoutDef).map(( key ) => {
       const containerDef = layoutDef[key]
       const gridProps = {
@@ -88,13 +75,13 @@ class Layout extends Component<any, any> {
     });
     
     return <Grid container spacing={0}>{components}</Grid>;
-  }
-}
+  };
+  
+  return renderLayout();
+};
 
 export const LayoutThemed = compose(
-  withReactory,
-  withTheme,
-  withStyles(Layout.styles)
+  withReactory
 )(Layout)
 
 

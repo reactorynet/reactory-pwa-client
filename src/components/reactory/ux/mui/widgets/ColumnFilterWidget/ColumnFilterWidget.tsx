@@ -1,4 +1,4 @@
-import React, { Component, Fragment } from 'react';
+import React, { Fragment, useState, useEffect } from 'react';
 import { compose } from 'redux';
 import {   
   AppBar, 
@@ -13,7 +13,9 @@ import {
   Switch,
   Toolbar   
 } from '@mui/material';
-import { withStyles, withTheme } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/reactory-core';
 import { Typography } from '@mui/material';
@@ -30,7 +32,7 @@ export interface ColumnFilter {
 export interface ColumnFilterWidgetProps {
   formData: ColumnFilter[],
   onChange: Function,
-  api: Reactory.Client.IReactoryApi
+  reactory: Reactory.Client.IReactoryApi
 };
 
 export interface ColumnFilterWidgetState {
@@ -38,51 +40,29 @@ export interface ColumnFilterWidgetState {
   expanded: boolean
 };
 
-class ColumnFilterWidget extends Component<ColumnFilterWidgetProps, ColumnFilterWidgetState> {
-  componentDefs: any;
-  constructor(props, context){
-    super(props, context);
-
-    this.state = {
-      columns: [],
-      expanded: false,      
-    };
-
-    this.toggleFilterSelector = this.toggleFilterSelector.bind(this);
-    this.acceptSelection = this.acceptSelection.bind(this);
-    this.onAddFilterClicked = this.onAddFilterClicked.bind(this);
-
-    this.componentDefs = props.api.getComponents([
-      'core.FullScreenModal',
-      'core.DropDownMenu'
-    ]);
-  }
+const ColumnFilterWidget = (props: ColumnFilterWidgetProps) => {
+  const theme = useTheme();
   
-  static styles = (theme) => {
-    return {
-      ColumnSelectorContainer: {
-        
-      }
-    }
+  const [columns, setColumns] = useState<ColumnFilter[]>([]);
+  const [expanded, setExpanded] = useState<boolean>(false);
+  
+  const componentDefs = props.reactory.getComponents<{
+    FullScreenModal: any,
+    DropDownMenu: any
+  }>([
+    'core.FullScreenModal',
+    'core.DropDownMenu'
+  ]);
+
+  const toggleFilterSelector = () => {
+    setExpanded(!expanded);
   };
 
-  static defaultProps = {
-    formData: [],
-    onChange: ( data )=>{
-      console.log('Column Filter Widget', data);
-    }
+  const acceptSelection = () => {
+    setExpanded(!expanded);
   };
 
-  toggleFilterSelector(){
-    this.setState({ expanded: !this.state.expanded });
-  }
-
-  acceptSelection(){
-    this.setState({ expanded: !this.state.expanded });
-  }
-
-  onAddFilterClicked(){
-    const { columns } = this.state;
+  const onAddFilterClicked = () => {
     const _columns = [...columns];
 
     _columns.push({ 
@@ -92,30 +72,27 @@ class ColumnFilterWidget extends Component<ColumnFilterWidgetProps, ColumnFilter
       modifier: 'AND',
       invert: false,
     });
-    this.setState({ columns: _columns })
-  }
+    setColumns(_columns);
+  };
 
-  render(){
-    const { FullScreenModal, DropDownMenu } = this.componentDefs;
-    const { columns, expanded } = this.state;
-    const { api } = this.props;
-    const that = this;
+  const { FullScreenModal, DropDownMenu } = componentDefs;
+  const { reactory: api } = props;
     return (
       <div>
-        <IconButton onClick={this.toggleFilterSelector} size="large">
+        <IconButton onClick={toggleFilterSelector} size="large">
           <Icon>filter_list</Icon>
         </IconButton>
-        <FullScreenModal open={this.state.expanded} onClose={this.toggleFilterSelector} title="Column Filter">
+        <FullScreenModal open={expanded} onClose={toggleFilterSelector} title="Column Filter">
           <AppBar title="Column Selection">
             <Toolbar>
-              <IconButton onClick={this.acceptSelection} size="large">
+              <IconButton onClick={acceptSelection} size="large">
                 <Icon>check_circle_outline</Icon>
               </IconButton>
-              <IconButton onClick={this.toggleFilterSelector} size="large">
+              <IconButton onClick={toggleFilterSelector} size="large">
                 <Icon>cancel</Icon>
               </IconButton>
               <Typography>Column Filter</Typography>
-              <IconButton style={{float: 'right'}} onClick={this.onAddFilterClicked} size="large">
+              <IconButton style={{float: 'right'}} onClick={onAddFilterClicked} size="large">
                 <Icon>add_circle</Icon>
               </IconButton>
             </Toolbar>
@@ -142,17 +119,13 @@ class ColumnFilterWidget extends Component<ColumnFilterWidgetProps, ColumnFilter
                   api.log(`${menuItem.id} selected`, { menuItem });
                   switch(menuItem.id) {
                     case 'remove_filter': {
-                      const { columns } = this.state;
                       const _columns = [...columns];
-
-                      that.setState({ columns: _columns });                      
+                      setColumns(_columns);                      
                       break;
                     }
                     case 'edit_values': {
-                      const { columns } = this.state;
                       const _columns = [...columns];
-
-                      that.setState({ columns: _columns });
+                      setColumns(_columns);
                       break;
                     }
                   }
@@ -176,15 +149,8 @@ class ColumnFilterWidget extends Component<ColumnFilterWidgetProps, ColumnFilter
         </FullScreenModal>            
       </div>
     );
-  }
-}
+};
 
 
 
-const ColumnFilterWidgetComponent = compose(
-  withTheme, 
-  withStyles(ColumnFilterWidget.styles),
-  withReactory
-)(ColumnFilterWidget)
-
-export default ColumnFilterWidgetComponent;
+export default ColumnFilterWidget;

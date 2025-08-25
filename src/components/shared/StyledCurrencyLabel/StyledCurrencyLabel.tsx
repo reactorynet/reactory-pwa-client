@@ -1,35 +1,33 @@
-import React, { Component, Fragment } from 'react';
-import PropTypes from 'prop-types';
+import React, { Fragment } from 'react';
+import { styled } from '@mui/material/styles';
+
 import { isArray, template, indexOf } from 'lodash';
 import { compose } from 'redux';
-import { makeStyles, withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { Theme, Tooltip } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 
-const ToolTipHOC = (props) => {
+const PREFIX = 'StyledCurrencyLabelComponent';
 
-  const { backgroundColor = 'rgba(0, 0, 0, 0.7)', color = 'rgba(0, 0, 0, 0.87)' } = props;
+const classes = {
+  root: `${PREFIX}-root`
+};
 
-  const classes = makeStyles((theme: Theme) => {
-    return {
-      root: {
-        backgroundColor,
-        color,
-        boxShadow: theme.shadows[1],
-        fontSize: 14
-      }
+const Root = styled('span')(({ theme }: { theme: Theme }) => {
+  return {
+    [`& .${classes.root}`]: {
+      boxShadow: theme.shadows[1],
+      fontSize: 14
     }
-  })();
+  };
+});
 
-  return (
-    <Tooltip className={classes.root} title={props.title} placement={props.placement}>
-      {props.children}
-    </Tooltip>
-  );
-}
+
+
 
 const StyledCurrencyLabel = (props) => {
+  const theme = useTheme();
 
   try {
 
@@ -117,47 +115,45 @@ const StyledCurrencyLabel = (props) => {
 
     let otherCurrencies = [];
 
-    const classes: any = makeStyles((theme: Theme):any => {
-      return {
-        label: {
-          fontSize: '0.9em',
-          color: 'rgba(0, 0, 0, 0.54)',
-          display: 'block'
-        },
-        currency: {
-          marginTop: theme.spacing(1),
-          marginBottom: theme.spacing(1),
-          marginRight: theme.spacing(1),
-          whiteSpace: 'nowrap'
-        },
-        currenciesContainer: {
-          flex: 1,
-          flexDirection: currenciesOrientation || "row"
-        },
-        currencyValue: {},
-        inlineContainer: {
+    const styles = {
+      label: {
+        fontSize: '0.9em',
+        color: 'rgba(0, 0, 0, 0.54)',
+        display: 'block'
+      },
+      currency: {
+        marginTop: theme.spacing(1),
+        marginBottom: theme.spacing(1),
+        marginRight: theme.spacing(1),
+        whiteSpace: 'nowrap'
+      },
+      currenciesContainer: {
+        flex: 1,
+        flexDirection: currenciesOrientation || "row"
+      },
+      currencyValue: {},
+      inlineContainer: {
+        display: 'flex',
+        '& div': {
           display: 'flex',
-          '& div': {
-            display: 'flex',
-            alignItems: 'center',
-            '& label': {
-              marginRight: theme.spacing(3),
-              fontSize: '1em'
-            }
-          },
+          alignItems: 'center',
+          '& label': {
+            marginRight: theme.spacing(3),
+            fontSize: '1em'
+          }
         },
-        error: {
-          color: theme.palette.error,
-          fontSize: 'smaller',
-        },
-        tooltip: {
-          backgroundColor: _tooltipBackgroundColor,
-          color: _tooltipTextColor,
-          boxShadow: theme.shadows[1],
-          fontSize: 14
-        }
+      },
+      error: {
+        color: theme.palette.error.main,
+        fontSize: 'smaller',
+      },
+      tooltip: {
+        backgroundColor: _tooltipBackgroundColor,
+        color: _tooltipTextColor,
+        boxShadow: theme.shadows[1],
+        fontSize: 14
       }
-    })();
+    };
 
 
     if (currencies && isArray(currencies) && displayAdditionalCurrencies === true) {
@@ -177,15 +173,15 @@ const StyledCurrencyLabel = (props) => {
 
         if ($add === true) {
           otherCurrencies.push((
-            <div className={classes.currency} {..._containerProps}>
-              <span className={classes.currencyValue}>
+            <div style={styles.currency} {..._containerProps}>
+              <Root style={styles.currencyValue}>
                 {
                   !_showZeroValues && currency_item[_additionalCurrencyMapField] == 0 ?
                     <span>   -   </span>
                     :
                     new Intl.NumberFormat(region, { style: 'currency', currency: currency_item.currency_code }).format(isCents ? (currency_item[_additionalCurrencyMapField] / 100) : currency_item[_additionalCurrencyMapField])
                 }
-              </span>
+              </Root>
             </div>
           ))
         }
@@ -208,22 +204,22 @@ const StyledCurrencyLabel = (props) => {
 
 
     let primaryCurrency = (
-      <div className={classes.currency} {..._containerProps}>
+      <div style={styles.currency} {..._containerProps}>
         {_prependText != '' && <span style={{ fontWeight: "bold" }}>{_prependText}</span>}
-        <span className={classes.currencyValue} style={valueStyle}>
+        <span style={{ ...styles.currencyValue, ...valueStyle }}>
           {new Intl.NumberFormat(region, { style: 'currency', currency: _currency }).format(isCents ? (_value / 100) : _value)}
         </span>
         {_postpendText != '' && <span>{_postpendText}</span>}
-        { error && <span className={classes.error}>{error}</span>}
+        { error && <span style={styles.error}>{error}</span>}
       </div>
     );
 
 
     if (inlineLabel === true) {
       return (
-        <div className={classes.inlineContainer}>
+        <div style={styles.inlineContainer}>
           <div>
-            {_label != '' && <label className={classes.label}>{_label}</label>}
+            {_label != '' && <label style={styles.label}>{_label}</label>}
           </div>
           <div>
             <Tooltip title={_tooltip} placement={_tooltipPlacement}>
@@ -241,9 +237,9 @@ const StyledCurrencyLabel = (props) => {
 
     return (
       <>
-        {_label != '' && <label className={classes.label}>{_label}</label>}
+        {_label != '' && <label style={styles.label}>{_label}</label>}
         <Tooltip title={_tooltip} color={_tooltipTextColor} placement={_tooltipPlacement}>
-          <div className={classes.currenciesContainer} style={props.currenciesContainerStyles}>
+          <div style={{ ...styles.currenciesContainer, ...props.currenciesContainerStyles }}>
             {displayPrimaryCurrency === true ? primaryCurrency : null}
             {displayAdditionalCurrencies === true ? otherCurrencies : null}
           </div>
@@ -255,22 +251,9 @@ const StyledCurrencyLabel = (props) => {
   }
 }
 
-StyledCurrencyLabel.propTypes = {
-  value: PropTypes.number,
-  currency: PropTypes.string,
-  symbol: PropTypes.string,
-  region: PropTypes.string
-};
-
-StyledCurrencyLabel.defaultProps = {
-  value: 0,
-  currency: 'ZAR',
-  symbol: 'R',
-  region: 'en-ZA'
-};
 
 
 
-const StyledCurrencyLabelComponent = compose(withReactory, withTheme)(StyledCurrencyLabel);
-export default StyledCurrencyLabelComponent;
+
+export default StyledCurrencyLabel;
 

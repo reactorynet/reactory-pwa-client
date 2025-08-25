@@ -1,4 +1,5 @@
 import React, { Fragment, useState } from 'react';
+import { styled, useTheme } from '@mui/material/styles';
 import PropTypes from 'prop-types';
 import { pullAt } from 'lodash';
 import {
@@ -11,22 +12,32 @@ import {
   Tooltip,
 } from '@mui/material';
 import { compose } from 'redux';
-import { withStyles, withTheme } from '@mui/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
-const styles = (theme) => ({
-  root: {
+const PREFIX = 'ChipArray';
+
+const classes = {
+  root: `${PREFIX}-root`,
+  chip: `${PREFIX}-chip`,
+  newChipInput: `${PREFIX}-newChipInput`
+};
+
+// TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
+const Root = styled('div')(({ theme }) => ({
+  [`& .${classes.root}`]: {
     display: 'flex',
     justifyContent: 'center',
     flexWrap: 'wrap',
   },
-  chip: {
+
+  [`& .${classes.chip}`]: {
     margin: theme.spacing(1),
   },
-  newChipInput: {
+
+  [`& .${classes.newChipInput}`]: {
     margin: theme.spacing(1),
-  },
-});
+  }
+}));
 
 /**
  * ChipArray Component
@@ -39,6 +50,7 @@ const styles = (theme) => ({
  */
 
 const ChipArray = (props: any) => {
+  const theme = useTheme();
   const {
     formData = [],
     onChange,
@@ -144,7 +156,7 @@ const ChipArray = (props: any) => {
   const clearAll = () => onChange([]);
 
   return (
-    <Fragment>
+    <Root>
       {chips}
       {formData?.length > 0 && options.allowDeleteAll && (
         <Tooltip title="Remove all">
@@ -154,7 +166,7 @@ const ChipArray = (props: any) => {
         </Tooltip>
       )}
       {options.allowAdd && <AddItemComponentWrapper />}
-    </Fragment>
+    </Root>
   );
 };
 
@@ -173,4 +185,4 @@ ChipArray.defaultProps = {
 };
 
 //@ts-ignore
-export default compose(withReactory, withTheme, withStyles(styles))(ChipArray);
+export default compose(withReactory)(ChipArray);

@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
-import { Styles } from '@mui/styles/withStyles/withStyles';
+import { styled, useTheme } from '@mui/material/styles';
 import { compose } from 'redux';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import { withStyles } from '@mui/styles';
 import PropTypes from 'prop-types';
 import {
   Grid,
@@ -13,26 +12,28 @@ import {
 
 import IntersectionVisible from '@reactory/client-core/components/utility/IntersectionVisible';
 
+const PREFIX = 'GridLayoutComponent';
 
-const styles = (theme: Theme) => {
-  return {
-    loading: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: theme.spacing(2),
-      marginBottom: theme.spacing(2)
-    },
-    spinning: {
-      animation: 'spin 3s infinite',
-    },
-  }
-}
+const classes = {
+  loading: `${PREFIX}-loading`,
+  spinning: `${PREFIX}-spinning`
+};
+
+const Root = styled('div')(({ theme }) => ({
+  [`& .${classes.loading}`]: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2)
+  },
+  [`& .${classes.spinning}`]: {
+    animation: 'spin 3s infinite',
+  },
+}));
 
 const GridLayoutWidget = (props) => {
-
-  
-
+  const theme = useTheme();
   const [state, _setState] = React.useState({
     data: [],
     page: 0,
@@ -56,8 +57,6 @@ const GridLayoutWidget = (props) => {
 
     if (uiOptions.remoteData === true) {
       try {
-
-
         setState({ loadingData: true });
         const graphqlDefinitions = formContext.$formState.formDef.graphql;
         if (graphqlDefinitions.query || graphqlDefinitions.queries) {
@@ -79,13 +78,10 @@ const GridLayoutWidget = (props) => {
 
           const queryResult = await reactory.graphqlQuery(queryDefinition.text, variables).then();
 
-
           if (queryResult.errors && queryResult.errors.length > 0) {
             reactory.log(`Error loading remote data for MaterialTableWidget`, { formContext, queryResult })
             setState({ data: [], page: 0, totalCount: 0, loadingData: false });
           } else {
-
-
             let result = reactory.utils.objectMapper(queryResult.data[queryDefinition.name], uiOptions.resultMap);
             setState((prevState) => ({ data: prevState.data.concat(result.data), page: result.page + 1, totalCount: result.totalCount, loadingData: false }));
           }
@@ -127,7 +123,7 @@ const GridLayoutWidget = (props) => {
     componentProps = { ...uiOptions.componentProps };
 
   return (
-    <>
+    <Root>
       <Grid container spacing={2} >
         {state.loadingData && state.data.length == 0 && <Loading message={loadingMessage} />}
         {
@@ -140,15 +136,15 @@ const GridLayoutWidget = (props) => {
       {props.children}
       {
         state.loadingData && state.data.length > 0 &&
-        <Typography classes={{ root: props.classes.loading }} variant={'h6'} align="center">Loading more &nbsp;<Icon className={props.classes.spinning} color="primary">autorenew</Icon></Typography>
+        <Typography className={classes.loading} variant={'h6'} align="center">Loading more &nbsp;<Icon className={classes.spinning} color="primary">autorenew</Icon></Typography>
       }
       {!state.loadingData && state.data.length > 0 && state.data.length < state.totalCount && <IntersectionVisible onShow={onShow}>
-        <Typography classes={{ root: props.classes.loading }} variant={'h6'}>Load More</Typography>
+        <Typography className={classes.loading} variant={'h6'}>Load More</Typography>
       </IntersectionVisible>}
-    </>
+    </Root>
   );
 };
 
-const GridLayoutComponent = compose(withReactory, withStyles(styles))(GridLayoutWidget);
+const GridLayoutComponent = compose(withReactory)(GridLayoutWidget);
 export default GridLayoutComponent;
 

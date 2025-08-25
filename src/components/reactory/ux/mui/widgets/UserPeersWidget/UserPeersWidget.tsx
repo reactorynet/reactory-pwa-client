@@ -1,4 +1,4 @@
-import React, { Fragment, Component } from 'react'
+import React, { Fragment, useState } from 'react'
 import PropTypes from 'prop-types'
 import { pullAt } from 'lodash'
 import {
@@ -11,56 +11,41 @@ import {
   Tooltip,
 } from '@mui/material';
 
+import { styled, useTheme } from '@mui/material/styles';
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
 
-class UserPeers extends Component<any, any> {
-  
-  static styles = (theme): any => ({
-    root: {
-      display: 'flex',
-      justifyContent: 'center',
-      flexWrap: 'wrap',
-    },
-    chip: {
-      margin: theme.spacing(1),
-    },
-    newChipInput: {
-      margin: theme.spacing(1)
-    }
-  });
+const PREFIX = 'UserPeers';
 
-  static propTypes = {
-    formData: PropTypes.array,
-    onChange: PropTypes.func,
-    onSubmit: PropTypes.func,
-    readOnly: PropTypes.bool,
-    schema: PropTypes.object,
-    uiSchema: PropTypes.object
+const classes = {
+  root: `${PREFIX}-root`,
+  chip: `${PREFIX}-chip`,
+  newChipInput: `${PREFIX}-newChipInput`,
+};
+
+const Root = styled('div')(({ theme }) => ({
+  [`& .${classes.root}`]: {
+    display: 'flex',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  [`& .${classes.chip}`]: {
+    margin: theme.spacing(1),
+  },
+  [`& .${classes.newChipInput}`]: {
+    margin: theme.spacing(1)
   }
+}));
 
-  static defaultProps = {
-    formData: [],
-    readOnly: false
-  }
+const UserPeers = (props: any) => {
+  const theme = useTheme();
+  const [showPeerFinder, setShowPeerFinder] = useState(false);
 
-  constructor(props, context){
-    super(props, context)
-    this.state = {
-      showPeerFinder: false
-    };
-
-  }
-  
-  render(){
-    const self = this
-    
-    return (
-      <Fragment>
-        UserPeers Widget
-      </Fragment>
-    )
-  }
+  return (
+    <Root>
+      UserPeers Widget
+    </Root>
+  )
 }
-const UserPeersComponent = compose(withTheme, withStyles(UserPeers.styles))(UserPeers)
+
+const UserPeersComponent = compose()(UserPeers)
 export default UserPeersComponent

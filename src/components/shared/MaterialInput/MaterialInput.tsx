@@ -1,19 +1,28 @@
-import React, { Component, Fragment } from 'react';
+import React from 'react';
 import { Icon, Input } from '@mui/material';
 import { compose } from 'redux';
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { template } from 'lodash';
 import { throttle } from 'lodash';
 
-class MaterialInputWidget extends Component<any, any> {
+// Extend the Theme type to include custom extensions
+interface ExtendedTheme extends Theme {
+  extensions?: {
+    [key: string]: {
+      icons: {
+        [key: string]: React.ComponentType<any>;
+      };
+    };
+  };
+}
 
-  render() {
-    const { props } = this;
+const MaterialInputWidget = (props: any) => {
+  const theme = useTheme() as ExtendedTheme;
 
-    let labelTitle = props.uiSchema.title;
-    let labelIcon = null;
-    let _iconPosition = 'left';
-    let theme = props.theme;
+  let labelTitle = props.uiSchema.title;
+  let labelIcon = null;
+  let _iconPosition = 'left';
     
     const {
       formData,
@@ -95,9 +104,8 @@ class MaterialInputWidget extends Component<any, any> {
         </div>
         {_iconPosition === 'right' ? labelIcon : null}
       </div>
-    )
-  }
-}
+    );
+};
 
-const MaterialInputComponent = compose(withTheme)(MaterialInputWidget)
+const MaterialInputComponent = MaterialInputWidget;
 export default MaterialInputComponent;

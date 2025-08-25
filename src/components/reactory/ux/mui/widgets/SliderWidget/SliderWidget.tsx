@@ -1,5 +1,4 @@
-import React, { Component, Fragment } from 'react';
-import PropTypes from 'prop-types';
+import React, { Fragment } from 'react';
 import { throttle } from 'lodash';
 import {
   FormControl,
@@ -8,19 +7,19 @@ import {
   InputLabel,
   Typography,
 } from '@mui/material';
-import { withStyles } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import Slider from '@mui/material/Slider';
 import Reactory from '@reactory/reactory-core';
 
-const styles = (theme) => ({
-  root: {
-    width: '85%',
-  },
-  slider: {
+const StyledSliderContainer = styled('div')(({ theme }: { theme: Theme }) => ({
+  width: '85%',
+  '& .slider': {
     padding: '22px 0px',
     margin: 'auto'
   },
-});
+}));
 
 
 interface SliderWidgetUISchema {
@@ -49,6 +48,7 @@ interface SliderWidgetWidgetProps {
  * @returns 
  */
 const SliderWidget = (props: SliderWidgetWidgetProps) => {
+  const theme = useTheme();
 
   const { formData, onChange, uiSchema, reactory, schema, idSchema } = props;
 
@@ -118,5 +118,4 @@ const SliderWidget = (props: SliderWidgetWidgetProps) => {
   }
 }
 
-export const SliderWidgetComponent = withStyles(styles)(SliderWidget);
-export default SliderWidgetComponent
+export default SliderWidget;

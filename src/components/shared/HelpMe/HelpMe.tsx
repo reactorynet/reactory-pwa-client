@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { compose } from 'redux';
 import { Paper, Theme } from '@mui/material';
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/reactory-core';
 
@@ -25,8 +25,9 @@ interface IHelpMeDepencdies {
 }
 
 const HelpMe = (props: IHelpMeProps) => {
+  const theme = useTheme();
   
-const { reactory, topics, theme, onClose, title = 'Help', allowSupportRequest = true } = props;
+const { reactory, topics, onClose, title = 'Help', allowSupportRequest = true } = props;
 
 const { FullScreenModal, StaticContent, MaterialCore, SupportForm } = reactory.getComponents<IHelpMeDepencdies>(['core.FullScreenModal', 'core.StaticContent', 'core.SupportForm', 'material-ui.MaterialCore']);
 const { Typography } = MaterialCore;
@@ -50,6 +51,6 @@ const { Typography } = MaterialCore;
     )
 }
 
-const HelpMeComponent = compose(withTheme, withReactory)(HelpMe);
+const HelpMeComponent = compose(withReactory)(HelpMe);
 
 export default HelpMeComponent;

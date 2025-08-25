@@ -11,10 +11,8 @@ import * as d3color from "d3-color";
 import * as d3delaunay from "d3-delaunay";
 
 import * as MaterialCore from '@mui/material'
-import * as MaterialCoreStyles from '@mui/styles'
 import * as MaterialIcons from '@mui/icons-material'
 import * as MaterialLab from '@mui/lab'
-import * as MaterialStyles from '@mui/styles';
 import * as MaterialDates from '@mui/x-date-pickers';
 import * as MaterialGrid from '@mui/x-data-grid';
 
@@ -67,7 +65,7 @@ import Cropper from './shared/image/Cropper';
 import ReactorChat from './shared/ReactorChat/ReactorChat';
 import { ReactorChatButton } from './shared/ReactorChat';
 
-import CurrencyLabel from './shared/currency/CurrencyLabel';
+
 import DateLabel from './shared/DateLabel';
 import { ReactoryStaticContentComponent as StaticContent } from './shared/StaticContent';
 import Label from './shared/Label';
@@ -77,7 +75,7 @@ import { Footer } from './shared/Footer';
 
 import * as utils from './util';
 import { compose } from 'redux';
-import { DropDownMenuComponent } from './shared/menus/DropDownMenu';
+import DropDownMenuComponent from './shared/menus/DropDownMenu';
 
 import { ErrorBoundary } from '@reactory/client-core/api/ErrorBoundary';
 
@@ -89,7 +87,6 @@ import MarkdownGfm from 'remark-gfm';
 import DomPurify from 'dompurify';
 import PrismCode from 'react-prism';
 import * as Three from 'three';
-
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -175,24 +172,12 @@ export const componentRegistery = [
     component: StyledCurrencyLabel,
     version: '1.0.0',
   },
-  // {
-  //   nameSpace: 'core',
-  //   name: 'PricingSliderComponent',
-  //   component: PricingSliderComponent,
-  //   version: '1.0.0',
-  // },
   {
     nameSpace: 'core',
     name: 'SelectWithDataWidget',
     component: require('@reactory/client-core/components/reactory/ux/mui/widgets/SelectWithData'),
     version: '1.0.0',
   },
-  // {
-  //   nameSpace: 'core',
-  //   name: 'PricingLineChartComponent',
-  //   component: PricingLineChartComponent,
-  //   version: '1.0.0',
-  // },
   {
     nameSpace: 'core',
     name: 'TableChildComponentWrapper',
@@ -435,30 +420,13 @@ export const componentRegistery = [
     nameSpace: 'material-ui',
     name: 'MaterialCore',
     version: '1.0.0',
-    component: {
-      ...MaterialCore,
-      styles: {
-        ...MaterialCoreStyles
-      }
-    }
+    component: MaterialCore
   },
   {
     nameSpace: 'material-ui',
     name: 'MaterialIcons',
     version: '1.0.0',
     component: MaterialIcons,
-  },
-  {
-    nameSpace: 'material-ui',
-    name: 'MaterialLab',
-    version: '1.0.0',
-    component: MaterialLab,
-  },
-  {
-    nameSpace: 'material-ui',
-    name: 'MaterialStyles',
-    version: '1.0.0',
-    component: MaterialStyles,
   },
   {
     nameSpace: 'material-ui',
@@ -474,6 +442,12 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'material-ui',
+    name: 'MaterialLab',
+    component: MaterialLab,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'material-ui',
     name: 'MaterialPickers',
     version: '1.0.0',
     component: MaterialDates,
@@ -482,15 +456,14 @@ export const componentRegistery = [
     nameSpace: 'material-ui',
     name: 'Material',
     version: '1.0.0',
-    component: {
+    component: {      
       MaterialCore,
-      MaterialIcons,
-      MaterialLab,
-      MaterialStyles,
+      MaterialIcons,      
       MaterialPickers: MaterialDates,
       MaterialTable: MaterialGrid,
       MaterialGrid,
-      MaterialDates
+      MaterialDates,
+      MaterialLab
     },
   },
   {
@@ -508,12 +481,6 @@ export const componentRegistery = [
   },
   GraphiqlWindow.meta,
   SlideOutLauncher.meta,
-  {
-    nameSpace: 'core',
-    name: 'CurrencyLabel',
-    version: '1.0.0',
-    component: CurrencyLabel
-  },
   {
     nameSpace: 'core',
     name: 'DateLabel',

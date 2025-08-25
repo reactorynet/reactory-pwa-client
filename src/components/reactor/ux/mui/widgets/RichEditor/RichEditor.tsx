@@ -3,11 +3,7 @@ import { styled } from '@mui/material/styles';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css'; // Import base styles
 import 'react-quill/dist/quill.bubble.css'; // Import bubble theme
-import { color } from 'd3';
-import { borderRadius, Theme } from '@mui/system';
-import { FormControl, InputLabel } from '@mui/material';
-import { use } from 'i18next';
-import { useReactory } from '@reactory/client-core/api';
+import { useReactory } from '@reactory/client-core/api/ApiProvider';
 
 const PREFIX = 'RichTextEditor';
 
@@ -16,9 +12,7 @@ const classes = {
   editor: `${PREFIX}-editor`
 };
 
-const StyledReactQuill
- = styled(ReactQuill
-)(({ theme }: { theme: Theme }) => { 
+const StyledReactQuill = styled(ReactQuill)(({ theme }) => { 
   const { palette } = theme;
   const { mode } = palette;
   const isLight = mode === 'light';
@@ -26,7 +20,7 @@ const StyledReactQuill
 
   const backgroundImageBlur = isLight ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
 
-  return ({
+  return {
     [`& .${classes.editorContainer}`]: {
       border: '1px solid #ccc',
       borderRadius: theme.shape.borderRadius,
@@ -38,8 +32,7 @@ const StyledReactQuill
 
     [`& .${classes.editor}`]: {
       minHeight: '200px',
-      // @ts-ignore
-      fontFamily: theme.typography?.fontFamily || 'inherit',
+      fontFamily: theme.typography.fontFamily,
       // padding: theme.spacing(2),
       marginTop: theme.spacing(2),
       zIndex: 1,
@@ -59,8 +52,7 @@ const StyledReactQuill
       },
       '& .ql-container': {
         border: 'none',
-        // @ts-ignore
-        fontSize: theme.typography?.body1?.fontSize,
+        fontSize: theme.typography.body1.fontSize,
         backgroundColor: theme.palette.background.paper,
         color: theme.palette.text.primary,
         // backgroundImage: `linear-gradient(to bottom, ${backgroundImageBlur}, ${backgroundImageBlur})`,
@@ -74,13 +66,13 @@ const StyledReactQuill
         color: theme.palette.text.disabled,
       },
     }
-  });
+  };
 });
 
 const RichTextEditor = (props: any) => {
   const [content, setContent] = useState();
 
-  const reactory = useReactory();
+  const reactor = useReactory();
 
   useEffect(() => { 
     if (props.formData && props.formData !== content) {
@@ -118,11 +110,10 @@ const RichTextEditor = (props: any) => {
   ];
   
   return (
-    <ReactQuill
+    <StyledReactQuill
       id={props.idSchema.$id}
       value={content}
-      onChange={handleEditorChange}
-      theme="snow"
+      onChange={handleEditorChange}      
       placeholder={props.schema.title}
       className={classes.editor}
       modules={modules}

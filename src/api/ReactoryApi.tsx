@@ -13,7 +13,7 @@ import { Provider } from 'react-redux';
 import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions, MutationResult, FetchResult, ApolloError, ServerError } from '@apollo/client';
 import localForage from 'localforage';
 import { CssBaseline } from '@mui/material';
-import { ThemeProvider as MuiThemeProvider } from '@mui/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
 // import objectMapper from './objectMapper';
@@ -1110,13 +1110,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       <CssBaseline />
       <Provider store={that.reduxStore}>
         <ApolloProvider client={that.client}>
-          <MuiThemeProvider theme={that.muiTheme}>
+          <ThemeProvider theme={that.muiTheme}>
             <Router>
               <ReactoryProvider reactory={that}>
                 {componentView}
               </ReactoryProvider>
             </Router>
-          </MuiThemeProvider>
+          </ThemeProvider>
         </ApolloProvider>
       </Provider>
     </React.Fragment>);

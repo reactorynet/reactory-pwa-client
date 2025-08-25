@@ -1,39 +1,22 @@
-import React, { Component } from 'react';
+import React from 'react';
 import { compose } from 'redux';
-import { withStyles, withTheme } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { Typography } from '@mui/material';
 import moment from 'moment';
 
-class DateLabel extends Component<any, any> {
-
-  static propTypes = {
-  };
-
-  static efaultProps = {
-  };
-
-  static styles = (theme): any => {
-    return {
-      currency: {
-        margin: theme.spacing(1)
-      },
-      currencyValue: {
-
-      },
-    }
-  };
-
-
-
-  render() {
-    const {
-      value,
-      api,
-      variant = "h6",
-      classes,
-      uiSchema
-    } = this.props;
+const DateLabel = (props: any) => {
+  const theme = useTheme();
+  
+  const {
+    value,
+    api,
+    variant = "h6",
+    classes,
+    uiSchema
+  } = props;
 
     let labelText = moment(value).format('DD  MMM YYYY HH:mm') ;
     let labelTitle = '';
@@ -54,24 +37,18 @@ class DateLabel extends Component<any, any> {
     return (
       <div>
         { labelTitle != '' && <label>{labelTitle}</label>}
-        <Typography variant={_variant} className={classes.label}>{labelText}</Typography>
+        <Typography variant={_variant} style={{ margin: theme.spacing(1) }}>{labelText}</Typography>
       </div>
     );
-  }
-}
+};
 
 
-
-const DateLabelComponent = compose(
-  withReactory,
-  withTheme,
-  withStyles(DateLabel.styles))(DateLabel);
 
 export default {
   nameSpace: 'core',
   name: 'DateLabel',
   version: '1.0.0',
-  component: DateLabelComponent,
+  component: DateLabel,
   tags: ['date', 'label'],
   description: 'Basic Date Label',
 };

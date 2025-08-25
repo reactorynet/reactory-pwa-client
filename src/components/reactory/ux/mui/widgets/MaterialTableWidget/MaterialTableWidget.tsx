@@ -1,8 +1,9 @@
-import React, { Fragment, Component, useState, RefObject, PureComponent } from 'react'
+import React, { Fragment, useState, RefObject, PureComponent } from 'react'
+import { styled } from '@mui/material/styles';
 import { pullAt, isNil, remove, filter, isArray, throttle, ThrottleSettings } from 'lodash'
 import {
 
-  Grid,
+  Grid2 as Grid,
   Typography,
   Button,
   IconButton,
@@ -23,21 +24,53 @@ import {
   TablePagination,
   Paper,
   Tooltip,
-  TextField
+  TextField,
+  Breakpoint
 
 } from '@mui/material'
 import { alpha, SxProps } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { find, template, get } from 'lodash';
-import { Styles } from '@mui/styles/withStyles/withStyles';
+
 import Reactory from '@reactory/reactory-core';
 import ReactoryApi from 'api';
 import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
 import { useNavigate } from 'react-router';
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 import { constants } from 'zlib';
+import { useReactory } from '@reactory/client-core/api/ApiProvider';
+
+const PREFIX = 'MaterialTableWidgetComponent';
+
+const classes = {
+  root: `${PREFIX}-root`,
+  chip: `${PREFIX}-chip`,
+  newChipInput: `${PREFIX}-newChipInput`
+};
+
+// TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
+const Root = styled('div')((
+  {
+    theme
+  }
+) => ({
+  [`& .${classes.root}`]: {
+    display: 'flex',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+
+  [`& .${classes.chip}`]: {
+    margin: theme.spacing(1),
+  },
+
+  [`& .${classes.newChipInput}`]: {
+    margin: theme.spacing(1)
+  }
+}));
+
 export interface MaterialTableRemoteDataReponse {
   data: any[],
   paging: {
@@ -207,23 +240,8 @@ export interface MaterialTablePagingState {
   activeRowsPerPage: number
 }
 
-const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipInput"> = (theme) => ({
-  root: {
-    display: 'flex',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-  },
-  chip: {
-    margin: theme.spacing(1),
-  },
-  newChipInput: {
-    margin: theme.spacing(1)
-  }
-});
-
 const ReactoryMaterialTablePagination = (props) => {
-  const {
-    reactory,
+  const {    
     theme,
     schema,
     idShema,
@@ -231,11 +249,11 @@ const ReactoryMaterialTablePagination = (props) => {
     uiSchema,
     formData,
     rowsPerPageOptions = [5, 10, 25, 50, 100],
-    tableRef,
-    classes,
+    tableRef,    
   } = props;
 
-  const { DropDownMenu } = reactory.getComponents(['core.DropDownMenu']);
+  const reactory = useReactory();
+  const { DropDownMenu } = reactory.getComponents<{ DropDownMenu: Reactory.Client.Components.DropDownMenu }>(['core.DropDownMenu']);
 
 
   const { useState, useEffect } = React;
@@ -295,11 +313,11 @@ const ReactoryMaterialTablePagination = (props) => {
     <td style={{ display: 'grid' }}>
       <Grid container spacing={2}>
         {show_totals === true && show_totals_label === true &&
-          <Grid item xs={12} md={12} lg={12} xl={12} style={footerOptions.totalsRowStyle}>
+          <Grid size={{ xs: 12, md: 12, lg: 12, xl: 12 }} sx={footerOptions.totalsRowStyle}>
             <div style={footerOptions.totalsCellStyle}>Totals</div>
           </Grid>}
         {show_totals === true && footerColumns !== undefined && footerColumns !== null &&
-          <Grid item container spacing={0} xs={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
+          <Grid size={{ xs: 12, md: 12, lg: 12, xl: 12 }} container spacing={0} style={{ display: 'flex', justifyContent: 'center' }}>
             {
               footerColumns.map((col) => {
                 let cellStyle = {};
@@ -337,27 +355,27 @@ const ReactoryMaterialTablePagination = (props) => {
               })
             }
           </Grid>}
-        <Grid container item xs={12} md={12} lg={12} xl={12} spacing={0} style={{ justifyContent: 'flex-end' }}>
+        <Grid container size={{ xs: 12, md: 12, lg: 12, xl: 12 }} spacing={0} style={{ justifyContent: 'flex-end' }}>
 
-          <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
-            <Grid item sm={8}>
+          <Grid container size={{ sm: 6, md: 2 }} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
+            <Grid size={{ sm: 8 }}>
               <Typography style={{ marginTop: '10px', float: 'right' }}>Total records:</Typography>
             </Grid>
-            <Grid item sm={2}>
+            <Grid size={{ sm: 2 }}>
               <Typography style={{ marginTop: '10px', float: 'right' }}>{props.count || 0}</Typography>
             </Grid>
           </Grid>
 
-          <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
-            <Grid item sm={8}>
+          <Grid container size={{ sm: 6, md: 2 }} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
+            <Grid size={{ sm: 8 }}>
               <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
             </Grid>
-            <Grid item sm={2}>
-              <DropDownMenu {...rowsPerPageDropDownProps} />
+            <Grid size={{ sm: 2 }}>
+              <DropDownMenu {...rowsPerPageDropDownProps} onSelect={onMenuItemSelect} />
             </Grid>
           </Grid>
-          <Grid item sm={6} md={4}>
-            <TablePagination {...{ ...props, classes: { root: classes.root } }} />
+          <Grid size={{ sm: 6, md: 4 }}>
+            <TablePagination {...props} />
           </Grid>
         </Grid>
       </Grid>
@@ -385,10 +403,9 @@ const ReactoryMaterialTableWaitForRenderer = (props) => {
 };
 
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
-
-  const {
-    reactory,
-    theme,
+  const theme: Theme & { MaterialTableWidget: any } = useTheme();
+  const reactory = useReactory();
+  const {    
     schema,
     idSchema,
     onChange,
@@ -450,7 +467,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   let actions = [];
 
   let ToolbarComponent = null;
-  let components: { [key: string]: Component | PureComponent | Function } = {};
+  let components: { [key: string]: React.ComponentType<any> } = {};
   let detailsPanel: (props: MaterialTableDetailPanelProps) => JSX.Element = null;
 
   if (uiOptions.componentMap) {
@@ -633,7 +650,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     _columns.forEach(coldef => {
 
-      const def: Reactory.Client.Components.MaterialTableWidgetColumnDefinition = {
+      const def: Reactory.Client.Components.MaterialTableWidgetColumnDefinition & { breakpoint?: string | number } = {
         ...coldef
       };      
 
@@ -659,7 +676,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           }
 
           if (ColRenderer) return <ColRenderer {...props} />
-          else return <ReactoryMaterialTableWaitForRenderer {...props} componentId={def.component} DefaultComponent={<>...</>} />
+          else return <ReactoryMaterialTableWaitForRenderer {...props} componentId={def.component} DefaultComponent={<Root>...</Root>} />;
         }
 
         delete def.component;
@@ -723,7 +740,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
       if (def.breakpoint) {
-        const shouldBreak = useMediaQuery(theme.breakpoints.down(def.breakpoint));
+        const shouldBreak = useMediaQuery(theme.breakpoints.down(def.breakpoint as Breakpoint));
 
         if (shouldBreak === false) {
           reactory.log('MaterialTableWidget ==> Skipping column render', { shouldBreak, def });
@@ -1697,5 +1714,4 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 };
 
-const MaterialTableWidgetComponent = compose(withReactory, withTheme, withStyles(ReactoryMaterialTableStyles))(ReactoryMaterialTable)
-export default MaterialTableWidgetComponent
+export default ReactoryMaterialTable;

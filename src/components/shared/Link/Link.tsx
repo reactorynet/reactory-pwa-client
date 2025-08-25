@@ -2,10 +2,22 @@ import React from 'react';
 import { Icon } from '@mui/material';
 import { template } from 'lodash';
 import { compose } from 'redux';
-import { withTheme, withStyles } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
+
+interface ExtendedTheme extends Theme {
+  extensions?: {
+    [key: string]: {
+      icons: {
+        [key: string]: React.ComponentType<any>;
+      };
+    };
+  };
+}
 import { Link } from 'react-router-dom';
 
 const LinkComponent = (props: any) => {
+  const theme = useTheme() as ExtendedTheme;
 
 
 
@@ -22,9 +34,9 @@ const LinkComponent = (props: any) => {
     }
 
     if (props.uiSchema["ui:options"].icon) {
-      const iconProps = { styles: { marginLeft: props.theme.spacing(1) } };
+      const iconProps = { styles: { marginLeft: theme.spacing(1) } };
       const custom = props.uiSchema["ui:options"].iconType
-      let IconComponent = custom !== undefined ? props.theme.extensions[custom].icons[props.uiSchema["ui:options"].icon] : null;
+      let IconComponent = custom !== undefined ? theme.extensions[custom].icons[props.uiSchema["ui:options"].icon] : null;
       if (IconComponent) {
         linkIcon = <IconComponent {...iconProps} />
       } else {
@@ -40,5 +52,4 @@ const LinkComponent = (props: any) => {
 
 };
 
-const ThemeLinkComponent = compose(withTheme)(LinkComponent);
-export default ThemeLinkComponent;
+export default LinkComponent;

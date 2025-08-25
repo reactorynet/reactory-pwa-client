@@ -1,5 +1,4 @@
-import React, { Fragment, Component } from 'react'
-import PropTypes from 'prop-types'
+import React, { Fragment } from 'react'
 import { pullAt, find, isNil, isEmpty } from 'lodash'
 import objectMapper from 'object-mapper'
 import {
@@ -9,155 +8,95 @@ import {
 } from '@mui/material';
 import gql from 'graphql-tag';
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
-class DocumentListWidget extends Component<any, any> {
+const DocumentListWidget = (props: any) => {
+  const theme = useTheme();
+  const [documents, setDocuments] = React.useState([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
-  static styles = (theme): any => ({
-    root: {
-      display: 'flex',
-      flexWrap: 'wrap',
-    },
-    label: {
-      fontSize: '1em',
-      color: 'rgba(0, 0, 0, 0.54)',
-      marginBottom: '0.5em',
-      display: 'block'
-    },
-    docContainer: {
-      paddingTop: theme.spacing(1)
-    },
-    doc: {
-      display: 'flex',
-      alignItems: 'center',
-      textDecoration: 'none',
-      color: 'rgba(0, 0, 0, 0.87)',
-      marginBottom: theme.spacing(0.5),
-      borderBottom: '1px solid #ded8d8',
-      marginLeft: theme.spacing(3),
-      padding: theme.spacing(1)
-    },
-    docName: {
-      flex: 1,
-      color: 'black',
-      textDecoration: 'none',
-    },
-    icon: {
-      color: theme.palette.primary.main,
-      marginRight: theme.spacing(1)
-    },
-    deleteButton: {
-      color: '#f24646',
-      fontWeight: 'bold',
-      border: 'none',
-      backgroundColor: 'transparent'
-    }
-  });
+  React.useEffect(() => {
+    getDocuments();
+  }, []);
 
-  static propTypes = {
-    formData: PropTypes.any,
-    uiSchema: PropTypes.object,
-  }
+  const getDocuments = () => {
+    const { query, propertyMap } = props.uiSchema['ui:options'];
+    const variables = propertyMap ? objectMapper(props, propertyMap) : null;
+    setIsLoading(true);
 
-  static defaultProps = {}
-
-  state = {
-    documents: [],
-    isLoading: true,
-    isDeleting: false,
-  }
-
-  constructor(props, context) {
-    super(props);
-    this.getDocuments = this.getDocuments.bind(this);
-  }
-
-  componentDidMount = () => {
-    this.getDocuments();
-  }
-
-  getDocuments = () => {
-    const { query, propertyMap } = this.props.uiSchema['ui:options'];
-    const variables = propertyMap ? objectMapper(this.props, propertyMap) : null;
-    this.setState({ isLoading: true });
-
-    this.props.api.graphqlQuery(query.text, variables).then((result) => {
+    props.api.graphqlQuery(query.text, variables).then((result) => {
       if (result && result.data && result.data[query.name]) {
-        this.setState({
-          documents: result.data[query.name],
-          isLoading: false,
-          error: null,
-        })
+        setDocuments(result.data[query.name]);
+        setIsLoading(false);
       } else {
-        this.setState({
-          documents: [],
-          isLoading: false,
-          error: null,
-        })
+        setDocuments([]);
+        setIsLoading(false);
       }
     }).catch((error) => {
-      this.setState({ isLoading: false, documents: [] });
-      this.props.api.createNotification(`Error ${query.name} Failed!`, { showInAppNotification: true, type: 'error' });
+      setIsLoading(false);
+      setDocuments([]);
+      props.api.createNotification(`Error ${query.name} Failed!`, { showInAppNotification: true, type: 'error' });
     });
 
   }
 
-  deleteDocument = (_id) => {
-    const { mutation } = this.props.uiSchema['ui:options'];
-    this.setState({ isDeleting: true });
-    this.props.api.graphqlMutation(gql(mutation.text), { id: _id })
+  const deleteDocument = (_id) => {
+    const { mutation } = props.uiSchema['ui:options'];
+    setIsDeleting(true);
+    props.api.graphqlMutation(gql(mutation.text), { id: _id })
       .then((deleteResult) => {
         if (deleteResult && deleteResult.data && deleteResult.data[mutation.name]) {
-          let updatedDocuments = [...this.state.documents];
+          let updatedDocuments = [...documents];
           updatedDocuments = updatedDocuments.filter(doc => doc.id != _id);
-          this.setState({ isDeleting: false, documents: updatedDocuments });
-          this.props.api.createNotification(`Document successfully deleted`, { showInAppNotification: true, type: 'success' });
+          setIsDeleting(false);
+          setDocuments(updatedDocuments);
+          props.api.createNotification(`Document successfully deleted`, { showInAppNotification: true, type: 'success' });
         } else {
           console.log('COULD NOT DELETE DOCUMENT');
-          this.setState({ isDeleting: false });
+          setIsDeleting(false);
         }
       }).catch((error) => {
-        this.setState({ isDeleting: false });
-        this.props.api.createNotification(`Error ${mutation.name} Failed!`, { showInAppNotification: true, type: 'error' });
+        setIsDeleting(false);
+        props.api.createNotification(`Error ${mutation.name} Failed!`, { showInAppNotification: true, type: 'error' });
       });
-  }
+  };
 
-  render() {
-    const self = this
-    const { classes, api } = this.props;
-    const { label } = this.props.uiSchema['ui:options'];
-    let _label = label || '';
+  const { api } = props;
+  const { label } = props.uiSchema['ui:options'];
+  let _label = label || '';
 
-    this.props.api.log('RENDERING DOCUMENTS LIST COMPONENT', {});
+  props.api.log('RENDERING DOCUMENTS LIST COMPONENT', {});
 
-    return (
-      <>
-        {_label != '' && <label className={classes.label}>{_label}</label>}
-        <div className={classes.docContainer}>
+  return (
+    <>
+      {_label != '' && <label style={{ fontSize: '1em', color: 'rgba(0, 0, 0, 0.54)', marginBottom: '0.5em', display: 'block' }}>{_label}</label>}
+      <div style={{ paddingTop: theme.spacing(1) }}>
+        {
+          documents.length > 0 ?
+            documents.map(doc => {
+              return (
+                <div key={doc.id} style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'rgba(0, 0, 0, 0.87)', marginBottom: theme.spacing(0.5), borderBottom: '1px solid #ded8d8', marginLeft: theme.spacing(3), padding: theme.spacing(1) }}>
+          <Icon fontSize="inherit" style={{ color: theme.palette.primary.main, marginRight: theme.spacing(1) }}>description</Icon>
+          <a style={{ flex: 1, color: 'black', textDecoration: 'none' }} href={doc.url} target="_blank" >
+            <Typography variant="subtitle1">{doc.name}</Typography>
+          </a>
           {
-            this.state.documents.length > 0 ?
-              this.state.documents.map(doc => {
-                return (
-                  <div key={doc.id} className={classes.doc}>
-            <Icon fontSize="inherit" classes={{ root: classes.icon }}>description</Icon>
-            <a className={classes.docName} href={doc.url} target="_blank" >
-              <Typography variant="subtitle1">{doc.name}</Typography>
-            </a>
-            {
-              !this.state.isDeleting ? <button className={classes.deleteButton} onClick={() => this.deleteDocument(doc.id)}>Remove</button> :
-                <CircularProgress style={{ color: '#f24646', height: '1rem', width: '1rem', marginRight: '1rem' }} />
-            }
-          </div>
-                )
-              }) : <p style={{ margin: '0 0 0 16px' }}>{ this.state.isLoading ? 'Loading... ' : 'No Documents Available'}</p>
+            !isDeleting ? <button style={{ color: '#f24646', fontWeight: 'bold', border: 'none', backgroundColor: 'transparent' }} onClick={() => deleteDocument(doc.id)}>Remove</button> :
+              <CircularProgress style={{ color: '#f24646', height: '1rem', width: '1rem', marginRight: '1rem' }} />
           }
         </div>
-      </>
-    )
-  }
-}
-// @ts-ignore
-const DocumentListComponent = compose(withReactory, withTheme, withStyles(DocumentListWidget.styles))(DocumentListWidget)
+              )
+            }) : <p style={{ margin: '0 0 0 16px' }}>{ isLoading ? 'Loading... ' : 'No Documents Available'}</p>
+        }
+      </div>
+    </>
+  );
+};
+
+const DocumentListComponent = compose(withReactory)(DocumentListWidget);
 export default DocumentListComponent;
 

@@ -1,24 +1,21 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import React from 'react';
 import { compose } from 'redux';
 import { Typography } from '@mui/material';
-import { withStyles, withTheme } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 import { template } from 'lodash';
 
-class Label extends Component<any, any> {
-
-
-  render() {
-
-    const { props } = this;
-    const {
-      value = "?",
-      variant = "h6",
-      classes,
-      reactory,
-    } = props;
+const Label = (props: any) => {
+  const theme = useTheme();
+  
+  const {
+    value = "?",
+    variant = "h6",
+    reactory,
+  } = props;
 
     let labelText = value;
 
@@ -32,45 +29,20 @@ class Label extends Component<any, any> {
     }
 
     return (
-      <Typography variant={variant} className={classes.label}>{labelText}</Typography>
+      <Typography variant={variant} style={{ margin: theme.spacing(1) }}>{labelText}</Typography>
     );
-  }
-
-  static propTypes = {
-    value: PropTypes.any,
-    variant: PropTypes.string
-  };
-  
-  static defaultProps = {
-    value: "?",
-    variant: "h6"
-  };
-
-
-  static styles = (theme) => {
-    return {
-      label: {
-        margin: theme.spacing(1)
-      },
-    }
-  };
-}
+};
 
 
 
 
 
-
-const LabelComponent = compose(
-  withReactory,
-  withTheme,
-  withStyles(Label.styles))(Label);
 
 export default {
   nameSpace: 'core',
   name: 'Label',
   version: '1.0.0',
-  component: LabelComponent,
+  component: Label,
   tags: ['label'],
   description: 'Basic Label',
 };

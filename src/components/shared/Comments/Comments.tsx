@@ -1,119 +1,66 @@
-import React, { Component } from 'react'
-import PropTypes from 'prop-types'
-import {withStyles, withTheme} from '@mui/styles'
+import React from 'react'
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import TextField from '@mui/material/TextField'
 import { List, ListItem, ListItemSecondaryAction, ListItemText } from '@mui/material'
 import Avatar from '@mui/material/Avatar';
 
 import { compose } from 'redux'
 
-class Comment extends Component<any, any> {
-  static styles = theme => {
-    return {
-      commentRoot: {
+const Comment = (props: any) => {
+  const { comment, key } = props;
 
-      }
-    }
-  }
+  return (
+    <ListItem key={key}>
+      <Avatar alt={comment.who.firstName} src={comment.who.avatar}></Avatar>
+      <ListItemText>{comment.text}</ListItemText>
+    </ListItem>
+  );
+};
 
-  static propTypes = {
-    comment: PropTypes.object.isRequired,
-    key: PropTypes.string,
-    alt: PropTypes.bool
-  }
+export const CommentComponent = Comment;
 
-
-  render(){
-    const { classes, comment, key } = this.props;
-
-    return (
-      <ListItem key={key}>
-        <Avatar alt={comment.who.firstName} src={comment.who.avatar}></Avatar>
-        <ListItemText>{comment.text}</ListItemText>
-      </ListItem>
-    )
-  }
-}
-
-export const CommentComponent = compose(
-  withStyles(Comment.styles),
-  withTheme
-)(Comment)
-
-class Comments extends Component<any, any> {
+const Comments = (props: any) => {
+  const theme = useTheme();
+  const [newCommentText, setNewCommentText] = React.useState('');
   
-  static styles = theme => {
-    const primaryDark = theme.palette.primary.dark
-    return {
-      commentsRoot: {
-        width: '100%'          
-      },
-      textField: {
-        width: '100%',
-      }
-    }
-  }
+  const handleNewCommentText = (evt: any) => {
+    setNewCommentText(evt.target.value);
+  };
 
-  static propTypes = {
-    comments: PropTypes.array,
-    newCommentAdded: PropTypes.func,    
-  }
-
-  static defaultProps = {
-    newCommentAdded : (comment) => { }
-  }
-
-  setNewCommentText(evt){
-    this.setState({newCommentText: evt.target.value})
-  }
-
-  newCommentTextKeyPress(evt){
+  const newCommentTextKeyPress = (evt: any) => {
     if(evt.charCode === 13){
-      evt.preventDefault()      
-      this.props.newCommentAdded(this.state.newCommentText)
-      this.setState({newCommentText: ''})
+      evt.preventDefault();      
+      props.newCommentAdded(newCommentText);
+      setNewCommentText('');
     }
-  }
+  };
 
-  render(){
+  const { comments } = props;
+  
+  return (
+    <div style={{ width: '100%' }}>
+      <form>
+          <TextField 
+            style={{ width: '100%' }}
+            value={newCommentText}
+            label="New Comment"
+            onChange={handleNewCommentText}
+            onKeyPress={newCommentTextKeyPress}
+          />
+      </form>
+      <List>
+        {comments.map((comment: any, index: number)=> {             
+          return (
+          <ListItem key={index}>              
+            <Avatar alt={`${comment.who.firstName} ${comment.who.lastName}`} src={comment.who.avatar} ></Avatar>
+            <ListItemText primary={comment.text} secondary={comment.when.format('DD MMM YY')}/>
+          </ListItem>
+          )})}
+      </List>
+    </div>
+  );
+};
 
-    const { classes, comments } = this.props
-    const { newCommentText } = this.state
-    return (
-      <div className={classes.commentsRoot}>
-        <form>
-            <TextField 
-              className={classes.textField}
-              value={newCommentText}
-              label="New Comment"
-              onChange={this.setNewCommentText}
-              onKeyPress={this.newCommentTextKeyPress}
-            />
-        </form>
-        <List>
-          {comments.map((comment, index)=> {             
-            return (
-            <ListItem key={index} className={classes.listItem}>              
-              <Avatar alt={`${comment.who.firstName} ${comment.who.lastName}`} src={comment.who.avatar} ></Avatar>
-              <ListItemText primary={comment.text} secondary={comment.when.format('DD MMM YY')}/>
-            </ListItem>
-            )})}
-        </List>
-      </div>
-    )
-  }
-
-  constructor(props, context){
-    super(props, context)
-    this.state = {
-      newCommentText: ''
-    }
-    this.setNewCommentText = this.setNewCommentText.bind(this)
-    this.newCommentTextKeyPress = this.newCommentTextKeyPress.bind(this)
-  }
-}
-
-export default compose(
-  withStyles(Comments.styles),
-  withTheme
-)(Comments)
+export default Comments;

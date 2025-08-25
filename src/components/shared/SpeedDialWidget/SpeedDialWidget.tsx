@@ -1,11 +1,11 @@
 import classNames from 'classnames';
 import React, { Fragment } from 'react';
-import { withStyles } from '@mui/styles';
+import { styled } from '@mui/material/styles';
 import { isFunction } from 'lodash';
 import capitalize from '@mui/utils/capitalize';
-import SpeedDial from '@mui/lab/SpeedDial';
-import SpeedDialIcon from '@mui/lab/SpeedDialIcon';
-import SpeedDialAction from '@mui/lab/SpeedDialAction';
+import SpeedDial from '@mui/material/SpeedDial';
+import SpeedDialIcon from '@mui/material/SpeedDialIcon';
+import SpeedDialAction from '@mui/material/SpeedDialAction';
 import { Theme } from '@mui/material';
 import { SxProps } from '@mui/system';
 import { compose } from 'redux';
@@ -500,4 +500,4 @@ const SpeedDials = (props: SpeedDialWidgetProps) => {
 
 
 
-export default compose(withStyles(styles))(SpeedDials);
+export default SpeedDials;

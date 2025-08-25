@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { compose } from 'redux';
 import lodash from 'lodash';
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { withContentRect } from 'react-measure';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import {
@@ -45,6 +45,7 @@ const getDefaultOptionsFromSchema = (schema: any, uiSchema: any): any => {
 };
 
 const FunnelChartWidget: React.FC<FunnelChartWidgetProps> = ({ formData, schema, uiSchema, contentRect }) => {
+  const theme = useTheme();
   const defaultOptions = getDefaultOptionsFromSchema(schema, uiSchema);
   const options = { ...defaultOptions, ...(formData?.options || {}) };
   const data = (formData?.data && Array.isArray(formData.data) && formData.data.length > 0)
@@ -76,7 +77,6 @@ const FunnelChartWidget: React.FC<FunnelChartWidgetProps> = ({ formData, schema,
 }
 
 export default compose(
-  withTheme,
   withReactory,
   withContentRect('bounds')
 )(FunnelChartWidget);

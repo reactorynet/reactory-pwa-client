@@ -1,46 +1,26 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import React from 'react';
 import { compose } from 'redux';
 
-import { withStyles, withTheme } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import styles from './styles';
 
-class Logo extends Component<any, any> { 
-
-  static propTypes = {
-    width: PropTypes.any,
-    backgroundSrc: PropTypes.string,
-  }
-
-  static defaultProps = {
-    width: 'auto',
-    backgroundSrc: null
+const Logo = (props: any) => {
+  const theme = useTheme();
+  const customStyle: any = {      
+    width: `${props.width}px`,
+    maxWidth: `${props.width}px`,            
   };
 
-  static styles = (theme): any => ({
-    ...styles(theme)
-  });
-
-  render(){
-    const customStyle: any = {      
-      width: `${this.props.width}px`,
-      maxWidth: `${this.props.width}px`,            
-    };
-
-    if(this.props.backgroundSrc !== null) {
-      customStyle.background = `url(${this.props.backgroundSrc})`
-      customStyle.backgroundSize = 'contain'
-      customStyle.backgroundRepeat = 'no-repeat'
-      customStyle.backgroundPosition = 'center'      
-    }
-
-    return <div className={this.props.classes.logo} style={this.props.style ? {...this.props.style, ...customStyle } : {...customStyle}} ></div>
+  if(props.backgroundSrc !== null) {
+    customStyle.background = `url(${props.backgroundSrc})`
+    customStyle.backgroundSize = 'contain'
+    customStyle.backgroundRepeat = 'no-repeat'
+    customStyle.backgroundPosition = 'center'      
   }
-}
 
-const ThemedLogo: any = compose( 
-  withStyles(Logo.styles),
-  withTheme  
-)(Logo);
+  return <div style={props.style ? {...props.style, ...customStyle } : {...customStyle}} ></div>
+};
 
-export default ThemedLogo;
+export default Logo;

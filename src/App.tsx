@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { styled } from '@mui/material/styles';
 import { ApolloProvider } from '@apollo/client';
 import {
   BrowserRouter as Router,
@@ -15,7 +16,6 @@ import configureStore from './models/redux';
 
 import { Theme, CssBaseline } from '@mui/material'
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { makeStyles } from '@mui/styles';
 import queryString from './components/utility/query-string';
 import './App.css';
 import { ReactoryHeader as Header } from '@reactory/client-core/components/shared/header';
@@ -30,6 +30,59 @@ import { Typography, Icon, Paper, Box } from '@mui/material';
 import license from './license';
 import { ReactoryProvider, useReactory } from './api/ApiProvider';
 import Reactory from '@reactory/reactory-core';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+
+const PREFIX = 'ReactoryHOC';
+
+const classes = {
+  root_paper: `${PREFIX}-root_paper`,
+  selectedMenuLabel: `${PREFIX}-selectedMenuLabel`,
+  prepend: `${PREFIX}-prepend`,
+  selected: `${PREFIX}-selected`,
+  preffered: `${PREFIX}-preffered`,
+  get_started: `${PREFIX}-get_started`,
+  schema_selector: `${PREFIX}-schema_selector`
+};
+
+const StyledRouter = styled(Router)(({ theme }: { theme: Theme }) => {
+
+  return {
+    [`& .${classes.root_paper}`]: {
+      minHeight: '100vh',
+      maxHeight: '100vh',        
+    },
+    [`& .${classes.selectedMenuLabel}`]: {
+      color: theme.palette.primary.main,
+      paddingRight: theme.spacing(1.5),
+      paddingLeft: theme.spacing(1)
+    },
+    [`& .${classes.prepend}`]: {
+      color: 'rgb(34, 39, 50)',
+      opacity: 0.7,
+      paddingLeft: theme.spacing(1.5),
+      paddingRight: theme.spacing(1)
+    },
+    [`& .${classes.selected}`]: {
+      color: 'rgb(34, 39, 50)',
+      opacity: 1,
+      paddingLeft: theme.spacing(1)
+    },
+    [`& .${classes.preffered}`]: {
+      fontWeight: 'bold',
+      color: theme.palette.primary.main
+    },
+    [`& .${classes.get_started}`]: {
+      fontSize: '20px',
+      color: 'grey',
+      textAlign: 'center',
+      marginTop: '30px'
+    },
+    [`& .${classes.schema_selector}`]: {
+      textAlign: 'right'
+    }
+  };
+});
 
 const packageInfo = {
   version: '1.0.0'
@@ -77,7 +130,7 @@ export interface AppState {
 
 interface ReactoryHOCProps {
   [key: string]: any,
-};
+}
 
 interface ReactoryRouterProps {
   reactory: Reactory.Client.ReactorySDK,
@@ -86,7 +139,7 @@ interface ReactoryRouterProps {
   authenticating: boolean,
   header: React.ReactElement
   footer: React.ReactElement
-};
+}
 
 /**
  * Wrapper component that renders inside each route to access params
@@ -980,47 +1033,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
   useEffect(willMount, []);
 
-  const useStyles = makeStyles(() => {
-
-    return {
-      root_paper: {
-        minHeight: '100vh',
-        maxHeight: '100vh',        
-      },
-      selectedMenuLabel: {
-        color: theme.palette.primary.main,
-        paddingRight: theme.spacing(1.5),
-        paddingLeft: theme.spacing(1)
-      },
-      prepend: {
-        color: 'rgb(34, 39, 50)',
-        opacity: 0.7,
-        paddingLeft: theme.spacing(1.5),
-        paddingRight: theme.spacing(1)
-      },
-      selected: {
-        color: 'rgb(34, 39, 50)',
-        opacity: 1,
-        paddingLeft: theme.spacing(1)
-      },
-      preffered: {
-        fontWeight: 'bold',
-        color: theme.palette.primary.main
-      },
-      get_started: {
-        fontSize: '20px',
-        color: 'grey',
-        textAlign: 'center',
-        marginTop: '30px'
-      },
-      schema_selector: {
-        textAlign: 'right'
-      }
-    }
-  });
 
 
-  const classes = useStyles();
 
   const onOfflineChanged = (isOffline: boolean) => {
     setOfflineStatus(isOffline)
@@ -1042,7 +1056,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   let header = isAuthenticating === false ? (<Header title={theme && theme.content && auth_validated ? theme.content.appTitle : 'Starting'} />) : null;
   let footer = isAuthenticating === false ? (<Footer />) : null;
   return (
-    <Router>
+    <StyledRouter>
       <React.Fragment>
         <CssBaseline />
         <ThemeProvider theme={theme}>
@@ -1050,6 +1064,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             <ApolloProvider client={reactory.client as any}>
               <React.StrictMode>
                 <ReactoryProvider reactory={reactory}>
+                  <LocalizationProvider dateAdapter={AdapterMoment}>
                   <Paper
                     id='reactory_paper_root'
                     elevation={0}
@@ -1070,13 +1085,14 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
                       </React.Fragment>}
                     <Offline onOfflineChanged={onOfflineChanged} />
                   </Paper>
+                  </LocalizationProvider>
                 </ReactoryProvider>
               </React.StrictMode>
             </ApolloProvider>
           </Provider>
         </ThemeProvider>
       </React.Fragment>
-    </Router>
+    </StyledRouter>
   );
 };
 

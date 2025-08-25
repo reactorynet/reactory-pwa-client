@@ -17,9 +17,10 @@ export const StaticContentWidget = (props: any) => {
   };
 
   const options = uiSchema && uiSchema['ui:options'] ? { ...DefaultOptions, ...uiSchema['ui:options'] } : DefaultOptions;
-  let aipersona = uiSchema?.['ui:ai'] || null;
+  let aipersona = null;
 
-  if (aipersona) { 
+  if (uiSchema?.['ui:ai']) { 
+    aipersona = { ...uiSchema?.['ui:ai'] };
     if(aipersona.propsMap) {
       let aiProps = {...aipersona.props};
       const mappedProps = reactory.utils.objectMapper.merge({

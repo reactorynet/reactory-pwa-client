@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import * as uuid from 'uuid';
 import { compose } from 'redux';
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { withContentRect } from 'react-measure';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import {
@@ -62,7 +62,6 @@ interface PieChartWidgetProps {
   idSchema?: any;
   uiSchema?: any;
   schema?: any;
-  theme?: any;  
   reactory: Reactory.Client.ReactorySDK;  
 }
 
@@ -123,6 +122,7 @@ const getDefaultOptionsFromSchema = (schema: any, uiSchema: any, reactory: React
 };
 
 const PieChartWidget: React.FC<PieChartWidgetProps> = (props) => { 
+  const theme = useTheme();
   const { reactory } = props;
   const { template } = reactory.utils;
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -325,7 +325,6 @@ const PieChartWidget: React.FC<PieChartWidgetProps> = (props) => {
 }
 
 export default compose(
-  withTheme,
   withReactory,
   withContentRect('bounds')
 )(PieChartWidget);

@@ -1,4 +1,5 @@
-import React, { Component } from 'react';
+import React from 'react';
+import { styled } from '@mui/material/styles';
 import {
   Button,
   AccordionSummary,
@@ -15,11 +16,28 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { initial, template } from 'lodash';
 import { compose } from 'redux';
-import { withTheme, withStyles } from '@mui/styles';
-import PropTypes from 'prop-types';
-import { makeStyles } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+
 import ApiProvider, { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { pathExists } from 'fs-extra';
+
+
+
+const PREFIX = 'AccordionComponent';
+
+const classes = {
+  heading: `${PREFIX}-heading`,
+  panelBody: `${PREFIX}-panelBody`
+};
+
+const Root = styled('div')(({ theme }: { theme: Theme }) => {
+  return {
+    [`& .${classes.heading}`]: {
+      fontSize: '1.2rem',
+      fontWeight: 'bold',
+    }
+  };
+});
 
 
 
@@ -67,19 +85,10 @@ const getActiveStep = (props, state = initialState) => {
   return state.activeStep;
 }
 
-const styles = (theme: Theme) => {
-  return {
-    heading: {
-      fontSize: '1.2rem',
-      fontWeight: 'bold',
-    }
-  }
-}
-
 
 const AccordionWidget = (props) => {
 
-  const { formData, uiSchema, formContext, classes, reactory } = props;
+  const { formData, uiSchema, formContext,  reactory } = props;
   const uiOptions = uiSchema["ui:options"] || {};
 
   let _panels = [];
@@ -117,7 +126,7 @@ const AccordionWidget = (props) => {
 
   if (displayStepper === true) {
     return (
-      <div>
+      <Root>
         <Stepper style={_componentStyle} activeStep={getActiveStep(props)} orientation="vertical">
           {
             _panels.map((panel, index) => {
@@ -209,8 +218,8 @@ const AccordionWidget = (props) => {
             })
           }
         </Stepper>
-      </div>
-    )
+      </Root>
+    );
   } else {
     return (
       <div>
@@ -253,5 +262,4 @@ const AccordionWidget = (props) => {
   }
 }
 
-const AccordionComponent = compose(withReactory, withTheme, withStyles(styles))(AccordionWidget);
-export default AccordionComponent;
+export default AccordionWidget;

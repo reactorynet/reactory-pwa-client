@@ -1,34 +1,43 @@
 import React, { Component, Fragment } from 'react';
+import { styled } from '@mui/material/styles';
 import {
   Icon,
   Grid,
-  Theme,
   Snackbar,
   Alert,
   AlertTitle
 } from '@mui/material';
 import { compose } from 'redux';
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import classNames from 'classnames';
 import { ReactoryApiEventNames } from '@reactory/client-core/api'
 import { v1 as uuidV1 } from 'uuid';
 
-const styles = (theme: Theme) => {
+const PREFIX = 'NotificationComponent';
+
+const classes = {
+  container: `${PREFIX}-container`,
+  notification: `${PREFIX}-notification`,
+  snackbar: `${PREFIX}-snackbar`
+};
+
+const Root = styled('div')(({ theme }: { theme: Theme }) => {
   return {
-    notification: {
+    [`& .${classes.notification}`]: {
       backgroundColor: theme.palette.background.paper,
     },
-    snackbar: {
+    [`& .${classes.snackbar}`]: {
       '& .MuiSnackbarContent-root': {
         backgroundColor: theme.palette.background.paper,
         color: theme.palette.text.primary,
       }
     }
-  }
-}
+  };
+});
 
-const NotificationHOC = ({ reactory, title, type, config, deleteNotification, classes, open, onClose }) => {
+const NotificationHOC = ({ reactory, title, type, config, deleteNotification,  open, onClose }) => {
   const [additionalComponentsToMount, setAdditionalComponentsToMount] = React.useState(null);
 
   React.useEffect(() => {
@@ -88,9 +97,9 @@ const NotificationHOC = ({ reactory, title, type, config, deleteNotification, cl
         className={classNames(classes.notification, classes[type])}
         action={
           config && config.components && config.components.length > 0 && (
-            <div style={{ marginLeft: 16 }}>
+            <Root style={{ marginLeft: 16 }}>
               {additionalComponentsToMount}
-            </div>
+            </Root>
           )
         }
       >
@@ -102,12 +111,12 @@ const NotificationHOC = ({ reactory, title, type, config, deleteNotification, cl
         )}
       </Alert>
     </Snackbar>
-  )
+  );
 }
 
-const NotificationHOCComponent = compose(withTheme, withReactory, withStyles(styles))(NotificationHOC);
+const NotificationHOCComponent = compose(withReactory)(NotificationHOC);
 
-const NotificationWidget = ({ reactory, classes }) => {
+const NotificationWidget = ({ reactory, }) => {
   const [notifications, setNotifications] = React.useState([]);
 
   React.useEffect(() => {
@@ -143,6 +152,6 @@ const NotificationWidget = ({ reactory, classes }) => {
   )
 }
 
-const NotificationComponent = compose(withTheme, withReactory, withStyles(styles))(NotificationWidget);
+const NotificationComponent = compose(withReactory)(NotificationWidget);
 
 export default NotificationComponent;

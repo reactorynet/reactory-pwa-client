@@ -1,50 +1,28 @@
-import React, { Fragment, Component } from 'react'
+import React, { Fragment } from 'react'
 import { Chip, Avatar } from '@mui/material';
 import { template } from 'lodash';
-import PropTypes from 'prop-types'
+
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { getAvatar } from '@reactory/client-core/components/util';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 
 
-class ChipLabel extends Component<any, any> {
-
-  static styles = (theme):any => ({
-    root: {
-      display: 'flex',
-      justifyContent: 'center',
-      flexWrap: 'wrap',
-    },
-    chip: {
-      margin: theme.spacing(1),
-    },
-  });
-
-  static propTypes = {
-    formData: PropTypes.array,
-  }
-
-  static defaultProps = {
-    formData: [],
-  }
-
-  constructor(props, context) {
-    super(props, context)
-  }
-
-  render() {
-
-    const {
-      api,
-      formData,
-      uiSchema,
-      componentProps
-    } = this.props;
+const ChipLabel = (props: any) => {
+  const theme = useTheme();
+  
+  const {
+    api,
+    formData,
+    uiSchema,
+    componentProps
+  } = props;
 
     let childprops: any = {};
     if (componentProps) {
-      childprops = api.utils.objectMapper(this.props, componentProps);
+      childprops = api.utils.objectMapper(props, componentProps);
     }
 
     let labelTitle = '';
@@ -87,8 +65,6 @@ class ChipLabel extends Component<any, any> {
           {chips}
         </div>
       </Fragment>
-    )
-  }
-}
-const ChipLabelComponent = compose(withTheme, withReactory, withStyles(ChipLabel.styles))(ChipLabel)
-export default ChipLabelComponent
+    );
+};
+export default ChipLabel;

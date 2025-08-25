@@ -1,12 +1,61 @@
-import React, { Component, Fragment } from 'react';
-import PropTypes from 'prop-types';
+import React, { Fragment } from 'react';
+import { styled } from '@mui/material/styles';
 import { isArray, indexOf } from 'lodash';
 import { compose } from 'redux';
 import { Icon, StyledComponentProps, Theme } from '@mui/material';
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import ReactoryApi from 'api';
 import Reactory from '@reactory/reactory-core';
+
+
+
+const PREFIX = 'LookupComponent';
+
+const classes = {
+  container: `${PREFIX}-container`,
+  label: `${PREFIX}-label`,
+  placeholder: `${PREFIX}-placeholder`,
+  value: `${PREFIX}-value`
+};
+
+// TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
+const Root = styled('div')(({ theme }: { theme: Theme }): any => {
+  return {
+    [`& .${classes.container}`]: {
+      border: 'solid 1px #e2e0e0',
+      borderRadius: '5px',
+      display: 'flex',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '10px'
+    },
+    [`& .${classes.label}`]: {
+      display: 'block',
+      color: 'rgba(0, 0, 0, 0.55)',
+      fontSize: '13px',
+      paddingBottom: '3px'
+    },
+    [`& .${classes.placeholder}`]: {
+      color: '#bababa',
+      margin: 0,
+      fontSize: '16px',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    },
+    [`& .${classes.value}`]: {
+      color: 'black',
+      margin: 0,
+      textTransform: 'uppercase',
+      fontSize: '16px',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  };
+});
 
 
 
@@ -21,7 +70,7 @@ interface ReactoryLookupWidgetProperties {
 
 type transform_function = (sourceValue: any, sourceObject?: any, destinationObject?: any, destinationKey?: any) => any
 type default_value = Function | string | number;
-interface transform_object { key: string, transform: transform_function, default?: default_value };
+interface transform_object { key: string, transform: transform_function, default?: default_value }
 type transform_to = string | transform_object
 type to_map = transform_to | transform_to[];
 type property_map = {
@@ -58,7 +107,7 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
 
 
   const dependencies = ['material-ui.Material', 'core.AlertDialog', 'core.FullScreenModal'];
-  const { reactory, formContext, uiSchema, schema, idSchema, formData, onChange, classes } = props;
+  const { reactory, formContext, uiSchema, schema, idSchema, formData, onChange, } = props;
   const { lodash } = reactory.utils;
   const { Material, FullScreenModal } = reactory.getComponents<{
     Material: Reactory.Client.Web.IMaterialModule,
@@ -217,7 +266,7 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
   }
 
   return (
-    <Fragment>
+    <Root>
       <div onClick={() => { setOpen(!open) }} style={{ marginTop: '0.5em' }}>
         {label != '' && <label className={classes.label} {...labelProps}>{label}</label>}
         <div className={classes.container}>
@@ -226,54 +275,15 @@ const LookupWidget = (props: ReactoryLookupWidgetProperties) => {
           <Icon color="primary">search</Icon>
         </div>
       </div>
-
       <FullScreenModal
         {...modalProps}>
         {open === true ? <ChildComponent {...{ ...componentProps, ...childprops }} /> : null}
       </FullScreenModal>
-
-    </Fragment>
+    </Root>
   );
 }
 
 
-const LookupWidgetStyles = (theme: Theme): any => {
-  return {
-    container: {
-      border: 'solid 1px #e2e0e0',
-      borderRadius: '5px',
-      display: 'flex',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '10px'
-    },
-    label: {
-      display: 'block',
-      color: 'rgba(0, 0, 0, 0.55)',
-      fontSize: '13px',
-      paddingBottom: '3px'
-    },
-    placeholder: {
-      color: '#bababa',
-      margin: 0,
-      fontSize: '16px',
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    },
-    value: {
-      color: 'black',
-      margin: 0,
-      textTransform: 'uppercase',
-      fontSize: '16px',
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
-  }
-};
-
-const LookupComponent = compose(withReactory, withTheme, withStyles(LookupWidgetStyles))(LookupWidget);
+const LookupComponent = compose(withReactory)(LookupWidget);
 export default LookupComponent;
 

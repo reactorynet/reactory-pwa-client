@@ -4,7 +4,7 @@ import {
   Typography,
 } from '@mui/material';
 import { compose } from 'redux';
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { withContentRect } from 'react-measure';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import {
@@ -79,6 +79,7 @@ const getDefaultOptionsFromSchema = (schema: any, uiSchema: any): any => {
 };
 
 const ComposedChartWidget: React.FC<ComposedChartWidgetProps> = (props) => {
+  const theme = useTheme();
   const { formData, schema, uiSchema, contentRect, api: reactory } = props;
   const defaultOptions = getDefaultOptionsFromSchema(schema, uiSchema);
   const options = { ...defaultOptions, ...(formData?.options ?? {}) };
@@ -130,7 +131,6 @@ const ComposedChartWidget: React.FC<ComposedChartWidgetProps> = (props) => {
 }
 
 export default compose(
-  withTheme,
   withReactory,
   withContentRect('bounds')
 )(ComposedChartWidget);

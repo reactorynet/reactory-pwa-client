@@ -1,7 +1,8 @@
 
-import React, { Component, Fragment } from 'react';
+import React, { Fragment, useState } from 'react';
 import PropTypes from 'prop-types';
 import { throttle, uniq } from 'lodash';
+import { styled } from '@mui/material/styles';
 import {  
   List,
   ListItem,
@@ -14,53 +15,50 @@ import {
   IconButton,
   Icon,
 } from '@mui/material';
-import { withStyles } from '@mui/styles';
 import { compose } from 'redux';
 
+const PREFIX = 'GroupListItemWidget';
 
-class GroupListItemWidget extends Component<any, any> {
+const classes = {
+  root: `${PREFIX}-root`,
+  slider: `${PREFIX}-slider`,
+};
 
-  static styles = (theme): any => ({
-    root: {
-      width: '85%',
-    },
-    slider: {
-      padding: '22px 0px',
-      margin: 'auto'
-    },    
-  });
+const Root = styled('div')(({ theme }) => ({
+  [`& .${classes.root}`]: {
+    width: '85%',
+  },
+  [`& .${classes.slider}`]: {
+    padding: '22px 0px',
+    margin: 'auto'
+  },    
+}));
+
+const GroupListItemWidget = (props: any) => {
+  const [items, setItems] = useState(props.formData || []);
+
+  const getGroups = () => {
+    // Implementation for getting groups
+  };
+
+  const { uiSchema, schema } = props;
   
-  constructor(props) {
-    super(props)
-    this.state = {
-        items: props.formData || [],
-    }        
-  }
+  let options = {
+    groupKey: 'group',
+  };
 
-  getGroups(){
-
-  }
-
-  render() {
-    const { classes, uiSchema, schema } = this.props;
-    const { value } = this.state;
-    
-    let options = {
-      groupKey: 'group',
-
-    };
-
-    if(uiSchema['ui:options']) options = {...options, ...uiSchema['ui:options']}
-    
-    return (
+  if(uiSchema['ui:options']) options = {...options, ...uiSchema['ui:options']}
+  
+  return (
+    <Root>
       <List subheader={ <li /> }>
-
+        {/* List content will go here */}
       </List>      
-    );
-  }
+    </Root>
+  );
 }
 
-export const GroupListItemWidgetComponent = compose(withStyles(GroupListItemWidget.styles))(GroupListItemWidget);
+export const GroupListItemWidgetComponent = compose()(GroupListItemWidget);
 export default GroupListItemWidgetComponent
 
 /***
@@ -110,8 +108,7 @@ export default GroupListItemWidgetComponent
                   })
                 }
                 </ul>                  
-              </li>
-              );    
+              </li>);    
             })
           }                
           </List>

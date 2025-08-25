@@ -5,7 +5,7 @@ import {
   Tooltip as MaterialTooltip,
   Box,
 } from '@mui/material';
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { withContentRect } from 'react-measure';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import {
@@ -75,6 +75,7 @@ const CustomTooltip = ({ active, payload, label, reactory }) => {
 
 
 const LineChartWidget = (props) => {
+  const theme = useTheme();
   const { formData, schema, reactory, uiSchema } = props;
 
   // Infer default options from schema
@@ -109,4 +110,4 @@ const LineChartWidget = (props) => {
   );
 };
 
-export default withTheme(withReactory(withContentRect('bounds')(LineChartWidget)));
+export default withReactory(withContentRect('bounds')(LineChartWidget));

@@ -1,1 +1,3 @@
-export { default } from './TabbedNavigation'; 
+import TabbedNavigationComponent from './TabbedNavigation';
+
+export default TabbedNavigationComponent;

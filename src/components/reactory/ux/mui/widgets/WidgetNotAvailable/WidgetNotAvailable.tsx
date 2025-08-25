@@ -1,67 +1,46 @@
-import React, { Component, Fragment } from 'react';
+import React, { Fragment, useState, useEffect } from 'react';
 import { compose } from 'redux';
 import {  
   Icon,
   Typography
 } from '@mui/material';
-import { withStyles, withTheme } from '@mui/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { ReactoryApiEventNames } from '@reactory/client-core/api/ReactoryApi';
-class WidgetNotAvailable extends Component<any, any> {
 
-  constructor(props){
-    super(props);
-    this.state = {
-      componentLoaded: false,      
-    };
+const WidgetNotAvailable = (props: any) => {
+  const [componentLoaded, setComponentLoaded] = useState(false);
 
-    this.onComponentRegistered = this.onComponentRegistered.bind(this);
-  }
-
-  static styles = (theme) => ({
-    root: {
-      padding: '8px',
-    },        
-  });
-
-  onComponentRegistered({ fqn, component }) {
-    const { map } = this.props;
+  const onComponentRegistered = ({ fqn, component }) => {
+    const { map } = props;
     if (fqn === map.componentFqn) {      
-      this.setState({ componentLoaded: true });
-      this.forceUpdate();
+      setComponentLoaded(true);
     }
-  }
+  };
 
-  componentDidMount(): void {
-    const that = this;
-    const { reactory } = that.props;
-    reactory.on(ReactoryApiEventNames.onComponentRegistered, this.onComponentRegistered);
-  }
-
-  componentWillUnmount(): void {
-    const { reactory } = this.props;
-    reactory.removeListener(ReactoryApiEventNames.onComponentRegistered, this.onComponentRegistered);
-  }
+  useEffect(() => {
+    const { reactory } = props;
+    reactory.on(ReactoryApiEventNames.onComponentRegistered, onComponentRegistered);
     
-  render() {
-    const { map, reactory } = this.props;
-    const ComponentToMount = reactory.getComponent(map.componentFqn);
-    if(ComponentToMount !== null && ComponentToMount !== undefined) {
-      return (<ComponentToMount {...this.props} />);
-    }
-
-    return (
-      <>
-        <Typography variant="caption">{map.componentFqn} <Icon>hourglass_empty</Icon></Typography>
-      </>
-    );
+    return () => {
+      reactory.removeListener(ReactoryApiEventNames.onComponentRegistered, onComponentRegistered);
+    };
+  }, []);
     
+  const { map, reactory } = props;
+  const ComponentToMount = reactory.getComponent(map.componentFqn);
+  if (ComponentToMount !== null && ComponentToMount !== undefined) {
+    return (<ComponentToMount {...props} />);
   }
+
+  return (
+    <>
+      <Typography variant="caption">{map.componentFqn} <Icon>hourglass_empty</Icon></Typography>
+    </>
+  );
 }
 
 export const WidgetNotAvailableComponent = compose(
-  withReactory, 
-  withStyles(WidgetNotAvailable.styles), 
-  withTheme)(WidgetNotAvailable);
+  withReactory
+)(WidgetNotAvailable);
   
 export default WidgetNotAvailableComponent

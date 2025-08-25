@@ -11,8 +11,9 @@ import { Avatar } from '@mui/material';
 
 export const WithAvatarIcon: Story = {
   args: {
+    classes: {},
     actions: [
-     {
+      {
         key: 'avatar',
         icon: <Avatar alt="User" src="https://randomuser.me/api/portraits/men/32.jpg" />,
         title: 'User Profile',
@@ -137,12 +138,14 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
+    classes: {},
     actions,
   },
 };
 
 export const WithCustomIcon: Story = {
   args: {
+    classes: {},
     actions,
     icon: <SaveIcon />,
     size: 'medium',
@@ -153,6 +156,7 @@ export const WithCustomIcon: Story = {
 
 export const SmallSize: Story = {
   args: {
+    classes: {},
     actions,
     size: 'small',
     elevation: 4,
@@ -161,6 +165,7 @@ export const SmallSize: Story = {
 
 export const LargeWithHighElevation: Story = {
   args: {
+    classes: {},
     actions,
     size: 'large',
     elevation: 16,
@@ -170,6 +175,7 @@ export const LargeWithHighElevation: Story = {
 
 export const Disabled: Story = {
   args: {
+    classes: {},
     actions,
     disabled: true,
     size: 'medium',
@@ -178,6 +184,7 @@ export const Disabled: Story = {
 
 export const FixedPositioning: Story = {
   args: {
+    classes: {},
     actions,
     position: 'bottom-right',
     offsetBottom: 50,
@@ -189,6 +196,7 @@ export const FixedPositioning: Story = {
 
 export const TopLeftPositioned: Story = {
   args: {
+    classes: {},
     actions,
     position: 'top-left',
     offsetTop: 50,
@@ -200,6 +208,7 @@ export const TopLeftPositioned: Story = {
 
 export const TopCenterPositioned: Story = {
   args: {
+    classes: {},
     actions,
     position: 'top-center',
     offsetTop: 60,
@@ -210,6 +219,7 @@ export const TopCenterPositioned: Story = {
 
 export const CenterPositioned: Story = {
   args: {
+    classes: {},
     actions,
     position: 'center',
     size: 'large',
@@ -219,6 +229,7 @@ export const CenterPositioned: Story = {
 
 export const CenterLeftPositioned: Story = {
   args: {
+    classes: {},
     actions,
     position: 'center-left',
     offsetLeft: 80,
@@ -228,17 +239,26 @@ export const CenterLeftPositioned: Story = {
 };
 
 export const ThemeComparison: Story = {
+  args: {
+    classes: {},
+    actions: actions,
+  },
   render: () => (
     <ThemeWrapper showThemeSelector={true}>
-      <SpeedDialWidget actions={actions} />
+      <SpeedDialWidget classes={{}} actions={actions} />
     </ThemeWrapper>
   ),
 };
 
 export const OffsetComparison: Story = {
+  args: {
+    classes: {},
+    actions: actions.slice(0, 2),
+  },
   render: () => (
     <div style={{ position: 'relative', height: '500px', width: '100%', border: '1px dashed #ccc' }}>
       <SpeedDialWidget 
+        classes={{}}
         actions={actions.slice(0, 2)} 
         position="bottom-right" 
         offsetBottom={16} 
@@ -247,6 +267,7 @@ export const OffsetComparison: Story = {
         color="primary"
       />
       <SpeedDialWidget 
+        classes={{}}
         actions={actions.slice(2, 4)} 
         position="bottom-right" 
         offsetBottom={80} 
@@ -255,6 +276,7 @@ export const OffsetComparison: Story = {
         color="secondary"
       />
       <SpeedDialWidget 
+        classes={{}}
         actions={actions.slice(0, 1)} 
         position="top-left" 
         offsetTop={16} 
@@ -263,6 +285,7 @@ export const OffsetComparison: Story = {
         color="primary"
       />
       <SpeedDialWidget 
+        classes={{}}
         actions={actions.slice(1, 2)} 
         position="top-left" 
         offsetTop={80} 

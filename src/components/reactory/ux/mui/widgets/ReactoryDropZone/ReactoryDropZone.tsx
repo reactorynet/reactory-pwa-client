@@ -1,11 +1,23 @@
-import React, { Component, Fragment, useCallback } from 'react';
+import React, { Fragment, useCallback, useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { withStyles, withTheme } from '@mui/styles';
+import { styled, useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux';
 import { Typography, TypographyProps, Icon, PropTypes } from '@mui/material';
 import gql from 'graphql-tag';
 
+const PREFIX = 'ReactoryDropZone';
+
+const classes = {
+  ReactoryDropZoneRoot: `${PREFIX}-ReactoryDropZoneRoot`,
+};
+
+const Root = styled('div')(({ theme }) => ({
+  [`& .${classes.ReactoryDropZoneRoot}`]: {
+    margin: 0,
+    padding: 0
+  }
+}));
 
 interface DropZoneIconProps {
   icon: String,
@@ -69,174 +81,142 @@ const DropZoneReactoryFormWidget = (props: DropZoneReactoryFormWidgetProps) => {
   )
 }
 
+const ReactoryDropZone = (props: any) => {
+  const theme = useTheme();
+  const [uploading, setUploading] = useState(false);
+  const [components, setComponents] = useState<any>({});
 
-class ReactoryDropZone extends Component<any, any> {
-  components: any = {};
+  useEffect(() => {
+    setComponents(props.reactory.getComponents(['core.Loading']));
+  }, [props.reactory]);
 
-  static styles = (theme) => {
-    return {
-      ReactoryDropZoneRoot: {
-        margin: 0,
-        padding: 0
+  const { uiSchema, schema, formData, reactory, formContext } = props;
+
+  let widgetProps = {
+    className: classes.ReactoryDropZoneRoot,
+    style: {}
+  };
+
+  let labelProps: TypographyProps = {
+    variant: "body2",
+  };
+
+  let dropZoneProps = {
+    labelProps,
+    text: 'Click here or drag and drop files to upload',
+    style: {
+
+    },
+    reactory,
+    className: null,
+  }
+
+  if (uiSchema && uiSchema['ui:options']) {
+    const uiOptions = uiSchema['ui:options'];
+
+    if (uiOptions.style) widgetProps.style = { ...uiOptions.style };
+    if (uiOptions.className) widgetProps.className = uiOptions.className;
+
+    const { ReactoryDropZoneProps = dropZoneProps } = uiOptions;
+    //styles form
+    dropZoneProps = { ...dropZoneProps, ...ReactoryDropZoneProps };
+  }
+
+  const dropHandler = (acceptedFiles) => {
+    setUploading(true);
+
+    if (uiSchema && uiSchema['ui:options']) {
+      const uiOptions = uiSchema['ui:options'];
+      const { ReactoryDropZoneProps } = uiOptions;
+
+      if (ReactoryDropZoneProps.mutation) {
+        const mutation = gql(ReactoryDropZoneProps.mutation.text);
+
+        let _v = {};
+        try {
+          _v = reactory.utils.templateObject(ReactoryDropZoneProps.mutation.variables, props);
+        } catch (templateErr) {
+          reactory.log(`🚨🚨🚨 Error processing mapping 🚨🚨🚨`, { templateErr });
+        }
+
+        const variables = {
+          ..._v,
+          file: acceptedFiles[0],
+        };
+
+        reactory.graphqlMutation(mutation, variables).then((docResult) => {
+          setUploading(false);
+
+          const { data, errors } = docResult;
+
+          if (errors && errors.length > 0) {
+            reactory.createNotification(`File ${acceptedFiles[0].name} could not be uploaded.`, {
+              showInAppNotification: true,
+              type: 'warning',
+              props: {
+                timeout: 2500,
+                canDismiss: true,
+                components: []
+              }
+            });
+
+            reactory.log(`Could not upload document`, { errors });
+
+            return;
+          }
+
+          // const { filename, size, id, link, mimetype } = data[ReactoryDropZoneProps.mutation.name];
+
+          reactory.createNotification(`File ${acceptedFiles[0].name} has been uploaded`, {
+            showInAppNotification: true,
+            type: 'success',
+            props: {
+              timeout: 2500,
+              canDismiss: true,
+              components: []
+            }
+          });
+
+          if (ReactoryDropZoneProps.mutation.onSuccessMethod && ReactoryDropZoneProps.mutation.onSuccessMethod == 'refresh') {
+            formContext.refresh();
+          }
+
+          if (ReactoryDropZoneProps.mutation.onSuccessEvent && ReactoryDropZoneProps.mutation.onSuccessEvent.name) {
+            if (ReactoryDropZoneProps.mutation.onSuccessEvent.via && ReactoryDropZoneProps.mutation.via === 'form') {
+              if (formContext.$ref[ReactoryDropZoneProps.mutation.onSuccessEvent.name]) {
+                //execute the function on the form with the reference
+                formContext.$ref[ReactoryDropZoneProps.mutation.onSuccessEvent.name](docResult.data[ReactoryDropZoneProps.mutation.name])
+              }
+            } else {
+              reactory.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, data[ReactoryDropZoneProps.mutation.name]);
+            }
+          }
+        }).catch((docError) => {
+          setUploading(false);
+          reactory.createNotification(`File ${acceptedFiles[0].filename} could not be uploaded`, {
+            showInAppNotification: true,
+            type: 'warning',
+            props: {
+              timeout: 2500,
+              canDismiss: true,
+              components: []
+            }
+          });
+
+          reactory.log(`Could not upload document`, { docError });
+        });
       }
     }
   }
 
-  constructor(props: any, context: any) {
-    super(props);
+  const { Loading } = components;
 
-    this.state = {
-      uploading: false,
-    }
-
-    this.components = props.reactory.getComponents(['core.Loading']);
-  }
-
-  render() {
-    const that = this;
-    const { uiSchema, schema, formData, classes, reactory, formContext } = this.props;
-
-    let widgetProps = {
-      className: classes.ReactoryDropZoneRoot,
-      style: {}
-    };
-
-    let labelProps: TypographyProps = {
-      variant: "body2",
-    };
-
-    let dropZoneProps = {
-      labelProps,
-      text: 'Click here or drag and drop files to upload',
-      style: {
-
-      },
-      reactory,
-      className: null,
-    }
-
-    if (uiSchema && uiSchema['ui:options']) {
-      const uiOptions = uiSchema['ui:options'];
-
-      if (uiOptions.style) widgetProps.style = { ...uiOptions.style };
-      if (uiOptions.className) widgetProps.className = uiOptions.className;
-
-      const { ReactoryDropZoneProps = dropZoneProps } = uiOptions;
-      //styles form
-      dropZoneProps = { ...dropZoneProps, ...ReactoryDropZoneProps };
-    }
-
-    const dropHandler = (acceptedFiles) => {
-
-      
-
-      that.setState({ uploading: true }, () => {
-
-        if (uiSchema && uiSchema['ui:options']) {
-          const uiOptions = uiSchema['ui:options'];
-          const { ReactoryDropZoneProps } = uiOptions;
-
-          if (ReactoryDropZoneProps.mutation) {
-            const mutation = gql(ReactoryDropZoneProps.mutation.text);
-
-
-            let _v = {};
-            try {
-              _v = reactory.utils.templateObject(ReactoryDropZoneProps.mutation.variables, that);
-            } catch (templateErr) {
-              reactory.log(`🚨🚨🚨 Error processing mapping 🚨🚨🚨`, { templateErr });
-            }
-
-            const variables = {
-              ..._v,
-              file: acceptedFiles[0],
-            };
-
-            reactory.graphqlMutation(mutation, variables).then((docResult) => {
-
-              that.setState({ uploading: false }, () => {
-
-
-                const { data, errors } = docResult;
-
-                if (errors && errors.length > 0) {
-                  reactory.createNotification(`File ${acceptedFiles[0].name} could not be uploaded.`, {
-                    showInAppNotification: true,
-                    type: 'warning',
-                    props: {
-                      timeout: 2500,
-                      canDismiss: true,
-                      components: []
-                    }
-                  });
-
-                  reactory.log(`Could not upload document`, { errors });
-
-                  return;
-                }
-
-                // const { filename, size, id, link, mimetype } = data[ReactoryDropZoneProps.mutation.name];
-
-                reactory.createNotification(`File ${acceptedFiles[0].name} has been uploaded`, {
-                  showInAppNotification: true,
-                  type: 'success',
-                  props: {
-                    timeout: 2500,
-                    canDismiss: true,
-                    components: []
-                  }
-                });
-
-                if (ReactoryDropZoneProps.mutation.onSuccessMethod && ReactoryDropZoneProps.mutation.onSuccessMethod == 'refresh') {
-                  formContext.refresh();
-                }
-
-                if (ReactoryDropZoneProps.mutation.onSuccessEvent && ReactoryDropZoneProps.mutation.onSuccessEvent.name) {
-                  if (ReactoryDropZoneProps.mutation.onSuccessEvent.via && ReactoryDropZoneProps.mutation.via === 'form') {
-                    if (formContext.$ref[ReactoryDropZoneProps.mutation.onSuccessEvent.name]) {
-                      //execute the function on the form with the reference
-                      formContext.$ref[ReactoryDropZoneProps.mutation.onSuccessEvent.name](docResult.data[ReactoryDropZoneProps.mutation.name])
-                    }
-                  } else {
-                    reactory.emit(ReactoryDropZoneProps.mutation.onSuccessEvent.name, data[ReactoryDropZoneProps.mutation.name]);
-                  }
-                }
-              });
-
-            }).catch((docError) => {
-
-              that.setState({ uploading: false }, () => {
-                reactory.createNotification(`File ${acceptedFiles[0].filename} could not be uploaded`, {
-                  showInAppNotification: true,
-                  type: 'warning',
-                  props: {
-                    timeout: 2500,
-                    canDismiss: true,
-                    components: []
-                  }
-                });
-
-              })
-
-              reactory.log(`Could not upload document`, { docError });
-
-            });
-          }
-        }
-
-      });
-
-    }
-
-    const { Loading } = this.components;
-
-    return (
-      <div {...widgetProps}>
-        {this.state.uploading === false ? <DropZoneReactoryFormWidget fileDropped={dropHandler} {...dropZoneProps} /> : <Loading title="Uploading file, please wait" icon={'cloud_upload'} spinIcon={false} />}
-      </div>
-    );
-  }
-
+  return (
+    <Root {...widgetProps}>
+      {uploading === false ? <DropZoneReactoryFormWidget fileDropped={dropHandler} {...dropZoneProps} /> : <Loading title="Uploading file, please wait" icon={'cloud_upload'} spinIcon={false} />}
+    </Root>
+  );
 }
+
 //@ts-ignore
-export default compose(withReactory, withTheme, withStyles(ReactoryDropZone.styles))(ReactoryDropZone);
+export default compose(withReactory)(ReactoryDropZone);

@@ -3,7 +3,19 @@ import { Button, Icon } from '@mui/material';
 
 import { template, isFunction } from 'lodash';
 import { compose } from 'redux';
-import { withTheme, withStyles } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
+
+// Extend the Theme type to include custom extensions
+interface ExtendedTheme extends Theme {
+  extensions?: {
+    [key: string]: {
+      icons: {
+        [key: string]: React.ComponentType<any>;
+      };
+    };
+  };
+}
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 //REQUIREMENTS
 // Text
@@ -11,7 +23,7 @@ import { withReactory } from '@reactory/client-core/api/ApiProvider';
 // Icon
 
 const SubmissionComponent = (props: any) => {
-
+  const theme = useTheme() as ExtendedTheme;
   
   let buttonText = 'SUBMIT';
   let icon = null;
@@ -37,7 +49,7 @@ const SubmissionComponent = (props: any) => {
       // const iconProps = { styles: { marginLeft: theme.spacing(1) } };
       const iconProps = {};
       const custom = uiOptions.iconType
-      let IconComponent = custom !== undefined ? props.theme.extensions[custom].icons[uiOptions.icon] : null;
+      let IconComponent = custom !== undefined ? theme.extensions[custom].icons[uiOptions.icon] : null;
       if (IconComponent) {
         icon = <IconComponent {...iconProps} />
       } else {
@@ -61,5 +73,5 @@ const SubmissionComponent = (props: any) => {
   )
 };
 
-const FormSubmissionComponent = compose(withTheme, withReactory)(SubmissionComponent);
+const FormSubmissionComponent = compose(withReactory)(SubmissionComponent);
 export default FormSubmissionComponent;

@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 /**
  * ReactoryCoreDialog Component
  * 
@@ -62,11 +62,12 @@
  * </ReactoryCoreDialog>
  */
 
-import React, { Component, Fragment } from 'react';
+import React, { Fragment } from 'react';
+import { styled } from '@mui/material/styles';
 import PropTypes from 'prop-types';
 import { compose } from 'redux';
 import { isEqual } from 'lodash';
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import {
   AppBar,
   Dialog,
@@ -88,6 +89,67 @@ import { deepEquals } from '@reactory/client-core/components/reactory/form/utils
 import {
   useMediaQuery
 } from '@mui/material';
+
+const PREFIX = 'ReactoryCoreDialog';
+
+const classes = {
+  dialog_root: `${PREFIX}-dialog_root`,
+  appBar: `${PREFIX}-appBar`,
+  flex: `${PREFIX}-flex`,
+  backNavContainer: `${PREFIX}-backNavContainer`,
+  backButtonText: `${PREFIX}-backButtonText`,
+  linkContainer: `${PREFIX}-linkContainer`,
+  linkText: `${PREFIX}-linkText`,
+  linkTextLast: `${PREFIX}-linkTextLast`,
+  backNavComponent: `${PREFIX}-backNavComponent`
+};
+
+const StyledFragment  = styled(Fragment )((
+  {
+    theme
+  }
+): any => {
+  return {
+    [`& .${classes.dialog_root}`]: {
+      overflowX: 'hidden',
+    },
+    [`& .${classes.appBar}`]: {
+      position: 'relative',          
+    },
+    [`& .${classes.flex}`]: {
+      flex: 1,
+    },
+    [`& .${classes.backNavContainer}`]: {
+      display: 'flex',
+      margin: '32px 32px 6px',
+    },
+    [`& .${classes.backButtonText}`]: {
+      fontWeight: 600,
+      lineHeight: '1.8'
+    },
+    [`& .${classes.linkContainer}`]: {
+      display: 'flex',
+      paddingLeft: theme.spacing(4),
+    },
+    [`& .${classes.linkText}`]: {
+      lineHeight: '1.8',
+      fontWeight: 400,
+    },
+    [`& .${classes.linkTextLast}`]: {
+      lineHeight: '1.8',
+      fontWeight: 400,
+      color: theme.palette.primary.main,
+      paddingLeft: '5px'
+    },
+    [`& .${classes.backNavComponent}`]: {
+      flex: 1,
+      display: 'flex',
+      justifyContent: 'flex-end',
+      alignItems: 'flex-end',
+      paddingRight: '5px'
+    }
+  };
+});
 
 // TypeScript interfaces for better type safety
 export interface IReactoryCoreDialogProps {
@@ -136,49 +198,6 @@ export interface IReactoryCoreDialogProps {
   classes?: any;
 }
 
-const FullScreenDialogStyles = (theme): any => {
-  return {
-    dialog_root: {
-      overflowX: 'hidden',
-    },
-    appBar: {
-      position: 'relative',          
-    },
-    flex: {
-      flex: 1,
-    },
-    backNavContainer: {
-      display: 'flex',
-      margin: '32px 32px 6px',
-    },
-    backButtonText: {
-      fontWeight: 600,
-      lineHeight: '1.8'
-    },
-    linkContainer: {
-      display: 'flex',
-      paddingLeft: theme.spacing(4),
-    },
-    linkText: {
-      lineHeight: '1.8',
-      fontWeight: 400,
-    },
-    linkTextLast: {
-      lineHeight: '1.8',
-      fontWeight: 400,
-      color: theme.palette.primary.main,
-      paddingLeft: '5px'
-    },
-    backNavComponent: {
-      flex: 1,
-      display: 'flex',
-      justifyContent: 'flex-end',
-      alignItems: 'flex-end',
-      paddingRight: '5px'
-    }
-  }
-};
-
 
 const Transition = React.forwardRef(function Transition(props: any, ref) {
   return <Slide direction={props.direction || "up"} ref={ref} {...props} />;
@@ -200,9 +219,9 @@ const Transition = React.forwardRef(function Transition(props: any, ref) {
  * @returns React component
  */
 const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
+  const theme = useTheme();
 
-  const {
-    classes,
+  const {    
     open = false,
     title,
     showAppBar = true,
@@ -217,7 +236,6 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
     backNavigationItems = [],
     backNavComponent = null,
     maxWidth = false,
-    theme,
     breakpoint = 'sm',
     reactory,
     onClose = null,
@@ -389,4 +407,4 @@ FullScreenDialog.defaultProps = {
   children: [],
 };
 
-export default compose(withReactory, withTheme, withStyles(FullScreenDialogStyles))(FullScreenDialog);
+export default compose(withReactory)(FullScreenDialog);

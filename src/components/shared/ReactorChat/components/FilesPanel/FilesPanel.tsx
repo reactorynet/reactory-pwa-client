@@ -174,8 +174,16 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showUserHomeFolder, setShowUserHomeFolder] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<SelectedItem[]>([]);
-  const [slidingItems, setSlidingItems] = useState<Set<string>>(new Set());
   const [isInitializingChat, setIsInitializingChat] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    open: boolean;
+    fileId: string;
+    fileName: string;
+  }>({
+    open: false,
+    fileId: '',
+    fileName: ''
+  });
   const [renameDialog, setRenameDialog] = useState<{
     open: boolean;
     fileId: string;
@@ -189,12 +197,10 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   });
 
   const {
-    React,
     Material
   } = reactory.getComponents<{
-    React: Reactory.React,
     Material: Reactory.Client.Web.IMaterialModule
-  }>(["react.React", "material-ui.Material"]);
+  }>(["material-ui.Material"]);
 
   const {
     Paper,
@@ -211,7 +217,6 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     CircularProgress,
     Button,
     TextField,
-    Grid,
     Card,
     CardContent,
     CardActions,
@@ -221,9 +226,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     Dialog,
     DialogTitle,
     DialogContent,
-    DialogActions,
-    Switch,
-    FormControlLabel
+    DialogActions
   } = Material.MaterialCore;
 
   const {
@@ -324,6 +327,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
       setDocuments([]);
       
       // Query the ReactorConversation with files field to get the attached files
+      // Force fresh data by bypassing Apollo cache - this is critical for refresh after unlink
       const response = await reactory.graphqlQuery<{
         ReactorConversation: {
           id: string;
@@ -337,6 +341,8 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
         loadOptions: {
           showAllFiles: showAllFiles
         }
+      }, {
+        fetchPolicy: 'no-cache' // Critical: Force fresh data, bypass Apollo cache
       });
 
       if (response?.data?.ReactorConversation) {
@@ -361,8 +367,9 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
             uploadDate: file.created ? new Date(file.created) : new Date(),
           }));
           
+          reactory.info(`Force refresh received ${conversation.files.length} files from server`);
           setDocuments(docs);
-          reactory.info(`Force refresh successful: ${docs.length} files loaded`);
+          reactory.info(`Force refresh successful: ${docs.length} files loaded and state updated`);
         } else {
           // No files attached to this chat session
           reactory.info('Force refresh: no files found for this chat session');
@@ -403,7 +410,11 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     setIsTransitioning(false);
     setShowUserHomeFolder(false);
     setSelectedFiles([]);
-    setSlidingItems(new Set());
+    setDeleteConfirmation({
+      open: false,
+      fileId: '',
+      fileName: ''
+    });
     setRenameDialog({
       open: false,
       fileId: '',
@@ -421,7 +432,11 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
       setIsTransitioning(false);
       setShowUserHomeFolder(false);
       setSelectedFiles([]);
-      setSlidingItems(new Set());
+      setDeleteConfirmation({
+        open: false,
+        fileId: '',
+        fileName: ''
+      });
       setRenameDialog({
         open: false,
         fileId: '',
@@ -688,17 +703,9 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     setRenameDialog({ open: false, fileId: '', currentName: '', newName: '' });
   }, []);
 
-  const handleSlideToggle = useCallback((docId: string) => {
-    setSlidingItems(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(docId)) {
-        newSet.delete(docId);
-      } else {
-        newSet.add(docId);
-      }
-      return newSet;
-    });
-  }, []);
+
+
+
 
   const handleUnlinkDocument = useCallback(async (doc: DocumentPreview) => {
     if (!chatState?.id) {
@@ -744,22 +751,47 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
           return;
         }
 
-        // Success - remove from sliding state and refresh the file list
-        setSlidingItems(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(doc.id);
-          return newSet;
+        // Success - refresh the file list
+        
+        // Immediately remove the file from local state for better UX
+        setDocuments(prev => {
+          const filtered = prev.filter(d => d.id !== doc.id);
+          reactory.info(`File ${doc.name} removed from local state immediately. Files remaining: ${filtered.length}`);
+          return filtered;
         });
         
-        await loadDocuments();
-        reactory.info(`File ${doc.name} unlinked successfully`);
+        // Wait a moment for the server to process the detachment
+        reactory.info('Waiting 500ms for server to process detachment...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Force refresh the file list using the dedicated refresh function
+        // This bypasses memoization issues and ensures fresh data
+        try {
+          reactory.info('Starting force refresh after detachment...');
+          await forceRefreshDocuments();
+          reactory.info('Force refresh completed successfully');
+        } catch (refreshError) {
+          reactory.error('Failed to force refresh file list', refreshError);
+          reactory.info('Attempting fallback to loadDocuments...');
+          // Fallback to the memoized loadDocuments function
+          await loadDocuments();
+        }
+        
+        // Also refresh the chat state to update the file count badge
+        if (onRefreshChatState) {
+          reactory.info('Calling onRefreshChatState...');
+          await onRefreshChatState();
+          reactory.info('onRefreshChatState completed');
+        }
+        
+        reactory.info('File list and chat state refreshed after detachment');
       } else {
         reactory.error('Failed to unlink file - no response from server');
       }
     } catch (error) {
       reactory.error(`Failed to unlink file ${doc.name}`, error);
     }
-  }, [chatState?.id, reactory, loadDocuments]);
+  }, [chatState?.id, reactory, loadDocuments, onRefreshChatState, forceRefreshDocuments]);
 
   const handleDeleteDocument = useCallback(async (doc: DocumentPreview) => {
     if (!chatState?.id) {
@@ -805,12 +837,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
           return;
         }
 
-        // Success - remove from sliding state and selected document if needed
-        setSlidingItems(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(doc.id);
-          return newSet;
-        });
+        // Success - remove selected document if needed
         
         if (selectedDocument?.id === doc.id) {
           setSelectedDocument(null);
@@ -825,6 +852,34 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
       reactory.error(`Failed to delete file ${doc.name}`, error);
     }
   }, [chatState?.id, selectedDocument, reactory, loadDocuments]);
+
+  const handleDeleteConfirmationOpen = useCallback((doc: DocumentPreview) => {
+    setDeleteConfirmation({
+      open: true,
+      fileId: doc.id,
+      fileName: doc.name
+    });
+  }, []);
+
+  const handleDeleteConfirmationCancel = useCallback(() => {
+    setDeleteConfirmation({
+      open: false,
+      fileId: '',
+      fileName: ''
+    });
+  }, []);
+
+  const handleDeleteConfirmationConfirm = useCallback(async () => {
+    const doc = documents.find(d => d.id === deleteConfirmation.fileId);
+    if (doc) {
+      await handleDeleteDocument(doc);
+    }
+    setDeleteConfirmation({
+      open: false,
+      fileId: '',
+      fileName: ''
+    });
+  }, [deleteConfirmation.fileId, documents, handleDeleteDocument]);
 
   const handleShowAllFilesToggle = useCallback(async (checked: boolean) => {
     if (checked) {
@@ -847,6 +902,11 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
         setShowAllFiles(false);
         setIsTransitioning(false);
         setSelectedFiles([]); // Clear selected files when returning
+        setDeleteConfirmation({
+          open: false,
+          fileId: '',
+          fileName: ''
+        });
       }, 300);
     }
   }, []);
@@ -1414,21 +1474,16 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
             {!loading && documents.length > 0 && (
               <List sx={{ p: 0 }}>
                 {documents.map((doc) => {
-                  const isSliding = slidingItems.has(doc.id);
-                  
                   return (
                     <ListItem key={doc.id} sx={{ 
                       px: { xs: 1, md: 2 },
                       py: { xs: 0.5, md: 0 },
-                      position: 'relative',
-                      overflow: 'hidden'
+                      position: 'relative'
                     }}>
-                      {/* Main content that slides */}
+                      {/* Main content */}
                       <Box sx={{
                         display: 'flex',
                         width: '100%',
-                        transform: isSliding ? 'translateX(-75%)' : 'translateX(0)',
-                        transition: 'transform 0.3s ease-in-out',
                         alignItems: 'center'
                       }}>
                         <ListItemButton
@@ -1478,77 +1533,68 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
                         </ListItemButton>
                         
                         {/* Action buttons */}
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRenameDocument(doc.id, doc.name);
-                            }}
-                            size="small"
-                            color="primary"
-                            sx={{ 
-                              minWidth: { xs: 40, md: 'auto' },
-                              minHeight: { xs: 40, md: 'auto' }
-                            }}
-                          >
-                            <Edit fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSlideToggle(doc.id);
-                            }}
-                            size="small"
-                            color="warning"
-                            sx={{ 
-                              minWidth: { xs: 40, md: 'auto' },
-                              minHeight: { xs: 40, md: 'auto' }
-                            }}
-                          >
-                            <LinkOff fontSize="small" />
-                          </IconButton>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          gap: 0.5,
+                          bgcolor: 'grey.100',
+                          borderRadius: 1,
+                          p: 0.5,
+                          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.12)',
+                          border: '1px solid',
+                          borderColor: 'grey.300'
+                        }}>
+                          <Tooltip title="Rename file">
+                            <IconButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRenameDocument(doc.id, doc.name);
+                              }}
+                              size="small"
+                              color="primary"
+                              sx={{ 
+                                minWidth: { xs: 32, md: 36 },
+                                minHeight: { xs: 32, md: 36 }
+                              }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Unlink from chat">
+                            <IconButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnlinkDocument(doc);
+                              }}
+                              size="small"
+                              color="warning"
+                              sx={{ 
+                                minWidth: { xs: 32, md: 36 },
+                                minHeight: { xs: 32, md: 36 }
+                              }}
+                            >
+                              <LinkOff fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete file">
+                            <IconButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteConfirmationOpen(doc);
+                              }}
+                              size="small"
+                              color="error"
+                              sx={{ 
+                                minWidth: { xs: 32, md: 36 },
+                                minHeight: { xs: 32, md: 36 }
+                              }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </Box>
                       
-                      {/* Hidden action buttons revealed when sliding */}
-                      <Box sx={{
-                        position: 'absolute',
-                        right: { xs: 8, md: 16 },
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        display: 'flex',
-                        gap: 1,
-                        opacity: isSliding ? 1 : 0,
-                        transition: 'opacity 0.3s ease-in-out',
-                        pointerEvents: isSliding ? 'auto' : 'none'
-                      }}>
-                        <Button
-                          variant="contained"
-                          color="warning"
-                          size="small"
-                          startIcon={<LinkOff />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleUnlinkDocument(doc);
-                          }}
-                          sx={{ minWidth: 80 }}
-                        >
-                          Unlink
-                        </Button>
-                        <Button
-                          variant="contained"
-                          color="error"
-                          size="small"
-                          startIcon={<Delete />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDocument(doc);
-                          }}
-                          sx={{ minWidth: 80 }}
-                        >
-                          Delete
-                        </Button>
-                      </Box>
+
                     </ListItem>
                   );
                 })}
@@ -1843,6 +1889,36 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
       >
         <CloudUpload />
       </Fab>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmation.open}
+        onClose={handleDeleteConfirmationCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {il8n?.t('reactor.client.files.confirmDelete', { defaultValue: 'Confirm Delete' })}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 1 }}>
+            Are you sure you want to delete "{deleteConfirmation.fileName}"? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteConfirmationCancel}>
+            {il8n?.t('reactor.client.files.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirmationConfirm} 
+            variant="contained"
+            color="error"
+            startIcon={<Delete />}
+          >
+            {il8n?.t('reactor.client.files.delete', { defaultValue: 'Delete' })}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Rename Dialog */}
       <Dialog

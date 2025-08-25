@@ -1,16 +1,49 @@
 import React from 'react';
+import { styled } from '@mui/material/styles';
 import { withReactory, useReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/reactory-core';
 import * as MaterialCore from '@mui/material';
-import { makeStyles } from '@mui/styles';
 import useSizeSpec from '@reactory/client-core/components/hooks/useSizeSpec';
 import { Theme } from '@mui/material';
 
 
+const PREFIX = 'Footer';
+
+const classes = {
+  footer_container: `${PREFIX}-footer_container`,
+  powered_by: `${PREFIX}-powered_by`,
+  avatar: `${PREFIX}-avatar`
+};
+
+const StyledGrid = styled(MaterialCore.Grid2)((
+  {
+    theme: Theme
+  }
+) => {
+
+  return {
+    [`&.${classes.footer_container}`]: {
+      outline: '1px',
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      width: 100, //sizeSpec.outerWidth,
+      //backgroundColor: theme.palette.background[reactory.getThemeMode()].default
+    },
+    [`& .${classes.powered_by}`]: {
+      display: 'flex',
+      justifyContent: 'center',
+    },
+    [`& .${classes.avatar}`]: {
+      height: '18px',
+      width: '18px'
+    }
+  };
+
+});
+
+
 export const Footer = () => {
-
-
-
   const reactory = useReactory();
   const { useEffect, useState } = React;
   const sizeSpec = useSizeSpec();
@@ -32,33 +65,10 @@ export const Footer = () => {
     Switch,
   } = MaterialCore;
 
-  const useStyles = makeStyles((theme: Theme) => {
 
-    return {
-      footer_container: {
-        outline: '1px',
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        width: sizeSpec.outerWidth,
-        //backgroundColor: theme.palette.background[reactory.getThemeMode()].default
-      },
-      powered_by: {
-        display: 'flex',
-        justifyContent: 'center',
-      },
-      avatar: {
-        height: '18px',
-        width: '18px'
-      }
-    }
-
-  });
-
-  const classes = useStyles();
 
   return (
-    <Grid spacing={0} container className={classes.footer_container}>
+    <StyledGrid spacing={0} container className={classes.footer_container}>
       <Grid item container direction="row">
         <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
           <div className={classes.powered_by}>
@@ -66,7 +76,7 @@ export const Footer = () => {
           </div>
         </Grid>
       </Grid>
-    </Grid>
+    </StyledGrid>
   );
 };
 

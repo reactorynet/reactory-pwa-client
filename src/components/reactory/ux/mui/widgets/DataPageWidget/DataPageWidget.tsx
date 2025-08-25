@@ -1,7 +1,7 @@
-import React, { Component, Fragment } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { compose } from 'redux';
 import { Button, IconButton, Icon, TextField } from '@mui/material';
-import { withStyles, withTheme } from '@mui/styles';
+import { styled, useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import Reactory from '@reactory/reactory-core';
 import LabelWidget from '@reactory/client-core/components/reactory/ux/mui/widgets/LabelWidget';
@@ -22,142 +22,119 @@ export interface DataPageWidgetProps {
   formData: PagingResult,
   onChange: any,
   api: Reactory.Client.IReactoryApi,
-  classes: JSS, 
   formContext: any,
   [key: string]: any 
 };
 
-export interface DataPageWidgetState {
-  currentPageInput: number
+const PREFIX = 'DataPageWidget';
+
+const classes = {
+  container: `${PREFIX}-container`,
 };
 
-class DataPageWidget extends Component<DataPageWidgetProps, DataPageWidgetState> {
-  componentDefs: any;
-  constructor(props, context){
-    super(props, context);
+const Root = styled('div')(({ theme }) => ({
+  [`& .${classes.container}`]: {
+    display: 'flex'
+  }
+}));
 
-    this.state = {
-      currentPageInput: props.formData.page
-    };    
-    this.toggleFilterSelector = this.toggleFilterSelector.bind(this);
-    this.componentDefs = props.api.getComponents([
+const DataPageWidget = (props: DataPageWidgetProps) => {
+  const theme = useTheme();
+  const [currentPageInput, setCurrentPageInput] = useState(props.formData.page);
+  
+  const componentDefs = useRef(null);
+
+  useEffect(() => {
+    componentDefs.current = props.api.getComponents([
       'core.FullScreenModal'
     ]);
+  }, [props.api]);
 
-    this.onPrevious = this.onPrevious.bind(this);
-    this.onNext = this.onNext.bind(this);
-    this.onPageNumberChange = this.onPageNumberChange.bind(this);
-    this.onPageNumberKeyPress = this.onPageNumberKeyPress.bind(this);    
-  }
-  
-  static styles = (theme) => {
-    return {
-      container: {
-        display: 'flex'
-      }
-    }
-  };
-
-  static defaultProps = {
-    formData: [],    
-  };
-
-  toggleFilterSelector(){
+  const toggleFilterSelector = () => {
     // this.setState({ expanded: !this.state.expanded });
   }
 
-  onPrevious(){
-    this.props.api.log('onPrevious()', null);
-    const _formData: PagingResult = { ...this.props.formData } 
+  const onPrevious = () => {
+    props.api.log('onPrevious()', null);
+    const _formData: PagingResult = { ...props.formData } 
 
     _formData.page = _formData.page - 1;
 
     const rootFormData = { 
-      ...this.props.formContext.formData 
+      ...props.formContext.formData 
     };
 
-    this.props.api.log('Root Form Data', rootFormData);    
+    props.api.log('Root Form Data', rootFormData);    
     rootFormData.paging = _formData;
 
-    this.props.formContext.setFormData(rootFormData, this.props.formContext.refresh);
+    props.formContext.setFormData(rootFormData, props.formContext.refresh);
   }
 
-  onNext(){
-    this.props.api.log('onNext()', {props: this.props});    
-    const _paging: PagingResult = { ...this.props.formData } 
+  const onNext = () => {
+    props.api.log('onNext()', {props});    
+    const _paging: PagingResult = { ...props.formData } 
     _paging.page = _paging.page + 1;
     const rootFormData = { 
-      ...this.props.formContext.formData 
+      ...props.formContext.formData 
     };
-    this.props.api.log('Root Form Data', rootFormData);
+    props.api.log('Root Form Data', rootFormData);
     rootFormData.paging = _paging;
 
-    this.props.formContext.setFormData(rootFormData, this.props.formContext.refresh);
+    props.formContext.setFormData(rootFormData, props.formContext.refresh);
   }
 
-  onPageNumberKeyPress(evt){
-    const self = this;
-    self.props.api.log('onPageNumberKeyPress', { evt, charCode: evt.charCode, keyCode: evt.keyCode });    
-    self.setState({ 
-      currentPageInput: parseInt(evt.target.value)
-     });
+  const onPageNumberKeyPress = (evt) => {
+    props.api.log('onPageNumberKeyPress', { evt, charCode: evt.charCode, keyCode: evt.keyCode });    
+    setCurrentPageInput(parseInt(evt.target.value));
 
      if(evt.charCode === 13) {        
-      const _paging: PagingResult = { ...this.props.formData }; 
-      _paging.page = self.state.currentPageInput;
+      const _paging: PagingResult = { ...props.formData }; 
+      _paging.page = currentPageInput;
       
       const rootFormData = { 
-        ...self.props.formContext.formData 
+        ...props.formContext.formData 
       };
 
-      self.props.api.log('Root Form Data', rootFormData);
+      props.api.log('Root Form Data', rootFormData);
       rootFormData.paging = _paging;    
-      self.props.formContext.setFormData(rootFormData, self.props.formContext.refresh);
+      props.formContext.setFormData(rootFormData, props.formContext.refresh);
      }
   }
   
-  onPageNumberChange(evt){
-    this.props.api.log('Page number change on data set', { value: evt.target.value });
-    this.setState({ 
-      currentPageInput: parseInt(evt.target.value)
-    }); 
+  const onPageNumberChange = (evt) => {
+    props.api.log('Page number change on data set', { value: evt.target.value });
+    setCurrentPageInput(parseInt(evt.target.value));
   }
 
-  render(){
-    const { FullScreenModal } = this.componentDefs;
+  const { FullScreenModal } = componentDefs.current || {};
 
-    return (
-      <div className={this.props.classes.container}>
-        {this.props.formData.page > 1 ? 
-          <IconButton onClick={this.onPrevious} size="large">
-            <Icon>chevron_left</Icon>
-          </IconButton> : null}
-          <TextField
-            id="filled-number"
-            label="Data Page"
-            type="number"
-            InputLabelProps={{
-              shrink: true,
-            }}
-            value={this.state.currentPageInput}
-            onChange={this.onPageNumberChange}
-            onKeyPress={this.onPageNumberKeyPress}
-            variant="filled"
-          />
-        <Typography variant={"h6"} style={{ marginLeft: '8px' }}>of {Math.floor(this.props.formData.total / this.props.formData.pageSize)}</Typography>
-        <IconButton onClick={this.onNext} size="large">
-          <Icon>chevron_right</Icon>
-        </IconButton>
-      </div>
-    );
-  }
+  return (
+    <Root className={classes.container}>
+      {props.formData.page > 1 ? 
+        <IconButton onClick={onPrevious} size="large">
+          <Icon>chevron_left</Icon>
+        </IconButton> : null}
+        <TextField
+          id="filled-number"
+          label="Data Page"
+          type="number"
+          InputLabelProps={{
+            shrink: true,
+          }}
+          value={currentPageInput}
+          onChange={onPageNumberChange}
+          onKeyPress={onPageNumberKeyPress}
+          variant="filled"
+        />
+      <Typography variant={"h6"} style={{ marginLeft: '8px' }}>of {Math.floor(props.formData.total / props.formData.pageSize)}</Typography>
+      <IconButton onClick={onNext} size="large">
+        <Icon>chevron_right</Icon>
+      </IconButton>
+    </Root>
+  );
 }
 
-
-
 const DataPageWidgetComponent = compose(
-  withTheme, 
-  withStyles(DataPageWidget.styles),
   withReactory
 )(DataPageWidget)
 

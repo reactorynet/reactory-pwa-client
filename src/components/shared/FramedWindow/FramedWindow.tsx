@@ -1,9 +1,8 @@
-import React, { Component, Fragment } from 'react';
-import PropTypes, { any } from 'prop-types';
+import React, { Fragment } from 'react';
 import { AppBar, IconButton, Toolbar, Icon, Typography } from '@mui/material';
 import { isArray } from 'lodash';
 import { compose } from 'redux';
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import ReactoryApi from "@reactory/client-core/api/ReactoryApi";
 import Reactory from '@reactory/reactory-core';
@@ -27,7 +26,7 @@ const defaultFrameProps = {
 
 export type ReactoryFormDefinition = Reactory.Forms.IReactoryForm;
 
-function FramedWindow({ containerProps, frameProps, data, method, id, reactory }) {
+function FramedWindow({ containerProps, frameProps, data, method, id, reactory, header, footer }) {
 
   if (!reactory) {
     reactory = useReactory();
@@ -49,13 +48,13 @@ function FramedWindow({ containerProps, frameProps, data, method, id, reactory }
     
     return (
       <div { ..._cprops } >
-          {this.props.header}
+          {header}
           <iframe id={frameid} { ...frameprops } />
           <form action={_fprops.url} method="post" target={frameid}>
             <input type="hidden" name="data" id="data" value={JSON.stringify(data)}/>
             <input type="submit" value="submit" />
           </form>
-          {this.props.footer}
+          {footer}
       </div>
     )
   } else {
@@ -105,21 +104,23 @@ function _GraphiqlWindow({ reactory }) {
   
   return (
     <FramedWindow 
-      id={`reactory-graphiql-window`} 
-      frameProps={{ url: `${reactory.CDN_ROOT}/plugins/graphiql/index.html?${reactory.utils.queryString.stringify(queryparams)}` }} 
-      method={'get'} 
+      id={`reactory-graphiql-window`}
+      frameProps={{ url: `${reactory.CDN_ROOT}/plugins/graphiql/index.html?${reactory.utils.queryString.stringify(queryparams)}` }}
+      method={'get'}
       reactory={reactory}
       containerProps={{
         id: `reactory-graphiql-window-container`,
-        ...FramedWindow.defaultProps.containerProps,        
-      }}/>)
+        ...FramedWindow.defaultProps.containerProps,
+      }} 
+      header={undefined} 
+      footer={undefined}/>)
 }
 
 _GraphiqlWindow.meta = {
   nameSpace: 'core',
   name: 'ReactoryGraphiQLExplorer',
   version: '1.0.0',
-  component: withReactory(withTheme(_GraphiqlWindow)),
+  component: withReactory(_GraphiqlWindow),
   tags: ['graphql', 'development'],
   description: 'Graphql Express Explorer',
   roles: ['DEVELOPER', 'ADMIN']
@@ -155,11 +156,13 @@ export interface ReportViewerState {
 
 
 function ReportViewer({ 
-  folder, report, method, 
-  resolver, delivery, 
-  deliveryOptions,
-  reactory, data, filename
-}) {
+  folder, report, method, useClient,
+  reactory, data, filename, exportDefinition, engine = 'pdf'
+}: ReportViewerProperties) {
+
+  const { Loading } = reactory.getComponents<{ Loading: any }>([
+      'core.Loading'
+    ]);
 
   const [ready, setReady] = React.useState(false);
   const [inlineLocalFile, setInlineLocalFile] = React.useState('');
@@ -170,14 +173,9 @@ function ReportViewer({
   }
 
   const getInlineViewResult = () => {
-    const { folder, report, reactory, method, data, engine = 'pdf', useClient } = this.props;
-    const { Loading } = this.componentDefs;
-    const { ready, inlineLocalFile } = this.state;
-    
-    
-
+      
     if(useClient === true) {
-      return this.getClientSide();
+      return getClientSide();
     }
 
     const reportWindowProps = {
@@ -207,20 +205,18 @@ function ReportViewer({
       );
 
       return (<FramedWindow 
-        id={`reactory-report-window`} 
-        frameProps={{ ...reportWindowProps }} 
-        method={method} 
+        id={`reactory-report-window`}
+        frameProps={{ ...reportWindowProps }}
+        method={method}
         reactory={reactory}
         containerProps={{
           id: `reactory-report-window-container`,
-          ...FramedWindow.defaultProps.containerProps,        
-        }}
-        />);
+          ...FramedWindow.defaultProps.containerProps,
+        }} header={undefined} footer={undefined}        />);
     }     
   }
 
   const getDownloadViewResult = () => {
-    const { folder, report, reactory, method, data } = this.props;
     
     const queryparams = {
       ...data,
@@ -248,17 +244,13 @@ function ReportViewer({
     )
   }
   
-  const getClientSide = () => {    
+  const getClientSide = () => {        
 
-    const { Loading } = this.componentDefs;
-    const { theme } = this.props;
+    const theme = useTheme();
 
-    if(this.props.useClient === false) {
+    if(useClient === false) {
       throw new Error('Cannot call getClientSide() when useClient === false');
     }    
-
-    const that = this;
-    const { ready, inlineLocalFile, downloaded } = this.state;
 
     if(inlineLocalFile && ready === true) {
       return (
@@ -266,22 +258,20 @@ function ReportViewer({
 
       </Loading>
       )
-    }
-
-    const exportDefinition: Reactory.Excel.IExport = this.props.exportDefinition
-    let formData = that.props.data;
+    }    
+    let formData = data;
             
     if(exportDefinition) {
 
       if(exportDefinition.mapping && exportDefinition.mappingType === 'om') {
-        formData = that.props.reactory.utils.objectMapper({ formData }, exportDefinition.mapping);
+        formData = reactory.utils.objectMapper({ formData }, exportDefinition.mapping);
       }
 
       const wb = new ExcelJS.Workbook();            
       const excelOptions: Reactory.Excel.IExcelExportOptions = exportDefinition.exportOptions as Reactory.Excel.IExcelExportOptions;
             
       const options: Partial<ExcelJS.XlsxWriteOptions> = {
-        filename: `${that.props.reactory.utils.template(excelOptions.filename)({ formData: this.props.data, moment: moment })}`,
+        filename: `${reactory.utils.template(excelOptions.filename)({ formData: data, moment: moment })}`,
       };
       
       const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
@@ -354,7 +344,7 @@ function ReportViewer({
         }        
       });
 
-      if(this.state.ready === false) {
+      if(ready === false) {
         wb.xlsx.writeBuffer(options).then((buffer: any) => {
           var byteArray = new Uint8Array(buffer);
           var a = window.document.createElement('a');
@@ -367,57 +357,14 @@ function ReportViewer({
           // Remove anchor from body
           // document.body.removeChild(a)           
           //update local file reference
-          that.setState({ inlineLocalFile: options.filename, ready: true, downloaded: true })
+          setInlineLocalFile(options.filename);
+          setReady(true);
+          setDownloaded(true);
         });
 
         return (<Loading message="Writing Excel, please wait" />)
-      }
-
-                                   
-      /**
-       * 
-        filename: 'CRMDashboard ${moment(formData.periodStart).format("YYYY MMM DD")} - ${moment(formData.periodEnd).format("YYYY MMM DD")}.xlsx',
-        sheetnames: ['Overview', 'Quotes'],
-        Quotes: {
-
-        },
-        Overview: {
-
-        },
-       * 
-       */
-
-      /*  
-      let titleText: ExcelJS.CellValue = {
-          'richText': [
-              {'font': { 'size': 12 },'text': columnDefinition.column },
-          ]
-      }
-
-      if(columnDefinition.required === true || columnDefinition.required === "true") {
-          titleText = {
-              'richText': [
-                  {'font': { bold: true, 'size': 12 },'text': columnDefinition.column },
-              ]
-          }
-      }
-      
-      headerCell.border = {
-          top: {
-              style: "medium",                            
-          }
-      }
-      
-      this.props.viewData.data.forEach((row: any, rowIndex: number) => {
-          const rowCell = ws.getCell(`${cols[index]}${rowIndex}`);
-          const rowText = row[columnDefinition.column];
-
-          rowCell.value = rowText;
-      })
-
-      headerCell.value = titleText;
-      */           
-    }    
+      }                                
+    }
   }
 
   let content = getInlineViewResult();
@@ -429,7 +376,7 @@ function ReportViewer({
   );
 }
 
-export const ReportViewerComponent = compose(withTheme, withReactory)(ReportViewer);
+export const ReportViewerComponent = compose(withReactory)(ReportViewer);
 
 
 export default FramedWindow;

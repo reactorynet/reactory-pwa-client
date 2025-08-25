@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { styled } from '@mui/material/styles';
 import { compose } from 'redux';
 //import { withRouter, match } from 'react-router-dom';
 import { Icon, IconButton } from '@mui/material';
-import { withStyles, withTheme, } from '@mui/styles';
+
 import moment, { Moment } from 'moment';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import classNames from 'classnames';
@@ -11,6 +12,85 @@ import { useNavigate, useParams } from 'react-router';
 import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender'
 import { margin } from '@mui/system';
 import { use } from 'i18next';
+
+const PREFIX = 'StaticContentComponent';
+
+const classes = {
+  editIcon: `${PREFIX}-editIcon`,
+  contentContainer: `${PREFIX}-contentContainer`,
+  buttonContainer: `${PREFIX}-buttonContainer`,
+  staticContentContainer: `${PREFIX}-staticContentContainer`,
+  staticContainerDeveloper: `${PREFIX}-staticContainerDeveloper`,
+  expandButton: `${PREFIX}-expandButton`,
+  expandButtonExpanded: `${PREFIX}-expandButtonExpanded`,
+  collapsedContent: `${PREFIX}-collapsedContent`
+};
+
+// TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
+const Root = styled('div')(({ theme }) => {
+  const { palette } = theme;
+
+  return {
+    [`& .${classes.editIcon}`]: {
+      float: 'right',
+      margin: '10px',
+      fontSize: '18px'
+    },
+    [`& .${classes.contentContainer}`]: {
+      margin: theme.spacing(1),
+      position: 'relative',
+    },
+    [`& .${classes.buttonContainer}`]: {
+      minHeight: '40px',
+      display: 'flex',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      marginTop: theme.spacing(-3),
+    },
+    [`& .${classes.staticContentContainer}`]: {
+      display: 'block',
+      minHeight: '40px',      
+      padding: theme.spacing(1),
+      margin: theme.spacing(1),
+      marginBottom: '50px',
+      position: 'relative',
+    },
+    [`& .${classes.staticContainerDeveloper}`]: {
+      '&:hover': {
+        outline: `1px solid ${palette.primary.main}`,
+        cursor: 'pointer'
+      }
+    },
+    [`& .${classes.expandButton}`]: {
+      position: 'absolute !important',
+      top: theme.spacing(2) + ' !important',
+      right: theme.spacing(1) + ' !important',
+      zIndex: 10,
+      minWidth: 'auto !important',
+      width: '32px !important',
+      height: '32px !important',
+    },
+    [`& .${classes.expandButtonExpanded}`]: {
+      top: 'auto',
+      bottom: theme.spacing(1),
+    },
+    [`& .${classes.collapsedContent}`]: {
+      maxHeight: '200px',
+      overflow: 'hidden',
+      position: 'relative',
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '40px',
+        background: `linear-gradient(transparent, ${theme.palette.background.paper})`,
+        pointerEvents: 'none',
+      }
+    },
+  };
+});
 
 export interface ReactoryStaticContentProps {
   id: string,
@@ -77,7 +157,7 @@ export interface ReactoryStaticContentState {
   found: boolean,
   expanded: boolean,
   [key: string]: any
-};
+}
 
 export interface ComponentMountInfo {
   id: string,
@@ -88,71 +168,6 @@ export interface ComponentMountInfo {
 
 export type ReactoryStaticContentComponent = React.FC<Partial<ReactoryStaticContentProps>>;
 
-
-const StaticContentStyles = (theme: any): any => {
-  const { palette } = theme;
-
-  return {
-    editIcon: {
-      float: 'right',
-      margin: '10px',
-      fontSize: '18px'
-    },
-    contentContainer: {
-      margin: theme.spacing(1),
-      position: 'relative',
-    },
-    buttonContainer: {
-      minHeight: '40px',
-      display: 'flex',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      marginTop: theme.spacing(-3),
-    },
-    staticContentContainer: {
-      display: 'block',
-      minHeight: '40px',      
-      padding: theme.spacing(1),
-      margin: theme.spacing(1),
-      marginBottom: '50px',
-      position: 'relative',
-    },
-    staticContainerDeveloper: {
-      '&:hover': {
-        outline: `1px solid ${palette.primary.main}`,
-        cursor: 'pointer'
-      }
-    },
-    expandButton: {
-      position: 'absolute !important',
-      top: theme.spacing(2) + ' !important',
-      right: theme.spacing(1) + ' !important',
-      zIndex: 10,
-      minWidth: 'auto !important',
-      width: '32px !important',
-      height: '32px !important',
-    },
-    expandButtonExpanded: {
-      top: 'auto',
-      bottom: theme.spacing(1),
-    },
-    collapsedContent: {
-      maxHeight: '200px',
-      overflow: 'hidden',
-      position: 'relative',
-      '&::after': {
-        content: '""',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '40px',
-        background: `linear-gradient(transparent, ${theme.palette.background.paper})`,
-        pointerEvents: 'none',
-      }
-    },
-  }
-};
 
 /**
  * Static Content Component. Used for editing static content using a wysiwig editor
@@ -175,8 +190,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
   const navigate = useNavigate();
   const params = useParams();
   const { renderContent } = useContentRender(reactory);
-  const {
-    classes,
+  const {    
     viewRoles,
     editRoles = ['DEVELOPER'],
     formFqn = 'static.ContentCapture',
@@ -437,7 +451,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
     setVersion(version + 1);
   }
 
-  let editWidget = (<IconButton onClick={edit} color="primary" size={'small'} className={classes.editIcon}>
+  let editWidget = (<IconButton onClick={edit} color="primary" size={'small'}>
     <Icon>{editing === false ? 'edit' : 'check'}</Icon>
   </IconButton>)
 
@@ -563,21 +577,21 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
     }
   }, [props.propertyBag])
 
-  return (        
-    <>      
-      {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}      
-      <div className={`${classes.buttonContainer}`}>
+  return (
+    <Root>
+      {editing === true ? <ContentCaptureComponent  {...contentCaptureProps} /> : contentComponent}
+      <div>
         {getCanEdit() === true && getIsDeveloper() === true && editWidget}
       </div>
-    </>
-  )
+    </Root>
+  );
 
 
 };
 
 
 
-const StaticContentComponent: any = compose(withReactory, withTheme, withStyles(StaticContentStyles))(StaticContent);
+const StaticContentComponent: any = compose(withReactory)(StaticContent);
 
 StaticContentComponent.meta = {
   nameSpace: 'core',

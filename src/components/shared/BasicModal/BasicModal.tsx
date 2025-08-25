@@ -1,6 +1,7 @@
 import React from 'react';
-import PropTypes from 'prop-types';
-import { withStyles } from '@mui/styles';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import Modal from '@mui/material/Modal';
 import Button from '@mui/material/Button';
@@ -17,58 +18,40 @@ function getModalStyle() {
 }
 
 
-class BasicModal extends React.Component<any, any> {
-  
-  static styles = (theme): any => ({
-    paper: {
-      position: 'absolute',    
-      backgroundColor: theme.palette.background.paper,
-      boxShadow: theme.shadows[5],
-      padding: theme.spacing(1)
-    },
-  });
+const BasicModal = (props: any) => {
+  const theme = useTheme();
+  const [open, setOpen] = React.useState(props.open === true || false);
 
-  constructor(props){
-    super(props)
-    this.state = {
-      open: props.open === true || false,
-    };
-  }
-  
-
-  handleOpen = () => {
-    this.setState({ open: true });
+  const handleOpen = () => {
+    setOpen(true);
   };
 
-  handleClose = () => {
-    this.setState({ open: false });
+  const handleClose = () => {
+    setOpen(false);
   };
 
-  render() {
-    const { classes, onClose, title, children } = this.props;
-    const closeHandler = onClose || this.handleClose;
-    return (
-      <div>                
-        <Modal
-          aria-labelledby="simple-modal-title"
-          aria-describedby="simple-modal-description"
-          open={this.state.open}
-          onClose={closeHandler}
-        >
-          <div style={getModalStyle()} className={classes.paper}>
-            <Typography variant="h6" id="modal-title">
-                {title}
-            </Typography>
-            <Typography variant="subtitle1" id="simple-modal-description">
-              {children}
-            </Typography>            
-          </div>
-        </Modal>
-      </div>
-    );
-  }
-}
+  const { onClose, title, children } = props;
+  const closeHandler = onClose || handleClose;
+  
+  return (
+    <div>                
+      <Modal
+        aria-labelledby="simple-modal-title"
+        aria-describedby="simple-modal-description"
+        open={open}
+        onClose={closeHandler}
+      >
+        <div style={{ ...getModalStyle(), position: 'absolute', backgroundColor: theme.palette.background.paper, boxShadow: theme.shadows[5], padding: theme.spacing(1) }}>
+          <Typography variant="h6" id="modal-title">
+              {title}
+          </Typography>
+          <Typography variant="subtitle1" id="simple-modal-description">
+            {children}
+          </Typography>            
+        </div>
+      </Modal>
+    </div>
+  );
+};
 
-const BasicModalWrapped = withStyles(BasicModal.styles)(BasicModal);
-
-export default BasicModalWrapped;
+export default BasicModal;
