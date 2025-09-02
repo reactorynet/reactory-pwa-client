@@ -86,6 +86,8 @@ import Markdown from 'react-markdown';
 import MarkdownGfm from 'remark-gfm';
 import DomPurify from 'dompurify';
 import PrismCode from 'react-prism';
+
+import WorkflowDesigner from './shared/WorkflowDesigner';
 import * as Three from 'three';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
@@ -643,5 +645,11 @@ export const componentRegistery = [
     name: 'Three',
     version: '1.0.0',
     component: Three
+  },
+  {
+    nameSpace: 'core',
+    name: 'WorkflowDesigner',
+    version: '1.0.0',
+    component: WorkflowDesigner
   },
 ];

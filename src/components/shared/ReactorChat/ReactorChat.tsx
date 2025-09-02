@@ -27,12 +27,7 @@ export default (props) => {
   const reactory = useReactory();
   const il8n = reactory.i18n;
   const user = reactory.getUser()?.loggedIn?.user;
-  const theme: Reactory.UX.IReactoryTheme = reactory.getTheme();
-
-  const {
-    options,
-  } = theme;
-
+    
   const {
     mode,
     primary,

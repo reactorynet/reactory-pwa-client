@@ -85,10 +85,12 @@ export default function StepLibraryPanel(props: StepLibraryPanelProps) {
 
   const handleStepDragStart = useCallbackReact((step: StepDefinition, event: React.DragEvent) => {
     // Set drag data
-    event.dataTransfer.setData('application/json', JSON.stringify({
+    const dragData = {
       type: 'step',
       stepDefinition: step
-    }));
+    };
+    console.log('🔄 Drag start - setting data:', dragData);
+    event.dataTransfer.setData('application/json', JSON.stringify(dragData));
     event.dataTransfer.effectAllowed = 'copy';
 
     // Create drag image

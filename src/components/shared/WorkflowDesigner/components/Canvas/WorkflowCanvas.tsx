@@ -8,7 +8,8 @@ import {
   WorkflowConnection
 } from '../../types';
 import { canvasToScreen, screenToCanvas } from '../../utils';
-import { DEFAULT_CANVAS_THEME } from '../../constants';
+import { DEFAULT_CANVAS_THEME, CANVAS_DEFAULTS } from '../../constants';
+import { useCanvasOperations } from '../../hooks/useCanvasOperations';
 import GridBackground from './GridBackground';
 import WorkflowStep from './WorkflowStep';
 import Connection from './Connection';
@@ -44,64 +45,77 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
     Material: Reactory.Client.Web.IMaterialModule
   }>(["react.React", "material-ui.Material"]);
 
+  // Get theme colors
+  const {
+    background,
+    text,
+  } = reactory.muiTheme.palette;
+
   const { useEffect: useEffectReact, useRef: useRefReact, useCallback: useCallbackReact } = React;
 
   const canvasRef = useRefReact<HTMLDivElement>(null);
   const svgRef = useRefReact<SVGSVGElement>(null);
-  const isDraggedRef = useRefReact(false);
+
+  // Use the canvas operations hook for proper mouse handling
+  const canvasOperations = useCanvasOperations({
+    viewport,
+    onViewportChange,
+    onStepMove,
+    onStepResize,
+    onCanvasClick,
+    onStepSelect,
+    onStepDoubleClick,
+    snapToGrid,
+    gridSize: CANVAS_DEFAULTS.GRID_SIZE,
+    steps: definition.steps
+  });
+
+  // Update canvas element reference for operations hook
+  useEffectReact(() => {
+    canvasOperations.setCanvasElement(canvasRef.current);
+  }, [canvasRef.current, canvasOperations]);
+
+  // Update viewport bounds when canvas resizes
+  useEffectReact(() => {
+    const updateBounds = () => {
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const newViewport = {
+          ...viewport,
+          bounds: {
+            x: 0,
+            y: 0,
+            width: rect.width,
+            height: rect.height
+          }
+        };
+        
+        // Only update if bounds actually changed
+        if (viewport.bounds.width !== rect.width || viewport.bounds.height !== rect.height) {
+          onViewportChange(newViewport);
+        }
+      }
+    };
+
+    // Update on mount and resize
+    updateBounds();
+    window.addEventListener('resize', updateBounds);
+    
+    return () => window.removeEventListener('resize', updateBounds);
+  }, [onViewportChange, viewport]);
 
   // Handle mouse events
   const handleMouseDown = useCallbackReact((event: React.MouseEvent) => {
-    if (!canvasRef.current) return;
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const screenPoint = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-    };
-
-    const canvasPoint = screenToCanvas(screenPoint, viewport);
-    
-    // Check if we clicked on a step
-    const clickedStep = definition.steps.find(step => {
-      const stepBounds = {
-        x: step.position.x,
-        y: step.position.y,
-        width: step.size?.width || 200,
-        height: step.size?.height || 100
-      };
-      
-      return canvasPoint.x >= stepBounds.x &&
-             canvasPoint.x <= stepBounds.x + stepBounds.width &&
-             canvasPoint.y >= stepBounds.y &&
-             canvasPoint.y <= stepBounds.y + stepBounds.height;
-    });
-
-    if (clickedStep) {
-      onStepSelect(clickedStep.id, event.ctrlKey || event.metaKey);
-      isDraggedRef.current = false;
-    } else {
-      // Click on empty canvas
-      onCanvasClick(canvasPoint, {
-        ctrl: event.ctrlKey,
-        shift: event.shiftKey,
-        alt: event.altKey,
-        meta: event.metaKey
-      });
-      isDraggedRef.current = false;
-    }
-
-    event.preventDefault();
-  }, [definition.steps, viewport, onStepSelect, onCanvasClick]);
+    canvasOperations.handleMouseDown(event.nativeEvent);
+  }, [canvasOperations]);
 
   const handleMouseMove = useCallbackReact((event: React.MouseEvent) => {
-    if (!canvasRef.current) return;
-    isDraggedRef.current = true;
-  }, []);
+    canvasOperations.handleMouseMove(event.nativeEvent);
+  }, [canvasOperations]);
 
   const handleMouseUp = useCallbackReact((event: React.MouseEvent) => {
-    isDraggedRef.current = false;
-  }, []);
+    canvasOperations.handleMouseUp(event.nativeEvent);
+  }, [canvasOperations]);
 
   const handleDoubleClick = useCallbackReact((event: React.MouseEvent) => {
     if (!canvasRef.current) return;
@@ -145,7 +159,10 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
     event.preventDefault();
     
     try {
-      const data = JSON.parse(event.dataTransfer.getData('application/json'));
+      const dataString = event.dataTransfer.getData('application/json');
+      console.log('🎯 Drop - received data string:', dataString);
+      const data = JSON.parse(dataString);
+      console.log('🎯 Drop - parsed data:', data);
       
       if (data.type === 'step' && data.stepDefinition && canvasRef.current) {
         const rect = canvasRef.current.getBoundingClientRect();
@@ -187,6 +204,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
         };
 
         // Call step creation callback
+        console.log('🎯 Drop - calling onStepCreate with:', data.stepDefinition, canvasPoint);
         onStepCreate(data.stepDefinition, canvasPoint);
       }
     } catch (error) {
@@ -196,44 +214,16 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
 
   // Handle wheel zoom
   const handleWheel = useCallbackReact((event: React.WheelEvent) => {
-    if (!canvasRef.current) return;
-
-    event.preventDefault();
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const mousePoint = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-    };
-
-    const canvasPoint = screenToCanvas(mousePoint, viewport);
-    const zoomDelta = event.deltaY > 0 ? 0.9 : 1.1;
-    const newZoom = Math.max(0.1, Math.min(3.0, viewport.zoom * zoomDelta));
-
-    if (newZoom === viewport.zoom) return;
-
-    // Calculate new pan to zoom towards mouse position
-    const newScreenPoint = canvasToScreen(canvasPoint, { ...viewport, zoom: newZoom });
-    const panDelta = {
-      x: mousePoint.x - newScreenPoint.x,
-      y: mousePoint.y - newScreenPoint.y
-    };
-
-    onViewportChange({
-      ...viewport,
-      zoom: newZoom,
-      panX: viewport.panX + panDelta.x,
-      panY: viewport.panY + panDelta.y
-    });
-  }, [viewport, onViewportChange]);
+    canvasOperations.handleWheel(event.nativeEvent);
+  }, [canvasOperations]);
 
   const { Box } = Material.MaterialCore;
 
   // Get canvas theme (use custom theme or default)
   const canvasTheme = {
     ...DEFAULT_CANVAS_THEME,
-    backgroundColor: '#fafafa',
-    gridColor: '#e0e0e0'
+    backgroundColor: background.paper,
+    gridColor: text.disabled || '#e0e0e0'
   };
 
   return (
@@ -243,7 +233,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
         position: 'absolute',
         inset: 0,
         backgroundColor: canvasTheme.backgroundColor,
-        cursor: dragState.isDragging ? 'grabbing' : 'grab',
+        cursor: canvasOperations.isDragging ? 'grabbing' : 'grab',
         overflow: 'hidden'
       }}
       onMouseDown={handleMouseDown}

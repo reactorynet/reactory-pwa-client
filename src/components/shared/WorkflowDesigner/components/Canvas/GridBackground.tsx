@@ -1,5 +1,5 @@
 import { CanvasViewport } from '../../types';
-
+import React from 'react';
 interface GridBackgroundProps {
   viewport: CanvasViewport;
   gridSize: number;

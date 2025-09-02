@@ -24,9 +24,10 @@ import { CANVAS_DEFAULTS, STEP_DEFAULTS } from './constants';
 
 // Component imports
 import WorkflowCanvas from './components/Canvas/WorkflowCanvas';
+import OptimizedWorkflowCanvas from './components/Canvas/OptimizedWorkflowCanvas';
 import StepLibraryPanel from './components/Panels/StepLibraryPanel';
 import PropertiesPanel from './components/Panels/PropertiesPanel';
-// import MainToolbar from './components/Toolbar/MainToolbar';
+
 
 export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const {
@@ -44,14 +45,16 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     readonly = false,
     autoSave = false,
     autoSaveInterval = 30000,
-    showGrid = true,
-    snapToGrid: enableSnapToGrid = true,
-    className,
-    style
   } = props;
 
   const reactory = useReactory();
-  const reactoryTheme: Reactory.UX.IReactoryTheme = reactory.getTheme();
+  const {
+   mode,
+   primary,
+   secondary,
+   background,
+   text,
+ } = reactory.muiTheme.palette;
 
   const {
     React,
@@ -68,6 +71,9 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const [propertiesPanelOpen, setPropertiesPanelOpen] = useStateReact<boolean>(true);
   const [validationPanelOpen, setValidationPanelOpen] = useStateReact<boolean>(false);
   const [templatesPanelOpen, setTemplatesPanelOpen] = useStateReact<boolean>(false);
+  const [showGrid, setShowGrid] = useStateReact<boolean>(props.showGrid || true);
+  const [enableSnapToGrid, setEnableSnapToGrid] = useStateReact<boolean>(props.snapToGrid || true);
+  const [useOptimizedRendering, setUseOptimizedRendering] = useStateReact<boolean>(false); // Will be set after definition loads
 
   // GraphQL operations
   const {
@@ -221,6 +227,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
   // Handle step creation from library (via canvas drop)
   const handleStepCreation = useCallbackReact((stepDefinition: any, position: Point) => {
+    console.log('🏗️ Step creation called with:', stepDefinition, position);
 
     const canvasPos = enableSnapToGrid 
       ? snapToGrid(position, CANVAS_DEFAULTS.GRID_SIZE)
@@ -254,6 +261,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       }))
     };
 
+    console.log('🏗️ Adding step to definition:', newStep);
     addStep(newStep);
 
     // Select the new step
@@ -261,7 +269,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       selectedSteps: new Set([newStep.id]),
       selectedConnections: new Set()
     });
-  }, [addStep, setSelection, enableSnapToGrid]);
+  }, [addStep, setSelection, enableSnapToGrid, generateStepId, snapToGrid, generateConnectionId]);
 
   // Handle connection creation
   const handleConnectionCreate = useCallbackReact((sourceStepId: string, sourcePortId: string, targetStepId: string, targetPortId: string) => {
@@ -452,19 +460,18 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     ViewSidebar,
     Settings,
     Visibility,
-    VisibilityOff
+    VisibilityOff,
+    Speed
   } = Material.MaterialIcons;
 
   // Main component render
   return (
     <Box
-      className={className}
-      style={style}
       sx={{
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
-        backgroundColor: reactoryTheme.palette.background.default,
+        backgroundColor: background.default,
         overflow: 'hidden'
       }}
     >
@@ -564,17 +571,29 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       </IconButton>
     </Tooltip>
 
-    <Tooltip title={`${showGrid ? 'Hide' : 'Show'} Grid`}>
-      <IconButton 
-        onClick={() => {
-          // Toggle grid - we'll need to add this to the component state
-          console.log('Toggle grid');
-        }}
-        color={showGrid ? "primary" : "default"}
-      >
-        {showGrid ? <Visibility /> : <VisibilityOff />}
-      </IconButton>
-    </Tooltip>
+                <Tooltip title={`${showGrid ? 'Hide' : 'Show'} Grid`}>
+              <IconButton 
+                onClick={() => {
+                  setShowGrid(!showGrid);
+                }}
+                color={showGrid ? "primary" : "default"}
+              >
+                {showGrid ? <Visibility /> : <VisibilityOff />}
+              </IconButton>
+            </Tooltip>
+
+            {/* DEBUG: Test Step Creation */}
+            {/* Performance Toggle */}
+            <Tooltip title={`${useOptimizedRendering ? 'Disable' : 'Enable'} Performance Mode`}>
+              <IconButton 
+                onClick={() => {
+                  setUseOptimizedRendering(!useOptimizedRendering);
+                }}
+                color={useOptimizedRendering ? "primary" : "default"}
+              >
+                <Speed />
+              </IconButton>
+            </Tooltip>
       </Paper>
 
       {/* Progress indicator */}
@@ -630,10 +649,79 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             flexGrow: 1, 
             position: 'relative', 
             overflow: 'hidden',
-            backgroundColor: reactoryTheme.palette.background.paper
+            backgroundColor: background.paper
           }}
         >
-          <WorkflowCanvas
+          {useOptimizedRendering ? (
+            <OptimizedWorkflowCanvas
+              definition={definition}
+              stepLibrary={stepLibrary}
+              viewport={viewport}
+              selection={selection}
+              dragState={dragState}
+              validationResult={validationResult}
+              showGrid={showGrid}
+              snapToGrid={enableSnapToGrid}
+              readonly={readonly}
+              onStepMove={useCallbackReact((stepId: string, position: Point) => {
+                updateStep(stepId, { position });
+              }, [updateStep])}
+              onStepResize={useCallbackReact((stepId: string, size: Size) => {
+                updateStep(stepId, { size });
+              }, [updateStep])}
+              onStepSelect={useCallbackReact((stepId: string, multi: boolean) => {
+                const newSelectedSteps: Set<string> = new Set(multi ? selection.selectedSteps : []);
+                
+                if (newSelectedSteps.has(stepId)) {
+                  newSelectedSteps.delete(stepId);
+                } else {
+                  newSelectedSteps.add(stepId);
+                }
+
+                setSelection({
+                  selectedSteps: newSelectedSteps,
+                  selectedConnections: multi ? selection.selectedConnections : new Set<string>(),
+                  selectionBounds: undefined
+                });
+              }, [selection, setSelection])}
+              onStepDoubleClick={useCallbackReact((stepId: string) => {
+                setPropertiesPanelOpen(true);
+              }, [])}
+              onConnectionCreate={useCallbackReact((connection: Partial<WorkflowConnection>) => {
+                if (connection.sourceStepId && connection.sourcePortId && connection.targetStepId && connection.targetPortId) {
+                  handleConnectionCreate(connection.sourceStepId, connection.sourcePortId, connection.targetStepId, connection.targetPortId);
+                }
+              }, [handleConnectionCreate])}
+              onConnectionSelect={useCallbackReact((connectionId: string, multi: boolean) => {
+                const newSelectedConnections: Set<string> = new Set(multi ? selection.selectedConnections : []);
+                
+                if (newSelectedConnections.has(connectionId)) {
+                  newSelectedConnections.delete(connectionId);
+                } else {
+                  newSelectedConnections.add(connectionId);
+                }
+
+                setSelection({
+                  selectedConnections: newSelectedConnections,
+                  selectedSteps: multi ? selection.selectedSteps : new Set<string>(),
+                  selectionBounds: undefined
+                });
+              }, [selection, setSelection])}
+              onCanvasClick={useCallbackReact((position: Point, modifiers: InteractionModifiers) => {
+                if (!modifiers.ctrl && !modifiers.meta) {
+                  // Clear selection when clicking on empty canvas
+                  setSelection({
+                    selectedSteps: new Set<string>(),
+                    selectedConnections: new Set<string>(),
+                    selectionBounds: undefined
+                  });
+                }
+              }, [setSelection])}
+              onViewportChange={setViewport}
+              onStepCreate={handleStepCreation}
+            />
+          ) : (
+            <WorkflowCanvas
             definition={definition}
             stepLibrary={stepLibrary}
             viewport={viewport}
@@ -699,6 +787,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             onViewportChange={setViewport}
             onStepCreate={handleStepCreation}
           />
+        )}
         </Box>
 
         {/* Properties Panel */}

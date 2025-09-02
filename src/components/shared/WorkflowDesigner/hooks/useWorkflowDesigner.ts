@@ -240,17 +240,28 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
   }, [addToHistory]);
 
   const addStep = useCallback((step: WorkflowStepDefinition) => {
-    const oldDefinition = cloneDefinition(definitionRef.current);
-    const newDefinition = cloneDefinition(oldDefinition);
-    newDefinition.steps.push(step);
-
-    setDefinition(newDefinition);
+    console.log('📝 addStep called with step:', step);
     
-    addToHistory({
-      type: 'add_step',
-      description: `Add step "${step.name}"`,
-      undoData: oldDefinition,
-      redoData: newDefinition
+    // Use functional state update to ensure we have the latest definition
+    setDefinition(currentDefinition => {
+      console.log('📝 Current definition in functional update - steps.length:', currentDefinition.steps.length);
+      const oldDefinition = cloneDefinition(currentDefinition);
+      const newDefinition = cloneDefinition(oldDefinition);
+      newDefinition.steps.push(step);
+      console.log('📝 newDefinition.steps.length:', newDefinition.steps.length);
+      
+      // Update the ref immediately to prevent race conditions
+      definitionRef.current = newDefinition;
+      
+      // Add to history
+      addToHistory({
+        type: 'add_step',
+        description: `Add step "${step.name}"`,
+        undoData: oldDefinition,
+        redoData: newDefinition
+      });
+      
+      return newDefinition;
     });
   }, [addToHistory]);
 
