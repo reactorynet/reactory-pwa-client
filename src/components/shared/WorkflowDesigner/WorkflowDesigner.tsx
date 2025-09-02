@@ -288,6 +288,15 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const handleKeyDown = useCallbackReact((event: KeyboardEvent) => {
     if (readonly) return;
 
+    // Ignore keyboard shortcuts when user is typing in input fields
+    const activeElement = document.activeElement;
+    const isInputFocused = activeElement && (
+      activeElement.tagName === 'INPUT' ||
+      activeElement.tagName === 'TEXTAREA' ||
+      (activeElement as HTMLElement).contentEditable === 'true' ||
+      activeElement.getAttribute('contenteditable') === 'true'
+    );
+    
     const modifiers = {
       ctrl: event.ctrlKey,
       shift: event.shiftKey,
@@ -296,8 +305,24 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     };
 
     const isModifierKey = modifiers.ctrl || modifiers.meta;
+    const key = event.key.toLowerCase();
+    
+    // If user is typing in an input field, don't intercept keyboard events
+    // except for specific shortcuts that should work everywhere
+    if (isInputFocused && !isModifierKey) {
+      // Allow normal typing behavior in input fields
+      return;
+    }
+    
+    // Allow certain shortcuts even in input fields (like Ctrl+Z for undo)
+    if (isInputFocused && isModifierKey) {
+      const allowedShortcutsInInputs = ['z', 'y', 's']; // Undo, Redo, Save
+      if (!allowedShortcutsInInputs.includes(key)) {
+        return;
+      }
+    }
 
-    switch (event.key.toLowerCase()) {
+    switch (key) {
       case 's':
         if (isModifierKey) {
           event.preventDefault();

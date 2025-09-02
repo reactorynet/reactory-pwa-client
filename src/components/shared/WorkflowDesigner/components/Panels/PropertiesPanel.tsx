@@ -67,18 +67,33 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
 
     const updatedStep = { ...selectedStep };
     
-    // Handle nested property paths (e.g., "configuration.inputField")
+    // Define step-level fields that should be updated directly on the step
+    const stepLevelFields = ['name'];
+    
     const pathParts = propertyPath.split('.');
-    let target: Record<string, unknown> = updatedStep.properties;
+    const rootField = pathParts[0];
     
-    for (let i = 0; i < pathParts.length - 1; i++) {
-      if (!target[pathParts[i]]) {
-        target[pathParts[i]] = {};
+    if (stepLevelFields.includes(rootField) && pathParts.length === 1) {
+      // Update step-level field directly
+      (updatedStep as any)[rootField] = value;
+    } else {
+      // Handle nested property paths (e.g., "configuration.inputField")
+      // Ensure properties object exists
+      if (!updatedStep.properties) {
+        updatedStep.properties = {};
       }
-      target = target[pathParts[i]] as Record<string, unknown>;
+      
+      let target: Record<string, unknown> = updatedStep.properties;
+      
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        if (!target[pathParts[i]]) {
+          target[pathParts[i]] = {};
+        }
+        target = target[pathParts[i]] as Record<string, unknown>;
+      }
+      
+      target[pathParts[pathParts.length - 1]] = value;
     }
-    
-    target[pathParts[pathParts.length - 1]] = value;
 
     onStepUpdate(updatedStep);
     

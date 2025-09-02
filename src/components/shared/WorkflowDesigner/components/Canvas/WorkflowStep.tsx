@@ -62,6 +62,22 @@ export default function WorkflowStep(props: WorkflowStepProps) {
   const hasErrors = errors.length > 0;
   const hasWarnings = warnings.length > 0;
 
+  // Helper function to create hover effect by adjusting color brightness
+  const adjustColorForHover = useCallbackReact((color: string) => {
+    // Convert hex to RGB, increase brightness slightly
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Increase brightness by 15% but cap at 255
+    const newR = Math.min(255, Math.floor(r + (255 - r) * 0.15));
+    const newG = Math.min(255, Math.floor(g + (255 - g) * 0.15));
+    const newB = Math.min(255, Math.floor(b + (255 - b) * 0.15));
+    
+    return `rgb(${newR}, ${newG}, ${newB})`;
+  }, []);
+
   // Get step colors based on type and state
   const getStepColors = useCallbackReact(() => {
     const theme = DEFAULT_STEP_THEME;
@@ -75,14 +91,18 @@ export default function WorkflowStep(props: WorkflowStepProps) {
       backgroundColor = theme.warningColor;
       borderColor = '#f57c00';
     } else if (selected) {
-      backgroundColor = theme.selectedColor;
+      // Apply subtle brightening for selected state too
+      backgroundColor = adjustColorForHover(backgroundColor);
       borderColor = '#1976d2';
-    } else if (isHovered) {
-      backgroundColor = '#f5f5f5';
+    }
+
+    // Apply hover effect by subtly lightening the background (if not already selected)
+    if (isHovered && !hasErrors && !hasWarnings && !selected) {
+      backgroundColor = adjustColorForHover(backgroundColor);
     }
 
     return { backgroundColor, borderColor };
-  }, [stepDefinition, hasErrors, hasWarnings, selected, isHovered]);
+  }, [stepDefinition, hasErrors, hasWarnings, selected, isHovered, adjustColorForHover]);
 
   // Handle mouse interactions
   const handleMouseDown = useCallbackReact((event: React.MouseEvent) => {
@@ -149,20 +169,79 @@ export default function WorkflowStep(props: WorkflowStepProps) {
 
   // Get step icon based on type
   const getStepIcon = useCallbackReact(() => {
+    const {
+      PlayArrow,
+      Stop,
+      Assignment,
+      AltRoute,
+      CallSplit,
+      CallMerge,
+      Extension,
+      AccountTree,
+      Functions,
+      Settings,
+      Timer,
+      DataObject,
+      Http,
+      Email,
+      Storage
+    } = Material.MaterialIcons;
+
+    // Map icon names to components
+    const iconMap: { [key: string]: React.ComponentType<any> } = {
+      'play_arrow': PlayArrow,
+      'stop': Stop,
+      'assignment': Assignment,
+      'alt_route': AltRoute,
+      'call_split': CallSplit,
+      'call_merge': CallMerge,
+      'extension': Extension,
+      'account_tree': AccountTree,
+      'functions': Functions,
+      'settings': Settings,
+      'timer': Timer,
+      'data_object': DataObject,
+      'http': Http,
+      'email': Email,
+      'storage': Storage
+    };
+
+    let iconName: string;
+    
     if (stepDefinition?.icon) {
-      // Return the icon name - in a real implementation, you'd map these to actual icons
-      return stepDefinition.icon;
+      iconName = stepDefinition.icon;
+    } else {
+      // Default icons based on step type
+      switch (step.type) {
+        case 'start': iconName = 'play_arrow'; break;
+        case 'end': iconName = 'stop'; break;
+        case 'task': iconName = 'assignment'; break;
+        case 'condition': iconName = 'alt_route'; break;
+        case 'parallel': iconName = 'call_split'; break;
+        case 'join': iconName = 'call_merge'; break;
+        case 'workflow': iconName = 'account_tree'; break;
+        case 'function': iconName = 'functions'; break;
+        case 'config': iconName = 'settings'; break;
+        case 'timer': iconName = 'timer'; break;
+        case 'data': iconName = 'data_object'; break;
+        case 'http': iconName = 'http'; break;
+        case 'email': iconName = 'email'; break;
+        case 'database': iconName = 'storage'; break;
+        default: iconName = 'extension'; break;
+      }
     }
 
-    switch (step.type) {
-      case 'start': return <PlayArrow />;
-      case 'end': return <Stop />;
-      case 'task': return <Assignment />;
-      case 'condition': return <AltRoute />;
-      case 'parallel': return <CallSplit />;
-      default: return <Assignment />;
-    }
-  }, [step.type, stepDefinition]);
+    const IconComponent = iconMap[iconName] || Extension;
+    
+    return (
+      <IconComponent 
+        sx={{ 
+          fontSize: 'inherit',
+          color: 'inherit'
+        }} 
+      />
+    );
+  }, [step.type, stepDefinition, Material.MaterialIcons]);
 
   return (
     <Box
@@ -186,18 +265,23 @@ export default function WorkflowStep(props: WorkflowStepProps) {
       onMouseLeave={handleMouseLeave}
     >
       <Paper
-        elevation={selected ? 8 : (isHovered ? 4 : 2)}
+        elevation={0}
         sx={{
           width: '100%',
           height: '100%',
           backgroundColor,
-          border: `2px solid ${borderColor}`,
-          borderRadius: DEFAULT_STEP_THEME.borderRadius / viewport.zoom,
+          border: `${Math.max(1, (selected ? 8 : 4) / viewport.zoom)}px solid ${borderColor}`,
+          borderRadius: Math.max(2, DEFAULT_STEP_THEME.borderRadius / viewport.zoom),
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          transform: selected ? 'scale(1.05)' : 'scale(1)',
-          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out'
+          transform: selected ? 'translateY(-2px)' : isHovered ? 'translateY(-1px)' : 'translateY(0)',
+          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.15s ease-in-out, border-width 0.15s ease-in-out',
+          boxShadow: selected 
+            ? '0 8px 24px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15)' 
+            : isHovered 
+              ? '0 6px 16px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.1)'
+              : '0 2px 4px rgba(0, 0, 0, 0.1)'
         }}
       >
         {/* Step Header */}
@@ -351,19 +435,7 @@ export default function WorkflowStep(props: WorkflowStepProps) {
           </Box>
         </Box>
 
-        {/* Selection Indicator */}
-        {selected && (
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: -2 / viewport.zoom,
-              border: `2px solid #1976d2`,
-              borderRadius: (DEFAULT_STEP_THEME.borderRadius + 2) / viewport.zoom,
-              pointerEvents: 'none',
-              animation: 'pulse 2s ease-in-out infinite'
-            }}
-          />
-        )}
+
 
         {/* Drag Indicator */}
         {isDragging && (
