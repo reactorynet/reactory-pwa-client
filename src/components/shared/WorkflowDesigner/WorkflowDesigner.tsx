@@ -27,6 +27,7 @@ import WorkflowCanvas from './components/Canvas/WorkflowCanvas';
 import OptimizedWorkflowCanvas from './components/Canvas/OptimizedWorkflowCanvas';
 import StepLibraryPanel from './components/Panels/StepLibraryPanel';
 import PropertiesPanel from './components/Panels/PropertiesPanel';
+import UserHomeFolder from '../UserHomeFolder/UserHomeFolder';
 
 
 export default function WorkflowDesigner(props: WorkflowDesignerProps) {
@@ -74,6 +75,9 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const [showGrid, setShowGrid] = useStateReact<boolean>(props.showGrid || true);
   const [enableSnapToGrid, setEnableSnapToGrid] = useStateReact<boolean>(props.snapToGrid || true);
   const [useOptimizedRendering, setUseOptimizedRendering] = useStateReact<boolean>(false); // Will be set after definition loads
+  const [isEditingTitle, setIsEditingTitle] = useStateReact<boolean>(false);
+  const [titleInputValue, setTitleInputValue] = useStateReact<string>('');
+  const [loadDialogOpen, setLoadDialogOpen] = useStateReact<boolean>(false);
 
   // GraphQL operations
   const {
@@ -405,6 +409,13 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     }
   }, [viewport, onCanvasChange]);
 
+  // Keep title input value in sync with definition
+  useEffectReact(() => {
+    if (!isEditingTitle) {
+      setTitleInputValue(definition?.name || '');
+    }
+  }, [definition?.name, isEditingTitle]);
+
   // Zoom to selection when selection changes
   const handleZoomToSelection = useCallbackReact(() => {
     const selectedSteps = definition.steps.filter(step => 
@@ -463,14 +474,205 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     validate();
   }, [validate]);
 
+  // Handle title editing
+  const handleTitleClick = useCallbackReact(() => {
+    if (!readonly) {
+      setIsEditingTitle(true);
+    }
+  }, [readonly]);
+
+  const handleTitleSave = useCallbackReact(() => {
+    if (titleInputValue.trim() && titleInputValue !== definition.name) {
+      const updatedDefinition = {
+        ...definition,
+        name: titleInputValue.trim()
+      };
+      updateDefinition(updatedDefinition);
+    }
+    setIsEditingTitle(false);
+  }, [titleInputValue, definition, updateDefinition]);
+
+  const handleTitleCancel = useCallbackReact(() => {
+    setTitleInputValue(definition?.name || '');
+    setIsEditingTitle(false);
+  }, [definition?.name]);
+
+  const handleTitleKeyDown = useCallbackReact((event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleTitleSave();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      handleTitleCancel();
+    }
+  }, [handleTitleSave, handleTitleCancel]);
+
+  // Handle save dropdown
+  const [saveMenuAnchor, setSaveMenuAnchor] = useStateReact<null | HTMLElement>(null);
+  const isSaveMenuOpen = Boolean(saveMenuAnchor);
+
+  // Handle context menu
+  const [contextMenu, setContextMenu] = useStateReact<{ mouseX: number; mouseY: number; target: { type: 'step' | 'connection' | 'canvas'; id?: string; } } | null>(null);
+
+  const handleSaveMenuOpen = useCallbackReact((event: React.MouseEvent<HTMLElement>) => {
+    setSaveMenuAnchor(event.currentTarget);
+  }, []);
+
+  const handleSaveMenuClose = useCallbackReact(() => {
+    setSaveMenuAnchor(null);
+  }, []);
+
+  const handleSaveToServer = useCallbackReact(async () => {
+    handleSaveMenuClose();
+    await save();
+  }, [save]);
+
+  const handleDownloadFile = useCallbackReact(() => {
+    handleSaveMenuClose();
+    
+    // Create downloadable JSON file
+    const dataStr = JSON.stringify(definition, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `${definition.name || 'workflow'}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  }, [definition]);
+
+  // Load handlers
+  const handleLoadWorkflow = useCallbackReact(() => {
+    setLoadDialogOpen(true);
+  }, []);
+
+  const handleLoadDialogClose = useCallbackReact(() => {
+    setLoadDialogOpen(false);
+  }, []);
+
+  const handleFileSelection = useCallbackReact(async (selectedItems: any[], selectionMode: 'single' | 'multi') => {
+    if (selectedItems.length > 0 && selectedItems[0].type === 'file') {
+      const selectedFile = selectedItems[0];
+      
+      // Check if it's a JSON file (workflow file)
+      if (selectedFile.name.toLowerCase().endsWith('.json')) {
+        try {
+          // For now, let's use the load function from useWorkflowDesigner
+          // In a real implementation, you'd fetch the file content from the backend
+          console.log('Loading workflow from file:', selectedFile);
+          
+          // Close the dialog
+          setLoadDialogOpen(false);
+          
+          // TODO: Implement actual file loading from backend
+          // This would typically involve:
+          // 1. Fetch file content from the backend using selectedFile.id
+          // 2. Parse the JSON content
+          // 3. Load it using the load() function
+          
+          console.info(`Loading workflow from ${selectedFile.name}`, 'This feature will be implemented to load the actual file content');
+          
+        } catch (error) {
+          console.error('Failed to load workflow', error);
+        }
+      } else {
+        console.warn('Invalid file type', 'Please select a JSON workflow file');
+      }
+    }
+  }, [load]);
+
+  const handleFileUpload = useCallbackReact(async (files: File[], path: string) => {
+    if (files.length > 0) {
+      const file = files[0];
+      
+      // Check if it's a JSON file
+      if (file.name.toLowerCase().endsWith('.json')) {
+        try {
+          const content = await file.text();
+          const workflowData = JSON.parse(content);
+          
+          // Validate the workflow structure (basic check)
+          if (workflowData.id && workflowData.name && workflowData.steps) {
+            // Load the workflow directly
+            updateDefinition(workflowData);
+            setLoadDialogOpen(false);
+            console.log(`Successfully loaded workflow: ${workflowData.name}`);
+          } else {
+            console.error('Invalid workflow file', 'The selected file does not appear to be a valid workflow definition');
+          }
+        } catch (error) {
+          console.error('Failed to parse workflow file', error);
+        }
+      } else {
+        console.warn('Invalid file type', 'Please select a JSON workflow file');
+      }
+    }
+  }, [updateDefinition]);
+
+  // Context menu handlers
+  const handleContextMenu = useCallbackReact((event: React.MouseEvent, target: { type: 'step' | 'connection' | 'canvas'; id?: string; }) => {
+    if (readonly) return;
+    
+    event.preventDefault();
+    setContextMenu({
+      mouseX: event.clientX - 2,
+      mouseY: event.clientY - 4,
+      target
+    });
+  }, [readonly]);
+
+  const handleContextMenuClose = useCallbackReact(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleCopyStep = useCallbackReact(() => {
+    if (contextMenu?.target.type === 'step' && contextMenu.target.id) {
+      const step = definition.steps.find(s => s.id === contextMenu.target.id);
+      if (step) {
+        // Create a copy with new ID and offset position
+        const copiedStep: WorkflowStepDefinition = {
+          ...step,
+          id: generateStepId(step.name.toLowerCase()),
+          name: `${step.name} Copy`,
+          position: {
+            x: step.position.x + 50,
+            y: step.position.y + 50
+          }
+        };
+        addStep(copiedStep);
+        setSelection({
+          selectedSteps: new Set([copiedStep.id]),
+          selectedConnections: new Set()
+        });
+      }
+    }
+    handleContextMenuClose();
+  }, [contextMenu, definition.steps, addStep, setSelection, generateStepId]);
+
+  const handleDeleteSelected = useCallbackReact(() => {
+    selection.selectedSteps.forEach(stepId => removeStep(stepId));
+    selection.selectedConnections.forEach(connId => removeConnection(connId));
+    handleContextMenuClose();
+  }, [selection, removeStep, removeConnection]);
+
+  const handleDuplicateStep = useCallbackReact(() => {
+    handleCopyStep(); // Same as copy for now
+  }, [handleCopyStep]);
+
   const {
     Box,
     Paper,
     Typography,
+    TextField,
     IconButton,
     Tooltip,
     LinearProgress,
-    Alert
+    Alert,
+    Menu,
+    MenuItem,
+    ButtonGroup,
+    Button
   } = Material.MaterialCore;
 
   const {
@@ -486,7 +688,16 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     Settings,
     Visibility,
     VisibilityOff,
-    Speed
+    Speed,
+    ArrowDropDown,
+    CloudUpload,
+    Download,
+    Edit,
+    ContentCopy,
+    Delete,
+    FileCopy,
+    MoreVert,
+    FolderOpen
   } = Material.MaterialIcons;
 
   // Main component render
@@ -513,19 +724,102 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           borderColor: 'divider'
         }}
       >
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          {definition.name}
-          {isDirty && ' *'}
-        </Typography>
+        {isEditingTitle ? (
+          <TextField
+            value={titleInputValue}
+            onChange={(e) => setTitleInputValue(e.target.value)}
+            onBlur={handleTitleSave}
+            onKeyDown={handleTitleKeyDown}
+            variant="standard"
+            autoFocus
+            fullWidth
+            sx={{ flexGrow: 1, mr: 1 }}
+            InputProps={{
+              style: { fontSize: '1.25rem', fontWeight: 500 }
+            }}
+          />
+        ) : (
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', cursor: readonly ? 'default' : 'pointer' }}>
+            <Typography 
+              variant="h6" 
+              onClick={handleTitleClick}
+              sx={{ 
+                flexGrow: 1,
+                '&:hover': readonly ? {} : { 
+                  backgroundColor: 'action.hover',
+                  borderRadius: 1,
+                  px: 1,
+                  py: 0.5 
+                }
+              }}
+            >
+              {definition.name}
+              {isDirty && ' *'}
+            </Typography>
+            {!readonly && (
+              <IconButton 
+                size="small" 
+                onClick={handleTitleClick}
+                sx={{ ml: 1, opacity: 0.7 }}
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+        )}
 
-        <Tooltip title="Save Workflow">
+        <Tooltip title="Load Workflow">
           <IconButton 
-            onClick={save} 
-            disabled={readonly || isSaving || !isDirty}
-            color="primary"
+            onClick={handleLoadWorkflow}
+            disabled={readonly}
+            sx={{ mr: 1 }}
           >
-            <Save />
+            <FolderOpen />
           </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Save Options">
+          <Box>
+            <ButtonGroup variant="contained" disabled={readonly || isSaving}>
+              <Button 
+                onClick={handleSaveToServer} 
+                disabled={!isDirty}
+                startIcon={<CloudUpload />}
+                size="small"
+              >
+                Save
+              </Button>
+              <Button 
+                size="small"
+                onClick={handleSaveMenuOpen}
+                disabled={readonly || isSaving}
+              >
+                <ArrowDropDown />
+              </Button>
+            </ButtonGroup>
+            <Menu
+              anchorEl={saveMenuAnchor}
+              open={isSaveMenuOpen}
+              onClose={handleSaveMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+            >
+              <MenuItem onClick={handleSaveToServer} disabled={readonly || isSaving || !isDirty}>
+                <CloudUpload sx={{ mr: 1 }} />
+                Save to Server
+              </MenuItem>
+              <MenuItem onClick={handleDownloadFile}>
+                <Download sx={{ mr: 1 }} />
+                Download File
+              </MenuItem>
+            </Menu>
+          </Box>
         </Tooltip>
 
         <Tooltip title="Undo">
@@ -744,6 +1038,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               }, [setSelection])}
               onViewportChange={setViewport}
               onStepCreate={handleStepCreation}
+              onContextMenu={handleContextMenu}
             />
           ) : (
             <WorkflowCanvas
@@ -811,6 +1106,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             }, [setSelection])}
             onViewportChange={setViewport}
             onStepCreate={handleStepCreation}
+            onContextMenu={handleContextMenu}
           />
         )}
         </Box>
@@ -869,6 +1165,73 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           Ready
         </Typography>
       </Paper>
+
+      {/* Context Menu */}
+      <Menu
+        open={contextMenu !== null}
+        onClose={handleContextMenuClose}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenu !== null
+            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+            : undefined
+        }
+      >
+        {contextMenu?.target.type === 'step' && [
+          <MenuItem key="copy" onClick={handleCopyStep}>
+            <ContentCopy sx={{ mr: 1 }} />
+            Copy Step
+          </MenuItem>,
+          <MenuItem key="duplicate" onClick={handleDuplicateStep}>
+            <FileCopy sx={{ mr: 1 }} />
+            Duplicate Step
+          </MenuItem>,
+          <MenuItem key="delete" onClick={handleDeleteSelected}>
+            <Delete sx={{ mr: 1 }} />
+            Delete Step
+          </MenuItem>
+        ]}
+        {contextMenu?.target.type === 'connection' && [
+          <MenuItem key="delete" onClick={handleDeleteSelected}>
+            <Delete sx={{ mr: 1 }} />
+            Delete Connection
+          </MenuItem>
+        ]}
+        {contextMenu?.target.type === 'canvas' && [
+          <MenuItem key="select-all" onClick={() => {
+            setSelection({
+              selectedSteps: new Set(definition.steps.map(s => s.id)),
+              selectedConnections: new Set(definition.connections.map(c => c.id))
+            });
+            handleContextMenuClose();
+          }}>
+            Select All
+          </MenuItem>,
+          <MenuItem key="zoom-fit" onClick={() => {
+            zoomToFit();
+            handleContextMenuClose();
+          }}>
+            Zoom to Fit
+          </MenuItem>
+        ]}
+        {selection.selectedSteps.size > 0 || selection.selectedConnections.size > 0 ? [
+          <MenuItem key="delete-selected" onClick={handleDeleteSelected}>
+            <Delete sx={{ mr: 1 }} />
+            Delete Selected ({selection.selectedSteps.size + selection.selectedConnections.size})
+          </MenuItem>
+        ] : null}
+      </Menu>
+
+      {/* Load Workflow Dialog */}
+      <UserHomeFolder
+        open={loadDialogOpen}
+        onClose={handleLoadDialogClose}
+        reactory={reactory}
+        onFileUpload={handleFileUpload}
+        onSelectionChanged={handleFileSelection}
+        rootPath="/"
+        il8n={undefined}
+      />
     </Box>
   );
 }

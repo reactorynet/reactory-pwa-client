@@ -113,7 +113,8 @@ export default function OptimizedWorkflowCanvas(props: WorkflowCanvasProps) {
     onConnectionSelect,
     onCanvasClick,
     onViewportChange,
-    onStepCreate
+    onStepCreate,
+    onContextMenu
   } = props;
 
   const reactory = useReactory();
@@ -277,6 +278,23 @@ export default function OptimizedWorkflowCanvas(props: WorkflowCanvasProps) {
     }
   }, [clusters, viewport, onViewportChange]);
 
+  // Handle canvas context menu
+  const handleCanvasContextMenu = useCallback((event: React.MouseEvent) => {
+    if (onContextMenu) {
+      const canvasRect = canvasRef.current?.getBoundingClientRect();
+      if (canvasRect) {
+        const canvasPosition = {
+          x: event.clientX - canvasRect.left,
+          y: event.clientY - canvasRect.top
+        };
+        const worldPosition = screenToCanvas(canvasPosition, viewport);
+        
+        // Check if we're clicking on empty canvas
+        onContextMenu(event, { type: 'canvas' });
+      }
+    }
+  }, [onContextMenu, viewport]);
+
   const { Box } = Material.MaterialCore;
 
   // Get canvas theme (use custom theme or default)
@@ -296,6 +314,7 @@ export default function OptimizedWorkflowCanvas(props: WorkflowCanvasProps) {
   return (
     <Box
       ref={canvasRef}
+      data-workflow-canvas="true"
       sx={{
         position: 'absolute',
         inset: 0,
@@ -309,6 +328,7 @@ export default function OptimizedWorkflowCanvas(props: WorkflowCanvasProps) {
       onDoubleClick={handleDoubleClick}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
+      onContextMenu={handleCanvasContextMenu}
       onWheel={handleWheel}
     >
       {/* SVG layer for connections and grid */}
@@ -434,6 +454,7 @@ export default function OptimizedWorkflowCanvas(props: WorkflowCanvasProps) {
                 }}
                 onSelect={(multi) => onStepSelect(step.id, multi)}
                 onDoubleClick={() => onStepDoubleClick(step.id)}
+                onContextMenu={onContextMenu}
               />
             );
           })

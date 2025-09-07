@@ -377,6 +377,7 @@ export interface WorkflowCanvasProps {
   onCanvasClick: (position: Point, modifiers: InteractionModifiers) => void;
   onViewportChange: (viewport: CanvasViewport) => void;
   onStepCreate: (stepDefinition: any, position: Point) => void;
+  onContextMenu?: (event: React.MouseEvent, target: { type: 'step' | 'connection' | 'canvas'; id?: string; }) => void;
 }
 
 export interface StepLibraryPanelProps {

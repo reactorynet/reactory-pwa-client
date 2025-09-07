@@ -88,6 +88,7 @@ import DomPurify from 'dompurify';
 import PrismCode from 'react-prism';
 
 import WorkflowDesigner from './shared/WorkflowDesigner';
+import JsonSchemaEditor from './shared/JsonSchemaEditor';
 import * as Three from 'three';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
@@ -651,5 +652,11 @@ export const componentRegistery = [
     name: 'WorkflowDesigner',
     version: '1.0.0',
     component: WorkflowDesigner
+  },
+  {
+    nameSpace: 'shared',
+    name: 'JsonSchemaEditor',
+    version: '1.0.0',
+    component: JsonSchemaEditor
   },
 ];

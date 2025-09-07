@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Point, CanvasViewport } from '../../types';
 import { canvasToScreen } from '../../utils';
 import { DEFAULT_CONNECTION_THEME } from '../../constants';
+import React from 'react';
 
 interface ConnectionProps {
   id: string;

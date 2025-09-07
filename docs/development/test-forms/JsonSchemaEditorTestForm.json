@@ -1,0 +1,97 @@
+{
+  "id": "JsonSchemaEditorTest",
+  "name": "JsonSchemaEditorTest",
+  "nameSpace": "test",
+  "version": "1.0.0",
+  "title": "JSON Schema Editor Test",
+  "description": "Test form for the JsonSchemaEditor component",
+  "schema": {
+    "type": "object",
+    "title": "JSON Schema Editor Test",
+    "properties": {
+      "dataSchema": {
+        "type": "object",
+        "title": "Data Schema",
+        "description": "Edit the JSON schema for form data validation"
+      },
+      "uiSchema": {
+        "type": "object", 
+        "title": "UI Schema",
+        "description": "Edit the UI schema for form presentation"
+      },
+      "testData": {
+        "type": "object",
+        "title": "Test Data",
+        "description": "Sample data to test the schemas"
+      }
+    }
+  },
+  "uiSchema": {
+    "ui:field": "GridLayout",
+    "ui:grid-layout": [
+      {
+        "dataSchema": { "xs": 12, "md": 6 },
+        "uiSchema": { "xs": 12, "md": 6 }
+      },
+      {
+        "testData": { "xs": 12 }
+      }
+    ],
+    "dataSchema": {
+      "ui:widget": "JsonSchemaEditorWidget",
+      "ui:height": 400,
+      "ui:showValidation": true,
+      "ui:formatOnBlur": true
+    },
+    "uiSchema": {
+      "ui:widget": "JsonSchemaEditorWidget", 
+      "ui:height": 400,
+      "ui:showValidation": true,
+      "ui:formatOnBlur": true
+    },
+    "testData": {
+      "ui:widget": "JsonSchemaEditorWidget",
+      "ui:height": 200,
+      "ui:showValidation": true,
+      "ui:formatOnBlur": true
+    }
+  },
+  "defaultFormValue": {
+    "dataSchema": {
+      "type": "object",
+      "title": "Sample Form",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "title": "First Name"
+        },
+        "lastName": {
+          "type": "string", 
+          "title": "Last Name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email"
+        }
+      },
+      "required": ["firstName", "lastName"]
+    },
+    "uiSchema": {
+      "firstName": {
+        "ui:placeholder": "Enter first name"
+      },
+      "lastName": {
+        "ui:placeholder": "Enter last name"
+      },
+      "email": {
+        "ui:help": "We'll never share your email"
+      }
+    },
+    "testData": {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com"
+    }
+  }
+}

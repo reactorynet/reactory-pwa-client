@@ -513,19 +513,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   });
 
 
-  // Debug specific macro lookup
-  const runtimeMacro = findMacroByAlias('macros');
-  console.log('🔧 [useChatFactory] RuntimeMacro lookup:', {
-    found: !!runtimeMacro,
-    macro: runtimeMacro,
-    macroName: runtimeMacro?.name,
-    macroAlias: runtimeMacro?.alias,
-    macroRunat: runtimeMacro?.runat
-  });
-
-
   const onToolCallReceived = React.useCallback(async (toolCall: ToolCallStreamingEvent) => {
-
+    debugger
     const validSessionId = chatState.id || toolCall.conversationId || toolCall.sessionId;
     if (!validSessionId) {
       console.error('❌ [useChatFactory] Tool call missing sessionId:', toolCall);

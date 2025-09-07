@@ -13,6 +13,8 @@ import { useCanvasOperations } from '../../hooks/useCanvasOperations';
 import GridBackground from './GridBackground';
 import WorkflowStep from './WorkflowStep';
 import Connection from './Connection';
+import ConnectionPreview from './ConnectionPreview';
+import { useConnectionCreation } from '../../hooks/useConnectionCreation';
 
 export default function WorkflowCanvas(props: WorkflowCanvasProps) {
   const {
@@ -33,8 +35,37 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
     onConnectionSelect,
     onCanvasClick,
     onViewportChange,
-    onStepCreate
+    onStepCreate,
+    onContextMenu
   } = props;
+
+
+
+  // Connection creation functionality
+  const {
+    connectionState,
+    startConnection,
+    updateConnectionPreview,
+    endConnection,
+    cancelConnection
+  } = useConnectionCreation();
+
+  // Handle canvas context menu
+  const handleCanvasContextMenu = useCallback((event: React.MouseEvent) => {
+    if (onContextMenu) {
+      const canvasRect = canvasRef.current?.getBoundingClientRect();
+      if (canvasRect) {
+        const canvasPosition = {
+          x: event.clientX - canvasRect.left,
+          y: event.clientY - canvasRect.top
+        };
+        const worldPosition = screenToCanvas(canvasPosition, viewport);
+        
+        // Check if we're clicking on empty canvas
+        onContextMenu(event, { type: 'canvas' });
+      }
+    }
+  }, [onContextMenu, viewport]);
 
   const reactory = useReactory();
   const {
@@ -74,6 +105,72 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
   useEffectReact(() => {
     canvasOperations.setCanvasElement(canvasRef.current);
   }, [canvasRef.current, canvasOperations]);
+
+  // Port interaction handlers
+  const handlePortDragStart = useCallbackReact((stepId: string, portId: string, portType: 'input' | 'output', position: Point) => {
+    const canvasPosition = screenToCanvas(position, viewport);
+    startConnection(stepId, portId, portType, canvasPosition);
+  }, [startConnection, viewport]);
+
+  const handlePortDragEnd = useCallbackReact((stepId: string, portId: string, position: Point) => {
+    if (connectionState.isCreating) {
+      // Validate connection compatibility
+      const sourceStep = definition.steps.find(s => s.id === connectionState.sourceStepId);
+      const targetStep = definition.steps.find(s => s.id === stepId);
+      
+      if (sourceStep && targetStep) {
+        const sourcePort = [...sourceStep.inputPorts, ...sourceStep.outputPorts].find(p => p.id === connectionState.sourcePortId);
+        const targetPort = [...targetStep.inputPorts, ...targetStep.outputPorts].find(p => p.id === portId);
+        
+        // Only allow connections between different port types (output -> input or input -> output)
+        if (sourcePort && targetPort && sourcePort.type !== targetPort.type) {
+          const result = endConnection(stepId, portId);
+          if (result && onConnectionCreate) {
+            onConnectionCreate(result);
+          }
+        } else {
+          cancelConnection();
+        }
+      } else {
+        cancelConnection();
+      }
+    }
+  }, [connectionState, endConnection, onConnectionCreate, definition.steps, cancelConnection]);
+
+  // Mouse move handler for connection preview
+  const handleConnectionMouseMove = useCallbackReact((event: MouseEvent) => {
+    if (connectionState.isCreating) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const mousePosition: Point = {
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top
+        };
+        const canvasPosition = screenToCanvas(mousePosition, viewport);
+        updateConnectionPreview(canvasPosition);
+      }
+    }
+  }, [connectionState.isCreating, updateConnectionPreview, viewport]);
+
+  // Keyboard handler for canceling connections
+  const handleKeyDown = useCallbackReact((event: KeyboardEvent) => {
+    if (connectionState.isCreating && event.key === 'Escape') {
+      cancelConnection();
+    }
+  }, [connectionState.isCreating, cancelConnection]);
+
+  // Event listeners for connection creation
+  useEffectReact(() => {
+    if (connectionState.isCreating) {
+      window.addEventListener('mousemove', handleConnectionMouseMove);
+      window.addEventListener('keydown', handleKeyDown);
+      
+      return () => {
+        window.removeEventListener('mousemove', handleConnectionMouseMove);
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [connectionState.isCreating, handleConnectionMouseMove, handleKeyDown]);
 
   // Update viewport bounds when canvas resizes
   useEffectReact(() => {
@@ -229,6 +326,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
   return (
     <Box
       ref={canvasRef}
+      data-workflow-canvas="true"
       sx={{
         position: 'absolute',
         inset: 0,
@@ -243,6 +341,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
       onWheel={handleWheel}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
+      onContextMenu={handleCanvasContextMenu}
     >
       {/* SVG for connections and grid */}
       <svg
@@ -302,6 +401,16 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
               />
             );
           })}
+
+          {/* Connection Preview */}
+          {connectionState.isCreating && connectionState.startPoint && connectionState.currentPoint && (
+            <ConnectionPreview
+              startPoint={connectionState.startPoint}
+              currentPoint={connectionState.currentPoint}
+              viewport={viewport}
+              sourcePortType={connectionState.sourcePortType!}
+            />
+          )}
         </g>
       </svg>
 
@@ -342,6 +451,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
               warnings={warnings}
               readonly={readonly}
               viewport={viewport}
+              isCreatingConnection={connectionState.isCreating}
               onMove={(newPosition) => {
                 const canvasPosition = screenToCanvas(newPosition, viewport);
                 onStepMove(step.id, canvasPosition);
@@ -355,6 +465,9 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
               }}
               onSelect={(multi) => onStepSelect(step.id, multi)}
               onDoubleClick={() => onStepDoubleClick(step.id)}
+              onPortDragStart={handlePortDragStart}
+              onPortDragEnd={handlePortDragEnd}
+              onContextMenu={onContextMenu}
             />
           );
         })}
@@ -369,7 +482,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
             top: Math.min(dragState.startPosition.y, dragState.currentPosition.y),
             width: Math.abs(dragState.currentPosition.x - dragState.startPosition.x),
             height: Math.abs(dragState.currentPosition.y - dragState.startPosition.y),
-            border: `2px dashed ${canvasTheme.selectionColor || '#1976d2'}`,
+            border: `${Math.max(1, 2.5 / viewport.zoom)}px dashed ${canvasTheme.selectionColor || '#1976d2'}`,
             backgroundColor: `${canvasTheme.selectionColor || '#1976d2'}${Math.round((canvasTheme.selectionOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
             pointerEvents: 'none',
             zIndex: 10

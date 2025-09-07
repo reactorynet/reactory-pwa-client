@@ -306,6 +306,14 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
         
         // Find first occurrence of this macro
         const firstIndex = self.findIndex(m => {
+          if (m === null || m === undefined) {
+            reactory.warning(`Invalid macro found in self: ${m}`);
+            return false; // Skip null or undefined macros
+          }
+          if (!m.nameSpace || !m.name || !m.version) {
+            reactory.warning(`Macro ${m.name} is missing required fields: nameSpace, name, or version`);
+            return false; // Skip invalid macros
+          }
           const mKey = `${m.nameSpace}.${m.name}@${m.version}`;
           return mKey === macroKey || (aliasKey && m.alias === aliasKey);
         });

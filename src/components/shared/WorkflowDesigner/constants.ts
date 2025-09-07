@@ -20,7 +20,7 @@ export const STEP_DEFAULTS = {
   MAX_WIDTH: 400,
   MAX_HEIGHT: 300,
   PADDING: 16,
-  BORDER_RADIUS: 8,
+  BORDER_RADIUS: 4,
   BORDER_WIDTH: 2,
 } as const;
 
