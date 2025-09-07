@@ -237,7 +237,28 @@ export default function WorkflowStep(props: WorkflowStepProps) {
   }, [readonly, onPortDragStart, step.id, viewport.zoom, size.height, step.inputPorts, step.outputPorts, isCreatingConnection]);
 
   const handlePortMouseUp = useCallbackReact((event: React.MouseEvent, portId: string) => {
-    if (readonly || !onPortDragEnd || !isDraggingPort) return;
+    if (readonly || !onPortDragEnd) return;
+    
+    // Only process mouse up if:
+    // 1. This step started dragging (isDraggingPort = true), OR  
+    // 2. There's a global connection in progress (isCreatingConnection = true)
+    if (!isDraggingPort && !isCreatingConnection) {
+      console.log('🔍 Port mouse up ignored:', {
+        stepId: step.id,
+        portId,
+        isDraggingPort,
+        isCreatingConnection,
+        reason: 'No local drag and no global connection in progress'
+      });
+      return;
+    }
+
+    console.log('🔗 Processing port mouse up:', {
+      stepId: step.id,
+      portId,
+      isDraggingPort,
+      isCreatingConnection
+    });
 
     event.stopPropagation();
     event.preventDefault(); // Also prevent default behavior
@@ -274,7 +295,7 @@ export default function WorkflowStep(props: WorkflowStepProps) {
         onPortDragEnd(step.id, portId, portPosition);
       }
     }
-  }, [readonly, onPortDragEnd, step.id, isDraggingPort, viewport.zoom, size.height, step.inputPorts, step.outputPorts]);
+  }, [readonly, onPortDragEnd, step.id, isDraggingPort, isCreatingConnection, viewport.zoom, size.height, step.inputPorts, step.outputPorts]);
 
   // Handle port mouse move to prevent unwanted canvas interactions
   const handlePortMouseMove = useCallbackReact((event: React.MouseEvent) => {
