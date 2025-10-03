@@ -183,7 +183,7 @@ export interface UseUserHomeFilesReturn {
   loading: boolean;
   folderLoading: boolean;
   loadUserFiles: (path?: string) => Promise<{ folders: FolderItem[]; files: FileItem[] }>;
-  loadAllFolders: () => Promise<FolderItem[]>;
+  loadAllFolders: (path?: string) => Promise<FolderItem[]>;
   createFolder: (name: string, path: string) => Promise<void>;
   deleteFolder: (path: string) => Promise<void>;
   deleteFile: (fileId: string) => Promise<void>;

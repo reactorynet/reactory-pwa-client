@@ -78,13 +78,45 @@ const CardWidget = (props: any) => {
     cardData.description = reactory.utils.template(cardData.description)(props);
   }
 
-  // Evaluate visible property for each action using reactory.utils.template
-  const visibleActions = (cardActions || []).filter(action => {
+  if (cardData?.value?.indexOf('${') > -1) {
+    cardData.value = reactory.utils.template(cardData.value)(props);
+  }
+
+  // Process template strings for actions and filter by visibility
+  const processedActions = (cardActions || []).map(action => {
+    const processedAction = { ...action };
+    
+    // Process label template string
+    if (typeof action.label === 'string' && action.label.indexOf('${') > -1) {
+      try {
+        processedAction.label = reactory.utils.template(action.label)(props);
+      } catch (error) {
+        console.warn('Failed to process action label template:', action.label, error);
+        processedAction.label = action.label; // Fallback to original
+      }
+    }
+    
+    // Process subtitle template string if present
+    if (typeof action.subtitle === 'string' && action.subtitle.indexOf('${') > -1) {
+      try {
+        processedAction.subtitle = reactory.utils.template(action.subtitle)(props);
+      } catch (error) {
+        console.warn('Failed to process action subtitle template:', action.subtitle, error);
+        processedAction.subtitle = action.subtitle; // Fallback to original
+      }
+    }
+    
+    return processedAction;
+  });
+
+  // Filter actions by visibility
+  const visibleActions = processedActions.filter(action => {
     if (typeof action.visible === 'string') {
       try {
         // Evaluate the expression in the context of props
         return reactory.utils.template(action.visible)(props);
-      } catch {
+      } catch (error) {
+        console.warn('Failed to evaluate action visibility:', action.visible, error);
         return true; // If evaluation fails, default to visible
       }
     }
@@ -101,6 +133,43 @@ const CardWidget = (props: any) => {
         window.open(url, '_blank');
       } else {
         window.location.assign(url);
+      }
+    } else if (typeof action.onClick === 'string') {
+      // Handle string-based onClick events
+      if (action.onClick.startsWith('event:')) {
+        // Dispatch reactory event
+        const eventName = action.onClick.replace('event:', '');
+        reactory.emit(eventName, { 
+          formData, 
+          schema, 
+          idSchema, 
+          uiSchema, 
+          action,
+          event 
+        });
+      } else if (action.onClick.startsWith('mutation:')) {
+        // Handle GraphQL mutation by emitting a mutation event
+        const mutationName = action.onClick.replace('mutation:', '');
+        reactory.emit('mutation', { 
+          mutationName,
+          variables: formData,
+          formData, 
+          schema, 
+          idSchema, 
+          uiSchema, 
+          action,
+          event 
+        });
+      } else {
+        // Generic event emission for other string patterns
+        reactory.emit(action.onClick, { 
+          formData, 
+          schema, 
+          idSchema, 
+          uiSchema, 
+          action,
+          event 
+        });
       }
     } else if (typeof action.onClick === 'function') {
       action.onClick(event);
@@ -149,7 +218,16 @@ const CardWidget = (props: any) => {
               disabled={action.disabled}
               sx={action.sx || {}}
             >
-              {action.label}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <Typography variant="button" component="span">
+                  {action.label}
+                </Typography>
+                {action.subtitle && (
+                  <Typography variant="caption" component="span" sx={{ textTransform: 'none', opacity: 0.7 }}>
+                    {action.subtitle}
+                  </Typography>
+                )}
+              </Box>
             </Button>
           ))}
         </CardActions>

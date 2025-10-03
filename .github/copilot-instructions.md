@@ -14,15 +14,18 @@ The Reactory PWA Client is a progressive web application built on Material UI (M
 
 ## Technology Stack
 
-- **React 17.0.2** with TypeScript
-- **Material UI v5.15.15** (MUI) with @mui/x-data-grid and @mui/x-date-pickers
-- **Redux** for state management with redux-thunk and redux-logger
-- **Apollo Client 3.10.8** for GraphQL
+- **React 17.0.2** with TypeScript 5.5.3
+- **Material UI v6.5.0** (MUI) with @mui/x-data-grid 5.17.23 and @mui/x-date-pickers 6.19.0
+- **Redux 5.0.1** for state management with redux-thunk 3.1.0 and redux-logger 4.0.0
+- **Apollo Client 3.10.8** for GraphQL with graphql 16.9.0
 - **React Router 6.24.1** for routing
-- **Jest** for testing with jsdom environment
-- **Storybook** for component development and documentation
-- **Webpack 5** with custom configuration
-- **Babel** for transpilation
+- **Jest 29.7.0** for testing with jsdom environment
+- **Storybook 9.0.18** for component development and documentation
+- **Webpack 5.97.1** with custom configuration
+- **Babel 7.24.8** for transpilation
+- **Emotion 11.13.5** for CSS-in-JS styling
+- **D3 7.9.0** for data visualization
+- **Zod 3.24.2** for schema validation
 
 ## Development Guidelines
 
@@ -39,8 +42,9 @@ The Reactory PWA Client is a progressive web application built on Material UI (M
 ```
 src/
 ├── components/          # React components
-│   ├── shared/         # Reusable UI components
+│   ├── shared/         # Reusable UI components (see COMPONENT_INDEX.yaml)
 │   ├── reactory/       # Core Reactory components
+│   │   └── ux/mui/widgets/  # ReactoryForm widgets (see WIDGET_INDEX.yaml)
 │   └── auth/           # Authentication components
 ├── api/                # API integration layer
 ├── models/             # Data models and types
@@ -51,6 +55,11 @@ src/
 └── stories/            # Storybook stories
 ```
 
+#### Component Organization
+- **Shared Components** (`src/components/shared/`): Standalone, reusable UI components for general application use. These components are not tied to the ReactoryForm system. See `COMPONENT_INDEX.yaml` for a complete catalog of available components organized by category (layout, content, forms, navigation, etc.).
+
+- **ReactoryForm Widgets** (`src/components/reactory/ux/mui/widgets/`): Specialized form components that integrate with the Reactory schema-driven form system. These widgets implement the standard ReactoryForm interface and handle formData, schema, and uiSchema properties. See `WIDGET_INDEX.yaml` for a complete catalog of available widgets organized by functionality (input, selection, display, data management, etc.).
+
 ### Component Development
 - Create components in appropriate directories (`shared/` for reusable, `reactory/` for core and `reactory/ux/mui/widgets` for schema widgets)
 - Use **Material UI components** as the primary UI framework
@@ -58,6 +67,10 @@ src/
 - Follow **accessibility** best practices
 - Write **Storybook stories** for all components
 - Use **TypeScript interfaces** for prop definitions
+
+#### Component Reference Guides
+- **`src/components/shared/COMPONENT_INDEX.yaml`**: Complete catalog of standalone UI components organized by category (layout, content, forms, navigation, dialogs, etc.). Use this to discover existing components before creating new ones.
+- **`src/components/reactory/ux/mui/widgets/WIDGET_INDEX.yaml`**: Complete catalog of ReactoryForm widgets organized by functionality (input, selection, display, data management, etc.). These widgets integrate with the schema-driven form system and implement standard ReactoryForm interfaces.
 
 ### State Management
 - Use **Redux** for global application state

@@ -259,14 +259,15 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
     CloudUpload,
     Add,
     ExpandMore,
-    ChevronRight
+    ChevronRight,
+    Close
   } = Material.MaterialIcons;
 
   // Load files when panel opens or when current path changes
   useEffect(() => {
     if (open) {
       // Load ALL folders to build the complete tree structure
-      loadAllFolders().then(rootFolders => {
+      loadAllFolders(rootPath).then(rootFolders => {
         if (rootFolders.length > 0) {
           folderStateRef.current.addFolders(rootFolders, '/');
         }
@@ -278,18 +279,18 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
 
   // Load files for current path when it changes (separate from folder loading)
   useEffect(() => {
-    if (open && folderState.currentPath !== '/') {
+    if (open && folderState.currentPath !== rootPath) {
       // Load files for the current path without affecting the folder tree
       loadUserFiles(folderState.currentPath).then(result => {
         if (result.folders.length > 0) {
           folderStateRef.current.updateFolderContents(result.folders, result.files, folderState.currentPath);
         }
       });
-    } else if (open && folderState.currentPath === '/') {
+    } else if (open && folderState.currentPath === rootPath) {
       // For root path, load files from root
-      loadUserFiles('/').then(result => {
+      loadUserFiles(rootPath).then(result => {
         if (result.folders.length > 0) {
-          folderStateRef.current.updateFolderContents(result.folders, result.files, '/');
+          folderStateRef.current.updateFolderContents(result.folders, result.files, rootPath);
         }
       });
     }
@@ -441,7 +442,7 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
     }
 
     // Refresh the complete folder tree
-    loadAllFolders().then(rootFolders => {
+    loadAllFolders(rootPath).then(rootFolders => {
       if (rootFolders.length > 0) {
         folderStateRef.current.addFolders(rootFolders, '/');
       }
@@ -809,6 +810,16 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
               <Typography variant="body2" sx={{ flexGrow: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {folderState.currentPath}
               </Typography>
+              <Tooltip title="Close dialog">
+                <IconButton
+                  onClick={onClose}
+                  size="small"
+                  color="default"
+                  sx={{ ml: 1 }}
+                >
+                  <Close />
+                </IconButton>
+              </Tooltip>
             </Box>
 
             {/* Multi-select Toggle */}

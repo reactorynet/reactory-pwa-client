@@ -103,8 +103,7 @@ const CacheComponent = ({ reactory, classes }) => {
     <ListItem 
       key="reactory.cache" 
       onClick={clearCache}       
-      sx={{
-        backgroundColor: theme.palette.background.paper,
+      sx={{        
         color: theme.palette.text.primary,
         borderBottom: `1px solid ${theme.palette.divider}`,
         '&:hover': {
@@ -153,8 +152,7 @@ const ToggleDevelopComponent = ({ reactory, classes }) => {
     <ListItem 
       key="reactory.development_mode" 
       onClick={toggle}       
-      sx={{
-        backgroundColor: theme.palette.background.paper,
+      sx={{        
         color: theme.palette.text.primary,
         borderBottom: 'none',
         '&:hover': {
@@ -336,8 +334,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                           <ListItem 
                             key={menu.id || index} 
                             onClick={goto}
-                            sx={{
-                              backgroundColor: theme.palette.background.default,
+                            sx={{                              
                               color: theme.palette.text.primary,
                               paddingLeft: theme.spacing(4),
                               '&:hover': {
@@ -364,7 +361,9 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                   </Collapse>
                 );
 
-                const toggleMenu = () => {
+                const toggleMenu = (e) => {
+                  e.stopPropagation();
+                  e.preventDefault(); 
                   let currentToggle = expanded[menuItem.id];
                   if (!currentToggle) currentToggle = { value: false };
                   currentToggle.value = !currentToggle.value;
@@ -384,8 +383,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                 <ListItem 
                   key={menuItem.id || mid} 
                   onClick={goto}                   
-                  sx={{
-                    backgroundColor: theme.palette.background.paper,
+                  sx={{                    
                     color: theme.palette.text.primary,
                     borderBottom: `1px solid ${theme.palette.divider}`,
                     '&:hover': {
@@ -400,11 +398,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                     <Icon color="primary">{menuItem.icon}</Icon>
                   </ListItemIcon>
                   <ListItemText primary={menuItem.title} />
-                  {expandButton && (
-                    <ListItemSecondaryAction>
-                      {expandButton}
-                    </ListItemSecondaryAction>
-                  )}
+                  {expandButton}
                 </ListItem>
               );
 
@@ -422,8 +416,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
       <ListItem 
         key="reactory.status" 
         onClick={() => setVersion(version + 1)}
-        sx={{
-          backgroundColor: theme.palette.background.paper,
+        sx={{          
           color: theme.palette.text.primary,          
           '&:hover': {
             backgroundColor: theme.palette.action.hover,
@@ -571,8 +564,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
           '& .MuiDrawer-paper': {
             width: 320,
             maxWidth: 320,
-            overflowX: 'hidden',
-            backgroundColor: theme.palette.background.paper,
+            overflowX: 'hidden',            
             color: theme.palette.text.primary,
           },
         }}
@@ -581,8 +573,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
           display: 'flex', 
           justifyContent: 'space-between', 
           minWidth: 260, 
-          padding: theme.spacing(0, 1),
-          backgroundColor: theme.palette.background.default,
+          padding: theme.spacing(0, 1),          
           color: theme.palette.text.primary,
         }}>
           <IconButton color="inherit" aria-label="Menu" onClick={toggleDrawer} size="large">
@@ -595,10 +586,8 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
         
         <List sx={{ 
           paddingTop: 0,
-          paddingBottom: 0,
-          backgroundColor: theme.palette.background.paper,
-          '& .MuiListItem-root': {
-            backgroundColor: theme.palette.background.paper,
+          paddingBottom: 0,          
+          '& .MuiListItem-root': {            
             color: theme.palette.text.primary,
             borderBottom: `1px solid ${theme.palette.divider}`,
             '&:hover': {
@@ -620,8 +609,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
         }}>
           {menuItems}
         </List>
-      </Drawer>
-      
+      </Drawer>      
       {renderHelpInterface()}
     </Box>
   );

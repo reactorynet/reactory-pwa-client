@@ -1,0 +1,310 @@
+---
+# Reactory PWA Client - Shared Components Index
+# This file contains an index of all standalone components in the shared folder
+# These are reusable UI components that are not part of the ReactoryForm built-in widgets
+
+version: "1.0.0"
+description: "Index of standalone React components for general use across the application"
+
+categories:
+  # UI Layout & Structure
+  layout:
+    - name: "Layout"
+      path: "./Layout.tsx"
+      description: "Main application layout component"
+      type: "component"
+      
+    - name: "Footer"
+      path: "./Footer/"
+      description: "Application footer component with branding and links"
+      type: "component"
+      storybook: true
+      
+    - name: "Header (DefaultHeader)"
+      path: "./header/"
+      description: "Application header with navigation and user controls"
+      type: "component"
+      exports: ["ReactoryHeader", "AvatarComponent"]
+
+  # Content Display
+  content:
+    - name: "AccordionComponent"
+      path: "./AccordionComponent/"
+      description: "Expandable accordion component for grouped content"
+      type: "component"
+      storybook: true
+      
+    - name: "CardWidget"
+      path: "../../reactory/ux/mui/widgets/CardWidget/"
+      description: "Material UI card component for content display"
+      type: "widget"
+      note: "This is actually a widget, should be moved to widgets folder"
+      
+    - name: "ContentWidget"
+      path: "../../reactory/ux/mui/widgets/ContentWidget/"
+      description: "Generic content display widget"
+      type: "widget"
+      storybook: true
+      
+    - name: "ImageComponent"
+      path: "./ImageComponent/"
+      description: "Image display component with cropping support"
+      type: "component"
+      related: ["image/Cropper"]
+      
+    - name: "MermaidDiagram"
+      path: "./MermaidDiagram/"
+      description: "Component for rendering Mermaid diagrams"
+      type: "component"
+      dependencies: ["mermaid"]
+
+  # Data Display & Tables
+  data:
+    - name: "GridLayoutComponent"
+      path: "./GridLayoutComponent/"
+      description: "Grid layout component for data presentation"
+      type: "component"
+      
+    - name: "DocumentListComponent"
+      path: "./DocumentListComponent/"
+      description: "Component for displaying document lists"
+      type: "component"
+      
+    - name: "TableChildComponentWrapper"
+      path: "./TableChildComponentWrapper/"
+      description: "Wrapper component for table child elements"
+      type: "component"
+
+  # Forms & Input
+  forms:
+    - name: "FormList"
+      path: "./FormList/"
+      description: "Component for listing and managing forms"
+      type: "component"
+      exports: ["FormListProps"]
+      
+    - name: "FormSubmissionComponent"
+      path: "./FormSubmissionComponent/"
+      description: "Component for handling form submissions"
+      type: "component"
+      
+    - name: "MaterialInput"
+      path: "./MaterialInput/"
+      description: "Material UI styled input component"
+      type: "component"
+      storybook: true
+      
+    - name: "LookupComponent"
+      path: "./LookupComponent/"
+      description: "Component for data lookup and selection"
+      type: "component"
+      
+    - name: "RadioGroupComponent"
+      path: "./RadioGroupComponent/"
+      description: "Radio button group component"
+      type: "component"
+
+  # Navigation & Interaction
+  navigation:
+    - name: "TabbedNavigation"
+      path: "./TabbedNavigation/"
+      description: "Tabbed navigation component"
+      type: "component"
+      
+    - name: "Link"
+      path: "./Link/"
+      description: "Enhanced link component with routing support"
+      type: "component"
+      storybook: true
+      
+    - name: "menus/DropDownMenu"
+      path: "./menus/"
+      description: "Dropdown menu component"
+      type: "component"
+
+  # Dialogs & Modals
+  dialogs:
+    - name: "AlertDialog"
+      path: "./AlertDialog/"
+      description: "Alert dialog component for confirmations"
+      type: "component"
+      storybook: true
+      
+    - name: "BasicModal"
+      path: "./BasicModal/"
+      description: "Basic modal dialog component"
+      type: "component"
+      storybook: true
+      
+    - name: "ReactoryCoreDialog"
+      path: "./ReactoryCoreDialog/"
+      description: "Core dialog component for Reactory framework"
+      type: "component"
+      note: "Under review - see ReactoryCoreDialog.REVIEW.md"
+
+  # Controls & Buttons
+  controls:
+    - name: "IconButtonDropDown"
+      path: "./IconButtonDropDown/"
+      description: "Icon button with dropdown functionality"
+      type: "component"
+      
+    - name: "RadialFab"
+      path: "./RadialFab/"
+      description: "Radial floating action button component"
+      type: "component"
+      
+    - name: "SpeedDialWidget"
+      path: "./SpeedDialWidget/"
+      description: "Speed dial widget for quick actions"
+      type: "component"
+
+  # Labels & Display
+  labels:
+    - name: "Label"
+      path: "./Label/"
+      description: "Generic label component"
+      type: "component"
+      storybook: true
+      
+    - name: "ChipLabel"
+      path: "./ChipLabel/"
+      description: "Chip-style label component"
+      type: "component"
+      storybook: true
+      
+    - name: "DateLabel"
+      path: "./DateLabel/"
+      description: "Date formatting label component"
+      type: "component"
+      storybook: true
+      
+    - name: "StyledCurrencyLabel"
+      path: "./StyledCurrencyLabel/"
+      description: "Styled currency display label"
+      type: "component"
+
+  # Utilities & Tools
+  utilities:
+    - name: "Loading"
+      path: "./Loading/"
+      description: "Loading indicator component"
+      type: "component"
+      storybook: true
+      
+    - name: "NotFoundComponent"
+      path: "./NotFoundComponent/"
+      description: "404 not found page component"
+      type: "component"
+      storybook: true
+      
+    - name: "ConditionalIconComponent"
+      path: "./ConditionalIconComponent/"
+      description: "Conditionally rendered icon component"
+      type: "component"
+      
+    - name: "Logo"
+      path: "./logo.tsx"
+      description: "Application logo component"
+      type: "component"
+
+  # File & Document Management
+  files:
+    - name: "DocumentUploadComponents"
+      path: "./DocumentUploadComponents/"
+      description: "Document upload and management components"
+      type: "component"
+      
+    - name: "ServerFileExplorer"
+      path: "./ServerFileExplorer/"
+      description: "Server-side file explorer component"
+      type: "component"
+      
+    - name: "UserHomeFolder"
+      path: "./UserHomeFolder/"
+      description: "User home folder management component"
+      type: "component"
+
+  # User Interface
+  user:
+    - name: "UserProfile"
+      path: "./UserProfile/"
+      description: "User profile display and management component"
+      type: "component"
+      
+    - name: "NotificationWidget"
+      path: "./NotificationWidget/"
+      description: "User notification display widget"
+      type: "component"
+
+  # Development & Admin
+  development:
+    - name: "JsonSchemaEditor"
+      path: "./JsonSchemaEditor/"
+      description: "JSON schema editor component"
+      type: "component"
+      exports: ["JsonSchemaEditorComponent", "JsonSchemaEditorWidget"]
+      
+    - name: "JsonSchemaEditorTest"
+      path: "./JsonSchemaEditorTest/"
+      description: "Test component for JSON schema editor"
+      type: "component"
+
+  # Communication
+  communication:
+    - name: "ReactorChat"
+      path: "./ReactorChat/"
+      description: "Chat interface component"
+      type: "component"
+      
+    - name: "Comments"
+      path: "./Comments/"
+      description: "Comments display and management component"
+      type: "component"
+
+  # Advanced Features
+  advanced:
+    - name: "WorkflowDesigner"
+      path: "./WorkflowDesigner/"
+      description: "Visual workflow designer component"
+      type: "component"
+      exports: ["WorkflowNode", "WorkflowConnection", "PortType", "useWorkflowDesigner", "useStepLibrary", "useCanvasOperations"]
+      
+    - name: "HelpMe"
+      path: "./HelpMe/"
+      description: "Help and assistance component"
+      type: "component"
+      
+    - name: "StaticContent"
+      path: "./StaticContent/"
+      description: "Static content display component"
+      type: "component"
+      
+    - name: "FramedWindow"
+      path: "./FramedWindow/"
+      description: "Framed window component for embedded content"
+      type: "component"
+      
+    - name: "SlideOutLauncher"
+      path: "./SlideOutLauncher/"
+      description: "Slide-out panel launcher component"
+      type: "component"
+
+  # Hooks & Utilities
+  hooks:
+    - name: "useContentRender"
+      path: "./hooks/"
+      description: "Hook for content rendering logic"
+      type: "hook"
+
+# Global exports and utilities
+exports:
+  styles: "./styles.ts"
+  main_index: "./index.tsx"
+
+# Notes for developers
+notes:
+  - "Components with storybook: true have associated Storybook stories for development and testing"
+  - "Some widgets may be misplaced in shared/ folder and should be evaluated for move to widgets/ folder"
+  - "All components should follow the established TypeScript and Material UI patterns"
+  - "New components should include appropriate Storybook stories and unit tests"

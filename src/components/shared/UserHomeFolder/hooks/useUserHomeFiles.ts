@@ -88,7 +88,7 @@ export const useUserHomeFiles = (reactory: Reactory.Client.ReactorySDK): UseUser
   }, [reactory]);
 
   // Load all folders from root to build the complete tree structure
-  const loadAllFolders = useCallback(async () => {
+  const loadAllFolders = useCallback(async (path: string = '/') => {
     reactory.info('Loading all folders to build complete tree structure');
     setFolderLoading(true);
     try {
@@ -102,7 +102,7 @@ export const useUserHomeFiles = (reactory: Reactory.Client.ReactorySDK): UseUser
             type: 'folder';
           }[];
         }
-      }, { path: string }>(GET_ALL_USER_FOLDERS, { path: '/' });
+      }, { path: string }>(GET_ALL_USER_FOLDERS, { path });
 
       if (rootResponse?.data?.ReactoryUserFiles) {
         const rootFolders = rootResponse.data.ReactoryUserFiles.folders;

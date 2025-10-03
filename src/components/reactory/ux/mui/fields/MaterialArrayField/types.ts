@@ -20,4 +20,26 @@ export interface ArrayTemplateProps<TData = Array<unknown>> {
   [key: string]: any
 }
 
+export interface ArrayFieldItemProps {
+  index: number;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  itemSchema: any;
+  itemIdSchema: any;
+  itemErrorSchema?: any;
+  itemData: any;
+  itemUiSchema?: any;
+  autofocus?: boolean;
+  onBlur?: () => void;
+  onFocus?: () => void;
+  parentSchema: any;
+  isDragging?: boolean;
+  disabled?: boolean;
+  readonly?: boolean;
+  rawErrors?: any;
+  formContext?: any;
+  dragProvided?: any;
+  dragSnapshot?: any;
+}
+
 export type MaterialArrayFieldType = Reactory.Forms.ReactoryFieldComponent<any[]>;

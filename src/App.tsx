@@ -295,8 +295,6 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const { auth_validated, user, authenticating = false } = props;
   const [routes, setRoutes] = React.useState<Reactory.Routing.IReactoryRoute[]>([]);
   const [v, setVersion] = React.useState<number>(0);
-
-
   const onLogin = () => {
     // Add a small delay to ensure the main app state has been updated
     setTimeout(() => {
@@ -354,7 +352,10 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   routes.forEach((routeDef: Reactory.Routing.IReactoryRoute, index: number) => {
     reactory.log(`Configuring Route ${routeDef.path}`, { routeDef, props: props });
     if (routeDef.redirect) {
-      navigation(routeDef.redirect, { state: { from: location }, replace: true })
+      // Use direct browser navigation for immediate redirect
+      debug('Executing immediate redirect:', routeDef.redirect);
+      window.location.href = routeDef.redirect;
+      return; // Skip creating a route element for redirects
     }
 
     let componentArgs = {};
@@ -432,9 +433,20 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
         />
       );
     } else {
+      // Check if user is anonymous and route is not public      
+      if (reactory.isAnon() && !routeDef.public && routeDef.path !== "/login") {
+        // If user is anonymous but route requires authentication, redirect to login
+        debug('Redirecting anonymous user to login for protected route:', routeDef.path);
+        window.location.href = "/login";
+        return; // Skip creating route element for redirected routes
+      } else {
+        debug('User is authenticated or route is public, proceeding with route configuration.', { routeDef
+        });
+      }
+
       const hasRolesForRoute = reactory.hasRole(routeDef.roles, reactory.getUser().loggedIn.roles) === true;
 
-      if (reactory.isAnon() === false && hasRolesForRoute === false) {
+      if (!reactory.isAnon() && hasRolesForRoute === false) {
         const NotFoundComponent = reactory.getComponent("core.NotFound");
         if (NotFoundComponent) {
           children.push(React.createElement(NotFoundComponent as any, {
@@ -471,6 +483,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             />
           );
         } else {
+          debugger;
           const hasRefreshed: boolean = localStorage.getItem('hasRefreshed') === 'true';
 
           //auth token not validated yet in process of checking
@@ -478,9 +491,12 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
           if (auth_validated === false || authenticating === true) {
             children.push(<Typography style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem' }} variant='h5'>Please wait while we validate your access token...</Typography>);
           } else {
-            if (hasRefreshed === true && reactory.isAnon() === true && routeDef.path !== "/login") {
+            // Handle login redirect - if user is anonymous and has refreshed, redirect to login
+            if (hasRefreshed && reactory.isAnon() && routeDef.path !== "/login") {
+              debug('Redirecting to login after refresh');
               localStorage.removeItem('hasRefreshed');
-              navigation("/login", { state: { from: location }, replace: true })
+              window.location.href = "/login";
+              return; // Skip creating route element for redirected routes
             }
           }
 
@@ -976,7 +992,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             lastRoute = lastRoute.trim();
             if (window.location.pathname.indexOf('reset-password') === -1) {
               localStorage.removeItem('$reactory.last.attempted.route$');
-              location.assign(lastRoute);
+              // Use React Router navigation instead of location.assign
+              setTimeout(() => {
+                window.location.href = lastRoute;
+              }, 100);
             }
           }
         }

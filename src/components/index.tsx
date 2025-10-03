@@ -27,7 +27,6 @@ import IntersectionVisible from './utility/IntersectionVisible';
 import Loading from './shared/Loading';
 import LinkComponent from './shared/Link';
 import ReactoryRouterComponent from './reactory/ReactoryFormRouter'
-import { ReactoryForm } from './reactory/ReactoryForm';
 import { ReactoryFormEnhanced as ReactoryFormV2 } from './reactory/ReactoryForm/ReactoryFormEnhanced';
 import * as ReactoryFormUtilities from './reactory/form/utils';
 import DateSelector from './dates/DateSelector';

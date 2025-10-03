@@ -1,8 +1,8 @@
 import { useReactory } from "@reactory/client-core/api";
 import { useEffect, useCallback, useMemo, useState } from 'react';
-import { 
-  WorkflowDesignerProps, 
-  WorkflowStepDefinition, 
+import {
+  WorkflowDesignerProps,
+  WorkflowStepDefinition,
   WorkflowConnection,
   Point,
   Size,
@@ -14,11 +14,11 @@ import { useWorkflowDesigner } from './hooks/useWorkflowDesigner';
 import { useStepLibrary } from './hooks/useStepLibrary';
 import { useCanvasOperations } from './hooks/useCanvasOperations';
 import { useGraphQL } from './hooks/useGraphQL';
-import { 
-  generateStepId, 
-  generateConnectionId, 
+import {
+  generateStepId,
+  generateConnectionId,
   snapToGrid,
-  getSelectionBounds 
+  getSelectionBounds
 } from './utils';
 import { CANVAS_DEFAULTS, STEP_DEFAULTS } from './constants';
 
@@ -28,6 +28,7 @@ import OptimizedWorkflowCanvas from './components/Canvas/OptimizedWorkflowCanvas
 import StepLibraryPanel from './components/Panels/StepLibraryPanel';
 import PropertiesPanel from './components/Panels/PropertiesPanel';
 import UserHomeFolder from '../UserHomeFolder/UserHomeFolder';
+import { ServerFileExplorer } from '../ServerFileExplorer';
 
 
 export default function WorkflowDesigner(props: WorkflowDesignerProps) {
@@ -50,12 +51,12 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
   const reactory = useReactory();
   const {
-   mode,
-   primary,
-   secondary,
-   background,
-   text,
- } = reactory.muiTheme.palette;
+    mode,
+    primary,
+    secondary,
+    background,
+    text,
+  } = reactory.muiTheme.palette;
 
   const {
     React,
@@ -77,7 +78,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const [useOptimizedRendering, setUseOptimizedRendering] = useStateReact<boolean>(false); // Will be set after definition loads
   const [isEditingTitle, setIsEditingTitle] = useStateReact<boolean>(false);
   const [titleInputValue, setTitleInputValue] = useStateReact<string>('');
-  const [loadDialogOpen, setLoadDialogOpen] = useStateReact<boolean>(false);
+  const [showUserHomeFolderDialog, setShowUserHomeFolderDialog] = useStateReact<boolean>(false);
+  const [showServerFileExplorerDialog, setShowServerFileExplorerDialog] = useStateReact<boolean>(false);
 
   // GraphQL operations
   const {
@@ -178,10 +180,10 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
   const zoomToFit = useCallbackReact(() => {
     if (definition.steps.length === 0) return;
-    
+
     // Calculate bounds of all steps
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    
+
     definition.steps.forEach(step => {
       const stepBounds = {
         x: step.position.x,
@@ -189,7 +191,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         width: step.size?.width || 200,
         height: step.size?.height || 100
       };
-      
+
       minX = Math.min(minX, stepBounds.x);
       minY = Math.min(minY, stepBounds.y);
       maxX = Math.max(maxX, stepBounds.x + stepBounds.width);
@@ -233,7 +235,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const handleStepCreation = useCallbackReact((stepDefinition: any, position: Point) => {
     console.log('🏗️ Step creation called with:', stepDefinition, position);
 
-    const canvasPos = enableSnapToGrid 
+    const canvasPos = enableSnapToGrid
       ? snapToGrid(position, CANVAS_DEFAULTS.GRID_SIZE)
       : position;
 
@@ -242,9 +244,9 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       name: stepDefinition.name,
       type: stepDefinition.id,
       position: canvasPos,
-      size: { 
-        width: STEP_DEFAULTS.WIDTH, 
-        height: STEP_DEFAULTS.HEIGHT 
+      size: {
+        width: STEP_DEFAULTS.WIDTH,
+        height: STEP_DEFAULTS.HEIGHT
       },
       properties: { ...stepDefinition.defaultProperties },
       inputPorts: stepDefinition.inputPorts.map(port => ({
@@ -300,7 +302,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       (activeElement as HTMLElement).contentEditable === 'true' ||
       activeElement.getAttribute('contenteditable') === 'true'
     );
-    
+
     const modifiers = {
       ctrl: event.ctrlKey,
       shift: event.shiftKey,
@@ -310,14 +312,14 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
     const isModifierKey = modifiers.ctrl || modifiers.meta;
     const key = event.key.toLowerCase();
-    
+
     // If user is typing in an input field, don't intercept keyboard events
     // except for specific shortcuts that should work everywhere
     if (isInputFocused && !isModifierKey) {
       // Allow normal typing behavior in input fields
       return;
     }
-    
+
     // Allow certain shortcuts even in input fields (like Ctrl+Z for undo)
     if (isInputFocused && isModifierKey) {
       const allowedShortcutsInInputs = ['z', 'y', 's']; // Undo, Redo, Save
@@ -418,10 +420,10 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
   // Zoom to selection when selection changes
   const handleZoomToSelection = useCallbackReact(() => {
-    const selectedSteps = definition.steps.filter(step => 
+    const selectedSteps = definition.steps.filter(step =>
       selection.selectedSteps.has(step.id)
     );
-    
+
     if (selectedSteps.length > 0) {
       const bounds = getSelectionBounds(selectedSteps);
       if (bounds) {
@@ -511,6 +513,11 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const [saveMenuAnchor, setSaveMenuAnchor] = useStateReact<null | HTMLElement>(null);
   const isSaveMenuOpen = Boolean(saveMenuAnchor);
 
+  // Handle load dropdown
+  const [loadMenuAnchor, setLoadMenuAnchor] = useStateReact<null | HTMLElement>(null);
+  const isLoadMenuOpen = Boolean(loadMenuAnchor);
+  const [selectedWorkspaceType, setSelectedWorkspaceType] = useStateReact<'server' | 'user'>('user');
+
   // Handle context menu
   const [contextMenu, setContextMenu] = useStateReact<{ mouseX: number; mouseY: number; target: { type: 'step' | 'connection' | 'canvas'; id?: string; } } | null>(null);
 
@@ -529,50 +536,100 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
   const handleDownloadFile = useCallbackReact(() => {
     handleSaveMenuClose();
-    
+
     // Create downloadable JSON file
     const dataStr = JSON.stringify(definition, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
     const exportFileDefaultName = `${definition.name || 'workflow'}.json`;
-    
+
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
   }, [definition]);
 
-  // Load handlers
-  const handleLoadWorkflow = useCallbackReact(() => {
-    setLoadDialogOpen(true);
+  // Load menu handlers
+  const handleLoadMenuOpen = useCallbackReact((event: React.MouseEvent<HTMLElement>) => {
+    setLoadMenuAnchor(event.currentTarget);
   }, []);
 
-  const handleLoadDialogClose = useCallbackReact(() => {
-    setLoadDialogOpen(false);
+  const handleLoadMenuClose = useCallbackReact(() => {
+    setLoadMenuAnchor(null);
   }, []);
+
+  const handleLoadFromServerWorkspace = useCallbackReact(() => {
+    setSelectedWorkspaceType('server');
+    setShowServerFileExplorerDialog(true);
+    handleLoadMenuClose();
+  }, []);
+
+  const handleLoadFromUserWorkspace = useCallbackReact(() => {
+    setSelectedWorkspaceType('user');
+    setShowUserHomeFolderDialog(true);
+    handleLoadMenuClose();
+  }, []);
+
+
+  const handleLoadDialogClose = useCallbackReact(() => {
+    setShowUserHomeFolderDialog(false);
+  }, []);
+
+  const handleServerFileExplorerClose = useCallbackReact(() => {
+    setShowServerFileExplorerDialog(false);
+  }, []);
+
+  const handleServerFileSelection = useCallbackReact(async (selectedFiles: any[]) => {
+    if (selectedFiles.length > 0) {
+      const selectedFile = selectedFiles[0];
+
+      // Check if it's a JSON file (workflow file)
+      if (selectedFile.name.toLowerCase().endsWith('.json')) {
+        try {
+          console.log('Loading workflow from server file:', selectedFile);
+          
+          // Close the dialog
+          setShowServerFileExplorerDialog(false);
+
+          // TODO: Implement actual server file loading
+          // This would typically involve:
+          // 1. Fetch file content from the server using selectedFile.fullPath
+          // 2. Parse the JSON content
+          // 3. Load it using the updateDefinition() function
+
+          console.info(`Loading workflow from server file: ${selectedFile.name}`, 'Server file loading will be implemented');
+
+        } catch (error) {
+          console.error('Failed to load workflow from server', error);
+        }
+      } else {
+        console.warn('Invalid file type', 'Please select a JSON workflow file');
+      }
+    }
+  }, [updateDefinition]);
 
   const handleFileSelection = useCallbackReact(async (selectedItems: any[], selectionMode: 'single' | 'multi') => {
     if (selectedItems.length > 0 && selectedItems[0].type === 'file') {
       const selectedFile = selectedItems[0];
-      
+
       // Check if it's a JSON file (workflow file)
       if (selectedFile.name.toLowerCase().endsWith('.json')) {
         try {
           // For now, let's use the load function from useWorkflowDesigner
           // In a real implementation, you'd fetch the file content from the backend
           console.log('Loading workflow from file:', selectedFile);
-          
+
           // Close the dialog
-          setLoadDialogOpen(false);
-          
+          setShowUserHomeFolderDialog(false);
+
           // TODO: Implement actual file loading from backend
           // This would typically involve:
           // 1. Fetch file content from the backend using selectedFile.id
           // 2. Parse the JSON content
           // 3. Load it using the load() function
-          
+
           console.info(`Loading workflow from ${selectedFile.name}`, 'This feature will be implemented to load the actual file content');
-          
+
         } catch (error) {
           console.error('Failed to load workflow', error);
         }
@@ -585,18 +642,18 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const handleFileUpload = useCallbackReact(async (files: File[], path: string) => {
     if (files.length > 0) {
       const file = files[0];
-      
+
       // Check if it's a JSON file
       if (file.name.toLowerCase().endsWith('.json')) {
         try {
           const content = await file.text();
           const workflowData = JSON.parse(content);
-          
+
           // Validate the workflow structure (basic check)
           if (workflowData.id && workflowData.name && workflowData.steps) {
             // Load the workflow directly
             updateDefinition(workflowData);
-            setLoadDialogOpen(false);
+            setShowUserHomeFolderDialog(false);
             console.log(`Successfully loaded workflow: ${workflowData.name}`);
           } else {
             console.error('Invalid workflow file', 'The selected file does not appear to be a valid workflow definition');
@@ -613,7 +670,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   // Context menu handlers
   const handleContextMenu = useCallbackReact((event: React.MouseEvent, target: { type: 'step' | 'connection' | 'canvas'; id?: string; }) => {
     if (readonly) return;
-    
+
     event.preventDefault();
     setContextMenu({
       mouseX: event.clientX - 2,
@@ -659,6 +716,11 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const handleDuplicateStep = useCallbackReact(() => {
     handleCopyStep(); // Same as copy for now
   }, [handleCopyStep]);
+
+  const computeRootPath = useCallbackReact(() => {
+    // Only used for UserHomeFolder (user workspace)
+    return '/';
+  }, []);
 
   const {
     Box,
@@ -712,12 +774,12 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       }}
     >
       {/* Main Toolbar */}
-      <Paper 
+      <Paper
         elevation={1}
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          p: 1, 
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          p: 1,
           gap: 1,
           borderRadius: 0,
           borderBottom: 1,
@@ -740,16 +802,16 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           />
         ) : (
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', cursor: readonly ? 'default' : 'pointer' }}>
-            <Typography 
-              variant="h6" 
+            <Typography
+              variant="h6"
               onClick={handleTitleClick}
-              sx={{ 
+              sx={{
                 flexGrow: 1,
-                '&:hover': readonly ? {} : { 
+                '&:hover': readonly ? {} : {
                   backgroundColor: 'action.hover',
                   borderRadius: 1,
                   px: 1,
-                  py: 0.5 
+                  py: 0.5
                 }
               }}
             >
@@ -757,8 +819,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               {isDirty && ' *'}
             </Typography>
             {!readonly && (
-              <IconButton 
-                size="small" 
+              <IconButton
+                size="small"
                 onClick={handleTitleClick}
                 sx={{ ml: 1, opacity: 0.7 }}
               >
@@ -768,63 +830,93 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           </Box>
         )}
 
-        <Tooltip title="Load Workflow">
-          <IconButton 
-            onClick={handleLoadWorkflow}
-            disabled={readonly}
-            sx={{ mr: 1 }}
-          >
-            <FolderOpen />
-          </IconButton>
-        </Tooltip>
-
-        <Tooltip title="Save Options">
-          <Box>
-            <ButtonGroup variant="contained" disabled={readonly || isSaving}>
-              <Button 
-                onClick={handleSaveToServer} 
-                disabled={!isDirty}
-                startIcon={<CloudUpload />}
-                size="small"
-              >
-                Save
-              </Button>
-              <Button 
-                size="small"
-                onClick={handleSaveMenuOpen}
-                disabled={readonly || isSaving}
-              >
-                <ArrowDropDown />
-              </Button>
-            </ButtonGroup>
-            <Menu
-              anchorEl={saveMenuAnchor}
-              open={isSaveMenuOpen}
-              onClose={handleSaveMenuClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
+        <Box sx={{ mr: 1 }}>
+          <ButtonGroup variant="outlined" disabled={readonly} size="small">
+            <Button
+              onClick={handleLoadFromUserWorkspace}
+              startIcon={<FolderOpen />}
             >
-              <MenuItem onClick={handleSaveToServer} disabled={readonly || isSaving || !isDirty}>
-                <CloudUpload sx={{ mr: 1 }} />
-                Save to Server
-              </MenuItem>
-              <MenuItem onClick={handleDownloadFile}>
-                <Download sx={{ mr: 1 }} />
-                Download File
-              </MenuItem>
-            </Menu>
-          </Box>
-        </Tooltip>
+              Load
+            </Button>
+            <Button
+              onClick={handleLoadMenuOpen}
+              disabled={readonly}
+            >
+              <ArrowDropDown />
+            </Button>
+          </ButtonGroup>
+          <Menu
+            anchorEl={loadMenuAnchor}
+            open={isLoadMenuOpen}
+            onClose={handleLoadMenuClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+          >
+            <MenuItem onClick={handleLoadFromUserWorkspace}>
+              <FolderOpen sx={{ mr: 1 }} />
+              My Workspace
+            </MenuItem>
+            <MenuItem onClick={handleLoadFromServerWorkspace}>
+              <CloudUpload sx={{ mr: 1 }} />
+              Server Workspace
+            </MenuItem>
+          </Menu>
+        </Box>
+
+
+        <Box>
+          <ButtonGroup variant="contained" disabled={readonly || isSaving}>
+
+            <Button
+              onClick={handleSaveToServer}
+              disabled={!isDirty}
+              startIcon={<CloudUpload />}
+              size="small"
+            >
+              Save
+            </Button>
+            <Button
+              size="small"
+              onClick={handleSaveMenuOpen}
+              disabled={readonly || isSaving}
+            >
+              <ArrowDropDown />
+            </Button>
+          </ButtonGroup>
+          <Menu
+            anchorEl={saveMenuAnchor}
+            open={isSaveMenuOpen}
+            onClose={handleSaveMenuClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+          >
+            <MenuItem onClick={handleSaveToServer} disabled={readonly || isSaving || !isDirty}>
+              <CloudUpload sx={{ mr: 1 }} />
+              Save to Server
+            </MenuItem>
+            <MenuItem onClick={handleDownloadFile}>
+              <Download sx={{ mr: 1 }} />
+              Download File
+            </MenuItem>
+          </Menu>
+        </Box>
+
 
         <Tooltip title="Undo">
-          <IconButton 
-            onClick={undo} 
+          <IconButton
+            onClick={undo}
             disabled={readonly || !historyState.canUndo}
           >
             <Undo />
@@ -832,8 +924,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         </Tooltip>
 
         <Tooltip title="Redo">
-          <IconButton 
-            onClick={redo} 
+          <IconButton
+            onClick={redo}
             disabled={readonly || !historyState.canRedo}
           >
             <Redo />
@@ -866,53 +958,53 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           </Tooltip>
         )}
 
-            <Typography variant="body2" sx={{ ml: 2, mr: 2 }}>
-      Zoom: {Math.round(viewport.zoom * 100)}%
-    </Typography>
+        <Typography variant="body2" sx={{ ml: 2, mr: 2 }}>
+          Zoom: {Math.round(viewport.zoom * 100)}%
+        </Typography>
 
-    {/* Panel Toggles */}
-    <Tooltip title="Toggle Step Library Panel">
-      <IconButton 
-        onClick={handleStepLibraryToggle}
-        color={stepLibraryPanelOpen ? "primary" : "default"}
-        sx={{ ml: 1 }}
-      >
-        <ViewSidebar />
-      </IconButton>
-    </Tooltip>
+        {/* Panel Toggles */}
+        <Tooltip title="Toggle Step Library Panel">
+          <IconButton
+            onClick={handleStepLibraryToggle}
+            color={stepLibraryPanelOpen ? "primary" : "default"}
+            sx={{ ml: 1 }}
+          >
+            <ViewSidebar />
+          </IconButton>
+        </Tooltip>
 
-    <Tooltip title="Toggle Properties Panel">
-      <IconButton 
-        onClick={handlePropertiesToggle}
-        color={propertiesPanelOpen ? "primary" : "default"}
-      >
-        <Settings />
-      </IconButton>
-    </Tooltip>
+        <Tooltip title="Toggle Properties Panel">
+          <IconButton
+            onClick={handlePropertiesToggle}
+            color={propertiesPanelOpen ? "primary" : "default"}
+          >
+            <Settings />
+          </IconButton>
+        </Tooltip>
 
-                <Tooltip title={`${showGrid ? 'Hide' : 'Show'} Grid`}>
-              <IconButton 
-                onClick={() => {
-                  setShowGrid(!showGrid);
-                }}
-                color={showGrid ? "primary" : "default"}
-              >
-                {showGrid ? <Visibility /> : <VisibilityOff />}
-              </IconButton>
-            </Tooltip>
+        <Tooltip title={`${showGrid ? 'Hide' : 'Show'} Grid`}>
+          <IconButton
+            onClick={() => {
+              setShowGrid(!showGrid);
+            }}
+            color={showGrid ? "primary" : "default"}
+          >
+            {showGrid ? <Visibility /> : <VisibilityOff />}
+          </IconButton>
+        </Tooltip>
 
-            {/* DEBUG: Test Step Creation */}
-            {/* Performance Toggle */}
-            <Tooltip title={`${useOptimizedRendering ? 'Disable' : 'Enable'} Performance Mode`}>
-              <IconButton 
-                onClick={() => {
-                  setUseOptimizedRendering(!useOptimizedRendering);
-                }}
-                color={useOptimizedRendering ? "primary" : "default"}
-              >
-                <Speed />
-              </IconButton>
-            </Tooltip>
+        {/* DEBUG: Test Step Creation */}
+        {/* Performance Toggle */}
+        <Tooltip title={`${useOptimizedRendering ? 'Disable' : 'Enable'} Performance Mode`}>
+          <IconButton
+            onClick={() => {
+              setUseOptimizedRendering(!useOptimizedRendering);
+            }}
+            color={useOptimizedRendering ? "primary" : "default"}
+          >
+            <Speed />
+          </IconButton>
+        </Tooltip>
       </Paper>
 
       {/* Progress indicator */}
@@ -922,14 +1014,14 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
       {/* Error display */}
       {graphqlError && (
-        <Alert severity="error" onClose={() => {/* Handle error dismissal */}}>
+        <Alert severity="error" onClose={() => {/* Handle error dismissal */ }}>
           {graphqlError}
         </Alert>
       )}
 
       {/* Main content area */}
       <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
-        
+
         {/* Step Library Panel */}
         {stepLibraryPanelOpen && (
           <Paper
@@ -963,10 +1055,10 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         )}
 
         {/* Canvas Area */}
-        <Box 
-          sx={{ 
-            flexGrow: 1, 
-            position: 'relative', 
+        <Box
+          sx={{
+            flexGrow: 1,
+            position: 'relative',
             overflow: 'hidden',
             backgroundColor: background.paper
           }}
@@ -990,7 +1082,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               }, [updateStep])}
               onStepSelect={useCallbackReact((stepId: string, multi: boolean) => {
                 const newSelectedSteps: Set<string> = new Set(multi ? selection.selectedSteps : []);
-                
+
                 if (newSelectedSteps.has(stepId)) {
                   newSelectedSteps.delete(stepId);
                 } else {
@@ -1013,7 +1105,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               }, [handleConnectionCreate])}
               onConnectionSelect={useCallbackReact((connectionId: string, multi: boolean) => {
                 const newSelectedConnections: Set<string> = new Set(multi ? selection.selectedConnections : []);
-                
+
                 if (newSelectedConnections.has(connectionId)) {
                   newSelectedConnections.delete(connectionId);
                 } else {
@@ -1042,73 +1134,73 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             />
           ) : (
             <WorkflowCanvas
-            definition={definition}
-            stepLibrary={stepLibrary}
-            viewport={viewport}
-            selection={selection}
-            dragState={dragState}
-            validationResult={validationResult}
-            showGrid={showGrid}
-            snapToGrid={enableSnapToGrid}
-            readonly={readonly}
-            onStepMove={useCallbackReact((stepId: string, position: Point) => {
-              updateStep(stepId, { position });
-            }, [updateStep])}
-            onStepResize={useCallbackReact((stepId: string, size: Size) => {
-              updateStep(stepId, { size });
-            }, [updateStep])}
-            onStepSelect={useCallbackReact((stepId: string, multi: boolean) => {
-              const newSelectedSteps: Set<string> = new Set(multi ? selection.selectedSteps : []);
-              
-              if (newSelectedSteps.has(stepId)) {
-                newSelectedSteps.delete(stepId);
-              } else {
-                newSelectedSteps.add(stepId);
-              }
+              definition={definition}
+              stepLibrary={stepLibrary}
+              viewport={viewport}
+              selection={selection}
+              dragState={dragState}
+              validationResult={validationResult}
+              showGrid={showGrid}
+              snapToGrid={enableSnapToGrid}
+              readonly={readonly}
+              onStepMove={useCallbackReact((stepId: string, position: Point) => {
+                updateStep(stepId, { position });
+              }, [updateStep])}
+              onStepResize={useCallbackReact((stepId: string, size: Size) => {
+                updateStep(stepId, { size });
+              }, [updateStep])}
+              onStepSelect={useCallbackReact((stepId: string, multi: boolean) => {
+                const newSelectedSteps: Set<string> = new Set(multi ? selection.selectedSteps : []);
 
-              setSelection({
-                selectedSteps: newSelectedSteps,
-                selectedConnections: multi ? selection.selectedConnections : new Set<string>(),
-                selectionBounds: undefined
-              });
-            }, [selection, setSelection])}
-            onStepDoubleClick={useCallbackReact((stepId: string) => {
-              setPropertiesPanelOpen(true);
-            }, [])}
-            onConnectionCreate={useCallbackReact((connection: Partial<WorkflowConnection>) => {
-              if (connection.sourceStepId && connection.sourcePortId && connection.targetStepId && connection.targetPortId) {
-                handleConnectionCreate(connection.sourceStepId, connection.sourcePortId, connection.targetStepId, connection.targetPortId);
-              }
-            }, [handleConnectionCreate])}
-            onConnectionSelect={useCallbackReact((connectionId: string, multi: boolean) => {
-              const newSelectedConnections: Set<string> = new Set(multi ? selection.selectedConnections : []);
-              
-              if (newSelectedConnections.has(connectionId)) {
-                newSelectedConnections.delete(connectionId);
-              } else {
-                newSelectedConnections.add(connectionId);
-              }
+                if (newSelectedSteps.has(stepId)) {
+                  newSelectedSteps.delete(stepId);
+                } else {
+                  newSelectedSteps.add(stepId);
+                }
 
-              setSelection({
-                selectedConnections: newSelectedConnections,
-                selectedSteps: multi ? selection.selectedSteps : new Set<string>(),
-                selectionBounds: undefined
-              });
-            }, [selection, setSelection])}
-            onCanvasClick={useCallbackReact((position: Point, modifiers: InteractionModifiers) => {
-              if (!modifiers.ctrl && !modifiers.meta) {
-                // Clear selection when clicking on empty canvas
                 setSelection({
-                  selectedSteps: new Set(),
-                  selectedConnections: new Set()
+                  selectedSteps: newSelectedSteps,
+                  selectedConnections: multi ? selection.selectedConnections : new Set<string>(),
+                  selectionBounds: undefined
                 });
-              }
-            }, [setSelection])}
-            onViewportChange={setViewport}
-            onStepCreate={handleStepCreation}
-            onContextMenu={handleContextMenu}
-          />
-        )}
+              }, [selection, setSelection])}
+              onStepDoubleClick={useCallbackReact((stepId: string) => {
+                setPropertiesPanelOpen(true);
+              }, [])}
+              onConnectionCreate={useCallbackReact((connection: Partial<WorkflowConnection>) => {
+                if (connection.sourceStepId && connection.sourcePortId && connection.targetStepId && connection.targetPortId) {
+                  handleConnectionCreate(connection.sourceStepId, connection.sourcePortId, connection.targetStepId, connection.targetPortId);
+                }
+              }, [handleConnectionCreate])}
+              onConnectionSelect={useCallbackReact((connectionId: string, multi: boolean) => {
+                const newSelectedConnections: Set<string> = new Set(multi ? selection.selectedConnections : []);
+
+                if (newSelectedConnections.has(connectionId)) {
+                  newSelectedConnections.delete(connectionId);
+                } else {
+                  newSelectedConnections.add(connectionId);
+                }
+
+                setSelection({
+                  selectedConnections: newSelectedConnections,
+                  selectedSteps: multi ? selection.selectedSteps : new Set<string>(),
+                  selectionBounds: undefined
+                });
+              }, [selection, setSelection])}
+              onCanvasClick={useCallbackReact((position: Point, modifiers: InteractionModifiers) => {
+                if (!modifiers.ctrl && !modifiers.meta) {
+                  // Clear selection when clicking on empty canvas
+                  setSelection({
+                    selectedSteps: new Set(),
+                    selectedConnections: new Set()
+                  });
+                }
+              }, [setSelection])}
+              onViewportChange={setViewport}
+              onStepCreate={handleStepCreation}
+              onContextMenu={handleContextMenu}
+            />
+          )}
         </Box>
 
         {/* Properties Panel */}
@@ -1140,13 +1232,13 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       </Box>
 
       {/* Status bar */}
-      <Paper 
+      <Paper
         elevation={1}
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
-          px: 2, 
+          px: 2,
           py: 0.5,
           borderRadius: 0,
           borderTop: 1,
@@ -1154,11 +1246,11 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         }}
       >
         <Typography variant="caption">
-          Steps: {definition.steps.length} | 
-          Connections: {definition.connections.length} | 
+          Steps: {definition.steps.length} |
+          Connections: {definition.connections.length} |
           Selected: {selection.selectedSteps.size + selection.selectedConnections.size}
         </Typography>
-        
+
         <Typography variant="caption">
           {validationResult.errors.length > 0 && `Errors: ${validationResult.errors.length} | `}
           {validationResult.warnings.length > 0 && `Warnings: ${validationResult.warnings.length} | `}
@@ -1222,14 +1314,28 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         ] : null}
       </Menu>
 
-      {/* Load Workflow Dialog */}
+      {/* Load Workflow Dialog - User Workspace */}
       <UserHomeFolder
-        open={loadDialogOpen}
+        open={showUserHomeFolderDialog}
         onClose={handleLoadDialogClose}
         reactory={reactory}
         onFileUpload={handleFileUpload}
         onSelectionChanged={handleFileSelection}
-        rootPath="/"
+        rootPath={ computeRootPath() }
+        il8n={undefined}
+      />
+
+      {/* Load Workflow Dialog - Server Workspace */}
+      <ServerFileExplorer
+        open={showServerFileExplorerDialog}
+        onClose={handleServerFileExplorerClose}
+        reactory={reactory}
+        serverPath="${APP_DATA_ROOT}/workflows"
+        onFileSelection={handleServerFileSelection}
+        selectionMode="single"
+        allowedFileTypes={['.json', 'application/json']}
+        title="Load Workflow from Server"
+        readonly={true}
         il8n={undefined}
       />
     </Box>

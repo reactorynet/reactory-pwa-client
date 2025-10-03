@@ -1,26 +1,7 @@
 import React, { Fragment } from 'react';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
-import {
-  Card,
-  Grid,
-  Paper,
-} from '@mui/material'
-
 import MaterialDefaultArrayField from './MaterialDefaultArrayField';
-
-import {
-  Div,
-  Section,
-  Article,
-  Paragraph
-} from '@reactory/client-core/components/reactory/ux/mui/fields/HtmlContainers'
-
-const DEFAULT_OPTIONS: Reactory.Schema.IUISchemaOptions = {
-  container: 'Paper',
-  showTitle: true,
-  showDescription: true,
-};
 
 interface ArrayTemplateState {
   formData: any[],
@@ -68,13 +49,11 @@ const MaterialArrayField: React.FC<ArrayTemplateProps> = (props) => {
   } = props;
 
   const reactory = useReactory();  
-  const uiOptions: Reactory.Schema.IUISchemaOptions | null = (uiSchema['ui:options'] as Reactory.Schema.IUISchemaOptions) || DEFAULT_OPTIONS
+  const uiOptions: Reactory.Schema.IUISchemaOptions | null = (uiSchema['ui:options'] as Reactory.Schema.IUISchemaOptions);
   const uiWidget: string | null = uiSchema['ui:widget'] || null;
   const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
   const registry = utils.getDefaultRegistry();
-  const {
-    TitleField,
-    DescriptionField,
+  const {  
     UnsupportedField
   } = registry.fields;
   if (!schema.hasOwnProperty("items")) {
@@ -88,15 +67,9 @@ const MaterialArrayField: React.FC<ArrayTemplateProps> = (props) => {
       />
     );
   }
-
-  let Container: React.ComponentType<any> = null;
-  let ArrayComponent: React.ComponentType<any> = null;
-  let ArrayElementComponent: React.ComponentType<any> = null;
-
-  const { container = 'none' } = uiSchema['ui:options'] as Reactory.Schema.IUISchemaOptions || DEFAULT_OPTIONS;
-  const definitions = registry.definitions;
-
-
+  
+  let ArrayComponent: React.ComponentType<any> = null;  
+  
   let arrayComponentProps: any = {};
   if (uiWidget !== null) {
     if (!ArrayComponent && uiWidget.indexOf('.') > 0) {
@@ -133,57 +106,11 @@ const MaterialArrayField: React.FC<ArrayTemplateProps> = (props) => {
     ArrayComponent = MaterialDefaultArrayField;
   }
 
-  switch (container) {
-    case 'Fragment': {
-      Container = Fragment;
-      break;
-    }
-    case 'Grid': {
-      Container = Grid;
-      break;
-    }
-    case 'Paper': {
-      Container = Paper;
-      break;
-    }
-    case 'Card': {
-      Container = Card;
-      break;
-    }
-    case 'div': {
-      Container = Div;
-      break;
-    }
-    case 'section': {
-      Container = Section;
-      break;
-    }
-    case 'article': {
-      Container = Article;
-      break;
-    }
-    case 'p': {
-      Container = Paragraph;
-      break;
-    }
-    default: {
-      if ((container as string).indexOf('.') > 0) {
-        Container = reactory.getComponent(container as string);
-      }
-      break;
-    }
-  }
-
-  if (!Container) Container = Paper;
-
-  let containerProps = {}
   // @ts-ignore
-  return (
-    <Container {...containerProps}>
-      <ArrayComponent 
-        {...props}
-      />
-    </Container>
+  return (    
+    <ArrayComponent 
+      {...props}
+    />    
   );
 };
 
