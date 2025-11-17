@@ -17,7 +17,9 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
     readonly,
     onStepUpdate,
     onConnectionUpdate,
-    onValidate
+    onValidate,
+    definition,
+    onDefinitionUpdate
   } = props;
 
   const reactory = useReactory();
@@ -63,6 +65,148 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
     if (!selectedStep) return [];
     return validationResult.warnings.filter(warning => warning.stepId === selectedStep.id);
   }, [selectedStep, validationResult.warnings]);
+
+  // Handle workflow definition property changes
+  const handleWorkflowDefinitionChange = useCallbackReact((formData: any) => {
+    if (!definition || readonly || !onDefinitionUpdate) return;
+
+    const updatedDefinition = {
+      ...definition,
+      name: formData.name || definition.name,
+      version: formData.version || definition.version,
+      description: formData.description || definition.description,
+      namespace: formData.namespace || definition.namespace,
+      tags: formData.tags || definition.tags || []
+    };
+
+    onDefinitionUpdate(updatedDefinition);
+  }, [definition, readonly, onDefinitionUpdate]);
+
+  // Create workflow definition schema and uiSchema
+  const workflowDefinitionFormSchema = useMemoReact(() => ({
+    type: 'object',
+    properties: {
+      name: {
+        type: 'string',
+        title: 'Name',
+        description: 'The workflow name'
+      },
+      version: {
+        type: 'string',
+        title: 'Version',
+        description: 'The workflow version (e.g., 1.0.0)',
+        pattern: '^[0-9]+\\.[0-9]+\\.[0-9]+$'
+      },
+      description: {
+        type: 'string',
+        title: 'Description',
+        description: 'A description of what this workflow does'
+      },
+      namespace: {
+        type: 'string',
+        title: 'Namespace',
+        description: 'The workflow namespace for organization'
+      },
+      tags: {
+        type: 'array',
+        title: 'Tags',
+        description: 'Tags for categorizing and searching workflows',
+        items: {
+          type: 'string'
+        }
+      },
+      // Read-only fields
+      id: {
+        type: 'string',
+        title: 'ID',
+        readOnly: true
+      },
+      author: {
+        type: 'string',
+        title: 'Author',
+        readOnly: true
+      },
+      createdAt: {
+        type: 'string',
+        title: 'Created At',
+        format: 'date-time',
+        readOnly: true
+      },
+      updatedAt: {
+        type: 'string',
+        title: 'Updated At',
+        format: 'date-time',
+        readOnly: true
+      }
+    },
+    required: ['name', 'version', 'namespace']
+  }), []);
+
+  const workflowDefinitionFormUISchema = useMemoReact(() => ({
+    'ui:order': ['name', 'version', 'description', 'namespace', 'tags', 'id', 'author', 'createdAt', 'updatedAt'],
+    name: {
+      'ui:placeholder': 'Enter workflow name...',
+      'ui:autofocus': true
+    },
+    version: {
+      'ui:placeholder': 'e.g., 1.0.0',
+      'ui:help': 'Use semantic versioning format (major.minor.patch)'
+    },
+    description: {
+      'ui:widget': 'textarea',
+      'ui:placeholder': 'Describe what this workflow does...',
+      'ui:options': {
+        rows: 3
+      }
+    },
+    namespace: {
+      'ui:placeholder': 'e.g., company.department',
+      'ui:help': 'Namespace for organizing workflows'
+    },
+    tags: {
+      'ui:widget': 'ReactoryTagWidget',
+      'ui:options': {
+        addable: true,
+        removable: true,
+        placeholder: 'Add tags...'
+      }
+    },
+    id: {
+      'ui:readonly': true,
+      'ui:description': 'Unique identifier for this workflow'
+    },
+    author: {
+      'ui:readonly': true,
+      'ui:description': 'The user who created this workflow'
+    },
+    createdAt: {
+      'ui:readonly': true,
+      'ui:widget': 'datetime',
+      'ui:description': 'When this workflow was first created'
+    },
+    updatedAt: {
+      'ui:readonly': true,
+      'ui:widget': 'datetime',
+      'ui:description': 'When this workflow was last modified'
+    }
+  }), []);
+
+  // Prepare form data for workflow definition
+  const workflowDefinitionFormData = useMemoReact(() => {
+    if (!definition) return {};
+    
+    return {
+      id: definition.id,
+      name: definition.name || '',
+      version: definition.version || '1.0.0',
+      description: definition.description || '',
+      namespace: definition.namespace || 'user',
+      tags: definition.tags || [],
+      author: definition.author || '',
+      createdAt: definition.createdAt ? new Date(definition.createdAt).toISOString() : '',
+      updatedAt: definition.updatedAt ? new Date(definition.updatedAt).toISOString() : ''
+    };
+  }, [definition]);
 
   // Handle property changes
   const handlePropertyChange = useCallbackReact((propertyPath: string, value: any) => {
@@ -213,9 +357,14 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
             Connection: {selectedConnection.id}
           </Typography>
         )}
-        {selectedSteps.length === 0 && selectedConnections.length === 0 && (
+        {selectedSteps.length === 0 && selectedConnections.length === 0 && definition && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            No items selected
+            Workflow: {definition.name} v{definition.version}
+          </Typography>
+        )}
+        {selectedSteps.length === 0 && selectedConnections.length === 0 && !definition && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            No workflow loaded
           </Typography>
         )}
         {selectedSteps.length > 1 && (
@@ -238,7 +387,7 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
             value="properties"
             icon={<Settings />}
             iconPosition="start"
-            disabled={!selectedStep && !selectedConnection}
+            disabled={!selectedStep && !selectedConnection && !definition}
           />
           <Tab
             label={
@@ -285,26 +434,72 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                 </Typography>
               </Box>
             ) : (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '200px',
-                  color: 'text.secondary',
-                  textAlign: 'center',
-                  p: 3
-                }}
-              >
-                <Settings sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
-                <Typography variant="h6" gutterBottom>
-                  No Selection
-                </Typography>
-                <Typography variant="body2">
-                  Select a step or connection to edit its properties
-                </Typography>
-              </Box>
+              // Show workflow definition properties when no items are selected
+              definition ? (
+                <Box sx={{ p: 2 }}>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Settings />
+                    Workflow Properties
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Configure workflow metadata and information
+                  </Typography>
+                  
+                  {/* ReactoryForm for workflow definition properties */}
+                  <Box sx={{ mt: 1 }}>
+                    {reactory.getComponent('core.ReactoryForm') ? (
+                      React.createElement(
+                        reactory.getComponent('core.ReactoryForm') as React.ComponentType<any>,
+                        {
+                          formData: workflowDefinitionFormData,
+                          schema: workflowDefinitionFormSchema,
+                          uiSchema: workflowDefinitionFormUISchema,
+                          onChange: (formState: any) => {
+                            if (formState.formData) {
+                              handleWorkflowDefinitionChange(formState.formData);
+                            }
+                          },
+                          onError: (errors: any[]) => {
+                            console.warn('Workflow definition form errors:', errors);
+                          },
+                          noValidate: false,
+                          liveValidate: true,
+                          disabled: readonly,
+                          showErrorList: false,
+                          children: undefined // Ensure no submit button is shown
+                        }
+                      )
+                    ) : (
+                      <Box sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="body2" color="error">
+                          ReactoryForm component not available
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '200px',
+                    color: 'text.secondary',
+                    textAlign: 'center',
+                    p: 3
+                  }}
+                >
+                  <Settings sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+                  <Typography variant="h6" gutterBottom>
+                    No Workflow
+                  </Typography>
+                  <Typography variant="body2">
+                    No workflow definition available
+                  </Typography>
+                </Box>
+              )
             )}
           </>
         )}

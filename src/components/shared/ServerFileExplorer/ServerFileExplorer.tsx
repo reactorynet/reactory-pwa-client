@@ -239,6 +239,10 @@ const ServerFileExplorer: React.FC<ServerFileExplorerProps> = ({
           const path = '/' + pathParts.slice(0, index + 1).join('/');
           const isLast = index === pathParts.length - 1;
           
+          if (part === serverPath || part === '${APP_DATA_ROOT}') {
+            return null; // Skip displaying the root path part
+          }
+
           return isLast ? (
             <Typography key={path} color="text.primary" variant="body2">
               {part}

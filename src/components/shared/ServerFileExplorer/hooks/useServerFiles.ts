@@ -1,19 +1,9 @@
 import { useState, useCallback } from 'react';
 import { ServerFileItem, ServerFolderItem, ServerSelectedItem, UseServerFilesReturn } from '../types';
 
-const useServerFiles = (
-  reactory: Reactory.Client.ReactorySDK, 
-  basePath: string
-): UseServerFilesReturn => {
-  const [files, setFiles] = useState<ServerFileItem[]>([]);
-  const [folders, setFolders] = useState<ServerFolderItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPath, setCurrentPath] = useState(basePath);
-
   // Real GraphQL queries matching our server implementation
   const LOAD_SERVER_FILES_QUERY = `
-    query LoadServerFiles($serverPath: String!, $loadOptions: ReactoryServerFilesLoadOptionsInput) {
+    query LoadServerFiles($serverPath: String, $loadOptions: ReactoryServerFilesLoadOptionsInput) {
       ReactoryServerFiles(serverPath: $serverPath, loadOptions: $loadOptions) {
         ... on ReactoryServerFiles {
           serverPath
@@ -59,7 +49,6 @@ const useServerFiles = (
         ... on ReactoryServerFilesErrorResponse {
           error
           message
-          serverPath
         }
       }
     }
@@ -149,6 +138,17 @@ const useServerFiles = (
       }
     }
   `;
+
+
+const useServerFiles = (
+  reactory: Reactory.Client.ReactorySDK, 
+  basePath: string
+): UseServerFilesReturn => {
+  const [files, setFiles] = useState<ServerFileItem[]>([]);
+  const [folders, setFolders] = useState<ServerFolderItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPath, setCurrentPath] = useState(basePath);
 
   const loadPath = useCallback(async (path: string, options?: {
     limit?: number;
@@ -608,6 +608,31 @@ const useServerFiles = (
       setLoading(false);
     }
   }, [reactory, refreshPath]);
+
+
+  const readFile = useCallback(async (file: ServerFileItem): Promise<string> => { 
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // For simplicity, we'll use a direct fetch to the file's fullPath
+      // In a real app, you might need to handle authentication, CORS, etc.
+      const response = await fetch(file.fullPath);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
+      }
+      const text = await response.text();
+      return text;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to read file';
+      console.error('Error reading file:', err);
+      reactory.error(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    } 
+  }, [reactory, refreshPath]);
+  
 
   return {
     files,

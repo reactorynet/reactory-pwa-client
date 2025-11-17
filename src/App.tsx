@@ -141,6 +141,33 @@ interface ReactoryRouterProps {
   footer: React.ReactElement
 }
 
+const AppLoading = (props) => {
+  return (
+    <>
+      <div id="default_loader" className="loader">
+        <div className="loader-inner">
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+          <div className="loader-line-wrap">
+            <div className="loader-line"></div>
+          </div>
+        </div>
+      </div>
+      <p>{props.message ? props.message : 'Loading'}</p>
+    </>
+  )
+}
+
 /**
  * Wrapper component that renders inside each route to access params
  * and process componentProps templates
@@ -212,7 +239,7 @@ const RouteComponentWrapper = ({ routeDef, reactory, componentArgs, children, on
       <div key={`route-loading-${routeDef.id}`}>
         {children}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '10% 2rem', marginTop: `${headerHeight}px` }}>
-          <span>Loading component...</span>
+          <AppLoading message="Loading component..." />
         </div>
       </div>
     );
@@ -222,6 +249,7 @@ const RouteComponentWrapper = ({ routeDef, reactory, componentArgs, children, on
     if (ReactoryComponent) {
 
       const componentProps = {
+        reactory,
         ...processedArgs,
         style: {
           marginTop: `${headerHeight}px`,
@@ -544,32 +572,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   )
 }
 
-const AppLoading = (props) => {
-  return (
-    <>
-      <div id="default_loader" className="loader">
-        <div className="loader-inner">
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-        </div>
-      </div>
-      <p>{props.message ? props.message : 'Loading'}</p>
-    </>
-  )
-}
+
 
 const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 

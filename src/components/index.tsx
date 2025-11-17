@@ -79,6 +79,7 @@ import DropDownMenuComponent from './shared/menus/DropDownMenu';
 import { ErrorBoundary } from '@reactory/client-core/api/ErrorBoundary';
 
 import Forms from './reactory/forms';
+import pluginComponents from './plugins';
 
 import *  as MaterialReactoryWidgets from '@reactory/client-core/components/reactory/ux/mui/widgets';
 import Markdown from 'react-markdown';
@@ -89,6 +90,8 @@ import PrismCode from 'react-prism';
 import WorkflowDesigner from './shared/WorkflowDesigner';
 import JsonSchemaEditor from './shared/JsonSchemaEditor';
 import * as Three from 'three';
+
+import { UserProfile } from './shared/UserProfile';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -658,4 +661,12 @@ export const componentRegistery = [
     version: '1.0.0',
     component: JsonSchemaEditor
   },
+  {
+    nameSpace: 'core',
+    name: 'UserProfile',
+    version: '1.0.1',
+    component: UserProfile
+  },
+  // Append plugin components
+  ...pluginComponents
 ];

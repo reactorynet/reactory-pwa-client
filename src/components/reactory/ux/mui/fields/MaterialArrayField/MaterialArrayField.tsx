@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import React from 'react';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 import MaterialDefaultArrayField from './MaterialDefaultArrayField';

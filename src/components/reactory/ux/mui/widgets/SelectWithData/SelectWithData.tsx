@@ -165,7 +165,7 @@ const SelectWithDataWidget = (props: SelectWithDataProperties) => {
         }
 
         let graphqlStaticProps = { };
-        if (graphql.props) {
+        if (graphql?.props) {
           graphqlStaticProps = { ...graphql.props };
         }
 

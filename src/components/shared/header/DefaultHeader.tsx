@@ -112,6 +112,7 @@ const CacheComponent = ({ reactory, classes }) => {
         '&:focus': {
           outline: 'none',
         },
+        cursor: 'pointer',
       }}
     >
       <ListItemIcon>
@@ -161,6 +162,7 @@ const ToggleDevelopComponent = ({ reactory, classes }) => {
         '&:focus': {
           outline: 'none',
         },
+        cursor: 'pointer',
       }}
     >
       <ListItemIcon>
@@ -340,6 +342,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                               '&:hover': {
                                 backgroundColor: theme.palette.action.hover,
                               },
+                              cursor: 'pointer',
                             }}
                           >
                             <ListItemIcon>
@@ -392,6 +395,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                     '&:focus': {
                       outline: 'none',
                     },
+                    cursor: 'pointer',
                   }}
                 >
                   <ListItemIcon>
@@ -421,6 +425,10 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
           '&:hover': {
             backgroundColor: theme.palette.action.hover,
           },
+          '&:focus': {
+            outline: 'none',
+          },
+          cursor: 'pointer',
         }}
       >
         <ListItemIcon>

@@ -31,6 +31,7 @@ export { default as ReactoryImageWidget } from './ImageWidget';
 export { default as ImageWidget } from './ImageWidget';
 export { default as RecordLookupWidget } from './RecordLookup';
 export { default as RichEditorWidget } from './RichEditor';
+export { default as FroalaWidget } from './RichEditor';
 export { default as SchemaSelectorWidget } from './SchemaSelectorWidget';
 export { default as SearchWidget } from './SearchWidget';
 export { default as SelectWidget } from './Select';

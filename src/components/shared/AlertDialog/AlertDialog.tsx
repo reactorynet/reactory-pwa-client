@@ -32,6 +32,8 @@ const ThemedAlertDialog = compose(withReactory)((props: any) => {
         actions = []
     } = props;
 
+    // return (<>Dialog</>)
+
     return (
         <Dialog
             open={open}

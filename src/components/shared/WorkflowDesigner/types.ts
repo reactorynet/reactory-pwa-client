@@ -400,6 +400,9 @@ export interface PropertiesPanelProps {
   onStepUpdate: (step: WorkflowStepDefinition) => void;
   onConnectionUpdate: (connection: WorkflowConnection) => void;
   onValidate: () => void;
+  // Workflow definition properties
+  definition?: WorkflowDefinition;
+  onDefinitionUpdate?: (definition: WorkflowDefinition) => void;
 }
 
 export interface PropertyFormProps {

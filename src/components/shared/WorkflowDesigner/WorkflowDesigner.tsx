@@ -75,7 +75,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const [templatesPanelOpen, setTemplatesPanelOpen] = useStateReact<boolean>(false);
   const [showGrid, setShowGrid] = useStateReact<boolean>(props.showGrid || true);
   const [enableSnapToGrid, setEnableSnapToGrid] = useStateReact<boolean>(props.snapToGrid || true);
-  const [useOptimizedRendering, setUseOptimizedRendering] = useStateReact<boolean>(false); // Will be set after definition loads
+  const [useOptimizedRendering, setUseOptimizedRendering] = useStateReact<boolean>(false); // Will be set after definition loads  
   const [isEditingTitle, setIsEditingTitle] = useStateReact<boolean>(false);
   const [titleInputValue, setTitleInputValue] = useStateReact<string>('');
   const [showUserHomeFolderDialog, setShowUserHomeFolderDialog] = useStateReact<boolean>(false);
@@ -1226,6 +1226,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               onStepUpdate={handleStepUpdate}
               onConnectionUpdate={handleConnectionUpdate}
               onValidate={handleValidate}
+              definition={definition}
+              onDefinitionUpdate={updateDefinition}
             />
           </Paper>
         )}
@@ -1333,7 +1335,15 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         serverPath="${APP_DATA_ROOT}/workflows"
         onFileSelection={handleServerFileSelection}
         selectionMode="single"
-        allowedFileTypes={['.json', 'application/json']}
+        allowedFileTypes={[
+          '.json',
+          '.yaml',
+          '.yml',
+          'application/json',
+          'application/x-yaml',
+          'text/yaml',
+          'text/x-yaml'
+        ]}
         title="Load Workflow from Server"
         readonly={true}
         il8n={undefined}

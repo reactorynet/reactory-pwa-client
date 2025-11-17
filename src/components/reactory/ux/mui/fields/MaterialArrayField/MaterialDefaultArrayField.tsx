@@ -137,10 +137,7 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
     ...(uiSchema['ui:options'] as Reactory.Schema.IUIArrayFieldOptions || {})
   };
 
-  let visible = true;
-  if (options?.hidden === true) visible = false;
-  
-  // Toolbar buttons
+  const visible = !(options?.hidden === true);
   let buttons = null;
   if (props.uiSchema && props.uiSchema['ui:toolbar']) {
     buttons = props.uiSchema['ui:toolbar'].buttons.map((button) => {
@@ -318,14 +315,15 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-      }
+      },
+      item: true,
     };
 
     const content = (
-      <Box>
-        <SchemaField {...schemaFieldProps} />
-        {toolbar}
-      </Box>
+        <>
+          <SchemaField {...schemaFieldProps} />
+          {toolbar}
+        </>
     );
 
     // For grid layouts, wrap in Grid2 and apply drag providers at the Grid2 level
@@ -475,8 +473,8 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
         formContext,
       };
 
-      // Wrap in Draggable if drag and drop is enabled
-      if (options.enableDragAndDrop && !readonly && !disabled) {
+      // Wrap in Draggable if drag and drop is enabled AND reordering is allowed
+      if (options.enableDragAndDrop && options.allowReorder && !readonly && !disabled) {
         return (
           <Draggable 
             key={`item-${index}`} 
@@ -501,15 +499,53 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
     return items;
   };
 
-  const itemsContent = options.enableDragAndDrop && !readonly && !disabled ? (
+  const itemsContent = options.enableDragAndDrop && options.allowReorder && !readonly && !disabled ? (
     <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="array-items" direction={options.dragDirection as any || "vertical"}>
-        {(provided) => (
+      <Droppable 
+        droppableId="array-items" 
+        direction={options.dragDirection as any || "vertical"}
+        renderClone={(provided, snapshot, rubric) => {
+          const item = formData[rubric.source.index];
+          const itemSchema = utils.retrieveSchema(schema.items, definitions, item);
+          const itemIdPrefix = `${idSchema.$id}_${rubric.source.index}`;
+          const itemIdSchema = utils.toIdSchema(itemSchema, itemIdPrefix, definitions, item, idPrefix);
+          
+          return renderArrayFieldItem({
+            index: rubric.source.index,
+            key: `item-clone-${rubric.source.index}`,
+            canMoveUp: false,
+            canMoveDown: false,
+            itemSchema,
+            itemIdSchema,
+            itemErrorSchema: errorSchema ? errorSchema[rubric.source.index] : undefined,
+            itemData: item,
+            formData,
+            parentSchema: schema,
+            itemUiSchema: uiSchema.items,
+            autofocus: false,
+            onBlur,
+            onFocus,
+            disabled,
+            readonly,
+            rawErrors: rawErrors?.[rubric.source.index],
+            formContext,
+            isDragging: true,
+            dragProvided: provided,
+            dragSnapshot: snapshot
+          });
+        }}
+      >
+        {(provided, snapshot) => (
           <ItemsContainer
             {...provided.droppableProps} 
             ref={provided.innerRef}
             key={`array-item-list-${props.idSchema.$id}`}
             {...((options.itemsContainerProps as any) || {})}
+            sx={{
+              ...((options.itemsContainerProps as any)?.sx || {}),
+              // Ensure Grid2 container properties are preserved during drag
+              minHeight: snapshot.isDraggingOver ? '100px' : 'auto',
+            }}
           >
             {renderItems()}
             {provided.placeholder}
@@ -517,14 +553,7 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
         )}
       </Droppable>
     </DragDropContext>
-  ) : (
-    <ItemsContainer
-      key={`array-item-list-${props.idSchema.$id}`}
-      {...((options.itemsContainerProps as any) || {})}
-    >
-      {renderItems()}
-    </ItemsContainer>
-  );
+  ) : renderItems();
 
   return (
     <Container {...((options.containerProps as any) || {})} key={id}>

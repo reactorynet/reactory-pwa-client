@@ -38,6 +38,10 @@ yarn.lock
 *storybook.log
 storybook-static
 
+/src/components/plugins/*
+!/src/components/plugins/README.MD
+!/src/components/plugins/index.ts
+
 # /src/**/*.jsx
 # /src/**/*.jsx.map
 # /src/**/*.js
