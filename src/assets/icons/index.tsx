@@ -1,9 +1,10 @@
 import React from 'react';
-import { DefaultTheme, useTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
+import { Theme } from '@mui/material';
 import { Icon, SvgIcon } from '@mui/material';
 
 export const O365 = React.forwardRef((props: any, ref) => {
-  const theme: DefaultTheme = useTheme();
+  const theme: Theme = useTheme();
   let fill = "#000000";
   if (props.color) {
     if (props.color.indexOf("#") === 0 || props.color.indexOf('rgb') === 0) fill = props.color;
@@ -22,7 +23,7 @@ export const O365 = React.forwardRef((props: any, ref) => {
 });
 
 export const OnSyspro = React.forwardRef<any, any>((props, ref) => {
-  const theme: any = useTheme();
+  const theme: Theme = useTheme();
   // let rectStyle = { fill: "none", stroke: "#9AD86E", strokeMiterlimit: 10, strokeWidth: "1px" };
   let rectStyle: any = { fill: "none", strokeMiterlimit: 10, strokeWidth: "1px" };
   let fill = "#000000";
@@ -47,7 +48,7 @@ export const OnSyspro = React.forwardRef<any, any>((props, ref) => {
 });
 
 export const Ruler = React.forwardRef<any, any>((props, ref) => {
-  const theme: any = useTheme();
+  const theme: Theme = useTheme();
   let _style: any = { fill: "none", stroke: "#000", strokeLinejoin: "round", strokeWidth: "2px" };
   let rectStyle: any = { fill: "none", strokeMiterlimit: 10, strokeWidth: "1px" };
   let fill = "#000000";
@@ -76,7 +77,7 @@ export const Ruler = React.forwardRef<any, any>((props, ref) => {
 });
 
 export const Briefcase = React.forwardRef((props: any, ref) => {
-  const theme: any = useTheme();
+  const theme: Theme = useTheme();
   let rectStyle = { fill: "none", stroke: "#000", strokeLinejoin: "round", strokeWidth: "2px" };
   let fill = "#000000";
 

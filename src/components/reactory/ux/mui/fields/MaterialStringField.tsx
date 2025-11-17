@@ -23,10 +23,12 @@ import {
   TextFieldProps,
 } from '@mui/material';
 
-import { withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 
 
 const MaterialStringFieldWidget = (props) => {
+  const theme = useTheme();
+  
   const {
     id,
     autofocus,
@@ -95,8 +97,7 @@ const MaterialStringFieldWidget = (props) => {
     }
 
     if (uiSchema["ui:widget"]) {
-      const Widget = registry.widgets[uiSchema["ui:widget"]]
-      reactory.debug(`MaterialStringFieldWidget: ${$id} using custom widget ${uiSchema["ui:widget"]}`, { args });
+      const Widget = registry.widgets[uiSchema["ui:widget"]]      
       if (Widget) return (<Widget {...args} />)
     }
 
@@ -112,9 +113,13 @@ const MaterialStringFieldWidget = (props) => {
 
 
 
-    if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
+    // Always shrink the label if we're using specific widgets to ensure proper display
+    if (uiSchema["ui:widget"] === "LabelWidget" || uiSchema["ui:widget"] === "LinkFieldWidget") {
+      inputLabelProps.shrink = true;
+    } else if (isNil(formData) === true || `${formData}`.trim() === "" || isEmpty(formData) === true) {
       reactory.debug(`MaterialStringFieldWidget: ${$id} formData is empty`, { formData, schema, uiSchema });
-      inputLabelProps.shrink = false;
+      // Check if we should force shrink from ui:options
+      inputLabelProps.shrink = uiOptions.forceShrinkLabel === true;
     } else {
       inputLabelProps.shrink = true;
       inputLabelProps.style = {

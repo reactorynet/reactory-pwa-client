@@ -1,0 +1,4 @@
+mutation ReactorDeleteChatSession($id: String!) {
+  ReactorDeleteChatSession(id: $id)
+}
+

@@ -3,7 +3,7 @@ import {
   IconButton,
   Icon,
   Paper,
-  Grid,
+  Grid2 as Grid,
   Button,
   Toolbar,
   Tooltip,

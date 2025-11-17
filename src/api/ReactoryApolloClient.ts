@@ -62,7 +62,8 @@ export default async () => {
         'x-client-key': `${process.env.REACT_APP_CLIENT_KEY}`,
         'x-client-pwd': `${process.env.REACT_APP_CLIENT_PASSWORD}`,
         'x-client-version': `${packageInfo.version}`,
-        'x-client-name': REACT_APP_APP_TITLE
+        'x-client-name': REACT_APP_APP_TITLE,
+        'apollo-require-preflight': 'true'
       }
     }
   });

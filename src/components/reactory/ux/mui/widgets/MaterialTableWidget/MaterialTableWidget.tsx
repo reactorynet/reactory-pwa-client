@@ -1,8 +1,9 @@
-import React, { Fragment, Component, useState, RefObject, PureComponent } from 'react'
+import React, { Fragment, useState, RefObject, PureComponent } from 'react'
+import { styled } from '@mui/material/styles';
 import { pullAt, isNil, remove, filter, isArray, throttle, ThrottleSettings } from 'lodash'
 import {
 
-  Grid,
+  Grid2 as Grid,
   Typography,
   Button,
   IconButton,
@@ -23,18 +24,53 @@ import {
   TablePagination,
   Paper,
   Tooltip,
-  TextField
+  TextField,
+  Breakpoint
 
 } from '@mui/material'
-import { alpha } from '@mui/material/styles';
+import { alpha, SxProps } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux'
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { find, template, get } from 'lodash';
-import { Styles } from '@mui/styles/withStyles/withStyles';
+
 import Reactory from '@reactory/reactory-core';
 import ReactoryApi from 'api';
 import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
+import { useNavigate } from 'react-router';
+import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
+import { constants } from 'zlib';
+import { useReactory } from '@reactory/client-core/api/ApiProvider';
+
+const PREFIX = 'MaterialTableWidgetComponent';
+
+const classes = {
+  root: `${PREFIX}-root`,
+  chip: `${PREFIX}-chip`,
+  newChipInput: `${PREFIX}-newChipInput`
+};
+
+// TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
+const Root = styled('div')((
+  {
+    theme
+  }
+) => ({
+  [`& .${classes.root}`]: {
+    display: 'flex',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+
+  [`& .${classes.chip}`]: {
+    margin: theme.spacing(1),
+  },
+
+  [`& .${classes.newChipInput}`]: {
+    margin: theme.spacing(1)
+  }
+}));
+
 export interface MaterialTableRemoteDataReponse {
   data: any[],
   paging: {
@@ -56,11 +92,15 @@ export interface ReactoryMaterialTableProps {
   theme: any,
   schema: Reactory.Schema.IArraySchema,
   uiSchema: ReactoryMaterialTableUISchema,
-  idSchema: any,
+  idSchema: Reactory.Schema.IDSchema,
   formData: any[],
   formContext: any,
   paging: any,
   searchText: any,
+  registry: {
+    fields: { [key: string]: any },
+    widgets: { [key: string]: any },
+  },
   onChange: (formData: any[]) => void
 }
 
@@ -133,40 +173,75 @@ export interface MaterialTableColumn<TRow> {
   rowProps?: any,
   altRowProps?: any,
   cellProps?: any
+  sx?: SxProps<Theme>,
+  format?: string
 }
 
 
 export interface MaterialTableOptions {
   //[key: string]: any
   rowStyle?: (rowData: any, idx: number) => any,
+  rowSx?: SxProps<Theme>,
   headerStyle?: any,
-  searchText?: string,
-  selection?: boolean
-  sort?: boolean,
-  grouping?: boolean
+  headerSx?: SxProps<Theme>,
+  searchText?: string,  
+  sort?: boolean,  
+  sx?: SxProps<Theme>,
+  /**
+   * Enables or disables grouping
+   */
+  grouping?: boolean;
+  /**
+   * Group by fields
+   */
+  groupBy?: string[];
+
+  /**
+   * Enable search in toolbar
+   */
+  search?: boolean;
+  /**
+   * Show title in field
+   */
+  showTitle?: boolean;
+  /**
+   * Show or hide toolbar
+   */
+  toolbar?: boolean;
+  /**
+   * Enable or disable selection
+   */
+  selection?: boolean;
+  /**
+   * Page size
+   */
+  pageSize?: number;
+  /**
+   * Page size options
+   */
+  pageSizeOptions?: number[];
+  /**
+   * allow ordering
+   */
+  allowOrder?: boolean;
+  /**
+   * The field that we want to use for ordering the result
+   */
+  orderField?: string;
+  /**
+   * Allow Sort
+   */
+  sortFields?: { field: string; direction?: "asc" | "desc" }[];
+
+  [key: string]: unknown;
 }
 
 export interface MaterialTablePagingState {
   activeRowsPerPage: number
 }
 
-const ReactoryMaterialTableStyles: Styles<Theme, {}, "root" | "chip" | "newChipInput"> = (theme) => ({
-  root: {
-    display: 'flex',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-  },
-  chip: {
-    margin: theme.spacing(1),
-  },
-  newChipInput: {
-    margin: theme.spacing(1)
-  }
-});
-
 const ReactoryMaterialTablePagination = (props) => {
-  const {
-    reactory,
+  const {    
     theme,
     schema,
     idShema,
@@ -174,16 +249,16 @@ const ReactoryMaterialTablePagination = (props) => {
     uiSchema,
     formData,
     rowsPerPageOptions = [5, 10, 25, 50, 100],
-    tableRef,
-    classes,
+    tableRef,    
   } = props;
 
-  const { DropDownMenu } = reactory.getComponents(['core.DropDownMenu']);
+  const reactory = useReactory();
+  const { DropDownMenu } = reactory.getComponents<{ DropDownMenu: Reactory.Client.Components.DropDownMenu }>(['core.DropDownMenu']);
 
 
   const { useState, useEffect } = React;
   const [version, setVersion] = useState<number>(0);
-
+  const navigation = useNavigate();
 
   const sizeSpec = useSizeSpec();
 
@@ -238,11 +313,11 @@ const ReactoryMaterialTablePagination = (props) => {
     <td style={{ display: 'grid' }}>
       <Grid container spacing={2}>
         {show_totals === true && show_totals_label === true &&
-          <Grid item xs={12} md={12} lg={12} xl={12} style={footerOptions.totalsRowStyle}>
+          <Grid size={{ xs: 12, md: 12, lg: 12, xl: 12 }} sx={footerOptions.totalsRowStyle}>
             <div style={footerOptions.totalsCellStyle}>Totals</div>
           </Grid>}
         {show_totals === true && footerColumns !== undefined && footerColumns !== null &&
-          <Grid item container spacing={0} xs={12} md={12} lg={12} xl={12} style={{ display: 'flex', justifyContent: 'center' }}>
+          <Grid size={{ xs: 12, md: 12, lg: 12, xl: 12 }} container spacing={0} style={{ display: 'flex', justifyContent: 'center' }}>
             {
               footerColumns.map((col) => {
                 let cellStyle = {};
@@ -280,27 +355,27 @@ const ReactoryMaterialTablePagination = (props) => {
               })
             }
           </Grid>}
-        <Grid container item xs={12} md={12} lg={12} xl={12} spacing={0} style={{ justifyContent: 'flex-end' }}>
+        <Grid container size={{ xs: 12, md: 12, lg: 12, xl: 12 }} spacing={0} style={{ justifyContent: 'flex-end' }}>
 
-          <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
-            <Grid item sm={8}>
+          <Grid container size={{ sm: 6, md: 2 }} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
+            <Grid size={{ sm: 8 }}>
               <Typography style={{ marginTop: '10px', float: 'right' }}>Total records:</Typography>
             </Grid>
-            <Grid item sm={2}>
+            <Grid size={{ sm: 2 }}>
               <Typography style={{ marginTop: '10px', float: 'right' }}>{props.count || 0}</Typography>
             </Grid>
           </Grid>
 
-          <Grid item container spacing={0} sm={6} md={2} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
-            <Grid item sm={8}>
+          <Grid container size={{ sm: 6, md: 2 }} style={{ justifyContent: 'flext-end', paddingRight: '10px' }}>
+            <Grid size={{ sm: 8 }}>
               <Typography style={{ marginTop: '10px', float: 'right' }}>{props.labelRowsPerPage} {props.rowsPerPage}</Typography>
             </Grid>
-            <Grid item sm={2}>
-              <DropDownMenu {...rowsPerPageDropDownProps} />
+            <Grid size={{ sm: 2 }}>
+              <DropDownMenu {...rowsPerPageDropDownProps} onSelect={onMenuItemSelect} />
             </Grid>
           </Grid>
-          <Grid item sm={6} md={4}>
-            <TablePagination {...{ ...props, classes: { root: classes.root } }} />
+          <Grid size={{ sm: 6, md: 4 }}>
+            <TablePagination {...props} />
           </Grid>
         </Grid>
       </Grid>
@@ -328,18 +403,23 @@ const ReactoryMaterialTableWaitForRenderer = (props) => {
 };
 
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
-
-  const {
-    reactory,
-    theme,
+  const theme: Theme & { MaterialTableWidget: any } = useTheme();
+  const reactory = useReactory();
+  const {    
     schema,
     idSchema,
     onChange,
     uiSchema = {},
     formContext = {},
     formData = [],
-    searchText = ""
+    searchText = "",
   } = props;
+
+  let registry = props.registry;
+  if (!props.registry) {
+    const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
+    registry = utils.getDefaultRegistry();
+  }
 
   const uiOptions: Reactory.Client.Components.IMaterialTableWidgetOptions = uiSchema['ui:options'] || {};
   const AlertDialog = reactory.getComponent<React.FC<any>>('core.AlertDialog@1.0.0');
@@ -354,6 +434,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     rowsSelected: [],
     action: null,
   });
+  const navigation = useNavigate();
 
   const [selectedRows, setSelectedRows] = useState([]);
   const [version, setVersion] = useState(0);
@@ -386,7 +467,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   let actions = [];
 
   let ToolbarComponent = null;
-  let components: { [key: string]: Component | PureComponent | Function } = {};
+  let components: { [key: string]: React.ComponentType<any> } = {};
   let detailsPanel: (props: MaterialTableDetailPanelProps) => JSX.Element = null;
 
   if (uiOptions.componentMap) {
@@ -430,8 +511,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
           if (uiOptions.detailPanelProps) {
             _detail_props = { ..._detail_props, ...uiOptions.detailPanelProps };
-          }
-
+          }          
           if (uiOptions.detailPanelPropsMap) {
             _detail_props = reactory.utils.objectMapper({
               detailPanelProps: uiOptions.detailPanelProps || {},
@@ -473,7 +553,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         }
 
         reactory.debug(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query });
-        let variables = reactory.utils.objectMapper({ formContext, query, props: queryDefinition.props || {} }, uiOptions.variables || queryDefinition.variables);
+        let variableMap = uiOptions.variables || queryDefinition.variables;
+        if (variableMap) {
+          variableMap = reactory.utils.parseObjectMap(variableMap);
+        }
+        let variables = reactory.utils.objectMapper({ formContext, query, props: queryDefinition.props || {} }, variableMap);
 
         variables = { ...variables, paging: { page: query.page, pageSize: query.pageSize } };
         reactory.debug('MaterialTableWidget - Mapped variables for query', { query, variables });
@@ -566,16 +650,18 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     _columns.forEach(coldef => {
 
-      const def: Reactory.Client.Components.MaterialTableWidgetColumnDefinition = {
+      const def: Reactory.Client.Components.MaterialTableWidgetColumnDefinition & { breakpoint?: string | number } = {
         ...coldef
-      };
+      };      
 
-      if (isNil(def.component) === false && def.component !== undefined) {
-        const ColRenderer = reactory.getComponent<React.FC<any>>(def.component);
+      if (isNil(def.component) === false && def.component !== undefined) {        
+        const ColRenderer = def.component.indexOf('.') > 0 ? 
+          reactory.getComponent<React.FC<any>>(def.component) : 
+          registry?.widgets?.[def.component];        
         // @ts-ignore       
         def.renderCell = (cellData, cellIndex, rowData, rowIndex) => {
 
-          let props = { formData: formContext.$formData, rowData, api: reactory, reactory, formContext, cellData, cellIndex, rowIndex };
+          let props = { formData: cellData, rowData, api: reactory, reactory, formContext, cellData, cellIndex, rowIndex };
           let mappedProps = {};
 
           if (def.props) {
@@ -585,12 +671,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           //check if there is a propsMap property
           //maps self props
           if (def.propsMap && props) {
-            mappedProps = reactory.utils.objectMapper(props, def.propsMap);
+            mappedProps = reactory.utils.objectMapper(props, reactory.utils.parseObjectMap(def.propsMap as any));
             props = { ...props, ...mappedProps, api: reactory, reactory };
           }
 
           if (ColRenderer) return <ColRenderer {...props} />
-          else return <ReactoryMaterialTableWaitForRenderer {...props} componentId={def.component} DefaultComponent={<>...</>} />
+          else return <ReactoryMaterialTableWaitForRenderer {...props} componentId={def.component} DefaultComponent={<Root>...</Root>} />;
         }
 
         delete def.component;
@@ -604,9 +690,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
           const childrenComponents = (components || []).map((componentDef, componentIndex) => {
 
-            const ComponentToRender = reactory.getComponent<React.FC>(componentDef.component);
+            const ComponentToRender = componentDef.component.indexOf('.') ? 
+              reactory.getComponent<React.FC>(componentDef.component) :
+              registry.widgets[componentDef.component];
 
-            let props = { formData: formContext.$formData, rowData, api: reactory, key: componentIndex, formContext };
+            let props = { formData: formContext.$formData, rowData, api: reactory, key: componentIndex, formContext, registry, };
             let mappedProps = {};
 
             if (componentDef.props) {
@@ -652,7 +740,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
       if (def.breakpoint) {
-        const shouldBreak = useMediaQuery(theme.breakpoints.down(def.breakpoint));
+        const shouldBreak = useMediaQuery(theme.breakpoints.down(def.breakpoint as Breakpoint));
 
         if (shouldBreak === false) {
           reactory.log('MaterialTableWidget ==> Skipping column render', { shouldBreak, def });
@@ -738,8 +826,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       }
     }
   }
-
-
 
   const refreshHandler = (eventName: string, eventData: any) => {
     const uiOptions = uiSchema['ui:options'] || {};
@@ -870,12 +956,13 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     const newRowsState: MaterialTableRowState = { ...rowsState };
 
-    $rows.forEach((row, rid) => {
+    const currentRows = uiOptions.remoteData === true ? data?.data : formData;
+
+    currentRows?.forEach((row, rid) => {
       if (!newRowsState[rid]) {
         newRowsState[rid] = {
           dirty: false,
           editing: false,
-          expanded: false,
           hover: false,
           saving: false,
           selected: allChecked,
@@ -887,13 +974,18 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     setRowState(newRowsState);
 
-  }, [allChecked])
+  }, [allChecked, data?.data, formData, uiOptions.remoteData])
 
   React.useEffect(() => {
 
     const newRowsState: MaterialTableRowState = { ...rowsState };
 
-    $rows.forEach((row, rid) => {
+    if (isArray($rows) === false || $rows.length === 0 ) { 
+      setRowState(newRowsState);
+      return;
+    }
+
+    $rows?.forEach((row, rid) => {
       if (!newRowsState[rid]) {
         newRowsState[rid] = {
           dirty: false,
@@ -911,6 +1003,41 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     setRowState(newRowsState);
 
   }, [allExpanded])
+
+  // Sync allChecked state when individual selections change
+  React.useEffect(() => {
+    const currentRows = uiOptions.remoteData === true ? data?.data : formData;
+    const selectedCount = Object.values(rowsState).filter(state => state.selected === true).length;
+    const totalCount = currentRows?.length || 0;
+    const isAllSelected = totalCount > 0 && selectedCount === totalCount;
+    
+    if (allChecked !== isAllSelected) {
+      setAllChecked(isAllSelected);
+    }
+  }, [rowsState, data?.data, formData, uiOptions.remoteData])
+
+  // Initialize row states when data changes
+  React.useEffect(() => {
+    const currentRows = uiOptions.remoteData === true ? data?.data : formData;
+    if (!currentRows || currentRows.length === 0) return;
+
+    const newRowsState: MaterialTableRowState = { ...rowsState };
+    
+    currentRows.forEach((row, rid) => {
+      if (!newRowsState[rid]) {
+        newRowsState[rid] = {
+          dirty: false,
+          editing: false,
+          expanded: false,
+          hover: false,
+          saving: false,
+          selected: false,
+        }
+      }
+    });
+
+    setRowState(newRowsState);
+  }, [data?.data, formData, uiOptions.remoteData])
 
   //modify columns with virtual columns
   //virtual columns are columns action columns
@@ -933,6 +1060,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     let $headers: JSX.Element[] = [];
 
+    if (options.toolbar === false) return null;
+
     if (detailsPanel) {
       const toggleExpandAll = () => {
         setAllExpanded(!allExpanded)
@@ -947,12 +1076,24 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
     if (options.selection === true) {
+      // Calculate header checkbox state
+      const currentRows = uiOptions.remoteData === true ? data?.data : formData;
+      const selectedCount = Object.values(rowsState).filter(state => state.selected === true).length;
+      const totalCount = currentRows?.length || 0;
+      const isAllSelected = totalCount > 0 && selectedCount === totalCount;
+      const isIndeterminate = selectedCount > 0 && selectedCount < totalCount;
+
       const toggleSelectAll = () => {
-        setAllChecked(!allChecked)
+        const newAllChecked = !isAllSelected;
+        setAllChecked(newAllChecked);
       }
 
       $headers.push((<TableCell key={'header_selection'}>
-        <Checkbox checked={allChecked} onClick={toggleSelectAll} />
+        <Checkbox 
+          checked={isAllSelected} 
+          indeterminate={isIndeterminate}
+          onClick={toggleSelectAll} 
+        />
       </TableCell>))
     }
 
@@ -984,8 +1125,17 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
    */
   const getSelectedRows = () => {
     let selected = [];
+    const currentRows = uiOptions.remoteData === true ? data?.data : formData;
+    
+    if (!currentRows) return selected;
+    
     Object.keys(rowsState).forEach(key => {
-      selected.push(data.data[parseInt(key)])
+      const rid = parseInt(key);
+      const rowState = rowsState[rid];
+      // Only include rows that are actually selected
+      if (rowState && rowState.selected === true && currentRows[rid]) {
+        selected.push(currentRows[rid]);
+      }
     });
     return selected;
   }
@@ -1015,9 +1165,6 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     if (detailsPanel && expanded === true) {
       $DetailComponent = detailsPanel({ rid, rowData: row, state: $rState })
     }
-
-
-
     const $cols = [];
 
     if (detailsPanel) {
@@ -1056,13 +1203,30 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
 
     columns.forEach((column: MaterialTableColumn<any>, columnIndex: number) => {
-      if (column.renderCell) $cols.push((<TableCell key={columnIndex}>{column.renderCell(row[column.field], columnIndex, row, rid)}</TableCell>));
-      else $cols.push((<TableCell key={columnIndex}>{`${row[column.field]}`}</TableCell>))
+      const cellData = row[column.field];
+      if (column.renderCell) { 
+        $cols.push((<TableCell key={columnIndex} sx={column?.sx}>{column.renderCell(cellData, columnIndex, row, rid)}</TableCell>));
+      }
+      else { 
+        // default cell renderer.
+        // check if the column has a format property        
+        let cellText = cellData;
+        if (column.format) {
+          try {
+            cellText = reactory.utils.template(column.format)({ row, column, reactory, cellData, rowData: row, utils: reactory.utils });
+          } catch (error) {
+            reactory.error(`Error formatting cell data for column ${column.field}`, { error, column, row, cellData });
+            cellText = error.message;
+          }
+          
+        }
+        $cols.push((<TableCell key={columnIndex} sx={column?.sx}>{cellText}</TableCell>))
+      }
     });
 
 
 
-    let rowComponents: JSX.Element[] = [(<TableRow key={rid}>
+    let rowComponents: JSX.Element[] = [(<TableRow key={rid} sx={row.sx}>
       {$cols}
     </TableRow>)];
 
@@ -1077,8 +1241,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
 
     if ($DetailComponent) {
-      rowComponents.push((<TableRow key={`${rid}_details`}>
-        <TableCell colSpan={colCount()}>
+      rowComponents.push((<TableRow key={`${rid}_details`} sx={row?.sx}>
+        <TableCell colSpan={colCount()} sx={uiOptions?.detailPanelProps?.sx}>
           {$DetailComponent}
         </TableCell>
       </TableRow>))
@@ -1137,9 +1301,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   const getPagination = () => {
-
+    if (uiOptions?.pagination !== null && uiOptions?.pagination === false) return null;
     return (
-      <Table id={`${idSchema.$id}_paging_table`}>
+      <Table id={`${idSchema.$id}_paging_table`} >
         <TableBody>
           <TableRow key={`${idSchema.$id}_pagination`}>
             <TableCell colSpan={columns.length}>
@@ -1282,12 +1446,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   const getToolbar = () => {
 
-    let numSelected = 0;
-
-    Object.keys(rowsState).forEach((property, index) => {
-      if (rowsState[property].selected === true) numSelected += + 1;
-    });
-
+    // Calculate selected count more efficiently
+    const selectedCount = Object.values(rowsState).filter(state => state.selected === true).length;
     let selected = getSelectedRows();
 
     let addButton = null;
@@ -1303,6 +1463,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
         if (onClick?.length > 0) {
           const [onClickComponent, onClickName] = onClick.split("/");
+          // check if the onclick is a navigation event
+          if (onClickComponent === "navigation" && onClickName === "navigate") {
+            
+            // @ts-ignore
+            navigation(reactory.utils.template(onClickProps.path)({ reactory, formContext, formData: $rows }));
+            return;
+          }
+
           const $component = reactory.getComponent(onClickComponent);
           if ($component && typeof $component[onClickName] === "function") {
             let $props = { ...(onClickProps as Object) };
@@ -1317,7 +1485,28 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
 
     const callDelete = () => {
+      if (uiOptions?.deleteButtonProps) {
+        const { onClick, onClickProps = {}, onClickPropsMap = {} } = uiOptions?.deleteButtonProps;
+        if (onClick?.length > 0) {
+          const [onClickComponent, onClickName] = onClick.split("/");
+        
+          if (onClickComponent === "navigation" && onClickName === "navigate") {
+            // @ts-ignore
+            navigation(reactory.utils.template(onClickProps.path)({ reactory, formContext, formData: $rows }));
+            return;
+          }
 
+          const $component = reactory.getComponent(onClickComponent);
+          if ($component && typeof $component[onClickName] === "function") {
+            let $props = { ...(onClickProps as Object) };
+            if (Object.keys(onClickPropsMap).length > 0) {
+              $props = reactory.utils.objectMapper({ rowsState, rows: $rows }, onClickPropsMap);
+              $props = { ...(onClickProps as Object), ...$props }
+            }
+            $component[onClickName]($props);
+          }
+        }
+      }
     }
 
     if (uiOptions?.allowAdd === true) {
@@ -1372,7 +1561,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     let actions = null;
 
-    if (numSelected > 0 && uiOptions?.actions?.length > 0) {
+    if (selectedCount > 0 && uiOptions?.actions?.length > 0) {
       let $menus: Reactory.UX.IDataDropDownMenuItem<Reactory.Client.Components.IMaterialTableWidgetAction>[] = [];
 
       uiOptions.actions.forEach((action, actionIndex) => {
@@ -1426,13 +1615,13 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               <Toolbar sx={{
                 pl: { sm: 2 },
                 pr: { xs: 1, sm: 1 },
-                ...(numSelected > 0 && {
+                ...(selectedCount > 0 && {
                   bgcolor: (theme) =>
                     alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
                 }),
               }}>
                 {actions}
-                {numSelected > 0 ? (
+                {selectedCount > 0 ? (
                   <>
                     <Typography
                       sx={{ flex: '1 1 100%' }}
@@ -1440,7 +1629,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
                       variant="subtitle1"
                       component="div"
                     >
-                      {numSelected} selected
+                      {selectedCount} selected
                     </Typography>
                     {deleteButton}
                   </>
@@ -1525,5 +1714,4 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 };
 
-const MaterialTableWidgetComponent = compose(withReactory, withTheme, withStyles(ReactoryMaterialTableStyles))(ReactoryMaterialTable)
-export default MaterialTableWidgetComponent
+export default ReactoryMaterialTable;

@@ -1,0 +1,289 @@
+{
+  "title": "ReactorChatButtonWidget Examples",
+  "description": "Example configurations for the ReactorChatButtonWidget",
+  "examples": [
+    {
+      "name": "Basic Standard Button",
+      "description": "Simple chat button with default settings",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatButton": {
+            "type": "string",
+            "title": "Chat Support"
+          }
+        }
+      },
+      "uiSchema": {
+        "chatButton": {
+          "ui:widget": "ReactorChatButtonWidget",
+          "ui:options": {
+            "buttonText": "Get Help",
+            "icon": "help",
+            "color": "primary"
+          }
+        }
+      }
+    },
+    {
+      "name": "Floating Action Button",
+      "description": "FAB-style chat button that slides in from the left",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "supportChat": {
+            "type": "string",
+            "title": "Support Chat"
+          }
+        }
+      },
+      "uiSchema": {
+        "supportChat": {
+          "ui:widget": "ReactorChatButtonWidget",
+          "ui:options": {
+            "fab": true,
+            "position": "left",
+            "width": 500,
+            "icon": "support_agent",
+            "color": "secondary",
+            "style": {
+              "position": "fixed",
+              "bottom": "20px",
+              "right": "20px",
+              "zIndex": 1000
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Conditional Chat Button",
+      "description": "Chat button that only shows for premium users",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userType": {
+            "type": "string",
+            "title": "User Type",
+            "enum": ["free", "premium", "enterprise"]
+          },
+          "aiAssistant": {
+            "type": "string",
+            "title": "AI Assistant"
+          }
+        }
+      },
+      "uiSchema": {
+        "userType": {
+          "ui:widget": "SelectWidget"
+        },
+        "aiAssistant": {
+          "ui:widget": "ReactorChatButtonWidget",
+          "ui:options": {
+            "fab": true,
+            "icon": "smart_toy",
+            "color": "success",
+            "visible": true,
+            "showIf": "{{userType}} === 'premium' || {{userType}} === 'enterprise'",
+            "chatProps": {
+              "formData": {
+                "userType": "{{userType}}",
+                "context": "ai_assistant"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Custom Styled Button",
+      "description": "Chat button with custom styling and branding",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "brandedChat": {
+            "type": "string",
+            "title": "Branded Chat"
+          }
+        }
+      },
+      "uiSchema": {
+        "brandedChat": {
+          "ui:widget": "ReactorChatButtonWidget",
+          "ui:options": {
+            "buttonText": "Talk to AI",
+            "icon": "psychology",
+            "variant": "outlined",
+            "color": "info",
+            "size": "large",
+            "style": {
+              "borderRadius": "25px",
+              "textTransform": "none",
+              "fontWeight": "bold",
+              "borderWidth": "2px"
+            },
+            "chatProps": {
+              "formData": {
+                "brand": "custom",
+                "theme": "professional"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Form-Integrated Chat",
+      "description": "Chat button that receives form data and context",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "title": "User ID"
+          },
+          "issueType": {
+            "type": "string",
+            "title": "Issue Type",
+            "enum": ["technical", "billing", "feature_request", "bug_report"]
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "format": "textarea"
+          },
+          "supportChat": {
+            "type": "string",
+            "title": "Need Help?"
+          }
+        }
+      },
+      "uiSchema": {
+        "userId": {
+          "ui:widget": "TextWidget"
+        },
+        "issueType": {
+          "ui:widget": "SelectWidget"
+        },
+        "description": {
+          "ui:widget": "TextareaWidget",
+          "ui:options": {
+            "rows": 4
+          }
+        },
+        "supportChat": {
+          "ui:widget": "ReactorChatButtonWidget",
+          "ui:options": {
+            "buttonText": "Get AI Support",
+            "icon": "support_agent",
+            "color": "warning",
+            "passFormDataAsChatProps": true,
+            "chatProps": {
+              "formData": {
+                "context": "support_ticket",
+                "autoFill": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Multiple Chat Buttons",
+      "description": "Different chat buttons for different purposes",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "generalChat": {
+            "type": "string",
+            "title": "General Chat"
+          },
+          "technicalSupport": {
+            "type": "string",
+            "title": "Technical Support"
+          },
+          "salesInquiry": {
+            "type": "string",
+            "title": "Sales Inquiry"
+          }
+        }
+      },
+      "uiSchema": {
+        "generalChat": {
+          "ui:widget": "ReactorChatButtonWidget",
+          "ui:options": {
+            "buttonText": "General Chat",
+            "icon": "chat",
+            "color": "primary",
+            "chatProps": {
+              "formData": {
+                "context": "general"
+              }
+            }
+          }
+        },
+        "technicalSupport": {
+          "ui:widget": "ReactorChatButtonWidget",
+          "ui:options": {
+            "buttonText": "Tech Support",
+            "icon": "build",
+            "color": "secondary",
+            "chatProps": {
+              "formData": {
+                "context": "technical_support"
+              }
+            }
+          }
+        },
+        "salesInquiry": {
+          "ui:widget": "ReactorChatButtonWidget",
+          "ui:options": {
+            "buttonText": "Sales Chat",
+            "icon": "shopping_cart",
+            "color": "success",
+            "chatProps": {
+              "formData": {
+                "context": "sales"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "usageNotes": {
+    "uiSchemaOptions": {
+      "fab": "Boolean - Whether to render as a Floating Action Button",
+      "position": "String - 'left' or 'right' for slide-out panel position",
+      "width": "Number - Width of the slide-out panel in pixels",
+      "buttonText": "String - Text to display on the button (ignored for FAB)",
+      "icon": "String - Material-UI icon name",
+      "variant": "String - 'text', 'outlined', or 'contained'",
+      "color": "String - Material-UI color theme",
+      "size": "String - 'small', 'medium', or 'large'",
+      "className": "String - Additional CSS classes",
+      "style": "Object - Additional CSS styles",
+      "chatProps": "Object - Properties to pass to ReactorChat component",
+      "visible": "Boolean - Whether the widget should be visible",
+      "showIf": "String - Template condition for conditional visibility",
+      "passFormDataAsChatProps": "Boolean - Whether to pass formData to ReactorChat"
+    },
+    "formDataIntegration": {
+      "description": "The widget can receive values from formData and pass them to the ReactorChat component",
+      "examples": [
+        "formData.userId will be passed as chatProps.userId",
+        "formData.context will be passed as chatProps.context",
+        "formData.style will be merged with the widget's style options",
+        "If passFormDataAsChatProps is true, the entire formData object is passed as chatProps.formData"
+      ]
+    },
+    "conditionalRendering": {
+      "description": "Use the showIf option with template syntax for conditional visibility",
+      "examples": [
+        "showIf: \"{{userType}} === 'premium'\"",
+        "showIf: \"{{isLoggedIn}} && {{hasPermission}}\"",
+        "showIf: \"{{formData.status}} !== 'completed'\""
+      ]
+    }
+  }
+} 

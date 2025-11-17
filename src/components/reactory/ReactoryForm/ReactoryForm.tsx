@@ -2,7 +2,7 @@
 /* eslint-disable */
 import React, { useCallback } from 'react';
 import Reactory from '@reactory/reactory-core';
-import SchemaForm, { ISchemaForm } from '../form/components/SchemaForm';
+import SchemaForm, { ISchemaForm } from '@reactory/client-core/components/reactory/form/components/SchemaForm';
 
 import { find, template, isArray, isNil, isString, isEmpty, throttle, filter } from 'lodash';
 import { useNavigate, useLocation, useParams, Params } from 'react-router';
@@ -18,8 +18,8 @@ import {
   Breakpoint
 } from '@mui/material';
 
-import IntersectionVisible from '../../utility/IntersectionVisible';
-import ErrorList from '../form/components/ErrorList';
+import IntersectionVisible from '@reactory/client-core/components/utility/IntersectionVisible';
+import ErrorList from '@reactory/client-core/components/reactory/form/components/ErrorList';
 
 import {
   DefaultComponentMap,
@@ -104,13 +104,18 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       HelpButton,
       HelpModal,
       toggleHelp,
-    } = useHelp({ formDefinition: form });
+    } = useHelp({ 
+      formDefinition: form,
+      formContext,
+      formData,
+    });
 
     const {
       Toolbar
     } = useToolbar({
       formDefinition: form,
       formData,
+      formContext,
       errors,
       errorSchema,
       onSubmit,
@@ -313,8 +318,6 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     };
     // #endregion
 
-    reactory.debug(`Form Props: ${SIGN}`, formProps);
-
     const isFormBusy = () => {
       if (isDataLoading === true) return true;
       if (isValidating === true) return true;
@@ -346,7 +349,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           name: `${form.name}`,
           key: `reactory_container::${instanceId}`,
           className: uiOptions?.className || '',
-          style: uiOptions?.style || {},
+          style: uiOptions?.style || { },
         }
 
         switch (uiOptions?.componentType) {

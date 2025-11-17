@@ -1,0 +1,29 @@
+overwrite: true
+schema: "${SCHEMA_PATH}"
+documents: "src/**/*.gql.ts"
+generates:
+  src/generated/types.ts:
+    plugins:
+      - "typescript"
+    config:
+      maybeValue: T | undefined
+      scalars: 
+        Void: void
+        CurrencyCode: string
+        CountryCode: string
+        BigDecimal: number
+  src/generated/graphql.schema.json:
+    plugins:
+      - "introspection"
+  src/:
+    preset: "near-operation-file"
+    presetConfig:
+      extension: ".g.ts"
+      baseTypesPath: "./generated/types.ts"
+    plugins:
+      - add:
+          content: '/* THIS IS AN AUTO-GENERATED FILE. DO NOT EDIT IT! */'
+      - "typescript-operations"
+      - "typescript-react-apollo"
+    config:
+      maybeValue: T | undefined

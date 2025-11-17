@@ -1,0 +1,23 @@
+mutation ReactorAttachFile($file: Upload!, $chatSessionId: String!) {
+  ReactorAttachFile(file: $file, chatSessionId: $chatSessionId) {
+    __typename
+    ... on ReactorChatMessage {
+      sessionId
+      id
+      role
+      content
+      rating
+      timestamp
+      tool_calls
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}
+

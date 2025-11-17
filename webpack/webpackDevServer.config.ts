@@ -36,7 +36,7 @@ export const getWebpackDevServerConfiguration = (proxy, allowedHost): WebpackDev
     // },
     // https: protocol === 'https',
     host: 'localhost',
-    port: 3000,
+    port: process.env.PORT || 3000,
     setupMiddlewares: (middlewares: Middleware[], server: Server): Middleware[] => { 
       if(!server) throw new Error('Server is not defined');
       if(!middlewares) throw new Error('Middlewares are not defined');

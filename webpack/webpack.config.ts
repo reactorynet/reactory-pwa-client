@@ -350,6 +350,12 @@ export default function(webpackEnv): WebpackConfiguration {
             evaluate: '\\[\\[(.+?)\\]\\]',
           }
         },
+        // Support importing .graphql/.gql documents
+        {
+          test: /\.(graphql|gql)$/,
+          exclude: /node_modules/,
+          use: [{ loader: require.resolve('graphql-tag/loader') }],
+        },
         {
           // "oneOf" will traverse all following loaders until one will
           // match the requirements. When no loader matches it will fall

@@ -11,10 +11,8 @@ import * as d3color from "d3-color";
 import * as d3delaunay from "d3-delaunay";
 
 import * as MaterialCore from '@mui/material'
-import * as MaterialCoreStyles from '@mui/styles'
 import * as MaterialIcons from '@mui/icons-material'
 import * as MaterialLab from '@mui/lab'
-import * as MaterialStyles from '@mui/styles';
 import * as MaterialDates from '@mui/x-date-pickers';
 import * as MaterialGrid from '@mui/x-data-grid';
 
@@ -29,7 +27,7 @@ import IntersectionVisible from './utility/IntersectionVisible';
 import Loading from './shared/Loading';
 import LinkComponent from './shared/Link';
 import ReactoryRouterComponent from './reactory/ReactoryFormRouter'
-import { ReactoryForm } from './reactory/ReactoryForm';
+import { ReactoryFormEnhanced as ReactoryFormV2 } from './reactory/ReactoryForm/ReactoryFormEnhanced';
 import * as ReactoryFormUtilities from './reactory/form/utils';
 import DateSelector from './dates/DateSelector';
 import Calendar from './dates/Calendar';
@@ -39,7 +37,7 @@ import SlideOutLauncher from './shared/SlideOutLauncher';
 import BasicModal from './shared/BasicModal';
 import SpeedDialWidget from './shared/SpeedDialWidget';
 import FullScreenDialog from './shared/ReactoryCoreDialog';
-import FramedWindow, { ReportViewerComponent, GraphiqlWindow } from './shared/FramedWindow';
+import { FramedWindow, ReportViewerComponent, GraphiqlWindow } from './shared/FramedWindow';
 
 import TabbedNavigation from './shared/TabbedNavigation';
 import ChipLabel from './shared/ChipLabel';
@@ -63,16 +61,37 @@ import NotFoundComponent from './shared/NotFoundComponent';
 import DocumentListComponent from './shared/DocumentListComponent';
 import DocumentUploadComponent from './shared/DocumentUploadComponents';
 import Cropper from './shared/image/Cropper';
+import ReactorChat from './shared/ReactorChat/ReactorChat';
+import { ReactorChatButton } from './shared/ReactorChat';
+
+
+import DateLabel from './shared/DateLabel';
+import { ReactoryStaticContentComponent as StaticContent } from './shared/StaticContent';
+import Label from './shared/Label';
+import AlertDialog from './shared/AlertDialog';
+import HelpMe from './shared/HelpMe';
+import { Footer } from './shared/Footer';
 
 import * as utils from './util';
 import { compose } from 'redux';
-import { DropDownMenuComponent } from './shared/menus/DropDownMenu';
+import DropDownMenuComponent from './shared/menus/DropDownMenu';
 
-import { ErrorBoundary } from '../api/ErrorBoundary';
+import { ErrorBoundary } from '@reactory/client-core/api/ErrorBoundary';
 
 import Forms from './reactory/forms';
+import pluginComponents from './plugins';
 
-import *  as MaterialReactoryWidgets from '@reactory/client-core/components/reactory/ux/mui/widgets'
+import *  as MaterialReactoryWidgets from '@reactory/client-core/components/reactory/ux/mui/widgets';
+import Markdown from 'react-markdown';
+import MarkdownGfm from 'remark-gfm';
+import DomPurify from 'dompurify';
+import PrismCode from 'react-prism';
+
+import WorkflowDesigner from './shared/WorkflowDesigner';
+import JsonSchemaEditor from './shared/JsonSchemaEditor';
+import * as Three from 'three';
+
+import { UserProfile } from './shared/UserProfile';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -158,24 +177,12 @@ export const componentRegistery = [
     component: StyledCurrencyLabel,
     version: '1.0.0',
   },
-  // {
-  //   nameSpace: 'core',
-  //   name: 'PricingSliderComponent',
-  //   component: PricingSliderComponent,
-  //   version: '1.0.0',
-  // },
   {
     nameSpace: 'core',
     name: 'SelectWithDataWidget',
     component: require('@reactory/client-core/components/reactory/ux/mui/widgets/SelectWithData'),
     version: '1.0.0',
   },
-  // {
-  //   nameSpace: 'core',
-  //   name: 'PricingLineChartComponent',
-  //   component: PricingLineChartComponent,
-  //   version: '1.0.0',
-  // },
   {
     nameSpace: 'core',
     name: 'TableChildComponentWrapper',
@@ -330,7 +337,7 @@ export const componentRegistery = [
     nameSpace: 'core',
     name: 'HelpMe',
     version: '1.0.0',
-    component: require('../components/shared/HelpMe').default
+    component: HelpMe
   },
   
   {
@@ -367,8 +374,14 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'ReactoryForm',
-    component: ReactoryForm,
+    component: ReactoryFormV2,
     version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
+    name: 'ReactoryForm',
+    component: ReactoryFormV2,
+    version: '2.0.0',
   },
   {
     nameSpace: 'core',
@@ -412,30 +425,13 @@ export const componentRegistery = [
     nameSpace: 'material-ui',
     name: 'MaterialCore',
     version: '1.0.0',
-    component: {
-      ...MaterialCore,
-      styles: {
-        ...MaterialCoreStyles
-      }
-    }
+    component: MaterialCore
   },
   {
     nameSpace: 'material-ui',
     name: 'MaterialIcons',
     version: '1.0.0',
     component: MaterialIcons,
-  },
-  {
-    nameSpace: 'material-ui',
-    name: 'MaterialLab',
-    version: '1.0.0',
-    component: MaterialLab,
-  },
-  {
-    nameSpace: 'material-ui',
-    name: 'MaterialStyles',
-    version: '1.0.0',
-    component: MaterialStyles,
   },
   {
     nameSpace: 'material-ui',
@@ -451,6 +447,12 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'material-ui',
+    name: 'MaterialLab',
+    component: MaterialLab,
+    version: '1.0.0'
+  },
+  {
+    nameSpace: 'material-ui',
     name: 'MaterialPickers',
     version: '1.0.0',
     component: MaterialDates,
@@ -459,15 +461,14 @@ export const componentRegistery = [
     nameSpace: 'material-ui',
     name: 'Material',
     version: '1.0.0',
-    component: {
+    component: {      
       MaterialCore,
-      MaterialIcons,
-      MaterialLab,
-      MaterialStyles,
+      MaterialIcons,      
       MaterialPickers: MaterialDates,
       MaterialTable: MaterialGrid,
       MaterialGrid,
-      MaterialDates
+      MaterialDates,
+      MaterialLab
     },
   },
   {
@@ -485,11 +486,30 @@ export const componentRegistery = [
   },
   GraphiqlWindow.meta,
   SlideOutLauncher.meta,
-  require('./shared/currency/CurrencyLabel').default,
-  require('./shared/DateLabel').default,
-  require('./shared/StaticContent').default.meta,
-  require('./shared/Label').default,
-  require('./shared/AlertDialog').default,  
+  {
+    nameSpace: 'core',
+    name: 'DateLabel',
+    version: '1.0.0',
+    component: DateLabel
+  },
+  {
+    nameSpace: 'core',
+    name: 'StaticContent',
+    version: '1.0.0',
+    component: StaticContent
+  },
+  {
+    nameSpace: 'core',
+    name: 'Label',
+    version: '1.0.0',
+    component: Label
+  },
+  {
+    nameSpace: 'core',
+    name: 'AlertDialog',
+    version: '1.0.0',
+    component: AlertDialog
+  },  
   {
     nameSpace: 'reactory-core',
     name: 'ReactBeautifulDnD',
@@ -533,7 +553,7 @@ export const componentRegistery = [
   {
     nameSpace: 'reactory',
     name: 'Footer',
-    component: require('./shared/Footer').Footer,
+    component: Footer,
     version: '1.0.0',
   },
   {
@@ -586,5 +606,67 @@ export const componentRegistery = [
       d3force
     }
   },
-  ...Forms
+  {
+    nameSpace: 'reactor',
+    name: 'ReactorChat',
+    version: '1.0.0',
+    component: ReactorChat,
+  },
+  {
+    nameSpace: 'reactor',
+    name: 'ReactorChatButton',
+    version: '1.0.0',
+    component: ReactorChatButton,
+  },
+  ...Forms,
+  {
+    nameSpace: 'core',
+    name: 'Markdown',
+    version: '1.0.0',
+    component: Markdown,
+  },
+  {
+    nameSpace: 'core',
+    name: 'MarkdownGfm',
+    version: '1.0.0',
+    component: MarkdownGfm,
+  },
+  {
+    nameSpace: 'core',
+    name: 'DOMPurify',
+    version: '1.0.0',
+    component: DomPurify,
+  },
+  {
+    nameSpace: 'core',
+    name: 'PrismCode',
+    version: '1.0.0',
+    component: PrismCode,
+  },
+  {
+    nameSpace: 'three',
+    name: 'Three',
+    version: '1.0.0',
+    component: Three
+  },
+  {
+    nameSpace: 'core',
+    name: 'WorkflowDesigner',
+    version: '1.0.0',
+    component: WorkflowDesigner
+  },
+  {
+    nameSpace: 'shared',
+    name: 'JsonSchemaEditor',
+    version: '1.0.0',
+    component: JsonSchemaEditor
+  },
+  {
+    nameSpace: 'core',
+    name: 'UserProfile',
+    version: '1.0.1',
+    component: UserProfile
+  },
+  // Append plugin components
+  ...pluginComponents
 ];

@@ -1,0 +1,22 @@
+mutation ReactorExecuteMacro($macroInput: ReactorMacroExecuteInput!) {
+  ReactorExecuteMacro(macroInput: $macroInput) {
+    __typename
+    ... on ReactorChatMessage {
+      sessionId
+      id
+      role
+      content
+      timestamp
+      tool_calls
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}
+

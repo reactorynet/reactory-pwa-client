@@ -1,0 +1,1 @@
+export { StaticContentWidget } from './StaticContentWidget'; 

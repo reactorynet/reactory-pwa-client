@@ -13,10 +13,12 @@ import { Provider } from 'react-redux';
 import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, MutationOptions, ApolloQueryResult, QueryResult, RefetchQueriesOptions, MutationResult, FetchResult, ApolloError, ServerError } from '@apollo/client';
 import localForage from 'localforage';
 import { CssBaseline } from '@mui/material';
-import { ThemeProvider as MuiThemeProvider } from '@mui/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
+// import objectMapper from './objectMapper';
 import objectMapper from 'object-mapper';
+import { parseObjectMapperFunction } from './objectMapper/parseObjectMapper';
 import {
   attachComponent,
   getAvatar,
@@ -32,14 +34,14 @@ import {
   isValidPassword,
   nil,
   nilStr,
-} from '../components/util';
+} from '@reactory/client-core/components/util';
 
-import amq from '../amq';
+import amq from '@reactory/client-core/amq';
 import * as RestApi from './RestApi';
 import GraphQL from '@reactory/client-core/api/graphql';
 import { Theme, Typography } from "@mui/material";
-import icons from '../assets/icons';
-import * as queryString from '../components/utility/query-string';
+import icons from '@reactory/client-core/assets/icons';
+import * as queryString from '@reactory/client-core/components/utility/query-string';
 import humanNumber from 'human-number';
 import humanDate from 'human-date';
 import { withReactory, ReactoryProvider } from './ApiProvider';
@@ -141,6 +143,40 @@ export function parseTemplateObject(templateObject: Object, props: any): any {
 
   return _$ret;
 }
+
+const transformFunctionBuiltInId = (value, sourceObject, destinationObject, destinationKey, transform: string, reactory: Reactory.Client.IReactoryApi) => {
+  switch (transform) {
+    case 'toInt':
+      return parseInt(value);
+    case 'toString':
+      return String(value);
+    case 'toDate':
+      return new Date(value);
+    case 'toBoolean':
+      return Boolean(value);
+    case 'toFloat':
+      return parseFloat(value);
+    case 'toNumber':
+      return Number(value);
+    case 'toObject':
+      return JSON.parse(value);
+    default: 
+      {
+        //check if the transform is a function reference on the reactory 
+        const transformFunction = reactory.$func[transform] ? reactory.$func[transform] : reactory.getComponent<Function>(transform);
+        if (transformFunction) {
+          return transformFunction(value, sourceObject, destinationObject, destinationKey);
+        } else {
+          return value;
+        }
+      }
+
+  }
+}
+
+// Use the new parseObjectMapperFunction from the objectMapper directory
+const parseObjectMapper = parseObjectMapperFunction;
+
 
 
 export const componentPartsFromFqn = (fqn: string) => {
@@ -462,6 +498,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       slugify: makeSlug,
       deepEquals,
       templateObject: parseTemplateObject,
+      parseObjectMap: (objectMap: Reactory.ObjectMap) => {
+        return parseObjectMapper(objectMap, this);
+      },
       classNames,
       uuid,
       collectData: (forms: any[], shape: any) => {
@@ -552,12 +591,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         192: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-192.png`,
         512: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-512.png`,
       }
-    };
-    this.log = window.reactory.logging.log ? console.log.bind(window.console) : () => { };
-    this.debug = window.reactory.logging.debug ? console.debug.bind(window.console) : () => { };
-    this.warning = window.reactory.logging.debug ? console.warn.bind(window.console) : () => { };
-    this.error = window.reactory.logging.error ? console.error.bind(window.console) : () => { };
-    this.info = window.reactory.logging.info ? console.info.bind(window.console) : () => { };
+    };    
+    this.log = window?.reactory?.logging?.log ? console.log : () => { };
+    this.debug = window?.reactory?.logging?.debug ? console.debug : () => { };
+    this.warning = window?.reactory?.logging?.warning ? console.warn : () => { };
+    this.error = window?.reactory?.logging?.error ? console.error : () => { };
+    this.info = window?.reactory?.logging?.info ? console.info : () => { };
     this.stat = this.stat.bind(this);
     this.flushstats = this.flushstats.bind(this);
     this.publishstats = this.publishstats.bind(this);
@@ -968,6 +1007,33 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         resolve(result);
       }).catch((clientErr) => {
         that.log(`Error occured executing the mutation: ${clientErr.message}`, { $mutation, clientErr });
+        const { graphQLErrors, networkError } = clientErr;
+        if (graphQLErrors && graphQLErrors.length > 0) {
+          graphQLErrors.forEach((error) => {
+            that.error(`GraphQL Error: ${error.message}`, { error, variables, options, mutation });
+          });
+        }
+        if (networkError) {
+          that.error(`Network Error: ${networkError.message}`, { networkError, variables, options, mutation });
+
+          const { result, statusCode } = networkError;
+
+          if (statusCode === 401 || statusCode === 403) {
+            that.createNotification(`🚨 Unauthorized or Forbidden Error, clearing auth token and reloading the page`, { type: 'error', canDismiss: true, timeout: 4000, showInAppNotification: true });
+            that.log(`Unauthorized or Forbidden Error, clearing auth token and reloading the page`, { networkError, variables, options, mutation });
+            that.setAuthToken(null);
+            that.clearStoreAndCache();
+            
+            setTimeout(() => {
+              that.emit(ReactoryApiEventNames.onLogout, { reason: 'Unauthorized or Forbidden Error', networkError, variables, options, mutation });
+            }, 1000);
+            //window.location.reload();
+          } else {
+            that.createNotification(`🚨 Network Error: ${networkError.message}`, { type: 'error', canDismiss: true, timeout: 4000, showInAppNotification: true });
+          }
+
+        }
+        
         reject(clientErr);
       });
     });
@@ -1044,13 +1110,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       <CssBaseline />
       <Provider store={that.reduxStore}>
         <ApolloProvider client={that.client}>
-          <MuiThemeProvider theme={that.muiTheme}>
+          <ThemeProvider theme={that.muiTheme}>
             <Router>
               <ReactoryProvider reactory={that}>
                 {componentView}
               </ReactoryProvider>
             </Router>
-          </MuiThemeProvider>
+          </ThemeProvider>
         </ApolloProvider>
       </Provider>
     </React.Fragment>);
@@ -1148,8 +1214,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           // A form must explicitly be set to false 
           // to not register as a component.
           if (formDef.registerAsComponent !== false && modified === true) {            
-            const ReactoryComponent: React.FC<any> = (props: any) => {
-              that.debug(`Rendering form ${formDef.id}`, { formDef, props });
+            const ReactoryComponent: React.FC<any> = (props: any) => {              
               try {
                 let $children = null;
                 if (props.children) {
@@ -1235,7 +1300,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
     if (!$formDef.__complete__) {
       that.graphqlQuery<any, any>(FORM_QUERY, { id, options }, { fetchPolicy: 'network-only' }).then(({ data, errors = [] }) => {
-        if (data && data.ReactoryFormGetById) {
+        if (data?.ReactoryFormGetById) {
           let index = lodash.findIndex(this.formSchemas, { id });
 
           that.formSchemas[index] = { ...data.ReactoryFormGetById, __complete__: true };
@@ -1247,7 +1312,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           that.emit(`onReactoryFormDefinitionUpdate::${id}`, that.formSchemas[index]);
         }
       }).catch((err) => {
-        onFormUpdated(null, err);
+        if (onFormUpdated) onFormUpdated(null, err);
         that.error('Could not get the form component data', { err })
       });
     }

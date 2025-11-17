@@ -1,6 +1,6 @@
 import React from 'react';
+import { styled, useTheme } from '@mui/material/styles';
 import { useParams, useNavigate } from 'react-router';
-import { DefaultTheme, makeStyles, useTheme } from '@mui/styles';
 import AppBar from '@mui/material/AppBar';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
@@ -8,7 +8,20 @@ import Box from '@mui/material/Box';
 import Icon from '@mui/material/Icon';
 import { Theme } from '@mui/material'
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
-import { ReactoryFormUtilities } from 'components/reactory/form/types';
+import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
+
+const PREFIX = 'MaterialTabbedField';
+
+const classes = {
+  root: `${PREFIX}-root`
+};
+
+// TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
+const Root = styled('div')(({ theme }: { theme: Theme }) => ({
+  [`& .${classes.root}`]: {
+    backgroundColor: theme.palette.background.paper,
+  }
+}));
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -19,20 +32,16 @@ interface TabPanelProps {
 }
 
 
-const useStyles = makeStyles((theme: Theme) => ({
-  root: {
-    backgroundColor: theme.palette.background.paper,
-  },
-}));
-
 const MaterialTabbedField = (props) => {
 
 
   const navigate = useNavigate();
   const params = useParams();
+  const pathQuery = new URLSearchParams(window.location.search);
+  
 
-  const classes = useStyles();
-  const theme = useTheme<DefaultTheme>();
+
+  const theme = useTheme<Theme>();
   const reactory = useReactory();
 
   const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
@@ -46,15 +55,35 @@ const MaterialTabbedField = (props) => {
     readonly,
     onBlur,
     formData,
+    formContext,
   } = props;
 
-
+  
   const layout = uiSchema['ui:tab-layout'] || [];
   const uiOptions = uiSchema['ui:tab-options'] || {};
 
 
-  const getTabIndex = () => {
-    const index = reactory.utils.lodash.findIndex(layout, { field: props.activeTab });
+  const getActiveTabIndex = () => {
+     if (uiSchema["ui:options"] && uiSchema["ui:options"].activeTab) {
+      switch (uiSchema["ui:options"].activeTab) { 
+        case "params":
+          if (params[uiSchema["ui:options"].activeTabKey]) {                    
+            return getTabIndex(params[uiSchema["ui:options"].activeTabKey]);
+          }
+          break;
+        case "query":
+          if (pathQuery.get(uiSchema["ui:options"].activeTabKey)) {
+            return getTabIndex(pathQuery.get(uiSchema["ui:options"].activeTabKey));
+          }
+          break;
+        default:
+          break;
+      }      
+    }
+  }
+
+  const getTabIndex = (field: string) => {
+    const index = reactory.utils.lodash.findIndex(layout, { field });
     if (index < 0) return 0;
     return index || 0;
   }
@@ -63,11 +92,12 @@ const MaterialTabbedField = (props) => {
     return layout[index].field
   }
 
-  const [value, setValue] = React.useState(getTabIndex());
+  const [value, setValue] = React.useState(getActiveTabIndex());
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     if (uiOptions.useRouter === true) {
-      const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')({ props, tab_id: getTabKey(newValue) });
+      const templateProps = { ...props, tab_id: getTabKey(newValue) }
+      const new_path = reactory.utils.template(uiOptions.path || '${tab_id}')(templateProps);
       navigate(new_path);
     } else {
       setValue(newValue);
@@ -107,12 +137,10 @@ const MaterialTabbedField = (props) => {
 
 
 
-  const { definitions, fields, formContext } = props.registry
+  const { definitions, fields } = props.registry
   const { SchemaField, TitleField, DescriptionField } = fields
-  const schema = utils.retrieveSchema(props.schema, definitions)
-  const title = (schema.title === undefined) ? '' : schema.title
-
-  const DefaultTabProps = {
+  const schema = utils.retrieveSchema(props.schema, definitions)  
+  const DefaultTabProps: Reactory.Schema.ITabOptions = {
     useRouter: false,
     tabsProps: {
       indicatorColor: "primary",
@@ -162,27 +190,6 @@ const MaterialTabbedField = (props) => {
     };
   };
 
-  React.useEffect(() => {
-    //determine default tab
-    if (uiSchema["ui:options"] && uiSchema["ui:options"].activeTab === 'params') {
-      if (uiSchema["ui:options"].activeTabKey) {
-        let tab_param = uiSchema["ui:options"].activeTabKey;
-        if (params[tab_param]) {
-          let activeIndex = 0;
-
-          layout.forEach((tabDef, tindex) => {
-            if (schema.properties[params["tab_param"]]) {
-              activeIndex = tindex;
-            }
-          });
-
-          setValue(activeIndex);
-        }
-      }
-    }
-  }, [])
-
-
   const TabsProps = {
     ...options.tabsProps,
     value,
@@ -195,7 +202,7 @@ const MaterialTabbedField = (props) => {
    */
 
   return (
-    <>
+    <Root>
       <AppBar {...options.appBarProps}>
         <Tabs {...TabsProps}>
           {layout.map((tabDef, tindex) => {
@@ -219,35 +226,35 @@ const MaterialTabbedField = (props) => {
 
         </Tabs>
       </AppBar>
-      
-        {layout.map((tabDef, tindex) => {
-          if (schema.properties[tabDef.field] && tindex === value) {
+      {layout.map((tabDef, tindex) => {
+        if (schema.properties[tabDef.field] && tindex === value) {
 
-            return (<Box key={tindex} role="tabpanel"
+          return (<Box key={tindex} role="tabpanel"
 
-              id={`full-width-tabpanel-${tindex}`}
-              aria-labelledby={`full-width-tab-${tindex}`} p={1}>
+            id={`full-width-tabpanel-${tindex}`}
+            aria-labelledby={`full-width-tab-${tindex}`} p={1}>
 
-              <SchemaField
-                name={tabDef.field}
-                required={isRequired(tabDef.field)}
-                schema={schema.properties[tabDef.field]}
-                uiSchema={uiSchema[tabDef.field]}
-                errorSchema={errorSchema[tabDef.field]}
-                idSchema={idSchema[tabDef.field]}
-                formData={formData[tabDef.field]}
-                onChange={onPropertyChange(tabDef.field)}
-                onBlur={onBlur}
-                registry={props.registry}
-                disabled={disabled}
-                readonly={readonly} />
+            <SchemaField
+              name={tabDef.field}
+              required={isRequired(tabDef.field)}
+              schema={schema.properties[tabDef.field]}
+              uiSchema={uiSchema[tabDef.field]}
+              errorSchema={errorSchema[tabDef.field]}
+              idSchema={idSchema[tabDef.field]}
+              formData={formData?.[tabDef.field]}
+              formContext={formContext}
+              onChange={onPropertyChange(tabDef.field)}
+              onBlur={onBlur}
+              registry={props.registry}
+              disabled={disabled}
+              readonly={readonly} />
 
-            </Box>)
+          </Box>)
 
-          }
-          
-        })}      
-    </>
+        }
+        
+      })}
+    </Root>
   );
 }
 

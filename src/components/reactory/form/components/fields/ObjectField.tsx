@@ -9,6 +9,8 @@ import {
   getUiOptions,
 } from "../../utils";
 
+import SchemaMerge from "json-schema-merge-allof";
+
 function DefaultObjectFieldTemplate(props) {
   const canExpand = function canExpand() {
     const { formData, schema, uiSchema } = props;
@@ -172,8 +174,38 @@ class   ObjectField extends Component<any, any> {
     let orderedProperties;
 
     try {
-      const properties = Object.keys(schema.properties);
-      orderedProperties = orderProperties(properties, uiSchema["ui:order"]);
+     // check if schema.properties is defined
+         let properties = [];
+         if (!schema.properties) {
+           // check if there is any anyOf
+           if (schema.anyOf) {
+             // If anyOf is present, we need to handle it
+             const anyOfSchema = retrieveSchema(schema, definitions, formData);
+             orderedProperties = orderProperties(Object.keys(anyOfSchema.properties), uiSchema["ui:order"]);
+           }
+     
+           if (schema.oneOf) {
+             // If oneOf is present, we need to handle it
+             const oneOfSchema = retrieveSchema(schema, definitions, formData);
+             orderedProperties = orderProperties(Object.keys(oneOfSchema.properties), uiSchema["ui:order"]);
+           }
+     
+           if (schema.allOf) { 
+             // If allOf is present, we need to handle it
+             const allOfSchema = SchemaMerge.mergeAllOf(schema.allOf, definitions, formData);
+             orderedProperties = orderProperties(Object.keys(allOfSchema.properties), uiSchema["ui:order"]);
+           }
+     
+           if (!orderedProperties) {
+             // If no properties are defined, we can return an empty array
+             orderedProperties = [];
+           } else {
+             properties = Object.keys(orderedProperties);
+           }
+         } else {
+           properties = Object.keys(schema.properties);
+           orderedProperties = orderProperties(properties, uiSchema["ui:order"]);
+         }
     } catch (err) {
       return (
         <div>

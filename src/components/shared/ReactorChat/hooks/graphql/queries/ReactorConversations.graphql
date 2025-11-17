@@ -1,0 +1,11 @@
+query ReactoryConversations($filter: ReactorConversationFilter) {
+  ReactorConversations(filter: $filter) {
+    id
+    personaId
+    created
+    user { id firstName lastName }
+    history { id role content timestamp }
+    vars
+  }
+}
+

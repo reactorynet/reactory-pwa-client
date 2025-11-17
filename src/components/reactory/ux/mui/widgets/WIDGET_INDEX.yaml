@@ -1,0 +1,374 @@
+---
+# Reactory PWA Client - Widget Index
+# This file contains an index of all built-in ReactoryForm widgets
+# These are specialized form components that integrate with the Reactory schema-driven form system
+
+version: "1.0.0"
+description: "Index of ReactoryForm widgets - specialized components for schema-driven forms"
+
+categories:
+  # Input Widgets
+  input:
+    - name: "AutoCompleteDropDown"
+      path: "./AutoCompleteDropDown/"
+      description: "Autocomplete dropdown widget with GraphQL data fetching"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "AutoCompleteDropDown"
+      features: ["multi-select", "remote-data", "filtering"]
+      
+    - name: "SearchWidget"
+      path: "./SearchWidget/"
+      description: "Search input widget with throttled input handling"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "SearchWidget"
+      storybook: true
+      
+    - name: "DateSelector"
+      path: "./DateSelector/"
+      description: "Date picker widget using MUI DatePicker"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "DateWidget"
+      dependencies: ["@mui/x-date-pickers", "moment"]
+      
+    - name: "ReactoryColorPicker"
+      path: "./ReactoryColorPicker/"
+      description: "Color picker widget for form color selection"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "ReactoryColorPicker"
+      
+    - name: "SliderWidget"
+      path: "./SliderWidget/"
+      description: "Slider input widget for numeric ranges"
+      type: "form-widget"
+      schema_type: "number"
+      ui_schema: "SliderWidget"
+
+  # Selection Widgets
+  selection:
+    - name: "Select"
+      path: "./Select/"
+      description: "Standard select dropdown widget"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "select"
+      
+    - name: "SelectWithData"
+      path: "./SelectWithData/"
+      description: "Select widget with remote data loading"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "SelectWithData"
+      features: ["remote-data", "caching"]
+      
+    - name: "ChipArray"
+      path: "./ChipArray/"
+      description: "Multi-select widget using Material UI chips"
+      type: "form-widget"
+      schema_type: "array"
+      ui_schema: "ChipArray"
+      
+    - name: "UserSelectorWidget"
+      path: "./UserSelectorWidget/"
+      description: "User selection widget with search functionality"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "UserSelectorWidget"
+      
+    - name: "UserWidgetWithSearch"
+      path: "./UserWidgetWithSearch/"
+      description: "Enhanced user widget with advanced search"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "UserWidgetWithSearch"
+      
+    - name: "UserPeersWidget"
+      path: "./UserPeersWidget/"
+      description: "Widget for selecting user peers/colleagues"
+      type: "form-widget"
+      schema_type: "array"
+      ui_schema: "UserPeersWidget"
+
+  # Data Display Widgets
+  display:
+    - name: "LabelWidget"
+      path: "./LabelWidget/"
+      description: "Enhanced label widget with formatting and icons"
+      type: "form-widget"
+      schema_type: "any"
+      ui_schema: "LabelWidget"
+      storybook: true
+      features: ["copy-to-clipboard", "templating", "conditional-icons"]
+      
+    - name: "ImageWidget"
+      path: "./ImageWidget/"
+      description: "Image display widget with responsive sizing"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "ImageWidget"
+      
+    - name: "CompanyLogo"
+      path: "./CompanyLogo/"
+      description: "Company logo display widget"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "CompanyLogo"
+      storybook: true
+      
+    - name: "LinkFieldWidget"
+      path: "./LinkFieldWidget/"
+      description: "Clickable link widget with customizable styling"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "LinkFieldWidget"
+      storybook: true
+      
+    - name: "ProgressWidget"
+      path: "./ProgressWidget/"
+      description: "Progress indicator widget for showing completion status"
+      type: "form-widget"
+      schema_type: "number"
+      ui_schema: "ProgressWidget"
+      storybook: true
+
+  # Data Management Widgets
+  data:
+    - name: "MaterialTableWidget"
+      path: "./MaterialTableWidget/"
+      description: "Advanced data table widget with sorting and filtering"
+      type: "form-widget"
+      schema_type: "array"
+      ui_schema: "MaterialTableWidget"
+      features: ["sorting", "filtering", "pagination", "export"]
+      
+    - name: "MaterialListWidget"
+      path: "./MaterialListWidget/"
+      description: "List display widget with Material UI styling"
+      type: "form-widget"
+      schema_type: "array"
+      ui_schema: "MaterialListWidget"
+      
+    - name: "DataPageWidget"
+      path: "./DataPageWidget/"
+      description: "Full-page data display widget with pagination"
+      type: "form-widget"
+      schema_type: "object"
+      ui_schema: "DataPageWidget"
+      
+    - name: "GroupedListItemsWidget"
+      path: "./GroupedListItemsWidget/"
+      description: "Grouped list items widget for hierarchical data"
+      type: "form-widget"
+      schema_type: "array"
+      ui_schema: "GroupedListItemsWidget"
+
+  # Content & Media Widgets
+  content:
+    - name: "ContentWidget"
+      path: "./ContentWidget/"
+      description: "Rich content display widget"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "ContentWidget"
+      storybook: true
+      
+    - name: "StaticContentWidget"
+      path: "./StaticContentWidget/"
+      description: "Static content display widget"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "StaticContentWidget"
+      
+    - name: "RichEditor"
+      path: "./RichEditor/"
+      description: "Rich text editor widget"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "RichEditor"
+      dependencies: ["froala-editor"]
+      
+    - name: "ReactoryDropZone"
+      path: "./ReactoryDropZone/"
+      description: "File upload drop zone widget"
+      type: "form-widget"
+      schema_type: "array"
+      ui_schema: "ReactoryDropZone"
+      features: ["drag-drop", "multiple-files", "file-validation"]
+
+  # Visual & Chart Widgets
+  visualization:
+    - name: "ChartWidget"
+      path: "./ChartWidget/"
+      description: "Generic chart widget for data visualization"
+      type: "form-widget"
+      schema_type: "object"
+      ui_schema: "ChartWidget"
+      
+    - name: "Charts"
+      path: "./Charts/"
+      description: "Collection of specialized chart widgets"
+      type: "form-widget-collection"
+      widgets:
+        - "BarChartWidget"
+        - "LineChartWidget"
+        - "PieChartWidget"
+        - "ComposedChartWidget"
+        - "FunnelChartWidget"
+      dependencies: ["recharts", "d3"]
+      
+    - name: "D3 Renderers"
+      path: "./D3/"
+      description: "D3-based visualization components"
+      type: "form-widget-collection"
+      widgets:
+        - "ForceDirectedNodeRenderer"
+        - "ReactoryD3Renderer"
+      dependencies: ["d3"]
+
+  # Mapping & Location Widgets
+  mapping:
+    - name: "GoogleMapWidget"
+      path: "./mapping/"
+      description: "Google Maps integration widget"
+      type: "form-widget"
+      schema_type: "object"
+      ui_schema: "GoogleMapWidget"
+      dependencies: ["google-maps-api"]
+      
+    - name: "AddressLabelWidget"
+      path: "./mapping/"
+      description: "Address display widget with map integration"
+      type: "form-widget"
+      schema_type: "object"
+      ui_schema: "AddressLabelWidget"
+
+  # Navigation & Flow Widgets
+  navigation:
+    - name: "StepperWidget"
+      path: "./StepperWidget/"
+      description: "Step-by-step navigation widget"
+      type: "form-widget"
+      schema_type: "object"
+      ui_schema: "StepperWidget"
+      
+    - name: "ToolbarWidget"
+      path: "./ToolbarWidget/"
+      description: "Toolbar widget with action buttons"
+      type: "form-widget"
+      schema_type: "object"
+      ui_schema: "ToolbarWidget"
+
+  # Utility & Administrative Widgets
+  utility:
+    - name: "ColumnFilterWidget"
+      path: "./ColumnFilterWidget/"
+      description: "Column filtering widget for data tables"
+      type: "form-widget"
+      schema_type: "object"
+      ui_schema: "ColumnFilterWidget"
+      
+    - name: "ColumnSelectorWidget"
+      path: "./ColumnSelectorWidget/"
+      description: "Column selection widget for customizing table views"
+      type: "form-widget"
+      schema_type: "array"
+      ui_schema: "ColumnSelectorWidget"
+      
+    - name: "SchemaSelectorWidget"
+      path: "./SchemaSelectorWidget/"
+      description: "Schema selection widget for dynamic forms"
+      type: "form-widget"
+      schema_type: "string"
+      ui_schema: "SchemaSelectorWidget"
+      
+    - name: "ConditionalIconWidget"
+      path: "./ConditionalIconWidget/"
+      description: "Conditionally displayed icon widget"
+      type: "form-widget"
+      schema_type: "any"
+      ui_schema: "ConditionalIconWidget"
+
+  # Communication & Interaction Widgets
+  communication:
+    - name: "ReactorChatButtonWidget"
+      path: "./ReactorChatButtonWidget/"
+      description: "Chat button widget for AI interaction"
+      type: "form-widget"
+      schema_type: "object"
+      ui_schema: "ReactorChatButtonWidget"
+      features: ["ai-integration", "contextual-help"]
+
+  # Lookup & Search Widgets
+  lookup:
+    - name: "RecordLookup"
+      path: "./RecordLookup/"
+      description: "Record lookup widget with search and selection"
+      type: "form-widget"
+      schema_type: "object"
+      ui_schema: "RecordLookup"
+      features: ["search", "pagination", "multi-select"]
+
+  # Error Handling
+  error:
+    - name: "WidgetNotAvailable"
+      path: "./WidgetNotAvailable/"
+      description: "Fallback widget displayed when requested widget is not found"
+      type: "fallback-widget"
+      schema_type: "any"
+      ui_schema: "any"
+
+# Widget System Configuration
+system:
+  main_index: "./index.tsx"
+  widget_registry: "Global widget registry for dynamic loading"
+  
+  # Widget naming conventions
+  naming_convention:
+    ui_schema_key: "Kebab-case or camelCase depending on widget"
+    component_name: "PascalCase ending with 'Widget'"
+    file_structure: "ComponentName/ComponentName.tsx + index.ts"
+
+  # Common widget props interface
+  standard_props:
+    - "formData: any - Current form data value"
+    - "onChange: (value: any) => void - Value change handler"
+    - "schema: Reactory.Schema.AnySchema - JSON schema definition"
+    - "uiSchema: Reactory.Schema.IUISchema - UI schema configuration"
+    - "idSchema: any - ID schema for form field identification"
+    - "errorSchema?: any - Error schema for validation messages"
+    - "readonly?: boolean - Read-only mode flag"
+    - "disabled?: boolean - Disabled state flag"
+
+# Widget Development Guidelines
+development:
+  requirements:
+    - "All widgets must implement standard ReactoryForm widget interface"
+    - "Widgets should handle formData, onChange, schema, and uiSchema props"
+    - "Error handling and validation support required"
+    - "TypeScript interfaces for props and ui:options required"
+    - "Responsive design using Material UI breakpoints"
+    - "Accessibility (a11y) compliance required"
+  
+  testing:
+    - "Unit tests for all widget functionality"
+    - "Storybook stories for interactive development"
+    - "Schema validation testing"
+    - "Error state testing"
+  
+  documentation:
+    - "JSDoc comments for all exported functions"
+    - "README.md for complex widgets"
+    - "Example schemas and usage patterns"
+    - "Integration examples with ReactoryForm"
+
+# Notes for developers
+notes:
+  - "Widgets with storybook: true have associated Storybook stories"
+  - "All widgets integrate with the Reactory schema-driven form system"
+  - "Custom ui:options should be properly typed in widget interfaces"
+  - "Widgets should gracefully handle missing or invalid data"
+  - "Consider performance implications for data-heavy widgets"
+  - "Follow Material UI theming and design system guidelines"

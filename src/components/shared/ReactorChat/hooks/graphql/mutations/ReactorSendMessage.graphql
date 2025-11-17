@@ -1,0 +1,32 @@
+mutation ReactorSendMessage($message: ReactorSendMessageInput!) {
+  ReactorSendMessage(message: $message) {
+    __typename
+    ... on ReactorChatMessage {
+      sessionId
+      id
+      role
+      content
+      rating
+      timestamp
+      tool_calls
+      tool_results
+    }
+    ... on ReactorInitiateSSE {
+      sessionId
+      endpoint
+      token
+      status
+      expiry
+      headers
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}
+

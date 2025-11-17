@@ -1,6 +1,6 @@
 import Reactory, { ObjectMap } from '@reactory/reactory-core';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
-import { Chip } from '@mui/material';
+import { Box, Chip } from '@mui/material';
 
 'use strict';
 const dependencies = ['react.React', 'material-ui.MaterialCore', 'material-ui.MaterialLab'];
@@ -14,6 +14,7 @@ export interface AutoCompleteDropDownUIProps  {
     matchField: string;
     displayField: string;
     title: string;
+    variant?: 'standard' | 'outlined' | 'filled';
 };
 
 /**
@@ -88,8 +89,7 @@ function AutoCompleteDropDown<
                     let _result_data = data[FormQuery.name];
                     if (FormQuery.resultMap) {
                         _result_data = reactory.utils.objectMapper(data[FormQuery.name], FormQuery.resultMap);
-                    }
-
+                    }                    
                     setOptions(_result_data || []);
                     setAvailable(_result_data || []);
                 }
@@ -167,6 +167,14 @@ function AutoCompleteDropDown<
 
     let $labelText = schema.title;
 
+    let themeDefaults: any = {
+        variant: 'standard'
+      };
+
+      if (reactory && reactory?.muiTheme?.MaterialTextField) {
+        themeDefaults = reactory?.muiTheme?.MaterialTextField
+      }
+
     return (
         <Autocomplete
             id={props.idSchema.$id}
@@ -174,14 +182,33 @@ function AutoCompleteDropDown<
             multiple={$props.multiSelect === true}
             autoHighlight
             autoSelect={true}
+            
             getOptionLabel={(option) => {
-                return option[$props.labelField || "label" || "name"];
+                // check if labelField is defined in props, otherwise use label or name
+                if (typeof option === 'string') {
+                    return option;
+                }
+                if (typeof option === 'number') {
+                    return `${option}`;
+                }
+                if (typeof option === 'object' && option !== null) { 
+                    // check if label has ${ } template syntax
+                    let label = option[$props.labelField || "label" || "name" || "title"];
+                    if (typeof $props.labelField === 'string' && $props.labelField.includes('${')) {
+                        try {
+                            label = reactory.utils.template($props.labelField)({ option, reactory, props });                            
+                        } catch (err) {
+                            reactory.log(`Error evaluating label template for ${schema.title}`, { err });
+                            label = `Label template error: ${$props.labelField}`;
+                        }
+                    }
+                    return label;
+                }
             }}
             value={$formData}
             onChange={onChange}
             inputValue={filter}
             isOptionEqualToValue={(opt) => {
-
                 try {
                     if ($props.multiSelect === true) {
                         if ((schema as Reactory.Schema.IArraySchema).items.type === 'object') {
@@ -213,22 +240,36 @@ function AutoCompleteDropDown<
                         }
 
                     }
-                } catch (err) {
-
+                } catch {
                     return false;
                 }
-
-
             }}
             onInputChange={(event, newInputValue) => {
                 setFilter(newInputValue);
             }}
-            renderOption={(option) => (
-
-                <React.Fragment>
-                    <span>{option[$props.labelField || "label" || "name" || "title"]}</span>
-                </React.Fragment>
-            )}
+            renderOption={(props, option) => {
+                let label = null;
+                if (typeof option === 'string') {
+                    label = option;
+                }
+                if (typeof option === 'number') {
+                    label = `${option}`;
+                }
+                if (typeof option === 'object' && option !== null) { 
+                    // check if label has ${ } template syntax
+                    label = option[$props.labelField || "label" || "name" || "title"];
+                    if (typeof $props.labelField === 'string' && $props.labelField.includes('${')) {
+                        try {
+                            label = reactory.utils.template($props.labelField)({ option, reactory, props });                            
+                        } catch (err) {
+                            reactory.log(`Error evaluating label template for ${schema.title}`, { err });
+                            label = `Label template error: ${$props.labelField}`;
+                        }
+                    }                    
+                }
+                //@ts-ignore
+                return (<Box key={props.key}>{label || 'No Label'}</Box>)
+            }}            
             renderTags={(value, getTagProps) => {
                 return value.map((option, index) => {
                     const onDeleteItem = () => {
@@ -297,6 +338,7 @@ function AutoCompleteDropDown<
                 return (<TextField
                     {...params}
                     InputLabelProps={inputLabelProps}
+                    variant={themeDefaults.variant || $props.variant || "standard"}
                     label={reactory.utils.template(schema.title || $props.title)({ ...props, reactory, })}
                     inputProps={{
                         ...params.inputProps,

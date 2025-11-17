@@ -2,7 +2,6 @@ import React, { Component, Fragment } from 'react';
 import { isNil, isEmpty, isArray } from 'lodash';
 import { compose } from 'redux';
 import PropTypes from 'prop-types'
-import { withStyles, withTheme } from '@mui/styles';
 import {
   Typography,
   Card,
@@ -19,14 +18,6 @@ import {
 } from '@mui/material'
 
 import { useReactory, withReactory } from '@reactory/client-core/api/ApiProvider'
-
-
-
-const MaterialFieldStyles = (theme) => {
-  return {}
-};
-
-
 
 const MaterialFieldTemplateFunction = (props) => {
 
@@ -59,8 +50,7 @@ const MaterialFieldTemplateFunction = (props) => {
 
   // reactory.log(`MaterialFieldTemplate Rendering field ${id}`, props);
 
-  const { signature } = formContext;
-
+  const { signature } = formContext || {};
 
   const isObject = schema.type === 'object'
   const isBoolean = schema.type === 'boolean'
@@ -101,7 +91,6 @@ const MaterialFieldTemplateFunction = (props) => {
         _props = { ..._props, ...mappedProps }
       }
     }
-
 
     if (uiOptions.propsMap) {
       let mappedProps = reactory.utils.objectMapper(props, uiOptions.propsMap);
@@ -224,16 +213,20 @@ const MaterialFieldTemplateFunction = (props) => {
 
       let labelComponent = isObject === false || isBoolean === true ? <InputLabel {...inputLabelProps}  >{label}</InputLabel> : null;
 
-      if (uiWidget && uiWidget === 'DateSelectorWidget') {
-        return <>{children}</>
+      if (uiWidget && uiWidget && uiWidget.includes('Date')) {
+        return <FormControl {...formControlProps}>          
+          {children}
+          {isNil(rawDescription) === false ? <FormHelperText id={`${id}_helper`}>{rawDescription}</FormHelperText> : null}
+          {errors}
+          {rawHelp}
+        </FormControl>
       }
 
       if (uiOptions && uiOptions.component === 'TextField') return (<>{children}</>);
 
-      if (uiWidget === 'LabelWidget' && uiOptions !== null && uiOptions !== undefined && (uiOptions.showLabel === null || uiOptions.showLabel === undefined)) showLabel = false;
-
+      if (uiWidget === 'LabelWidget' && uiOptions !== null && uiOptions !== undefined && (uiOptions.showLabel === null || uiOptions.showLabel === undefined)) showLabel = false;      
       return (
-        <FormControl {...formControlProps}>
+        <FormControl {...formControlProps}>          
           {showLabel !== false ? labelComponent : null}
           {children}
           {isNil(rawDescription) === false ? <FormHelperText id={`${id}_helper`}>{rawDescription}</FormHelperText> : null}

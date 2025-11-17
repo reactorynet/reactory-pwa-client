@@ -1,6 +1,6 @@
 import React from 'react';
+import { styled, useTheme } from '@mui/material/styles';
 import { compose } from "redux";
-import { withStyles, withTheme } from "@mui/styles";
 import { withReactory } from "@reactory/client-core/api/ApiProvider";
 import {
   Icon,
@@ -17,6 +17,56 @@ import {
 // } from "react-google-maps";
 import Reactory from "@reactory/reactory-core";
 
+const PREFIX = 'ReactoryGoogleMapWidget';
+
+const classes = {
+  container: `${PREFIX}-container`,
+  label: `${PREFIX}-label`,
+  placeholder: `${PREFIX}-placeholder`,
+  value: `${PREFIX}-value`
+};
+
+// TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
+const Root = styled('div')(({ theme }) => {
+  const { palette } = theme;  
+
+  return {
+    [`& .${classes.container}`]: {
+      border: "solid 1px #e2e0e0",
+      borderRadius: "5px",
+      display: "flex",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "10px",
+    },
+    [`& .${classes.label}`]: {
+      display: "block",
+      color: "rgba(0, 0, 0, 0.8)",
+      fontSize: "13px",
+      paddingBottom: "5px",
+      fontWeight: "bold",
+    },
+    [`& .${classes.placeholder}`]: {
+      color: "#bababa",
+      margin: 0,
+      fontSize: "16px",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    },
+    [`& .${classes.value}`]: {
+      color: "black",
+      margin: 0,
+      textTransform: "uppercase",
+      fontSize: "16px",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    },
+  };
+});
+
 const VIEWMODES = {
   MAP_WITH_SEARCH: "MAP_WITH_SEARCH",
   ADDRESS_LABEL: "ADDRESS_LABEL",
@@ -25,6 +75,7 @@ const VIEWMODES = {
 };
 
 const GoogleMapWidget = (props: any) => {
+  const theme = useTheme();
 
   const { reactory,
     formData,
@@ -33,7 +84,6 @@ const GoogleMapWidget = (props: any) => {
     idSchema,
     viewMode = VIEWMODES.MAP_WITH_SEARCH,
     classes,
-    theme,
     title,
     onChange,
     loadingElement,
@@ -260,61 +310,20 @@ const GoogleMapWidget = (props: any) => {
 
 
 
-  return (<>
-    {getTextFieldWithSearch()}
-    {show_modal === true && <GetModal />}
-  </>);
+  return (
+    <Root>
+      {getTextFieldWithSearch()}
+      {show_modal === true && <GetModal />}
+    </Root>
+  );
 
 }
-
-const ReactoryGoogleMapWidgetStyles = (theme): any => {
-
-  const { palette } = theme;  
-
-  return {
-    container: {
-      border: "solid 1px #e2e0e0",
-      borderRadius: "5px",
-      display: "flex",
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "10px",
-    },
-    label: {
-      display: "block",
-      color: "rgba(0, 0, 0, 0.8)",
-      fontSize: "13px",
-      paddingBottom: "5px",
-      fontWeight: "bold",
-    },
-    placeholder: {
-      color: "#bababa",
-      margin: 0,
-      fontSize: "16px",
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-    },
-    value: {
-      color: "black",
-      margin: 0,
-      textTransform: "uppercase",
-      fontSize: "16px",
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-    },
-  };
-};
 
 /**
  * The core component for google map address widget.
  */
 const ReactoryGoogleMapWidget = compose(
-  withReactory,
-  withTheme,
-  withStyles(ReactoryGoogleMapWidgetStyles)
+  withReactory
 )(GoogleMapWidget);
 
 export default ReactoryGoogleMapWidget;

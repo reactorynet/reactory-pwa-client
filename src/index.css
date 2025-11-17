@@ -10,3 +10,15 @@ body {
 pac-container {
   z-index: 2000 !important
 }
+
+/* Ensure LabelWidget and LinkFieldWidget labels are always shrunk properly */
+.reactory-label-widget .MuiInputLabel-root,
+.reactory-link-widget-container .MuiInputLabel-root {
+  transform: translate(0, 1.5px) scale(0.75);
+  transform-origin: top left;
+}
+
+.reactory-label-widget-container,
+.reactory-link-widget-container {
+  min-height: 24px;
+}

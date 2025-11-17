@@ -3,7 +3,8 @@ import { GraphQLError } from "graphql"
 
 export interface IReactoryFormDataManagerHookResult {
   type: string | 'graphql' | 'rest' | 'local' | 'grpc' | 'socket'
-  isBusy: boolean  
+  isBusy: boolean
+  available: boolean  
   onSubmit: <TData>(data: TData) => Promise<TData>
   onChange: <TData>(data: TData) => Promise<TData>
   getData: <TData>(props: any) => Promise<TData>
@@ -34,6 +35,7 @@ export interface ReactoryFormDataManagerHookProps {
   formContext: Reactory.Client.IReactoryFormContext<any>,
   formData: any,
   mode: string | 'view' | 'edit' | 'new' | 'onChange' | 'onSubmit' | 'onError' | 'onLoad';
+  props: any,
 }
 
 export interface ReactoryFormDataManagerProviderHookProps extends ReactoryFormDataManagerHookProps {

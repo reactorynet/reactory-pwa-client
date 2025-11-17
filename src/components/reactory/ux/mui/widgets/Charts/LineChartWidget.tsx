@@ -1,112 +1,113 @@
-import React, { Component, Fragment, PureComponent } from 'react'
-import PropTypes from 'prop-types'
+import React from 'react';
 import {
-  Chip,
-  IconButton,
-  Icon,
-  InputLabel,
-  Input,
   Paper,
-  Tooltip as MaterialTooltip,
   Typography,
-  Theme,  
+  Tooltip as MaterialTooltip,
+  Box,
 } from '@mui/material';
-import uuid from 'uuid';
-import { compose } from 'redux';
-import lodash, { isNull, isArray } from 'lodash';
-import { withStyles, withTheme } from '@mui/styles';
+import { useTheme } from '@mui/material/styles';
 import { withContentRect } from 'react-measure';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import {
-  Area,
-  Bar,
-  Cell,
   ComposedChart,
-  Funnel,
-  FunnelChart,
-  LabelList,
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip,  
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   Legend,
-  PieChart,
-  Pie,
-  Sector,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
+import Reactory from '@reactory/reactory-core';
 
-
-
-const HtmlTooltip = withStyles((theme: Theme) => ({
-  tooltip: {
-    backgroundColor: '#f5f5f9',
-    color: 'rgba(0, 0, 0, 0.87)',
-    maxWidth: 220,
-    fontSize: theme.typography.pxToRem(12),
-    border: '1px solid #dadde9',
-  },
-}))(MaterialTooltip);
-
-
-
-
-
-class LineChartWidget extends PureComponent<any> {  
-
-  render() {
-
-    const { formData, uiSchema, contentRect, api } = this.props;
-
-    if(isNull(formData) === true || formData === undefined) {
-      return <Typography>NO DATA</Typography> 
-    }
-
-    const CustomTooltip = (props: any) => {
-
-      const { active, payload, label } = props;      
-      if (active) {
-        return (
-          <Paper square={true} variant={'outlined'} style={{ padding: '8px' }}>
-            <Typography>{label}</Typography>
-            {payload && payload.map((item) => <Typography>{`${item.name} : ${api.utils.humanNumber(item.value)}`}</Typography>)}                    
-          </Paper>
-        );
-      }
-    
-      return null;
+const getDefaultOptionsFromSchema = (schema: Reactory.Schema.IArraySchema, uiSchema:Reactory.Schema.ILineChartUISchema ): Reactory.Schema.ILineChartUIOptions => {
+  // If schema is array, infer x/y keys from items
+  if (schema && schema.type === 'array' && schema.items && typeof schema.items === 'object') {
+    const options: any = uiSchema?.['ui:options'] || {};
+    let xKey = options?.xKey || 'date';
+    let yKey = options?.yKey || 'value';
+    return {
+      line: { type: 'monotone', dataKey: yKey, stroke: '#8884d8' },
+      series: options?.series || [],
+      xAxis: { dataKey: xKey },
+      yAxis: { dataKey: yKey },
+      bounds: {
+        width: uiSchema?.['ui:options']?.bounds?.width || 345,
+        height: uiSchema?.['ui:options']?.bounds?.height || 300,
+      },
     };
-
-    if(isNull(formData.options) === true || formData.options === undefined) return <Typography>[Composed Chart] - NO OPTIONS</Typography> 
-    else {
-      let { 
-        line,
-        series = [], 
-        xAxis, 
-        yAxis = {}
-      } = formData.options;
-
-      const { data = [] } = formData;            
-      return (
-        <ResponsiveContainer height={contentRect.bounds.height || 400} width="95%">
-            <ComposedChart width={contentRect.bounds.width || 640} height={contentRect.bounds.height || 400} data={data}>
-              <XAxis {...xAxis} />
-              <YAxis {...yAxis} />
-              <Tooltip content={<CustomTooltip />}/>
-              <Legend />
-              <CartesianGrid stroke="#f5f5f5" />
-              {series.length === 0 && <Line {...line} />}
-              {series.length > 0 && series.map((l,k) => <Line {...l} key={k} />)}
-            </ComposedChart>    
-          </ResponsiveContainer>  
-      );
-    }           
   }
+  // fallback
+  return {
+    line: { type: 'monotone', dataKey: 'value', stroke: '#8884d8' },
+    series: [],
+    xAxis: { dataKey: 'date' },
+    yAxis: { dataKey: 'value' },
+    bounds: {
+      width: uiSchema?.['ui:options']?.bounds?.width || 345,
+      height: uiSchema?.['ui:options']?.bounds?.height || 300,
+    },
+  };
 };
 
-//@ts-ignore
-const LineChartWidgetComponent = compose(withTheme, withReactory, withContentRect('bounds'))(LineChartWidget);
+const defaultData = [
+  { name: 'A', value: 0 },
+  { name: 'B', value: 0 },
+  { name: 'C', value: 0 },
+  { name: 'D', value: 0 },
+  { name: 'E', value: 0 },
+];
 
-export default LineChartWidgetComponent;
+const CustomTooltip = ({ active, payload, label, reactory }) => {
+  if (active) {
+    return (
+      <Paper square variant={'outlined'} style={{ padding: '8px' }}>
+        <Typography>{label}</Typography>
+        {payload && payload.map((item, idx) => (
+          <Typography key={idx}>{`${item.name} : ${reactory.utils.humanNumber(item.value)}`}</Typography>
+        ))}
+      </Paper>
+    );
+  }
+  return null;
+};
+
+
+
+const LineChartWidget = (props) => {
+  const theme = useTheme();
+  const { formData, schema, reactory, uiSchema } = props;
+
+  // Infer default options from schema
+  const options = getDefaultOptionsFromSchema(schema, uiSchema);  
+  const chartData = (Array.isArray(formData) && formData.length > 0) ? formData : defaultData;
+
+  let { line, series = [], xAxis, yAxis = {}, bounds } = options;
+  const data = chartData;
+
+  return (
+    <Box padding={2} sx={{ backgroundColor: 'background.paper' }}>
+      {schema?.title && (
+        <Typography variant="h6" sx={{ mb: 1 }}>{schema.title}</Typography>
+      )}
+      {schema?.description && (
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>{schema.description}</Typography>
+      )}
+      <ResponsiveContainer height={bounds?.height ?? 400} width="95%">
+        <ComposedChart width={bounds?.width ?? 640} height={bounds?.height ?? 400} data={data}>
+          <XAxis {...xAxis} />
+          <YAxis {...yAxis} />
+          {/*@ts-ignore - Recharts types are not fully compatible with MUI theme*/}
+          <Tooltip content={<CustomTooltip reactory={reactory} />}/>
+          <Legend />
+          <CartesianGrid stroke="#f5f5f5" />
+          { /**@ts-ignore - Recharts types are not fully compatible with MUI theme */ }
+          {series.length === 0 && <Line {...line} key={0} />}
+          {series.length > 0 && series.map((l, k) => <Line {...l} key={k} />)}
+        </ComposedChart>
+      </ResponsiveContainer>
+    </Box>
+  );
+};
+
+export default withReactory(withContentRect('bounds')(LineChartWidget));

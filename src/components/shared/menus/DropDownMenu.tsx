@@ -1,10 +1,10 @@
-import React, { Component } from "react";
+import React from "react";
 import PropTypes from "prop-types";
 import { v4 as uuid } from "uuid";
 import om from "object-mapper";
 import { compose } from "redux";
 import { isNil } from "lodash";
-import { withStyles, withTheme, makeStyles } from "@mui/styles";
+import { useTheme } from "@mui/material/styles";
 import { Theme, Tooltip } from "@mui/material";
 import IconButton from "@mui/material/IconButton";
 import { Menu, MenuItem } from "@mui/material/";
@@ -18,6 +18,7 @@ const noHandler = (evt, menuItem) => {
 
 
 export const DropDownMenu = (props: Reactory.UX.IDropDownMenuProps) => {
+  const theme = useTheme();
 
   const [open, setIsOpen] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState<unknown>(null);
@@ -123,9 +124,4 @@ export const DropDownMenu = (props: Reactory.UX.IDropDownMenuProps) => {
 
 DropDownMenu.muiName = "IconMenu";
 
-export const DropDownMenuComponent = compose(
-  withTheme
-)(DropDownMenu);
-export default {
-  DropDownMenuComponent,
-};
+export default DropDownMenu;
