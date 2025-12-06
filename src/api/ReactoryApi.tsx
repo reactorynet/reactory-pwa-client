@@ -1,4 +1,5 @@
 import React from "react";
+import path from "path";
 import i18next, { i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
@@ -54,10 +55,18 @@ import { ApiStatusQueryScope } from "./graphql/graph/queries/ApiStatus";
 import { ReactoryResourceLoader } from "./ReactoryResourceLoader";
 import { ReactoryPluginLoader } from './ReactoryPluginLoader';
 
+
 const {
+  REACT_APP_CLIENT_KEY = 'reactory',
   REACTORY_APPLICATION_ANONUSER_EMAIL = 'anonymous@reactory.local',
   REACTORY_APPLICATION_ANONUSER_PASSWORD = 'anonymous-password',
 } = process.env;
+
+
+const PACKAGE_JSON = require('../../package.json');
+
+const APP_VERSION = PACKAGE_JSON.version || '1.0.0';
+
 
 const pluginDefinitionValid = (definition) => {
   const pass = {
@@ -411,7 +420,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     };
   } = null;
   amq: any = null;
-  statistics: any = null;
+  statistics: Reactory.Telemetry.ReactoryApiClientStatisticsCollection = null;
+  statisticsFlushInterval: number = 60000; // Default to flushing every 60 seconds
+  statisticsFlushTimer: any = null;
   __form_instances: any = null;
   flushIntervalTimer: any = null;
   __REACTORYAPI: boolean = true;
@@ -519,7 +530,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     };
     this.$func = {
       'core.NullFunction': (params) => {
-        this.log('An extension function was not found', [params]);;
+        this.warning('An extension function was not found', [params]);;
         return 0;
       }
     };
@@ -640,6 +651,28 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.on(ReactoryApiEventNames.onApiStatusUpdate, this.forms.bind(this));
   }
   
+
+  /**
+   * Creates a base metric resource object with standard attributes.
+   * Merges any additional attributes provided via the attributes parameter.
+   * 
+   * @param attributes - Optional map of additional attributes to merge into the resource
+   * @returns A base metric resource object with merged attributes
+   */
+  private getBaseMetricResource(attributes: Record<string, any> = {}): Reactory.Models.MetricResource {
+    const clientKey = this.CLIENT_KEY;
+    return {
+      service_name:  `${clientKey}-pwa-client`,
+      service_version: APP_VERSION,
+      host_name: window.location.hostname,
+      deployment_environment: process.env.NODE_ENV || 'development',
+      attributes: {
+        'user.anon': this.isAnon(),
+        'client.key': clientKey,
+        ...attributes
+      }
+    };
+  }
 
   /**
    * Used to retrieve a anonymous JWT token for use in the application
@@ -811,6 +844,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   createNotification(title: string, options: NotificationOptions | any = {}) {
     const that = this;
+    const baseResource = this.getBaseMetricResource();
+
     that.log('_____ CREATE NOTIFICATION ______', { title, options });
     let defaultNotificationProps = {
       title,
@@ -825,6 +860,20 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     if (options.props) {
       defaultNotificationProps.config = { ...defaultNotificationProps.config, ...options?.config }
     }
+
+    // Track notification creation
+    that.stat('notification.created', {
+      type: 'counter',
+      value: 1,
+      timestamp: new Date(),
+      resource: baseResource,
+      attributes: {
+        notificationType: options.type || 'info',
+        showInApp: options.showInAppNotification !== false,
+        canDismiss: defaultNotificationProps.config.canDismiss,
+        titleLength: title.length
+      } as any
+    });
 
     if (options.showInAppNotification !== false) {
       that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: { ...options.config, ...options.props } });
@@ -867,17 +916,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     if (window && window.Notification) {
 
       switch (Notification.permission) {
-        case "denied": {
-          //denied notificaitons, use fallback
-          // this.amq.raiseFormCommand("reactory.core.display.notification",
-          //   {
-          //     title: title,
-          //     options: {
-          //       ...defaultNotificationProperties,
-          //       ...options
-          //     }
-          //   });
-          // return;
+        case "denied": {        
           that.emit(ReactoryApiEventNames.onShowNotification, { title: title, type: options.type, config: options.props });
           return;
         }
@@ -919,7 +958,18 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.publishingStats = true;
     if (this.statistics.__delta > 0) {
       this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, []);
-      const entries = this.statistics.__keys.map(key => ({ key, stat: this.statistics.items[key] }));
+      // Map the statistics to the proper IStatistic format expected by the GraphQL schema
+      const entries = this.statistics.__keys.map(key => {
+        const stat = this.statistics.items[key];
+        // Ensure the statistic has the 'name' field (required by schema)
+        return {
+          ...stat,
+          name: stat.name || key, // Use stat.name if present, otherwise use the key
+        };
+      });
+      
+      this.log(`Publishing ${entries.length} statistics`, { entries });
+      
       this.graphqlMutation(gql`mutation PublishStatistics($entries: [StatisticsInput]!){
                 CorePublishStatistics(entries: $entries) {
                   id
@@ -929,19 +979,43 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
             }`, {
         entries
       }).then((publishResult) => {
+        // Check if the mutation returned with GraphQL errors
+        if (publishResult.errors && publishResult.errors.length > 0) {
+          this.error(`GraphQL errors occurred while publishing statistics`, { 
+            errors: publishResult.errors,
+            entriesAttempted: entries.length 
+          });
+          // Log each error for debugging
+          publishResult.errors.forEach((err, idx) => {
+            this.error(`GraphQL Error #${idx + 1}: ${err.message}`, { 
+              error: err,
+              extensions: err.extensions 
+            });
+          });
+          // Don't clear statistics if there were errors - will retry on next flush
+          this.publishingStats = false;
+          return;
+        }
+
+        // Success - clear the statistics
         this.statistics = {
           __delta: 0,
           __keys: [],
-          __lastFlush: null,
+          __lastFlush: new Date(),
           __flushInterval: this.statistics.__flushInterval,
           items: {}
         };
-        this.log('Statistics published and flushed', [publishResult]);
+        this.log('Statistics published and flushed', { publishResult, entriesPublished: entries.length });
         this.publishingStats = false;
       }).catch((error) => {
-        this.log(error.message, error);
+        // Network or other critical errors
+        this.error(`Error publishing statistics: ${error.message}`, { error, entriesAttempted: entries.length });
+        // Don't clear statistics on network errors - will retry on next flush
         this.publishingStats = false;
       });
+    } else {
+      this.log('No statistics to publish (delta = 0)');
+      this.publishingStats = false;
     }
   }
 
@@ -949,31 +1023,31 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     if (save === true) {
       this.publishstats();
     } else {
+      // Clear statistics without saving
       this.statistics = {
         __delta: 0,
         __keys: [],
-        __lastflush: null,
-        __flushinterval: this.statistics.__flushinterval,
+        __lastFlush: null,
+        __flushInterval: this.statistics.__flushInterval,
         items: {}
       };
     }
   };
 
-  stat(key, statistic) {
-
+  stat(key: string, statistic: Partial<Reactory.Models.IStatistic>) {
     try {
       if (this.statistics && this.statistics.items && this.statistics.items[key]) {
+        // Update existing statistic - merge with new data
         this.statistics.items[key] = { ...this.statistics.items[key], ...statistic };
       } else {
-
-        this.statistics.items[key] = statistic;
+        // New statistic - add to items and track key
+        this.statistics.items[key] = statistic as Reactory.Models.IStatistic;
         this.statistics.__keys.push(key);
       }
       this.statistics.__delta += 1;
     } catch (statisticsCollectionError) {
-      this.log(`Error capturing statistic`, { key, statistic, statisticsCollectionError });
+      this.error(`Error capturing statistic`, { key, statistic, statisticsCollectionError });
     }
-
   };
 
   trackFormInstance(formInstance) {
@@ -991,12 +1065,26 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     options: any = { fetchPolicy: "no-cache", refresh: false },
     refetchQueries = []): Promise<FetchResult<T>> {
     const that = this;
+    const startTime = Date.now();
+    const baseResource = this.getBaseMetricResource();
+
     let $mutation = null;
     if (typeof mutation === 'string') {
       try {
         $mutation = gql(mutation);
       } catch (gqlError) {
         that.log(`Error occurred while creating the mutation document from input`, { mutation });
+        // Track GQL parsing errors
+        that.stat('graphql.mutation.parse_error', {
+          type: 'counter',
+          value: 1,
+          timestamp: new Date(),
+          resource: baseResource,
+          attributes: {
+            error: gqlError.message,
+            mutationType: 'string'
+          } as any
+        });
       }
     } else $mutation = mutation;
 
@@ -1004,19 +1092,93 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       let mutation_options: MutationOptions<any, any> = { mutation: $mutation, variables };
       mutation_options.refetchQueries = refetchQueries;
       that.client.mutate<T>(mutation_options).then((result) => {
+        const duration = Date.now() - startTime;
+        // Track successful mutations
+        that.stat('graphql.mutation.success', {
+          type: 'counter',
+          value: 1,
+          timestamp: new Date(),
+          resource: baseResource,
+          attributes: {
+            duration,
+            hasErrors: (result.errors && result.errors.length > 0),
+            refetchQueries: refetchQueries.length
+          } as any
+        });
+
+        // Track mutation duration histogram
+        that.stat('graphql.mutation.duration', {
+          type: 'histogram' as any,
+          value: duration,
+          timestamp: new Date(),
+          resource: baseResource,
+          histogramData: {
+            buckets: [
+            { upperBound: 100, count: duration <= 100 ? 1 : 0 } as any,
+            { upperBound: 500, count: duration <= 500 ? 1 : 0 } as any,
+            { upperBound: 1000, count: duration <= 1000 ? 1 : 0 } as any,
+            { upperBound: 2000, count: duration <= 2000 ? 1 : 0 } as any,
+            { upperBound: 5000, count: duration <= 5000 ? 1 : 0 } as any,
+            ],
+            count: 1,
+            sum: duration
+          },
+          attributes: {
+            fetchPolicy: options.fetchPolicy
+          } as any
+        } as any);
+
         resolve(result);
       }).catch((clientErr) => {
+        const duration = Date.now() - startTime;
         that.log(`Error occured executing the mutation: ${clientErr.message}`, { $mutation, clientErr });
         const { graphQLErrors, networkError } = clientErr;
+
+        // Track mutation errors
+        that.stat('graphql.mutation.error', {
+          type: 'counter',
+          value: 1,
+          timestamp: new Date(),
+          resource: baseResource,
+          attributes: {
+            duration,
+            errorType: networkError ? 'network' : 'graphql',
+            errorMessage: clientErr.message
+          } as any
+        });
+
         if (graphQLErrors && graphQLErrors.length > 0) {
           graphQLErrors.forEach((error) => {
             that.error(`GraphQL Error: ${error.message}`, { error, variables, options, mutation });
+            // Track individual GraphQL errors
+            that.stat('graphql.mutation.graphql_error', {
+              type: 'counter',
+              value: 1,
+              timestamp: new Date(),
+              resource: baseResource,
+              attributes: {
+                errorMessage: error.message,
+                errorCode: error.extensions?.code || 'unknown'
+              } as any
+            });
           });
         }
         if (networkError) {
           that.error(`Network Error: ${networkError.message}`, { networkError, variables, options, mutation });
 
           const { result, statusCode } = networkError;
+
+          // Track network errors with status codes
+          that.stat('graphql.mutation.network_error', {
+            type: 'counter',
+            value: 1,
+            timestamp: new Date(),
+            resource: baseResource,
+            attributes: {
+              statusCode: statusCode || 0,
+              errorMessage: networkError.message
+            } as any
+          });
 
           if (statusCode === 401 || statusCode === 403) {
             that.createNotification(`🚨 Unauthorized or Forbidden Error, clearing auth token and reloading the page`, { type: 'error', canDismiss: true, timeout: 4000, showInAppNotification: true });
@@ -1044,6 +1206,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     options: any = { fetchPolicy: 'network-only' },
     queryDefinition: Reactory.Forms.IReactoryFormQuery = null): Promise<ApolloQueryResult<T>> {
     const that = this;
+    const startTime = Date.now();
+    const baseResource = this.getBaseMetricResource();
+
     let $query = null;
     if (typeof query === 'string') {
       try {
@@ -1051,15 +1216,66 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       } catch (gqlError) {
         that.log(`Error occurred while creating the query document from input`, { query, gqlError });
         that.createNotification('🚨 GRAPHQL ERROR IN QUERY CHECK LOG FOR DETAILS - Test the query in the Developer tools', { type: 'warning', canDismiss: true, timeout: 4000, showInAppNotification: true });
+        // Track query parsing errors
+        that.stat('graphql.query.parse_error', {
+          type: 'counter',
+          value: 1,
+          timestamp: new Date(),
+          resource: baseResource,
+          attributes: {
+            error: gqlError.message,
+            queryType: 'string'
+          } as any
+        });
       }
     } else $query = query;
 
+    const effectiveFetchPolicy = navigator.onLine === true ? options.fetchPolicy : 'cache-only';
     const result = await that.client.query<T, V>({
       query: $query,
       variables,
-      fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
+      fetchPolicy: effectiveFetchPolicy,
     });
+    const duration = Date.now() - startTime;
     const { errors = [] } = result;
+
+    // Track successful queries
+    that.stat('graphql.query.success', {
+      type: 'counter',
+      value: 1,
+      timestamp: new Date(),
+      resource: baseResource,
+      attributes: {
+        duration,
+        fetchPolicy: effectiveFetchPolicy,
+        hasErrors: errors.length > 0,
+        cacheHit: effectiveFetchPolicy === 'cache-only' || effectiveFetchPolicy === 'cache-first',
+        online: navigator.onLine
+      } as any
+    });
+
+    // Track query duration histogram
+    that.stat('graphql.query.duration', {
+      type: 'histogram' as any,
+      value: duration,
+      timestamp: new Date(),
+      resource: baseResource,
+      histogramData: {
+        buckets: [
+          { upperBound: 50, count: duration <= 50 ? 1 : 0 } as any,
+          { upperBound: 100, count: duration <= 100 ? 1 : 0 } as any,
+          { upperBound: 250, count: duration <= 250 ? 1 : 0 } as any,
+          { upperBound: 500, count: duration <= 500 ? 1 : 0 } as any,
+          { upperBound: 1000, count: duration <= 1000 ? 1 : 0 } as any,
+          { upperBound: 2000, count: duration <= 2000 ? 1 : 0 } as any,
+        ],
+        count: 1,
+        sum: duration
+      },
+      attributes: {
+        fetchPolicy: effectiveFetchPolicy
+      } as any
+    } as any);
     if (errors.length > 0) {
       errors.forEach((error) => {
         if (error) {
@@ -1081,10 +1297,27 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   async afterLogin(loginResult: Reactory.Client.ILoginResult): Promise<Reactory.Models.IApiStatus> {
+    const startTime = Date.now();
+    const baseResource = this.getBaseMetricResource();
+
     this.setAuthToken(loginResult.user.token);
     const { client, ws_link, clearCache } = await ReactoryApolloClient();
     this.client = client;
     this.clearCache = clearCache;
+
+    const duration = Date.now() - startTime;
+    // Track login success
+    this.stat('auth.login.success', {
+      type: 'counter',
+      value: 1,
+      timestamp: new Date(),
+      resource: baseResource,
+      attributes: {
+        duration,
+        hasToken: !!loginResult.user.token
+      } as any
+    });
+
     return this.status({ emitLogin: true, forceLogout: true });
   }
 
@@ -1144,6 +1377,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     const that = this;
     const { debug } = this;
     const refresh = async () => {
+      const startTime = Date.now();
+      const baseResource = that.getBaseMetricResource();
 
       const FORMS_QUERY = `
       query ReactoryForms {
@@ -1173,6 +1408,20 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       const result = await that.graphqlQuery<{ ReactoryForms: Reactory.Forms.IReactoryForm[] }, any>(FORMS_QUERY, {}, { fetchPolicy: 'network-only' });
       const { errors = [], data = { ReactoryForms: [] } } = result;
       const { ReactoryForms } = data;
+
+      const duration = Date.now() - startTime;
+      // Track form schema loading
+      that.stat('forms.schema.loaded', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          duration,
+          formCount: ReactoryForms?.length || 0,
+          hasErrors: errors.length > 0
+        } as any
+      });
 
       if (errors.length > 0) {
         errors.forEach((err, erridx) => {
@@ -1256,11 +1505,47 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
     };
 
+    const baseResource = that.getBaseMetricResource();
+
     if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined && bypassCache === false) {
       if (moment(that.formSchemaLastFetch).add(5, 'minutes').isBefore(moment())) {
+        // Track cache miss - needs refresh
+        that.stat('forms.cache.miss', {
+          type: 'counter',
+          value: 1,
+          timestamp: new Date(),
+          resource: baseResource,
+          attributes: {
+            reason: 'expired',
+            cacheAge: moment().diff(that.formSchemaLastFetch, 'seconds')
+          } as any
+        });
         await refresh();
+      } else {
+        // Track cache hit
+        that.stat('forms.cache.hit', {
+          type: 'counter',
+          value: 1,
+          timestamp: new Date(),
+          resource: baseResource,
+          attributes: {
+            cacheAge: moment().diff(that.formSchemaLastFetch, 'seconds')
+          } as any
+        });
       }
-    } else { await refresh() };
+    } else {
+      // Track cache miss - no cache
+      that.stat('forms.cache.miss', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          reason: bypassCache ? 'bypass' : 'empty'
+        } as any
+      });
+      await refresh();
+    };
 
     return that.formSchemas;
   }
@@ -1322,10 +1607,25 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   async raiseFormCommand(commandId, commandDef, formProps) {
     const self = this;
+    const startTime = Date.now();
+    const baseResource = this.getBaseMetricResource();
+
     if (commandDef.action && commandDef.action === 'component') {
       const componentToMount = commandDef.component.componentFqn;
       const _formData = formProps.formData || formProps.formContext.formData;
       this.showModalWithComponentFqn(componentToMount, commandDef.title, { formData: _formData }, { open: true }, null, false, null);
+
+      // Track component-based form commands
+      this.stat('form.command.component', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          commandId,
+          componentFqn: componentToMount
+        } as any
+      });
     }
 
     if (commandDef.hasOwnProperty('graphql')) {
@@ -1369,9 +1669,37 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }
 
     if (commandId.indexOf('workflow') === 0) {
-      return await this.startWorkFlow(commandId, formProps);
+      const result = await this.startWorkFlow(commandId, formProps);
+      const duration = Date.now() - startTime;
+
+      // Track workflow-based form commands
+      this.stat('form.command.workflow', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          commandId,
+          duration
+        } as any
+      });
+
+      return result;
     } else {
       this.amq.raiseFormCommand(commandId, formProps);
+
+      const duration = Date.now() - startTime;
+      // Track AMQ-based form commands
+      this.stat('form.command.amq', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          commandId,
+          duration
+        } as any
+      });
     }
 
   }
@@ -1379,19 +1707,53 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   startWorkFlow(workFlowId, data) {
     //this.amp.raiseWorkFlowEvent(workFlowId, data);
     const that = this;
+    const startTime = Date.now();
+    const baseResource = this.getBaseMetricResource();
+
     return new Promise((resolve, reject) => {
       that.client.query({
         query: that.mutations.System.startWorkflow,
         variables: { name: workFlowId, data },
         fetchPolicy: 'network-only'
       }).then((result) => {
-        if (result.data.startWorkflow === true) {
+        const duration = Date.now() - startTime;
+        const success = result.data.startWorkflow === true;
+
+        // Track workflow execution
+        that.stat('workflow.execute', {
+          type: 'counter',
+          value: 1,
+          timestamp: new Date(),
+          resource: baseResource,
+          attributes: {
+            workFlowId,
+            duration,
+            success
+          } as any
+        });
+
+        if (success) {
           resolve(true);
         } else {
           resolve(false);
         }
       }).catch((clientErr) => {
+        const duration = Date.now() - startTime;
         console.error('Error starting workflow', clientErr);
+
+        // Track workflow errors
+        that.stat('workflow.error', {
+          type: 'counter',
+          value: 1,
+          timestamp: new Date(),
+          resource: baseResource,
+          attributes: {
+            workFlowId,
+            duration,
+            error: clientErr.message
+          } as any
+        });
+
         resolve(anonUser);
       });
     });
@@ -1470,7 +1832,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   isAnon() {
-    return this.hasRole(['ANON'], this.$user.roles) === true;
+    return this.hasRole(['ANON'], this.$user?.roles || []) === true;
   }
 
   addRole(user, organization, role = 'USER') {
@@ -1554,6 +1916,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     componentType: string = 'component',
     errorBoundary: boolean = true) {
     const fqn = `${nameSpace}.${name}@${version}`;
+    const baseResource = this.getBaseMetricResource();
+
     if (isEmpty(nameSpace))
       throw new Error(`nameSpace is required for component registration: ${fqn}`);
     if (isEmpty(name))
@@ -1573,6 +1937,23 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       useErrorBoundary: errorBoundary === true,
       componentType
     };
+
+    // Track component registrations
+    this.stat('component.registered', {
+      type: 'counter',
+      value: 1,
+      timestamp: new Date(),
+      resource: baseResource,
+      attributes: {
+        componentFqn: fqn,
+        componentType,
+        nameSpace,
+        hasRoles: (roles?.length || 0) > 0 ,
+        wrapWithApi,
+        errorBoundary
+      } as any
+    });
+
     this.emit(ReactoryApiEventNames.onComponentRegistered, { fqn, component: this.componentRegister[fqn] });
   }
 
@@ -1587,20 +1968,60 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   };
 
   getComponent<T>(fqn): T {
+    const baseResource = this.getBaseMetricResource();
+
     if (fqn === undefined)
       throw new Error('NO NULL FQN');
     try {
       const found = this.componentRegister[this.ensureVersion(fqn)];
       if (found && found.component) {
+        // Track successful component retrieval
+        this.stat('component.retrieved', {
+          type: 'counter',
+          value: 1,
+          timestamp: new Date(),
+          resource: baseResource,
+          attributes: {
+            componentFqn: fqn,
+            useReactory: found.useReactory,
+            componentType: found.componentType
+          } as any
+        });
+
         let ComponentToReturn = found.component as T;
         if (found.useReactory === true) {
           ComponentToReturn = compose(withReactory)(ComponentToReturn) as T;
         }
         return ComponentToReturn as T;
       }
+
+      // Track component not found
+      this.stat('component.not_found', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          componentFqn: fqn
+        } as any
+      });
+
       return null; //we must return null, because the component is not found, we cannot automatically return the not found component, that is the responsibility of the component
     } catch (err) {
       this.log(`Bad component name ${err.message}`, fqn);
+
+      // Track component retrieval errors
+      this.stat('component.retrieval_error', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          componentFqn: fqn,
+          error: err.message
+        } as any
+      });
+
       if (this.componentRegister && this.componentRegister['core.NotFound@1.0.0']) {
         return this.getNotFoundComponent() as T;
       }
@@ -1630,7 +2051,45 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
             $name = component.name;
             componentMap[component.name] = canUserCreateComponent === true ? component.component : this.getNotAllowedComponent(component.name);
             if (component.useReactory === true) {
-              componentMap[$name] = compose(withReactory)(componentMap[$name]);
+              // we need to check here if the component is composable
+              // the withReactory HOC assumes the component is a valid React component
+              // this may not always be the case, so we need to handle it gracefully
+              const isValidReactComponent = typeof componentMap[$name] === 'function' || 
+                                           (typeof componentMap[$name] === 'object' && 
+                                            componentMap[$name] !== null && 
+                                            typeof componentMap[$name].$$typeof !== 'undefined');
+              
+              if (isValidReactComponent) {
+                componentMap[$name] = compose(withReactory)(componentMap[$name]);
+                
+                // Track successful component binding
+                this.stat('component.bound_with_reactory', {
+                  type: 'counter',
+                  value: 1,
+                  timestamp: new Date(),
+                  resource: this.getBaseMetricResource(),
+                  attributes: {
+                    componentFqn: fqn,
+                    componentName: $name
+                  } as any
+                });
+              } else {
+                this.warning(`Component ${$name} is marked as useReactory but is not a valid React component`, { component });
+                
+                // Track badly configured components
+                this.stat('component.badly_configured', {
+                  type: 'counter',
+                  value: 1,
+                  timestamp: new Date(),
+                  resource: this.getBaseMetricResource(),
+                  attributes: {
+                    componentFqn: fqn,
+                    componentName: $name,
+                    reason: 'invalid_react_component',
+                    componentType: typeof componentMap[$name]
+                  } as any
+                });
+              }
             }
           } else {
             $name = componentPartsFromFqn(fqn).name;
@@ -1649,7 +2108,42 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
             $name = component.name;
             componentMap[$name] = canUserCreateComponent === true ? component.component : getNotAllowedComponent(component.name);
             if (component.useReactory === true) {
-              componentMap[$name] = compose(withReactory)(componentMap[$name]);
+              const isValidReactComponent = typeof componentMap[$name] === 'function' || 
+                                           (typeof componentMap[$name] === 'object' && 
+                                            componentMap[$name] !== null && 
+                                            typeof componentMap[$name].$$typeof !== 'undefined');
+              
+              if (isValidReactComponent) {
+                componentMap[$name] = compose(withReactory)(componentMap[$name]);
+                
+                // Track successful component binding
+                this.stat('component.bound_with_reactory', {
+                  type: 'counter',
+                  value: 1,
+                  timestamp: new Date(),
+                  resource: this.getBaseMetricResource(),
+                  attributes: {
+                    componentFqn: lookupFqn,
+                    componentName: $name
+                  } as any
+                });
+              } else {
+                log('Component is marked as useReactory but is not a valid React component', [$name, component]);
+                
+                // Track badly configured components
+                this.stat('component.badly_configured', {
+                  type: 'counter',
+                  value: 1,
+                  timestamp: new Date(),
+                  resource: this.getBaseMetricResource(),
+                  attributes: {
+                    componentFqn: lookupFqn,
+                    componentName: $name,
+                    reason: 'invalid_react_component',
+                    componentType: typeof componentMap[$name]
+                  } as any
+                });
+              }
             }
           } else {
             $name = componentPartsFromFqn(lookupFqn).name;
@@ -1747,6 +2241,9 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   async logout(refreshStatus = true) {
     if (this.isLoggingOut === true) return;
     this.isLoggingOut = true;
+    const startTime = Date.now();
+    const baseResource = this.getBaseMetricResource();
+
     localStorage.removeItem(storageKeys.AuthToken);
     this.clearStoreAndCache();
     await this.getAnonToken();
@@ -1760,6 +2257,20 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     } else {
       this.emit(ReactoryApiEventNames.onLogout);
     }
+
+    const duration = Date.now() - startTime;
+    // Track logout events
+    this.stat('auth.logout', {
+      type: 'counter',
+      value: 1,
+      timestamp: new Date(),
+      resource: baseResource,
+      attributes: {
+        duration,
+        refreshStatus
+      } as any
+    });
+
     this.isLoggingOut = false;
   }
 
@@ -1797,18 +2308,127 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   async storeObjectWithKey(key, objectToStore, indexDB: boolean = false, cb = (err) => { }): Promise<void> {
-    if (!indexDB) return localStorage.setItem(key, JSON.stringify(objectToStore));
-    else return await localForage.setItem(key, objectToStore, cb);
+    const startTime = Date.now();
+    const baseResource = this.getBaseMetricResource();
+
+    try {
+      if (!indexDB) {
+        localStorage.setItem(key, JSON.stringify(objectToStore));
+      } else {
+        await localForage.setItem(key, objectToStore, cb);
+      }
+      const duration = Date.now() - startTime;
+      // Track successful storage operations
+      this.stat('storage.write.success', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          storageType: indexDB ? 'indexedDB' : 'localStorage',
+          duration,
+          keyLength: key.length
+        } as any
+      });
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      // Track storage errors
+      this.stat('storage.write.error', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          storageType: indexDB ? 'indexedDB' : 'localStorage',
+          duration,
+          error: error.message
+        } as any
+      });
+      throw error;
+    }
   }
 
   async readObjectWithKey(key, indexDB: boolean = false) {
-    if (!indexDB) return JSON.parse(localStorage.getItem(key));
-    else return JSON.parse(await localForage.getItem(key))
+    const startTime = Date.now();
+    const baseResource = this.getBaseMetricResource();
+
+    try {
+      let result;
+      if (!indexDB) {
+        result = JSON.parse(localStorage.getItem(key));
+      } else {
+        result = JSON.parse(await localForage.getItem(key));
+      }
+      const duration = Date.now() - startTime;
+      // Track successful read operations
+      this.stat('storage.read.success', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          storageType: indexDB ? 'indexedDB' : 'localStorage',
+          duration,
+          hasValue: result !== null
+        } as any
+      });
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      // Track read errors
+      this.stat('storage.read.error', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          storageType: indexDB ? 'indexedDB' : 'localStorage',
+          duration,
+          error: error.message
+        } as any
+      });
+      throw error;
+    }
   }
 
   async deleteObjectWithKey(key, indexDB: boolean = false) {
-    if (!indexDB) return localStorage.removeItem(key);
-    else await localForage.removeItem(key);
+    const startTime = Date.now();
+    const baseResource = this.getBaseMetricResource();
+
+    try {
+      if (!indexDB) {
+        localStorage.removeItem(key);
+      } else {
+        await localForage.removeItem(key);
+      }
+      const duration = Date.now() - startTime;
+      // Track successful delete operations
+      this.stat('storage.delete.success', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          storageType: indexDB ? 'indexedDB' : 'localStorage',
+          duration
+        } as any
+      });
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      // Track delete errors
+      this.stat('storage.delete.error', {
+        type: 'counter',
+        value: 1,
+        timestamp: new Date(),
+        resource: baseResource,
+        attributes: {
+          storageType: indexDB ? 'indexedDB' : 'localStorage',
+          duration,
+          error: error.message
+        } as any
+      });
+      throw error;
+    }
   }
 
   private async getApiStatus(scope: ApiStatusQueryScope[] = ['application'], theme?: string, mode?: string): Promise<Partial<Reactory.Models.IApiStatus> | Reactory.Models.IApiStatus> {

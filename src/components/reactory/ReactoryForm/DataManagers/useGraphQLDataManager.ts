@@ -438,7 +438,10 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
             // if there is, use it to transform the data
             nextData = transformData(data, query.name, query.responseHandlers[typename].resultMap) as TData;  
           }
+        } else {
+          reactory.warning(`No __typename found for query result: ${query.name}`, { data });
         }
+
         if (data !== null && data !== undefined) {
           nextData = transformData(data, query.name, resultMap) as TData;
         }

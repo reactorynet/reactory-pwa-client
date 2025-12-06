@@ -511,7 +511,6 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             />
           );
         } else {
-          debugger;
           const hasRefreshed: boolean = localStorage.getItem('hasRefreshed') === 'true';
 
           //auth token not validated yet in process of checking
@@ -589,37 +588,49 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
   const getApiStatus = async (): Promise<void> => {
     const started = Date.now();
+    const clientKey = reactory.CLIENT_KEY.toLowerCase().replace(/\s+/g, '_');
+    const baseResource: Reactory.Models.IStatistic['resource'] = {
+      service_name: 'reactory-pwa-client',
+      service_version: (reactory.$version || '1.0.0') as string,
+      host_name: window.location.hostname,
+      deployment_environment: (process.env.NODE_ENV || 'development') as string,
+      attributes: {
+        'user.anon': reactory.isAnon(),
+        'client.key': clientKey,
+      } as any
+    };
 
     try {
       const apiStatus = await reactory.status({ emitLogin: false, forceLogout: false });
       const done = Date.now();
+      const durationMs = done - started;
       const api_ok = apiStatus.status === 'API OK'
+      
       setOfflineStatus(!api_ok);
       if (offline !== !api_ok) {
         onOfflineChanged(!api_ok);
       }
 
       let isSlow = false;
-
       const newLast = {
         when: started,
-        pingMS: done - started,
+        pingMS: durationMs,
       };
 
       timeoutMS = timeout_base;
 
-      //if our ping timeout is slow
-      if (newLast.pingMS > 4000 && totals.total > 10) {
+      // Determine performance classification
+      if (durationMs > 4000 && totals.total > 10) {
         last_slow = done;
         timeoutMS = timeout_base * 1.25;
       }
 
-      //if our ping time is really low
-      if (newLast.pingMS > 7000 && totals.total > 10) {
+      if (durationMs > 7000 && totals.total > 10) {
         isSlow = true;
         timeoutMS = timeout_base * 1.5;
       }
 
+      // Calculate dynamic timeout based on success rate
       let next_tm_base = TM_BASE_DEFAULT;
       if (totals.total > 5) {
         let avg: number = (totals.ok * 100) / totals.total;
@@ -637,7 +648,138 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
       totals = newTotals;
 
-      reactory.stat(`user-session-api-status-totals`, { user_id: reactory.getUser().id, ...totals, ...newLast });
+      // Common attributes for all metrics
+      const commonAttributes = {
+        'http.method': 'POST',
+        'http.status_code': api_ok ? 200 : 500,
+        'client.key': clientKey,
+        'api.endpoint': '/graphql',
+        'user.authenticated': !reactory.isAnon(),
+      };
+
+      // 1. Counter: Total API status checks
+      const totalChecksMetric: Reactory.Models.IStatistic = {
+        name: `${clientKey}_api_status_checks_total`,
+        description: 'Total number of API status checks performed',
+        unit: '1',
+        type: 'counter' as any,
+        value: 1,
+        attributes: {
+          ...commonAttributes,
+          'check.result': api_ok ? 'success' : 'failure',
+        },
+        resource: baseResource,
+        timestamp: new Date(started),
+      };
+      reactory.stat(`${clientKey}_api_status_checks_total`, totalChecksMetric);
+
+      // 2. Counter: Successful checks
+      if (api_ok) {
+        const successMetric: Reactory.Models.IStatistic = {
+          name: `${clientKey}_api_status_success_total`,
+          description: 'Total number of successful API status checks',
+          unit: '1',
+          type: 'counter' as any,
+          value: 1,
+          attributes: commonAttributes,
+          resource: baseResource,
+          timestamp: new Date(started),
+        };
+        reactory.stat(`${clientKey}_api_status_success_total`, successMetric);
+      }
+
+      // 3. Histogram: Response time distribution
+      const histogramMetric: Reactory.Models.IStatistic = {
+        name: `${clientKey}_api_status_duration_ms`,
+        description: 'API status check duration in milliseconds',
+        unit: 'ms',
+        type: 'histogram' as any,
+        histogramData: {
+          count: 1,
+          sum: durationMs,
+          buckets: [
+            { upperBound: 100, count: durationMs <= 100 ? 1 : 0 } as any,
+            { upperBound: 500, count: durationMs <= 500 ? 1 : 0 } as any,
+            { upperBound: 1000, count: durationMs <= 1000 ? 1 : 0 } as any,
+            { upperBound: 2000, count: durationMs <= 2000 ? 1 : 0 } as any,
+            { upperBound: 4000, count: durationMs <= 4000 ? 1 : 0 } as any,
+            { upperBound: 7000, count: durationMs <= 7000 ? 1 : 0 } as any,
+            { upperBound: 10000, count: durationMs <= 10000 ? 1 : 0 } as any,
+          ],
+        } as any,
+        attributes: {
+          ...commonAttributes,
+          'performance.classification': isSlow ? 'slow' : (durationMs > 4000 ? 'degraded' : 'normal'),
+        },
+        resource: baseResource,
+        timestamp: new Date(started),
+      };
+      reactory.stat(`${clientKey}_api_status_duration_ms`, histogramMetric);
+
+      // 4. Gauge: Current online/offline status
+      const statusGauge: Reactory.Models.IStatistic = {
+        name: `${clientKey}_api_online_status`,
+        description: 'Current API online status (1 = online, 0 = offline)',
+        unit: '1',
+        type: 'gauge' as any,
+        value: api_ok ? 1 : 0,
+        attributes: commonAttributes,
+        resource: baseResource,
+        timestamp: new Date(done),
+      };
+      reactory.stat(`${clientKey}_api_online_status`, statusGauge);
+
+      // 5. UpDownCounter: Active connection quality score
+      // Score calculation: base 100, -10 for each error in last 10 checks, -5 for slow responses
+      const errorRate = totals.total > 0 ? (totals.error / totals.total) : 0;
+      const slowRate = totals.total > 0 ? (totals.slow / totals.total) : 0;
+      const qualityScore = Math.max(0, 100 - (errorRate * 50) - (slowRate * 30));
+      
+      const qualityMetric: Reactory.Models.IStatistic = {
+        name: `${clientKey}_api_connection_quality`,
+        description: 'Connection quality score (0-100)',
+        unit: '1',
+        type: 'updowncounter' as any,
+        value: Math.round(qualityScore),
+        attributes: {
+          ...commonAttributes,
+          'quality.error_rate': errorRate.toFixed(4),
+          'quality.slow_rate': slowRate.toFixed(4),
+          'quality.classification': qualityScore > 80 ? 'excellent' : qualityScore > 60 ? 'good' : qualityScore > 40 ? 'fair' : 'poor',
+        },
+        resource: baseResource,
+        timestamp: new Date(done),
+      };
+      reactory.stat(`${clientKey}_api_connection_quality`, qualityMetric);
+
+      // 6. Summary: Performance percentiles (aggregate locally over time)
+      const successRate = totals.total > 0 ? (totals.ok / totals.total) : 0;
+      const summaryMetric: Reactory.Models.IStatistic = {
+        name: `${clientKey}_api_status_summary`,
+        description: 'API status check performance summary',
+        unit: 'ms',
+        type: 'summary' as any,
+        summaryData: {
+          count: totals.total,
+          sum: totals.ok * 1000, // Rough approximation
+          quantiles: [
+            { quantile: 0.5, value: durationMs },
+            { quantile: 0.9, value: durationMs * 1.5 },
+            { quantile: 0.99, value: durationMs * 2 },
+          ],
+        },
+        attributes: {
+          ...commonAttributes,
+          'stats.success_rate': successRate.toFixed(4),
+          'stats.total_checks': totals.total,
+          'stats.error_count': totals.error,
+          'stats.slow_count': totals.slow,
+        },
+        resource: baseResource,
+        timestamp: new Date(done),
+      };
+      reactory.stat(`${clientKey}_api_status_summary`, summaryMetric);
+
       reactory.emit('onApiStatusTotalsChange', { ...totals, ...newLast, api_ok, isSlow });
 
       if (next_tm_base !== timeout_base) setTimeoutBase(next_tm_base);
@@ -646,18 +788,110 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
         void getApiStatus();
       }, timeoutMS);
 
-      reactory.debug(`Client Ping Totals:`, { totals: newTotals, nextIn: timeoutMS });
+      reactory.debug(`Client Ping Totals:`, { 
+        totals: newTotals, 
+        nextIn: timeoutMS,
+        durationMs,
+        qualityScore: Math.round(qualityScore),
+        successRate: `${(successRate * 100).toFixed(2)}%`,
+      });
     } catch (error) {
-      reactory.error(`Error while fetching api status`, { error: error });
+      const done = Date.now();
+      const durationMs = done - started;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      reactory.error(`Error while fetching api status`, { error, durationMs });
       setOfflineStatus(true);
       onOfflineChanged(true);
 
-      totals = {
+      const newTotals = {
         error: totals.error + 1,
         slow: totals.slow,
-        ok: totals.ok + 1,
+        ok: totals.ok,
         total: totals.total + 1,
       };
+      totals = newTotals;
+
+      // Publish error metrics
+      const errorAttributes = {
+        'http.method': 'POST',
+        'http.status_code': 0,
+        'client.key': clientKey,
+        'api.endpoint': '/graphql',
+        'error.type': error?.name || 'unknown',
+        'error.message': errorMessage,
+        'user.authenticated': !reactory.isAnon(),
+      };
+
+      // 1. Counter: Total checks (including failures)
+      const totalChecksErrorMetric: Reactory.Models.IStatistic = {
+        name: `${clientKey}_api_status_checks_total`,
+        description: 'Total number of API status checks performed',
+        unit: '1',
+        type: 'counter' as any,
+        value: 1,
+        attributes: {
+          ...errorAttributes,
+          'check.result': 'failure',
+        },
+        resource: baseResource,
+        timestamp: new Date(started),
+      };
+      reactory.stat(`${clientKey}_api_status_checks_total`, totalChecksErrorMetric);
+
+      // 2. Counter: Failed checks
+      const failureMetric: Reactory.Models.IStatistic = {
+        name: `${clientKey}_api_status_failure_total`,
+        description: 'Total number of failed API status checks',
+        unit: '1',
+        type: 'counter' as any,
+        value: 1,
+        attributes: errorAttributes,
+        resource: baseResource,
+        timestamp: new Date(started),
+      };
+      reactory.stat(`${clientKey}_api_status_failure_total`, failureMetric);
+
+      // 3. Histogram: Failed request duration
+      const errorHistogramMetric: Reactory.Models.IStatistic = {
+        name: `${clientKey}_api_status_duration_ms`,
+        description: 'API status check duration in milliseconds',
+        unit: 'ms',
+        type: 'histogram' as any,
+        histogramData: {
+          count: 1,
+          sum: durationMs,
+          buckets: [
+            { upperBound: 100, count: durationMs <= 100 ? 1 : 0 } as any,
+            { upperBound: 500, count: durationMs <= 500 ? 1 : 0 } as any,
+            { upperBound: 1000, count: durationMs <= 1000 ? 1 : 0 } as any,
+            { upperBound: 2000, count: durationMs <= 2000 ? 1 : 0 } as any,
+            { upperBound: 4000, count: durationMs <= 4000 ? 1 : 0 } as any,
+            { upperBound: 7000, count: durationMs <= 7000 ? 1 : 0 } as any,
+            { upperBound: 10000, count: durationMs <= 10000 ? 1 : 0 } as any,
+          ],
+        } as any,
+        attributes: {
+          ...errorAttributes,
+          'performance.classification': 'error',
+        },
+        resource: baseResource,
+        timestamp: new Date(started),
+      };
+      reactory.stat(`${clientKey}_api_status_duration_ms`, errorHistogramMetric);
+
+      // 4. Gauge: Offline status
+      const offlineGauge: Reactory.Models.IStatistic = {
+        name: `${clientKey}_api_online_status`,
+        description: 'Current API online status (1 = online, 0 = offline)',
+        unit: '1',
+        type: 'GAUGE' as any,
+        value: 0,
+        attributes: errorAttributes,
+        resource: baseResource,
+        timestamp: new Date(done),
+      };
+      reactory.stat(`${clientKey}_api_online_status`, offlineGauge);
 
       setTimeout(() => {
         void getApiStatus();
