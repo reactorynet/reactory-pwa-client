@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import configureStore from './models/redux';
 import { CssBaseline, Paper } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
+//@ts-ignore
 import './App.css';
 import { ReactoryHeader as Header } from '@reactory/client-core/components/shared/header';
 import { componentRegistery } from './components/index';
@@ -75,7 +76,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     clientSecret: `${localStorage.getItem('REACT_APP_CLIENT_PASSWORD')}`,
     $version: `${packageInfo.version}-${license.version}`,
     useNavigate
-  }));
+  }) as unknown as Reactory.Client.ReactorySDK);
 
   // Initialize Redux store
   const [store] = useState(() => configureStore(null));
@@ -102,7 +103,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const {
     auth_validated,
     isAuthenticating,
-    isAuthTransitioning,
+    isAuthTransitioning,  
     onLogin,
     onLogout,
   } = useReactoryAuth({
@@ -112,11 +113,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     setIsValidated,
     setIsAuthenticating: setAuthenticating,
     setIsReady,
-    applyTheme,
+    applyTheme,    
   });
 
+  
   // Custom hook: Initialization
-  useReactoryInit({
+useReactoryInit({
     reactory: reactory as any,
     store,
     componentRegistry: componentRegistery,
@@ -136,6 +138,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     },
     onThemeChanged,
   });
+  
 
   // Custom hook: API health checking
   const {
@@ -146,7 +149,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory: reactory as any,
     offline,
     setOffline: setOfflineStatus,
-    autoCheck: true,
+    autoCheck: true    
   });
 
   // Custom hook: Route configuration
@@ -159,6 +162,23 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory: reactory as any,
     initialRoutes: [],
   });
+
+
+  // initialize the reactory sdk api client
+  useEffect(() => {
+    const initializeReactory = async () => {
+      try {
+        reactory.log('ReactoryHOC - Initializing Reactory SDK...');
+        await reactory.init();
+        reactory.log('ReactoryHOC - Reactory SDK initialized successfully');
+      } catch (initError) {
+        reactory.error('ReactoryHOC - Error during Reactory SDK initialization', initError);
+        setError(initError as Error);
+      }
+    };
+
+    initializeReactory();
+  }, []);
 
   // Get components needed for rendering
   const components: any = reactory.getComponents(dependencies);
@@ -195,7 +215,7 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     <StyledRouter>
       <React.Fragment>
         <CssBaseline />
-        <AppProviders theme={theme} store={store} reactory={reactory as any}>
+        <AppProviders theme={theme} store={store} reactory={reactory}>
           <Paper
             id="reactory_paper_root"
             elevation={0}

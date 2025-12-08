@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { AppLoadingProps } from '../../../types/app';
+//@ts-ignore
 import './AppLoading.css';
 
 /**

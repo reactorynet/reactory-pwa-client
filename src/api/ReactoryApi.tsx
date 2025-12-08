@@ -97,6 +97,7 @@ export const ReactoryApiEventNames = {
   onHideMenu: 'onHideMenu',
   onShowMenu: 'onShowMenu',
   onComponentRegistered: 'onComponentRegistered',
+  onReactoryApiInitialized: 'onReactoryApiInitialized',
 };
 
 export const EmptyComponent = (fqn) => {
@@ -707,6 +708,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }
     await this.hydrate();
     await this.initi18n();
+    window.reactory = { api: this }    
+    this.emit(ReactoryApiEventNames.onReactoryApiInitialized, { });
   }
 
   /**

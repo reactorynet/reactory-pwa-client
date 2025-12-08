@@ -8,6 +8,7 @@ import { saveRoutes, loadRoutes } from '../../utils/app/localStorage';
 export interface UseRouteConfigurationParams {
   reactory: Reactory.Client.ReactorySDK;
   initialRoutes: Reactory.Routing.IReactoryRoute[];
+  isInitialized?: boolean;
 }
 
 export interface UseRouteConfigurationReturn {
@@ -23,6 +24,7 @@ export interface UseRouteConfigurationReturn {
 export const useRouteConfiguration = ({
   reactory,
   initialRoutes,
+  isInitialized = false,
 }: UseRouteConfigurationParams): UseRouteConfigurationReturn => {
   const [routes, setRoutes] = useState<Reactory.Routing.IReactoryRoute[]>(initialRoutes);
   const [routeVersion, setRouteVersion] = useState<number>(0);
@@ -32,6 +34,12 @@ export const useRouteConfiguration = ({
    */
   const configureRouting = useCallback(async () => {
     try {
+
+      if (!isInitialized) {
+        reactory.log('useRouteConfiguration - Skipping route configuration, Reactory not initialized');
+        return;
+      }
+
       reactory.log('useRouteConfiguration - Configuring routes...');
 
       // Try to load cached routes first
@@ -57,7 +65,7 @@ export const useRouteConfiguration = ({
         // Increment route version to trigger re-render
         setRouteVersion((prev) => prev + 1);
       } else {
-        reactory.warn('useRouteConfiguration - No routes returned from API');
+        reactory.warning('useRouteConfiguration - No routes returned from API');
       }
     } catch (error) {
       reactory.error('useRouteConfiguration - Failed to configure routes', error);
@@ -69,13 +77,17 @@ export const useRouteConfiguration = ({
         setRoutes(cachedRoutes);
       }
     }
-  }, [reactory]);
+  }, [reactory, isInitialized]);
 
   /**
    * Handle route change events
    */
   const onRouteChanged = useCallback(
     (path: string) => {
+      if (!isInitialized) {
+        reactory.log('useRouteConfiguration - Skipping route change handling, Reactory not initialized');
+        return;
+      }
       reactory.log('useRouteConfiguration - Route changed', { path });
       
       // Store the current route for restoration on app reload
@@ -89,7 +101,7 @@ export const useRouteConfiguration = ({
       // Increment version to trigger re-render if needed
       setRouteVersion((prev) => prev + 1);
     },
-    [reactory]
+    [reactory, isInitialized]
   );
 
   /**
@@ -114,7 +126,7 @@ export const useRouteConfiguration = ({
     return () => {
       reactory.off('onRouteChanged', handleRouteChange);
     };
-  }, [reactory, onRouteChanged]);
+  }, [reactory, onRouteChanged, isInitialized]);
 
   return {
     routes,

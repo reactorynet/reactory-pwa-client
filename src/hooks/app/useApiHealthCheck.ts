@@ -10,6 +10,7 @@ export interface UseApiHealthCheckParams {
   offline: boolean;
   setOffline: (offline: boolean) => void;
   autoCheck?: boolean;
+  isInitialized?: boolean;
 }
 
 export interface UseApiHealthCheckReturn {
@@ -26,6 +27,7 @@ export const useApiHealthCheck = ({
   offline,
   setOffline,
   autoCheck = true,
+  isInitialized = false,
 }: UseApiHealthCheckParams): UseApiHealthCheckReturn => {
   const [isCheckingApi, setIsCheckingApi] = useState<boolean>(false);
 
@@ -33,6 +35,12 @@ export const useApiHealthCheck = ({
    * Check API health status
    */
   const checkApiHealth = useCallback(async () => {
+
+    if (!isInitialized) {
+      reactory.log('useApiHealthCheck - Skipping API health check, Reactory not initialized');
+      return;
+    }
+
     if (isCheckingApi) {
       return; // Prevent concurrent checks
     }
@@ -62,7 +70,7 @@ export const useApiHealthCheck = ({
           reactory.error('useApiHealthCheck - Failed to load forms', formsError);
         }
       } else {
-        reactory.warn('useApiHealthCheck - API is offline or unreachable', apiStatus);
+        reactory.warning('useApiHealthCheck - API is offline or unreachable', apiStatus);
         setOffline(true);
       }
     } catch (error) {

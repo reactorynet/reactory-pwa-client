@@ -2,9 +2,11 @@
  * useReactoryInit Hook
  * Manages Reactory initialization and lifecycle events
  */
-import { useEffect } from 'react';
-import queryString from 'query-string';
+import { useEffect, useState } from 'react';
+import queryString from '@reactory/client-core/components/utility/query-string';
 import { registerComponents } from '../../utils/app/componentRegistration';
+import Reactory from '@reactory/reactory-core';
+import { ReactoryApiEventNames } from '@reactory/client-core/api';
 
 export interface UseReactoryInitParams {
   reactory: Reactory.Client.ReactorySDK;
@@ -33,7 +35,10 @@ export const useReactoryInit = ({
   onApiStatusUpdate,
   onRouteChanged,
   onThemeChanged,
-}: UseReactoryInitParams): void => {
+}: UseReactoryInitParams): { isInitialized: boolean } => {
+
+  const [isInitialized] = useState<boolean>(false);
+
   /**
    * Window resize handler
    */
@@ -62,9 +67,7 @@ export const useReactoryInit = ({
    * Initialization logic - runs on mount
    */
   const willMount = async () => {
-    try {
-      await reactory.init();
-
+    try {      
       // Register built-in components
       registerComponents(reactory, componentRegistry);
 
@@ -101,8 +104,7 @@ export const useReactoryInit = ({
       const query = queryString.parse(window.location.search);
       reactory.queryObject = query;
       reactory.queryString = window.location.search;
-      reactory.objectToQueryString = queryString.stringify;
-
+      reactory.objectToQueryString = queryString.stringify;      
       reactory.log('useReactoryInit - Initialization complete');
     } catch (error) {
       reactory.error('useReactoryInit - Initialization failed', error);
@@ -125,7 +127,13 @@ export const useReactoryInit = ({
 
   // Run initialization on mount and cleanup on unmount
   useEffect(() => {
-    void willMount();
+    reactory.once('onReactoryApiInitialized', () => {
+      willMount();
+    });    
     return willUnmount;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return {
+    isInitialized,
+  }
 };

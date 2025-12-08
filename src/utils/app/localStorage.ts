@@ -135,3 +135,25 @@ export const clearAuthToken = (): void => {
     localStorage.removeItem('auth_token');
   }
 };
+
+export const saveRoutes = (routes: any[]): void => {
+  if (localStorage) {
+    localStorage.setItem('$reactory$cached_routes$', JSON.stringify(routes));
+  }
+};
+
+export const loadRoutes = (): any[] | null => {
+  if (localStorage) {
+    const routesJson = localStorage.getItem('$reactory$cached_routes$');
+    if (routesJson) {
+      try {
+        const routes = JSON.parse(routesJson);
+        return routes;
+      } catch (error) {
+        console.error('Failed to parse cached routes from localStorage', error);
+        return null;
+      }
+    }
+  }
+  return null;
+};

@@ -59,6 +59,8 @@ export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoa
     error('Resource uri is required');
     return;
   }
+
+  debug(`Loading plugin ${name} from ${uri}`);
   
   const resourceId = `${id}`; 
   if (nil(document.getElementById(resourceId)) === false) {
@@ -93,6 +95,7 @@ export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoa
         debug(`Plugin ${name} injected. Waiting for components to be loaded...`);
       }
       document.body.append(scriptLink)
+      debug(`Plugin ${name} script injected successfully`);
       break;
     }
     default: {

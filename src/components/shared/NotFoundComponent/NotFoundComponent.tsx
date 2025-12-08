@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import ReactoryApi, { useReactory } from '@reactory/client-core/api//ApiProvider';
 
 // TODO: Move this interface to @reactory/reactory-core/types/index.d.ts
-interface NotFoundProps {
+export interface NotFoundProps {
   message?: string,
   waitingFor?: string,
   wait?: number,
@@ -11,6 +11,7 @@ interface NotFoundProps {
   theme?: any,
   location?: any
   onFound?: () => void;
+  style?: React.CSSProperties;
 };
 
 const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) => {
@@ -71,7 +72,7 @@ const NotFound: React.FunctionComponent<NotFoundProps> = (props: NotFoundProps) 
 
   if (found === false) {
     let msg = `Waiting for application components to finish loading... ${process.env.NODE_ENV !== 'production' ? props.waitingFor : ''}`;
-    return (<>{msg}</>)
+    return (<div style={props.style}>{msg}</div>)
   } else {
 
     if(props.waitingFor) {

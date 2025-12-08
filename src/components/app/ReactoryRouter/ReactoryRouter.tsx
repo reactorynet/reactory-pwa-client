@@ -4,7 +4,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Typography } from '@mui/material';
+import { fabClasses, Typography } from '@mui/material';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 import { ReactoryRouterProps } from '../../../types/app';
 import { RouteComponentWrapper } from '../RouteComponentWrapper';
@@ -222,7 +222,7 @@ export const ReactoryRouter: React.FC<ReactoryRouterProps> = (props) => {
     // Handle authentication in progress
     const hasRefreshed: boolean = localStorage.getItem('hasRefreshed') === 'true';
 
-    if (auth_validated === false || authenticating === true) {
+    if (auth_validated) {
       children.push(
         <Typography
           key="validating-token"

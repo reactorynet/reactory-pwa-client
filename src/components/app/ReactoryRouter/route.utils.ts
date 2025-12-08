@@ -1,3 +1,4 @@
+import React from "react";
 /**
  * Route utilities for ReactoryRouter
  * Provides helper functions for route validation and processing

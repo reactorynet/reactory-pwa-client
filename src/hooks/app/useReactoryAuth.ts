@@ -45,7 +45,7 @@ export const useReactoryAuth = ({
   const refreshFormsAndComponents = async () => {
     try {
       // Force refresh forms cache to get forms for the logged-in user
-      await (reactory as any).forms(true);
+      await reactory.forms(true);
 
       // Re-register built-in components after forms are loaded
       registerComponents(reactory, componentRegistry);
@@ -151,6 +151,25 @@ export const useReactoryAuth = ({
     // Clear the transition flag after a short delay
     setTimeout(() => setIsAuthTransitioning(false), 100);
   };
+
+
+
+  useEffect(() => { 
+    reactory.once('onReactoryApiInitialized', () => {
+      // Check if user is already logged in on hook initialization
+      const initialUser = reactory.getUser();
+      if (initialUser && initialUser.loggedIn) {
+        setUser(initialUser);
+        setIsValidated(true);
+        setAuthValidated(true);
+        applyTheme();
+      }
+      setIsAuthenticating(false);
+      setIsAuthenticatingState(false);
+      setIsReady(true);
+    });
+
+  }, []);
 
   return {
     auth_validated,

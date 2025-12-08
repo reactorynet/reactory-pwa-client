@@ -66,8 +66,15 @@ export const RouteComponentWrapper: React.FC<RouteComponentWrapperProps> = ({
     };
   }
 
-  const ReactoryComponent = reactory.getComponent(routeDef.componentFqn);
-  const NotFound = reactory.getComponent("core.NotFound");
+  const ReactoryComponent = reactory.getComponent<React.FC<any>>(routeDef.componentFqn);
+  const NotFound = reactory.getComponent<React.FC<{
+    message: string;
+    waitingFor: string;
+    args: Record<string, any>;
+    wait: number;
+    onFound: () => void;
+    style?: React.CSSProperties;
+  }>>("core.NotFound");
 
   // Add additional safety checks for component loading
   if (!ReactoryComponent) {
@@ -91,7 +98,12 @@ export const RouteComponentWrapper: React.FC<RouteComponentWrapperProps> = ({
           ...processedArgs?.style,
         }
       };
-
+      reactory.debug(`Rendering component ${routeDef.componentFqn} for route ${routeDef.path}`, {
+        routeDef,
+        params,
+        location,
+        componentProps
+      });
       return (
         <div key={`route-${routeDef.id}`}>
           {children}
