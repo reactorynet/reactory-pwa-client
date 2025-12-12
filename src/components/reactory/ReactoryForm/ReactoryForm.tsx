@@ -39,6 +39,7 @@ import {
   useUISchema,
   useToolbar,
  } from './hooks';
+import { ReactoryApiEventNames } from '@reactory/client-core/api';
 
 type ScreenSizeKey = Breakpoint | number;
 
@@ -176,6 +177,20 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     // #region Lifecycle
     const formRef: React.RefObject<any> = React.createRef<any>();
 
+    const onComponentRegistered = ({
+      componentFqn
+    }) => { 
+      // if our form definition and widget map exists
+      // we check to see if the registered component
+      // is part of our dependencies
+      if(form && form.widgetMap) {
+        const widgetMapEntry = find(form.widgetMap, (wm) => wm.componentFqn === componentFqn);
+        if(widgetMapEntry) {          
+          setVersion(version + 1);
+        }
+      }
+    };
+
     // const reset = () => {
     //   setComponents(getComponents(DEFAULT_DEPENDENCIES));
     //   //setFormData(initialData());
@@ -198,7 +213,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
     const onReactoryFormMounted = () => {
 
       reactory.amq.onReactoryPluginLoaded('loaded', onPluginLoaded);
-
+      reactory.on(ReactoryApiEventNames.onComponentRegistered, onComponentRegistered);
       // if (props.refCallback) props.refCallback(getFormReference());
       // if (props.ref && typeof props.ref === 'function') props.ref(getFormReference())
 
