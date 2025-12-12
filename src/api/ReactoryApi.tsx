@@ -610,8 +610,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.__form_instances = {};
     this.trackFormInstance = this.trackFormInstance.bind(this);
     //bind internal queue listeners
+    const that = this;
+        
     this.amq.onReactoryPluginEvent('loaded', (data) => {
-      this.emit(ReactoryApiEventNames.onPluginLoaded, data);
+      setTimeout(() => {
+        that.emit(ReactoryApiEventNames.onPluginLoaded, data);    
+      }, 1500);
     });
     this.flushIntervalTimer = setInterval(this.flushstats.bind(this, true), 5000);
     this.__REACTORYAPI = true;
@@ -673,7 +677,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
     }
     await this.hydrate();
-    await this.initi18n();
+    await this.initi18n();    
   }
 
   /**
