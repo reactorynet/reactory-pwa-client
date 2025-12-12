@@ -16,6 +16,14 @@ import configureStore from './models/redux';
 
 import { Theme, CssBaseline } from '@mui/material'
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { 
+  REACT_APP_CLIENT_KEY,
+  REACT_APP_CLIENT_PASSWORD,
+  REACT_APP_API_ENDPOINT,
+  classes,
+  packageInfo
+} from './app/constants';
+import { AppLoading } from './app/AppLoading';
 import queryString from './components/utility/query-string';
 import './App.css';
 import { ReactoryHeader as Header } from '@reactory/client-core/components/shared/header';
@@ -33,17 +41,8 @@ import Reactory from '@reactory/reactory-core';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
-const PREFIX = 'ReactoryHOC';
 
-const classes = {
-  root_paper: `${PREFIX}-root_paper`,
-  selectedMenuLabel: `${PREFIX}-selectedMenuLabel`,
-  prepend: `${PREFIX}-prepend`,
-  selected: `${PREFIX}-selected`,
-  preffered: `${PREFIX}-preffered`,
-  get_started: `${PREFIX}-get_started`,
-  schema_selector: `${PREFIX}-schema_selector`
-};
+
 
 const StyledRouter = styled(Router)(({ theme }: { theme: Theme }) => {
 
@@ -84,15 +83,8 @@ const StyledRouter = styled(Router)(({ theme }: { theme: Theme }) => {
   };
 });
 
-const packageInfo = {
-  version: '1.0.0'
-}
 
-const {
-  REACT_APP_CLIENT_KEY,
-  REACT_APP_CLIENT_PASSWORD,
-  REACT_APP_API_ENDPOINT
-} = process.env;
+
 
 if (localStorage) {
   localStorage.setItem('REACT_APP_CLIENT_KEY', REACT_APP_CLIENT_KEY);
@@ -141,32 +133,6 @@ interface ReactoryRouterProps {
   footer: React.ReactElement
 }
 
-const AppLoading = (props) => {
-  return (
-    <>
-      <div id="default_loader" className="loader">
-        <div className="loader-inner">
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-          <div className="loader-line-wrap">
-            <div className="loader-line"></div>
-          </div>
-        </div>
-      </div>
-      <p>{props.message ? props.message : 'Loading'}</p>
-    </>
-  )
-}
 
 /**
  * Wrapper component that renders inside each route to access params
@@ -637,6 +603,7 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
       totals = newTotals;
 
+      //@ts-ignore
       reactory.stat(`user-session-api-status-totals`, { user_id: reactory.getUser().id, ...totals, ...newLast });
       reactory.emit('onApiStatusTotalsChange', { ...totals, ...newLast, api_ok, isSlow });
 
