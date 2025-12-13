@@ -57,11 +57,29 @@
 - **Mocking**: Proper mocking of ReactoryForm and JsonSchemaEditor dependencies
 - **Accessibility**: Tests for ARIA attributes and keyboard navigation
 
-#### T3.4: Build Verification ✅
-- **TypeScript Compilation**: ✅ No errors (`tsc --noEmit` passes)
-- **Component Structure**: Proper React component with hooks
-- **Import/Export**: Correct module structure with index.ts
-- **Bundle Impact**: Zero additional dependencies (using existing components)
+#### T4.2: Visual Editor Property Editing ✅
+- **FieldSettingsDialog**: Modal dialog for editing field properties
+- **ReactoryForm Integration**: Uses ReactoryForm to render property editors
+- **Dynamic Schemas**: Generates editor schemas based on the field type being edited
+- **Properties Supported**:
+  - **Common**: Title, Description, Required, Read Only
+  - **String**: Min/Max Length, Pattern, Format (email, date, etc.)
+  - **Number**: Min/Max Value, Multiple Of
+  - **Array**: Min/Max Items, Unique Items
+  - **Boolean**: Default Value
+
+#### T4.3: Nested Object Support ✅
+- **Recursive Rendering**: `ObjectField` component renders nested properties recursively
+- **Nested Drop Zones**: Unique droppable IDs using dot notation (e.g., `SCHEMA_CANVAS.address.street`)
+- **Path-Based Updates**: Logic to traverse schema and update properties at any depth
+- **Nested Reordering**: Support for reordering fields within nested objects
+
+#### T4.4: Array Field Support ✅
+- **ArrayField Component**: Specialized component for array type fields
+- **Items Drop Zone**: Dedicated drop zone for the `items` property
+- **Single Item Constraint**: Enforces array `items` schema to be a single schema object
+- **Recursive Integration**: Works seamlessly within nested objects and can contain nested objects
+- **Deep Nesting Fix**: Correctly renders drop zones for Objects nested inside Arrays
 
 ### Updated Timeline After Task T3 Completion:
 - **T1**: ✅ 1-2 hours (completed)
