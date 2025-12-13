@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useReducer, useMemo } from 'react';
 
 export interface ValidationState {
   isValid: boolean;
@@ -13,6 +13,14 @@ export interface FormEditorState {
     uiSchema: ValidationState;
   };
 }
+
+export type FormEditorAction = 
+  | { type: 'SET_FORM_DATA', payload: any }
+  | { type: 'UPDATE_SCHEMA', payload: any }
+  | { type: 'UPDATE_UI_SCHEMA', payload: any }
+  | { type: 'UPDATE_SCHEMA_VALIDATION', payload: { isValid: boolean, errors: string[] } }
+  | { type: 'UPDATE_UI_SCHEMA_VALIDATION', payload: { isValid: boolean, errors: string[] } }
+  | { type: 'SET_FORM_SCHEMAS', payload: any };
 
 export interface FormEditorActions {
   setReactoryForm: (form: any) => void;
@@ -81,64 +89,98 @@ const DEFAULT_FORM_SCHEMAS = {
   sanitizeSchema: undefined
 };
 
-export const useFormEditorState = (initialFormData?: any): [FormEditorState, FormEditorActions] => {
-  const [reactoryForm, setReactoryForm] = useState(initialFormData || DEFAULT_FORM_DATA);
-  const [formSchemas, setFormSchemas] = useState(DEFAULT_FORM_SCHEMAS);
-  const [validationState, setValidationState] = useState({
+const initialState: FormEditorState = {
+  reactoryForm: DEFAULT_FORM_DATA,
+  formSchemas: DEFAULT_FORM_SCHEMAS,
+  validationState: {
     schema: { isValid: true, errors: [] },
     uiSchema: { isValid: true, errors: [] }
+  }
+};
+
+const formEditorReducer = (state: FormEditorState, action: FormEditorAction): FormEditorState => {
+  switch (action.type) {
+    case 'SET_FORM_DATA':
+      return {
+        ...state,
+        reactoryForm: action.payload
+      };
+    case 'SET_FORM_SCHEMAS':
+      return {
+        ...state,
+        formSchemas: action.payload,
+        reactoryForm: {
+          ...state.reactoryForm,
+          schema: action.payload.schema || state.reactoryForm.schema,
+          uiSchema: action.payload.uiSchema || state.reactoryForm.uiSchema
+        }
+      };
+    case 'UPDATE_SCHEMA':
+      return {
+        ...state,
+        formSchemas: {
+          ...state.formSchemas,
+          schema: action.payload
+        },
+        reactoryForm: {
+          ...state.reactoryForm,
+          schema: action.payload
+        }
+      };
+    case 'UPDATE_UI_SCHEMA':
+      return {
+        ...state,
+        formSchemas: {
+          ...state.formSchemas,
+          uiSchema: action.payload
+        },
+        reactoryForm: {
+          ...state.reactoryForm,
+          uiSchema: action.payload
+        }
+      };
+    case 'UPDATE_SCHEMA_VALIDATION':
+      return {
+        ...state,
+        validationState: {
+          ...state.validationState,
+          schema: action.payload
+        }
+      };
+    case 'UPDATE_UI_SCHEMA_VALIDATION':
+      return {
+        ...state,
+        validationState: {
+          ...state.validationState,
+          uiSchema: action.payload
+        }
+      };
+    default:
+      return state;
+  }
+};
+
+export const useFormEditorState = (initialFormData?: any): [FormEditorState, FormEditorActions] => {
+  const [state, dispatch] = useReducer(formEditorReducer, {
+    ...initialState,
+    reactoryForm: initialFormData || initialState.reactoryForm,
+    formSchemas: {
+      ...initialState.formSchemas,
+      schema: initialFormData?.schema || initialState.formSchemas.schema,
+      uiSchema: initialFormData?.uiSchema || initialState.formSchemas.uiSchema
+    }
   });
 
-  const updateSchemaValidation = useCallback((isValid: boolean, errors: string[] = []) => {
-    setValidationState(prev => ({
-      ...prev,
-      schema: { isValid, errors }
-    }));
-  }, []);
-
-  const updateUISchemaValidation = useCallback((isValid: boolean, errors: string[] = []) => {
-    setValidationState(prev => ({
-      ...prev,
-      uiSchema: { isValid, errors }
-    }));
-  }, []);
-
-  const updateSchema = useCallback((schema: any) => {
-    setFormSchemas(prev => ({
-      ...prev,
-      schema
-    }));
-    setReactoryForm(prev => ({
-      ...prev,
-      schema
-    }));
-  }, []);
-
-  const updateUISchema = useCallback((uiSchema: any) => {
-    setFormSchemas(prev => ({
-      ...prev,
-      uiSchema
-    }));
-    setReactoryForm(prev => ({
-      ...prev,
-      uiSchema
-    }));
-  }, []);
-
-  const state: FormEditorState = {
-    reactoryForm,
-    formSchemas,
-    validationState
-  };
-
-  const actions: FormEditorActions = {
-    setReactoryForm,
-    setFormSchemas,
-    updateSchemaValidation,
-    updateUISchemaValidation,
-    updateSchema,
-    updateUISchema
-  };
+  const actions = useMemo<FormEditorActions>(() => ({
+    setReactoryForm: (form: any) => dispatch({ type: 'SET_FORM_DATA', payload: form }),
+    setFormSchemas: (schemas: any) => dispatch({ type: 'SET_FORM_SCHEMAS', payload: schemas }),
+    updateSchemaValidation: (isValid: boolean, errors: string[] = []) => 
+      dispatch({ type: 'UPDATE_SCHEMA_VALIDATION', payload: { isValid, errors } }),
+    updateUISchemaValidation: (isValid: boolean, errors: string[] = []) => 
+      dispatch({ type: 'UPDATE_UI_SCHEMA_VALIDATION', payload: { isValid, errors } }),
+    updateSchema: (schema: any) => dispatch({ type: 'UPDATE_SCHEMA', payload: schema }),
+    updateUISchema: (uiSchema: any) => dispatch({ type: 'UPDATE_UI_SCHEMA', payload: uiSchema })
+  }), [dispatch]);
 
   return [state, actions];
 };

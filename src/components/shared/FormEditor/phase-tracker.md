@@ -120,6 +120,32 @@ Development of a comprehensive form definition editor with real-time persistence
   - ✅ Integrated recursively with ObjectField
   - ✅ Fixed recursive dropping of fields into Objects nested inside Arrays
 
+#### Task T5: Internal State Management & Sync ✅ COMPLETED
+- [x] **T5.1**: Refactor State Management
+  - ✅ Replaced `useState` with `useReducer` in `useFormEditorState` hook
+  - ✅ Defined comprehensive action types and reducer logic
+  - ✅ Improved state update reliability and performance
+
+- [x] **T5.2**: Implement Bidirectional Sync
+  - ✅ Ensured updates in Visual Editor persist when switching to Code View
+  - ✅ Ensured updates in Code View reflect immediately in Visual Editor
+  - ✅ Added checks to prevent unnecessary updates (loops) when parsing/stringifying JSON
+  - ✅ Validated state updates trigger correct re-renders
+  - ✅ Fixed issue where JsonSchemaEditor changes were not propagating to parent (missing onChange call)
+  - ✅ Fixed focus loss issue in JsonSchemaEditor by preventing aggressive content updates on keystrokes using semantic comparison
+  - ✅ Fixed component unmounting issue by moving `TabPanel` and `ValidationStatus` definitions outside the main `FormEditor` component
+
+### Phase 2: Data Integration & AI Features
+- [x] **T6.1**: Add Data Configuration Tab
+  - ✅ Added "Data" tab to `FormEditor` (index 3)
+  - ✅ Implemented `handleDataChange` to update `reactoryForm.graphql`
+  - ✅ Integrated `JsonSchemaEditor` for editing GraphQL configuration
+  - ✅ Fixed Tab/Panel index mismatch for Data and Preview tabs
+
+- [ ] **T6.2**: AI-Assisted Schema Generation
+  - [ ] Implement "Generate Schema from Description" feature
+  - [ ] Integrate with AI service for schema suggestions
+
 ### IMMEDIATE NEXT TASK: Phase 1 Complete - Ready for Review
 
 #### Enhanced State Management
@@ -293,6 +319,8 @@ Development of a comprehensive form definition editor with real-time persistence
   - ✅ Task T1: Baseline build testing completed
   - ✅ Task T2: Code editor evaluation completed - selected existing JsonSchemaEditor
   - ✅ Task T3: FormEditor component created with full JsonSchemaEditor integration
+  - ✅ Task T4: Visual Schema Editor implemented with drag-and-drop and property editing
+  - ✅ Task T5: Internal state management refactored for robust bidirectional sync
 - **In Progress**: Phase 1 completion and Phase 2 planning
 - **Blocked**: None
 - **Next Week Goals**:

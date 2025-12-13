@@ -187,29 +187,43 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
     'code-block'
   ];
 
-  // useEffect(() => {
-  //   if (value !== content) {
-  //     setContent(value);
-  //   }
-  // }, [value]);
+  const contentRef = React.useRef(content);
+  useEffect(() => {
+    contentRef.current = content;
+  });
 
-  // useEffect(() => {
-  //   if (onChange && content !== value) {
-  //     onChange(content);
-  //   }
-  // }, [content, onChange, value]);
+  useEffect(() => {
+    if (value === undefined) return;
+    
+    const currentContent = contentRef.current;
+    
+    // If exact string match, do nothing
+    if (value === currentContent) return;
 
-  // useEffect(() => {
-  //   if (showValidation) {
-  //     validateContent(content);
-  //   }
-  // }, [content, showValidation]);
+    try {
+      // Check for semantic equality to avoid re-formatting while typing
+      const currentParsed = JSON.parse(currentContent || '{}');
+      const newParsed = JSON.parse(value || '{}');
+      
+      // If semantically different, update content
+      if (JSON.stringify(currentParsed) !== JSON.stringify(newParsed)) {
+        setContent(value);
+      }
+    } catch (e) {
+      // If local content is invalid JSON, we can't do a semantic check.
+      // However, if the value prop changed, it implies an external update.
+      if (value !== currentContent) {
+        setContent(value);
+      }
+    }
+  }, [value]);
 
   function formatJson() {
     try {
       const parsed = JSON.parse(content);
       const formatted = JSON.stringify(parsed, null, 2);
       setContent(formatted);
+      onChange?.(formatted);
     } catch (error) {
       // If parsing fails, try to clean up basic formatting
       const cleaned = content
@@ -217,11 +231,8 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
         .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Quote unquoted keys
         .replace(/:\s*([^",{\[\]}\s]+)(\s*[,}\]])/g, ': "$1"$2'); // Quote unquoted string values
       setContent(cleaned);
+      onChange?.(cleaned);
     }
-  }
-
-  function validateJson() {
-    validateContent(content);
   }
 
   const validateContent = (jsonContent: string) => {
@@ -272,8 +283,13 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
     onValidationChange?.(valid, errors);
   };
 
+  function validateJson() {
+    validateContent(content);
+  }
+
   const handleEditorChange = (newContent: string) => {
     setContent(newContent);
+    onChange?.(newContent);
   };
 
   const handleBlur = () => {

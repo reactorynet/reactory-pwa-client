@@ -20,6 +20,51 @@ interface FormEditorProps {
   onChange?: (formData: any) => void;
 }
 
+// Helper components defined outside to prevent re-mounting
+const TabPanel: React.FC<{
+  children: React.ReactNode;
+  value: number;
+  index: number;
+}> = ({ children, value, index, ...other }) => (
+  <div
+    role="tabpanel"
+    hidden={value !== index}
+    id={`form-editor-tabpanel-${index}`}
+    aria-labelledby={`form-editor-tab-${index}`}
+    {...other}
+  >
+    {value === index && (
+      <Box sx={{ p: 3 }}>
+        {children}
+      </Box>
+    )}
+  </div>
+);
+
+const ValidationStatus: React.FC<{
+  isValid: boolean;
+  errors: string[];
+  label: string;
+}> = ({ isValid, errors, label }) => (
+  <Box sx={{ mb: 2 }}>
+    <Alert
+      severity={isValid ? 'success' : 'error'}
+      variant="outlined"
+      sx={{ fontSize: '0.875rem' }}
+    >
+      <strong>{label}:</strong> {isValid ? 'Valid' : `${errors.length} error(s)`}
+      {!isValid && errors.length > 0 && (
+        <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+          {errors.slice(0, 3).map((error, index) => (
+            <li key={index} style={{ fontSize: '0.8rem' }}>{error}</li>
+          ))}
+          {errors.length > 3 && <li style={{ fontSize: '0.8rem' }}>...and {errors.length - 3} more</li>}
+        </ul>
+      )}
+    </Alert>
+  </Box>
+);
+
 const  FormEditor: React.FC<FormEditorProps> = ({
   formData: initialFormData,
   onChange
@@ -52,8 +97,12 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     // Update the form schema state regardless of validation result
     try {
       const parsed = JSON.parse(newSchemaString);
-      actions.updateSchema(parsed);
-      onChange?.(state.reactoryForm);
+      // Only update schema if it's different from current
+      // This prevents potential loops if stringify(parse(str)) !== str
+      if (JSON.stringify(parsed) !== JSON.stringify(state.formSchemas.schema)) {
+        actions.updateSchema(parsed);
+        onChange?.(state.reactoryForm);
+      }
     } catch (error) {
       // Keep the string value for editing even if invalid
       console.warn('Invalid JSON schema:', error);
@@ -61,7 +110,10 @@ const  FormEditor: React.FC<FormEditorProps> = ({
   }, [validateSchemaChange, actions, onChange, state.reactoryForm]);
 
   const handleVisualSchemaChange = useCallback((newSchema: any) => {
+    // When visual editor updates schema, it is already a valid object
+    // Update both schema state and validation state
     actions.updateSchema(newSchema);
+    actions.updateSchemaValidation(true, []);
     onChange?.(state.reactoryForm);
   }, [actions, onChange, state.reactoryForm]);
 
@@ -79,34 +131,35 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     // Update the form UI schema state regardless of validation result
     try {
       const parsed = JSON.parse(newUISchemaString);
-      actions.updateUISchema(parsed);
-      onChange?.(state.reactoryForm);
+      // Only update schema if it's different from current
+      if (JSON.stringify(parsed) !== JSON.stringify(state.formSchemas.uiSchema)) {
+        actions.updateUISchema(parsed);
+        onChange?.(state.reactoryForm);
+      }
     } catch (error) {
       // Keep the string value for editing even if invalid
       console.warn('Invalid UI schema:', error);
     }
   }, [validateUISchemaChange, actions, onChange, state.reactoryForm]);
 
-  // Tab panel component
-  const TabPanel: React.FC<{
-    children: React.ReactNode;
-    value: number;
-    index: number;
-  }> = ({ children, value, index, ...other }) => (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`form-editor-tabpanel-${index}`}
-      aria-labelledby={`form-editor-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
+  const handleDataChange = useCallback((newDataString: string) => {
+    try {
+      const parsed = JSON.parse(newDataString);
+      // Only update if different
+      if (JSON.stringify(parsed) !== JSON.stringify(state.reactoryForm.graphql)) {
+        actions.setReactoryForm({
+          ...state.reactoryForm,
+          graphql: parsed
+        });
+        onChange?.({
+          ...state.reactoryForm,
+          graphql: parsed
+        });
+      }
+    } catch (error) {
+      console.warn('Invalid Data/GraphQL configuration:', error);
+    }
+  }, [actions, onChange, state.reactoryForm]);
 
   const a11yProps = (index: number) => ({
     id: `form-editor-tab-${index}`,
@@ -218,31 +271,6 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     }
   }, [state.reactoryForm]);
 
-  // Validation status indicator
-  const ValidationStatus: React.FC<{
-    isValid: boolean;
-    errors: string[];
-    label: string;
-  }> = ({ isValid, errors, label }) => (
-    <Box sx={{ mb: 2 }}>
-      <Alert
-        severity={isValid ? 'success' : 'error'}
-        variant="outlined"
-        sx={{ fontSize: '0.875rem' }}
-      >
-        <strong>{label}:</strong> {isValid ? 'Valid' : `${errors.length} error(s)`}
-        {!isValid && errors.length > 0 && (
-          <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
-            {errors.slice(0, 3).map((error, index) => (
-              <li key={index} style={{ fontSize: '0.8rem' }}>{error}</li>
-            ))}
-            {errors.length > 3 && <li style={{ fontSize: '0.8rem' }}>...and {errors.length - 3} more</li>}
-          </ul>
-        )}
-      </Alert>
-    </Box>
-  );
-
   return (
     <>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -270,7 +298,8 @@ const  FormEditor: React.FC<FormEditorProps> = ({
             }
             {...a11yProps(2)}
           />
-          <Tab label="Preview" {...a11yProps(3)} />
+          <Tab label="Data" {...a11yProps(3)} />
+          <Tab label="Preview" {...a11yProps(4)} />
         </Tabs>
       </Box>
 
@@ -351,6 +380,23 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       </TabPanel>
 
       <TabPanel value={activeTab} index={3}>
+        <Typography variant="h6" gutterBottom>
+          Data Configuration (GraphQL)
+        </Typography>
+        <Paper elevation={1} sx={{ p: 2 }}>
+          <JsonSchemaEditor
+            value={JSON.stringify(state.reactoryForm.graphql || {}, null, 2)}
+            onChange={handleDataChange}
+            label="GraphQL Data Provider Config"
+            placeholder="Enter GraphQL queries and mutations..."
+            height={400}
+            showValidation={true}
+            formatOnBlur={true}
+          />
+        </Paper>
+      </TabPanel>
+
+      <TabPanel value={activeTab} index={4}>
         <Typography variant="h6" gutterBottom>
           Form Preview
         </Typography>

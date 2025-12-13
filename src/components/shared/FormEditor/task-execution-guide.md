@@ -81,6 +81,16 @@
 - **Recursive Integration**: Works seamlessly within nested objects and can contain nested objects
 - **Deep Nesting Fix**: Correctly renders drop zones for Objects nested inside Arrays
 
+#### T5.1: State Management Refactor ✅
+- **useReducer**: Migrated from `useState` to `useReducer` for predictable state updates
+- **Action Types**: Defined strict action types (`UPDATE_SCHEMA`, `UPDATE_UI_SCHEMA`, etc.)
+- **Performance**: Optimized state updates to reduce unnecessary re-renders
+
+#### T5.2: Code/Visual Sync ✅
+- **Bidirectional Sync**: Changes in one view (Code/Visual) immediately reflect in the other
+- **Loop Prevention**: Added checks to prevent update loops when parsing/stringifying JSON
+- **Validation Sync**: Visual editor updates automatically clear validation errors since the output is guaranteed valid JSON
+
 ### Updated Timeline After Task T3 Completion:
 - **T1**: ✅ 1-2 hours (completed)
 - **T2**: ✅ 4-6 hours (completed - decision made)
