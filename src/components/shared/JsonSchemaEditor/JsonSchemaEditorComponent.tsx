@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import ReactQuill from 'react-quill';
+import hljs from 'highlight.js';
 import 'react-quill/dist/quill.snow.css';
 import { 
   FormControl, 
@@ -9,7 +10,8 @@ import {
   Box, 
   Alert,
   Tooltip,
-  IconButton 
+  IconButton, 
+  TextField
 } from '@mui/material';
 import { 
   FormatAlignLeft, 
@@ -173,7 +175,7 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
         'validate-json': validateJson
       }
     },
-    syntax: true,
+    syntax: { hljs },
     clipboard: {
       matchVisual: false,
     }
@@ -185,23 +187,23 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
     'code-block'
   ];
 
-  useEffect(() => {
-    if (value !== content) {
-      setContent(value);
-    }
-  }, [value]);
+  // useEffect(() => {
+  //   if (value !== content) {
+  //     setContent(value);
+  //   }
+  // }, [value]);
 
-  useEffect(() => {
-    if (onChange && content !== value) {
-      onChange(content);
-    }
-  }, [content, onChange, value]);
+  // useEffect(() => {
+  //   if (onChange && content !== value) {
+  //     onChange(content);
+  //   }
+  // }, [content, onChange, value]);
 
-  useEffect(() => {
-    if (showValidation) {
-      validateContent(content);
-    }
-  }, [content, showValidation]);
+  // useEffect(() => {
+  //   if (showValidation) {
+  //     validateContent(content);
+  //   }
+  // }, [content, showValidation]);
 
   function formatJson() {
     try {
@@ -307,15 +309,20 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
           </Box>
         </Box>
 
-        <StyledReactQuill
+        <TextField 
           value={content}
-          onChange={handleEditorChange}
-          onBlur={handleBlur}          
+          onChange={(e) => handleEditorChange(e.target.value)}
+          onBlur={handleBlur}
           placeholder={placeholder}
-          readOnly={readOnly}
-          className={classes.editor}
-          modules={modules}
-          formats={formats}
+          multiline
+          minRows={10}
+          maxRows={20}
+          fullWidth
+          variant="outlined"
+          InputProps={{
+            readOnly: readOnly,
+            className: classes.editor,
+          }}
           style={{ height: typeof height === 'number' ? `${height}px` : height }}
         />
       </Box>

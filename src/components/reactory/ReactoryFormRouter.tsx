@@ -175,8 +175,7 @@ const ReactoryFormRouter = (props) => {
     // Handle /new/develop
     if (relativePath.length === 2 && relativePath[0] === 'new' && relativePath[1] === 'develop') {
       return (
-        <div style={{ padding: '20px', background: 'lightgreen' }}>
-          <h2>NEW/DEVELOP - Conditional Route Working!</h2>
+        <div style={{ padding: '20px' }}>          
           <FormEditorEnhanced 
             formId="new"
             mode="develop"

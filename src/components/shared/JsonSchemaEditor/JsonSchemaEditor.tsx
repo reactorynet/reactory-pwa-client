@@ -9,7 +9,8 @@ import {
   Box, 
   Alert,
   Tooltip,
-  IconButton 
+  IconButton, 
+  TextField
 } from '@mui/material';
 import { 
   FormatAlignLeft, 
@@ -307,15 +308,20 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
           </Box>
         </Box>
 
-        <StyledReactQuill
+        <TextField 
           value={content}
-          onChange={handleEditorChange}
+          onChange={(e) => handleEditorChange(e.target.value)}
           onBlur={handleBlur}
           placeholder={placeholder}
-          readOnly={readOnly}
-          className={classes.editor}
-          modules={modules}
-          formats={formats}
+          multiline
+          minRows={10}
+          maxRows={20}
+          fullWidth
+          variant="outlined"
+          InputProps={{
+            readOnly: readOnly,
+            className: classes.editor,
+          }}
           style={{ height: typeof height === 'number' ? `${height}px` : height }}
         />
       </Box>

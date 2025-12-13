@@ -89,6 +89,8 @@ import PrismCode from 'react-prism';
 
 import WorkflowDesigner from './shared/WorkflowDesigner';
 import JsonSchemaEditor from './shared/JsonSchemaEditor';
+import FormEditor from './shared/FormEditor';
+
 import * as Three from 'three';
 
 import { UserProfile } from './shared/UserProfile';
@@ -666,6 +668,12 @@ export const componentRegistery = [
     name: 'UserProfile',
     version: '1.0.1',
     component: UserProfile
+  },
+  {
+    nameSpace: 'reactory',
+    name: 'FormEditorEnhanced',
+    version: '1.0.0',
+    component: FormEditor
   },
   // Append plugin components
   ...pluginComponents
