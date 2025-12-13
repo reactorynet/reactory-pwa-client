@@ -5,10 +5,14 @@ import {
   Tab,
   Typography,
   Alert,
-  Paper
+  Paper,
+  FormControlLabel,
+  Switch,
+  Stack
 } from '@mui/material';
 import { ReactoryForm } from '../../reactory';
 import JsonSchemaEditor from '../JsonSchemaEditor';
+import { VisualSchemaEditor } from './VisualEditor';
 import { useFormEditorState, useSchemaValidation } from './hooks';
 
 interface FormEditorProps {
@@ -26,6 +30,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
 
   // Local UI state
   const [activeTab, setActiveTab] = useState(0);
+  const [isVisualMode, setIsVisualMode] = useState(true);
 
   // Tab change handler
   const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
@@ -54,6 +59,11 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       console.warn('Invalid JSON schema:', error);
     }
   }, [validateSchemaChange, actions, onChange, state.reactoryForm]);
+
+  const handleVisualSchemaChange = useCallback((newSchema: any) => {
+    actions.updateSchema(newSchema);
+    onChange?.(state.reactoryForm);
+  }, [actions, onChange, state.reactoryForm]);
 
   const handleUISchemaChange = useCallback((newUISchemaString: string) => {
     // Validate the UI schema and update validation state
@@ -282,22 +292,41 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       </TabPanel>
 
       <TabPanel value={activeTab} index={1}>
-        <ValidationStatus
-          isValid={state.validationState.schema.isValid}
-          errors={state.validationState.schema.errors}
-          label="Data Schema Validation"
-        />
-
-        <Paper elevation={1} sx={{ p: 2 }}>
-          <JsonSchemaEditor
-            value={JSON.stringify(state.formSchemas.schema, null, 2)}
-            onChange={handleSchemaChange}
-            label="Form Data Schema"
-            placeholder="Enter JSON schema definition for form data validation..."
-            height={400}
-            showValidation={true}
-            formatOnBlur={true}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+          <ValidationStatus
+            isValid={state.validationState.schema.isValid}
+            errors={state.validationState.schema.errors}
+            label="Data Schema Validation"
           />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isVisualMode}
+                onChange={(e) => setIsVisualMode(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="Visual Editor"
+          />
+        </Stack>
+
+        <Paper elevation={1} sx={{ p: 2, height: '100%', minHeight: 400 }}>
+          {isVisualMode ? (
+            <VisualSchemaEditor
+              schema={state.formSchemas.schema}
+              onChange={handleVisualSchemaChange}
+            />
+          ) : (
+            <JsonSchemaEditor
+              value={JSON.stringify(state.formSchemas.schema, null, 2)}
+              onChange={handleSchemaChange}
+              label="Form Data Schema"
+              placeholder="Enter JSON schema definition for form data validation..."
+              height={400}
+              showValidation={true}
+              formatOnBlur={true}
+            />
+          )}
         </Paper>
       </TabPanel>
 
