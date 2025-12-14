@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { ReactoryForm } from '../../reactory';
 import JsonSchemaEditor from '../JsonSchemaEditor';
-import { VisualSchemaEditor, VisualUISchemaEditor } from './VisualEditor';
+import { VisualSchemaEditor, VisualUISchemaEditor, VisualDataEditor } from './VisualEditor';
 import { useFormEditorState, useSchemaValidation } from './hooks';
 
 interface FormEditorProps {
@@ -77,6 +77,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
   const [activeTab, setActiveTab] = useState(0);
   const [isVisualMode, setIsVisualMode] = useState(true);
   const [isUIVisualMode, setIsUIVisualMode] = useState(true);
+  const [isDataVisualMode, setIsDataVisualMode] = useState(true);
 
   // Tab change handler
   const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
@@ -149,6 +150,19 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       console.warn('Invalid UI schema:', error);
     }
   }, [validateUISchemaChange, actions, onChange, state.reactoryForm]);
+
+  const handleVisualDataChange = useCallback((newData: { providers?: any, graphql?: any }) => {
+    actions.setReactoryForm({
+      ...state.reactoryForm,
+      providers: newData.providers,
+      graphql: newData.graphql
+    });
+    onChange?.({
+      ...state.reactoryForm,
+      providers: newData.providers,
+      graphql: newData.graphql
+    });
+  }, [actions, onChange, state.reactoryForm]);
 
   const handleDataChange = useCallback((newDataString: string) => {
     try {
@@ -408,19 +422,40 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       </TabPanel>
 
       <TabPanel value={activeTab} index={3}>
-        <Typography variant="h6" gutterBottom>
-          Data Configuration (GraphQL)
-        </Typography>
-        <Paper elevation={1} sx={{ p: 2 }}>
-          <JsonSchemaEditor
-            value={JSON.stringify(state.reactoryForm.graphql || {}, null, 2)}
-            onChange={handleDataChange}
-            label="GraphQL Data Provider Config"
-            placeholder="Enter GraphQL queries and mutations..."
-            height={400}
-            showValidation={true}
-            formatOnBlur={true}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+          <Typography variant="h6">
+            Data Configuration (GraphQL)
+          </Typography>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isDataVisualMode}
+                onChange={(e) => setIsDataVisualMode(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="Visual Editor"
           />
+        </Stack>
+
+        <Paper elevation={1} sx={{ p: 2, height: '100%', minHeight: 400 }}>
+          {isDataVisualMode ? (
+            <VisualDataEditor
+              providers={state.reactoryForm.providers}
+              graphql={state.reactoryForm.graphql}
+              onChange={handleVisualDataChange}
+            />
+          ) : (
+            <JsonSchemaEditor
+              value={JSON.stringify(state.reactoryForm.graphql || {}, null, 2)}
+              onChange={handleDataChange}
+              label="GraphQL Data Provider Config"
+              placeholder="Enter GraphQL queries and mutations..."
+              height={400}
+              showValidation={true}
+              formatOnBlur={true}
+            />
+          )}
         </Paper>
       </TabPanel>
 

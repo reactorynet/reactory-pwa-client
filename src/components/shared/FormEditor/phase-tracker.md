@@ -152,6 +152,18 @@ Development of a comprehensive form definition editor with real-time persistence
   - ✅ Implemented Drag and Drop reordering for `ui:order` property on root and nested objects
   - ✅ Added "Form Root Settings" editor for global UI properties (`ui:field`, `ui:title`, etc.)
 
+### Phase 2: Data Integration & AI Features
+- [x] **T6.4**: Visual Data (GraphQL) Editor
+  - ✅ Implemented `VisualDataEditor` for configuring `graphql` property
+  - ✅ Created `DataSettingsDialog` for editing Queries and Mutations using `ReactoryForm`
+  - ✅ Defined schemas for Query and Mutation configuration in `data-field-editors.ts`
+  - ✅ Integrated into "Data" tab with Visual/Code toggle switch
+  - ✅ Allows Adding, Editing, and Deleting Primary Query, Additional Queries, and Mutations
+  - ✅ Added empty state handling with "Enable Data Integration" button for null/undefined data
+  - ✅ Refactored `VisualDataEditor` to support `providers` configuration (GraphQL, REST, Local, gRPC, Socket)
+  - ✅ Created `VisualGraphQLDataEditor` for dedicated GraphQL query/mutation editing
+  - ✅ Added provider management (Add, Edit, Delete) with vertical tabs navigation
+
 - [ ] **T6.2**: AI-Assisted Schema Generation
   - [ ] Implement "Generate Schema from Description" feature
   - [ ] Integrate with AI service for schema suggestions

@@ -251,6 +251,16 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
 
   const onSubmit = async <TData>(data: TData): Promise<TData> => {
     debug("useGraphQLDataManager:onSubmit", { data });
+    if (!graphql) { 
+      reactory.warning("No graphql definition provided", { data });
+      return data;
+    }
+    
+    if (!graphql?.mutation) { 
+      reactory.warning("No mutation definition provided", { data });
+      return data;
+    }
+    
     setLocalData(data);
     setIsBusy(true);
     if (
