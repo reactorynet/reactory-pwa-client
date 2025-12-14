@@ -142,6 +142,16 @@ Development of a comprehensive form definition editor with real-time persistence
   - ✅ Integrated `JsonSchemaEditor` for editing GraphQL configuration
   - ✅ Fixed Tab/Panel index mismatch for Data and Preview tabs
 
+### Phase 2: Data Integration & AI Features
+- [x] **T6.3**: Visual UI Schema Editor
+  - ✅ Implemented `VisualUISchemaEditor` mirroring schema structure
+  - ✅ Created `UIFieldSettingsDialog` using `ReactoryForm` for editing "ui:" properties
+  - ✅ Defined schemas for UI properties in `ui-field-editors.ts`
+  - ✅ Integrated into "UI Schema" tab with Visual/Code toggle
+  - ✅ Implemented mapping logic between UI schema keys (with `ui:` prefix) and editor form fields
+  - ✅ Implemented Drag and Drop reordering for `ui:order` property on root and nested objects
+  - ✅ Added "Form Root Settings" editor for global UI properties (`ui:field`, `ui:title`, etc.)
+
 - [ ] **T6.2**: AI-Assisted Schema Generation
   - [ ] Implement "Generate Schema from Description" feature
   - [ ] Integrate with AI service for schema suggestions

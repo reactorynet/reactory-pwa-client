@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { ReactoryForm } from '../../reactory';
 import JsonSchemaEditor from '../JsonSchemaEditor';
-import { VisualSchemaEditor } from './VisualEditor';
+import { VisualSchemaEditor, VisualUISchemaEditor } from './VisualEditor';
 import { useFormEditorState, useSchemaValidation } from './hooks';
 
 interface FormEditorProps {
@@ -76,6 +76,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
   // Local UI state
   const [activeTab, setActiveTab] = useState(0);
   const [isVisualMode, setIsVisualMode] = useState(true);
+  const [isUIVisualMode, setIsUIVisualMode] = useState(true);
 
   // Tab change handler
   const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
@@ -114,6 +115,13 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     // Update both schema state and validation state
     actions.updateSchema(newSchema);
     actions.updateSchemaValidation(true, []);
+    onChange?.(state.reactoryForm);
+  }, [actions, onChange, state.reactoryForm]);
+
+  const handleVisualUISchemaChange = useCallback((newUISchema: any) => {
+    // When visual UI editor updates, it provides the full UI schema object
+    actions.updateUISchema(newUISchema);
+    actions.updateUISchemaValidation(true, []);
     onChange?.(state.reactoryForm);
   }, [actions, onChange, state.reactoryForm]);
 
@@ -360,22 +368,42 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       </TabPanel>
 
       <TabPanel value={activeTab} index={2}>
-        <ValidationStatus
-          isValid={state.validationState.uiSchema.isValid}
-          errors={state.validationState.uiSchema.errors}
-          label="UI Schema Validation"
-        />
-
-        <Paper elevation={1} sx={{ p: 2 }}>
-          <JsonSchemaEditor
-            value={JSON.stringify(state.formSchemas.uiSchema, null, 2)}
-            onChange={handleUISchemaChange}
-            label="Form UI Schema"
-            placeholder="Enter UI schema definition for form presentation..."
-            height={400}
-            showValidation={true}
-            formatOnBlur={true}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+          <ValidationStatus
+            isValid={state.validationState.uiSchema.isValid}
+            errors={state.validationState.uiSchema.errors}
+            label="UI Schema Validation"
           />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isUIVisualMode}
+                onChange={(e) => setIsUIVisualMode(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="Visual Editor"
+          />
+        </Stack>
+
+        <Paper elevation={1} sx={{ p: 2, height: '100%', minHeight: 400 }}>
+          {isUIVisualMode ? (
+            <VisualUISchemaEditor
+              schema={state.formSchemas.schema}
+              uiSchema={state.formSchemas.uiSchema}
+              onChange={handleVisualUISchemaChange}
+            />
+          ) : (
+            <JsonSchemaEditor
+              value={JSON.stringify(state.formSchemas.uiSchema, null, 2)}
+              onChange={handleUISchemaChange}
+              label="Form UI Schema"
+              placeholder="Enter UI schema definition for form presentation..."
+              height={400}
+              showValidation={true}
+              formatOnBlur={true}
+            />
+          )}
         </Paper>
       </TabPanel>
 
