@@ -196,14 +196,20 @@ const  FormEditor: React.FC<FormEditorProps> = ({
           type: 'object',
           title: 'Form Base Config',
           description: 'Use base configuration input to edit basics for your form',
-          required: ['id'],
+          required: ['id', 'name', 'nameSpace', 'version'],
           properties: {
             id: { title: 'ID', type: 'string', description: 'Provide a unique id for your form' },
+            nameSpace: { type: 'string', title: 'Namespace', description: 'Form namespace (e.g. "core", "my-app")' },
+            name: { type: 'string', title: 'Name', description: 'Form name' },
+            version: { type: 'string', title: 'Version', description: 'Semantic version (e.g. 1.0.0)' },
             title: { type: 'string', title: 'Form title' },
             description: { type: 'string', title: 'Form Description' },
             uiFramework: { type: 'string', title: 'UI Framework', description: 'Select the UI Framework for your form' },
             icon: { type: 'string', title: 'Icon'},
             avatar: { type: 'string', title: 'Avatar / Image' },
+            registerAsComponent: { type: 'boolean', title: 'Register as Component', description: 'Should this form be registered as a component?' },
+            roles: { type: 'array', title: 'Allowed Roles', items: { type: 'string' } },
+            components: { type: 'array', title: 'Required Components', items: { type: 'string' } }
           }
         };
       }
@@ -222,8 +228,13 @@ const  FormEditor: React.FC<FormEditorProps> = ({
           "ui:field": "GridLayout",
           "ui:grid-layout": [
             {
-              id: { xs: 12, sm: 12, md: 6, lg: 6 },
-              title: { xs: 12, sm: 12, md: 6, lg: 6 }
+              nameSpace: { xs: 12, sm: 4 },
+              name: { xs: 12, sm: 4 },
+              version: { xs: 12, sm: 4 }
+            },
+            {
+              id: { xs: 12, sm: 12, md: 6 },
+              title: { xs: 12, sm: 12, md: 6 }
             },
             {
               description: { xs: 12, sm: 12, md: 12, lg: 12 }
@@ -231,9 +242,39 @@ const  FormEditor: React.FC<FormEditorProps> = ({
             {
               uiFramework: { xs: 12, sm: 12, md: 6, lg: 3 },
               icon: { xs: 12, sm: 12, md: 6, lg: 3 },
-              avatar: { xs: 12, sm: 12, md: 6, lg: 6 }
+              avatar: { 
+                xs: 12, sm: 12, md: 12, lg: 12, sx: {
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                  outline: '1px solid #ddd'
+                } 
+              }
+            },
+            {
+              registerAsComponent: { xs: 12 }
+            },
+            {
+              roles: { xs: 12, sm: 6 },
+              components: { xs: 12, sm: 6 }
             }
           ],
+          avatar: {
+            "ui:title": "",
+            "ui:widget": "ImageWidget",
+            "ui:options": {
+              variant: "image",
+              size: "medium"
+            }
+          },
+          icon: {            
+            "ui:widget": "IconPickerWidget",
+            "ui:options": {
+              label: "Select Icon",
+              variant: "popover"
+            }
+          },
           uiFramework: {
             "ui:widget": "SelectWidget",
             "ui:options": {
@@ -282,11 +323,17 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       case 'base':
         return {
           id: state.reactoryForm.id,
+          nameSpace: state.reactoryForm.nameSpace,
+          name: state.reactoryForm.name,
+          version: state.reactoryForm.version,
           title: state.reactoryForm.title,
           description: state.reactoryForm.description,
           uiFramework: state.reactoryForm.uiFramework,
           icon: state.reactoryForm.icon,
-          avatar: state.reactoryForm.avatar
+          avatar: state.reactoryForm.avatar,
+          registerAsComponent: state.reactoryForm.registerAsComponent,
+          roles: state.reactoryForm.roles || [],
+          components: state.reactoryForm.components || []
         };
       default:
         return {};

@@ -90,6 +90,7 @@ import PrismCode from 'react-prism';
 import WorkflowDesigner from './shared/WorkflowDesigner';
 import JsonSchemaEditor from './shared/JsonSchemaEditor';
 import FormEditor from './shared/FormEditor';
+import { UserHomeFolder } from './shared/UserHomeFolder';
 
 import * as Three from 'three';
 
@@ -668,6 +669,12 @@ export const componentRegistery = [
     name: 'UserProfile',
     version: '1.0.1',
     component: UserProfile
+  },
+  {
+    nameSpace: 'core',
+    name: 'UserHomeFolder',
+    version: '1.0.0',
+    component: UserHomeFolder
   },
   {
     nameSpace: 'reactory',

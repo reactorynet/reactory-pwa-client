@@ -12,7 +12,7 @@ import {
 import UserHomeFolderHeader from './components/UserHomeFolderHeader';
 import { getParentPath, filterFiles } from './utils';
 
-const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
+const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
   open,
   onClose,
   reactory,
@@ -1186,4 +1186,4 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
   );
 };
 
-export default UserHomeFolderRefactored;
+export default UserHomeFolder;

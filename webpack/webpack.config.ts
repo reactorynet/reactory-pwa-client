@@ -340,7 +340,13 @@ export default function(webpackEnv): WebpackConfiguration {
     },
     module: {
       strictExportPresence: true,
-      rules: [        
+      rules: [
+        {
+          test: /\.m?js/,
+          resolve: {
+            fullySpecified: false,
+          },
+        },
         {
           test: [/\.ejs$/, /.html$/],
           loader: 'ejs-loader',          

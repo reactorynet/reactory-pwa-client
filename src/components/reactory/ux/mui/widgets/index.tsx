@@ -48,3 +48,4 @@ export { default as UserSelectorWidget } from './UserSelectorWidget';
 export { default as UserWidgetWithSearch } from './UserWidgetWithSearch';
 export { default as WidgetNotAvailable } from './WidgetNotAvailable';
 export { default as CardWidget } from './CardWidget/CardWidget';
+export { default as IconPickerWidget } from './IconPickerWidget';
