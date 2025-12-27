@@ -320,6 +320,7 @@ const MaterialSchemaField: Reactory.Forms.ReactorySchemaFieldComponent = (props)
     rawErrors: errors,
     id,
     label,
+    title: label,
     hidden,
     onKeyChange,
     onBlur,

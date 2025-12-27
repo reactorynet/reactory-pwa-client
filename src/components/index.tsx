@@ -95,6 +95,7 @@ import { UserHomeFolder } from './shared/UserHomeFolder';
 import * as Three from 'three';
 
 import { UserProfile } from './shared/UserProfile';
+import { useContentRender } from './shared/hooks/useContentRender';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -681,6 +682,30 @@ export const componentRegistery = [
     name: 'FormEditorEnhanced',
     version: '1.0.0',
     component: FormEditor
+  },
+  {
+    nameSpace: 'core',
+    name: 'UserAvatar',
+    version: '1.0.0',
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/UserAvatar').default
+  },
+  {
+    nameSpace: 'core',
+    name: 'StatusBadge',
+    version: '1.0.0',
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/StatusBadge').default
+  },
+  {
+    nameSpace: 'core',
+    name: 'RelativeTime',
+    version: '1.0.0',
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/RelativeTime').default
+  },
+  {
+    nameSpace: 'core',
+    name: 'useContentRender',
+    version: '1.0.0',
+    component: useContentRender
   },
   // Append plugin components
   ...pluginComponents

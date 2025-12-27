@@ -17,6 +17,7 @@ import {
 import { useReactory } from '@reactory/client-core/api';
 import { ImageComponentProps } from './types';
 import { UserHomeFolder } from '../UserHomeFolder';
+import { ServerFileExplorer, ServerFileItem } from '../ServerFileExplorer';
 
 const ImageContainer = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'editable' && prop !== 'hasImage'
@@ -109,12 +110,15 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
     setFolderDialogOpen(false);
   }, []);
 
-  const handleFileSelection = useCallback((selectedItems: any[], selectionMode: string) => {
+  const handleFileSelection = useCallback((selectedItems: ServerFileItem[]) => {
     if (selectedItems.length > 0) {
       const selectedFile = selectedItems[0];
       if (selectedFile.type === 'file') {
         // Get the file URL from the selected item
-        const fileUrl = selectedFile.item?.fullpath || selectedFile.item?.path || selectedFile.fullpath || selectedFile.path;
+        let fileUrl = selectedFile.fullPath;
+        if (fileUrl.indexOf('${APP_DATA_ROOT}') === 0) {
+          fileUrl = fileUrl.replace('${APP_DATA_ROOT}', process.env.REACT_APP_CDN || 'http://localhost:4000/cdn');
+        }
         onChange(fileUrl);
         setImageError(false);
       }
@@ -310,24 +314,30 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
   return (
     <>
       {renderImage()}
-      {FullScreenModal && folderDialogOpen && (
-        <FullScreenModal
-          open={folderDialogOpen}
-          onClose={handleFolderClose}
-          title="Select Image"
-          showAppBar={true}
-          fullScreen={true}
-          reactory={reactory}
-        >
-          <UserHomeFolder
-            open={true}
+      {folderDialogOpen && (
+
+          <ServerFileExplorer
+            open={folderDialogOpen}
             onClose={handleFolderClose}
             reactory={reactory}
-            onSelectionChanged={handleFileSelection}
-            rootPath={rootPath}
+            serverPath="${APP_DATA_ROOT}/forms/images"
+            onFileSelection={handleFileSelection}
+            selectionMode="single"
+            allowedFileTypes={[
+              'image/jpeg',
+              'image/png',
+              'image/gif',
+              'image/webp'
+            ]}
+            title="Select Image"
+            readonly={true}
             il8n={reactory.i18n}
-          />
-        </FullScreenModal>
+            allowUpload={true}
+            allowCreateFolder={true}
+            allowDelete={true}
+            allowRename={true}            
+      />
+
       )}
     </>
   );

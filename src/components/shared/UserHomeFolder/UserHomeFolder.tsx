@@ -22,6 +22,7 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
   onItemDeselect,
   il8n,
   rootPath = '/',
+  allowMultiSelect = true,
   selectedItems: externalSelectedItems = []
 }) => {
   // Core state
@@ -823,7 +824,8 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
             </Box>
 
             {/* Multi-select Toggle */}
-            <Box sx={{ mb: 2 }}>
+            {allowMultiSelect && (
+              <Box sx={{ mb: 2 }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -867,8 +869,7 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
                   : 'Click files to select and auto-close panel'
                 }
               </Typography>
-            </Box>
-
+            </Box>)}
             {/* Upload Area */}
             <UploadArea />
           </Box>

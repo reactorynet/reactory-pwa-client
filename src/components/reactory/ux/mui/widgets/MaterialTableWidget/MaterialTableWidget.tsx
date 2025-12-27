@@ -794,9 +794,35 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
       if (uiOptions.conditionalRowStyling && uiOptions.conditionalRowStyling.length > 0) {
 
+        const isFunction = (condition: string) => { 
+          return condition.indexOf('(rowData)') >= 0;
+        }
+
+        const isTemplate = (condition: string) => { 
+          return condition.indexOf('${') >= 0;
+        }
+
+        const isRegex = (condition: string) => { 
+          return condition.indexOf('^') >= 0 && condition.indexOf('$') >= 0;
+        }
+
         uiOptions.conditionalRowStyling.forEach((option) => {
           const _field = get(rowData, option.field);
-          if (_field && _field.toLowerCase() == option.condition.toLowerCase()) {
+          let result: boolean = false;
+          // support expressions in the condition
+          if (isTemplate(option.condition)) {
+            let templateFunction = reactory.utils.template(option.condition);
+            result = templateFunction({ rowData }) === 'true';
+          } else if (isFunction(option.condition)) {
+            result = eval(option.condition)(rowData);
+          } else if (isRegex(option.condition)) {
+            // support regular expressions in the condition
+            result = new RegExp(option.condition).test(_field);
+          } else {
+            result = _field.toLowerCase() == option.condition.toLowerCase();
+          }
+
+          if (result === true) {
             style = { ...style, ...option.style };
           }
         });

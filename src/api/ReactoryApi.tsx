@@ -1906,7 +1906,40 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         }
       }
     } catch (clientError) {
-      
+      if (clientError.name === 'ApolloError') {
+        const {
+          networkError,
+          graphQLErrors,
+          protocolErrors,
+        } = clientError as ApolloError;
+        
+        if (networkError && (networkError as ServerError).statusCode === undefined) {
+          that.error(`Network Error: ${networkError.message}`, { networkError, options });          
+          throw networkError;
+        }
+
+        if (networkError && (networkError as ServerError).statusCode === 401) {
+          await that.logout(false);
+          that.setUser(anonUser);
+          return anonUser;          
+        }
+
+        if (graphQLErrors && graphQLErrors.length > 0) {
+          graphQLErrors.forEach((gqlError) => {
+            that.error(`GraphQL Error: ${gqlError.message}`, gqlError);
+          });
+        }
+
+        if (protocolErrors && protocolErrors.length > 0) {
+          protocolErrors.forEach((protocolError) => {
+            that.error(`Protocol Error: ${protocolError.message}`, protocolError);
+          });
+        }
+      } else {
+        that.error(`${clientError?.name || 'Unspecified'} Error occurred while fetching the API status: ${clientError.message}`, { clientError });
+        that.error(`Error occurred while fetching the API status: ${clientError?.message}`, { clientError });
+        throw clientError;
+      }
       return currentStatus;
     }    
   }

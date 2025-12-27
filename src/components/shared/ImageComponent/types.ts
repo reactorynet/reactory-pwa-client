@@ -75,3 +75,4 @@ export interface ImageComponentProps {
    */
   placeholder?: string;
 }
+

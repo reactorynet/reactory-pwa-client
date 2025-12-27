@@ -77,3 +77,4 @@ export interface IconGridProps {
    */
   width?: number;
 }
+
