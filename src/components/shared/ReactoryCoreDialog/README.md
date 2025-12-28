@@ -224,3 +224,4 @@ The component uses Material-UI's theming system. You can customize the appearanc
 - [IMPROVEMENTS.md](./IMPROVEMENTS.md) - Detailed changelog of recent improvements
 - [Material-UI Dialog Documentation](https://mui.com/material-ui/react-dialog/)
 
+

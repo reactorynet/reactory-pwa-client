@@ -218,3 +218,4 @@ Potential additions for future versions:
 5. **Templates**: Pre-configured templates (confirm, alert, form, etc.)
 6. **Accessibility**: Enhanced ARIA support and keyboard navigation
 
+

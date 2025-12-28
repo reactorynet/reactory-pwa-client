@@ -96,6 +96,16 @@ import * as Three from 'three';
 
 import { UserProfile } from './shared/UserProfile';
 import { useContentRender } from './shared/hooks/useContentRender';
+import { 
+  Timeline,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineConnector,
+  TimelineContent,
+  TimelineDot,
+  TimelineOppositeContent 
+} from './shared/Timeline';
+import { RichEditorWidget } from '@reactory/client-core/components/reactory/ux/mui/widgets';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -591,6 +601,48 @@ export const componentRegistery = [
     component: DropZone
   },
   {
+    nameSpace: 'core',
+    name: 'Timeline',
+    version: '1.0.0',
+    component: Timeline
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineItem',
+    version: '1.0.0',
+    component: TimelineItem
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineSeparator',
+    version: '1.0.0',
+    component: TimelineSeparator
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineConnector',
+    version: '1.0.0',
+    component: TimelineConnector
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineContent',
+    version: '1.0.0',
+    component: TimelineContent
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineDot',
+    version: '1.0.0',
+    component: TimelineDot
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineOppositeContent',
+    version: '1.0.0',
+    component: TimelineOppositeContent
+  },
+  {
     nameSpace: 'recompose',
     name: 'Recompose',
     version: '1.0.0',
@@ -706,6 +758,12 @@ export const componentRegistery = [
     name: 'useContentRender',
     version: '1.0.0',
     component: useContentRender
+  },
+  {
+    nameSpace: 'core',
+    name: 'RichEditorWidget',
+    version: '1.0.0',
+    component: RichEditorWidget
   },
   // Append plugin components
   ...pluginComponents

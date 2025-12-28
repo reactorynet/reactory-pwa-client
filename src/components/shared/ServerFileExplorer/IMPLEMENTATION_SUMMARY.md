@@ -305,3 +305,4 @@ Potential improvements:
 - Drag and drop uses native HTML5 APIs for broad browser support
 - All dialogs use Material-UI for consistent styling
 
+
