@@ -106,6 +106,9 @@ import {
   TimelineOppositeContent 
 } from './shared/Timeline';
 import { RichEditorWidget } from '@reactory/client-core/components/reactory/ux/mui/widgets';
+import { QuickFilters } from '@reactory/client-core/components/reactory/ux/mui/widgets/MaterialTableWidget/components/QuickFilters';
+import { SearchBar } from '@reactory/client-core/components/reactory/ux/mui/widgets/MaterialTableWidget/components/SearchBar';
+import { AdvancedFilterPanel } from '@reactory/client-core/components/reactory/ux/mui/widgets/MaterialTableWidget/components/AdvancedFilterPanel';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -764,6 +767,24 @@ export const componentRegistery = [
     name: 'RichEditorWidget',
     version: '1.0.0',
     component: RichEditorWidget
+  },
+  {
+    nameSpace: 'core',
+    name: 'QuickFilters',
+    version: '1.0.0',
+    component: QuickFilters
+  },
+  {
+    nameSpace: 'core',
+    name: 'SearchBar',
+    version: '1.0.0',
+    component: SearchBar
+  },
+  {
+    nameSpace: 'core',
+    name: 'AdvancedFilterPanel',
+    version: '1.0.0',
+    component: AdvancedFilterPanel
   },
   // Append plugin components
   ...pluginComponents

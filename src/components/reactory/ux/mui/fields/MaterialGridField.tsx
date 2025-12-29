@@ -3,6 +3,7 @@ import { Grid2 as Grid, Paper, Typography } from '@mui/material'
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 import { useReactory } from '@reactory/client-core/api';
 import Reactory from '@reactory/reactory-core';
+import i18n, { TOptions as I18nFormatOptions } from "i18next";
 
 const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props) => { 
   const reactory = useReactory();
@@ -27,7 +28,21 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
   
   if (!utils) return <></>
   const schema = utils.retrieveSchema(props.schema, definitions)
-  const title = (schema.title === undefined) ? '' : schema.title
+  let title = (schema.title === undefined) ? '' : schema.title 
+  let titleStyle = {};
+  if (uiSchema["ui:title"] && typeof uiSchema["ui:title"] === 'string') { 
+    title = uiSchema?.["ui:title"];
+  } else if (uiSchema["ui:title"] && typeof uiSchema["ui:title"] === 'object') { 
+    if (typeof uiSchema["ui:title"].title === "string") title = uiSchema["ui:title"].title;
+    if (typeof uiSchema["ui:title"].title === "object") { 
+      title = uiSchema["ui:title"].title.key;
+      let titleOptions: I18nFormatOptions = {};
+      titleOptions = { ...titleOptions, ...uiSchema["ui:title"].title.options };
+    }
+    if (typeof uiSchema["ui:title"].jss === "object") {
+      titleStyle = { ...titleStyle, ...uiSchema["ui:title"].jss };
+    }
+  }
 
   const layout = uiSchema['ui:grid-layout'];
 
@@ -120,7 +135,7 @@ const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props)
         title={title as string}
         required={required}
         formContext={formContext}
-        style={(uiSchema["ui:title"] as Reactory.Schema.UITitleFieldOptions)?.jss || {}} /> : null}
+        style={titleStyle} /> : null}
       {schema.description ?
         <DescriptionField
           id={`${idSchema.$id}__description`}
