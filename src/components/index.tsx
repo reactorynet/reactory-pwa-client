@@ -109,6 +109,7 @@ import { RichEditorWidget } from '@reactory/client-core/components/reactory/ux/m
 import { QuickFilters } from '@reactory/client-core/components/reactory/ux/mui/widgets/MaterialTableWidget/components/QuickFilters';
 import { SearchBar } from '@reactory/client-core/components/reactory/ux/mui/widgets/MaterialTableWidget/components/SearchBar';
 import { AdvancedFilterPanel } from '@reactory/client-core/components/reactory/ux/mui/widgets/MaterialTableWidget/components/AdvancedFilterPanel';
+import UserList from './shared/UserList';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -347,7 +348,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'UserListWithSearch',
-    component: () => '',
+    component: UserList,
     version: '1.0.0',
   },
   {

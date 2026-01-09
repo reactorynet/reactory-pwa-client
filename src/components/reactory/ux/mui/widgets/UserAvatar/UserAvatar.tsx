@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
-import { Chip, Avatar, Typography, Box, Tooltip } from '@mui/material';
+import { Chip, Avatar, Typography, Box, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton } from '@mui/material';
 import { compose } from 'redux';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { template } from 'lodash';
@@ -34,6 +34,37 @@ const StyledBox = styled(Box)(({ theme }) => ({
   },
 }));
 
+const EditableChip = styled(Chip)(({ theme }) => ({
+  cursor: 'pointer',
+  transition: theme.transitions.create(['background-color', 'box-shadow', 'transform'], {
+    duration: theme.transitions.duration.short,
+  }),
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+    boxShadow: theme.shadows[2],
+    transform: 'scale(1.02)',
+  },
+  '&:active': {
+    transform: 'scale(0.98)',
+  },
+}));
+
+const EditableBox = styled(Box)(({ theme }) => ({
+  cursor: 'pointer',
+  borderRadius: theme.shape.borderRadius,
+  padding: theme.spacing(0.5),
+  transition: theme.transitions.create(['background-color', 'box-shadow'], {
+    duration: theme.transitions.duration.short,
+  }),
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+    boxShadow: theme.shadows[1],
+  },
+  '&:active': {
+    backgroundColor: theme.palette.action.selected,
+  },
+}));
+
 interface UserAvatarOptions {
   /**
    * Display variant
@@ -61,6 +92,36 @@ interface UserAvatarOptions {
    * @default false
    */
   clickable?: boolean;
+  
+  /**
+   * Enable user selection/editing with dialog
+   * When true, clicking opens a user selector dialog
+   * @default false
+   */
+  editable?: boolean;
+  
+  /**
+   * Organization ID for filtering users in selector
+   * Required when editable is true
+   */
+  organizationId?: string;
+  
+  /**
+   * Business unit ID for filtering users
+   */
+  businessUnitId?: string;
+  
+  /**
+   * Show filters in user selector dialog
+   * @default true
+   */
+  showFilters?: boolean;
+  
+  /**
+   * Dialog title for user selector
+   * @default 'Select User'
+   */
+  dialogTitle?: string;
   
   /**
    * Text to show when user is not assigned
@@ -110,7 +171,9 @@ interface UserAvatarProps {
   uiSchema?: {
     'ui:options'?: UserAvatarOptions;
   };
+  onChange?: (user: Partial<Reactory.Models.IUser> | null) => void;
   reactory?: Reactory.Client.IReactoryApi;
+  formContext?: any;
   [key: string]: any;
 }
 
@@ -118,16 +181,19 @@ interface UserAvatarProps {
  * UserAvatar Widget
  * 
  * A flexible component for displaying user information with avatar.
- * Supports multiple display variants and configurations.
+ * Supports multiple display variants, configurations, and user selection.
  * 
  * Features:
  * - Multiple display variants (chip, avatar, avatar-name)
- * - Size options (small, medium, large)
+ * - Size options (small, medium)
  * - Email tooltip
  * - Unassigned state handling
  * - Template-based formatting
  * - Click handling
  * - Avatar image support
+ * - **NEW: Editable mode with user selector dialog**
+ * - **NEW: Hover states for interactive mode**
+ * - **NEW: Integration with UserListWithSearch**
  * 
  * @example
  * // Basic chip usage
@@ -141,13 +207,29 @@ interface UserAvatarProps {
  * }
  * 
  * @example
- * // Avatar with name
+ * // Editable avatar with user selector
+ * {
+ *   'ui:widget': 'UserAvatar',
+ *   'ui:options': {
+ *     variant: 'chip',
+ *     size: 'medium',
+ *     editable: true,
+ *     organizationId: 'org-123',
+ *     dialogTitle: 'Assign User',
+ *     showFilters: true
+ *   }
+ * }
+ * 
+ * @example
+ * // Avatar with name (editable)
  * {
  *   'ui:widget': 'UserAvatar',
  *   'ui:options': {
  *     variant: 'avatar-name',
  *     size: 'medium',
- *     unassignedText: 'Not Assigned'
+ *     editable: true,
+ *     unassignedText: 'Click to Assign',
+ *     organizationId: formContext.organizationId
  *   }
  * }
  */
@@ -159,7 +241,12 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
     value,
     uiSchema,
     reactory,
+    onChange,
+    formContext,
   } = props;
+
+  // Dialog state for user selection
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Get options from uiSchema
   const options = useMemo((): UserAvatarOptions => {
@@ -168,6 +255,9 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
       size: 'small',
       showEmail: true,
       clickable: false,
+      editable: false,
+      showFilters: true,
+      dialogTitle: 'Select User',
       unassignedText: 'Unassigned',
       unassignedIcon: 'person_outline',
       labelFormat: '${user.firstName} ${user.lastName}',
@@ -247,10 +337,38 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
 
   // Handle click
   const handleClick = () => {
-    if (options.onClick) {
+    if (options.editable) {
+      setDialogOpen(true);
+    } else if (options.onClick) {
       options.onClick(user);
     }
   };
+
+  // Handle user selection from dialog
+  const handleUserSelected = (selectedUser: Partial<Reactory.Models.IUser>) => {
+    if (onChange) {
+      onChange(selectedUser);
+    }
+    setDialogOpen(false);
+    
+    if (options.onClick) {
+      options.onClick(selectedUser);
+    }
+  };
+
+  // Handle dialog close
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+  };
+
+  // Get the UserListWithSearch component
+  const UserListWithSearch = useMemo(() => {
+    if (!reactory || !options.editable) return null;
+    const componentDefs = reactory.getComponents<{
+      UserListWithSearch: React.FC;
+    }>(['core.UserListWithSearch']);
+    return componentDefs?.UserListWithSearch || null;
+  }, [reactory, options.editable]);
 
   // Render avatar element
   const avatarElement = useMemo(() => {
@@ -285,12 +403,21 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
 
   // Render based on variant
   const renderContent = () => {
+    const isInteractive = options.editable || options.clickable;
+    
     switch (options.variant) {
       case 'avatar':
+        if (options.editable) {
+          return (
+            <EditableBox onClick={handleClick}>
+              {avatarElement}
+            </EditableBox>
+          );
+        }
         return avatarElement;
 
       case 'avatar-name':
-        return (
+        const avatarNameContent = (
           <StyledBox className={classes.avatarName}>
             {avatarElement}
             <Typography
@@ -301,9 +428,32 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
             </Typography>
           </StyledBox>
         );
+        
+        if (options.editable) {
+          return (
+            <EditableBox onClick={handleClick}>
+              {avatarNameContent}
+            </EditableBox>
+          );
+        }
+        return avatarNameContent;
 
       case 'chip':
       default:
+        if (options.editable) {
+          return (
+            <EditableChip
+              avatar={avatarElement}
+              label={userLabel}
+              size={options.size}
+              variant="outlined"
+              className={`${classes.chip} ${!user ? classes.unassigned : ''}`}
+              onClick={handleClick}
+              style={options.style}
+            />
+          );
+        }
+        
         return (
           <Chip
             avatar={avatarElement}
@@ -311,7 +461,7 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
             size={options.size}
             variant="outlined"
             className={`${classes.chip} ${!user ? classes.unassigned : ''}`}
-            onClick={options.clickable ? handleClick : undefined}
+            onClick={isInteractive ? handleClick : undefined}
             style={options.style}
           />
         );
@@ -320,18 +470,74 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
 
   const content = renderContent();
 
-  // Wrap with tooltip if email should be shown
-  if (options.showEmail && tooltipText && tooltipText !== userLabel) {
-    return (
-      <Tooltip title={tooltipText} placement="top">
-        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-          {content}
-        </span>
-      </Tooltip>
-    );
-  }
+  // Render user selector dialog
+  const renderDialog = () => {
+    if (!options.editable || !UserListWithSearch) return null;
 
-  return content;
+    const orgId = options.organizationId || formContext?.organizationId;
+    
+    return (
+      <Dialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            height: '80vh',
+            maxHeight: '800px',
+          }
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6">{options.dialogTitle}</Typography>
+            <IconButton
+              edge="end"
+              onClick={handleDialogClose}
+              aria-label="close"
+              size="small"
+            >
+              <span className="material-icons">close</span>
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <UserListWithSearch
+            // @ts-ignore
+            organizationId={orgId}
+            businessUnitId={options.businessUnitId}
+            multiSelect={false}
+            onUserSelect={handleUserSelected}
+            selected={user?.id ? [user.id] : []}
+            businessUnitFilter={!!options.businessUnitId}
+            showFilters={options.showFilters}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="inherit">
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
+  // Wrap with tooltip if email should be shown
+  const wrappedContent = options.showEmail && tooltipText && tooltipText !== userLabel ? (
+    <Tooltip title={tooltipText} placement="top">
+      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+        {content}
+      </span>
+    </Tooltip>
+  ) : content;
+
+  return (
+    <>
+      {wrappedContent}
+      {renderDialog()}
+    </>
+  );
 };
 
 UserAvatar.defaultProps = {

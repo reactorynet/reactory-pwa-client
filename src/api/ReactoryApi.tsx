@@ -923,7 +923,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.publishingStats = true;
     if (this.statistics.__delta > 0) {
       this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, []);
-      const entries = this.statistics.__keys.map(key => ({ key, stat: this.statistics.items[key] }));
+      const entries = this.statistics.__keys.map(key => this.statistics.items[key]);
       this.graphqlMutation(gql`mutation PublishStatistics($entries: [StatisticsInput]!){
                 CorePublishStatistics(entries: $entries) {
                   id
