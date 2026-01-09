@@ -42,10 +42,10 @@ storybook-static
 !/src/components/plugins/README.MD
 !/src/components/plugins/index.ts
 
-# /src/**/*.jsx
-# /src/**/*.jsx.map
-# /src/**/*.js
-# /src/**/*.js.map
+/src/**/*.jsx
+/src/**/*.jsx.map
+/src/**/*.js
+/src/**/*.js.map
 
-# /.storybook/**/*.jsx
-# /.storybook/**/*.jsx.map
+/.storybook/**/*.jsx
+/.storybook/**/*.jsx.map

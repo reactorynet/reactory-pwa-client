@@ -35,7 +35,7 @@ const MaterialArrayField: React.FC<ArrayTemplateProps> = (props) => {
     readonly,
     required,
     schema,
-    uiSchema,
+    uiSchema = {},
     title,
     description,
     formContext,
@@ -48,9 +48,13 @@ const MaterialArrayField: React.FC<ArrayTemplateProps> = (props) => {
     onChange,
   } = props;
 
+  if (!schema) {
+    return (<div>Invalid Array Schema</div>);
+  }
+
   const reactory = useReactory();  
-  const uiOptions: Reactory.Schema.IUISchemaOptions | null = (uiSchema['ui:options'] as Reactory.Schema.IUISchemaOptions);
-  const uiWidget: string | null = uiSchema['ui:widget'] || null;
+  const uiOptions: Reactory.Schema.IUISchemaOptions | null = (uiSchema?.['ui:options'] as Reactory.Schema.IUISchemaOptions);
+  const uiWidget: string | null = uiSchema?.['ui:widget'] || null;
   const utils = reactory.getComponent<ReactoryFormUtilities>('core.ReactoryFormUtilities');
   const registry = utils.getDefaultRegistry();
   const {  

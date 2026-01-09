@@ -34,7 +34,7 @@ import { compose } from 'redux'
 import { useTheme } from '@mui/material/styles';
 import { find, template, get } from 'lodash';
 
-import Reactory from '@reactory/reactory-core';
+import Reactory, { ObjectMap } from '@reactory/reactory-core';
 import ReactoryApi from 'api';
 import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
 import { useNavigate } from 'react-router';
@@ -555,7 +555,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         reactory.debug(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query });
         let variableMap = uiOptions.variables || queryDefinition.variables;
         if (variableMap) {
-          variableMap = reactory.utils.parseObjectMap(variableMap);
+          variableMap = reactory.utils.parseObjectMap(variableMap as ObjectMap);
         }
         let variables = reactory.utils.objectMapper({ formContext, query, props: queryDefinition.props || {} }, variableMap);
 
@@ -640,9 +640,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     let _columns = uiOptions.columns;
 
     if (isNil(uiOptions.columnsProperty) === false) {
-      _columns = [...formContext.formData[uiOptions.columnsProperty]];
+      _columns = [...formContext.formData[uiOptions.columnsProperty as string]];
       if (isNil(uiOptions.columnsPropertyMap) === false) {
-        _columns = reactory.utils.objectMapper(_columns, uiOptions.columnsPropertyMap)
+        _columns = reactory.utils.objectMapper(_columns, uiOptions.columnsPropertyMap as ObjectMap)
       }
     }
 
@@ -794,9 +794,35 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
       if (uiOptions.conditionalRowStyling && uiOptions.conditionalRowStyling.length > 0) {
 
+        const isFunction = (condition: string) => { 
+          return condition.indexOf('(rowData)') >= 0;
+        }
+
+        const isTemplate = (condition: string) => { 
+          return condition.indexOf('${') >= 0;
+        }
+
+        const isRegex = (condition: string) => { 
+          return condition.indexOf('^') >= 0 && condition.indexOf('$') >= 0;
+        }
+
         uiOptions.conditionalRowStyling.forEach((option) => {
           const _field = get(rowData, option.field);
-          if (_field && _field.toLowerCase() == option.condition.toLowerCase()) {
+          let result: boolean = false;
+          // support expressions in the condition
+          if (isTemplate(option.condition)) {
+            let templateFunction = reactory.utils.template(option.condition);
+            result = templateFunction({ rowData }) === 'true';
+          } else if (isFunction(option.condition)) {
+            result = eval(option.condition)(rowData);
+          } else if (isRegex(option.condition)) {
+            // support regular expressions in the condition
+            result = new RegExp(option.condition).test(_field);
+          } else {
+            result = _field.toLowerCase() == option.condition.toLowerCase();
+          }
+
+          if (result === true) {
             style = { ...style, ...option.style };
           }
         });
@@ -1455,6 +1481,31 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
     if (uiOptions?.componentMap && uiOptions.componentMap.Toolbar) {
       //get custom toolbar
+      const ToolbarComponent = reactory.getComponent(uiOptions.componentMap.Toolbar);
+      if (ToolbarComponent) {
+        // @ts-ignore
+        return <ToolbarComponent 
+          reactory={reactory} 
+          data={{
+            data: data?.data || [],
+            paging: data?.paging || {
+              hasNext: false,
+              page: 0,
+              pageSize: 10,
+              total: 0
+            },
+            selected: getSelectedRows()
+          }} 
+          // @ts-ignore
+          onDataChange={() => {
+            // console log for now
+            console.log('onDataChange', data);
+          }} 
+          searchText={searchText} 
+          // @ts-ignore
+          //onSearchChange={onSearchChange} />
+          />
+      }
     }
 
     const callAdd = () => {

@@ -167,11 +167,11 @@ const RichTextEditor = (props: any) => {
   return (
     <StyledEditorContainer className={classes.editorContainer}>
       <ReactQuill
-        id={props.idSchema.$id}
+        id={props?.idSchema?.$id || 'rich-editor'}
         value={content}
         onChange={handleEditorChange}
         theme="snow"
-        placeholder={props.schema.title}
+        placeholder={props?.placeholder || props?.schema?.title || props?.uiSchema?.['ui:placeholder']}
         className={classes.editor}
         modules={modules}
         formats={formats}

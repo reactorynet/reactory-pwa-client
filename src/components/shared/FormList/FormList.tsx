@@ -200,6 +200,7 @@ const FormList: React.FC<FormListProps> = ({
 
   // Handle form selection
   const handleFormSelect = useCallback((form: FormItem, action: 'view' | 'edit' | 'develop' = 'view') => {
+    reactory.log(`Form selected: ${form.name} for action: ${action}`);
     const baseRoute = routePrefix ? `/${routePrefix}` : '';
     const route = `${baseRoute}/${form.id}/${action}`;
     

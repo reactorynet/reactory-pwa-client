@@ -89,9 +89,27 @@ import PrismCode from 'react-prism';
 
 import WorkflowDesigner from './shared/WorkflowDesigner';
 import JsonSchemaEditor from './shared/JsonSchemaEditor';
+import FormEditor from './shared/FormEditor';
+import { UserHomeFolder } from './shared/UserHomeFolder';
+
 import * as Three from 'three';
 
 import { UserProfile } from './shared/UserProfile';
+import { useContentRender } from './shared/hooks/useContentRender';
+import { 
+  Timeline,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineConnector,
+  TimelineContent,
+  TimelineDot,
+  TimelineOppositeContent 
+} from './shared/Timeline';
+import { RichEditorWidget } from '@reactory/client-core/components/reactory/ux/mui/widgets';
+import { QuickFilters } from '@reactory/client-core/components/reactory/ux/mui/widgets/MaterialTableWidget/components/QuickFilters';
+import { SearchBar } from '@reactory/client-core/components/reactory/ux/mui/widgets/MaterialTableWidget/components/SearchBar';
+import { AdvancedFilterPanel } from '@reactory/client-core/components/reactory/ux/mui/widgets/MaterialTableWidget/components/AdvancedFilterPanel';
+import UserList from './shared/UserList';
 
 export const AdminDashboard = <NotFoundComponent waitingFor='core.AdminDashboard@1.0.0' key={'AdminDashboard - Deprecated'}/>;
 export const ReactoryRouter = ReactoryRouterComponent;
@@ -330,7 +348,7 @@ export const componentRegistery = [
   {
     nameSpace: 'core',
     name: 'UserListWithSearch',
-    component: () => '',
+    component: UserList,
     version: '1.0.0',
   },
   {
@@ -587,6 +605,48 @@ export const componentRegistery = [
     component: DropZone
   },
   {
+    nameSpace: 'core',
+    name: 'Timeline',
+    version: '1.0.0',
+    component: Timeline
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineItem',
+    version: '1.0.0',
+    component: TimelineItem
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineSeparator',
+    version: '1.0.0',
+    component: TimelineSeparator
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineConnector',
+    version: '1.0.0',
+    component: TimelineConnector
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineContent',
+    version: '1.0.0',
+    component: TimelineContent
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineDot',
+    version: '1.0.0',
+    component: TimelineDot
+  },
+  {
+    nameSpace: 'core',
+    name: 'TimelineOppositeContent',
+    version: '1.0.0',
+    component: TimelineOppositeContent
+  },
+  {
     nameSpace: 'recompose',
     name: 'Recompose',
     version: '1.0.0',
@@ -666,6 +726,66 @@ export const componentRegistery = [
     name: 'UserProfile',
     version: '1.0.1',
     component: UserProfile
+  },
+  {
+    nameSpace: 'core',
+    name: 'UserHomeFolder',
+    version: '1.0.0',
+    component: UserHomeFolder
+  },
+  {
+    nameSpace: 'reactory',
+    name: 'FormEditorEnhanced',
+    version: '1.0.0',
+    component: FormEditor
+  },
+  {
+    nameSpace: 'core',
+    name: 'UserAvatar',
+    version: '1.0.0',
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/UserAvatar').default
+  },
+  {
+    nameSpace: 'core',
+    name: 'StatusBadge',
+    version: '1.0.0',
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/StatusBadge').default
+  },
+  {
+    nameSpace: 'core',
+    name: 'RelativeTime',
+    version: '1.0.0',
+    component: require('@reactory/client-core/components/reactory/ux/mui/widgets/RelativeTime').default
+  },
+  {
+    nameSpace: 'core',
+    name: 'useContentRender',
+    version: '1.0.0',
+    component: useContentRender
+  },
+  {
+    nameSpace: 'core',
+    name: 'RichEditorWidget',
+    version: '1.0.0',
+    component: RichEditorWidget
+  },
+  {
+    nameSpace: 'core',
+    name: 'QuickFilters',
+    version: '1.0.0',
+    component: QuickFilters
+  },
+  {
+    nameSpace: 'core',
+    name: 'SearchBar',
+    version: '1.0.0',
+    component: SearchBar
+  },
+  {
+    nameSpace: 'core',
+    name: 'AdvancedFilterPanel',
+    version: '1.0.0',
+    component: AdvancedFilterPanel
   },
   // Append plugin components
   ...pluginComponents

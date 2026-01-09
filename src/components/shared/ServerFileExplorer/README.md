@@ -14,6 +14,11 @@ The `ServerFileExplorer` component was created to provide a clean separation of 
 - **Administrative permissions**: Built-in support for read-only mode and permission-based operations
 - **Modern UI**: Clean Material-UI based interface with grid/list view modes
 - **Navigation history**: Back/forward navigation with breadcrumbs
+- **File Upload**: Drag & drop or click-to-upload files with visual feedback
+- **Folder Management**: Create new folders with dialog interface
+- **File Operations**: Rename and delete files/folders with confirmation dialogs
+- **Context Menu**: Right-click menu for quick access to file operations
+- **Bulk Operations**: Delete multiple selected items at once
 
 ## Usage
 
@@ -129,24 +134,101 @@ const handleServerFileSelection = async (selectedFiles) => {
 | **File Operations** | User file CRUD | Server file management |
 | **Selection Model** | Auto-close on file select | Configurable selection |
 
+## Implemented Features ✅
+
+- [x] File upload with drag & drop support
+- [x] Folder creation with dialog interface
+- [x] File and folder rename operations
+- [x] File and folder delete operations
+- [x] Context menu for quick actions
+- [x] Bulk delete operations
+- [x] Real GraphQL integration for all operations
+- [x] Permission-based UI (allowUpload, allowDelete, allowRename, readonly)
+
 ## Future Enhancements
 
-- [ ] Real GraphQL integration (currently using mock data)
-- [ ] File upload with progress tracking
+- [ ] File upload with progress tracking and cancellation
 - [ ] Folder tree view with lazy loading
-- [ ] Advanced file operations (copy, move, bulk operations)
+- [ ] Copy and paste operations
+- [ ] Move items via drag and drop
 - [ ] File preview capabilities
-- [ ] Search and filtering improvements
-- [ ] Permission-based UI restrictions
+- [ ] Advanced search and filtering
+- [ ] Keyboard shortcuts for operations
+- [ ] Undo/redo functionality
 - [ ] Audit logging for administrative actions
+- [ ] File compression/decompression
+
+## File Operations
+
+### Upload Files
+- **Drag & Drop**: Drag files from desktop directly into the dialog
+- **Click Upload**: Click the upload area or toolbar button to select files
+- **Multi-file**: Upload multiple files at once
+- **File Type Filter**: Respects `allowedFileTypes` prop
+- **Visual Feedback**: Drag overlay with upload icon during drag operation
+
+### Create Folders
+- Click the "Create Folder" button in toolbar
+- Enter folder name in dialog
+- Press Enter or click "Create" to confirm
+- Folder created in current path
+- File list auto-refreshes
+
+### Rename Items
+- Right-click item or click menu icon (⋮)
+- Select "Rename" from context menu
+- Enter new name in dialog
+- Press Enter or click "Rename" to confirm
+- Works for both files and folders
+
+### Delete Items
+- **Single Delete**: Right-click and select "Delete"
+- **Bulk Delete**: Select multiple items and click delete button in toolbar
+- Confirmation dialog shows items to be deleted
+- Warning that action cannot be undone
+- File list auto-refreshes after deletion
+
+### Download Files
+- Right-click file and select "Download"
+- File downloads to browser's download location
+- Only available for files (not folders)
+
+## Error Handling
+
+All operations include comprehensive error handling:
+- Try-catch blocks around API calls
+- User-friendly error notifications
+- Console logging for debugging
+- Graceful degradation on failures
+- Success notifications for completed operations
+
+## GraphQL Integration
+
+The component uses the following GraphQL operations:
+
+- **ReactoryServerFiles**: Load files and folders
+- **ReactoryUploadFile**: Upload files to server
+- **ReactoryCreateFolder**: Create new folders
+- **ReactoryDeleteFile**: Delete files
+- **ReactoryDeleteFolder**: Delete folders
+- **ReactoryMoveItem**: Rename files/folders (via move operation)
 
 ## Development Notes
 
-Currently using mock data for development. Production implementation will require:
+The component is fully integrated with the Reactory GraphQL backend and supports:
 
-1. Server-side GraphQL queries for file operations
-2. File upload handling with proper security
-3. Permission checking integration
-4. Error handling and user feedback improvements
+1. ✅ Real-time file operations with server
+2. ✅ Permission-based UI restrictions
+3. ✅ Error handling and user feedback
+4. ✅ Automatic refresh after operations
+5. ✅ Selection management and bulk operations
 
 The component is designed to be easily extensible and can be customized for different server-side file management scenarios.
+
+## Related Components
+
+- **UserHomeFolder**: User-specific file management with similar UI patterns
+- **WorkflowDesigner**: Uses ServerFileExplorer for loading/saving workflows
+- **ImageComponent**: May use for file selection
+
+For detailed implementation notes, see [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)

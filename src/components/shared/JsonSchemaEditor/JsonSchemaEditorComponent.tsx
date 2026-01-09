@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import ReactQuill from 'react-quill';
+import hljs from 'highlight.js';
 import 'react-quill/dist/quill.snow.css';
 import { 
   FormControl, 
@@ -9,7 +10,8 @@ import {
   Box, 
   Alert,
   Tooltip,
-  IconButton 
+  IconButton, 
+  TextField
 } from '@mui/material';
 import { 
   FormatAlignLeft, 
@@ -173,7 +175,7 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
         'validate-json': validateJson
       }
     },
-    syntax: true,
+    syntax: { hljs },
     clipboard: {
       matchVisual: false,
     }
@@ -185,29 +187,43 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
     'code-block'
   ];
 
+  const contentRef = React.useRef(content);
   useEffect(() => {
-    if (value !== content) {
-      setContent(value);
+    contentRef.current = content;
+  });
+
+  useEffect(() => {
+    if (value === undefined) return;
+    
+    const currentContent = contentRef.current;
+    
+    // If exact string match, do nothing
+    if (value === currentContent) return;
+
+    try {
+      // Check for semantic equality to avoid re-formatting while typing
+      const currentParsed = JSON.parse(currentContent || '{}');
+      const newParsed = JSON.parse(value || '{}');
+      
+      // If semantically different, update content
+      if (JSON.stringify(currentParsed) !== JSON.stringify(newParsed)) {
+        setContent(value);
+      }
+    } catch (e) {
+      // If local content is invalid JSON, we can't do a semantic check.
+      // However, if the value prop changed, it implies an external update.
+      if (value !== currentContent) {
+        setContent(value);
+      }
     }
   }, [value]);
-
-  useEffect(() => {
-    if (onChange && content !== value) {
-      onChange(content);
-    }
-  }, [content, onChange, value]);
-
-  useEffect(() => {
-    if (showValidation) {
-      validateContent(content);
-    }
-  }, [content, showValidation]);
 
   function formatJson() {
     try {
       const parsed = JSON.parse(content);
       const formatted = JSON.stringify(parsed, null, 2);
       setContent(formatted);
+      onChange?.(formatted);
     } catch (error) {
       // If parsing fails, try to clean up basic formatting
       const cleaned = content
@@ -215,11 +231,8 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
         .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Quote unquoted keys
         .replace(/:\s*([^",{\[\]}\s]+)(\s*[,}\]])/g, ': "$1"$2'); // Quote unquoted string values
       setContent(cleaned);
+      onChange?.(cleaned);
     }
-  }
-
-  function validateJson() {
-    validateContent(content);
   }
 
   const validateContent = (jsonContent: string) => {
@@ -270,8 +283,13 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
     onValidationChange?.(valid, errors);
   };
 
+  function validateJson() {
+    validateContent(content);
+  }
+
   const handleEditorChange = (newContent: string) => {
     setContent(newContent);
+    onChange?.(newContent);
   };
 
   const handleBlur = () => {
@@ -307,15 +325,20 @@ const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
           </Box>
         </Box>
 
-        <StyledReactQuill
+        <TextField 
           value={content}
-          onChange={handleEditorChange}
-          onBlur={handleBlur}          
+          onChange={(e) => handleEditorChange(e.target.value)}
+          onBlur={handleBlur}
           placeholder={placeholder}
-          readOnly={readOnly}
-          className={classes.editor}
-          modules={modules}
-          formats={formats}
+          multiline
+          minRows={10}
+          maxRows={20}
+          fullWidth
+          variant="outlined"
+          InputProps={{
+            readOnly: readOnly,
+            className: classes.editor,
+          }}
           style={{ height: typeof height === 'number' ? `${height}px` : height }}
         />
       </Box>

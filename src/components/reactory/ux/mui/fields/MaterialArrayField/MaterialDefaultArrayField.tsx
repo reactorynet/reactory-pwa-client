@@ -556,7 +556,7 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
   ) : renderItems();
 
   return (
-    <Container {...((options.containerProps as any) || {})} key={id}>
+    <Container {...((options.containerProps as any) || {})} key={id}>      
       {title}
       {description}
       {toolbar}

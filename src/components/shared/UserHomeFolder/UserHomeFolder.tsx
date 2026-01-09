@@ -12,7 +12,7 @@ import {
 import UserHomeFolderHeader from './components/UserHomeFolderHeader';
 import { getParentPath, filterFiles } from './utils';
 
-const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
+const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
   open,
   onClose,
   reactory,
@@ -22,6 +22,7 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
   onItemDeselect,
   il8n,
   rootPath = '/',
+  allowMultiSelect = true,
   selectedItems: externalSelectedItems = []
 }) => {
   // Core state
@@ -823,7 +824,8 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
             </Box>
 
             {/* Multi-select Toggle */}
-            <Box sx={{ mb: 2 }}>
+            {allowMultiSelect && (
+              <Box sx={{ mb: 2 }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -867,8 +869,7 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
                   : 'Click files to select and auto-close panel'
                 }
               </Typography>
-            </Box>
-
+            </Box>)}
             {/* Upload Area */}
             <UploadArea />
           </Box>
@@ -1186,4 +1187,4 @@ const UserHomeFolderRefactored: React.FC<UserHomeFolderProps> = ({
   );
 };
 
-export default UserHomeFolderRefactored;
+export default UserHomeFolder;

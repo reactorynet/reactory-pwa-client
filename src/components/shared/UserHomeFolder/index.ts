@@ -1,5 +1,5 @@
 // Main refactored component
-export { default as UserHomeFolderRefactored } from './UserHomeFolder';
+export { default as UserHomeFolder } from './UserHomeFolder';
 
 // Types
 export * from './types';

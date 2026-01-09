@@ -65,8 +65,33 @@ const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
       totals = newTotals;
 
-      //@ts-ignore
-      reactory.stat(`user-session-api-status-totals`, { user_id: reactory.getUser().id, ...totals, ...newLast });
+      // Convert to correct StatisticsInput format
+      const statistic: any = {
+        name: "user_session_api_status_totals",
+        description: "User session API status monitoring",
+        type: "counter",
+        value: totals.total,
+        unit: "requests",
+        attributes: {
+          user_id: reactory.getUser()?.id || 'unknown',
+          error_count: totals.error,
+          slow_count: totals.slow,
+          ok_count: totals.ok,
+          total_count: totals.total,
+          ping_ms: newLast.pingMS,
+          api_ok,
+          is_slow: isSlow
+        },
+        timestamp: new Date(started),
+        resource: {
+          service_name: "reactory-pwa-client",
+          service_version: reactory.version || '1.0.0',
+          deployment_environment: process.env.NODE_ENV || 'development',
+          host_name: window.location.hostname,
+        }
+      };
+
+      reactory.stat("user_session_api_status_totals", statistic);
       reactory.emit('onApiStatusTotalsChange', { ...totals, ...newLast, api_ok, isSlow });
 
       if (next_tm_base !== timeout_base) setTimeoutBase(next_tm_base);

@@ -71,8 +71,7 @@ function AutoCompleteDropDown<
         MaterialLab: Reactory.Client.Web.MaterialLabs;
     }>(dependencies);
 
-    const { TextField } = MaterialCore;
-    const { Autocomplete } = MaterialLab;
+    const { TextField, Autocomplete } = MaterialCore;
 
     const [options, setOptions] = React.useState<TData[]>([]);
     const [filter, setFilter] = React.useState(null);

@@ -82,6 +82,8 @@ import {
   AppBarProps,
   ToolbarProps,
   Theme,
+  Box,
+  CircularProgress,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
@@ -196,6 +198,20 @@ export interface IReactoryCoreDialogProps {
   reactory?: any;
   /** CSS classes from withStyles HOC */
   classes?: any;
+  /** Remove padding from content area */
+  disablePadding?: boolean;
+  /** Custom padding for content area */
+  contentPadding?: number | string;
+  /** Show loading overlay */
+  loading?: boolean;
+  /** Loading message */
+  loadingMessage?: string;
+  /** Actions to display in footer */
+  actions?: React.ReactNode;
+  /** Disable backdrop click close */
+  disableBackdropClick?: boolean;
+  /** Disable escape key close */
+  disableEscapeKeyDown?: boolean;
 }
 
 
@@ -239,7 +255,14 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
     breakpoint = 'sm',
     reactory,
     onClose = null,
-    children = []
+    children = [],
+    disablePadding = false,
+    contentPadding,
+    loading = false,
+    loadingMessage = 'Loading...',
+    actions,
+    disableBackdropClick = false,
+    disableEscapeKeyDown = false
   } = props;
 
 
@@ -332,12 +355,23 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
   }
 
 
+  // Calculate content padding
+  const getContentPadding = (): string | number => {
+    if (contentPadding !== undefined) return contentPadding;
+    if (disablePadding) return 0;
+    return theme.spacing(2);
+  };
+
   let dialogProps = {
     fullScreen: fullScreen === true ? true : shouldBreak === true,
     fullWidth,
     maxWidth,
     open,
-    onClose: handleClose,
+    onClose: (event: any, reason: 'backdropClick' | 'escapeKeyDown') => {
+      if (reason === 'backdropClick' && disableBackdropClick) return;
+      if (reason === 'escapeKeyDown' && disableEscapeKeyDown) return;
+      handleClose();
+    },
     TransitionComponent: Transition,
     ...containerProps,
     style: {
@@ -348,25 +382,96 @@ const FullScreenDialog = (props: IReactoryCoreDialogProps) => {
   return (
     <Fragment>
       <Dialog className={classes.dialog_root} {...dialogProps} >
-        {
-          showAppBar && <AppBar className={classes.appBar} {...appBarProps}>
+        {showAppBar && (
+          <AppBar 
+            className={classes.appBar} 
+            {...appBarProps}
+            sx={{
+              position: 'sticky',
+              top: 0,
+              zIndex: theme.zIndex.appBar,
+              ...appBarProps.sx
+            }}
+          >
             <Toolbar {...toolbarProps} variant={"dense"}>
-              <IconButton color="inherit" onClick={handleClose} aria-label="Close" size="large">
+              <IconButton 
+                color="inherit" 
+                onClick={handleClose} 
+                aria-label="Close" 
+                size="large"
+                edge="start"
+              >
                 <Icon>{props.closeButtonIcon || 'close'}</Icon>
               </IconButton>
-              {title ? <Typography variant="h6" color="inherit">{title}</Typography> : null}
+              {title && (
+                <Typography 
+                  variant="h6" 
+                  color="inherit" 
+                  sx={{ ml: 2, flex: 1 }}
+                >
+                  {title}
+                </Typography>
+              )}
             </Toolbar>
           </AppBar>
-        }
+        )}
 
-        {
-          backNavigationItems && backNavigationItems.length > 0 && <BackNavigation />
-        }
-        <div style={{ marginTop: showAppBar ? '48px' : '0px' }}>
-        {children}
-        </div>
+        {backNavigationItems && backNavigationItems.length > 0 && <BackNavigation />}
+
+        <Box
+          sx={{
+            flex: 1,
+            overflow: 'auto',
+            padding: getContentPadding(),
+            position: 'relative',
+          }}
+        >
+          {loading && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                zIndex: theme.zIndex.modal,
+              }}
+            >
+              <CircularProgress />
+              {loadingMessage && (
+                <Typography variant="body2" sx={{ mt: 2 }}>
+                  {loadingMessage}
+                </Typography>
+              )}
+            </Box>
+          )}
+          {children}
+        </Box>
+
+        {actions && (
+          <Box
+            sx={{
+              position: 'sticky',
+              bottom: 0,
+              borderTop: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.background.paper,
+              padding: theme.spacing(2),
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: theme.spacing(1),
+              zIndex: theme.zIndex.appBar,
+            }}
+          >
+            {actions}
+          </Box>
+        )}
       </Dialog>
-    </Fragment >
+    </Fragment>
   );
 
 }
@@ -392,6 +497,13 @@ FullScreenDialog.propTypes = {
   children: PropTypes.node,
   theme: PropTypes.object,
   reactory: PropTypes.object,
+  disablePadding: PropTypes.bool,
+  contentPadding: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  loading: PropTypes.bool,
+  loadingMessage: PropTypes.string,
+  actions: PropTypes.node,
+  disableBackdropClick: PropTypes.bool,
+  disableEscapeKeyDown: PropTypes.bool,
 };
 
 FullScreenDialog.defaultProps = {
@@ -405,6 +517,11 @@ FullScreenDialog.defaultProps = {
   closeButtonIcon: 'close',
   closeOnEvents: [],
   children: [],
+  disablePadding: false,
+  loading: false,
+  loadingMessage: 'Loading...',
+  disableBackdropClick: false,
+  disableEscapeKeyDown: false,
 };
 
 export default compose(withReactory)(FullScreenDialog);

@@ -2,6 +2,7 @@ export interface UserHomeFolderProps {
   open: boolean;
   onClose: () => void;
   reactory: Reactory.Client.ReactorySDK;
+  allowMultiSelect?: boolean;
   onFileUpload?: (files: File[], path: string) => Promise<void>;
   onSelectionChanged?: (selectedItems: SelectedItem[], selectionMode: 'single' | 'multi') => void;
   onItemSelect?: (item: SelectedItem, selectionMode: 'single' | 'multi') => Promise<void>;

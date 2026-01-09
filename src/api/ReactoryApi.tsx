@@ -923,7 +923,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.publishingStats = true;
     if (this.statistics.__delta > 0) {
       this.log(`Flushing Collected Statistics (${this.statistics.__delta}) deltas across (${this.statistics.__keys.length}) keys`, []);
-      const entries = this.statistics.__keys.map(key => ({ key, stat: this.statistics.items[key] }));
+      const entries = this.statistics.__keys.map(key => this.statistics.items[key]);
       this.graphqlMutation(gql`mutation PublishStatistics($entries: [StatisticsInput]!){
                 CorePublishStatistics(entries: $entries) {
                   id
@@ -1906,7 +1906,40 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         }
       }
     } catch (clientError) {
-      
+      if (clientError.name === 'ApolloError') {
+        const {
+          networkError,
+          graphQLErrors,
+          protocolErrors,
+        } = clientError as ApolloError;
+        
+        if (networkError && (networkError as ServerError).statusCode === undefined) {
+          that.error(`Network Error: ${networkError.message}`, { networkError, options });          
+          throw networkError;
+        }
+
+        if (networkError && (networkError as ServerError).statusCode === 401) {
+          await that.logout(false);
+          that.setUser(anonUser);
+          return anonUser;          
+        }
+
+        if (graphQLErrors && graphQLErrors.length > 0) {
+          graphQLErrors.forEach((gqlError) => {
+            that.error(`GraphQL Error: ${gqlError.message}`, gqlError);
+          });
+        }
+
+        if (protocolErrors && protocolErrors.length > 0) {
+          protocolErrors.forEach((protocolError) => {
+            that.error(`Protocol Error: ${protocolError.message}`, protocolError);
+          });
+        }
+      } else {
+        that.error(`${clientError?.name || 'Unspecified'} Error occurred while fetching the API status: ${clientError.message}`, { clientError });
+        that.error(`Error occurred while fetching the API status: ${clientError?.message}`, { clientError });
+        throw clientError;
+      }
       return currentStatus;
     }    
   }
