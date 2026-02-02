@@ -30,6 +30,13 @@ import { getUserListStyles } from './styles/userList.styles';
  */
 export const UserList: React.FC<UserListProps> = (props) => {
   const {
+    // GraphQL
+    graphqlQuery,
+
+    // Organization
+    organizationId,
+    businessUnitId,
+
     // Selection
     selectionMode = 'none',
     initialSelected = [],
@@ -77,8 +84,7 @@ export const UserList: React.FC<UserListProps> = (props) => {
     onUserClick,
     onRefresh,
 
-    // Data
-    query,
+    // Data    
     pollInterval,
     skip = false,
 
@@ -138,7 +144,9 @@ export const UserList: React.FC<UserListProps> = (props) => {
     setSearchString,
     refetch,
   } = useUserQuery({
-    query,
+    graphqlQuery,
+    organizationId,
+    businessUnitId,
     initialPage,
     initialPageSize,
     initialSearchString,

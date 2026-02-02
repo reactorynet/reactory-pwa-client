@@ -46,11 +46,11 @@ export const REACTORY_USER_LIST_QUERY = gql`
   ${PAGING_RESULT_FRAGMENT}
   query ReactoryUserListQuery(
     $paging: PagingRequest
-    $searchString: String
+    $filter: ReactoryUserFilterInput
   ) {
     ReactoryUsers(
       paging: $paging
-      searchString: $searchString
+      filter: $filter
     ) {
       users {
         ...UserFragment

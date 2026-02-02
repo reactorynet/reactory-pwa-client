@@ -1,5 +1,5 @@
 import { useReactory } from "@reactory/client-core/api";
-import { useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
 import {
   WorkflowDesignerProps,
   WorkflowStepDefinition,
@@ -25,10 +25,14 @@ import { CANVAS_DEFAULTS, STEP_DEFAULTS } from './constants';
 // Component imports
 import WorkflowCanvas from './components/Canvas/WorkflowCanvas';
 import OptimizedWorkflowCanvas from './components/Canvas/OptimizedWorkflowCanvas';
+import { WorkflowWebGLCanvas } from './renderers/WebGLRenderer';
 import StepLibraryPanel from './components/Panels/StepLibraryPanel';
 import PropertiesPanel from './components/Panels/PropertiesPanel';
 import UserHomeFolder from '../UserHomeFolder/UserHomeFolder';
 import { ServerFileExplorer } from '../ServerFileExplorer';
+
+// Rendering mode type
+type RenderingMode = 'dom' | 'optimized' | 'webgl';
 
 
 export default function WorkflowDesigner(props: WorkflowDesignerProps) {
@@ -58,28 +62,23 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     text,
   } = reactory.muiTheme.palette;
 
-  const {
-    React,
+  const {    
     Material
-  } = reactory.getComponents<{
-    React: Reactory.React,
+  } = reactory.getComponents<{    
     Material: Reactory.Client.Web.IMaterialModule
-  }>(["react.React", "material-ui.Material"]);
-
-  const { useState: useStateReact, useMemo: useMemoReact, useCallback: useCallbackReact, useEffect: useEffectReact } = React;
-
+  }>(["material-ui.Material"]);
   // UI state
-  const [stepLibraryPanelOpen, setStepLibraryPanelOpen] = useStateReact<boolean>(true);
-  const [propertiesPanelOpen, setPropertiesPanelOpen] = useStateReact<boolean>(true);
-  const [validationPanelOpen, setValidationPanelOpen] = useStateReact<boolean>(false);
-  const [templatesPanelOpen, setTemplatesPanelOpen] = useStateReact<boolean>(false);
-  const [showGrid, setShowGrid] = useStateReact<boolean>(props.showGrid || true);
-  const [enableSnapToGrid, setEnableSnapToGrid] = useStateReact<boolean>(props.snapToGrid || true);
-  const [useOptimizedRendering, setUseOptimizedRendering] = useStateReact<boolean>(false); // Will be set after definition loads  
-  const [isEditingTitle, setIsEditingTitle] = useStateReact<boolean>(false);
-  const [titleInputValue, setTitleInputValue] = useStateReact<string>('');
-  const [showUserHomeFolderDialog, setShowUserHomeFolderDialog] = useStateReact<boolean>(false);
-  const [showServerFileExplorerDialog, setShowServerFileExplorerDialog] = useStateReact<boolean>(false);
+  const [stepLibraryPanelOpen, setStepLibraryPanelOpen] = useState<boolean>(true);
+  const [propertiesPanelOpen, setPropertiesPanelOpen] = useState<boolean>(true);
+  const [validationPanelOpen, setValidationPanelOpen] = useState<boolean>(false);
+  const [templatesPanelOpen, setTemplatesPanelOpen] = useState<boolean>(false);
+  const [showGrid, setShowGrid] = useState<boolean>(props.showGrid || true);
+  const [enableSnapToGrid, setEnableSnapToGrid] = useState<boolean>(props.snapToGrid || true);
+  const [renderingMode, setRenderingMode] = useState<RenderingMode>('webgl'); // Default to WebGL for best performance
+  const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
+  const [titleInputValue, setTitleInputValue] = useState<string>('');
+  const [showUserHomeFolderDialog, setShowUserHomeFolderDialog] = useState<boolean>(false);
+  const [showServerFileExplorerDialog, setShowServerFileExplorerDialog] = useState<boolean>(false);
 
   // GraphQL operations
   const {
@@ -138,7 +137,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     initialDefinition,
     autoSave,
     autoSaveInterval,
-    onSave: useCallbackReact(async (def) => {
+    onSave: useCallback(async (def) => {
       if (onSave) {
         await onSave(def);
       } else {
@@ -150,7 +149,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         }
       }
     }, [onSave, updateWorkflow, createWorkflow]),
-    onLoad: useCallbackReact(async (id) => {
+    onLoad: useCallback(async (id) => {
       if (onLoad) {
         return await onLoad(id);
       } else {
@@ -168,17 +167,17 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   });
 
   // Canvas viewport operations (for toolbar controls)
-  const zoomIn = useCallbackReact(() => {
+  const zoomIn = useCallback(() => {
     const newZoom = Math.min(3.0, viewport.zoom * 1.2);
     setViewport({ ...viewport, zoom: newZoom });
   }, [viewport, setViewport]);
 
-  const zoomOut = useCallbackReact(() => {
+  const zoomOut = useCallback(() => {
     const newZoom = Math.max(0.1, viewport.zoom / 1.2);
     setViewport({ ...viewport, zoom: newZoom });
   }, [viewport, setViewport]);
 
-  const zoomToFit = useCallbackReact(() => {
+  const zoomToFit = useCallback(() => {
     if (definition.steps.length === 0) return;
 
     // Calculate bounds of all steps
@@ -226,13 +225,13 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     });
   }, [definition.steps, viewport, setViewport]);
 
-  const zoomToSelectionBounds = useCallbackReact((bounds) => {
+  const zoomToSelectionBounds = useCallback((bounds) => {
     // Implementation for zooming to selection bounds
     console.log('Zoom to selection:', bounds);
   }, []);
 
   // Handle step creation from library (via canvas drop)
-  const handleStepCreation = useCallbackReact((stepDefinition: any, position: Point) => {
+  const handleStepCreation = useCallback((stepDefinition: any, position: Point) => {
     console.log('🏗️ Step creation called with:', stepDefinition, position);
 
     const canvasPos = enableSnapToGrid
@@ -278,7 +277,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, [addStep, setSelection, enableSnapToGrid, generateStepId, snapToGrid, generateConnectionId]);
 
   // Handle connection creation
-  const handleConnectionCreate = useCallbackReact((sourceStepId: string, sourcePortId: string, targetStepId: string, targetPortId: string) => {
+  const handleConnectionCreate = useCallback((sourceStepId: string, sourcePortId: string, targetStepId: string, targetPortId: string) => {
     const newConnection: WorkflowConnection = {
       id: generateConnectionId(),
       sourceStepId,
@@ -291,7 +290,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, [addConnection]);
 
   // Handle keyboard shortcuts
-  const handleKeyDown = useCallbackReact((event: KeyboardEvent) => {
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (readonly) return;
 
     // Ignore keyboard shortcuts when user is typing in input fields
@@ -391,13 +390,13 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, [readonly, save, undo, redo, removeStep, removeConnection, selection, setSelection, definition, zoomIn, zoomOut, zoomToFit]);
 
   // Set up keyboard event listeners
-  useEffectReact(() => {
+  useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
   // Notify parent of selection changes
-  useEffectReact(() => {
+  useEffect(() => {
     if (onSelectionChange) {
       const selectedItems = [...selection.selectedSteps, ...selection.selectedConnections];
       onSelectionChange(selectedItems);
@@ -405,21 +404,21 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, [selection, onSelectionChange]);
 
   // Notify parent of canvas changes
-  useEffectReact(() => {
+  useEffect(() => {
     if (onCanvasChange) {
       onCanvasChange(viewport);
     }
   }, [viewport, onCanvasChange]);
 
   // Keep title input value in sync with definition
-  useEffectReact(() => {
+  useEffect(() => {
     if (!isEditingTitle) {
       setTitleInputValue(definition?.name || '');
     }
   }, [definition?.name, isEditingTitle]);
 
   // Zoom to selection when selection changes
-  const handleZoomToSelection = useCallbackReact(() => {
+  const handleZoomToSelection = useCallback(() => {
     const selectedSteps = definition.steps.filter(step =>
       selection.selectedSteps.has(step.id)
     );
@@ -433,34 +432,34 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, [definition.steps, selection.selectedSteps, zoomToSelectionBounds]);
 
   // Panel toggle handlers
-  const handleStepLibraryToggle = useCallbackReact(() => {
+  const handleStepLibraryToggle = useCallback(() => {
     setStepLibraryPanelOpen(!stepLibraryPanelOpen);
   }, [stepLibraryPanelOpen]);
 
-  const handlePropertiesToggle = useCallbackReact(() => {
+  const handlePropertiesToggle = useCallback(() => {
     setPropertiesPanelOpen(!propertiesPanelOpen);
   }, [propertiesPanelOpen]);
 
-  const handleValidationToggle = useCallbackReact(() => {
+  const handleValidationToggle = useCallback(() => {
     setValidationPanelOpen(!validationPanelOpen);
   }, [validationPanelOpen]);
 
   // Get selected items for properties panel
-  const selectedSteps = useMemoReact(() => {
+  const selectedSteps = useMemo(() => {
     return definition.steps.filter(step => selection.selectedSteps.has(step.id));
   }, [definition.steps, selection.selectedSteps]);
 
-  const selectedConnections = useMemoReact(() => {
+  const selectedConnections = useMemo(() => {
     return definition.connections.filter(connection => selection.selectedConnections.has(connection.id));
   }, [definition.connections, selection.selectedConnections]);
 
   // Handle step property updates
-  const handleStepUpdate = useCallbackReact((updatedStep: WorkflowStepDefinition) => {
+  const handleStepUpdate = useCallback((updatedStep: WorkflowStepDefinition) => {
     updateStep(updatedStep.id, updatedStep);
   }, [updateStep]);
 
   // Handle connection updates
-  const handleConnectionUpdate = useCallbackReact((updatedConnection: WorkflowConnection) => {
+  const handleConnectionUpdate = useCallback((updatedConnection: WorkflowConnection) => {
     // Update connection in definition
     const newDefinition = {
       ...definition,
@@ -472,18 +471,18 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, [updateDefinition, definition]);
 
   // Handle manual validation trigger
-  const handleValidate = useCallbackReact(() => {
+  const handleValidate = useCallback(() => {
     validate();
   }, [validate]);
 
   // Handle title editing
-  const handleTitleClick = useCallbackReact(() => {
+  const handleTitleClick = useCallback(() => {
     if (!readonly) {
       setIsEditingTitle(true);
     }
   }, [readonly]);
 
-  const handleTitleSave = useCallbackReact(() => {
+  const handleTitleSave = useCallback(() => {
     if (titleInputValue.trim() && titleInputValue !== definition.name) {
       const updatedDefinition = {
         ...definition,
@@ -494,12 +493,12 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     setIsEditingTitle(false);
   }, [titleInputValue, definition, updateDefinition]);
 
-  const handleTitleCancel = useCallbackReact(() => {
+  const handleTitleCancel = useCallback(() => {
     setTitleInputValue(definition?.name || '');
     setIsEditingTitle(false);
   }, [definition?.name]);
 
-  const handleTitleKeyDown = useCallbackReact((event: React.KeyboardEvent) => {
+  const handleTitleKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
       event.preventDefault();
       handleTitleSave();
@@ -510,31 +509,31 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, [handleTitleSave, handleTitleCancel]);
 
   // Handle save dropdown
-  const [saveMenuAnchor, setSaveMenuAnchor] = useStateReact<null | HTMLElement>(null);
+  const [saveMenuAnchor, setSaveMenuAnchor] = useState<null | HTMLElement>(null);
   const isSaveMenuOpen = Boolean(saveMenuAnchor);
 
   // Handle load dropdown
-  const [loadMenuAnchor, setLoadMenuAnchor] = useStateReact<null | HTMLElement>(null);
+  const [loadMenuAnchor, setLoadMenuAnchor] = useState<null | HTMLElement>(null);
   const isLoadMenuOpen = Boolean(loadMenuAnchor);
-  const [selectedWorkspaceType, setSelectedWorkspaceType] = useStateReact<'server' | 'user'>('user');
+  const [selectedWorkspaceType, setSelectedWorkspaceType] = useState<'server' | 'user'>('user');
 
   // Handle context menu
-  const [contextMenu, setContextMenu] = useStateReact<{ mouseX: number; mouseY: number; target: { type: 'step' | 'connection' | 'canvas'; id?: string; } } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; target: { type: 'step' | 'connection' | 'canvas'; id?: string; } } | null>(null);
 
-  const handleSaveMenuOpen = useCallbackReact((event: React.MouseEvent<HTMLElement>) => {
+  const handleSaveMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setSaveMenuAnchor(event.currentTarget);
   }, []);
 
-  const handleSaveMenuClose = useCallbackReact(() => {
+  const handleSaveMenuClose = useCallback(() => {
     setSaveMenuAnchor(null);
   }, []);
 
-  const handleSaveToServer = useCallbackReact(async () => {
+  const handleSaveToServer = useCallback(async () => {
     handleSaveMenuClose();
     await save();
   }, [save]);
 
-  const handleDownloadFile = useCallbackReact(() => {
+  const handleDownloadFile = useCallback(() => {
     handleSaveMenuClose();
 
     // Create downloadable JSON file
@@ -550,36 +549,36 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, [definition]);
 
   // Load menu handlers
-  const handleLoadMenuOpen = useCallbackReact((event: React.MouseEvent<HTMLElement>) => {
+  const handleLoadMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setLoadMenuAnchor(event.currentTarget);
   }, []);
 
-  const handleLoadMenuClose = useCallbackReact(() => {
+  const handleLoadMenuClose = useCallback(() => {
     setLoadMenuAnchor(null);
   }, []);
 
-  const handleLoadFromServerWorkspace = useCallbackReact(() => {
+  const handleLoadFromServerWorkspace = useCallback(() => {
     setSelectedWorkspaceType('server');
     setShowServerFileExplorerDialog(true);
     handleLoadMenuClose();
   }, []);
 
-  const handleLoadFromUserWorkspace = useCallbackReact(() => {
+  const handleLoadFromUserWorkspace = useCallback(() => {
     setSelectedWorkspaceType('user');
     setShowUserHomeFolderDialog(true);
     handleLoadMenuClose();
   }, []);
 
 
-  const handleLoadDialogClose = useCallbackReact(() => {
+  const handleLoadDialogClose = useCallback(() => {
     setShowUserHomeFolderDialog(false);
   }, []);
 
-  const handleServerFileExplorerClose = useCallbackReact(() => {
+  const handleServerFileExplorerClose = useCallback(() => {
     setShowServerFileExplorerDialog(false);
   }, []);
 
-  const handleServerFileSelection = useCallbackReact(async (selectedFiles: any[]) => {
+  const handleServerFileSelection = useCallback(async (selectedFiles: any[]) => {
     if (selectedFiles.length > 0) {
       const selectedFile = selectedFiles[0];
 
@@ -608,7 +607,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     }
   }, [updateDefinition]);
 
-  const handleFileSelection = useCallbackReact(async (selectedItems: any[], selectionMode: 'single' | 'multi') => {
+  const handleFileSelection = useCallback(async (selectedItems: any[], selectionMode: 'single' | 'multi') => {
     if (selectedItems.length > 0 && selectedItems[0].type === 'file') {
       const selectedFile = selectedItems[0];
 
@@ -639,7 +638,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     }
   }, [load]);
 
-  const handleFileUpload = useCallbackReact(async (files: File[], path: string) => {
+  const handleFileUpload = useCallback(async (files: File[], path: string) => {
     if (files.length > 0) {
       const file = files[0];
 
@@ -668,7 +667,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, [updateDefinition]);
 
   // Context menu handlers
-  const handleContextMenu = useCallbackReact((event: React.MouseEvent, target: { type: 'step' | 'connection' | 'canvas'; id?: string; }) => {
+  const handleContextMenu = useCallback((event: React.MouseEvent, target: { type: 'step' | 'connection' | 'canvas'; id?: string; }) => {
     if (readonly) return;
 
     event.preventDefault();
@@ -679,11 +678,11 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     });
   }, [readonly]);
 
-  const handleContextMenuClose = useCallbackReact(() => {
+  const handleContextMenuClose = useCallback(() => {
     setContextMenu(null);
   }, []);
 
-  const handleCopyStep = useCallbackReact(() => {
+  const handleCopyStep = useCallback(() => {
     if (contextMenu?.target.type === 'step' && contextMenu.target.id) {
       const step = definition.steps.find(s => s.id === contextMenu.target.id);
       if (step) {
@@ -707,17 +706,87 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     handleContextMenuClose();
   }, [contextMenu, definition.steps, addStep, setSelection, generateStepId]);
 
-  const handleDeleteSelected = useCallbackReact(() => {
+  const handleDeleteSelected = useCallback(() => {
     selection.selectedSteps.forEach(stepId => removeStep(stepId));
     selection.selectedConnections.forEach(connId => removeConnection(connId));
     handleContextMenuClose();
   }, [selection, removeStep, removeConnection]);
 
-  const handleDuplicateStep = useCallbackReact(() => {
+  const handleDuplicateStep = useCallback(() => {
     handleCopyStep(); // Same as copy for now
   }, [handleCopyStep]);
 
-  const computeRootPath = useCallbackReact(() => {
+  // Canvas event handlers - moved to top level to avoid hooks in JSX
+  const handleCanvasStepMove = useCallback((stepId: string, position: Point) => {
+    updateStep(stepId, { position });
+  }, [updateStep]);
+
+  const handleCanvasStepResize = useCallback((stepId: string, size: Size) => {
+    updateStep(stepId, { size });
+  }, [updateStep]);
+
+  const handleCanvasStepSelect = useCallback((stepId: string, multi: boolean) => {
+    const newSelectedSteps: Set<string> = new Set(multi ? selection.selectedSteps : []);
+
+    if (newSelectedSteps.has(stepId)) {
+      newSelectedSteps.delete(stepId);
+    } else {
+      newSelectedSteps.add(stepId);
+    }
+
+    setSelection({
+      selectedSteps: newSelectedSteps,
+      selectedConnections: multi ? selection.selectedConnections : new Set<string>(),
+      selectionBounds: undefined
+    });
+  }, [selection, setSelection]);
+
+  const handleCanvasStepDoubleClick = useCallback((_stepId: string) => {
+    setPropertiesPanelOpen(true);
+  }, []);
+
+  const handleCanvasConnectionCreate = useCallback((connection: Partial<WorkflowConnection>) => {
+    if (connection.sourceStepId && connection.sourcePortId && connection.targetStepId && connection.targetPortId) {
+      handleConnectionCreate(connection.sourceStepId, connection.sourcePortId, connection.targetStepId, connection.targetPortId);
+    }
+  }, [handleConnectionCreate]);
+
+  const handleCanvasConnectionSelect = useCallback((connectionId: string, multi: boolean) => {
+    const newSelectedConnections: Set<string> = new Set(multi ? selection.selectedConnections : []);
+
+    if (newSelectedConnections.has(connectionId)) {
+      newSelectedConnections.delete(connectionId);
+    } else {
+      newSelectedConnections.add(connectionId);
+    }
+
+    setSelection({
+      selectedConnections: newSelectedConnections,
+      selectedSteps: multi ? selection.selectedSteps : new Set<string>(),
+      selectionBounds: undefined
+    });
+  }, [selection, setSelection]);
+
+  const handleCanvasClick = useCallback((_position: Point, modifiers: InteractionModifiers) => {
+    if (!modifiers.ctrl && !modifiers.meta) {
+      setSelection({
+        selectedSteps: new Set<string>(),
+        selectedConnections: new Set<string>(),
+        selectionBounds: undefined
+      });
+    }
+  }, [setSelection]);
+
+  const handleStepLibraryStepDragStart = useCallback((_step: unknown) => {
+    // Step drag start handled by StepItem
+  }, []);
+
+  const handleStepLibraryStepClick = useCallback((step: unknown) => {
+    // Handle step click - could show step details
+    console.log('Step clicked:', step);
+  }, []);
+
+  const computeRootPath = useCallback(() => {
     // Only used for UserHomeFolder (user workspace)
     return '/';
   }, []);
@@ -993,18 +1062,37 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           </IconButton>
         </Tooltip>
 
-        {/* DEBUG: Test Step Creation */}
-        {/* Performance Toggle */}
-        <Tooltip title={`${useOptimizedRendering ? 'Disable' : 'Enable'} Performance Mode`}>
-          <IconButton
-            onClick={() => {
-              setUseOptimizedRendering(!useOptimizedRendering);
-            }}
-            color={useOptimizedRendering ? "primary" : "default"}
-          >
-            <Speed />
-          </IconButton>
-        </Tooltip>
+        {/* Rendering Mode Toggle */}
+        <ButtonGroup size="small" variant="outlined" sx={{ ml: 1 }}>
+          <Tooltip title="DOM Rendering (Basic)">
+            <Button
+              onClick={() => setRenderingMode('dom')}
+              variant={renderingMode === 'dom' ? 'contained' : 'outlined'}
+              size="small"
+            >
+              DOM
+            </Button>
+          </Tooltip>
+          <Tooltip title="Optimized DOM Rendering">
+            <Button
+              onClick={() => setRenderingMode('optimized')}
+              variant={renderingMode === 'optimized' ? 'contained' : 'outlined'}
+              size="small"
+            >
+              OPT
+            </Button>
+          </Tooltip>
+          <Tooltip title="WebGL Rendering (Best Performance)">
+            <Button
+              onClick={() => setRenderingMode('webgl')}
+              variant={renderingMode === 'webgl' ? 'contained' : 'outlined'}
+              size="small"
+              startIcon={<Speed />}
+            >
+              WebGL
+            </Button>
+          </Tooltip>
+        </ButtonGroup>
       </Paper>
 
       {/* Progress indicator */}
@@ -1041,15 +1129,10 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               categories={categories}
               searchTerm={searchTerm}
               selectedCategory={selectedCategory}
-              onStepDragStart={useCallbackReact((step) => {
-                // Step drag start handled by StepItem
-              }, [])}
+              onStepDragStart={handleStepLibraryStepDragStart}
               onSearchChange={setSearchTerm}
               onCategorySelect={setSelectedCategory}
-              onStepClick={useCallbackReact((step) => {
-                // Handle step click - could show step details
-                console.log('Step clicked:', step);
-              }, [])}
+              onStepClick={handleStepLibraryStepClick}
             />
           </Paper>
         )}
@@ -1063,7 +1146,33 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             backgroundColor: background.paper
           }}
         >
-          {useOptimizedRendering ? (
+          {/* WebGL Canvas - Best Performance */}
+          {renderingMode === 'webgl' && (
+            <WorkflowWebGLCanvas
+              definition={definition}
+              stepLibrary={stepLibrary}
+              viewport={viewport}
+              selection={selection}
+              dragState={dragState}
+              validationResult={validationResult}
+              showGrid={showGrid}
+              snapToGrid={enableSnapToGrid}
+              readonly={readonly}
+              onStepMove={handleCanvasStepMove}
+              onStepResize={handleCanvasStepResize}
+              onStepSelect={handleCanvasStepSelect}
+              onStepDoubleClick={handleCanvasStepDoubleClick}
+              onConnectionCreate={handleCanvasConnectionCreate}
+              onConnectionSelect={handleCanvasConnectionSelect}
+              onCanvasClick={handleCanvasClick}
+              onViewportChange={setViewport}
+              onStepCreate={handleStepCreation}
+              onContextMenu={handleContextMenu}
+            />
+          )}
+
+          {/* Optimized DOM Canvas */}
+          {renderingMode === 'optimized' && (
             <OptimizedWorkflowCanvas
               definition={definition}
               stepLibrary={stepLibrary}
@@ -1074,65 +1183,21 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               showGrid={showGrid}
               snapToGrid={enableSnapToGrid}
               readonly={readonly}
-              onStepMove={useCallbackReact((stepId: string, position: Point) => {
-                updateStep(stepId, { position });
-              }, [updateStep])}
-              onStepResize={useCallbackReact((stepId: string, size: Size) => {
-                updateStep(stepId, { size });
-              }, [updateStep])}
-              onStepSelect={useCallbackReact((stepId: string, multi: boolean) => {
-                const newSelectedSteps: Set<string> = new Set(multi ? selection.selectedSteps : []);
-
-                if (newSelectedSteps.has(stepId)) {
-                  newSelectedSteps.delete(stepId);
-                } else {
-                  newSelectedSteps.add(stepId);
-                }
-
-                setSelection({
-                  selectedSteps: newSelectedSteps,
-                  selectedConnections: multi ? selection.selectedConnections : new Set<string>(),
-                  selectionBounds: undefined
-                });
-              }, [selection, setSelection])}
-              onStepDoubleClick={useCallbackReact((stepId: string) => {
-                setPropertiesPanelOpen(true);
-              }, [])}
-              onConnectionCreate={useCallbackReact((connection: Partial<WorkflowConnection>) => {
-                if (connection.sourceStepId && connection.sourcePortId && connection.targetStepId && connection.targetPortId) {
-                  handleConnectionCreate(connection.sourceStepId, connection.sourcePortId, connection.targetStepId, connection.targetPortId);
-                }
-              }, [handleConnectionCreate])}
-              onConnectionSelect={useCallbackReact((connectionId: string, multi: boolean) => {
-                const newSelectedConnections: Set<string> = new Set(multi ? selection.selectedConnections : []);
-
-                if (newSelectedConnections.has(connectionId)) {
-                  newSelectedConnections.delete(connectionId);
-                } else {
-                  newSelectedConnections.add(connectionId);
-                }
-
-                setSelection({
-                  selectedConnections: newSelectedConnections,
-                  selectedSteps: multi ? selection.selectedSteps : new Set<string>(),
-                  selectionBounds: undefined
-                });
-              }, [selection, setSelection])}
-              onCanvasClick={useCallbackReact((position: Point, modifiers: InteractionModifiers) => {
-                if (!modifiers.ctrl && !modifiers.meta) {
-                  // Clear selection when clicking on empty canvas
-                  setSelection({
-                    selectedSteps: new Set<string>(),
-                    selectedConnections: new Set<string>(),
-                    selectionBounds: undefined
-                  });
-                }
-              }, [setSelection])}
+              onStepMove={handleCanvasStepMove}
+              onStepResize={handleCanvasStepResize}
+              onStepSelect={handleCanvasStepSelect}
+              onStepDoubleClick={handleCanvasStepDoubleClick}
+              onConnectionCreate={handleCanvasConnectionCreate}
+              onConnectionSelect={handleCanvasConnectionSelect}
+              onCanvasClick={handleCanvasClick}
               onViewportChange={setViewport}
               onStepCreate={handleStepCreation}
               onContextMenu={handleContextMenu}
             />
-          ) : (
+          )}
+
+          {/* Basic DOM Canvas */}
+          {renderingMode === 'dom' && (
             <WorkflowCanvas
               definition={definition}
               stepLibrary={stepLibrary}
@@ -1143,59 +1208,13 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               showGrid={showGrid}
               snapToGrid={enableSnapToGrid}
               readonly={readonly}
-              onStepMove={useCallbackReact((stepId: string, position: Point) => {
-                updateStep(stepId, { position });
-              }, [updateStep])}
-              onStepResize={useCallbackReact((stepId: string, size: Size) => {
-                updateStep(stepId, { size });
-              }, [updateStep])}
-              onStepSelect={useCallbackReact((stepId: string, multi: boolean) => {
-                const newSelectedSteps: Set<string> = new Set(multi ? selection.selectedSteps : []);
-
-                if (newSelectedSteps.has(stepId)) {
-                  newSelectedSteps.delete(stepId);
-                } else {
-                  newSelectedSteps.add(stepId);
-                }
-
-                setSelection({
-                  selectedSteps: newSelectedSteps,
-                  selectedConnections: multi ? selection.selectedConnections : new Set<string>(),
-                  selectionBounds: undefined
-                });
-              }, [selection, setSelection])}
-              onStepDoubleClick={useCallbackReact((stepId: string) => {
-                setPropertiesPanelOpen(true);
-              }, [])}
-              onConnectionCreate={useCallbackReact((connection: Partial<WorkflowConnection>) => {
-                if (connection.sourceStepId && connection.sourcePortId && connection.targetStepId && connection.targetPortId) {
-                  handleConnectionCreate(connection.sourceStepId, connection.sourcePortId, connection.targetStepId, connection.targetPortId);
-                }
-              }, [handleConnectionCreate])}
-              onConnectionSelect={useCallbackReact((connectionId: string, multi: boolean) => {
-                const newSelectedConnections: Set<string> = new Set(multi ? selection.selectedConnections : []);
-
-                if (newSelectedConnections.has(connectionId)) {
-                  newSelectedConnections.delete(connectionId);
-                } else {
-                  newSelectedConnections.add(connectionId);
-                }
-
-                setSelection({
-                  selectedConnections: newSelectedConnections,
-                  selectedSteps: multi ? selection.selectedSteps : new Set<string>(),
-                  selectionBounds: undefined
-                });
-              }, [selection, setSelection])}
-              onCanvasClick={useCallbackReact((position: Point, modifiers: InteractionModifiers) => {
-                if (!modifiers.ctrl && !modifiers.meta) {
-                  // Clear selection when clicking on empty canvas
-                  setSelection({
-                    selectedSteps: new Set(),
-                    selectedConnections: new Set()
-                  });
-                }
-              }, [setSelection])}
+              onStepMove={handleCanvasStepMove}
+              onStepResize={handleCanvasStepResize}
+              onStepSelect={handleCanvasStepSelect}
+              onStepDoubleClick={handleCanvasStepDoubleClick}
+              onConnectionCreate={handleCanvasConnectionCreate}
+              onConnectionSelect={handleCanvasConnectionSelect}
+              onCanvasClick={handleCanvasClick}
               onViewportChange={setViewport}
               onStepCreate={handleStepCreation}
               onContextMenu={handleContextMenu}

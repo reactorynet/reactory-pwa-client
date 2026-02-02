@@ -263,6 +263,14 @@ categories:
 
   # Utility & Administrative Widgets
   utility:
+    - name: "DynamicWidget"
+      path: "./DynamicWidget/"
+      description: "Utility widget for dynamically mounting Reactory components by FQN"
+      type: "form-widget"
+      schema_type: "any"
+      ui_schema: "DynamicWidget"
+      features: ["component-mounting", "prop-mapping", "error-handling"]
+      
     - name: "ColumnFilterWidget"
       path: "./ColumnFilterWidget/"
       description: "Column filtering widget for data tables"

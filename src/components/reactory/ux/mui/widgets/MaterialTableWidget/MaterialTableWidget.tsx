@@ -1,4 +1,4 @@
-import React, { Fragment, useState, RefObject, PureComponent } from 'react'
+import React, { Fragment, useState, RefObject, PureComponent, useCallback, useMemo, useRef } from 'react'
 import { styled } from '@mui/material/styles';
 import { pullAt, isNil, remove, filter, isArray, throttle, ThrottleSettings } from 'lodash'
 import {
@@ -16,6 +16,7 @@ import {
   Slider,
   useMediaQuery,
   Table,
+  TableContainer,
   TableRow,
   TableBody,
   TableCell,
@@ -25,7 +26,8 @@ import {
   Paper,
   Tooltip,
   TextField,
-  Breakpoint
+  Breakpoint,
+  Box,
 
 } from '@mui/material'
 import { alpha, SxProps } from '@mui/material/styles';
@@ -41,6 +43,7 @@ import { useNavigate } from 'react-router';
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 import { constants } from 'zlib';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
+import { ColumnHeader, ColumnHeaderConfig } from './components/ColumnHeader';
 
 const PREFIX = 'MaterialTableWidgetComponent';
 
@@ -161,6 +164,96 @@ export interface MaterialTableRowState {
 }
 
 
+/**
+ * Header configuration options for enhanced column header rendering
+ */
+export interface ColumnHeaderConfiguration {
+  /**
+   * Custom header renderer component FQN (e.g., 'custom.MyColumnHeader@1.0.0')
+   */
+  headerComponent?: string;
+  /**
+   * Props to pass to the custom header component
+   */
+  headerComponentProps?: Record<string, unknown>;
+  /**
+   * Props map for dynamic prop resolution
+   */
+  headerComponentPropsMap?: Record<string, unknown>;
+  /**
+   * i18n key for the column title
+   */
+  titleKey?: string;
+  /**
+   * Icon to display in the header
+   */
+  icon?: string;
+  /**
+   * Position of the icon relative to the title
+   */
+  iconPosition?: 'left' | 'right';
+  /**
+   * Icon color
+   */
+  iconColor?: string;
+  /**
+   * Header text color
+   */
+  color?: string;
+  /**
+   * Header background color
+   */
+  backgroundColor?: string;
+  /**
+   * Enable sorting for this column
+   */
+  sortable?: boolean;
+  /**
+   * Enable filtering for this column
+   */
+  filterable?: boolean;
+  /**
+   * Custom filter component FQN
+   */
+  filterComponent?: string;
+  /**
+   * Tooltip text
+   */
+  tooltip?: string;
+  /**
+   * i18n key for tooltip
+   */
+  tooltipKey?: string;
+  /**
+   * Header text alignment
+   */
+  align?: 'left' | 'center' | 'right';
+  /**
+   * Custom header cell styles
+   */
+  headerSx?: SxProps<Theme>;
+  /**
+   * CSS class name
+   */
+  headerClassName?: string;
+  /**
+   * Minimum width
+   */
+  minWidth?: number | string;
+  /**
+   * Maximum width
+   */
+  maxWidth?: number | string;
+  /**
+   * Disable text wrapping
+   */
+  noWrap?: boolean;
+  /**
+   * Typography variant
+   */
+  variant?: 'h6' | 'subtitle1' | 'subtitle2' | 'body1' | 'body2' | 'caption';
+}
+
 export interface MaterialTableColumn<TRow> {
   field: string,
   title: string,
@@ -174,7 +267,11 @@ export interface MaterialTableColumn<TRow> {
   altRowProps?: any,
   cellProps?: any
   sx?: SxProps<Theme>,
-  format?: string
+  format?: string,
+  /**
+   * Enhanced header configuration options
+   */
+  header?: ColumnHeaderConfiguration
 }
 
 
@@ -383,23 +480,56 @@ const ReactoryMaterialTablePagination = (props) => {
   )
 }
 
+/**
+ * Component that waits for a Reactory component to become available.
+ * Uses efficient polling (100ms) instead of slow polling (777ms).
+ */
 const ReactoryMaterialTableWaitForRenderer = (props) => {
   const { reactory, componentId, DefaultComponent } = props;
-  const [version, setVersion] = React.useState<number>(0);
+  const [component, setComponent] = React.useState<React.ComponentType<any> | null>(() => {
+    // Check if component is already available on initial render
+    return reactory?.componentRegister?.[componentId] || null;
+  });
+  const mountedRef = React.useRef(true);
 
-  if (!reactory.componentRegister[componentId]) {
+  React.useEffect(() => {
+    mountedRef.current = true;
+    
+    // If component is already loaded, no need to poll
+    if (component) return;
 
-    setTimeout(() => {
-      setVersion(version + 1)
-    }, 777)
+    // Check more frequently (100ms) for better UX
+    const checkInterval = setInterval(() => {
+      if (!mountedRef.current) {
+        clearInterval(checkInterval);
+        return;
+      }
+      
+      const loadedComponent = reactory?.componentRegister?.[componentId];
+      if (loadedComponent) {
+        clearInterval(checkInterval);
+        setComponent(loadedComponent);
+      }
+    }, 100);
 
+    // Timeout after 10 seconds
+    const timeout = setTimeout(() => {
+      clearInterval(checkInterval);
+    }, 10000);
+
+    return () => {
+      mountedRef.current = false;
+      clearInterval(checkInterval);
+      clearTimeout(timeout);
+    };
+  }, [componentId, reactory, component]);
+
+  if (!component) {
     return DefaultComponent;
   }
 
-  const Component = reactory.getComponent(componentId);
-
+  const Component = component;
   return <Component {...props} />;
-
 };
 
 const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
@@ -441,6 +571,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const [allChecked, setAllChecked] = useState<boolean>(false);
   const [allExpanded, setAllExpanded] = useState<boolean>(false);
   const [is_refreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Track data loading state
   const [last_queried, setLastQueried] = useState(null);
   const [last_result, setLastResult] = useState(formData);
   const [rowsState, setRowState] = useState<MaterialTableRowState>({});
@@ -461,7 +592,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
   });
 
-  const tableRef: any = React.createRef();
+  const tableRef = useRef<any>(null);
 
   let columns = [];
   let actions = [];
@@ -470,9 +601,80 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   let components: { [key: string]: React.ComponentType<any> } = {};
   let detailsPanel: (props: MaterialTableDetailPanelProps) => JSX.Element = null;
 
+  // Track component loading state to avoid repeated polling
+  const [componentsLoaded, setComponentsLoaded] = useState<{
+    toolbar: boolean;
+    detailsPanel: boolean;
+  }>({ toolbar: false, detailsPanel: false });
+  
+  const componentLoadingRef = useRef<{ interval?: NodeJS.Timeout }>({});
+
+  // Memoize toolbar component setup
+  const toolbarComponentId = uiOptions.componentMap?.Toolbar;
+  const detailsPanelComponentId = uiOptions.componentMap?.DetailsPanel;
+
+  // Effect to handle component loading with efficient polling
+  React.useEffect(() => {
+    if (!toolbarComponentId && !detailsPanelComponentId) return;
+    
+    const checkComponents = () => {
+      let updated = false;
+      const newState = { ...componentsLoaded };
+      
+      if (toolbarComponentId && !componentsLoaded.toolbar) {
+        const comp = reactory.componentRegister?.[toolbarComponentId];
+        if (comp) {
+          newState.toolbar = true;
+          updated = true;
+        }
+      }
+      
+      if (detailsPanelComponentId && !componentsLoaded.detailsPanel) {
+        const comp = reactory.componentRegister?.[detailsPanelComponentId];
+        if (comp) {
+          newState.detailsPanel = true;
+          updated = true;
+        }
+      }
+      
+      if (updated) {
+        setComponentsLoaded(newState);
+      }
+      
+      // Stop polling when all components are loaded
+      const allLoaded = 
+        (!toolbarComponentId || newState.toolbar) && 
+        (!detailsPanelComponentId || newState.detailsPanel);
+      
+      if (allLoaded && componentLoadingRef.current.interval) {
+        clearInterval(componentLoadingRef.current.interval);
+        componentLoadingRef.current.interval = undefined;
+      }
+    };
+    
+    // Initial check
+    checkComponents();
+    
+    // Start polling only if needed
+    const needsPolling = 
+      (toolbarComponentId && !componentsLoaded.toolbar) ||
+      (detailsPanelComponentId && !componentsLoaded.detailsPanel);
+    
+    if (needsPolling && !componentLoadingRef.current.interval) {
+      componentLoadingRef.current.interval = setInterval(checkComponents, 100);
+    }
+    
+    return () => {
+      if (componentLoadingRef.current.interval) {
+        clearInterval(componentLoadingRef.current.interval);
+      }
+    };
+  }, [toolbarComponentId, detailsPanelComponentId, componentsLoaded, reactory.componentRegister]);
+
+  // Build component map using loaded components
   if (uiOptions.componentMap) {
-    if (uiOptions.componentMap.Toolbar) {
-      ToolbarComponent = reactory.getComponent(uiOptions.componentMap.Toolbar);
+    if (toolbarComponentId) {
+      ToolbarComponent = reactory.getComponent(toolbarComponentId);
       if (ToolbarComponent) {
         components.Toolbar = (toolbar_props) => {
           let _toolbar_props = { ...toolbar_props };
@@ -497,13 +699,12 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
           return <ToolbarComponent {..._toolbar_props} formContext={formContext} tableRef={tableRef} />
         }
-      } else {
-        setTimeout(() => { setVersion(version + 1) }, 777);
       }
+      // No more setTimeout - the effect handles re-checking
     }
 
-    if (uiOptions.componentMap.DetailsPanel) {
-      const DetailsPanelComponent = reactory.getComponent<React.FC<{ formContext: any, tableRef: any }>>(uiOptions.componentMap.DetailsPanel);
+    if (detailsPanelComponentId) {
+      const DetailsPanelComponent = reactory.getComponent<React.FC<{ formContext: any, tableRef: any }>>(detailsPanelComponentId);
 
       if (DetailsPanelComponent) {
         detailsPanel = (detail_props: MaterialTableDetailPanelProps) => {
@@ -534,22 +735,31 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
 
 
-  const getData = async (): Promise<MaterialTableRemoteDataReponse> => {
-
+  // Memoize getData with useCallback to prevent unnecessary re-creation
+  const getData = useCallback(async (): Promise<MaterialTableRemoteDataReponse> => {
     reactory.debug('core.ReactoryMaterialTable data query', { query });
 
+    // Set loading state
+    setIsLoading(true);
+    setError(null);
+
     let response: MaterialTableRemoteDataReponse = {
-      ...data
-    }
+      data: data?.data || [],
+      paging: data?.paging || { hasNext: false, page: 0, pageSize: 10, total: 0 }
+    };
 
     try {
       const graphqlDefinitions = formContext.graphql;
 
-      if (graphqlDefinitions.query || graphqlDefinitions.queries) {
+      if (graphqlDefinitions?.query || graphqlDefinitions?.queries) {
         let queryDefinition: Reactory.Forms.IReactoryFormQuery = graphqlDefinitions.query;
         if (typeof uiOptions.query === 'string' && uiOptions.query !== 'query' && graphqlDefinitions.queries && graphqlDefinitions.queries[uiOptions.query]) {
           queryDefinition = graphqlDefinitions.queries[uiOptions.query];
           reactory.debug(`Switching Query definition to ==> ${uiOptions.query}`, queryDefinition);
+        }
+
+        if (!queryDefinition) {
+          return response;
         }
 
         reactory.debug(`MaterialTableWidget - Mapping variables for query`, { formContext, map: uiOptions.variables, query });
@@ -582,140 +792,173 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         } catch (e) {
           reactory.log(`Error running query for grid`, { e });
           setError("Error executing query");
+          return response;
         }
-        //show a loader error
+
         if (queryResult?.data) {
-          const $data: any = reactory.utils.objectMapper(reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]), uiOptions.resultMap || queryDefinition.resultMap);
+          const $data: any = reactory.utils.objectMapper(
+            reactory.utils.lodash.cloneDeep(queryResult.data[queryDefinition.name]),
+            uiOptions.resultMap || queryDefinition.resultMap
+          );
+          
           if ($data) {
-            if (isArray($data) === true) response.data = $data;
-            else {
+            if (isArray($data) === true) {
+              response.data = $data;
+            } else {
               if ($data.data && isArray($data.data) === true) response.data = $data.data;
-              if ($data.paging) response.paging = $data.paging
+              if ($data.paging) response.paging = $data.paging;
             }
 
             if ($data.data && $data.paging) {
-              response.data = $data.data
-              response.paging = $data.paging
-            } else {
-              if (isArray($data)) {
-                response.data = $data;
-              }
+              response.data = $data.data;
+              response.paging = $data.paging;
+            } else if (isArray($data)) {
+              response.data = $data;
             }
           }
 
           if (uiOptions.disablePaging === true) {
-            response.paging.page = 1,
-              response.paging.total = response.data.length;
+            response.paging.page = 1;
+            response.paging.total = response.data.length;
           }
 
           if (formContext.$selectedRows && formContext.$selectedRows.current) {
             response.data.forEach((item, item_id) => {
               if (reactory.utils.lodash.findIndex(formContext.$selectedRows.current, { id: item.id }) >= 0) {
-                item.tableData = { checked: true, id: item_id }
+                item.tableData = { checked: true, id: item_id };
               }
             });
           }
-          //response.paging.page = response.paging.page - 1;
         } else {
           reactory.log(`Query returned null data`, { queryResult });
-          setError("No data returned from query")
+          setError("No data returned from query");
         }
 
         if (queryResult?.errors && queryResult.errors.length > 0) {
           reactory.log('Query contains errors', { queryResult });
         }
       }
-
     } catch (remoteDataError) {
       reactory.log(`Error getting remote data`, { remoteDataError });
+      setIsLoading(false);
       return response;
     }
+    
     setData(response);
-  };
+    setIsLoading(false);
+    return response;
+  }, [query, formContext.graphql, uiOptions.query, uiOptions.variables, uiOptions.resultMap, uiOptions.disablePaging, formContext.$selectedRows, reactory]);
 
   const rows = uiOptions.remoteData === true ? data?.data : formData;
-  if (uiOptions.columns && uiOptions.columns.length) {
-    let _columnRef = [];
-    let _mergeColumns = false;
+
+  // Extract unique breakpoints from columns for responsive filtering
+  // This must be done at the top level to comply with Rules of Hooks
+  const columnBreakpoints = useMemo(() => {
+    const breakpoints = new Set<Breakpoint>();
+    const cols = uiOptions.columns || [];
+    cols.forEach((col: any) => {
+      if (col.breakpoint) {
+        breakpoints.add(col.breakpoint as Breakpoint);
+      }
+    });
+    return Array.from(breakpoints);
+  }, [uiOptions.columns]);
+
+  // Call useMediaQuery at top level for each unique breakpoint (max ~5 breakpoints: xs, sm, md, lg, xl)
+  const isXsDown = useMediaQuery(theme.breakpoints.down('xs'));
+  const isSmDown = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMdDown = useMediaQuery(theme.breakpoints.down('md'));
+  const isLgDown = useMediaQuery(theme.breakpoints.down('lg'));
+  const isXlDown = useMediaQuery(theme.breakpoints.down('xl'));
+
+  // Map breakpoints to their media query results
+  const breakpointMatches = useMemo(() => ({
+    xs: isXsDown,
+    sm: isSmDown,
+    md: isMdDown,
+    lg: isLgDown,
+    xl: isXlDown,
+  }), [isXsDown, isSmDown, isMdDown, isLgDown, isXlDown]);
+
+  // Memoize column building to avoid expensive re-computation on every render
+  const processedColumns = useMemo(() => {
+    const result: MaterialTableColumn<any>[] = [];
+    
+    if (!uiOptions.columns || !uiOptions.columns.length) {
+      return result;
+    }
+
     let _columns = uiOptions.columns;
 
     if (isNil(uiOptions.columnsProperty) === false) {
-      _columns = [...formContext.formData[uiOptions.columnsProperty as string]];
+      _columns = [...(formContext.formData?.[uiOptions.columnsProperty as string] || [])];
       if (isNil(uiOptions.columnsPropertyMap) === false) {
         _columns = reactory.utils.objectMapper(_columns, uiOptions.columnsPropertyMap as ObjectMap)
       }
     }
 
-    remove(_columns, { selected: false });
+    // Filter out unselected columns
+    _columns = _columns.filter((col: any) => col.selected !== false);
 
-    _columns.forEach(coldef => {
-
+    _columns.forEach((coldef: any) => {
       const def: Reactory.Client.Components.MaterialTableWidgetColumnDefinition & { breakpoint?: string | number } = {
         ...coldef
-      };      
+      };
 
-      if (isNil(def.component) === false && def.component !== undefined) {        
-        const ColRenderer = def.component.indexOf('.') > 0 ? 
-          reactory.getComponent<React.FC<any>>(def.component) : 
-          registry?.widgets?.[def.component];        
-        // @ts-ignore       
+      if (isNil(def.component) === false && def.component !== undefined) {
+        const ColRenderer = def.component.indexOf('.') > 0
+          ? reactory.getComponent<React.FC<any>>(def.component)
+          : registry?.widgets?.[def.component];
+        // @ts-ignore
         def.renderCell = (cellData, cellIndex, rowData, rowIndex) => {
-
           let props = { formData: cellData, rowData, api: reactory, reactory, formContext, cellData, cellIndex, rowIndex };
           let mappedProps = {};
 
           if (def.props) {
-            props = { ...props, ...def.props, ...mappedProps, api: reactory, reactory, }
+            props = { ...props, ...def.props, ...mappedProps, api: reactory, reactory };
           }
 
-          //check if there is a propsMap property
-          //maps self props
           if (def.propsMap && props) {
             mappedProps = reactory.utils.objectMapper(props, reactory.utils.parseObjectMap(def.propsMap as any));
             props = { ...props, ...mappedProps, api: reactory, reactory };
           }
 
-          if (ColRenderer) return <ColRenderer {...props} />
+          if (ColRenderer) return <ColRenderer {...props} />;
           else return <ReactoryMaterialTableWaitForRenderer {...props} componentId={def.component} DefaultComponent={<Root>...</Root>} />;
-        }
+        };
 
         delete def.component;
       }
 
       if (isArray(def.components) === true) {
-        reactory.log(`Rendering Chidren Elements`, def);
         const { components } = def;
         def.render = (rowData) => {
-          reactory.log(`Child element to be rendered`, def);
-
           const childrenComponents = (components || []).map((componentDef, componentIndex) => {
+            const ComponentToRender = componentDef.component.indexOf('.')
+              ? reactory.getComponent<React.FC>(componentDef.component)
+              : registry.widgets[componentDef.component];
 
-            const ComponentToRender = componentDef.component.indexOf('.') ? 
-              reactory.getComponent<React.FC>(componentDef.component) :
-              registry.widgets[componentDef.component];
-
-            let props = { formData: formContext.$formData, rowData, api: reactory, key: componentIndex, formContext, registry, };
+            let props = { formData: formContext.$formData, rowData, api: reactory, key: componentIndex, formContext, registry };
             let mappedProps = {};
 
             if (componentDef.props) {
-              props = { ...props, ...componentDef.props, ...mappedProps, api: reactory }
+              props = { ...props, ...componentDef.props, ...mappedProps, api: reactory };
             }
 
             if (componentDef.propsMap && props) {
               mappedProps = reactory.utils.objectMapper(props, componentDef.propsMap);
               props = { ...props, ...mappedProps, api: reactory };
             }
-            if (ComponentToRender) return <ComponentToRender {...props} />
-            else return <Typography>Renderer {componentDef.component} Not Found</Typography>
-
+            if (ComponentToRender) return <ComponentToRender {...props} />;
+            else return <Typography key={componentIndex}>Renderer {componentDef.component} Not Found</Typography>;
           });
 
-
-          return (<div style={{ display: 'flex', 'justifyContent': 'flex-start' }}>
-            {childrenComponents}
-          </div>)
-
-        }
+          return (
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              {childrenComponents}
+            </div>
+          );
+        };
 
         delete def.components;
       }
@@ -724,51 +967,78 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
         def.render = (rowData) => {
           const buttonProps = def.props.actionButton;
           if (buttonProps.icon) {
-            //@ts-ignore
-            return <Fab
-              color={buttonProps?.color || "default"}
-              size={buttonProps.size ? buttonProps.size : "small"}>
-              <Icon style={{ color: "#fff" }}>
-                {buttonProps.icon}
-              </Icon>
-            </Fab>
+            // Cast color and size as any since they come from dynamic form configuration
+            const fabColor = (buttonProps?.color || "default") as any;
+            const fabSize = (buttonProps.size ? buttonProps.size : "small") as any;
+            return (
+              <Fab color={fabColor} size={fabSize}>
+                <Icon style={{ color: '#fff' }}>{buttonProps.icon}</Icon>
+              </Fab>
+            );
           } else {
-            return <Button>{buttonProps.text}</Button>
+            return <Button>{buttonProps.text}</Button>;
           }
-        }
+        };
       }
 
-
+      // Check breakpoint using pre-computed media query results (no hook violation)
       if (def.breakpoint) {
-        const shouldBreak = useMediaQuery(theme.breakpoints.down(def.breakpoint as Breakpoint));
-
+        const shouldBreak = breakpointMatches[def.breakpoint as keyof typeof breakpointMatches];
+        // Only include column if we're NOT at or below the breakpoint
         if (shouldBreak === false) {
-          reactory.log('MaterialTableWidget ==> Skipping column render', { shouldBreak, def });
-          columns.push(def)
+          result.push(def as MaterialTableColumn<any>);
         }
       } else {
-        columns.push(def)
+        result.push(def as MaterialTableColumn<any>);
       }
     });
-  }
+
+    return result;
+  }, [
+    uiOptions.columns,
+    uiOptions.columnsProperty,
+    uiOptions.columnsPropertyMap,
+    formContext.formData,
+    formContext.$formData,
+    reactory,
+    registry,
+    breakpointMatches
+  ]);
+
+  // Use processed columns
+  columns = processedColumns;
 
   const view_mode = localStorage.getItem('$reactory$theme_mode') || "light";
+  const isDarkMode = theme.palette.mode === 'dark';
+  
   let theme_alt_rowStyle = {};
   let theme_row_style = {};
   let theme_selected_style = {};
-  let theme_header_style = {};
-
+  
+  // Default header style using MUI theme colors - respects dark/light mode
+  let theme_header_style: Record<string, unknown> = {
+    backgroundColor: isDarkMode ? theme.palette.background.paper : theme.palette.background.default,
+    color: theme.palette.text.primary,
+  };
+  debugger;
+  // Override with custom MaterialTableWidget theme if available
   if (theme.MaterialTableWidget) {
-    if (theme.MaterialTableWidget[view_mode].rowStyle) theme_row_style = { ...theme.MaterialTableWidget[view_mode].rowStyle };
-    if (theme.MaterialTableWidget[view_mode].altRowStyle) theme_alt_rowStyle = { ...theme.MaterialTableWidget[view_mode].altRowStyle };
-    if (theme.MaterialTableWidget[view_mode].selectedRowStyle) theme_selected_style = theme.MaterialTableWidget[view_mode].selectedRowStyle;
-    if (theme.MaterialTableWidget[view_mode].headerStyle) theme_header_style = theme.MaterialTableWidget[view_mode].headerStyle;
+    if (theme.MaterialTableWidget[view_mode]?.rowStyle) theme_row_style = { ...theme.MaterialTableWidget[view_mode].rowStyle };
+    if (theme.MaterialTableWidget[view_mode]?.altRowStyle) theme_alt_rowStyle = { ...theme.MaterialTableWidget[view_mode].altRowStyle };
+    if (theme.MaterialTableWidget[view_mode]?.selectedRowStyle) theme_selected_style = theme.MaterialTableWidget[view_mode].selectedRowStyle;
+    if (theme.MaterialTableWidget[view_mode]?.headerStyle) {
+      theme_header_style = { 
+        ...theme_header_style, 
+        ...theme.MaterialTableWidget[view_mode].headerStyle 
+      };
+    }
   }
 
+  // Apply uiOptions headerStyle last to allow per-widget overrides
   if (uiOptions.headerStyle) {
     theme_header_style = { ...theme_header_style, ...uiOptions.headerStyle };
   }
-
+  debugger;
   let options: MaterialTableOptions = {
     rowStyle: (rowData, index) => {
 
@@ -853,30 +1123,32 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
   }
 
-  const refreshHandler = (eventName: string, eventData: any) => {
-    const uiOptions = uiSchema['ui:options'] || {};
+  // Memoize refresh handler with useCallback
+  const refreshHandler = useCallback((eventName: string, eventData: any) => {
+    const opts = uiSchema['ui:options'] || {};
     reactory.log(`MaterialTableWidget - Handled ${eventName}`, eventData);
-    if (uiOptions.remoteData === true) {
+    if (opts.remoteData === true) {
       if (tableRef.current && tableRef.current.onQueryChange) {
-        tableRef.current.onQueryChange()
+        tableRef.current.onQueryChange();
       }
     } else {
-      setVersion(version + 1);
+      setVersion(v => v + 1);
     }
-  };
+  }, [uiSchema, reactory]);
 
-  const refresh = (args: any) => {
-
-    if (is_refreshing === true) return;
+  // Memoize refresh function with useCallback
+  const refresh = useCallback((args: any) => {
+    if (is_refreshing) return;
+    
     setIsRefreshing(true);
     if (uiOptions.remoteData === true) {
       if (tableRef.current && tableRef.current.onQueryChange) {
-        tableRef.current.onQueryChange()
+        tableRef.current.onQueryChange();
       }
     }
-    setVersion(version + 1);
+    setVersion(v => v + 1);
     setIsRefreshing(false);
-  }
+  }, [is_refreshing, uiOptions.remoteData]);
 
   if (!components.Pagination) {
     components.Pagination = (pagination_props: any) => {
@@ -934,136 +1206,169 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
 
   }
 
+  // ============================================
+  // CONSOLIDATED EFFECTS - Optimized to reduce re-renders
+  // ============================================
+
+  // Effect 1: Data fetching - only when query changes
   React.useEffect(() => {
-    getData()
-  }, [query])
+    if (uiOptions.remoteData === true) {
+      getData();
+    }
+  }, [query, getData, uiOptions.remoteData]);
 
+  // Effect 2: Mount/unmount - event binding
   React.useEffect(() => {
-
-    refresh({})
-  }, [formContext.formData]);
-
-  React.useEffect(() => {
-    setVersion(version + 1);
-  }, [uiSchema])
-
-  const willUnmount = () => {
-    const uiOptions = uiSchema['ui:options'] || {};
-    if (uiOptions.refreshEvents) {
-      //itterate through list of event names,
-      //for now we just do a force refresh which will trigger re-rendering
-      //logic in the widget.
-      uiOptions.refreshEvents.forEach((reactoryEvent) => {
-        reactory.removeListener(reactoryEvent.name, refresh);
-      });
-    };
-  }
-
-  React.useEffect(() => {
-    const uiOptions = uiSchema['ui:options'] || {};
-    if (uiOptions.refreshEvents) {
-      //itterate through list of event names,
-      //for now we just do a force refresh which will trigger re-rendering
-      //logic in the widget.
-      uiOptions.refreshEvents.forEach((reactoryEvent) => {
+    const opts = uiSchema['ui:options'] || {};
+    
+    // Bind refresh events
+    if (opts.refreshEvents) {
+      opts.refreshEvents.forEach((reactoryEvent) => {
         reactory.log(`MaterialTableWidget - Binding refresh event "${reactoryEvent.name}"`, undefined);
         reactory.on(reactoryEvent.name, refresh);
       });
-    };
-
-    if (uiOptions.remoteData === true) {
-      getData()
     }
 
-    return willUnmount;
-  }, []);
-
-  React.useEffect(() => {
-
-    const newRowsState: MaterialTableRowState = { ...rowsState };
-
-    const currentRows = uiOptions.remoteData === true ? data?.data : formData;
-
-    currentRows?.forEach((row, rid) => {
-      if (!newRowsState[rid]) {
-        newRowsState[rid] = {
-          dirty: false,
-          editing: false,
-          hover: false,
-          saving: false,
-          selected: allChecked,
-        }
-      } else {
-        newRowsState[rid].selected = allChecked === true
+    // Cleanup function
+    return () => {
+      if (opts.refreshEvents) {
+        opts.refreshEvents.forEach((reactoryEvent) => {
+          reactory.removeListener(reactoryEvent.name, refresh);
+        });
       }
-    });
+    };
+  }, [uiSchema, refresh, reactory]);
 
-    setRowState(newRowsState);
-
-  }, [allChecked, data?.data, formData, uiOptions.remoteData])
-
+  // Effect 3: FormContext data changes (for non-remote data mode)
   React.useEffect(() => {
+    if (uiOptions.remoteData !== true && formContext.formData) {
+      // Only refresh for local data mode when form data changes
+      setVersion(v => v + 1);
+    }
+  }, [formContext.formData, uiOptions.remoteData]);
 
-    const newRowsState: MaterialTableRowState = { ...rowsState };
+  // Track previous allChecked/allExpanded values to detect toggle operations
+  const prevAllCheckedRef = useRef<boolean>(allChecked);
+  const prevAllExpandedRef = useRef<boolean>(allExpanded);
 
-    if (isArray($rows) === false || $rows.length === 0 ) { 
-      setRowState(newRowsState);
+  // Effect 4: Sync row states when allChecked or allExpanded changes (user toggles)
+  React.useEffect(() => {
+    const currentRows = uiOptions.remoteData === true ? data?.data : formData;
+    if (!currentRows || currentRows.length === 0) {
+      prevAllCheckedRef.current = allChecked;
+      prevAllExpandedRef.current = allExpanded;
       return;
     }
 
-    $rows?.forEach((row, rid) => {
-      if (!newRowsState[rid]) {
-        newRowsState[rid] = {
-          dirty: false,
-          editing: false,
-          hover: false,
-          saving: false,
-          selected: allChecked,
-          expanded: allExpanded
+    // Detect if this is a toggle operation (user clicked select all / deselect all)
+    const wasSelectAllToggled = prevAllCheckedRef.current !== allChecked;
+    const wasExpandAllToggled = prevAllExpandedRef.current !== allExpanded;
+
+    // Update refs immediately
+    prevAllCheckedRef.current = allChecked;
+    prevAllExpandedRef.current = allExpanded;
+
+    // Only update if a toggle operation happened
+    if (!wasSelectAllToggled && !wasExpandAllToggled) {
+      return;
+    }
+
+    // Use functional update to avoid dependency on rowsState
+    setRowState(prevRowsState => {
+      const newRowsState: MaterialTableRowState = {};
+      
+      currentRows.forEach((row, rid) => {
+        const existingState = prevRowsState[rid];
+        
+        if (existingState) {
+          newRowsState[rid] = {
+            ...existingState,
+            selected: wasSelectAllToggled ? allChecked : existingState.selected,
+            expanded: wasExpandAllToggled ? allExpanded : existingState.expanded,
+          };
+        } else {
+          newRowsState[rid] = {
+            dirty: false,
+            editing: false,
+            expanded: allExpanded,
+            hover: false,
+            saving: false,
+            selected: allChecked,
+          };
         }
-      } else {
-        newRowsState[rid].expanded = allExpanded === true
-      }
+      });
+
+      return newRowsState;
     });
+  }, [allChecked, allExpanded, data?.data, formData, uiOptions.remoteData]);
 
-    setRowState(newRowsState);
-
-  }, [allExpanded])
-
-  // Sync allChecked state when individual selections change
+  // Effect 5: Initialize row states when data changes
   React.useEffect(() => {
     const currentRows = uiOptions.remoteData === true ? data?.data : formData;
-    const selectedCount = Object.values(rowsState).filter(state => state.selected === true).length;
+    if (!currentRows || currentRows.length === 0) {
+      setRowState({});
+      return;
+    }
+
+    // Use functional update to initialize only missing row states
+    setRowState(prevRowsState => {
+      let needsUpdate = false;
+      const newRowsState = { ...prevRowsState };
+      
+      currentRows.forEach((row, rid) => {
+        if (!newRowsState[rid]) {
+          newRowsState[rid] = {
+            dirty: false,
+            editing: false,
+            expanded: false,
+            hover: false,
+            saving: false,
+            selected: false,
+          };
+          needsUpdate = true;
+        }
+      });
+
+      // Clean up rows that no longer exist
+      Object.keys(newRowsState).forEach(key => {
+        const rid = parseInt(key);
+        if (rid >= currentRows.length) {
+          delete newRowsState[rid];
+          needsUpdate = true;
+        }
+      });
+
+      return needsUpdate ? newRowsState : prevRowsState;
+    });
+  }, [data?.data, formData, uiOptions.remoteData]);
+
+  // Effect 6: Sync allChecked state from individual selections (but avoid circular updates)
+  const isUpdatingAllChecked = useRef(false);
+  React.useEffect(() => {
+    if (isUpdatingAllChecked.current) {
+      isUpdatingAllChecked.current = false;
+      return;
+    }
+
+    const currentRows = uiOptions.remoteData === true ? data?.data : formData;
     const totalCount = currentRows?.length || 0;
-    const isAllSelected = totalCount > 0 && selectedCount === totalCount;
+    
+    if (totalCount === 0) {
+      if (allChecked) {
+        isUpdatingAllChecked.current = true;
+        setAllChecked(false);
+      }
+      return;
+    }
+
+    const selectedCount = Object.values(rowsState).filter(state => state?.selected === true).length;
+    const isAllSelected = selectedCount === totalCount;
     
     if (allChecked !== isAllSelected) {
+      isUpdatingAllChecked.current = true;
       setAllChecked(isAllSelected);
     }
-  }, [rowsState, data?.data, formData, uiOptions.remoteData])
-
-  // Initialize row states when data changes
-  React.useEffect(() => {
-    const currentRows = uiOptions.remoteData === true ? data?.data : formData;
-    if (!currentRows || currentRows.length === 0) return;
-
-    const newRowsState: MaterialTableRowState = { ...rowsState };
-    
-    currentRows.forEach((row, rid) => {
-      if (!newRowsState[rid]) {
-        newRowsState[rid] = {
-          dirty: false,
-          editing: false,
-          expanded: false,
-          hover: false,
-          saving: false,
-          selected: false,
-        }
-      }
-    });
-
-    setRowState(newRowsState);
-  }, [data?.data, formData, uiOptions.remoteData])
+  }, [rowsState, data?.data, formData, uiOptions.remoteData]);
 
   //modify columns with virtual columns
   //virtual columns are columns action columns
@@ -1082,27 +1387,56 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     $rows = last_result as any[]
   }
 
-  const getHeader = () => {
+  // State for column sorting and filtering
+  const [columnSort, setColumnSort] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
+  const [columnFilters, setColumnFilters] = useState<Set<string>>(new Set());
 
+  // Handler for column sort
+  const handleColumnSort = useCallback((field: string, direction: 'asc' | 'desc') => {
+    setColumnSort({ field, direction });
+    // Emit sort event for external handling
+    reactory.emit('MaterialTableWidget:sort', { field, direction, tableId: idSchema.$id });
+  }, [reactory, idSchema.$id]);
+
+  // Handler for column filter
+  const handleColumnFilter = useCallback((field: string) => {
+    setColumnFilters(prev => {
+      const newFilters = new Set(prev);
+      if (newFilters.has(field)) {
+        newFilters.delete(field);
+      } else {
+        newFilters.add(field);
+      }
+      return newFilters;
+    });
+    // Emit filter event for external handling
+    reactory.emit('MaterialTableWidget:filter', { field, tableId: idSchema.$id });
+  }, [reactory, idSchema.$id]);
+
+  const getHeader = () => {
     let $headers: JSX.Element[] = [];
 
     if (options.toolbar === false) return null;
 
+    // Expand/collapse all button for details panel
     if (detailsPanel) {
       const toggleExpandAll = () => {
-        setAllExpanded(!allExpanded)
-      }
+        setAllExpanded(!allExpanded);
+      };
 
-      $headers.push((<TableCell key={'header_expand_collapse'}>
-        <IconButton onClick={toggleExpandAll}>
-          <Icon>{allExpanded ? 'unfold_less' : 'unfold_more'}</Icon>
-        </IconButton>
-      </TableCell>))
+      $headers.push((
+        <TableCell key={'header_expand_collapse'} sx={{ width: 48 }}>
+          <Tooltip title={reactory.i18n.t(allExpanded ? 'table.collapseAll' : 'table.expandAll', allExpanded ? 'Collapse All' : 'Expand All')}>
+            <IconButton onClick={toggleExpandAll} size="small">
+              <Icon>{allExpanded ? 'unfold_less' : 'unfold_more'}</Icon>
+            </IconButton>
+          </Tooltip>
+        </TableCell>
+      ));
     }
 
-
+    // Selection checkbox header
     if (options.selection === true) {
-      // Calculate header checkbox state
       const currentRows = uiOptions.remoteData === true ? data?.data : formData;
       const selectedCount = Object.values(rowsState).filter(state => state.selected === true).length;
       const totalCount = currentRows?.length || 0;
@@ -1112,38 +1446,141 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       const toggleSelectAll = () => {
         const newAllChecked = !isAllSelected;
         setAllChecked(newAllChecked);
-      }
+      };
 
-      $headers.push((<TableCell key={'header_selection'}>
-        <Checkbox 
-          checked={isAllSelected} 
-          indeterminate={isIndeterminate}
-          onClick={toggleSelectAll} 
-        />
-      </TableCell>))
+      $headers.push((
+        <TableCell key={'header_selection'} sx={{ width: 48 }}>
+          <Tooltip title={reactory.i18n.t(isAllSelected ? 'table.deselectAll' : 'table.selectAll', isAllSelected ? 'Deselect All' : 'Select All')}>
+            <Checkbox
+              checked={isAllSelected}
+              indeterminate={isIndeterminate}
+              onClick={toggleSelectAll}
+              size="small"
+            />
+          </Tooltip>
+        </TableCell>
+      ));
     }
 
+    // Render column headers
     columns.forEach((column: MaterialTableColumn<any>, idx) => {
       const {
         title,
         renderHeader,
         field,
+        header,
+        headerProps,
+      } = column;
 
-      } = column
+      // If custom renderHeader function is provided (legacy support), use it
+      if (renderHeader) {
+        $headers.push(renderHeader($rows, rowsState));
+        return; // Skip default rendering
+      }
 
-      if (renderHeader) $headers.push(renderHeader($rows, rowsState))
+      // Calculate column width
+      const columnWidth = `${(100 / columns.length)}%`;
 
-      $headers.push((<TableCell key={idx} width={`${(100 / columns.length)}%`}>{title}</TableCell>))
+      // Check if column has enhanced header configuration
+      const hasHeaderConfig = header && (
+        header.headerComponent ||
+        header.titleKey ||
+        header.icon ||
+        header.sortable ||
+        header.filterable ||
+        header.tooltip ||
+        header.color ||
+        header.backgroundColor
+      );
+
+      if (hasHeaderConfig) {
+        // Use the new ColumnHeader component with full configuration
+        const headerConfig: ColumnHeaderConfig = {
+          ...header,
+          // Map our interface to ColumnHeaderConfig if needed
+        };
+        debugger;
+        $headers.push((
+          <TableCell
+            key={idx}
+            width={columnWidth}
+            sx={{            
+              minWidth: header.minWidth,
+              maxWidth: header.maxWidth,
+              ...header.headerSx,
+            }}
+            {...headerProps}
+          >
+            <ColumnHeader
+              field={field}
+              title={title}
+              columnIndex={idx}
+              header={headerConfig}
+              sortDirection={columnSort?.field === field ? columnSort.direction : null}
+              isFiltered={columnFilters.has(field)}
+              reactory={reactory}
+              theme={theme}
+              onSort={handleColumnSort}
+              onFilter={handleColumnFilter}
+              data={$rows}
+              rowsState={rowsState}
+              formContext={formContext}
+              tableRef={tableRef}
+            />
+          </TableCell>
+        ));
+      } else {
+        // Default header rendering with i18n support
+        // Check if title looks like an i18n key (contains dots or starts with common prefixes)
+        const isI18nKey = title && (
+          title.includes('.') ||
+          title.startsWith('table.') ||
+          title.startsWith('column.') ||
+          title.startsWith('header.')
+        );
+
+        const displayTitle = isI18nKey
+          ? reactory.i18n.t(title, title)
+          : title;
+
+        $headers.push((
+          <TableCell
+            key={idx}
+            width={columnWidth}
+            sx={{ fontWeight: 600 }}
+            {...headerProps}
+          >
+            <Typography variant="subtitle2" component="span" sx={{ fontWeight: 600 }}>
+              {displayTitle}
+            </Typography>
+          </TableCell>
+        ));
+      }
     });
 
-
+    debugger;
     return (
-      <TableHead>
-        <TableRow>
+      <TableHead 
+        sx={{
+          ...options.headerSx,
+        }}
+      >
+        <TableRow 
+          sx={{             
+            ...theme_header_style,
+            // Ensure header cells also inherit proper styling
+            '& .MuiTableCell-head': {
+              backgroundColor: 'inherit',
+              color: theme.palette.text.primary,
+              borderBottomColor: theme.palette.divider,
+            },
+          }}
+        >
           {$headers}
         </TableRow>
-      </TableHead>)
-  }
+      </TableHead>
+    );
+  };
 
   /**
    * Returns the selected rows across all pages for the 
@@ -1707,8 +2144,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   }
 
   const getTableStyles = (): React.CSSProperties => {
-    return {}
-  }
+    return {
+      backgroundColor: theme.palette.background.paper,
+      color: theme.palette.text.primary,
+    };
+  };
 
   let confirmDialog = null;
   if (activeAction.show === true) {
@@ -1750,11 +2190,19 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return (
       <>
         {getToolbar()}
-        <Table id={`${idSchema.$id}_table`} style={getTableStyles()}>
-          {getHeader()}
-          {getBody()}
-          {getFooter()}
-        </Table>
+        <TableContainer 
+          sx={{ 
+            width: '100%',
+            overflowX: 'auto',
+            backgroundColor: theme.palette.background.paper,
+          }}
+        >
+          <Table id={`${idSchema.$id}_table`} style={getTableStyles()}>
+            {getHeader()}
+            {getBody()}
+            {getFooter()}
+          </Table>
+        </TableContainer>
         {getPagination()}
         {confirmDialog}
       </>

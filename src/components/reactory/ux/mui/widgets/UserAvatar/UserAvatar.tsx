@@ -6,6 +6,7 @@ import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { template } from 'lodash';
 import { getAvatar } from '@reactory/client-core/components/util';
 import Reactory from '@reactory/reactory-core';
+import { REACTORY_USER_LIST_QUERY } from '@reactory/client-core/components/shared/UserList/graphql';
 
 const PREFIX = 'UserAvatar';
 
@@ -162,6 +163,11 @@ interface UserAvatarOptions {
    * Click handler
    */
   onClick?: (user: Partial<Reactory.Models.IUser> | null) => void;
+
+  /**
+   * User list query to use for the user selector dialog
+   */
+  userListQuery?: string;
 }
 
 interface UserAvatarProps {
@@ -191,9 +197,9 @@ interface UserAvatarProps {
  * - Template-based formatting
  * - Click handling
  * - Avatar image support
- * - **NEW: Editable mode with user selector dialog**
- * - **NEW: Hover states for interactive mode**
- * - **NEW: Integration with UserListWithSearch**
+ * - **Editable mode with new UserList component**
+ * - **Single-user selection with search and filters**
+ * - **Hover states for interactive mode**
  * 
  * @example
  * // Basic chip usage
@@ -207,7 +213,7 @@ interface UserAvatarProps {
  * }
  * 
  * @example
- * // Editable avatar with user selector
+ * // Editable avatar with user selector (single selection)
  * {
  *   'ui:widget': 'UserAvatar',
  *   'ui:options': {
@@ -221,7 +227,7 @@ interface UserAvatarProps {
  * }
  * 
  * @example
- * // Avatar with name (editable)
+ * // Avatar with name (editable, using formContext for org)
  * {
  *   'ui:widget': 'UserAvatar',
  *   'ui:options': {
@@ -229,9 +235,10 @@ interface UserAvatarProps {
  *     size: 'medium',
  *     editable: true,
  *     unassignedText: 'Click to Assign',
- *     organizationId: formContext.organizationId
+ *     dialogTitle: 'Select Assignee'
  *   }
  * }
+ * // Note: organizationId will be taken from formContext.organizationId
  */
 const UserAvatar: React.FC<UserAvatarProps> = (props) => {
   const theme = useTheme();
@@ -337,7 +344,9 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
 
   // Handle click
   const handleClick = () => {
+    console.log('[UserAvatar] Clicked', { editable: options.editable, user });
     if (options.editable) {
+      console.log('[UserAvatar] Opening dialog');
       setDialogOpen(true);
     } else if (options.onClick) {
       options.onClick(user);
@@ -361,14 +370,64 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
     setDialogOpen(false);
   };
 
-  // Get the UserListWithSearch component
-  const UserListWithSearch = useMemo(() => {
-    if (!reactory || !options.editable) return null;
-    const componentDefs = reactory.getComponents<{
-      UserListWithSearch: React.FC;
-    }>(['core.UserListWithSearch']);
-    return componentDefs?.UserListWithSearch || null;
+  // Get the UserList component
+  const { UserList } = useMemo(() => {
+    if (!reactory || !options.editable) return { UserList: null };
+    return reactory.getComponents<{
+      UserList: React.FC<any>;
+    }>(['core.UserList']);
   }, [reactory, options.editable]);
+
+
+  // Get the UserList component
+  // Memoize the graphqlQuery to prevent infinite re-renders
+  const graphqlQuery = useMemo(() => {
+
+    let graphqlQuery = null;
+
+    if (options.userListQuery) {
+      graphqlQuery = formContext?.graphql?.queries?.[options.userListQuery];
+      if (graphqlQuery) {
+        return graphqlQuery;
+      }
+    }
+
+    graphqlQuery = {
+      name: 'ReactoryUsers',
+      text: `
+        fragment UserFragment on User {
+          id
+          email
+          firstName
+          lastName
+          avatar
+          roles
+          createdAt
+          updatedAt
+        }
+
+        fragment PagingResultFragment on PagingResult {
+          total
+          page
+          pageSize
+          hasNext
+        }
+
+        query ReactoryUserListQuery($paging: PagingRequest, $filter: ReactoryUserFilterInput) {
+          ReactoryUsers(paging: $paging, filter: $filter) {
+            users {
+              ...UserFragment
+            }
+            paging {
+              ...PagingResultFragment
+            }
+          }
+        }
+      `,
+    };
+
+    return graphqlQuery;
+  }, [options.userListQuery, formContext]);
 
   // Render avatar element
   const avatarElement = useMemo(() => {
@@ -472,7 +531,7 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
 
   // Render user selector dialog
   const renderDialog = () => {
-    if (!options.editable || !UserListWithSearch) return null;
+    if (!options.editable || !UserList) return null;
 
     const orgId = options.organizationId || formContext?.organizationId;
     
@@ -502,16 +561,48 @@ const UserAvatar: React.FC<UserAvatarProps> = (props) => {
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent dividers>
-          <UserListWithSearch
-            // @ts-ignore
+        <DialogContent dividers sx={{ p: 0 }}>
+          <UserList
+            graphqlQuery={graphqlQuery}
+            selectionMode="single"
+            initialSelected={user ? [user as Reactory.Models.IUser] : []}
+            onUserSelect={handleUserSelected}
             organizationId={orgId}
             businessUnitId={options.businessUnitId}
-            multiSelect={false}
-            onUserSelect={handleUserSelected}
-            selected={user?.id ? [user.id] : []}
-            businessUnitFilter={!!options.businessUnitId}
-            showFilters={options.showFilters}
+            enableSearch={true}
+            searchPlaceholder="Search users..."
+            enableQuickFilters={options.showFilters}
+            quickFilters={options.showFilters ? [
+              {
+                id: 'active',
+                label: 'Active Users',
+                icon: 'check_circle',
+                color: 'success' as const,
+                filter: {
+                  field: 'deleted',
+                  value: false,
+                  operator: 'eq' as const,
+                },
+              },
+              {
+                id: 'admins',
+                label: 'Admins',
+                icon: 'admin_panel_settings',
+                color: 'primary' as const,
+                filter: {
+                  field: 'roles',
+                  value: 'ADMIN',
+                  operator: 'contains' as const,
+                },
+              },
+            ] : undefined}
+            enableAdvancedFilters={false} // Disable advanced filters for UserAvatar
+            viewMode="list"
+            itemVariant="detailed"
+            dense={false}
+            height="calc(80vh - 180px)"
+            initialPageSize={25}
+            pageSizeOptions={[10, 25, 50, 100]}
           />
         </DialogContent>
         <DialogActions>

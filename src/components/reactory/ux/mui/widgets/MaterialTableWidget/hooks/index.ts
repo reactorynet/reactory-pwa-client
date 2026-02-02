@@ -12,3 +12,6 @@ export type {
   UseAdvancedFiltersOptions,
   UseAdvancedFiltersResult,
 } from './useAdvancedFilters';
+
+export { useComponentLoader, useComponentsLoader } from './useComponentLoader';
+export type { ComponentLoaderState, UseComponentLoaderOptions } from './useComponentLoader';

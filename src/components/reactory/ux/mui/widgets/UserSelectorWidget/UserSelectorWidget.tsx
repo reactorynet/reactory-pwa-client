@@ -27,8 +27,7 @@ const UserSelector = (props: any) => {
     'core.BasicDialog',
     'core.Profile',
     'core.UserListWithSearch',
-    'core.CreateProfile', 
-    'towerstone.SurveyDelegateWidget'
+    'core.CreateProfile',     
   ]);
 
   const getModal = () => {

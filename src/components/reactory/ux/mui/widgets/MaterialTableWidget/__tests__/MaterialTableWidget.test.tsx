@@ -122,15 +122,27 @@ jest.mock('@reactory/client-core/api/ApiProvider', () => ({
   withReactory: (Component) => Component,
 }));
 
-// Mock theme
+// Mock theme with proper breakpoint function that returns media query strings
 const mockTheme = {
   spacing: (n: number) => `${n * 8}px`,
   palette: {
+    mode: 'light',
     primary: { main: '#1976d2' },
     action: { activatedOpacity: 0.12 },
+    background: {
+      paper: '#ffffff',
+      default: '#f5f5f5',
+    },
+    text: {
+      primary: '#000000',
+      secondary: '#666666',
+    },
+    divider: '#e0e0e0',
   },
   breakpoints: {
-    down: () => false,
+    // Return a proper media query string for useMediaQuery to work
+    down: (breakpoint: string) => `@media (max-width:${breakpoint === 'xs' ? '0' : breakpoint === 'sm' ? '600' : breakpoint === 'md' ? '900' : breakpoint === 'lg' ? '1200' : '1536'}px)`,
+    up: (breakpoint: string) => `@media (min-width:${breakpoint === 'xs' ? '0' : breakpoint === 'sm' ? '600' : breakpoint === 'md' ? '900' : breakpoint === 'lg' ? '1200' : '1536'}px)`,
   },
   MaterialTableWidget: {
     light: {
@@ -147,6 +159,11 @@ const mockTheme = {
     },
   },
 };
+
+// Mock useMediaQuery to avoid JSDOM issues
+jest.mock('@mui/material/useMediaQuery', () => {
+  return jest.fn().mockReturnValue(false);
+});
 
 // Mock useTheme to return our mock theme
 jest.mock('@mui/material/styles', () => ({

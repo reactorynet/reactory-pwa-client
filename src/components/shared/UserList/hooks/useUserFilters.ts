@@ -233,8 +233,11 @@ export const useUserFilters = ({
     setPresets((prev) => prev.filter((p) => p.id !== presetId));
   }, []);
 
+  // Memoize the returned values to prevent unnecessary re-renders
+  const quickFiltersSet = useMemo(() => new Set(activeQuickFilters), [activeQuickFilters]);
+
   return {
-    quickFilters: new Set(activeQuickFilters),
+    quickFilters: quickFiltersSet,
     advancedFilters: advancedFilters,
     toggleQuickFilter,
     setAdvancedFilter,

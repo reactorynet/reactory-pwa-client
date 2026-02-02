@@ -4,7 +4,7 @@
  * @module UserList/hooks/__tests__/useUserSelection
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react-hooks';
 import { useUserSelection } from '../useUserSelection';
 import type Reactory from '@reactory/reactory-core';
 

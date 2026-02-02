@@ -95,8 +95,7 @@ const UserWidgetWithSearch = (props: any) => {
       </FullScreenModal>
     )
   }
-
-  //console.log('rendering User Widget with search');
+  
   const { UserWithQuery } = componentDefs.current || {};
   const { formData } = props;
 

@@ -13,9 +13,11 @@ export { ComposedChartWidgetComponent as ComposedChartWidget} from './ChartWidge
 export { default as DataPageWidget } from './DataPageWidget';
 export { default as DateSelectorWidget } from '@reactory/client-core/components/dates/DateSelector';
 export { DateWidget } from './DateSelector';
+export { default as DynamicWidget } from './DynamicWidget';
 export { FunnelChartWidgetComponent as FunnelChartWidget} from './ChartWidget';
 export const HiddenWidget = (props, context) => (<input type="hidden" name={props.name} value={props.formData} />);
 export { default as LabelWidget } from './LabelWidget';
+export { LabelWidgetV2 } from './LabelWidget';
 export { default as LineChartWidget } from './Charts/LineChartWidget';
 export { default as LinkField } from './LinkFieldWidget'; //added for backward compatibility
 export { default as LinkFieldWidget } from './LinkFieldWidget';

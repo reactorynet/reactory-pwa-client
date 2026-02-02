@@ -17,7 +17,10 @@ import { REACTORY_USER_LIST_QUERY } from '../graphql/queries';
 export const SimpleUserList: React.FC = () => {
   return (
     <UserList
-      query={REACTORY_USER_LIST_QUERY}
+      graphqlQuery={{
+        name: 'ReactoryUsers',
+        text: REACTORY_USER_LIST_QUERY.loc?.source.body || '',
+      }}
       selectionMode="none"
       enableSearch={true}
       viewMode="list"
@@ -39,7 +42,10 @@ export const SingleSelectionUserList: React.FC = () => {
   return (
     <div>
       <UserList
-        query={REACTORY_USER_LIST_QUERY}
+        graphqlQuery={{
+          name: 'ReactoryUsers',
+          text: REACTORY_USER_LIST_QUERY.loc?.source.body || '',
+        }}
         selectionMode="single"
         onSelectionChange={handleSelectionChange}
         enableSearch={true}
@@ -66,7 +72,10 @@ export const MultipleSelectionUserList: React.FC = () => {
   return (
     <div>
       <UserList
-        query={REACTORY_USER_LIST_QUERY}
+        graphqlQuery={{
+          name: 'ReactoryUsers',
+          text: REACTORY_USER_LIST_QUERY.loc?.source.body || '',
+        }}
         selectionMode="multiple"
         onSelectionChange={handleSelectionChange}
         enableSearch={true}
@@ -98,7 +107,10 @@ export const FullFeaturedUserList: React.FC = () => {
 
   return (
     <UserList
-      query={REACTORY_USER_LIST_QUERY}
+      graphqlQuery={{
+        name: 'ReactoryUsers',
+        text: REACTORY_USER_LIST_QUERY.loc?.source.body || '',
+      }}
       selectionMode="multiple"
       enableSearch={true}
       searchPlaceholder="Search by name, email..."
@@ -173,7 +185,10 @@ export const CustomRendererUserList: React.FC = () => {
 
   return (
     <UserList
-      query={REACTORY_USER_LIST_QUERY}
+      graphqlQuery={{
+        name: 'ReactoryUsers',
+        text: REACTORY_USER_LIST_QUERY.loc?.source.body || '',
+      }}
       selectionMode="multiple"
       itemVariant="custom"
       customItemRenderer={customItemRenderer}
@@ -188,7 +203,10 @@ export const CustomRendererUserList: React.FC = () => {
 export const CompactUserList: React.FC = () => {
   return (
     <UserList
-      query={REACTORY_USER_LIST_QUERY}
+      graphqlQuery={{
+        name: 'ReactoryUsers',
+        text: REACTORY_USER_LIST_QUERY.loc?.source.body || '',
+      }}
       selectionMode="single"
       enableSearch={true}
       viewMode="list"

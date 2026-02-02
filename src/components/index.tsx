@@ -353,6 +353,12 @@ export const componentRegistery = [
   },
   {
     nameSpace: 'core',
+    name: 'UserList',
+    component: UserList,
+    version: '1.0.0',
+  },
+  {
+    nameSpace: 'core',
     name: 'HelpMe',
     version: '1.0.0',
     component: HelpMe

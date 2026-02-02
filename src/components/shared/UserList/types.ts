@@ -158,7 +158,12 @@ export type CustomItemRenderer = (
 
 export interface UserListProps {
   // Required
-  query: any; // GraphQL DocumentNode
+  query?: Reactory.Forms.IReactoryFormQuery; // GraphQL query object
+  graphqlQuery?: Reactory.Forms.IReactoryFormQuery; // Alias for backward compatibility
+
+  // Organization Configuration
+  organizationId?: string;
+  businessUnitId?: string;
 
   // Selection Configuration
   selectionMode?: SelectionMode;
@@ -263,7 +268,10 @@ export interface UseUserFiltersResult {
 }
 
 export interface UseUserQueryOptions {
-  query: any;
+  graphqlQuery?: Reactory.Forms.IReactoryFormQuery;
+  organizationId?: string;
+  businessUnitId?: string;
+  filters?: UserFilterInput;
   initialPage?: number;
   initialPageSize?: number;
   initialSearchString?: string;
