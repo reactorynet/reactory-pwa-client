@@ -149,6 +149,8 @@ export interface WebGLRenderState {
   steps: WorkflowStepDefinition[];
   /** Connections to render */
   connections: WorkflowConnection[];
+  /** Processed step geometry data with calculated port positions (for hit testing) */
+  stepGeometry?: StepGeometryData[];
   /** Current viewport */
   viewport: CanvasViewport;
   /** Selection state */

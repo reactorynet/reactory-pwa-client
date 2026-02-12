@@ -1,4 +1,23 @@
 // Core workflow designer types
+
+// Import rendering configuration types
+import type { StepRenderConfig } from './types/rendering';
+
+// Export rendering configuration types
+export type {
+  RendererConfig,
+  WebGLRenderConfig,
+  SVGRenderConfig,
+  CanvasRenderConfig,
+  CircuitRenderConfig,
+  GeometryConfig,
+  MaterialConfig,
+  ShaderConfig,
+  AnimationConfig,
+  StepRenderConfig,
+  PortRenderConfig,
+} from './types/rendering';
+
 export interface Point {
   x: number;
   y: number;
@@ -152,9 +171,13 @@ export interface StepDefinition {
   color?: string;
   inputPorts: PortTemplate[];
   outputPorts: PortTemplate[];
-  propertySchema: PropertySchema;
+  formFQN?: string;
+  propertySchema: Reactory.Schema.AnySchema;
+  uiSchema?: Reactory.Schema.IUISchema;
   defaultProperties: Record<string, unknown>;
   tags?: string[];
+  // Rendering configuration for different renderers
+  rendering?: StepRenderConfig;
 }
 
 export interface PortTemplate {
@@ -186,6 +209,8 @@ export interface PropertyDefinition {
   items?: PropertyDefinition;
   properties?: Record<string, PropertyDefinition>;
   required?: string[];
+  // JSON Schema extensions for object types
+  additionalProperties?: boolean | PropertyDefinition;  
 }
 
 export interface StepCategory {

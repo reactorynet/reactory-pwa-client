@@ -1,308 +1,166 @@
 import { useReactory } from "@reactory/client-core/api";
 import {
-  WorkflowStepDefinition,
-  StepDefinition,
-  ValidationError,
-  PropertyFormProps,
-  PropertyFieldDefinition
+  PropertyFormProps
 } from '../../types';
-import PropertyField from './PropertyField';
+import { ReactoryForm } from '@reactory/client-core/components/reactory/ReactoryForm/ReactoryForm';
 
-export default function PropertyForm(props: PropertyFormProps) {
+export default function PropertyForm(props: Readonly<PropertyFormProps>) {
   const {
     step,
     stepDefinition,
     errors,
     warnings,
-    expandedSections,
     readonly,
-    onPropertyChange,
-    onSectionToggle
+    onPropertyChange
   } = props;
 
   const reactory = useReactory();
-  const {
-    React,
-    Material
-  } = reactory.getComponents<{
-    React: Reactory.React,
-    Material: Reactory.Client.Web.IMaterialModule
-  }>(["react.React", "material-ui.Material"]);
+  const { React } = reactory.getComponents<{
+    React: Reactory.React
+  }>(["react.React"]);
 
   const { useMemo: useMemoReact, useCallback: useCallbackReact } = React;
 
-  // Group properties into sections
-  const propertySections = useMemoReact(() => {
-    const sections: Array<{
-      id: string;
-      title: string;
-      properties: PropertyFieldDefinition[];
-    }> = [
-      {
-        id: 'basic',
-        title: 'Basic Properties',
-        properties: [
-          { key: 'name', label: 'Name', type: 'text', value: step.name, required: true },
-          { key: 'description', label: 'Description', type: 'text', value: step.properties.description || '', required: false }
-        ]
-      }
-    ];
+  // Get ReactoryForm component
+  
 
-    // Add step-specific properties based on step definition
-    if (stepDefinition?.propertySchema) {
-      const schema = stepDefinition.propertySchema;
-      
-      // Group properties by sections if defined, otherwise create a general section
-      const customSection: {
-        id: string;
-        title: string;
-        properties: PropertyFieldDefinition[];
-      } = {
-        id: 'configuration',
-        title: 'Configuration',
-        properties: []
-      };
+  // Build form schema from step definition
+  const formSchema = useMemoReact(() => {
+    if (!stepDefinition) return null;
 
-      Object.entries(schema.properties || {}).forEach(([key, propSchema]) => {
-        let fieldType: 'text' | 'number' | 'boolean' | 'select' | 'textarea' | 'json' = 'text';
-        
-        if (propSchema.type === 'number') {
-          fieldType = 'number';
-        } else if (propSchema.type === 'boolean') {
-          fieldType = 'boolean';
-        } else if (propSchema.enum && propSchema.enum.length > 0) {
-          fieldType = 'select';
-        } else if (propSchema.type === 'object') {
-          fieldType = 'json';
-        }
-        
-        customSection.properties.push({
-          key,
-          label: propSchema.title || key,
-          type: fieldType,
-          value: step.properties[key] || propSchema.default || '',
-          required: schema.required?.includes(key) || false,
-          description: propSchema.description,
-          options: propSchema.enum?.map(opt => ({ label: opt.toString(), value: opt })),
-          schema: propSchema
-        });
-      });
+    // Use the step's propertySchema as the base
+    return stepDefinition.propertySchema;
+  }, [stepDefinition]);
 
-      if (customSection.properties.length > 0) {
-        sections.push(customSection);
-      }
+  // Build UI schema from step definition
+  const formUiSchema = useMemoReact(() => {
+    if (!stepDefinition) return {};
+
+    // Use the step's uiSchema or build a basic one
+    if (stepDefinition.uiSchema) {
+      return stepDefinition.uiSchema;
     }
 
-    // Add advanced properties section
-    const advancedSection: {
-      id: string;
-      title: string;
-      properties: PropertyFieldDefinition[];
-    } = {
-      id: 'advanced',
-      title: 'Advanced',
-      properties: [
-        { 
-          key: 'timeout', 
-          label: 'Timeout (ms)', 
-          type: 'number', 
-          value: step.properties.timeout || 30000, 
-          required: false,
-          description: 'Maximum execution time in milliseconds'
-        },
-        { 
-          key: 'retryCount', 
-          label: 'Retry Count', 
-          type: 'number', 
-          value: step.properties.retryCount || 0, 
-          required: false,
-          description: 'Number of retry attempts on failure'
-        },
-        { 
-          key: 'enabled', 
-          label: 'Enabled', 
-          type: 'boolean', 
-          value: step.properties.enabled !== false, 
-          required: false,
-          description: 'Whether this step is enabled for execution'
-        }
-      ]
-    };
+    // Fallback: generate basic ui schema from property schema
+    const uiSchema: Record<string, unknown> = {};
+        
+    return uiSchema;
+  }, [stepDefinition]);
 
-    sections.push(advancedSection);
-
-    return sections;
-  }, [step, stepDefinition]);
-
-  // Get errors/warnings for a specific property
-  const getFieldValidation = useCallbackReact((propertyKey: string) => {
-    const fieldErrors = errors.filter(error => 
-      error.path?.includes(propertyKey) || error.message.toLowerCase().includes(propertyKey.toLowerCase())
-    );
-    const fieldWarnings = warnings.filter(warning => 
-      warning.path?.includes(propertyKey) || warning.message.toLowerCase().includes(propertyKey.toLowerCase())
-    );
-
+  // Current form data (combine step name with properties)
+  const formData = useMemoReact(() => {
     return {
-      hasError: fieldErrors.length > 0,
-      hasWarning: fieldWarnings.length > 0,
-      errorMessage: fieldErrors[0]?.message,
-      warningMessage: fieldWarnings[0]?.message
+      name: step.name,
+      ...step.properties
     };
-  }, [errors, warnings]);
+  }, [step.name, step.properties]);
 
-  // Handle basic property changes (name, description)
-  const handleBasicPropertyChange = useCallbackReact((key: string, value: any) => {
-    if (key === 'name') {
-      // Update step name directly
-      onPropertyChange('name', value);
-    } else {
-      // Update in properties object
-      onPropertyChange(key, value);
-    }
-  }, [onPropertyChange]);
+  // Handle form data changes
+  const handleFormChange = useCallbackReact((data: {formData: Record<string, unknown>}) => {
+    if (!data || !data.formData) return;
 
-  const {
-    Box,
-    Typography,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
-    Chip,
-    Alert
-  } = Material.MaterialCore;
+    const newData = data.formData;
+    
+    // Update each changed property
+    Object.entries(newData).forEach(([key, value]) => {
+      const currentValue = key === 'name' ? step.name : step.properties[key];
+      
+      // Only trigger change if value actually changed
+      if (currentValue !== value) {
+        onPropertyChange(key, value);
+      }
+    });
+  }, [step, onPropertyChange]);
 
-  const {
-    ExpandMore,
-    Error,
-    Warning
-  } = Material.MaterialIcons;
+  // Transform errors to form validation errors
+  const formErrors = useMemoReact(() => {
+    if (!errors || errors.length === 0) return undefined;
+
+    // Convert validation errors to form errors format
+    const formErrorList: Array<{
+      property: string;
+      message: string;
+      stack: string;
+    }> = [];
+
+    errors.forEach(error => {
+      const path = error.path || [];
+      const pathString = Array.isArray(path) ? path.join('.') : String(path);
+      const property = pathString ? `.${pathString}` : '';
+      
+      formErrorList.push({
+        property,
+        message: error.message,
+        stack: error.message
+      });
+    });
+
+    return formErrorList.length > 0 ? formErrorList : undefined;
+  }, [errors]);
+
+  if (!stepDefinition || !formSchema) {
+    return (
+      <div style={{ padding: 16, textAlign: 'center', color: '#666' }}>
+        <p>No configuration available for this step type.</p>
+        <p style={{ fontSize: '0.9em', marginTop: 8 }}>
+          Step Type: {step.type}
+        </p>
+      </div>
+    );
+  }
+
+  if (!ReactoryForm) {
+    return (
+      <div style={{ padding: 16, textAlign: 'center', color: '#d32f2f' }}>
+        <p>ReactoryForm component not available.</p>
+        <p style={{ fontSize: '0.9em', marginTop: 8 }}>
+          Please ensure core.ReactoryForm@1.0.0 is registered.
+        </p>
+      </div>
+    );
+  }
+
+
+  const formDefinition: Reactory.Forms.IReactoryForm = useMemoReact(() => {
+    return {
+      id: `workflowEditor.${step.name}@1.0.0`,
+      name: step.name,
+      nameSpace: 'workflowEditor',
+      version: '1.0.0',
+      schema: formSchema as Reactory.Schema.AnySchema,
+      uiSchema: formUiSchema as Reactory.Schema.IUISchema,            
+    };
+  }, [step.name, formSchema, formUiSchema, formData]);
 
   return (
-    <Box sx={{ p: 0 }}>
-      {propertySections.map((section) => {
-        const isExpanded = expandedSections.has(section.id);
-        const sectionErrors = errors.filter(error => 
-          section.properties.some(prop => 
-            error.path?.includes(prop.key) || error.message.toLowerCase().includes(prop.key.toLowerCase())
-          )
-        );
-        const sectionWarnings = warnings.filter(warning => 
-          section.properties.some(prop => 
-            warning.path?.includes(prop.key) || warning.message.toLowerCase().includes(prop.key.toLowerCase())
-          )
-        );
+    <div style={{ padding: '0 16px' }}>
+      <ReactoryForm
+        formDef={formDefinition}
+        data={formData}
+        >
+        
+        
+      </ReactoryForm>
 
-        return (
-          <Accordion
-            key={section.id}
-            expanded={isExpanded}
-            onChange={() => onSectionToggle(section.id)}
-            sx={{
-              '&:before': { display: 'none' },
-              boxShadow: 'none',
-              borderBottom: 1,
-              borderColor: 'divider'
-            }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMore />}
-              sx={{
-                minHeight: 48,
-                '& .MuiAccordionSummary-content': {
-                  alignItems: 'center',
-                  gap: 1
-                }
-              }}
-            >
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                {section.title}
-              </Typography>
-              
-              {sectionErrors.length > 0 && (
-                <Chip
-                  label={sectionErrors.length}
-                  size="small"
-                  color="error"
-                  icon={<Error />}
-                  sx={{ fontSize: '0.7rem', height: 20 }}
-                />
-              )}
-              
-              {sectionWarnings.length > 0 && (
-                <Chip
-                  label={sectionWarnings.length}
-                  size="small"
-                  color="warning"
-                  icon={<Warning />}
-                  sx={{ fontSize: '0.7rem', height: 20 }}
-                />
-              )}
-            </AccordionSummary>
-
-            <AccordionDetails sx={{ pt: 0 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {section.properties.map((property) => {
-                  const validation = getFieldValidation(property.key);
-                  
-                  return (
-                    <PropertyField
-                      key={property.key}
-                      property={property}
-                      validation={validation}
-                      readonly={readonly}
-                      onChange={(value) => {
-                        if (section.id === 'basic') {
-                          handleBasicPropertyChange(property.key, value);
-                        } else {
-                          onPropertyChange(property.key, value);
-                        }
-                      }}
-                    />
-                  );
-                })}
-
-                {/* Section validation summary */}
-                {sectionErrors.length > 0 && (
-                  <Alert severity="error">
-                    <Typography variant="body2" gutterBottom>
-                      <strong>Errors in this section:</strong>
-                    </Typography>
-                    {sectionErrors.slice(0, 3).map((error, index) => (
-                      <Typography key={index} variant="body2" component="div">
-                        • {error.message}
-                      </Typography>
-                    ))}
-                    {sectionErrors.length > 3 && (
-                      <Typography variant="body2" component="div">
-                        ... and {sectionErrors.length - 3} more
-                      </Typography>
-                    )}
-                  </Alert>
-                )}
-
-                {sectionWarnings.length > 0 && (
-                  <Alert severity="warning">
-                    <Typography variant="body2" gutterBottom>
-                      <strong>Warnings in this section:</strong>
-                    </Typography>
-                    {sectionWarnings.slice(0, 3).map((warning, index) => (
-                      <Typography key={index} variant="body2" component="div">
-                        • {warning.message}
-                      </Typography>
-                    ))}
-                    {sectionWarnings.length > 3 && (
-                      <Typography variant="body2" component="div">
-                        ... and {sectionWarnings.length - 3} more
-                      </Typography>
-                    )}
-                  </Alert>
-                )}
-              </Box>
-            </AccordionDetails>
-          </Accordion>
-        );
-      })}
-    </Box>
+      {/* Show warnings if any */}
+      {warnings && warnings.length > 0 && (
+        <div style={{
+          marginTop: 16,
+          padding: 12,
+          backgroundColor: '#fff3e0',
+          borderLeft: '4px solid #ff9800',
+          borderRadius: 4
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#e65100' }}>
+            ⚠️ Warnings
+          </div>
+          {warnings.map((warning, index) => (
+            <div key={index} style={{ fontSize: '0.9em', color: '#e65100', marginTop: 4 }}>
+              • {warning.message}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

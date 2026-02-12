@@ -1020,7 +1020,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     backgroundColor: isDarkMode ? theme.palette.background.paper : theme.palette.background.default,
     color: theme.palette.text.primary,
   };
-  debugger;
+  
   // Override with custom MaterialTableWidget theme if available
   if (theme.MaterialTableWidget) {
     if (theme.MaterialTableWidget[view_mode]?.rowStyle) theme_row_style = { ...theme.MaterialTableWidget[view_mode].rowStyle };
@@ -1037,8 +1037,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   // Apply uiOptions headerStyle last to allow per-widget overrides
   if (uiOptions.headerStyle) {
     theme_header_style = { ...theme_header_style, ...uiOptions.headerStyle };
-  }
-  debugger;
+  }  
   let options: MaterialTableOptions = {
     rowStyle: (rowData, index) => {
 
@@ -1499,7 +1498,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           ...header,
           // Map our interface to ColumnHeaderConfig if needed
         };
-        debugger;
+      
         $headers.push((
           <TableCell
             key={idx}
@@ -1558,7 +1557,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       }
     });
 
-    debugger;
+
     return (
       <TableHead 
         sx={{
@@ -1666,7 +1665,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     }
 
     columns.forEach((column: MaterialTableColumn<any>, columnIndex: number) => {
-      const cellData = row[column.field];
+      // column field could be property or array field pointer
+      // use lodash get to extract property - supports dot notation and array indices
+      const cellData = get(row, column.field);
       if (column.renderCell) { 
         $cols.push((<TableCell key={columnIndex} sx={column?.sx}>{column.renderCell(cellData, columnIndex, row, rid)}</TableCell>));
       }
@@ -1939,8 +1940,29 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             console.log('onDataChange', data);
           }} 
           searchText={searchText} 
-          // @ts-ignore
-          //onSearchChange={onSearchChange} />
+          queryVariables={{
+            filter: { searchString: query.search },
+            paging: { page: query.page, pageSize: query.pageSize }
+          }}
+          onQueryChange={(queryName: string, variables: any) => {
+             // Handle the update from the toolbar
+             let newQuery = { ...query };
+             
+             // Extract search string if present (supporting standard Reactory patterns)
+             if (variables?.filter?.searchString !== undefined) {
+                newQuery.search = variables.filter.searchString;
+             } else if (typeof variables?.searchString === 'string') {
+                newQuery.search = variables.searchString;
+             }
+
+             // Extract paging
+             if (variables?.paging) {
+                 if (typeof variables.paging.page === 'number') newQuery.page = variables.paging.page;
+                 if (typeof variables.paging.pageSize === 'number') newQuery.pageSize = variables.paging.pageSize;
+             }
+             
+             setQuery(newQuery);
+          }}
           />
       }
     }
