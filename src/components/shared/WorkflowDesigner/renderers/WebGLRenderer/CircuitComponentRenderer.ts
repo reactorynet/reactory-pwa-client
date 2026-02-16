@@ -142,8 +142,8 @@ export class CircuitComponentRenderer {
       group.add(glowMesh);
     }
     
-    // Create pins
-    this.createPins(step, pinMeshes, group);
+    // Create pins with element-type-aware positioning
+    this.createPins(step, pinMeshes, group, elementType);
     
     // Position the group (negate Y for Three.js coordinate system)
     const centerX = step.position.x + step.size.width / 2;
@@ -280,25 +280,55 @@ export class CircuitComponentRenderer {
   }
 
   /**
+   * Calculate the actual body dimensions for each component type
+   * Returns { halfWidth, halfHeight } of the visible component body
+   */
+  private getComponentBodyDimensions(step: StepGeometryData, elementType: CircuitElementType): { bodyHalfWidth: number; bodyHalfHeight: number } {
+    switch (elementType) {
+      case 'pushButton': {
+        // Push button is a square based on min dimension
+        const size = Math.min(step.size.width, step.size.height) * 0.7;
+        return { bodyHalfWidth: size / 2, bodyHalfHeight: size / 2 };
+      }
+      case 'led': {
+        // LED is circular with rim
+        const radius = Math.min(step.size.width, step.size.height) * 0.3 * 1.15; // Include rim
+        return { bodyHalfWidth: radius, bodyHalfHeight: radius };
+      }
+      case 'icChip':
+      default: {
+        // IC chip uses most of the step area
+        const width = step.size.width * 0.85;
+        const height = step.size.height * 0.7;
+        return { bodyHalfWidth: width / 2, bodyHalfHeight: height / 2 };
+      }
+    }
+  }
+
+  /**
    * Create connection pins for a component
    */
-  private createPins(step: StepGeometryData, pinMeshes: THREE.Mesh[], group: THREE.Group): void {
-    const halfWidth = step.size.width / 2;
-    const halfHeight = step.size.height / 2;
+  private createPins(step: StepGeometryData, pinMeshes: THREE.Mesh[], group: THREE.Group, elementType: CircuitElementType): void {
+    // Get actual component body dimensions for proper pin placement
+    const { bodyHalfWidth, bodyHalfHeight } = this.getComponentBodyDimensions(step, elementType);
+    
+    // Small gap between component edge and pin
+    const pinGap = 4;
+    const pinOffset = bodyHalfWidth + pinGap + CIRCUIT_DIMENSIONS.pinRadius;
     
     // Input pins (left side)
     step.inputPorts.forEach((port, index) => {
-      const y = this.calculatePinY(index, step.inputPorts.length, step.size.height);
+      const y = this.calculatePinY(index, step.inputPorts.length, bodyHalfHeight * 2);
       const pinMesh = new THREE.Mesh(this.pinGeometry, this.materials.pin.clone());
-      pinMesh.position.set(-halfWidth - CIRCUIT_DIMENSIONS.pinRadius, y - halfHeight, 0.5);
+      pinMesh.position.set(-pinOffset, y - bodyHalfHeight, 0.5);
       pinMesh.name = `pin_input_${port.id}`;
       pinMeshes.push(pinMesh);
       group.add(pinMesh);
       
-      // Pin leg (line from component to pin)
+      // Pin leg (line from component edge to pin)
       const legGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-halfWidth * 0.85, y - halfHeight, 0.3),
-        new THREE.Vector3(-halfWidth - CIRCUIT_DIMENSIONS.pinRadius, y - halfHeight, 0.3),
+        new THREE.Vector3(-bodyHalfWidth, y - bodyHalfHeight, 0.3),
+        new THREE.Vector3(-pinOffset, y - bodyHalfHeight, 0.3),
       ]);
       const legMaterial = new THREE.LineBasicMaterial({ color: CIRCUIT_COLORS.componentPin, linewidth: 2 });
       const leg = new THREE.Line(legGeometry, legMaterial);
@@ -307,17 +337,17 @@ export class CircuitComponentRenderer {
     
     // Output pins (right side)
     step.outputPorts.forEach((port, index) => {
-      const y = this.calculatePinY(index, step.outputPorts.length, step.size.height);
+      const y = this.calculatePinY(index, step.outputPorts.length, bodyHalfHeight * 2);
       const pinMesh = new THREE.Mesh(this.pinGeometry, this.materials.pin.clone());
-      pinMesh.position.set(halfWidth + CIRCUIT_DIMENSIONS.pinRadius, y - halfHeight, 0.5);
+      pinMesh.position.set(pinOffset, y - bodyHalfHeight, 0.5);
       pinMesh.name = `pin_output_${port.id}`;
       pinMeshes.push(pinMesh);
       group.add(pinMesh);
       
       // Pin leg
       const legGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(halfWidth * 0.85, y - halfHeight, 0.3),
-        new THREE.Vector3(halfWidth + CIRCUIT_DIMENSIONS.pinRadius, y - halfHeight, 0.3),
+        new THREE.Vector3(bodyHalfWidth, y - bodyHalfHeight, 0.3),
+        new THREE.Vector3(pinOffset, y - bodyHalfHeight, 0.3),
       ]);
       const legMaterial = new THREE.LineBasicMaterial({ color: CIRCUIT_COLORS.componentPin, linewidth: 2 });
       const leg = new THREE.Line(legGeometry, legMaterial);

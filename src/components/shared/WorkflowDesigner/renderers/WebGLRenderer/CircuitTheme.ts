@@ -303,40 +303,33 @@ export const CIRCUIT_CSS = `
   
   .circuit-label {
     position: absolute;
-    color: #ffffff;
-    font-family: 'Roboto Mono', 'Courier New', monospace;
-    font-size: 12px;
-    font-weight: 600;
-    text-shadow: 
-      0 0 4px rgba(0,0,0,0.8),
-      1px 1px 0 #0d2818,
-      -1px -1px 0 #0d2818,
-      1px -1px 0 #0d2818,
-      -1px 1px 0 #0d2818,
-      2px 2px 2px rgba(0,0,0,0.5);
     pointer-events: auto;
     white-space: nowrap;
     user-select: none;
     cursor: pointer;
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
   
   .circuit-label:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
   }
   
   .circuit-label-designator {
-    background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 100%);
-    color: #1a472a;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 12px;
-    font-weight: bold;
-    box-shadow: 
-      0 2px 4px rgba(0,0,0,0.3),
-      inset 0 1px 0 rgba(255,255,255,0.8);
-    border: 1px solid rgba(0,0,0,0.2);
-    letter-spacing: 0.5px;
+    display: inline-block;
+    background: #ffffff;
+    color: #000000;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    border: 1px solid rgba(0,0,0,0.1);
+    letter-spacing: 0.3px;
+  }
+  
+  .circuit-label:hover .circuit-label-designator {
+    box-shadow: 0 3px 10px rgba(0,0,0,0.35);
   }
   
   /* Grabbed state visual feedback */

@@ -188,7 +188,7 @@ const ReactoryDropZone = (props: any) => {
     setComponents(reactory.getComponents(['core.Loading']));
   }, [props.reactory]);
 
-  const { uiSchema, schema, formData, formContext } = props;
+  const { uiSchema, schema, formData, formContext, onDrop, multiple, accept, maxSize } = props;
 
   let widgetProps = {
     className: classes.ReactoryDropZoneRoot,
@@ -222,6 +222,20 @@ const ReactoryDropZone = (props: any) => {
 
   const dropHandler = async (acceptedFiles) => {
     if (acceptedFiles.length === 0) return;
+
+    // If onDrop prop is provided, use it directly (standalone mode)
+    if (onDrop && typeof onDrop === 'function') {
+      try {
+        await onDrop(acceptedFiles);
+      } catch (error) {
+        reactory.log('Error in onDrop handler', { error }, 'error');
+        reactory.createNotification(`Upload failed: ${error.message}`, {
+          showInAppNotification: true,
+          type: 'error',
+        });
+      }
+      return;
+    }
 
     setUploading(true);
     setUploadProgress(0);

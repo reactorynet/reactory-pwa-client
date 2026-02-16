@@ -199,7 +199,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = (props) => {
       cancelled: '#f44336',
       'on-hold': '#fbc02d',
     };
-    return defaultColors[statusValue.toLowerCase()] || theme.palette.primary.main;
+    return defaultColors[`${statusValue}`?.toLowerCase() || ''] || theme.palette.primary.main;
   }, [statusValue, options.colorMap, theme]);
 
   // Get icon for current status
@@ -222,7 +222,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = (props) => {
       'on-hold': 'pause_circle',
     };
     
-    return defaultIcons[statusValue.toLowerCase()] || null;
+    return defaultIcons[`${statusValue}`?.toLowerCase() || ''] || null;
   }, [statusValue, options.iconMap, options.showIcon]);
 
   // Format label
@@ -233,7 +233,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = (props) => {
       if (options.labelFormat && options.labelFormat.includes('${')) {
         return template(options.labelFormat)({ value: statusValue, ...props });
       }
-      return statusValue.toUpperCase();
+      return statusValue?.toUpperCase();
     } catch (err) {
       reactory?.log('StatusBadge: Label format error', { err, format: options.labelFormat }, 'warn');
       return statusValue;

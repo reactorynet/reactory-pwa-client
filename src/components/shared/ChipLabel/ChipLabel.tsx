@@ -24,7 +24,6 @@ const ChipLabel = (props: any) => {
     if (componentProps) {
       childprops = api.utils.objectMapper(props, componentProps);
     }
-
     let labelTitle = '';
     let containerStyles: React.CSSProperties = {
       display: 'flex',
@@ -52,7 +51,7 @@ const ChipLabel = (props: any) => {
     if (!chipData) chipData = [];
 
     const chips = chipData.map((chip, index) => {
-      let chipLabel = format ? template(format)({ who: chip }) : 'no user';
+      let chipLabel = format ? template(format)({ who: chip }) : chip;
       let _avatar = useUserAvatar ? <Avatar alt={chipLabel} src={getAvatar(chip)} /> : null;
 
       return (<Chip avatar={_avatar} style={{ marginRight: '5px' }} key={index} variant="outlined" label={chipLabel} />);

@@ -447,10 +447,14 @@ export class InteractionManager implements IInteractionManager {
     const worldPosition = this.screenToWorld(screenPosition);
     
     // Check ports first (smallest targets, highest priority)
-    for (const step of this.renderState.steps) {
-      // Check input ports
+    // Use stepGeometry if available for accurate port positions
+    const stepsForPortHitTest = this.renderState.stepGeometry || this.renderState.steps;
+    
+    for (const step of stepsForPortHitTest) {
+      // Check input ports - use worldPosition from geometry data
       for (const port of step.inputPorts) {
-        const portWorldPos = {
+        // Use the pre-calculated worldPosition from the port geometry
+        const portWorldPos = (port as { worldPosition?: Point }).worldPosition || {
           x: step.position.x,
           y: step.position.y + (step.size?.height || 100) / 2
         };
@@ -476,9 +480,10 @@ export class InteractionManager implements IInteractionManager {
         }
       }
       
-      // Check output ports
+      // Check output ports - use worldPosition from geometry data
       for (const port of step.outputPorts) {
-        const portWorldPos = {
+        // Use the pre-calculated worldPosition from the port geometry
+        const portWorldPos = (port as { worldPosition?: Point }).worldPosition || {
           x: step.position.x + (step.size?.width || 200),
           y: step.position.y + (step.size?.height || 100) / 2
         };

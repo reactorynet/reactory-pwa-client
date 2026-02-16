@@ -16,7 +16,7 @@ import { InteractionManager } from './InteractionManager';
 import { CircuitComponentRenderer } from './CircuitComponentRenderer';
 import { CircuitTraceRenderer } from './CircuitTraceRenderer';
 import { CircuitLabelRenderer } from './CircuitLabelRenderer';
-import { CIRCUIT_COLORS } from './CircuitTheme';
+import { CIRCUIT_COLORS, CIRCUIT_DIMENSIONS, getCircuitElement } from './CircuitTheme';
 import {
   SceneConfig,
   WebGLRendererConfig,
@@ -281,6 +281,35 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
   }, []);
 
   /**
+   * Calculate component body dimensions for port positioning
+   * Must match CircuitComponentRenderer.getComponentBodyDimensions
+   */
+  const getComponentBodyDimensions = useCallback((
+    stepWidth: number, 
+    stepHeight: number, 
+    stepType: string
+  ): { bodyHalfWidth: number; bodyHalfHeight: number } => {
+    const circuitElement = getCircuitElement(stepType).circuitElement;
+    
+    switch (circuitElement) {
+      case 'pushButton': {
+        const size = Math.min(stepWidth, stepHeight) * 0.7;
+        return { bodyHalfWidth: size / 2, bodyHalfHeight: size / 2 };
+      }
+      case 'led': {
+        const radius = Math.min(stepWidth, stepHeight) * 0.3 * 1.15;
+        return { bodyHalfWidth: radius, bodyHalfHeight: radius };
+      }
+      case 'icChip':
+      default: {
+        const width = stepWidth * 0.85;
+        const height = stepHeight * 0.7;
+        return { bodyHalfWidth: width / 2, bodyHalfHeight: height / 2 };
+      }
+    }
+  }, []);
+
+  /**
    * Convert workflow steps to geometry data
    */
   const stepsToGeometry = useCallback((
@@ -295,33 +324,59 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
       const hasError = validation.errors.some(e => e.stepId === step.id);
       const hasWarning = validation.warnings.some(e => e.stepId === step.id);
 
-      // Calculate port positions
+      // Calculate port positions based on actual component body size
       const stepWidth = step.size?.width || 200;
       const stepHeight = step.size?.height || 100;
+      const { bodyHalfWidth, bodyHalfHeight } = getComponentBodyDimensions(stepWidth, stepHeight, step.type);
       
-      const inputPorts: PortGeometryData[] = step.inputPorts.map((port, index) => ({
-        id: port.id,
-        localPosition: { x: 0, y: (index + 1) * (stepHeight / (step.inputPorts.length + 1)) },
-        worldPosition: { 
-          x: step.position.x, 
-          y: step.position.y + (index + 1) * (stepHeight / (step.inputPorts.length + 1))
-        },
-        color: 0x4caf50, // Green for inputs
-        connected: false, // Will be updated based on connections
-        hovered: false
-      }));
+      // Pin positioning: small gap from body edge + pin radius
+      const pinGap = 4;
+      const pinOffset = bodyHalfWidth + pinGap + CIRCUIT_DIMENSIONS.pinRadius;
+      
+      // Center of step
+      const centerX = step.position.x + stepWidth / 2;
+      const centerY = step.position.y + stepHeight / 2;
+      
+      const inputPorts: PortGeometryData[] = step.inputPorts.map((port, index) => {
+        // Calculate Y position relative to body height
+        const total = step.inputPorts.length;
+        const bodyHeight = bodyHalfHeight * 2;
+        const portY = total === 1 
+          ? bodyHalfHeight 
+          : (bodyHeight / (total + 1)) * (index + 1);
+        
+        return {
+          id: port.id,
+          localPosition: { x: -pinOffset, y: portY - bodyHalfHeight },
+          worldPosition: { 
+            x: centerX - pinOffset, 
+            y: centerY + (portY - bodyHalfHeight)
+          },
+          color: 0x4caf50,
+          connected: false,
+          hovered: false
+        };
+      });
 
-      const outputPorts: PortGeometryData[] = step.outputPorts.map((port, index) => ({
-        id: port.id,
-        localPosition: { x: stepWidth, y: (index + 1) * (stepHeight / (step.outputPorts.length + 1)) },
-        worldPosition: { 
-          x: step.position.x + stepWidth, 
-          y: step.position.y + (index + 1) * (stepHeight / (step.outputPorts.length + 1))
-        },
-        color: 0x2196f3, // Blue for outputs
-        connected: false,
-        hovered: false
-      }));
+      const outputPorts: PortGeometryData[] = step.outputPorts.map((port, index) => {
+        const total = step.outputPorts.length;
+        const bodyHeight = bodyHalfHeight * 2;
+        const portY = total === 1 
+          ? bodyHalfHeight 
+          : (bodyHeight / (total + 1)) * (index + 1);
+        
+        return {
+          id: port.id,
+          localPosition: { x: pinOffset, y: portY - bodyHalfHeight },
+          worldPosition: { 
+            x: centerX + pinOffset, 
+            y: centerY + (portY - bodyHalfHeight)
+          },
+          color: 0x2196f3,
+          connected: false,
+          hovered: false
+        };
+      });
 
       return {
         id: step.id,
@@ -339,7 +394,7 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
         outputPorts
       };
     });
-  }, []);
+  }, [getComponentBodyDimensions]);
 
   /**
    * Convert workflow connections to geometry data
@@ -360,15 +415,24 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
 
       const sourceWidth = sourceStep.size?.width || 200;
       const sourceHeight = sourceStep.size?.height || 100;
+      const targetWidth = targetStep.size?.width || 200;
       const targetHeight = targetStep.size?.height || 100;
 
+      // Calculate port positions based on component body dimensions
+      const sourceBody = getComponentBodyDimensions(sourceWidth, sourceHeight, sourceStep.type);
+      const targetBody = getComponentBodyDimensions(targetWidth, targetHeight, targetStep.type);
+      
+      const pinGap = 4;
+      const sourcePinOffset = sourceBody.bodyHalfWidth + pinGap + CIRCUIT_DIMENSIONS.pinRadius;
+      const targetPinOffset = targetBody.bodyHalfWidth + pinGap + CIRCUIT_DIMENSIONS.pinRadius;
+
       const startPoint: Point = {
-        x: sourceStep.position.x + sourceWidth,
+        x: sourceStep.position.x + sourceWidth / 2 + sourcePinOffset,
         y: sourceStep.position.y + sourceHeight / 2
       };
 
       const endPoint: Point = {
-        x: targetStep.position.x,
+        x: targetStep.position.x + targetWidth / 2 - targetPinOffset,
         y: targetStep.position.y + targetHeight / 2
       };
 
@@ -394,7 +458,7 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
         hasError
       };
     }).filter((c): c is ConnectionGeometryData => c !== null);
-  }, []);
+  }, [getComponentBodyDimensions]);
 
   /**
    * Update workflow data
@@ -521,10 +585,12 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
     }
 
     // Update render state for interaction manager
+    // Include stepGeometry for accurate hit testing of ports
     currentStateRef.current = {
       ...currentStateRef.current,
       steps,
       connections,
+      stepGeometry,
       selection,
       validation
     } as WebGLRenderState;
