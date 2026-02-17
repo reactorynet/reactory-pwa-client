@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { List, Box, useTheme } from '@mui/material';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 import type { ItemVariant, SelectionMode, CustomItemRenderer, ItemRendererOptions } from '../../types';
 import { UserListItemCompact, UserListItemDetailed } from '../UserListItem';
 import { getUserListStyles } from '../../styles/userList.styles';

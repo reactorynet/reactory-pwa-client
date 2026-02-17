@@ -47,7 +47,7 @@ import humanDate from 'human-date';
 import { withReactory, ReactoryProvider } from './ApiProvider';
 import { ReactoryLoggedInUser, anonUser, storageKeys } from './local';
 import ReactoryApolloClient from './ReactoryApolloClient';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { compose } from "redux";
 import { ApiStatus as ApiStatusQueryFactory } from './graphql/graph/queries';
 import { ApiStatusQueryScope } from "./graphql/graph/queries/ApiStatus";

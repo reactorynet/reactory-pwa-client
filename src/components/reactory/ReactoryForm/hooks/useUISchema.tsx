@@ -3,7 +3,7 @@ import { useReactory } from "@reactory/client-core/api";
 import { ReactoryFormUISchemaManagerHook, ScreenSizeKey } from "../types";
 import queryString from '@reactory/client-core/components/utility/query-string';
 import { useLocation } from 'react-router';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { Icon, IconButton } from '@mui/material';
 
 /**

@@ -5,7 +5,7 @@ import { compose } from 'redux';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { template } from 'lodash';
 import { getAvatar } from '@reactory/client-core/components/util';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { REACTORY_USER_LIST_QUERY } from '@reactory/client-core/components/shared/UserList/graphql';
 
 const PREFIX = 'UserAvatar';

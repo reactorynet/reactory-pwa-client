@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import ReactoryApi, { useReactory } from '@reactory/client-core/api//ApiProvider';
 
-// TODO: Move this interface to @reactory/reactory-core/types/index.d.ts
+// TODO: Move this interface to @reactorynet/reactory-core/types/index.d.ts
 interface NotFoundProps {
   message?: string,
   waitingFor?: string,

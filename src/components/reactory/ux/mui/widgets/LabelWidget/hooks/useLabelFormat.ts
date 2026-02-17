@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { template, isNil } from 'lodash';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 
 export interface UseLabelFormatOptions {
   /** Format string template (lodash template syntax) */

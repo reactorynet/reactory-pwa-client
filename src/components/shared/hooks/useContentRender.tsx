@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { MermaidDiagram } from '@reactory/client-core/components/shared/MermaidDiagram/MermaidDiagram';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { useReactory } from '@reactory/client-core/api';
 /**
  * Content types that can be rendered

@@ -1,5 +1,5 @@
 import React from 'react';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { useNavigate } from 'react-router';
 
 const formSchema: Reactory.Schema.IArraySchema = {

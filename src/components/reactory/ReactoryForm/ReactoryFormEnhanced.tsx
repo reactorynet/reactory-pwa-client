@@ -7,7 +7,7 @@
  */
 
 import React, { useCallback, useEffect } from 'react';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 
 // Import existing ReactoryForm

@@ -1,6 +1,6 @@
 // Reactory component that is used to render a D3 graph
 
-import Reactory from "@reactory/reactory-core";
+import Reactory from "@reactorynet/reactory-core";
 import { useReactory } from "@reactory/client-core/api";
 
 export interface ReactoryD3RendererDependencies { 

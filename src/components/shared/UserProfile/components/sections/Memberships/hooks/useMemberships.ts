@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { ProfileUser } from '../../../../types';
 
 /**

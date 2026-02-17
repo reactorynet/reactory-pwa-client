@@ -33,8 +33,9 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [emailValid, setEmailValid] = useState(reactory.utils.isEmail(profile.email || ''));
 
-  const canEdit = mode === 'edit' || mode === 'admin';
-  const isProfileOwner = profile.id === reactory.getUser()?.id;
+  const isNewMode = mode === 'new';
+  const canEdit = mode === 'edit' || mode === 'admin' || isNewMode;
+  const isProfileOwner = isNewMode || profile.id === reactory.getUser()?.id;
 
   // Validation
   const saveDisabled = !emailValid ||
@@ -244,8 +245,8 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               />
             </Grid>
 
-            {/* Save Button */}
-            {canEdit && isProfileOwner && (
+            {/* Save / Create Button */}
+            {canEdit && (isProfileOwner || isNewMode) && (
               <Grid size={{ xs: 12 }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                   <Button
@@ -255,7 +256,9 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
                     disabled={saveDisabled || loading}
                     sx={{ minWidth: 120 }}
                   >
-                    {loading ? 'Saving...' : 'Update Profile'}
+                    {loading
+                      ? (isNewMode ? 'Creating...' : 'Saving...')
+                      : (isNewMode ? 'Create User' : 'Update Profile')}
                   </Button>
 
                   {saveDisabled && (
@@ -267,7 +270,8 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
               </Grid>
             )}
 
-            {/* Profile Metadata */}
+            {/* Profile Metadata (hidden in new mode) */}
+            {!isNewMode && (
             <Grid size={{ xs: 12 }}>
               <Box sx={{
                 p: 2,                
@@ -289,6 +293,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
                 )}
               </Box>
             </Grid>
+            )}
           </Grid>
         </Grid>
       </Grid>

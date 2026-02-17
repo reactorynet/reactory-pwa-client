@@ -3,3 +3,5 @@ export { GeneralSection } from './Account';
 export { MembershipsSection } from './Memberships';
 export { DemographicsSection } from './Demographics';
 export { OrganigramSection } from './Organigram';
+export { SocialsSection } from './Socials';
+export { AISection } from './AI';

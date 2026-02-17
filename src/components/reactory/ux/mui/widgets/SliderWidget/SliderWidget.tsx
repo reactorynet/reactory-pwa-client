@@ -11,7 +11,7 @@ import { styled } from '@mui/material/styles';
 import { useTheme } from '@mui/material/styles';
 import { Theme } from '@mui/material';
 import Slider from '@mui/material/Slider';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const StyledSliderContainer = styled('div')(({ theme }: { theme: Theme }) => ({
   width: '85%',

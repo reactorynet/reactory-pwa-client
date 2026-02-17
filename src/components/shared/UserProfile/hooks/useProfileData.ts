@@ -1,23 +1,40 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import Reactory from '@reactory/reactory-core';
-import { ProfileUser, UseProfileDataResult, PROFILE_DATA_FRAGMENT } from '../types';
+import Reactory from '@reactorynet/reactory-core';
+import { ProfileUser, ProfileMode, UseProfileDataResult, PROFILE_DATA_FRAGMENT } from '../types';
+
+const EMPTY_PROFILE = {
+  id: '',
+  firstName: '',
+  lastName: '',
+  email: '',
+  mobileNumber: '',
+  avatar: '',
+  socials: [],
+  __isnew: true,
+} as unknown as ProfileUser;
 
 /**
  * Hook for managing profile data loading and state
  * Based on existing Connected/UserProfile.tsx and hooks/useProfile.tsx patterns
+ * 
+ * When mode is 'new', no fetch is performed and an empty profile is used.
  */
 export const useProfileData = (
   userId?: string,
   initialProfile?: ProfileUser,
-  reactory?: Reactory.Client.ReactorySDK
+  reactory?: Reactory.Client.ReactorySDK,
+  mode?: ProfileMode
 ): UseProfileDataResult => {
-  const [profile, setProfile] = useState<ProfileUser | null>(initialProfile || null);
+  const isNewMode = mode === 'new';
+  const [profile, setProfile] = useState<ProfileUser | null>(
+    isNewMode ? { ...EMPTY_PROFILE } : (initialProfile || null)
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Get current user for ownership checks
   const currentUser = reactory?.getUser();
-  const targetUserId = userId || initialProfile?.id || currentUser?.id;
+  const targetUserId = isNewMode ? undefined : (userId || initialProfile?.id || currentUser?.id);
 
   // Computed properties
   const isOwner = useMemo(() => {
@@ -29,8 +46,8 @@ export const useProfileData = (
   }, [reactory]);
 
   const isNew = useMemo(() => {
-    return !profile || !profile.id;
-  }, [profile]);
+    return isNewMode || !profile || !profile.id;
+  }, [isNewMode, profile]);
 
   // GraphQL query for profile data
   const PROFILE_QUERY = `
@@ -66,6 +83,8 @@ export const useProfileData = (
 
   // Fetch profile data
   const fetchProfile = useCallback(async (id?: string) => {
+    if (isNewMode) return; // Don't fetch in new mode
+    
     if (!id && !targetUserId) {
       setError('No user ID provided');
       return;
@@ -95,7 +114,7 @@ export const useProfileData = (
     } finally {
       setLoading(false);
     }
-  }, [targetUserId, reactory, PROFILE_QUERY]);
+  }, [targetUserId, reactory, PROFILE_QUERY, isNewMode]);
 
   // Refetch profile data
   const refetch = useCallback(async (): Promise<void> => {
@@ -111,17 +130,18 @@ export const useProfileData = (
 
   // Reset profile state
   const reset = useCallback(() => {
-    setProfile(initialProfile || null);
+    setProfile(isNewMode ? { ...EMPTY_PROFILE } : (initialProfile || null));
     setError(null);
     setLoading(false);
-  }, [initialProfile]);
+  }, [initialProfile, isNewMode]);
 
   // Load profile on mount or when userId changes
   useEffect(() => {
+    if (isNewMode) return; // Skip fetch in new mode
     if (!profile && (targetUserId || initialProfile)) {
       fetchProfile();
     }
-  }, [targetUserId, profile, fetchProfile, initialProfile]);
+  }, [targetUserId, profile, fetchProfile, initialProfile, isNewMode]);
 
   // Update profile when initialProfile changes
   useEffect(() => {

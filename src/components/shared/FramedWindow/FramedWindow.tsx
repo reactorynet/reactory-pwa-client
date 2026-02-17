@@ -5,7 +5,7 @@ import { compose } from 'redux';
 import { useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import ReactoryApi from "@reactory/client-core/api/ReactoryApi";
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import * as ExcelJS from 'exceljs';
 import moment from 'moment';
 import { useReactory } from '@reactory/client-core/api';

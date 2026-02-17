@@ -8,7 +8,7 @@
 
 import { ApolloError } from "@apollo/client";
 import { Breakpoint } from '@mui/material';
-import * as Reactory from "@reactory/reactory-core";
+import * as Reactory from "@reactorynet/reactory-core";
 import { Params } from "react-router";
 
 // ============================================================================

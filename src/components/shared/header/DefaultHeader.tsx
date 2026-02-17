@@ -31,7 +31,7 @@ import moment from 'moment';
 import ReactoryApi, { withReactory, ReactoryApiEventNames } from '@reactory/client-core/api';
 import license from '@reactory/client-core/license';
 import { useNavigate } from 'react-router';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import localForage from 'localforage';
 import { ReactoryAvatar } from './AvatarComponent';
 

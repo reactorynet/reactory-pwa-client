@@ -16,7 +16,7 @@ import {
   Theme,
 } from '@mui/material';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const PREFIX = 'MaterialFormErrorTemplate';
 

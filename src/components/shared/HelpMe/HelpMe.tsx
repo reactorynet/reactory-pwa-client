@@ -3,7 +3,7 @@ import { compose } from 'redux';
 import { Paper, Theme } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 interface IHelpMeProps {
   reactory: Reactory.Client.IReactoryApi,

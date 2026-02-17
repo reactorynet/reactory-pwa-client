@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 import type {
   SelectionMode,
   UseUserSelectionOptions,

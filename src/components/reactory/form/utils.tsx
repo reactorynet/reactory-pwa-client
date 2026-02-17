@@ -8,7 +8,7 @@ import fields from './components/fields';
 import widgets from './components/widgets';
 import templates from './components/templates';
 import { useReactory } from "@reactory/client-core/api";
-import Reactory from "@reactory/reactory-core";
+import Reactory from "@reactorynet/reactory-core";
 import TitleField from "./components/fields/TitleField";
 
 export const ADDITIONAL_PROPERTY_FLAG = "__additional_property";

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import Reactory from '@reactory/reactory-core';
-import { ProfileUser, UseProfileMutationsResult, PeerUser } from '../types';
+import Reactory from '@reactorynet/reactory-core';
+import { ProfileUser, SocialReference, UseProfileMutationsResult, PeerUser, PROFILE_DATA_FRAGMENT } from '../types';
 
 /**
  * Hook for managing profile mutations (save, delete, update operations)
@@ -8,7 +8,8 @@ import { ProfileUser, UseProfileMutationsResult, PeerUser } from '../types';
  */
 export const useProfileMutations = (
   profileId: string | undefined,
-  reactory?: Reactory.Client.ReactorySDK
+  reactory?: Reactory.Client.ReactorySDK,
+  applicationId?: string
 ): UseProfileMutationsResult => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -481,6 +482,119 @@ export const useProfileMutations = (
     return setPeerRelationship(user.id, relationship);
   }, [setPeerRelationship]);
 
+  // Create a new user for an application
+  const createUser = useCallback(async (
+    profile: ProfileUser,
+    appId?: string
+  ): Promise<ProfileUser | null> => {
+    if (!reactory) {
+      setError('Reactory instance not available');
+      return null;
+    }
+
+    const targetClientId = appId || applicationId;
+    if (!targetClientId) {
+      setError('Application ID is required to create a user');
+      return null;
+    }
+
+    try {
+      setLoading(true);
+      clearError();
+
+      const mutation = `
+        mutation CreateUserForApplication($input: CreateUserInput!, $clientId: String!, $password: String, $roles: [String]) {
+          ReactoryCoreCreateUserForApplication(input: $input, clientId: $clientId, password: $password, roles: $roles) {
+            ...ProfileData
+          }
+        }
+        ${PROFILE_DATA_FRAGMENT}
+      `;
+
+      const result = await reactory.graphqlMutation<
+        { ReactoryCoreCreateUserForApplication: ProfileUser },
+        { input: { firstName: string; lastName: string; email: string; mobileNumber?: string; avatar?: string }; clientId: string; password?: string; roles?: string[] }
+      >(mutation, {
+        input: {
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          email: profile.email,
+          mobileNumber: profile.mobileNumber,
+          avatar: profile.avatar,
+        },
+        clientId: targetClientId,
+        roles: ['USER']
+      });
+
+      if (result.data?.ReactoryCoreCreateUserForApplication) {
+        reactory.createNotification('User created successfully', { type: 'success' });
+        return result.data.ReactoryCoreCreateUserForApplication;
+      } else {
+        throw new Error('Create user failed');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create user';
+      setError(errorMessage);
+      reactory?.createNotification('Failed to create user', { type: 'error' });
+      reactory?.log('Error creating user', { error: err }, 'error');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [reactory, applicationId, clearError]);
+
+  // Update social media profiles for a user
+  const updateSocials = useCallback(async (
+    socials: SocialReference[]
+  ): Promise<boolean> => {
+    if (!profileId || !reactory) {
+      setError('Profile ID or reactory instance not available');
+      return false;
+    }
+
+    try {
+      setLoading(true);
+      clearError();
+
+      const mutation = `
+        mutation UpdateUserSocials($userId: String!, $socials: [SocialReferenceInput]!) {
+          ReactoryCoreUpdateUserSocials(userId: $userId, socials: $socials) {
+            id
+            socials {
+              id
+              provider
+              url
+              authenticated
+              valid
+            }
+          }
+        }
+      `;
+
+      const socialsInput = socials.map(({ provider, url }) => ({ provider, url }));
+
+      const result = await reactory.graphqlMutation<
+        { ReactoryCoreUpdateUserSocials: { id: string; socials: SocialReference[] } },
+        { userId: string; socials: { provider: string; url: string }[] }
+      >(mutation, { userId: profileId, socials: socialsInput });
+
+      if (result.data?.ReactoryCoreUpdateUserSocials) {
+        reactory.createNotification('Social profiles updated successfully', { type: 'success' });
+        return true;
+      } else {
+        throw new Error('Update socials failed');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update social profiles';
+      setError(errorMessage);
+      reactory?.createNotification('Failed to update social profiles', { type: 'error' });
+      reactory?.log('Error updating socials', { error: err }, 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [profileId, reactory, clearError]);
+
   const confirmPeers = useCallback(async (): Promise<boolean> => {
     if (!profileId || !reactory) {
       setError('Profile ID or reactory instance not available');
@@ -556,8 +670,10 @@ export const useProfileMutations = (
 
   return {
     saveProfile,
+    createUser,
     deleteProfile,
     updateAvatar,
+    updateSocials,
     createMembership,
     updateMembership,
     deleteMembership,

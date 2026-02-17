@@ -3,7 +3,7 @@ import { compose } from 'redux';
 import { Button, IconButton, Icon, TextField } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import LabelWidget from '@reactory/client-core/components/reactory/ux/mui/widgets/LabelWidget';
 import { Typography } from '@mui/material';
 

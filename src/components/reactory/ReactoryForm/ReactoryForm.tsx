@@ -1,7 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import React, { useCallback } from 'react';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import SchemaForm, { ISchemaForm } from '@reactory/client-core/components/reactory/form/components/SchemaForm';
 
 import { find, template, isArray, isNil, isString, isEmpty, throttle, filter } from 'lodash';

@@ -3,7 +3,7 @@ import { styled, useTheme } from '@mui/material/styles';
 import { Badge, Icon, Typography, Box, Tooltip } from '@mui/material';
 import { compose } from 'redux';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const PREFIX = 'CountBadge';
 

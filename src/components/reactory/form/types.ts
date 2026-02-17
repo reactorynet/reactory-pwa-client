@@ -1,4 +1,4 @@
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 export type ReactoryFormUtilities = {
   ADDITIONAL_PROPERTY_FLAG: string;
   allowAdditionalItems: (schema: Reactory.Schema.ISchema) => boolean;

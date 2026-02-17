@@ -16,7 +16,8 @@ import {
   Cancel,
   Delete,
   ArrowBack,
-  AdminPanelSettings
+  AdminPanelSettings,
+  PersonAdd
 } from '@mui/icons-material';
 import { ProfileHeaderProps } from '../types';
 
@@ -41,7 +42,16 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   const canEditPermissions = isOwner || isAdmin;
   const isEditing = mode === 'edit' || mode === 'admin';
+  const isNewMode = mode === 'new';
   const canDelete = isAdmin && mode === 'admin' && !profile.deleted;
+
+  const displayName = isNewMode
+    ? 'New User'
+    : `${profile.firstName} ${profile.lastName}`;
+
+  const displayEmail = isNewMode
+    ? 'Fill in the details below to create a new user'
+    : profile.email;
 
   return (
     <Paper
@@ -79,8 +89,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           minWidth: 0,          
           }}>
           <Avatar
-            src={reactory.getAvatar(profile, null)}
-            alt={`${profile.firstName} ${profile.lastName}`}
+            src={isNewMode ? undefined : reactory.getAvatar(profile, null)}
+            alt={displayName}
             sx={{
               width: { xs: 60, md: 80 },
               height: { xs: 60, md: 80 },
@@ -90,7 +100,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               backgroundColor: theme.palette.background.paper 
             }}
           >
-            {profile.firstName?.charAt(0)}{profile.lastName?.charAt(0)}
+            {isNewMode ? <PersonAdd fontSize="large" /> : (
+              <>{profile.firstName?.charAt(0)}{profile.lastName?.charAt(0)}</>
+            )}
           </Avatar>
 
           <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -106,7 +118,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 whiteSpace: 'nowrap'
               }}
             >
-              {profile.firstName} {profile.lastName}
+              {displayName}
             </Typography>
 
             <Typography
@@ -117,12 +129,25 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 mb: 1
               }}
             >
-              {profile.email}
+              {displayEmail}
             </Typography>
 
             {/* Status Chips */}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {isOwner && (
+              {isNewMode && (
+                <Chip
+                  icon={<PersonAdd />}
+                  label="New User"
+                  size="small"
+                  sx={{
+                    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                    color: '#c8e6c9',
+                    border: '1px solid rgba(76, 175, 80, 0.3)'
+                  }}
+                />
+              )}
+
+              {!isNewMode && isOwner && (
                 <Chip
                   label="Your Profile"
                   size="small"
@@ -134,7 +159,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 />
               )}
 
-              {isAdmin && (
+              {!isNewMode && isAdmin && (
                 <Chip
                   icon={<AdminPanelSettings />}
                   label="Admin"

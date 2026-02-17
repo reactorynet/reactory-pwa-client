@@ -4,7 +4,7 @@
  * Type definitions for the LabelWidget component and its sub-components.
  */
 import type { SxProps, Theme, TypographyProps } from '@mui/material';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 
 /**
  * Extended theme interface with custom icon extensions

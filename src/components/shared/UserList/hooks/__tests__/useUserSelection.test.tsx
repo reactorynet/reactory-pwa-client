@@ -6,7 +6,7 @@
 
 import { renderHook, act } from '@testing-library/react-hooks';
 import { useUserSelection } from '../useUserSelection';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 
 // Mock users for testing
 const mockUsers: Reactory.Models.IUser[] = [

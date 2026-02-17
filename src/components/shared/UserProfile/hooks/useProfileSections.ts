@@ -1,16 +1,20 @@
 import { useState, useCallback, useMemo } from 'react';
-import Reactory from '@reactory/reactory-core';
-import { ProfileSection, ProfileConfiguration, UseProfileSectionsResult, DEFAULT_PROFILE_CONFIG } from '../types';
+import Reactory from '@reactorynet/reactory-core';
+import { ProfileSection, ProfileConfiguration, ProfileMode, UseProfileSectionsResult, DEFAULT_PROFILE_CONFIG } from '../types';
+
+/** Sections that are always available regardless of mode */
+const NEW_MODE_SECTIONS = ['general'];
 
 /**
  * Hook for managing profile sections and navigation
- * Handles section filtering based on roles and permissions
+ * Handles section filtering based on roles, permissions, and mode
  */
 export const useProfileSections = (
   configuration: Partial<ProfileConfiguration> = {},
   userRoles: string[] = [],
   userPermissions: string[] = [],
-  reactory?: Reactory.Client.ReactorySDK
+  reactory?: Reactory.Client.ReactorySDK,
+  mode?: ProfileMode
 ): UseProfileSectionsResult => {
   // Merge configuration with defaults
   // Only use default sections if configuration doesn't provide any
@@ -26,12 +30,15 @@ export const useProfileSections = (
   const actualUserRoles: string[] = userRoles.length > 0 ? userRoles :
     reactory?.getUser()?.loggedIn.roles as string[] || [];  
 
-  // Filter sections based on roles
+  // Filter sections based on roles and mode
   const visibleSections = useMemo(() => {
     return config.sections
       .filter(section => {
         // Check if section is enabled
         if (!section.enabled) return false;
+
+        // In 'new' mode, only allow sections in the NEW_MODE_SECTIONS list
+        if (mode === 'new' && !NEW_MODE_SECTIONS.includes(section.id)) return false;
 
         // Check if user has required roles
         if (section.roles && section.roles.length > 0) {
@@ -44,7 +51,7 @@ export const useProfileSections = (
         return true;
       })
       .sort((a, b) => a.order - b.order);
-  }, [config.sections, actualUserRoles]);
+  }, [config.sections, actualUserRoles, mode]);
 
   // Current section state
   const [currentSection, setCurrentSection] = useState<string>(

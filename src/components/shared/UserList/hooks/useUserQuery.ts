@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { debounce } from 'lodash';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 import type {
   UseUserQueryOptions,
   UseUserQueryResult,

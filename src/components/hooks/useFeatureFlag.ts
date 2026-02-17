@@ -5,7 +5,7 @@ import {
   FeatureFlagConfiguration,
   ProviderConfig 
 } from '@zepz/feature-flags-ts';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 export interface UseFeatureFlagOptions {
   /** Feature flag ID to check */

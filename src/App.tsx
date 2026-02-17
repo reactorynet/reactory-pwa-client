@@ -42,7 +42,7 @@ import ReactoryApolloClient from './api/ReactoryApolloClient';
 import { Typography, Icon, Paper, Box } from '@mui/material';
 import license from './license';
 import { ReactoryProvider, useReactory } from './api/ApiProvider';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 

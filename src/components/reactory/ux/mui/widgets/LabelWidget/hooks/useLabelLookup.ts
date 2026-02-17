@@ -5,7 +5,7 @@
  * and mapping the result to display text.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 
 export interface UseLabelLookupOptions {
   /** GraphQL query configuration */

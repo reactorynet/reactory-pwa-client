@@ -1,7 +1,7 @@
 import React from 'react';
 import { styled } from '@mui/material/styles';
 import { withReactory, useReactory } from '@reactory/client-core/api/ApiProvider';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import * as MaterialCore from '@mui/material';
 import useSizeSpec from '@reactory/client-core/components/hooks/useSizeSpec';
 import { Theme } from '@mui/material';

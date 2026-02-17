@@ -36,7 +36,7 @@ import { compose } from 'redux'
 import { useTheme } from '@mui/material/styles';
 import { find, template, get } from 'lodash';
 
-import Reactory, { ObjectMap } from '@reactory/reactory-core';
+import Reactory, { ObjectMap } from '@reactorynet/reactory-core';
 import ReactoryApi from 'api';
 import { useSizeSpec } from '@reactory/client-core/components/hooks/useSizeSpec';
 import { useNavigate } from 'react-router';

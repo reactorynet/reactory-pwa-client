@@ -5,7 +5,7 @@ import { compose } from 'redux';
 import { useTheme } from '@mui/material/styles';
 import { template, isNil } from 'lodash';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 interface ExtendedTheme extends Theme {
   extensions?: {

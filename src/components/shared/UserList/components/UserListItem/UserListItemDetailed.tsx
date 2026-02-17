@@ -18,7 +18,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 import type { UserListItemProps } from '../../types';
 import { getUserListStyles } from '../../styles/userList.styles';
 

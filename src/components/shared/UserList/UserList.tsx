@@ -9,7 +9,7 @@
 
 import React, { useEffect, useCallback } from 'react';
 import { Box, useTheme } from '@mui/material';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 import type { UserListProps } from './types';
 import { useUserSelection, useUserFilters, useUserQuery } from './hooks';
 import { UserListToolbar } from './components/UserListToolbar';

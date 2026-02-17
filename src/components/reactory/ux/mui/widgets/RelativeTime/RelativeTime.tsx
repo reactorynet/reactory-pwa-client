@@ -5,7 +5,7 @@ import { compose } from 'redux';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { template } from 'lodash';
 import moment from 'moment';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const PREFIX = 'RelativeTime';
 

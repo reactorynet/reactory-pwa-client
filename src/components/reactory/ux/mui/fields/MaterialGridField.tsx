@@ -2,7 +2,7 @@ import React from 'react';
 import { Grid2 as Grid, Paper, Typography } from '@mui/material'
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 import { useReactory } from '@reactory/client-core/api';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import i18n, { TOptions as I18nFormatOptions } from "i18next";
 
 const MaterialGridField: Reactory.Forms.ReactoryFieldComponent<object> = (props) => { 

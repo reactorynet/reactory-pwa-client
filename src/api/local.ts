@@ -1,4 +1,4 @@
-import Reactory from "@reactory/reactory-core";
+import Reactory from "@reactorynet/reactory-core";
 
 const {
   REACTORY_APPLICATION_ANONUSER_EMAIL = 'anonymous@reactory.local',

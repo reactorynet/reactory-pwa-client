@@ -11,7 +11,7 @@
  * The function supports both built-in transforms and custom FQN-based transforms.
  */
 
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 /**
  * Built-in transform function that handles common data type conversions

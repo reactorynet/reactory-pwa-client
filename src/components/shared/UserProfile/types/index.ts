@@ -1,6 +1,18 @@
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 // Core profile types based on existing plugin components
+export interface SocialReference {
+  id?: string;
+  provider: string;
+  url: string;
+  authenticated?: boolean;
+  scope?: unknown;
+  auth?: unknown;
+  valid?: boolean;
+  created?: Date;
+  updated?: Date;
+}
+
 export interface ProfileUser extends Reactory.Models.IUser {
   id: string;
   firstName: string;
@@ -86,7 +98,9 @@ export interface UserProfileProps {
   userId?: string;
   profile?: ProfileUser;
   configuration?: Partial<ProfileConfiguration>;
-  mode?: 'view' | 'edit' | 'admin';
+  mode?: ProfileMode;
+  /** The application/client ID, used when creating a user for a specific application */
+  applicationId?: string;
   onProfileSave?: (profile: ProfileUser) => void;
   onProfileCancel?: () => void;
   onPeersConfirmed?: () => void;
@@ -98,7 +112,7 @@ export interface UserProfileProps {
 
 export interface ProfileSectionProps {
   profile: ProfileUser;
-  mode: 'view' | 'edit' | 'admin';
+  mode: ProfileMode;
   loading?: boolean;
   onProfileUpdate: (updates: Partial<ProfileUser>) => void;
   onSave?: (profile: ProfileUser) => Promise<boolean | void>;
@@ -130,6 +144,17 @@ export interface OrgangramSectionProps extends ProfileSectionProps {
   onPeersConfirmed?: () => void;
 }
 
+export interface SocialsSectionProps extends ProfileSectionProps {
+  onSocialsSave?: (socials: SocialReference[]) => Promise<boolean>;
+}
+
+export interface AISectionProps extends ProfileSectionProps {
+  /** Currently linked persona ID */
+  linkedPersonaId?: string;
+  onPersonaLink?: (personaId: string) => void;
+  onPersonaUnlink?: () => void;
+}
+
 export interface ProfileNavigationProps {
   sections: ProfileSection[];
   currentSection: string;
@@ -141,7 +166,7 @@ export interface ProfileNavigationProps {
 
 export interface ProfileHeaderProps {
   profile: ProfileUser;
-  mode: 'view' | 'edit' | 'admin';
+  mode: ProfileMode;
   isOwner: boolean;
   isAdmin: boolean;
   onEdit?: () => void;
@@ -178,8 +203,10 @@ export interface UseProfileSectionsResult {
 
 export interface UseProfileMutationsResult {
   saveProfile: (profile: ProfileUser) => Promise<boolean>;
+  createUser: (profile: ProfileUser, applicationId?: string) => Promise<ProfileUser | null>;
   deleteProfile: () => Promise<boolean>;
   updateAvatar: (avatarData: string) => Promise<boolean>;
+  updateSocials: (socials: SocialReference[]) => Promise<boolean>;
   createMembership: (membership: Partial<Reactory.Models.IMembership>) => Promise<boolean>;
   updateMembership: (id: string, updates: Partial<Reactory.Models.IMembership>) => Promise<boolean>;
   deleteMembership: (id: string) => Promise<boolean>;
@@ -193,7 +220,7 @@ export interface UseProfileMutationsResult {
 
 // Navigation types
 export type ProfileNavigationType = 'tabs' | 'sidebar' | 'accordion';
-export type ProfileMode = 'view' | 'edit' | 'admin';
+export type ProfileMode = 'view' | 'edit' | 'new' | 'delete' | 'admin';
 export type PeerRelationship = 'manager' | 'peer' | 'report';
 
 // Form data types
@@ -230,6 +257,13 @@ export const PROFILE_DATA_FRAGMENT = `
     providerId
     createdAt
     updatedAt
+    socials {
+      id
+      provider
+      url
+      authenticated
+      valid
+    }
     memberships {
       id
       roles      
@@ -288,6 +322,24 @@ export const DEFAULT_PROFILE_CONFIG: ProfileConfiguration = {
       component: 'UserProfile.OrganigramSection',
       enabled: true,
       order: 4,
+      roles: ['USER', 'ADMIN']
+    },
+    {
+      id: 'socials',
+      title: 'Socials',
+      icon: 'share',
+      component: 'UserProfile.SocialsSection',
+      enabled: true,
+      order: 5,
+      roles: ['USER', 'ADMIN']
+    },
+    {
+      id: 'ai',
+      title: 'AI Persona',
+      icon: 'smart_toy',
+      component: 'UserProfile.AISection',
+      enabled: true,
+      order: 6,
       roles: ['USER', 'ADMIN']
     }
   ],

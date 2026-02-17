@@ -18,7 +18,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const getDefaultOptionsFromSchema = (schema: Reactory.Schema.IArraySchema, uiSchema:Reactory.Schema.ILineChartUISchema ): Reactory.Schema.ILineChartUIOptions => {
   // If schema is array, infer x/y keys from items

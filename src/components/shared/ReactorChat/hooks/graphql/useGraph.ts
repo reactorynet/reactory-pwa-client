@@ -1,5 +1,5 @@
 import { gql } from "@apollo/client";
-import Reactory from "@reactory/reactory-core";
+import Reactory from "@reactorynet/reactory-core";
 import {
   ChatState,
   ToolApprovalMode,

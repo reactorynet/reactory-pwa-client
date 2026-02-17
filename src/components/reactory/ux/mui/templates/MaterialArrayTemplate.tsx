@@ -17,7 +17,7 @@ import {
 
 import { withReactory } from '@reactory/client-core/api/ApiProvider'
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 interface ArrayTemplateProps<TData = Array<unknown>> {
   schema: Reactory.Schema.IArraySchema,

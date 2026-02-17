@@ -1,6 +1,6 @@
 import ReactoryApi from "@reactory/client-core/api/ReactoryApi";
 import { isArray } from "lodash";
-import Reactory from "@reactory/reactory-core";
+import Reactory from "@reactorynet/reactory-core";
 
 export default (reactory: Reactory.Client.ReactorySDK) => ({
   /**

@@ -26,7 +26,7 @@ import {
 
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { compose } from 'redux';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
 
 

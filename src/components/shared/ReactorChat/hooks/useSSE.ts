@@ -1,5 +1,5 @@
 import React from 'react';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { UXChatMessage } from '@reactory/client-core/components/shared/ReactorChat/types';
 
 export enum StreamingEventType {

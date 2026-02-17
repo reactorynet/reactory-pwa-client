@@ -3,7 +3,7 @@
  * @module UserList/types
  */
 
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 
 // ============================================================================
 // Selection Types

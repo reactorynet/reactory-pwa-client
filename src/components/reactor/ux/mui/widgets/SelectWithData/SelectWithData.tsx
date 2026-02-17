@@ -4,7 +4,7 @@ import { compose } from 'redux';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import { Input, OutlinedInput, FilledInput, FormControl, InputLabel, Select, MenuItem, Chip, Box } from '@mui/material';
 import { Icon } from '@mui/material';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const PREFIX = 'SelectWithData';
 

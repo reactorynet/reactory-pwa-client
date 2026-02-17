@@ -1,4 +1,4 @@
-import Reactory, { ObjectMap } from '@reactory/reactory-core';
+import Reactory, { ObjectMap } from '@reactorynet/reactory-core';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 import { Box, Chip } from '@mui/material';
 

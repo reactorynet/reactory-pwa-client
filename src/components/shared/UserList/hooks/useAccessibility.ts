@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 
 export interface UseAccessibilityOptions {
   users: Reactory.Models.IUser[];

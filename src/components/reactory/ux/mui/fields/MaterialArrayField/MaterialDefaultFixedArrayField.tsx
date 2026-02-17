@@ -2,7 +2,7 @@ import React from 'react';
 import { Paper, Grid, Button, Icon } from '@mui/material';
 import { useRegistry } from '@reactory/client-core/components/reactory/form/components/hooks';
 import { ArrayTemplateProps, MaterialArrayFieldType } from './types';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 
 

@@ -15,7 +15,7 @@ import {
 //   InfoWindow,
 //   MarkerProps,
 // } from "react-google-maps";
-import Reactory from "@reactory/reactory-core";
+import Reactory from "@reactorynet/reactory-core";
 
 const PREFIX = 'ReactoryGoogleMapWidget';
 

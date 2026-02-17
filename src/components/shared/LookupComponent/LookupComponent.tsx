@@ -6,7 +6,7 @@ import { Icon, StyledComponentProps, Theme } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
 import ReactoryApi from 'api';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 
 

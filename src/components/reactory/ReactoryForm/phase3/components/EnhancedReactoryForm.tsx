@@ -23,7 +23,7 @@ import {
   Info as InfoIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { useReactory } from '@reactory/client-core/api/ApiProvider';
 
 // Import existing ReactoryForm

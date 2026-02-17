@@ -2,7 +2,7 @@
  * Type definitions for DynamicWidget
  */
 import type { SxProps, Theme } from '@mui/material';
-import type Reactory from '@reactory/reactory-core';
+import type Reactory from '@reactorynet/reactory-core';
 
 /**
  * State returned by the component loader hook

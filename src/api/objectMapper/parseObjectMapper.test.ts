@@ -9,7 +9,7 @@
  */
 
 import { parseObjectMapperFunction } from './parseObjectMapper';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 // Jest types
 declare const describe: any;

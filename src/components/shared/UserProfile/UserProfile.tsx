@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
-import { Box, Container, Paper, Typography, Alert, useTheme } from '@mui/material';
-import Reactory from '@reactory/reactory-core';
+import { Box, Container, Paper, Typography, Alert, Button, useTheme } from '@mui/material';
+import Reactory from '@reactorynet/reactory-core';
 import {
   UserProfileProps,
   ProfileConfiguration,
@@ -15,6 +15,8 @@ import { GeneralSection } from './components/sections/Account';
 import { MembershipsSection } from './components/sections/Memberships';
 import { DemographicsSection } from './components/sections/Demographics';
 import { OrganigramSection } from './components/sections/Organigram';
+import { SocialsSection } from './components/sections/Socials';
+import { AISection } from './components/sections/AI';
 
 /**
  * Main UserProfile component - Modern profile management system
@@ -25,6 +27,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
   profile: initialProfile,
   configuration = {},
   mode = 'view',
+  applicationId,
   onProfileSave,
   onProfileCancel,
   onPeersConfirmed,
@@ -42,9 +45,15 @@ const UserProfile: React.FC<UserProfileProps> = ({
       DEFAULT_PROFILE_CONFIG.sections
   };  
   const loggedInUser = reactory.getUser().loggedIn;
-  const profileData = useProfileData(userId || loggedInUser.id, initialProfile, reactory);
-  const sections = useProfileSections(config, [], [], reactory);
-  const mutations = useProfileMutations(profileData.profile?.id, reactory);
+  const isNewMode = mode === 'new';
+  const profileData = useProfileData(
+    isNewMode ? undefined : (userId || loggedInUser.id),
+    initialProfile,
+    reactory,
+    mode
+  );
+  const sections = useProfileSections(config, [], [], reactory, mode);
+  const mutations = useProfileMutations(profileData.profile?.id, reactory, applicationId);
   const theme = useTheme();
 
   // Event handlers
@@ -53,11 +62,18 @@ const UserProfile: React.FC<UserProfileProps> = ({
   }, [profileData]);
 
   const handleProfileSave = useCallback(async (profile: import('./types').ProfileUser) => {
-    const success = await mutations.saveProfile(profile);
-    if (success && onProfileSave) {
-      onProfileSave(profile);
+    if (isNewMode) {
+      const createdUser = await mutations.createUser(profile, applicationId);
+      if (createdUser && onProfileSave) {
+        onProfileSave(createdUser);
+      }
+    } else {
+      const success = await mutations.saveProfile(profile);
+      if (success && onProfileSave) {
+        onProfileSave(profile);
+      }
     }
-  }, [mutations, onProfileSave]);
+  }, [isNewMode, mutations, applicationId, onProfileSave]);
 
   const handleSectionChange = useCallback((sectionId: string) => {
     sections.navigateToSection(sectionId);
@@ -122,6 +138,21 @@ const UserProfile: React.FC<UserProfileProps> = ({
             {...commonProps}
             selectedMembership={profileData.profile.memberships?.[0]}
             onPeersConfirmed={onPeersConfirmed}
+          />
+        );
+
+      case 'socials':
+        return (
+          <SocialsSection
+            {...commonProps}
+            onSocialsSave={mutations.updateSocials}
+          />
+        );
+
+      case 'ai':
+        return (
+          <AISection
+            {...commonProps}
           />
         );
 
@@ -208,7 +239,6 @@ const UserProfile: React.FC<UserProfileProps> = ({
       style={style}
       sx={{
         py: 2,
-        minHeight: '100vh',
         backgroundColor: theme.palette.background.default
       }}
     >
@@ -226,7 +256,42 @@ const UserProfile: React.FC<UserProfileProps> = ({
         reactory={reactory}
       />
 
-      {/* Navigation and Content Layout */}
+      {/* Delete confirmation mode */}
+      {mode === 'delete' && (
+        <Paper sx={{ p: 3, mt: 2, borderRadius: 2 }}>
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Confirm User Deletion
+            </Typography>
+            <Typography variant="body2">
+              Are you sure you want to delete the profile for{' '}
+              <strong>{profileData.profile.firstName} {profileData.profile.lastName}</strong>?
+              This action cannot be undone.
+            </Typography>
+          </Alert>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            {onProfileCancel && (
+              <Button variant="outlined" onClick={onProfileCancel} disabled={mutations.loading}>
+                Cancel
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              color="error"
+              onClick={async () => {
+                const success = await mutations.deleteProfile();
+                if (success && onProfileCancel) onProfileCancel();
+              }}
+              disabled={mutations.loading}
+            >
+              {mutations.loading ? 'Deleting...' : 'Delete User'}
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
+      {/* Navigation and Content Layout (hidden in delete mode) */}
+      {mode !== 'delete' && (
       <Box sx={{
         display: 'flex',
         flexDirection: {
@@ -252,6 +317,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
           {renderSectionContent()}
         </Box>
       </Box>
+      )}
 
       {/* Error Display */}
       {(profileData.error || mutations.error) && (
