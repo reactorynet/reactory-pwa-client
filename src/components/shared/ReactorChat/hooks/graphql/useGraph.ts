@@ -32,6 +32,8 @@ export interface ReactorInitSessionInput {
   macros?: any[];
   tools?: any[];
   toolApprovalMode?: ToolApprovalMode;
+  /** Optional session ID to load context from for cross-agent context sharing */
+  contextFromSessionId?: string;
 }
 
 export type ReactorChatResponse =

@@ -34,7 +34,7 @@ export interface WebGLRenderConfig extends RendererConfig {
  */
 export interface CircuitRenderConfig {
   // Component type (IC chip, LED, button, etc.)
-  elementType?: 'pushButton' | 'led' | 'icChip' | 'transistor' | 'capacitor' | 'resistor' | 'generic';
+  elementType?: 'pushButton' | 'led' | 'icChip' | 'transistor' | 'capacitor' | 'resistor' | 'relay' | 'dipSwitch' | 'sevenSegment' | 'generic';
   
   // Component label prefix (U1, LED2, S3, etc.)
   labelPrefix?: string;

@@ -10,14 +10,14 @@ export interface CircuitColors {
   boardBackground: number;
   boardGrid: number;
   boardGridMajor: number;
-  
+
   // Trace colors (connections)
   traceCopper: number;
   traceGold: number;
   traceSelected: number;
   traceHover: number;
   traceError: number;
-  
+
   // Component colors
   componentBody: number;
   componentBodyHover: number;
@@ -26,11 +26,11 @@ export interface CircuitColors {
   componentPin: number;
   componentPinConnected: number;
   componentPinHover: number;
-  
+
   // Label colors
   labelSilkscreen: number;
   labelText: number;
-  
+
   // Special component colors
   pushButtonBody: number;
   pushButtonTop: number;
@@ -40,6 +40,38 @@ export interface CircuitColors {
   ledOff: number;
   ledOn: number;
   ledGlow: number;
+
+  // Transistor (condition/decision)
+  transistorBody: number;
+  transistorAccent: number;
+
+  // Relay (parallel/join flow control)
+  relayBody: number;
+  relayCoil: number;
+  relayContact: number;
+
+  // DIP Switch (user activity)
+  dipSwitchBody: number;
+  dipSwitchToggle: number;
+  dipSwitchToggleOn: number;
+
+  // Seven-Segment Display (telemetry)
+  sevenSegBody: number;
+  sevenSegActive: number;
+  sevenSegInactive: number;
+
+  // Integration IC accent stripes
+  icStripeRest: number;
+  icStripeGraphql: number;
+  icStripeGrpc: number;
+  icStripeService: number;
+
+  // Resistor
+  resistorBody: number;
+
+  // Capacitor
+  capacitorBody: number;
+  capacitorBand: number;
 }
 
 export const CIRCUIT_COLORS: CircuitColors = {
@@ -81,6 +113,38 @@ export const CIRCUIT_COLORS: CircuitColors = {
   ledOff: 0x330000,           // Dark red when off
   ledOn: 0xff0000,            // Bright red when on
   ledGlow: 0xff6666,          // Glow effect
+
+  // Transistor (condition/decision) - orange tones
+  transistorBody: 0x2c2c2c,
+  transistorAccent: 0xff9800,    // Orange - matches condition category
+
+  // Relay (parallel/join) - purple tones
+  relayBody: 0x1a1a1a,
+  relayCoil: 0x9c27b0,          // Purple - matches flow category
+  relayContact: 0xb87333,       // Copper contacts
+
+  // DIP Switch (user activity)
+  dipSwitchBody: 0x1a1a1a,
+  dipSwitchToggle: 0x555555,     // Off-state toggle
+  dipSwitchToggleOn: 0xff5722,   // On-state - matches interaction category
+
+  // Seven-Segment Display (telemetry)
+  sevenSegBody: 0x1a1a1a,
+  sevenSegActive: 0x00e676,      // Bright green segments
+  sevenSegInactive: 0x1b2a1b,   // Very dim green (off segments)
+
+  // Integration IC stripes (brand colors)
+  icStripeRest: 0x00bcd4,       // Cyan - REST
+  icStripeGraphql: 0xe535ab,    // Pink - GraphQL
+  icStripeGrpc: 0x00897b,       // Teal - gRPC
+  icStripeService: 0x5e35b1,    // Deep purple - Service Invoke
+
+  // Resistor
+  resistorBody: 0xd2b48c,       // Tan/beige
+
+  // Capacitor
+  capacitorBody: 0x1a1a2e,      // Dark blue-black
+  capacitorBand: 0x808080,       // Silver band
 };
 
 export interface CircuitDimensions {
@@ -88,25 +152,41 @@ export interface CircuitDimensions {
   traceWidth: number;
   traceWidthSelected: number;
   traceCornerRadius: number;
-  
+
   // Component dimensions
   pinRadius: number;
   pinSpacing: number;
-  
+
   // Push button
   pushButtonSize: number;
   pushButtonHeight: number;
-  
+
   // IC Chip
   icChipPadding: number;
   icChipNotchSize: number;
   icChipMinWidth: number;
   icChipMinHeight: number;
-  
+
   // LED
   ledRadius: number;
   ledGlowRadius: number;
-  
+
+  // Transistor
+  transistorSize: number;
+
+  // Relay
+  relayCoilWidth: number;
+
+  // DIP Switch
+  dipSwitchSlotCount: number;
+
+  // Seven-Segment Display
+  sevenSegDigitWidth: number;
+  sevenSegDigitHeight: number;
+
+  // IC stripe
+  icStripeHeight: number;
+
   // Labels
   labelFontSize: number;
   labelOffset: number;
@@ -136,6 +216,22 @@ export const CIRCUIT_DIMENSIONS: CircuitDimensions = {
   ledRadius: 20,
   ledGlowRadius: 30,
   
+  // Transistor
+  transistorSize: 50,
+
+  // Relay
+  relayCoilWidth: 30,
+
+  // DIP Switch
+  dipSwitchSlotCount: 4,
+
+  // Seven-Segment Display
+  sevenSegDigitWidth: 14,
+  sevenSegDigitHeight: 24,
+
+  // IC stripe
+  icStripeHeight: 8,
+
   // Labels
   labelFontSize: 11,
   labelOffset: 8,
@@ -144,7 +240,17 @@ export const CIRCUIT_DIMENSIONS: CircuitDimensions = {
 /**
  * Component type to circuit element mapping
  */
-export type CircuitElementType = 'pushButton' | 'icChip' | 'led' | 'resistor' | 'capacitor' | 'transistor' | 'generic';
+export type CircuitElementType =
+  | 'pushButton'
+  | 'icChip'
+  | 'led'
+  | 'resistor'
+  | 'capacitor'
+  | 'transistor'
+  | 'relay'
+  | 'dipSwitch'
+  | 'sevenSegment'
+  | 'generic';
 
 export interface ComponentTypeMapping {
   type: string;
@@ -154,17 +260,33 @@ export interface ComponentTypeMapping {
 }
 
 export const COMPONENT_TYPE_MAPPINGS: ComponentTypeMapping[] = [
+  // Control flow
   { type: 'start', circuitElement: 'pushButton', prefix: 'S' },
   { type: 'trigger', circuitElement: 'pushButton', prefix: 'S' },
-  { type: 'task', circuitElement: 'icChip', prefix: 'U' },
-  { type: 'action', circuitElement: 'icChip', prefix: 'U' },
-  { type: 'process', circuitElement: 'icChip', prefix: 'U' },
-  { type: 'decision', circuitElement: 'transistor', prefix: 'Q' },
-  { type: 'condition', circuitElement: 'transistor', prefix: 'Q' },
-  { type: 'branch', circuitElement: 'transistor', prefix: 'Q' },
   { type: 'end', circuitElement: 'led', prefix: 'LED' },
   { type: 'output', circuitElement: 'led', prefix: 'LED' },
   { type: 'terminate', circuitElement: 'led', prefix: 'LED' },
+  // Actions
+  { type: 'task', circuitElement: 'icChip', prefix: 'U' },
+  { type: 'action', circuitElement: 'icChip', prefix: 'U' },
+  { type: 'process', circuitElement: 'icChip', prefix: 'U' },
+  // Logic
+  { type: 'decision', circuitElement: 'transistor', prefix: 'Q' },
+  { type: 'condition', circuitElement: 'transistor', prefix: 'Q' },
+  { type: 'branch', circuitElement: 'transistor', prefix: 'Q' },
+  // Flow control
+  { type: 'parallel', circuitElement: 'relay', prefix: 'K' },
+  { type: 'join', circuitElement: 'relay', prefix: 'K' },
+  // Integration (specific matches before generic — order matters for .includes())
+  { type: 'service_invoke', circuitElement: 'icChip', prefix: 'SVC', defaultColor: CIRCUIT_COLORS.icStripeService },
+  { type: 'graphql', circuitElement: 'icChip', prefix: 'API', defaultColor: CIRCUIT_COLORS.icStripeGraphql },
+  { type: 'grpc', circuitElement: 'icChip', prefix: 'RPC', defaultColor: CIRCUIT_COLORS.icStripeGrpc },
+  { type: 'rest', circuitElement: 'icChip', prefix: 'HTTP', defaultColor: CIRCUIT_COLORS.icStripeRest },
+  // User interaction
+  { type: 'user_activity', circuitElement: 'dipSwitch', prefix: 'SW' },
+  // Observability
+  { type: 'telemetry', circuitElement: 'sevenSegment', prefix: 'DSP' },
+  // Passive components
   { type: 'delay', circuitElement: 'capacitor', prefix: 'C' },
   { type: 'timer', circuitElement: 'capacitor', prefix: 'C' },
   { type: 'filter', circuitElement: 'resistor', prefix: 'R' },
@@ -186,6 +308,50 @@ export function getCircuitElement(stepType: string): ComponentTypeMapping {
  */
 export function generateComponentLabel(prefix: string, index: number): string {
   return `${prefix}${index + 1}`;
+}
+
+/**
+ * Shared body dimension calculation used by both CircuitComponentRenderer and useWebGLCanvas.
+ * Returns { bodyHalfWidth, bodyHalfHeight } of the visible component body.
+ */
+export function calculateComponentBodyDimensions(
+  stepWidth: number,
+  stepHeight: number,
+  elementType: CircuitElementType
+): { bodyHalfWidth: number; bodyHalfHeight: number } {
+  switch (elementType) {
+    case 'pushButton': {
+      const size = Math.min(stepWidth, stepHeight) * 0.7;
+      return { bodyHalfWidth: size / 2, bodyHalfHeight: size / 2 };
+    }
+    case 'led': {
+      const radius = Math.min(stepWidth, stepHeight) * 0.3 * 1.15;
+      return { bodyHalfWidth: radius, bodyHalfHeight: radius };
+    }
+    case 'transistor': {
+      const size = Math.min(stepWidth, stepHeight) * 0.65;
+      return { bodyHalfWidth: size * 0.7, bodyHalfHeight: size * 0.7 };
+    }
+    case 'capacitor': {
+      const radius = Math.min(stepWidth, stepHeight) * 0.3;
+      return { bodyHalfWidth: radius, bodyHalfHeight: radius };
+    }
+    case 'resistor': {
+      const width = stepWidth * 0.7;
+      const height = stepHeight * 0.4;
+      return { bodyHalfWidth: width / 2, bodyHalfHeight: height / 2 };
+    }
+    case 'relay':
+    case 'dipSwitch':
+    case 'sevenSegment':
+    case 'icChip':
+    case 'generic':
+    default: {
+      const width = stepWidth * 0.85;
+      const height = stepHeight * 0.7;
+      return { bodyHalfWidth: width / 2, bodyHalfHeight: height / 2 };
+    }
+  }
 }
 
 /**
@@ -385,5 +551,6 @@ export default {
   COMPONENT_TYPE_MAPPINGS,
   getCircuitElement,
   generateComponentLabel,
+  calculateComponentBodyDimensions,
   CIRCUIT_CSS,
 };

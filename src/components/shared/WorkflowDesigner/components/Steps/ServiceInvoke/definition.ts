@@ -125,5 +125,18 @@ export const ServiceInvokeStepDefinition: StepDefinition = {
       'ui:help': 'Method to invoke on the service'
     }
   },
-  tags: ['integration', 'service', 'invoke', 'reactory']
+  tags: ['integration', 'service', 'invoke', 'reactory'],
+  rendering: {
+    webgl: {
+      type: 'webgl',
+      theme: 'circuit',
+      circuit: {
+        elementType: 'icChip',
+        labelPrefix: 'SVC',
+        colors: {
+          bodySelected: 0x5e35b1,
+        }
+      }
+    }
+  }
 };

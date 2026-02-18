@@ -66,5 +66,15 @@ export const ConditionStepDefinition: StepDefinition = {
       'ui:help': 'JavaScript expression that evaluates to true/false'
     }
   },
-  tags: ['logic', 'condition', 'branch', 'if']
+  tags: ['logic', 'condition', 'branch', 'if'],
+  rendering: {
+    webgl: {
+      type: 'webgl',
+      theme: 'circuit',
+      circuit: {
+        elementType: 'transistor',
+        labelPrefix: 'Q',
+      }
+    }
+  }
 };

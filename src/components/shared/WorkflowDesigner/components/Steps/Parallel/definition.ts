@@ -58,5 +58,15 @@ export const ParallelStepDefinition: StepDefinition = {
       'ui:help': 'Number of parallel branches that can execute simultaneously'
     }
   },
-  tags: ['flow', 'parallel', 'concurrent', 'split']
+  tags: ['flow', 'parallel', 'concurrent', 'split'],
+  rendering: {
+    webgl: {
+      type: 'webgl',
+      theme: 'circuit',
+      circuit: {
+        elementType: 'relay',
+        labelPrefix: 'K',
+      }
+    }
+  }
 };

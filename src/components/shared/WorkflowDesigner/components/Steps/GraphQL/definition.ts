@@ -99,7 +99,7 @@ export const GraphQLStepDefinition: StepDefinition = {
     name: 'GraphQL Query',
     operation: 'query',
     timeout: 30000,
-    headers: {}
+    headers: []
   },
   uiSchema: {
     'ui:order': ['name', 'endpoint', 'operation', 'query', 'headers', 'timeout'],

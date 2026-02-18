@@ -56,5 +56,15 @@ export const JoinStepDefinition: StepDefinition = {
       'ui:help': 'If enabled, waits for all branches to complete before continuing'
     }
   },
-  tags: ['flow', 'join', 'merge', 'synchronize']
+  tags: ['flow', 'join', 'merge', 'synchronize'],
+  rendering: {
+    webgl: {
+      type: 'webgl',
+      theme: 'circuit',
+      circuit: {
+        elementType: 'relay',
+        labelPrefix: 'K',
+      }
+    }
+  }
 };

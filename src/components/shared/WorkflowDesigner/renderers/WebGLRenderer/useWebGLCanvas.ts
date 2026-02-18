@@ -16,7 +16,7 @@ import { InteractionManager } from './InteractionManager';
 import { CircuitComponentRenderer } from './CircuitComponentRenderer';
 import { CircuitTraceRenderer } from './CircuitTraceRenderer';
 import { CircuitLabelRenderer } from './CircuitLabelRenderer';
-import { CIRCUIT_COLORS, CIRCUIT_DIMENSIONS, getCircuitElement } from './CircuitTheme';
+import { CIRCUIT_COLORS, CIRCUIT_DIMENSIONS, getCircuitElement, calculateComponentBodyDimensions } from './CircuitTheme';
 import {
   SceneConfig,
   WebGLRendererConfig,
@@ -281,32 +281,16 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
   }, []);
 
   /**
-   * Calculate component body dimensions for port positioning
-   * Must match CircuitComponentRenderer.getComponentBodyDimensions
+   * Calculate component body dimensions for port positioning.
+   * Uses shared function from CircuitTheme to stay in sync with CircuitComponentRenderer.
    */
   const getComponentBodyDimensions = useCallback((
-    stepWidth: number, 
-    stepHeight: number, 
+    stepWidth: number,
+    stepHeight: number,
     stepType: string
   ): { bodyHalfWidth: number; bodyHalfHeight: number } => {
     const circuitElement = getCircuitElement(stepType).circuitElement;
-    
-    switch (circuitElement) {
-      case 'pushButton': {
-        const size = Math.min(stepWidth, stepHeight) * 0.7;
-        return { bodyHalfWidth: size / 2, bodyHalfHeight: size / 2 };
-      }
-      case 'led': {
-        const radius = Math.min(stepWidth, stepHeight) * 0.3 * 1.15;
-        return { bodyHalfWidth: radius, bodyHalfHeight: radius };
-      }
-      case 'icChip':
-      default: {
-        const width = stepWidth * 0.85;
-        const height = stepHeight * 0.7;
-        return { bodyHalfWidth: width / 2, bodyHalfHeight: height / 2 };
-      }
-    }
+    return calculateComponentBodyDimensions(stepWidth, stepHeight, circuitElement);
   }, []);
 
   /**

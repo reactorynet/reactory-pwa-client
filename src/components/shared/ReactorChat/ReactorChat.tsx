@@ -91,13 +91,35 @@ export default (props) => {
   }, []);
 
   // Streaming toggle state
-  const [streamingEnabled, setStreamingEnabled] = useState<boolean>(false);
+  const [streamingEnabled, setStreamingEnabled] = useState<boolean>(true);
+
+  // Session cache: preserves chat state per persona so switching back restores the session
+  const sessionCache = React.useRef<Map<string, {
+    chatState: ChatState;
+    isInitialized: boolean;
+  }>>(new Map());
+
+  // Track the previous session for context sharing when starting a new session with a different agent
+  const previousSessionRef = React.useRef<{
+    sessionId: string;
+    personaId: string;
+  } | null>(null);
+
+  // Look up cached session when persona changes
+  const cachedSession = React.useMemo(() => {
+    if (selectedPersona?.id) {
+      return sessionCache.current.get(selectedPersona.id) || undefined;
+    }
+    return undefined;
+  }, [selectedPersona?.id]);
 
   // Non-streaming chat factory
   const chatFactory = useChatFactory({
     reactory,
     persona: selectedPersona,
     protocol: streamingEnabled ? 'sse' : 'graphql',
+    existingSession: cachedSession,
+    contextFromSessionId: previousSessionRef.current?.sessionId,
   });
 
 
@@ -369,7 +391,7 @@ export default (props) => {
 
     (async () => {
       reactory.log(`ReactorChat: Refreshing chat list for persona: ${selectedPersona?.name || 'none'}`);
-      const chatList = await listChats({});
+      const chatList = await listChats({ personaId: selectedPersona?.id });
       setChats(chatList as ChatState[]);
     })();
   }, [selectedPersona?.id, busy, listChats, setChats]);
@@ -561,6 +583,18 @@ export default (props) => {
   }, [chatState?.id, reactory]);
 
   const handlePersonaSelect = useCallback((persona: Partial<IAIPersona>) => {
+    // Save current session to cache before switching
+    if (selectedPersona?.id && chatState?.id) {
+      previousSessionRef.current = {
+        sessionId: chatState.id,
+        personaId: selectedPersona.id,
+      };
+      sessionCache.current.set(selectedPersona.id, {
+        chatState: { ...chatState },
+        isInitialized: true,
+      });
+    }
+
     selectPersona(persona.id);
     setPersonaPanelOpen(false);
 
@@ -570,7 +604,7 @@ export default (props) => {
       pathname: location.pathname,
       search: searchQuery
     });
-  }, [selectPersona, navigate, location.pathname]);
+  }, [selectPersona, navigate, location.pathname, selectedPersona?.id, chatState]);
 
   const handleNewChat = useCallback(() => {
     // Create a new chat with the existing persona

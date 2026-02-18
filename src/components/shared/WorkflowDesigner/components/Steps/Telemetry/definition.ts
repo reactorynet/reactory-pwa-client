@@ -150,8 +150,8 @@ export const TelemetryStepDefinition: StepDefinition = {
       type: 'webgl',
       theme: 'circuit',
       circuit: {
-        elementType: 'icChip',
-        labelPrefix: 'MON',
+        elementType: 'sevenSegment',
+        labelPrefix: 'DSP',
         colors: {
           body: 0x1a1a1a,
           bodyHover: 0x2a2a2a,

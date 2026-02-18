@@ -50,15 +50,15 @@ export function getCircuitRenderConfig(
  */
 export function getStepElementType(
   step: StepDefinition
-): 'pushButton' | 'led' | 'icChip' | 'transistor' | 'capacitor' | 'resistor' | 'generic' {
+): 'pushButton' | 'led' | 'icChip' | 'transistor' | 'capacitor' | 'resistor' | 'relay' | 'dipSwitch' | 'sevenSegment' | 'generic' {
   const circuitConfig = getCircuitRenderConfig(step);
   if (circuitConfig?.elementType) {
     return circuitConfig.elementType;
   }
-  
+
   // Fallback to default mappings based on step category/type
   const stepType = step.id.toLowerCase();
-  
+
   if (stepType.includes('start') || stepType.includes('trigger')) {
     return 'pushButton';
   }
@@ -68,14 +68,23 @@ export function getStepElementType(
   if (stepType.includes('condition') || stepType.includes('decision')) {
     return 'transistor';
   }
+  if (stepType === 'parallel' || stepType === 'join') {
+    return 'relay';
+  }
+  if (stepType === 'user_activity') {
+    return 'dipSwitch';
+  }
+  if (stepType === 'telemetry') {
+    return 'sevenSegment';
+  }
   if (stepType.includes('delay') || stepType.includes('timer')) {
     return 'capacitor';
   }
   if (stepType.includes('filter') || stepType.includes('transform')) {
     return 'resistor';
   }
-  
-  return 'icChip'; // Default for most action/task steps
+
+  return 'icChip'; // Default for most action/task/integration steps
 }
 
 /**
@@ -93,6 +102,9 @@ export function getComponentLabelPrefix(step: StepDefinition): string {
     case 'pushButton': return 'S';
     case 'led': return 'LED';
     case 'transistor': return 'Q';
+    case 'relay': return 'K';
+    case 'dipSwitch': return 'SW';
+    case 'sevenSegment': return 'DSP';
     case 'capacitor': return 'C';
     case 'resistor': return 'R';
     case 'icChip': return 'U';
@@ -124,6 +136,12 @@ export function getComponentDimensions(
       return { width: 30, height: 30 };
     case 'transistor':
       return { width: 50, height: 60 };
+    case 'relay':
+      return { width: 100, height: 60 };
+    case 'dipSwitch':
+      return { width: 100, height: 65 };
+    case 'sevenSegment':
+      return { width: 90, height: 65 };
     case 'capacitor':
       return { width: 40, height: 60 };
     case 'resistor':

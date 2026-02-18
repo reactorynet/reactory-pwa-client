@@ -51,7 +51,7 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
   const formData = useMemoReact(() => {
     return {
       name: step.name,
-      ...step.properties
+      ...(step.properties || {})
     };
   }, [step.name, step.properties]);
 
@@ -63,7 +63,7 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
     
     // Update each changed property
     Object.entries(newData).forEach(([key, value]) => {
-      const currentValue = key === 'name' ? step.name : step.properties[key];
+      const currentValue = key === 'name' ? step.name : (step.properties || {})[key];
       
       // Only trigger change if value actually changed
       if (currentValue !== value) {
@@ -122,15 +122,16 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
 
 
   const formDefinition: Reactory.Forms.IReactoryForm = useMemoReact(() => {
+    const safeName = (step.type || 'unknown').replace(/[^a-zA-Z0-9_]/g, '_');
     return {
-      id: `workflowEditor.${step.name}@1.0.0`,
-      name: step.name,
+      id: `workflowEditor.${safeName}@1.0.0`,
+      name: safeName,
       nameSpace: 'workflowEditor',
       version: '1.0.0',
       schema: formSchema as Reactory.Schema.AnySchema,
-      uiSchema: formUiSchema as Reactory.Schema.IUISchema,            
+      uiSchema: formUiSchema as Reactory.Schema.IUISchema,
     };
-  }, [step.name, formSchema, formUiSchema, formData]);
+  }, [step.type, formSchema, formUiSchema]);
 
   return (
     <div style={{ padding: '0 16px' }}>

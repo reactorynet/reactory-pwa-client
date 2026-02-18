@@ -50,6 +50,8 @@ interface ChatFactorHookOptions {
     chatState?: ChatState;
     isInitialized?: boolean;
   };
+  /** Optional session ID to share context from when initializing a new session */
+  contextFromSessionId?: string;
   onStreamToken?: (token: string) => void;
   onStreamMessage?: (message: UXChatMessage) => void;
   onStreamError?: (error: any) => void;
@@ -166,61 +168,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const onSSEMessageReceived = (message: CompletionStreamingEvent) => {
     if (message.type === StreamingEventType.COMPLETE) {
-      console.log('🔧 [useChatFactory] onSSEMessageReceived called:', {
-        messageType: message.type,
-        messageContent: message.data.content?.substring(0, 100),
-        currentHistoryLength: chatState.history?.length || 0,
-        currentChatStateId: chatState.id
-      });
-
-      // update the chat state with the new message
-      setChatState((prevState) => {                
+      // Update the last assistant message with the final content from the complete event.
+      // This replaces any placeholder ("Processing...") or token-accumulated content.
+      setChatState((prevState) => {
         const history = [...prevState.history];
         const lastIndex = history.length - 1;
-        
-        console.log('🔧 [useChatFactory] onSSEMessageReceived state update:', {
-          historyLength: history.length,
-          lastIndex,
-          lastMessage: lastIndex >= 0 ? history[lastIndex] : null,
-          toolsCount: prevState.tools?.length || 0,
-          macrosCount: prevState.macros?.length || 0
-        });
-        
-        if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
-          // Update the last assistant message with the final content
-          // This handles both "Processing..." and "Calling tool:" messages
-          const lastMessage = history[lastIndex];
-          
-          if (lastMessage.content === "Processing..." || lastMessage.content.startsWith("Calling tool:")) {
-            // Replace the placeholder content with the final AI response
-            history[lastIndex] = {
-              ...lastMessage,
-              content: message.data.content,
-              timestamp: new Date(),
-            };
-            
-            console.log('🔧 [useChatFactory] Updated streaming message with final content:', {
-              oldContent: lastMessage.content,
-              newContent: message.data.content,
-              messageId: lastMessage.id
-            });
-          } else {
-            // Regular message update
-            lastMessage.content = message.data.content;
-          }
-        }
-  
-        const newState = { ...prevState,
-          history: history,        
-        };
 
-        console.log('🔧 [useChatFactory] onSSEMessageReceived final state:', {
-          newHistoryLength: newState.history.length,
-          toolsCount: newState.tools?.length || 0,
-          macrosCount: newState.macros?.length || 0
-        });
-                
-        return newState;
+        if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+          history[lastIndex] = {
+            ...history[lastIndex],
+            content: message.data.content,
+            timestamp: new Date(),
+          };
+        }
+
+        return { ...prevState, history };
       });
       setIsStreaming(false);
       setWaitingForResponse(false);
@@ -244,7 +206,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       if (!isInitialized && persona?.id) {
         reactory.info(`ChatFactory: Initializing chat session on first message with persona ${persona.id}`);
         try {
-          const newSessionId = await initializeChat(persona);
+          const newSessionId = await initializeChat(persona, props.contextFromSessionId);
           setIsInitialized(true);
           sessionId = newSessionId; // Use the session ID from initialization
         } catch (error) {
@@ -319,6 +281,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         if (!resp) throw new Error('No response from server');
 
         if (resp.__typename === 'ReactorErrorResponse') {
+          // Replace the "Processing..." placeholder with the error message
+          setChatState((prevState) => {
+            const history = [...prevState.history];
+            const lastIndex = history.length - 1;
+            if (lastIndex >= 0 && history[lastIndex].role === 'assistant' && history[lastIndex].content === 'Processing...') {
+              history[lastIndex] = {
+                ...history[lastIndex],
+                content: `Error: ${resp.message}`,
+                timestamp: new Date(),
+              };
+            }
+            return { ...prevState, history };
+          });
+          setIsStreaming(false);
+          setWaitingForResponse(false);
           onError(new Error(resp.message));
           setBusy(false);
           return;
@@ -359,6 +336,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           }
         }
       } catch (error) {
+        // Clean up streaming state and replace placeholder on error
+        setChatState((prevState) => {
+          const history = [...prevState.history];
+          const lastIndex = history.length - 1;
+          if (lastIndex >= 0 && history[lastIndex].role === 'assistant' && history[lastIndex].content === 'Processing...') {
+            history[lastIndex] = {
+              ...history[lastIndex],
+              content: `Error: ${(error as Error).message || 'An unexpected error occurred'}`,
+              timestamp: new Date(),
+            };
+          }
+          return { ...prevState, history };
+        });
+        setIsStreaming(false);
+        setWaitingForResponse(false);
         onError(error as Error);
       }
     } finally {
@@ -512,9 +504,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   });
 
+  // Ref to always access the latest processToolCallsMemoized — assigned after it's defined.
+  // This avoids stale closures in onToolCallReceived, which is bound via SSE event listeners.
+  const processToolCallsRef = React.useRef<(toolCalls: any[], message: UXChatMessage, depth?: number) => Promise<{ toolResults: any[], toolErrors: any[] }>>(null);
 
   const onToolCallReceived = React.useCallback(async (toolCall: ToolCallStreamingEvent) => {
-    debugger
     const validSessionId = chatState.id || toolCall.conversationId || toolCall.sessionId;
     if (!validSessionId) {
       console.error('❌ [useChatFactory] Tool call missing sessionId:', toolCall);
@@ -553,18 +547,6 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       tools: chatState.tools?.map(t => ({ name: t.function?.name, type: t.type, runat: t.runat }))
     });
     
-    // Check if the specific tool exists
-    const requestedTool = chatState.tools?.find(t => t.function?.name === toolCall.data.name);
-    const requestedMacro = chatState.macros?.find(m => m.name === toolCall.data.name || m.alias === toolCall.data.name);
-    
-    console.log('🔧 [useChatFactory] Tool lookup results:', {
-      requestedToolName: toolCall.data.name,
-      foundTool: !!requestedTool,
-      foundMacro: !!requestedMacro,
-      toolDetails: requestedTool,
-      macroDetails: requestedMacro
-    });
-    
     // create tool call construct
     const toolCallMessage = {
       id: toolCall.data.id,
@@ -582,63 +564,26 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       }],
     } as UXChatMessage;
     
-    console.log('🔧 [useChatFactory] Created tool call message:', toolCallMessage);
-    console.log('🔧 [useChatFactory] Tool call message structure:', {
-      hasId: !!toolCallMessage.id,
-      hasRole: !!toolCallMessage.role,
-      hasSessionId: !!toolCallMessage.sessionId,
-      hasToolCalls: !!toolCallMessage.tool_calls,
-      toolCallsLength: toolCallMessage.tool_calls?.length,
-      firstToolCall: toolCallMessage.tool_calls?.[0]
-    });
-    
-    // Update the current streaming message to include the tool calls
-    // This ensures the UI shows the tool calls properly
+    // Merge tool calls into the current streaming assistant message
     setChatState((prevState) => {
-      
       const history = [...prevState.history];
       const lastIndex = history.length - 1;
       
-      console.log('🔧 [useChatFactory] onToolCallReceived - updating history:', {
-        historyLength: history.length,
-        lastIndex,
-        lastMessage: lastIndex >= 0 ? history[lastIndex] : null,
-        toolCallName: toolCall.data.name,
-        toolCallId: toolCall.data.id,
-        // Show the current history structure
-        currentHistory: history.map((msg, idx) => ({
-          index: idx,
-          role: msg.role,
-          content: msg.content,
-          hasToolCalls: !!(msg.tool_calls && msg.tool_calls.length > 0),
-          toolCallsCount: msg.tool_calls?.length || 0,
-          isProcessing: msg.content === "Processing...",
-          isCallingTool: msg.content.startsWith("Calling tool:")
-        }))
-      });
-      
-      if (lastIndex >= 0 && history[lastIndex].role === 'assistant' && history[lastIndex].content === 'Processing...') {
-        // Replace the "Processing..." message with the tool call message
+      if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
+        // Merge tool calls into the existing assistant message
+        // (handles both "Processing..." placeholders and token-accumulated messages)
+        const existingToolCalls = history[lastIndex].tool_calls || [];
         history[lastIndex] = {
           ...history[lastIndex],
-          content: `Calling tool: ${toolCall.data.name}`,
-          tool_calls: toolCallMessage.tool_calls,
+          content: history[lastIndex].content === "Processing..."
+            ? `Calling tool: ${toolCall.data.name}`
+            : history[lastIndex].content,
+          tool_calls: [...existingToolCalls, ...toolCallMessage.tool_calls],
           timestamp: new Date(),
         };
-        
-        console.log('🔧 [useChatFactory] Updated streaming message with tool calls:', {
-          index: lastIndex,
-          oldContent: "Processing...",
-          newContent: `Calling tool: ${toolCall.data.name}`,
-          toolCalls: toolCallMessage.tool_calls
-        });
       } else {
-        // Add the tool call message to history if no streaming message found
+        // No existing assistant message — add the tool call message
         history.push(toolCallMessage);
-        console.log('🔧 [useChatFactory] Added tool call message to history:', {
-          index: history.length - 1,
-          message: toolCallMessage
-        });
       }
       
       const newState = {
@@ -648,38 +593,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         updated: new Date(),
       };
       
-      console.log('🔧 [useChatFactory] onToolCallReceived - new state:', {
-        newHistoryLength: newState.history.length,
-        newHistory: newState.history.map((msg, idx) => ({
-          index: idx,
-          role: msg.role,
-          content: msg.content,
-          hasToolCalls: !!(msg.tool_calls && msg.tool_calls.length > 0),
-          toolCallsCount: msg.tool_calls?.length || 0
-        })),
-        toolsCount: newState.tools?.length || 0,
-        macrosCount: newState.macros?.length || 0
-      });
-            
       return newState;
     });
     
-    console.log('🔧 [useChatFactory] Processing tool calls for message:', toolCallMessage);
-    
     try {
-      console.log('🔧 [useChatFactory] About to call processToolCalls');
-      
-      // Use the tool call message directly instead of relying on stale state
-      // This ensures we have the most up-to-date information
-      const result = await processToolCallsMemoized(toolCallMessage.tool_calls, toolCallMessage);
-      console.log('🔧 [useChatFactory] Tool calls processed successfully:', result);
+      if (processToolCallsRef.current) {
+        await processToolCallsRef.current(toolCallMessage.tool_calls, toolCallMessage);
+      } else {
+        console.error('[useChatFactory] processToolCallsRef not yet assigned — tool call dropped');
+      }
     } catch (error) {
-      console.error('❌ [useChatFactory] Error processing tool calls:', error);
-      console.error('❌ [useChatFactory] Error details:', {
-        errorMessage: error.message,
-        errorStack: error.stack,
-        errorName: error.name
-      });
+      console.error('[useChatFactory] Error processing tool calls:', error);
       onError(error as Error);
     }
   }, [chatState?.id]);
@@ -762,7 +686,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * call on the front end.
    * @param persona 
    */
-  const initializeChat = async (persona) => {
+  const initializeChat = async (persona, contextFromSessionId?: string) => {
 
     // get the client macros from the macro registry
     const clientMacros = Object.values(macros).filter((macro) => macro.runat === "client");
@@ -811,6 +735,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       })) ?? [],
       tools: [...clientTools],
       streamingMode: protocol === 'sse' ? 'SSE' : 'NONE',
+      contextFromSessionId,
     };
 
     try {
@@ -841,23 +766,33 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       }
 
       if (result?.__typename === 'ReactorInitiateSSE') {
-        // Some providers may require immediate SSE after init; connect now
+        const sseResult = result as any;
+        const sseSessionId = sseResult.sessionId as string;
+
         console.log('🔧 [useChatFactory] ReactorInitiateSSE response details:', {
-          sessionId: (result as any).sessionId,
-          chatStateMacrosCount: (result as any).chatState?.macros?.length || 0,
-          chatStateToolsCount: (result as any).chatState?.tools?.length || 0,
+          sessionId: sseSessionId,
+          chatStateMacrosCount: sseResult.chatState?.macros?.length || 0,
+          chatStateToolsCount: sseResult.chatState?.tools?.length || 0,
           prevStateMacrosCount: chatState.macros?.length || 0,
           prevStateToolsCount: chatState.tools?.length || 0
         });
-        
+
+        // Update chatState.id so subsequent sendMessage calls have the session ID
+        setChatState((prevState) => ({
+          ...prevState,
+          id: sseSessionId,
+          macros: sseResult.chatState?.macros || prevState.macros || [],
+          tools: sseResult.chatState?.tools || prevState.tools || [],
+        }));
+
         sse.connect({
-          endpoint: (result as any).endpoint,
-          sessionId: (result as any).sessionId,
-          headers: (result as any).headers,
-          token: (result as any).token,
-          expiry: (result as any).expiry,
+          endpoint: sseResult.endpoint,
+          sessionId: sseSessionId,
+          headers: sseResult.headers,
+          token: sseResult.token,
+          expiry: sseResult.expiry,
         });
-        return (result as any).sessionId as string;
+        return sseSessionId;
       }
 
       throw new Error('No response from server');
@@ -868,60 +803,29 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }
 
   useEffect(() => {
-    let isMounted = true;
+    if (!persona?.id) return;
 
-    // Only set up initial chat state if no chat session exists
-    // This prevents overwriting server-loaded tools and macros
-    if (persona?.id && !chatState.id) {
-      reactory.info(`ChatFactory: Setting up initial chat state with persona ${persona.id}`);
-      
-      setChatState((prevState) => {
-        console.log('🔧 [useChatFactory] Persona useEffect - prevState details:', {
-          prevStateToolsCount: prevState.tools?.length || 0,
-          prevStateMacrosCount: prevState.macros?.length || 0,
-          prevStateKeys: Object.keys(prevState),
-          prevStateTools: prevState.tools?.map(t => ({ name: t.function?.name, type: t.type })),
-          prevStateMacros: prevState.macros?.map(m => ({ name: m.name, alias: m.alias })),
-          hasChatStateId: !!prevState.id
-        });
-        
-        // Only initialize if we truly have no state or no tools/macros
-        if (!prevState.id && (!prevState.tools || prevState.tools.length === 0)) {
-          console.log('🔧 [useChatFactory] Setting up initial chat state with new persona');
-          const initialState = getInitialChatState();
-          
-          console.log('🔧 [useChatFactory] Persona useEffect - initialState details:', {
-            initialStateToolsCount: initialState.tools?.length || 0,
-            initialStateMacrosCount: initialState.macros?.length || 0,
-            initialStateKeys: Object.keys(initialState)
-          });
-          
-          return initialState;
-        } else {
-          // We already have tools and macros loaded, just update the persona
-          console.log('🔧 [useChatFactory] Preserving existing tools and macros, updating persona only');
-          const newState = {
-            ...prevState,
-            persona,
-            updated: new Date(),
-          };
-          
-          console.log('🔧 [useChatFactory] Persona useEffect - newState details:', {
-            newStateToolsCount: newState.tools?.length || 0,
-            newStateMacrosCount: newState.macros?.length || 0,
-            newStateKeys: Object.keys(newState)
-          });
-          
-          return newState;
-        }
-      });
-      
-      setIsInitialized(false); // Reset initialization flag when persona changes
+    // Check if the persona in chatState actually matches the new persona.
+    // When switching FROM persona A (which has an active session) TO persona B,
+    // chatState still holds persona A's data — we must detect this mismatch.
+    const currentPersonaId = chatState.persona?.id || chatState.botId;
+    if (currentPersonaId === persona.id) return; // Same persona, no action needed
+
+    // Persona changed — check for a cached session injected from the parent
+    if (existingSession?.chatState?.persona?.id === persona.id) {
+      // Restore the cached session for this persona
+      setChatState(existingSession.chatState);
+      setIsInitialized(existingSession.isInitialized || false);
+      reactory.info(`ChatFactory: Restored cached session for persona ${persona.id}`);
+    } else {
+      // No cached session — fresh start with new persona's greeting, tools, macros
+      const initialState = getInitialChatState();
+      setChatState(initialState);
+      setIsInitialized(false);
+      reactory.info(`ChatFactory: Fresh start for persona ${persona.id}`);
     }
 
-    return () => {
-      isMounted = false;
-    };
+    return () => {};
   }, [persona?.id]); // Only depend on persona ID, not tools/macros
 
   // Update session state when existingSession changes (when switching between factories)
@@ -1039,16 +943,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setChatState((prevState) => {
       const history = [...prevState.history];
 
-      // Find the last message with tool_calls (manual reverse search for compatibility)
-      // Skip "processing" and "calling tool" messages and look for actual tool call messages
+      // Find the last assistant message with tool_calls
       let lastMessageIndex = -1;
       for (let i = history.length - 1; i >= 0; i--) {
         const msg = history[i];
-        if (msg.role === 'assistant' && 
-            msg.tool_calls && 
-            msg.tool_calls.length > 0 && 
-            msg.content !== "Processing..." && 
-            !msg.content.startsWith("Calling tool:")) { // Skip processing and calling messages
+        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
           lastMessageIndex = i;
           break;
         }
@@ -1857,6 +1756,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     consolidateToolResults,
     sendToolResultsToAI
   ]);
+
+  // Keep the ref in sync so onToolCallReceived always calls the latest version
+  processToolCallsRef.current = processToolCallsMemoized;
 
   return {
     busy,

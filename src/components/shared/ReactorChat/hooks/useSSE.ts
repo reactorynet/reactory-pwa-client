@@ -78,10 +78,10 @@ export interface UseSSEOptions {
 }
 
 export interface UseSSEResult {
-  connect: (opts: { 
-    endpoint: string; 
-    sessionId: string; 
-    token?: string; 
+  connect: (opts: {
+    endpoint: string;
+    sessionId: string;
+    token?: string;
     headers?: Record<string, string>;
     expiry?: Date;
     onConnectionOpened?: () => void;
@@ -93,6 +93,19 @@ export interface UseSSEResult {
   currentStreamingMessage: string;
 }
 
+/**
+ * Minimum chunk size (in characters) below which we emit tokens immediately.
+ * Chunks larger than this are split into word-level segments and drip-fed
+ * to simulate smooth token-by-token streaming.
+ */
+const DRIP_THRESHOLD = 8;
+
+/**
+ * Approximate interval between drip-fed word emissions (ms).
+ * 20ms ≈ 50 words/sec which looks like fast typing.
+ */
+const DRIP_INTERVAL_MS = 20;
+
 const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
@@ -100,99 +113,164 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
   const eventSourceRef = React.useRef<EventSource | null>(null);
   const sessionRef = React.useRef<string | null>(null);
 
+  // Callback refs — always point to the latest callback so SSE event
+  // listeners (which are bound once on connect) never go stale.
+  const onTokenRef = React.useRef(onToken);
+  const onMessageRef = React.useRef(onMessage);
+  const onErrorRef = React.useRef(onError);
+  const onToolCallRef = React.useRef(onToolCall);
+  onTokenRef.current = onToken;
+  onMessageRef.current = onMessage;
+  onErrorRef.current = onError;
+  onToolCallRef.current = onToolCall;
+
+  // Token drip-feed queue: words waiting to be emitted
+  const tokenQueueRef = React.useRef<{ segments: string[]; template: TokenStreamingEvent }[]>([]);
+  const dripTimerRef = React.useRef<number | null>(null);
+
+  /**
+   * Flush the drip-feed queue: emit one segment per interval tick.
+   */
+  const flushQueue = React.useCallback(() => {
+    if (dripTimerRef.current !== null) return; // already running
+
+    const tick = () => {
+      const queue = tokenQueueRef.current;
+      if (queue.length === 0) {
+        dripTimerRef.current = null;
+        return;
+      }
+
+      const front = queue[0];
+      const segment = front.segments.shift();
+      if (segment && onTokenRef.current) {
+        onTokenRef.current({
+          ...front.template,
+          data: {
+            ...front.template.data,
+            content: segment,
+            delta: segment,
+          },
+        });
+      }
+
+      if (front.segments.length === 0) {
+        queue.shift();
+      }
+
+      dripTimerRef.current = window.setTimeout(tick, DRIP_INTERVAL_MS);
+    };
+
+    dripTimerRef.current = window.setTimeout(tick, 0);
+  }, []);
+
+  /**
+   * Enqueue a large token chunk by splitting into word-level segments.
+   */
+  const enqueueTokenDrip = React.useCallback(
+    (event: TokenStreamingEvent) => {
+      const text = event.data.content || event.data.delta || '';
+      if (text.length <= DRIP_THRESHOLD) {
+        // Small enough — emit immediately
+        if (onTokenRef.current) onTokenRef.current(event);
+        return;
+      }
+
+      // Split on word boundaries, preserving whitespace with the preceding word
+      const segments: string[] = [];
+      const words = text.split(/(\s+)/);
+      let buf = '';
+      for (const w of words) {
+        buf += w;
+        // Emit after each whitespace-terminated word (or at end)
+        if (/\s$/.test(buf) || w === words[words.length - 1]) {
+          if (buf) segments.push(buf);
+          buf = '';
+        }
+      }
+      if (buf) segments.push(buf);
+
+      if (segments.length <= 1) {
+        // Only one segment — emit directly
+        if (onTokenRef.current) onTokenRef.current(event);
+        return;
+      }
+
+      tokenQueueRef.current.push({ segments, template: event });
+      flushQueue();
+    },
+    [flushQueue]
+  );
+
+  /**
+   * Dispatch an SSE MessageEvent. Uses callback refs so the handler
+   * never goes stale even though event listeners are bound once.
+   */
   const handleMessage = React.useCallback((event: MessageEvent) => {
     try {
-      console.log('🔍 [useSSE] handleMessage called with event:', {
-        type: event.type,
-        data: event.data,
-        lastEventId: event.lastEventId,
-        origin: event.origin,        
-      });
-      
       const data = JSON.parse(event.data);
-      console.log('🔍 [useSSE] parsed data:', data);
-      
+
       if (data.type !== 'token') {
         reactory.debug('useSSE: event', data);
       }
 
       switch (data.type) {
         case 'token': {
-          console.log('🔍 [useSSE] processing token event, token:', data.content);          
-          if (onToken) onToken( data as TokenStreamingEvent );
+          enqueueTokenDrip(data as TokenStreamingEvent);
           break;
         }
         case 'complete': {
-          console.log('🔍 [useSSE] processing complete event');
-          setIsStreaming(false);                  
-          if (onMessage) onMessage(data as CompletionStreamingEvent);
+          // Flush any remaining queued tokens immediately before completing
+          tokenQueueRef.current = [];
+          if (dripTimerRef.current !== null) {
+            clearTimeout(dripTimerRef.current);
+            dripTimerRef.current = null;
+          }
+          setIsStreaming(false);
+          if (onMessageRef.current) onMessageRef.current(data as CompletionStreamingEvent);
           break;
         }
         case 'error': {
-          console.log('🔍 [useSSE] processing error event:', data.data);
-          setIsStreaming(false);          
-          if (onError) onError(data as ErrorStreamingEvent);
+          setIsStreaming(false);
+          if (onErrorRef.current) onErrorRef.current(data as ErrorStreamingEvent);
           break;
         }
         case 'start': {
-          console.log('🔍 [useSSE] processing start event:', data.data);
           setIsStreaming(true);
           break;
         }
         case 'tool_call': {
-          console.log('🔍 [useSSE] processing tool_call event:', data.data);
-          console.log('🔍 [useSSE] tool_call data structure:', {
-            hasData: !!data.data,
-            dataKeys: data.data ? Object.keys(data.data) : [],
-            dataType: typeof data.data,
-            fullData: data.data
-          });
-          
-          if (onToolCall) {           
-            console.log('🔍 [useSSE] calling onToolCall with:', data);
-            void onToolCall(data as ToolCallStreamingEvent);
-          } else {
-            console.warn('⚠️ [useSSE] onToolCall callback not provided for tool_call event');
+          if (onToolCallRef.current) {
+            void onToolCallRef.current(data as ToolCallStreamingEvent);
           }
           break;
         }
         default:
-          console.log('🔍 [useSSE] unknown event type:', data.type);
           reactory.debug('useSSE: unknown event', data.type);
       }
     } catch (err) {
-      console.error('❌ [useSSE] parse error', err, 'event data:', event.data);
       reactory.error('useSSE: parse error', err);
-      if (onError) onError({ message: 'Failed to parse streaming data', type: 'PARSE_ERROR' });
+      if (onErrorRef.current) onErrorRef.current({ message: 'Failed to parse streaming data', type: 'PARSE_ERROR' });
     }
-  }, [currentStreamingMessage, onError, onMessage, onToken, onToolCall, reactory]);
+  }, [enqueueTokenDrip, reactory]);
 
-  const connect = React.useCallback(({ 
-    endpoint, 
+  const connect = React.useCallback(({
+    endpoint,
     sessionId,
     token,
     headers,
     expiry,
     onConnectionOpened,
-  }: { 
-    endpoint: string; 
-    sessionId: string; 
-    token?: string; 
-    headers?: Record<string, string>; 
+  }: {
+    endpoint: string;
+    sessionId: string;
+    token?: string;
+    headers?: Record<string, string>;
     expiry?: Date;
     onConnectionOpened?: () => void;
   }) => {
-    console.log('🔌 [useSSE] connect called with:', {
-      endpoint,
-      sessionId,
-      hasToken: !!token,
-      hasHeaders: !!headers,
-      expiry
-    });
-    
     // Close previous
     if (eventSourceRef.current) {
-      console.log('🔌 [useSSE] closing previous EventSource');
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
@@ -203,77 +281,50 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
 
     try {
       const sseUrl = new URL(endpoint);
-      console.log('🔌 [useSSE] connecting to SSE URL:', sseUrl.toString());
       reactory.log(`useSSE: connecting to ${sseUrl.toString()}`, 'info');
-      const es = new EventSource(sseUrl.toString());            
-      
-      es.onopen = () => {        
-        console.log('🔌 [useSSE] EventSource connection opened');
+      const es = new EventSource(sseUrl.toString());
+
+      es.onopen = () => {
         reactory.log('useSSE: connected', 'info');
         if (onConnectionOpened) onConnectionOpened();
       };
-      
+
       // Listen for custom events with specific types
-      es.addEventListener('token', (event) => {
-        console.log('🔍 [useSSE] token event received:', event);
-        handleMessage(event as MessageEvent);
-      });
-      
-      es.addEventListener('complete', (event) => {
-        console.log('🔍 [useSSE] complete event received:', event);
-        handleMessage(event as MessageEvent);
-      });
-      
-      es.addEventListener('error', (event) => {
-        console.log('🔍 [useSSE] error event received:', event);
-        handleMessage(event as MessageEvent);
-      });
-      
-      es.addEventListener('tool_call', (event) => {
-        console.log('🔍 [useSSE] tool_call event received:', event);
-        console.log('🔍 [useSSE] tool_call event details:', {
-          data: event.data,
-          lastEventId: event.lastEventId,
-          origin: event.origin,
-          type: event.type
-        });
-        handleMessage(event as MessageEvent);
-      });
-      
-      es.addEventListener('start', (event) => {
-        console.log('🔍 [useSSE] start event received:', event);
-        handleMessage(event as MessageEvent);
-      });
-      
+      es.addEventListener('token', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('complete', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('error', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('tool_call', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
+
       // Also listen for generic message events as fallback
-      es.onmessage = (event) => {
-        console.log('🔍 [useSSE] generic message event received:', event);
-        handleMessage(event);
-      };
-      
+      es.onmessage = (event) => handleMessage(event);
+
       es.onerror = (err) => {
-        console.error('❌ [useSSE] EventSource error:', err);
-        reactory.error('useSSE: error', err);
+        reactory.error('useSSE: EventSource error', err);
         setIsStreaming(false);
         if (eventSourceRef.current) {
           eventSourceRef.current.close();
           eventSourceRef.current = null;
         }
-        if (onError) onError({ message: 'Streaming connection error', type: 'SSE_ERROR' });
+        if (onErrorRef.current) onErrorRef.current({ message: 'Streaming connection error', type: 'SSE_ERROR' });
       };
-      
+
       eventSourceRef.current = es;
-      console.log('🔌 [useSSE] EventSource created and configured');
     } catch (err) {
-      console.error('❌ [useSSE] connect failed:', err);
       reactory.error('useSSE: connect failed', err);
       setIsStreaming(false);
-      if (onError) onError(err);
+      if (onErrorRef.current) onErrorRef.current(err);
     }
-  }, [handleMessage, onError, reactory]);
+  }, [handleMessage, reactory]);
 
   const disconnect = React.useCallback(() => {
-    console.log('🔌 [useSSE] disconnect called');
+    // Clear drip-feed queue
+    tokenQueueRef.current = [];
+    if (dripTimerRef.current !== null) {
+      clearTimeout(dripTimerRef.current);
+      dripTimerRef.current = null;
+    }
+
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
@@ -290,4 +341,3 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
 };
 
 export default useSSE;
-

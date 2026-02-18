@@ -1,6 +1,14 @@
-import { Tooltip } from '@mui/material';
+import { Tooltip, keyframes } from '@mui/material';
 import { ChatState, IAIPersona, UXChatMessage } from '../types';
 import useContentRender from '../../hooks/useContentRender';
+
+const isProcessingMessage = (message: UXChatMessage) =>
+  message.role === 'assistant' && message.content === 'Processing...';
+
+const pulse = keyframes`
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+`;
 
 const ChatList = (props: {
   reactory: Reactory.Client.ReactorySDK,
@@ -287,11 +295,16 @@ const ChatList = (props: {
               }}
             >
               <Paper
-                elevation={1}
+                elevation={isProcessingMessage(message) ? 0 : 1}
                 sx={{
-                  p: 0.5,                  
+                  p: 0.5,
                   maxWidth: '95%',
                   backgroundColor: getMessageBackgroundColor(message),
+                  ...(isProcessingMessage(message) && {
+                    backgroundColor: 'transparent',
+                    border: '1px dashed',
+                    borderColor: 'divider',
+                  }),
                 }}
               >
                 <Grid container spacing={1}>
@@ -307,9 +320,30 @@ const ChatList = (props: {
                     </Avatar>
                   </Grid>
                   <Grid item xs>
-                    <Typography variant="body1">
-                      {memoizedRenderContent(getMessageText(message))}
-                    </Typography>
+                    {isProcessingMessage(message) ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1, px: 0.5 }}>
+                        {[0, 1, 2].map((i) => (
+                          <Box
+                            key={i}
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: 'text.secondary',
+                              animation: `${pulse} 1.4s ease-in-out infinite`,
+                              animationDelay: `${i * 0.2}s`,
+                            }}
+                          />
+                        ))}
+                        <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5, fontStyle: 'italic' }}>
+                          {selectedPersona?.name || 'Agent'} is thinking...
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="body1">
+                        {memoizedRenderContent(getMessageText(message))}
+                      </Typography>
+                    )}
                     {/* Render tool errors if present */}
                     {Array.isArray(message.tool_errors) && message.tool_errors.length > 0 && (
                       <Typography variant="body2" color="error" sx={{ fontWeight: 500, mt: 1 }}>
@@ -325,6 +359,7 @@ const ChatList = (props: {
                         {renderComponent(message)}
                       </Box>
                     )}
+                    {!isProcessingMessage(message) && (
                     <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="caption" color="textSecondary">
                         {typeof (message as any)?.timestamp === 'string' ?
@@ -378,6 +413,7 @@ const ChatList = (props: {
                         </Box>
                       )}
                     </Box>
+                    )}
                   </Grid>
                 </Grid>
               </Paper>

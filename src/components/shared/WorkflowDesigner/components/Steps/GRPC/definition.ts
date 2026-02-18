@@ -115,7 +115,7 @@ export const GRPCStepDefinition: StepDefinition = {
   defaultProperties: {
     name: 'gRPC Call',
     port: 50051,
-    metadata: {},
+    metadata: [],
     timeout: 30000,
     ssl: false
   },
@@ -125,5 +125,18 @@ export const GRPCStepDefinition: StepDefinition = {
       'ui:help': 'Path to the .proto definition file'
     },    
   },
-  tags: ['integration', 'grpc', 'rpc', 'microservices']
+  tags: ['integration', 'grpc', 'rpc', 'microservices'],
+  rendering: {
+    webgl: {
+      type: 'webgl',
+      theme: 'circuit',
+      circuit: {
+        elementType: 'icChip',
+        labelPrefix: 'RPC',
+        colors: {
+          bodySelected: 0x00897b,
+        }
+      }
+    }
+  }
 };

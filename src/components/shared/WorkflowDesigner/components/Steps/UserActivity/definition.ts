@@ -138,5 +138,15 @@ export const UserActivityStepDefinition: StepDefinition = {
       'ui:help': 'JSON Schema for user input form'
     }
   },
-  tags: ['interaction', 'user', 'approval', 'manual', 'activity']
+  tags: ['interaction', 'user', 'approval', 'manual', 'activity'],
+  rendering: {
+    webgl: {
+      type: 'webgl',
+      theme: 'circuit',
+      circuit: {
+        elementType: 'dipSwitch',
+        labelPrefix: 'SW',
+      }
+    }
+  }
 };
