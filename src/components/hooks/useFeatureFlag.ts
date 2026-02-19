@@ -4,7 +4,7 @@ import {
   ApiFeatureFlagProvider, 
   FeatureFlagConfiguration,
   ProviderConfig 
-} from '@zepz/feature-flags-ts';
+} from '@reactory/client-core/featureflags';
 import Reactory from '@reactorynet/reactory-core';
 
 export interface UseFeatureFlagOptions {
