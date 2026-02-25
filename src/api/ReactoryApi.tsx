@@ -37,6 +37,7 @@ import {
 } from '@reactory/client-core/components/util';
 
 import amq from '@reactory/client-core/amq';
+import { ReactoryApiEventNames } from './ApiEventNames';
 import * as RestApi from './RestApi';
 import GraphQL from '@reactory/client-core/api/graphql';
 import { Theme, Typography } from "@mui/material";
@@ -77,18 +78,7 @@ const pluginDefinitionValid = (definition) => {
 };
 
 
-export const ReactoryApiEventNames = {
-  onLogout: 'loggedOut',
-  onLogin: 'loggedIn',
-  onPluginLoaded: 'onPluginLoaded',
-  onApiStatusUpdate: 'onApiStatusUpdate',
-  onRouteChanged: 'onRouteChanged',
-  onShowNotification: 'onShowNotification',
-  onThemeChanged: 'onThemeChanged',
-  onHideMenu: 'onHideMenu',
-  onShowMenu: 'onShowMenu',
-  onComponentRegistered: 'onComponentRegistered',
-};
+export { ReactoryApiEventNames } from './ApiEventNames';
 
 export const EmptyComponent = (fqn) => {
   return (<Typography>No Component For Fqn: {fqn}</Typography>)
@@ -1993,39 +1983,86 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   };
 
   public injectPlugin(plugin: Reactory.Platform.IReactoryApplicationPlugin): void { 
-    let Loader: Reactory.Forms.ReactoryResourceLoader 
-      = this.componentRegister["core.ReactoryPluginLoader@1.0.0"]?.component as Reactory.Forms.ReactoryResourceLoader;
+    try {
+      let Loader: Reactory.Forms.ReactoryResourceLoader 
+        = this.componentRegister["core.ReactoryPluginLoader@1.0.0"]?.component as Reactory.Forms.ReactoryResourceLoader;
 
-    if (plugin.loader) { 
-      Loader = this.getComponent<Reactory.Forms.ReactoryResourceLoader>(plugin.loader);
-      if (!Loader) { 
-        this.error(`Plugin expect custom loader: ${plugin.loader} not found`, { plugin });
-        throw new Error(`Plugin expect custom loader: ${plugin.loader} not found`);
+      if (plugin.loader) { 
+        Loader = this.getComponent<Reactory.Forms.ReactoryResourceLoader>(plugin.loader);
+        if (!Loader) { 
+          const errorMessage = `Plugin expects custom loader: ${plugin.loader} not found`;
+          this.error(errorMessage, { plugin });
+          this.emit(ReactoryApiEventNames.onPluginError, {
+            plugin,
+            error: errorMessage,
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
       }
-    }
 
-    if (Loader) {
-      // @ts-ignore
-      void Loader({ plugin, reactory: this });
+      if (Loader) {
+        // @ts-ignore
+        void Loader({ plugin, reactory: this });
+      } else {
+        const errorMessage = `No plugin loader available for plugin: ${plugin.name || plugin.id}`;
+        this.warning(errorMessage, { plugin });
+        this.emit(ReactoryApiEventNames.onPluginError, {
+          plugin,
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      const errorMessage = `Unexpected error injecting plugin "${plugin.name || plugin.id}": ${err instanceof Error ? err.message : String(err)}`;
+      this.error(errorMessage, { plugin, err });
+      this.emit(ReactoryApiEventNames.onPluginError, {
+        plugin,
+        error: errorMessage,
+        timestamp: new Date().toISOString(),
+      });
     }
   }
 
   private async loadPlugins() {
     if (this.$user && this.$user.plugins && this.$user.plugins.length > 0) {
-      this.$user.plugins.forEach((plugin: Reactory.Platform.IReactoryApplicationPlugin) => {
+      const failedPlugins: Array<{ plugin: Reactory.Platform.IReactoryApplicationPlugin; error: string }> = [];
+
+      for (const plugin of this.$user.plugins) {
         const {
           enabled = true,
           roles,
         } = plugin;
         if (roles && roles.length > 0) {
           if (this.hasRole(roles) === false) { 
-            return;
+            continue;
           }
         }
-        if (enabled === true) {          
-          this.injectPlugin(plugin);
+        if (enabled === true) {
+          try {
+            this.injectPlugin(plugin);
+          } catch (err) {
+            const errorMessage = `Failed to load plugin "${plugin.name || plugin.id}": ${err instanceof Error ? err.message : String(err)}`;
+            this.error(errorMessage, { plugin, err });
+            failedPlugins.push({ plugin, error: errorMessage });
+          }
         }
-      });
+      }
+
+      if (failedPlugins.length > 0) {
+        this.warning(
+          `${failedPlugins.length} plugin(s) failed to load: ${failedPlugins.map(f => f.plugin.name || f.plugin.id).join(', ')}`,
+          { failedPlugins }
+        );
+        this.emit(ReactoryApiEventNames.onShowNotification, {
+          title: `${failedPlugins.length} plugin(s) failed to load`,
+          type: 'warning',
+          config: {
+            message: failedPlugins.map(f => f.error).join('\n'),
+            duration: 8000,
+          },
+        });
+      }
     }
   }
 

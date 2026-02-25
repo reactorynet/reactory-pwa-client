@@ -2,7 +2,7 @@ import ReactoryApi from './ReactoryApi';
 import { withReactory as WITH_REACTORY } from './ApiProvider';
 import { useReactory as USE_REACTORY } from './ApiProvider';
 import { default as API_PROVIDER } from './ApiProvider';
-import { ReactoryApiEventNames as API_EVENTS } from './ReactoryApi';
+import { ReactoryApiEventNames as API_EVENTS } from './ApiEventNames';
 import graph from './graphql/graph';
 
 

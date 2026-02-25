@@ -1,4 +1,4 @@
-import { ReactoryApiEventNames } from "api";
+import { ReactoryApiEventNames } from "@reactory/client-core/api/ApiEventNames";
 
 export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoaderOptions): Promise<void> => {
   const {
@@ -92,11 +92,24 @@ export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoa
       scriptLink.onload = () => { 
         debug(`Plugin ${name} injected. Waiting for components to be loaded...`);
       }
+      scriptLink.onerror = (event) => {
+        const errorMessage = `Failed to load plugin "${name}" (${id}) from ${uri}`;
+        error(errorMessage, { event, plugin });
+        // Remove the broken script tag so a retry can re-add it
+        const broken = document.getElementById(resourceId);
+        if (broken) broken.remove();
+        // Surface the error through the reactory event system
+        reactory.emit(ReactoryApiEventNames.onPluginError, {
+          plugin,
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+        });
+      }
       document.body.append(scriptLink)
       break;
     }
     default: {
-      // do nothing for now.
+      warning(`Unsupported plugin mimeType "${mimeType}" for plugin "${name}" (${id}). Skipping.`);
       break;
     }
   }
