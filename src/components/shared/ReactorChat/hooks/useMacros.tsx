@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { 
   MacroComponentDefinitionRegistry, MacroComponentDefinition, MacrosHook, MacrosHookResults, MacrosHookProps, 
-  Macro} from '../types';
+  Macro, ReactorToolCall, ReactorToolResult, ReactorToolError} from '../types';
 import clientMacros from './macros'
 
 
@@ -24,7 +24,9 @@ const EXECUTE_MACRO_MUTATION = `
         images
         rating
         timestamp
-        tool_calls
+        tool_calls { id type function { name arguments } status }
+        tool_results { id name content timestamp }
+        tool_errors { id name error timestamp }
       }
       ... on ReactorInitiateSSE {
         sessionId
@@ -57,7 +59,9 @@ export interface ExecuteMacroResponse {
     images?: any[];
     rating: number;
     timestamp: Date;
-    tool_calls?: any[];
+    tool_calls?: ReactorToolCall[];
+    tool_results?: ReactorToolResult[];
+    tool_errors?: ReactorToolError[];
   } | {
     sessionId: string;
     endpoint: string;
@@ -147,6 +151,19 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
 
   const findMacroByAlias = useCallback((alias: string): MacroComponentDefinition<unknown> | null => {            
     const macro = Object.values(macros).find(m => m.alias === alias);    
+    return macro || null;
+  }, [macros]);
+
+
+  const findMacroByName = useCallback((name: string): MacroComponentDefinition<unknown> | null => {            
+    // check if the name includes a namespace, if not assume reactor-macros namespace
+    if (name.indexOf('.') === -1) {
+      name = `reactor-macros.${name}`;
+    }
+    if(name.indexOf('@') === -1) {
+      name = `${name}@1.0.0`;
+    }
+    const macro = Object.values(macros).find(m => `${m.nameSpace}.${m.name}@${m.version}` === name);    
     return macro || null;
   }, [macros]);
 
@@ -348,7 +365,8 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
     },
     updateMacro: registerMacro,
     getMacroById: (id) => macros[id],
-    findMacroByAlias,    
+    findMacroByAlias,
+    findMacroByName,    
     executeMacro,
     parseMacro,
   };

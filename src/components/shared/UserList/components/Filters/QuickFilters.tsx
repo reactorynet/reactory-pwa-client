@@ -45,7 +45,7 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
             label={filter.label}
             onClick={() => onToggle(filter.id)}
             color={isActive ? 'primary' : 'default'}
-            variant={isActive ? 'filled' : 'outlined'}
+            variant="filled"
             icon={isActive ? <Check /> : undefined}
             clickable
             aria-pressed={isActive}

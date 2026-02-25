@@ -7,7 +7,15 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
       created
       updated
       user { id firstName lastName }
-      history { id role content timestamp tool_calls }
+      history {
+        id
+        role
+        content
+        timestamp
+        tool_calls { id type function { name arguments } status }
+        tool_results { id name content timestamp }
+        tool_errors { id name error timestamp }
+      }
       vars
       tools {
         id

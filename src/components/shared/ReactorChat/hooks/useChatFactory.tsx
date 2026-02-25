@@ -70,7 +70,9 @@ type ReactorChatMessage = {
   content: string
   rating: number
   timestamp: Date
-  tool_calls: string[]
+  tool_calls: import('../types').ReactorToolCall[]
+  tool_results: import('../types').ReactorToolResult[]
+  tool_errors: import('../types').ReactorToolError[]
 }
 
 type ReactorInitiateSSE = {
@@ -104,7 +106,9 @@ const EXEC_MACRO_MUTATION = `
       role
       content
       timestamp
-      tool_calls
+      tool_calls { id type function { name arguments } status }
+      tool_results { id name content timestamp }
+      tool_errors { id name error timestamp }
     }
   }
 `;
@@ -116,7 +120,9 @@ const EXEC_TOOL_CALL_MUTATION = `
       role
       content
       timestamp
-      tool_calls
+      tool_calls { id type function { name arguments } status }
+      tool_results { id name content timestamp }
+      tool_errors { id name error timestamp }
     }
   }
 `;
@@ -133,7 +139,9 @@ interface ReactorChatHistory {
   role: string
   content: string
   timestamp: Date
-  tool_calls: string[]
+  tool_calls: import('../types').ReactorToolCall[]
+  tool_results: import('../types').ReactorToolResult[]
+  tool_errors: import('../types').ReactorToolError[]
   rating: number
 }
 
@@ -482,7 +490,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
 
-  const { getMacroById, executeMacro, parseMacro, macros, findMacroByAlias } = useMacros({
+  const { getMacroById, executeMacro, parseMacro, macros, findMacroByAlias, findMacroByName } = useMacros({
     reactory,
     chatState,
     onMacroCallResult: (result: any, state: ChatState) => {
@@ -561,6 +569,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           name: toolCall.data.name,          
           arguments: typeof toolCall.data.arguments === 'string' ? JSON.parse(toolCall.data.arguments) : toolCall.data.arguments,
         },
+        status: 'running' as const,
       }],
     } as UXChatMessage;
     
@@ -1213,10 +1222,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         onMessage({
           id: reactory.utils.uuid(),
           timestamp: new Date(),
-          role: "assistant",
+          role: "user",
           content: `Tool approval mode set to ${mode}`,
           sessionId: chatState.id,
-        });
+          isActivity: true,
+        } as any);
       } else {
         throw new Error("No response from server");
       }
@@ -1295,7 +1305,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   /**
    * Send tool results back to the AI provider and get the response
    */
-  const sendToolResultsToAI = React.useCallback(async (consolidatedResults: string, toolResults: any[], toolErrors: any[]): Promise<UXChatMessage | null> => {
+  const sendToolResultsToAI = React.useCallback(async (consolidatedResults: string, toolResults: any[], toolErrors: any[], thinkingPlaceholderId?: string): Promise<UXChatMessage | null> => {
     try {
       const resp = await graph.sendMessage({
         message: consolidatedResults,
@@ -1311,13 +1321,27 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
         const aiMessage = resp as unknown as UXChatMessage;
 
-        // Add the AI response to chat history
+        // Replace the Processing... placeholder if one was injected, otherwise append
         if (aiMessage.sessionId) {
-          setChatState((prevState) => ({
-            ...prevState,
-            history: [...prevState.history, aiMessage as any],
-            updated: new Date(),
-          }));
+          setChatState((prevState) => {
+            const history = [...prevState.history];
+            if (thinkingPlaceholderId) {
+              let phIdx = -1;
+              for (let i = history.length - 1; i >= 0; i--) {
+                if ((history[i] as any).id === thinkingPlaceholderId) { phIdx = i; break; }
+              }
+              if (phIdx >= 0) {
+                history[phIdx] = aiMessage as any;
+                return { ...prevState, history, updated: new Date() };
+              }
+            }
+            // Fallback — just append
+            return {
+              ...prevState,
+              history: [...history, aiMessage as any],
+              updated: new Date(),
+            };
+          });
         }
 
         return aiMessage;
@@ -1389,12 +1413,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       if (toolCall.type === 'function' && toolCall.function) {
         const { id, function: func } = toolCall;
         const { name, arguments: args } = func;
-
+        debugger;
         // Try to find the macro by alias first, then by name
         let macro = findMacroByAlias(name);
         if (!macro) {
           // If not found by alias, try to find by name in the macros array
-          macro = chatState.macros?.find(m => m.name === name || m.alias === name);
+          macro = findMacroByName(name);
         }
 
         if (!macro) {
@@ -1616,9 +1640,18 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       });
 
       if (lastMessageIndex >= 0) {
-        // Update the message with tool_calls with tool results
+        // Update the message with tool_calls with tool results and update each tool call's status
+        const updatedToolCalls = (history[lastMessageIndex].tool_calls || []).map((tc: any) => {
+          const hasResult = toolResults.some((r: any) => r.id === tc.id);
+          const hasError = toolErrors.some((e: any) => e.id === tc.id);
+          return {
+            ...tc,
+            status: hasError ? 'error' : hasResult ? 'success' : tc.status || 'pending',
+          };
+        });
         history[lastMessageIndex] = {
           ...history[lastMessageIndex],
+          tool_calls: updatedToolCalls,
           tool_results: toolResults,
           tool_errors: toolErrors,
         };
@@ -1726,7 +1759,26 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     if (toolResults.length > 0) {
       try {
         const consolidatedResults = consolidateToolResults(toolResults, toolErrors);
-        const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors);
+
+        // Insert a Processing... placeholder so the UI shows the "thinking" indicator
+        // while we wait for the AI's follow-up response.
+        const thinkingPlaceholderId = reactory.utils.uuid();
+        setChatState((prevState) => ({
+          ...prevState,
+          history: [
+            ...prevState.history,
+            {
+              id: thinkingPlaceholderId,
+              role: 'assistant',
+              content: 'Processing...',
+              timestamp: new Date(),
+              sessionId: prevState.id,
+            } as any,
+          ],
+          updated: new Date(),
+        }));
+
+        const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors, thinkingPlaceholderId);
 
         // Check if the AI response contains new tool calls
         if (aiResponse && aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {

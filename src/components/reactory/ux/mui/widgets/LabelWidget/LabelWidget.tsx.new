@@ -4,7 +4,7 @@ import { compose } from 'redux';
 import { withTheme, withStyles } from '@mui/styles';
 import { template, isNil } from 'lodash';
 import { withReactory } from '@reactory/client-core/api/ApiProvider';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 function formatMoney(amount, decimalCount = 2, decimal = ".", thousands = ",") {
   try {

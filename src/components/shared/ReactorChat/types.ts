@@ -96,7 +96,7 @@ export interface ChatCompletionResponseMessageStore extends OpenAI.Chat.ChatComp
   id: string
   rating?: number
   created: Date
-  tool_results: any[]
+  tool_results: ReactorToolResult[]
 }
 
 export type ReactorConversationHistory = UXChatMessage[]
@@ -176,6 +176,52 @@ export type ChatMessage = OpenAI.ChatCompletionMessage |
   OpenAI.ChatCompletionMessageToolCall;
   //RatedChatCompletionResponseMessage;
 
+/**
+ * Represents the execution status of a tool call.
+ */
+export type ReactorToolCallStatus = 'pending' | 'running' | 'success' | 'error';
+
+/**
+ * Represents the function details within a tool call.
+ */
+export interface ReactorToolCallFunction {
+  name: string;
+  arguments: string;
+}
+
+/**
+ * Represents a single tool call requested by the AI assistant,
+ * including its execution status.
+ */
+export interface ReactorToolCall {
+  id: string;
+  type: 'function';
+  function: ReactorToolCallFunction;
+  status: ReactorToolCallStatus;
+  /** Legacy field - some tool calls may have name at top level */
+  name?: string;
+}
+
+/**
+ * Represents the result of a successfully executed tool call.
+ */
+export interface ReactorToolResult {
+  id: string;
+  name?: string;
+  content?: any;
+  timestamp?: Date;
+}
+
+/**
+ * Represents an error from a failed tool call execution.
+ */
+export interface ReactorToolError {
+  id: string;
+  name?: string;
+  error?: string;
+  timestamp?: Date;
+}
+
 export type UXChatMessage = ChatMessage & {
   id: string;
   role: "user" | "assistant" | "system" | "tool" | "error";
@@ -183,11 +229,14 @@ export type UXChatMessage = ChatMessage & {
   sessionId: string;
   timestamp: Date;
   component?: string | React.FC | React.ComponentType<any> | React.ReactNode;
-  tool_calls?: any[];
-  tool_results?: any[];
-  tool_errors?: any[];
+  tool_calls?: ReactorToolCall[];
+  tool_results?: ReactorToolResult[];
+  tool_errors?: ReactorToolError[];
   props?: any
   rating?: number | null;
+  /** When true, this message represents a user-initiated activity (e.g. changing tool approval mode)
+   *  rather than a real chat message. It renders with a distinct activity-notification style. */
+  isActivity?: boolean;
 }
 
 export interface MCPClient {
@@ -412,6 +461,7 @@ export interface MacrosHookResults {
   updateMacro: (macro: MacroComponentDefinition<unknown>) => void
   getMacroById: (id: string) => MacroComponentDefinition<unknown> | undefined
   findMacroByAlias: (alias: string) => MacroComponentDefinition<unknown> | undefined
+  findMacroByName: (name: string) => MacroComponentDefinition<unknown> | undefined
   parseMacro: (text: string) => {
     macro: MacroComponentDefinition<unknown> | null
     args: any

@@ -1023,15 +1023,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           const { result, statusCode } = networkError;
 
           if (statusCode === 401 || statusCode === 403) {
-            that.createNotification(`🚨 Unauthorized or Forbidden Error, clearing auth token and reloading the page`, { type: 'error', canDismiss: true, timeout: 4000, showInAppNotification: true });
-            that.log(`Unauthorized or Forbidden Error, clearing auth token and reloading the page`, { networkError, variables, options, mutation });
-            that.setAuthToken(null);
-            that.clearStoreAndCache();
-            
-            setTimeout(() => {
-              that.emit(ReactoryApiEventNames.onLogout, { reason: 'Unauthorized or Forbidden Error', networkError, variables, options, mutation });
-            }, 1000);
-            //window.location.reload();
+            that.log(`Unauthorized or Forbidden Error on mutation, triggering session expired logout`, { networkError, variables, options, mutation });
+            that.logout(false, 'session_expired').catch((logoutErr) => {
+              that.error('Error during session expired logout from mutation:', logoutErr);
+            });
           } else {
             that.createNotification(`🚨 Network Error: ${networkError.message}`, { type: 'error', canDismiss: true, timeout: 4000, showInAppNotification: true });
           }
@@ -1748,7 +1743,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   }
 
   isLoggingOut = false;
-  async logout(refreshStatus = true) {
+  async logout(refreshStatus = true, reason?: string) {
     if (this.isLoggingOut === true) return;
     this.isLoggingOut = true;
     localStorage.removeItem(storageKeys.AuthToken);
@@ -1757,12 +1752,13 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     await this.forms(true);
     const { client } = await ReactoryApolloClient();
     this.client = client;
+    const logoutEventData = reason ? { reason } : undefined;
     if (refreshStatus === true) {
       this.status({ emitLogin: false, forceLogout: true }).then(() => {
-        this.emit(ReactoryApiEventNames.onLogout);
+        this.emit(ReactoryApiEventNames.onLogout, logoutEventData);
       });
     } else {
-      this.emit(ReactoryApiEventNames.onLogout);
+      this.emit(ReactoryApiEventNames.onLogout, logoutEventData);
     }
     this.isLoggingOut = false;
   }
@@ -1836,7 +1832,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         } = apiStatusError as ApolloError;
 
         if (networkError && (networkError as ServerError).statusCode === 401) {
-          await that.logout(false);
+          that.log('Session expired (401 on getApiStatus), logging out with session_expired reason');
+          await that.logout(false, 'session_expired');
           that.setUser(anonUser);
           return anonUser;          
         }
@@ -1919,7 +1916,8 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         }
 
         if (networkError && (networkError as ServerError).statusCode === 401) {
-          await that.logout(false);
+          that.log('Session expired (401 on status), logging out with session_expired reason');
+          await that.logout(false, 'session_expired');
           that.setUser(anonUser);
           return anonUser;          
         }

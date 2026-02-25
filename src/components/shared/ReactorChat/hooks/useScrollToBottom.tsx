@@ -1,9 +1,67 @@
 import { Tooltip, keyframes } from '@mui/material';
-import { ChatState, IAIPersona, UXChatMessage } from '../types';
+import { ChatState, IAIPersona, ReactorToolCall, ReactorToolCallStatus, UXChatMessage } from '../types';
 import useContentRender from '../../hooks/useContentRender';
 
 const isProcessingMessage = (message: UXChatMessage) =>
   message.role === 'assistant' && message.content === 'Processing...';
+
+const isActivityMessage = (message: UXChatMessage) =>
+  (message as any).isActivity === true;
+
+const isToolCallMessage = (message: UXChatMessage) =>
+  message.role === 'assistant' &&
+  Array.isArray(message.tool_calls) &&
+  message.tool_calls.length > 0;
+
+/**
+ * Returns the status for a specific tool call within a message.
+ * Uses the typed `status` field from the server when available,
+ * falls back to result/error correlation for backward compatibility.
+ */
+const getToolCallStatus = (message: UXChatMessage, callId: string): ReactorToolCallStatus => {
+  // First check: use the typed status from the server if the tool call has it
+  const toolCall = (message.tool_calls as ReactorToolCall[] | undefined)?.find((tc) => tc.id === callId);
+  if (toolCall?.status && toolCall.status !== 'pending') {
+    return toolCall.status;
+  }
+
+  // Fallback: infer from tool_errors / tool_results arrays
+  if (Array.isArray(message.tool_errors) && message.tool_errors.some((e) => e.id === callId)) {
+    return 'error';
+  }
+  if (Array.isArray(message.tool_results) && message.tool_results.some((r) => r.id === callId)) {
+    return 'success';
+  }
+  return 'pending';
+};
+
+/**
+ * Returns the aggregate status for the whole tool-call message.
+ * Uses the typed statuses when available.
+ */
+const getOverallToolCallStatus = (message: UXChatMessage): ReactorToolCallStatus => {
+  if (!isToolCallMessage(message)) return 'pending';
+
+  // Check if any tool call has a typed status from the server
+  const statuses = ((message.tool_calls || []) as ReactorToolCall[]).map((tc) => {
+    if (tc.status && tc.status !== 'pending') return tc.status;
+    return getToolCallStatus(message, tc.id);
+  });
+
+  // If all are success, overall is success
+  if (statuses.length > 0 && statuses.every((s) => s === 'success')) return 'success';
+  // If any is error, overall is error
+  if (statuses.some((s) => s === 'error')) return 'error';
+  // If any has a result or error, but mixed, use the fallback
+  const hasAnyResult =
+    (Array.isArray(message.tool_results) && message.tool_results.length > 0) ||
+    (Array.isArray(message.tool_errors) && message.tool_errors.length > 0);
+  if (hasAnyResult) {
+    if (Array.isArray(message.tool_errors) && message.tool_errors.length > 0) return 'error';
+    return 'success';
+  }
+  return 'running';
+};
 
 const pulse = keyframes`
   0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
@@ -43,6 +101,16 @@ const ChatList = (props: {
   } = theme;
 
   const listRef = React.useRef<HTMLDivElement | null>(null);
+  // Tracks which tool-call result panels are expanded, keyed by "<messageId>:<callId>"
+  const [expandedToolResults, setExpandedToolResults] = React.useState<Set<string>>(new Set());
+  const toggleToolResult = React.useCallback((key: string) => {
+    setExpandedToolResults(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   const scrollToBottom = () => {
     if (listRef.current) {
@@ -125,6 +193,11 @@ const ChatList = (props: {
   }
 
   const getMessageAvatarIcon = (message: UXChatMessage) => {
+    // Activity messages get a settings/tune icon
+    if (isActivityMessage(message)) {
+      return 'tune';
+    }
+
     // For tool messages, show a tool icon
     if (message.role === 'assistant' && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
       return 'build'; // Material Design tool icon
@@ -157,6 +230,11 @@ const ChatList = (props: {
   }
 
   const getMessageAvatarColor = (message: UXChatMessage) => {
+    // Activity messages get an info colour
+    if (isActivityMessage(message)) {
+      return 'info.main';
+    }
+
     // Tool messages get a different color
     if (message.role === 'assistant' && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
       return 'warning.main'; // Orange/amber color for tools
@@ -174,6 +252,9 @@ const ChatList = (props: {
   }
 
   const shouldShowRetryButton = (message: UXChatMessage) => {
+    // Activity messages are not retryable
+    if (isActivityMessage(message)) return false;
+
     // Only show for user messages that have content
     return message.role === 'user' &&
       message.content &&
@@ -247,7 +328,7 @@ const ChatList = (props: {
         return reactory.i18n.t('reactor.client.chat.callingTools', {
           count: message.tool_calls.length,
           tools: message.tool_calls.map((call) => call.function?.name ?? call.name ?? 'unknown').join(', '),
-          defaultValue: 'Calling {{count} tool(s): {tools}'
+          defaultValue: 'Calling {{count}} tool(s): {{tools}}'
         });
       }
     }
@@ -295,7 +376,7 @@ const ChatList = (props: {
               }}
             >
               <Paper
-                elevation={isProcessingMessage(message) ? 0 : 1}
+                elevation={isProcessingMessage(message) || isActivityMessage(message) || isToolCallMessage(message) ? 0 : 1}
                 sx={{
                   p: 0.5,
                   maxWidth: '95%',
@@ -305,6 +386,24 @@ const ChatList = (props: {
                     border: '1px dashed',
                     borderColor: 'divider',
                   }),
+                  ...(isActivityMessage(message) && {
+                    backgroundColor: 'transparent',
+                    border: '1px dashed',
+                    borderColor: 'info.main',
+                    opacity: 0.85,
+                  }),
+                  ...(isToolCallMessage(message) && (() => {
+                    const status = getOverallToolCallStatus(message);
+                    return {
+                      backgroundColor: 'transparent',
+                      border: '1px dashed',
+                      borderColor:
+                        status === 'success' ? 'success.main' :
+                        status === 'error'   ? 'error.main' :
+                        'warning.main',
+                      opacity: 0.9,
+                    };
+                  })()),
                 }}
               >
                 <Grid container spacing={1}>
@@ -339,13 +438,168 @@ const ChatList = (props: {
                           {selectedPersona?.name || 'Agent'} is thinking...
                         </Typography>
                       </Box>
-                    ) : (
+                    ) : isActivityMessage(message) ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, px: 0.5 }}>
+                        <Typography
+                          variant="body2"
+                          color="info.main"
+                          sx={{ fontStyle: 'italic', userSelect: 'none' }}
+                        >
+                          {getMessageText(message)}
+                        </Typography>
+                      </Box>
+                    ) : isToolCallMessage(message) ? (() => {
+                      const overallStatus = getOverallToolCallStatus(message);
+                      const overallColor =
+                        overallStatus === 'success' ? 'success.main' :
+                        overallStatus === 'error'   ? 'error.main' :
+                        'warning.main';
+                      const headerLabel =
+                        overallStatus === 'running'
+                          ? (message.tool_calls.length === 1 ? 'Invoking tool' : `Invoking ${message.tool_calls.length} tools`)
+                          : overallStatus === 'success'
+                          ? (message.tool_calls.length === 1 ? 'Tool completed' : `${message.tool_calls.length} tools completed`)
+                          : (message.tool_calls.length === 1 ? 'Tool failed' : `${message.tool_calls.length} tools (some failed)`);
+
+                      return (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
+                          {/* Header row */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {overallStatus === 'running' ? (
+                              [0, 1, 2].map((i) => (
+                                <Box
+                                  key={i}
+                                  sx={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    backgroundColor: overallColor,
+                                    animation: `${pulse} 1.4s ease-in-out infinite`,
+                                    animationDelay: `${i * 0.2}s`,
+                                  }}
+                                />
+                              ))
+                            ) : (
+                              <Icon sx={{ fontSize: '0.875rem', color: overallColor }}>
+                                {overallStatus === 'success' ? 'check_circle' : 'error'}
+                              </Icon>
+                            )}
+                            <Typography variant="caption" color={overallColor} sx={{ fontStyle: 'italic', userSelect: 'none' }}>
+                              {headerLabel}
+                            </Typography>
+                          </Box>
+
+                          {/* Per-call chips */}
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.25 }}>
+                            {message.tool_calls.map((call, i) => {
+                              const callId = call.id ?? `${message.id}-${i}`;
+                              const name = call.function?.name ?? call.name ?? 'unknown';
+                              const callStatus = getToolCallStatus(message, callId);
+                              const chipColor =
+                                callStatus === 'success' ? 'success.main' :
+                                callStatus === 'error'   ? 'error.main' :
+                                'warning.main';
+                              const chipBg =
+                                callStatus === 'success' ? 'rgba(46,125,50,0.1)' :
+                                callStatus === 'error'   ? 'rgba(211,47,47,0.1)' :
+                                'rgba(255,167,38,0.1)';
+                              const callIcon =
+                                callStatus === 'success' ? 'check_circle' :
+                                callStatus === 'error'   ? 'error' :
+                                'build';
+                              const expandKey = `${message.id}:${callId}`;
+                              const isExpanded = expandedToolResults.has(expandKey);
+
+                              // Find result/error payload for this call
+                              const resultPayload = message.tool_results?.find((r: any) => r.id === callId);
+                              const errorPayload  = message.tool_errors?.find((e: any) => e.id === callId);
+                              const hasPayload = !!resultPayload || !!errorPayload;
+
+                              return (
+                                <Box key={callId} sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                  <Box
+                                    sx={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      px: 0.75,
+                                      py: 0.25,
+                                      borderRadius: '4px',
+                                      border: '1px solid',
+                                      borderColor: chipColor,
+                                      bgcolor: chipBg,
+                                    }}
+                                  >
+                                    {callStatus === 'running' ? (
+                                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: chipColor, animation: `${pulse} 1.4s ease-in-out infinite` }} />
+                                    ) : (
+                                      <Icon sx={{ fontSize: '0.75rem', color: chipColor }}>{callIcon}</Icon>
+                                    )}
+                                    <Typography variant="caption" sx={{ color: chipColor, fontFamily: 'monospace', fontSize: '0.7rem' }}>
+                                      {name}
+                                    </Typography>
+                                    {hasPayload && (
+                                      <Tooltip title={isExpanded ? 'Hide result' : 'Show result'}>
+                                        <span
+                                          onClick={() => toggleToolResult(expandKey)}
+                                          style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', marginLeft: 2 }}
+                                        >
+                                          <Icon sx={{ fontSize: '0.875rem', color: chipColor }}>
+                                            {isExpanded ? 'expand_less' : 'expand_more'}
+                                          </Icon>
+                                        </span>
+                                      </Tooltip>
+                                    )}
+                                  </Box>
+
+                                  {/* Collapsible result panel */}
+                                  {isExpanded && (
+                                    <Box
+                                      sx={{
+                                        mt: 0.25,
+                                        p: 0.75,
+                                        borderRadius: '4px',
+                                        bgcolor: chipBg,
+                                        border: '1px solid',
+                                        borderColor: chipColor,
+                                        maxWidth: 320,
+                                        maxHeight: 160,
+                                        overflowY: 'auto',
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="caption"
+                                        component="pre"
+                                        sx={{
+                                          fontFamily: 'monospace',
+                                          fontSize: '0.65rem',
+                                          color: callStatus === 'error' ? 'error.main' : 'text.secondary',
+                                          whiteSpace: 'pre-wrap',
+                                          wordBreak: 'break-all',
+                                          m: 0,
+                                        }}
+                                      >
+                                        {errorPayload
+                                          ? String(errorPayload.error ?? JSON.stringify(errorPayload, null, 2))
+                                          : typeof resultPayload?.content === 'string'
+                                          ? resultPayload.content
+                                          : JSON.stringify(resultPayload?.content ?? resultPayload, null, 2)}
+                                      </Typography>
+                                    </Box>
+                                  )}
+                                </Box>
+                              );
+                            })}
+                          </Box>
+                        </Box>
+                      );
+                    })() : (
                       <Typography variant="body1">
                         {memoizedRenderContent(getMessageText(message))}
                       </Typography>
                     )}
-                    {/* Render tool errors if present */}
-                    {Array.isArray(message.tool_errors) && message.tool_errors.length > 0 && (
+                    {/* Render tool errors if present — only for non-tool-call messages (tool-call messages show errors inline per chip) */}
+                    {!isToolCallMessage(message) && Array.isArray(message.tool_errors) && message.tool_errors.length > 0 && (
                       <Typography variant="body2" color="error" sx={{ fontWeight: 500, mt: 1 }}>
                         {message.tool_errors.map((err, idx) => (
                           <span key={idx}>
@@ -359,7 +613,7 @@ const ChatList = (props: {
                         {renderComponent(message)}
                       </Box>
                     )}
-                    {!isProcessingMessage(message) && (
+                    {!isProcessingMessage(message) && !isToolCallMessage(message) && (
                     <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="caption" color="textSecondary">
                         {typeof (message as any)?.timestamp === 'string' ?

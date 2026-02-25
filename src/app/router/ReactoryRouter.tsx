@@ -185,8 +185,11 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
       // Check if user is anonymous and route is not public      
       if (reactory.isAnon() && !routeDef.public && routeDef.path !== "/login") {
         // If user is anonymous but route requires authentication, redirect to login
-        debug('Redirecting anonymous user to login for protected route:', routeDef.path);
-        window.location.href = "/login";
+        // Preserve the current path as a redirect param so user returns after login
+        const currentPath = window.location.pathname + window.location.search;
+        const loginUrl = `/login?r=${encodeURIComponent(currentPath)}`;
+        debug(`Redirecting anonymous user to login for protected route: ${routeDef.path}, with redirect: ${currentPath}`);
+        window.location.href = loginUrl;
         return; // Skip creating route element for redirected routes
       } else {
         debug('User is authenticated or route is public, proceeding with route configuration.', { routeDef
@@ -244,7 +247,8 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
             if (hasRefreshed && reactory.isAnon() && routeDef.path !== "/login") {
               debug('Redirecting to login after refresh');
               localStorage.removeItem('hasRefreshed');
-              window.location.href = "/login";
+              const currentPath = window.location.pathname + window.location.search;
+              window.location.href = `/login?r=${encodeURIComponent(currentPath)}`;
               return; // Skip creating route element for redirected routes
             }
           }

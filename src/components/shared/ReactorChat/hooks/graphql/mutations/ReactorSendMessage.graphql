@@ -8,8 +8,9 @@ mutation ReactorSendMessage($message: ReactorSendMessageInput!) {
       content
       rating
       timestamp
-      tool_calls
-      tool_results
+      tool_calls { id type function { name arguments } status }
+      tool_results { id name content timestamp }
+      tool_errors { id name error timestamp }
     }
     ... on ReactorInitiateSSE {
       sessionId

@@ -127,9 +127,13 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
   // Token drip-feed queue: words waiting to be emitted
   const tokenQueueRef = React.useRef<{ segments: string[]; template: TokenStreamingEvent }[]>([]);
   const dripTimerRef = React.useRef<number | null>(null);
+  // Holds a complete event that arrived while the drip queue was still running.
+  // It will be fired once the queue fully drains.
+  const pendingCompleteRef = React.useRef<CompletionStreamingEvent | null>(null);
 
   /**
    * Flush the drip-feed queue: emit one segment per interval tick.
+   * When the queue empties, fire any deferred completion event.
    */
   const flushQueue = React.useCallback(() => {
     if (dripTimerRef.current !== null) return; // already running
@@ -138,6 +142,13 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
       const queue = tokenQueueRef.current;
       if (queue.length === 0) {
         dripTimerRef.current = null;
+        // Fire deferred completion now that every word has been rendered
+        if (pendingCompleteRef.current) {
+          const evt = pendingCompleteRef.current;
+          pendingCompleteRef.current = null;
+          setIsStreaming(false);
+          if (onMessageRef.current) onMessageRef.current(evt);
+        }
         return;
       }
 
@@ -220,14 +231,15 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
           break;
         }
         case 'complete': {
-          // Flush any remaining queued tokens immediately before completing
-          tokenQueueRef.current = [];
-          if (dripTimerRef.current !== null) {
-            clearTimeout(dripTimerRef.current);
-            dripTimerRef.current = null;
+          if (tokenQueueRef.current.length > 0 || dripTimerRef.current !== null) {
+            // Drip queue is still running — park the completion event and let
+            // the queue drain naturally; flushQueue's tick() will fire it once empty.
+            pendingCompleteRef.current = data as CompletionStreamingEvent;
+          } else {
+            // Queue already empty — complete immediately
+            setIsStreaming(false);
+            if (onMessageRef.current) onMessageRef.current(data as CompletionStreamingEvent);
           }
-          setIsStreaming(false);
-          if (onMessageRef.current) onMessageRef.current(data as CompletionStreamingEvent);
           break;
         }
         case 'error': {
@@ -318,8 +330,9 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
   }, [handleMessage, reactory]);
 
   const disconnect = React.useCallback(() => {
-    // Clear drip-feed queue
+    // Clear drip-feed queue and any pending completion
     tokenQueueRef.current = [];
+    pendingCompleteRef.current = null;
     if (dripTimerRef.current !== null) {
       clearTimeout(dripTimerRef.current);
       dripTimerRef.current = null;

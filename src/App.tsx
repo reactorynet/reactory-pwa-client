@@ -265,8 +265,12 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     }
   };
 
-  const onLogout = () => {
-    reactory.log('App.onLogout handler', {});
+  const onLogout = (eventData?: { reason?: string }) => {
+    reactory.log('App.onLogout handler', { eventData });
+
+    // Capture the current path before clearing state, for session expiry redirect
+    const currentPath = window.location.pathname + window.location.search;
+    const isSessionExpired = eventData?.reason === 'session_expired';
 
     // Set flag to prevent re-rendering loops during auth transition
     setIsAuthTransitioning(true);
@@ -303,8 +307,22 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     // Cleanup forms and components
     void cleanupFormsAndComponents();
 
-    // Clear the transition flag after a short delay
-    setTimeout(() => setIsAuthTransitioning(false), 100);
+    // If session expired due to 401, navigate to login with redirect param
+    if (isSessionExpired && currentPath && currentPath !== '/login' && !currentPath.startsWith('/login?')) {
+      reactory.log(`Session expired, redirecting to login with return path: ${currentPath}`);
+      reactory.createNotification(
+        'Your session has expired. Please log in again.',
+        { type: 'warning', canDismiss: true, timeout: 5000, showInAppNotification: true }
+      );
+      const redirectPath = `/login?r=${encodeURIComponent(currentPath)}`;
+      // Use a short delay to allow cleanup to complete before navigating
+      setTimeout(() => {
+        window.location.href = redirectPath;
+      }, 250);
+    } else {
+      // Clear the transition flag after a short delay for normal logout
+      setTimeout(() => setIsAuthTransitioning(false), 100);
+    }
   };
 
 
