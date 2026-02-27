@@ -1922,7 +1922,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       const ToolbarComponent = reactory.getComponent(uiOptions.componentMap.Toolbar);
       if (ToolbarComponent) {
         // @ts-ignore
-        return <ToolbarComponent 
+        return <ToolbarComponent
+          formContext={formContext} 
           reactory={reactory} 
           data={{
             data: data?.data || [],
