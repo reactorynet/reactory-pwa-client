@@ -22,6 +22,8 @@ interface FilesPanelProps {
   onInitializeChat?: () => Promise<boolean>;
   onRefreshChatState?: () => Promise<void>;
   il8n: any;
+  /** When true, renders as a compact horizontal chip strip instead of the full overlay panel */
+  minimized?: boolean;
 }
 
 const GET_CONVERSATION_FILES = gql`
@@ -163,7 +165,8 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
   onFileUpload,
   onInitializeChat,
   onRefreshChatState,
-  il8n
+  il8n,
+  minimized = false,
 }) => {
   const [selectedDocument, setSelectedDocument] = useState<DocumentPreview | null>(null);
   const [documents, setDocuments] = useState<DocumentPreview[]>([]);
@@ -1196,6 +1199,55 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
     }
     return il8n?.t('reactor.client.files.title', { defaultValue: 'File Management' });
   };
+
+  // Minimized chip-strip view shown when the file explorer sidebar is docked open
+  if (minimized) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.75,
+          px: 1,
+          py: 0.5,
+          flexWrap: 'wrap',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          minHeight: 36,
+        }}
+      >
+        {documents.length === 0 ? (
+          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+            {il8n?.t('reactor.client.files.noAttachments', { defaultValue: 'No files attached' })}
+          </Typography>
+        ) : (
+          documents.map((doc) => (
+            <Chip
+              key={doc.id}
+              icon={getFileIcon(doc.type) as React.ReactElement}
+              label={doc.name.length > 20 ? doc.name.substring(0, 20) + '…' : doc.name}
+              size="small"
+              variant="outlined"
+              onDelete={() => handleUnlinkDocument(doc)}
+              deleteIcon={<LinkOff fontSize="inherit" />}
+              onClick={() => handleDocumentSelect(doc)}
+              sx={{
+                maxWidth: 180,
+                fontSize: '0.7rem',
+                '& .MuiChip-icon': { fontSize: '0.9rem' },
+              }}
+            />
+          ))
+        )}
+        <Tooltip title={il8n?.t('reactor.client.files.openPanel', { defaultValue: 'Open files panel' })}>
+          <IconButton size="small" onClick={onClose} sx={{ ml: 'auto' }}>
+            <ArrowBack fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    );
+  }
 
   return (
     <Box

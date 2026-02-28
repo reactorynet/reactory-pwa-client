@@ -18,6 +18,7 @@ import ToolsPanel from './components/ToolsPanel';
 import ChatHistoryPanel from './components/ChatHistoryPanel';
 import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel/FilesPanel';
+import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/FileExplorerSidebar';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
 import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
@@ -190,6 +191,7 @@ export default (props) => {
     History,
     AttachFile,
     Construction,
+    FolderOpen,
   } = Material.MaterialIcons;
 
   // Helper to get color based on token pressure
@@ -281,6 +283,34 @@ export default (props) => {
   const [chatHistoryPanelOpen, setChatHistoryPanelOpen] = useState<boolean>(false);
   const [recordingPanelOpen, setRecordingPanelOpen] = useState<boolean>(false);
   const [filesPanelOpen, setFilesPanelOpen] = useState<boolean>(false);
+
+  // File explorer sidebar — docked inline panel (left or right)
+  const [fileExplorerOpen, setFileExplorerOpen] = useState<boolean>(false);
+  const [fileExplorerDock, setFileExplorerDock] = useState<DockSide>(() => {
+    try {
+      const saved = localStorage.getItem('reactorChat.fileExplorerDock');
+      return (saved === 'left' || saved === 'right') ? saved : 'right';
+    } catch {
+      return 'right';
+    }
+  });
+
+  const handleFileExplorerToggle = useCallback(() => {
+    setFileExplorerOpen(prev => !prev);
+  }, []);
+
+  const handleFileExplorerClose = useCallback(() => {
+    setFileExplorerOpen(false);
+  }, []);
+
+  const handleFileExplorerDockChange = useCallback((dock: DockSide) => {
+    setFileExplorerDock(dock);
+    try {
+      localStorage.setItem('reactorChat.fileExplorerDock', dock);
+    } catch {
+      // localStorage unavailable — ignore
+    }
+  }, []);
 
   const [headerOpen, setHeaderOpen] = useState<boolean>(false);
   const [chatMenuAnchor, setChatMenuAnchor] = useState<null | HTMLElement>(null);
@@ -582,6 +612,15 @@ export default (props) => {
     }
   }, [chatState?.id, reactory]);
 
+  const handleInitializeChat = useCallback(async () => {
+    if (!chatState?.id && selectedPersona) {
+      reactory.log('Initializing new chat session for file operations');
+      await newChat();
+      return true;
+    }
+    return false;
+  }, [chatState?.id, selectedPersona, newChat, reactory]);
+
   const handlePersonaSelect = useCallback((persona: Partial<IAIPersona>) => {
     // Save current session to cache before switching
     if (selectedPersona?.id && chatState?.id) {
@@ -753,7 +792,17 @@ export default (props) => {
       title: il8n?.t('reactor.client.chat.history', { defaultValue: 'Chat History' }),
       clickHandler: handleChatHistoryPanelToggle,
     },
-  ], [chatState, enabledTools, Person, Chat, Description, Star, History, AttachFile, Construction, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle]);
+    {
+      key: 'fileExplorer',
+      icon: (
+        <Badge badgeContent={fileExplorerOpen ? undefined : 0} variant="dot" color="primary" invisible={!fileExplorerOpen}>
+          <FolderOpen />
+        </Badge>
+      ),
+      title: il8n?.t('reactor.client.fileExplorer.toggle', { defaultValue: 'My Files' }),
+      clickHandler: handleFileExplorerToggle,
+    },
+  ], [chatState, enabledTools, fileExplorerOpen, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle]);
 
   const backgroundSVG = useMemo(() => {
     // Create a simplified SVG pattern that should work reliably in data URLs
@@ -786,185 +835,254 @@ export default (props) => {
         position: 'relative',
       }}
     >
+      {/* Horizontal row: optional left dock + chat area + optional right dock */}
       <Box
         sx={{
-          position: 'relative',
-          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'row',
+          flex: 1,
+          minHeight: 0,
           marginBottom: 1,
           overflow: 'hidden',
-          backgroundColor: themeColors.background,
-          backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
-          backgroundSize: '40px 40px',
-          backgroundRepeat: 'repeat',
-          opacity: 0.8,
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              radial-gradient(circle at 20% 20%, ${themeColors.primary}08 0%, transparent 60%),
-              radial-gradient(circle at 80% 80%, ${themeColors.secondary}08 0%, transparent 60%)
-            `,
-            backdropFilter: 'blur(1px)',
-            pointerEvents: 'none',
-            zIndex: 0,
-          },
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              radial-gradient(circle at 25% 25%, ${themeColors.secondary}06 0%, transparent 60%),
-              radial-gradient(circle at 75% 75%, ${themeColors.primary}06 0%, transparent 60%)
-            `,
-            backdropFilter: 'blur(0.5px)',
-            pointerEvents: 'none',
-            zIndex: 0,
-          }
         }}
       >
-        {/* Chat List Panel */}
-        <Paper
-          elevation={0}
+        {/* Left-docked file explorer */}
+        {fileExplorerOpen && fileExplorerDock === 'left' && !isNarrowScreen && (
+          <FileExplorerSidebar
+            open={fileExplorerOpen}
+            dock={fileExplorerDock}
+            onDockChange={handleFileExplorerDockChange}
+            onClose={handleFileExplorerClose}
+            reactory={reactory}
+            chatState={chatState}
+            onAttachFile={uploadFile}
+            il8n={il8n}
+          />
+        )}
+
+        {/* Main chat column */}
+        <Box
           sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            transform: personaPanelOpen
-              ? 'translateX(100%)'
-              : toolsPanelOpen
-                ? 'translateX(-100%)'
-                : 'translateX(0)',
-            transition: 'transform 0.3s ease-in-out',
-            overflow: 'auto',
-            p: 2,
+            flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            minHeight: 0,
-            zIndex: 1,
-            backgroundColor: themeColors.background,
-            backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
-            backgroundSize: '60px 60px',
-            backgroundRepeat: 'repeat',
-          }}
-          style={{
-            padding: '0',
+            minWidth: 0,
             overflow: 'hidden',
-            flexGrow: 1,
-            minHeight: 0,
           }}
         >
-          <ChatList
+          {/* Minimized attached-files chip strip — visible when file explorer sidebar is open */}
+          {fileExplorerOpen && !isNarrowScreen && (
+            <FilesPanel
+              open={true}
+              onClose={handleFilesPanelClose}
+              reactory={reactory}
+              chatState={chatState}
+              selectedPersona={selectedPersona}
+              onFileUpload={uploadFile}
+              onInitializeChat={handleInitializeChat}
+              onRefreshChatState={handleRefreshChatState}
+              il8n={il8n}
+              minimized={true}
+            />
+          )}
+
+          {/* Background-patterned chat container */}
+          <Box
+            sx={{
+              position: 'relative',
+              flex: 1,
+              overflow: 'hidden',
+              backgroundColor: themeColors.background,
+              backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
+              backgroundSize: '40px 40px',
+              backgroundRepeat: 'repeat',
+              opacity: 0.8,
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `
+                  radial-gradient(circle at 20% 20%, ${themeColors.primary}08 0%, transparent 60%),
+                  radial-gradient(circle at 80% 80%, ${themeColors.secondary}08 0%, transparent 60%)
+                `,
+                backdropFilter: 'blur(1px)',
+                pointerEvents: 'none',
+                zIndex: 0,
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `
+                  radial-gradient(circle at 25% 25%, ${themeColors.secondary}06 0%, transparent 60%),
+                  radial-gradient(circle at 75% 75%, ${themeColors.primary}06 0%, transparent 60%)
+                `,
+                backdropFilter: 'blur(0.5px)',
+                pointerEvents: 'none',
+                zIndex: 0,
+              }
+            }}
+          >
+            {/* Chat List Panel */}
+            <Paper
+              elevation={0}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                transform: personaPanelOpen
+                  ? 'translateX(100%)'
+                  : toolsPanelOpen
+                    ? 'translateX(-100%)'
+                    : 'translateX(0)',
+                transition: 'transform 0.3s ease-in-out',
+                overflow: 'auto',
+                p: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 0,
+                zIndex: 1,
+                backgroundColor: themeColors.background,
+                backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
+                backgroundSize: '60px 60px',
+                backgroundRepeat: 'repeat',
+              }}
+              style={{
+                padding: '0',
+                overflow: 'hidden',
+                flexGrow: 1,
+                minHeight: 0,
+              }}
+            >
+              <ChatList
+                reactory={reactory}
+                messages={messages}
+                personas={personas}
+                selectedPersona={selectedPersona}
+                chatState={chatState}
+                onRetryMessage={React.useCallback((message) => {
+                  if (message.content) {
+                    sendMessage(message.content);
+                  }
+                }, [sendMessage])}
+                onRateMessage={React.useCallback((message, rating) => {
+                  reactory.log(`Message rated: ${rating}`, { message });
+                }, [reactory])}
+                onCopyMessage={React.useCallback((message) => {
+                  if (message.content && navigator.clipboard) {
+                    navigator.clipboard.writeText(message.content).then(() => {
+                      reactory.log('Message copied to clipboard');
+                    }).catch((err) => {
+                      reactory.error('Failed to copy message', err);
+                    });
+                  }
+                }, [reactory])}
+              />
+            </Paper>
+
+            {/* Persona Selection Panel */}
+            <PersonaSelectionPanel
+              open={personaPanelOpen}
+              onClose={handlePersonaPanelClose}
+              personas={personas}
+              selectedPersona={selectedPersona}
+              onPersonaSelect={handlePersonaSelect}
+              Material={Material}
+              il8n={il8n}
+              toCamelCaseLabel={toCamelCaseLabel}
+            />
+
+            {/* Tools Panel */}
+            <ToolsPanel
+              open={toolsPanelOpen}
+              onClose={handleToolsPanelClose}
+              chatState={chatState}
+              streamingEnabled={streamingEnabled}
+              isStreaming={isStreaming}
+              enabledTools={enabledTools}
+              onStreamingToggle={handleStreamingToggle}
+              onToolApprovalModeChange={setToolApprovalMode}
+              onToolToggle={handleToolToggle}
+              onToolExecute={onToolExecute}
+              getToolIcon={getToolIcon}
+              Material={Material}
+              il8n={il8n}
+              toCamelCaseLabel={toCamelCaseLabel}
+              reactory={reactory}
+            />
+
+            {/* Chat History Panel - Slides up from bottom */}
+            <ChatHistoryPanel
+              open={chatHistoryPanelOpen}
+              onClose={handleChatHistoryPanelClose}
+              chats={chats}
+              chatState={chatState}
+              getPersona={getPersona}
+              onChatSelect={handleChatSelect}
+              onDeleteChat={deleteChat}
+              Material={Material}
+              il8n={il8n}
+            />
+
+            {/* Files Panel (overlay, only when not using docked explorer) */}
+            <FilesPanel
+              open={filesPanelOpen}
+              onClose={handleFilesPanelClose}
+              reactory={reactory}
+              chatState={chatState}
+              selectedPersona={selectedPersona}
+              onFileUpload={uploadFile}
+              onInitializeChat={handleInitializeChat}
+              onRefreshChatState={handleRefreshChatState}
+              il8n={il8n}
+            />
+
+            {/* Recording Audio Bar - Slides up from bottom */}
+            <RecordingAudioBar
+              open={recordingPanelOpen}
+              onClose={handleRecordingPanelClose}
+              il8n={il8n}
+              reactory={reactory}
+            />
+          </Box>
+        </Box>
+
+        {/* Right-docked file explorer */}
+        {fileExplorerOpen && fileExplorerDock === 'right' && !isNarrowScreen && (
+          <FileExplorerSidebar
+            open={fileExplorerOpen}
+            dock={fileExplorerDock}
+            onDockChange={handleFileExplorerDockChange}
+            onClose={handleFileExplorerClose}
             reactory={reactory}
-            messages={messages}
-            personas={personas}
-            selectedPersona={selectedPersona}
             chatState={chatState}
-            onRetryMessage={React.useCallback((message) => {
-              // Retry the user's message by sending it again
-              if (message.content) {
-                sendMessage(message.content);
-              }
-            }, [sendMessage])}
-            onRateMessage={React.useCallback((message, rating) => {
-              // Handle rating functionality
-              reactory.log(`Message rated: ${rating}`, { message });
-              // TODO: Implement actual rating API call
-            }, [reactory])}
-            onCopyMessage={React.useCallback((message) => {
-              // Copy message content to clipboard
-              if (message.content && navigator.clipboard) {
-                navigator.clipboard.writeText(message.content).then(() => {
-                  reactory.log('Message copied to clipboard');
-                  // TODO: Show success toast
-                }).catch((err) => {
-                  reactory.error('Failed to copy message', err);
-                });
-              }
-            }, [reactory])}
+            onAttachFile={uploadFile}
+            il8n={il8n}
           />
-        </Paper>
-
-        {/* Persona Selection Panel */}
-        <PersonaSelectionPanel
-          open={personaPanelOpen}
-          onClose={handlePersonaPanelClose}
-          personas={personas}
-          selectedPersona={selectedPersona}
-          onPersonaSelect={handlePersonaSelect}
-          Material={Material}
-          il8n={il8n}
-          toCamelCaseLabel={toCamelCaseLabel}
-        />
-
-        {/* Tools Panel */}
-        <ToolsPanel
-          open={toolsPanelOpen}
-          onClose={handleToolsPanelClose}
-          chatState={chatState}
-          streamingEnabled={streamingEnabled}
-          isStreaming={isStreaming}
-          enabledTools={enabledTools}
-          onStreamingToggle={handleStreamingToggle}
-          onToolApprovalModeChange={setToolApprovalMode}
-          onToolToggle={handleToolToggle}
-          onToolExecute={onToolExecute}
-          getToolIcon={getToolIcon}
-          Material={Material}
-          il8n={il8n}
-          toCamelCaseLabel={toCamelCaseLabel}
-          reactory={reactory}
-        />
-        {/* Chat History Panel - Slides up from bottom */}
-        <ChatHistoryPanel
-          open={chatHistoryPanelOpen}
-          onClose={handleChatHistoryPanelClose}
-          chats={chats}
-          chatState={chatState}
-          getPersona={getPersona}
-          onChatSelect={handleChatSelect}
-          onDeleteChat={deleteChat}
-          Material={Material}
-          il8n={il8n}
-        />
-
-        {/* Files Panel */}
-        <FilesPanel
-          open={filesPanelOpen}
-          onClose={handleFilesPanelClose}
-          reactory={reactory}
-          chatState={chatState}
-          selectedPersona={selectedPersona}
-          onFileUpload={uploadFile}
-          onInitializeChat={React.useCallback(async () => {
-            // Initialize a new chat session if none exists
-            if (!chatState?.id && selectedPersona) {
-              reactory.log('Initializing new chat session for file operations');
-              await newChat();
-              return true; // Indicate success
-            }
-            return false; // Chat already exists
-          }, [chatState?.id, selectedPersona, newChat, reactory])}
-          onRefreshChatState={handleRefreshChatState}
-          il8n={il8n}
-        />
-
-        {/* Recording Audio Bar - Slides up from bottom */}
-        <RecordingAudioBar
-          open={recordingPanelOpen}
-          onClose={handleRecordingPanelClose}
-          il8n={il8n}
-          reactory={reactory}
-        />
+        )}
       </Box>
+
+      {/* Mobile drawer version of file explorer */}
+      {fileExplorerOpen && isNarrowScreen && (
+        <FileExplorerSidebar
+          open={fileExplorerOpen}
+          dock={fileExplorerDock}
+          onDockChange={handleFileExplorerDockChange}
+          onClose={handleFileExplorerClose}
+          reactory={reactory}
+          chatState={chatState}
+          onAttachFile={uploadFile}
+          il8n={il8n}
+        />
+      )}
 
       {/* Persona RadialFab - Bottom Right */}
       <RadialFab
