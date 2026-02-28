@@ -48,15 +48,18 @@ src/feature/__tests__/
 
 # Running Tests
 ```bash
-# reactory configuration environment
-$REACTORY_SERVER/bin/jest.sh reactory local
+# Run all tests
+npx jest
+
+# Run tests with environment-specific config
+bin/test.sh <client-key> <environment>
 
 # With watch mode
-$REACTORY_SERVER/bin/jest.sh reactory local --watch
+npx jest --watch
 
 # Specific test file
-$REACTORY_SERVER/bin/jest.sh reactory local --testPathPattern=WorkflowRunner
+npx jest --testPathPattern=ComponentName
 
 # Coverage report
-$REACTORY_SERVER/bin/jest.sh reactory local --coverage
+npx jest --coverage
 ```
