@@ -1043,30 +1043,46 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
     } else $query = query;
 
-    const result = await that.client.query<T, V>({
-      query: $query,
-      variables,
-      fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
-    });
-    const { errors = [] } = result;
-    if (errors.length > 0) {
-      errors.forEach((error) => {
-        if (error) {
-          const { extensions } = error;
-          if (extensions) {
-            const { code } = extensions;
-            if (code === 'INTERNAL_SERVER_ERROR') {
-              //we know for certain the server had an unhandled error in the resolver chain.
-              //the client may not cater for these errors, so we can by default warn the user
-              //that the server reported an error - we should log and report the error
-              //to the server side error reporting and tracing.
-              that.error(`🚨 Server reported an internal error. This is should not occur, all errors need to be gracefully handled, with support info`, { error, variables, options, query, queryDefinition });              
+    try {
+      const result = await that.client.query<T, V>({
+        query: $query,
+        variables,
+        fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
+      });
+      const { errors = [] } = result;
+      if (errors.length > 0) {
+        errors.forEach((error) => {
+          if (error) {
+            const { extensions } = error;
+            if (extensions) {
+              const { code } = extensions;
+              if (code === 'INTERNAL_SERVER_ERROR') {
+                //we know for certain the server had an unhandled error in the resolver chain.
+                //the client may not cater for these errors, so we can by default warn the user
+                //that the server reported an error - we should log and report the error
+                //to the server side error reporting and tracing.
+                that.error(`🚨 Server reported an internal error. This is should not occur, all errors need to be gracefully handled, with support info`, { error, variables, options, query, queryDefinition });              
+              }
             }
           }
+        });
+      }
+      return result;
+    } catch (queryError) {
+      const { graphQLErrors, networkError } = queryError;
+      if (networkError) {
+        const { statusCode } = networkError;
+        if (statusCode === 401 || statusCode === 403) {
+          that.log(`Unauthorized or Forbidden Error on query, triggering session expired logout`, { networkError, variables, options, query });
+          that.logout(false, 'session_expired').catch((logoutErr) => {
+            that.error('Error during session expired logout from query:', logoutErr);
+          });
+        } else {
+          that.createNotification(`🚨 Network Error: ${networkError.message}`, { type: 'error', canDismiss: true, timeout: 4000, showInAppNotification: true });
         }
-      });
+      }
+      throw queryError;
     }
-    return result;
   }
 
   async afterLogin(loginResult: Reactory.Client.ILoginResult): Promise<Reactory.Models.IApiStatus> {
@@ -1736,21 +1752,30 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   async logout(refreshStatus = true, reason?: string) {
     if (this.isLoggingOut === true) return;
     this.isLoggingOut = true;
-    localStorage.removeItem(storageKeys.AuthToken);
-    this.clearStoreAndCache();
-    await this.getAnonToken();
-    await this.forms(true);
-    const { client } = await ReactoryApolloClient();
-    this.client = client;
-    const logoutEventData = reason ? { reason } : undefined;
-    if (refreshStatus === true) {
-      this.status({ emitLogin: false, forceLogout: true }).then(() => {
-        this.emit(ReactoryApiEventNames.onLogout, logoutEventData);
-      });
-    } else {
+    try {
+      localStorage.removeItem(storageKeys.AuthToken);
+      this.clearStoreAndCache();
+      await this.getAnonToken();
+      const { client } = await ReactoryApolloClient();
+      this.client = client;
+      await this.forms(true);
+      this.setUser(anonUser);
+      const logoutEventData = reason ? { reason } : undefined;
+      if (refreshStatus === true) {
+        try {
+          await this.status({ emitLogin: false, forceLogout: true });
+        } catch (statusErr) {
+          this.error('Error refreshing status during logout:', statusErr);
+        }
+      }
       this.emit(ReactoryApiEventNames.onLogout, logoutEventData);
+    } catch (logoutError) {
+      this.error('Error during logout, forcing anon state:', logoutError);
+      this.setUser(anonUser);
+      this.emit(ReactoryApiEventNames.onLogout, reason ? { reason } : undefined);
+    } finally {
+      this.isLoggingOut = false;
     }
-    this.isLoggingOut = false;
   }
 
   getLastValidation() {
@@ -1853,6 +1878,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   async status(options?: Reactory.Client.IApiStatusRequestOptions): Promise<Reactory.Models.IApiStatus> {
     const that = this;
     const currentStatus = this.$user as Reactory.Models.IApiStatus;
+    const $options = options || {} as Reactory.Client.IApiStatusRequestOptions;
     if (!this.client) throw new Error('ApolloClient not ready')
 
     try {
@@ -1866,7 +1892,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         'theme',
         'navigationComponents',
         'plugins'
-      ], options.theme, options.mode) as Reactory.Models.IApiStatus;
+      ], $options.theme, $options.mode) as Reactory.Models.IApiStatus;
       if(!apiStatus) {
         return currentStatus;
       }
@@ -1876,7 +1902,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         that.lastValidation = moment().valueOf();
         that.tokenValidated = true;
       
-        if (options.emitLogin === true)
+        if ($options.emitLogin === true)
           that.emit(ReactoryApiEventNames.onLogin, that.getUser());
         if (apiStatus.messages && isArray(apiStatus.messages)) {
           apiStatus.messages.forEach((message) => {
@@ -1886,7 +1912,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...apiStatus, offline: false });      
         return apiStatus;
       } else {
-        if (options.forceLogout !== false) {
+        if ($options.forceLogout !== false) {
           that.logout(false);
           that.setUser(anonUser);
           that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...apiStatus, status: 'API OFFLINE', offline: true });

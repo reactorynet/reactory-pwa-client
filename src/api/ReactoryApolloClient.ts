@@ -34,9 +34,6 @@ if (localStorage) {
 
 
 export default async () => {
-  // get the authentication token from local storage if it exists
-  const token = localStorage.getItem('auth_token');
-
   let persistedCache: any = null;
   let cache: any = null;
   let persistor: any = null;
@@ -55,10 +52,13 @@ export default async () => {
   }
 
   const authLink = setContext((_, { headers }) => {
+    // Read the token fresh from localStorage on every request
+    // so that token updates (e.g. after logout/login) are picked up immediately
+    const currentToken = localStorage.getItem('auth_token');
     return {
       headers: {
         ...headers,
-        authorization: token ? `Bearer ${token}` : "",
+        authorization: currentToken ? `Bearer ${currentToken}` : "",
         'x-client-key': `${process.env.REACT_APP_CLIENT_KEY}`,
         'x-client-pwd': `${process.env.REACT_APP_CLIENT_PASSWORD}`,
         'x-client-version': `${packageInfo.version}`,
@@ -79,18 +79,24 @@ export default async () => {
   createClient({  
     url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/graph`.replace('http', 'ws'),    
     retryAttempts: 5,
-    connectionParams: {
-      Authorization: `Bearer ${token}`,
-      authToken: token
+    connectionParams: () => {
+      const currentToken = localStorage.getItem('auth_token');
+      return {
+        Authorization: `Bearer ${currentToken}`,
+        authToken: currentToken
+      };
     }    
   })
 
   const ws_client = createClient({
     url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/graph`.replace('http', 'ws'),
     retryAttempts: 5,
-    connectionParams: {
-      Authorization: `Bearer ${token}`,
-      authToken: token
+    connectionParams: () => {
+      const currentToken = localStorage.getItem('auth_token');
+      return {
+        Authorization: `Bearer ${currentToken}`,
+        authToken: currentToken
+      };
     }
   })
 
