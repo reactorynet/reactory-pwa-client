@@ -365,6 +365,12 @@ export interface HistoryAction {
 export interface WorkflowDesignerProps {
   workflowId?: string;
   initialDefinition?: WorkflowDefinition;
+  /**
+   * The registered workflow object from the workflow registry.
+   * When provided, the designer uses the workflow's workflowType and location
+   * to load the YAML definition from the server on mount.
+   */
+  workflow?: RegisteredWorkflowRef;
   templates?: WorkflowTemplate[];
   stepLibrary?: StepDefinition[];
   theme?: WorkflowDesignerTheme;
@@ -381,6 +387,19 @@ export interface WorkflowDesignerProps {
   snapToGrid?: boolean;
   className?: string;
   style?: React.CSSProperties;
+}
+
+/**
+ * Minimal reference to a registered workflow, passed from the DetailsPanel
+ * so the designer knows the workflowType, location, and identity.
+ */
+export interface RegisteredWorkflowRef {
+  name: string;
+  nameSpace: string;
+  version: string;
+  workflowType?: 'YAML' | 'CODE';
+  location?: string;
+  [key: string]: unknown;
 }
 
 export interface WorkflowCanvasProps {

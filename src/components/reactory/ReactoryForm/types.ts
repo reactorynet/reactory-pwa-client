@@ -3,6 +3,7 @@ import { ApolloError } from "@apollo/client";
 import { Breakpoint } from '@mui/material';
 import Reactory from "@reactorynet/reactory-core";
 import { Params } from "react-router";
+import { FormLoadingState } from "./hooks/useFormLoadingState";
 
 export interface ReactoryComponentError {
   errorType: string | "graph" | "runtime",
@@ -99,6 +100,11 @@ export type ReactoryFormDefinitionHook = <TData>(props: Reactory.Client.IReactor
   formData: TData,
 
   isDataLoading: boolean,
+
+  /**
+   * Granular loading state tracking for the form lifecycle.
+   */
+  loadingState: FormLoadingState,
 
   /**
    * The form FQN.

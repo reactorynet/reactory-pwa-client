@@ -13,7 +13,6 @@ import createUploadLink from 'apollo-upload-client/createUploadLink.mjs';
 import { fetch } from "whatwg-fetch";
 import { getCache } from './ReactoryApolloCache';
 
-
 const packageInfo: any = require('../../package.json');
 
 const {
@@ -68,8 +67,13 @@ export default async () => {
     }
   });
 
+  const safeUrl = (route: string) => {
+    const baseUrl = localStorage.getItem('REACT_APP_API_ENDPOINT') || '';
+    return `${baseUrl.replace(/\/+$/, '')}/${route.replace(/^\/+/, '')}`;
+  }
+  
   const uploadLink = createUploadLink({
-    uri: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/graph`,
+    uri: safeUrl('graph'),
     fetch: fetch
   });
 
@@ -77,7 +81,7 @@ export default async () => {
   let resolvers: Resolvers[] = [];
 
   createClient({  
-    url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/graph`.replace('http', 'ws'),    
+    url: safeUrl('graph').replace('http', 'ws'),    
     retryAttempts: 5,
     connectionParams: () => {
       const currentToken = localStorage.getItem('auth_token');
@@ -89,7 +93,7 @@ export default async () => {
   })
 
   const ws_client = createClient({
-    url: `${localStorage.getItem('REACT_APP_API_ENDPOINT')}/graph`.replace('http', 'ws'),
+    url: safeUrl('graph').replace('http', 'ws'),
     retryAttempts: 5,
     connectionParams: () => {
       const currentToken = localStorage.getItem('auth_token');

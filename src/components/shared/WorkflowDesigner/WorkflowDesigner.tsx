@@ -18,7 +18,8 @@ import {
   generateStepId,
   generateConnectionId,
   snapToGrid,
-  getSelectionBounds
+  getSelectionBounds,
+  convertYamlToDesignerDefinition,
 } from './utils';
 import { CANVAS_DEFAULTS, STEP_DEFAULTS } from './constants';
 
@@ -34,11 +35,151 @@ import { ServerFileExplorer } from '../ServerFileExplorer';
 // Rendering mode type
 type RenderingMode = 'dom' | 'optimized' | 'webgl';
 
+/**
+ * Custom hook for loading YAML workflow definitions from the server.
+ * Encapsulates the GraphQL query, state management, and conversion logic.
+ */
+function useYamlWorkflowLoader(
+  workflowRef: WorkflowDesignerProps['workflow'],
+  initialDefinition: WorkflowDesignerProps['initialDefinition'],
+  reactory: Reactory.Client.IReactoryApi | Reactory.Client.ReactorySDK,
+  updateDefinition: (def: any) => void,
+) {
+  const [yamlLoading, setYamlLoading] = useState<boolean>(false);
+  const [yamlError, setYamlError] = useState<string | null>(null);
+  const [yamlSource, setYamlSource] = useState<string | null>(null);
+  const [yamlSourceType, setYamlSourceType] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (workflowRef?.workflowType !== 'YAML') return;
+    if (initialDefinition) return;
+
+    const loadYamlDefinition = async () => {
+      setYamlLoading(true);
+      setYamlError(null);
+
+      try {
+        const query = `
+          query GetWorkflowYamlDefinition(
+            $nameSpace: String!
+            $name: String!
+            $version: String
+          ) {
+            workflowYamlDefinition(
+              nameSpace: $nameSpace
+              name: $name
+              version: $version
+            ) {
+              nameSpace
+              name
+              version
+              description
+              author
+              tags
+              inputs
+              outputs
+              variables
+              steps {
+                id
+                name
+                description
+                type
+                enabled
+                continueOnError
+                timeout
+                inputs
+                outputs
+                condition
+                dependsOn
+                config
+                designer {
+                  position { x y }
+                  size { width height }
+                  color
+                  icon
+                  collapsed
+                  helpText
+                  ports {
+                    inputs { name label position { x y } dataType }
+                    outputs { name label position { x y } dataType }
+                  }
+                }
+                steps {
+                  id
+                  name
+                  type
+                  designer {
+                    position { x y }
+                    size { width height }
+                    color
+                    icon
+                  }
+                }
+              }
+              designer {
+                canvas { zoom panX panY gridSize snapToGrid }
+                connections {
+                  id
+                  sourceStepId
+                  sourcePort
+                  targetStepId
+                  targetPort
+                  points { x y }
+                  style
+                  color
+                  label
+                }
+                notes { id text position { x y } size { width height } color }
+                groups { id label stepIds color collapsed }
+              }
+              yamlSource
+              sourceType
+              location
+            }
+          }
+        `;
+
+        const response = await reactory.graphqlQuery<{
+          workflowYamlDefinition: any;
+        }, any>(query, {
+          nameSpace: workflowRef.nameSpace,
+          name: workflowRef.name,
+          version: workflowRef.version,
+        });
+
+        const yamlDef = response?.data?.workflowYamlDefinition;
+        if (!yamlDef) {
+          throw new Error(
+            `No YAML definition returned for ${workflowRef.nameSpace}.${workflowRef.name}`
+          );
+        }
+
+        setYamlSource(yamlDef.yamlSource || null);
+        setYamlSourceType(yamlDef.sourceType || null);
+
+        const designerDefinition = convertYamlToDesignerDefinition(yamlDef);
+        updateDefinition(designerDefinition);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to load YAML definition';
+        setYamlError(msg);
+        reactory.log(msg, { err }, 'error');
+      } finally {
+        setYamlLoading(false);
+      }
+    };
+
+    loadYamlDefinition();
+  }, [workflowRef?.nameSpace, workflowRef?.name, workflowRef?.version]);
+
+  return { yamlLoading, yamlError, yamlSource, yamlSourceType };
+}
+
 
 export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const {
     workflowId,
     initialDefinition,
+    workflow: workflowRef,
     templates,
     stepLibrary: customStepLibrary,
     theme: customTheme,
@@ -165,6 +306,14 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     }, [onLoad, getWorkflow]),
     onValidationChange
   });
+
+  // Load YAML workflow definition if this is a YAML-based workflow
+  const { yamlLoading, yamlError, yamlSource, yamlSourceType } = useYamlWorkflowLoader(
+    workflowRef,
+    initialDefinition,
+    reactory,
+    updateDefinition,
+  );
 
   // Canvas viewport operations (for toolbar controls)
   const zoomIn = useCallback(() => {

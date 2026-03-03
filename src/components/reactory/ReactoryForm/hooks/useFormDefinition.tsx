@@ -10,6 +10,7 @@ import { DefaultComponentMap, ReactoryFormDefinitionHook } from "../types";
 import { useDataManager } from "./useDataManager";
 import { useSchema } from "./useSchema";
 import { useUISchema } from "./useUISchema";
+import { useFormLoadingState } from "./useFormLoadingState";
 
 const DEFAULT_DEPENDENCIES = [
   "core.Loading",
@@ -51,6 +52,12 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     formDef || ReactoryDefaultForm
   );
   const [v, setVersion] = useState(0);
+
+  // Whether we have a real form (not the placeholder)
+  const isPlaceholderForm = form?.id === ReactoryDefaultForm.id;
+
+  // Granular loading stage tracking
+  const loadingState = useFormLoadingState();
   const FQN = `${form?.nameSpace || "unknown"}.${form?.name || "unknown"}@${
     form?.version || "0.0.0"
   }`;
@@ -127,18 +134,25 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
   );
 
   const getForm = () => {
+    loadingState.setStageActive('form-definition');
     let _form = formDef;
     if (nil(_form)) {
-      _form = reactory.form(formId, (nextForm, error) => {
-        if (nextForm && !error) {
+      _form = reactory.form(formId, (nextForm, formError) => {
+        if (nextForm && !formError) {
+          loadingState.setStageComplete('form-definition');
           setForm(nextForm);
+        } else if (formError) {
+          loadingState.setStageError('form-definition', 'Failed to load form definition');
         }
       }, props.loadOptions || {});
       if (nil(_form)) {
         warning(`Form not found: ${formId}`);
       } else {
+        loadingState.setStageComplete('form-definition');
         setForm(_form);
       }
+    } else {
+      loadingState.setStageComplete('form-definition');
     }
   };
 
@@ -169,6 +183,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
   const injectResources = () => {
     if (document) {
       if (form.uiResources && form.uiResources.length) {
+        loadingState.setStageActive('resources');
         form.uiResources.forEach((resource) => {
           const resourceId = `${resource.type}_${resource.id}`;
           if (nil(document.getElementById(resourceId)) === true) {
@@ -204,7 +219,12 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
             }
           }
         });
+        loadingState.setStageComplete('resources');
+      } else {
+        loadingState.skipStage('resources');
       }
+    } else {
+      loadingState.skipStage('resources');
     }
   };
 
@@ -391,6 +411,24 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     }
   }, [formDef]);
 
+  // Track UI schema loading stage
+  useEffect(() => {
+    if (isUiSchemaLoading) {
+      loadingState.setStageActive('ui-schema');
+    } else {
+      loadingState.setStageComplete('ui-schema');
+    }
+  }, [isUiSchemaLoading]);
+
+  // Track data loading stage
+  useEffect(() => {
+    if (isDataLoading) {
+      loadingState.setStageActive('data');
+    } else {
+      loadingState.setStageComplete('data');
+    }
+  }, [isDataLoading]);
+
   useEffect(() => {
     setVersion(v + 1);
   }, [formData]);
@@ -406,7 +444,8 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     _form = setWidgets(_form);
     _form = setObjectTemplate(_form);
     _form = setFieldTemplate(_form);
-    _form.__complete__ = true;
+    // Only mark complete when we have the real form, not the placeholder
+    _form.__complete__ = !isPlaceholderForm;
     _form.idSchema = toIdSchema(
       schema,
       _form.id,
@@ -417,6 +456,16 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     return _form;
   };
 
+  // Track the widgets stage via effect — must not setState during render
+  const effectiveForm = getEffectiveForm();
+  useEffect(() => {
+    if (effectiveForm.__complete__) {
+      loadingState.setStageComplete('widgets');
+    } else {
+      loadingState.setStageActive('widgets');
+    }
+  }, [effectiveForm.__complete__]);
+
   return {
     instanceId,
     uiOptions,
@@ -425,19 +474,20 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     uiSchemaActiveGraphDefintion,
     uiSchemasAvailable,
     SchemaSelector,
-    isUiSchemaLoading: false,
+    isUiSchemaLoading,
 
     schema,
 
     FQN,
     SIGN,
     graphDefinition: uiSchemaActiveGraphDefintion,
-    form: getEffectiveForm(),
+    form: effectiveForm,
     formContext: getFormContext(),
     setForm,
 
     canRefresh,
-    isDataLoading: false,
+    isDataLoading,
+    loadingState,
     formData,
     onChange,
     reset,

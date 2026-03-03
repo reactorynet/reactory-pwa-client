@@ -40,6 +40,7 @@ import {
   useToolbar,
  } from './hooks';
 import { ReactoryApiEventNames } from '@reactory/client-core/api';
+import { FormLoadingIndicator } from './components';
 
 type ScreenSizeKey = Breakpoint | number;
 
@@ -66,6 +67,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       form,
       formData,
       isDataLoading,
+      loadingState,
       setForm,
       formContext,
       schema,
@@ -350,7 +352,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         ...{ ...formProps, toolbarPosition }
       };
 
-      if (form.__complete__ === true) {
+      if (form.__complete__ === true && !loadingState.isLoading) {
         const formChildren: any[] = [];
         if ((toolbarPosition?.indexOf("top") >= 0 || toolbarPosition?.indexOf("both") >= 0) && Toolbar) formChildren.push(<Toolbar />);
         if (isFormBusy() === true) formChildren.push(<LinearProgress />);
@@ -416,7 +418,16 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
           }
         }
       } else {
-        renderedComponent = <LinearProgress />
+        const loadingVariant = uiOptions?.loadingVariant || 'full';
+        renderedComponent = (
+          <FormLoadingIndicator
+            stages={loadingState.stages}
+            progress={loadingState.progress}
+            activeStageLabel={loadingState.activeStageLabel}
+            hasError={loadingState.hasError}
+            variant={loadingVariant}
+          />
+        );
         debug(`${SIGN}:render - loading`);
       }
     } catch (err) {
