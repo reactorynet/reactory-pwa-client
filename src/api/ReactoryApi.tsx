@@ -14,7 +14,9 @@ import { ApolloClient, gql, ApolloProvider, NormalizedCacheObject, Resolvers, Mu
 import localForage from 'localforage';
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
-import lodash, { intersection, isArray, isEmpty, isNil, template, LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
+import * as lodash from 'lodash';
+import { intersection, isArray, isEmpty, isNil, template } from 'lodash';
+import type { LoDashWrapper, LoDashStatic, TemplateExecutor, TemplateOptions } from 'lodash';
 import moment from 'moment';
 // import objectMapper from './objectMapper';
 import objectMapper from 'object-mapper';
