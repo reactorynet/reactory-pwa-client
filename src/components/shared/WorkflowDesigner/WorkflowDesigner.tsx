@@ -36,8 +36,21 @@ import { ServerFileExplorer } from '../ServerFileExplorer';
 type RenderingMode = 'dom' | 'optimized' | 'webgl';
 
 /**
+ * A single error captured during YAML workflow definition loading.
+ */
+interface YamlLoadError {
+  stage: 'REGISTRY' | 'FILE_RESOLVE' | 'FILE_READ' | 'PARSE' | 'VALIDATION';
+  message: string;
+  code?: string;
+  line?: number;
+  column?: number;
+}
+
+type YamlLoadStatus = 'SUCCESS' | 'PARTIAL' | 'NOT_FOUND' | 'IO_ERROR' | 'PARSE_ERROR' | 'REGISTRY_ERROR' | null;
+
+/**
  * Custom hook for loading YAML workflow definitions from the server.
- * Encapsulates the GraphQL query, state management, and conversion logic.
+ * Always returns a result object — check loadStatus and errors for failure details.
  */
 function useYamlWorkflowLoader(
   workflowRef: WorkflowDesignerProps['workflow'],
@@ -46,17 +59,22 @@ function useYamlWorkflowLoader(
   updateDefinition: (def: any) => void,
 ) {
   const [yamlLoading, setYamlLoading] = useState<boolean>(false);
-  const [yamlError, setYamlError] = useState<string | null>(null);
+  const [yamlErrors, setYamlErrors] = useState<YamlLoadError[]>([]);
   const [yamlSource, setYamlSource] = useState<string | null>(null);
   const [yamlSourceType, setYamlSourceType] = useState<string | null>(null);
+  const [loadStatus, setLoadStatus] = useState<YamlLoadStatus>(null);
 
   useEffect(() => {
     if (workflowRef?.workflowType !== 'YAML') return;
     if (initialDefinition) return;
 
     const loadYamlDefinition = async () => {
+      if (!workflowRef) return;
+      const { nameSpace, name, version } = workflowRef;
+
       setYamlLoading(true);
-      setYamlError(null);
+      setYamlErrors([]);
+      setLoadStatus(null);
 
       try {
         const query = `
@@ -135,6 +153,14 @@ function useYamlWorkflowLoader(
               yamlSource
               sourceType
               location
+              loadStatus
+              errors {
+                stage
+                message
+                code
+                line
+                column
+              }
             }
           }
         `;
@@ -142,26 +168,33 @@ function useYamlWorkflowLoader(
         const response = await reactory.graphqlQuery<{
           workflowYamlDefinition: any;
         }, any>(query, {
-          nameSpace: workflowRef.nameSpace,
-          name: workflowRef.name,
-          version: workflowRef.version,
+          nameSpace,
+          name,
+          version,
         });
 
         const yamlDef = response?.data?.workflowYamlDefinition;
         if (!yamlDef) {
-          throw new Error(
-            `No YAML definition returned for ${workflowRef.nameSpace}.${workflowRef.name}`
-          );
+          setYamlErrors([{ stage: 'REGISTRY', message: `No response returned for ${nameSpace}.${name}`, code: 'NO_RESPONSE' }]);
+          setLoadStatus('NOT_FOUND');
+          return;
         }
 
+        // Always capture the raw source (even on error, so the YAML view can display it)
         setYamlSource(yamlDef.yamlSource || null);
         setYamlSourceType(yamlDef.sourceType || null);
+        setLoadStatus(yamlDef.loadStatus || 'SUCCESS');
+        setYamlErrors(yamlDef.errors || []);
 
-        const designerDefinition = convertYamlToDesignerDefinition(yamlDef);
-        updateDefinition(designerDefinition);
+        // Only build designer definition if the load was at least partially successful
+        if (yamlDef.loadStatus === 'SUCCESS' || yamlDef.loadStatus === 'PARTIAL') {
+          const designerDefinition = convertYamlToDesignerDefinition(yamlDef);
+          updateDefinition(designerDefinition);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to load YAML definition';
-        setYamlError(msg);
+        setYamlErrors([{ stage: 'REGISTRY', message: msg, code: 'NETWORK_ERROR' }]);
+        setLoadStatus('NOT_FOUND');
         reactory.log(msg, { err }, 'error');
       } finally {
         setYamlLoading(false);
@@ -171,7 +204,15 @@ function useYamlWorkflowLoader(
     loadYamlDefinition();
   }, [workflowRef?.nameSpace, workflowRef?.name, workflowRef?.version]);
 
-  return { yamlLoading, yamlError, yamlSource, yamlSourceType };
+  // Convenience: single error string for simple display scenarios
+  const yamlError = yamlErrors.length > 0
+    ? yamlErrors.map(e => {
+        const loc = e.line ? ` L${e.line}:${e.column ?? 0}` : '';
+        return `[${e.stage}]${loc} ${e.message}`;
+      }).join('\n')
+    : null;
+
+  return { yamlLoading, yamlError, yamlErrors, yamlSource, setYamlSource, yamlSourceType, loadStatus };
 }
 
 
@@ -308,7 +349,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   });
 
   // Load YAML workflow definition if this is a YAML-based workflow
-  const { yamlLoading, yamlError, yamlSource, yamlSourceType } = useYamlWorkflowLoader(
+  const { yamlLoading, yamlError, yamlErrors, yamlSource, setYamlSource, yamlSourceType, loadStatus } = useYamlWorkflowLoader(
     workflowRef,
     initialDefinition,
     reactory,
