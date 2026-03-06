@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardHeader, CardContent, CardMedia, Typography, CardActions, Button, Icon, Box } from '@mui/material';
 import { useReactory } from '@reactory/client-core/api';
+import { safeCDNUrl } from '@reactory/client-core/utils/safeUrl';
 
 
 export type CardWidgetUiSchema = {
@@ -43,7 +44,7 @@ const CardWidget = (props: any) => {
       height: 180, // Default height for the image
       width: 180, // Default width for the image
       altText: schema?.title || idSchema?.$id || 'No Title', // Default alt text for the image
-      defaultImage: `${process.env.CDN_ROOT}profiles/default/default.png`, // Default image if none provided
+      defaultImage: safeCDNUrl('profiles/default/default.png'), // Default image if none provided
     }
   };
   const cardActions = uiOptions.actions || [];
@@ -51,7 +52,7 @@ const CardWidget = (props: any) => {
     height: 180, // Default height for the image
     width: 180, // Default width for the image
     altText: schema?.title || idSchema?.$id || 'No Title', // Default alt text for the image
-    defaultImage: `${process.env.CDN_ROOT}profiles/default/default.png`, // Default image if none provided
+    defaultImage: safeCDNUrl(`profiles/default/default.png`), // Default image if none provided
   };
   const mapping = uiOptions.mapping;
 

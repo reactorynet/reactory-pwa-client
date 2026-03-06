@@ -9,6 +9,7 @@ import Reactory from '@reactorynet/reactory-core';
 import * as ExcelJS from 'exceljs';
 import moment from 'moment';
 import { useReactory } from '@reactory/client-core/api';
+import { safeCDNUrl } from '@reactory/client-core/utils/safeUrl';
 
 
 const defaultFrameProps = {
@@ -105,7 +106,7 @@ function _GraphiqlWindow({ reactory }) {
   return (
     <FramedWindow 
       id={`reactory-graphiql-window`}
-      frameProps={{ url: `${reactory.CDN_ROOT}/plugins/graphiql/index.html?${reactory.utils.queryString.stringify(queryparams)}` }}
+      frameProps={{ url: `${safeCDNUrl(`plugins/graphiql/index.html`)}?${reactory.utils.queryString.stringify(queryparams)}` }}
       method={'get'}
       reactory={reactory}
       containerProps={{

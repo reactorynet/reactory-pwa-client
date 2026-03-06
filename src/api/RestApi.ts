@@ -1,4 +1,4 @@
-import safeUrl from "@reactory/client-core/utils/safeUrl";
+import { safeCDNUrl, safeUrl } from "@reactory/client-core/utils/safeUrl";
 
 const api_root = process.env.REACT_APP_API_ENDPOINT;
 const api_client_id = process.env.REACT_APP_CLIENT_KEY;
@@ -13,7 +13,7 @@ const api_headers = {
 
 export const login = (email, password) => {
   
-  const url = safeUrl('login');
+  const url = safeUrl([api_root, 'login'] );
   return new Promise((resolve, reject) => {
     const token = btoa(`${email}:${password}`)
     fetch(url, {
@@ -36,7 +36,7 @@ export const login = (email, password) => {
 
 
 export const companyWithId = (id) => {
-  const url = safeUrl(`search?types=org,id=${id}`);
+  const url = safeUrl([api_root, `search?types=org,id=${id}`]);
   return fetch(url, {
     method: 'get',
     headers: {
@@ -46,7 +46,7 @@ export const companyWithId = (id) => {
 }
 
 export const register = (registerPayload) => {
-  const url = safeUrl('register');
+  const url = safeUrl([api_root, 'register']);
   return fetch(url, {
     method: 'post',
     body: JSON.stringify(registerPayload),
@@ -55,7 +55,7 @@ export const register = (registerPayload) => {
 }
 
 export const forgot = (forgotPayload) => {
-  const url = safeUrl('forgot');
+  const url = safeUrl([api_root, 'forgot']);
   return fetch(url, {
     method: 'post',
     body: JSON.stringify(forgotPayload),
@@ -64,7 +64,7 @@ export const forgot = (forgotPayload) => {
 }
 
 export const reset = (resetPayload) => {
-  const url = safeUrl('reset');
+  const url = safeUrl([api_root, 'reset']);
   return fetch(url, {
     method: 'post',
     body: JSON.stringify(resetPayload),
@@ -73,7 +73,7 @@ export const reset = (resetPayload) => {
 }
 
 export const forms = () => {
-  const url = safeUrl('reactory/schema');
+  const url = safeUrl([api_root, 'reactory/schema']);
   return fetch(url, {
     method: 'get',
     headers: api_headers
@@ -81,7 +81,7 @@ export const forms = () => {
 }
 
 export const getContent = (route, header = api_headers) => {
-  const url = safeUrl(route);
+  const url = safeUrl([api_root, route]);
   return fetch(url, {
     method: 'get',
     headers: { ...api_headers,  'accept': 'application/text', 'content-type': 'application/text' }
@@ -91,7 +91,7 @@ export const getContent = (route, header = api_headers) => {
 export const getPDF = ( folder, report, params = { __t: new Date().valueOf()  }, filename = 'pdfout.pdf' ) => {
   const { api } = window.reactory;
   api.utils.queryString.stringify(params)
-  const url = safeUrl(`pdf/${folder}/${report}?`);
+  const url = safeUrl([api_root, `pdf/${folder}/${report}?`]);
   return fetch(url, {
     method: 'get',
     headers: { ...api}
@@ -110,7 +110,7 @@ export const getPDF = ( folder, report, params = { __t: new Date().valueOf()  },
 export const getExcel = ( formId: string, params = { __t: new Date().valueOf()  }, filename = 'form.xlsx' ) => {
   const { api } = window.reactory;
   api.utils.queryString.stringify(params)
-  const url = safeUrl(`excel/${formId}?`);
+  const url = safeUrl([api_root, `excel/${formId}?`]);
   return fetch(url, {
     method: 'get',
     headers: { ...api}

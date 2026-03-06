@@ -38,6 +38,8 @@ import {
   nilStr,
 } from '@reactory/client-core/components/util';
 
+import { safeCDNUrl } from '../utils/safeUrl';
+
 import amq from '@reactory/client-core/amq';
 import { ReactoryApiEventNames } from './ApiEventNames';
 import * as RestApi from './RestApi';
@@ -370,7 +372,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   getUserFullName: (user: Reactory.Models.IUser) => string;
   getThemeResource: (path?: string) => string;
   getCDNResource: (path: string) => string;
-  CDN_ROOT: string = process.env.REACT_APP_CDN || 'http://localhost:4000/cdn';
+  CDN_ROOT: string;
   API_ROOT: string = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:4000';
   CLIENT_KEY: string = process.env.REACT_APP_CLIENT_KEY;
   CLIENT_PWD: string = process.env.REACT_APP_CLIENT_PASSWORD;
@@ -571,17 +573,21 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.getUserLoginCredentials = this.getUserLoginCredentials.bind(this);
     this.setAuthToken = this.setAuthToken.bind(this);
     this.getAuthToken = this.getAuthToken.bind(this);
+    // ensure the CDN_ROOT does not end with a slash
+    if (this.CDN_ROOT.endsWith('/')) {
+      this.CDN_ROOT = this.CDN_ROOT.slice(0, -1);
+    }
     this.assets = {
-      logo: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/logo.png`,
-      avatar: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/avatar.png`,
+      logo: safeCDNUrl(`themes/${this.CLIENT_KEY}/images/logo.png`),
+      avatar: safeCDNUrl(`themes/${this.CLIENT_KEY}/images/avatar.png`),
       icons: {
-        16: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-16.png`,
-        32: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-32.png`,
-        44: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-44.png`,
-        64: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-64.png`,
-        144: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-144.png`,
-        192: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-192.png`,
-        512: `${this.CDN_ROOT}/themes/${this.CLIENT_KEY}/images/icons-512.png`,
+        16: safeCDNUrl(`themes/${this.CLIENT_KEY}/images/icons-16.png`),
+        32: safeCDNUrl(`themes/${this.CLIENT_KEY}/images/icons-32.png`),
+        44: safeCDNUrl(`themes/${this.CLIENT_KEY}/images/icons-44.png`),
+        64: safeCDNUrl(`themes/${this.CLIENT_KEY}/images/icons-64.png`),
+        144: safeCDNUrl(`themes/${this.CLIENT_KEY}/images/icons-144.png`),
+        192: safeCDNUrl(`themes/${this.CLIENT_KEY}/images/icons-192.png`),
+        512: safeCDNUrl(`themes/${this.CLIENT_KEY}/images/icons-512.png`),
       }
     };    
     this.log = window?.reactory?.logging?.log ? console.log : () => { };

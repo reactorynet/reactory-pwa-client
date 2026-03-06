@@ -106,6 +106,14 @@ export const ReactoryPluginLoader = async (options: Reactory.Platform.IPluginLoa
         });
       }
       document.body.append(scriptLink)
+      // when the type is javascript we can check if the process.env.LOADJSMAP is set to true to load the source map for debugging
+      if (process.env.LOADJSMAP === 'true' || process.env.NODE_ENV === 'development') {
+        let mapLink = document.createElement('link');
+        mapLink.rel = 'preload';
+        mapLink.as = 'script';
+        mapLink.href = `${uri}.map`;
+        document.head.append(mapLink);
+      }
       break;
     }
     default: {
