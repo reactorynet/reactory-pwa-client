@@ -15,6 +15,7 @@ import {
   Folder as FolderIcon
 } from '@mui/icons-material';
 import { useReactory } from '@reactory/client-core/api';
+import { safeCDNUrl } from '../../../utils/safeUrl';
 import { ImageComponentProps } from './types';
 import { UserHomeFolder } from '../UserHomeFolder';
 import { ServerFileExplorer, ServerFileItem } from '../ServerFileExplorer';
@@ -117,7 +118,7 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
         // Get the file URL from the selected item
         let fileUrl = selectedFile.fullPath;
         if (fileUrl.indexOf('${APP_DATA_ROOT}') === 0) {
-          fileUrl = fileUrl.replace('${APP_DATA_ROOT}', process.env.REACT_APP_CDN || 'http://localhost:4000/cdn');
+          fileUrl = safeCDNUrl(fileUrl.replace('${APP_DATA_ROOT}', ''));
         }
         onChange(fileUrl);
         setImageError(false);

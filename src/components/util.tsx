@@ -6,6 +6,7 @@ import {
   Paper,
   Grid
 } from '@mui/material';
+import { safeCDNUrl } from '../utils/safeUrl';
 
 const DefaultProfile = {
   id: 'default',
@@ -243,12 +244,11 @@ export const CDNProfileResource = (profileId = 'default', file = 'default.png') 
 };
 
 export const CDNResource = (path) => {
-  return `${process.env.REACT_APP_CDN}/${path}`;
+  return safeCDNUrl(path);
 };
 
 export const ThemeResource = (path = 'images/avatar.png') => {
-  const partnerThemeRoute = CDNResource(`themes/${process.env.REACT_APP_CLIENT_KEY}/`);
-  return `${partnerThemeRoute}${path}`;
+  return safeCDNUrl(`themes/${process.env.REACT_APP_CLIENT_KEY}/${path}`);
 }
 
 export const getAvatar = (profile, alt?) => {

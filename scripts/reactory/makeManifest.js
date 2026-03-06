@@ -1,24 +1,29 @@
+function cdnUrl(path) {
+  var cdn = (process.env.REACT_APP_CDN || 'http://localhost:4000/cdn').replace(/\/+$/, '');
+  return cdn + '/' + path.replace(/^\/+/, '');
+}
+
 var manifestJson = {
   "short_name": process.env.REACT_APP_SHORT_NAME || "Reactory",
   "name": process.env.REACT_APP_TITLE || "Reactory Framework",
   "icons": [
     {
-      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/favicon.ico",
+      "src": cdnUrl("themes/" + process.env.REACT_APP_THEME + "/images/favicon.ico"),
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/icons-144.png",
+      "src": cdnUrl("themes/" + process.env.REACT_APP_THEME + "/images/icons-144.png"),
       "sizes": "144x144",
       "type": "image/png"
     },
     {
-      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/icons-192.png",
+      "src": cdnUrl("themes/" + process.env.REACT_APP_THEME + "/images/icons-192.png"),
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": process.env.REACT_APP_CDN + "/themes/" + process.env.REACT_APP_THEME + "/images/icons-512.png",
+      "src": cdnUrl("themes/" + process.env.REACT_APP_THEME + "/images/icons-512.png"),
       "sizes": "512x512",
       "type": "image/png"
     }
