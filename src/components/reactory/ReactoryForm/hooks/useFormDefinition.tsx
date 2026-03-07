@@ -204,9 +204,25 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
                 scriptLink.type = "text/javascript";
                 document.body.append(scriptLink);
                 debug(`${SIGN} Injecting script`, { resource });
-                setTimeout(() => {
-                  setVersion(v + 1);
-                }, 500);
+                // setTimeout(() => {
+                //   setVersion(v + 1);
+                // }, 500);
+                // if the script contains a .js in the uri, we try to add the .js.map
+                if (resource.uri && resource.uri.indexOf(".js") > -1) {
+                  // uri might contain a query string, we need to remove it before adding .map
+                  let uriWithoutQuery = resource.uri.split("?")[0];
+                  let sourceMapUri = uriWithoutQuery + ".map";
+                  // we also check if the source map already exists by checking for an element with id of resourceId + "_map"
+                  if (nil(document.getElementById(resourceId + "_map")) === true) {
+                    let scriptMapLink = document.createElement("script");
+                    scriptMapLink.id = resourceId + "_map";
+                    scriptMapLink.src = sourceMapUri;
+                    scriptMapLink.type = "text/javascript";
+                    document.body.append(scriptMapLink);
+                    debug(`${SIGN} Injecting script source map`, { resource, sourceMapUri });
+                  }
+                }
+
                 break;
               }
               default: {
