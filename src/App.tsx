@@ -149,6 +149,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [isReady, setIsReady] = React.useState<boolean>(false);
   const [auth_validated, setIsValidated] = React.useState<boolean>(false);
   const [user, setUser] = React.useState<any | Reactory.Models.IUser>(null);
+  // Ref to track current user for stable comparison in event handlers (avoids stale closures)
+  const userRef = React.useRef<any>(null);
+  const offlineRef = React.useRef<boolean>(false);
   const [error, setError] = React.useState<Error>(null);
   //  const [apiStatus, setApiStatus] = React.useState<any>(null);
   const [offline, setOfflineStatus] = React.useState<boolean>(false);
@@ -168,6 +171,10 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   }));
 
   const [store] = React.useState<any>(configureStore(null));
+
+  // Keep refs in sync with state for stable comparisons in event handlers
+  userRef.current = user;
+  offlineRef.current = offline;
 
   const components: any = reactory.getComponents(dependencies);
   const { NotificationComponent, Footer } = components;
@@ -380,16 +387,20 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
       if (isOffline === true) {
         setOfflineStatus(isOffline);
+        offlineRef.current = true;
         setTimeout(() => { void getApiStatus() }, 3500);
       } else {
-        let user = reactory.utils.lodash.cloneDeep(reactory.getUser());
-        delete user.when;
-        let _user = reactory.utils.lodash.cloneDeep(user);
-        delete _user.when;
+        // Compare new user from API against current state user (via ref)
+        let newUser = reactory.utils.lodash.cloneDeep(reactory.getUser());
+        delete newUser.when;
+        let currentUser = reactory.utils.lodash.cloneDeep(userRef.current);
+        if (currentUser) delete currentUser.when;
 
-        if (deepEquals(user, _user) === false || status.offline !== offline) {
-          setUser(user)
+        if (deepEquals(newUser, currentUser) === false || status.offline !== offlineRef.current) {
+          setUser(newUser);
+          userRef.current = newUser;
           setOfflineStatus(false);
+          offlineRef.current = false;
         }
       }
     } else {

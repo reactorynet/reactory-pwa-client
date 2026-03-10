@@ -34,34 +34,16 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   } = utils;
   const { auth_validated, user, authenticating = false } = props;
   const [routes, setRoutes] = React.useState<Reactory.Routing.IReactoryRoute[]>([]);
-  const [v, setVersion] = React.useState<number>(0);
-  const onLogin = () => {
-    // Add a small delay to ensure the main app state has been updated
-    setTimeout(() => {
-      configureRouting();
-      setVersion(v + 1);
-    }, 100);
-  };
-
-
-  const onLogout = () => {
-    // Add a small delay to ensure the main app state has been updated
-    setTimeout(() => {
-      setVersion(v + 1);
-    }, 100);
-  };
-
-  reactory.on(ReactoryApiEventNames.onLogout, onLogout);
-  reactory.on(ReactoryApiEventNames.onLogin, onLogin);
+  const [routeHash, setRouteHash] = React.useState<number>(0);
+  // useReducer-based trigger for edge cases (e.g., lazy component load)
+  const [, forceRender] = React.useReducer((x: number) => x + 1, 0);
 
   reactory.navigation = navigation;
   reactory.location = location;
 
-
   const configureRouting = () => {
     debug('Configuring Routing', { auth_validated, user });
 
-    // Add safety checks to prevent route configuration during transitions
     if (authenticating) {
       debug('Skipping route configuration - authenticating', {
         authenticating
@@ -70,28 +52,48 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
     }
 
     const $routes = [...reactory.getRoutes()];
-    if (reactory.utils.hashCode(JSON.stringify($routes)) !== reactory.utils.hashCode(JSON.stringify(routes))) {
+    const newHash = reactory.utils.hashCode(JSON.stringify($routes));
+    const currentHash = reactory.utils.hashCode(JSON.stringify(routes));
+    if (newHash !== currentHash) {
       setRoutes($routes);
-      setVersion(v + 1);
+      setRouteHash(newHash);
     }
-  }
+  };
 
-  const onPluginLoaded = (pluginName: string) => {
-    debug(`Plugin Loaded: ${pluginName}, reconfiguring routes.`);
-    configureRouting();
-  }
+  // Ref to always have the latest configureRouting, avoiding stale closures
+  const configureRoutingRef = React.useRef(configureRouting);
+  configureRoutingRef.current = configureRouting;
 
+  // Register all event listeners in a single effect with proper cleanup
   useEffect(() => {
-    configureRouting();
-    reactory.on(ReactoryApiEventNames.onPluginLoaded, onPluginLoaded);
+    configureRoutingRef.current();
+
+    const handleLogin = () => {
+      // Small delay to ensure main app state has been updated
+      setTimeout(() => configureRoutingRef.current(), 100);
+    };
+    const handleLogout = () => {
+      setTimeout(() => configureRoutingRef.current(), 100);
+    };
+    const handlePluginLoaded = (pluginName: string) => {
+      debug(`Plugin Loaded: ${pluginName}, reconfiguring routes.`);
+      configureRoutingRef.current();
+    };
+
+    reactory.on(ReactoryApiEventNames.onLogin, handleLogin);
+    reactory.on(ReactoryApiEventNames.onLogout, handleLogout);
+    reactory.on(ReactoryApiEventNames.onPluginLoaded, handlePluginLoaded);
+
     return () => {
-      reactory.off(ReactoryApiEventNames.onPluginLoaded, onPluginLoaded);
-    }
+      reactory.off(ReactoryApiEventNames.onLogin, handleLogin);
+      reactory.off(ReactoryApiEventNames.onLogout, handleLogout);
+      reactory.off(ReactoryApiEventNames.onPluginLoaded, handlePluginLoaded);
+    };
   }, []);
 
   useEffect(() => {
     configureRouting();
-  }, [auth_validated, authenticating])
+  }, [auth_validated, authenticating]);
 
   if (auth_validated === false || authenticating === true) {
     return (<span>Validating Authentication</span>)
@@ -174,7 +176,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
               reactory={reactory}
               componentArgs={componentArgs}
               children={children}
-              onComponentLoad={() => setVersion(v + 1)}
+              onComponentLoad={forceRender}
               hasHeader={hasHeader}
               headerHeight={headerHeight}
             />
@@ -227,7 +229,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
                   reactory={reactory}
                   componentArgs={componentArgs}
                   children={children}
-                  onComponentLoad={() => setVersion(v + 1)}
+                  onComponentLoad={forceRender}
                   hasHeader={hasHeader}
                   headerHeight={headerHeight}
                 />
@@ -291,7 +293,7 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   const NotFoundElement = reactory.getComponent<any>("core.NotFound");
   ChildRoutes.push(<Route key={ChildRoutes.length + 1} path="*" element={<NotFoundElement />} />)
   return (
-    <Routes key={'reactory-router-routes-' + v}>
+    <Routes key={'reactory-router-routes-' + routeHash}>
       {ChildRoutes}
     </Routes>
   )
