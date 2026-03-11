@@ -459,6 +459,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.register = RestApi.register;
     this.reset = RestApi.reset;
     this.forgot = RestApi.forgot;
+    this.checkUsername = RestApi.checkUsername;
     this.forms = this.forms.bind(this);
     this.form = this.form.bind(this);
     this.React = React;

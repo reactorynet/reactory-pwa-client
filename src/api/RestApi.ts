@@ -46,7 +46,7 @@ export const companyWithId = (id) => {
 }
 
 export const register = (registerPayload) => {
-  const url = safeUrl([api_root, 'register']);
+  const url = safeUrl([api_root, 'useraccount/register']);
   return fetch(url, {
     method: 'post',
     body: JSON.stringify(registerPayload),
@@ -55,7 +55,7 @@ export const register = (registerPayload) => {
 }
 
 export const forgot = (forgotPayload) => {
-  const url = safeUrl([api_root, 'forgot']);
+  const url = safeUrl([api_root, 'useraccount/forgot']);
   return fetch(url, {
     method: 'post',
     body: JSON.stringify(forgotPayload),
@@ -63,8 +63,20 @@ export const forgot = (forgotPayload) => {
   }).then((response) => response.json())
 }
 
+/**
+ * Checks whether a username is already taken.
+ * Returns 200 { exists: false } or 409 { exists: true, suggestion }.
+ */
+export const checkUsername = (username: string) => {
+  const url = safeUrl([api_root, `useraccount/checkUsername/${encodeURIComponent(username)}`]);
+  return fetch(url, {
+    method: 'get',
+    headers: api_headers,
+  }).then((response) => response.json());
+}
+
 export const reset = (resetPayload) => {
-  const url = safeUrl([api_root, 'reset']);
+  const url = safeUrl([api_root, 'useraccount/reset']);
   return fetch(url, {
     method: 'post',
     body: JSON.stringify(resetPayload),
