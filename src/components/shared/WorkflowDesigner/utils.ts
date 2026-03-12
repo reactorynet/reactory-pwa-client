@@ -11,7 +11,37 @@ import {
   ValidationSeverity,
   PortType,
   PortDefinition,
+  StepDefinition,
 } from './types';
+import { getStepDefinition } from './components/Steps';
+
+/**
+ * Maps YAML workflow step types to designer step definition IDs.
+ * Used when importing YAML workflows into the visual designer.
+ */
+export const YAML_TO_DESIGNER_TYPE_MAP: Record<string, string> = {
+  conditional: 'condition',
+  apiCall: 'rest',
+  custom: 'service_invoke',
+  dataTransformation: 'data_transform',
+  forEach: 'for_each',
+  cliCommand: 'cli_command',
+  fileOperation: 'task',
+};
+
+/**
+ * Maps designer step definition IDs back to YAML step types.
+ * Used when exporting from the visual designer to YAML format.
+ */
+export const DESIGNER_TO_YAML_TYPE_MAP: Record<string, string> = {
+  condition: 'conditional',
+  rest: 'apiCall',
+  service_invoke: 'custom',
+  data_transform: 'dataTransformation',
+  for_each: 'forEach',
+  cli_command: 'cliCommand',
+  task: 'custom',
+};
 
 // Geometry utilities
 export function distance(p1: Point, p2: Point): number {
@@ -430,102 +460,318 @@ export function zoomToSelection(selectedBounds: Bounds, viewportBounds: Bounds):
  * 
  * Steps without designer.position metadata are auto-laid out in a
  * top-to-bottom arrangement with 250px vertical spacing.
+ * 
+ * This function also:
+ * - Maps YAML step types to designer step IDs (e.g. `conditional` → `condition`)
+ * - Synthesizes Start and End steps that the YAML format doesn't have
+ * - Flattens nested sub-steps from conditional/forEach/parallel into top-level steps
+ * - Looks up canonical port definitions from the step library
  */
 export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinition {
-  const STEP_SPACING_X = 300;
   const STEP_SPACING_Y = 150;
   const DEFAULT_STEP_SIZE: Size = { width: 200, height: 100 };
 
-  // Convert steps
-  const steps: WorkflowStepDefinition[] = (yamlDef.steps || []).map(
-    (step: any, index: number) => {
-      const designer = step.designer || {};
+  const allSteps: WorkflowStepDefinition[] = [];
+  const allConnections: WorkflowConnection[] = [];
 
-      // Position: use designer metadata or auto-layout
-      const position: Point = designer.position
-        ? { x: designer.position.x, y: designer.position.y }
-        : { x: 100, y: 100 + index * STEP_SPACING_Y };
+  /**
+   * Resolve the designer type for a YAML step type.
+   */
+  function resolveDesignerType(yamlType: string): string {
+    return YAML_TO_DESIGNER_TYPE_MAP[yamlType] || yamlType;
+  }
 
-      const size: Size = designer.size
-        ? { width: designer.size.width, height: designer.size.height }
-        : { ...DEFAULT_STEP_SIZE };
+  /**
+   * Build ports for a step. If a StepDefinition exists in the library, use its
+   * canonical ports. Otherwise fall back to the generic derivation from
+   * input/output keys.
+   */
+  function buildPortsForStep(
+    step: any,
+    designerType: string,
+    size: Size
+  ): { inputPorts: PortDefinition[]; outputPorts: PortDefinition[] } {
+    const stepDef = getStepDefinition(designerType);
 
-      // Derive input/output ports from step inputs/outputs keys
-      const inputKeys = step.inputs ? Object.keys(step.inputs) : [];
-      const outputKeys = step.outputs ? Object.keys(step.outputs) : [];
+    if (stepDef) {
+      // Use canonical ports from step definition, prefixed with step id
+      const inputPorts: PortDefinition[] = stepDef.inputPorts.map((pt, idx) => ({
+        id: `${step.id}_${pt.name}_${pt.type}`,
+        name: pt.name,
+        type: pt.type,
+        dataType: pt.dataType,
+        position: pt.type === PortType.CONTROL_INPUT
+          ? { x: size.width / 2, y: 0 }
+          : { x: 0, y: 30 + idx * 20 },
+      }));
 
-      // Also incorporate designer port metadata if available
-      const designerInputPorts = designer.ports?.inputs || [];
-      const designerOutputPorts = designer.ports?.outputs || [];
+      const outputPorts: PortDefinition[] = stepDef.outputPorts.map((pt, idx) => ({
+        id: `${step.id}_${pt.name}_${pt.type}`,
+        name: pt.name,
+        type: pt.type,
+        dataType: pt.dataType,
+        position: pt.type === PortType.CONTROL_OUTPUT
+          ? { x: size.width / 2, y: size.height }
+          : { x: size.width, y: 30 + idx * 20 },
+      }));
 
-      const inputPorts: PortDefinition[] = buildPorts(
-        inputKeys,
-        designerInputPorts,
-        PortType.INPUT,
-        size
-      );
-
-      const outputPorts: PortDefinition[] = buildPorts(
-        outputKeys,
-        designerOutputPorts,
-        PortType.OUTPUT,
-        size
-      );
-
-      // Always ensure at least one control input and one control output port
-      if (!inputPorts.some(p => p.type === PortType.CONTROL_INPUT)) {
-        inputPorts.unshift({
-          id: `${step.id}_ctrl_in`,
-          name: 'control_in',
-          type: PortType.CONTROL_INPUT,
-          position: { x: size.width / 2, y: 0 },
-        });
-      }
-      if (!outputPorts.some(p => p.type === PortType.CONTROL_OUTPUT)) {
-        outputPorts.push({
-          id: `${step.id}_ctrl_out`,
-          name: 'control_out',
-          type: PortType.CONTROL_OUTPUT,
-          position: { x: size.width / 2, y: size.height },
-        });
-      }
-
-      const metadata: Record<string, unknown> = {};
-      if (designer.color) metadata.color = designer.color;
-      if (designer.icon) metadata.icon = designer.icon;
-      if (designer.collapsed !== undefined) metadata.collapsed = designer.collapsed;
-      if (designer.helpText) metadata.helpText = designer.helpText;
-
-      return {
-        id: step.id,
-        name: step.name || step.id,
-        type: step.type,
-        position,
-        size,
-        properties: {
-          ...(step.config || {}),
-          enabled: step.enabled ?? true,
-          continueOnError: step.continueOnError ?? false,
-          timeout: step.timeout,
-          condition: step.condition,
-          inputs: step.inputs,
-          outputs: step.outputs,
-        },
-        inputPorts,
-        outputPorts,
-        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      } as WorkflowStepDefinition;
+      return { inputPorts, outputPorts };
     }
+
+    // Fallback: derive from step inputs/outputs keys
+    const inputKeys = step.inputs ? Object.keys(step.inputs) : [];
+    const outputKeys = step.outputs ? Object.keys(step.outputs) : [];
+    const designerInputPorts = step.designer?.ports?.inputs || [];
+    const designerOutputPorts = step.designer?.ports?.outputs || [];
+
+    const inputPorts = buildPorts(inputKeys, designerInputPorts, PortType.INPUT, size);
+    const outputPorts = buildPorts(outputKeys, designerOutputPorts, PortType.OUTPUT, size);
+
+    // Ensure control ports
+    if (!inputPorts.some(p => p.type === PortType.CONTROL_INPUT)) {
+      inputPorts.unshift({
+        id: `${step.id}_ctrl_in`,
+        name: 'control_in',
+        type: PortType.CONTROL_INPUT,
+        position: { x: size.width / 2, y: 0 },
+      });
+    }
+    if (!outputPorts.some(p => p.type === PortType.CONTROL_OUTPUT)) {
+      outputPorts.push({
+        id: `${step.id}_ctrl_out`,
+        name: 'control_out',
+        type: PortType.CONTROL_OUTPUT,
+        position: { x: size.width / 2, y: size.height },
+      });
+    }
+
+    return { inputPorts, outputPorts };
+  }
+
+  /**
+   * Find the first control input port id for a step.
+   */
+  function ctrlIn(step: WorkflowStepDefinition): string {
+    const port = step.inputPorts.find(
+      p => p.type === PortType.CONTROL_INPUT
+    );
+    return port?.id || `${step.id}_ctrl_in`;
+  }
+
+  /**
+   * Find a control output port id for a step, optionally by name.
+   */
+  function ctrlOut(step: WorkflowStepDefinition, portName?: string): string {
+    if (portName) {
+      const port = step.outputPorts.find(
+        p => p.name === portName &&
+          (p.type === PortType.CONTROL_OUTPUT || p.type === PortType.OUTPUT)
+      );
+      if (port) return port.id;
+    }
+    const port = step.outputPorts.find(
+      p => p.type === PortType.CONTROL_OUTPUT
+    );
+    return port?.id || `${step.id}_ctrl_out`;
+  }
+
+  /**
+   * Convert a single YAML step (excluding nested sub-steps) into a
+   * WorkflowStepDefinition, positioned at the given Y offset.
+   */
+  function convertStep(
+    step: any,
+    yOffset: number,
+    parentStepId?: string,
+    branchName?: string
+  ): WorkflowStepDefinition {
+    const designer = step.designer || {};
+    const designerType = resolveDesignerType(step.type);
+
+    const position: Point = designer.position
+      ? { x: designer.position.x, y: designer.position.y }
+      : { x: 100, y: yOffset };
+
+    const size: Size = designer.size
+      ? { width: designer.size.width, height: designer.size.height }
+      : { ...DEFAULT_STEP_SIZE };
+
+    const { inputPorts, outputPorts } = buildPortsForStep(step, designerType, size);
+
+    const metadata: Record<string, unknown> = {};
+    if (designer.color) metadata.color = designer.color;
+    if (designer.icon) metadata.icon = designer.icon;
+    if (designer.collapsed !== undefined) metadata.collapsed = designer.collapsed;
+    if (designer.helpText) metadata.helpText = designer.helpText;
+    if (parentStepId) metadata.parentStepId = parentStepId;
+    if (branchName) metadata.branchName = branchName;
+    // Preserve the original YAML type so round-tripping is lossless
+    if (step.type !== designerType) metadata.yamlType = step.type;
+
+    return {
+      id: step.id,
+      name: step.name || step.id,
+      type: designerType,
+      position,
+      size,
+      properties: {
+        ...(step.config || {}),
+        enabled: step.enabled ?? true,
+        continueOnError: step.continueOnError ?? false,
+        timeout: step.timeout,
+        condition: step.condition,
+        inputs: step.inputs,
+        outputs: step.outputs,
+      },
+      inputPorts,
+      outputPorts,
+      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+    };
+  }
+
+  /**
+   * Recursively flatten YAML steps (including nested sub-steps from
+   * conditional/forEach/parallel types) into the flat allSteps and
+   * allConnections arrays.
+   *
+   * Returns the first and last steps in the flattened chain, so
+   * the caller can wire them to surrounding steps.
+   */
+  function flattenSteps(
+    yamlSteps: any[],
+    baseY: number,
+    parentStepId?: string,
+    branchName?: string
+  ): { first: WorkflowStepDefinition | null; last: WorkflowStepDefinition | null } {
+    if (!yamlSteps || yamlSteps.length === 0) {
+      return { first: null, last: null };
+    }
+
+    let currentY = baseY;
+    let previousStep: WorkflowStepDefinition | null = null;
+    let firstStep: WorkflowStepDefinition | null = null;
+
+    for (const yamlStep of yamlSteps) {
+      const designerType = resolveDesignerType(yamlStep.type);
+      const step = convertStep(yamlStep, currentY, parentStepId, branchName);
+      allSteps.push(step);
+      currentY += STEP_SPACING_Y;
+
+      if (!firstStep) firstStep = step;
+
+      // Connect to previous step in the chain (unless dependsOn is explicit)
+      if (previousStep && !yamlStep.dependsOn) {
+        allConnections.push({
+          id: generateConnectionId(),
+          sourceStepId: previousStep.id,
+          sourcePortId: ctrlOut(previousStep),
+          targetStepId: step.id,
+          targetPortId: ctrlIn(step),
+        });
+      }
+
+      // Handle nested sub-steps
+      if (designerType === 'condition' && yamlStep.config) {
+        const thenSteps = yamlStep.config.thenSteps || [];
+        const elseSteps = yamlStep.config.elseSteps || [];
+
+        // Flatten then-branch
+        if (thenSteps.length > 0) {
+          const thenChain = flattenSteps(
+            thenSteps, currentY, yamlStep.id, 'then'
+          );
+          currentY += thenSteps.length * STEP_SPACING_Y;
+
+          if (thenChain.first) {
+            allConnections.push({
+              id: generateConnectionId(),
+              sourceStepId: step.id,
+              sourcePortId: ctrlOut(step, 'true'),
+              targetStepId: thenChain.first.id,
+              targetPortId: ctrlIn(thenChain.first),
+            });
+          }
+        }
+
+        // Flatten else-branch
+        if (elseSteps.length > 0) {
+          const elseChain = flattenSteps(
+            elseSteps, currentY, yamlStep.id, 'else'
+          );
+          currentY += elseSteps.length * STEP_SPACING_Y;
+
+          if (elseChain.first) {
+            allConnections.push({
+              id: generateConnectionId(),
+              sourceStepId: step.id,
+              sourcePortId: ctrlOut(step, 'false'),
+              targetStepId: elseChain.first.id,
+              targetPortId: ctrlIn(elseChain.first),
+            });
+          }
+        }
+      } else if (designerType === 'for_each' && yamlStep.config?.steps) {
+        const bodySteps = yamlStep.config.steps;
+        if (bodySteps.length > 0) {
+          const bodyChain = flattenSteps(
+            bodySteps, currentY, yamlStep.id, 'loop_body'
+          );
+          currentY += bodySteps.length * STEP_SPACING_Y;
+
+          if (bodyChain.first) {
+            allConnections.push({
+              id: generateConnectionId(),
+              sourceStepId: step.id,
+              sourcePortId: ctrlOut(step, 'loop_body'),
+              targetStepId: bodyChain.first.id,
+              targetPortId: ctrlIn(bodyChain.first),
+            });
+          }
+        }
+      } else if (designerType === 'parallel' && yamlStep.config?.branches) {
+        const branches: any[] = yamlStep.config.branches;
+        for (const branch of branches) {
+          if (branch.steps && branch.steps.length > 0) {
+            const branchChain = flattenSteps(
+              branch.steps, currentY, yamlStep.id, branch.name || 'branch'
+            );
+            currentY += branch.steps.length * STEP_SPACING_Y;
+
+            if (branchChain.first) {
+              // Connect parallel step to the first step in this branch
+              allConnections.push({
+                id: generateConnectionId(),
+                sourceStepId: step.id,
+                sourcePortId: ctrlOut(step, branch.name || 'branch1'),
+                targetStepId: branchChain.first.id,
+                targetPortId: ctrlIn(branchChain.first),
+              });
+            }
+          }
+        }
+      }
+
+      previousStep = step;
+    }
+
+    return { first: firstStep, last: previousStep };
+  }
+
+  // --- Main conversion ---
+
+  // Flatten all top-level YAML steps (and their nested children)
+  const { first: firstRealStep, last: lastRealStep } = flattenSteps(
+    yamlDef.steps || [], 100
   );
 
-  // Build connections from designer.connections or from dependsOn relationships
-  const connections: WorkflowConnection[] = [];
+  // Also process any explicit dependsOn connections from YAML
   const designerConnections = yamlDef.designer?.connections || [];
-
   if (designerConnections.length > 0) {
-    // Use explicit designer connections
-    designerConnections.forEach((conn: any, idx: number) => {
-      connections.push({
+    // Use explicit designer connections (override inferred ones)
+    // Clear auto-generated connections and use explicit ones
+    allConnections.length = 0;
+    designerConnections.forEach((conn: any) => {
+      allConnections.push({
         id: conn.id || generateConnectionId(),
         sourceStepId: conn.sourceStepId,
         sourcePortId: conn.sourcePort,
@@ -540,7 +786,7 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
       });
     });
   } else {
-    // Infer connections from dependsOn declarations
+    // Add dependsOn-based connections (supplement auto-generated ones)
     (yamlDef.steps || []).forEach((step: any) => {
       const deps = step.dependsOn
         ? Array.isArray(step.dependsOn)
@@ -548,28 +794,117 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
           : [step.dependsOn]
         : [];
       deps.forEach((depId: string) => {
-        connections.push({
-          id: generateConnectionId(),
-          sourceStepId: depId,
-          sourcePortId: `${depId}_ctrl_out`,
-          targetStepId: step.id,
-          targetPortId: `${step.id}_ctrl_in`,
-        });
+        const sourceStep = allSteps.find(s => s.id === depId);
+        const targetStep = allSteps.find(s => s.id === step.id);
+        if (sourceStep && targetStep) {
+          // Avoid duplicate connections
+          const exists = allConnections.some(
+            c => c.sourceStepId === depId && c.targetStepId === step.id
+          );
+          if (!exists) {
+            allConnections.push({
+              id: generateConnectionId(),
+              sourceStepId: depId,
+              sourcePortId: ctrlOut(sourceStep),
+              targetStepId: step.id,
+              targetPortId: ctrlIn(targetStep),
+            });
+          }
+        }
       });
     });
+  }
 
-    // If no dependsOn at all, chain steps in order
-    if (connections.length === 0 && steps.length > 1) {
-      for (let i = 0; i < steps.length - 1; i++) {
-        connections.push({
-          id: generateConnectionId(),
-          sourceStepId: steps[i].id,
-          sourcePortId: `${steps[i].id}_ctrl_out`,
-          targetStepId: steps[i + 1].id,
-          targetPortId: `${steps[i + 1].id}_ctrl_in`,
-        });
-      }
+  // Synthesize Start step
+  const startStepSize: Size = { width: 120, height: 60 };
+  const startStep: WorkflowStepDefinition = {
+    id: '__start__',
+    name: 'Start',
+    type: 'start',
+    position: firstRealStep
+      ? { x: firstRealStep.position.x, y: firstRealStep.position.y - STEP_SPACING_Y }
+      : { x: 100, y: 0 },
+    size: startStepSize,
+    properties: { name: 'Start' },
+    inputPorts: [],
+    outputPorts: [
+      {
+        id: '__start___next_control_output',
+        name: 'next',
+        type: PortType.CONTROL_OUTPUT,
+        position: { x: startStepSize.width / 2, y: startStepSize.height },
+      },
+    ],
+    metadata: { synthesized: true },
+  };
+  allSteps.unshift(startStep);
+
+  if (firstRealStep) {
+    allConnections.push({
+      id: generateConnectionId(),
+      sourceStepId: '__start__',
+      sourcePortId: '__start___next_control_output',
+      targetStepId: firstRealStep.id,
+      targetPortId: ctrlIn(firstRealStep),
+    });
+  }
+
+  // Synthesize End step — find terminal steps (those with no outgoing connections
+  // to other top-level steps, excluding nested child steps)
+  const topLevelStepIds = new Set(
+    (yamlDef.steps || []).map((s: any) => s.id)
+  );
+  const stepsWithOutgoing = new Set(
+    allConnections
+      .filter(c => topLevelStepIds.has(c.sourceStepId) && topLevelStepIds.has(c.targetStepId))
+      .map(c => c.sourceStepId)
+  );
+  const terminalSteps = allSteps.filter(
+    s => topLevelStepIds.has(s.id) && !stepsWithOutgoing.has(s.id)
+  );
+
+  const endStepSize: Size = { width: 120, height: 60 };
+  const lastY = allSteps.reduce((max, s) => Math.max(max, s.position.y), 0);
+  const endStep: WorkflowStepDefinition = {
+    id: '__end__',
+    name: 'End',
+    type: 'end',
+    position: { x: 100, y: lastY + STEP_SPACING_Y },
+    size: endStepSize,
+    properties: { name: 'End', returnValue: 'success' },
+    inputPorts: [
+      {
+        id: '__end___previous_control_input',
+        name: 'previous',
+        type: PortType.CONTROL_INPUT,
+        position: { x: endStepSize.width / 2, y: 0 },
+      },
+    ],
+    outputPorts: [],
+    metadata: { synthesized: true },
+  };
+  allSteps.push(endStep);
+
+  // Connect terminal steps to End
+  if (terminalSteps.length > 0) {
+    for (const term of terminalSteps) {
+      allConnections.push({
+        id: generateConnectionId(),
+        sourceStepId: term.id,
+        sourcePortId: ctrlOut(term),
+        targetStepId: '__end__',
+        targetPortId: '__end___previous_control_input',
+      });
     }
+  } else if (lastRealStep) {
+    // Fallback: connect last step to end
+    allConnections.push({
+      id: generateConnectionId(),
+      sourceStepId: lastRealStep.id,
+      sourcePortId: ctrlOut(lastRealStep),
+      targetStepId: '__end__',
+      targetPortId: '__end___previous_control_input',
+    });
   }
 
   // Convert variables
@@ -593,8 +928,8 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
     description: yamlDef.description || '',
     tags: yamlDef.tags || [],
     author: yamlDef.author,
-    steps,
-    connections,
+    steps: allSteps,
+    connections: allConnections,
     variables,
     configuration: {
       timeout: undefined,

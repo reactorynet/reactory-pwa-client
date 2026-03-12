@@ -17,6 +17,14 @@ export { UserActivityStepDefinition } from './UserActivity/definition';
 
 // Observability Step Definitions
 export { TelemetryStepDefinition } from './Telemetry/definition';
+export { LogStepDefinition } from './Log/definition';
+
+// YAML-aligned Step Definitions
+export { DelayStepDefinition } from './Delay/definition';
+export { ValidationStepDefinition } from './Validation/definition';
+export { DataTransformStepDefinition } from './DataTransform/definition';
+export { ForEachStepDefinition } from './ForEach/definition';
+export { CliCommandStepDefinition } from './CliCommand/definition';
 
 import { StepDefinition } from '../../types';
 import { StartStepDefinition } from './Start/definition';
@@ -31,6 +39,12 @@ import { GRPCStepDefinition } from './GRPC/definition';
 import { ServiceInvokeStepDefinition } from './ServiceInvoke/definition';
 import { UserActivityStepDefinition } from './UserActivity/definition';
 import { TelemetryStepDefinition } from './Telemetry/definition';
+import { LogStepDefinition } from './Log/definition';
+import { DelayStepDefinition } from './Delay/definition';
+import { ValidationStepDefinition } from './Validation/definition';
+import { DataTransformStepDefinition } from './DataTransform/definition';
+import { ForEachStepDefinition } from './ForEach/definition';
+import { CliCommandStepDefinition } from './CliCommand/definition';
 
 /**
  * All available workflow step definitions
@@ -42,13 +56,18 @@ export const ALL_STEP_DEFINITIONS: StepDefinition[] = [
   
   // Actions
   TaskStepDefinition,
+  CliCommandStepDefinition,
   
   // Logic
   ConditionStepDefinition,
+  ValidationStepDefinition,
+  DataTransformStepDefinition,
   
   // Flow control
   ParallelStepDefinition,
   JoinStepDefinition,
+  DelayStepDefinition,
+  ForEachStepDefinition,
   
   // Integration
   GraphQLStepDefinition,
@@ -61,6 +80,7 @@ export const ALL_STEP_DEFINITIONS: StepDefinition[] = [
   
   // Observability
   TelemetryStepDefinition,
+  LogStepDefinition,
 ];
 
 /**
