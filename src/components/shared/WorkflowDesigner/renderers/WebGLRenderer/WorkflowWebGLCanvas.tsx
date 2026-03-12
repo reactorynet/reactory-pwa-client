@@ -343,12 +343,10 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
     markInteractionStart();
     
     // Pan the viewport
-    // Invert Y-axis because screen coordinates increase downward,
-    // but we want dragging down to pan the view down (showing content above)
     const newViewport = {
       ...viewport,
       panX: viewport.panX + delta.x,
-      panY: viewport.panY - delta.y
+      panY: viewport.panY + delta.y
     };
     onViewportChange(newViewport);
     
@@ -382,11 +380,21 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
   // Handle context menu
   const handleStepContextMenu = useCallback((stepId: string, event: WebGLInteractionEvent) => {
     if (onContextMenu && event.originalEvent instanceof MouseEvent) {
+      const native = event.originalEvent;
       // Create a synthetic React mouse event from the native event
+      // clientX/clientY must be copied explicitly — they are prototype getters and don't survive spread
       const syntheticEvent = {
-        ...event.originalEvent,
-        nativeEvent: event.originalEvent,
-        isDefaultPrevented: () => event.originalEvent.defaultPrevented,
+        ...native,
+        nativeEvent: native,
+        clientX: native.clientX,
+        clientY: native.clientY,
+        pageX: native.pageX,
+        pageY: native.pageY,
+        screenX: native.screenX,
+        screenY: native.screenY,
+        preventDefault: () => native.preventDefault(),
+        stopPropagation: () => native.stopPropagation(),
+        isDefaultPrevented: () => native.defaultPrevented,
         isPropagationStopped: () => false,
         persist: () => {}
       } as unknown as React.MouseEvent;
@@ -396,10 +404,19 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
 
   const handleConnectionContextMenu = useCallback((connectionId: string, event: WebGLInteractionEvent) => {
     if (onContextMenu && event.originalEvent instanceof MouseEvent) {
+      const native = event.originalEvent;
       const syntheticEvent = {
-        ...event.originalEvent,
-        nativeEvent: event.originalEvent,
-        isDefaultPrevented: () => event.originalEvent.defaultPrevented,
+        ...native,
+        nativeEvent: native,
+        clientX: native.clientX,
+        clientY: native.clientY,
+        pageX: native.pageX,
+        pageY: native.pageY,
+        screenX: native.screenX,
+        screenY: native.screenY,
+        preventDefault: () => native.preventDefault(),
+        stopPropagation: () => native.stopPropagation(),
+        isDefaultPrevented: () => native.defaultPrevented,
         isPropagationStopped: () => false,
         persist: () => {}
       } as unknown as React.MouseEvent;
@@ -409,10 +426,19 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
 
   const handleCanvasContextMenu = useCallback((position: Point, event: WebGLInteractionEvent) => {
     if (onContextMenu && event.originalEvent instanceof MouseEvent) {
+      const native = event.originalEvent;
       const syntheticEvent = {
-        ...event.originalEvent,
-        nativeEvent: event.originalEvent,
-        isDefaultPrevented: () => event.originalEvent.defaultPrevented,
+        ...native,
+        nativeEvent: native,
+        clientX: native.clientX,
+        clientY: native.clientY,
+        pageX: native.pageX,
+        pageY: native.pageY,
+        screenX: native.screenX,
+        screenY: native.screenY,
+        preventDefault: () => native.preventDefault(),
+        stopPropagation: () => native.stopPropagation(),
+        isDefaultPrevented: () => native.defaultPrevented,
         isPropagationStopped: () => false,
         persist: () => {}
       } as unknown as React.MouseEvent;

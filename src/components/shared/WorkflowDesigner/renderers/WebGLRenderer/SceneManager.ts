@@ -158,8 +158,9 @@ export class SceneManager implements ISceneManager {
     
     // Pan the camera (in world coordinates)
     // panX and panY are in screen coordinates, convert to world
+    // Both use negative sign so that positive pan values shift content right/down
     const worldPanX = -panX / zoom;
-    const worldPanY = panY / zoom;
+    const worldPanY = -panY / zoom;
     
     this.camera.position.x = worldPanX + frustumWidth / 2;
     this.camera.position.y = -(worldPanY + frustumHeight / 2);

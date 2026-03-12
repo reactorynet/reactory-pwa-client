@@ -1,5 +1,5 @@
 import { useReactory } from "@reactory/client-core/api";
-import React, { useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import {
   WorkflowDesignerProps,
   WorkflowStepDefinition,
@@ -236,6 +236,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   } = props;
 
   const reactory = useReactory();
+  const canvasAreaRef = useRef<HTMLDivElement>(null);
   const {
     mode,
     primary,
@@ -396,16 +397,26 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       height: maxY - minY + 100
     };
 
-    // Assume canvas size (would be better to get from ref)
-    const canvasWidth = 800;
-    const canvasHeight = 600;
+    // Use actual canvas container dimensions if available, fall back to defaults
+    const canvasWidth = canvasAreaRef.current?.clientWidth || 800;
+    const canvasHeight = canvasAreaRef.current?.clientHeight || 600;
 
-    const scaleX = canvasWidth / contentBounds.width;
-    const scaleY = canvasHeight / contentBounds.height;
-    const newZoom = Math.min(scaleX, scaleY, 1.0);
+    // Leave a 5% inset so content isn't flush with the edges
+    const availableWidth = canvasWidth * 0.9;
+    const availableHeight = canvasHeight * 0.9;
 
-    const newPanX = canvasWidth / 2 - (contentBounds.x + contentBounds.width / 2) * newZoom;
-    const newPanY = canvasHeight / 2 - (contentBounds.y + contentBounds.height / 2) * newZoom;
+    const scaleX = availableWidth / contentBounds.width;
+    const scaleY = availableHeight / contentBounds.height;
+    // Clamp: never exceed 1.0 (don't zoom in beyond natural size), never below 0.05
+    const newZoom = Math.max(0.05, Math.min(scaleX, scaleY, 1.0));
+
+    const contentCenterX = contentBounds.x + contentBounds.width / 2;
+    const contentCenterY = contentBounds.y + contentBounds.height / 2;
+
+    // screenX = worldX * zoom + panX  →  panX = screenCenterX - worldCenterX * zoom
+    // screenY = worldY * zoom + panY  →  panY = screenCenterY - worldCenterY * zoom
+    const newPanX = canvasWidth / 2 - contentCenterX * newZoom;
+    const newPanY = canvasHeight / 2 - contentCenterY * newZoom;
 
     setViewport({
       ...viewport,
@@ -1027,7 +1038,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        height: '100dvh',
+        maxHeight: '100dvh',
         backgroundColor: background.default,
         overflow: 'hidden'
       }}
@@ -1329,6 +1341,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
         {/* Canvas Area */}
         <Box
+          ref={canvasAreaRef}
           sx={{
             flexGrow: 1,
             position: 'relative',
