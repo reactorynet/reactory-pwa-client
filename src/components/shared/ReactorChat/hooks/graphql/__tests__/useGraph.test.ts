@@ -31,6 +31,15 @@ const mockReactory = () => {
       if (String(doc).includes('ReactorExecuteTool')) {
         return mkResp({ ReactorExecuteTool: { __typename: 'ReactorChatMessage', sessionId: 'sess-1', id: 'tx', role: 'assistant', content: 'tool', timestamp: new Date().toISOString() } });
       }
+      if (String(doc).includes('ReactorStartVoiceSession')) {
+        return mkResp({ ReactorStartVoiceSession: { __typename: 'ReactorVoiceSession', chatSessionId: 'sess-1', personaId: 'p1', ttsEnabled: true, sttEnabled: true, voice: 'af_heart', sttLanguage: 'en', ttsStreamUrl: null, sttStreamUrl: null, created: new Date().toISOString() } });
+      }
+      if (String(doc).includes('ReactorEndVoiceSession')) {
+        return mkResp({ ReactorEndVoiceSession: true });
+      }
+      if (String(doc).includes('ReactorSendVoiceMessage')) {
+        return mkResp({ ReactorSendVoiceMessage: { __typename: 'ReactorVoiceChatMessage', sessionId: 'sess-1', content: 'Hello!', role: 'assistant', audioBase64: 'AAAA', audioFormat: 'wav', audioDuration: 1.5, timestamp: new Date().toISOString() } });
+      }
       return mkResp({});
     }),
     graphqlQuery: jest.fn((doc: any, vars: any) => {
@@ -97,6 +106,42 @@ describe('useGraph', () => {
     const graph = useGraph({ reactory });
     const ok = await graph.deleteChatSession('sess-1');
     expect(ok).toBe(true);
+  });
+
+  it('starts a voice session', async () => {
+    const reactory = mockReactory();
+    const graph = useGraph({ reactory });
+    const result = await graph.startVoiceSession({ personaId: 'p1' });
+    expect(result.__typename).toBe('ReactorVoiceSession');
+    if (result.__typename === 'ReactorVoiceSession') {
+      expect(result.chatSessionId).toBe('sess-1');
+      expect(result.ttsEnabled).toBe(true);
+      expect(result.sttEnabled).toBe(true);
+      expect(result.voice).toBe('af_heart');
+    }
+  });
+
+  it('ends a voice session', async () => {
+    const reactory = mockReactory();
+    const graph = useGraph({ reactory });
+    const ok = await graph.endVoiceSession('sess-1');
+    expect(ok).toBe(true);
+  });
+
+  it('sends a voice message', async () => {
+    const reactory = mockReactory();
+    const graph = useGraph({ reactory });
+    const result = await graph.sendVoiceMessage(new Blob([]), {
+      chatSessionId: 'sess-1',
+      personaId: 'p1',
+      synthesizeResponse: true,
+    });
+    expect(result.__typename).toBe('ReactorVoiceChatMessage');
+    if (result.__typename === 'ReactorVoiceChatMessage') {
+      expect(result.content).toBe('Hello!');
+      expect(result.audioBase64).toBe('AAAA');
+      expect(result.audioFormat).toBe('wav');
+    }
   });
 });
 

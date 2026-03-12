@@ -1,0 +1,22 @@
+mutation ReactorSendVoiceMessage($audio: Upload!, $input: ReactorVoiceMessageInput!) {
+  ReactorSendVoiceMessage(audio: $audio, input: $input) {
+    __typename
+    ... on ReactorVoiceChatMessage {
+      sessionId
+      content
+      role
+      audioBase64
+      audioFormat
+      audioDuration
+      timestamp
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

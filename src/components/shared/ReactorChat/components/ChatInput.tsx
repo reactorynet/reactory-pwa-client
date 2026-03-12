@@ -10,6 +10,10 @@ interface ChatInputProps {
   onFileUpload?: (file: File) => void;
   recordingPanelOpen?: boolean;
   chatState?: ChatState;
+  /** Whether voice mode is active */
+  voiceModeActive?: boolean;
+  /** Toggle voice mode on/off */
+  onVoiceModeToggle?: () => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -20,6 +24,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onFileUpload,
   recordingPanelOpen = false,
   chatState,
+  voiceModeActive = false,
+  onVoiceModeToggle,
 }) => {
   const reactory = useReactory();
   const il8n = reactory.i18n;
@@ -110,6 +116,29 @@ const ChatInput: React.FC<ChatInputProps> = ({
               },
               endAdornment: (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 0.5 }}>
+                  {onVoiceModeToggle && (
+                    <IconButton
+                      aria-label={voiceModeActive ? "Disable voice mode" : "Enable voice mode"}
+                      onClick={onVoiceModeToggle}
+                      disabled={disabled}
+                      size="small"
+                      sx={{
+                        p: 0.1,
+                        fontSize: '1rem',
+                        color: voiceModeActive
+                          ? theme.palette.secondary.main
+                          : theme.palette.text.disabled,
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover,
+                        },
+                      }}
+                      title={voiceModeActive ? "Voice mode on" : "Voice mode off"}
+                    >
+                      <span className="material-icons" style={{ fontSize: 18 }}>
+                        {voiceModeActive ? 'record_voice_over' : 'voice_over_off'}
+                      </span>
+                    </IconButton>
+                  )}
                   <IconButton
                     aria-label="Record audio"
                     onClick={onRecordingToggle}

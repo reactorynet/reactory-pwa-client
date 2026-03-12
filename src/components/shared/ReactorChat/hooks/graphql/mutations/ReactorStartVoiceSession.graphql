@@ -1,0 +1,24 @@
+mutation ReactorStartVoiceSession($input: ReactorStartVoiceSessionInput!) {
+  ReactorStartVoiceSession(input: $input) {
+    __typename
+    ... on ReactorVoiceSession {
+      chatSessionId
+      personaId
+      ttsEnabled
+      sttEnabled
+      voice
+      sttLanguage
+      ttsStreamUrl
+      sttStreamUrl
+      created
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

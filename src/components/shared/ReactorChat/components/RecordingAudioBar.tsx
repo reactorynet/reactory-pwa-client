@@ -8,6 +8,16 @@ export interface RecordingAudioBarProps {
   il8n: any;
   reactory: any;
   onAudioData?: (data: string | Uint8Array, format: 'base64' | 'bytes') => void;
+  /** Callback for voice mode: receives the recorded Blob when recording stops */
+  onRecordingComplete?: (audioBlob: Blob) => void;
+  /** Whether voice mode is active (changes UI to reflect voice mode) */
+  voiceModeActive?: boolean;
+  /** Whether a voice message is being processed */
+  voiceProcessing?: boolean;
+  /** Whether TTS audio is playing */
+  voicePlaying?: boolean;
+  /** Callback to stop TTS playback */
+  onStopPlayback?: () => void;
   recordingOptions?: {
     sampleRate?: number;
     channels?: number;
@@ -22,8 +32,32 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
   il8n, 
   reactory,
   onAudioData,
+  onRecordingComplete,
+  voiceModeActive = false,
+  voiceProcessing = false,
+  voicePlaying = false,
+  onStopPlayback,
   recordingOptions = {}
 }) => {
+  // When in voice mode, capture the raw Blob via onAudioData and forward to onRecordingComplete
+  const handleAudioData = React.useCallback((data: string | Uint8Array, format: 'base64' | 'bytes') => {
+    if (voiceModeActive && onRecordingComplete) {
+      // Convert base64/bytes back to Blob for the voice mutation
+      if (format === 'base64' && typeof data === 'string') {
+        const binary = atob(data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        onRecordingComplete(new Blob([bytes], { type: 'audio/webm' }));
+      } else if (data instanceof Uint8Array) {
+        onRecordingComplete(new Blob([data], { type: 'audio/webm' }));
+      }
+    } else if (onAudioData) {
+      onAudioData(data, format);
+    }
+  }, [onAudioData, onRecordingComplete, voiceModeActive]);
+
   const {
     startRecording,
     stopRecording,
@@ -32,7 +66,7 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
     requestPermission,
     state,
     audioStream
-  } = useAudioRecording(reactory, onAudioData, recordingOptions);
+  } = useAudioRecording(reactory, handleAudioData, recordingOptions);
 
   // Format duration as MM:SS
   const formatDuration = (ms: number): string => {
@@ -181,8 +215,14 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
               mb: 0.5
             }}
           >
-            {state.isRecording 
+            {voiceProcessing
+              ? il8n?.t('reactor.client.voice.processing', { defaultValue: 'Processing...' })
+              : voicePlaying
+              ? il8n?.t('reactor.client.voice.playing', { defaultValue: 'Speaking...' })
+              : state.isRecording 
               ? il8n?.t('reactor.client.recording.recording', { defaultValue: 'Recording...' })
+              : voiceModeActive
+              ? il8n?.t('reactor.client.voice.ready', { defaultValue: 'Voice mode active' })
               : il8n?.t('reactor.client.recording.ready', { defaultValue: 'Ready to record' })
             }
           </Typography>
@@ -220,13 +260,23 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
           </Typography>
         </Box>
 
-        {/* Recording Duration */}
+        {/* Recording Duration / Voice Status */}
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
           gap: 1,
           minWidth: 60
         }}>
+          {voicePlaying && onStopPlayback && (
+            <IconButton
+              onClick={onStopPlayback}
+              sx={{ color: 'white', p: 0.5 }}
+              size="small"
+              aria-label="Stop playback"
+            >
+              <span className="material-icons" style={{ fontSize: 20 }}>volume_off</span>
+            </IconButton>
+          )}
           {state.isRecording && (
             <Box sx={{
               width: 8,

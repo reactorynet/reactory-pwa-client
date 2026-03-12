@@ -22,6 +22,7 @@ import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
 import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
+import useSpeechServices from './hooks/useSpeechServices';
 
 export default (props) => {
   const { formData } = props;
@@ -157,6 +158,14 @@ export default (props) => {
     onMacroCallError: (error) => {
     }
   })
+
+  // Voice / speech services
+  const speech = useSpeechServices({
+    reactory,
+    personaId: selectedPersona?.id,
+    chatSessionId: chatState?.id,
+    voice: selectedPersona?.appearance?.voice?.[0],
+  });
 
   const {
     Button,
@@ -546,6 +555,46 @@ export default (props) => {
   const handleRecordingPanelClose = useCallback(() => {
     setRecordingPanelOpen(false);
   }, []);
+
+  // Voice mode toggle — starts or ends a voice session
+  const handleVoiceModeToggle = useCallback(async () => {
+    if (!selectedPersona?.id) return;
+    await speech.toggleVoiceMode(selectedPersona.id, chatState?.id);
+  }, [selectedPersona?.id, chatState?.id, speech]);
+
+  // Called when a recording finishes in voice mode — sends audio through voice pipeline
+  const handleVoiceRecordingComplete = useCallback(async (audioBlob: Blob) => {
+    if (!speech.state.voiceModeActive) return;
+
+    // Add a user "audio message" placeholder to the chat history
+    setChatState((prevState) => ({
+      ...prevState,
+      history: [...prevState.history, {
+        id: reactory.utils.uuid(),
+        role: 'user',
+        content: '🎤 Voice message',
+        timestamp: new Date(),
+        sessionId: chatState?.id,
+      } as UXChatMessage],
+    }));
+
+    await speech.sendVoiceMessage(audioBlob, (aiResponseText) => {
+      // Add the AI's text response to the chat history
+      // (TTS playback is handled automatically by useSpeechServices)
+      if (aiResponseText) {
+        setChatState((prevState) => ({
+          ...prevState,
+          history: [...prevState.history, {
+            id: reactory.utils.uuid(),
+            role: 'assistant',
+            content: aiResponseText,
+            timestamp: new Date(),
+            sessionId: chatState?.id,
+          } as UXChatMessage],
+        }));
+      }
+    });
+  }, [speech, chatState?.id, setChatState, reactory]);
 
   const handleFilesPanelToggle = useCallback(() => {
     // Close other panels first
@@ -1051,6 +1100,11 @@ export default (props) => {
               onClose={handleRecordingPanelClose}
               il8n={il8n}
               reactory={reactory}
+              voiceModeActive={speech.state.voiceModeActive}
+              voiceProcessing={speech.state.processing}
+              voicePlaying={speech.state.playing}
+              onStopPlayback={speech.stopPlayback}
+              onRecordingComplete={handleVoiceRecordingComplete}
             />
           </Box>
         </Box>
@@ -1159,6 +1213,8 @@ export default (props) => {
         placeholder="Ask me anything..."
         onRecordingToggle={handleRecordingPanelToggle}
         recordingPanelOpen={recordingPanelOpen}
+        voiceModeActive={speech.state.voiceModeActive}
+        onVoiceModeToggle={handleVoiceModeToggle}
         onFileUpload={React.useCallback(async (file: File) => {
           // Let uploadFile handle session initialization if needed
           if (uploadFile) {

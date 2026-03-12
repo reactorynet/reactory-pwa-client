@@ -30,6 +30,8 @@ export default async (): Promise<JestConfigWithTsJest> => {
       '^.+\\.(js|jsx)$': ['babel-jest', {
         presets: ['@babel/preset-env', '@babel/preset-react'],
       }],
+      // GraphQL files — export file content as string so String(doc).includes() works
+      '\\.graphql$': '<rootDir>/test/__mocks__/graphqlTransform.js',
     },
     moduleNameMapper: {
       // Path aliases

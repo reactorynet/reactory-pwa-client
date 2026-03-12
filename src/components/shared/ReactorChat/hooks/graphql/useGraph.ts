@@ -20,6 +20,9 @@ import REACTOR_ASK_AUDIO from "./mutations/ReactorAskQuestionAudio.graphql";
 import REACTOR_DELETE_CHAT from "./mutations/ReactorDeleteChatSession.graphql";
 import REACTOR_EXECUTE_MACRO from "./mutations/ReactorExecuteMacro.graphql";
 import REACTOR_EXECUTE_TOOL from "./mutations/ReactorExecuteTool.graphql";
+import REACTOR_START_VOICE_SESSION from "./mutations/ReactorStartVoiceSession.graphql";
+import REACTOR_END_VOICE_SESSION from "./mutations/ReactorEndVoiceSession.graphql";
+import REACTOR_SEND_VOICE_MESSAGE from "./mutations/ReactorSendVoiceMessage.graphql";
 
 export type StreamingMode = "NONE" | "SSE" | "WEBSOCKET";
 
@@ -80,6 +83,65 @@ export interface ReactorSendMessageInput {
   message: string;
   streamingMode?: StreamingMode;
 }
+
+// --- Voice session types ---
+
+export interface StartVoiceSessionInput {
+  personaId: string;
+  message?: string;
+  ttsEnabled?: boolean;
+  sttEnabled?: boolean;
+  voice?: string;
+  sttLanguage?: string;
+  chatSessionId?: string;
+}
+
+export interface VoiceMessageInput {
+  chatSessionId: string;
+  personaId: string;
+  synthesizeResponse?: boolean;
+  voice?: string;
+}
+
+export type VoiceSessionResult =
+  | ({ __typename: "ReactorVoiceSession" } & {
+      chatSessionId: string;
+      personaId: string;
+      ttsEnabled: boolean;
+      sttEnabled: boolean;
+      voice?: string;
+      sttLanguage?: string;
+      ttsStreamUrl?: string;
+      sttStreamUrl?: string;
+      created?: Date;
+    })
+  | ({ __typename: "ReactorErrorResponse" } & {
+      code: string;
+      message: string;
+      details?: any;
+      timestamp?: Date;
+      recoverable?: boolean;
+      suggestion?: string;
+    });
+
+export type VoiceChatResult =
+  | ({ __typename: "ReactorVoiceChatMessage" } & {
+      sessionId: string;
+      content?: string;
+      role?: string;
+      audioBase64?: string;
+      audioFormat?: string;
+      audioDuration?: number;
+      timestamp?: Date;
+    })
+  | ({ __typename: "ReactorErrorResponse" } & {
+      code: string;
+      message: string;
+      details?: any;
+      timestamp?: Date;
+      recoverable?: boolean;
+      suggestion?: string;
+    });
 
 export interface UseGraphOptions {
   reactory: Reactory.Client.ReactorySDK;
@@ -196,6 +258,39 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorExecuteTool as ReactorChatResponse;
   };
 
+  // --- Voice session operations ---
+
+  const startVoiceSession = async (
+    input: StartVoiceSessionInput
+  ): Promise<VoiceSessionResult> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorStartVoiceSession: VoiceSessionResult },
+      { input: StartVoiceSessionInput }
+    >(REACTOR_START_VOICE_SESSION as any, { input });
+    return response?.data?.ReactorStartVoiceSession as VoiceSessionResult;
+  };
+
+  const endVoiceSession = async (
+    chatSessionId: string
+  ): Promise<boolean> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorEndVoiceSession: boolean },
+      { chatSessionId: string }
+    >(REACTOR_END_VOICE_SESSION as any, { chatSessionId });
+    return response?.data?.ReactorEndVoiceSession ?? false;
+  };
+
+  const sendVoiceMessage = async (
+    audio: Blob,
+    input: VoiceMessageInput
+  ): Promise<VoiceChatResult> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorSendVoiceMessage: VoiceChatResult },
+      { audio: Blob; input: VoiceMessageInput }
+    >(REACTOR_SEND_VOICE_MESSAGE as any, { audio, input });
+    return response?.data?.ReactorSendVoiceMessage as VoiceChatResult;
+  };
+
   return {
     startChatSession,
     sendMessage,
@@ -207,6 +302,9 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     listConversations,
     executeMacro,
     executeTool,
+    startVoiceSession,
+    endVoiceSession,
+    sendVoiceMessage,
   };
 };
 
