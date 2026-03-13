@@ -37,6 +37,8 @@ export interface ReactorInitSessionInput {
   toolApprovalMode?: ToolApprovalMode;
   /** Optional session ID to load context from for cross-agent context sharing */
   contextFromSessionId?: string;
+  modelId?: string;
+  providerId?: string;
 }
 
 export type ReactorChatResponse =
@@ -82,6 +84,8 @@ export interface ReactorSendMessageInput {
   chatSessionId?: string;
   message: string;
   streamingMode?: StreamingMode;
+  modelId?: string;
+  providerId?: string;
 }
 
 // --- Voice session types ---

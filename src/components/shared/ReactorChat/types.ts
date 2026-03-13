@@ -301,6 +301,10 @@ export type ChatState = {
    */
   modelId?: string
   /**
+   * The provider ID used for the chat session. When set, overrides the persona default.
+   */
+  providerId?: string
+  /**
    * The history of the chat session.
    */
   history: ReactorConversationHistory

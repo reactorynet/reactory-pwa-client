@@ -40,6 +40,9 @@ interface ChatFactoryHookResult {
   currentStreamingMessage?: string
   // sets the chat state
   setChatState: React.Dispatch<React.SetStateAction<ChatState>>
+  // model override: allows changing the model/provider mid-conversation
+  modelOverride: { modelId?: string; providerId?: string } | null
+  setModelOverride: React.Dispatch<React.SetStateAction<{ modelId?: string; providerId?: string } | null>>
 }
 
 interface ChatFactorHookOptions {
@@ -284,6 +287,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           chatSessionId: sessionId,
           message,
           streamingMode: protocol === 'sse' ? 'SSE' : 'NONE',
+          ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
+          ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
         } as ReactorSendMessageInput);
 
         if (!resp) throw new Error('No response from server');
@@ -319,7 +324,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                   personaId: persona.id,
                   chatSessionId: sessionId,
                   message,
-                  streamingMode: 'SSE'
+                  streamingMode: 'SSE',
+                  ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
+                  ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
                 });
               }
             });
@@ -486,6 +493,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const [isStreaming, setIsStreaming] = React.useState<boolean>(false);
   const [waitingForResponse, setWaitingForResponse] = React.useState<boolean>(false);
+  const [modelOverride, setModelOverride] = React.useState<{ modelId?: string; providerId?: string } | null>(null);
 
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
@@ -745,6 +753,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       tools: [...clientTools],
       streamingMode: protocol === 'sse' ? 'SSE' : 'NONE',
       contextFromSessionId,
+      ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
+      ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
     };
 
     try {
@@ -1829,6 +1839,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     isStreaming: (sse as any).isStreaming,
     currentStreamingMessage: (sse as any).currentStreamingMessage,
     setChatState,
+    modelOverride,
+    setModelOverride,
     // Debug helpers
     protectCriticalState,
     validateChatState,
