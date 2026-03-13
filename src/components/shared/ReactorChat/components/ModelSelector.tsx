@@ -76,7 +76,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     return activeModelId;
   };
 
-  const availableProviders = getAvailableProviders();
+  const availableProviders = providers;
 
   return (
     <>

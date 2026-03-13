@@ -89,8 +89,7 @@ export interface Provider {
 export const useProviders = () => {
   const { loading, error, data, refetch } = useQuery(GET_PROVIDERS);
 
-  const providers: Provider[] = data?.ReactorProviders || [];
-  
+  const providers: Provider[] = data?.ReactorProviders || []  
   const getProviderById = (id: string): Provider | undefined => 
     providers.find(provider => provider.id === id);
   
