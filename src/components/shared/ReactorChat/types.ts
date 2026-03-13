@@ -83,6 +83,7 @@ export interface IAIPersona {
   prompts?: IAIPersonaPromptTemplate[]
   tools?: MacroToolDefinition[]
   avatar?: string;
+  providerId?: string;
   macros?: MacroComponentDefinition<unknown>[]
 }
 
