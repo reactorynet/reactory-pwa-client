@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChatState, MacroToolDefinition, ToolApprovalMode } from '../types';
+import ModelSelector, { ModelOverride } from './ModelSelector';
 
 interface ToolsPanelProps {
   open: boolean;
@@ -12,6 +13,14 @@ interface ToolsPanelProps {
   onToolApprovalModeChange: (mode: ToolApprovalMode) => void;
   onToolToggle: (toolName: string) => void;
   onToolExecute: (toolCall: MacroToolDefinition & { args?: any, calledBy?: string, callId?: string }) => void;
+  /** Currently active model override — passed through to ModelSelector */
+  modelOverride: ModelOverride | null;
+  /** Callback when user selects a different model */
+  onModelChange: (override: ModelOverride | null) => void;
+  /** Default model ID from the persona */
+  personaModelId?: string;
+  /** Default provider ID from the persona */
+  personaProviderId?: string;
   Material: any;
   toCamelCaseLabel: (str: string) => string;
   getToolIcon: (tool: any) => string;
@@ -30,6 +39,10 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   onToolApprovalModeChange,
   onToolToggle,
   onToolExecute,
+  modelOverride,
+  onModelChange,
+  personaModelId,
+  personaProviderId,
   Material,
   toCamelCaseLabel,
   getToolIcon,
@@ -81,6 +94,29 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
         <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
           {il8n?.t('reactor.client.tools.title', { defaultValue: 'Tools' })}
         </Typography>
+      </Box>
+
+      {/* Model Selection */}
+      <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+        <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold' }}>
+          {il8n?.t('reactor.client.model.title', { defaultValue: 'Model & Provider' })}
+        </Typography>
+        <ModelSelector
+          modelOverride={modelOverride}
+          onModelChange={onModelChange}
+          personaModelId={personaModelId}
+          personaProviderId={personaProviderId}
+        />
+        {modelOverride && (
+          <Typography variant="caption" color="primary" sx={{ mt: 1, display: 'block' }}>
+            {il8n?.t('reactor.client.model.override.active', { defaultValue: 'Custom model active — overrides persona default' })}
+          </Typography>
+        )}
+        {!modelOverride && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            {il8n?.t('reactor.client.model.override.default', { defaultValue: 'Using persona default model' })}
+          </Typography>
+        )}
       </Box>
 
       {/* Tool Approval Mode Header */}

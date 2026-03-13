@@ -21,7 +21,6 @@ import FilesPanel from './components/FilesPanel/FilesPanel';
 import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/FileExplorerSidebar';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
-import ModelSelector from './components/ModelSelector';
 import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
 import useSpeechServices from './hooks/useSpeechServices';
 
@@ -938,16 +937,6 @@ export default (props) => {
             />
           )}
 
-          {/* Model selector bar */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1, py: 0.5 }}>
-            <ModelSelector
-              modelOverride={modelOverride}
-              onModelChange={setModelOverride}
-              personaModelId={selectedPersona?.modelId}
-              personaProviderId={selectedPersona?.providerId}
-            />
-          </Box>
-
           {/* Background-patterned chat container */}
           <Box
             sx={{
@@ -1074,6 +1063,10 @@ export default (props) => {
               onToolApprovalModeChange={setToolApprovalMode}
               onToolToggle={handleToolToggle}
               onToolExecute={onToolExecute}
+              modelOverride={modelOverride}
+              onModelChange={setModelOverride}
+              personaModelId={selectedPersona?.modelId}
+              personaProviderId={selectedPersona?.providerId}
               getToolIcon={getToolIcon}
               Material={Material}
               il8n={il8n}
