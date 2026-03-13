@@ -54,7 +54,9 @@ export const TaskStepDefinition: StepDefinition = {
       configuration: {
         type: 'object',
         title: 'Configuration',
-        description: 'Task-specific configuration'
+        description: 'Task-specific configuration',
+        properties: {},
+        additionalProperties: true
       }
     },
     required: ['name', 'taskType']

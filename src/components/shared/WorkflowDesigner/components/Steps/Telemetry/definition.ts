@@ -71,6 +71,7 @@ export const TelemetryStepDefinition: StepDefinition = {
           tags: {
             type: 'object',
             title: 'Tags',
+            properties: {},
             additionalProperties: {
               type: 'string'
             }
@@ -93,6 +94,7 @@ export const TelemetryStepDefinition: StepDefinition = {
           attributes: {
             type: 'object',
             title: 'Attributes',
+            properties: {},
             additionalProperties: true
           }
         }
@@ -108,6 +110,7 @@ export const TelemetryStepDefinition: StepDefinition = {
           attributes: {
             type: 'object',
             title: 'Span Attributes',
+            properties: {},
             additionalProperties: {
               type: 'string'
             }

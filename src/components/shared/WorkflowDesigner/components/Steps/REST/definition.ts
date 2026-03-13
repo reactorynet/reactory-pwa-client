@@ -72,6 +72,7 @@ export const RESTStepDefinition: StepDefinition = {
         type: 'object',
         title: 'Headers',
         description: 'HTTP headers',
+        properties: {},
         additionalProperties: {
           type: 'string'
         }
@@ -80,6 +81,7 @@ export const RESTStepDefinition: StepDefinition = {
         type: 'object',
         title: 'Query Parameters',
         description: 'URL query parameters',
+        properties: {},
         additionalProperties: {
           type: 'string'
         }

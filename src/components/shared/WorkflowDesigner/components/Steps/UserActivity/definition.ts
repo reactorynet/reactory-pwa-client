@@ -84,7 +84,9 @@ export const UserActivityStepDefinition: StepDefinition = {
       formSchema: {
         type: 'object',
         title: 'Form Schema',
-        description: 'JSON schema for user input form'
+        description: 'JSON schema for user input form',
+        properties: {},
+        additionalProperties: true
       },
       timeout: {
         type: 'number',

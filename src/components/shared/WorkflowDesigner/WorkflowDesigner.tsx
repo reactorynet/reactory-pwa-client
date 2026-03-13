@@ -269,10 +269,9 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     error: graphqlError,
     getWorkflows,
     getWorkflow,
-    createWorkflow,
-    updateWorkflow,
-    deleteWorkflow,
-    validateWorkflow
+    saveWorkflowDefinition,
+    deleteWorkflowDefinition,
+    validateWorkflowDefinition
   } = useGraphQL();
 
   // Step library management
@@ -324,14 +323,10 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       if (onSave) {
         await onSave(def);
       } else {
-        // Use GraphQL to save
-        if (def.id && def.id !== 'new') {
-          await updateWorkflow(def);
-        } else {
-          await createWorkflow(def);
-        }
+        // Use GraphQL to save (upsert)
+        await saveWorkflowDefinition(def);
       }
-    }, [onSave, updateWorkflow, createWorkflow]),
+    }, [onSave, saveWorkflowDefinition]),
     onLoad: useCallback(async (id) => {
       if (onLoad) {
         return await onLoad(id);

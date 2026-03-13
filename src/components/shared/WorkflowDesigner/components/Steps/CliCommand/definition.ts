@@ -62,6 +62,7 @@ export const CliCommandStepDefinition: StepDefinition = {
       environment: {
         type: 'object',
         title: 'Environment Variables',
+        properties: {},
         additionalProperties: { type: 'string' }
       },
       expectedExitCodes: {

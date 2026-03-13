@@ -53,6 +53,7 @@ export const LogStepDefinition: StepDefinition = {
         type: 'object',
         title: 'Additional Data',
         description: 'Extra data to attach to the log entry',
+        properties: {},
         additionalProperties: true
       }
     },

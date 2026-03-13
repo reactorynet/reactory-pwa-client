@@ -1,21 +1,144 @@
 import { useState, useCallback } from 'react';
 import { useReactory } from '@reactory/client-core/api';
 import { 
-  WorkflowDefinition, 
-  WorkflowQueryResult, 
-  WorkflowMutationResult, 
-  WorkflowsQueryResult 
+  WorkflowDefinition,
+  WorkflowsQueryResult,
 } from '../types';
+
+/**
+ * Response shape returned by the saveWorkflowDefinition mutation,
+ * matching the server's YamlWorkflowDefinition GraphQL type.
+ */
+export interface SaveWorkflowResult {
+  saveWorkflowDefinition: {
+    nameSpace: string;
+    name: string;
+    version: string;
+    description: string | null;
+    author: string | null;
+    tags: string[] | null;
+    loadStatus: string;
+    yamlSource: string | null;
+    location: string | null;
+    errors: Array<{ stage: string; message: string; code: string | null }> | null;
+    steps: Array<{
+      id: string;
+      name: string | null;
+      type: string;
+      designer: {
+        position: { x: number; y: number } | null;
+        size: { width: number; height: number } | null;
+      } | null;
+    }> | null;
+    designer: {
+      canvas: {
+        zoom: number | null;
+        panX: number | null;
+        panY: number | null;
+        gridSize: number | null;
+        snapToGrid: boolean | null;
+      } | null;
+      connections: Array<{
+        id: string;
+        sourceStepId: string;
+        sourcePort: string;
+        targetStepId: string;
+        targetPort: string;
+        points: Array<{ x: number; y: number }> | null;
+      }> | null;
+    } | null;
+  };
+}
+
+export interface DeleteWorkflowResult {
+  deleteWorkflowDefinition: {
+    success: boolean;
+    message: string | null;
+  };
+}
+
+export interface ValidateWorkflowResult {
+  validateWorkflowDefinition: {
+    valid: boolean;
+    errors: Array<{ field: string; message: string; code: string | null }>;
+    warnings: Array<{ field: string; message: string; code: string | null }>;
+  };
+}
 
 export interface UseGraphQLReturn {
   loading: boolean;
   error: string | null;
   getWorkflows: (filter?: any, pagination?: any) => Promise<WorkflowDefinition[]>;
   getWorkflow: (namespace: string, name: string) => Promise<WorkflowDefinition | null>;
-  createWorkflow: (definition: WorkflowDefinition) => Promise<WorkflowDefinition>;
-  updateWorkflow: (definition: WorkflowDefinition) => Promise<WorkflowDefinition>;
-  deleteWorkflow: (workflowId: string) => Promise<boolean>;
-  validateWorkflow: (definition: WorkflowDefinition) => Promise<any>;
+  saveWorkflowDefinition: (definition: WorkflowDefinition) => Promise<SaveWorkflowResult['saveWorkflowDefinition']>;
+  deleteWorkflowDefinition: (nameSpace: string, name: string, version?: string) => Promise<boolean>;
+  validateWorkflowDefinition: (definition: WorkflowDefinition) => Promise<ValidateWorkflowResult['validateWorkflowDefinition']>;
+}
+
+/**
+ * Transforms a client-side WorkflowDefinition into the GraphQL WorkflowDefinitionInput shape.
+ */
+function toWorkflowDefinitionInput(definition: WorkflowDefinition) {
+  return {
+    nameSpace: definition.namespace,
+    name: definition.name,
+    version: definition.version,
+    description: definition.description,
+    author: definition.author,
+    tags: definition.tags,
+    inputs: null,
+    outputs: null,
+    variables: definition.variables ? JSON.stringify(definition.variables) : null,
+    steps: definition.steps?.map((step) => ({
+      id: step.id,
+      name: step.name,
+      type: step.type,
+      description: step.metadata?.description ?? null,
+      enabled: true,
+      continueOnError: false,
+      timeout: null,
+      inputs: step.properties ? JSON.stringify(step.properties) : null,
+      outputs: null,
+      condition: null,
+      dependsOn: null,
+      config: null,
+      designer: {
+        position: step.position ? { x: step.position.x, y: step.position.y } : null,
+        size: step.size ? { width: step.size.width, height: step.size.height } : null,
+        ports: {
+          inputs: step.inputPorts?.map((p) => ({
+            portId: p.id,
+            position: p.position ? { x: p.position.x, y: p.position.y } : null,
+          })),
+          outputs: step.outputPorts?.map((p) => ({
+            portId: p.id,
+            position: p.position ? { x: p.position.x, y: p.position.y } : null,
+          })),
+        },
+      },
+    })),
+    designer: {
+      canvas: definition.metadata?.canvas ? {
+        zoom: definition.metadata.canvas.zoom ?? null,
+        panX: definition.metadata.canvas.panX ?? null,
+        panY: definition.metadata.canvas.panY ?? null,
+        gridSize: definition.metadata.canvas.gridSize ?? null,
+        snapToGrid: definition.metadata.canvas.snapToGrid ?? null,
+      } : null,
+      connections: definition.connections?.map((conn) => ({
+        id: conn.id,
+        sourceStepId: conn.sourceStepId,
+        sourcePort: conn.sourcePortId,
+        targetStepId: conn.targetStepId,
+        targetPort: conn.targetPortId,
+        points: conn.points?.map((p) => ({ x: p.x, y: p.y })),
+        style: conn.metadata?.style ?? null,
+        label: null,
+      })),
+      notes: null,
+      groups: null,
+    },
+  };
 }
 
 export function useGraphQL(): UseGraphQLReturn {
@@ -129,7 +252,7 @@ export function useGraphQL(): UseGraphQLReturn {
         }
       `;
 
-      const response = await reactory.graphqlQuery<WorkflowQueryResult, {
+      const response = await reactory.graphqlQuery<{ workflow: WorkflowDefinition | null }, {
         namespace: string;
         name: string;
       }>(query, { namespace, name });
@@ -138,148 +261,115 @@ export function useGraphQL(): UseGraphQLReturn {
     });
   }, [reactory, handleRequest]);
 
-  const createWorkflow = useCallback(async (
+  const saveWorkflowDefinition = useCallback(async (
     definition: WorkflowDefinition
-  ): Promise<WorkflowDefinition> => {
+  ): Promise<SaveWorkflowResult['saveWorkflowDefinition']> => {
     return handleRequest(async () => {
       const mutation = `
-        mutation CreateWorkflow($definition: WorkflowDefinitionInput!) {
-          createWorkflow(definition: $definition) {
-            success
-            workflow {
+        mutation SaveWorkflowDefinition($definition: WorkflowDefinitionInput!) {
+          saveWorkflowDefinition(definition: $definition) {
+            nameSpace
+            name
+            version
+            description
+            author
+            tags
+            loadStatus
+            yamlSource
+            location
+            errors {
+              stage
+              message
+              code
+            }
+            steps {
               id
               name
-              version
-              namespace
-              description
-              tags
-              author
-              createdAt
-              updatedAt
+              type
+              designer {
+                position { x y }
+                size { width height }
+              }
             }
-            error
+            designer {
+              canvas {
+                zoom
+                panX
+                panY
+                gridSize
+                snapToGrid
+              }
+              connections {
+                id
+                sourceStepId
+                sourcePort
+                targetStepId
+                targetPort
+                points { x y }
+              }
+            }
           }
         }
       `;
 
-      // Transform definition to GraphQL input format
-      const input = {
-        name: definition.name,
-        version: definition.version,
-        namespace: definition.namespace,
-        description: definition.description,
-        tags: definition.tags,
-        configuration: definition.configuration,
-        // Note: In a real implementation, you'd need to transform
-        // the visual definition to the backend workflow format
-        steps: definition.steps,
-        connections: definition.connections,
-        variables: definition.variables
-      };
+      const input = toWorkflowDefinitionInput(definition);
 
-      const response = await reactory.graphqlMutation<WorkflowMutationResult, {
+      const response = await reactory.graphqlMutation<SaveWorkflowResult, {
         definition: any;
       }>(mutation, { definition: input });
 
-      if (response.data?.success && response.data.workflow) {
-        return response.data.workflow;
-      }
-
-      throw new Error(response.data?.error || 'Failed to create workflow');
-    });
-  }, [reactory, handleRequest]);
-
-  const updateWorkflow = useCallback(async (
-    definition: WorkflowDefinition
-  ): Promise<WorkflowDefinition> => {
-    return handleRequest(async () => {
-      const mutation = `
-        mutation UpdateWorkflow($workflowId: String!, $definition: WorkflowDefinitionInput!) {
-          updateWorkflow(workflowId: $workflowId, definition: $definition) {
-            success
-            workflow {
-              id
-              name
-              version
-              namespace
-              description
-              tags
-              author
-              createdAt
-              updatedAt
-            }
-            error
-          }
+      if (response.data?.saveWorkflowDefinition) {
+        const result = response.data.saveWorkflowDefinition;
+        if (result.loadStatus !== 'SUCCESS' && result.loadStatus !== 'PARTIAL') {
+          const errorMessages = result.errors?.map(e => e.message).join('; ') || 'Unknown error';
+          throw new Error(`Failed to save workflow: ${errorMessages}`);
         }
-      `;
-
-      // Transform definition to GraphQL input format
-      const input = {
-        name: definition.name,
-        version: definition.version,
-        namespace: definition.namespace,
-        description: definition.description,
-        tags: definition.tags,
-        configuration: definition.configuration,
-        steps: definition.steps,
-        connections: definition.connections,
-        variables: definition.variables
-      };
-
-      const response = await reactory.graphqlMutation<WorkflowMutationResult, {
-        workflowId: string;
-        definition: any;
-      }>(mutation, { 
-        workflowId: definition.id,
-        definition: input 
-      });
-
-      if (response.data?.success && response.data.workflow) {
-        return response.data.workflow;
+        return result;
       }
 
-      throw new Error(response.data?.error || 'Failed to update workflow');
+      throw new Error('Failed to save workflow definition');
     });
   }, [reactory, handleRequest]);
 
-  const deleteWorkflow = useCallback(async (
-    workflowId: string
+  const deleteWorkflowDefinition = useCallback(async (
+    nameSpace: string,
+    name: string,
+    version?: string
   ): Promise<boolean> => {
     return handleRequest(async () => {
       const mutation = `
-        mutation DeleteWorkflow($workflowId: String!) {
-          deleteWorkflow(workflowId: $workflowId) {
+        mutation DeleteWorkflowDefinition($nameSpace: String!, $name: String!, $version: String) {
+          deleteWorkflowDefinition(nameSpace: $nameSpace, name: $name, version: $version) {
             success
             message
-            error
           }
         }
       `;
 
-      const response = await reactory.graphqlMutation<{
-        success: boolean;
-        message?: string;
-        error?: string;
-      }, {
-        workflowId: string;
-      }>(mutation, { workflowId });
+      const response = await reactory.graphqlMutation<DeleteWorkflowResult, {
+        nameSpace: string;
+        name: string;
+        version?: string;
+      }>(mutation, { nameSpace, name, version });
 
-      if (response.data?.success) {
+      if (response.data?.deleteWorkflowDefinition?.success) {
         return true;
       }
 
-      throw new Error(response.data?.error || 'Failed to delete workflow');
+      throw new Error(
+        response.data?.deleteWorkflowDefinition?.message || 'Failed to delete workflow definition'
+      );
     });
   }, [reactory, handleRequest]);
 
-  const validateWorkflow = useCallback(async (
+  const validateWorkflowDefinition = useCallback(async (
     definition: WorkflowDefinition
-  ): Promise<any> => {
+  ): Promise<ValidateWorkflowResult['validateWorkflowDefinition']> => {
     return handleRequest(async () => {
       const mutation = `
-        mutation ValidateWorkflow($definition: WorkflowDefinitionInput!) {
-          validateWorkflow(definition: $definition) {
-            isValid
+        mutation ValidateWorkflowDefinition($definition: WorkflowDefinitionInput!) {
+          validateWorkflowDefinition(definition: $definition) {
+            valid
             errors {
               field
               message
@@ -294,36 +384,17 @@ export function useGraphQL(): UseGraphQLReturn {
         }
       `;
 
-      // Transform definition to GraphQL input format
-      const input = {
-        name: definition.name,
-        version: definition.version,
-        namespace: definition.namespace,
-        description: definition.description,
-        tags: definition.tags,
-        configuration: definition.configuration,
-        steps: definition.steps,
-        connections: definition.connections,
-        variables: definition.variables
-      };
+      const input = toWorkflowDefinitionInput(definition);
 
-      const response = await reactory.graphqlMutation<{
-        isValid: boolean;
-        errors: Array<{
-          field: string;
-          message: string;
-          code: string;
-        }>;
-        warnings: Array<{
-          field: string;
-          message: string;
-          code: string;
-        }>;
-      }, {
+      const response = await reactory.graphqlMutation<ValidateWorkflowResult, {
         definition: any;
       }>(mutation, { definition: input });
 
-      return response.data;
+      if (response.data?.validateWorkflowDefinition) {
+        return response.data.validateWorkflowDefinition;
+      }
+
+      throw new Error('Failed to validate workflow definition');
     });
   }, [reactory, handleRequest]);
 
@@ -332,9 +403,8 @@ export function useGraphQL(): UseGraphQLReturn {
     error,
     getWorkflows,
     getWorkflow,
-    createWorkflow,
-    updateWorkflow,
-    deleteWorkflow,
-    validateWorkflow
+    saveWorkflowDefinition,
+    deleteWorkflowDefinition,
+    validateWorkflowDefinition,
   };
 }
