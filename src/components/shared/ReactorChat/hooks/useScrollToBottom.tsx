@@ -19,8 +19,9 @@ const isToolCallMessage = (message: UXChatMessage) =>
  * falls back to result/error correlation for backward compatibility.
  */
 const getToolCallStatus = (message: UXChatMessage, callId: string): ReactorToolCallStatus => {
+  if (!callId) return 'pending';
   // First check: use the typed status from the server if the tool call has it
-  const toolCall = (message.tool_calls as ReactorToolCall[] | undefined)?.find((tc) => tc.id === callId);
+  const toolCall = (message.tool_calls as ReactorToolCall[] | undefined)?.filter(Boolean).find((tc) => tc.id === callId);
   if (toolCall?.status && toolCall.status !== 'pending') {
     return toolCall.status;
   }
@@ -43,7 +44,7 @@ const getOverallToolCallStatus = (message: UXChatMessage): ReactorToolCallStatus
   if (!isToolCallMessage(message)) return 'pending';
 
   // Check if any tool call has a typed status from the server
-  const statuses = ((message.tool_calls || []) as ReactorToolCall[]).map((tc) => {
+  const statuses = ((message.tool_calls || []) as ReactorToolCall[]).filter(Boolean).map((tc) => {
     if (tc.status && tc.status !== 'pending') return tc.status;
     return getToolCallStatus(message, tc.id);
   });
@@ -491,8 +492,10 @@ const ChatList = (props: {
 
                           {/* Per-call chips */}
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.25 }}>
-                            {message.tool_calls.map((call, i) => {
+                            {message.tool_calls.filter(Boolean).map((call, i) => {
+                              if (!call) return null;
                               const callId = call.id ?? `${message.id}-${i}`;
+                              // @ts-ignore
                               const name = call.function?.name ?? call.name ?? 'unknown';
                               const callStatus = getToolCallStatus(message, callId);
                               const chipColor =
