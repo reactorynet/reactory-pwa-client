@@ -107,12 +107,16 @@ function toWorkflowDefinitionInput(definition: WorkflowDefinition) {
         size: step.size ? { width: step.size.width, height: step.size.height } : null,
         ports: {
           inputs: step.inputPorts?.map((p) => ({
-            portId: p.id,
+            name: p.name || p.id,
+            label: p.name,
             position: p.position ? { x: p.position.x, y: p.position.y } : null,
+            dataType: p.dataType ?? null,
           })),
           outputs: step.outputPorts?.map((p) => ({
-            portId: p.id,
+            name: p.name || p.id,
+            label: p.name,
             position: p.position ? { x: p.position.x, y: p.position.y } : null,
+            dataType: p.dataType ?? null,
           })),
         },
       },
