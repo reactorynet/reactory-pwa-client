@@ -1,4 +1,4 @@
-import { Tooltip, keyframes } from '@mui/material';
+import { Tooltip, Collapse, keyframes } from '@mui/material';
 import { ChatState, IAIPersona, ReactorToolCall, ReactorToolCallStatus, UXChatMessage } from '../types';
 import useContentRender from '../../hooks/useContentRender';
 
@@ -109,6 +109,17 @@ const ChatList = (props: {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      return next;
+    });
+  }, []);
+
+  // Tracks which thinking/reasoning panels are expanded, keyed by message id
+  const [expandedThinking, setExpandedThinking] = React.useState<Set<string>>(new Set());
+  const toggleThinking = React.useCallback((messageId: string) => {
+    setExpandedThinking(prev => {
+      const next = new Set(prev);
+      if (next.has(messageId)) next.delete(messageId);
+      else next.add(messageId);
       return next;
     });
   }, []);
@@ -597,9 +608,64 @@ const ChatList = (props: {
                         </Box>
                       );
                     })() : (
-                      <Typography variant="body1">
-                        {memoizedRenderContent(getMessageText(message))}
-                      </Typography>
+                      <>
+                        {/* Collapsible thinking/reasoning panel */}
+                        {message.thinking && (
+                          <Box sx={{ mb: 0.5 }}>
+                            <Box
+                              onClick={() => toggleThinking(String(message.id || idx))}
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                cursor: 'pointer',
+                                px: 0.75,
+                                py: 0.25,
+                                borderRadius: '4px',
+                                bgcolor: 'action.hover',
+                                '&:hover': { bgcolor: 'action.selected' },
+                              }}
+                            >
+                              <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>psychology</Icon>
+                              <Typography variant="caption" color="text.secondary" sx={{ userSelect: 'none' }}>
+                                {expandedThinking.has(String(message.id || idx)) ? 'Hide reasoning' : 'View reasoning'}
+                              </Typography>
+                              <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                                {expandedThinking.has(String(message.id || idx)) ? 'expand_less' : 'expand_more'}
+                              </Icon>
+                            </Box>
+                            <Collapse in={expandedThinking.has(String(message.id || idx))}>
+                              <Box
+                                sx={{
+                                  mt: 0.5,
+                                  p: 1,
+                                  borderRadius: '4px',
+                                  bgcolor: 'action.hover',
+                                  borderLeft: '3px solid',
+                                  borderColor: 'text.disabled',
+                                  maxHeight: 200,
+                                  overflowY: 'auto',
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: 'text.secondary',
+                                    fontStyle: 'italic',
+                                    fontSize: '0.8rem',
+                                    whiteSpace: 'pre-wrap',
+                                  }}
+                                >
+                                  {message.thinking}
+                                </Typography>
+                              </Box>
+                            </Collapse>
+                          </Box>
+                        )}
+                        <Typography variant="body1">
+                          {memoizedRenderContent(getMessageText(message))}
+                        </Typography>
+                      </>
                     )}
                     {/* Render tool errors if present — only for non-tool-call messages (tool-call messages show errors inline per chip) */}
                     {!isToolCallMessage(message) && Array.isArray(message.tool_errors) && message.tool_errors.length > 0 && (

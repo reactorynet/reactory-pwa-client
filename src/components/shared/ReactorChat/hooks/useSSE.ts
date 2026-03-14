@@ -4,6 +4,7 @@ import { UXChatMessage } from '@reactory/client-core/components/shared/ReactorCh
 
 export enum StreamingEventType {
   TOKEN = 'token',
+  REASONING = 'reasoning',
   TOOL_CALL = 'tool_call',
   COMPLETE = 'complete',
   ERROR = 'error'
@@ -58,6 +59,7 @@ export interface CompletionStreamingEvent extends StreamingEventBase {
   data: {
     content: string;
     finishReason: 'stop' | 'error';
+    thinking?: string;
   };
 }
 
@@ -69,9 +71,23 @@ export interface ErrorStreamingEvent extends StreamingEventBase {
   };
 }
 
+/**
+ * Reasoning/thinking streaming event
+ */
+export interface ReasoningStreamingEvent extends StreamingEventBase {
+  type: StreamingEventType.REASONING;
+  data: {
+    content: string;
+    delta: string;
+    position: number;
+    isComplete: boolean;
+  };
+}
+
 export interface UseSSEOptions {
   reactory: Reactory.Client.ReactorySDK;
   onToken?: (token: TokenStreamingEvent) => void;
+  onReasoning?: (reasoning: ReasoningStreamingEvent) => void;
   onMessage?: (message: CompletionStreamingEvent) => void;
   onError?: (error: any) => void;
   onToolCall?: (toolCall: ToolCallStreamingEvent) => void;
@@ -106,7 +122,7 @@ const DRIP_THRESHOLD = 8;
  */
 const DRIP_INTERVAL_MS = 20;
 
-const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOptions): UseSSEResult => {
+const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -116,10 +132,12 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
   // Callback refs — always point to the latest callback so SSE event
   // listeners (which are bound once on connect) never go stale.
   const onTokenRef = React.useRef(onToken);
+  const onReasoningRef = React.useRef(onReasoning);
   const onMessageRef = React.useRef(onMessage);
   const onErrorRef = React.useRef(onError);
   const onToolCallRef = React.useRef(onToolCall);
   onTokenRef.current = onToken;
+  onReasoningRef.current = onReasoning;
   onMessageRef.current = onMessage;
   onErrorRef.current = onError;
   onToolCallRef.current = onToolCall;
@@ -230,6 +248,10 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
           enqueueTokenDrip(data as TokenStreamingEvent);
           break;
         }
+        case 'reasoning': {
+          if (onReasoningRef.current) onReasoningRef.current(data as ReasoningStreamingEvent);
+          break;
+        }
         case 'complete': {
           if (tokenQueueRef.current.length > 0 || dripTimerRef.current !== null) {
             // Drip queue is still running — park the completion event and let
@@ -303,6 +325,7 @@ const useSSE = ({ reactory, onToken, onMessage, onError, onToolCall }: UseSSEOpt
 
       // Listen for custom events with specific types
       es.addEventListener('token', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('reasoning', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('complete', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('error', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('tool_call', (event) => handleMessage(event as MessageEvent));

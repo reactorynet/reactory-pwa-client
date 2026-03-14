@@ -4,7 +4,7 @@ query ReactoryConversations($filter: ReactorConversationFilter) {
     personaId
     created
     user { id firstName lastName }
-    history { id role content timestamp }
+    history { id role content thinking timestamp }
     vars
   }
 }

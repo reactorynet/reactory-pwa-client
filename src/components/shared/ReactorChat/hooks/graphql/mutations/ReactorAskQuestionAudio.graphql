@@ -6,6 +6,7 @@ mutation ReactorAskQuestionAudio($audio: Upload!, $chatSessionId: String!) {
       id
       role
       content
+      thinking
       rating
       timestamp
       tool_calls { id type function { name arguments } status }
