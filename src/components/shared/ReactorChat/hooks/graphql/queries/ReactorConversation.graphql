@@ -11,6 +11,7 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
         id
         role
         content
+        thinking
         timestamp
         tool_calls { id type function { name arguments } status }
         tool_results { id name content timestamp }

@@ -6,6 +6,7 @@ mutation ReactorSendMessage($message: ReactorSendMessageInput!) {
       id
       role
       content
+      thinking
       rating
       timestamp
       tool_calls { id type function { name arguments } status }

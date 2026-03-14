@@ -4,7 +4,7 @@ import useMacros from "./useMacros"
 import { exec } from "child_process"
 import ToolPrompt from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
-import useSSE, { CompletionStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent } from './useSSE';
+import useSSE, { CompletionStreamingEvent, ReasoningStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent } from './useSSE';
 
 interface ChatFactoryHookResult {
   // represents the chat state
@@ -189,6 +189,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           history[lastIndex] = {
             ...history[lastIndex],
             content: message.data.content,
+            thinking: message.data.thinking || history[lastIndex].thinking,
             timestamp: new Date(),
           };
         }
@@ -679,6 +680,25 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setWaitingForResponse(false);
   }, [chatState?.id, waitingForResponse]);
 
+  const onReasoningReceived = React.useCallback((reasoning: ReasoningStreamingEvent) => {
+    setChatState((prevState) => {
+      const history = [...prevState.history];
+      const lastIndex = history.length - 1;
+
+      if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+        const lastMessage = history[lastIndex];
+        history[lastIndex] = {
+          ...lastMessage,
+          thinking: (lastMessage.thinking || '') + reasoning.data.delta,
+          timestamp: new Date(),
+        };
+      }
+
+      return { ...prevState, history };
+    });
+    setIsStreaming(true);
+  }, []);
+
 
 
     /**
@@ -691,6 +711,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const sse = useSSE({
       reactory,
       onToken: onTokenReceived,
+      onReasoning: onReasoningReceived,
       onToolCall: onToolCallReceived,
       onMessage: onSSEMessageReceived,
       onError: (e) => { onError(e); props.onStreamError?.(e); },
