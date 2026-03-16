@@ -1,4 +1,4 @@
-import { gql, useQuery } from '@apollo/client';
+import { gql, useQuery, useMutation } from '@apollo/client';
 
 const GET_PROVIDERS = gql`
   query ReactorProviders {
@@ -38,7 +38,38 @@ const GET_PROVIDERS = gql`
         concurrentRequests
       }
       credentialRequirements
+      authComponentFqn
     }
+  }
+`;
+
+const GET_USER_PROVIDER_AUTH = gql`
+  query ReactorUserProviderAuth {
+    ReactorUserProviderAuth {
+      provider
+      configured
+      isDefault
+      isAppDefault
+      source
+    }
+  }
+`;
+
+const SAVE_PROVIDER_AUTH = gql`
+  mutation ReactorSaveProviderAuth($input: ReactorSaveProviderAuthInput!) {
+    ReactorSaveProviderAuth(input: $input) {
+      provider
+      configured
+      isDefault
+      isAppDefault
+      source
+    }
+  }
+`;
+
+const REMOVE_PROVIDER_AUTH = gql`
+  mutation ReactorRemoveProviderAuth($input: ReactorRemoveProviderAuthInput!) {
+    ReactorRemoveProviderAuth(input: $input)
   }
 `;
 
@@ -84,12 +115,32 @@ export interface Provider {
   capabilities: string[];
   rateLimits?: ProviderRateLimits;
   credentialRequirements?: string[];
+  authComponentFqn?: string;
+}
+
+export interface ProviderAuthStatus {
+  provider: string;
+  configured: boolean;
+  isDefault: boolean;
+  isAppDefault: boolean;
+  source?: string;
 }
 
 export const useProviders = () => {
   const { loading, error, data, refetch } = useQuery(GET_PROVIDERS);
+  const {
+    loading: authLoading,
+    data: authData,
+    refetch: refetchAuth,
+  } = useQuery(GET_USER_PROVIDER_AUTH);
 
-  const providers: Provider[] = data?.ReactorProviders || []  
+  const [saveProviderAuthMutation] = useMutation(SAVE_PROVIDER_AUTH);
+  const [removeProviderAuthMutation] = useMutation(REMOVE_PROVIDER_AUTH);
+
+  const providers: Provider[] = data?.ReactorProviders || [];
+  const providerAuthStatuses: ProviderAuthStatus[] =
+    authData?.ReactorUserProviderAuth || [];
+
   const getProviderById = (id: string): Provider | undefined => 
     providers.find(provider => provider.id === id);
   
@@ -115,14 +166,38 @@ export const useProviders = () => {
     return models;
   };
 
+  const getAuthStatus = (providerId: string): ProviderAuthStatus | undefined =>
+    providerAuthStatuses.find((s) => s.provider === providerId);
+
+  const saveProviderAuth = async (input: {
+    providerId: string;
+    credentials: Record<string, any>;
+    setAsAccountDefault?: boolean;
+    setAsAppDefault?: boolean;
+  }) => {
+    await saveProviderAuthMutation({ variables: { input } });
+    await refetchAuth();
+  };
+
+  const removeProviderAuth = async (providerId: string) => {
+    await removeProviderAuthMutation({
+      variables: { input: { providerId } },
+    });
+    await refetchAuth();
+  };
+
   return {
     providers,
-    loading,
+    loading: loading || authLoading,
     error,
     refetch,
     getProviderById,
     getModelById,
     getAvailableProviders,
-    getModelsByCapability
+    getModelsByCapability,
+    providerAuthStatuses,
+    getAuthStatus,
+    saveProviderAuth,
+    removeProviderAuth,
   };
 };

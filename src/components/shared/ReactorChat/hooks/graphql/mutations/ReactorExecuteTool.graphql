@@ -1,5 +1,5 @@
-mutation ReactorExecuteTool($toolInput: ReactorToolDefinitionInput!) {
-  ReactorExecuteTool(toolInput: $toolInput) {
+mutation ReactorExecuteTool($tool: String!, $personaId: String!, $chatSessionId: String!, $callId: String, $args: Any) {
+  ReactorExecuteTool(tool: $tool, personaId: $personaId, chatSessionId: $chatSessionId, callId: $callId, args: $args) {
     __typename
     ... on ReactorChatMessage {
       sessionId

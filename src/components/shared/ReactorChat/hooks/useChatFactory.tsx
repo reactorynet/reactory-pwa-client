@@ -177,7 +177,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     });
   }, [persona]);  
 
-  const onSSEMessageReceived = (message: CompletionStreamingEvent) => {
+  // Accumulate tool_calls as they stream in; they will be processed
+  // as a batch once the completion event arrives.
+  const pendingToolCallsRef = React.useRef<any[]>([]);
+
+  const onSSEMessageReceived = async (message: CompletionStreamingEvent) => {
     if (message.type === StreamingEventType.COMPLETE) {
       // Update the last assistant message with the final content from the complete event.
       // This replaces any placeholder ("Processing...") or token-accumulated content.
@@ -198,6 +202,26 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       });
       setIsStreaming(false);
       setWaitingForResponse(false);
+
+      // Now process any tool_calls that were accumulated during streaming.
+      const accumulated = pendingToolCallsRef.current;
+      pendingToolCallsRef.current = [];
+      if (accumulated.length > 0 && processToolCallsRef.current) {
+        const toolMessage = {
+          id: accumulated[0].id,
+          role: "assistant",
+          content: "",
+          timestamp: new Date(),
+          sessionId: chatState.id,
+          tool_calls: accumulated,
+        } as UXChatMessage;
+        try {
+          await processToolCallsRef.current(accumulated, toolMessage);
+        } catch (error) {
+          console.error('[useChatFactory] Error processing accumulated tool calls:', error);
+          onError(error as Error);
+        }
+      }
     }
   }
 
@@ -316,24 +340,24 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }
 
         if (resp.__typename === 'ReactorInitiateSSE') {
-          if (!sse.connected) {
-            sse.connect({ 
-              endpoint: resp.endpoint, 
-              sessionId: resp.sessionId,
-              onConnectionOpened: async () => {
-                await graph.sendMessage({
-                  personaId: persona.id,
-                  chatSessionId: sessionId,
-                  message,
-                  streamingMode: 'SSE',
-                  ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
-                  ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
-                });
-              }
-            });
-            
-            return; 
-          }
+          // Server told us to (re)establish SSE — disconnect any stale session first
+          sse.disconnect();
+          sse.connect({ 
+            endpoint: resp.endpoint, 
+            sessionId: resp.sessionId,
+            onConnectionOpened: async () => {
+              await graph.sendMessage({
+                personaId: persona.id,
+                chatSessionId: sessionId,
+                message,
+                streamingMode: 'SSE',
+                ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
+                ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
+              });
+            }
+          });
+          
+          return;
         }
 
         if (resp.__typename === 'ReactorChatMessage') {
@@ -613,17 +637,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       
       return newState;
     });
-    
-    try {
-      if (processToolCallsRef.current) {
-        await processToolCallsRef.current(toolCallMessage.tool_calls, toolCallMessage);
-      } else {
-        console.error('[useChatFactory] processToolCallsRef not yet assigned — tool call dropped');
-      }
-    } catch (error) {
-      console.error('[useChatFactory] Error processing tool calls:', error);
-      onError(error as Error);
-    }
+
+    // Accumulate the tool_call; actual processing is deferred until the
+    // completion event arrives so that ALL tool_calls are processed as a batch.
+    pendingToolCallsRef.current = [...pendingToolCallsRef.current, ...toolCallMessage.tool_calls];
   }, [chatState?.id]);
 
 
@@ -718,6 +735,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     });
 
   /**
+   * Wraps setModelOverride to also persist the selection to the server
+   * when an active conversation exists.
+   */
+  const handleModelChange = React.useCallback((override: { modelId?: string; providerId?: string } | null) => {
+    setModelOverride(override);
+    if (chatState?.id) {
+      if (override) {
+        graph.setChatModelProvider(chatState.id, override.modelId, override.providerId).catch((err: any) => {
+          reactory.log(`ChatFactory: Failed to persist model/provider override: ${err?.message}`, {}, 'warning');
+        });
+      }
+    }
+  }, [chatState?.id, graph, reactory]);
+
+  /**
    * Initializes the chat session with a given persona.
    * This is important to call when the chat session is first created so that the 
    * backend is aware of the persona and which tools the client has available to 
@@ -796,9 +828,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             ...prevState,
             id: chat.id as string || chatState.id,
             updated: new Date(),
-            // Only update macros and tools if they're actually provided, otherwise preserve existing ones
-            macros: (chat as any).macros || prevState.macros || [],
-            tools: (chat as any).tools || prevState.tools || [],
+            // Only update macros and tools if the server actually returned non-empty arrays,
+            // otherwise preserve existing ones. Note: [] is truthy in JS, so we must check .length.
+            macros: ((chat as any).macros?.length > 0) ? (chat as any).macros : (prevState.macros || []),
+            tools: ((chat as any).tools?.length > 0) ? (chat as any).tools : (prevState.tools || []),
           }));
           return chat.id as string;
         }
@@ -821,8 +854,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         setChatState((prevState) => ({
           ...prevState,
           id: sseSessionId,
-          macros: sseResult.chatState?.macros || prevState.macros || [],
-          tools: sseResult.chatState?.tools || prevState.tools || [],
+          // Note: [] is truthy in JS, so we must check .length to avoid overwriting with empty arrays
+          macros: (sseResult.chatState?.macros?.length > 0) ? sseResult.chatState.macros : (prevState.macros || []),
+          tools: (sseResult.chatState?.tools?.length > 0) ? sseResult.chatState.tools : (prevState.tools || []),
         }));
 
         sse.connect({
@@ -853,8 +887,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
     // Persona changed — check for a cached session injected from the parent
     if (existingSession?.chatState?.persona?.id === persona.id) {
-      // Restore the cached session for this persona
-      setChatState(existingSession.chatState);
+      // Restore the cached session for this persona, validating critical state is preserved
+      setChatState(validateChatState(existingSession.chatState));
       setIsInitialized(existingSession.isInitialized || false);
       reactory.info(`ChatFactory: Restored cached session for persona ${persona.id}`);
     } else {
@@ -870,8 +904,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   // Update session state when existingSession changes (when switching between factories)
   useEffect(() => {
-    if (existingSession?.chatState) {            
-      setChatState(existingSession.chatState);
+    if (existingSession?.chatState) {
+      // Validate to ensure tools/macros are preserved when restoring session state
+      setChatState(validateChatState(existingSession.chatState));
       setIsInitialized(existingSession.isInitialized || false);
       reactory.info(`ChatFactory: Inherited existing session ${existingSession.chatState.id}`);
     }
@@ -1297,6 +1332,19 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             updated: new Date(),
           }));
 
+          // Restore model/provider override from the conversation if it differs from persona defaults
+          const loadedModelId = (result as any).modelId;
+          const loadedProviderId = (result as any).providerId;
+          if (loadedModelId || loadedProviderId) {
+            const personaModelId = persona?.modelId;
+            const personaProviderId = persona?.providerId;
+            const isDifferent = (loadedModelId && loadedModelId !== personaModelId) ||
+              (loadedProviderId && loadedProviderId !== personaProviderId);
+            setModelOverride(isDifferent ? { modelId: loadedModelId, providerId: loadedProviderId } : null);
+          } else {
+            setModelOverride(null);
+          }
+
           // Mark as initialized since we're loading an existing session
           setIsInitialized(true);
         }
@@ -1338,11 +1386,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    */
   const sendToolResultsToAI = React.useCallback(async (consolidatedResults: string, toolResults: any[], toolErrors: any[], thinkingPlaceholderId?: string): Promise<UXChatMessage | null> => {
     try {
+      // Determine tool_call_id from the first tool result (if available)
+      const firstToolCallId = toolResults?.[0]?.id || undefined;
       const resp = await graph.sendMessage({
         message: consolidatedResults,
         personaId: persona.id,
         chatSessionId: chatState.id,
         streamingMode: 'NONE',
+        role: 'tool',
+        tool_call_id: firstToolCallId,
+        ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
+        ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
       });
 
       if (resp) {
@@ -1383,7 +1437,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       reactory.error('Error sending tool results to AI', error);
       throw error;
     }
-  }, [graph, persona?.id, chatState?.id]);
+  }, [graph, persona?.id, chatState?.id, modelOverride]);
 
   /**
    * Helper function to clean up approval component from the message with tool_calls
@@ -1470,7 +1524,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
               if (approved) {
                 try {
-                  const result = await executeMacro(macro, args);
+                  const result = await executeMacro(macro, args, 'user', id);
                   toolResults.push({
                     id,
                     name,
@@ -1574,7 +1628,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             argsType: typeof args
           });
           
-          const result = await executeMacro(macro, args);
+          const result = await executeMacro(macro, args, 'auto', id);
           console.log('✅ [useChatFactory] Macro executed successfully:', { name: macro.name, result });
           return {
             id,
@@ -1861,7 +1915,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     currentStreamingMessage: (sse as any).currentStreamingMessage,
     setChatState,
     modelOverride,
-    setModelOverride,
+    setModelOverride: handleModelChange,
     // Debug helpers
     protectCriticalState,
     validateChatState,

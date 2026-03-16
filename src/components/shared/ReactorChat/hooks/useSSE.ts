@@ -113,12 +113,16 @@ export interface UseSSEResult {
  * Minimum chunk size (in characters) below which we emit tokens immediately.
  * Chunks larger than this are split into word-level segments and drip-fed
  * to simulate smooth token-by-token streaming.
+ *
+ * NOTE: The server already batches tokens into small chunks (≤8 chars) before
+ * sending via SSE, so the client drip-feed is effectively disabled by setting
+ * a high threshold. Tokens are passed straight through for instant rendering.
  */
-const DRIP_THRESHOLD = 8;
+const DRIP_THRESHOLD = 80;
 
 /**
- * Approximate interval between drip-fed word emissions (ms).
- * 20ms ≈ 50 words/sec which looks like fast typing.
+ * Interval between drip-fed word emissions (ms).
+ * Only used when a chunk exceeds DRIP_THRESHOLD (currently never).
  */
 const DRIP_INTERVAL_MS = 20;
 
@@ -337,6 +341,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       es.onerror = (err) => {
         reactory.error('useSSE: EventSource error', err);
         setIsStreaming(false);
+        setConnected(false);
         if (eventSourceRef.current) {
           eventSourceRef.current.close();
           eventSourceRef.current = null;

@@ -20,6 +20,7 @@ import REACTOR_ASK_AUDIO from "./mutations/ReactorAskQuestionAudio.graphql";
 import REACTOR_DELETE_CHAT from "./mutations/ReactorDeleteChatSession.graphql";
 import REACTOR_EXECUTE_MACRO from "./mutations/ReactorExecuteMacro.graphql";
 import REACTOR_EXECUTE_TOOL from "./mutations/ReactorExecuteTool.graphql";
+import REACTOR_SET_MODEL_PROVIDER from "./mutations/ReactorSetChatModelProvider.graphql";
 import REACTOR_START_VOICE_SESSION from "./mutations/ReactorStartVoiceSession.graphql";
 import REACTOR_END_VOICE_SESSION from "./mutations/ReactorEndVoiceSession.graphql";
 import REACTOR_SEND_VOICE_MESSAGE from "./mutations/ReactorSendVoiceMessage.graphql";
@@ -84,6 +85,8 @@ export interface ReactorSendMessageInput {
   chatSessionId?: string;
   message: string;
   streamingMode?: StreamingMode;
+  role?: string;
+  tool_call_id?: string;
   modelId?: string;
   providerId?: string;
 }
@@ -253,12 +256,12 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
   };
 
   const executeTool = async (
-    toolInput: any
+    toolInput: { tool: string; personaId: string; chatSessionId: string; callId?: string; args?: any }
   ): Promise<ReactorChatResponse> => {
     const response = await reactory.graphqlMutation<
       { ReactorExecuteTool: ReactorChatResponse },
-      { toolInput: any }
-    >(REACTOR_EXECUTE_TOOL as any, { toolInput });
+      { tool: string; personaId: string; chatSessionId: string; callId?: string; args?: any }
+    >(REACTOR_EXECUTE_TOOL as any, toolInput);
     return response?.data?.ReactorExecuteTool as ReactorChatResponse;
   };
 
@@ -295,10 +298,23 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorSendVoiceMessage as VoiceChatResult;
   };
 
+  const setChatModelProvider = async (
+    chatSessionId: string,
+    modelId?: string,
+    providerId?: string
+  ): Promise<any> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorSetChatModelProvider: any },
+      { chatSessionId: string; modelId?: string; providerId?: string }
+    >(REACTOR_SET_MODEL_PROVIDER as any, { chatSessionId, modelId, providerId });
+    return response?.data?.ReactorSetChatModelProvider;
+  };
+
   return {
     startChatSession,
     sendMessage,
     setChatToolApprovalMode,
+    setChatModelProvider,
     attachFile,
     askQuestionAudio,
     deleteChatSession,

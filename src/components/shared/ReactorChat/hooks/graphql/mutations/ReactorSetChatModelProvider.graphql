@@ -1,0 +1,18 @@
+mutation ReactorSetChatModelProvider($chatSessionId: String!, $modelId: String, $providerId: String) {
+  ReactorSetChatModelProvider(chatSessionId: $chatSessionId, modelId: $modelId, providerId: $providerId) {
+    __typename
+    ... on ReactorChatState {
+      id
+      modelId
+      providerId
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

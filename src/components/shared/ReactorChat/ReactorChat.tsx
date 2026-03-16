@@ -4,6 +4,7 @@ import useChatFactory from './hooks/useChatFactory';
 // Streaming is now handled via useChatFactory with protocol 'sse'
 import ChatList from './hooks/useScrollToBottom';
 import useMacros from './hooks/useMacros';
+import { useProviders } from './hooks/useProviders';
 import { useEffect } from 'react';
 
 import {
@@ -76,6 +77,13 @@ export default (props) => {
     onError,
     intialPersonaId: props?.personaId || null,
   });
+
+  const {
+    providers,
+    providerAuthStatuses,
+    saveProviderAuth,
+    removeProviderAuth,
+  } = useProviders();
 
   const scrollToBottom = useCallback((message: any) => {
     const doScroll = () => {
@@ -1067,6 +1075,10 @@ export default (props) => {
               onModelChange={setModelOverride}
               personaModelId={selectedPersona?.modelId}
               personaProviderId={selectedPersona?.providerId}
+              providers={providers}
+              providerAuthStatuses={providerAuthStatuses}
+              onProviderAuthSave={saveProviderAuth}
+              onProviderAuthRemove={removeProviderAuth}
               getToolIcon={getToolIcon}
               Material={Material}
               il8n={il8n}

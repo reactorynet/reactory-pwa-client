@@ -27,6 +27,8 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
       }
       macros { id nameSpace name version icon description alias roles params runat }
       toolApprovalMode
+      modelId
+      providerId
       tokenCount
       maxTokens
       tokenPressure
