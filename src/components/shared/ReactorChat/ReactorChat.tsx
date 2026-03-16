@@ -12,7 +12,9 @@ import {
   UXChatMessage,
   MacroToolDefinition,
   ToolApprovalMode,
-  ChatState
+  ChatState,
+  TodoList,
+  TODOS_VAR_KEY,
 } from './types';
 import PersonaSelectionPanel from './components/PersonaSelectionPanel';
 import ToolsPanel from './components/ToolsPanel';
@@ -20,6 +22,8 @@ import ChatHistoryPanel from './components/ChatHistoryPanel';
 import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel/FilesPanel';
 import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/FileExplorerSidebar';
+import TodosPanel from './components/TodosPanel';
+import DebugPanel from './components/DebugPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
 import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
@@ -211,6 +215,8 @@ export default (props) => {
     AttachFile,
     Construction,
     FolderOpen,
+    Checklist,
+    BugReport,
   } = Material.MaterialIcons;
 
   // Helper to get color based on token pressure
@@ -302,6 +308,8 @@ export default (props) => {
   const [chatHistoryPanelOpen, setChatHistoryPanelOpen] = useState<boolean>(false);
   const [recordingPanelOpen, setRecordingPanelOpen] = useState<boolean>(false);
   const [filesPanelOpen, setFilesPanelOpen] = useState<boolean>(false);
+  const [todosPanelOpen, setTodosPanelOpen] = useState<boolean>(false);
+  const [debugPanelOpen, setDebugPanelOpen] = useState<boolean>(false);
 
   // File explorer sidebar — docked inline panel (left or right)
   const [fileExplorerOpen, setFileExplorerOpen] = useState<boolean>(false);
@@ -365,6 +373,8 @@ export default (props) => {
     setChatHistoryPanelOpen(false);
     setRecordingPanelOpen(false);
     setFilesPanelOpen(false);
+    setTodosPanelOpen(false);
+    setDebugPanelOpen(false);
 
     // Clear other session-related states
     setSelectedChats([]);
@@ -504,6 +514,8 @@ export default (props) => {
     setChatHistoryPanelOpen(false);
     setRecordingPanelOpen(false);
     setFilesPanelOpen(false);
+    setTodosPanelOpen(false);
+    setDebugPanelOpen(false);
     // Then toggle persona panel
     setPersonaPanelOpen(!personaPanelOpen);
   }, [personaPanelOpen]);
@@ -518,6 +530,8 @@ export default (props) => {
     setChatHistoryPanelOpen(false);
     setRecordingPanelOpen(false);
     setFilesPanelOpen(false);
+    setTodosPanelOpen(false);
+    setDebugPanelOpen(false);
     // Then toggle tools panel
     setToolsPanelOpen(!toolsPanelOpen);
   }, [toolsPanelOpen]);
@@ -544,6 +558,8 @@ export default (props) => {
     setToolsPanelOpen(false);
     setRecordingPanelOpen(false);
     setFilesPanelOpen(false);
+    setTodosPanelOpen(false);
+    setDebugPanelOpen(false);
     // Then toggle chat history panel
     setChatHistoryPanelOpen(!chatHistoryPanelOpen);
   }, [chatHistoryPanelOpen]);
@@ -558,6 +574,8 @@ export default (props) => {
     setToolsPanelOpen(false);
     setChatHistoryPanelOpen(false);
     setFilesPanelOpen(false);
+    setTodosPanelOpen(false);
+    setDebugPanelOpen(false);
     // Then toggle recording panel
     setRecordingPanelOpen(!recordingPanelOpen);
   }, [recordingPanelOpen]);
@@ -612,6 +630,8 @@ export default (props) => {
     setToolsPanelOpen(false);
     setChatHistoryPanelOpen(false);
     setRecordingPanelOpen(false);
+    setTodosPanelOpen(false);
+    setDebugPanelOpen(false);
     // Then toggle files panel
     setFilesPanelOpen(!filesPanelOpen);
   }, [filesPanelOpen]);
@@ -619,6 +639,67 @@ export default (props) => {
   const handleFilesPanelClose = useCallback(() => {
     setFilesPanelOpen(false);
   }, []);
+
+  const handleTodosPanelToggle = useCallback(() => {
+    setPersonaPanelOpen(false);
+    setToolsPanelOpen(false);
+    setChatHistoryPanelOpen(false);
+    setRecordingPanelOpen(false);
+    setFilesPanelOpen(false);
+    setDebugPanelOpen(false);
+    setTodosPanelOpen(!todosPanelOpen);
+  }, [todosPanelOpen]);
+
+  const handleTodosPanelClose = useCallback(() => {
+    setTodosPanelOpen(false);
+  }, []);
+
+  const handleDebugPanelToggle = useCallback(() => {
+    setPersonaPanelOpen(false);
+    setToolsPanelOpen(false);
+    setChatHistoryPanelOpen(false);
+    setRecordingPanelOpen(false);
+    setFilesPanelOpen(false);
+    setTodosPanelOpen(false);
+    setDebugPanelOpen(!debugPanelOpen);
+  }, [debugPanelOpen]);
+
+  const handleDebugPanelClose = useCallback(() => {
+    setDebugPanelOpen(false);
+  }, []);
+
+  const handleRefreshChatVars = useCallback(async () => {
+    if (!chatState?.id) return;
+    try {
+      const response = await reactory.graphqlQuery<
+        { ReactorConversation: { vars?: Record<string, unknown> } | { code: string; message: string } },
+        { id: string }
+      >(`
+        query ReactorConversation($id: String!) {
+          ReactorConversation(id: $id) {
+            ... on ReactorChatState {
+              id
+              vars
+            }
+            ... on ReactorChatError {
+              code
+              message
+            }
+          }
+        }
+      `, { id: chatState.id });
+
+      const result = response?.data?.ReactorConversation;
+      if (result && 'vars' in result && result.vars) {
+        setChatState(prev => ({
+          ...prev,
+          vars: result.vars,
+        }));
+      }
+    } catch (err) {
+      reactory.log(`Failed to refresh chat vars: ${err}`, {}, 'warning');
+    }
+  }, [chatState?.id, reactory, setChatState]);
 
   // Function to refresh chat state to update file count badge
   const handleRefreshChatState = useCallback(async () => {
@@ -789,6 +870,13 @@ export default (props) => {
     return 'build';
   }, []);
 
+  // Count total todo items across all lists for the badge
+  const todoCount = useMemo(() => {
+    if (!chatState?.vars?.[TODOS_VAR_KEY]) return 0;
+    const record = chatState.vars[TODOS_VAR_KEY] as Record<string, TodoList>;
+    return Object.values(record).reduce((sum, list) => sum + list.items.length, 0);
+  }, [chatState?.vars]);
+
   // check the max width of the screen
   const isNarrowScreen = useMemo(() => {
     const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
@@ -861,7 +949,23 @@ export default (props) => {
       title: il8n?.t('reactor.client.fileExplorer.toggle', { defaultValue: 'My Files' }),
       clickHandler: handleFileExplorerToggle,
     },
-  ], [chatState, enabledTools, fileExplorerOpen, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle]);
+    {
+      key: 'todos',
+      icon: (
+        <Badge badgeContent={todoCount} color="primary">
+          <Checklist />
+        </Badge>
+      ),
+      title: il8n?.t('reactor.client.chat.todos', { defaultValue: 'Todo Lists' }),
+      clickHandler: handleTodosPanelToggle,
+    },
+    ...(reactory.isDevelopmentMode() ? [{
+      key: 'debug',
+      icon: <BugReport />,
+      title: il8n?.t('reactor.client.chat.debug', { defaultValue: 'Debug Inspector' }),
+      clickHandler: handleDebugPanelToggle,
+    }] : []),
+  ], [chatState, enabledTools, fileExplorerOpen, todoCount, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleDebugPanelToggle, reactory]);
 
   const backgroundSVG = useMemo(() => {
     // Create a simplified SVG pattern that should work reliably in data URLs
@@ -1112,6 +1216,28 @@ export default (props) => {
               il8n={il8n}
             />
 
+            {/* Todos Panel - Slides up from bottom */}
+            <TodosPanel
+              open={todosPanelOpen}
+              onClose={handleTodosPanelClose}
+              chatState={chatState}
+              onRefreshVars={handleRefreshChatVars}
+              Material={Material}
+              il8n={il8n}
+            />
+
+            {/* Debug Panel - Slides up from bottom (dev mode only) */}
+            {reactory.isDevelopmentMode() && (
+              <DebugPanel
+                open={debugPanelOpen}
+                onClose={handleDebugPanelClose}
+                chatState={chatState}
+                onRefreshVars={handleRefreshChatVars}
+                Material={Material}
+                il8n={il8n}
+              />
+            )}
+
             {/* Recording Audio Bar - Slides up from bottom */}
             <RecordingAudioBar
               open={recordingPanelOpen}
@@ -1170,8 +1296,8 @@ export default (props) => {
             src={selectedPersona?.avatar}
             alt={selectedPersona?.name}
             sx={{
-              width: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
-              height: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen ? 28 : 32,
+              width: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen || todosPanelOpen || debugPanelOpen ? 28 : 32,
+              height: filesPanelOpen || personaPanelOpen || toolsPanelOpen || chatHistoryPanelOpen || recordingPanelOpen || todosPanelOpen || debugPanelOpen ? 28 : 32,
               transition: 'all 0.3s ease-in-out',
             }}
           />
@@ -1190,7 +1316,9 @@ export default (props) => {
             toolsPanelOpen ||
             chatHistoryPanelOpen ||
             recordingPanelOpen ||
-            filesPanelOpen ? 86 : 94,
+            filesPanelOpen ||
+            todosPanelOpen ||
+            debugPanelOpen ? 86 : 94,
           right: 8,
         }}
       />

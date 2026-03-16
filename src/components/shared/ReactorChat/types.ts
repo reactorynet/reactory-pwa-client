@@ -489,3 +489,32 @@ export interface MacrosHookProps {
 }
 
 export type MacrosHook = (props: MacrosHookProps) => MacrosHookResults
+
+// ── Todo types (mirror server-side todoMacro types) ────────────────────
+
+export type TodoStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+
+export type TodoExecutionMode = 'series' | 'parallel';
+
+export interface TodoItem {
+  id: string;
+  title: string;
+  description?: string;
+  status: TodoStatus;
+  assignee?: string;
+  result?: unknown;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TodoList {
+  id: string;
+  name: string;
+  executionMode: TodoExecutionMode;
+  items: TodoItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const TODOS_VAR_KEY = 'reactor.todos';

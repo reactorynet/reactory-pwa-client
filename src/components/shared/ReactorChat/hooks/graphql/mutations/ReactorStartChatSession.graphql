@@ -4,6 +4,7 @@ fragment ReactorChatStateFields on ReactorChatState {
   toolApprovalMode
   modelId
   providerId
+  vars
   tools {
     id
     type
