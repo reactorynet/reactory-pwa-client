@@ -89,6 +89,8 @@ export interface ReactorSendMessageInput {
   tool_call_id?: string;
   modelId?: string;
   providerId?: string;
+  /** When true, skip persisting the message — tool results are already in history from executeMacro */
+  continueAfterTools?: boolean;
 }
 
 // --- Voice session types ---

@@ -1398,15 +1398,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    */
   const sendToolResultsToAI = React.useCallback(async (consolidatedResults: string, toolResults: any[], toolErrors: any[], thinkingPlaceholderId?: string): Promise<UXChatMessage | null> => {
     try {
-      // Determine tool_call_id from the first tool result (if available)
-      const firstToolCallId = toolResults?.[0]?.id || undefined;
+      // Tool results are already persisted in MongoDB by executeMacro.
+      // Use continueAfterTools to avoid adding a duplicate tool message.
       const resp = await graph.sendMessage({
-        message: consolidatedResults,
+        message: consolidatedResults || 'Continue after tool execution',
         personaId: persona.id,
         chatSessionId: chatState.id,
         streamingMode: 'NONE',
         role: 'tool',
-        tool_call_id: firstToolCallId,
+        continueAfterTools: true,
         ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
         ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
       });
