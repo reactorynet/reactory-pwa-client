@@ -150,7 +150,6 @@ function useYamlWorkflowLoader(
                 notes { id text position { x y } size { width height } color }
                 groups { id label stepIds color collapsed }
               }
-              yamlSource
               sourceType
               location
               loadStatus
@@ -172,7 +171,6 @@ function useYamlWorkflowLoader(
           name,
           version,
         });
-
         const yamlDef = response?.data?.workflowYamlDefinition;
         if (!yamlDef) {
           setYamlErrors([{ stage: 'REGISTRY', message: `No response returned for ${nameSpace}.${name}`, code: 'NO_RESPONSE' }]);

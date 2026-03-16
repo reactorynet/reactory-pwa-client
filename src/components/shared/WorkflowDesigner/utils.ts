@@ -928,15 +928,41 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
     }
   }
 
-  // Convert variables
-  const variables = yamlDef.variables
-    ? Object.entries(yamlDef.variables).map(([name, value]) => ({
+  // Convert variables — the YAML stores them as a stringified JSON array,
+  // e.g. '[{"id":"x","name":"myVar","type":"string","defaultValue":""}]',
+  // but they could also arrive as a plain object or already-parsed array.
+  const variables = (() => {
+    let raw = yamlDef.variables;
+    if (!raw) return [];
+
+    if (typeof raw === 'string') {
+      try {
+        raw = JSON.parse(raw);
+      } catch {
+        return [];
+      }
+    }
+
+    if (Array.isArray(raw)) {
+      return raw.map((v: any) => ({
+        id: v.id || generateId(),
+        name: v.name,
+        type: v.type || typeof v.defaultValue,
+        defaultValue: v.defaultValue,
+      }));
+    }
+
+    if (typeof raw === 'object') {
+      return Object.entries(raw).map(([name, value]) => ({
         id: generateId(),
         name,
         type: typeof value as string,
         defaultValue: value,
-      }))
-    : [];
+      }));
+    }
+
+    return [];
+  })();
 
   // Build the designer WorkflowDefinition
   const designerCanvas = yamlDef.designer?.canvas;
