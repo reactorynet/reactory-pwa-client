@@ -5,6 +5,9 @@ mutation ReactorSetChatModelProvider($chatSessionId: String!, $modelId: String, 
       id
       modelId
       providerId
+      maxTokens
+      tokenCount
+      tokenPressure
     }
     ... on ReactorErrorResponse {
       code

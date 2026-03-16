@@ -680,8 +680,12 @@ export default (props) => {
             ... on ReactorChatState {
               id
               vars
+              tokenCount
+              maxTokens
+              tokenPressure
+              toolApprovalMode
             }
-            ... on ReactorChatError {
+            ... on ReactorErrorResponse {
               code
               message
             }
@@ -690,10 +694,10 @@ export default (props) => {
       `, { id: chatState.id });
 
       const result = response?.data?.ReactorConversation;
-      if (result && 'vars' in result && result.vars) {
+      if (result && 'vars' in result) {
         setChatState(prev => ({
           ...prev,
-          vars: result.vars,
+          ...result,
         }));
       }
     } catch (err) {

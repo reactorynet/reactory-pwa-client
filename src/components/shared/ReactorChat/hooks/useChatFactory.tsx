@@ -742,12 +742,24 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setModelOverride(override);
     if (chatState?.id) {
       if (override) {
-        graph.setChatModelProvider(chatState.id, override.modelId, override.providerId).catch((err: any) => {
-          reactory.log(`ChatFactory: Failed to persist model/provider override: ${err?.message}`, {}, 'warning');
-        });
+        graph.setChatModelProvider(chatState.id, override.modelId, override.providerId)
+          .then((result: any) => {
+            // Update chatState with the new maxTokens returned by the server
+            if (result && result.maxTokens != null) {
+              setChatState(prev => ({
+                ...prev,
+                maxTokens: result.maxTokens,
+                tokenCount: result.tokenCount ?? prev.tokenCount,
+                tokenPressure: result.tokenPressure ?? prev.tokenPressure,
+              }));
+            }
+          })
+          .catch((err: any) => {
+            reactory.log(`ChatFactory: Failed to persist model/provider override: ${err?.message}`, {}, 'warning');
+          });
       }
     }
-  }, [chatState?.id, graph, reactory]);
+  }, [chatState?.id, graph, reactory, setChatState]);
 
   /**
    * Initializes the chat session with a given persona.
