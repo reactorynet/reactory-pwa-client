@@ -150,7 +150,6 @@ function useYamlWorkflowLoader(
                 notes { id text position { x y } size { width height } color }
                 groups { id label stepIds color collapsed }
               }
-              yamlSource
               sourceType
               location
               loadStatus
@@ -172,7 +171,6 @@ function useYamlWorkflowLoader(
           name,
           version,
         });
-
         const yamlDef = response?.data?.workflowYamlDefinition;
         if (!yamlDef) {
           setYamlErrors([{ stage: 'REGISTRY', message: `No response returned for ${nameSpace}.${name}`, code: 'NO_RESPONSE' }]);
@@ -263,6 +261,9 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const [showUserHomeFolderDialog, setShowUserHomeFolderDialog] = useState<boolean>(false);
   const [showServerFileExplorerDialog, setShowServerFileExplorerDialog] = useState<boolean>(false);
 
+  // Active workflow ref — starts from props but can be overridden by file selection
+  const [activeWorkflowRef, setActiveWorkflowRef] = useState<WorkflowDesignerProps['workflow']>(workflowRef ?? null);
+
   // GraphQL operations
   const {
     loading: graphqlLoading,
@@ -344,9 +345,10 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     onValidationChange
   });
 
-  // Load YAML workflow definition if this is a YAML-based workflow
+  // Load YAML workflow definition if this is a YAML-based workflow.
+  // Uses activeWorkflowRef so it can be re-triggered by file selection.
   const { yamlLoading, yamlError, yamlErrors, yamlSource, setYamlSource, yamlSourceType, loadStatus } = useYamlWorkflowLoader(
-    workflowRef,
+    activeWorkflowRef,
     initialDefinition,
     reactory,
     updateDefinition,
@@ -707,6 +709,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   // Handle save dropdown
   const [saveMenuAnchor, setSaveMenuAnchor] = useState<null | HTMLElement>(null);
   const isSaveMenuOpen = Boolean(saveMenuAnchor);
+  const [saveNotification, setSaveNotification] = useState<{ open: boolean; severity: 'success' | 'error'; message: string }>({ open: false, severity: 'success', message: '' });
 
   // Handle load dropdown
   const [loadMenuAnchor, setLoadMenuAnchor] = useState<null | HTMLElement>(null);
@@ -726,7 +729,13 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
   const handleSaveToServer = useCallback(async () => {
     handleSaveMenuClose();
-    await save();
+    try {
+      await save();
+      setSaveNotification({ open: true, severity: 'success', message: 'Workflow saved successfully' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save workflow';
+      setSaveNotification({ open: true, severity: 'error', message: msg });
+    }
   }, [save]);
 
   const handleDownloadFile = useCallback(() => {
@@ -775,33 +784,44 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   }, []);
 
   const handleServerFileSelection = useCallback(async (selectedFiles: any[]) => {
-    if (selectedFiles.length > 0) {
-      const selectedFile = selectedFiles[0];
+    if (selectedFiles.length === 0) return;
 
-      // Check if it's a JSON file (workflow file)
-      if (selectedFile.name.toLowerCase().endsWith('.json')) {
-        try {
-          console.log('Loading workflow from server file:', selectedFile);
-          
-          // Close the dialog
-          setShowServerFileExplorerDialog(false);
+    const selectedFile = selectedFiles[0];
+    const lowerName = (selectedFile.name as string).toLowerCase();
+    const isWorkflowFile = lowerName.endsWith('.yaml') || lowerName.endsWith('.yml') || lowerName.endsWith('.json');
 
-          // TODO: Implement actual server file loading
-          // This would typically involve:
-          // 1. Fetch file content from the server using selectedFile.fullPath
-          // 2. Parse the JSON content
-          // 3. Load it using the updateDefinition() function
-
-          console.info(`Loading workflow from server file: ${selectedFile.name}`, 'Server file loading will be implemented');
-
-        } catch (error) {
-          console.error('Failed to load workflow from server', error);
-        }
-      } else {
-        console.warn('Invalid file type', 'Please select a JSON workflow file');
-      }
+    if (!isWorkflowFile) {
+      setSaveNotification({ open: true, severity: 'error', message: 'Please select a YAML or JSON workflow file' });
+      return;
     }
-  }, [updateDefinition]);
+
+    // Parse nameSpace, name, version from the catalog path.
+    // Catalog path format: .../workflows/catalog/<nameSpace>/<name>/<version>/<name>.yaml
+    const fullPath: string = selectedFile.fullPath || selectedFile.path || '';
+    const catalogMatch = fullPath.replace(/\\/g, '/').split(/\/catalog\//);
+    let nameSpace = '';
+    let name = '';
+    let version: string | undefined;
+
+    if (catalogMatch.length >= 2) {
+      const segments = catalogMatch[1].split('/');
+      nameSpace = segments[0] || '';
+      name = segments[1] || '';
+      version = segments[2] || undefined;
+    }
+
+    if (!nameSpace || !name) {
+      // Fallback: try to derive from the filename itself (name.yaml → name)
+      name = lowerName.replace(/\.(yaml|yml|json)$/, '');
+      setSaveNotification({ open: true, severity: 'error', message: `Could not determine workflow namespace from path: ${fullPath}` });
+      return;
+    }
+
+    setShowServerFileExplorerDialog(false);
+
+    // Trigger the YAML loader by updating the active workflow ref
+    setActiveWorkflowRef({ nameSpace, name, version: version ?? '1.0.0', workflowType: 'YAML' } as any);
+  }, []);
 
   const handleFileSelection = useCallback(async (selectedItems: any[], selectionMode: 'single' | 'multi') => {
     if (selectedItems.length > 0 && selectedItems[0].type === 'file') {
@@ -996,6 +1016,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     Tooltip,
     LinearProgress,
     Alert,
+    Snackbar,
     Menu,
     MenuItem,
     ButtonGroup,
@@ -1565,6 +1586,22 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         readonly={true}
         il8n={undefined}
       />
+
+      {/* Save notification */}
+      <Snackbar
+        open={saveNotification.open}
+        autoHideDuration={4000}
+        onClose={() => setSaveNotification(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={saveNotification.severity}
+          onClose={() => setSaveNotification(prev => ({ ...prev, open: false }))}
+          variant="filled"
+        >
+          {saveNotification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

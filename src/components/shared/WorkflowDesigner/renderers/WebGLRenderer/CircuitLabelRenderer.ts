@@ -188,6 +188,12 @@ export class CircuitLabelRenderer {
     labelObject.position.set(threePos.x, threePos.y - 50, 5);
     popupObject.position.set(threePos.x + 100, threePos.y, 10);
     
+    // Give the label chip a lower stacking order so popups render above it
+    labelElement.style.zIndex = '10';
+    // Popup starts hidden and non-interactive
+    popupElement.style.zIndex = '10';
+    popupElement.style.pointerEvents = 'none';
+
     // Add click handler to show popup
     labelElement.style.pointerEvents = 'auto';
     labelElement.style.cursor = 'pointer';
@@ -248,7 +254,7 @@ export class CircuitLabelRenderer {
           <div class="circuit-popup-pin-group">
             <div class="circuit-popup-pin-label">Inputs</div>
             ${options.inputPorts.map(port => `
-              <div class="circuit-popup-pin">
+              <div class="circuit-popup-pin" title="${this.escapeHtml(port)}">
                 <span class="circuit-popup-pin-dot input"></span>
                 ${this.escapeHtml(port)}
               </div>
@@ -259,7 +265,7 @@ export class CircuitLabelRenderer {
           <div class="circuit-popup-pin-group">
             <div class="circuit-popup-pin-label">Outputs</div>
             ${options.outputPorts.map(port => `
-              <div class="circuit-popup-pin">
+              <div class="circuit-popup-pin" title="${this.escapeHtml(port)}">
                 <span class="circuit-popup-pin-dot output"></span>
                 ${this.escapeHtml(port)}
               </div>
@@ -363,6 +369,10 @@ export class CircuitLabelRenderer {
     labelData.popupObject.visible = true;
     labelData.isPopupVisible = true;
     this.activePopup = id;
+
+    // Raise above all label chips and re-enable interaction
+    labelData.popupElement.style.zIndex = '9999';
+    labelData.popupElement.style.pointerEvents = 'auto';
     
     // Animate in
     requestAnimationFrame(() => {
@@ -376,19 +386,24 @@ export class CircuitLabelRenderer {
   hidePopup(id: string): void {
     const labelData = this.labels.get(id);
     if (!labelData) return;
-    
-    labelData.popupElement.classList.remove('visible');
-    
-    // Hide after animation
-    setTimeout(() => {
-      if (!labelData.isPopupVisible) return; // May have been shown again
-      labelData.popupObject.visible = false;
-    }, 200);
-    
+
     labelData.isPopupVisible = false;
     if (this.activePopup === id) {
       this.activePopup = null;
     }
+
+    // Immediately block pointer events so the fading-out popup
+    // cannot intercept clicks on labels beneath it
+    labelData.popupElement.style.pointerEvents = 'none';
+    labelData.popupElement.style.zIndex = '10';
+    labelData.popupElement.classList.remove('visible');
+    
+    // Hide the Three.js object after the CSS fade-out animation completes.
+    // Guard: if showPopup was called during the animation, abort the hide.
+    setTimeout(() => {
+      if (labelData.isPopupVisible) return;
+      labelData.popupObject.visible = false;
+    }, 250);
   }
 
   /**

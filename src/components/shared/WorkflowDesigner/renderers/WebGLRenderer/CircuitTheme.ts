@@ -371,10 +371,10 @@ export const CIRCUIT_CSS = `
       0 4px 12px rgba(0,0,0,0.5),
       0 0 20px rgba(184, 115, 51, 0.3),
       inset 0 1px 0 rgba(255,255,255,0.1);
-    pointer-events: auto;
+    pointer-events: none;
     z-index: 1000;
     min-width: 180px;
-    max-width: 280px;
+    max-width: 360px;
     opacity: 0;
     transform: translateY(-10px) scale(0.95);
     transition: opacity 0.2s ease, transform 0.2s ease;
@@ -427,7 +427,8 @@ export const CIRCUIT_CSS = `
   
   .circuit-popup-pins {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 6px;
     margin-top: 8px;
     padding-top: 8px;
     border-top: 1px solid #333;
@@ -450,6 +451,9 @@ export const CIRCUIT_CSS = `
     align-items: center;
     gap: 4px;
     font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   
   .circuit-popup-pin-dot {
@@ -473,6 +477,7 @@ export const CIRCUIT_CSS = `
     white-space: nowrap;
     user-select: none;
     cursor: pointer;
+    z-index: 10;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
   
