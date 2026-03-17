@@ -697,22 +697,36 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setWaitingForResponse(false);
   }, [chatState?.id, waitingForResponse]);
 
+  const reasoningBufferRef = React.useRef<string>("");
+  const reasoningFlushTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
   const onReasoningReceived = React.useCallback((reasoning: ReasoningStreamingEvent) => {
-    setChatState((prevState) => {
-      const history = [...prevState.history];
-      const lastIndex = history.length - 1;
+    reasoningBufferRef.current += reasoning.data.delta;
 
-      if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
-        const lastMessage = history[lastIndex];
-        history[lastIndex] = {
-          ...lastMessage,
-          thinking: (lastMessage.thinking || '') + reasoning.data.delta,
-          timestamp: new Date(),
-        };
-      }
+    if (!reasoningFlushTimerRef.current) {
+      reasoningFlushTimerRef.current = setTimeout(() => {
+        const flushContent = reasoningBufferRef.current;
+        reasoningBufferRef.current = "";
+        reasoningFlushTimerRef.current = null;
 
-      return { ...prevState, history };
-    });
+        setChatState((prevState) => {
+          const history = [...prevState.history];
+          const lastIndex = history.length - 1;
+
+          if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+            const lastMessage = history[lastIndex];
+            history[lastIndex] = {
+              ...lastMessage,
+              thinking: (lastMessage.thinking || '') + flushContent,
+              timestamp: new Date(),
+            };
+          }
+
+          return { ...prevState, history };
+        });
+      }, 50); // Flush every 50ms to prevent React state lockup
+    }
+    
     setIsStreaming(true);
   }, []);
 
