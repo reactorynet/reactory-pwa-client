@@ -1,0 +1,6 @@
+mutation ReactorSetChatMaxToolIterations($chatSessionId: String!, $maxToolIterations: Int!) {
+  ReactorSetChatMaxToolIterations(chatSessionId: $chatSessionId, maxToolIterations: $maxToolIterations) {
+    id
+    maxToolIterations
+  }
+}

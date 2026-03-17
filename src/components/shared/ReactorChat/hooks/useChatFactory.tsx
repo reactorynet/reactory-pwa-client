@@ -4,7 +4,7 @@ import useMacros from "./useMacros"
 import { exec } from "child_process"
 import ToolPrompt from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
-import useSSE, { CompletionStreamingEvent, ReasoningStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent } from './useSSE';
+import useSSE, { CompletionStreamingEvent, ReasoningStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
 
 interface ChatFactoryHookResult {
   // represents the chat state
@@ -43,6 +43,14 @@ interface ChatFactoryHookResult {
   // model override: allows changing the model/provider mid-conversation
   modelOverride: { modelId?: string; providerId?: string } | null
   setModelOverride: React.Dispatch<React.SetStateAction<{ modelId?: string; providerId?: string } | null>>
+  // sets the maximum number of auto tool iterations for the chat session
+  setMaxToolIterations: (maxIterations: number) => Promise<void>
+  // continues tool execution after a tool iteration limit was reached
+  continueToolExecution: (newMaxIterations?: number) => Promise<void>
+  // info about a tool iteration limit event, null when not paused
+  toolIterationLimitInfo: { iterationsCompleted: number; maxIterations: number; partialContent?: string } | null
+  // clears the tool iteration limit info ("stop" action)
+  clearToolIterationLimitInfo: () => void
 }
 
 interface ChatFactorHookOptions {
@@ -519,6 +527,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [isStreaming, setIsStreaming] = React.useState<boolean>(false);
   const [waitingForResponse, setWaitingForResponse] = React.useState<boolean>(false);
   const [modelOverride, setModelOverride] = React.useState<{ modelId?: string; providerId?: string } | null>(null);
+  const [toolIterationLimitInfo, setToolIterationLimitInfo] = React.useState<{ iterationsCompleted: number; maxIterations: number; partialContent?: string } | null>(null);
 
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
@@ -738,6 +747,34 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * @param chatSessionId 
    * @returns 
    */
+    const onToolIterationLimitReceived = React.useCallback((event: ToolIterationLimitStreamingEvent) => {
+      reactory.log('[useChatFactory] Tool iteration limit reached', event.data, 'warning');
+
+      // Update the last assistant message with partial content if available
+      if (event.data.partialContent) {
+        setChatState((prevState) => {
+          const history = [...prevState.history];
+          const lastIndex = history.length - 1;
+          if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
+            history[lastIndex] = {
+              ...history[lastIndex],
+              content: event.data.partialContent,
+              timestamp: new Date(),
+            };
+          }
+          return { ...prevState, history };
+        });
+      }
+
+      setToolIterationLimitInfo({
+        iterationsCompleted: event.data.iterationsCompleted,
+        maxIterations: event.data.maxIterations,
+        partialContent: event.data.partialContent,
+      });
+      setWaitingForResponse(false);
+      setBusy(false);
+    }, [reactory]);
+
     const graph = useGraph({ reactory });
     const sse = useSSE({
       reactory,
@@ -746,6 +783,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onToolCall: onToolCallReceived,
       onMessage: onSSEMessageReceived,
       onError: (e) => { onError(e); props.onStreamError?.(e); },
+      onToolIterationLimit: onToolIterationLimitReceived,
     });
 
   /**
@@ -1329,6 +1367,113 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
+  const setMaxToolIterations = async (maxIterations: number) => {
+    setBusy(true);
+    try {
+      let sessionId = chatState.id;
+
+      if (!isInitialized && persona?.id) {
+        reactory.info(`ChatFactory: Initializing chat session on max tool iterations change with persona ${persona.id}`);
+        try {
+          const newSessionId = await initializeChat(persona);
+          setIsInitialized(true);
+          sessionId = newSessionId;
+        } catch (error) {
+          onError(error);
+          setBusy(false);
+          return;
+        }
+      }
+
+      if (!sessionId) {
+        throw new Error('No active chat session available');
+      }
+
+      const response = await graph.setChatMaxToolIterations(sessionId, maxIterations);
+      if (response) {
+        setChatState((prevState) => ({
+          ...prevState,
+          maxToolIterations: response.maxToolIterations,
+        }));
+      } else {
+        throw new Error('No response from server');
+      }
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const continueToolExecution = async (newMaxIterations?: number) => {
+    setBusy(true);
+    setToolIterationLimitInfo(null);
+    try {
+      const sessionId = chatState.id;
+      if (!sessionId) {
+        throw new Error('No active chat session available');
+      }
+
+      if (protocol === 'sse') {
+        setIsStreaming(true);
+        setWaitingForResponse(true);
+      }
+
+      const resp = await graph.continueToolExecution(
+        sessionId,
+        chatState.botId || persona?.id,
+        newMaxIterations,
+        protocol === 'sse' ? 'SSE' : 'NONE',
+      );
+
+      if (!resp) throw new Error('No response from server');
+
+      if ((resp as any).__typename === 'ReactorErrorResponse') {
+        setIsStreaming(false);
+        setWaitingForResponse(false);
+        onError(new Error((resp as any).message));
+        return;
+      }
+
+      if ((resp as any).__typename === 'ReactorInitiateSSE') {
+        const sseResp = resp as any;
+        sse.disconnect();
+        sse.connect({
+          endpoint: sseResp.endpoint,
+          sessionId: sseResp.sessionId,
+          onConnectionOpened: async () => {
+            await graph.continueToolExecution(
+              sessionId,
+              chatState.botId || persona?.id,
+              newMaxIterations,
+              'SSE',
+            );
+          },
+        });
+        return;
+      }
+
+      if ((resp as any).__typename === 'ReactorChatMessage') {
+        const msg = resp as unknown as UXChatMessage;
+        setChatState((prevState) => ({
+          ...prevState,
+          history: [...prevState.history, msg as any],
+          updated: new Date(),
+        }));
+
+        if (protocol === 'graphql' && msg.tool_calls && (msg.tool_calls as any[]).length > 0) {
+          await processToolCallsMemoized(msg.tool_calls as any[], msg);
+        }
+      }
+    } catch (error) {
+      setIsStreaming(false);
+      setWaitingForResponse(false);
+      onError(error as Error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const loadChat = async (chatSessionId: string) => {
     setBusy(true);
     try {
@@ -1355,6 +1500,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             tokenCount: (result as any).tokenCount,
             maxTokens: (result as any).maxTokens,
             toolApprovalMode: (result as any).toolApprovalMode,
+            maxToolIterations: (result as any).maxToolIterations,
             updated: new Date(),
           }));
 
@@ -1942,6 +2088,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setChatState,
     modelOverride,
     setModelOverride: handleModelChange,
+    setMaxToolIterations,
+    continueToolExecution,
+    toolIterationLimitInfo,
+    clearToolIterationLimitInfo: () => setToolIterationLimitInfo(null),
     // Debug helpers
     protectCriticalState,
     validateChatState,

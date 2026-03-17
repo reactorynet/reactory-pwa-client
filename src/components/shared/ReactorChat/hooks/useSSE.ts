@@ -7,7 +7,8 @@ export enum StreamingEventType {
   REASONING = 'reasoning',
   TOOL_CALL = 'tool_call',
   COMPLETE = 'complete',
-  ERROR = 'error'
+  ERROR = 'error',
+  TOOL_ITERATION_LIMIT = 'tool_iteration_limit'
 }
 
 /**
@@ -84,6 +85,15 @@ export interface ReasoningStreamingEvent extends StreamingEventBase {
   };
 }
 
+export interface ToolIterationLimitStreamingEvent extends StreamingEventBase {
+  type: StreamingEventType.TOOL_ITERATION_LIMIT;
+  data: {
+    iterationsCompleted: number;
+    maxIterations: number;
+    partialContent: string;
+  };
+}
+
 export interface UseSSEOptions {
   reactory: Reactory.Client.ReactorySDK;
   onToken?: (token: TokenStreamingEvent) => void;
@@ -91,6 +101,7 @@ export interface UseSSEOptions {
   onMessage?: (message: CompletionStreamingEvent) => void;
   onError?: (error: any) => void;
   onToolCall?: (toolCall: ToolCallStreamingEvent) => void;
+  onToolIterationLimit?: (event: ToolIterationLimitStreamingEvent) => void;
 }
 
 export interface UseSSEResult {
@@ -126,7 +137,7 @@ const DRIP_THRESHOLD = 80;
  */
 const DRIP_INTERVAL_MS = 20;
 
-const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall }: UseSSEOptions): UseSSEResult => {
+const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -140,11 +151,13 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   const onMessageRef = React.useRef(onMessage);
   const onErrorRef = React.useRef(onError);
   const onToolCallRef = React.useRef(onToolCall);
+  const onToolIterationLimitRef = React.useRef(onToolIterationLimit);
   onTokenRef.current = onToken;
   onReasoningRef.current = onReasoning;
   onMessageRef.current = onMessage;
   onErrorRef.current = onError;
   onToolCallRef.current = onToolCall;
+  onToolIterationLimitRef.current = onToolIterationLimit;
 
   // Token drip-feed queue: words waiting to be emitted
   const tokenQueueRef = React.useRef<{ segments: string[]; template: TokenStreamingEvent }[]>([]);
@@ -280,6 +293,13 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
         case 'tool_call': {
           if (onToolCallRef.current) {
             void onToolCallRef.current(data as ToolCallStreamingEvent);
+          }
+          break;
+        }
+        case 'tool_iteration_limit': {
+          setIsStreaming(false);
+          if (onToolIterationLimitRef.current) {
+            onToolIterationLimitRef.current(data as ToolIterationLimitStreamingEvent);
           }
           break;
         }

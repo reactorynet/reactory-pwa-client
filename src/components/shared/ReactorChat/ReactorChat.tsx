@@ -23,6 +23,7 @@ import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel/FilesPanel';
 import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/FileExplorerSidebar';
 import TodosPanel from './components/TodosPanel';
+import ToolIterationLimitBanner from './components/ToolIterationLimitBanner';
 import DebugPanel from './components/DebugPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
@@ -155,6 +156,10 @@ export default (props) => {
     setChatState,
     modelOverride,
     setModelOverride,
+    setMaxToolIterations,
+    continueToolExecution,
+    toolIterationLimitInfo,
+    clearToolIterationLimitInfo,
   } = {
     ...chatFactory,
     isStreaming: false,
@@ -1187,6 +1192,7 @@ export default (props) => {
               providerAuthStatuses={providerAuthStatuses}
               onProviderAuthSave={saveProviderAuth}
               onProviderAuthRemove={removeProviderAuth}
+              onMaxToolIterationsChange={setMaxToolIterations}
               getToolIcon={getToolIcon}
               Material={Material}
               il8n={il8n}
@@ -1355,6 +1361,17 @@ export default (props) => {
               transition: 'transform 0.3s ease-in-out',
             },
           }}
+        />
+      )}
+
+      {toolIterationLimitInfo && (
+        <ToolIterationLimitBanner
+          iterationsCompleted={toolIterationLimitInfo.iterationsCompleted}
+          maxIterations={toolIterationLimitInfo.maxIterations}
+          onContinue={(newMax) => continueToolExecution(newMax)}
+          onStop={() => clearToolIterationLimitInfo()}
+          Material={Material}
+          il8n={il8n}
         />
       )}
       <ChatInput

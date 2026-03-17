@@ -24,6 +24,8 @@ import REACTOR_SET_MODEL_PROVIDER from "./mutations/ReactorSetChatModelProvider.
 import REACTOR_START_VOICE_SESSION from "./mutations/ReactorStartVoiceSession.graphql";
 import REACTOR_END_VOICE_SESSION from "./mutations/ReactorEndVoiceSession.graphql";
 import REACTOR_SEND_VOICE_MESSAGE from "./mutations/ReactorSendVoiceMessage.graphql";
+import REACTOR_SET_MAX_TOOL_ITERATIONS from "./mutations/ReactorSetChatMaxToolIterations.graphql";
+import REACTOR_CONTINUE_TOOL_EXECUTION from "./mutations/ReactorContinueToolExecution.graphql";
 
 export type StreamingMode = "NONE" | "SSE" | "WEBSOCKET";
 
@@ -189,6 +191,30 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response.data.ReactorSetChatToolApprovalMode;
   };
 
+  const setChatMaxToolIterations = async (
+    chatSessionId: string,
+    maxToolIterations: number
+  ): Promise<Pick<ChatState, "id" | "maxToolIterations">> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorSetChatMaxToolIterations: Pick<ChatState, "id" | "maxToolIterations"> },
+      { chatSessionId: string; maxToolIterations: number }
+    >(REACTOR_SET_MAX_TOOL_ITERATIONS as any, { chatSessionId, maxToolIterations });
+    return response.data.ReactorSetChatMaxToolIterations;
+  };
+
+  const continueToolExecution = async (
+    chatSessionId: string,
+    personaId: string,
+    maxToolIterations?: number,
+    streamingMode?: StreamingMode,
+  ): Promise<ReactorChatResponse> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorContinueToolExecution: ReactorChatResponse },
+      { chatSessionId: string; personaId: string; maxToolIterations?: number; streamingMode?: StreamingMode }
+    >(REACTOR_CONTINUE_TOOL_EXECUTION as any, { chatSessionId, personaId, maxToolIterations, streamingMode });
+    return response?.data?.ReactorContinueToolExecution as ReactorChatResponse;
+  };
+
   const attachFile = async (
     file: File,
     chatSessionId: string
@@ -316,6 +342,8 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     startChatSession,
     sendMessage,
     setChatToolApprovalMode,
+    setChatMaxToolIterations,
+    continueToolExecution,
     setChatModelProvider,
     attachFile,
     askQuestionAudio,

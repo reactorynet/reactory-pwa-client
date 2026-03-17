@@ -360,6 +360,12 @@ export type ChatState = {
   toolApprovalMode?: ToolApprovalMode; // Added field for tool approval mode
 
   /**
+   * The maximum number of auto tool call iterations before pausing for user confirmation.
+   * When null/undefined, the server default (100) is used.
+   */
+  maxToolIterations?: number;
+
+  /**
    * A list of MCP Clients
    */
   mcpClients?: MCPClient[],

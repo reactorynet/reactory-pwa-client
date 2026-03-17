@@ -35,6 +35,8 @@ interface ToolsPanelProps {
   }) => Promise<void>;
   /** Remove provider auth credentials */
   onProviderAuthRemove?: (providerId: string) => Promise<void>;
+  /** Callback when user changes max tool iterations */
+  onMaxToolIterationsChange?: (maxIterations: number) => void;
   Material: any;
   toCamelCaseLabel: (str: string) => string;
   getToolIcon: (tool: any) => string;
@@ -61,6 +63,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   providerAuthStatuses = [],
   onProviderAuthSave,
   onProviderAuthRemove,
+  onMaxToolIterationsChange,
   Material,
   toCamelCaseLabel,
   getToolIcon,
@@ -396,6 +399,33 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
           </Box>
         )}
       </Box>
+
+      {/* Max Auto Tool Calls */}
+      {chatState?.toolApprovalMode === ToolApprovalMode.AUTO && (
+        <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+            {il8n?.t('reactor.client.tools.maxIterations', { defaultValue: 'Max Auto Tool Calls' })}
+          </Typography>
+          <TextField
+            type="number"
+            size="small"
+            value={chatState?.maxToolIterations ?? 100}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              if (val >= 1 && val <= 500 && onMaxToolIterationsChange) {
+                onMaxToolIterationsChange(val);
+              }
+            }}
+            inputProps={{ min: 1, max: 500 }}
+            sx={{ width: 120 }}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            {il8n?.t('reactor.client.tools.maxIterations.description', {
+              defaultValue: 'Maximum number of tool calls the agent can make automatically before pausing for confirmation.'
+            })}
+          </Typography>
+        </Box>
+      )}
 
       {/* Tools Grid */}
       {chatState?.tools && chatState.tools.length > 0 ? (

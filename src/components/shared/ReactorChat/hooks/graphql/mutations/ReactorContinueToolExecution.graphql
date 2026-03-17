@@ -1,0 +1,33 @@
+mutation ReactorContinueToolExecution($chatSessionId: String!, $personaId: String!, $maxToolIterations: Int, $streamingMode: StreamingMode) {
+  ReactorContinueToolExecution(chatSessionId: $chatSessionId, personaId: $personaId, maxToolIterations: $maxToolIterations, streamingMode: $streamingMode) {
+    __typename
+    ... on ReactorChatMessage {
+      sessionId
+      id
+      role
+      content
+      thinking
+      rating
+      timestamp
+      tool_calls { id type function { name arguments } status }
+      tool_results { id name content timestamp }
+      tool_errors { id name error timestamp }
+    }
+    ... on ReactorInitiateSSE {
+      sessionId
+      endpoint
+      token
+      status
+      expiry
+      headers
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}
