@@ -799,8 +799,14 @@ export default (props) => {
     if (selectedPersona) {
       reactory.log(`Creating new chat with persona: ${selectedPersona.name}`);
       newChat();
+      // Clear the sessionId from the URL so the old session isn't reloaded
+      const searchQuery = `?personaId=${selectedPersona.id}`;
+      navigate({
+        pathname: location.pathname,
+        search: searchQuery,
+      });
     }
-  }, [selectedPersona, newChat, reactory]);
+  }, [selectedPersona, newChat, reactory, navigate, location.pathname]);
 
   const handleCannedPrompts = useCallback(() => {
     // TODO: Implement canned prompts logic
