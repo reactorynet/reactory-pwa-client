@@ -67,8 +67,12 @@ export interface CompletionStreamingEvent extends StreamingEventBase {
 export interface ErrorStreamingEvent extends StreamingEventBase {
   type: StreamingEventType.ERROR;
   data: {
+    /** Error code from the server (e.g. 'STREAM_ERROR', 'CONNECTION_ERROR') */
+    code: string;
+    /** Human-readable error message */
     message: string;
-    error: Error;
+    /** Optional additional error details */
+    details?: any;
   };
 }
 
