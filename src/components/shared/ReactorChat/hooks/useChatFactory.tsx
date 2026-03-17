@@ -1140,24 +1140,6 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     });
   }, [chatState.history, chatState.tools, chatState.macros]);
 
-
-  const newChat = async () => {
-    setBusy(true);
-    try {
-      // Initialize a brand new session
-      const newSessionId = await initializeChat(persona);
-      if (newSessionId) {
-        setIsInitialized(true);
-      } else {
-        throw new Error('Failed to initialize new chat');
-      }
-    } catch (error) {
-      onError(error);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const fetchConversations = async (filter: any) => {
     try {
       const list = await graph.listConversations(filter);
@@ -1180,6 +1162,37 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onError(error);
     }
   };
+
+  const newChat = async () => {
+    setBusy(true);
+    try {
+      // Full reset for a true "New Chat" - addresses the bug where history was not cleared
+      const initialState = getInitialChatState();
+      setChatState(initialState);
+      setIsInitialized(false);
+      setToolIterationLimitInfo(null);
+      setIsStreaming(false);
+      setWaitingForResponse(false);
+      setModelOverride(null);
+      
+      // Disconnect any existing SSE connection to ensure clean state
+      sse.disconnect();
+      
+      // Initialize a brand new session
+      const newSessionId = await initializeChat(persona);
+      if (newSessionId) {
+        setIsInitialized(true);
+        reactory.info(`ChatFactory: Started completely new chat session ${newSessionId}`);
+      } else {
+        throw new Error('Failed to initialize new chat');
+      }
+    } catch (error) {
+      onError(error as Error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
 
   // Upload file to chat session
   const uploadFile = async (file: File, chatSessionId: string) => {
@@ -1217,35 +1230,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       reactory.info(`ChatFactory: Attaching file ${file.name} to session ${sessionId}`);
       
-const newChat = async () => {
-  setBusy(true);
-  try {
-    // Full reset for a true "New Chat" - addresses the bug where history was not cleared
-    const initialState = getInitialChatState();
-    setChatState(initialState);
-    setIsInitialized(false);
-    setToolIterationLimitInfo(null);
-    setIsStreaming(false);
-    setWaitingForResponse(false);
-    setModelOverride(null);
-    
-    // Disconnect any existing SSE connection to ensure clean state
-    sse.disconnect();
-    
-    // Initialize a brand new session
-    const newSessionId = await initializeChat(persona);
-    if (newSessionId) {
-      setIsInitialized(true);
-      reactory.info(`ChatFactory: Started completely new chat session ${newSessionId}`);
-    } else {
-      throw new Error('Failed to initialize new chat');
-    }
-  } catch (error) {
-    onError(error as Error);
-  } finally {
-    setBusy(false);
-  }
-}
+      const result = await graph.attachFile(file, sessionId);
       if (result) {
         if ((result as any).__typename === 'ReactorErrorResponse') {
           onError(new Error((result as any).message));
