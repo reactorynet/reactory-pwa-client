@@ -1,6 +1,7 @@
 import React from 'react';
 import { gql } from '@apollo/client';
 import { ChatState } from '../../types';
+import useDesktopEnvironment from '../../hooks/useDesktopEnvironment';
 
 export type DockSide = 'left' | 'right';
 
@@ -127,6 +128,8 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     const width = window.innerWidth || document.documentElement.clientWidth;
     return width < 900;
   }, []);
+
+  const desktopEnv = useDesktopEnvironment();
 
   const loadPath = React.useCallback(async (path: string) => {
     setLoadingPaths(prev => new Set(prev).add(path));
@@ -386,7 +389,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
       >
         <FolderOpen sx={{ fontSize: 18 }} color="primary" />
         <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600, fontSize: '0.85rem' }}>
-          {il8n?.t('reactor.client.fileExplorer.title', { defaultValue: 'My Files' })}
+          {il8n?.t('reactor.client.fileExplorer.title', { defaultValue: 'My Files' })} {desktopEnv.isDesktop ? '(Local)' : '(Cloud)'}
         </Typography>
         {fileCount > 0 && (
           <Chip label={fileCount} size="small" color="default" sx={{ height: 20, fontSize: '0.7rem' }} />
