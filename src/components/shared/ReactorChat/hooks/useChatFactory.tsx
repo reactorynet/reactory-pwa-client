@@ -216,7 +216,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       pendingToolCallsRef.current = [];
       if (accumulated.length > 0 && processToolCallsRef.current) {
         const toolMessage = {
-          id: accumulated[0].id,
+          id: reactory.utils.uuid(),
           role: "assistant",
           content: "",
           timestamp: new Date(),
@@ -599,7 +599,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     
     // create tool call construct
     const toolCallMessage = {
-      id: toolCall.data.id,
+      id: reactory.utils.uuid(),
       role: "assistant",
       content: "",
       timestamp: new Date(),

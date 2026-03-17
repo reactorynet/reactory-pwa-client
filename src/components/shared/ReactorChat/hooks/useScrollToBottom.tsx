@@ -728,7 +728,6 @@ const ChatList = (props: {
                               size="small"
                               sx={{ fontSize: '0.875rem' }}
                               onClick={() => handleRetry(message)}
-                              title="Retry this message"
                             >
                               <Icon sx={{ fontSize: '1rem' }}>refresh</Icon>
                             </IconButton>
