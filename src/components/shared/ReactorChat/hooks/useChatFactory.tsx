@@ -673,22 +673,19 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           // Start building content from the first token
           history[lastIndex] = {
             ...lastMessage,
-            content: token.data.content,
+            content: token.data.delta || token.data.content || "",
             timestamp: new Date(),
           };
         } else if (lastMessage.content.startsWith("Calling tool:")) {
           // Keep the tool call message as is, don't update with tokens
           // The final content will come from the completion event
         } else {
-          // Regular token accumulation
-          if (waitingForResponse) {
-            lastMessage.content = token.data.content;
-          } else {
-            lastMessage.content += token.data.content;
-          }
-          
+          // Regular token accumulation — always append the delta.
+          // The server sends incremental deltas (not accumulated text),
+          // so we always concatenate.
           history[lastIndex] = {
             ...lastMessage,
+            content: lastMessage.content + (token.data.delta || token.data.content || ""),
             timestamp: new Date(),
           };
         }
@@ -704,7 +701,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     });
     setIsStreaming(true);
     setWaitingForResponse(false);
-  }, [chatState?.id, waitingForResponse]);
+  }, [chatState?.id]);
 
   const reasoningBufferRef = React.useRef<string>("");
   const reasoningFlushTimerRef = React.useRef<NodeJS.Timeout | null>(null);
