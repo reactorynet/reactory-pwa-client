@@ -5,6 +5,7 @@ interface DebugPanelProps {
   open: boolean;
   onClose: () => void;
   chatState?: ChatState;
+  modelOverride?: { modelId?: string; providerId?: string } | null;
   onRefreshVars?: () => void;
   Material: any;
   il8n: any;
@@ -18,6 +19,7 @@ function formatDate(d: Date | string | undefined): string {
 
 const DebugPanel: React.FC<DebugPanelProps> = ({
   open,
+  modelOverride,
   onClose,
   chatState,
   onRefreshVars,
@@ -172,6 +174,28 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
       <Box sx={{ flex: 1, overflow: 'auto', px: 2, pb: 2 }}>
         {/* Session Info */}
         <SectionHeader id="session" title="Session Info" />
+        <Collapse in={expandedSections.has('session')}>
+          <Box sx={{ mb: 1 }}>
+            <InfoRow label="Session ID" value={chatState?.id} />
+            <InfoRow 
+              label="Model ID" 
+              value={
+                modelOverride?.modelId 
+                  ? `${modelOverride.modelId} (override)` 
+                  : (chatState?.modelId 
+                      ? chatState.modelId 
+                      : (chatState?.persona?.modelId || 'Using Persona Default'))
+              } 
+            />
+            <InfoRow 
+              label="Provider ID" 
+              value={chatState?.providerId || chatState?.persona?.providerId || 'Default Provider'} 
+            />
+            <InfoRow label="Tool Approval" value={chatState?.toolApprovalMode} />
+            <InfoRow label="Created" value={formatDate(chatState?.created)} />
+            <InfoRow label="Updated" value={formatDate(chatState?.updated)} />
+          </Box>
+        </Collapse>
         <Collapse in={expandedSections.has('session')}>
           <Box sx={{ mb: 1 }}>
             <InfoRow label="Session ID" value={chatState?.id} />

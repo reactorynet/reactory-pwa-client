@@ -438,7 +438,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       vars: {},
       started: new Date(),
       updated: new Date(),
-      modelId: persona?.modelId || 'grok-2-latest',
+      modelId: persona?.modelId || 'gpt-4o-mini',      
       user: reactory.getUser(),
       mcpClients: [],
       toolApprovalMode: ToolApprovalMode.PROMPT,

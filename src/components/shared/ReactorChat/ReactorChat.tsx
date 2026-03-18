@@ -1245,6 +1245,7 @@ export default (props) => {
             {/* Debug Panel - Slides up from bottom (dev mode only) */}
             {reactory.isDevelopmentMode() && (
               <DebugPanel
+                modelOverride={modelOverride}                
                 open={debugPanelOpen}
                 onClose={handleDebugPanelClose}
                 chatState={chatState}
