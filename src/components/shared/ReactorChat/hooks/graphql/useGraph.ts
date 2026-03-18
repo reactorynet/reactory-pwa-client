@@ -93,6 +93,8 @@ export interface ReactorSendMessageInput {
   providerId?: string;
   /** When true, skip persisting the message — tool results are already in history from executeMacro */
   continueAfterTools?: boolean;
+  /** Optional base64 image data URLs for vision-capable models */
+  images?: string[];
 }
 
 // --- Voice session types ---

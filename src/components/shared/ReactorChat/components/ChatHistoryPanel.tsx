@@ -98,7 +98,12 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                     ? chat.history.find((item) => item.role === 'user')
                     : null;
                   const persona = chat.persona;
-                  const label = firstUserMsg?.content ?? il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
+                  const rawLabel = firstUserMsg?.content ?? il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
+                  const label = typeof rawLabel === 'string'
+                    ? rawLabel
+                    : Array.isArray(rawLabel)
+                      ? (rawLabel.find((p: any) => p.type === 'text')?.text ?? '[Image message]')
+                      : String(rawLabel);
 
                   return (
                     <ListItem
@@ -187,9 +192,12 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
               </Typography>
               <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
                 {chatState.history.slice(-5).map((message, index) => {
-                  const messagePreview = typeof message.content === 'string'
-                    ? message.content.substring(0, 100)
-                    : 'Message content not available';
+                  const rawContent = message.content as unknown;
+                  const messagePreview = typeof rawContent === 'string'
+                    ? rawContent.substring(0, 100)
+                    : Array.isArray(rawContent)
+                      ? ((rawContent as any[]).find((p) => p.type === 'text')?.text?.substring(0, 100) ?? '[Image message]')
+                      : 'Message content not available';
                   const truncatedPreview = messagePreview.length > 100
                     ? messagePreview + '...'
                     : messagePreview;

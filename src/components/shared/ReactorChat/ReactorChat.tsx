@@ -88,6 +88,7 @@ export default (props) => {
     providerAuthStatuses,
     saveProviderAuth,
     removeProviderAuth,
+    getModelById,
   } = useProviders();
 
   const scrollToBottom = useCallback((message: any) => {
@@ -818,8 +819,18 @@ export default (props) => {
     reactory.log(`Favorite persona: ${selectedPersona?.name} - to be implemented`);
   }, [selectedPersona, reactory]);
 
-  const handleSendMessage = useCallback((message: string) => {
-    sendMessage(message, chatState?.id);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
+
+  const supportsImages = useMemo(() => {
+    const activeModelId = modelOverride?.modelId || chatState?.modelId || selectedPersona?.modelId;
+    if (!activeModelId) return false;
+    const model = getModelById(activeModelId);
+    return model?.supportedMediaTypes?.includes('image') ?? false;
+  }, [modelOverride?.modelId, chatState?.modelId, selectedPersona?.modelId, getModelById]);
+
+  const handleSendMessage = useCallback((message: string, images?: string[]) => {
+    sendMessage(message, chatState?.id, images);
+    setPendingImages([]);
   }, [sendMessage, chatState?.id]);
 
   const handleStreamingToggle = useCallback((enabled: boolean) => {
@@ -1396,6 +1407,14 @@ export default (props) => {
           }
         }, [uploadFile, chatState?.id])}
         chatState={chatState}
+        supportsImages={supportsImages}
+        pendingImages={pendingImages}
+        onPastedImages={React.useCallback((images: string[]) => {
+          setPendingImages((prev) => [...prev, ...images]);
+        }, [])}
+        onRemovePendingImage={React.useCallback((index: number) => {
+          setPendingImages((prev) => prev.filter((_, i) => i !== index));
+        }, [])}
       />
     </Box>
   );

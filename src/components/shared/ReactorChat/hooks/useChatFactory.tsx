@@ -13,7 +13,7 @@ interface ChatFactoryHookResult {
   // for a response.
   busy: boolean
   // function used to send a message to the active chat.
-  sendMessage: (message: string, sessionId?: string) => Promise<void>
+  sendMessage: (message: string, sessionId?: string, images?: string[]) => Promise<void>
   // loads a chat session by id
   loadChat: (chatSessionId: string) => Promise<void>
   // starts a new chat session
@@ -233,7 +233,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }
 
-  const sendMessage = async (message: string, chatSessionId: string) => {
+  const sendMessage = async (message: string, chatSessionId: string, images?: string[]) => {
     setBusy(true);
     try {
       // check if the message is empty
@@ -286,7 +286,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           id: reactory.utils.uuid(),
           timestamp: new Date(),
           role: "user",
-          content: message,
+          content: images && images.length > 0
+            ? [{ type: 'text', text: message }, ...images.map((url) => ({ type: 'image_url', image_url: { url } }))] as any
+            : message,
           sessionId: chatState.id,
         });
       }
@@ -322,6 +324,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           streamingMode: protocol === 'sse' ? 'SSE' : 'NONE',
           ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
           ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
+          ...(images && images.length > 0 ? { images } : {}),
         } as ReactorSendMessageInput);
 
         if (!resp) throw new Error('No response from server');
@@ -1056,7 +1059,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     console.log('🔧 [useChatFactory] onMessage called:', {
       messageId: message.id,
       messageRole: message.role,
-      messageContent: message.content?.substring(0, 100),
+      messageContent: typeof message.content === 'string'
+        ? message.content?.substring(0, 100)
+        : Array.isArray(message.content)
+          ? `[content-parts: ${(message.content as any[]).length}]`
+          : String(message.content ?? '').substring(0, 100),
       currentHistoryLength: chatState.history?.length || 0,
       currentChatStateId: chatState.id
     });

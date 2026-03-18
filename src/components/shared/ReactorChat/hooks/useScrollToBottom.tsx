@@ -270,8 +270,9 @@ const ChatList = (props: {
     // Only show for user messages that have content
     return message.role === 'user' &&
       message.content &&
-      typeof message.content === 'string' &&
-      message.content.trim().length > 0;
+      (typeof message.content === 'string'
+        ? message.content.trim().length > 0
+        : Array.isArray(message.content) && (message.content as any[]).length > 0);
   }
 
   const handleRetry = (message: UXChatMessage) => {
@@ -288,7 +289,9 @@ const ChatList = (props: {
 
   const handleCopy = async (message: UXChatMessage) => {
     try {
-      const textToCopy = message.content || getMessageText(message);
+      const textToCopy = typeof message.content === 'string'
+        ? message.content
+        : getMessageText(message);
       await navigator.clipboard.writeText(textToCopy);
       // Could add a toast notification here
       if (onCopyMessage) {
@@ -322,6 +325,16 @@ const ChatList = (props: {
 
     if (typeof message.content === 'string' && message.content.trim().length > 0) {
       return message.content;
+    }
+
+    // Handle content-parts arrays from vision model messages
+    if (Array.isArray(message.content)) {
+      const textParts = (message.content as any[])
+        .filter((part) => part?.type === 'text')
+        .map((part) => part.text || '')
+        .join('\n')
+        .trim();
+      if (textParts.length > 0) return textParts;
     }
 
     if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
@@ -665,6 +678,29 @@ const ChatList = (props: {
                         <Typography variant="body1">
                           {memoizedRenderContent(getMessageText(message))}
                         </Typography>
+                        {/* Render images from content-parts (vision model messages) */}
+                        {Array.isArray(message.content) && (message.content as any[]).some((p) => p?.type === 'image_url') && (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                            {(message.content as any[])
+                              .filter((part) => part?.type === 'image_url')
+                              .map((part, imgIdx) => (
+                                <img
+                                  key={imgIdx}
+                                  src={part.image_url?.url}
+                                  alt={`Attached image ${imgIdx + 1}`}
+                                  style={{
+                                    maxWidth: 300,
+                                    maxHeight: 300,
+                                    borderRadius: 4,
+                                    objectFit: 'contain',
+                                    cursor: 'pointer',
+                                    border: '1px solid rgba(0,0,0,0.12)',
+                                  }}
+                                  onClick={() => window.open(part.image_url?.url, '_blank')}
+                                />
+                              ))}
+                          </Box>
+                        )}
                       </>
                     )}
                     {/* Render tool errors if present — only for non-tool-call messages (tool-call messages show errors inline per chip) */}
