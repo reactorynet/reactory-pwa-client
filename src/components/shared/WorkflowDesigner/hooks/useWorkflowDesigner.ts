@@ -122,6 +122,8 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
 
   // Refs for avoiding stale closures
   const definitionRef = useRef(definition);
+  const viewportRef = useRef(viewport);
+  const selectionRef = useRef(selection);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   const lastSavedDefinitionRef = useRef<WorkflowDefinition>(cloneDefinition(definition));
 
@@ -338,34 +340,53 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     });
   }, [addToHistory]);
 
-  // Viewport operations
+  // Viewport operations -- only update viewport state (no definition clone/update).
+  // Viewport metadata is synced into the definition lazily before save.
   const setViewportState = useCallback((newViewport: CanvasViewport) => {
     setViewport(newViewport);
-    
-    // Update metadata
-    const newDefinition = cloneDefinition(definitionRef.current);
-    if (!newDefinition.metadata) newDefinition.metadata = {};
-    if (!newDefinition.metadata.canvas) newDefinition.metadata.canvas = {};
-    
-    newDefinition.metadata.canvas.zoom = newViewport.zoom;
-    newDefinition.metadata.canvas.panX = newViewport.panX;
-    newDefinition.metadata.canvas.panY = newViewport.panY;
-    
-    setDefinition(newDefinition);
+    viewportRef.current = newViewport;
   }, []);
 
-  // Selection operations
+  // Selection operations -- same lazy-sync approach as viewport.
   const setSelectionState = useCallback((newSelection: SelectionState) => {
     setSelection(newSelection);
-    
-    // Update metadata
-    const newDefinition = cloneDefinition(definitionRef.current);
-    if (!newDefinition.metadata) newDefinition.metadata = {};
-    if (!newDefinition.metadata.ui) newDefinition.metadata.ui = {};
-    
-    newDefinition.metadata.ui.selectedItems = [...newSelection.selectedSteps];
-    
-    setDefinition(newDefinition);
+    selectionRef.current = newSelection;
+  }, []);
+
+  // Flush viewport and selection metadata into the definition object.
+  // Called right before save so we don't lose canvas position / selection.
+  const syncMetadataToDefinition = useCallback(() => {
+    const def = definitionRef.current;
+    if (!def.metadata) def.metadata = {};
+    if (!def.metadata.canvas) def.metadata.canvas = {};
+    if (!def.metadata.ui) def.metadata.ui = {};
+
+    const v = viewportRef.current;
+    const s = selectionRef.current;
+
+    const canvasChanged =
+      def.metadata.canvas.zoom !== v.zoom ||
+      def.metadata.canvas.panX !== v.panX ||
+      def.metadata.canvas.panY !== v.panY;
+
+    const selectionChanged =
+      JSON.stringify(def.metadata.ui.selectedItems ?? []) !==
+      JSON.stringify([...s.selectedSteps]);
+
+    if (canvasChanged || selectionChanged) {
+      const updated = cloneDefinition(def);
+      if (!updated.metadata) updated.metadata = {};
+      if (!updated.metadata.canvas) updated.metadata.canvas = {};
+      if (!updated.metadata.ui) updated.metadata.ui = {};
+
+      updated.metadata.canvas.zoom = v.zoom;
+      updated.metadata.canvas.panX = v.panX;
+      updated.metadata.canvas.panY = v.panY;
+      updated.metadata.ui.selectedItems = [...s.selectedSteps];
+
+      setDefinition(updated);
+      definitionRef.current = updated;
+    }
   }, []);
 
   // Save and load operations
@@ -374,6 +395,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     
     try {
       setIsSaving(true);
+      syncMetadataToDefinition();
       await onSave(definitionRef.current);
       lastSavedDefinitionRef.current = cloneDefinition(definitionRef.current);
       setIsDirty(false);
@@ -383,7 +405,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     } finally {
       setIsSaving(false);
     }
-  }, [onSave]);
+  }, [onSave, syncMetadataToDefinition]);
 
   const load = useCallback(async (loadWorkflowId: string) => {
     if (!onLoad) return;

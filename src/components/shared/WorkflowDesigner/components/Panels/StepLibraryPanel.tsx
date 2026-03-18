@@ -1,3 +1,4 @@
+import React from 'react';
 import { useReactory } from "@reactory/client-core/api";
 import {
   StepDefinition,
@@ -8,7 +9,7 @@ import StepCategoryList from './StepCategoryList';
 import StepSearch from './StepSearch';
 import StepItem from './StepItem';
 
-export default function StepLibraryPanel(props: StepLibraryPanelProps) {
+function StepLibraryPanelInner(props: StepLibraryPanelProps) {
   const {
     stepLibrary,
     categories,
@@ -311,3 +312,5 @@ export default function StepLibraryPanel(props: StepLibraryPanelProps) {
     </Box>
   );
 }
+
+export default React.memo(StepLibraryPanelInner);

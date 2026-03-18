@@ -1,3 +1,4 @@
+import React from 'react';
 import { useReactory } from "@reactory/client-core/api";
 
 interface StepSearchProps {
@@ -6,7 +7,7 @@ interface StepSearchProps {
   onClear: () => void;
 }
 
-export default function StepSearch({ searchTerm, onSearchChange, onClear }: StepSearchProps) {
+function StepSearchInner({ searchTerm, onSearchChange, onClear }: StepSearchProps) {
   const reactory = useReactory();
   const {
     React,
@@ -82,3 +83,5 @@ export default function StepSearch({ searchTerm, onSearchChange, onClear }: Step
     />
   );
 }
+
+export default React.memo(StepSearchInner);

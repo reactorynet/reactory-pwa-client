@@ -1,3 +1,4 @@
+import React from 'react';
 import { useReactory } from "@reactory/client-core/api";
 import { StepCategory } from '../../types';
 
@@ -8,7 +9,7 @@ interface StepCategoryListProps {
   onCategorySelect: (categoryId?: string) => void;
 }
 
-export default function StepCategoryList({ 
+function StepCategoryListInner({ 
   categories, 
   selectedCategory, 
   stepCounts, 
@@ -220,3 +221,5 @@ export default function StepCategoryList({
     </Box>
   );
 }
+
+export default React.memo(StepCategoryListInner);

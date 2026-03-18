@@ -1,5 +1,5 @@
+import React, { useState, useCallback } from 'react';
 import { useReactory } from "@reactory/client-core/api";
-import { useState, useCallback } from 'react';
 import { StepDefinition, StepCategory } from '../../types';
 
 interface StepItemProps {
@@ -9,7 +9,7 @@ interface StepItemProps {
   onClick: (step: StepDefinition) => void;
 }
 
-export default function StepItem({ step, category, onDragStart, onClick }: StepItemProps) {
+function StepItemInner({ step, category, onDragStart, onClick }: StepItemProps) {
   const reactory = useReactory();
   const {
     React,
@@ -306,3 +306,5 @@ export default function StepItem({ step, category, onDragStart, onClick }: StepI
     </Card>
   );
 }
+
+export default React.memo(StepItemInner);
