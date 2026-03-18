@@ -358,6 +358,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       es.addEventListener('error', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('tool_call', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
 
       // Also listen for generic message events as fallback
       es.onmessage = (event) => handleMessage(event);
