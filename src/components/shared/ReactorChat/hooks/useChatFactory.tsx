@@ -4,7 +4,7 @@ import useMacros from "./useMacros"
 import { exec } from "child_process"
 import ToolPrompt from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
-import useSSE, { CompletionStreamingEvent, ReasoningStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
+import useSSE, { CompletionStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
 
 interface ChatFactoryHookResult {
   // represents the chat state
@@ -772,6 +772,34 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       setBusy(false);
     }, [reactory]);
 
+    /**
+     * Handle retry events from the server when a provider hits rate limiting
+     * or other transient errors and is retrying with exponential backoff.
+     */
+    const onRetryReceived = React.useCallback((event: RetryStreamingEvent) => {
+      const { attempt, maxAttempts, retryAfterMs, reason } = event.data;
+      const delaySec = Math.round(retryAfterMs / 1000);
+      reactory.log(
+        `[useChatFactory] Provider retry: ${reason} — attempt ${attempt}/${maxAttempts}, retrying in ${delaySec}s`,
+        event.data,
+        'warning'
+      );
+
+      // Update the streaming placeholder message to show retry status
+      setChatState((prevState) => {
+        const history = [...prevState.history];
+        const lastIndex = history.length - 1;
+        if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
+          history[lastIndex] = {
+            ...history[lastIndex],
+            content: `${reason}. Retrying in ${delaySec}s (attempt ${attempt}/${maxAttempts})…`,
+            timestamp: new Date(),
+          };
+        }
+        return { ...prevState, history };
+      });
+    }, [reactory]);
+
     const graph = useGraph({ reactory });
     const sse = useSSE({
       reactory,
@@ -781,6 +809,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onMessage: onSSEMessageReceived,
       onError: (e) => { onError(e); props.onStreamError?.(e); },
       onToolIterationLimit: onToolIterationLimitReceived,
+      onRetry: onRetryReceived,
     });
 
   /**

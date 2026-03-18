@@ -195,27 +195,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
             <InfoRow label="Created" value={formatDate(chatState?.created)} />
             <InfoRow label="Updated" value={formatDate(chatState?.updated)} />
           </Box>
-        </Collapse>
-        <Collapse in={expandedSections.has('session')}>
-          <Box sx={{ mb: 1 }}>
-            <InfoRow label="Session ID" value={chatState?.id} />
-            <InfoRow 
-              label="Model ID" 
-              value={
-                chatState?.modelId 
-                  ? chatState.modelId 
-                  : (chatState?.persona?.modelId || 'Using Persona Default')
-              } 
-            />
-            <InfoRow 
-              label="Provider ID" 
-              value={chatState?.providerId || chatState?.persona?.providerId || 'Default Provider'} 
-            />
-            <InfoRow label="Tool Approval" value={chatState?.toolApprovalMode} />
-            <InfoRow label="Created" value={formatDate(chatState?.created)} />
-            <InfoRow label="Updated" value={formatDate(chatState?.updated)} />
-          </Box>
-        </Collapse>
+        </Collapse>        
         <Divider sx={{ my: 0.5 }} />
 
         {/* Token Stats */}

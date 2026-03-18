@@ -8,7 +8,8 @@ export enum StreamingEventType {
   TOOL_CALL = 'tool_call',
   COMPLETE = 'complete',
   ERROR = 'error',
-  TOOL_ITERATION_LIMIT = 'tool_iteration_limit'
+  TOOL_ITERATION_LIMIT = 'tool_iteration_limit',
+  RETRY = 'retry'
 }
 
 /**
@@ -98,6 +99,24 @@ export interface ToolIterationLimitStreamingEvent extends StreamingEventBase {
   };
 }
 
+/**
+ * Retry streaming event — the provider hit a retryable error and will
+ * automatically retry after a backoff period.
+ */
+export interface RetryStreamingEvent extends StreamingEventBase {
+  type: StreamingEventType.RETRY;
+  data: {
+    /** Current retry attempt (1-based) */
+    attempt: number;
+    /** Maximum number of retries that will be attempted */
+    maxAttempts: number;
+    /** Backoff delay in milliseconds before the next attempt */
+    retryAfterMs: number;
+    /** Human-readable reason for the retry */
+    reason: string;
+  };
+}
+
 export interface UseSSEOptions {
   reactory: Reactory.Client.ReactorySDK;
   onToken?: (token: TokenStreamingEvent) => void;
@@ -106,6 +125,7 @@ export interface UseSSEOptions {
   onError?: (error: any) => void;
   onToolCall?: (toolCall: ToolCallStreamingEvent) => void;
   onToolIterationLimit?: (event: ToolIterationLimitStreamingEvent) => void;
+  onRetry?: (event: RetryStreamingEvent) => void;
 }
 
 export interface UseSSEResult {
@@ -141,7 +161,7 @@ const DRIP_THRESHOLD = 80;
  */
 const DRIP_INTERVAL_MS = 20;
 
-const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit }: UseSSEOptions): UseSSEResult => {
+const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -156,12 +176,14 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   const onErrorRef = React.useRef(onError);
   const onToolCallRef = React.useRef(onToolCall);
   const onToolIterationLimitRef = React.useRef(onToolIterationLimit);
+  const onRetryRef = React.useRef(onRetry);
   onTokenRef.current = onToken;
   onReasoningRef.current = onReasoning;
   onMessageRef.current = onMessage;
   onErrorRef.current = onError;
   onToolCallRef.current = onToolCall;
   onToolIterationLimitRef.current = onToolIterationLimit;
+  onRetryRef.current = onRetry;
 
   // Token drip-feed queue: words waiting to be emitted
   const tokenQueueRef = React.useRef<{ segments: string[]; template: TokenStreamingEvent }[]>([]);
@@ -304,6 +326,12 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           setIsStreaming(false);
           if (onToolIterationLimitRef.current) {
             onToolIterationLimitRef.current(data as ToolIterationLimitStreamingEvent);
+          }
+          break;
+        }
+        case 'retry': {
+          if (onRetryRef.current) {
+            onRetryRef.current(data as RetryStreamingEvent);
           }
           break;
         }
