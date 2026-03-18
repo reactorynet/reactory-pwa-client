@@ -48,6 +48,17 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
     () => new Set(['session', 'tokens'])
   );
 
+  // Auto-refresh when panel opens
+  React.useEffect(() => {
+    if (open && onRefreshVars) {
+      // Small delay to ensure the panel animation completes and state is ready
+      const timer = setTimeout(() => {
+        onRefreshVars();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [open, onRefreshVars]);
+
   const toggleSection = React.useCallback((section: string) => {
     setExpandedSections(prev => {
       const next = new Set(prev);
@@ -88,7 +99,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
   const varsJson = React.useMemo(() => {
     if (!chatState?.vars) return '{}';
     try { return JSON.stringify(chatState.vars, null, 2); }
-    catch { return '{ "error": "Could not serialize vars" }'; }
+    catch { return '{ \"error\": \"Could not serialize vars\" }'; }
   }, [chatState?.vars]);
 
   const SectionHeader: React.FC<{ id: string; title: string }> = ({ id, title }) => (
@@ -164,8 +175,18 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
         <Collapse in={expandedSections.has('session')}>
           <Box sx={{ mb: 1 }}>
             <InfoRow label="Session ID" value={chatState?.id} />
-            <InfoRow label="Model ID" value={chatState?.modelId} />
-            <InfoRow label="Provider ID" value={chatState?.providerId} />
+            <InfoRow 
+              label="Model ID" 
+              value={
+                chatState?.modelId 
+                  ? chatState.modelId 
+                  : (chatState?.persona?.modelId || 'Using Persona Default')
+              } 
+            />
+            <InfoRow 
+              label="Provider ID" 
+              value={chatState?.providerId || chatState?.persona?.providerId || 'Default Provider'} 
+            />
             <InfoRow label="Tool Approval" value={chatState?.toolApprovalMode} />
             <InfoRow label="Created" value={formatDate(chatState?.created)} />
             <InfoRow label="Updated" value={formatDate(chatState?.updated)} />

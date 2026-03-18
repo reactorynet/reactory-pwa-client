@@ -64,6 +64,17 @@ const TodosPanel: React.FC<TodosPanelProps> = ({
 
   const [expandedLists, setExpandedLists] = React.useState<Set<string>>(new Set());
 
+  // Auto-refresh when panel opens
+  React.useEffect(() => {
+    if (open && onRefreshVars) {
+      // Small delay to ensure the panel animation completes and state is ready
+      const timer = setTimeout(() => {
+        onRefreshVars();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [open, onRefreshVars]);
+
   const toggleList = React.useCallback((listId: string) => {
     setExpandedLists(prev => {
       const next = new Set(prev);
