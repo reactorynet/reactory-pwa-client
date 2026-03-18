@@ -46,6 +46,16 @@ interface YamlLoadError {
   column?: number;
 }
 
+/**
+ * A step-level validation error returned by the server's YAML executor validation.
+ */
+interface ServerValidationError {
+  /** Step ID (populated for step-specific errors) */
+  field?: string | null;
+  message: string;
+  code?: string | null;
+}
+
 type YamlLoadStatus = 'SUCCESS' | 'PARTIAL' | 'NOT_FOUND' | 'IO_ERROR' | 'PARSE_ERROR' | 'REGISTRY_ERROR' | null;
 
 /**
@@ -60,6 +70,7 @@ function useYamlWorkflowLoader(
 ) {
   const [yamlLoading, setYamlLoading] = useState<boolean>(false);
   const [yamlErrors, setYamlErrors] = useState<YamlLoadError[]>([]);
+  const [serverValidationErrors, setServerValidationErrors] = useState<ServerValidationError[]>([]);
   const [yamlSource, setYamlSource] = useState<string | null>(null);
   const [yamlSourceType, setYamlSourceType] = useState<string | null>(null);
   const [loadStatus, setLoadStatus] = useState<YamlLoadStatus>(null);
@@ -160,6 +171,11 @@ function useYamlWorkflowLoader(
                 line
                 column
               }
+              validationErrors {
+                field
+                message
+                code
+              }
             }
           }
         `;
@@ -183,6 +199,7 @@ function useYamlWorkflowLoader(
         setYamlSourceType(yamlDef.sourceType || null);
         setLoadStatus(yamlDef.loadStatus || 'SUCCESS');
         setYamlErrors(yamlDef.errors || []);
+        setServerValidationErrors(yamlDef.validationErrors || []);
 
         // Only build designer definition if the load was at least partially successful
         if (yamlDef.loadStatus === 'SUCCESS' || yamlDef.loadStatus === 'PARTIAL') {
@@ -210,7 +227,7 @@ function useYamlWorkflowLoader(
       }).join('\n')
     : null;
 
-  return { yamlLoading, yamlError, yamlErrors, yamlSource, setYamlSource, yamlSourceType, loadStatus };
+  return { yamlLoading, yamlError, yamlErrors, serverValidationErrors, yamlSource, setYamlSource, yamlSourceType, loadStatus };
 }
 
 
@@ -347,12 +364,33 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
 
   // Load YAML workflow definition if this is a YAML-based workflow.
   // Uses activeWorkflowRef so it can be re-triggered by file selection.
-  const { yamlLoading, yamlError, yamlErrors, yamlSource, setYamlSource, yamlSourceType, loadStatus } = useYamlWorkflowLoader(
+  const { yamlLoading, yamlError, yamlErrors, serverValidationErrors, yamlSource, setYamlSource, yamlSourceType, loadStatus } = useYamlWorkflowLoader(
     activeWorkflowRef,
     initialDefinition,
     reactory,
     updateDefinition,
   );
+
+  // Merge server-side YAML validation errors into the designer's validationResult
+  // so step nodes automatically display error indicators via the existing rendering pipeline.
+  const mergedValidationResult = useMemo(() => {
+    if (!serverValidationErrors || serverValidationErrors.length === 0) {
+      return validationResult;
+    }
+
+    const serverErrors = serverValidationErrors.map((sve): import('./types').ValidationError => ({
+      severity: 'error' as const,
+      message: sve.code ? `[${sve.code}] ${sve.message}` : sve.message,
+      stepId: sve.field || undefined,
+      type: 'SCHEMA_VIOLATION' as any,
+    }));
+
+    return {
+      ...validationResult,
+      isValid: validationResult.isValid && serverErrors.length === 0,
+      errors: [...validationResult.errors, ...serverErrors],
+    };
+  }, [validationResult, serverValidationErrors]);
 
   // Canvas viewport operations (for toolbar controls)
   const zoomIn = useCallback(() => {
@@ -1373,7 +1411,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               viewport={viewport}
               selection={selection}
               dragState={dragState}
-              validationResult={validationResult}
+              validationResult={mergedValidationResult}
               showGrid={showGrid}
               snapToGrid={enableSnapToGrid}
               readonly={readonly}
@@ -1398,7 +1436,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               viewport={viewport}
               selection={selection}
               dragState={dragState}
-              validationResult={validationResult}
+              validationResult={mergedValidationResult}
               showGrid={showGrid}
               snapToGrid={enableSnapToGrid}
               readonly={readonly}
@@ -1423,7 +1461,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               viewport={viewport}
               selection={selection}
               dragState={dragState}
-              validationResult={validationResult}
+              validationResult={mergedValidationResult}
               showGrid={showGrid}
               snapToGrid={enableSnapToGrid}
               readonly={readonly}
@@ -1459,7 +1497,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               selectedSteps={selectedSteps}
               selectedConnections={selectedConnections}
               stepLibrary={stepLibrary}
-              validationResult={validationResult}
+              validationResult={mergedValidationResult}
               readonly={readonly}
               onStepUpdate={handleStepUpdate}
               onConnectionUpdate={handleConnectionUpdate}
@@ -1492,8 +1530,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         </Typography>
 
         <Typography variant="caption">
-          {validationResult.errors.length > 0 && `Errors: ${validationResult.errors.length} | `}
-          {validationResult.warnings.length > 0 && `Warnings: ${validationResult.warnings.length} | `}
+          {mergedValidationResult.errors.length > 0 && `Errors: ${mergedValidationResult.errors.length} | `}
+          {mergedValidationResult.warnings.length > 0 && `Warnings: ${mergedValidationResult.warnings.length} | `}
           Ready
         </Typography>
       </Paper>
