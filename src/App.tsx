@@ -207,6 +207,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
       setError(err);
       setIsAuthenticating(false);
       setIsReady(false);
+      // Auto-retry after a delay so the unavailable screen can recover
+      // without requiring a manual page refresh.
+      setTimeout(() => { void getApiStatus(emitLogin); }, 5000);
     }
   };
 
@@ -513,6 +516,8 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
             'error');
           setError(err);
           setIsReady(false);
+          setIsAuthenticating(false);
+          setOfflineStatus(true);
         }
       });
     }
@@ -530,6 +535,65 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const onOfflineChanged = (isOffline: boolean) => {
     setOfflineStatus(isOffline)
   };
+
+  // When the server is unreachable (or init failed after retries), show the
+  // unavailable screen instead of a permanent loading spinner.  The Offline
+  // widget inside the full render tree depends on ReactoryProvider, so we use
+  // a standalone view here that works without any context providers.
+  if ((offline === true || error !== null) && isReady === false && isAuthenticating === false) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          bgcolor: 'background.default',
+          color: 'text.primary',
+          textAlign: 'center',
+          p: 3,
+        }}
+      >
+        <Icon sx={{ fontSize: 100, color: 'error.main', mb: 2 }}>cloud_off</Icon>
+        <Typography variant="h5" gutterBottom>
+          System Unavailable
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 1, maxWidth: 500, opacity: 0.8 }}>
+          We are unable to connect to the service at this time. This may be due
+          to a poor internet connection, the server being down, or your device
+          being offline.
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 3, opacity: 0.6 }}>
+          We will automatically retry the connection. You can also click the
+          button below to retry now.
+        </Typography>
+        <Box
+          component="button"
+          onClick={() => {
+            setOfflineStatus(false);
+            setError(null);
+            setIsAuthenticating(true);
+            void getApiStatus();
+          }}
+          sx={{
+            px: 3,
+            py: 1.5,
+            fontSize: '1rem',
+            fontWeight: 500,
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
+            border: 'none',
+            borderRadius: 2,
+            cursor: 'pointer',
+            '&:hover': { opacity: 0.9 },
+          }}
+        >
+          Retry Connection
+        </Box>
+      </Box>
+    );
+  }
 
   if (isReady === false) return <AppLoading message={"Loading..."} />;
 
