@@ -24,6 +24,7 @@ import FilesPanel from './components/FilesPanel/FilesPanel';
 import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/FileExplorerSidebar';
 import TodosPanel from './components/TodosPanel';
 import ToolIterationLimitBanner from './components/ToolIterationLimitBanner';
+import NetworkStatusIndicator from './components/NetworkStatusIndicator';
 import DebugPanel from './components/DebugPanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
@@ -161,6 +162,11 @@ export default (props) => {
     continueToolExecution,
     toolIterationLimitInfo,
     clearToolIterationLimitInfo,
+    networkStatus = 'idle' as const,
+    networkError = null,
+    reconnectAttempt: networkReconnectAttempt = 0,
+    retryConnection,
+    dismissNetworkError,
   } = {
     ...chatFactory,
     isStreaming: false,
@@ -1278,6 +1284,20 @@ export default (props) => {
               onStopPlayback={speech.stopPlayback}
               onRecordingComplete={handleVoiceRecordingComplete}
             />
+
+            {/* Network Status Indicator — floating pill chip, visible to all users */}
+            {networkStatus !== 'idle' && (
+              <NetworkStatusIndicator
+                status={networkStatus}
+                networkError={networkError}
+                reconnectAttempt={networkReconnectAttempt}
+                maxAttempts={5}
+                onRetry={retryConnection}
+                onDismiss={dismissNetworkError}
+                Material={Material}
+                il8n={il8n}
+              />
+            )}
           </Box>
         </Box>
 

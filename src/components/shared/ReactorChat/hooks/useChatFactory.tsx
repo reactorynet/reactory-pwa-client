@@ -1,5 +1,5 @@
 import React, { useEffect } from "react"
-import { IAIPersona, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition } from "../types"
+import { IAIPersona, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition, NetworkStatus } from "../types"
 import useMacros from "./useMacros"
 import { exec } from "child_process"
 import ToolPrompt from './ToolPrompt';
@@ -51,6 +51,12 @@ interface ChatFactoryHookResult {
   toolIterationLimitInfo: { iterationsCompleted: number; maxIterations: number; partialContent?: string } | null
   // clears the tool iteration limit info ("stop" action)
   clearToolIterationLimitInfo: () => void
+  // network connection status
+  networkStatus: NetworkStatus
+  networkError: string | null
+  reconnectAttempt: number
+  retryConnection: () => void
+  dismissNetworkError: () => void
 }
 
 interface ChatFactorHookOptions {
@@ -235,6 +241,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const sendMessage = async (message: string, chatSessionId: string, images?: string[]) => {
     setBusy(true);
+    // Clear any lingering network error when the user tries sending again
+    if (networkStatus === 'error') {
+      setNetworkStatus('idle');
+      setNetworkError(null);
+    }
     try {
       // check if the message is empty
       if (!message || message.trim() === "") {
@@ -532,6 +543,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [modelOverride, setModelOverride] = React.useState<{ modelId?: string; providerId?: string } | null>(null);
   const [toolIterationLimitInfo, setToolIterationLimitInfo] = React.useState<{ iterationsCompleted: number; maxIterations: number; partialContent?: string } | null>(null);
 
+  // Network connectivity state
+  const [networkStatus, setNetworkStatus] = React.useState<NetworkStatus>('idle');
+  const [networkError, setNetworkError] = React.useState<string | null>(null);
+  const [networkReconnectAttempt, setNetworkReconnectAttempt] = React.useState(0);
+
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
 
@@ -813,6 +829,20 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onError: (e) => { onError(e); props.onStreamError?.(e); },
       onToolIterationLimit: onToolIterationLimitReceived,
       onRetry: onRetryReceived,
+      onReconnecting: (attempt, maxAttempts) => {
+        setNetworkStatus('reconnecting');
+        setNetworkReconnectAttempt(attempt);
+        setNetworkError(null);
+      },
+      onReconnected: () => {
+        setNetworkStatus('connected');
+        setNetworkError(null);
+        setNetworkReconnectAttempt(0);
+      },
+      onReconnectFailed: () => {
+        setNetworkStatus('error');
+        setNetworkError('Connection lost. Please check your network and try again.');
+      },
     });
 
   /**
@@ -1087,13 +1117,25 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     });
   }
 
-  const onError = (error: Error) => {
+  const onError = (error: any) => {
+    const message = (error as Error)?.message || String(error) || 'An unexpected error occurred';
+    const type = (error as any)?.type;
+
+    // SSE/streaming errors replace the chat message with a non-obtrusive network indicator
+    // visible to all users, rather than polluting the chat history with error messages.
+    if (type === 'SSE_ERROR' || type === 'PARSE_ERROR' || type === 'SESSION_EXPIRED') {
+      setNetworkStatus('error');
+      setNetworkError(message);
+      return;
+    }
+
+    // Other errors (application/logic errors): show as a chat message for ADMIN/DEVELOPER only
     if (reactory.hasRole(['ADMIN', 'DEVELOPER'])) {
       onMessage({
         id: reactory.utils.uuid(),
         timestamp: new Date(),
         role: "assistant",
-        content: 'Error: ' + error.message,
+        content: 'Error: ' + message,
         tool_calls: [],
         rating: 0,
         refusal: null,
@@ -1103,6 +1145,23 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       });
     }
   }
+
+  /** Clear the network error indicator and allow the user to continue */
+  const dismissNetworkError = React.useCallback(() => {
+    setNetworkStatus('idle');
+    setNetworkError(null);
+    setNetworkReconnectAttempt(0);
+  }, []);
+
+  /**
+   * Reset network status so the user can retry sending a message after a network error.
+   * The next sendMessage call will attempt to reconnect automatically.
+   */
+  const retryConnection = React.useCallback(() => {
+    setNetworkStatus('idle');
+    setNetworkError(null);
+    setNetworkReconnectAttempt(0);
+  }, []);
 
   /**
    * Use the onToolCallPrompt to handle tool calls that require user confirmation or additional input.
@@ -2138,6 +2197,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     continueToolExecution,
     toolIterationLimitInfo,
     clearToolIterationLimitInfo: () => setToolIterationLimitInfo(null),
+    // Network status
+    networkStatus,
+    networkError,
+    reconnectAttempt: networkReconnectAttempt,
+    retryConnection,
+    dismissNetworkError,
     // Debug helpers
     protectCriticalState,
     validateChatState,
