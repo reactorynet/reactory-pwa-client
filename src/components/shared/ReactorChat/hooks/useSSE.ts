@@ -126,6 +126,12 @@ export interface UseSSEOptions {
   onToolCall?: (toolCall: ToolCallStreamingEvent) => void;
   onToolIterationLimit?: (event: ToolIterationLimitStreamingEvent) => void;
   onRetry?: (event: RetryStreamingEvent) => void;
+  /** Called when the SSE connection drops and a reconnect attempt begins */
+  onReconnecting?: (attempt: number, maxAttempts: number, delayMs: number) => void;
+  /** Called when a dropped SSE connection is successfully re-established */
+  onReconnected?: () => void;
+  /** Called when all reconnect attempts have been exhausted */
+  onReconnectFailed?: (totalAttempts: number) => void;
 }
 
 export interface UseSSEResult {
@@ -142,6 +148,10 @@ export interface UseSSEResult {
   connected: boolean;
   eventSource: EventSource | null;
   currentStreamingMessage: string;
+  /** True while automatic reconnection attempts are in progress */
+  isReconnecting: boolean;
+  /** The current reconnection attempt number (0 = not reconnecting) */
+  reconnectAttempt: number;
 }
 
 /**
@@ -161,10 +171,18 @@ const DRIP_THRESHOLD = 80;
  */
 const DRIP_INTERVAL_MS = 20;
 
-const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry }: UseSSEOptions): UseSSEResult => {
+/** Maximum number of automatic reconnect attempts after an SSE connection drops */
+const MAX_RECONNECT_ATTEMPTS = 5;
+
+/** Exponential backoff delays (ms) for each reconnect attempt */
+const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 16000];
+
+const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry, onReconnecting, onReconnected, onReconnectFailed }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
+  const [isReconnecting, setIsReconnecting] = React.useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = React.useState(0);
   const eventSourceRef = React.useRef<EventSource | null>(null);
   const sessionRef = React.useRef<string | null>(null);
 
@@ -177,6 +195,9 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   const onToolCallRef = React.useRef(onToolCall);
   const onToolIterationLimitRef = React.useRef(onToolIterationLimit);
   const onRetryRef = React.useRef(onRetry);
+  const onReconnectingRef = React.useRef(onReconnecting);
+  const onReconnectedRef = React.useRef(onReconnected);
+  const onReconnectFailedRef = React.useRef(onReconnectFailed);
   onTokenRef.current = onToken;
   onReasoningRef.current = onReasoning;
   onMessageRef.current = onMessage;
@@ -184,6 +205,21 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   onToolCallRef.current = onToolCall;
   onToolIterationLimitRef.current = onToolIterationLimit;
   onRetryRef.current = onRetry;
+  onReconnectingRef.current = onReconnecting;
+  onReconnectedRef.current = onReconnected;
+  onReconnectFailedRef.current = onReconnectFailed;
+
+  // Reconnection state refs
+  const lastConnectOptsRef = React.useRef<{
+    endpoint: string; sessionId: string; token?: string;
+    headers?: Record<string, string>; expiry?: Date; onConnectionOpened?: () => void;
+  } | null>(null);
+  const hasCompletedRef = React.useRef<boolean>(false);
+  const reconnectTimerRef = React.useRef<number | null>(null);
+  const reconnectAttemptsRef = React.useRef<number>(0);
+  // Refs to latest reconnect functions to break circular deps and prevent stale closures
+  const reconnectNowRef = React.useRef<() => void>(() => {});
+  const attemptReconnectRef = React.useRef<() => void>(() => {});
 
   // Token drip-feed queue: words waiting to be emitted
   const tokenQueueRef = React.useRef<{ segments: string[]; template: TokenStreamingEvent }[]>([]);
@@ -207,6 +243,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
         if (pendingCompleteRef.current) {
           const evt = pendingCompleteRef.current;
           pendingCompleteRef.current = null;
+          hasCompletedRef.current = true;
           setIsStreaming(false);
           if (onMessageRef.current) onMessageRef.current(evt);
         }
@@ -296,6 +333,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           break;
         }
         case 'complete': {
+          hasCompletedRef.current = true;
           if (tokenQueueRef.current.length > 0 || dripTimerRef.current !== null) {
             // Drip queue is still running — park the completion event and let
             // the queue drain naturally; flushQueue's tick() will fire it once empty.
@@ -344,6 +382,105 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
     }
   }, [enqueueTokenDrip, reactory]);
 
+  /**
+   * Schedule a reconnect with exponential backoff. Guards against:
+   * - Natural stream completions (hasCompletedRef)
+   * - Expired session tokens
+   * - Exceeding MAX_RECONNECT_ATTEMPTS
+   */
+  const attemptReconnect = () => {
+    if (hasCompletedRef.current) return; // Natural server close — not an error
+    if (!lastConnectOptsRef.current) return;
+
+    const expiry = lastConnectOptsRef.current.expiry;
+    if (expiry && new Date() >= expiry) {
+      setIsReconnecting(false);
+      if (onReconnectFailedRef.current) onReconnectFailedRef.current(reconnectAttemptsRef.current);
+      if (onErrorRef.current) onErrorRef.current({ message: 'Session token has expired', type: 'SESSION_EXPIRED' });
+      return;
+    }
+
+    const nextAttempt = reconnectAttemptsRef.current + 1;
+    if (nextAttempt > MAX_RECONNECT_ATTEMPTS) {
+      reconnectAttemptsRef.current = 0;
+      setIsReconnecting(false);
+      setReconnectAttempt(0);
+      if (onReconnectFailedRef.current) onReconnectFailedRef.current(MAX_RECONNECT_ATTEMPTS);
+      if (onErrorRef.current) onErrorRef.current({ message: 'Streaming connection error', type: 'SSE_ERROR' });
+      return;
+    }
+
+    reconnectAttemptsRef.current = nextAttempt;
+    const delay = RECONNECT_BACKOFF_MS[Math.min(nextAttempt - 1, RECONNECT_BACKOFF_MS.length - 1)];
+    setIsReconnecting(true);
+    setReconnectAttempt(nextAttempt);
+    if (onReconnectingRef.current) onReconnectingRef.current(nextAttempt, MAX_RECONNECT_ATTEMPTS, delay);
+
+    reconnectTimerRef.current = window.setTimeout(() => {
+      reconnectTimerRef.current = null;
+      if (!hasCompletedRef.current && lastConnectOptsRef.current) {
+        reactory.log(`useSSE: reconnecting (attempt ${nextAttempt}/${MAX_RECONNECT_ATTEMPTS})`, 'info');
+        reconnectNowRef.current();
+      }
+    }, delay);
+  };
+
+  /**
+   * Create a fresh EventSource for a reconnection attempt.
+   * Does NOT invoke onConnectionOpened to avoid resending the original message.
+   */
+  const reconnectNow = () => {
+    const opts = lastConnectOptsRef.current;
+    if (!opts) return;
+
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
+    try {
+      const sseUrl = new URL(opts.endpoint);
+      const es = new EventSource(sseUrl.toString());
+
+      es.onopen = () => {
+        reactory.log(`useSSE: reconnected (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`, 'info');
+        reconnectAttemptsRef.current = 0;
+        setIsReconnecting(false);
+        setReconnectAttempt(0);
+        setConnected(true);
+        if (onReconnectedRef.current) onReconnectedRef.current();
+      };
+
+      es.addEventListener('token', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('reasoning', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('complete', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('error', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('tool_call', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
+      es.onmessage = (event) => handleMessage(event);
+
+      es.onerror = () => {
+        setIsStreaming(false);
+        setConnected(false);
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+        attemptReconnectRef.current();
+      };
+
+      eventSourceRef.current = es;
+    } catch (err) {
+      reactory.error('useSSE: reconnect failed', err);
+      attemptReconnectRef.current();
+    }
+  };
+
+  // Keep refs in sync every render to prevent stale closures in timers/callbacks
+  reconnectNowRef.current = reconnectNow;
+  attemptReconnectRef.current = attemptReconnect;
+
   const connect = React.useCallback(({
     endpoint,
     sessionId,
@@ -359,6 +496,17 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
     expiry?: Date;
     onConnectionOpened?: () => void;
   }) => {
+    // Save opts for auto-reconnect and reset all reconnect state
+    lastConnectOptsRef.current = { endpoint, sessionId, token, headers, expiry, onConnectionOpened };
+    hasCompletedRef.current = false;
+    reconnectAttemptsRef.current = 0;
+    if (reconnectTimerRef.current !== null) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    setIsReconnecting(false);
+    setReconnectAttempt(0);
+
     // Close previous
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
@@ -399,7 +547,8 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           eventSourceRef.current.close();
           eventSourceRef.current = null;
         }
-        if (onErrorRef.current) onErrorRef.current({ message: 'Streaming connection error', type: 'SSE_ERROR' });
+        // Attempt automatic reconnection with backoff
+        attemptReconnectRef.current();
       };
 
       eventSourceRef.current = es;
@@ -411,6 +560,18 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   }, [handleMessage, reactory]);
 
   const disconnect = React.useCallback(() => {
+    // Signal intentional disconnect — suppresses auto-reconnection
+    hasCompletedRef.current = true;
+
+    // Cancel any pending reconnect timer
+    if (reconnectTimerRef.current !== null) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
+    setIsReconnecting(false);
+    setReconnectAttempt(0);
+
     // Clear drip-feed queue and any pending completion
     tokenQueueRef.current = [];
     pendingCompleteRef.current = null;
@@ -431,7 +592,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
 
   React.useEffect(() => () => disconnect(), [disconnect]);
 
-  return { connect, disconnect, isStreaming, currentStreamingMessage, connected, eventSource: eventSourceRef.current };
+  return { connect, disconnect, isStreaming, currentStreamingMessage, connected, eventSource: eventSourceRef.current, isReconnecting, reconnectAttempt };
 };
 
 export default useSSE;

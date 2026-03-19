@@ -102,6 +102,9 @@ export interface ChatCompletionResponseMessageStore extends OpenAI.Chat.ChatComp
 
 export type ReactorConversationHistory = UXChatMessage[]
 
+/** Represents the current network connection status for the ReactorChat session. */
+export type NetworkStatus = 'idle' | 'connected' | 'reconnecting' | 'error';
+
 // Tool approval modes
 export enum ToolApprovalMode {
   AUTO = "auto",      // Execute all tools without asking
