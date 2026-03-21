@@ -1351,7 +1351,11 @@ export default (props) => {
           />
         }
         mainLabel="Persona Actions"
-        mainColor="primary"
+        mainColor={
+          chatState?.toolApprovalMode === ToolApprovalMode.AUTO ? 'success' :
+          chatState?.toolApprovalMode === ToolApprovalMode.PROMPT ? 'warning' :
+          'primary'
+        }
         onMainClick={handlePersonaPanelToggle}
         mainClickLabel="Select Persona"
         position="bottom-right"
