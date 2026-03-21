@@ -859,16 +859,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   // Re-establish SSE connection on page reload when an existing session is loaded.
   // The SSE transport is lost on navigation/refresh, so we need to reconnect.
+  const sseReestablishedRef = React.useRef(false);
   React.useEffect(() => {
     if (
       existingSession?.chatState?.id &&
       existingSession?.isInitialized &&
       protocol === 'sse' &&
-      !sse.connected
+      !sse.connected &&
+      !sseReestablishedRef.current
     ) {
+      sseReestablishedRef.current = true;
       const sessionId = existingSession.chatState.id;
       reactory.log(`ChatFactory: Re-establishing SSE for existing session ${sessionId}`);
-      // Send a lightweight message to trigger SSE re-init from the server
+
+      // Send a lightweight SSE-mode message to trigger the server to return
+      // ReactorInitiateSSE (since the SSE transport no longer exists server-side).
       graph.sendMessage({
         message: '',
         personaId: persona.id,
@@ -877,17 +882,23 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         continueAfterTools: true,
       }).then((resp: any) => {
         if (resp?.__typename === 'ReactorInitiateSSE') {
+          sse.disconnect(); // clean up any stale state
           sse.connect({
             endpoint: resp.endpoint,
             sessionId: resp.sessionId,
             headers: resp.headers,
           });
+          reactory.log(`ChatFactory: SSE re-established for session ${sessionId}`);
+        } else {
+          reactory.log(`ChatFactory: SSE re-init returned ${resp?.__typename}, not ReactorInitiateSSE`, {}, 'warning');
+          sseReestablishedRef.current = false; // allow retry
         }
       }).catch((err: any) => {
         reactory.log(`ChatFactory: Failed to re-establish SSE: ${err?.message}`, {}, 'warning');
+        sseReestablishedRef.current = false; // allow retry
       });
     }
-  }, [existingSession?.chatState?.id, existingSession?.isInitialized, protocol]);
+  }, [existingSession?.chatState?.id, existingSession?.isInitialized, protocol, sse.connected]);
 
   /**
    * Wraps setModelOverride to also persist the selection to the server

@@ -43,45 +43,95 @@ export interface RadialFabProps {
 /**
  * Compute a spiral-arc position for each action button.
  *
- * For a small number of buttons (≤ 4) it behaves like a normal arc.
- * As the count grows the radius increases per-button (spiral) so they
- * don't pile on top of each other, and the total sweep widens.
- *
- * The arc fans from ~135° (upper-left) towards ~290° (lower-left)
- * relative to the main FAB which sits at bottom-right.
+ * It uses a quadrant logic based on the `position` prop to ensure buttons
+ * fan out towards the center of the screen, avoiding the edges.
+ * It also includes a viewport clamping failsafe to prevent bleeding.
  */
 const getSpiralPosition = (
   index: number,
   isOpen: boolean,
   baseRadius: number,
   totalActions: number,
+  position: string,
+  fabCenter: { x: number; y: number } | null
 ) => {
   if (!isOpen) return { x: 0, y: 0, scale: 0.3 };
 
-  // Minimum angular spacing between buttons (in degrees) to prevent overlap.
-  // A small FAB is ~40px; at radius r the arc-length per degree is r*π/180.
-  // We want at least 38px spacing → minAngleDeg ≈ 38 / (r * π/180).
-  // Using base radius for the estimate keeps the math simple.
+  // Phase 1: Quadrant Logic based on position
+  // We want the buttons to fan out towards the center of the screen.
+  let startAngleDeg = 180;
+  let endAngleDeg = 270;
+
+  switch (position) {
+    case 'bottom-left':
+      startAngleDeg = 270; // Up
+      endAngleDeg = 360;   // Right
+      break;
+    case 'top-left':
+      startAngleDeg = 0;   // Right
+      endAngleDeg = 90;    // Down
+      break;
+    case 'top-right':
+      startAngleDeg = 90;  // Down
+      endAngleDeg = 180;   // Left
+      break;
+    case 'bottom-right':
+    default:
+      startAngleDeg = 180; // Left
+      endAngleDeg = 270;   // Up
+      break;
+  }
+
+  // Calculate required sweep based on number of actions to prevent overlap
   const minAngleDeg = Math.max(18, (38 / (baseRadius * Math.PI / 180)));
-
-  // Sweep: enough room for all buttons at minAngleDeg spacing,
-  // clamped between a comfortable minimum and maximum.
   const neededSweep = (totalActions - 1) * minAngleDeg;
-  const sweep = Math.min(240, Math.max(90, neededSweep)) * (Math.PI / 180);
-
-  const startAngle = (135 * Math.PI) / 180;
-  const endAngle = startAngle + sweep;
-
-  const angleStep = totalActions > 1 ? (endAngle - startAngle) / (totalActions - 1) : 0;
+  
+  // Phase 2: Restrict sweep to the 90-degree safe quadrant
+  const sweepDeg = Math.min(90, Math.max(45, neededSweep));
+  
+  // Center the sweep within the 90-degree quadrant
+  const quadrantCenter = (startAngleDeg + endAngleDeg) / 2;
+  const actualStartDeg = quadrantCenter - (sweepDeg / 2);
+  
+  const startAngle = (actualStartDeg * Math.PI) / 180;
+  const sweep = sweepDeg * (Math.PI / 180);
+  
+  const angleStep = totalActions > 1 ? sweep / (totalActions - 1) : 0;
   const angle = startAngle + index * angleStep;
 
   // Spiral: radius grows per step so buttons further along the arc sit further out.
-  // Growth rate increases with button count so dense fans spread outward.
-  const growthPerStep = baseRadius * (totalActions > 5 ? 0.14 : 0.08);
+  // Since we capped the sweep at 90, we increase the radius more aggressively
+  // for large numbers of buttons to prevent overlapping.
+  let growthPerStep = baseRadius * (totalActions > 5 ? 0.2 : 0.1);
+  if (totalActions > 4 && neededSweep > 90) {
+      growthPerStep = baseRadius * 0.3; 
+  }
+
   const r = baseRadius + index * growthPerStep;
 
-  const x = Math.cos(angle) * r;
-  const y = Math.sin(angle) * r;
+  let x = Math.cos(angle) * r;
+  let y = Math.sin(angle) * r;
+
+  // Phase 3: Failsafe Viewport Clamping
+  if (fabCenter && typeof window !== 'undefined') {
+    const buttonRadius = 24; // approx half of a medium fab (48px)
+    const margin = 16; // safe margin from screen edge
+    
+    const absoluteX = fabCenter.x + x;
+    const absoluteY = fabCenter.y + y;
+    
+    if (absoluteX < margin + buttonRadius) {
+      x = margin + buttonRadius - fabCenter.x;
+    } else if (absoluteX > window.innerWidth - margin - buttonRadius) {
+      x = window.innerWidth - margin - buttonRadius - fabCenter.x;
+    }
+    
+    if (absoluteY < margin + buttonRadius) {
+      y = margin + buttonRadius - fabCenter.y;
+    } else if (absoluteY > window.innerHeight - margin - buttonRadius) {
+      y = window.innerHeight - margin - buttonRadius - fabCenter.y;
+    }
+  }
 
   return { x, y, scale: 1 };
 };
@@ -124,8 +174,11 @@ const RadialFab: React.FC<RadialFabProps> = ({
   const [isLongPressed, setIsLongPressed] = useState(false);
   const [isHoverDisabled, setIsHoverDisabled] = useState(false);
   const [hoveredAction, setHoveredAction] = useState(-1);
+  const [fabCenter, setFabCenter] = useState<{ x: number, y: number } | null>(null);
+  
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
   const isMobile = useRef(false);
+  const mainFabRef = useRef<HTMLButtonElement>(null);
 
   // Detect mobile device
   useEffect(() => {
@@ -137,16 +190,27 @@ const RadialFab: React.FC<RadialFabProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  const updateFabCenter = useCallback(() => {
+    if (mainFabRef.current) {
+      const rect = mainFabRef.current.getBoundingClientRect();
+      setFabCenter({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+    }
+  }, []);
+
   // Mouse enter handler for hover effects (desktop only)
   const handleMouseEnter = useCallback((evt: React.MouseEvent) => {
     if (disabled || isMobile.current || isHoverDisabled) return;
     setIsHovered(true);
+    updateFabCenter();
     if (openDelay > 0) {
       setTimeout(() => setIsOpen(true), openDelay);
     } else {
       setIsOpen(true);
     }
-  }, [disabled, openDelay, isHoverDisabled]);
+  }, [disabled, openDelay, isHoverDisabled, updateFabCenter]);
 
   // Mouse leave handler (desktop only) - don't close on hover out
   const handleMouseLeave = useCallback((evt: React.MouseEvent) => {
@@ -159,11 +223,12 @@ const RadialFab: React.FC<RadialFabProps> = ({
   const handleTouchStart = useCallback((evt: React.TouchEvent) => {
     if (disabled || !isMobile.current) return;
     evt.preventDefault();
+    updateFabCenter();
     longPressTimeout.current = setTimeout(() => {
       setIsLongPressed(true);
       setIsOpen(true);
     }, 500);
-  }, [disabled]);
+  }, [disabled, updateFabCenter]);
 
   // Touch end handler (mobile)
   const handleTouchEnd = useCallback((evt: React.TouchEvent) => {
@@ -188,6 +253,10 @@ const RadialFab: React.FC<RadialFabProps> = ({
   const handleMainClick = useCallback((evt: React.MouseEvent<HTMLButtonElement>) => {
     if (disabled) return;
 
+    if (!isOpen) {
+      updateFabCenter();
+    }
+
     setIsOpen(false);
     setIsHovered(false);
     setIsLongPressed(false);
@@ -201,7 +270,7 @@ const RadialFab: React.FC<RadialFabProps> = ({
     if (onMainClick) {
       onMainClick(evt);
     }
-  }, [disabled, onMainClick]);
+  }, [disabled, onMainClick, isOpen, updateFabCenter]);
 
   // Click outside handler to close the fan
   useEffect(() => {
@@ -272,6 +341,7 @@ const RadialFab: React.FC<RadialFabProps> = ({
     >
       {/* Main FAB */}
       <Fab
+        ref={mainFabRef}
         color={mainColor}
         size={mainSize}
         onClick={handleMainClick}
@@ -295,7 +365,7 @@ const RadialFab: React.FC<RadialFabProps> = ({
       {/* Action Buttons */}
       <TransitionGroup component={null}>
         {isOpen && actions.map((action, index) => {
-          const pos = getSpiralPosition(index, isOpen, radius, actions.length);
+          const pos = getSpiralPosition(index, isOpen, radius, actions.length, position, fabCenter);
           const dockScale = getDockScale(index, hoveredAction);
 
           return (
