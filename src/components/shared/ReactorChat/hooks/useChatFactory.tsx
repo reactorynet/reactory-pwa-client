@@ -857,6 +857,38 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       },
     });
 
+  // Re-establish SSE connection on page reload when an existing session is loaded.
+  // The SSE transport is lost on navigation/refresh, so we need to reconnect.
+  React.useEffect(() => {
+    if (
+      existingSession?.chatState?.id &&
+      existingSession?.isInitialized &&
+      protocol === 'sse' &&
+      !sse.connected
+    ) {
+      const sessionId = existingSession.chatState.id;
+      reactory.log(`ChatFactory: Re-establishing SSE for existing session ${sessionId}`);
+      // Send a lightweight message to trigger SSE re-init from the server
+      graph.sendMessage({
+        message: '',
+        personaId: persona.id,
+        chatSessionId: sessionId,
+        streamingMode: 'SSE',
+        continueAfterTools: true,
+      }).then((resp: any) => {
+        if (resp?.__typename === 'ReactorInitiateSSE') {
+          sse.connect({
+            endpoint: resp.endpoint,
+            sessionId: resp.sessionId,
+            headers: resp.headers,
+          });
+        }
+      }).catch((err: any) => {
+        reactory.log(`ChatFactory: Failed to re-establish SSE: ${err?.message}`, {}, 'warning');
+      });
+    }
+  }, [existingSession?.chatState?.id, existingSession?.isInitialized, protocol]);
+
   /**
    * Wraps setModelOverride to also persist the selection to the server
    * when an active conversation exists.
@@ -1807,6 +1839,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     try {
       // Tool results are already persisted in MongoDB by executeMacro.
       // Use continueAfterTools to avoid adding a duplicate tool message.
+      // Always use NONE for tool result follow-ups so we get the full response
+      // (including any follow-up tool_calls) in the GraphQL response. Using SSE
+      // would require the client to re-negotiate the SSE transport.
       const resp = await graph.sendMessage({
         message: consolidatedResults || 'Continue after tool execution',
         personaId: persona.id,
@@ -2314,18 +2349,28 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
         const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors, thinkingPlaceholderId);
 
-        // Check if the AI response contains new tool calls.
-        // The response may have tool_calls at the top level (ReactorChatMessage shape)
-        // or nested in choices[0].message.tool_calls (raw OpenAI response shape).
-        const responseToolCalls = aiResponse?.tool_calls
-          // @ts-ignore - tool_calls is not in the official UXChatMessage type, but we add it in sendToolResultsToAI
-          || aiResponse?.choices?.[0]?.message?.tool_calls
-          || [];
+        // Check if the AI response contains new tool calls and recursively process them.
+        // Since sendToolResultsToAI uses streamingMode: NONE, tool_calls come back
+        // in the GraphQL response (not via SSE).
+        const responseToolCalls = (aiResponse as any)?.tool_calls || [];
         if (responseToolCalls.length > 0) {
-          // Recursively process the new tool calls
-          const recursiveResults = await processToolCallsMemoized(responseToolCalls, aiResponse, depth + 1);
+          // sendToolResultsToAI already added the aiResponse (with tool_calls) to the
+          // chat history by replacing the Processing... placeholder. But React batches
+          // state updates, so onToolCallPrompt may not see it yet. Yield to let React
+          // flush before the recursive call searches history for the approval target.
+          await new Promise(resolve => setTimeout(resolve, 50));
 
-          // Merge results from recursive calls
+          const followUpMessage = {
+            id: (aiResponse as any)?.id || reactory.utils.uuid(),
+            role: 'assistant' as const,
+            content: (aiResponse as any)?.content || '',
+            thinking: (aiResponse as any)?.thinking,
+            timestamp: new Date(),
+            sessionId: chatState.id,
+            tool_calls: responseToolCalls,
+          } as UXChatMessage;
+
+          const recursiveResults = await processToolCallsMemoized(responseToolCalls, followUpMessage, depth + 1);
           toolResults.push(...recursiveResults.toolResults);
           toolErrors.push(...recursiveResults.toolErrors);
         }
