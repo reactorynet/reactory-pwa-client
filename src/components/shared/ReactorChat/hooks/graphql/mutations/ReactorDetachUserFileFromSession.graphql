@@ -1,0 +1,22 @@
+mutation ReactorDetachUserFileFromSession(
+  $params: ReactorDetachUserFileParam!
+) {
+  ReactorDetachUserFileFromSession(params: $params) {
+    __typename
+    ... on ReactorDetachFileResponse {
+      success
+      message
+      sessionId
+      fileId
+      path
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

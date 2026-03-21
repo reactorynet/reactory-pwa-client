@@ -16,6 +16,48 @@ const mockReactory = () => {
       if (String(doc).includes('ReactorSetChatToolApprovalMode')) {
         return mkResp({ ReactorSetChatToolApprovalMode: { id: 'sess-1', toolApprovalMode: 'auto' } });
       }
+      if (String(doc).includes('ReactorAttachUserFileToSession')) {
+        return mkResp({
+          ReactorAttachUserFileToSession: {
+            __typename: 'ReactorAttachFileResponse',
+            success: true,
+            sessionId: 'sess-1',
+            fileId: 'file-1',
+            path: '/a/b.txt',
+          },
+        });
+      }
+      if (String(doc).includes('ReactorDetachUserFileFromSession')) {
+        return mkResp({
+          ReactorDetachUserFileFromSession: {
+            __typename: 'ReactorDetachFileResponse',
+            success: true,
+            sessionId: 'sess-1',
+            fileId: 'file-1',
+            path: '/a/b.txt',
+          },
+        });
+      }
+      if (String(doc).includes('ReactorPinFolderToSession')) {
+        return mkResp({
+          ReactorPinFolderToSession: {
+            __typename: 'ReactorPinFolderResponse',
+            success: true,
+            sessionId: 'sess-1',
+            path: '/docs',
+          },
+        });
+      }
+      if (String(doc).includes('ReactorUnpinFolderFromSession')) {
+        return mkResp({
+          ReactorUnpinFolderFromSession: {
+            __typename: 'ReactorPinFolderResponse',
+            success: true,
+            sessionId: 'sess-1',
+            path: '/docs',
+          },
+        });
+      }
       if (String(doc).includes('ReactorAttachFile')) {
         return mkResp({ ReactorAttachFile: { __typename: 'ReactorChatMessage', sessionId: 'sess-1', id: 'm2', role: 'assistant', content: 'file', timestamp: new Date().toISOString() } });
       }
@@ -142,6 +184,37 @@ describe('useGraph', () => {
       expect(result.audioBase64).toBe('AAAA');
       expect(result.audioFormat).toBe('wav');
     }
+  });
+
+  it('pins and unpins user file and folders on session', async () => {
+    const reactory = mockReactory();
+    const graph = useGraph({ reactory });
+    const attach = await graph.attachUserFileToSession({
+      sessionId: 'sess-1',
+      fileId: 'fid',
+      path: '/p/x',
+      referenceOnly: true,
+    });
+    expect(attach.__typename).toBe('ReactorAttachFileResponse');
+    const detach = await graph.detachUserFileFromSession({
+      sessionId: 'sess-1',
+      fileId: 'fid',
+      path: '/p/x',
+      delete: false,
+    });
+    expect(detach.__typename).toBe('ReactorDetachFileResponse');
+    const pinFolder = await graph.pinFolderToSession({
+      sessionId: 'sess-1',
+      path: '/d',
+      name: 'd',
+    });
+    expect(pinFolder.__typename).toBe('ReactorPinFolderResponse');
+    const unpinFolder = await graph.unpinFolderFromSession({
+      sessionId: 'sess-1',
+      path: '/d',
+      name: 'd',
+    });
+    expect(unpinFolder.__typename).toBe('ReactorPinFolderResponse');
   });
 });
 

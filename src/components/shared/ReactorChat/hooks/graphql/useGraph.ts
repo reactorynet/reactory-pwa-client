@@ -26,6 +26,10 @@ import REACTOR_END_VOICE_SESSION from "./mutations/ReactorEndVoiceSession.graphq
 import REACTOR_SEND_VOICE_MESSAGE from "./mutations/ReactorSendVoiceMessage.graphql";
 import REACTOR_SET_MAX_TOOL_ITERATIONS from "./mutations/ReactorSetChatMaxToolIterations.graphql";
 import REACTOR_CONTINUE_TOOL_EXECUTION from "./mutations/ReactorContinueToolExecution.graphql";
+import REACTOR_ATTACH_USER_FILE from "./mutations/ReactorAttachUserFileToSession.graphql";
+import REACTOR_DETACH_USER_FILE from "./mutations/ReactorDetachUserFileFromSession.graphql";
+import REACTOR_PIN_FOLDER from "./mutations/ReactorPinFolderToSession.graphql";
+import REACTOR_UNPIN_FOLDER from "./mutations/ReactorUnpinFolderFromSession.graphql";
 
 export type StreamingMode = "NONE" | "SSE" | "WEBSOCKET";
 
@@ -340,6 +344,57 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorSetChatModelProvider;
   };
 
+  const attachUserFileToSession = async (params: {
+    sessionId: string;
+    fileId: string;
+    path: string;
+    description?: string;
+    referenceOnly?: boolean;
+  }) => {
+    const response = await reactory.graphqlMutation<
+      { ReactorAttachUserFileToSession: any },
+      { params: typeof params }
+    >(REACTOR_ATTACH_USER_FILE as any, { params });
+    return response?.data?.ReactorAttachUserFileToSession;
+  };
+
+  const detachUserFileFromSession = async (params: {
+    sessionId: string;
+    fileId: string;
+    path: string;
+    delete?: boolean;
+  }) => {
+    const response = await reactory.graphqlMutation<
+      { ReactorDetachUserFileFromSession: any },
+      { params: typeof params }
+    >(REACTOR_DETACH_USER_FILE as any, { params });
+    return response?.data?.ReactorDetachUserFileFromSession;
+  };
+
+  const pinFolderToSession = async (params: {
+    sessionId: string;
+    path: string;
+    name: string;
+  }) => {
+    const response = await reactory.graphqlMutation<
+      { ReactorPinFolderToSession: any },
+      { params: typeof params }
+    >(REACTOR_PIN_FOLDER as any, { params });
+    return response?.data?.ReactorPinFolderToSession;
+  };
+
+  const unpinFolderFromSession = async (params: {
+    sessionId: string;
+    path: string;
+    name: string;
+  }) => {
+    const response = await reactory.graphqlMutation<
+      { ReactorUnpinFolderFromSession: any },
+      { params: typeof params }
+    >(REACTOR_UNPIN_FOLDER as any, { params });
+    return response?.data?.ReactorUnpinFolderFromSession;
+  };
+
   return {
     startChatSession,
     sendMessage,
@@ -357,6 +412,10 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     startVoiceSession,
     endVoiceSession,
     sendVoiceMessage,
+    attachUserFileToSession,
+    detachUserFileFromSession,
+    pinFolderToSession,
+    unpinFolderFromSession,
   };
 };
 

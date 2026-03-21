@@ -1,0 +1,22 @@
+mutation ReactorAttachUserFileToSession(
+  $params: ReactorAttachUserFileParam!
+) {
+  ReactorAttachUserFileToSession(params: $params) {
+    __typename
+    ... on ReactorAttachFileResponse {
+      success
+      message
+      sessionId
+      fileId
+      path
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

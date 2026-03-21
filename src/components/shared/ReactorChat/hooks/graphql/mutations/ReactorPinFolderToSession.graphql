@@ -1,0 +1,19 @@
+mutation ReactorPinFolderToSession($params: ReactorPinFolderParam!) {
+  ReactorPinFolderToSession(params: $params) {
+    __typename
+    ... on ReactorPinFolderResponse {
+      success
+      message
+      sessionId
+      path
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

@@ -32,7 +32,8 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
       tokenCount
       maxTokens
       tokenPressure
-      files { id filename mimetype size }
+      files { id filename mimetype size path }
+      folders { name path }
     }
     ... on ReactorErrorResponse {
       code

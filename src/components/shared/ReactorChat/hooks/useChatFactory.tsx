@@ -31,6 +31,18 @@ interface ChatFactoryHookResult {
   sendAudio: (audio: File | Blob, chatSessionId: string) => Promise<void>
   // uploads a file to the chat session
   uploadFile: (file: File, chatSessionId: string) => Promise<void>
+  /** Pin an existing user file to the session (no upload). */
+  pinUserFileForChat: (
+    fileId: string,
+    path: string,
+    options?: { referenceOnly?: boolean }
+  ) => Promise<void>
+  /** Unpin a file from the session. */
+  unpinUserFileForChat: (fileId: string, path: string) => Promise<void>
+  /** Pin a folder path for the agent. */
+  pinFolderForChat: (path: string, name: string) => Promise<void>
+  /** Unpin a folder from the session. */
+  unpinFolderForChat: (path: string, name: string) => Promise<void>
   // sets the tool approval mode for the chat session
   setToolApprovalMode: (mode: ToolApprovalMode) => Promise<void>
   // indicates if the chat session has been initialized
@@ -1389,6 +1401,134 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   };
 
+  const refreshSessionAttachments = React.useCallback(async () => {
+    const id = chatState.id;
+    if (!id) return;
+    try {
+      const conv = await graph.getConversation(id);
+      if (conv && (conv as any).__typename !== "ReactorErrorResponse") {
+        setChatState((prev) => ({
+          ...prev,
+          files: (conv as any).files ?? prev.files,
+          folders: (conv as any).folders ?? prev.folders,
+        }));
+      }
+    } catch (e) {
+      reactory.error("ChatFactory: refreshSessionAttachments failed", e);
+    }
+  }, [chatState.id, graph, reactory, setChatState]);
+
+  const ensureSessionForAttachments = React.useCallback(async (): Promise<string | null> => {
+    let sessionId = chatState.id;
+    if (!isInitialized && persona?.id) {
+      reactory.info(`ChatFactory: Initializing chat session for file/folder pin with persona ${persona.id}`);
+      try {
+        const newSessionId = await initializeChat(persona);
+        setIsInitialized(true);
+        sessionId = newSessionId;
+        setChatState((prev) => ({ ...prev, id: newSessionId || prev.id }));
+      } catch (error) {
+        onError(error);
+        return null;
+      }
+    }
+    return sessionId || null;
+  }, [chatState.id, isInitialized, persona, initializeChat, reactory, setChatState]);
+
+  const pinUserFileForChat = async (
+    fileId: string,
+    path: string,
+    options?: { referenceOnly?: boolean }
+  ) => {
+    setBusy(true);
+    try {
+      const sessionId = await ensureSessionForAttachments();
+      if (!sessionId) throw new Error("No chat session");
+      const result = await graph.attachUserFileToSession({
+        sessionId,
+        fileId,
+        path,
+        referenceOnly: options?.referenceOnly,
+      });
+      if (result?.__typename === "ReactorErrorResponse") {
+        onError(new Error((result as any).message));
+        return;
+      }
+      await refreshSessionAttachments();
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const unpinUserFileForChat = async (fileId: string, path: string) => {
+    setBusy(true);
+    try {
+      const sessionId = chatState.id;
+      if (!sessionId) throw new Error("No chat session");
+      const result = await graph.detachUserFileFromSession({
+        sessionId,
+        fileId,
+        path,
+        delete: false,
+      });
+      if (result?.__typename === "ReactorErrorResponse") {
+        onError(new Error((result as any).message));
+        return;
+      }
+      await refreshSessionAttachments();
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const pinFolderForChat = async (folderPath: string, folderName: string) => {
+    setBusy(true);
+    try {
+      const sessionId = await ensureSessionForAttachments();
+      if (!sessionId) throw new Error("No chat session");
+      const result = await graph.pinFolderToSession({
+        sessionId,
+        path: folderPath,
+        name: folderName,
+      });
+      if (result?.__typename === "ReactorErrorResponse") {
+        onError(new Error((result as any).message));
+        return;
+      }
+      await refreshSessionAttachments();
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const unpinFolderForChat = async (folderPath: string, folderName: string) => {
+    setBusy(true);
+    try {
+      const sessionId = chatState.id;
+      if (!sessionId) throw new Error("No chat session");
+      const result = await graph.unpinFolderFromSession({
+        sessionId,
+        path: folderPath,
+        name: folderName,
+      });
+      if (result?.__typename === "ReactorErrorResponse") {
+        onError(new Error((result as any).message));
+        return;
+      }
+      await refreshSessionAttachments();
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // Send audio to chat session
   const sendAudio = async (audio: File | Blob, chatSessionId: string) => {
     setBusy(true);
@@ -1606,6 +1746,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             maxTokens: (result as any).maxTokens,
             toolApprovalMode: (result as any).toolApprovalMode,
             maxToolIterations: (result as any).maxToolIterations,
+            files: (result as any).files ?? prevState.files,
+            folders: (result as any).folders ?? prevState.folders,
             updated: new Date(),
           }));
 
@@ -2186,6 +2328,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setChats,
     deleteChat,
     uploadFile,
+    pinUserFileForChat,
+    unpinUserFileForChat,
+    pinFolderForChat,
+    unpinFolderForChat,
     sendAudio,
     isInitialized,
     isStreaming: (sse as any).isStreaming,

@@ -146,6 +146,10 @@ export default (props) => {
     sendMessage,
     sendAudio,
     uploadFile,
+    pinUserFileForChat,
+    unpinUserFileForChat,
+    pinFolderForChat,
+    unpinFolderForChat,
     newChat,
     loadChat,
     listChats,
@@ -1050,7 +1054,10 @@ export default (props) => {
             onClose={handleFileExplorerClose}
             reactory={reactory}
             chatState={chatState}
-            onAttachFile={uploadFile}
+            onPinFile={pinUserFileForChat}
+            onUnpinFile={unpinUserFileForChat}
+            onPinFolder={pinFolderForChat}
+            onUnpinFolder={unpinFolderForChat}
             il8n={il8n}
           />
         )}
@@ -1310,7 +1317,10 @@ export default (props) => {
             onClose={handleFileExplorerClose}
             reactory={reactory}
             chatState={chatState}
-            onAttachFile={uploadFile}
+            onPinFile={pinUserFileForChat}
+            onUnpinFile={unpinUserFileForChat}
+            onPinFolder={pinFolderForChat}
+            onUnpinFolder={unpinFolderForChat}
             il8n={il8n}
           />
         )}
@@ -1325,7 +1335,10 @@ export default (props) => {
           onClose={handleFileExplorerClose}
           reactory={reactory}
           chatState={chatState}
-          onAttachFile={uploadFile}
+          onPinFile={pinUserFileForChat}
+          onUnpinFile={unpinUserFileForChat}
+          onPinFolder={pinFolderForChat}
+          onUnpinFolder={unpinFolderForChat}
           il8n={il8n}
         />
       )}

@@ -401,6 +401,10 @@ export type ChatState = {
    * Files attached to the chat session
    */
   files?: Reactory.Models.IReactoryFile[]
+  /**
+   * Folders pinned to the chat session (server field: folders)
+   */
+  folders?: { name: string; path: string }[]
 }
 
 export interface QuestionHandlerResponse {

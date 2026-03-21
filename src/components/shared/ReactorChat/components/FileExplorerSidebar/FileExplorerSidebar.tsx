@@ -12,7 +12,15 @@ export interface FileExplorerSidebarProps {
   onClose: () => void;
   reactory: Reactory.Client.ReactorySDK;
   chatState?: ChatState;
-  onAttachFile?: (file: File, chatSessionId: string) => Promise<void>;
+  /** Pin an existing cataloged file (or desktop reference when referenceOnly). */
+  onPinFile?: (
+    fileId: string,
+    path: string,
+    options?: { referenceOnly?: boolean },
+  ) => Promise<void>;
+  onUnpinFile?: (fileId: string, path: string) => Promise<void>;
+  onPinFolder?: (path: string, name: string) => Promise<void>;
+  onUnpinFolder?: (path: string, name: string) => Promise<void>;
   il8n: any;
 }
 
@@ -35,8 +43,8 @@ interface TreeFile {
 }
 
 const GET_PATH_CONTENTS = gql`
-  query ReactoryUserFiles($path: String) {
-    ReactoryUserFiles(path: $path) {
+  query ReactoryUserFiles($path: String, $loadOptions: ReactoryUserFilesLoadOptionsInput) {
+    ReactoryUserFiles(path: $path, loadOptions: $loadOptions) {
       ... on ReactoryUserFiles {
         path
         folders {
@@ -64,6 +72,11 @@ const GET_PATH_CONTENTS = gql`
 
 const SIDEBAR_WIDTH = 320;
 
+function fileIdString(f: Reactory.Models.IReactoryFile): string {
+  const id = (f as any).id ?? (f as any)._id;
+  return id != null ? String(id) : '';
+}
+
 const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   open,
   dock,
@@ -71,7 +84,10 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   onClose,
   reactory,
   chatState,
-  onAttachFile,
+  onPinFile,
+  onUnpinFile,
+  onPinFolder,
+  onUnpinFolder,
   il8n,
 }) => {
   const {
@@ -109,8 +125,11 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     PictureAsPdf,
     Description,
     Code,
-    AttachFile,
     Refresh,
+    PushPin,
+    PushPinOutlined,
+    Visibility,
+    VisibilityOff,
   } = Material.MaterialIcons;
 
   const [tree, setTree] = React.useState<TreeFolder>({
@@ -122,7 +141,8 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   });
   const [expanded, setExpanded] = React.useState<Set<string>>(new Set(['/']));
   const [loadingPaths, setLoadingPaths] = React.useState<Set<string>>(new Set());
-  const [attachingFileId, setAttachingFileId] = React.useState<string | null>(null);
+  const [pinningKey, setPinningKey] = React.useState<string | null>(null);
+  const [showHidden, setShowHidden] = React.useState(false);
 
   const isNarrowScreen = React.useMemo(() => {
     const width = window.innerWidth || document.documentElement.clientWidth;
@@ -130,6 +150,11 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   }, []);
 
   const desktopEnv = useDesktopEnvironment();
+
+  const loadOptions = React.useMemo(
+    () => ({ includeHidden: showHidden }),
+    [showHidden],
+  );
 
   const loadPath = React.useCallback(async (path: string) => {
     setLoadingPaths(prev => new Set(prev).add(path));
@@ -149,7 +174,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
             alias: string;
           }[];
         } | { error: string; message: string };
-      }, { path: string }>(GET_PATH_CONTENTS, { path });
+      }, { path: string; loadOptions: { includeHidden: boolean } }>(GET_PATH_CONTENTS, { path, loadOptions });
 
       const data = response?.data?.ReactoryUserFiles;
       if (!data || 'error' in data) return;
@@ -182,7 +207,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
         return next;
       });
     }
-  }, [reactory]);
+  }, [reactory, loadOptions]);
 
   const insertAtPath = (
     node: TreeFolder,
@@ -200,10 +225,11 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   };
 
   React.useEffect(() => {
-    if (open && !tree.loaded) {
-      loadPath('/');
-    }
-  }, [open, tree.loaded, loadPath]);
+    if (!open) return;
+    setTree({ name: '/', path: '/', loaded: false, children: [], files: [] });
+    setExpanded(new Set(['/']));
+    loadPath('/');
+  }, [open, showHidden, loadPath]);
 
   const handleToggleFolder = React.useCallback((path: string, loaded: boolean) => {
     setExpanded(prev => {
@@ -226,20 +252,97 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     loadPath('/');
   }, [loadPath]);
 
-  const handleAttachFile = React.useCallback(async (file: TreeFile) => {
-    if (!onAttachFile || !file.url) return;
-    setAttachingFileId(file.id);
-    try {
-      const response = await fetch(file.url);
-      const blob = await response.blob();
-      const fileObj = new File([blob], file.name, { type: file.mimetype || 'application/octet-stream' });
-      await onAttachFile(fileObj, chatState?.id || '');
-    } catch (err) {
-      reactory.error('FileExplorerSidebar: failed to attach file', err);
-    } finally {
-      setAttachingFileId(null);
+  const pinnedFileIds = React.useMemo(() => {
+    const files = chatState?.files || [];
+    const set = new Set<string>();
+    for (const f of files) {
+      const id = fileIdString(f);
+      if (id) set.add(id);
     }
-  }, [onAttachFile, chatState?.id, reactory]);
+    return set;
+  }, [chatState?.files]);
+
+  const pinnedFilePaths = React.useMemo(() => {
+    const files = chatState?.files || [];
+    const set = new Set<string>();
+    for (const f of files) {
+      const p = (f as any)?.path;
+      if (p) set.add(String(p));
+    }
+    return set;
+  }, [chatState?.files]);
+
+  const pinnedFolderPaths = React.useMemo(() => {
+    const folders = chatState?.folders || [];
+    return new Set(folders.map(f => f.path));
+  }, [chatState?.folders]);
+
+  const isFilePinned = React.useCallback(
+    (file: TreeFile) =>
+      pinnedFileIds.has(file.id) ||
+      (!!file.path && pinnedFilePaths.has(file.path)),
+    [pinnedFileIds, pinnedFilePaths],
+  );
+
+  const isFolderPinned = React.useCallback(
+    (folderPath: string) => pinnedFolderPaths.has(folderPath),
+    [pinnedFolderPaths],
+  );
+
+  const sessionFileIdForUnpin = React.useCallback(
+    (file: TreeFile) => {
+      const files = chatState?.files || [];
+      if (pinnedFileIds.has(file.id)) return file.id;
+      const byPath = files.find(
+        (f) => (f as any)?.path && String((f as any).path) === file.path,
+      );
+      return byPath ? fileIdString(byPath) : file.id;
+    },
+    [chatState?.files, pinnedFileIds],
+  );
+
+  const handlePinToggleFile = React.useCallback(
+    async (e: React.MouseEvent, file: TreeFile) => {
+      e.stopPropagation();
+      const pinned = isFilePinned(file);
+      const key = `f:${file.id}`;
+      setPinningKey(key);
+      try {
+        if (pinned) {
+          await onUnpinFile?.(sessionFileIdForUnpin(file), file.path);
+        } else {
+          const referenceOnly = desktopEnv.isDesktop;
+          await onPinFile?.(file.id, file.path, referenceOnly ? { referenceOnly: true } : undefined);
+        }
+      } catch (err) {
+        reactory.error('FileExplorerSidebar: pin/unpin file failed', err);
+      } finally {
+        setPinningKey(null);
+      }
+    },
+    [desktopEnv.isDesktop, isFilePinned, onPinFile, onUnpinFile, reactory, sessionFileIdForUnpin],
+  );
+
+  const handlePinToggleFolder = React.useCallback(
+    async (e: React.MouseEvent, folder: TreeFolder) => {
+      e.stopPropagation();
+      const pinned = isFolderPinned(folder.path);
+      const key = `d:${folder.path}`;
+      setPinningKey(key);
+      try {
+        if (pinned) {
+          await onUnpinFolder?.(folder.path, folder.name);
+        } else {
+          await onPinFolder?.(folder.path, folder.name);
+        }
+      } catch (err) {
+        reactory.error('FileExplorerSidebar: pin/unpin folder failed', err);
+      } finally {
+        setPinningKey(null);
+      }
+    },
+    [isFolderPinned, onPinFolder, onUnpinFolder, reactory],
+  );
 
   const getFileIcon = React.useCallback((mimetype: string) => {
     if (mimetype.startsWith('image/')) return <Image sx={{ fontSize: 16 }} />;
@@ -261,6 +364,8 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   const renderFolder = (folder: TreeFolder, depth: number = 0) => {
     const isExpanded = expanded.has(folder.path);
     const isLoading = loadingPaths.has(folder.path);
+    const folderPinned = isFolderPinned(folder.path);
+    const folderPinBusy = pinningKey === `d:${folder.path}`;
 
     return (
       <React.Fragment key={folder.path}>
@@ -291,6 +396,32 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
               fontWeight: isExpanded ? 600 : 400,
             }}
           />
+          {(onPinFolder || onUnpinFolder) && (
+            <Tooltip
+              title={
+                folderPinned
+                  ? il8n?.t('reactor.client.fileExplorer.unpinFolder', { defaultValue: 'Unpin folder' })
+                  : il8n?.t('reactor.client.fileExplorer.pinFolder', { defaultValue: 'Pin folder to chat' })
+              }
+            >
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={folderPinBusy}
+                  onClick={e => handlePinToggleFolder(e, folder)}
+                  sx={{ ml: 0.5 }}
+                >
+                  {folderPinBusy ? (
+                    <CircularProgress size={14} />
+                  ) : folderPinned ? (
+                    <PushPin sx={{ fontSize: 16 }} color="primary" />
+                  ) : (
+                    <PushPinOutlined sx={{ fontSize: 16 }} />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
           {isExpanded ? <ExpandLess sx={{ fontSize: 16 }} /> : <ExpandMore sx={{ fontSize: 16 }} />}
         </ListItemButton>
         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -313,7 +444,8 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   };
 
   const renderFile = (file: TreeFile, depth: number) => {
-    const isAttaching = attachingFileId === file.id;
+    const pinned = isFilePinned(file);
+    const busy = pinningKey === `f:${file.id}`;
 
     return (
       <ListItemButton
@@ -324,11 +456,9 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
           minHeight: 32,
         }}
         dense
-        disabled={isAttaching}
-        onClick={() => handleAttachFile(file)}
       >
         <ListItemIcon sx={{ minWidth: 28 }}>
-          {isAttaching ? <CircularProgress size={14} /> : getFileIcon(file.mimetype)}
+          {busy ? <CircularProgress size={14} /> : getFileIcon(file.mimetype)}
         </ListItemIcon>
         <ListItemText
           primary={file.name}
@@ -343,9 +473,30 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
             fontSize: '0.65rem',
           }}
         />
-        <Tooltip title={il8n?.t('reactor.client.fileExplorer.attachToChat', { defaultValue: 'Attach to chat' })}>
-          <AttachFile sx={{ fontSize: 14, color: 'action.active', ml: 0.5, flexShrink: 0 }} />
-        </Tooltip>
+        {(onPinFile || onUnpinFile) && (
+          <Tooltip
+            title={
+              pinned
+                ? il8n?.t('reactor.client.fileExplorer.unpinFile', { defaultValue: 'Unpin from chat' })
+                : il8n?.t('reactor.client.fileExplorer.pinFile', { defaultValue: 'Pin to chat' })
+            }
+          >
+            <span>
+              <IconButton
+                size="small"
+                disabled={busy}
+                onClick={e => handlePinToggleFile(e, file)}
+                sx={{ ml: 0.5 }}
+              >
+                {pinned ? (
+                  <PushPin sx={{ fontSize: 16 }} color="primary" />
+                ) : (
+                  <PushPinOutlined sx={{ fontSize: 16 }} />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
       </ListItemButton>
     );
   };
@@ -394,6 +545,17 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
         {fileCount > 0 && (
           <Chip label={fileCount} size="small" color="default" sx={{ height: 20, fontSize: '0.7rem' }} />
         )}
+        <Tooltip
+          title={
+            showHidden
+              ? il8n?.t('reactor.client.fileExplorer.hideHidden', { defaultValue: 'Hide hidden files' })
+              : il8n?.t('reactor.client.fileExplorer.showHidden', { defaultValue: 'Show hidden files' })
+          }
+        >
+          <IconButton size="small" onClick={() => setShowHidden(h => !h)}>
+            {showHidden ? <Visibility sx={{ fontSize: 16 }} /> : <VisibilityOff sx={{ fontSize: 16 }} />}
+          </IconButton>
+        </Tooltip>
         <Tooltip title={il8n?.t('reactor.client.fileExplorer.refresh', { defaultValue: 'Refresh' })}>
           <IconButton size="small" onClick={handleRefresh}>
             <Refresh sx={{ fontSize: 16 }} />
@@ -435,8 +597,8 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
         }}
       >
         <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-          {il8n?.t('reactor.client.fileExplorer.hint', {
-            defaultValue: 'Click a file to attach it to the chat',
+          {il8n?.t('reactor.client.fileExplorer.hintPin', {
+            defaultValue: 'Use the pin to add files or folders to this chat for the agent. Desktop pins use local references without re-uploading.',
           })}
         </Typography>
       </Box>
