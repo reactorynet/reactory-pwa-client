@@ -1366,14 +1366,23 @@ export default (props) => {
         mainLabel="Persona Actions"
         mainColor={
           chatState?.toolApprovalMode === ToolApprovalMode.AUTO ? 'success' :
-          chatState?.toolApprovalMode === ToolApprovalMode.PROMPT ? 'warning' :
+          chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO ? 'warning' :
           'primary'
+        }
+        mainSx={
+          chatState?.toolApprovalMode === ToolApprovalMode.PROMPT ? {
+            bgcolor: '#ed6c02', '&:hover': { bgcolor: '#e65100' },
+          } :
+          chatState?.toolApprovalMode === ToolApprovalMode.PLAN ? {
+            bgcolor: '#9c27b0', '&:hover': { bgcolor: '#7b1fa2' },
+          } :
+          undefined
         }
         onMainClick={handlePersonaPanelToggle}
         mainClickLabel="Select Persona"
         position="bottom-right"
         spacing={16}
-        radius={70}
+        radius={65}
         sx={{
           zIndex: 1000,
           transition: 'all 0.3s ease-in-out',
@@ -1452,6 +1461,8 @@ export default (props) => {
         onRemovePendingImage={React.useCallback((index: number) => {
           setPendingImages((prev) => prev.filter((_, i) => i !== index));
         }, [])}
+        toolApprovalMode={chatState?.toolApprovalMode}
+        onToolApprovalModeChange={setToolApprovalMode}
       />
     </Box>
   );

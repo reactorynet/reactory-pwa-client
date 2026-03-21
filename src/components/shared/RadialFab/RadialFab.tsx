@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { 
-  Fab, 
-  Tooltip, 
-  Box, 
+import {
+  Fab,
+  Tooltip,
+  Box,
   styled,
   FabProps as MuiFabProps,
   TooltipProps
@@ -33,28 +33,72 @@ export interface RadialFabProps {
   disabled?: boolean;
   className?: string;
   sx?: any;
+  /** Optional sx overrides applied directly to the main Fab button */
+  mainSx?: any;
   // New props for main FAB functionality
   onMainClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   mainClickLabel?: string;
 }
 
-// Helper function to get position for each action button
-const getActionPosition = (index: number, isOpen: boolean, radius: number, totalActions: number = 4) => {
-  if (!isOpen) return { x: 0, y: 0 };
-  
-    // Fan spread from 135° to 270° (clockwise from top-left to bottom-left)
-  const startAngle = (135 * Math.PI) / 180; // 135 degrees in radians (top-left)
-  const endAngle = (270 * Math.PI) / 180;   // 270 degrees in radians (bottom-left)
-  
-  // Calculate the angle for this specific action
-  const angleStep = (endAngle - startAngle) / (totalActions - 1);
-  const angle = startAngle + (index * angleStep);
-  
-  // Convert polar coordinates to Cartesian coordinates
-  const x = Math.cos(angle) * radius;
-  const y = Math.sin(angle) * radius;
-  
-  return { x, y };
+/**
+ * Compute a spiral-arc position for each action button.
+ *
+ * For a small number of buttons (≤ 4) it behaves like a normal arc.
+ * As the count grows the radius increases per-button (spiral) so they
+ * don't pile on top of each other, and the total sweep widens.
+ *
+ * The arc fans from ~135° (upper-left) towards ~290° (lower-left)
+ * relative to the main FAB which sits at bottom-right.
+ */
+const getSpiralPosition = (
+  index: number,
+  isOpen: boolean,
+  baseRadius: number,
+  totalActions: number,
+) => {
+  if (!isOpen) return { x: 0, y: 0, scale: 0.3 };
+
+  // Minimum angular spacing between buttons (in degrees) to prevent overlap.
+  // A small FAB is ~40px; at radius r the arc-length per degree is r*π/180.
+  // We want at least 38px spacing → minAngleDeg ≈ 38 / (r * π/180).
+  // Using base radius for the estimate keeps the math simple.
+  const minAngleDeg = Math.max(18, (38 / (baseRadius * Math.PI / 180)));
+
+  // Sweep: enough room for all buttons at minAngleDeg spacing,
+  // clamped between a comfortable minimum and maximum.
+  const neededSweep = (totalActions - 1) * minAngleDeg;
+  const sweep = Math.min(240, Math.max(90, neededSweep)) * (Math.PI / 180);
+
+  const startAngle = (135 * Math.PI) / 180;
+  const endAngle = startAngle + sweep;
+
+  const angleStep = totalActions > 1 ? (endAngle - startAngle) / (totalActions - 1) : 0;
+  const angle = startAngle + index * angleStep;
+
+  // Spiral: radius grows per step so buttons further along the arc sit further out.
+  // Growth rate increases with button count so dense fans spread outward.
+  const growthPerStep = baseRadius * (totalActions > 5 ? 0.14 : 0.08);
+  const r = baseRadius + index * growthPerStep;
+
+  const x = Math.cos(angle) * r;
+  const y = Math.sin(angle) * r;
+
+  return { x, y, scale: 1 };
+};
+
+/**
+ * Dock-style magnification: the hovered button scales up, its neighbours
+ * scale proportionally, and the rest stay at their resting size.
+ *
+ * Returns a scale multiplier for the button at `index` given that
+ * `hoveredIndex` is the one under the pointer (-1 = none hovered).
+ */
+const getDockScale = (index: number, hoveredIndex: number): number => {
+  if (hoveredIndex < 0) return 1;
+  const distance = Math.abs(index - hoveredIndex);
+  if (distance === 0) return 1.35;
+  if (distance === 1) return 1.12;
+  return 0.85;
 };
 
 const RadialFab: React.FC<RadialFabProps> = ({
@@ -71,6 +115,7 @@ const RadialFab: React.FC<RadialFabProps> = ({
   disabled = false,
   className,
   sx,
+  mainSx,
   onMainClick,
   mainClickLabel,
 }) => {
@@ -78,6 +123,7 @@ const RadialFab: React.FC<RadialFabProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [isLongPressed, setIsLongPressed] = useState(false);
   const [isHoverDisabled, setIsHoverDisabled] = useState(false);
+  const [hoveredAction, setHoveredAction] = useState(-1);
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
   const isMobile = useRef(false);
 
@@ -106,7 +152,7 @@ const RadialFab: React.FC<RadialFabProps> = ({
   const handleMouseLeave = useCallback((evt: React.MouseEvent) => {
     if (isMobile.current) return;
     setIsHovered(false);
-    // Don't close the fan when hovering out - keep it open
+    setHoveredAction(-1);
   }, []);
 
   // Touch start handler (mobile long press)
@@ -116,7 +162,7 @@ const RadialFab: React.FC<RadialFabProps> = ({
     longPressTimeout.current = setTimeout(() => {
       setIsLongPressed(true);
       setIsOpen(true);
-    }, 500); // 500ms for long press
+    }, 500);
   }, [disabled]);
 
   // Touch end handler (mobile)
@@ -127,7 +173,6 @@ const RadialFab: React.FC<RadialFabProps> = ({
       longPressTimeout.current = null;
     }
     setIsLongPressed(false);
-    // Don't close immediately on touch end for mobile
   }, [disabled]);
 
   // Touch move/cancel handler (mobile)
@@ -142,18 +187,17 @@ const RadialFab: React.FC<RadialFabProps> = ({
   // Main FAB click handler
   const handleMainClick = useCallback((evt: React.MouseEvent<HTMLButtonElement>) => {
     if (disabled) return;
-    
-    // Close the fan when main FAB is clicked
+
     setIsOpen(false);
     setIsHovered(false);
     setIsLongPressed(false);
-    
-    // Disable hover detection for 1000ms
+    setHoveredAction(-1);
+
     setIsHoverDisabled(true);
     setTimeout(() => {
       setIsHoverDisabled(false);
     }, 1000);
-    
+
     if (onMainClick) {
       onMainClick(evt);
     }
@@ -163,14 +207,15 @@ const RadialFab: React.FC<RadialFabProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isOpen && !event.target) return;
-      
+
       const target = event.target as Element;
       const fabContainer = document.querySelector(`[data-radial-fab="${className || 'radial-fab'}"], [data-radial-fab]`);
-      
+
       if (fabContainer && !fabContainer.contains(target)) {
         setIsOpen(false);
         setIsHovered(false);
         setIsLongPressed(false);
+        setHoveredAction(-1);
       }
     };
 
@@ -185,11 +230,10 @@ const RadialFab: React.FC<RadialFabProps> = ({
     };
   }, [isOpen, className]);
 
-
-
   const handleActionClick = useCallback((action: RadialFabAction) => (event: React.MouseEvent<HTMLButtonElement>) => {
     action.onClick(event);
     setIsOpen(false);
+    setHoveredAction(-1);
   }, []);
 
   const containerStyles = useMemo(() => {
@@ -239,9 +283,10 @@ const RadialFab: React.FC<RadialFabProps> = ({
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           transform: isOpen ? 'rotate(0deg)' : 'rotate(0deg)',
           '&:hover': {
-            transform: isOpen ? 'scale(1.1)' : 'scale(1.1)',
+            transform: 'scale(1.1)',
             boxShadow: (theme) => theme.shadows[8],
           },
+          ...mainSx,
         }}
       >
         {mainIcon}
@@ -249,54 +294,53 @@ const RadialFab: React.FC<RadialFabProps> = ({
 
       {/* Action Buttons */}
       <TransitionGroup component={null}>
-        {isOpen && actions.map((action, index) => (
-          <CSSTransition
-            key={index}
-            timeout={500}
-            classNames="radial-action"
-            unmountOnExit
-          >
-            <Tooltip
-              title={action.label}
-              placement={position.includes('right') ? 'left' : 'right'}
-              {...action.tooltipProps}
+        {isOpen && actions.map((action, index) => {
+          const pos = getSpiralPosition(index, isOpen, radius, actions.length);
+          const dockScale = getDockScale(index, hoveredAction);
+
+          return (
+            <CSSTransition
+              key={index}
+              timeout={500}
+              classNames="radial-action"
+              unmountOnExit
             >
-              <Fab
-                color={action.color || 'default'}
-                size={action.size || mainSize}
-                onClick={handleActionClick(action)}
-                disabled={action.disabled || disabled}
-                aria-label={action.label}
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  transform: 'translate(-50%, -50%)',
-                  // Apply positioning based on index with smooth transitions
-                  ...(() => {
-                    const pos = getActionPosition(index, isOpen, radius, actions.length);
-                    return {
-                      transform: isOpen 
-                        ? `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`
-                        : 'translate(-50%, -50%) scale(0.3)',
-                      opacity: isOpen ? 1 : 0,
-                      pointerEvents: isOpen ? 'auto' : 'none',
-                      transition: `all 0.5s cubic-bezier(0.4, 0, 0.2, 1) ${index * 100}ms`,
-                      // Hover effects
-                      '&:hover': {
-                        transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px)) scale(1.1)`,
-                        zIndex: 10,
-                        boxShadow: (theme) => theme.shadows[8],
-                      },
-                    };
-                  })(),
-                }}
+              <Tooltip
+                title={action.label}
+                placement={position.includes('right') ? 'left' : 'right'}
+                {...action.tooltipProps}
               >
-                {action.icon}
-              </Fab>
-            </Tooltip>
-          </CSSTransition>
-        ))}
+                <Fab
+                  color={action.color || 'default'}
+                  size={action.size || mainSize}
+                  onClick={handleActionClick(action)}
+                  onMouseEnter={() => setHoveredAction(index)}
+                  onMouseLeave={() => setHoveredAction(-1)}
+                  disabled={action.disabled || disabled}
+                  aria-label={action.label}
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    transform: isOpen
+                      ? `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px)) scale(${dockScale})`
+                      : 'translate(-50%, -50%) scale(0.3)',
+                    opacity: isOpen ? 1 : 0,
+                    pointerEvents: isOpen ? 'auto' : 'none',
+                    transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+                    transitionDelay: isOpen ? `${index * 40}ms` : '0ms',
+                    zIndex: hoveredAction === index ? 10 : 1,
+                    '&:hover': {
+                      boxShadow: (theme) => theme.shadows[12],
+                    },
+                  }}
+                >
+                  {action.icon}
+                </Fab>
+              </Tooltip>
+            </CSSTransition>
+          );
+        })}
       </TransitionGroup>
     </Box>
   );

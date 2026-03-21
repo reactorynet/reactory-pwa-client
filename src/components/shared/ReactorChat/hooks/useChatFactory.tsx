@@ -2227,19 +2227,49 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // We don't need to add another "Calling tool..." message here
     // The UI will show "Calling tool..." based on the tool_calls array in the message
 
-    // Group tools by approval requirements
-    const toolsRequiringApproval = toolApprovalMode === ToolApprovalMode.PROMPT ? toolCalls : [];
-    const toolsForAutoExecution = toolApprovalMode === ToolApprovalMode.AUTO ? toolCalls : [];
-    
+    // Read-only tool names that plan mode can auto-execute
+    const readOnlyTools = new Set([
+      'readChatFile', 'readFile', 'listFiles', 'searchFiles', 'getFileContents',
+      'readDirectory', 'stat', 'state', 'getState', 'getChatState',
+    ]);
+
+    // Group tools by approval requirements based on current mode
+    let toolsRequiringApproval: any[] = [];
+    let toolsForAutoExecution: any[] = [];
+
+    if (toolApprovalMode === ToolApprovalMode.AUTO) {
+      toolsForAutoExecution = toolCalls;
+    } else if (toolApprovalMode === ToolApprovalMode.PROMPT) {
+      toolsRequiringApproval = toolCalls;
+    } else if (toolApprovalMode === ToolApprovalMode.SAFE_AUTO) {
+      // Safe-auto: auto-execute read-only tools, prompt for everything else
+      for (const tc of toolCalls) {
+        const name = tc.function?.name || tc.name || '';
+        if (readOnlyTools.has(name)) {
+          toolsForAutoExecution.push(tc);
+        } else {
+          toolsRequiringApproval.push(tc);
+        }
+      }
+    } else if (toolApprovalMode === ToolApprovalMode.PLAN) {
+      // Plan mode: auto-execute read-only tools, prompt for everything else
+      for (const tc of toolCalls) {
+        const name = tc.function?.name || tc.name || '';
+        if (readOnlyTools.has(name)) {
+          toolsForAutoExecution.push(tc);
+        } else {
+          toolsRequiringApproval.push(tc);
+        }
+      }
+    } else {
+      // Fallback: prompt for all
+      toolsRequiringApproval = toolCalls;
+    }
+
     console.log('🔧 [useChatFactory] Tool grouping:', {
       toolsRequiringApproval: toolsRequiringApproval.length,
       toolsForAutoExecution: toolsForAutoExecution.length,
       toolApprovalMode,
-      toolApprovalModeType: typeof toolApprovalMode,
-      ToolApprovalMode_PROMPT: ToolApprovalMode.PROMPT,
-      ToolApprovalMode_AUTO: ToolApprovalMode.AUTO,
-      isPromptMode: toolApprovalMode === ToolApprovalMode.PROMPT,
-      isAutoMode: toolApprovalMode === ToolApprovalMode.AUTO
     });
 
     // Handle tools requiring approval
@@ -2284,10 +2314,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
         const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors, thinkingPlaceholderId);
 
-        // Check if the AI response contains new tool calls
-        if (aiResponse && aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
+        // Check if the AI response contains new tool calls.
+        // The response may have tool_calls at the top level (ReactorChatMessage shape)
+        // or nested in choices[0].message.tool_calls (raw OpenAI response shape).
+        const responseToolCalls = aiResponse?.tool_calls
+          // @ts-ignore - tool_calls is not in the official UXChatMessage type, but we add it in sendToolResultsToAI
+          || aiResponse?.choices?.[0]?.message?.tool_calls
+          || [];
+        if (responseToolCalls.length > 0) {
           // Recursively process the new tool calls
-          const recursiveResults = await processToolCallsMemoized(aiResponse.tool_calls, aiResponse, depth + 1);
+          const recursiveResults = await processToolCallsMemoized(responseToolCalls, aiResponse, depth + 1);
 
           // Merge results from recursive calls
           toolResults.push(...recursiveResults.toolResults);

@@ -107,9 +107,10 @@ export type NetworkStatus = 'idle' | 'connected' | 'reconnecting' | 'error';
 
 // Tool approval modes
 export enum ToolApprovalMode {
-  AUTO = "auto",      // Execute all tools without asking
-  PROMPT = "prompt",  // Ask for confirmation before executing any tool
-  SAFE_AUTO = "safe_auto" // Auto-approve safe tools, prompt for potentially dangerous ones
+  AUTO = "auto",           // Execute all tools without asking
+  SAFE_AUTO = "safe_auto", // Auto-approve safe tools, prompt for potentially dangerous ones
+  PROMPT = "prompt",       // Ask for confirmation before executing any tool
+  PLAN = "plan"            // Plan mode - agent plans before acting, tools require approval
 }
 
 export type Macro<TResult> = (params: any[], state: ChatState, reactory: Reactory.Client.ReactorySDK) => Promise<TResult>

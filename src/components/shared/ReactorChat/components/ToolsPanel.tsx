@@ -94,6 +94,10 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     Button,
     TextField,
     FormControlLabel,
+    Select,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
   } = Material.MaterialCore;
 
   return (
@@ -341,24 +345,61 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
         </DialogActions>
       </Dialog>
 
-      {/* Tool Approval Mode Header */}
+      {/* Tool Approval Mode */}
       <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
-        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+        <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold' }}>
           {il8n?.t('reactor.client.tools.approval.mode', { defaultValue: 'Tool Approval Mode' })}
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            {il8n?.t('reactor.client.tools.approval.auto', { defaultValue: 'Auto' })}
-          </Typography>
-          <Switch
-            checked={chatState?.toolApprovalMode === ToolApprovalMode.PROMPT}
-            onChange={(e) => onToolApprovalModeChange(e.target.checked ? ToolApprovalMode.PROMPT : ToolApprovalMode.AUTO)}
-            size="small"
-          />
-          <Typography variant="body2" color="text.secondary">
-            {il8n?.t('reactor.client.tools.approval.manual', { defaultValue: 'Manual' })}
-          </Typography>
-        </Box>
+        <Select
+          value={chatState?.toolApprovalMode || ToolApprovalMode.AUTO}
+          onChange={(e) => onToolApprovalModeChange(e.target.value as ToolApprovalMode)}
+          size="small"
+          fullWidth
+          renderValue={(value) => {
+            const labels: Record<string, { icon: string; label: string; color: string }> = {
+              [ToolApprovalMode.AUTO]: { icon: 'bolt', label: 'Auto', color: '#4caf50' },
+              [ToolApprovalMode.SAFE_AUTO]: { icon: 'verified_user', label: 'Safe Auto', color: '#ffc107' },
+              [ToolApprovalMode.PROMPT]: { icon: 'front_hand', label: 'Prompt', color: '#ed6c02' },
+              [ToolApprovalMode.PLAN]: { icon: 'architecture', label: 'Plan', color: '#9c27b0' },
+            };
+            const mode = labels[value as string] || labels[ToolApprovalMode.AUTO];
+            return (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Icon sx={{ color: mode.color, fontSize: 20 }}>{mode.icon}</Icon>
+                <Typography variant="body2">{mode.label}</Typography>
+              </Box>
+            );
+          }}
+        >
+          <MenuItem value={ToolApprovalMode.AUTO}>
+            <ListItemIcon><Icon sx={{ color: '#4caf50' }}>bolt</Icon></ListItemIcon>
+            <ListItemText
+              primary={il8n?.t('reactor.client.tools.approval.auto', { defaultValue: 'Auto' })}
+              secondary={il8n?.t('reactor.client.tools.approval.auto.description', { defaultValue: 'Execute all tools without asking' })}
+            />
+          </MenuItem>
+          <MenuItem value={ToolApprovalMode.SAFE_AUTO}>
+            <ListItemIcon><Icon sx={{ color: '#ffc107' }}>verified_user</Icon></ListItemIcon>
+            <ListItemText
+              primary={il8n?.t('reactor.client.tools.approval.safe_auto', { defaultValue: 'Safe Auto' })}
+              secondary={il8n?.t('reactor.client.tools.approval.safe_auto.description', { defaultValue: 'Auto-approve safe tools, prompt for dangerous ones' })}
+            />
+          </MenuItem>
+          <MenuItem value={ToolApprovalMode.PROMPT}>
+            <ListItemIcon><Icon sx={{ color: '#ed6c02' }}>front_hand</Icon></ListItemIcon>
+            <ListItemText
+              primary={il8n?.t('reactor.client.tools.approval.prompt', { defaultValue: 'Prompt' })}
+              secondary={il8n?.t('reactor.client.tools.approval.prompt.description', { defaultValue: 'Ask for confirmation before every tool' })}
+            />
+          </MenuItem>
+          <MenuItem value={ToolApprovalMode.PLAN}>
+            <ListItemIcon><Icon sx={{ color: '#9c27b0' }}>architecture</Icon></ListItemIcon>
+            <ListItemText
+              primary={il8n?.t('reactor.client.tools.approval.plan', { defaultValue: 'Plan' })}
+              secondary={il8n?.t('reactor.client.tools.approval.plan.description', { defaultValue: 'Agent plans before acting, tools require approval' })}
+            />
+          </MenuItem>
+        </Select>
       </Box>
 
       {/* Streaming Mode Toggle */}
@@ -401,7 +442,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
       </Box>
 
       {/* Max Auto Tool Calls */}
-      {chatState?.toolApprovalMode === ToolApprovalMode.AUTO && (
+      {(chatState?.toolApprovalMode === ToolApprovalMode.AUTO || chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO) && (
         <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
             {il8n?.t('reactor.client.tools.maxIterations', { defaultValue: 'Max Auto Tool Calls' })}

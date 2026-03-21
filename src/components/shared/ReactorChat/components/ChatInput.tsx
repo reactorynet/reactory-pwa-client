@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useReactory } from "@reactory/client-core/api";
-import { ChatState } from '../types';
+import { ChatState, ToolApprovalMode } from '../types';
 
 interface ChatInputProps {
   onSendMessage: (message: string, images?: string[]) => void;
@@ -22,6 +22,10 @@ interface ChatInputProps {
   onPastedImages?: (images: string[]) => void;
   /** Callback to remove a single pending image by index */
   onRemovePendingImage?: (index: number) => void;
+  /** Current tool approval mode */
+  toolApprovalMode?: ToolApprovalMode;
+  /** Callback when user changes the tool approval mode */
+  onToolApprovalModeChange?: (mode: ToolApprovalMode) => void;
 }
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -40,6 +44,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   pendingImages = [],
   onPastedImages,
   onRemovePendingImage,
+  toolApprovalMode,
+  onToolApprovalModeChange,
 }) => {
   const reactory = useReactory();
   const il8n = reactory.i18n;
@@ -59,6 +65,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
     Grid,
     Box,
     Paper,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
+    Icon,
+    Tooltip,
   } = Material.MaterialCore;
 
   const {
@@ -68,6 +80,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
   // Internal state for the input value
   const [inputValue, setInputValue] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const [toolModeAnchor, setToolModeAnchor] = useState<null | HTMLElement>(null);
+
+  const toolModeOptions = [
+    { mode: ToolApprovalMode.AUTO, icon: 'bolt', label: 'Auto', color: '#4caf50', description: 'Execute all tools without asking' },
+    { mode: ToolApprovalMode.SAFE_AUTO, icon: 'verified_user', label: 'Safe Auto', color: '#ffc107', description: 'Auto-approve safe tools, prompt for dangerous' },
+    { mode: ToolApprovalMode.PROMPT, icon: 'front_hand', label: 'Prompt', color: '#ed6c02', description: 'Confirm before every tool' },
+    { mode: ToolApprovalMode.PLAN, icon: 'architecture', label: 'Plan', color: '#9c27b0', description: 'Plan before acting, tools require approval' },
+  ];
+  const currentMode = toolModeOptions.find(o => o.mode === toolApprovalMode) || toolModeOptions[0];
 
   // Handle input change - only updates internal state
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,6 +216,57 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </Box>
       )}
       <Grid container spacing={1} alignItems="center">
+        {/* Tool Approval Mode Button */}
+        {onToolApprovalModeChange && (
+          <Grid item>
+            <Tooltip title={`Tool mode: ${currentMode.label}`}>
+              <IconButton
+                size="small"
+                onClick={(e) => setToolModeAnchor(e.currentTarget)}
+                sx={{
+                  bgcolor: `${currentMode.color}18`,
+                  border: `1.5px solid ${currentMode.color}`,
+                  borderRadius: 1,
+                  width: 32,
+                  height: 32,
+                  '&:hover': { bgcolor: `${currentMode.color}30` },
+                }}
+              >
+                <Icon sx={{ color: currentMode.color, fontSize: 18 }}>{currentMode.icon}</Icon>
+              </IconButton>
+            </Tooltip>
+            <Menu
+              anchorEl={toolModeAnchor}
+              open={Boolean(toolModeAnchor)}
+              onClose={() => setToolModeAnchor(null)}
+              anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              slotProps={{ paper: { sx: { minWidth: 240 } } }}
+            >
+              {toolModeOptions.map((opt) => (
+                <MenuItem
+                  key={opt.mode}
+                  selected={opt.mode === toolApprovalMode}
+                  onClick={() => {
+                    onToolApprovalModeChange(opt.mode);
+                    setToolModeAnchor(null);
+                  }}
+                  sx={{ py: 1 }}
+                >
+                  <ListItemIcon>
+                    <Icon sx={{ color: opt.color }}>{opt.icon}</Icon>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={opt.label}
+                    secondary={opt.description}
+                    primaryTypographyProps={{ variant: 'body2', fontWeight: opt.mode === toolApprovalMode ? 'bold' : 'normal' }}
+                    secondaryTypographyProps={{ variant: 'caption' }}
+                  />
+                </MenuItem>
+              ))}
+            </Menu>
+          </Grid>
+        )}
         {/* Text Input Field */}
         <Grid item xs sx={{ display: 'flex', alignItems: 'center' }}>
           <TextField
