@@ -1816,6 +1816,32 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
           // Mark as initialized since we're loading an existing session
           setIsInitialized(true);
+
+          // Re-establish the SSE transport for streaming sessions.
+          // The EventSource from the previous page visit is gone, so
+          // the server has no active transport for this conversation.
+          // Sending a lightweight SSE-mode call triggers the server to
+          // return ReactorInitiateSSE without processing a real message.
+          if (protocol === 'sse' && !sse.connected) {
+            graph.sendMessage({
+              message: '',
+              personaId: persona.id,
+              chatSessionId,
+              streamingMode: 'SSE',
+              continueAfterTools: true,
+            }).then((resp: any) => {
+              if (resp?.__typename === 'ReactorInitiateSSE') {
+                sse.disconnect();
+                sse.connect({
+                  endpoint: resp.endpoint,
+                  sessionId: resp.sessionId,
+                  headers: resp.headers,
+                });
+              }
+            }).catch((err: any) => {
+              reactory.log(`ChatFactory: Failed to re-establish SSE for loaded session: ${err?.message}`, {}, 'warning');
+            });
+          }
         }
       }
     } catch (error) {
