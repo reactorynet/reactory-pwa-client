@@ -125,6 +125,16 @@ export type MacroToolDefinition = {
   runat?: "server" | "client",
   roles?: string[],
   enabled?: boolean;
+  /**
+   * Which tool-approval modes this tool is available in.
+   * Omit to make the tool available in every mode.
+   */
+  modes?: ToolApprovalMode[];
+  /**
+   * When true the tool is read-only / side-effect free and can be
+   * auto-executed in safe_auto and plan modes without user approval.
+   */
+  safeForAutoExecution?: boolean;
   function: {
     name: string;
     description?: string;
