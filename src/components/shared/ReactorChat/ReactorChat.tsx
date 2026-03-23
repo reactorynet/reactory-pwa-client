@@ -606,9 +606,14 @@ export default (props) => {
     await speech.toggleVoiceMode(selectedPersona.id, chatState?.id);
   }, [selectedPersona?.id, chatState?.id, speech]);
 
-  // Called when a recording finishes in voice mode — sends audio through voice pipeline
+  // Called when a recording finishes — sends audio through voice pipeline or as a message
   const handleVoiceRecordingComplete = useCallback(async (audioBlob: Blob) => {
-    if (!speech.state.voiceModeActive) return;
+    if (!speech.state.voiceModeActive) {
+      if (chatState?.id) {
+        await sendAudio(audioBlob, chatState.id);
+      }
+      return;
+    }
 
     // Add a user "audio message" placeholder to the chat history
     setChatState((prevState) => ({
@@ -638,7 +643,7 @@ export default (props) => {
         }));
       }
     });
-  }, [speech, chatState?.id, setChatState, reactory]);
+  }, [speech, chatState?.id, setChatState, reactory, sendAudio]);
 
   const handleFilesPanelToggle = useCallback(() => {
     // Close other panels first

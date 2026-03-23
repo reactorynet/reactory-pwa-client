@@ -41,7 +41,7 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
 }) => {
   // When in voice mode, capture the raw Blob via onAudioData and forward to onRecordingComplete
   const handleAudioData = React.useCallback((data: string | Uint8Array, format: 'base64' | 'bytes') => {
-    if (voiceModeActive && onRecordingComplete) {
+    if (onRecordingComplete) {
       // Convert base64/bytes back to Blob for the voice mutation
       if (format === 'base64' && typeof data === 'string') {
         const binary = atob(data);
@@ -56,7 +56,7 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
     } else if (onAudioData) {
       onAudioData(data, format);
     }
-  }, [onAudioData, onRecordingComplete, voiceModeActive]);
+  }, [onAudioData, onRecordingComplete]);
 
   const {
     startRecording,
