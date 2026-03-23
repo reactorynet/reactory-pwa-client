@@ -699,6 +699,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           content: history[lastIndex].content === "Processing..."
             ? `Calling tool: ${toolCall.data.name}`
             : history[lastIndex].content,
+          // @ts-ignore
           tool_calls: [...existingToolCalls, toolCallEntry],
           timestamp: new Date(),
         };
