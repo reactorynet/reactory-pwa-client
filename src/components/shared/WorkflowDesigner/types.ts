@@ -169,6 +169,10 @@ export interface StepDefinition {
   description: string;
   icon?: string;
   color?: string;
+  inputs?: Record<string, unknown>;
+  outputs?: Record<string, unknown>;
+  inputMapping?: Reactory.ObjectMap;
+  outputMapping?: Reactory.ObjectMap;
   inputPorts: PortTemplate[];
   outputPorts: PortTemplate[];
   formFQN?: string;
@@ -458,6 +462,8 @@ export interface PropertyFormProps {
   readonly: boolean;
   onPropertyChange: (propertyPath: string, value: any) => void;
   onSectionToggle: (sectionId: string) => void;
+  /** Called when the form is submitted — receives the full updated step */
+  onStepUpdate?: (step: WorkflowStepDefinition) => void;
 }
 
 export interface PropertyFieldDefinition {

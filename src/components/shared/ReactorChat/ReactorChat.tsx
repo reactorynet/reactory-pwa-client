@@ -932,6 +932,12 @@ export default (props) => {
   // SpeedDial actions for persona and chat tools
   const personaSpeedDialActions = useMemo(() => [   
     {
+      key: 'newChat',
+      icon: <Chat />,
+      title: il8n?.t('reactor.client.persona.newChat', { defaultValue: 'New Chat' }),
+      clickHandler: handleNewChat,
+    },
+    {
       key: 'files',
       icon: (
         <Badge badgeContent={chatState?.files?.length || 0} color="primary">
@@ -950,12 +956,6 @@ export default (props) => {
       ),
       title: il8n?.t('reactor.client.chat.opentools', { defaultValue: 'Open tools menu' }),
       clickHandler: handleToolsPanelToggle,
-    },
-    {
-      key: 'newChat',
-      icon: <Chat />,
-      title: il8n?.t('reactor.client.persona.newChat', { defaultValue: 'New Chat' }),
-      clickHandler: handleNewChat,
     },
     // {
     //   key: 'cannedPrompts',

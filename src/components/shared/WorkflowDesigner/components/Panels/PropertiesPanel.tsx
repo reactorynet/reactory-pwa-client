@@ -202,7 +202,7 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
       >
         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Settings />
-          Properties
+          {reactory.i18n.t("reactory.workflow.designer.propertiesPanel.title", "Properties")}
         </Typography>
 
         {/* Selection Info */}
@@ -277,6 +277,7 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                 readonly={readonly}
                 onPropertyChange={handlePropertyChange}
                 onSectionToggle={handleSectionToggle}
+                onStepUpdate={onStepUpdate}
               />
             ) : selectedConnection ? (
               <Box sx={{ p: 2 }}>

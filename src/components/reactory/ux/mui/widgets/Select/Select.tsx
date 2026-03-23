@@ -1,6 +1,7 @@
 import React, { Fragment } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import PropTypes from 'prop-types';
+import type { SelectWidgetProps, SelectOption } from './types';
 import { pullAt, find, isArray, isNil, isEmpty } from 'lodash';
 import {
   Icon,
@@ -40,7 +41,7 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   }
 }));
 
-const SelectWidget = (props) => {
+const SelectWidget = (props: SelectWidgetProps) => {
   const theme = useTheme();
 
     let elements = null
@@ -113,10 +114,10 @@ const SelectWidget = (props) => {
       controlProps = { ...controlProps, ...uiOptions.FormControl.props }
     };
 
-    const matchOption = value => {
+    const matchOption = (value: string | number | null): SelectOption | undefined => {
       if (uiSchema['ui:options'] && uiSchema['ui:options'].selectOptions) {
-        const option = find(uiSchema['ui:options'].selectOptions, { value: value })
-        return option ? option : { value: value, label: value }
+        const option = find(uiSchema['ui:options'].selectOptions, { value: value });
+        return option ?? { value: value ?? '', label: String(value ?? '') };
       }
     }
 

@@ -220,7 +220,19 @@ const RichTextEditor = (props: any) => {
     props.uiSchema?.['ui:options']?.format ||
     props.uiSchema?.['ui:options']?.mode ||
     '';
-  const isCodeMode = ['yaml', 'json', 'javascript', 'typescript', 'sql', 'code'].includes(format);
+  const isCodeMode = [
+    'console',
+    'graphql',
+    'grpc',
+    'java',
+    'csharp',
+    'python',
+    'yaml', 
+    'json', 
+    'javascript', 
+    'typescript', 
+    'sql', 
+    'code'].includes(format);
 
   // ── State ──────────────────────────────────────────────────────────────────
   // In code mode we maintain plain-text separately so we can emit it via

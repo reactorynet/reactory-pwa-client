@@ -53,7 +53,22 @@ const MaterialStringFieldWidget = (props) => {
   } = props;
 
   const reactory = useReactory();
-  const $id = idSchema.$id
+  const $id = idSchema.$id;
+
+  // Local state prevents cursor jumping: the input is controlled by localValue,
+  // not by the formData prop that flows back after every parent re-render.
+  const [localValue, setLocalValue] = React.useState<string>(
+    () => formData != null ? String(formData).replace("undefined", "") :
+          (schema?.default != null ? String(schema.default) : "")
+  );
+
+  // Sync from external formData changes (e.g. form reset, data load).
+  // Using the functional updater avoids a stale-closure on localValue.
+  React.useEffect(() => {
+    const externalValue = formData != null ? String(formData).replace("undefined", "") : "";
+    setLocalValue(prev => prev !== externalValue ? externalValue : prev);
+  }, [formData]); // eslint-disable-line react-hooks/exhaustive-deps
+
   try {
     const inputProps: any = {
       value: '',
@@ -93,6 +108,7 @@ const MaterialStringFieldWidget = (props) => {
       if (args.toLowerCase === true) {
         _v = _v.toLowerCase();
       }
+      setLocalValue(_v);
       onChange(_v);
     }
 
@@ -180,11 +196,10 @@ const MaterialStringFieldWidget = (props) => {
 
 
       let componentProps: Partial<TextFieldProps> = {
-        defaultValue: `${formData || schema.default}`.replace("undefined", ""),
         variant: themeDefaults.variant || uiOptions.variant || "standard",
         InputProps: inputProps,
         label: `${schema.title}${required ? ' *' : ''}`,
-        value: `${formData || schema.default}`.replace("undefined", ""),
+        value: localValue,
         fullWidth: true,
         key: props.key || idSchema.$id || id,
         InputLabelProps: inputLabelProps,
@@ -227,7 +242,7 @@ const MaterialStringFieldWidget = (props) => {
           id={idSchema.$id}
           autoFocus={idSchema.id === props.formContext.$focus && props.formContext.$focus !== undefined}
           readOnly={uiOptions.readOnly === true} 
-          value={formData || schema.defaultValue || schema.default}
+          value={localValue}
           onFocus={onFocus && (e => onFocus(id, e.target.value))}
           onBlur={onBlur && (e => onFocus(id, e.target.value))}
           onChange={onInputChanged} />

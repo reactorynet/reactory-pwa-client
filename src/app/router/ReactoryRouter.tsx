@@ -80,14 +80,20 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
       configureRoutingRef.current();
     };
 
+    const handleApiStatusUpdate = () => {
+      configureRoutingRef.current();
+    };
+
     reactory.on(ReactoryApiEventNames.onLogin, handleLogin);
     reactory.on(ReactoryApiEventNames.onLogout, handleLogout);
     reactory.on(ReactoryApiEventNames.onPluginLoaded, handlePluginLoaded);
+    reactory.on(ReactoryApiEventNames.onApiStatusUpdate, handleApiStatusUpdate);
 
     return () => {
       reactory.off(ReactoryApiEventNames.onLogin, handleLogin);
       reactory.off(ReactoryApiEventNames.onLogout, handleLogout);
       reactory.off(ReactoryApiEventNames.onPluginLoaded, handlePluginLoaded);
+      reactory.off(ReactoryApiEventNames.onApiStatusUpdate, handleApiStatusUpdate);
     };
   }, []);
 
@@ -299,4 +305,11 @@ const ReactoryRouter = (props: ReactoryRouterProps) => {
   )
 }
 
-export default ReactoryRouter;
+function arePropsEqual(prev: ReactoryRouterProps, next: ReactoryRouterProps): boolean {
+  return (
+    prev.auth_validated === next.auth_validated &&
+    prev.authenticating === next.authenticating
+  );
+}
+
+export default React.memo(ReactoryRouter, arePropsEqual);

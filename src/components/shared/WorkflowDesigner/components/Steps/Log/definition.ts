@@ -48,14 +48,7 @@ export const LogStepDefinition: StepDefinition = {
         title: 'Log Level',
         enum: ['debug', 'info', 'warn', 'error'],
         default: 'info'
-      },
-      data: {
-        type: 'object',
-        title: 'Additional Data',
-        description: 'Extra data to attach to the log entry',
-        properties: {},
-        additionalProperties: true
-      }
+      },     
     },
     required: ['name', 'message']
   },
@@ -65,11 +58,25 @@ export const LogStepDefinition: StepDefinition = {
     level: 'info'
   },
   uiSchema: {
-    'ui:order': ['name', 'message', 'level', 'data'],
+    'ui:order': ['name', 'message', 'level'],
     message: {
-      'ui:widget': 'textarea',
-      'ui:options': { rows: 3 },
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': {
+        format: 'console', 
+        rows: 3 
+      },
       'ui:help': 'Supports ${variable} substitution from workflow context'
+    },
+    level: {
+      'ui:widget': 'SelectWidget',
+      'ui:options': {
+        selectOptions: [
+          { icon: 'bug_report', key: 'debug', value: 'debug', label: 'Debug' },
+          { icon: 'info', key: 'info', value: 'info', label: 'Info' },
+          { icon: 'warning', key: 'warn', value: 'warn', label: 'Warn' },
+          { icon: 'error', key: 'error', value: 'error', label: 'Error' }
+        ]
+      }
     }
   },
   tags: ['observability', 'log', 'debug', 'message'],

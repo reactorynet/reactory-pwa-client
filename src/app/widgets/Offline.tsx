@@ -4,7 +4,7 @@ import { useReactory } from '@reactory/client-core/api/ApiProvider';
 
 const Offline = (props: { onOfflineChanged: (isOffline: boolean) => void }) => {
 
-  const TM_BASE_DEFAULT: number = 45000;
+  const TM_BASE_DEFAULT: number = 90000;
   const reactory = useReactory();
   const { onOfflineChanged } = props;
   const [timeout_base, setTimeoutBase] = React.useState<number>(TM_BASE_DEFAULT);
