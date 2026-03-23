@@ -17,6 +17,8 @@ fragment ReactorChatStateFields on ReactorChatState {
       parameters
     }
     runat
+    modes
+    safeForAutoExecution
   }
   tokenCount
   maxTokens

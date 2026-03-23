@@ -52,6 +52,8 @@ query GetReactorPersonas {
           description
           parameters 
         }
+        modes
+        safeForAutoExecution
       }
     }
   }

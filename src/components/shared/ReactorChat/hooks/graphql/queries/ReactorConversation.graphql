@@ -23,7 +23,10 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
         type
         propsMap
         roles
-        function { name icon description parameters }        
+        function { name icon description parameters }
+        runat
+        modes
+        safeForAutoExecution
       }
       macros { id nameSpace name version icon description alias roles params runat }
       toolApprovalMode

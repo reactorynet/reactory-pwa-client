@@ -232,7 +232,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       // Now process any tool_calls that were accumulated during streaming.
       const accumulated = pendingToolCallsRef.current;
       pendingToolCallsRef.current = [];
-      if (accumulated.length > 0 && processToolCallsRef.current) {
+
+      // In AUTO mode with SSE, the server already executed all tools in its
+      // internal loop and sent tool_call start/complete events for UI progress.
+      // The accumulated entries here are purely informational -- do NOT
+      // re-execute them on the client (that would be a double-execution).
+      const isAutoSSE = chatState.toolApprovalMode === ToolApprovalMode.AUTO && protocol === 'sse';
+
+      if (accumulated.length > 0 && processToolCallsRef.current && !isAutoSSE) {
         const toolMessage = {
           id: reactory.utils.uuid(),
           role: "assistant",
@@ -614,73 +621,102 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       return;
     }
     
-    console.log('🔧 [useChatFactory] Tool call validation passed:', {
-      name: toolCall.data.name,
-      id: toolCall.data.id,
-      arguments: toolCall.data.arguments
-    });
-    
-    // Check if the requested tool/macro exists
-    console.log('🔧 [useChatFactory] Available macros in chat state:', {
-      macrosCount: chatState.macros?.length || 0,
-      macros: chatState.macros?.map(m => ({ name: m.name, alias: m.alias, runat: m.runat })),
-      toolsCount: chatState.tools?.length || 0,
-      tools: chatState.tools?.map(t => ({ name: t.function?.name, type: t.type, runat: t.runat }))
-    });
-    
-    // create tool call construct
+    const isComplete = !!toolCall.data.isComplete;
+    const toolCallId = toolCall.data.id;
+
+    // When isComplete is true, this is a completion event for an already-tracked
+    // tool call (e.g. from the AUTO server-side loop). Update the existing entry
+    // instead of appending a duplicate.
+    if (isComplete) {
+      setChatState((prevState) => {
+        const history = [...prevState.history];
+        const lastIndex = history.length - 1;
+
+        if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
+          const existingToolCalls = history[lastIndex].tool_calls || [];
+          const updatedToolCalls = existingToolCalls.map((tc: any) =>
+            tc.id === toolCallId ? { ...tc, status: 'success' as const } : tc
+          );
+
+          // If the tool wasn't already tracked (edge case: completion arrives
+          // without a preceding start event), append it as completed.
+          const wasUpdated = existingToolCalls.some((tc: any) => tc.id === toolCallId);
+          if (!wasUpdated) {
+            updatedToolCalls.push({
+              id: toolCallId,
+              type: "function",
+              function: {
+                name: toolCall.data.name,
+                arguments: typeof toolCall.data.arguments === 'string'
+                  ? JSON.parse(toolCall.data.arguments) : toolCall.data.arguments,
+              },
+              status: 'success' as const,
+            });
+          }
+
+          history[lastIndex] = {
+            ...history[lastIndex],
+            tool_calls: updatedToolCalls,
+            timestamp: new Date(),
+          };
+        }
+
+        return { ...prevState, id: prevState.id || validSessionId, history, updated: new Date() };
+      });
+      return;
+    }
+
+    // --- Start event (isComplete === false): add a new tool call entry ---
+
+    const toolCallEntry = {
+      id: toolCallId,
+      type: "function",
+      function: {
+        name: toolCall.data.name,
+        arguments: typeof toolCall.data.arguments === 'string'
+          ? JSON.parse(toolCall.data.arguments) : toolCall.data.arguments,
+      },
+      status: 'running' as const,
+    };
+
     const toolCallMessage = {
       id: reactory.utils.uuid(),
       role: "assistant",
       content: "",
       timestamp: new Date(),
       sessionId: validSessionId,
-      tool_calls: [{
-        id: toolCall.data.id,
-        type: "function",
-        function: {
-          name: toolCall.data.name,          
-          arguments: typeof toolCall.data.arguments === 'string' ? JSON.parse(toolCall.data.arguments) : toolCall.data.arguments,
-        },
-        status: 'running' as const,
-      }],
+      tool_calls: [toolCallEntry],
     } as UXChatMessage;
-    
-    // Merge tool calls into the current streaming assistant message
+
     setChatState((prevState) => {
       const history = [...prevState.history];
       const lastIndex = history.length - 1;
       
       if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
-        // Merge tool calls into the existing assistant message
-        // (handles both "Processing..." placeholders and token-accumulated messages)
         const existingToolCalls = history[lastIndex].tool_calls || [];
         history[lastIndex] = {
           ...history[lastIndex],
           content: history[lastIndex].content === "Processing..."
             ? `Calling tool: ${toolCall.data.name}`
             : history[lastIndex].content,
-          tool_calls: [...existingToolCalls, ...toolCallMessage.tool_calls],
+          tool_calls: [...existingToolCalls, toolCallEntry],
           timestamp: new Date(),
         };
       } else {
-        // No existing assistant message — add the tool call message
         history.push(toolCallMessage);
       }
       
-      const newState = {
+      return {
         ...prevState,
         id: prevState.id || validSessionId,
         history,
         updated: new Date(),
       };
-      
-      return newState;
     });
 
     // Accumulate the tool_call; actual processing is deferred until the
     // completion event arrives so that ALL tool_calls are processed as a batch.
-    pendingToolCallsRef.current = [...pendingToolCallsRef.current, ...toolCallMessage.tool_calls];
+    pendingToolCallsRef.current = [...pendingToolCallsRef.current, toolCallEntry];
   }, [chatState?.id]);
 
 
@@ -1219,64 +1255,35 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }, []);
 
   /**
-   * Use the onToolCallPrompt to handle tool calls that require user confirmation or additional input.
-   * Instead of creating a new message, we'll update the existing message with tool_calls to include the prompt component
-   * @param toolCall 
-   * @param state 
+   * Attach a ToolPrompt component to the message that owns the tool_calls.
+   * When `targetMessageId` is provided the search is deterministic; otherwise
+   * falls back to the last assistant message with tool_calls.
    */
-  const onToolCallPrompt = React.useCallback((toolCall: string, args: any, state: ChatState, callBack: (approved: boolean) => void) => {
-    // Find the most recent message with tool_calls and update it with the approval component
+  const onToolCallPrompt = React.useCallback((toolCall: string, args: any, state: ChatState, callBack: (approved: boolean) => void, targetMessageId?: string) => {
     setChatState((prevState) => {
       const history = [...prevState.history];
 
-      // Find the last assistant message with tool_calls
       let lastMessageIndex = -1;
-      for (let i = history.length - 1; i >= 0; i--) {
-        const msg = history[i];
-        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
-          lastMessageIndex = i;
-          break;
+      if (targetMessageId) {
+        lastMessageIndex = history.findIndex((msg) => (msg as any).id === targetMessageId);
+      }
+      if (lastMessageIndex < 0) {
+        for (let i = history.length - 1; i >= 0; i--) {
+          const msg = history[i];
+          if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+            lastMessageIndex = i;
+            break;
+          }
         }
       }
 
-      console.log('🔧 [useChatFactory] onToolCallPrompt - message search:', {
-        historyLength: history.length,
-        lastMessageIndex,
-        foundMessage: lastMessageIndex >= 0 ? history[lastMessageIndex] : null,
-        toolCall,
-        args,
-        // Debug the history to see what messages we have
-        historyMessages: history.map((msg, idx) => ({
-          index: idx,
-          role: msg.role,
-          content: msg.content,
-          hasToolCalls: !!(msg.tool_calls && msg.tool_calls.length > 0),
-          toolCallsCount: msg.tool_calls?.length || 0,
-          // Show the actual tool_calls content for debugging
-          toolCalls: msg.tool_calls?.map(tc => ({
-            id: tc.id,
-            type: tc.type,
-            functionName: tc.function?.name
-          }))
-        })),
-        // Show the specific message we're looking for
-        targetMessage: {
-          role: 'assistant',
-          needsToolCalls: true,
-          notProcessing: true,
-          notCallingTool: true
-        }
-      });
-
       if (lastMessageIndex >= 0) {
-        console.log('🔧 [useChatFactory] onToolCallPrompt - updating message at index:', lastMessageIndex);
         history[lastMessageIndex] = {
           ...history[lastMessageIndex],
           component: () => <ToolPrompt toolName={toolCall} args={args} onDecision={callBack} />,
         };
       } else {
         console.warn('⚠️ [useChatFactory] No message with tool_calls found for prompt');
-        console.warn('⚠️ [useChatFactory] This might indicate a message positioning issue during streaming');
       }
 
       return {
@@ -1905,46 +1912,35 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }, [graph, persona?.id, chatState?.id, modelOverride]);
 
   /**
-   * Helper function to clean up approval component from the message with tool_calls
+   * Remove the approval component from a message.
+   * When `targetMessageId` is provided the removal is deterministic;
+   * otherwise falls back to the last assistant message with tool_calls.
    */
-  const cleanupApprovalComponent = React.useCallback(() => {
+  const cleanupApprovalComponent = React.useCallback((targetMessageId?: string) => {
     setChatState((prevState) => {
       const history = [...prevState.history];
 
-      // Find the last message with tool_calls and remove the component
-      // Skip "processing" and "calling tool" messages and look for actual tool call messages
       let lastMessageIndex = -1;
-      for (let i = history.length - 1; i >= 0; i--) {
-        const msg = history[i];
-        if (msg.role === 'assistant' && 
-            msg.tool_calls && 
-            msg.tool_calls.length > 0 && 
-            msg.content !== "Processing..." && 
-            !msg.content.startsWith("Calling tool:")) { // Skip processing and calling messages
-          lastMessageIndex = i;
-          break;
+      if (targetMessageId) {
+        lastMessageIndex = history.findIndex((msg) => (msg as any).id === targetMessageId);
+      }
+      if (lastMessageIndex < 0) {
+        for (let i = history.length - 1; i >= 0; i--) {
+          const msg = history[i];
+          if (msg.role === 'assistant' && 
+              msg.tool_calls && 
+              msg.tool_calls.length > 0 && 
+              msg.content !== "Processing..." && 
+              !msg.content.startsWith("Calling tool:")) {
+            lastMessageIndex = i;
+            break;
+          }
         }
       }
-
-      console.log('🔧 [useChatFactory] cleanupApprovalComponent - message search:', {
-        historyLength: history.length,
-        lastMessageIndex,
-        foundMessage: lastMessageIndex >= 0 ? history[lastMessageIndex] : null,
-        // Debug the history to see what messages we have
-        historyMessages: history.map((msg, idx) => ({
-          index: idx,
-          role: msg.role,
-          content: msg.content,
-          hasToolCalls: !!(msg.tool_calls && msg.tool_calls.length > 0),
-          toolCallsCount: msg.tool_calls?.length || 0
-        }))
-      });
 
       if (lastMessageIndex >= 0) {
         const { component, ...messageWithoutComponent } = history[lastMessageIndex];
         history[lastMessageIndex] = messageWithoutComponent;
-      } else {
-        console.warn('⚠️ [useChatFactory] No message with tool_calls found for cleanup');
       }
 
       return {
@@ -1956,18 +1952,19 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }, [chatState?.history, chatState?.tools, chatState?.macros]);
 
   /**
-   * Process tools that require user approval
+   * Process tools that require user approval.
+   * @param targetMessageId - The ID of the chat message that holds the tool_calls.
+   *   Passed through to onToolCallPrompt / cleanupApprovalComponent for
+   *   deterministic message targeting.
    */
-  const processToolsWithApproval = React.useCallback(async (toolCalls: any[], toolResults: any[], toolErrors: any[]) => {
+  const processToolsWithApproval = React.useCallback(async (toolCalls: any[], toolResults: any[], toolErrors: any[], targetMessageId?: string) => {
     for (const toolCall of toolCalls) {
       if (toolCall.type === 'function' && toolCall.function) {
         const { id, function: func } = toolCall;
         const { name, arguments: args } = func;
-        debugger;
-        // Try to find the macro by alias first, then by name
+
         let macro = findMacroByAlias(name);
         if (!macro) {
-          // If not found by alias, try to find by name in the macros array
           macro = findMacroByName(name);
         }
 
@@ -1984,8 +1981,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         try {
           await new Promise<void>((resolve, reject) => {
             onToolCallPrompt(macro.name, args, chatState, async (approved: boolean) => {
-              // Clean up the approval component
-              cleanupApprovalComponent();
+              cleanupApprovalComponent(targetMessageId);
 
               if (approved) {
                 try {
@@ -2017,18 +2013,23 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 });
                 resolve();
               }
-            });
+            }, targetMessageId);
           });
+
+          // Yield so React can flush state between sequential approval prompts.
+          // Without this, the cleanup of tool N and the prompt for tool N+1 are
+          // batched, and the ToolPrompt for tool N+1 may not render.
+          await new Promise(r => setTimeout(r, 0));
         } catch (error) {
           reactory.error(`Error processing approved tool: ${name}`, error);
         }
       }
     }
   }, [
-    // Use specific primitive dependencies instead of entire chatState object
     chatState.macros?.length,
     chatState.id,
     findMacroByAlias,
+    findMacroByName,
     onToolCallPrompt,
     cleanupApprovalComponent,
     executeMacro
@@ -2269,17 +2270,28 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       return { toolResults, toolErrors };
     }
 
-    // The message with tool_calls is already added to the chat history by sendMessage
-    // We don't need to add another "Calling tool..." message here
-    // The UI will show "Calling tool..." based on the tool_calls array in the message
+    // Build a lookup from tool name -> MacroToolDefinition for per-tool metadata.
+    const toolMetaByName = new Map<string, MacroToolDefinition>();
+    for (const t of (chatState.tools || [])) {
+      if (t?.function?.name) toolMetaByName.set(t.function.name, t);
+    }
 
-    // Read-only tool names that plan mode can auto-execute
-    const readOnlyTools = new Set([
-      'readChatFile', 'readFile', 'listFiles', 'searchFiles', 'getFileContents',
-      'readDirectory', 'stat', 'state', 'getState', 'getChatState',
-    ]);
+    /**
+     * Determine if a tool is safe for auto-execution based on its
+     * `safeForAutoExecution` metadata. Falls back to a hardcoded
+     * allowlist for tools that haven't been annotated yet.
+     */
+    const isToolSafe = (name: string): boolean => {
+      const meta = toolMetaByName.get(name);
+      if (meta?.safeForAutoExecution != null) return meta.safeForAutoExecution;
+      // Legacy fallback for unannotated tools
+      const legacySafe = new Set([
+        'readChatFile', 'readFile', 'listFiles', 'searchFiles', 'getFileContents',
+        'readDirectory', 'stat', 'state', 'getState', 'getChatState',
+      ]);
+      return legacySafe.has(name);
+    };
 
-    // Group tools by approval requirements based on current mode
     let toolsRequiringApproval: any[] = [];
     let toolsForAutoExecution: any[] = [];
 
@@ -2287,28 +2299,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       toolsForAutoExecution = toolCalls;
     } else if (toolApprovalMode === ToolApprovalMode.PROMPT) {
       toolsRequiringApproval = toolCalls;
-    } else if (toolApprovalMode === ToolApprovalMode.SAFE_AUTO) {
-      // Safe-auto: auto-execute read-only tools, prompt for everything else
+    } else if (toolApprovalMode === ToolApprovalMode.SAFE_AUTO || toolApprovalMode === ToolApprovalMode.PLAN) {
       for (const tc of toolCalls) {
         const name = tc.function?.name || tc.name || '';
-        if (readOnlyTools.has(name)) {
-          toolsForAutoExecution.push(tc);
-        } else {
-          toolsRequiringApproval.push(tc);
-        }
-      }
-    } else if (toolApprovalMode === ToolApprovalMode.PLAN) {
-      // Plan mode: auto-execute read-only tools, prompt for everything else
-      for (const tc of toolCalls) {
-        const name = tc.function?.name || tc.name || '';
-        if (readOnlyTools.has(name)) {
+        if (isToolSafe(name)) {
           toolsForAutoExecution.push(tc);
         } else {
           toolsRequiringApproval.push(tc);
         }
       }
     } else {
-      // Fallback: prompt for all
       toolsRequiringApproval = toolCalls;
     }
 
@@ -2318,10 +2318,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       toolApprovalMode,
     });
 
-    // Handle tools requiring approval
+    // Handle tools requiring approval, passing the owning message ID
+    // so the ToolPrompt is attached to the correct message deterministically.
     if (toolsRequiringApproval.length > 0) {
-      console.log('🔧 [useChatFactory] Processing tools requiring approval');
-      await processToolsWithApproval(toolsRequiringApproval, toolResults, toolErrors);
+      await processToolsWithApproval(toolsRequiringApproval, toolResults, toolErrors, message.id);
     }
 
     // Handle auto-execution tools
