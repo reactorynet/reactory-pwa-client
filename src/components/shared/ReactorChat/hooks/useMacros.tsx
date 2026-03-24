@@ -257,8 +257,11 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
             throw new Error(`Macro ${macro.name} is not executable on the server`);
           }
           // Call the server-side macro
-          const response = await reactory.graphqlMutation< 
-            ExecuteMacroResponse , { 
+          if (!chatState.persona?.id) {
+            throw new Error(`Cannot execute macro ${macro.name}: persona is not available. Please reload the chat session.`);
+          }
+          const response = await reactory.graphqlMutation<
+            ExecuteMacroResponse , {
             macro: string;
             args: any;
             personaId: string;
@@ -271,7 +274,7 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
             personaId: chatState.persona.id,
             chatSessionId: chatState.id,
             calledBy,
-            callId 
+            callId
           });
           if (response?.data) {
             result = response.data.ReactorExecuteMacro;
@@ -298,7 +301,7 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
       return null;
     }
   }
-  , [onMacroCallResult, onMacroCallError]);
+  , [onMacroCallResult, onMacroCallError, chatState?.persona?.id, chatState?.id]);
   
   // use effect to monitor changes on the chatState for macros
   useEffect(() => {

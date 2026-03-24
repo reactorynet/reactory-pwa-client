@@ -240,7 +240,31 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       const isAutoSSE = chatState.toolApprovalMode === ToolApprovalMode.AUTO && protocol === 'sse';
 
       if (accumulated.length > 0 && processToolCallsRef.current && !isAutoSSE) {
-        const toolMessage = {
+        // Yield so React flushes the setChatState calls above (content update,
+        // streaming flags). Without this, onToolCallPrompt cannot find the
+        // assistant message with tool_calls that onToolCallReceived added.
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Read the latest history from state via the updater function so we
+        // get the flushed state (the closure `chatState` may be stale).
+        let existingToolMessage: UXChatMessage | null = null;
+        setChatState((currentState) => {
+          const history = currentState.history || [];
+          for (let i = history.length - 1; i >= 0; i--) {
+            const msg = history[i];
+            if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+              existingToolMessage = msg as UXChatMessage;
+              break;
+            }
+          }
+          return currentState; // no-op update, just reading
+        });
+
+        // Another yield so the no-op setChatState callback runs and
+        // populates existingToolMessage before we use it.
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        const toolMessage = existingToolMessage || {
           id: reactory.utils.uuid(),
           role: "assistant",
           content: "",
@@ -248,6 +272,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           sessionId: chatState.id,
           tool_calls: accumulated,
         } as UXChatMessage;
+
         try {
           await processToolCallsRef.current(accumulated, toolMessage);
         } catch (error) {
@@ -2472,6 +2497,32 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     protectCriticalState,
     validateChatState,
     setChatStateWithValidation,
+    // SSE session controls (for DebugPanel)
+    sseConnected: sse.connected,
+    sseIsReconnecting: sse.isReconnecting,
+    sseDisconnect: sse.disconnect,
+    sseReconnect: () => {
+      if (!chatState?.id) return;
+      sse.disconnect();
+      graph.sendMessage({
+        message: '',
+        personaId: persona.id,
+        chatSessionId: chatState.id,
+        streamingMode: 'SSE',
+        continueAfterTools: true,
+      }).then((resp: any) => {
+        if (resp?.__typename === 'ReactorInitiateSSE') {
+          sse.connect({
+            endpoint: resp.endpoint,
+            sessionId: resp.sessionId,
+            headers: resp.headers,
+          });
+          reactory.log(`DebugPanel: SSE re-established for session ${chatState.id}`);
+        }
+      }).catch((err: any) => {
+        reactory.log(`DebugPanel: Failed to re-establish SSE: ${err?.message}`, {}, 'warning');
+      });
+    },
   }
 };
 

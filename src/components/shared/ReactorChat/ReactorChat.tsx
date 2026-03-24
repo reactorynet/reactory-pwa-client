@@ -171,6 +171,10 @@ export default (props) => {
     reconnectAttempt: networkReconnectAttempt = 0,
     retryConnection,
     dismissNetworkError,
+    sseConnected = false,
+    sseIsReconnecting = false,
+    sseDisconnect = undefined as (() => void) | undefined,
+    sseReconnect = undefined as (() => void) | undefined,
   } = {
     ...chatFactory,
     isStreaming: false,
@@ -1274,13 +1278,18 @@ export default (props) => {
             {/* Debug Panel - Slides up from bottom (dev mode only) */}
             {reactory.isDevelopmentMode() && (
               <DebugPanel
-                modelOverride={modelOverride}                
+                modelOverride={modelOverride}
                 open={debugPanelOpen}
                 onClose={handleDebugPanelClose}
                 chatState={chatState}
                 onRefreshVars={handleRefreshChatVars}
                 Material={Material}
                 il8n={il8n}
+                sseConnected={sseConnected}
+                sseIsReconnecting={sseIsReconnecting}
+                isStreaming={isStreaming}
+                onSseDisconnect={sseDisconnect}
+                onSseReconnect={sseReconnect}
               />
             )}
 

@@ -9,6 +9,11 @@ interface DebugPanelProps {
   onRefreshVars?: () => void;
   Material: any;
   il8n: any;
+  sseConnected?: boolean;
+  sseIsReconnecting?: boolean;
+  isStreaming?: boolean;
+  onSseDisconnect?: () => void;
+  onSseReconnect?: () => void;
 }
 
 function formatDate(d: Date | string | undefined): string {
@@ -25,6 +30,11 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
   onRefreshVars,
   Material,
   il8n,
+  sseConnected = false,
+  sseIsReconnecting = false,
+  isStreaming = false,
+  onSseDisconnect,
+  onSseReconnect,
 }) => {
   const {
     Paper,
@@ -36,6 +46,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
     Tooltip,
     LinearProgress,
     Collapse,
+    Button,
   } = Material.MaterialCore;
 
   const {
@@ -47,7 +58,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
   } = Material.MaterialIcons;
 
   const [expandedSections, setExpandedSections] = React.useState<Set<string>>(
-    () => new Set(['session', 'tokens'])
+    () => new Set(['session', 'sse', 'tokens'])
   );
 
   // Auto-refresh when panel opens
@@ -195,7 +206,67 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
             <InfoRow label="Created" value={formatDate(chatState?.created)} />
             <InfoRow label="Updated" value={formatDate(chatState?.updated)} />
           </Box>
-        </Collapse>        
+        </Collapse>
+        <Divider sx={{ my: 0.5 }} />
+
+        {/* SSE Session */}
+        <SectionHeader id="sse" title="SSE Session" />
+        <Collapse in={expandedSections.has('sse')}>
+          <Box sx={{ mb: 1 }}>
+            <InfoRow
+              label="Status"
+              value={
+                <Chip
+                  label={
+                    sseIsReconnecting
+                      ? 'Reconnecting'
+                      : sseConnected
+                        ? 'Connected'
+                        : 'Disconnected'
+                  }
+                  size="small"
+                  color={
+                    sseIsReconnecting
+                      ? 'warning'
+                      : sseConnected
+                        ? 'success'
+                        : 'default'
+                  }
+                  sx={{ height: 20, fontSize: '0.7rem' }}
+                />
+              }
+            />
+            <InfoRow
+              label="Streaming"
+              value={isStreaming ? 'Active' : 'Idle'}
+            />
+            <Box sx={{ display: 'flex', gap: 1, px: 1, pt: 1 }}>
+              {sseConnected ? (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="error"
+                  onClick={onSseDisconnect}
+                  disabled={!onSseDisconnect}
+                  sx={{ flex: 1, textTransform: 'none', fontSize: '0.75rem' }}
+                >
+                  Disconnect SSE
+                </Button>
+              ) : (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="success"
+                  onClick={onSseReconnect}
+                  disabled={!onSseReconnect || !chatState?.id || sseIsReconnecting}
+                  sx={{ flex: 1, textTransform: 'none', fontSize: '0.75rem' }}
+                >
+                  {sseIsReconnecting ? 'Reconnecting...' : 'Connect SSE'}
+                </Button>
+              )}
+            </Box>
+          </Box>
+        </Collapse>
         <Divider sx={{ my: 0.5 }} />
 
         {/* Token Stats */}
