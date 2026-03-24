@@ -209,16 +209,45 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const onSSEMessageReceived = async (message: CompletionStreamingEvent) => {
     if (message.type === StreamingEventType.COMPLETE) {
+      console.log('📩 [useChatFactory] onSSEMessageReceived COMPLETE', {
+        contentLength: message.data?.content?.length || 0,
+        contentPreview: message.data?.content?.substring(0, 100) || '(empty)',
+        finishReason: message.data?.finishReason,
+      });
+
       // Update the last assistant message with the final content from the complete event.
-      // This replaces any placeholder ("Processing...") or token-accumulated content.
       setChatState((prevState) => {
         const history = [...prevState.history];
         const lastIndex = history.length - 1;
+        const lastMsg = lastIndex >= 0 ? history[lastIndex] : null;
 
-        if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+        console.log('📩 [useChatFactory] COMPLETE setChatState', {
+          lastIndex,
+          lastMsgRole: lastMsg?.role,
+          lastMsgContentLength: (typeof lastMsg?.content === 'string' ? lastMsg.content.length : 0),
+          incomingContentLength: message.data?.content?.length || 0,
+        });
+
+        if (lastIndex >= 0 && lastMsg?.role === "assistant") {
+          // Only overwrite content if the completion event carries actual text.
+          // In AUTO mode the server may send a completion with empty content
+          // after the provider already streamed/set the real content. Without
+          // this guard, the empty event wipes the displayed message.
+          const incomingContent = message.data.content;
+          const existingContent = history[lastIndex].content;
+          const shouldUpdateContent = incomingContent
+            || existingContent === 'Processing...'
+            || !existingContent;
+
+          console.log('📩 [useChatFactory] COMPLETE update decision', {
+            shouldUpdateContent,
+            incomingContent: incomingContent?.substring?.(0, 80) || '(empty)',
+            existingContent: typeof existingContent === 'string' ? existingContent.substring(0, 80) : '(non-string)',
+          });
+
           history[lastIndex] = {
             ...history[lastIndex],
-            content: message.data.content,
+            ...(shouldUpdateContent ? { content: incomingContent } : {}),
             thinking: message.data.thinking || history[lastIndex].thinking,
             timestamp: new Date(),
           };
