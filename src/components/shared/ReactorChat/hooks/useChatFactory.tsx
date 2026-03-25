@@ -215,6 +215,20 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         finishReason: message.data?.finishReason,
       });
 
+      // ── Drain the reasoning buffer synchronously ──────────────────────
+      // The reasoning callback uses a 50ms debounce timer. If the COMPLETE
+      // event arrives before the timer fires, the buffer still holds
+      // un-flushed reasoning text. Drain it now and merge it into the
+      // final thinking text. Also set the completion guard so any stale
+      // timer callbacks become no-ops.
+      streamingCompleteRef.current = true;
+      if (reasoningFlushTimerRef.current) {
+        clearTimeout(reasoningFlushTimerRef.current);
+        reasoningFlushTimerRef.current = null;
+      }
+      const trailingReasoning = reasoningBufferRef.current;
+      reasoningBufferRef.current = "";
+
       // Update the last assistant message with the final content from the complete event.
       setChatState((prevState) => {
         const history = [...prevState.history];
@@ -245,10 +259,18 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             existingContent: typeof existingContent === 'string' ? existingContent.substring(0, 80) : '(non-string)',
           });
 
+          // Build the authoritative thinking text:
+          // 1. The completion event's `thinking` field is the full server-
+          //    accumulated reasoning — prefer it when available.
+          // 2. Fall back to whatever was streamed incrementally into the
+          //    message's `thinking` field + any trailing buffer content.
+          const streamedThinking = (history[lastIndex].thinking || '') + trailingReasoning;
+          const finalThinking = message.data.thinking || streamedThinking || undefined;
+
           history[lastIndex] = {
             ...history[lastIndex],
             ...(shouldUpdateContent ? { content: incomingContent } : {}),
-            thinking: message.data.thinking || history[lastIndex].thinking,
+            thinking: finalThinking,
             timestamp: new Date(),
           };
         }
@@ -397,6 +419,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             } as UXChatMessage],
           }));
 
+          // Reset the completion guard so reasoning events are accepted
+          // for this new streaming response.
+          streamingCompleteRef.current = false;
           setIsStreaming(true);
           setWaitingForResponse(true);
         }
@@ -827,12 +852,24 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const reasoningBufferRef = React.useRef<string>("");
   const reasoningFlushTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  // Guard: once the COMPLETE event has been processed, ignore any stale
+  // reasoning buffer flushes that fire after the authoritative thinking
+  // text has been set.
+  const streamingCompleteRef = React.useRef<boolean>(false);
 
   const onReasoningReceived = React.useCallback((reasoning: ReasoningStreamingEvent) => {
+    // Skip if streaming already completed (stale event from reconnect, etc.)
+    if (streamingCompleteRef.current) return;
+
+    reactory.debug('[useChatFactory] Received reasoning delta:', reasoning);
     reasoningBufferRef.current += reasoning.data.delta;
 
     if (!reasoningFlushTimerRef.current) {
       reasoningFlushTimerRef.current = setTimeout(() => {
+        // Re-check guard inside the timer callback — the COMPLETE event
+        // may have arrived and drained the buffer while we were waiting.
+        if (streamingCompleteRef.current) return;
+
         const flushContent = reasoningBufferRef.current;
         reasoningBufferRef.current = "";
         reasoningFlushTimerRef.current = null;

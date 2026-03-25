@@ -278,6 +278,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
    */
   const enqueueTokenDrip = React.useCallback(
     (event: TokenStreamingEvent) => {
+      reactory.debug('[useSSE]: enqueueTokenDrip', event);
       const text = event.data.content || event.data.delta || '';
       if (text.length <= DRIP_THRESHOLD) {
         // Small enough — emit immediately
@@ -328,7 +329,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           enqueueTokenDrip(data as TokenStreamingEvent);
           break;
         }
-        case 'reasoning': {
+        case 'reasoning': {          
           if (onReasoningRef.current) onReasoningRef.current(data as ReasoningStreamingEvent);
           break;
         }
