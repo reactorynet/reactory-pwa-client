@@ -2246,8 +2246,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         if (!macro) {
           macro = findMacroByName(name);
         }
+        // Fallback: search chatState.macros directly by name or alias
+        // (covers cases where the AI uses the tool function name which
+        // may differ from the registered macro FQN)
+        if (!macro && chatState.macros) {
+          const found = chatState.macros.find(
+            (m: any) => m.name === name || m.alias === name
+              || m.name?.endsWith(`.${name}`) || m.alias?.endsWith(`.${name}`)
+          );
+          if (found) macro = found as any;
+        }
 
         if (!macro) {
+          console.warn(`⚠️ [useChatFactory] Macro not found for tool: ${name}`, {
+            availableMacros: chatState.macros?.map((m: any) => ({ name: m.name, alias: m.alias })),
+          });
           toolErrors.push({
             id,
             name,
@@ -2339,11 +2352,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         
         console.log('🔧 [useChatFactory] Tool call details:', { id, name, args });
 
-        // Try to find the macro by alias first, then by name
+        // Try to find the macro by alias first, then by name, then by partial match
         let macro = findMacroByAlias(name);
         if (!macro) {
-          // If not found by alias, try to find by name in the macros array
-          macro = chatState.macros?.find(m => m.name === name || m.alias === name);
+          macro = chatState.macros?.find(
+            (m: any) => m.name === name || m.alias === name
+              || m.name?.endsWith(`.${name}`) || m.alias?.endsWith(`.${name}`)
+          ) ?? null;
         }
         
         console.log('🔧 [useChatFactory] Macro found:', {
@@ -2623,8 +2638,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       updateChatStateWithToolResults(message, toolResults, toolErrors);
     }
 
-    // Send tool results back to AI provider and check for recursive tool calls
-    if (toolResults.length > 0) {
+    // Send tool results (and/or errors) back to the AI provider so it can
+    // continue the conversation. This must fire even when ALL tools failed
+    // (toolResults empty, toolErrors non-empty) — otherwise the AI never
+    // learns about the failure and the conversation hangs silently.
+    if (toolResults.length > 0 || toolErrors.length > 0) {
       try {
         const consolidatedResults = consolidateToolResults(toolResults, toolErrors);
 
