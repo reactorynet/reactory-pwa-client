@@ -510,6 +510,7 @@ export interface MacrosHookProps {
   chatState: ChatState
   onMacroCallResult: (result: any, state: ChatState) => void
   onMacroCallError: (error: Error, macro: MacroComponentDefinition<unknown>, state: ChatState) => void
+  sessionLogger?: SessionLogger
 }
 
 export type MacrosHook = (props: MacrosHookProps) => MacrosHookResults
@@ -542,3 +543,43 @@ export interface TodoList {
 }
 
 export const TODOS_VAR_KEY = 'reactor.todos';
+
+// ── Session Logger types (client-to-server debug logging) ──────────────
+
+export type SessionLogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface SessionLogEntry {
+  level: SessionLogLevel;
+  message: string;
+  meta?: Record<string, unknown>;
+  timestamp: Date;
+  source?: string;
+}
+
+export interface SessionLoggerOptions {
+  /** Flush interval in ms (default 3000) */
+  flushInterval?: number;
+  /** Max entries to buffer before auto-flush (default 50) */
+  bufferSize?: number;
+  /** Whether logging is enabled */
+  enabled: boolean;
+  /** Chat session ID to log against */
+  chatSessionId?: string;
+}
+
+export interface SessionLogger {
+  debug(message: string, meta?: Record<string, unknown>, source?: string): void;
+  info(message: string, meta?: Record<string, unknown>, source?: string): void;
+  warn(message: string, meta?: Record<string, unknown>, source?: string): void;
+  error(message: string, meta?: Record<string, unknown>, source?: string): void;
+  /** Force flush buffered entries now */
+  flush(): Promise<void>;
+  /** Number of entries currently buffered */
+  bufferedCount: number;
+  /** Total entries sent this session */
+  totalSent: number;
+  /** Whether the logger is actively enabled */
+  enabled: boolean;
+  /** Last flush error message, null if no error */
+  lastFlushError: string | null;
+}

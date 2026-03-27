@@ -1,6 +1,7 @@
 import { useReactory } from "@reactory/client-core/api";
 import usePersonas from './hooks/usePersonas';
 import useChatFactory from './hooks/useChatFactory';
+import useSessionLogger from './hooks/useSessionLogger';
 // Streaming is now handled via useChatFactory with protocol 'sse'
 import ChatList from './hooks/useScrollToBottom';
 import useMacros from './hooks/useMacros';
@@ -110,6 +111,24 @@ export default (props) => {
   // Streaming toggle state
   const [streamingEnabled, setStreamingEnabled] = useState<boolean>(true);
 
+  // Client logging state — persisted to localStorage
+  const [clientLoggingEnabled, setClientLoggingEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('reactorChat.clientLogging') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleClientLogging = useCallback((enabled: boolean) => {
+    setClientLoggingEnabled(enabled);
+    try {
+      localStorage.setItem('reactorChat.clientLogging', String(enabled));
+    } catch {
+      // localStorage unavailable
+    }
+  }, []);
+
   // Session cache: preserves chat state per persona so switching back restores the session
   const sessionCache = React.useRef<Map<string, {
     chatState: ChatState;
@@ -130,6 +149,16 @@ export default (props) => {
     return undefined;
   }, [selectedPersona?.id]);
 
+  // Track the active session ID for the session logger — state so changes trigger re-render
+  const [activeSessionId, setActiveSessionId] = React.useState<string | undefined>(cachedSession?.chatState?.id);
+
+  // Session logger — sends client logs to the server's ChatSessionLogger
+  // Instantiated before chatFactory so it can be passed in.
+  const sessionLogger = useSessionLogger(reactory, {
+    enabled: clientLoggingEnabled && reactory.isDevelopmentMode(),
+    chatSessionId: activeSessionId,
+  });
+
   // Non-streaming chat factory
   const chatFactory = useChatFactory({
     reactory,
@@ -137,6 +166,7 @@ export default (props) => {
     protocol: streamingEnabled ? 'sse' : 'graphql',
     existingSession: cachedSession,
     contextFromSessionId: previousSessionRef.current?.sessionId,
+    sessionLogger,
   });
 
 
@@ -180,6 +210,13 @@ export default (props) => {
     isStreaming: false,
     currentStreamingMessage: '',
   };
+
+  // Keep session ID in sync so useSessionLogger picks it up
+  React.useEffect(() => {
+    if (chatState?.id && chatState.id !== activeSessionId) {
+      setActiveSessionId(chatState.id);
+    }
+  }, [chatState?.id, activeSessionId]);
 
   const {
     findMacroByAlias,
@@ -486,6 +523,7 @@ export default (props) => {
   }, []);
 
   const handleChatSelect = useCallback((chat) => {
+    sessionLogger?.info(`Chat selected: ${chat.id}`, { chatId: chat.id, previousChatId: chatState?.id }, 'ReactorChat');
     console.log('ReactorChat: handleChatSelect called', {
       chatId: chat.id,
       currentChatId: chatState?.id,
@@ -565,8 +603,10 @@ export default (props) => {
       const newSet = new Set(prev);
       if (newSet.has(toolName)) {
         newSet.delete(toolName);
+        sessionLogger?.info(`Tool disabled: ${toolName}`, { toolName }, 'ReactorChat');
       } else {
         newSet.add(toolName);
+        sessionLogger?.info(`Tool enabled: ${toolName}`, { toolName }, 'ReactorChat');
       }
       return newSet;
     });
@@ -607,6 +647,7 @@ export default (props) => {
   // Voice mode toggle — starts or ends a voice session
   const handleVoiceModeToggle = useCallback(async () => {
     if (!selectedPersona?.id) return;
+    sessionLogger?.info('Voice mode toggled', { personaId: selectedPersona.id, chatSessionId: chatState?.id }, 'ReactorChat');
     await speech.toggleVoiceMode(selectedPersona.id, chatState?.id);
   }, [selectedPersona?.id, chatState?.id, speech]);
 
@@ -1290,6 +1331,9 @@ export default (props) => {
                 isStreaming={isStreaming}
                 onSseDisconnect={sseDisconnect}
                 onSseReconnect={sseReconnect}
+                clientLoggingEnabled={clientLoggingEnabled}
+                onToggleClientLogging={handleToggleClientLogging}
+                sessionLogger={sessionLogger}
               />
             )}
 

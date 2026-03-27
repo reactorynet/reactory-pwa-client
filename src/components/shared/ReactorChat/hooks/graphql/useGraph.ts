@@ -30,6 +30,7 @@ import REACTOR_ATTACH_USER_FILE from "./mutations/ReactorAttachUserFileToSession
 import REACTOR_DETACH_USER_FILE from "./mutations/ReactorDetachUserFileFromSession.graphql";
 import REACTOR_PIN_FOLDER from "./mutations/ReactorPinFolderToSession.graphql";
 import REACTOR_UNPIN_FOLDER from "./mutations/ReactorUnpinFolderFromSession.graphql";
+import REACTOR_SESSION_LOG from "./mutations/ReactorSessionLog.graphql";
 
 export type StreamingMode = "NONE" | "SSE" | "WEBSOCKET";
 
@@ -395,6 +396,23 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorUnpinFolderFromSession;
   };
 
+  const sendSessionLog = async (
+    chatSessionId: string,
+    entries: Array<{
+      level: string;
+      message: string;
+      meta?: Record<string, unknown>;
+      timestamp: Date | string;
+      source?: string;
+    }>
+  ): Promise<{ accepted: number; dropped: number }> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorSessionLog: { accepted: number; dropped: number } },
+      { input: { chatSessionId: string; entries: typeof entries } }
+    >(REACTOR_SESSION_LOG as any, { input: { chatSessionId, entries } });
+    return response?.data?.ReactorSessionLog ?? { accepted: 0, dropped: 0 };
+  };
+
   return {
     startChatSession,
     sendMessage,
@@ -416,6 +434,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     detachUserFileFromSession,
     pinFolderToSession,
     unpinFolderFromSession,
+    sendSessionLog,
   };
 };
 

@@ -85,7 +85,8 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
     reactory,
     chatState,
     onMacroCallResult,
-    onMacroCallError   
+    onMacroCallError,
+    sessionLogger,
   } = props;
   
   
@@ -138,6 +139,7 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
     }
     nextMacros[macroKey] = macro;
     setMacros(nextMacros);
+    sessionLogger?.debug(`Macro registered: ${macroKey}`, { alias: macro.alias, runat: macro.runat }, 'useMacros');
   }, []);
 
   // Function to register multiple macros at once
@@ -231,12 +233,14 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
       });  
     }
 
+    sessionLogger?.debug(`Macro parsed: ${fullMacroName}`, { args, matchCount: matchingMacros.length }, 'useMacros');
     return { macro: matchingMacros[0], args };
          
   }, [macros]);
 
   const executeMacro = useCallback(async (macro: MacroComponentDefinition<unknown>, args?: any, calledBy?: string, callId?: string) => {
     if (!macro) {
+      sessionLogger?.error('executeMacro called without macro argument', { calledBy, callId }, 'useMacros');
       if (onMacroCallError) {
         onMacroCallError(new Error(`Macro argument required`),null, chatState);
       }
@@ -244,6 +248,8 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
     }
 
     if (macro) {
+      const macroKey = `${macro.nameSpace}.${macro.name}@${macro.version}`;
+      sessionLogger?.info(`Executing macro: ${macroKey}`, { runat: macro.runat, calledBy, callId }, 'useMacros');
       try {
         let result = null;
         if (macro.component && (macro.runat === 'client' || macro.runat === null || macro.runat === undefined)) {
@@ -276,19 +282,27 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
             calledBy,
             callId
           });
-          if (response?.data) {
-            result = response.data.ReactorExecuteMacro;
+          if (response?.data) {            
+            result = response.data.ReactorExecuteMacro;            
           } else {
             throw new Error(`Error executing macro: ${macro.name}`);
           } 
         }
+        sessionLogger?.info(`Macro executed successfully: ${macroKey}`, { hasResult: !!result }, 'useMacros');
         if (onMacroCallResult) {
+          debugger          
+          // first check if the result has a valid tool result structure and 
+          // that it does not have null tool call results which indicates an error in the macro execution
+          if (result && typeof result === 'object' && 'tool_results' in result && (!result.tool_calls || !result.tool_calls.some((call: ReactorToolCall) => call.status === 'error'))) {
+            sessionLogger?.debug(`Macro execution result for ${macroKey} contains tool results`, { toolResultCount: result.tool_results.length }, 'useMacros');
+          }
           onMacroCallResult(result, chatState);
         } else {
           reactory.log(`Macro executed: ${macro.name}`, result);
         }
         return result;
       } catch (error) {
+        sessionLogger?.error(`Macro execution failed: ${macroKey}`, { error: error?.message || String(error) }, 'useMacros');
         reactory.error(`Error executing macro: ${macro.name}`, error);
         if (onMacroCallError) onMacroCallError(error, macro, chatState);
         return null;

@@ -309,9 +309,9 @@ const ChatList = (props: {
          message.content.includes('Tool 1 (') ||
          message.content.includes('Multiple tools executed successfully:'))) {
       console.warn('useScrollToBottom: Found suspicious tool message:', {
-        id: message.id,
-        role: message.role,
-        content: message.content.substring(0, 100)
+        id: message?.id,
+        role: message?.role,
+        content: message?.content.substring(0, 100)
       });
       return '';
     }
@@ -488,6 +488,59 @@ const ChatList = (props: {
 
                       return (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
+                          {/* Thinking/reasoning panel — also shown on tool-call messages */}
+                          {message.thinking && (
+                            <Box sx={{ mb: 0.5 }}>
+                              <Box
+                                onClick={() => toggleThinking(String(message.id || idx))}
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  cursor: 'pointer',
+                                  px: 0.75,
+                                  py: 0.25,
+                                  borderRadius: '4px',
+                                  bgcolor: 'action.hover',
+                                  '&:hover': { bgcolor: 'action.selected' },
+                                }}
+                              >
+                                <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>psychology</Icon>
+                                <Typography variant="caption" color="text.secondary" sx={{ userSelect: 'none' }}>
+                                  {expandedThinking.has(String(message.id || idx)) ? 'Hide reasoning' : 'View reasoning'}
+                                </Typography>
+                                <Icon sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                                  {expandedThinking.has(String(message.id || idx)) ? 'expand_less' : 'expand_more'}
+                                </Icon>
+                              </Box>
+                              <Collapse in={expandedThinking.has(String(message.id || idx))}>
+                                <Box
+                                  sx={{
+                                    mt: 0.5,
+                                    p: 1,
+                                    borderRadius: '4px',
+                                    bgcolor: 'action.hover',
+                                    borderLeft: '3px solid',
+                                    borderColor: 'text.disabled',
+                                    maxHeight: 200,
+                                    overflowY: 'auto',
+                                  }}
+                                >
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: 'text.secondary',
+                                      fontStyle: 'italic',
+                                      fontSize: '0.8rem',
+                                      whiteSpace: 'pre-wrap',
+                                    }}
+                                  >
+                                    {message.thinking}
+                                  </Typography>
+                                </Box>
+                              </Collapse>
+                            </Box>
+                          )}
                           {/* Header row */}
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             {overallStatus === 'running' ? (
