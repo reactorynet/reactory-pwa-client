@@ -1,3 +1,4 @@
+import { argsToArgsConfig } from 'graphql/type/definition';
 import { StepDefinition, PortType } from '../../../types';
 
 export const ServiceInvokeStepDefinition: StepDefinition = {
@@ -56,15 +57,36 @@ export const ServiceInvokeStepDefinition: StepDefinition = {
         description: 'Name of the workflow step',
         default: 'Service Invoke'
       },
-      serviceName: {
+      serviceId: {
         type: 'string',
-        title: 'Service Name',
-        description: 'Name of the registered service'
+        title: 'Service ID',
+        description: 'ID of the registered service'
       },
       serviceMethod: {
         type: 'string',
         title: 'Service Method',
         description: 'Method name to invoke'
+      },
+      arguments: {
+        "description": "Step input parameters (object or JSON-serialized string)",
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "object",
+              "patternProperties": {
+                "^[a-zA-Z][a-zA-Z0-9_]*$": {
+                  "oneOf": [
+                    { "type": "string" },
+                    { "type": "number" },
+                    { "type": "boolean" },
+                    { "type": "null" },
+                    { "type": "object" },
+                    { "type": "array" }
+                  ]
+                }
+              }
+            }
+          ]
       },
       passthrough: {
         type: 'boolean',
@@ -104,7 +126,7 @@ export const ServiceInvokeStepDefinition: StepDefinition = {
         }
       }
     },
-    required: ['name', 'serviceName', 'serviceMethod']
+    required: ['name', 'serviceId', 'serviceMethod']
   },
   defaultProperties: {
     name: 'Service Invoke',
@@ -117,9 +139,26 @@ export const ServiceInvokeStepDefinition: StepDefinition = {
     }
   },
   uiSchema: {
-    'ui:order': ['name', 'serviceName', 'serviceMethod', 'passthrough', 'errorHandling', 'retryConfig'],
-    serviceName: {
-      'ui:help': 'Name of the registered Reactory service'
+    'ui:order': [
+      'name', 
+      'serviceId', 
+      'serviceMethod', 
+      'arguments',
+      'passthrough', 
+      'errorHandling', 
+      'retryConfig'
+    ],
+    serviceId: {
+      'ui:help': 'ID of the registered Reactory service'
+    },
+    passthrough: {
+      'ui:options': {
+        yesLabel: 'Passthrough',
+        noLabel: 'Standard',
+        yesIcon: 'call_merge',
+        noIcon: 'call_split',
+        showLabels: true
+      }      
     },
     serviceMethod: {
       'ui:help': 'Method to invoke on the service'

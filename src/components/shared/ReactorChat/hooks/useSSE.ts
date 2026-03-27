@@ -338,15 +338,38 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
         case 'complete': {
           hasCompletedRef.current = true;
           sessionLogger?.info('SSE complete event received', { finishReason: (data as CompletionStreamingEvent).data?.finishReason, contentLength: (data as CompletionStreamingEvent).data?.content?.length || 0 }, 'useSSE');
-          if (tokenQueueRef.current.length > 0 || dripTimerRef.current !== null) {
-            // Drip queue is still running — park the completion event and let
-            // the queue drain naturally; flushQueue's tick() will fire it once empty.
-            pendingCompleteRef.current = data as CompletionStreamingEvent;
-          } else {
-            // Queue already empty — complete immediately
-            setIsStreaming(false);
-            if (onMessageRef.current) onMessageRef.current(data as CompletionStreamingEvent);
+
+          // If the drip queue is still running, flush all remaining segments
+          // immediately rather than waiting for word-by-word dripping. This
+          // prevents multi-second delays when re-renders are expensive (e.g.
+          // complex tool call histories in AUTO mode).
+          if (dripTimerRef.current !== null) {
+            clearTimeout(dripTimerRef.current);
+            dripTimerRef.current = null;
           }
+          const queue = tokenQueueRef.current;
+          if (queue.length > 0) {
+            // Emit all remaining queued content as a single token per entry
+            for (const entry of queue) {
+              const remaining = entry.segments.join('');
+              if (remaining && onTokenRef.current) {
+                onTokenRef.current({
+                  ...entry.template,
+                  data: {
+                    ...entry.template.data,
+                    content: remaining,
+                    delta: remaining,
+                  },
+                });
+              }
+            }
+            tokenQueueRef.current = [];
+          }
+          pendingCompleteRef.current = null;
+
+          // Now fire the completion immediately
+          setIsStreaming(false);
+          if (onMessageRef.current) onMessageRef.current(data as CompletionStreamingEvent);
           break;
         }
         case 'error': {

@@ -239,44 +239,62 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         const lastIndex = history.length - 1;
         const lastMsg = lastIndex >= 0 ? history[lastIndex] : null;
 
+        const incomingContent = message.data.content;
+
         console.log('📩 [useChatFactory] COMPLETE setChatState', {
           lastIndex,
           lastMsgRole: lastMsg?.role,
           lastMsgContentLength: (typeof lastMsg?.content === 'string' ? lastMsg.content.length : 0),
-          incomingContentLength: message.data?.content?.length || 0,
+          lastMsgHasToolCalls: !!(lastMsg?.tool_calls && (lastMsg.tool_calls as any[]).length > 0),
+          incomingContentLength: incomingContent?.length || 0,
         });
 
+        // Build the authoritative thinking text:
+        // 1. The completion event's `thinking` field is the full server-
+        //    accumulated reasoning — prefer it when available.
+        // 2. Fall back to whatever was streamed incrementally into the
+        //    message's `thinking` field + any trailing buffer content.
+        const streamedThinking = (lastMsg?.thinking || '') + trailingReasoning;
+        const finalThinking = message.data.thinking || streamedThinking || undefined;
+
         if (lastIndex >= 0 && lastMsg?.role === "assistant") {
-          // Only overwrite content if the completion event carries actual text.
-          // In AUTO mode the server may send a completion with empty content
-          // after the provider already streamed/set the real content. Without
-          // this guard, the empty event wipes the displayed message.
-          const incomingContent = message.data.content;
-          const existingContent = history[lastIndex].content;
-          const shouldUpdateContent = incomingContent
-            || existingContent === 'Processing...'
-            || !existingContent;
+          // If the last message has tool_calls (e.g. from AUTO mode tool loop)
+          // AND the completion carries new text content, append a NEW assistant
+          // message. The ChatList component renders tool-call messages and text
+          // messages differently — combining both on the same message hides
+          // the text behind the tool chip UI.
+          const hasToolCalls = Array.isArray(lastMsg.tool_calls) && (lastMsg.tool_calls as any[]).length > 0;
 
-          console.log('📩 [useChatFactory] COMPLETE update decision', {
-            shouldUpdateContent,
-            incomingContent: incomingContent?.substring?.(0, 80) || '(empty)',
-            existingContent: typeof existingContent === 'string' ? existingContent.substring(0, 80) : '(non-string)',
-          });
+          if (hasToolCalls && incomingContent) {
+            console.log('📩 [useChatFactory] COMPLETE: appending new message (existing has tool_calls)');
+            history.push({
+              id: reactory.utils.uuid(),
+              role: 'assistant',
+              content: incomingContent,
+              thinking: finalThinking,
+              timestamp: new Date(),
+              sessionId: prevState.id,
+            } as any);
+          } else {
+            // No tool_calls on the message — update in place as before
+            const existingContent = history[lastIndex].content;
+            const shouldUpdateContent = incomingContent
+              || existingContent === 'Processing...'
+              || !existingContent;
 
-          // Build the authoritative thinking text:
-          // 1. The completion event's `thinking` field is the full server-
-          //    accumulated reasoning — prefer it when available.
-          // 2. Fall back to whatever was streamed incrementally into the
-          //    message's `thinking` field + any trailing buffer content.
-          const streamedThinking = (history[lastIndex].thinking || '') + trailingReasoning;
-          const finalThinking = message.data.thinking || streamedThinking || undefined;
+            console.log('📩 [useChatFactory] COMPLETE update decision', {
+              shouldUpdateContent,
+              incomingContent: incomingContent?.substring?.(0, 80) || '(empty)',
+              existingContent: typeof existingContent === 'string' ? existingContent.substring(0, 80) : '(non-string)',
+            });
 
-          history[lastIndex] = {
-            ...history[lastIndex],
-            ...(shouldUpdateContent ? { content: incomingContent } : {}),
-            thinking: finalThinking,
-            timestamp: new Date(),
-          };
+            history[lastIndex] = {
+              ...history[lastIndex],
+              ...(shouldUpdateContent ? { content: incomingContent } : {}),
+              thinking: finalThinking,
+              timestamp: new Date(),
+            };
+          }
         }
 
         return { ...prevState, history };
@@ -472,7 +490,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             endpoint: resp.endpoint, 
             sessionId: resp.sessionId,
             onConnectionOpened: async () => {
-              await graph.sendMessage({
+              const sseResp = await graph.sendMessage({
                 personaId: persona.id,
                 chatSessionId: sessionId,
                 message,
@@ -480,6 +498,45 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
                 ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
               });
+
+              // The mutation response carries the same final content as the
+              // SSE COMPLETE event. Apply it as a fallback so the UI always
+              // shows the AI response even if the SSE event was lost.
+              // IMPORTANT: only touch state if the SSE completion hasn't
+              // already delivered the content — unnecessary setChatState calls
+              // trigger memo recomputes that can interfere with streaming.
+              if (sseResp?.__typename === 'ReactorChatMessage') {
+                const msg = sseResp as unknown as UXChatMessage;
+                if ((msg as any).content) {
+                  setChatState((prevState) => {
+                    const history = prevState.history || [];
+                    const lastIndex = history.length - 1;
+                    if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
+                      const existingContent = history[lastIndex].content || '';
+                      const needsFallback = !existingContent
+                        || existingContent === 'Processing...'
+                        || existingContent.startsWith('Calling tool:');
+                      if (needsFallback) {
+                        console.log('📩 [useChatFactory] SSE onConnectionOpened fallback: applying mutation response content', {
+                          existingContent: typeof existingContent === 'string' ? existingContent.substring(0, 60) : '(non-string)',
+                          incomingContentLength: (msg as any).content?.length,
+                        });
+                        const updatedHistory = [...history];
+                        updatedHistory[lastIndex] = {
+                          ...updatedHistory[lastIndex],
+                          content: (msg as any).content,
+                          thinking: (msg as any).thinking || updatedHistory[lastIndex].thinking || undefined,
+                          timestamp: new Date(),
+                        };
+                        return { ...prevState, history: updatedHistory };
+                      }
+                    }
+                    // No change needed — return prevState as-is to avoid
+                    // triggering a re-render that could disrupt streaming.
+                    return prevState;
+                  });
+                }
+              }
             }
           });
           
@@ -2427,14 +2484,23 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const toolResults = [];
     const toolErrors = [];
 
+    // Filter out null/undefined entries that can occur when the GraphQL
+    // schema nullifies tool_calls with missing required fields (e.g. status).
+    const validToolCalls = toolCalls.filter((tc): tc is NonNullable<typeof tc> => tc != null);
+
     console.log('🔧 [useChatFactory] processToolCallsMemoized called:', {
-      toolCallsCount: toolCalls.length,
+      toolCallsCount: validToolCalls.length,
+      toolCallsFiltered: toolCalls.length - validToolCalls.length,
       toolApprovalMode,
       depth,
       messageId: message.id,
       messageRole: message.role,
       currentChatStateId: chatState.id
     });
+
+    if (validToolCalls.length === 0) {
+      return { toolResults, toolErrors };
+    }
 
     // Prevent infinite recursion (max 10 levels deep)
     const MAX_RECURSION_DEPTH = 10;
@@ -2472,11 +2538,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     let toolsForAutoExecution: any[] = [];
 
     if (toolApprovalMode === ToolApprovalMode.AUTO) {
-      toolsForAutoExecution = toolCalls;
+      toolsForAutoExecution = validToolCalls;
     } else if (toolApprovalMode === ToolApprovalMode.PROMPT) {
-      toolsRequiringApproval = toolCalls;
+      toolsRequiringApproval = validToolCalls;
     } else if (toolApprovalMode === ToolApprovalMode.SAFE_AUTO || toolApprovalMode === ToolApprovalMode.PLAN) {
-      for (const tc of toolCalls) {
+      for (const tc of validToolCalls) {
         const name = tc.function?.name || tc.name || '';
         if (isToolSafe(name)) {
           toolsForAutoExecution.push(tc);
@@ -2485,7 +2551,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }
       }
     } else {
-      toolsRequiringApproval = toolCalls;
+      toolsRequiringApproval = validToolCalls;
     }
 
     console.log('🔧 [useChatFactory] Tool grouping:', {
