@@ -1,0 +1,6 @@
+mutation ReactorSessionLog($input: ReactorSessionLogInput!) {
+  ReactorSessionLog(input: $input) {
+    accepted
+    dropped
+  }
+}

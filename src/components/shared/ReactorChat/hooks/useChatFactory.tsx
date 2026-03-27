@@ -84,6 +84,8 @@ interface ChatFactorHookOptions {
   onStreamToken?: (token: string) => void;
   onStreamMessage?: (message: UXChatMessage) => void;
   onStreamError?: (error: any) => void;
+  /** Optional session logger for client-side debug logging to the server */
+  sessionLogger?: import('../types').SessionLogger;
 }
 
 type ChatFactoryHook = (props: ChatFactorHookOptions) => ChatFactoryHookResult
@@ -188,6 +190,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     persona: rawPersona,
     protocol = 'graphql',
     existingSession,
+    sessionLogger,
   } = props;
 
   const persona = React.useMemo(() => rawPersona, [rawPersona?.id]);
@@ -209,6 +212,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const onSSEMessageReceived = async (message: CompletionStreamingEvent) => {
     if (message.type === StreamingEventType.COMPLETE) {
+      sessionLogger?.info('SSE stream complete', { contentLength: message.data?.content?.length || 0, finishReason: message.data?.finishReason }, 'useSSE');
       console.log('📩 [useChatFactory] onSSEMessageReceived COMPLETE', {
         contentLength: message.data?.content?.length || 0,
         contentPreview: message.data?.content?.substring(0, 100) || '(empty)',
@@ -336,6 +340,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const sendMessage = async (message: string, chatSessionId: string, images?: string[]) => {
     setBusy(true);
+    sessionLogger?.info(`Sending message (${message.length} chars)`, { hasImages: !!images?.length }, 'useChatFactory');
     // Clear any lingering network error when the user tries sending again
     if (networkStatus === 'error') {
       setNetworkStatus('idle');
@@ -461,6 +466,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
         if (resp.__typename === 'ReactorInitiateSSE') {
           // Server told us to (re)establish SSE — disconnect any stale session first
+          sessionLogger?.info('SSE connect requested by server', { endpoint: resp.endpoint, sessionId: resp.sessionId }, 'useSSE');
           sse.disconnect();
           sse.connect({ 
             endpoint: resp.endpoint, 
@@ -494,9 +500,44 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           if (protocol === 'graphql' && msg.tool_calls && (msg.tool_calls as any[]).length > 0) {
             await processToolCallsMemoized(msg.tool_calls as any[], msg);
           }
+
+          // SSE fallback: the GraphQL mutation response carries the same content
+          // as the SSE COMPLETE event. If the COMPLETE event was lost (transport
+          // disconnected, race condition, etc.), this ensures the UI still shows
+          // the final AI response without requiring a manual reload.
+          if (protocol === 'sse' && (msg as any).content) {
+            setChatState((prevState) => {
+              const history = [...prevState.history];
+              const lastIndex = history.length - 1;
+              if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
+                const existingContent = history[lastIndex].content || '';
+                // Only apply fallback if the SSE COMPLETE hasn't already delivered content
+                const needsFallback = !existingContent
+                  || existingContent === 'Processing...'
+                  || existingContent.startsWith('Calling tool:');
+                if (needsFallback) {
+                  console.log('📩 [useChatFactory] SSE fallback: applying mutation response content', {
+                    existingContent: existingContent?.substring?.(0, 60),
+                    incomingContentLength: (msg as any).content?.length,
+                  });
+                  history[lastIndex] = {
+                    ...history[lastIndex],
+                    content: (msg as any).content,
+                    thinking: (msg as any).thinking || history[lastIndex].thinking || undefined,
+                    timestamp: new Date(),
+                  };
+                  return { ...prevState, history };
+                }
+              }
+              return prevState;
+            });
+            setIsStreaming(false);
+            setWaitingForResponse(false);
+          }
         }
       } catch (error) {
         // Clean up streaming state and replace placeholder on error
+        reactory.error('[useChatFactory] Error sending message:', error);
         setChatState((prevState) => {
           const history = [...prevState.history];
           const lastIndex = history.length - 1;
@@ -652,6 +693,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const { getMacroById, executeMacro, parseMacro, macros, findMacroByAlias, findMacroByName } = useMacros({
     reactory,
     chatState,
+    sessionLogger,
     onMacroCallResult: (result: any, state: ChatState) => {
       // use onMessage to update the chat state with the result
       const message = {
@@ -890,6 +932,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           return { ...prevState, history };
         });
       }, 50); // Flush every 50ms to prevent React state lockup
+    } else {
+      sessionLogger.debug('[useChatFactory] Reasoning buffer updated, waiting for flush timer', { bufferLength: reasoningBufferRef.current.length });
     }
     
     setIsStreaming(true);
@@ -962,6 +1006,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const graph = useGraph({ reactory });
     const sse = useSSE({
       reactory,
+      sessionLogger,
       onToken: onTokenReceived,
       onReasoning: onReasoningReceived,
       onToolCall: onToolCallReceived,
@@ -1063,6 +1108,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * @param persona 
    */
   const initializeChat = async (persona, contextFromSessionId?: string) => {
+    sessionLogger?.info(`Initializing chat session`, { personaId: persona?.id, contextFromSessionId }, 'useChatFactory');
 
     // get the client macros from the macro registry
     const clientMacros = Object.values(macros).filter((macro) => macro.runat === "client");
@@ -1269,6 +1315,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }, [chatState.tools, chatState.macros, chatState.id, isInitialized]);
 
   const onMessage = (message: UXChatMessage) => {
+    sessionLogger?.debug(`Message received (role=${message.role})`, { messageId: message.id, role: message.role, toolCalls: message.tool_calls?.length || 0 }, 'useChatFactory');
     console.log('🔧 [useChatFactory] onMessage called:', {
       messageId: message.id,
       messageRole: message.role,
@@ -1301,8 +1348,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }
 
   const onError = (error: any) => {
+    reactory.error('useChatFactory onError:', error);
     const message = (error as Error)?.message || String(error) || 'An unexpected error occurred';
     const type = (error as any)?.type;
+    sessionLogger?.error(`Error: ${message}`, { type }, 'useChatFactory');
 
     // SSE/streaming errors replace the chat message with a non-obtrusive network indicator
     // visible to all users, rather than polluting the chat history with error messages.
@@ -1399,9 +1448,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }
 
   const deleteChat = async (id: string | string[]) => {
+    const deleteId = Array.isArray(id) ? id[0] : id;
+    sessionLogger?.info(`Deleting chat session`, { chatSessionId: deleteId }, 'useChatFactory');
     try {
       // Only single id supported by schema
-      const deleteId = Array.isArray(id) ? id[0] : id;
       await graph.deleteChatSession(deleteId);
       await fetchConversations({}); // Refresh the chat list after deletion
     } catch (error) {
@@ -1410,6 +1460,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   };
 
   const newChat = async () => {
+    sessionLogger?.info('Starting new chat', { personaId: persona?.id }, 'useChatFactory');
     setBusy(true);
     try {
       // Full reset for a true "New Chat" - addresses the bug where history was not cleared
@@ -1582,6 +1633,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     path: string,
     options?: { referenceOnly?: boolean }
   ) => {
+    sessionLogger?.info(`Pinning user file to chat`, { fileId, path, referenceOnly: options?.referenceOnly }, 'useChatFactory');
     setBusy(true);
     try {
       const sessionId = await ensureSessionForAttachments();
@@ -1605,6 +1657,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   };
 
   const unpinUserFileForChat = async (fileId: string, path: string) => {
+    sessionLogger?.info(`Unpinning user file from chat`, { fileId, path }, 'useChatFactory');
     setBusy(true);
     try {
       const sessionId = chatState.id;
@@ -1628,6 +1681,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   };
 
   const pinFolderForChat = async (folderPath: string, folderName: string) => {
+    sessionLogger?.info(`Pinning folder to chat`, { folderPath, folderName }, 'useChatFactory');
     setBusy(true);
     try {
       const sessionId = await ensureSessionForAttachments();
@@ -1650,6 +1704,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   };
 
   const unpinFolderForChat = async (folderPath: string, folderName: string) => {
+    sessionLogger?.info(`Unpinning folder from chat`, { folderPath, folderName }, 'useChatFactory');
     setBusy(true);
     try {
       const sessionId = chatState.id;
@@ -1707,6 +1762,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   };
 
   const setToolApprovalMode = async (mode: ToolApprovalMode) => {
+    sessionLogger?.info(`Tool approval mode changing to ${mode}`, { mode, chatSessionId: chatState.id }, 'useChatFactory');
     setBusy(true);
     try {
       // Initialize chat session on first tool approval mode change if not already initialized
@@ -1755,6 +1811,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   }
 
   const setMaxToolIterations = async (maxIterations: number) => {
+    sessionLogger?.info(`Max tool iterations changing to ${maxIterations}`, { maxIterations, chatSessionId: chatState.id }, 'useChatFactory');
     setBusy(true);
     try {
       let sessionId = chatState.id;
@@ -1862,6 +1919,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   };
 
   const loadChat = async (chatSessionId: string) => {
+    sessionLogger?.info(`Loading chat session`, { chatSessionId }, 'useChatFactory');
     setBusy(true);
     try {
       const result = await graph.getConversation(chatSessionId);
@@ -2404,7 +2462,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       if (meta?.safeForAutoExecution != null) return meta.safeForAutoExecution;
       // Legacy fallback for unannotated tools
       const legacySafe = new Set([
-        'readChatFile', 'readFile', 'listFiles', 'searchFiles', 'getFileContents',
+        'readChatFile', 'readFile', 'listFiles', 'listDirectory', 'searchFiles', 'getFileContents',
         'readDirectory', 'stat', 'state', 'getState', 'getChatState',
       ]);
       return legacySafe.has(name);

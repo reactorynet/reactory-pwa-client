@@ -1,6 +1,6 @@
 import React from 'react';
 import Reactory from '@reactorynet/reactory-core';
-import { UXChatMessage } from '@reactory/client-core/components/shared/ReactorChat/types';
+import { UXChatMessage, SessionLogger } from '@reactory/client-core/components/shared/ReactorChat/types';
 
 export enum StreamingEventType {
   TOKEN = 'token',
@@ -132,6 +132,8 @@ export interface UseSSEOptions {
   onReconnected?: () => void;
   /** Called when all reconnect attempts have been exhausted */
   onReconnectFailed?: (totalAttempts: number) => void;
+  /** Optional session logger for client-to-server debug logging */
+  sessionLogger?: SessionLogger;
 }
 
 export interface UseSSEResult {
@@ -177,7 +179,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 /** Exponential backoff delays (ms) for each reconnect attempt */
 const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 16000];
 
-const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry, onReconnecting, onReconnected, onReconnectFailed }: UseSSEOptions): UseSSEResult => {
+const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry, onReconnecting, onReconnected, onReconnectFailed, sessionLogger }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -335,6 +337,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
         }
         case 'complete': {
           hasCompletedRef.current = true;
+          sessionLogger?.info('SSE complete event received', { finishReason: (data as CompletionStreamingEvent).data?.finishReason, contentLength: (data as CompletionStreamingEvent).data?.content?.length || 0 }, 'useSSE');
           if (tokenQueueRef.current.length > 0 || dripTimerRef.current !== null) {
             // Drip queue is still running — park the completion event and let
             // the queue drain naturally; flushQueue's tick() will fire it once empty.
@@ -347,30 +350,39 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           break;
         }
         case 'error': {
+          const errEvt = data as ErrorStreamingEvent;
+          sessionLogger?.error(`SSE error event: ${errEvt.data?.code}`, { code: errEvt.data?.code, message: errEvt.data?.message }, 'useSSE');
           setIsStreaming(false);
-          if (onErrorRef.current) onErrorRef.current(data as ErrorStreamingEvent);
+          if (onErrorRef.current) onErrorRef.current(errEvt);
           break;
         }
         case 'start': {
+          sessionLogger?.info('SSE stream started', { sessionId: data.sessionId }, 'useSSE');
           setIsStreaming(true);
           break;
         }
         case 'tool_call': {
+          const tc = data as ToolCallStreamingEvent;
+          sessionLogger?.info(`SSE tool_call: ${tc.data?.name}`, { toolName: tc.data?.name, callId: tc.data?.id, isComplete: tc.data?.isComplete }, 'useSSE');
           if (onToolCallRef.current) {
-            void onToolCallRef.current(data as ToolCallStreamingEvent);
+            void onToolCallRef.current(tc);
           }
           break;
         }
         case 'tool_iteration_limit': {
+          const limitEvt = data as ToolIterationLimitStreamingEvent;
+          sessionLogger?.warn('SSE tool iteration limit reached', { iterationsCompleted: limitEvt.data?.iterationsCompleted, maxIterations: limitEvt.data?.maxIterations }, 'useSSE');
           setIsStreaming(false);
           if (onToolIterationLimitRef.current) {
-            onToolIterationLimitRef.current(data as ToolIterationLimitStreamingEvent);
+            onToolIterationLimitRef.current(limitEvt);
           }
           break;
         }
         case 'retry': {
+          const retryEvt = data as RetryStreamingEvent;
+          sessionLogger?.info(`SSE retry: ${retryEvt.data?.reason}`, { reason: retryEvt.data?.reason }, 'useSSE');
           if (onRetryRef.current) {
-            onRetryRef.current(data as RetryStreamingEvent);
+            onRetryRef.current(retryEvt);
           }
           break;
         }
@@ -378,6 +390,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           reactory.debug('useSSE: unknown event', data.type);
       }
     } catch (err) {
+      sessionLogger?.error('SSE message parse error', { error: (err as Error)?.message }, 'useSSE');
       reactory.error('useSSE: parse error', err);
       if (onErrorRef.current) onErrorRef.current({ message: 'Failed to parse streaming data', type: 'PARSE_ERROR' });
     }
@@ -395,6 +408,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
 
     const expiry = lastConnectOptsRef.current.expiry;
     if (expiry && new Date() >= expiry) {
+      sessionLogger?.error('SSE reconnect aborted: session token expired', { attempts: reconnectAttemptsRef.current }, 'useSSE');
       setIsReconnecting(false);
       if (onReconnectFailedRef.current) onReconnectFailedRef.current(reconnectAttemptsRef.current);
       if (onErrorRef.current) onErrorRef.current({ message: 'Session token has expired', type: 'SESSION_EXPIRED' });
@@ -413,6 +427,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
 
     reconnectAttemptsRef.current = nextAttempt;
     const delay = RECONNECT_BACKOFF_MS[Math.min(nextAttempt - 1, RECONNECT_BACKOFF_MS.length - 1)];
+    sessionLogger?.info(`SSE reconnecting (attempt ${nextAttempt}/${MAX_RECONNECT_ATTEMPTS})`, { attempt: nextAttempt, maxAttempts: MAX_RECONNECT_ATTEMPTS, delayMs: delay }, 'useSSE');
     setIsReconnecting(true);
     setReconnectAttempt(nextAttempt);
     if (onReconnectingRef.current) onReconnectingRef.current(nextAttempt, MAX_RECONNECT_ATTEMPTS, delay);
@@ -445,6 +460,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
 
       es.onopen = () => {
         reactory.log(`useSSE: reconnected (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`, 'info');
+        sessionLogger?.info('SSE reconnected successfully', { previousAttempts: reconnectAttemptsRef.current }, 'useSSE');
         reconnectAttemptsRef.current = 0;
         setIsReconnecting(false);
         setReconnectAttempt(0);
@@ -520,10 +536,12 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
 
     try {
       const sseUrl = new URL(endpoint);
+      sessionLogger?.info('SSE connecting', { endpoint: sseUrl.toString(), sessionId }, 'useSSE');
       reactory.log(`useSSE: connecting to ${sseUrl.toString()}`, 'info');
       const es = new EventSource(sseUrl.toString());
 
       es.onopen = () => {
+        sessionLogger?.info('SSE connection opened', { sessionId }, 'useSSE');
         reactory.log('useSSE: connected', 'info');
         if (onConnectionOpened) onConnectionOpened();
       };
@@ -541,6 +559,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       es.onmessage = (event) => handleMessage(event);
 
       es.onerror = (err) => {
+        sessionLogger?.error('SSE connection error', { sessionId }, 'useSSE');
         reactory.error('useSSE: EventSource error', err);
         setIsStreaming(false);
         setConnected(false);
@@ -561,6 +580,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   }, [handleMessage, reactory]);
 
   const disconnect = React.useCallback(() => {
+    sessionLogger?.info('SSE disconnect requested', { sessionId: sessionRef.current }, 'useSSE');
     // Signal intentional disconnect — suppresses auto-reconnection
     hasCompletedRef.current = true;
 

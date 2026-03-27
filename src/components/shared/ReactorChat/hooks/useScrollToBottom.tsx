@@ -309,9 +309,9 @@ const ChatList = (props: {
          message.content.includes('Tool 1 (') ||
          message.content.includes('Multiple tools executed successfully:'))) {
       console.warn('useScrollToBottom: Found suspicious tool message:', {
-        id: message.id,
-        role: message.role,
-        content: message.content.substring(0, 100)
+        id: message?.id,
+        role: message?.role,
+        content: message?.content.substring(0, 100)
       });
       return '';
     }

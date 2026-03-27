@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChatState, TODOS_VAR_KEY, TodoList } from '../types';
+import { ChatState, SessionLogger, TODOS_VAR_KEY, TodoList } from '../types';
 
 interface DebugPanelProps {
   open: boolean;
@@ -14,6 +14,9 @@ interface DebugPanelProps {
   isStreaming?: boolean;
   onSseDisconnect?: () => void;
   onSseReconnect?: () => void;
+  clientLoggingEnabled?: boolean;
+  onToggleClientLogging?: (enabled: boolean) => void;
+  sessionLogger?: SessionLogger;
 }
 
 function formatDate(d: Date | string | undefined): string {
@@ -35,6 +38,9 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
   isStreaming = false,
   onSseDisconnect,
   onSseReconnect,
+  clientLoggingEnabled = false,
+  onToggleClientLogging,
+  sessionLogger,
 }) => {
   const {
     Paper,
@@ -47,6 +53,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
     LinearProgress,
     Collapse,
     Button,
+    Switch,
   } = Material.MaterialCore;
 
   const {
@@ -265,6 +272,56 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
                 </Button>
               )}
             </Box>
+          </Box>
+        </Collapse>
+        <Divider sx={{ my: 0.5 }} />
+
+        {/* Client Logging */}
+        <SectionHeader id="clientLogging" title="Client Logging" />
+        <Collapse in={expandedSections.has('clientLogging')}>
+          <Box sx={{ mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, py: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">
+                Send client logs to session log
+              </Typography>
+              <Switch
+                size="small"
+                checked={clientLoggingEnabled}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => onToggleClientLogging?.(e.target.checked)}
+                disabled={!chatState?.id}
+              />
+            </Box>
+            {clientLoggingEnabled && sessionLogger && (
+              <>
+                <InfoRow label="Buffered" value={sessionLogger.bufferedCount} />
+                <InfoRow label="Total Sent" value={sessionLogger.totalSent} />
+                {sessionLogger.lastFlushError && (
+                  <Box sx={{ px: 1, py: 0.5 }}>
+                    <Typography variant="caption" color="error">
+                      Flush error: {sessionLogger.lastFlushError}
+                    </Typography>
+                  </Box>
+                )}
+                <Box sx={{ px: 1, pt: 0.5 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => sessionLogger.flush()}
+                    disabled={sessionLogger.bufferedCount === 0}
+                    sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                  >
+                    Flush Now
+                  </Button>
+                </Box>
+              </>
+            )}
+            {!chatState?.id && (
+              <Box sx={{ px: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Start a chat session to enable logging
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Collapse>
         <Divider sx={{ my: 0.5 }} />
