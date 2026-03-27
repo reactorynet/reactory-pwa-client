@@ -159,7 +159,7 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
       </div>
     );
   }
-
+  
   return (
     <div style={{ padding: '0 16px' }}>
       {/*

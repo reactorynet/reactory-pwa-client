@@ -53,6 +53,8 @@ export interface ToolCallStreamingEvent extends StreamingEventBase {
     arguments: any;
     id: string;             // Changed from callId to match server
     isComplete: boolean;     // Changed from status to match server
+    /** The execution result, included when isComplete is true */
+    result?: any;
   };
 }
 

@@ -822,15 +822,25 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           }
         }
 
+        // Extract tool result from the SSE event (sent by server when isComplete=true)
+        const toolResult = toolCall.data.result;
+
         if (targetIndex >= 0) {
           const existingToolCalls = (history[targetIndex].tool_calls || []) as any[];
           const updatedToolCalls = existingToolCalls.map((tc: any) =>
             tc.id === toolCallId ? { ...tc, status: 'success' as const } : tc
           );
 
+          // Append to the message's tool_results array to match DB format
+          const existingResults = (history[targetIndex] as any).tool_results || [];
+          const updatedResults = toolResult != null
+            ? [...existingResults, { id: toolCallId, name: toolCall.data.name, content: toolResult, timestamp: new Date() }]
+            : existingResults;
+
           history[targetIndex] = {
             ...history[targetIndex],
             tool_calls: updatedToolCalls,
+            tool_results: updatedResults,
             timestamp: new Date(),
           };
         } else {
@@ -849,9 +859,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
               status: 'success' as const,
             });
 
+            const existingResults = (history[lastIndex] as any).tool_results || [];
+            const updatedResults = toolResult != null
+              ? [...existingResults, { id: toolCallId, name: toolCall.data.name, content: toolResult, timestamp: new Date() }]
+              : existingResults;
+
             history[lastIndex] = {
               ...history[lastIndex],
               tool_calls: existingToolCalls,
+              tool_results: updatedResults,
               timestamp: new Date(),
             };
           }
