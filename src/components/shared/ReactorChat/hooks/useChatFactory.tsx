@@ -808,19 +808,37 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     if (isComplete) {
       setChatState((prevState) => {
         const history = [...prevState.history];
-        const lastIndex = history.length - 1;
 
-        if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
-          const existingToolCalls = history[lastIndex].tool_calls || [];
+        // Search backwards through ALL assistant messages to find the one
+        // containing this tool call — tool calls may now span multiple
+        // messages (one per AI turn) instead of being on a single message.
+        let targetIndex = -1;
+        for (let i = history.length - 1; i >= 0; i--) {
+          if (history[i].role === 'assistant' && Array.isArray(history[i].tool_calls)) {
+            if ((history[i].tool_calls as any[]).some((tc: any) => tc.id === toolCallId)) {
+              targetIndex = i;
+              break;
+            }
+          }
+        }
+
+        if (targetIndex >= 0) {
+          const existingToolCalls = (history[targetIndex].tool_calls || []) as any[];
           const updatedToolCalls = existingToolCalls.map((tc: any) =>
             tc.id === toolCallId ? { ...tc, status: 'success' as const } : tc
           );
 
-          // If the tool wasn't already tracked (edge case: completion arrives
-          // without a preceding start event), append it as completed.
-          const wasUpdated = existingToolCalls.some((tc: any) => tc.id === toolCallId);
-          if (!wasUpdated) {
-            updatedToolCalls.push({
+          history[targetIndex] = {
+            ...history[targetIndex],
+            tool_calls: updatedToolCalls,
+            timestamp: new Date(),
+          };
+        } else {
+          // Tool wasn't tracked — append to the last assistant message
+          const lastIndex = history.length - 1;
+          if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
+            const existingToolCalls = (history[lastIndex].tool_calls || []) as any[];
+            existingToolCalls.push({
               id: toolCallId,
               type: "function",
               function: {
@@ -830,13 +848,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
               },
               status: 'success' as const,
             });
-          }
 
-          history[lastIndex] = {
-            ...history[lastIndex],
-            tool_calls: updatedToolCalls,
-            timestamp: new Date(),
-          };
+            history[lastIndex] = {
+              ...history[lastIndex],
+              tool_calls: existingToolCalls,
+              timestamp: new Date(),
+            };
+          }
         }
 
         return { ...prevState, id: prevState.id || validSessionId, history, updated: new Date() };
@@ -869,22 +887,34 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setChatState((prevState) => {
       const history = [...prevState.history];
       const lastIndex = history.length - 1;
-      
+
       if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
-        const existingToolCalls = history[lastIndex].tool_calls || [];
-        history[lastIndex] = {
-          ...history[lastIndex],
-          content: history[lastIndex].content === "Processing..."
-            ? `Calling tool: ${toolCall.data.name}`
-            : history[lastIndex].content,
-          // @ts-ignore
-          tool_calls: [...existingToolCalls, toolCallEntry],
-          timestamp: new Date(),
-        };
+        const existingToolCalls: any[] = history[lastIndex].tool_calls || [];
+
+        // If the existing message already has tool_calls and ALL of them
+        // are completed (status==='success'), this is a NEW AI turn (e.g.
+        // next iteration in AUTO mode). Start a new assistant message to
+        // match the DB structure where each turn is a separate entry.
+        const allCompleted = existingToolCalls.length > 0
+          && existingToolCalls.every((tc: any) => tc.status === 'success');
+
+        if (allCompleted) {
+          history.push(toolCallMessage);
+        } else {
+          history[lastIndex] = {
+            ...history[lastIndex],
+            content: history[lastIndex].content === "Processing..."
+              ? `Calling tool: ${toolCall.data.name}`
+              : history[lastIndex].content,
+            // @ts-ignore
+            tool_calls: [...existingToolCalls, toolCallEntry],
+            timestamp: new Date(),
+          };
+        }
       } else {
         history.push(toolCallMessage);
       }
-      
+
       return {
         ...prevState,
         id: prevState.id || validSessionId,
