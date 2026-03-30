@@ -174,6 +174,8 @@ const ChatList = (props: {
       if (Component) {
         //@ts-ignore
         return (<Component {...{ ...message.props, reactory }} />);
+      } else {
+        return <Typography>Component {message.component} not found</Typography>
       }
     } else {
       // assume it is a React component

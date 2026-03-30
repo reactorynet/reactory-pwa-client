@@ -165,6 +165,8 @@ export interface UseGraphOptions {
   reactory: Reactory.Client.ReactorySDK;
 }
 
+import { useMemo } from 'react';
+
 const useGraph = ({ reactory }: UseGraphOptions) => {
   const startChatSession = async (
     initSession: ReactorInitSessionInput
@@ -413,7 +415,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorSessionLog ?? { accepted: 0, dropped: 0 };
   };
 
-  return {
+  return useMemo(() => ({
     startChatSession,
     sendMessage,
     setChatToolApprovalMode,
@@ -435,7 +437,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     pinFolderToSession,
     unpinFolderFromSession,
     sendSessionLog,
-  };
+  }), [reactory]);
 };
 
 export default useGraph;

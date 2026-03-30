@@ -252,11 +252,22 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
       sessionLogger?.info(`Executing macro: ${macroKey}`, { runat: macro.runat, calledBy, callId }, 'useMacros');
       try {
         let result = null;
-        if (macro.component && (macro.runat === 'client' || macro.runat === null || macro.runat === undefined)) {
-          const macroFunction = macro.component as Macro<any>;
-          // the component is client side so we execute and 
-          // return the results.
-          result = await macroFunction(args, chatState, reactory);
+        if ((macro.runat === 'client' || macro.runat === null || macro.runat === undefined)) {
+          // @ts-ignore
+          let clientMacro: MacroComponentDefinition<unknown> = macro.component;
+          if (!clientMacro) {
+            // find the macro in the client macros
+            clientMacro = clientMacros.find((m) => m.nameSpace === macro.nameSpace && m.name === macro.name && m.version === macro.version)
+          }
+
+          if (clientMacro) {
+            const macroFunction = clientMacro.component as Macro<any>;
+            // the component is client side so we execute and 
+            // return the results.
+            result = await macroFunction(args, chatState, reactory);
+          } else {
+            result = "Client tool / macro not found"
+          }
         } else {
           // sanity check the macro is flagged as server side
           if (macro.runat !== 'server') {
@@ -290,7 +301,6 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
         }
         sessionLogger?.info(`Macro executed successfully: ${macroKey}`, { hasResult: !!result }, 'useMacros');
         if (onMacroCallResult) {
-          debugger          
           // first check if the result has a valid tool result structure and 
           // that it does not have null tool call results which indicates an error in the macro execution
           if (result && typeof result === 'object' && 'tool_results' in result && (!result.tool_calls || !result.tool_calls.some((call: ReactorToolCall) => call.status === 'error'))) {

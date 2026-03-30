@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChatState, SessionLogger, TODOS_VAR_KEY, TodoList } from '../types';
+import { RichEditorWidget } from '@reactory/client-core/components/reactory/ux/mui/widgets';
 
 interface DebugPanelProps {
   open: boolean;
@@ -17,6 +18,7 @@ interface DebugPanelProps {
   clientLoggingEnabled?: boolean;
   onToggleClientLogging?: (enabled: boolean) => void;
   sessionLogger?: SessionLogger;
+  onUpdateSystemPrompt?: (prompt: string) => void;
 }
 
 function formatDate(d: Date | string | undefined): string {
@@ -41,6 +43,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
   clientLoggingEnabled = false,
   onToggleClientLogging,
   sessionLogger,
+  onUpdateSystemPrompt,
 }) => {
   const {
     Paper,
@@ -63,6 +66,29 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
     ExpandLess,
     BugReport,
   } = Material.MaterialIcons;
+
+  
+  const [systemPrompt, setSystemPrompt] = React.useState<string>(chatState?.persona?.persona || '');
+  const [isPromptModified, setIsPromptModified] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (chatState?.persona?.persona) {
+      setSystemPrompt(chatState.persona.persona);
+      setIsPromptModified(false);
+    }
+  }, [chatState?.persona?.persona]);
+
+  const handlePromptChange = React.useCallback((val: string) => {
+    setSystemPrompt(val);
+    setIsPromptModified(val !== chatState?.persona?.persona);
+  }, [chatState?.persona?.persona]);
+
+  const handleSavePrompt = React.useCallback(() => {
+    if (onUpdateSystemPrompt) {
+      onUpdateSystemPrompt(systemPrompt);
+      setIsPromptModified(false);
+    }
+  }, [onUpdateSystemPrompt, systemPrompt]);
 
   const [expandedSections, setExpandedSections] = React.useState<Set<string>>(
     () => new Set(['session', 'sse', 'tokens'])
@@ -190,6 +216,33 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
 
       {/* Content */}
       <Box sx={{ flex: 1, overflow: 'auto', px: 2, pb: 2 }}>
+        
+        {/* System Prompt */}
+        <SectionHeader id="systemPrompt" title="System Prompt Override" />
+        <Collapse in={expandedSections.has('systemPrompt')}>
+          <Box sx={{ mb: 1, px: 1 }}>
+            <RichEditorWidget
+              formData={systemPrompt}
+              onChange={handlePromptChange}
+              schema={{ title: "System Prompt" }}
+              uiSchema={{ "ui:options": { format: "code" } }}
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+              <Button
+                variant="contained"
+                size="small"
+                color="primary"
+                disabled={!isPromptModified || !onUpdateSystemPrompt}
+                onClick={handleSavePrompt}
+                sx={{ textTransform: 'none' }}
+              >
+                Apply for Session
+              </Button>
+            </Box>
+          </Box>
+        </Collapse>
+        <Divider sx={{ my: 0.5 }} />
+
         {/* Session Info */}
         <SectionHeader id="session" title="Session Info" />
         <Collapse in={expandedSections.has('session')}>
@@ -395,11 +448,15 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
         <SectionHeader id="macros" title={`Macros (${chatState?.macros?.length || 0})`} />
         <Collapse in={expandedSections.has('macros')}>
           <Box sx={{ mb: 1, px: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {(chatState?.macros || []).map((macro, idx) => (
-              <Tooltip key={idx} title={`${macro.nameSpace}.${macro.name}@${macro.version}`}>
-                <Chip label={macro.alias || macro.name || 'unnamed'} size="small" variant="outlined" />
-              </Tooltip>
-            ))}
+            {(chatState?.macros || []).map((macro, idx) =>  {
+              if (macro) {
+                return (
+                  <Tooltip key={idx} title={`${macro.nameSpace}.${macro.name}@${macro.version}`}>
+                    <Chip label={macro.alias || macro.name || 'unnamed'} size="small" variant="outlined" />
+                  </Tooltip>
+                )}
+              }
+            )}          
             {(!chatState?.macros || chatState.macros.length === 0) && (
               <Typography variant="caption" color="text.secondary">No macros registered</Typography>
             )}

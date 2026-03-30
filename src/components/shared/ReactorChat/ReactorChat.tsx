@@ -734,6 +734,30 @@ export default (props) => {
     setDebugPanelOpen(false);
   }, []);
 
+  
+
+  const handleUpdateSystemPrompt = useCallback(async (newPrompt: string) => {
+    if (chatState?.id) {
+      try {
+        //@ts-ignore
+        await chatFactory.patchSystemPrompt(chatState.id, newPrompt);
+      } catch (err) {
+        reactory.log('Failed to patch system prompt on server', { err }, 'error');
+      }
+    }
+    setChatState((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        persona: {
+          ...prev.persona,
+          persona: newPrompt
+        }
+      };
+    });
+  }, [setChatState, chatState?.id, chatFactory]);
+
+
   const handleRefreshChatVars = useCallback(async () => {
     if (!chatState?.id) return;
     try {

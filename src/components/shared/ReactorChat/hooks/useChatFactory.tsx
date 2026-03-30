@@ -14,6 +14,8 @@ interface ChatFactoryHookResult {
   busy: boolean
   // function used to send a message to the active chat.
   sendMessage: (message: string, sessionId?: string, images?: string[]) => Promise<void>
+  // function used to rate a message in the chat history
+  rateMessage: (messageId: string, rating: number) => Promise<void>
   // loads a chat session by id
   loadChat: (chatSessionId: string) => Promise<void>
   // starts a new chat session
@@ -1182,24 +1184,22 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    */
   const handleModelChange = React.useCallback((override: { modelId?: string; providerId?: string } | null) => {
     setModelOverride(override);
-    if (chatState?.id) {
-      if (override) {
-        graph.setChatModelProvider(chatState.id, override.modelId, override.providerId)
-          .then((result: any) => {
-            // Update chatState with the new maxTokens returned by the server
-            if (result && result.maxTokens != null) {
-              setChatState(prev => ({
-                ...prev,
-                maxTokens: result.maxTokens,
-                tokenCount: result.tokenCount ?? prev.tokenCount,
-                tokenPressure: result.tokenPressure ?? prev.tokenPressure,
-              }));
-            }
-          })
-          .catch((err: any) => {
-            reactory.log(`ChatFactory: Failed to persist model/provider override: ${err?.message}`, {}, 'warning');
-          });
-      }
+    if (chatState?.id && override && typeof graph?.setChatModelProvider === 'function') {
+      graph.setChatModelProvider(chatState.id, override.modelId, override.providerId)
+        .then((result: any) => {
+          // Update chatState with the new maxTokens returned by the server
+          if (result?.maxTokens != null) {
+            setChatState(prev => ({
+              ...prev,
+              maxTokens: result.maxTokens,
+              tokenCount: result.tokenCount ?? prev.tokenCount,
+              tokenPressure: result.tokenPressure ?? prev.tokenPressure,
+            }));
+          }
+        })
+        .catch((err: any) => {
+          reactory.log(`ChatFactory: Failed to persist model/provider override: ${err?.message}`, {}, 'warning');
+        });
     }
   }, [chatState?.id, graph, reactory, setChatState]);
 
@@ -2078,7 +2078,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           if (protocol === 'sse' && !sse.connected) {
             graph.sendMessage({
               message: '',
-              personaId: persona.id,
+              personaId: (result as any)?.personaId || persona.id,
               chatSessionId,
               streamingMode: 'SSE',
               continueAfterTools: true,
@@ -2257,9 +2257,32 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           if (found) macro = found as any;
         }
 
+        // Final fallback: if no macro found but a matching server-side tool exists
+        // on the conversation, create a synthetic macro entry for server-side execution.
+        // This handles YAML-defined agents whose tools are registered on the conversation
+        // but whose macros may not be in the client-side registry.
+        if (!macro && chatState.tools) {
+          const serverTool = chatState.tools.find(
+            (t: any) => t.function?.name === name && t.runat === 'server'
+          );
+          if (serverTool) {
+            macro = {
+              name: name,
+              nameSpace: 'reactor-macros',
+              version: '1.0.0',
+              description: serverTool.function?.description || name,
+              runat: 'server',
+              roles: serverTool.roles || [],
+              alias: name,
+              enabled: true,
+            } as any;
+          }
+        }
+
         if (!macro) {
           console.warn(`⚠️ [useChatFactory] Macro not found for tool: ${name}`, {
             availableMacros: chatState.macros?.map((m: any) => ({ name: m.name, alias: m.alias })),
+            availableTools: chatState.tools?.map((t: any) => ({ name: t.function?.name, runat: t.runat })),
           });
           toolErrors.push({
             id,
@@ -2367,6 +2390,26 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           macroAlias: macro?.alias,
           availableMacros: chatState.macros?.map(m => ({ name: m.name, alias: m.alias }))
         });
+
+        // Final fallback: if no macro found but a matching server-side tool exists
+        // on the conversation, create a synthetic macro entry for server-side execution.
+        if (!macro && chatState.tools) {
+          const serverTool = chatState.tools.find(
+            (t: any) => t.function?.name === name && t.runat === 'server'
+          );
+          if (serverTool) {
+            macro = {
+              name: name,
+              nameSpace: 'reactor-macros',
+              version: '1.0.0',
+              description: serverTool.function?.description || name,
+              runat: 'server',
+              roles: serverTool.roles || [],
+              alias: name,
+              enabled: true,
+            } as any;
+          }
+        }
 
         if (!macro) {
           console.error('❌ [useChatFactory] Macro not found for tool call:', { name, availableMacros: chatState.macros?.map(m => m.name) });
@@ -2777,6 +2820,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         reactory.log(`DebugPanel: Failed to re-establish SSE: ${err?.message}`, {}, 'warning');
       });
     },
+    rateMessage: async (messageId: string, rating: number) => {
+      // graph.rateMessage(messageId, rating).catch((err) => {
+      //   reactory.error(`Error rating message ${messageId} with rating ${rating}`, err);
+      // });
+    }
   }
 };
 
