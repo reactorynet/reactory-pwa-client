@@ -1261,6 +1261,12 @@ export default (props) => {
                     });
                   }
                 }, [reactory])}
+                onDismissError={React.useCallback((message) => {
+                  setChatState((prevState) => ({
+                    ...prevState,
+                    history: prevState.history.filter((msg) => msg.id !== message.id),
+                  }));
+                }, [setChatState])}
               />
             </Paper>
 

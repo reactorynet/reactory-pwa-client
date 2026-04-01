@@ -464,16 +464,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         if (!resp) throw new Error('No response from server');
 
         if (resp.__typename === 'ReactorErrorResponse') {
-          // Replace the "Processing..." placeholder with the error message
+          // Remove the "Processing..." placeholder and add a system-style error
           setChatState((prevState) => {
             const history = [...prevState.history];
             const lastIndex = history.length - 1;
             if (lastIndex >= 0 && history[lastIndex].role === 'assistant' && history[lastIndex].content === 'Processing...') {
-              history[lastIndex] = {
-                ...history[lastIndex],
-                content: `Error: ${resp.message}`,
-                timestamp: new Date(),
-              };
+              history.splice(lastIndex, 1);
             }
             return { ...prevState, history };
           });
@@ -1452,33 +1448,50 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const onError = (error: any) => {
     reactory.error('useChatFactory onError:', error);
-    const message = (error as Error)?.message || String(error) || 'An unexpected error occurred';
+    const errorMessage = (error as Error)?.message || String(error) || 'An unexpected error occurred';
     const type = (error as any)?.type;
-    sessionLogger?.error(`Error: ${message}`, { type }, 'useChatFactory');
+    sessionLogger?.error(`Error: ${errorMessage}`, { type }, 'useChatFactory');
 
     // SSE/streaming errors replace the chat message with a non-obtrusive network indicator
     // visible to all users, rather than polluting the chat history with error messages.
     if (type === 'SSE_ERROR' || type === 'PARSE_ERROR' || type === 'SESSION_EXPIRED') {
       setNetworkStatus('error');
-      setNetworkError(message);
+      setNetworkError(errorMessage);
       return;
     }
 
-    // Other errors (application/logic errors): show as a chat message for ADMIN/DEVELOPER only
-    if (reactory.hasRole(['ADMIN', 'DEVELOPER'])) {
-      onMessage({
-        id: reactory.utils.uuid(),
-        timestamp: new Date(),
-        role: "assistant",
-        content: 'Error: ' + message,
-        tool_calls: [],
-        rating: 0,
-        refusal: null,
-        annotations: [],
-        audio: null,
-        sessionId: chatState.id,
-      });
-    }
+    // Application/logic errors: show as a dismissible system-style error message.
+    // Deduplicate: if the last message is an error with the same content, increment its counter.
+    setChatState((prevState) => {
+      const history = [...prevState.history];
+      const lastMsg = history.length > 0 ? history[history.length - 1] : null;
+
+      if (lastMsg && (lastMsg as any).role === 'error' && lastMsg.content === errorMessage) {
+        // Same error repeated — increment the counter instead of adding a new message
+        history[history.length - 1] = {
+          ...lastMsg,
+          errorCount: ((lastMsg as any).errorCount || 1) + 1,
+          timestamp: new Date(),
+        };
+      } else {
+        // New error — add as a system-style error message
+        history.push({
+          id: reactory.utils.uuid(),
+          timestamp: new Date(),
+          role: "error",
+          content: errorMessage,
+          tool_calls: [],
+          rating: 0,
+          refusal: null,
+          annotations: [],
+          audio: null,
+          sessionId: chatState.id,
+          errorCount: 1,
+        } as any);
+      }
+
+      return { ...prevState, history };
+    });
   }
 
   /** Clear the network error indicator and allow the user to continue */

@@ -69,6 +69,9 @@ const pulse = keyframes`
   40% { opacity: 1; transform: scale(1); }
 `;
 
+const isErrorMessage = (message: UXChatMessage) =>
+  message.role === 'error';
+
 const ChatList = (props: {
   reactory: Reactory.Client.ReactorySDK,
   messages: UXChatMessage[],
@@ -77,10 +80,11 @@ const ChatList = (props: {
   chatState?: ChatState,
   onRetryMessage?: (message: UXChatMessage) => void,
   onRateMessage?: (message: UXChatMessage, rating: 'up' | 'down') => void,
-  onCopyMessage?: (message: UXChatMessage) => void
+  onCopyMessage?: (message: UXChatMessage) => void,
+  onDismissError?: (message: UXChatMessage) => void,
 }) => {
 
-  const { messages, reactory, personas, selectedPersona, chatState, onRetryMessage, onRateMessage, onCopyMessage } = props;
+  const { messages, reactory, personas, selectedPersona, chatState, onRetryMessage, onRateMessage, onCopyMessage, onDismissError } = props;
   const { renderContent } = useContentRender(reactory);
 
   const {
@@ -207,6 +211,11 @@ const ChatList = (props: {
   }
 
   const getMessageAvatarIcon = (message: UXChatMessage) => {
+    // Error messages get an error icon
+    if (isErrorMessage(message)) {
+      return 'error_outline';
+    }
+
     // Activity messages get a settings/tune icon
     if (isActivityMessage(message)) {
       return 'tune';
@@ -244,6 +253,11 @@ const ChatList = (props: {
   }
 
   const getMessageAvatarColor = (message: UXChatMessage) => {
+    // Error messages get error color
+    if (isErrorMessage(message)) {
+      return 'error.main';
+    }
+
     // Activity messages get an info colour
     if (isActivityMessage(message)) {
       return 'info.main';
@@ -403,7 +417,7 @@ const ChatList = (props: {
               }}
             >
               <Paper
-                elevation={isProcessingMessage(message) || isActivityMessage(message) || isToolCallMessage(message) ? 0 : 1}
+                elevation={isProcessingMessage(message) || isActivityMessage(message) || isToolCallMessage(message) || isErrorMessage(message) ? 0 : 1}
                 sx={{
                   p: 0.5,
                   maxWidth: '95%',
@@ -418,6 +432,12 @@ const ChatList = (props: {
                     border: '1px dashed',
                     borderColor: 'info.main',
                     opacity: 0.85,
+                  }),
+                  ...(isErrorMessage(message) && {
+                    backgroundColor: 'rgba(211,47,47,0.05)',
+                    border: '1px dashed',
+                    borderColor: 'error.main',
+                    opacity: 0.9,
                   }),
                   ...(isToolCallMessage(message) && (() => {
                     const status = getOverallToolCallStatus(message);
@@ -474,6 +494,74 @@ const ChatList = (props: {
                         >
                           {getMessageText(message)}
                         </Typography>
+                      </Box>
+                    ) : isErrorMessage(message) ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5, px: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Icon sx={{ fontSize: '0.875rem', color: 'error.main' }}>error</Icon>
+                          <Typography
+                            variant="caption"
+                            color="error.main"
+                            sx={{ fontWeight: 500, userSelect: 'none' }}
+                          >
+                            Error
+                            {(message as any).errorCount > 1 && (
+                              <Box
+                                component="span"
+                                sx={{
+                                  ml: 0.75,
+                                  px: 0.75,
+                                  py: 0.125,
+                                  borderRadius: '10px',
+                                  bgcolor: 'error.main',
+                                  color: 'error.contrastText',
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                ×{(message as any).errorCount}
+                              </Box>
+                            )}
+                          </Typography>
+                          <Box sx={{ flex: 1 }} />
+                          {onDismissError && (
+                            <Tooltip title="Dismiss">
+                              <IconButton
+                                size="small"
+                                onClick={() => onDismissError(message)}
+                                sx={{ p: 0.25 }}
+                              >
+                                <Icon sx={{ fontSize: '0.875rem', color: 'error.main' }}>close</Icon>
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                        <Box
+                          sx={{
+                            p: 0.75,
+                            borderRadius: '4px',
+                            bgcolor: 'rgba(211,47,47,0.08)',
+                            border: '1px solid',
+                            borderColor: 'error.main',
+                            maxHeight: 120,
+                            overflowY: 'auto',
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            component="pre"
+                            sx={{
+                              fontFamily: 'monospace',
+                              fontSize: '0.7rem',
+                              color: 'error.main',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-all',
+                              m: 0,
+                            }}
+                          >
+                            {message.content}
+                          </Typography>
+                        </Box>
                       </Box>
                     ) : isToolCallMessage(message) ? (() => {
                       const overallStatus = getOverallToolCallStatus(message);
@@ -773,7 +861,7 @@ const ChatList = (props: {
                         {renderComponent(message)}
                       </Box>
                     )}
-                    {!isProcessingMessage(message) && !isToolCallMessage(message) && (
+                    {!isProcessingMessage(message) && !isToolCallMessage(message) && !isErrorMessage(message) && (
                     <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="caption" color="textSecondary">
                         {typeof (message as any)?.timestamp === 'string' ?

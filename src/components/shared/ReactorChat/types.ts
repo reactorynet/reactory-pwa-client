@@ -254,6 +254,8 @@ export type UXChatMessage = ChatMessage & {
   /** When true, this message represents a user-initiated activity (e.g. changing tool approval mode)
    *  rather than a real chat message. It renders with a distinct activity-notification style. */
   isActivity?: boolean;
+  /** Tracks how many times the same error has occurred (for deduplication in the UI). */
+  errorCount?: number;
 }
 
 export interface MCPClient {
