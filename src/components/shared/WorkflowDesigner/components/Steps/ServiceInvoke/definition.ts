@@ -149,7 +149,20 @@ export const ServiceInvokeStepDefinition: StepDefinition = {
       'retryConfig'
     ],
     serviceId: {
+      'ui:placeholder': 'e.g. core.UserService',
       'ui:help': 'ID of the registered Reactory service'
+    },
+    serviceMethod: {
+      'ui:placeholder': 'e.g. getUserById',
+      'ui:help': 'Method to invoke on the service'
+    },
+    arguments: {
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': {
+        format: 'json',
+        rows: 6
+      },
+      'ui:help': 'Arguments to pass as a JSON object. Supports ${variable} substitution from workflow context.'
     },
     passthrough: {
       'ui:options': {
@@ -160,8 +173,47 @@ export const ServiceInvokeStepDefinition: StepDefinition = {
         showLabels: true
       }      
     },
-    serviceMethod: {
-      'ui:help': 'Method to invoke on the service'
+    errorHandling: {
+      'ui:widget': 'SelectWidget',
+      'ui:options': {
+        selectOptions: [
+          { key: 'throw', value: 'throw', label: 'Throw (halt workflow)', icon: 'error' },
+          { key: 'continue', value: 'continue', label: 'Continue (ignore error)', icon: 'skip_next' },
+          { key: 'retry', value: 'retry', label: 'Retry', icon: 'replay' }
+        ]
+      },
+      'ui:help': 'How to handle errors from the service invocation'
+    },
+    retryConfig: {
+      maxAttempts: {
+        'ui:widget': 'SliderWidget',
+        'ui:options': {
+          min: 1,
+          max: 10,
+          step: 1,
+          marks: true
+        },
+        'ui:help': 'Maximum number of retry attempts'
+      },
+      delay: {
+        'ui:widget': 'SliderWidget',
+        'ui:options': {
+          min: 100,
+          max: 30000,
+          step: 100
+        },
+        'ui:help': 'Initial delay between retries in milliseconds'
+      },
+      backoff: {
+        'ui:widget': 'SelectWidget',
+        'ui:options': {
+          selectOptions: [
+            { key: 'linear', value: 'linear', label: 'Linear', icon: 'trending_flat' },
+            { key: 'exponential', value: 'exponential', label: 'Exponential', icon: 'trending_up' }
+          ]
+        },
+        'ui:help': 'Linear: constant delay between attempts. Exponential: delay doubles each attempt.'
+      }
     }
   },
   tags: ['integration', 'service', 'invoke', 'reactory'],

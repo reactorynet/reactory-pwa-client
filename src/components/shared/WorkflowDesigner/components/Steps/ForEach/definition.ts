@@ -92,7 +92,28 @@ export const ForEachStepDefinition: StepDefinition = {
   uiSchema: {
     'ui:order': ['name', 'items', 'itemVariable', 'indexVariable', 'maxConcurrency'],
     items: {
-      'ui:help': 'Expression resolving to an array, e.g. ${steps.previous.output}'
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': {
+        format: 'javascript',
+        rows: 3
+      },
+      'ui:help': 'Expression resolving to an array, e.g. ${steps.previous.output} or context.myList'
+    },
+    itemVariable: {
+      'ui:placeholder': 'item'
+    },
+    indexVariable: {
+      'ui:placeholder': 'index'
+    },
+    maxConcurrency: {
+      'ui:widget': 'SliderWidget',
+      'ui:options': {
+        min: 1,
+        max: 20,
+        step: 1,
+        marks: true
+      },
+      'ui:help': 'Number of iterations to run in parallel (1 = sequential, fully ordered)'
     }
   },
   tags: ['flow', 'loop', 'iteration', 'forEach', 'repeat'],

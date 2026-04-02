@@ -92,8 +92,25 @@ export const ValidationStepDefinition: StepDefinition = {
   },
   uiSchema: {
     'ui:order': ['name', 'stopOnFirstError', 'rules'],
+    stopOnFirstError: {
+      'ui:help': 'When enabled, validation stops at the first failing rule and skips remaining rules'
+    },
     rules: {
-      'ui:help': 'Define validation rules to check against the input data'
+      'ui:help': 'Define validation rules to check against the input data',
+      items: {
+        type: {
+          'ui:widget': 'SelectWidget',
+          'ui:options': {
+            selectOptions: [
+              { key: 'required', value: 'required', label: 'Required', icon: 'star' },
+              { key: 'type', value: 'type', label: 'Type Check', icon: 'category' },
+              { key: 'pattern', value: 'pattern', label: 'Pattern (regex)', icon: 'pattern' },
+              { key: 'range', value: 'range', label: 'Range', icon: 'swap_horiz' },
+              { key: 'custom', value: 'custom', label: 'Custom Expression', icon: 'code' }
+            ]
+          }
+        }
+      }
     }
   },
   tags: ['logic', 'validation', 'check', 'rules'],

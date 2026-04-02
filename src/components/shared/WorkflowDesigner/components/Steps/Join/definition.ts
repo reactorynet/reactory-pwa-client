@@ -53,7 +53,7 @@ export const JoinStepDefinition: StepDefinition = {
   },
   uiSchema: {
     waitForAll: {
-      'ui:help': 'If enabled, waits for all branches to complete before continuing'
+      'ui:help': 'Enabled: waits for every branch to finish before proceeding. Disabled: continues as soon as the first branch completes.'
     }
   },
   tags: ['flow', 'join', 'merge', 'synchronize'],

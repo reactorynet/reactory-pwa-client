@@ -37,8 +37,14 @@ export const EndStepDefinition: StepDefinition = {
     returnValue: 'success'
   },
   uiSchema: {
+    'ui:order': ['name', 'returnValue'],
+    name: {
+      'ui:autofocus': true,
+      'ui:placeholder': 'e.g. Workflow Complete'
+    },
     returnValue: {
-      'ui:help': 'Value returned when workflow completes'
+      'ui:placeholder': 'success',
+      'ui:help': 'The value returned to the workflow caller when this endpoint is reached'
     }
   },
   tags: ['control', 'end', 'exit'],

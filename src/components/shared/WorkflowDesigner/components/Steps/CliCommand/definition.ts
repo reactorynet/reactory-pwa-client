@@ -84,10 +84,27 @@ export const CliCommandStepDefinition: StepDefinition = {
   uiSchema: {
     'ui:order': ['name', 'command', 'arguments', 'workingDirectory', 'environment', 'expectedExitCodes'],
     command: {
-      'ui:help': 'Command to execute (e.g. "node", "python", "curl")'
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': {
+        format: 'console',
+        rows: 2
+      },
+      'ui:help': 'Command to execute (e.g. "node", "python", "curl"). Supports ${variable} substitution.'
     },
     workingDirectory: {
+      'ui:placeholder': '/app or ${REACTORY_SERVER}',
       'ui:help': 'Defaults to the workflow working directory'
+    },
+    environment: {
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': {
+        format: 'json',
+        rows: 4
+      },
+      'ui:help': 'Environment variables to inject into the process (JSON object of key-value pairs)'
+    },
+    expectedExitCodes: {
+      'ui:help': 'Exit codes considered successful. Any other code will be treated as an error. Default: [0]'
     }
   },
   tags: ['action', 'cli', 'command', 'shell', 'execute'],

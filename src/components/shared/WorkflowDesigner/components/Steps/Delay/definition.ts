@@ -34,10 +34,16 @@ export const DelayStepDefinition: StepDefinition = {
       },
       duration: {
         type: 'number',
-        title: 'Duration (ms)',
-        description: 'Delay duration in milliseconds',
+        title: 'Duration',
+        description: 'How long to pause workflow execution',
         minimum: 0,
         default: 1000
+      },
+      durationUnit: {
+        type: 'string',
+        title: 'Unit',
+        enum: ['ms', 'seconds', 'minutes'],
+        default: 'ms'
       },
       reason: {
         type: 'string',
@@ -49,15 +55,29 @@ export const DelayStepDefinition: StepDefinition = {
   },
   defaultProperties: {
     name: 'Delay',
-    duration: 1000
+    duration: 1000,
+    durationUnit: 'ms'
   },
   uiSchema: {
-    'ui:order': ['name', 'duration', 'reason'],
+    'ui:order': ['name', 'duration', 'durationUnit', 'reason'],
     duration: {
-      'ui:help': 'Time to pause in milliseconds'
+      'ui:placeholder': '1000',
+      'ui:help': 'Numeric amount of time to pause (interpreted according to the selected unit)'
+    },
+    durationUnit: {
+      'ui:widget': 'SelectWidget',
+      'ui:options': {
+        selectOptions: [
+          { key: 'ms', value: 'ms', label: 'Milliseconds (ms)', icon: 'access_time' },
+          { key: 'seconds', value: 'seconds', label: 'Seconds', icon: 'timer' },
+          { key: 'minutes', value: 'minutes', label: 'Minutes', icon: 'schedule' }
+        ]
+      }
     },
     reason: {
-      'ui:help': 'Optional explanation for the delay'
+      'ui:widget': 'textarea',
+      'ui:options': { rows: 2 },
+      'ui:help': 'Optional explanation for the delay (useful for workflow documentation)'
     }
   },
   tags: ['flow', 'delay', 'wait', 'pause', 'timer'],
