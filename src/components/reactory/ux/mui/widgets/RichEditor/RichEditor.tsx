@@ -183,11 +183,28 @@ const StyledEditorContainer = styled(Box)(({ theme }) => {
 
 /** HTML-escape a string for safe insertion into a pre/code block. */
 function escapeHtml(text: string): string {
-  return text
+  const s = typeof text === 'string' ? text : String(text ?? '');
+  return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/**
+ * Coerce a formData value to a plain string suitable for code-mode display.
+ * - null / undefined → empty string
+ * - already a string → returned as-is
+ * - object / array   → pretty-printed JSON (useful for json-format fields)
+ * - anything else    → String() coercion
+ */
+function normalizeToString(value: any): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+  }
+  return String(value);
 }
 
 /**
@@ -239,22 +256,24 @@ const RichTextEditor = (props: any) => {
   // onChange.  The Quill `value` prop receives HTML (the code-block wrapper).
   const rawTextRef = useRef<string>('');
   const [content, setContent] = useState<string | undefined>(() => {
-    if (!props.formData) return undefined;
+    if (props.formData == null || props.formData === '') return undefined;
     if (isCodeMode) {
-      rawTextRef.current = props.formData;
-      return toCodeBlockHtml(props.formData);
+      const normalized = normalizeToString(props.formData);
+      rawTextRef.current = normalized;
+      return toCodeBlockHtml(normalized);
     }
-    return props.formData;
+    return typeof props.formData === 'string' ? props.formData : undefined;
   });
 
   // ── Sync external formData changes ────────────────────────────────────────
   useEffect(() => {
-    if (!props.formData) return;
+    if (props.formData == null || props.formData === '') return;
     if (isCodeMode) {
-      if (props.formData === rawTextRef.current) return; // no external change
-      rawTextRef.current = props.formData;
-      setContent(toCodeBlockHtml(props.formData));
-    } else if (props.formData !== content) {
+      const normalized = normalizeToString(props.formData);
+      if (normalized === rawTextRef.current) return; // no external change
+      rawTextRef.current = normalized;
+      setContent(toCodeBlockHtml(normalized));
+    } else if (typeof props.formData === 'string' && props.formData !== content) {
       setContent(props.formData);
     }
   }, [props.formData]);
