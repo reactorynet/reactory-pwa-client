@@ -35,6 +35,15 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
 
   // Panel state
   const [activeTab, setActiveTab] = useStateReact<'properties' | 'validation' | 'run'>('properties');
+
+  // Workflow metadata editing state
+  const [wfName, setWfName] = useStateReact<string>(definition?.name || '');
+  const [wfNamespace, setWfNamespace] = useStateReact<string>(definition?.namespace || 'user');
+  const [wfVersion, setWfVersion] = useStateReact<string>(definition?.version || '1.0.0');
+  const [wfDescription, setWfDescription] = useStateReact<string>(definition?.description || '');
+  const [wfAuthor, setWfAuthor] = useStateReact<string>(definition?.author || '');
+  const [tagInput, setTagInput] = useStateReact<string>('');
+  const [roleInput, setRoleInput] = useStateReact<string>('');
   const [expandedSections, setExpandedSections] = useStateReact<Set<string>>(new Set(['basic']));
   const [isRunning, setIsRunning] = useStateReact<boolean>(false);
   const [runOutput, setRunOutput] = useStateReact<string>('');
@@ -149,6 +158,23 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
     }
   }, [selectedStep]);
 
+  // Sync workflow metadata fields when definition changes (e.g. after loading a file)
+  React.useEffect(() => {
+    if (definition) {
+      setWfName(definition.name || '');
+      setWfNamespace(definition.namespace || 'user');
+      setWfVersion(definition.version || '1.0.0');
+      setWfDescription(definition.description || '');
+      setWfAuthor(definition.author || '');
+    }
+  }, [definition?.id, definition?.name, definition?.namespace, definition?.version]);
+
+  // Helper to commit a changed field to the definition
+  const commitWfField = useCallbackReact((field: string, value: unknown) => {
+    if (!definition || !onDefinitionUpdate || readonly) return;
+    onDefinitionUpdate({ ...definition, [field]: value });
+  }, [definition, onDefinitionUpdate, readonly]);
+
   // Clear run results when step selection changes
   React.useEffect(() => {
     setRunOutput('');
@@ -165,8 +191,15 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
     Alert,
     Badge,
     Button,
+    IconButton,
     TextField,
-    CircularProgress
+    CircularProgress,
+    Chip,
+    Stack,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
+    Tooltip
   } = Material.MaterialCore;
 
   const {
@@ -174,7 +207,13 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
     Warning,
     Error,
     Info,
-    PlayArrow
+    PlayArrow,
+    Add,
+    Close,
+    ExpandMore,
+    AccountCircle,
+    Label,
+    AccountTree
   } = Material.MaterialIcons;
 
   // Calculate validation counts
@@ -218,7 +257,7 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
         )}
         {selectedSteps.length === 0 && selectedConnections.length === 0 && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            No selection
+            {definition?.namespace ? `${definition.namespace}.${definition.name}` : definition?.name || 'Workflow Properties'}
           </Typography>
         )}
         {selectedSteps.length > 1 && (
@@ -241,7 +280,7 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
             value="properties"
             icon={<Settings />}
             iconPosition="start"
-            disabled={!selectedStep && !selectedConnection}
+
           />
           <Tab
             label={
@@ -289,26 +328,225 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                 </Typography>
               </Box>
             ) : (
-              // No step or connection selected — show empty state
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '200px',
-                  color: 'text.secondary',
-                  textAlign: 'center',
-                  p: 3
-                }}
-              >
-                <Settings sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
-                <Typography variant="h6" gutterBottom>
-                  No Selection
-                </Typography>
-                <Typography variant="body2">
-                  Select a step or connection to view its properties
-                </Typography>
+              // No step or connection selected — show workflow metadata form
+              <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <AccountTree sx={{ color: 'primary.main' }} />
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    Workflow Properties
+                  </Typography>
+                </Box>
+
+                {/* Identity section */}
+                <Accordion defaultExpanded disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
+                  <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+                    <Typography variant="body2" fontWeight={600}>Identity</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <TextField
+                      label="Name"
+                      value={wfName}
+                      size="small"
+                      fullWidth
+                      disabled={readonly}
+                      onChange={(e) => setWfName(e.target.value)}
+                      onBlur={() => commitWfField('name', wfName)}
+                      helperText="Human-readable workflow name"
+                    />
+                    <TextField
+                      label="Namespace"
+                      value={wfNamespace}
+                      size="small"
+                      fullWidth
+                      disabled={readonly}
+                      onChange={(e) => setWfNamespace(e.target.value)}
+                      onBlur={() => commitWfField('namespace', wfNamespace)}
+                      helperText="e.g. user, reactory, my-org"
+                    />
+                    <TextField
+                      label="Version"
+                      value={wfVersion}
+                      size="small"
+                      fullWidth
+                      disabled={readonly}
+                      onChange={(e) => setWfVersion(e.target.value)}
+                      onBlur={() => commitWfField('version', wfVersion)}
+                      helperText="Semantic version, e.g. 1.0.0"
+                    />
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* Details section */}
+                <Accordion defaultExpanded disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
+                  <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+                    <Typography variant="body2" fontWeight={600}>Details</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <TextField
+                      label="Description"
+                      value={wfDescription}
+                      size="small"
+                      fullWidth
+                      multiline
+                      rows={3}
+                      disabled={readonly}
+                      onChange={(e) => setWfDescription(e.target.value)}
+                      onBlur={() => commitWfField('description', wfDescription)}
+                    />
+                    <TextField
+                      label="Author"
+                      value={wfAuthor}
+                      size="small"
+                      fullWidth
+                      disabled={readonly}
+                      onChange={(e) => setWfAuthor(e.target.value)}
+                      onBlur={() => commitWfField('author', wfAuthor)}
+                      InputProps={{ startAdornment: <AccountCircle sx={{ mr: 0.5, color: 'action.active', fontSize: 18 }} /> }}
+                    />
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* Tags section */}
+                <Accordion disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
+                  <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+                    <Typography variant="body2" fontWeight={600}>Tags</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {(definition?.tags || []).length > 0 && (
+                      <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                        {(definition?.tags || []).map((tag) => (
+                          <Chip
+                            key={tag}
+                            label={tag}
+                            size="small"
+                            icon={<Label fontSize="small" />}
+                            onDelete={readonly ? undefined : () => {
+                              if (!definition || !onDefinitionUpdate) return;
+                              onDefinitionUpdate({ ...definition, tags: (definition.tags || []).filter(t => t !== tag) });
+                            }}
+                          />
+                        ))}
+                      </Stack>
+                    )}
+                    {!readonly && (
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <TextField
+                          size="small"
+                          placeholder="Add tag…"
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                              e.preventDefault();
+                              const newTag = tagInput.trim().replace(/,$/, '');
+                              if (newTag && definition && onDefinitionUpdate) {
+                                const existing = definition.tags || [];
+                                if (!existing.includes(newTag)) {
+                                  onDefinitionUpdate({ ...definition, tags: [...existing, newTag] });
+                                }
+                              }
+                              setTagInput('');
+                            }
+                          }}
+                          sx={{ flexGrow: 1 }}
+                        />
+                        <Tooltip title="Add tag">
+                          <span>
+                            <IconButton
+                              size="small"
+                              disabled={!tagInput.trim()}
+                              onClick={() => {
+                                const newTag = tagInput.trim();
+                                if (newTag && definition && onDefinitionUpdate) {
+                                  const existing = definition.tags || [];
+                                  if (!existing.includes(newTag)) {
+                                    onDefinitionUpdate({ ...definition, tags: [...existing, newTag] });
+                                  }
+                                }
+                                setTagInput('');
+                              }}
+                            >
+                              <Add fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Box>
+                    )}
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* Roles section */}
+                <Accordion disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
+                  <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+                    <Typography variant="body2" fontWeight={600}>Roles</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Roles that are permitted to view or execute this workflow.
+                    </Typography>
+                    {(definition?.roles || []).length > 0 && (
+                      <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                        {(definition?.roles || []).map((role) => (
+                          <Chip
+                            key={role}
+                            label={role}
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            onDelete={readonly ? undefined : () => {
+                              if (!definition || !onDefinitionUpdate) return;
+                              onDefinitionUpdate({ ...definition, roles: (definition.roles || []).filter(r => r !== role) });
+                            }}
+                          />
+                        ))}
+                      </Stack>
+                    )}
+                    {!readonly && (
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <TextField
+                          size="small"
+                          placeholder="Add role…"
+                          value={roleInput}
+                          onChange={(e) => setRoleInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if ((e.key === 'Enter' || e.key === ',') && roleInput.trim()) {
+                              e.preventDefault();
+                              const newRole = roleInput.trim().replace(/,$/, '');
+                              if (newRole && definition && onDefinitionUpdate) {
+                                const existing = definition.roles || [];
+                                if (!existing.includes(newRole)) {
+                                  onDefinitionUpdate({ ...definition, roles: [...existing, newRole] });
+                                }
+                              }
+                              setRoleInput('');
+                            }
+                          }}
+                          sx={{ flexGrow: 1 }}
+                        />
+                        <Tooltip title="Add role">
+                          <span>
+                            <IconButton
+                              size="small"
+                              disabled={!roleInput.trim()}
+                              onClick={() => {
+                                const newRole = roleInput.trim();
+                                if (newRole && definition && onDefinitionUpdate) {
+                                  const existing = definition.roles || [];
+                                  if (!existing.includes(newRole)) {
+                                    onDefinitionUpdate({ ...definition, roles: [...existing, newRole] });
+                                  }
+                                }
+                                setRoleInput('');
+                              }}
+                            >
+                              <Add fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Box>
+                    )}
+                  </AccordionDetails>
+                </Accordion>
               </Box>
             )}
           </>
