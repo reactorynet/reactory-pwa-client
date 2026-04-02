@@ -134,6 +134,9 @@ export interface UseSSEOptions {
   onReconnected?: () => void;
   /** Called when all reconnect attempts have been exhausted */
   onReconnectFailed?: (totalAttempts: number) => void;
+  /** Called whenever an SSE data event (start, token, tool_call, reasoning) is received.
+   *  Useful for detecting server activity on reconnect when no explicit busy signal exists. */
+  onStreamActivity?: () => void;
   /** Optional session logger for client-to-server debug logging */
   sessionLogger?: SessionLogger;
 }
@@ -181,7 +184,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 /** Exponential backoff delays (ms) for each reconnect attempt */
 const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 16000];
 
-const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry, onReconnecting, onReconnected, onReconnectFailed, sessionLogger }: UseSSEOptions): UseSSEResult => {
+const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry, onReconnecting, onReconnected, onReconnectFailed, onStreamActivity, sessionLogger }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -209,9 +212,11 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   onToolCallRef.current = onToolCall;
   onToolIterationLimitRef.current = onToolIterationLimit;
   onRetryRef.current = onRetry;
+  const onStreamActivityRef = React.useRef(onStreamActivity);
   onReconnectingRef.current = onReconnecting;
   onReconnectedRef.current = onReconnected;
   onReconnectFailedRef.current = onReconnectFailed;
+  onStreamActivityRef.current = onStreamActivity;
 
   // Reconnection state refs
   const lastConnectOptsRef = React.useRef<{
@@ -326,6 +331,12 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
 
       if (data.type !== 'token') {
         reactory.debug('useSSE: event', data);
+      }
+
+      // Notify consumer of server-side activity for any data-bearing event.
+      // This allows the consumer to re-activate busy indicators on reconnect.
+      if (data.type === 'start' || data.type === 'token' || data.type === 'tool_call' || data.type === 'reasoning') {
+        if (onStreamActivityRef.current) onStreamActivityRef.current();
       }
 
       switch (data.type) {

@@ -304,6 +304,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       setIsStreaming(false);
       setWaitingForResponse(false);
 
+      // Clear the SSE inactivity watchdog and mark not-busy since
+      // the server has signalled completion.
+      if (sseInactivityTimerRef.current) {
+        clearTimeout(sseInactivityTimerRef.current);
+        sseInactivityTimerRef.current = null;
+      }
+      setBusy(false);
+
       // Now process any tool_calls that were accumulated during streaming.
       const accumulated = pendingToolCallsRef.current;
       pendingToolCallsRef.current = [];
@@ -742,6 +750,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [networkError, setNetworkError] = React.useState<string | null>(null);
   const [networkReconnectAttempt, setNetworkReconnectAttempt] = React.useState(0);
 
+  // Inactivity watchdog: resets busy state if no SSE events arrive within 15 seconds.
+  // This handles the case where the connection re-establishes but the server has
+  // already finished processing (e.g. the complete event was missed).
+  const SSE_INACTIVITY_TIMEOUT_MS = 15_000;
+  const sseInactivityTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const busyRef = React.useRef(busy);
+  busyRef.current = busy;
+
   // New: chats state for historical chats
   const [chats, setChats] = React.useState<any[]>([]);
 
@@ -1073,6 +1089,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         partialContent: event.data.partialContent,
       });
       setWaitingForResponse(false);
+      // Clear the SSE inactivity watchdog since the stream has paused
+      if (sseInactivityTimerRef.current) {
+        clearTimeout(sseInactivityTimerRef.current);
+        sseInactivityTimerRef.current = null;
+      }
       setBusy(false);
     }, [reactory]);
 
@@ -1128,6 +1149,28 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onReconnectFailed: () => {
         setNetworkStatus('error');
         setNetworkError('Connection lost. Please check your network and try again.');
+      },
+      onStreamActivity: () => {
+        // When SSE data events arrive (start, token, tool_call, reasoning),
+        // ensure the busy indicator is active. This covers the reconnect case
+        // where the user navigated away and came back while the server is
+        // still processing.
+        if (!busyRef.current) {
+          setBusy(true);
+        }
+
+        // Reset the inactivity watchdog every time we receive activity.
+        if (sseInactivityTimerRef.current) {
+          clearTimeout(sseInactivityTimerRef.current);
+        }
+        sseInactivityTimerRef.current = setTimeout(() => {
+          sseInactivityTimerRef.current = null;
+          // No events for 15 seconds — assume the server finished or the
+          // stream stalled. Clear the busy indicator so the UI isn't stuck.
+          setBusy(false);
+          setIsStreaming(false);
+          setWaitingForResponse(false);
+        }, SSE_INACTIVITY_TIMEOUT_MS);
       },
     });
 
@@ -1451,6 +1494,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     const errorMessage = (error as Error)?.message || String(error) || 'An unexpected error occurred';
     const type = (error as any)?.type;
     sessionLogger?.error(`Error: ${errorMessage}`, { type }, 'useChatFactory');
+
+    // Clear the SSE inactivity watchdog and busy state on errors
+    if (sseInactivityTimerRef.current) {
+      clearTimeout(sseInactivityTimerRef.current);
+      sseInactivityTimerRef.current = null;
+    }
+    setBusy(false);
 
     // SSE/streaming errors replace the chat message with a non-obtrusive network indicator
     // visible to all users, rather than polluting the chat history with error messages.
@@ -2769,6 +2819,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   // Keep the ref in sync so onToolCallReceived always calls the latest version
   processToolCallsRef.current = processToolCallsMemoized;
+
+  // Clean up the SSE inactivity timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (sseInactivityTimerRef.current) {
+        clearTimeout(sseInactivityTimerRef.current);
+        sseInactivityTimerRef.current = null;
+      }
+    };
+  }, []);
 
   return {
     busy,
