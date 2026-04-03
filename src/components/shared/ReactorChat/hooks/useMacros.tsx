@@ -253,15 +253,20 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
       try {
         let result = null;
         if ((macro.runat === 'client' || macro.runat === null || macro.runat === undefined)) {
-          // @ts-ignore
-          let clientMacro: MacroComponentDefinition<unknown> = macro.component;
-          if (!clientMacro) {
-            // find the macro in the client macros
-            clientMacro = clientMacros.find((m) => m.nameSpace === macro.nameSpace && m.name === macro.name && m.version === macro.version)
+          // macro.component may already be the Macro function (when the definition comes from
+          // findMacroByAlias / the local registry), or it may be absent (when a lightweight
+          // descriptor arrives from the server via chatState.macros).  Handle both cases.
+          let macroFunction: Macro<any> | undefined;
+          if (typeof macro.component === 'function') {
+            macroFunction = macro.component as Macro<any>;
+          } else {
+            const clientMacro = clientMacros.find(
+              (m) => m.nameSpace === macro.nameSpace && m.name === macro.name && m.version === macro.version
+            );
+            macroFunction = clientMacro?.component as Macro<any> | undefined;
           }
 
-          if (clientMacro) {
-            const macroFunction = clientMacro.component as Macro<any>;
+          if (typeof macroFunction === 'function') {
             // the component is client side so we execute and 
             // return the results.
             result = await macroFunction(args, chatState, reactory);

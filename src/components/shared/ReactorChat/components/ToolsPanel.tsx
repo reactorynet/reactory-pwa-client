@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { ChatState, MacroToolDefinition, ToolApprovalMode } from '../types';
 import ModelSelector, { ModelOverride } from './ModelSelector';
 import { Provider, ProviderAuthStatus } from '../hooks/useProviders';
-
+import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender';
+import { max } from 'lodash';
+import { border } from '@mui/system';
 interface ToolsPanelProps {
   open: boolean;
   onClose: () => void;
@@ -74,6 +76,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   const [configProviderId, setConfigProviderId] = useState<string | null>(null);
   const [configForm, setConfigForm] = useState<Record<string, any>>({});
   const [configSaving, setConfigSaving] = useState(false);
+  const { renderContent } = useContentRender(reactory);
 
   const {
     Paper,
@@ -533,8 +536,19 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                         {toCamelCaseLabel(toolName ?? 'Tool')}
                       </Typography>
                     </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      {tool.function?.description || 'No description available'}
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      mb: 1,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'scroll',
+                      maxHeight: 220,
+                      border: 1,
+                      borderColor: 'divider',
+                      p: 1,
+                      borderRadius: 1,
+                    }}>
+                      {renderContent(tool.function?.description || 'No description available')}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       {tool.function?.parameters?.properties && (

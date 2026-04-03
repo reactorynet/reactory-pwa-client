@@ -553,7 +553,7 @@ export const TODOS_VAR_KEY = 'reactor.todos';
 
 // ── Side Panel types (agent-mounted components / forms) ────────────────
 
-export type SidePanelAction = 'add' | 'update' | 'remove';
+export type SidePanelAction = 'add' | 'update' | 'remove' | 'list' | 'search' | 'register';
 
 export interface SidePanelItem {
   /** Unique reference ID the agent uses to update/remove this item. */

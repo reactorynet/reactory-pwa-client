@@ -28,6 +28,154 @@ const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
   const action: SidePanelAction = parsed.action || 'add';
   const referenceId: string | undefined = parsed.referenceId;
 
+  // ── LIST ──
+  if (action === 'list') {
+    const schemas: Reactory.Forms.IReactoryForm[] = Array.isArray(reactory.formSchemas) ? reactory.formSchemas : [];
+    if (schemas.length === 0) {
+      return {
+        __typename: "ReactorChatMessage",
+        role: "assistant",
+        content: 'No form schemas are currently registered.',
+        id: reactory.utils.uuid(),
+        rating: 0,
+        timestamp: new Date(),
+        tool_calls: [],
+      };
+    }
+
+    const rows = schemas.map((f) => {
+      const id = f.id || `${f.nameSpace}.${f.name}@${f.version}`;
+      const title = f.title || f.name || '—';
+      return `| \`${id}\` | ${title} |`;
+    });
+
+    const content = [
+      `**Registered form schemas** (${schemas.length} total):`,
+      '',
+      '| ID | Title |',
+      '|----|-------|',
+      ...rows,
+    ].join('\n');
+
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content,
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
+  }
+
+  // ── SEARCH ──
+  if (action === 'search') {
+    const query: string = (parsed.query || '').toLowerCase().trim();
+    if (!query) {
+      return {
+        __typename: "ReactorChatMessage",
+        role: "assistant",
+        content: 'Cannot search forms: `query` is required for the search action.',
+        id: reactory.utils.uuid(),
+        rating: 0,
+        timestamp: new Date(),
+        tool_calls: [],
+      };
+    }
+
+    const schemas: Reactory.Forms.IReactoryForm[] = Array.isArray(reactory.formSchemas) ? reactory.formSchemas : [];
+    const matches = schemas.filter((f) => {
+      const id = (f.id || '').toLowerCase();
+      const name = (f.name || '').toLowerCase();
+      const ns = (f.nameSpace || '').toLowerCase();
+      const title = (f.title || '').toLowerCase();
+      const description = (f.description || '').toLowerCase();
+      return id.includes(query) || name.includes(query) || ns.includes(query) || title.includes(query) || description.includes(query);
+    });
+
+    if (matches.length === 0) {
+      return {
+        __typename: "ReactorChatMessage",
+        role: "assistant",
+        content: `No form schemas found matching \`${query}\`.`,
+        id: reactory.utils.uuid(),
+        rating: 0,
+        timestamp: new Date(),
+        tool_calls: [],
+      };
+    }
+
+    const rows = matches.map((f) => {
+      const id = f.id || `${f.nameSpace}.${f.name}@${f.version}`;
+      const title = f.title || f.name || '—';
+      return `| \`${id}\` | ${title} |`;
+    });
+
+    const content = [
+      `**Search results for "${query}"** (${matches.length} match${matches.length !== 1 ? 'es' : ''}):`,
+      '',
+      '| ID | Title |',
+      '|----|-------|',
+      ...rows,
+    ].join('\n');
+
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content,
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
+  }
+
+  // ── REGISTER ──
+  if (action === 'register') {
+    const formDef: Partial<Reactory.Forms.IReactoryForm> = parsed.formDefinition ?? {};
+    if (parsed.title) formDef.title = parsed.title;
+    if (parsed.description) formDef.description = parsed.description;
+    if (parsed.schema) formDef.schema = parsed.schema;
+    if (parsed.uiSchema) formDef.uiSchema = parsed.uiSchema;
+
+    if (!formDef.nameSpace) formDef.nameSpace = 'reactor-forms';
+    if (!formDef.name) formDef.name = 'DynamicForm';
+    if (!formDef.version) formDef.version = '1.0.0';
+    if (!formDef.id) {
+      formDef.id = `${formDef.nameSpace}.${formDef.name}.${formDef.version}`;
+    }
+
+    if (!formDef.schema) {
+      return {
+        __typename: "ReactorChatMessage",
+        role: "assistant",
+        content: 'Cannot register form: a `schema` is required.',
+        id: reactory.utils.uuid(),
+        rating: 0,
+        timestamp: new Date(),
+        tool_calls: [],
+      };
+    }
+
+    const schemas: Reactory.Forms.IReactoryForm[] = Array.isArray(reactory.formSchemas) ? reactory.formSchemas : [];
+    const existingIndex = schemas.findIndex((f) => f.id === formDef.id);
+    if (existingIndex >= 0) {
+      reactory.formSchemas[existingIndex] = { ...schemas[existingIndex], ...formDef } as Reactory.Forms.IReactoryForm;
+    } else {
+      reactory.formSchemas.push(formDef as Reactory.Forms.IReactoryForm);
+    }
+
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: `Form schema \`${formDef.id}\` has been ${existingIndex >= 0 ? 'updated' : 'registered'} in the SDK.`,
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
+  }
+
   if (!chatState.sidePanel) {
     reactory.error('FormMacro: Side panel actions not available on chatState');
     return null;
@@ -153,12 +301,15 @@ const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
   };
 };
 
-const TOOL_DESCRIPTION = `Present a structured form to the user in the persistent side panel. The form stays visible as the conversation continues. When the user submits, their responses are returned as a JSON message in the conversation.
+const TOOL_DESCRIPTION = `Present, manage, list, search, or register form schemas via the Reactory SDK.
 
 ACTIONS:
-- "add" (default): Open a new form in the side panel. Provide a "formDefinition" or individual "schema"/"uiSchema"/"title" fields. Optionally set "referenceId" for later update/remove.
+- "add" (default): Open a new form in the persistent side panel. Provide a "formDefinition" or individual "schema"/"uiSchema"/"title" fields. Optionally set "referenceId" for later update/remove.
 - "update": Update an existing form's definition or data. Requires "referenceId".
 - "remove": Remove a form from the side panel. Requires "referenceId".
+- "list": List all registered form schemas known to the SDK.
+- "search": Search registered form schemas by id, name, namespace, title, or description. Requires "query".
+- "register": Register a form definition with the SDK without opening it. Useful for saving a definition for later use. Requires "schema".
 
 Use the "side_panel_state" tool first to see what is currently mounted and get reference IDs.
 
@@ -196,6 +347,10 @@ EXAMPLES:
    schema: { type:"object", properties:{ items:{ type:"array", title:"Select all that apply", items:{ type:"string", enum:["Item A","Item B","Item C"] }, uniqueItems:true } } }
    uiSchema: { items:{ "ui:widget":"checkboxes" } }
 
+5) List all registered forms: { "action": "list" }
+6) Search forms: { "action": "search", "query": "feedback" }
+7) Register for later use: { "action": "register", "schema": {...}, "title": "My Form", "name": "MyForm", "nameSpace": "my-forms" }
+
 You can also set "formData" to pre-populate fields with default values.`;
 
 const FormMacroDefinition: MacroComponentDefinition<typeof FormMacro> = {
@@ -220,8 +375,8 @@ const FormMacroDefinition: MacroComponentDefinition<typeof FormMacro> = {
           properties: {
             action: {
               type: "string",
-              description: "The operation to perform: 'add' (default), 'update', or 'remove'.",
-              enum: ["add", "update", "remove"],
+              description: "The operation to perform: 'add' (default), 'update', 'remove', 'list', 'search', or 'register'.",
+              enum: ["add", "update", "remove", "list", "search", "register"],
             },
             referenceId: {
               type: "string",
@@ -254,6 +409,22 @@ const FormMacroDefinition: MacroComponentDefinition<typeof FormMacro> = {
             formData: {
               type: "object",
               description: "Pre-populated default values for form fields. Keys must match property names in the schema.",
+            },
+            query: {
+              type: "string",
+              description: "Search query string. Required for 'search'. Matched against form ID, name, namespace, title, and description.",
+            },
+            name: {
+              type: "string",
+              description: "Form name used when registering. Combined with nameSpace and version to produce the form ID.",
+            },
+            nameSpace: {
+              type: "string",
+              description: "Namespace for the form when registering (default: 'reactor-forms').",
+            },
+            version: {
+              type: "string",
+              description: "Semver version string for the form when registering (default: '1.0.0').",
             },
           },
           required: [],
