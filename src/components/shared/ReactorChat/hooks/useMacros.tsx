@@ -332,8 +332,11 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
     
     
     if (chatState.macros) {
-      // Create a combined array of macros, but ensure uniqueness
-      const allMacros = [...chatState.macros, ...clientMacros];
+      // Create a combined array of macros, but ensure uniqueness.
+      // IMPORTANT: clientMacros must come FIRST so their complete definitions
+      // (with `component` and `tools` properties) win the deduplication.
+      // Server-returned macros lack these client-only properties.
+      const allMacros = [...clientMacros, ...chatState.macros];
       
       // Deduplicate macros by nameSpace.name@version or alias
       const uniqueMacros = allMacros.filter((macro, index, self) => {

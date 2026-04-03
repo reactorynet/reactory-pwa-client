@@ -64,6 +64,8 @@ const D3MacroDefinition: MacroComponentDefinition<typeof D3Macro> = {
   tools: [
     {
       type: "function",
+      runat: "client",
+      safeForAutoExecution: true,
       function: {
         name: "d3",
         icon: "bubble_chart",

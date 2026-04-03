@@ -1,4 +1,4 @@
-import { Macro, MacroComponentDefinition, UXChatMessage } from "../../types";
+import { Macro, MacroComponentDefinition, SidePanelAction, UXChatMessage } from "../../types";
 
 const DEFAULT_FORM: Partial<Reactory.Forms.IReactoryForm> = {
   name: "UserFeedback",
@@ -25,6 +25,40 @@ const DEFAULT_FORM: Partial<Reactory.Forms.IReactoryForm> = {
 const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
   const parsed = (args && typeof args === 'object' && !Array.isArray(args)) ? args as Record<string, any> : {};
 
+  const action: SidePanelAction = parsed.action || 'add';
+  const referenceId: string | undefined = parsed.referenceId;
+
+  if (!chatState.sidePanel) {
+    reactory.error('FormMacro: Side panel actions not available on chatState');
+    return null;
+  }
+
+  // ── REMOVE ──
+  if (action === 'remove') {
+    if (!referenceId) {
+      return {
+        __typename: "ReactorChatMessage",
+        role: "assistant",
+        content: 'Cannot remove form: `referenceId` is required for the remove action.',
+        id: reactory.utils.uuid(),
+        rating: 0,
+        timestamp: new Date(),
+        tool_calls: [],
+      };
+    }
+    chatState.sidePanel.removeItem(referenceId);
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: `Removed form "${referenceId}" from the side panel.`,
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
+  }
+
+  // Build form definition for add/update
   let formDefinition: Partial<Reactory.Forms.IReactoryForm> = parsed.formDefinition ?? { ...DEFAULT_FORM };
 
   if (parsed.title) formDefinition.title = parsed.title;
@@ -49,8 +83,6 @@ const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
     };
   }
 
-  const messageId = reactory.utils.uuid();
-
   const onSubmit = (formData: unknown) => {
     const payload = typeof formData === 'string' ? formData : JSON.stringify(formData, null, 2);
     chatState.sendMessage(
@@ -59,30 +91,76 @@ const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
     );
   };
 
-  return {
-    __typename: "ReactorChatMessage",
-    role: "assistant",
-    content: parsed.message || formDefinition.title || 'Please complete the form below.',
-    component: 'core.ReactoryForm',
+  // ── UPDATE ──
+  if (action === 'update') {
+    if (!referenceId) {
+      return {
+        __typename: "ReactorChatMessage",
+        role: "assistant",
+        content: 'Cannot update form: `referenceId` is required for the update action.',
+        id: reactory.utils.uuid(),
+        rating: 0,
+        timestamp: new Date(),
+        tool_calls: [],
+      };
+    }
+    chatState.sidePanel.updateItem(referenceId, {
+      props: {
+        formDef: formDefinition,
+        formData: parsed.formData ?? formDefinition.defaultFormValue ?? undefined,
+        onSubmit,
+        reactory,
+      },
+      title: parsed.title || formDefinition.title || referenceId,
+    });
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: `Updated form "${referenceId}" in the side panel.`,
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
+  }
+
+  // ── ADD (default) ──
+  const itemId = referenceId || reactory.utils.uuid();
+  const formTitle = parsed.title || formDefinition.title || 'Form';
+
+  chatState.sidePanel.addItem({
+    id: itemId,
+    componentFqn: 'core.ReactoryForm',
     props: {
       formDef: formDefinition,
       formData: parsed.formData ?? formDefinition.defaultFormValue ?? undefined,
       onSubmit,
+      reactory,
     },
-    id: messageId,
+    title: formTitle,
+    addedAt: new Date(),
+    type: 'form',
+  });
+
+  return {
+    __typename: "ReactorChatMessage",
+    role: "assistant",
+    content: `Opened form **${formTitle}** in the side panel (ref: \`${itemId}\`). ${parsed.message || 'Please complete the form.'}`,
+    id: reactory.utils.uuid(),
     rating: 0,
     timestamp: new Date(),
     tool_calls: [],
   };
 };
 
-const TOOL_DESCRIPTION = `Present a structured form to the user to collect specific information. The user fills out the form fields and submits; their responses are returned to you as a JSON message in the conversation.
+const TOOL_DESCRIPTION = `Present a structured form to the user in the persistent side panel. The form stays visible as the conversation continues. When the user submits, their responses are returned as a JSON message in the conversation.
 
-USE THIS TOOL WHEN YOU NEED:
-- Structured data from the user (not free-text chat)
-- Multiple related pieces of information at once
-- Input constrained to specific types, enums, or formats
-- Confirmation or selection from predefined options
+ACTIONS:
+- "add" (default): Open a new form in the side panel. Provide a "formDefinition" or individual "schema"/"uiSchema"/"title" fields. Optionally set "referenceId" for later update/remove.
+- "update": Update an existing form's definition or data. Requires "referenceId".
+- "remove": Remove a form from the side panel. Requires "referenceId".
+
+Use the "side_panel_state" tool first to see what is currently mounted and get reference IDs.
 
 HOW TO BUILD A FORM:
 Provide a "formDefinition" object with a JSON Schema "schema" and an optional "uiSchema".
@@ -122,7 +200,7 @@ You can also set "formData" to pre-populate fields with default values.`;
 
 const FormMacroDefinition: MacroComponentDefinition<typeof FormMacro> = {
   name: "FormMacro",
-  description: "Present a structured form to the user to collect specific, typed information. The form renders inline in the chat and submitted data is returned as a JSON message.",
+  description: "Present a structured form in the persistent side panel to collect specific, typed information. Submitted data is returned as a JSON message.",
   component: FormMacro,
   version: "1.0.0",
   nameSpace: "reactor-macros",
@@ -140,6 +218,15 @@ const FormMacroDefinition: MacroComponentDefinition<typeof FormMacro> = {
         parameters: {
           type: "object",
           properties: {
+            action: {
+              type: "string",
+              description: "The operation to perform: 'add' (default), 'update', or 'remove'.",
+              enum: ["add", "update", "remove"],
+            },
+            referenceId: {
+              type: "string",
+              description: "Unique reference ID. Required for 'update' and 'remove'. Optional for 'add' (auto-generated if omitted).",
+            },
             formDefinition: {
               type: "object",
               description: "A Reactory form definition. Must include at minimum a 'schema' (JSON Schema object with type:'object' and properties). Optionally include 'uiSchema', 'title', 'description', 'name', 'nameSpace', 'version'. If only 'schema' and/or 'uiSchema' are needed, you can pass them as top-level parameters instead.",
@@ -154,7 +241,7 @@ const FormMacroDefinition: MacroComponentDefinition<typeof FormMacro> = {
             },
             title: {
               type: "string",
-              description: "Title displayed above the form.",
+              description: "Title displayed above the form and as the side panel tab label.",
             },
             description: {
               type: "string",
@@ -162,7 +249,7 @@ const FormMacroDefinition: MacroComponentDefinition<typeof FormMacro> = {
             },
             message: {
               type: "string",
-              description: "Chat message content displayed alongside the form (e.g. 'Please fill out the details below.').",
+              description: "Chat message content displayed alongside the confirmation (e.g. 'Please fill out the details in the side panel.').",
             },
             formData: {
               type: "object",

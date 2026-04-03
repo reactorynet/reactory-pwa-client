@@ -18,8 +18,8 @@ interface ChatFactoryHookResult {
   rateMessage: (messageId: string, rating: number) => Promise<void>
   // loads a chat session by id
   loadChat: (chatSessionId: string) => Promise<void>
-  // starts a new chat session
-  newChat: () => Promise<void>
+  // starts a new chat session, returns the new session ID
+  newChat: () => Promise<string | null>
   // function use to return all the available chats for the
   // current user.
   listChats(filter?: any): Promise<any[]>
@@ -156,6 +156,50 @@ const EXEC_TOOL_CALL_MUTATION = `
       tool_calls { id type function { name arguments } status }
       tool_results { id name content timestamp }
       tool_errors { id name error timestamp }
+    }
+  }
+`;
+
+const COMPLETE_CLIENT_TOOL_CALLS_MUTATION = `
+  mutation ReactorCompleteClientToolCalls(
+    $chatSessionId: String!
+    $personaId: String!
+    $results: [ReactorClientToolResultInput!]!
+    $continueProcessing: Boolean
+    $streamingMode: StreamingMode
+  ) {
+    ReactorCompleteClientToolCalls(
+      chatSessionId: $chatSessionId
+      personaId: $personaId
+      results: $results
+      continueProcessing: $continueProcessing
+      streamingMode: $streamingMode
+    ) {
+      ... on ReactorChatMessage {
+        id
+        role
+        content
+        timestamp
+        tool_calls { id type function { name arguments } status }
+        tool_results { id name content timestamp }
+        tool_errors { id name error timestamp }
+      }
+      ... on ReactorInitiateSSE {
+        sessionId
+        endpoint
+        token
+        status
+        expiry
+        headers
+      }
+      ... on ReactorErrorResponse {
+        code
+        message
+        details
+        timestamp
+        recoverable
+        suggestion
+      }
     }
   }
 `;
@@ -308,13 +352,110 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       const accumulated = pendingToolCallsRef.current;
       pendingToolCallsRef.current = [];
 
-      // In AUTO mode with SSE, the server already executed all tools in its
-      // internal loop and sent tool_call start/complete events for UI progress.
-      // The accumulated entries here are purely informational -- do NOT
-      // re-execute them on the client (that would be a double-execution).
+      // In AUTO mode with SSE, the server executes server-side tools in its
+      // internal loop and sends tool_call start/complete events for UI progress.
+      // However, client-side tools (runat: 'client') are NOT executed by the
+      // server — they are forwarded to the client via SSE with isComplete=false.
+      // We must execute those locally and report results back to the server.
       const isAutoSSE = chatState.toolApprovalMode === ToolApprovalMode.AUTO && protocol === 'sse';
 
-      if (accumulated.length > 0 && processToolCallsRef.current && !isAutoSSE) {
+      if (accumulated.length > 0 && isAutoSSE) {
+        // In AUTO+SSE: identify client-only tools that the server skipped.
+        // These arrived with isComplete=false and their status is still 'running'.
+        // Server-executed tools arrive with isComplete=true (status='success').
+        const clientOnlyTools = accumulated.filter((tc: any) => {
+          // Check if this tool is a client-side macro
+          const macro = findMacroByAlias(tc.function?.name)
+            || chatState.macros?.find((m: any) =>
+              m.name === tc.function?.name || m.alias === tc.function?.name
+            );
+          return macro?.runat === 'client' || (!macro?.runat && tc.status !== 'success');
+        });
+
+        if (clientOnlyTools.length > 0) {
+          console.log('🔧 [useChatFactory] AUTO+SSE: Executing', clientOnlyTools.length, 'client-side tool(s) and reporting results');
+
+          const clientResults: Array<{
+            toolCallId: string;
+            toolName: string;
+            result?: any;
+            isError?: boolean;
+            error?: string;
+          }> = [];
+
+          for (const toolCall of clientOnlyTools) {
+            const name = toolCall.function?.name;
+            const args = toolCall.function?.arguments;
+            let macro = findMacroByAlias(name);
+            if (!macro) {
+              macro = chatState.macros?.find(
+                (m: any) => m.name === name || m.alias === name
+              ) ?? null;
+            }
+
+            if (macro) {
+              try {
+                const result = await executeMacro(macro, args, 'auto', toolCall.id);
+                clientResults.push({
+                  toolCallId: toolCall.id,
+                  toolName: name,
+                  result: result?.content || result,
+                });
+
+                // Update UI: mark tool as success
+                setChatState((prevState) => {
+                  const history = [...prevState.history];
+                  for (let i = history.length - 1; i >= 0; i--) {
+                    if (history[i].role === 'assistant' && Array.isArray(history[i].tool_calls)) {
+                      const tcs = history[i].tool_calls as any[];
+                      const idx = tcs.findIndex((t: any) => t.id === toolCall.id);
+                      if (idx >= 0) {
+                        tcs[idx] = { ...tcs[idx], status: 'success' };
+                        const existingResults = (history[i] as any).tool_results || [];
+                        history[i] = {
+                          ...history[i],
+                          tool_calls: [...tcs],
+                          tool_results: [...existingResults, {
+                            id: toolCall.id,
+                            name,
+                            content: result?.content || result,
+                            timestamp: new Date(),
+                          }],
+                        };
+                        break;
+                      }
+                    }
+                  }
+                  return { ...prevState, history, updated: new Date() };
+                });
+              } catch (error: any) {
+                clientResults.push({
+                  toolCallId: toolCall.id,
+                  toolName: name,
+                  isError: true,
+                  error: error.message,
+                });
+              }
+            } else {
+              clientResults.push({
+                toolCallId: toolCall.id,
+                toolName: name,
+                isError: true,
+                error: `Client macro not found: ${name}`,
+              });
+            }
+          }
+
+          // Report results to server and continue AI processing
+          if (clientResults.length > 0) {
+            try {
+              await completeClientToolCalls(clientResults, true);
+            } catch (error) {
+              console.error('[useChatFactory] Error reporting client tool results:', error);
+            }
+          }
+        }
+      } else if (accumulated.length > 0 && processToolCallsRef.current && !isAutoSSE) {
         // Yield so React flushes the setChatState calls above (content update,
         // streaming flags). Without this, onToolCallPrompt cannot find the
         // assistant message with tool_calls that onToolCallReceived added.
@@ -1229,6 +1370,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 type: toolDef.type,
                 propsMap: toolDef.propsMap,
                 roles: toolDef.roles,
+                runat: 'client',
                 function: {
                   icon: toolDef.function.icon,
                   name: toolDef.function.name,
@@ -1253,6 +1395,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         description: macro.description,
         alias: macro.alias,
         roles: macro.roles,
+        runat: 'client',
       })) ?? [],
       tools: [...clientTools],
       streamingMode: protocol === 'sse' ? 'SSE' : 'NONE',
@@ -1575,7 +1718,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   };
 
-  const newChat = async () => {
+  const newChat = async (): Promise<string | null> => {
     sessionLogger?.info('Starting new chat', { personaId: persona?.id }, 'useChatFactory');
     setBusy(true);
     try {
@@ -1596,11 +1739,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       if (newSessionId) {
         setIsInitialized(true);
         reactory.info(`ChatFactory: Started completely new chat session ${newSessionId}`);
+        return newSessionId;
       } else {
         throw new Error('Failed to initialize new chat');
       }
     } catch (error) {
       onError(error as Error);
+      throw error;
     } finally {
       setBusy(false);
     }
@@ -2202,6 +2347,72 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       throw error;
     }
   }, [graph, persona?.id, chatState?.id, modelOverride]);
+
+  /**
+   * Report client-side tool execution results to the server and optionally
+   * continue the AI processing loop. Called after client-only tools are
+   * executed locally (e.g. ComponentMacro, FormMacro).
+   */
+  const completeClientToolCalls = React.useCallback(async (
+    results: Array<{
+      toolCallId: string;
+      toolName: string;
+      result?: any;
+      isError?: boolean;
+      error?: string;
+    }>,
+    continueProcessing: boolean = true,
+  ): Promise<UXChatMessage | null> => {
+    if (!chatState?.id || !persona?.id) {
+      reactory.error('completeClientToolCalls: missing chatSessionId or personaId');
+      return null;
+    }
+
+    try {
+      const resp = await reactory.graphqlMutation<{
+        ReactorCompleteClientToolCalls: ReactorSendMessageResponse;
+      }, {
+        chatSessionId: string;
+        personaId: string;
+        results: typeof results;
+        continueProcessing: boolean;
+        streamingMode: string;
+      }>(COMPLETE_CLIENT_TOOL_CALLS_MUTATION, {
+        chatSessionId: chatState.id,
+        personaId: persona.id,
+        results,
+        continueProcessing,
+        streamingMode: protocol === 'sse' ? 'SSE' : 'NONE',
+      });
+
+      const data = resp?.data?.ReactorCompleteClientToolCalls;
+      if (!data) return null;
+
+      if (data.__typename === "ReactorErrorResponse") {
+        throw new Error((data as any).message);
+      }
+
+      if (data.__typename === "ReactorInitiateSSE") {
+        // SSE mode — the server will stream the AI continuation.
+        // The SSE handler will pick up the response.
+        return null;
+      }
+
+      // Non-streaming: the AI response is returned directly
+      const aiMessage = data as unknown as UXChatMessage;
+      if (aiMessage) {
+        setChatState((prevState) => ({
+          ...prevState,
+          history: [...prevState.history, aiMessage as any],
+          updated: new Date(),
+        }));
+      }
+      return aiMessage;
+    } catch (error) {
+      reactory.error('Error completing client tool calls', error);
+      return null;
+    }
+  }, [chatState?.id, persona?.id, protocol, reactory]);
 
   /**
    * Remove the approval component from a message.

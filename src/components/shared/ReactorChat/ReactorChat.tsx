@@ -15,6 +15,7 @@ import {
   ToolApprovalMode,
   ChatState,
   TodoList,
+  SidePanelState,
   TODOS_VAR_KEY,
 } from './types';
 import PersonaSelectionPanel from './components/PersonaSelectionPanel';
@@ -27,10 +28,12 @@ import TodosPanel from './components/TodosPanel';
 import ToolIterationLimitBanner from './components/ToolIterationLimitBanner';
 import NetworkStatusIndicator from './components/NetworkStatusIndicator';
 import DebugPanel from './components/DebugPanel';
+import SidePanel from './components/SidePanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
 import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
 import useSpeechServices from './hooks/useSpeechServices';
+import useSidePanel from './hooks/useSidePanel';
 
 export default (props) => {
   const { formData } = props;
@@ -133,6 +136,7 @@ export default (props) => {
   const sessionCache = React.useRef<Map<string, {
     chatState: ChatState;
     isInitialized: boolean;
+    sidePanelState?: SidePanelState;
   }>>(new Map());
 
   // Track the previous session for context sharing when starting a new session with a different agent
@@ -187,6 +191,7 @@ export default (props) => {
     chats,
     setChats,
     deleteChat,
+    isInitialized,
     isStreaming = false,
     currentStreamingMessage = '',
     setChatState,
@@ -217,6 +222,33 @@ export default (props) => {
       setActiveSessionId(chatState.id);
     }
   }, [chatState?.id, activeSessionId]);
+
+  // Side panel for agent-mounted components and forms
+  const {
+    panelState: sidePanelState,
+    setPanelState: setSidePanelState,
+    actions: sidePanelActions,
+    togglePanel: toggleSidePanel,
+  } = useSidePanel();
+
+  // Restore side panel state from session cache when persona changes
+  React.useEffect(() => {
+    if (selectedPersona?.id) {
+      const cached = sessionCache.current.get(selectedPersona.id);
+      if (cached?.sidePanelState) {
+        setSidePanelState(cached.sidePanelState);
+      } else {
+        setSidePanelState({ items: [], activeItemId: undefined, isOpen: false });
+      }
+    }
+  }, [selectedPersona?.id, setSidePanelState]);
+
+  // Inject side panel actions into chatState so client macros can access them
+  React.useEffect(() => {
+    if (chatState && !chatState.sidePanel) {
+      setChatState((prev) => ({ ...prev, sidePanel: sidePanelActions }));
+    }
+  }, [chatState?.sidePanel, sidePanelActions, setChatState]);
 
   const {
     findMacroByAlias,
@@ -509,8 +541,66 @@ export default (props) => {
       reactory.log(`ReactorChat: Refreshing chat list for persona: ${selectedPersona?.name || 'none'}`);
       const chatList = await listChats({ personaId: selectedPersona?.id });
       setChats(chatList as ChatState[]);
+
+      // Auto-initialize session when we have personaId but no sessionId in URL.
+      // This ensures the server knows about client tools from the start.
+      // Check after chats load so we can detect empty sessions to resume.
+      if (
+        selectedPersona?.id &&
+        !queryParams.sessionId &&
+        !isInitialized &&
+        !autoInitInProgress.current
+      ) {
+        autoInitInProgress.current = true;
+        try {
+          // Check if the most recent chat for this persona is empty (no user messages).
+          // If so, resume it instead of creating a new session.
+          if (chatList && chatList.length > 0) {
+            const mostRecentChat = chatList[0]; // chats are sorted most-recent first
+            const hasUserMessages = mostRecentChat.history?.some(
+              (msg: any) => msg.role === 'user'
+            );
+
+            if (!hasUserMessages && mostRecentChat.id) {
+              reactory.log(`ReactorChat: Resuming empty session ${mostRecentChat.id}`);
+              isManualNavigation.current = true;
+              navigate({
+                pathname: location.pathname,
+                search: `?sessionId=${mostRecentChat.id}&personaId=${selectedPersona.id}`,
+              });
+              // Explicitly load the session so tools/macros are populated from the server.
+              // The loadChat useEffect won't fire because isManualNavigation is set.
+              await loadChat(mostRecentChat.id);
+              setTimeout(() => { isManualNavigation.current = false; }, 500);
+              return;
+            }
+          }
+
+          // No empty session to resume — create a new one
+          reactory.log(`ReactorChat: Auto-initializing new session for persona ${selectedPersona.name}`);
+          const sessionId = await newChat();
+          if (sessionId) {
+            isManualNavigation.current = true;
+            navigate({
+              pathname: location.pathname,
+              search: `?sessionId=${sessionId}&personaId=${selectedPersona.id}`,
+            });
+            // Explicitly load the full session from server so tools/macros are
+            // guaranteed to be in chatState. initializeChat's setChatState may
+            // not include tools if the SSE response's chatState was sparse.
+            await loadChat(sessionId);
+            setTimeout(() => { isManualNavigation.current = false; }, 500);
+          }
+        } catch (error) {
+          reactory.error('ReactorChat: Auto-initialization failed', error);
+        } finally {
+          autoInitInProgress.current = false;
+        }
+      }
     })();
   }, [selectedPersona?.id, busy, listChats, setChats]);
+
+  const autoInitInProgress = React.useRef(false);
 
   const handleHeaderToggle = useCallback(() => setHeaderOpen((open) => !open), []);
 
@@ -734,6 +824,22 @@ export default (props) => {
     setDebugPanelOpen(false);
   }, []);
 
+  const handleSidePanelToggle = useCallback(() => {
+    toggleSidePanel();
+  }, [toggleSidePanel]);
+
+  const handleSidePanelClose = useCallback(() => {
+    setSidePanelState((prev) => ({ ...prev, isOpen: false }));
+  }, [setSidePanelState]);
+
+  const handleSidePanelRemoveItem = useCallback((id: string) => {
+    sidePanelActions.removeItem(id);
+  }, [sidePanelActions]);
+
+  const handleSidePanelSelectItem = useCallback((id: string) => {
+    sidePanelActions.setActiveItem(id);
+  }, [sidePanelActions]);
+
   
 
   const handleUpdateSystemPrompt = useCallback(async (newPrompt: string) => {
@@ -865,6 +971,7 @@ export default (props) => {
       sessionCache.current.set(selectedPersona.id, {
         chatState: { ...chatState },
         isInitialized: true,
+        sidePanelState: { ...sidePanelState },
       });
     }
 
@@ -879,19 +986,27 @@ export default (props) => {
     });
   }, [selectPersona, navigate, location.pathname, selectedPersona?.id, chatState]);
 
-  const handleNewChat = useCallback(() => {
+  const handleNewChat = useCallback(async () => {
     // Create a new chat with the existing persona
     if (selectedPersona) {
       reactory.log(`Creating new chat with persona: ${selectedPersona.name}`);
-      newChat();
-      // Clear the sessionId from the URL so the old session isn't reloaded
-      const searchQuery = `?personaId=${selectedPersona.id}`;
+      const sessionId = await newChat();
+      // Navigate with both sessionId and personaId so the server
+      // is immediately aware of client tools
+      const searchQuery = sessionId
+        ? `?sessionId=${sessionId}&personaId=${selectedPersona.id}`
+        : `?personaId=${selectedPersona.id}`;
       navigate({
         pathname: location.pathname,
         search: searchQuery,
       });
+      // Reload the full session from the server so tools/macros are in chatState.
+      // initializeChat may not fully populate them from the SSE response alone.
+      if (sessionId) {
+        await loadChat(sessionId);
+      }
     }
-  }, [selectedPersona, newChat, reactory, navigate, location.pathname]);
+  }, [selectedPersona, newChat, reactory, navigate, location.pathname, loadChat]);
 
   const handleCannedPrompts = useCallback(() => {
     // TODO: Implement canned prompts logic
@@ -1069,13 +1184,23 @@ export default (props) => {
       title: il8n?.t('reactor.client.chat.todos', { defaultValue: 'Todo Lists' }),
       clickHandler: handleTodosPanelToggle,
     },
+    ...(sidePanelState.items.length > 0 ? [{
+      key: 'sidePanel',
+      icon: (
+        <Badge badgeContent={sidePanelState.items.length} color="primary">
+          <Icon>dashboard_customize</Icon>
+        </Badge>
+      ),
+      title: il8n?.t('reactor.client.chat.sidePanel', { defaultValue: 'Side Panel' }),
+      clickHandler: handleSidePanelToggle,
+    }] : []),
     ...(reactory.isDevelopmentMode() ? [{
       key: 'debug',
       icon: <BugReport />,
       title: il8n?.t('reactor.client.chat.debug', { defaultValue: 'Debug Inspector' }),
       clickHandler: handleDebugPanelToggle,
     }] : []),
-  ], [chatState, enabledTools, fileExplorerOpen, todoCount, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleDebugPanelToggle, reactory]);
+  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSidePanelToggle, handleDebugPanelToggle, reactory]);
 
   const backgroundSVG = useMemo(() => {
     // Create a simplified SVG pattern that should work reliably in data URLs
@@ -1412,6 +1537,17 @@ export default (props) => {
             il8n={il8n}
           />
         )}
+
+        {/* Side panel for agent-mounted components/forms */}
+        <SidePanel
+          open={sidePanelState.isOpen}
+          items={sidePanelState.items}
+          activeItemId={sidePanelState.activeItemId}
+          onClose={handleSidePanelClose}
+          onRemoveItem={handleSidePanelRemoveItem}
+          onSelectItem={handleSidePanelSelectItem}
+          reactory={reactory}
+        />
       </Box>
 
       {/* Mobile drawer version of file explorer */}

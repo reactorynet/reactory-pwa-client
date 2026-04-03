@@ -418,6 +418,11 @@ export type ChatState = {
    * Folders pinned to the chat session (server field: folders)
    */
   folders?: { name: string; path: string }[]
+  /**
+   * Side panel actions for client macros to mount components/forms
+   * in the persistent side panel.
+   */
+  sidePanel?: SidePanelActions
 }
 
 export interface QuestionHandlerResponse {
@@ -545,6 +550,46 @@ export interface TodoList {
 }
 
 export const TODOS_VAR_KEY = 'reactor.todos';
+
+// ── Side Panel types (agent-mounted components / forms) ────────────────
+
+export type SidePanelAction = 'add' | 'update' | 'remove';
+
+export interface SidePanelItem {
+  /** Unique reference ID the agent uses to update/remove this item. */
+  id: string;
+  /** Component FQN (e.g. 'core.ReactoryForm' for forms). */
+  componentFqn: string;
+  /** Props passed to the mounted component. */
+  props: Record<string, any>;
+  /** Display title shown in the tab / header. */
+  title: string;
+  /** When the item was added. */
+  addedAt: Date;
+  /** Tool-call ID that caused this item to be added. */
+  addedBy?: string;
+  /** Distinguishes whether this item originated from the component or form macro. */
+  type: 'component' | 'form';
+}
+
+export interface SidePanelState {
+  /** All items currently mounted in the side panel. */
+  items: SidePanelItem[];
+  /** The ID of the currently visible / focused item. */
+  activeItemId?: string;
+  /** Whether the side panel drawer is open. */
+  isOpen: boolean;
+}
+
+export interface SidePanelActions {
+  addItem: (item: SidePanelItem) => void;
+  updateItem: (id: string, updates: Partial<Omit<SidePanelItem, 'id'>>) => void;
+  removeItem: (id: string) => void;
+  getState: () => SidePanelState;
+  setActiveItem: (id: string) => void;
+  togglePanel: () => void;
+  clearAll: () => void;
+}
 
 // ── Session Logger types (client-to-server debug logging) ──────────────
 
