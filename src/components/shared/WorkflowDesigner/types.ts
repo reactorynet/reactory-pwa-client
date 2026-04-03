@@ -43,6 +43,7 @@ export interface WorkflowDefinition {
   description?: string;
   namespace: string;
   tags?: string[];
+  roles?: string[];
   author?: string;
   createdAt?: Date;
   updatedAt?: Date;

@@ -126,18 +126,68 @@ export const UserActivityStepDefinition: StepDefinition = {
   },
   uiSchema: {
     'ui:order': ['name', 'activityType', 'assignTo', 'title', 'description', 'formSchema', 'timeout', 'notifications'],
-    description: {
-      'ui:widget': 'textarea',
+    activityType: {
+      'ui:widget': 'SelectWidget',
       'ui:options': {
-        rows: 3
+        selectOptions: [
+          { key: 'approval', value: 'approval', label: 'Approval', icon: 'check_circle' },
+          { key: 'form', value: 'form', label: 'Form Input', icon: 'dynamic_form' },
+          { key: 'notification', value: 'notification', label: 'Notification', icon: 'notifications' },
+          { key: 'task', value: 'task', label: 'Task', icon: 'task_alt' }
+        ]
       }
     },
-    formSchema: {
-      'ui:widget': 'textarea',
-      'ui:options': {
-        rows: 5
+    assignTo: {
+      type: {
+        'ui:widget': 'SelectWidget',
+        'ui:options': {
+          selectOptions: [
+            { key: 'user', value: 'user', label: 'Specific User', icon: 'person' },
+            { key: 'role', value: 'role', label: 'Role', icon: 'badge' },
+            { key: 'group', value: 'group', label: 'Group', icon: 'group' }
+          ]
+        }
       },
-      'ui:help': 'JSON Schema for user input form'
+      id: {
+        'ui:placeholder': 'user@domain.com, role-name, or group-id',
+        'ui:help': 'Identifier of the user, role, or group to assign this activity to'
+      }
+    },
+    title: {
+      'ui:placeholder': 'e.g. Approve Purchase Request'
+    },
+    description: {
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': {
+        rows: 4
+      },
+      'ui:help': 'Detailed description of what the user needs to do'
+    },
+    formSchema: {
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': {
+        format: 'json',
+        rows: 8
+      },
+      'ui:help': 'JSON Schema definition for the user input form (used when activityType is "form")'
+    },
+    timeout: {
+      'ui:widget': 'SliderWidget',
+      'ui:options': {
+        min: 1,
+        max: 168,
+        step: 1,
+        marks: true
+      },
+      'ui:help': 'Hours before this activity automatically times out (1h–1 week / 168h)'
+    },
+    notifications: {
+      email: {
+        'ui:help': 'Send an email notification when this activity is assigned'
+      },
+      slack: {
+        'ui:help': 'Send a Slack message when this activity is assigned (requires Slack integration to be configured)'
+      }
     }
   },
   tags: ['interaction', 'user', 'approval', 'manual', 'activity'],

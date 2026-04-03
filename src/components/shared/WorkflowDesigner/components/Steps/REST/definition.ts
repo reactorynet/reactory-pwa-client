@@ -69,21 +69,27 @@ export const RESTStepDefinition: StepDefinition = {
         format: 'uri'
       },
       headers: {
-        type: 'object',
+        type: 'array',
         title: 'Headers',
-        description: 'HTTP headers',
-        properties: {},
-        additionalProperties: {
-          type: 'string'
+        description: 'HTTP request headers (key-value pairs)',
+        items: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', title: 'Header Name' },
+            value: { type: 'string', title: 'Value' }
+          }
         }
       },
       queryParams: {
-        type: 'object',
+        type: 'array',
         title: 'Query Parameters',
-        description: 'URL query parameters',
-        properties: {},
-        additionalProperties: {
-          type: 'string'
+        description: 'URL query parameters (key-value pairs)',
+        items: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', title: 'Parameter Name' },
+            value: { type: 'string', title: 'Value' }
+          }
         }
       },
       auth: {
@@ -122,31 +128,85 @@ export const RESTStepDefinition: StepDefinition = {
   defaultProperties: {
     name: 'REST API Call',
     method: 'GET',
-    headers: {},
-    queryParams: {},
+    headers: [],
+    queryParams: [],
     auth: { type: 'none' },
     timeout: 30000,
     retries: 0
   },
   uiSchema: {
     'ui:order': ['name', 'method', 'url', 'headers', 'queryParams', 'auth', 'timeout', 'retries'],
+    method: {
+      'ui:widget': 'SelectWidget',
+      'ui:options': {
+        selectOptions: [
+          { key: 'GET', value: 'GET', label: 'GET', icon: 'download' },
+          { key: 'POST', value: 'POST', label: 'POST', icon: 'upload' },
+          { key: 'PUT', value: 'PUT', label: 'PUT', icon: 'edit' },
+          { key: 'PATCH', value: 'PATCH', label: 'PATCH', icon: 'build' },
+          { key: 'DELETE', value: 'DELETE', label: 'DELETE', icon: 'delete' }
+        ]
+      }
+    },
     url: {
-      'ui:placeholder': 'https://api.example.com/endpoint',
-      'ui:help': 'Full URL of the REST API endpoint'
+      'ui:placeholder': 'https://api.example.com/resources',
+      'ui:help': 'Full URL of the REST endpoint. Supports ${variable} substitution.'
     },
     headers: {
-      'ui:widget': 'textarea',
+      'ui:widget': 'MaterialTableWidget',
       'ui:options': {
-        rows: 3
+        columns: [
+          { title: 'Header Name', field: 'key' },
+          { title: 'Value', field: 'value' }
+        ]
       },
-      'ui:help': 'JSON object with HTTP headers'
+      'ui:help': 'HTTP headers to include with the request'
     },
     queryParams: {
-      'ui:widget': 'textarea',
+      'ui:widget': 'MaterialTableWidget',
       'ui:options': {
-        rows: 2
+        columns: [
+          { title: 'Parameter', field: 'key' },
+          { title: 'Value', field: 'value' }
+        ]
       },
-      'ui:help': 'JSON object with query parameters'
+      'ui:help': 'URL query parameters appended to the request URL'
+    },
+    auth: {
+      type: {
+        'ui:widget': 'SelectWidget',
+        'ui:options': {
+          selectOptions: [
+            { key: 'none', value: 'none', label: 'None', icon: 'lock_open' },
+            { key: 'bearer', value: 'bearer', label: 'Bearer Token', icon: 'token' },
+            { key: 'basic', value: 'basic', label: 'Basic Auth', icon: 'person' },
+            { key: 'api_key', value: 'api_key', label: 'API Key', icon: 'key' }
+          ]
+        }
+      },
+      token: {
+        'ui:placeholder': 'Enter token or API key',
+        'ui:help': 'Authentication credential (token, password, or API key)'
+      }
+    },
+    timeout: {
+      'ui:widget': 'SliderWidget',
+      'ui:options': {
+        min: 1000,
+        max: 120000,
+        step: 1000
+      },
+      'ui:help': 'Request timeout in milliseconds (1 000 ms = 1s — 120 000 ms = 120s)'
+    },
+    retries: {
+      'ui:widget': 'SliderWidget',
+      'ui:options': {
+        min: 0,
+        max: 5,
+        step: 1,
+        marks: true
+      },
+      'ui:help': 'Number of retry attempts on request failure (0 = no retries)'
     }
   },
   tags: ['integration', 'rest', 'api', 'http'],

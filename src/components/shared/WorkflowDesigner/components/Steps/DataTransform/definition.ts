@@ -81,7 +81,29 @@ export const DataTransformStepDefinition: StepDefinition = {
   uiSchema: {
     'ui:order': ['name', 'transformations'],
     transformations: {
-      'ui:help': 'Define data transformation operations to apply sequentially'
+      'ui:help': 'Define data transformation operations to apply sequentially',
+      items: {
+        operation: {
+          'ui:widget': 'SelectWidget',
+          'ui:options': {
+            selectOptions: [
+              { key: 'map', value: 'map', label: 'Map', icon: 'code' },
+              { key: 'filter', value: 'filter', label: 'Filter', icon: 'filter_list' },
+              { key: 'reduce', value: 'reduce', label: 'Reduce', icon: 'compress' },
+              { key: 'sort', value: 'sort', label: 'Sort', icon: 'sort' },
+              { key: 'group', value: 'group', label: 'Group', icon: 'folder' },
+              { key: 'merge', value: 'merge', label: 'Merge', icon: 'merge' },
+              { key: 'extract', value: 'extract', label: 'Extract', icon: 'content_cut' },
+              { key: 'custom', value: 'custom', label: 'Custom', icon: 'settings' }
+            ]
+          }
+        },
+        expression: {
+          'ui:widget': 'RichEditorWidget',
+          'ui:options': { format: 'javascript', rows: 2 },
+          'ui:help': 'Transformation expression (e.g. item.price * 1.1)'
+        }
+      }
     }
   },
   tags: ['logic', 'transform', 'data', 'map', 'filter'],

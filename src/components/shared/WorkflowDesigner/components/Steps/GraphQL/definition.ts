@@ -103,18 +103,46 @@ export const GraphQLStepDefinition: StepDefinition = {
   },
   uiSchema: {
     'ui:order': ['name', 'endpoint', 'operation', 'query', 'headers', 'timeout'],
-    query: {
-      'ui:widget': 'textarea',
+    endpoint: {
+      'ui:placeholder': 'https://api.example.com/graphql',
+      'ui:help': 'Full URL of the GraphQL endpoint'
+    },
+    operation: {
+      'ui:widget': 'SelectWidget',
       'ui:options': {
-        rows: 10
+        selectOptions: [
+          { key: 'query', value: 'query', label: 'Query', icon: 'search' },
+          { key: 'mutation', value: 'mutation', label: 'Mutation', icon: 'edit' },
+          { key: 'subscription', value: 'subscription', label: 'Subscription', icon: 'stream' }
+        ]
       }
     },
-    headers: {
-      'ui:widget': 'textarea',
+    query: {
+      'ui:widget': 'RichEditorWidget',
       'ui:options': {
-        rows: 3
+        format: 'javascript',
+        rows: 12
       },
-      'ui:help': 'JSON object with header key-value pairs'
+      'ui:help': 'GraphQL query, mutation, or subscription document'
+    },
+    headers: {
+      'ui:widget': 'MaterialTableWidget',
+      'ui:options': {
+        columns: [
+          { title: 'Header Name', field: 'key' },
+          { title: 'Value', field: 'value' }
+        ]
+      },
+      'ui:help': 'HTTP headers to include with the GraphQL request (e.g. Authorization)'
+    },
+    timeout: {
+      'ui:widget': 'SliderWidget',
+      'ui:options': {
+        min: 1000,
+        max: 120000,
+        step: 1000
+      },
+      'ui:help': 'Request timeout in milliseconds (1 000 ms = 1s — 120 000 ms = 120s)'
     }
   },
   tags: ['integration', 'graphql', 'api', 'query'],

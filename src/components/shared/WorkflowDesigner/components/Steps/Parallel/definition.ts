@@ -55,7 +55,14 @@ export const ParallelStepDefinition: StepDefinition = {
   },
   uiSchema: {
     maxConcurrency: {
-      'ui:help': 'Number of parallel branches that can execute simultaneously'
+      'ui:widget': 'SliderWidget',
+      'ui:options': {
+        min: 1,
+        max: 10,
+        step: 1,
+        marks: true
+      },
+      'ui:help': 'Number of parallel branches that can execute simultaneously (1–10)'
     }
   },
   tags: ['flow', 'parallel', 'concurrent', 'split'],

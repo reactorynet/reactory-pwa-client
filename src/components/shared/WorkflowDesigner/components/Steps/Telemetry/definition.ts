@@ -50,73 +50,6 @@ export const TelemetryStepDefinition: StepDefinition = {
         enum: ['metric', 'trace', 'log', 'event'],
         default: 'metric'
       },
-      metricConfig: {
-        type: 'object',
-        title: 'Metric Configuration',
-        properties: {
-          name: {
-            type: 'string',
-            title: 'Metric Name'
-          },
-          type: {
-            type: 'string',
-            enum: ['counter', 'gauge', 'histogram'],
-            default: 'counter'
-          },
-          value: {
-            type: 'number',
-            title: 'Value',
-            default: 1
-          },
-          tags: {
-            type: 'object',
-            title: 'Tags',
-            properties: {},
-            additionalProperties: {
-              type: 'string'
-            }
-          }
-        }
-      },
-      logConfig: {
-        type: 'object',
-        title: 'Log Configuration',
-        properties: {
-          level: {
-            type: 'string',
-            enum: ['debug', 'info', 'warn', 'error'],
-            default: 'info'
-          },
-          message: {
-            type: 'string',
-            title: 'Message'
-          },
-          attributes: {
-            type: 'object',
-            title: 'Attributes',
-            properties: {},
-            additionalProperties: true
-          }
-        }
-      },
-      traceConfig: {
-        type: 'object',
-        title: 'Trace Configuration',
-        properties: {
-          spanName: {
-            type: 'string',
-            title: 'Span Name'
-          },
-          attributes: {
-            type: 'object',
-            title: 'Span Attributes',
-            properties: {},
-            additionalProperties: {
-              type: 'string'
-            }
-          }
-        }
-      },
       exporters: {
         type: 'array',
         title: 'Exporters',
@@ -127,7 +60,94 @@ export const TelemetryStepDefinition: StepDefinition = {
         default: ['console']
       }
     },
-    required: ['name', 'telemetryType']
+    required: ['name', 'telemetryType'],
+    // JSON Schema draft-07 if/then/else — cast to any[] because ISchema doesn't model these keywords
+    allOf: ([
+      {
+        if: { properties: { telemetryType: { const: 'metric' } }, required: ['telemetryType'] },
+        then: {
+          properties: {
+            metricConfig: {
+              type: 'object',
+              title: 'Metric Configuration',
+              properties: {
+                name: {
+                  type: 'string',
+                  title: 'Metric Name'
+                },
+                type: {
+                  type: 'string',
+                  enum: ['counter', 'gauge', 'histogram'],
+                  default: 'counter'
+                },
+                value: {
+                  type: 'number',
+                  title: 'Value',
+                  default: 1
+                },
+                tags: {
+                  type: 'object',
+                  title: 'Tags',
+                  properties: {},
+                  additionalProperties: { type: 'string' }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        if: { properties: { telemetryType: { const: 'log' } }, required: ['telemetryType'] },
+        then: {
+          properties: {
+            logConfig: {
+              type: 'object',
+              title: 'Log Configuration',
+              properties: {
+                level: {
+                  type: 'string',
+                  enum: ['debug', 'info', 'warn', 'error'],
+                  default: 'info'
+                },
+                message: {
+                  type: 'string',
+                  title: 'Message'
+                },
+                attributes: {
+                  type: 'object',
+                  title: 'Attributes',
+                  properties: {},
+                  additionalProperties: true
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        if: { properties: { telemetryType: { const: 'trace' } }, required: ['telemetryType'] },
+        then: {
+          properties: {
+            traceConfig: {
+              type: 'object',
+              title: 'Trace Configuration',
+              properties: {
+                spanName: {
+                  type: 'string',
+                  title: 'Span Name'
+                },
+                attributes: {
+                  type: 'object',
+                  title: 'Span Attributes',
+                  properties: {},
+                  additionalProperties: { type: 'string' }
+                }
+              }
+            }
+          }
+        }
+      }
+    ] as any[])
   },
   defaultProperties: {
     name: 'Telemetry',
@@ -136,14 +156,49 @@ export const TelemetryStepDefinition: StepDefinition = {
   },
   uiSchema: {
     'ui:order': ['name', 'telemetryType', 'metricConfig', 'logConfig', 'traceConfig', 'exporters'],
+    telemetryType: {
+      'ui:widget': 'SelectWidget',
+      'ui:options': {
+        selectOptions: [
+          { key: 'metric', value: 'metric', label: 'Metric', icon: 'speed' },
+          { key: 'trace', value: 'trace', label: 'Trace', icon: 'route' },
+          { key: 'log', value: 'log', label: 'Log', icon: 'terminal' },
+          { key: 'event', value: 'event', label: 'Event', icon: 'event' }
+        ]
+      }
+    },
     metricConfig: {
-      'ui:help': 'Configuration for metric collection'
+      'ui:help': 'Configuration for metric collection (visible when Telemetry Type is Metric)',
+      type: {
+        'ui:widget': 'SelectWidget',
+        'ui:options': {
+          selectOptions: [
+            { key: 'counter', value: 'counter', label: 'Counter', icon: 'add_circle' },
+            { key: 'gauge', value: 'gauge', label: 'Gauge', icon: 'speed' },
+            { key: 'histogram', value: 'histogram', label: 'Histogram', icon: 'bar_chart' }
+          ]
+        }
+      }
     },
     logConfig: {
-      'ui:help': 'Configuration for log entries'
+      'ui:help': 'Configuration for log entries (visible when Telemetry Type is Log)',
+      level: {
+        'ui:widget': 'SelectWidget',
+        'ui:options': {
+          selectOptions: [
+            { key: 'debug', value: 'debug', label: 'Debug', icon: 'bug_report' },
+            { key: 'info', value: 'info', label: 'Info', icon: 'info' },
+            { key: 'warn', value: 'warn', label: 'Warn', icon: 'warning' },
+            { key: 'error', value: 'error', label: 'Error', icon: 'error' }
+          ]
+        }
+      }
     },
     traceConfig: {
-      'ui:help': 'Configuration for trace spans'
+      'ui:help': 'Configuration for trace spans (visible when Telemetry Type is Trace)',
+      spanName: {
+        'ui:placeholder': 'e.g. workflow.step.operation'
+      }
     }
   },
   tags: ['observability', 'telemetry', 'metrics', 'tracing', 'logging'],

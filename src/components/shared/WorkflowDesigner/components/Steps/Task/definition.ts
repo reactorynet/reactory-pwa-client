@@ -68,12 +68,23 @@ export const TaskStepDefinition: StepDefinition = {
   },
   uiSchema: {
     'ui:order': ['name', 'taskType', 'configuration'],
-    configuration: {
-      'ui:widget': 'textarea',
+    taskType: {
+      'ui:widget': 'SelectWidget',
       'ui:options': {
-        rows: 5
+        selectOptions: [
+          { key: 'http_request', value: 'http_request', label: 'HTTP Request', icon: 'http' },
+          { key: 'data_transform', value: 'data_transform', label: 'Data Transform', icon: 'transform' },
+          { key: 'custom_script', value: 'custom_script', label: 'Custom Script', icon: 'code' }
+        ]
+      }
+    },
+    configuration: {
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': {
+        format: 'json',
+        rows: 8
       },
-      'ui:help': 'Task-specific configuration as JSON'
+      'ui:help': 'Task-specific configuration as a JSON object'
     }
   },
   tags: ['action', 'task', 'execute'],

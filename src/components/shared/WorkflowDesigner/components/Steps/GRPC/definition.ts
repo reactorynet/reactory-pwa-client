@@ -121,9 +121,47 @@ export const GRPCStepDefinition: StepDefinition = {
   },
   uiSchema: {
     'ui:order': ['name', 'host', 'port', 'service', 'method', 'protoPath', 'metadata', 'timeout', 'ssl'],
+    host: {
+      'ui:placeholder': 'grpc.example.com',
+      'ui:help': 'gRPC server hostname or IP address'
+    },
+    port: {
+      'ui:placeholder': '50051'
+    },
+    service: {
+      'ui:placeholder': 'e.g. myapp.UserService',
+      'ui:help': 'Fully qualified service name as defined in the .proto file'
+    },
+    method: {
+      'ui:placeholder': 'e.g. GetUser',
+      'ui:help': 'Name of the service method to invoke'
+    },
     protoPath: {
+      'ui:placeholder': '/path/to/service.proto',
       'ui:help': 'Path to the .proto definition file'
-    },    
+    },
+    metadata: {
+      'ui:widget': 'MaterialTableWidget',
+      'ui:options': {
+        columns: [
+          { title: 'Key', field: 'key' },
+          { title: 'Value', field: 'value' }
+        ]
+      },
+      'ui:help': 'gRPC metadata key-value pairs (equivalent to HTTP headers)'
+    },
+    timeout: {
+      'ui:widget': 'SliderWidget',
+      'ui:options': {
+        min: 1000,
+        max: 120000,
+        step: 1000
+      },
+      'ui:help': 'Request timeout in milliseconds (1 000 ms = 1s — 120 000 ms = 120s)'
+    },
+    ssl: {
+      'ui:help': 'Enable SSL/TLS encryption for the gRPC connection. Ensure the server certificate is trusted by the runtime environment.'
+    }
   },
   tags: ['integration', 'grpc', 'rpc', 'microservices'],
   rendering: {

@@ -59,11 +59,12 @@ export const ConditionStepDefinition: StepDefinition = {
   },
   uiSchema: {
     expression: {
-      'ui:widget': 'textarea',
+      'ui:widget': 'RichEditorWidget',
       'ui:options': {
-        rows: 3
+        format: 'javascript',
+        rows: 6
       },
-      'ui:help': 'JavaScript expression that evaluates to true/false'
+      'ui:help': 'JavaScript expression that evaluates to true or false. Access current input via the `input` variable. Example: `input.status === "active" && input.count > 0`'
     }
   },
   tags: ['logic', 'condition', 'branch', 'if'],

@@ -33,6 +33,7 @@ export const StartStepDefinition: StepDefinition = {
   uiSchema: {
     name: {
       'ui:autofocus': true,
+      'ui:placeholder': 'e.g. Start Order Processing',
       'ui:help': 'Enter a descriptive name for the start step'
     }
   },
