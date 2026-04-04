@@ -66,9 +66,27 @@ const LoginMacro: Macro<unknown> = async (params, chatState, reactory) => {
   };    
 };
 
+const TOOL_DESCRIPTION = `Authenticate the current user. Two modes of operation:
+
+1) CREDENTIALS PROVIDED — if "username" and "password" are supplied, attempts a direct login immediately and returns a success or failure message.
+2) NO CREDENTIALS — if called with no arguments (or without valid credentials), mounts the interactive login UI component so the user can enter their details.
+
+Use mode 2 when the user says they want to log in but hasn't provided credentials, or when a previous attempt failed and you want to offer a UI retry.
+Use mode 1 only when the user has explicitly supplied both their username/email and password in the conversation.
+
+NEVER store, log, or repeat passwords. Do not auto-fill credentials from memory.
+
+EXAMPLES:
+
+1) Show the login UI:
+   {} (no parameters)
+
+2) Attempt login with provided credentials:
+   { "username": "alice@example.com", "password": "s3cr3t" }`;
+
 const LoginMacroDefinition: MacroComponentDefinition<typeof LoginMacro> = { 
   name: "LoginMacro",
-  description: "A macro that handles user login. It will trigger the login component if no username or password is provided, or attempt to log in with the provided credentials.",
+  description: "Authenticate the user — either via provided credentials or by mounting the login UI.",
   component: LoginMacro,
   version: "1.0.0",
   nameSpace: "core",
@@ -81,10 +99,23 @@ const LoginMacroDefinition: MacroComponentDefinition<typeof LoginMacro> = {
       function: {
         name: "login",
         icon: "login",
-        description: "Triggers the login process process.",
-        parameters: null
-      }
-    }
+        description: TOOL_DESCRIPTION,
+        parameters: {
+          type: "object",
+          properties: {
+            username: {
+              type: "string",
+              description: "The user's email address or username. Only provide if the user has explicitly given it.",
+            },
+            password: {
+              type: "string",
+              description: "The user's password. Only provide if the user has explicitly given it in this conversation.",
+            },
+          },
+          required: [],
+        },
+      },
+    },
   ],  
 };
 

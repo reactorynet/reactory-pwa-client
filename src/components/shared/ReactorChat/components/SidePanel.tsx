@@ -1,7 +1,10 @@
 import React from 'react';
 import { SidePanelItem } from '../types';
 
-const SIDEBAR_WIDTH = 380;
+const MIN_PANEL_WIDTH = 280;
+const MAX_PANEL_PERCENT = 0.75;
+const DEFAULT_SPLIT = 0.5; // 50/50 by default
+const DRAG_HANDLE_WIDTH = 6;
 
 export interface SidePanelProps {
   open: boolean;
@@ -42,7 +45,6 @@ const SidePanelItemRenderer = React.memo(({ item, reactory }: {
 
   return <Component {...item.props} />;
 }, (prev, next) => {
-  // Only re-render when the item identity or props actually change
   return (
     prev.item.id === next.item.id &&
     prev.item.componentFqn === next.item.componentFqn &&
@@ -76,14 +78,77 @@ const SidePanel: React.FC<SidePanelProps> = React.memo(({
     Tab,
     Paper,
     Tooltip,
-    Divider,
     Drawer,
     useMediaQuery,
     useTheme,
   } = Material.MaterialCore;
 
   const theme = useTheme();
-  const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Resizable panel width as a fraction of the parent container
+  const [splitRatio, setSplitRatio] = ReactLib.useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('reactorChat.sidePanelSplit');
+      if (saved) {
+        const val = parseFloat(saved);
+        if (!isNaN(val) && val >= 0.2 && val <= MAX_PANEL_PERCENT) return val;
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_SPLIT;
+  });
+
+  const containerRef = ReactLib.useRef<HTMLDivElement>(null);
+  const isDragging = ReactLib.useRef(false);
+  const rafId = ReactLib.useRef<number>(0);
+
+  const handleMouseDown = ReactLib.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      // Batch resize updates in a single animation frame to prevent
+      // ResizeObserver loop errors from cascading layout changes.
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+      rafId.current = requestAnimationFrame(() => {
+        const parent = containerRef.current?.parentElement;
+        if (!parent) return;
+        const parentRect = parent.getBoundingClientRect();
+        const parentWidth = parentRect.width;
+        const panelWidth = parentRect.right - ev.clientX;
+        const ratio = Math.min(MAX_PANEL_PERCENT, Math.max(MIN_PANEL_WIDTH / parentWidth, panelWidth / parentWidth));
+        setSplitRatio(ratio);
+      });
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      try {
+        setSplitRatio((current) => {
+          localStorage.setItem('reactorChat.sidePanelSplit', String(current));
+          return current;
+        });
+      } catch { /* ignore */ }
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
+
+  // Clean up animation frame on unmount
+  ReactLib.useEffect(() => {
+    return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
 
   const activeItem = items.find((i) => i.id === activeItemId) ?? items[0];
   const activeIndex = items.findIndex((i) => i.id === activeItem?.id);
@@ -111,7 +176,7 @@ const SidePanel: React.FC<SidePanelProps> = React.memo(({
   const panelContent = (
     <Box
       sx={{
-        width: isNarrowScreen ? '100%' : SIDEBAR_WIDTH,
+        width: '100%',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -143,42 +208,40 @@ const SidePanel: React.FC<SidePanelProps> = React.memo(({
 
       {/* Tabs (when multiple items) */}
       {items.length > 1 && (
-        <>
-          <Tabs
-            value={activeIndex >= 0 ? activeIndex : 0}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{ minHeight: 36, borderBottom: 1, borderColor: 'divider' }}
-          >
-            {items.map((item) => (
-              <Tab
-                key={item.id}
-                label={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="caption" noWrap sx={{ maxWidth: 100 }}>
-                      {item.title}
-                    </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveItem(item.id);
-                      }}
-                      sx={{ p: 0, ml: 0.5 }}
-                    >
-                      <Icon sx={{ fontSize: 14 }}>close</Icon>
-                    </IconButton>
-                  </Box>
-                }
-                sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }}
-              />
-            ))}
-          </Tabs>
-        </>
+        <Tabs
+          value={activeIndex >= 0 ? activeIndex : 0}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ minHeight: 36, borderBottom: 1, borderColor: 'divider' }}
+        >
+          {items.map((item) => (
+            <Tab
+              key={item.id}
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography variant="caption" noWrap sx={{ maxWidth: 100 }}>
+                    {item.title}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveItem(item.id);
+                    }}
+                    sx={{ p: 0, ml: 0.5 }}
+                  >
+                    <Icon sx={{ fontSize: 14 }}>close</Icon>
+                  </IconButton>
+                </Box>
+              }
+              sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }}
+            />
+          ))}
+        </Tabs>
       )}
 
-      {/* Content area — each item is rendered in its own stable container */}
+      {/* Content area */}
       <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
         {items.length === 0 ? emptyState : items.map((item) => (
           <Box
@@ -192,40 +255,90 @@ const SidePanel: React.FC<SidePanelProps> = React.memo(({
     </Box>
   );
 
-  // Narrow screen: use a Drawer
-  if (isNarrowScreen) {
+  // Mobile: full-width side panel, chat becomes a floating mini dialog
+  if (isMobile) {
     return (
       <Drawer
         anchor="right"
         open={open && items.length > 0}
         onClose={onClose}
-        PaperProps={{ sx: { width: '100%', maxWidth: 420 } }}
+        PaperProps={{ sx: { width: '100%' } }}
       >
         {panelContent}
       </Drawer>
     );
   }
 
-  // Wide screen: inline docked panel
+  // Desktop: inline docked panel with resizable drag handle
   if (!open || items.length === 0) return null;
 
   return (
-    <Paper
-      elevation={2}
+    <Box
+      ref={containerRef}
       sx={{
-        width: SIDEBAR_WIDTH,
+        width: `${splitRatio * 100}%`,
+        minWidth: MIN_PANEL_WIDTH,
+        maxWidth: `${MAX_PANEL_PERCENT * 100}%`,
         flexShrink: 0,
         height: '100%',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         overflow: 'hidden',
-        borderLeft: 1,
-        borderColor: 'divider',
-        ml: 1,
+        // Smooth width changes when items are added/removed (not during drag)
+        transition: isDragging.current ? 'none' : 'width 0.2s ease',
+        willChange: 'width',
       }}
     >
-      {panelContent}
-    </Paper>
+      {/* Drag handle */}
+      <Box
+        onMouseDown={handleMouseDown}
+        sx={{
+          width: DRAG_HANDLE_WIDTH,
+          flexShrink: 0,
+          cursor: 'col-resize',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'transparent',
+          '&:hover': {
+            bgcolor: 'action.hover',
+          },
+          '&:hover .drag-indicator': {
+            opacity: 1,
+          },
+          transition: 'background-color 0.15s',
+          zIndex: 1,
+        }}
+      >
+        <Box
+          className="drag-indicator"
+          sx={{
+            width: 3,
+            height: 40,
+            borderRadius: 1,
+            bgcolor: 'divider',
+            opacity: 0.4,
+            transition: 'opacity 0.15s',
+          }}
+        />
+      </Box>
+
+      {/* Panel content */}
+      <Paper
+        elevation={2}
+        sx={{
+          flex: 1,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          borderLeft: 1,
+          borderColor: 'divider',
+        }}
+      >
+        {panelContent}
+      </Paper>
+    </Box>
   );
 });
 

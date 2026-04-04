@@ -404,10 +404,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             if (macro) {
               try {
                 const result = await executeMacro(macro, args, 'auto', toolCall.id);
+                // Extract meaningful content from the macro result.
+                // Macros return { __typename, content, ... } — use .content.
+                // If the macro returned null (e.g. side effect with no response),
+                // produce a descriptive fallback so the AI knows what happened.
+                const resultContent = result?.content
+                  || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
+                  || `Client tool "${name}" executed successfully (no content returned).`;
                 clientResults.push({
                   toolCallId: toolCall.id,
                   toolName: name,
-                  result: result?.content || result,
+                  result: resultContent,
                 });
 
                 // Update UI: mark tool as success
@@ -426,7 +433,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                           tool_results: [...existingResults, {
                             id: toolCall.id,
                             name,
-                            content: result?.content || result,
+                            content: resultContent,
                             timestamp: new Date(),
                           }],
                         };
@@ -2707,11 +2714,17 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           
           const result = await executeMacro(macro, args, 'auto', id);
           console.log('✅ [useChatFactory] Macro executed successfully:', { name: macro.name, result });
+          // Extract meaningful string content from the macro result.
+          // Macros return { __typename, content, ... } — prefer .content.
+          // If the macro returned null (side effect only), provide a fallback.
+          const resultContent = result?.content
+            || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
+            || `Client tool "${name}" executed successfully (no content returned).`;
           return {
             id,
             name,
             role: "tool",
-            content: result?.content || result,
+            content: resultContent,
             timestamp: new Date(),
             sessionId: chatState.id,
           };
@@ -2991,10 +3004,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           const macro = findMacroByAlias(toolName)
             || chatState.macros?.find((m: any) => m.name === toolName || m.alias === toolName);
           if (macro?.runat === 'client' || (!macro?.runat && macro)) {
+            // Extract meaningful content — avoid passing the raw tool envelope object
+            const trContent = (typeof tr.content === 'string' && tr.content.length > 0)
+              ? tr.content
+              : (tr.content != null ? JSON.stringify(tr.content) : `Client tool "${toolName}" executed successfully.`);
             clientSideResults.push({
               toolCallId: tr.id,
               toolName,
-              result: tr.content || tr,
+              result: trContent,
             });
           } else {
             serverSideResults.push(tr);

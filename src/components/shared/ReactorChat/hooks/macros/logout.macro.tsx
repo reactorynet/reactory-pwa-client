@@ -27,13 +27,25 @@ const LogoutMacro: Macro<unknown> = async (params, chatState, reactory) => {
   }
 };
 
+const TOOL_DESCRIPTION = `Log out the currently authenticated user and end their session.
+
+This immediately invalidates the user's session token and redirects to the unauthenticated state. Any unsaved work in open forms or components will be lost.
+
+Invoke this when:
+- The user explicitly asks to log out, sign out, or exit their session.
+- A security-sensitive flow requires session termination.
+
+Do NOT invoke this automatically or as a side effect of other operations. Always confirm intent before calling if there is any ambiguity.
+
+No parameters required.`;
+
 const LogoutMacroDefinition: MacroComponentDefinition<typeof LogoutMacro> = { 
   name: "LogoutMacro",
-  description: "A macro that handles user logout.",
+  description: "Log out the currently authenticated user and terminate their session.",
   component: LogoutMacro,
   version: "1.0.0",
   nameSpace: "core",
-  roles: ['USER'], // Only logged-in users can logout
+  roles: ['USER'],
   alias: 'logout',
   runat: 'client',
   tools: [
@@ -41,14 +53,14 @@ const LogoutMacroDefinition: MacroComponentDefinition<typeof LogoutMacro> = {
       type: "function",
       function: {
         name: "logout",
-        description: "Logout from the system",
+        description: TOOL_DESCRIPTION,
         parameters: {
           type: "object",
           properties: {},
-          required: []
-        }
-      }
-    }
+          required: [],
+        },
+      },
+    },
   ],  
 };
 

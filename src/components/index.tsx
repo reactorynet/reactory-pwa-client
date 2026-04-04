@@ -91,6 +91,13 @@ import WorkflowDesigner from './shared/WorkflowDesigner';
 import JsonSchemaEditor from './shared/JsonSchemaEditor';
 import FormEditor from './shared/FormEditor';
 import { UserHomeFolder } from './shared/UserHomeFolder';
+import {
+  BarChartComponentDefinition,
+  LineChartComponentDefinition,
+  PieChartComponentDefinition,
+  ComposedChartComponentDefinition,
+  FunnelChartComponentDefinition,
+} from './shared/Charts';
 
 import * as Three from 'three';
 
@@ -122,7 +129,12 @@ export const CompanyLogo = (props) => {
   return <Logo {...logoProps} />
 };
 
-export const componentRegistery = [
+export type ReactoryClientComponentRegistration = Reactory.IReactoryComponentDefinition<any> & {
+  wrapWithApi?: boolean; // Whether to wrap the component with API context providers by default
+};
+
+
+export const componentRegistery: ReactoryClientComponentRegistration[] = [
   {
     nameSpace: 'react',
     name: 'React',
@@ -793,6 +805,13 @@ export const componentRegistery = [
     version: '1.0.0',
     component: AdvancedFilterPanel
   },
+  // Shared chart components
+  BarChartComponentDefinition,
+  LineChartComponentDefinition,
+  PieChartComponentDefinition,
+  ComposedChartComponentDefinition,
+  FunnelChartComponentDefinition,
   // Append plugin components
   ...pluginComponents
 ];
+
