@@ -355,6 +355,15 @@ export default (props) => {
         return false;
       }
 
+      // Filter out assistant messages with no displayable content
+      // (e.g. empty continuation responses after tool completion)
+      if (msg.role === 'assistant' &&
+        (!msg.content || (typeof msg.content === 'string' && msg.content.trim().length === 0)) &&
+        (!msg.tool_calls || msg.tool_calls.length === 0) &&
+        (!msg.thinking || msg.thinking.trim().length === 0)) {
+        return false;
+      }
+
       return true;
     });
 
@@ -518,27 +527,27 @@ export default (props) => {
     }
   }, [queryParams.sessionId, chatState?.id, busy, loadChat]);
 
-  useEffect(() => {
-    console.log('ReactorChat: Chat list refresh useEffect triggered', {
-      personaId: selectedPersona?.id,
-      busy,
-      isManualNavigation: isManualNavigation.current
-    });
+  const autoInitInProgress = React.useRef(false);
+  // Track whether the initial chat list has been loaded for the current persona
+  const chatListLoadedForPersonaRef = React.useRef<string | null>(null);
 
-    // Only refresh chat list if persona actually changed and we're not busy
-    if (busy) {
-      reactory.log('ReactorChat: Skipping chat list refresh - system is busy');
-      return;
-    }
+  // Load chat list once when persona changes (not on every busy toggle).
+  // The chat list is also refreshed when the history panel is opened.
+  useEffect(() => {
+    if (!selectedPersona?.id) return;
+
+    // Skip if we already loaded the chat list for this persona
+    if (chatListLoadedForPersonaRef.current === selectedPersona.id) return;
 
     // Skip refresh during manual navigation to prevent redundant calls
     if (isManualNavigation.current) {
-      reactory.log('ReactorChat: Skipping chat list refresh - manual navigation in progress');
       return;
     }
 
+    chatListLoadedForPersonaRef.current = selectedPersona.id;
+
     (async () => {
-      reactory.log(`ReactorChat: Refreshing chat list for persona: ${selectedPersona?.name || 'none'}`);
+      reactory.log(`ReactorChat: Loading chat list for persona: ${selectedPersona?.name || 'none'}`);
       const chatList = await listChats({ personaId: selectedPersona?.id });
       setChats(chatList as ChatState[]);
 
@@ -598,9 +607,7 @@ export default (props) => {
         }
       }
     })();
-  }, [selectedPersona?.id, busy, listChats, setChats]);
-
-  const autoInitInProgress = React.useRef(false);
+  }, [selectedPersona?.id, listChats, setChats]);
 
   const handleHeaderToggle = useCallback(() => setHeaderOpen((open) => !open), []);
 
@@ -711,8 +718,15 @@ export default (props) => {
     setTodosPanelOpen(false);
     setDebugPanelOpen(false);
     // Then toggle chat history panel
-    setChatHistoryPanelOpen(!chatHistoryPanelOpen);
-  }, [chatHistoryPanelOpen]);
+    const willOpen = !chatHistoryPanelOpen;
+    setChatHistoryPanelOpen(willOpen);
+    // Refresh the chat list when opening the history panel
+    if (willOpen) {
+      listChats({ personaId: selectedPersona?.id }).then((chatList) => {
+        setChats(chatList as ChatState[]);
+      });
+    }
+  }, [chatHistoryPanelOpen, listChats, selectedPersona?.id, setChats]);
 
   const handleChatHistoryPanelClose = useCallback(() => {
     setChatHistoryPanelOpen(false);

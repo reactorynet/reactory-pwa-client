@@ -354,21 +354,28 @@ const ChatList = (props: {
     }
 
     if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
-      if (message.tool_calls.length === 1) {
-        return reactory.i18n.t('reactor.client.chat.callingTool', {
-          tool: message.tool_calls[0].function?.name ?? message.tool_calls[0].name ?? 'unknown',
-          defaultValue: 'Calling {{tool}}'
+      const validCalls = message.tool_calls.filter(Boolean);
+      const allCompleted = validCalls.every((tc: any) => tc.status === 'success');
+      const toolNames = validCalls.map((call: any) => call.function?.name ?? call.name ?? 'unknown');
+
+      if (allCompleted) {
+        // Tools are done — show completed summary
+        return reactory.i18n.t('reactor.client.chat.toolsCompleted', {
+          count: validCalls.length,
+          tools: toolNames.join(', '),
+          defaultValue: 'Completed {{count}} tool(s): {{tools}}'
         });
-      } else if (message.tool_calls.length < 5) {
-        return reactory.i18n.t('reactor.client.chat.callingTools', {
-          count: message.tool_calls.length,
-          tools: message.tool_calls.map((call) => call.function?.name ?? call.name ?? 'unknown').join(', '),
-          defaultValue: 'Calling {{count}} tool(s): {{tools}}'
+      }
+
+      if (validCalls.length === 1) {
+        return reactory.i18n.t('reactor.client.chat.callingTool', {
+          tool: toolNames[0],
+          defaultValue: 'Calling {{tool}}'
         });
       } else {
         return reactory.i18n.t('reactor.client.chat.callingTools', {
-          count: message.tool_calls.length,
-          tools: message.tool_calls.map((call) => call.function?.name ?? call.name ?? 'unknown').join(', '),
+          count: validCalls.length,
+          tools: toolNames.join(', '),
           defaultValue: 'Calling {{count}} tool(s): {{tools}}'
         });
       }
@@ -381,8 +388,17 @@ const ChatList = (props: {
 
     // Handle tool results (though these should typically be filtered out)
     if (Array.isArray(message.tool_results) && message.tool_results.length > 0) {
-      console.warn('Tool results message should have been filtered out:', message);
-      return 'Tool results (internal)';
+      const resultNames = message.tool_results.map((r: any) => r.name || 'tool').join(', ');
+      return reactory.i18n.t('reactor.client.chat.toolResultsSummary', {
+        tools: resultNames,
+        defaultValue: 'Tool results: {{tools}}'
+      });
+    }
+
+    // If this is an assistant message with no displayable content, return null
+    // to signal that it should be hidden rather than showing a confusing message
+    if (message.role === 'assistant') {
+      return null;
     }
 
     return reactory.i18n.t('reactor.client.chat.noContent', {

@@ -2961,8 +2961,6 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // learns about the failure and the conversation hangs silently.
     if (toolResults.length > 0 || toolErrors.length > 0) {
       try {
-        const consolidatedResults = consolidateToolResults(toolResults, toolErrors);
-
         // Insert a Processing... placeholder so the UI shows the "thinking" indicator
         // while we wait for the AI's follow-up response.
         const thinkingPlaceholderId = reactory.utils.uuid();
@@ -2981,6 +2979,56 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           updated: new Date(),
         }));
 
+        // Identify client-side tool results that need proper tool_call_id persistence.
+        // Server-side macros are already persisted by executeMacro on the server,
+        // but client-side macros only ran locally — use completeClientToolCalls
+        // to persist them with their tool_call_id so the tool call loop is closed.
+        const clientSideResults: Array<{ toolCallId: string; toolName: string; result?: any; isError?: boolean; error?: string }> = [];
+        const serverSideResults: typeof toolResults = [];
+
+        for (const tr of toolResults) {
+          const toolName = tr.name || '';
+          const macro = findMacroByAlias(toolName)
+            || chatState.macros?.find((m: any) => m.name === toolName || m.alias === toolName);
+          if (macro?.runat === 'client' || (!macro?.runat && macro)) {
+            clientSideResults.push({
+              toolCallId: tr.id,
+              toolName,
+              result: tr.content || tr,
+            });
+          } else {
+            serverSideResults.push(tr);
+          }
+        }
+        for (const te of toolErrors) {
+          if (te.id) {
+            const toolName = te.name || '';
+            const macro = findMacroByAlias(toolName)
+              || chatState.macros?.find((m: any) => m.name === toolName || m.alias === toolName);
+            if (macro?.runat === 'client' || (!macro?.runat && macro)) {
+              clientSideResults.push({
+                toolCallId: te.id,
+                toolName,
+                isError: true,
+                error: te.error || te.name,
+              });
+            }
+          }
+        }
+
+        // Persist client-side tool results via completeClientToolCalls so each
+        // result is stored with its tool_call_id (closing the tool call loop).
+        if (clientSideResults.length > 0) {
+          try {
+            // Don't continue processing yet — we handle continuation below
+            await completeClientToolCalls(clientSideResults, false);
+          } catch (err) {
+            console.error('[useChatFactory] Error persisting client tool results:', err);
+          }
+        }
+
+        // Now continue the AI processing loop with consolidated results
+        const consolidatedResults = consolidateToolResults(toolResults, toolErrors);
         const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors, thinkingPlaceholderId);
 
         // Check if the AI response contains new tool calls and recursively process them.
@@ -3021,11 +3069,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     // Use specific primitive dependencies instead of entire chatState object
     chatState.toolApprovalMode,
     chatState.id,
+    chatState.macros,
     processToolsWithApproval,
     processToolsAutomatically,
     updateChatStateWithToolResults,
     consolidateToolResults,
-    sendToolResultsToAI
+    sendToolResultsToAI,
+    completeClientToolCalls,
+    findMacroByAlias,
   ]);
 
   // Keep the ref in sync so onToolCallReceived always calls the latest version
