@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import ChartTooltip from './ChartTooltip';
-import type { PieSliceEntry, ChartDimensions } from './ChartTypes';
+import type { PieSliceEntry, ChartDimensions, ChartStylingOptions } from './ChartTypes';
 
 /** Default colour palette used when slice-level colours are not specified */
 const DEFAULT_COLORS = [
@@ -60,6 +60,8 @@ export interface PieChartProps extends ChartDimensions {
    * Receives (value, sliceName) and should return a display string.
    */
   tooltipFormatter?: (value: number | string, name: string) => string;
+  /** Optional visual styling overrides: inner/outer radius, animation, container sx, etc. */
+  styling?: ChartStylingOptions;
 }
 
 /**
@@ -76,7 +78,7 @@ const PieChart: React.FC<PieChartProps> = ({
   dataKey = 'value',
   nameKey = 'name',
   colors = DEFAULT_COLORS,
-  innerRadius = 0,
+  innerRadius,
   outerRadius,
   title,
   description,
@@ -84,31 +86,45 @@ const PieChart: React.FC<PieChartProps> = ({
   width = '100%',
   showLegend = true,
   tooltipFormatter,
+  styling,
 }) => {
-  const derivedOuterRadius = outerRadius ?? Math.floor(height / 2) - 20;
+  const {
+    containerSx,
+    titleVariant = 'h6',
+    descriptionVariant = 'subtitle2',
+    animationDuration,
+    margin,
+    pieInnerRadius,
+    pieOuterRadius,
+  } = styling ?? {};
+
+  const effectiveInnerRadius = innerRadius ?? pieInnerRadius ?? 0;
+  const effectiveOuterRadius = outerRadius ?? pieOuterRadius ?? Math.floor(height / 2) - 20;
 
   return (
-    <Box>
+    <Box sx={containerSx}>
       {title && (
-        <Typography variant="h6" sx={{ mb: 0.5 }}>
+        <Typography variant={titleVariant} sx={{ mb: 0.5 }}>
           {title}
         </Typography>
       )}
       {description && (
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
+        <Typography variant={descriptionVariant} color="text.secondary" sx={{ mb: 1.5 }}>
           {description}
         </Typography>
       )}
       <ResponsiveContainer width={width} height={height}>
-        <RechartsPieChart>
+        <RechartsPieChart margin={margin}>
           <Pie
             data={data}
             dataKey={dataKey}
             nameKey={nameKey}
             cx="50%"
             cy="50%"
-            innerRadius={innerRadius}
-            outerRadius={derivedOuterRadius}
+            innerRadius={effectiveInnerRadius}
+            outerRadius={effectiveOuterRadius}
+            isAnimationActive={animationDuration !== 0}
+            {...(animationDuration !== undefined && { animationDuration })}
           >
             {data.map((entry, idx) => (
               <Cell

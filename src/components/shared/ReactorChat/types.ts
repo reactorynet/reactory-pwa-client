@@ -105,6 +105,18 @@ export type ReactorConversationHistory = UXChatMessage[]
 /** Represents the current network connection status for the ReactorChat session. */
 export type NetworkStatus = 'idle' | 'connected' | 'reconnecting' | 'error';
 
+/**
+ * High-level activity status of the chat session, derived from
+ * busy, isStreaming, toolIterationLimitInfo, and pending tool call state.
+ */
+export type ChatActivityStatus =
+  | 'idle'            // Awaiting user input
+  | 'thinking'        // AI is processing (busy but not streaming yet)
+  | 'streaming'       // AI response is being streamed
+  | 'executing_tools' // Tools are being executed
+  | 'paused'          // Paused at iteration limit, awaiting user decision
+  | 'pending_resume'; // Loaded conversation with unfinished tool calls
+
 // Tool approval modes
 export enum ToolApprovalMode {
   AUTO = "auto",           // Execute all tools without asking

@@ -19,6 +19,7 @@ import type {
   LineSeriesConfig,
   ChartDataPoint,
   ChartDimensions,
+  ChartStylingOptions,
 } from './ChartTypes';
 
 export interface ComposedChartProps extends ChartDimensions {
@@ -61,6 +62,8 @@ export interface ComposedChartProps extends ChartDimensions {
    * Receives (value, seriesName) and should return a display string.
    */
   tooltipFormatter?: (value: number | string, name: string) => string;
+  /** Optional visual styling overrides: grid, axis, bar radius, line width, area opacity, animation, etc. */
+  styling?: ChartStylingOptions;
 }
 
 const DEFAULT_DATA: ChartDataPoint[] = [
@@ -93,36 +96,85 @@ const ComposedChart: React.FC<ComposedChartProps> = ({
   xAxisProps,
   yAxisProps,
   tooltipFormatter,
+  styling,
 }) => {
   const chartData = data?.length ? data : DEFAULT_DATA;
 
+  const {
+    containerSx,
+    titleVariant = 'h6',
+    descriptionVariant = 'subtitle2',
+    animationDuration,
+    margin,
+    gridColor,
+    gridDasharray = '3 3',
+    axisFontSize,
+    axisColor,
+    barRadius,
+    barOpacity,
+    lineStrokeWidth,
+    showDots,
+    dotRadius,
+    lineDasharray,
+    areaFillOpacity,
+  } = styling ?? {};
+
+  const axisTickStyle = (axisFontSize || axisColor)
+    ? { fontSize: axisFontSize, fill: axisColor }
+    : undefined;
+
+  const defaultDot = showDots
+    ? (dotRadius ? { r: dotRadius } : true)
+    : false;
+
   return (
-    <Box>
+    <Box sx={containerSx}>
       {title && (
-        <Typography variant="h6" sx={{ mb: 0.5 }}>
+        <Typography variant={titleVariant} sx={{ mb: 0.5 }}>
           {title}
         </Typography>
       )}
       {description && (
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
+        <Typography variant={descriptionVariant} color="text.secondary" sx={{ mb: 1.5 }}>
           {description}
         </Typography>
       )}
       <ResponsiveContainer width={width} height={height}>
-        <RechartsComposedChart data={chartData}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis dataKey={xAxisKey} {...xAxisProps} />
-          <YAxis {...yAxisProps} />
+        <RechartsComposedChart data={chartData} margin={margin}>
+          {showGrid && <CartesianGrid strokeDasharray={gridDasharray} stroke={gridColor} />}
+          <XAxis dataKey={xAxisKey} tick={axisTickStyle} {...xAxisProps} />
+          <YAxis tick={axisTickStyle} {...yAxisProps} />
           <Tooltip content={<ChartTooltip formatter={tooltipFormatter} />} />
           {showLegend && <Legend />}
           {areas.map((areaConfig, idx) => (
-            <Area key={`area-${idx}`} {...areaConfig} />
+            <Area
+              key={`area-${idx}`}
+              {...areaConfig}
+              fillOpacity={areaConfig.fillOpacity ?? areaFillOpacity}
+              isAnimationActive={animationDuration !== 0}
+              {...(animationDuration !== undefined && { animationDuration })}
+            />
           ))}
           {bars.map((barConfig, idx) => (
-            <Bar key={`bar-${idx}`} {...barConfig} />
+            <Bar
+              key={`bar-${idx}`}
+              {...barConfig}
+              radius={barConfig.radius ?? barRadius}
+              opacity={barConfig.opacity as number ?? barOpacity}
+              isAnimationActive={animationDuration !== 0}
+              {...(animationDuration !== undefined && { animationDuration })}
+            />
           ))}
           {lines.map((lineConfig, idx) => (
-            <Line key={`line-${idx}`} {...lineConfig} />
+            <Line
+              key={`line-${idx}`}
+              {...lineConfig}
+              strokeWidth={lineConfig.strokeWidth as number ?? lineStrokeWidth}
+              dot={lineConfig.dot !== undefined ? lineConfig.dot : defaultDot}
+              strokeDasharray={lineConfig.strokeDasharray ?? lineDasharray}
+              isAnimationActive={animationDuration !== 0}
+              {...(animationDuration !== undefined && { animationDuration })}
+            />
           ))}
         </RechartsComposedChart>
       </ResponsiveContainer>

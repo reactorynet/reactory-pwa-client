@@ -27,6 +27,8 @@ import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/
 import TodosPanel from './components/TodosPanel';
 import ToolIterationLimitBanner from './components/ToolIterationLimitBanner';
 import NetworkStatusIndicator from './components/NetworkStatusIndicator';
+import ChatStatusIndicator from './components/ChatStatusIndicator';
+import PendingToolCallsBanner from './components/PendingToolCallsBanner';
 import DebugPanel from './components/DebugPanel';
 import SidePanel from './components/SidePanel';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -34,6 +36,7 @@ import RecordingAudioBar from "./components/RecordingAudioBar";
 import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
 import useSpeechServices from './hooks/useSpeechServices';
 import useSidePanel from './hooks/useSidePanel';
+import useChatStatus from './hooks/useChatStatus';
 
 export default (props) => {
   const { formData } = props;
@@ -210,11 +213,22 @@ export default (props) => {
     sseIsReconnecting = false,
     sseDisconnect = undefined as (() => void) | undefined,
     sseReconnect = undefined as (() => void) | undefined,
+    pendingToolCallResume = null as any,
+    resumePendingToolCalls = (async () => {}) as () => Promise<void>,
+    dismissPendingToolCalls = (() => {}) as () => void,
   } = {
     ...chatFactory,
     isStreaming: false,
     currentStreamingMessage: '',
   };
+
+  // Derived chat activity status
+  const chatStatusInfo = useChatStatus({
+    busy,
+    isStreaming,
+    toolIterationLimitInfo,
+    pendingToolCallResume: !!pendingToolCallResume,
+  });
 
   // Keep session ID in sync so useSessionLogger picks it up
   React.useEffect(() => {
@@ -223,17 +237,47 @@ export default (props) => {
     }
   }, [chatState?.id, activeSessionId]);
 
+  // Persist side panel state to server (debounced by useSidePanel)
+  const handleSidePanelPersist = React.useCallback((state: SidePanelState) => {
+    const sessionId = chatState?.id;
+    if (!sessionId) return;
+    reactory.graphqlMutation(
+      `mutation ReactorSetSidePanelState($chatSessionId: String!, $sidePanelState: ReactorSidePanelStateInput!) {
+        ReactorSetSidePanelState(chatSessionId: $chatSessionId, sidePanelState: $sidePanelState) { id }
+      }`,
+      { chatSessionId: sessionId, sidePanelState: state },
+    ).catch((err) => {
+      reactory.log(`Failed to persist side panel state: ${err?.message}`, {}, 'warning');
+    });
+  }, [chatState?.id, reactory]);
+
   // Side panel for agent-mounted components and forms
   const {
     panelState: sidePanelState,
     setPanelState: setSidePanelState,
     actions: sidePanelActions,
     togglePanel: toggleSidePanel,
-  } = useSidePanel();
+  } = useSidePanel(undefined, handleSidePanelPersist);
 
-  // Restore side panel state from session cache when persona changes
+  // Restore side panel state: prefer server-persisted state (from loadChat),
+  // fall back to session cache, then empty state.
   React.useEffect(() => {
     if (selectedPersona?.id) {
+      // Server-persisted state is stored in chatState.sidePanelState by loadChat
+      const serverState = (chatState as any)?.sidePanelState;
+      if (serverState && Array.isArray(serverState.items) && serverState.items.length > 0) {
+        setSidePanelState({
+          items: serverState.items.map((item: any) => ({
+            ...item,
+            // Merge persisted props with the reactory SDK instance
+            props: { ...(item.props || {}), reactory },
+          })),
+          activeItemId: serverState.activeItemId,
+          isOpen: serverState.isOpen,
+        });
+        return;
+      }
+      // Fall back to client session cache
       const cached = sessionCache.current.get(selectedPersona.id);
       if (cached?.sidePanelState) {
         setSidePanelState(cached.sidePanelState);
@@ -241,7 +285,7 @@ export default (props) => {
         setSidePanelState({ items: [], activeItemId: undefined, isOpen: false });
       }
     }
-  }, [selectedPersona?.id, setSidePanelState]);
+  }, [selectedPersona?.id, chatState?.id, setSidePanelState]);
 
   // Inject side panel actions into chatState so client macros can access them
   React.useEffect(() => {
@@ -1651,6 +1695,17 @@ export default (props) => {
         />
       )}
 
+      {/* Chat status indicator */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: busy ? 'auto' : 0 }}>
+        <ChatStatusIndicator
+          status={chatStatusInfo.status}
+          label={chatStatusInfo.label}
+          icon={chatStatusInfo.icon}
+          color={chatStatusInfo.color}
+          Material={Material}
+        />
+      </Box>
+
       {busy && (
         <LinearProgress
           variant="indeterminate"
@@ -1663,6 +1718,18 @@ export default (props) => {
               transition: 'transform 0.3s ease-in-out',
             },
           }}
+        />
+      )}
+
+      {/* Pending tool call resume banner */}
+      {pendingToolCallResume && (
+        <PendingToolCallsBanner
+          pendingCount={pendingToolCallResume.toolCalls.length}
+          toolNames={pendingToolCallResume.toolCalls.map((tc: any) => tc.function?.name).filter(Boolean)}
+          onResume={resumePendingToolCalls}
+          onDismiss={dismissPendingToolCalls}
+          Material={Material}
+          il8n={il8n}
         />
       )}
 

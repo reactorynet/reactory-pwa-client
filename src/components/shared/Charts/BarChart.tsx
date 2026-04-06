@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import ChartTooltip from './ChartTooltip';
-import type { BarSeriesConfig, ChartDataPoint, ChartDimensions } from './ChartTypes';
+import type { BarSeriesConfig, ChartDataPoint, ChartDimensions, ChartStylingOptions } from './ChartTypes';
 
 export interface BarChartProps extends ChartDimensions {
   /** Array of data objects. Each object maps category/axis keys to values. */
@@ -44,6 +44,8 @@ export interface BarChartProps extends ChartDimensions {
    * Receives (value, seriesName) and should return a display string.
    */
   tooltipFormatter?: (value: number | string, name: string) => string;
+  /** Optional visual styling overrides: grid colour, axis font, bar radius, animation, etc. */
+  styling?: ChartStylingOptions;
 }
 
 const DEFAULT_BARS: BarSeriesConfig[] = [{ dataKey: 'value', fill: '#4e79a7' }];
@@ -77,30 +79,56 @@ const BarChart: React.FC<BarChartProps> = ({
   xAxisProps,
   yAxisProps,
   tooltipFormatter,
+  styling,
 }) => {
   const chartData = data?.length ? data : DEFAULT_DATA;
 
+  const {
+    containerSx,
+    titleVariant = 'h6',
+    descriptionVariant = 'subtitle2',
+    animationDuration,
+    margin,
+    gridColor,
+    gridDasharray = '3 3',
+    axisFontSize,
+    axisColor,
+    barRadius,
+    barOpacity,
+  } = styling ?? {};
+
+  const axisTickStyle = (axisFontSize || axisColor)
+    ? { fontSize: axisFontSize, fill: axisColor }
+    : undefined;
+
   return (
-    <Box>
+    <Box sx={containerSx}>
       {title && (
-        <Typography variant="h6" sx={{ mb: 0.5 }}>
+        <Typography variant={titleVariant} sx={{ mb: 0.5 }}>
           {title}
         </Typography>
       )}
       {description && (
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
+        <Typography variant={descriptionVariant} color="text.secondary" sx={{ mb: 1.5 }}>
           {description}
         </Typography>
       )}
       <ResponsiveContainer width={width} height={height}>
-        <RechartsBarChart data={chartData}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis dataKey={xAxisKey} {...xAxisProps} />
-          <YAxis {...yAxisProps} />
+        <RechartsBarChart data={chartData} margin={margin}>
+          {showGrid && <CartesianGrid strokeDasharray={gridDasharray} stroke={gridColor} />}
+          <XAxis dataKey={xAxisKey} tick={axisTickStyle} {...xAxisProps} />
+          <YAxis tick={axisTickStyle} {...yAxisProps} />
           <Tooltip content={<ChartTooltip formatter={tooltipFormatter} />} />
           {showLegend && <Legend />}
           {bars.map((barConfig, idx) => (
-            <Bar key={`bar-${idx}`} {...barConfig} />
+            <Bar
+              key={`bar-${idx}`}
+              {...barConfig}
+              radius={barConfig.radius ?? barRadius}
+              opacity={barConfig.opacity as number ?? barOpacity}
+              isAnimationActive={animationDuration !== 0}
+              {...(animationDuration !== undefined && { animationDuration })}
+            />
           ))}
         </RechartsBarChart>
       </ResponsiveContainer>

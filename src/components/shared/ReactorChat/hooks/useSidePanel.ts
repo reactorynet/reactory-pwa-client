@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { SidePanelItem, SidePanelState, SidePanelActions } from '../types';
 
 const MAX_ITEMS = 10;
+const PERSIST_DEBOUNCE_MS = 500;
 
 export interface UseSidePanelResult {
   panelState: SidePanelState;
@@ -23,8 +24,28 @@ const INITIAL_STATE: SidePanelState = {
   isOpen: false,
 };
 
+/**
+ * Strips non-serializable fields (reactory SDK instance) from item props
+ * so only persistable data is sent to the server.
+ */
+function toSerializable(state: SidePanelState): SidePanelState {
+  return {
+    ...state,
+    items: state.items.map(({ id, componentFqn, title, type, addedAt, addedBy, props }) => {
+      // Strip the reactory SDK reference — it's non-serializable and will be
+      // re-injected on restore. Keep all other props (userId, formId, etc.).
+      const { reactory: _reactory, ...serializableProps } = props || {};
+      return {
+        id, componentFqn, title, type, addedAt, addedBy,
+        props: Object.keys(serializableProps).length > 0 ? serializableProps : undefined,
+      } as SidePanelItem;
+    }),
+  };
+}
+
 export default function useSidePanel(
   initialState?: SidePanelState,
+  onPersist?: (state: SidePanelState) => void,
 ): UseSidePanelResult {
   const [panelState, setPanelState] = useState<SidePanelState>(
     initialState ?? INITIAL_STATE,
@@ -34,13 +55,44 @@ export default function useSidePanel(
   const stateRef = useRef(panelState);
   stateRef.current = panelState;
 
+  // Debounced persistence: fires after state settles for PERSIST_DEBOUNCE_MS
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onPersistRef = useRef(onPersist);
+  onPersistRef.current = onPersist;
+  // Track whether the state has been mutated (vs initial load/restore)
+  const hasMutated = useRef(false);
+
+  useEffect(() => {
+    if (!onPersistRef.current || !hasMutated.current) return;
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      onPersistRef.current?.(toSerializable(panelState));
+    }, PERSIST_DEBOUNCE_MS);
+    return () => {
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    };
+  }, [panelState]);
+
+  // Flush pending persist on page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (persistTimerRef.current && onPersistRef.current && hasMutated.current) {
+        clearTimeout(persistTimerRef.current);
+        onPersistRef.current(toSerializable(stateRef.current));
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
+  const markMutated = useCallback(() => { hasMutated.current = true; }, []);
+
   const addItem = useCallback((item: SidePanelItem) => {
     setPanelState((prev) => {
       if (prev.items.length >= MAX_ITEMS) {
         console.warn(`[useSidePanel] Max items (${MAX_ITEMS}) reached — ignoring add`);
         return prev;
       }
-      // Prevent duplicate IDs
       if (prev.items.some((i) => i.id === item.id)) {
         console.warn(`[useSidePanel] Item with id "${item.id}" already exists — ignoring add`);
         return prev;
@@ -51,7 +103,8 @@ export default function useSidePanel(
         isOpen: true,
       };
     });
-  }, []);
+    markMutated();
+  }, [markMutated]);
 
   const updateItem = useCallback(
     (id: string, updates: Partial<Omit<SidePanelItem, 'id'>>) => {
@@ -63,15 +116,15 @@ export default function useSidePanel(
         items[idx] = updated;
         return { ...prev, items };
       });
+      markMutated();
     },
-    [],
+    [markMutated],
   );
 
   const removeItem = useCallback((id: string) => {
     setPanelState((prev) => {
       const items = prev.items.filter((i) => i.id !== id);
       let activeItemId = prev.activeItemId;
-      // If the removed item was active, shift to the next available
       if (prev.activeItemId === id) {
         activeItemId = items.length > 0 ? items[items.length - 1].id : undefined;
       }
@@ -81,7 +134,8 @@ export default function useSidePanel(
         isOpen: items.length > 0 ? prev.isOpen : false,
       };
     });
-  }, []);
+    markMutated();
+  }, [markMutated]);
 
   const getState = useCallback((): SidePanelState => stateRef.current, []);
 
@@ -90,15 +144,18 @@ export default function useSidePanel(
       if (!prev.items.some((i) => i.id === id)) return prev;
       return { ...prev, activeItemId: id };
     });
-  }, []);
+    markMutated();
+  }, [markMutated]);
 
   const togglePanel = useCallback(() => {
     setPanelState((prev) => ({ ...prev, isOpen: !prev.isOpen }));
-  }, []);
+    markMutated();
+  }, [markMutated]);
 
   const clearAll = useCallback(() => {
     setPanelState(INITIAL_STATE);
-  }, []);
+    markMutated();
+  }, [markMutated]);
 
   const actions: SidePanelActions = useMemo(() => ({
     addItem,

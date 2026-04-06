@@ -22,6 +22,7 @@ import REACTOR_EXECUTE_MACRO from "./mutations/ReactorExecuteMacro.graphql";
 import REACTOR_EXECUTE_TOOL from "./mutations/ReactorExecuteTool.graphql";
 import REACTOR_SET_MODEL_PROVIDER from "./mutations/ReactorSetChatModelProvider.graphql";
 import REACTOR_START_VOICE_SESSION from "./mutations/ReactorStartVoiceSession.graphql";
+import REACTOR_SET_SIDE_PANEL_STATE from "./mutations/ReactorSetSidePanelState.graphql";
 import REACTOR_END_VOICE_SESSION from "./mutations/ReactorEndVoiceSession.graphql";
 import REACTOR_SEND_VOICE_MESSAGE from "./mutations/ReactorSendVoiceMessage.graphql";
 import REACTOR_SET_MAX_TOOL_ITERATIONS from "./mutations/ReactorSetChatMaxToolIterations.graphql";
@@ -415,6 +416,17 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorSessionLog ?? { accepted: 0, dropped: 0 };
   };
 
+  const setSidePanelState = async (
+    chatSessionId: string,
+    sidePanelState: { items: any[]; activeItemId?: string; isOpen: boolean },
+  ): Promise<any> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorSetSidePanelState: any },
+      { chatSessionId: string; sidePanelState: any }
+    >(REACTOR_SET_SIDE_PANEL_STATE as any, { chatSessionId, sidePanelState });
+    return response?.data?.ReactorSetSidePanelState;
+  };
+
   return useMemo(() => ({
     startChatSession,
     sendMessage,
@@ -437,6 +449,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     pinFolderToSession,
     unpinFolderFromSession,
     sendSessionLog,
+    setSidePanelState,
   }), [reactory]);
 };
 

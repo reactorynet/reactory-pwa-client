@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import ChartTooltip from './ChartTooltip';
-import type { LineSeriesConfig, ChartDataPoint, ChartDimensions } from './ChartTypes';
+import type { LineSeriesConfig, ChartDataPoint, ChartDimensions, ChartStylingOptions } from './ChartTypes';
 
 export interface LineChartProps extends ChartDimensions {
   /** Array of data objects. Each object maps category/axis keys to values. */
@@ -44,6 +44,8 @@ export interface LineChartProps extends ChartDimensions {
    * Receives (value, seriesName) and should return a display string.
    */
   tooltipFormatter?: (value: number | string, name: string) => string;
+  /** Optional visual styling overrides: grid colour, axis font, line width, dots, animation, etc. */
+  styling?: ChartStylingOptions;
 }
 
 const DEFAULT_SERIES: LineSeriesConfig[] = [
@@ -79,30 +81,63 @@ const LineChart: React.FC<LineChartProps> = ({
   xAxisProps,
   yAxisProps,
   tooltipFormatter,
+  styling,
 }) => {
   const chartData = data?.length ? data : DEFAULT_DATA;
 
+  const {
+    containerSx,
+    titleVariant = 'h6',
+    descriptionVariant = 'subtitle2',
+    animationDuration,
+    margin,
+    gridColor,
+    gridDasharray = '3 3',
+    axisFontSize,
+    axisColor,
+    lineStrokeWidth,
+    showDots,
+    dotRadius,
+    lineDasharray,
+  } = styling ?? {};
+
+  const axisTickStyle = (axisFontSize || axisColor)
+    ? { fontSize: axisFontSize, fill: axisColor }
+    : undefined;
+
+  const defaultDot = showDots
+    ? (dotRadius ? { r: dotRadius } : true)
+    : false;
+
   return (
-    <Box>
+    <Box sx={containerSx}>
       {title && (
-        <Typography variant="h6" sx={{ mb: 0.5 }}>
+        <Typography variant={titleVariant} sx={{ mb: 0.5 }}>
           {title}
         </Typography>
       )}
       {description && (
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
+        <Typography variant={descriptionVariant} color="text.secondary" sx={{ mb: 1.5 }}>
           {description}
         </Typography>
       )}
       <ResponsiveContainer width={width} height={height}>
-        <RechartsLineChart data={chartData}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis dataKey={xAxisKey} {...xAxisProps} />
-          <YAxis {...yAxisProps} />
+        <RechartsLineChart data={chartData} margin={margin}>
+          {showGrid && <CartesianGrid strokeDasharray={gridDasharray} stroke={gridColor} />}
+          <XAxis dataKey={xAxisKey} tick={axisTickStyle} {...xAxisProps} />
+          <YAxis tick={axisTickStyle} {...yAxisProps} />
           <Tooltip content={<ChartTooltip formatter={tooltipFormatter} />} />
           {showLegend && <Legend />}
           {series.map((seriesConfig, idx) => (
-            <Line key={`line-${idx}`} {...seriesConfig} />
+            <Line
+              key={`line-${idx}`}
+              {...seriesConfig}
+              strokeWidth={seriesConfig.strokeWidth as number ?? lineStrokeWidth}
+              dot={seriesConfig.dot !== undefined ? seriesConfig.dot : defaultDot}
+              strokeDasharray={seriesConfig.strokeDasharray ?? lineDasharray}
+              isAnimationActive={animationDuration !== 0}
+              {...(animationDuration !== undefined && { animationDuration })}
+            />
           ))}
         </RechartsLineChart>
       </ResponsiveContainer>

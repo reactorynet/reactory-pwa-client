@@ -37,6 +37,11 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
       tokenPressure
       files { id filename mimetype size path }
       folders { name path }
+      sidePanelState {
+        items { id componentFqn title type props addedAt addedBy }
+        activeItemId
+        isOpen
+      }
     }
     ... on ReactorErrorResponse {
       code

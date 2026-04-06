@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import ChartTooltip from './ChartTooltip';
-import type { FunnelStageEntry, ChartDimensions } from './ChartTypes';
+import type { FunnelStageEntry, ChartDimensions, ChartStylingOptions } from './ChartTypes';
 
 /** Default fill colours applied to funnel stages in order */
 const DEFAULT_COLORS = [
@@ -52,6 +52,8 @@ export interface FunnelChartProps extends ChartDimensions {
    * Receives (value, stageName) and should return a display string.
    */
   tooltipFormatter?: (value: number | string, name: string) => string;
+  /** Optional visual styling overrides: label position, animation, container sx, etc. */
+  styling?: ChartStylingOptions;
 }
 
 /**
@@ -75,7 +77,16 @@ const FunnelChart: React.FC<FunnelChartProps> = ({
   height = 300,
   width = '100%',
   tooltipFormatter,
+  styling,
 }) => {
+  const {
+    containerSx,
+    titleVariant = 'h6',
+    descriptionVariant = 'subtitle2',
+    animationDuration,
+    funnelLabelPosition = 'right',
+  } = styling ?? {};
+
   // Attach colours to each stage entry so Recharts Cell props can be omitted
   const coloredData = data?.map((entry, idx) => ({
     ...entry,
@@ -83,23 +94,28 @@ const FunnelChart: React.FC<FunnelChartProps> = ({
   }));
 
   return (
-    <Box>
+    <Box sx={containerSx}>
       {title && (
-        <Typography variant="h6" sx={{ mb: 0.5 }}>
+        <Typography variant={titleVariant} sx={{ mb: 0.5 }}>
           {title}
         </Typography>
       )}
       {description && (
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
+        <Typography variant={descriptionVariant} color="text.secondary" sx={{ mb: 1.5 }}>
           {description}
         </Typography>
       )}
       <ResponsiveContainer width={width} height={height}>
         <RechartsFunnelChart>
           <Tooltip content={<ChartTooltip formatter={tooltipFormatter} />} />
-          <Funnel dataKey={dataKey} data={coloredData} isAnimationActive>
+          <Funnel
+            dataKey={dataKey}
+            data={coloredData}
+            isAnimationActive={animationDuration !== 0}
+            {...(animationDuration !== undefined && { animationDuration })}
+          >
             {showLabels && (
-              <LabelList position="right" fill="#000" stroke="none" dataKey={nameKey} />
+              <LabelList position={funnelLabelPosition} fill="#000" stroke="none" dataKey={nameKey} />
             )}
           </Funnel>
         </RechartsFunnelChart>

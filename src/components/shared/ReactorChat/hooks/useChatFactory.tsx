@@ -893,6 +893,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [modelOverride, setModelOverride] = React.useState<{ modelId?: string; providerId?: string } | null>(null);
   const [toolIterationLimitInfo, setToolIterationLimitInfo] = React.useState<{ iterationsCompleted: number; maxIterations: number; partialContent?: string } | null>(null);
 
+  // Pending tool calls detected on conversation load (for resume after navigation)
+  const [pendingToolCallResume, setPendingToolCallResume] = React.useState<{
+    toolCalls: any[];
+    assistantMessageId: string;
+  } | null>(null);
+
   // Network connectivity state
   const [networkStatus, setNetworkStatus] = React.useState<NetworkStatus>('idle');
   const [networkError, setNetworkError] = React.useState<string | null>(null);
@@ -2266,8 +2272,32 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             maxToolIterations: (result as any).maxToolIterations,
             files: (result as any).files ?? prevState.files,
             folders: (result as any).folders ?? prevState.folders,
+            sidePanelState: (result as any).sidePanelState ?? null,
             updated: new Date(),
           }));
+
+          // Detect pending tool calls that were not completed (e.g. user navigated away)
+          const loadedHistory = (result as any).history ?? [];
+          if (loadedHistory.length > 0) {
+            const lastAssistantWithTools = [...loadedHistory].reverse().find(
+              (msg: any) => msg.role === 'assistant' && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0
+            );
+            if (lastAssistantWithTools) {
+              const pending = lastAssistantWithTools.tool_calls.filter(
+                (tc: any) => tc && (tc.status === 'pending' || tc.status === 'running')
+              );
+              if (pending.length > 0) {
+                setPendingToolCallResume({
+                  toolCalls: pending,
+                  assistantMessageId: lastAssistantWithTools.id,
+                });
+              } else {
+                setPendingToolCallResume(null);
+              }
+            } else {
+              setPendingToolCallResume(null);
+            }
+          }
 
           // Restore model/provider override from the conversation if it differs from persona defaults
           const loadedModelId = (result as any).modelId;
@@ -3176,7 +3206,15 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       // graph.rateMessage(messageId, rating).catch((err) => {
       //   reactory.error(`Error rating message ${messageId} with rating ${rating}`, err);
       // });
-    }
+    },
+    // Pending tool call resumption
+    pendingToolCallResume,
+    resumePendingToolCalls: async () => {
+      if (!pendingToolCallResume || !chatState?.id) return;
+      setPendingToolCallResume(null);
+      await continueToolExecution();
+    },
+    dismissPendingToolCalls: () => setPendingToolCallResume(null),
   }
 };
 

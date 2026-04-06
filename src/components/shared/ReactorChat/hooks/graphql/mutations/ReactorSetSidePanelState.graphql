@@ -1,0 +1,10 @@
+mutation ReactorSetSidePanelState($chatSessionId: String!, $sidePanelState: ReactorSidePanelStateInput!) {
+  ReactorSetSidePanelState(chatSessionId: $chatSessionId, sidePanelState: $sidePanelState) {
+    id
+    sidePanelState {
+      items { id componentFqn title type props addedAt addedBy }
+      activeItemId
+      isOpen
+    }
+  }
+}

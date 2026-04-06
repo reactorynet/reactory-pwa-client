@@ -23,4 +23,5 @@ export type {
   FunnelStageEntry,
   ChartDataPoint,
   ChartDimensions,
+  ChartStylingOptions,
 } from './ChartTypes';
