@@ -216,6 +216,7 @@ export default (props) => {
     pendingToolCallResume = null as any,
     resumePendingToolCalls = (async () => {}) as () => Promise<void>,
     dismissPendingToolCalls = (() => {}) as () => void,
+    chatLoading = false,
   } = {
     ...chatFactory,
     isStreaming: false,
@@ -236,6 +237,34 @@ export default (props) => {
       setActiveSessionId(chatState.id);
     }
   }, [chatState?.id, activeSessionId]);
+
+  // ChatList message action callbacks — defined unconditionally to satisfy Rules of Hooks
+  const handleRetryMessage = React.useCallback((message: any) => {
+    if (message.content) {
+      sendMessage(message.content);
+    }
+  }, [sendMessage]);
+
+  const handleRateMessage = React.useCallback((message: any, rating: any) => {
+    reactory.log(`Message rated: ${rating}`, { message });
+  }, [reactory]);
+
+  const handleCopyMessage = React.useCallback((message: any) => {
+    if (message.content && navigator.clipboard) {
+      navigator.clipboard.writeText(message.content).then(() => {
+        reactory.log('Message copied to clipboard');
+      }).catch((err) => {
+        reactory.error('Failed to copy message', err);
+      });
+    }
+  }, [reactory]);
+
+  const handleDismissError = React.useCallback((message: any) => {
+    setChatState((prevState) => ({
+      ...prevState,
+      history: prevState.history.filter((msg) => msg.id !== message.id),
+    }));
+  }, [setChatState]);
 
   // Persist side panel state to server (debounced by useSidePanel)
   const handleSidePanelPersist = React.useCallback((state: SidePanelState) => {
@@ -335,7 +364,8 @@ export default (props) => {
     Chip,
     Switch,
     Checkbox,
-    Badge
+    Badge,
+    Skeleton,
   } = Material.MaterialCore;
 
   const {
@@ -1421,36 +1451,83 @@ export default (props) => {
                 minHeight: 0,
               }}
             >
-              <ChatList
-                reactory={reactory}
-                messages={messages}
-                personas={personas}
-                selectedPersona={selectedPersona}
-                chatState={chatState}
-                onRetryMessage={React.useCallback((message) => {
-                  if (message.content) {
-                    sendMessage(message.content);
-                  }
-                }, [sendMessage])}
-                onRateMessage={React.useCallback((message, rating) => {
-                  reactory.log(`Message rated: ${rating}`, { message });
-                }, [reactory])}
-                onCopyMessage={React.useCallback((message) => {
-                  if (message.content && navigator.clipboard) {
-                    navigator.clipboard.writeText(message.content).then(() => {
-                      reactory.log('Message copied to clipboard');
-                    }).catch((err) => {
-                      reactory.error('Failed to copy message', err);
-                    });
-                  }
-                }, [reactory])}
-                onDismissError={React.useCallback((message) => {
-                  setChatState((prevState) => ({
-                    ...prevState,
-                    history: prevState.history.filter((msg) => msg.id !== message.id),
-                  }));
-                }, [setChatState])}
-              />
+              {chatLoading ? (
+                /* Loading skeleton — replaces the message list while a chat
+                   session is being fetched so there is no stale-state flash. */
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    p: 2,
+                    height: '100%',
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  {/* Simulate incoming message bubbles from bottom up */}
+                  {[0.7, 0.45, 0.85, 0.55, 0.6].map((widthFraction, i) => (
+                    <Box
+                      key={i}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: i % 2 === 0 ? 'flex-start' : 'flex-end',
+                      }}
+                    >
+                      <Skeleton
+                        variant="rounded"
+                        width={`${Math.round(widthFraction * 100)}%`}
+                        height={i === 2 ? 72 : 44}
+                        sx={{
+                          borderRadius: i % 2 === 0 ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
+                          bgcolor: i % 2 === 0
+                            ? `${themeColors.primary}18`
+                            : `${themeColors.secondary}18`,
+                        }}
+                      />
+                    </Box>
+                  ))}
+                  {/* Pulsing "typing" indicator at the bottom */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.75,
+                      pl: 1,
+                    }}
+                  >
+                    {[0, 0.2, 0.4].map((delay) => (
+                      <Box
+                        key={delay}
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          bgcolor: themeColors.primary,
+                          opacity: 0.5,
+                          animation: 'reactorChatPulse 1.2s ease-in-out infinite',
+                          animationDelay: `${delay}s`,
+                          '@keyframes reactorChatPulse': {
+                            '0%, 100%': { transform: 'scale(0.6)', opacity: 0.3 },
+                            '50%': { transform: 'scale(1)', opacity: 0.8 },
+                          },
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              ) : (
+                <ChatList
+                  reactory={reactory}
+                  messages={messages}
+                  personas={personas}
+                  selectedPersona={selectedPersona}
+                  chatState={chatState}
+                  onRetryMessage={handleRetryMessage}
+                  onRateMessage={handleRateMessage}
+                  onCopyMessage={handleCopyMessage}
+                  onDismissError={handleDismissError}
+                />
+              )}
             </Paper>
 
             {/* Persona Selection Panel */}

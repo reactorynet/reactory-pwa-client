@@ -71,6 +71,10 @@ interface ChatFactoryHookResult {
   reconnectAttempt: number
   retryConnection: () => void
   dismissNetworkError: () => void
+  /** True only while a chat session is being loaded — distinct from `busy`
+   *  which is also set during AI responses. Use this to show a loading
+   *  skeleton that replaces the chat message list during navigation. */
+  chatLoading: boolean
 }
 
 interface ChatFactorHookOptions {
@@ -884,6 +888,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     existingSession?.chatState || getInitialChatState()
   );
   const [busy, setBusy] = React.useState<boolean>(false);
+  const [chatLoading, setChatLoading] = React.useState<boolean>(false);
   const [isInitialized, setIsInitialized] = React.useState<boolean>(
     existingSession?.isInitialized || false
   );
@@ -1345,12 +1350,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
       // Send a lightweight SSE-mode message to trigger the server to return
       // ReactorInitiateSSE (since the SSE transport no longer exists server-side).
+      // NOTE: do NOT set continueAfterTools — this is only a transport probe.
       graph.sendMessage({
         message: '',
         personaId: persona.id,
         chatSessionId: sessionId,
         streamingMode: 'SSE',
-        continueAfterTools: true,
       }).then((resp: any) => {
         if (resp?.__typename === 'ReactorInitiateSSE') {
           sse.disconnect(); // clean up any stale state
@@ -2245,6 +2250,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const loadChat = async (chatSessionId: string) => {
     sessionLogger?.info(`Loading chat session`, { chatSessionId }, 'useChatFactory');
     setBusy(true);
+    setChatLoading(true);
     try {
       const result = await graph.getConversation(chatSessionId);
       if (result) {
@@ -2256,13 +2262,30 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             index === self.findIndex((t: any) => t.function?.name === tool.function?.name)
           ) : [];
 
-          // Update chatState with the loaded chat session
+          // Update chatState with the loaded chat session.
+          // When the session has no user/assistant messages yet (new session),
+          // preserve the persona's default greeting so the UI shows it on load.
+          const serverHistory: UXChatMessage[] = (result as any).history ?? [];
+          const hasVisibleMessages = serverHistory.some(
+            (m: any) => m.role === 'user' || m.role === 'assistant'
+          );
+          const greetingEntry: UXChatMessage | null =
+            !hasVisibleMessages && persona?.defaultGreeting
+              ? {
+                  id: `${(result as any).id}-greeting`,
+                  role: 'assistant',
+                  content: persona.defaultGreeting,
+                  timestamp: new Date(),
+                  sessionId: null,
+                }
+              : null;
+
           setChatState((prevState) => ({
             ...prevState,
             // Only update specific properties, don't spread the entire result
             id: (result as any).id,
             started: (result as any).started,
-            history: (result as any).history ?? [],
+            history: greetingEntry ? [greetingEntry, ...serverHistory] : serverHistory,
             tools: uniqueTools,
             macros: (result as any).macros ?? [],
             vars: (result as any).vars ?? {},
@@ -2277,9 +2300,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           }));
 
           // Detect pending tool calls that were not completed (e.g. user navigated away)
-          const loadedHistory = (result as any).history ?? [];
-          if (loadedHistory.length > 0) {
-            const lastAssistantWithTools = [...loadedHistory].reverse().find(
+          if (serverHistory.length > 0) {
+            const lastAssistantWithTools = [...serverHistory].reverse().find(
               (msg: any) => msg.role === 'assistant' && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0
             );
             if (lastAssistantWithTools) {
@@ -2318,15 +2340,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           // Re-establish the SSE transport for streaming sessions.
           // The EventSource from the previous page visit is gone, so
           // the server has no active transport for this conversation.
-          // Sending a lightweight SSE-mode call triggers the server to
-          // return ReactorInitiateSSE without processing a real message.
+          // Sending an empty SSE-mode message triggers the server to return
+          // ReactorInitiateSSE without processing or calling the AI provider.
           if (protocol === 'sse' && !sse.connected) {
             graph.sendMessage({
               message: '',
               personaId: (result as any)?.personaId || persona.id,
               chatSessionId,
               streamingMode: 'SSE',
-              continueAfterTools: true,
+              // NOTE: do NOT set continueAfterTools here — this is only a
+              // transport reconnect probe that must not invoke the AI.
             }).then((resp: any) => {
               if (resp?.__typename === 'ReactorInitiateSSE') {
                 sse.disconnect();
@@ -2347,6 +2370,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onError(error);
     } finally {
       setBusy(false);
+      setChatLoading(false);
     }
   };
 
@@ -3172,6 +3196,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     reconnectAttempt: networkReconnectAttempt,
     retryConnection,
     dismissNetworkError,
+    chatLoading,
     // Debug helpers
     protectCriticalState,
     validateChatState,
@@ -3188,7 +3213,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         personaId: persona.id,
         chatSessionId: chatState.id,
         streamingMode: 'SSE',
-        continueAfterTools: true,
+        // NOTE: do NOT set continueAfterTools — this is only a transport probe.
       }).then((resp: any) => {
         if (resp?.__typename === 'ReactorInitiateSSE') {
           sse.connect({

@@ -103,7 +103,7 @@ const ComponentMacro: Macro<UXChatMessage> = (args, chatState, reactory) => {
       const tags = Array.isArray(entry.tags) && entry.tags.length > 0 ? entry.tags.join(', ') : '—';
       const type = entry.componentType || 'component';
       return `| \`${key}\` | ${type} | ${tags} |`;
-    });
+    }).sort((a, b) => a.localeCompare(b));
 
     const content = [
       `**Search results for "${query}"** (${matches.length} match${matches.length !== 1 ? 'es' : ''}):`,

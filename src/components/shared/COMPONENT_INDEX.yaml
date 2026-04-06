@@ -75,6 +75,72 @@ categories:
       description: "Wrapper component for table child elements"
       type: "component"
 
+  # Data Visualisation — Charts
+  visualization:
+    - name: "BarChart"
+      path: "./Charts/BarChart.tsx"
+      description: "Responsive bar chart built on Recharts. Supports grouped and stacked bars."
+      type: "component"
+      registration: "core.BarChart@1.0.0"
+      dependencies: ["recharts"]
+
+    - name: "LineChart"
+      path: "./Charts/LineChart.tsx"
+      description: "Responsive line chart built on Recharts. Supports multiple series."
+      type: "component"
+      registration: "core.LineChart@1.0.0"
+      dependencies: ["recharts"]
+
+    - name: "PieChart"
+      path: "./Charts/PieChart.tsx"
+      description: "Responsive pie chart built on Recharts."
+      type: "component"
+      registration: "core.PieChart@1.0.0"
+      dependencies: ["recharts"]
+
+    - name: "ComposedChart"
+      path: "./Charts/ComposedChart.tsx"
+      description: "Composed chart combining bars, lines, and areas via Recharts."
+      type: "component"
+      registration: "core.ComposedChart@1.0.0"
+      dependencies: ["recharts"]
+
+    - name: "FunnelChart"
+      path: "./Charts/FunnelChart.tsx"
+      description: "Funnel/conversion chart built on Recharts."
+      type: "component"
+      registration: "core.FunnelChart@1.0.0"
+      dependencies: ["recharts"]
+
+    - name: "D3Chart"
+      path: "./D3Chart/"
+      description: >
+        Comprehensive D3.js chart component supporting nine built-in chart types:
+        bar, line, area, pie, donut, scatter, histogram, tree (hierarchical layout),
+        and force-directed graph. Renders responsively via ResizeObserver.
+        Supports multiple colour scheme presets, per-type axes, grid, hover tooltips,
+        an optional legend, and a customRenderer escape hatch for fully bespoke D3 code.
+        Pass data as a flat D3DataPoint[] for cartesian/pie charts, a D3HierarchyNode
+        for tree, or D3ForceGraphData for force graphs.
+      type: "component"
+      registration: "core.D3Chart@1.0.0"
+      dependencies: ["d3"]
+      exports:
+        - "D3Chart"
+        - "D3ChartComponentDefinition"
+        - "D3ChartType"
+        - "D3ChartContext"
+        - "D3CustomRenderer"
+        - "D3DataPoint"
+        - "D3HierarchyNode"
+        - "D3ForceNode"
+        - "D3ForceLink"
+        - "D3ForceGraphData"
+        - "D3ColorScheme"
+        - "D3Margin"
+        - "D3AxisConfig"
+        - "D3StylingOptions"
+
   # Forms & Input
   forms:
     - name: "FormList"
