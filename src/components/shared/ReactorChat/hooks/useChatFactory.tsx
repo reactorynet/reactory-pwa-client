@@ -75,6 +75,12 @@ interface ChatFactoryHookResult {
    *  which is also set during AI responses. Use this to show a loading
    *  skeleton that replaces the chat message list during navigation. */
   chatLoading: boolean
+  /** Report client-side tool execution results to the server and optionally
+   *  continue the AI processing loop. */
+  completeClientToolCalls: (
+    results: Array<{ toolCallId: string; toolName: string; result?: any; isError?: boolean; error?: string }>,
+    continueProcessing: boolean,
+  ) => Promise<UXChatMessage | null>
 }
 
 interface ChatFactorHookOptions {
@@ -260,6 +266,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   // as a batch once the completion event arrives.
   const pendingToolCallsRef = React.useRef<any[]>([]);
 
+  // Ref to always access the latest completeClientToolCalls — assigned after
+  // it's defined. This avoids stale closures in useMacros' executeMacro,
+  // which is bound before completeClientToolCalls is created.
+  const completeClientToolCallsRef = React.useRef<((
+    results: Array<{ toolCallId: string; toolName: string; result?: any; isError?: boolean; error?: string }>,
+    continueProcessing: boolean,
+  ) => Promise<any>) | null>(null);
+
   const onSSEMessageReceived = async (message: CompletionStreamingEvent) => {
     if (message.type === StreamingEventType.COMPLETE) {
       sessionLogger?.info('SSE stream complete', { contentLength: message.data?.content?.length || 0, finishReason: message.data?.finishReason }, 'useSSE');
@@ -387,13 +401,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         if (clientOnlyTools.length > 0) {
           console.log('🔧 [useChatFactory] AUTO+SSE: Executing', clientOnlyTools.length, 'client-side tool(s) and reporting results');
 
-          const clientResults: Array<{
-            toolCallId: string;
-            toolName: string;
-            result?: any;
-            isError?: boolean;
-            error?: string;
-          }> = [];
+          let hasClientTools = false;
 
           for (const toolCall of clientOnlyTools) {
             const name = toolCall.function?.name;
@@ -407,19 +415,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
             if (macro) {
               try {
+                // executeMacro now persists the result via onClientToolComplete
                 const result = await executeMacro(macro, args, 'auto', toolCall.id);
-                // Extract meaningful content from the macro result.
-                // Macros return { __typename, content, ... } — use .content.
-                // If the macro returned null (e.g. side effect with no response),
-                // produce a descriptive fallback so the AI knows what happened.
                 const resultContent = result?.content
                   || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
                   || `Client tool "${name}" executed successfully (no content returned).`;
-                clientResults.push({
-                  toolCallId: toolCall.id,
-                  toolName: name,
-                  result: resultContent,
-                });
+                hasClientTools = true;
 
                 // Update UI: mark tool as success
                 setChatState((prevState) => {
@@ -448,29 +449,34 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                   return { ...prevState, history, updated: new Date() };
                 });
               } catch (error: any) {
-                clientResults.push({
+                hasClientTools = true;
+                // executeMacro's catch block also persists errors via onClientToolComplete
+              }
+            } else {
+              // Macro not found — persist the error directly since executeMacro wasn't called
+              hasClientTools = true;
+              try {
+                await completeClientToolCalls([{
                   toolCallId: toolCall.id,
                   toolName: name,
                   isError: true,
-                  error: error.message,
-                });
+                  error: `Client macro not found: ${name}`,
+                }], false);
+              } catch (err) {
+                console.error('[useChatFactory] Error persisting macro-not-found error:', err);
               }
-            } else {
-              clientResults.push({
-                toolCallId: toolCall.id,
-                toolName: name,
-                isError: true,
-                error: `Client macro not found: ${name}`,
-              });
             }
           }
 
-          // Report results to server and continue AI processing
-          if (clientResults.length > 0) {
+          // All client tool results are already persisted by executeMacro via
+          // onClientToolComplete. Now trigger AI continuation with an empty
+          // results array so the server picks up the persisted results and
+          // continues the conversation without duplicating tool result entries.
+          if (hasClientTools) {
             try {
-              await completeClientToolCalls(clientResults, true);
+              await completeClientToolCalls([], true);
             } catch (error) {
-              console.error('[useChatFactory] Error reporting client tool results:', error);
+              console.error('[useChatFactory] Error triggering AI continuation after client tools:', error);
             }
           }
         }
@@ -940,7 +946,13 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     onMacroCallError: (error, macro, state: ChatState) => {
       reactory.error(`ChatFactory: Error executing macro ${error}`);
       onError(error);
-    }
+    },
+    onClientToolComplete: async (results, continueProcessing) => {
+      if (completeClientToolCallsRef.current) {
+        return completeClientToolCallsRef.current(results, continueProcessing);
+      }
+      return null;
+    },
   });
 
   // Ref to always access the latest processToolCallsMemoized — assigned after it's defined.
@@ -2525,6 +2537,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   }, [chatState?.id, persona?.id, protocol, reactory]);
 
+  // Keep the ref in sync so useMacros' executeMacro always calls the latest version.
+  completeClientToolCallsRef.current = completeClientToolCalls;
+
   /**
    * Remove the approval component from a message.
    * When `targetMessageId` is provided the removal is deterministic;
@@ -3046,59 +3061,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           updated: new Date(),
         }));
 
-        // Identify client-side tool results that need proper tool_call_id persistence.
-        // Server-side macros are already persisted by executeMacro on the server,
-        // but client-side macros only ran locally — use completeClientToolCalls
-        // to persist them with their tool_call_id so the tool call loop is closed.
-        const clientSideResults: Array<{ toolCallId: string; toolName: string; result?: any; isError?: boolean; error?: string }> = [];
-        const serverSideResults: typeof toolResults = [];
+        // Client-side tool results are now persisted by executeMacro in
+        // useMacros.tsx via the onClientToolComplete callback, so we no longer
+        // need a separate completeClientToolCalls call here.
 
-        for (const tr of toolResults) {
-          const toolName = tr.name || '';
-          const macro = findMacroByAlias(toolName)
-            || chatState.macros?.find((m: any) => m.name === toolName || m.alias === toolName);
-          if (macro?.runat === 'client' || (!macro?.runat && macro)) {
-            // Extract meaningful content — avoid passing the raw tool envelope object
-            const trContent = (typeof tr.content === 'string' && tr.content.length > 0)
-              ? tr.content
-              : (tr.content != null ? JSON.stringify(tr.content) : `Client tool "${toolName}" executed successfully.`);
-            clientSideResults.push({
-              toolCallId: tr.id,
-              toolName,
-              result: trContent,
-            });
-          } else {
-            serverSideResults.push(tr);
-          }
-        }
-        for (const te of toolErrors) {
-          if (te.id) {
-            const toolName = te.name || '';
-            const macro = findMacroByAlias(toolName)
-              || chatState.macros?.find((m: any) => m.name === toolName || m.alias === toolName);
-            if (macro?.runat === 'client' || (!macro?.runat && macro)) {
-              clientSideResults.push({
-                toolCallId: te.id,
-                toolName,
-                isError: true,
-                error: te.error || te.name,
-              });
-            }
-          }
-        }
-
-        // Persist client-side tool results via completeClientToolCalls so each
-        // result is stored with its tool_call_id (closing the tool call loop).
-        if (clientSideResults.length > 0) {
-          try {
-            // Don't continue processing yet — we handle continuation below
-            await completeClientToolCalls(clientSideResults, false);
-          } catch (err) {
-            console.error('[useChatFactory] Error persisting client tool results:', err);
-          }
-        }
-
-        // Now continue the AI processing loop with consolidated results
+        // Continue the AI processing loop with consolidated results
         const consolidatedResults = consolidateToolResults(toolResults, toolErrors);
         const aiResponse = await sendToolResultsToAI(consolidatedResults, toolResults, toolErrors, thinkingPlaceholderId);
 
@@ -3146,7 +3113,6 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     updateChatStateWithToolResults,
     consolidateToolResults,
     sendToolResultsToAI,
-    completeClientToolCalls,
     findMacroByAlias,
   ]);
 
@@ -3240,6 +3206,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       await continueToolExecution();
     },
     dismissPendingToolCalls: () => setPendingToolCallResume(null),
+    completeClientToolCalls,
   }
 };
 

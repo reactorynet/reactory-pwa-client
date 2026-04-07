@@ -1,5 +1,11 @@
 import { Macro, MacroComponentDefinition, SidePanelAction, UXChatMessage } from "../../types";
 
+/** Parse a value from JSON string if needed (Gemini sends freeform objects as strings). */
+const tryParseJSON = (val: unknown): unknown => {
+  if (typeof val !== 'string') return val;
+  try { return JSON.parse(val); } catch { return val; }
+};
+
 // @ts-ignore
 const D3Macro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
   const parsed = (args && typeof args === 'object' && !Array.isArray(args)) ? args as Record<string, any> : {};
@@ -10,7 +16,15 @@ const D3Macro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
 
   if (!chatState.sidePanel) {
     reactory.error('D3Macro: Side panel actions not available on chatState');
-    return null;
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: 'Cannot manage D3 visualizations: side panel is not available.',
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
   }
 
   // ── REMOVE ──
@@ -51,12 +65,13 @@ const D3Macro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
   // Normalise force-graph data: legacy { data: [...nodes], links: [...] } shape
   // → new { nodes, links } shape expected by D3ForceGraphData
   let chartData: unknown;
+  const parsedData = tryParseJSON(parsed.data) as any;
   if (chartType === 'force') {
-    const nodesInput = parsed.data?.nodes ?? parsed.data ?? [];
-    const linksInput = parsed.data?.links ?? parsed.links ?? [];
+    const nodesInput = parsedData?.nodes ?? parsedData ?? [];
+    const linksInput = parsedData?.links ?? (tryParseJSON(parsed.links) as any) ?? [];
     chartData = { nodes: nodesInput, links: linksInput };
   } else {
-    chartData = parsed.data ?? [];
+    chartData = parsedData ?? [];
   }
 
   const vizProps: Record<string, any> = {
@@ -84,9 +99,9 @@ const D3Macro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
     // Colour scheme
     ...(parsed.colorScheme !== undefined ? { colorScheme: parsed.colorScheme }   : {}),
     // Margin override
-    ...(parsed.margin !== undefined ? { margin: parsed.margin } : {}),
+    ...(parsed.margin !== undefined ? { margin: tryParseJSON(parsed.margin) } : {}),
     // Styling overrides
-    ...(parsed.styling !== undefined ? { styling: parsed.styling } : {}),
+    ...(parsed.styling !== undefined ? { styling: tryParseJSON(parsed.styling) } : {}),
   };
 
   // ── UPDATE ──

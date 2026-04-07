@@ -529,6 +529,18 @@ export interface MacrosHookProps {
   chatState: ChatState
   onMacroCallResult: (result: any, state: ChatState) => void
   onMacroCallError: (error: Error, macro: MacroComponentDefinition<unknown>, state: ChatState) => void
+  /**
+   * Called after a client-side macro executes when it was invoked as part of a
+   * tool call (i.e. has a callId). This allows the orchestration layer to
+   * persist the tool result on the server and close the tool call loop.
+   */
+  onClientToolComplete?: (results: Array<{
+    toolCallId: string;
+    toolName: string;
+    result?: any;
+    isError?: boolean;
+    error?: string;
+  }>, continueProcessing: boolean) => Promise<any>
   sessionLogger?: SessionLogger
 }
 

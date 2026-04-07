@@ -6,6 +6,12 @@ import type {
   ChartStylingOptions,
 } from '../../../Charts/ChartTypes';
 
+/** Parse a value from JSON string if needed (Gemini sends freeform objects as strings). */
+const tryParseJSON = (val: unknown): unknown => {
+  if (typeof val !== 'string') return val;
+  try { return JSON.parse(val); } catch { return val; }
+};
+
 const CHART_COMPONENT_MAP: Record<string, string> = {
   'pie':      'core.PieChart@1.0.0',
   'bar':      'core.BarChart@1.0.0',
@@ -179,7 +185,15 @@ const ChartMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
 
   if (!chatState.sidePanel) {
     reactory.error('ChartMacro: Side panel actions not available on chatState');
-    return null;
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: 'Cannot manage charts: side panel is not available.',
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
   }
 
   // ── REMOVE ──
@@ -212,9 +226,9 @@ const ChartMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
   const componentFqn = CHART_COMPONENT_MAP[chartType] || CHART_COMPONENT_MAP['pie'];
   const chartProps = buildChartProps(
     chartType,
-    parsed.data || [],
+    (tryParseJSON(parsed.data) || []) as any[],
     title,
-    parsed.options || {},
+    (tryParseJSON(parsed.options) || {}) as Record<string, any>,
   );
 
   // ── UPDATE ──

@@ -1,1 +1,1 @@
-export { ReactoryForm } from './ReactoryForm';
+export { ReactoryFormEnhanced as ReactoryForm } from './ReactoryFormEnhanced';

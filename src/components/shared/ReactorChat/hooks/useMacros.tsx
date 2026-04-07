@@ -81,11 +81,12 @@ export interface ExecuteMacroResponse {
 
 const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
   
-  const { 
+  const {
     reactory,
     chatState,
     onMacroCallResult,
     onMacroCallError,
+    onClientToolComplete,
     sessionLogger,
   } = props;
   
@@ -306,7 +307,7 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
         }
         sessionLogger?.info(`Macro executed successfully: ${macroKey}`, { hasResult: !!result }, 'useMacros');
         if (onMacroCallResult) {
-          // first check if the result has a valid tool result structure and 
+          // first check if the result has a valid tool result structure and
           // that it does not have null tool call results which indicates an error in the macro execution
           if (result && typeof result === 'object' && 'tool_results' in result && (!result.tool_calls || !result.tool_calls.some((call: ReactorToolCall) => call.status === 'error'))) {
             sessionLogger?.debug(`Macro execution result for ${macroKey} contains tool results`, { toolResultCount: result.tool_results.length }, 'useMacros');
@@ -315,11 +316,45 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
         } else {
           reactory.log(`Macro executed: ${macro.name}`, result);
         }
+
+        // Close the tool call loop for client-side macros that were invoked
+        // as part of a tool call (callId present). This persists the result
+        // on the server so the conversation history stays consistent and the
+        // AI provider can see the tool output.
+        const isClientSide = macro.runat === 'client' || macro.runat === null || macro.runat === undefined;
+        if (isClientSide && callId && onClientToolComplete) {
+          const toolName = macro.alias || macro.name;
+          const resultContent = result?.content
+            || (result != null ? (typeof result === 'string' ? result : JSON.stringify(result)) : null)
+            || `Client tool "${toolName}" executed successfully (no content returned).`;
+          sessionLogger?.info(`Completing client tool call loop: ${toolName} (callId: ${callId})`, {}, 'useMacros');
+          onClientToolComplete([{
+            toolCallId: callId,
+            toolName,
+            result: resultContent,
+          }], false).catch((err) => {
+            sessionLogger?.error(`Failed to complete client tool call: ${err?.message || String(err)}`, { callId, toolName }, 'useMacros');
+          });
+        }
+
         return result;
       } catch (error) {
         sessionLogger?.error(`Macro execution failed: ${macroKey}`, { error: error?.message || String(error) }, 'useMacros');
         reactory.error(`Error executing macro: ${macro.name}`, error);
         if (onMacroCallError) onMacroCallError(error, macro, chatState);
+
+        // Report client-side tool errors to the server as well
+        const isClientSide = macro.runat === 'client' || macro.runat === null || macro.runat === undefined;
+        if (isClientSide && callId && onClientToolComplete) {
+          const toolName = macro.alias || macro.name;
+          onClientToolComplete([{
+            toolCallId: callId,
+            toolName,
+            isError: true,
+            error: error?.message || String(error),
+          }], false).catch(() => {});
+        }
+
         return null;
       }
     } else {
@@ -330,7 +365,7 @@ const useMacros: MacrosHook = (props: MacrosHookProps): MacrosHookResults => {
       return null;
     }
   }
-  , [onMacroCallResult, onMacroCallError, chatState?.persona?.id, chatState?.id]);
+  , [onMacroCallResult, onMacroCallError, onClientToolComplete, chatState?.persona?.id, chatState?.id]);
   
   // use effect to monitor changes on the chatState for macros
   useEffect(() => {

@@ -1,12 +1,18 @@
 import { Macro, MacroComponentDefinition, SidePanelAction, UXChatMessage } from "../../types";
 
+/** Parse a value from JSON string if needed (Gemini sends freeform objects as strings). */
+const tryParseJSON = (val: unknown): unknown => {
+  if (typeof val !== 'string') return val;
+  try { return JSON.parse(val); } catch { return val; }
+};
+
 // @ts-ignore
 const ComponentMacro: Macro<UXChatMessage> = (args, chatState, reactory) => {
   const parsed = (args && typeof args === 'object' && !Array.isArray(args)) ? args as Record<string, any> : {};
 
   const action: SidePanelAction = parsed.action || 'add';
   const fqn: string | undefined = parsed.fqn || (Array.isArray(args) ? args[0] : undefined);
-  const props: Record<string, any> = parsed.props || (Array.isArray(args) ? args[1] : {}) || {};
+  const props: Record<string, any> = (tryParseJSON(parsed.props) || (Array.isArray(args) ? args[1] : {}) || {}) as Record<string, any>;
   const referenceId: string | undefined = parsed.referenceId;
   const title: string | undefined = parsed.title;
 
@@ -187,7 +193,15 @@ const ComponentMacro: Macro<UXChatMessage> = (args, chatState, reactory) => {
 
   if (!chatState.sidePanel) {
     reactory.error('ComponentMacro: Side panel actions not available on chatState');
-    return null;
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: 'Cannot manage components: side panel is not available.',
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
   }
 
   // ── REMOVE ──
@@ -247,23 +261,55 @@ const ComponentMacro: Macro<UXChatMessage> = (args, chatState, reactory) => {
   // ── ADD (default) ──
   if (!fqn) {
     reactory.error('ComponentMacro: No component fqn provided', args);
-    return null;
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: 'Cannot add component: `fqn` (fully-qualified name) is required.',
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
   }
 
   if (typeof fqn !== 'string') {
     reactory.error('ComponentMacro: Component fqn must be a string', args);
-    return null;
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: `Cannot add component: \`fqn\` must be a string, received ${typeof fqn}.`,
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
   }
 
   const component = reactory.getComponent(fqn);
   if (!component) {
     reactory.error('ComponentMacro: Component not found', args);
-    return null;
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: `Cannot add component: \`${fqn}\` is not registered. Use the "list" or "search" action to find available components.`,
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
   }
 
   if (typeof component !== 'function') {
     reactory.error('ComponentMacro: Component is not a valid React component', args);
-    return null;
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: `Cannot add component: \`${fqn}\` is registered but is not a valid React component.`,
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
   }
 
   const itemId = referenceId || reactory.utils.uuid();

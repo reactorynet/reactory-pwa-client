@@ -1,5 +1,19 @@
 import { Macro, MacroComponentDefinition, SidePanelAction, UXChatMessage } from "../../types";
 
+/**
+ * Attempts to parse a value as JSON if it's a string.
+ * Returns the parsed object on success, or the original value otherwise.
+ * This handles the case where Gemini returns JSON strings for freeform object parameters.
+ */
+const tryParseJSON = (val: unknown): unknown => {
+  if (typeof val !== 'string') return val;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return val;
+  }
+};
+
 const DEFAULT_FORM: Partial<Reactory.Forms.IReactoryForm> = {
   name: "UserFeedback",
   nameSpace: "reactor-forms",
@@ -132,11 +146,11 @@ const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
 
   // ── REGISTER ──
   if (action === 'register') {
-    const formDef: Partial<Reactory.Forms.IReactoryForm> = parsed.formDefinition ?? {};
+    const formDef: Partial<Reactory.Forms.IReactoryForm> = (tryParseJSON(parsed.formDefinition) as Partial<Reactory.Forms.IReactoryForm>) ?? {};
     if (parsed.title) formDef.title = parsed.title;
     if (parsed.description) formDef.description = parsed.description;
-    if (parsed.schema) formDef.schema = parsed.schema;
-    if (parsed.uiSchema) formDef.uiSchema = parsed.uiSchema;
+    if (parsed.schema) formDef.schema = tryParseJSON(parsed.schema) as Reactory.Schema.ISchema;
+    if (parsed.uiSchema) formDef.uiSchema = tryParseJSON(parsed.uiSchema) as Reactory.Schema.IUISchema;
 
     if (!formDef.nameSpace) formDef.nameSpace = 'reactor-forms';
     if (!formDef.name) formDef.name = 'DynamicForm';
@@ -178,7 +192,15 @@ const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
 
   if (!chatState.sidePanel) {
     reactory.error('FormMacro: Side panel actions not available on chatState');
-    return null;
+    return {
+      __typename: "ReactorChatMessage",
+      role: "assistant",
+      content: 'Cannot manage forms: side panel is not available.',
+      id: reactory.utils.uuid(),
+      rating: 0,
+      timestamp: new Date(),
+      tool_calls: [],
+    };
   }
 
   // ── REMOVE ──
@@ -207,12 +229,12 @@ const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
   }
 
   // Build form definition for add/update
-  let formDefinition: Partial<Reactory.Forms.IReactoryForm> = parsed.formDefinition ?? { ...DEFAULT_FORM };
+  let formDefinition: Partial<Reactory.Forms.IReactoryForm> = (tryParseJSON(parsed.formDefinition) as Partial<Reactory.Forms.IReactoryForm>) ?? { ...DEFAULT_FORM };
 
   if (parsed.title) formDefinition.title = parsed.title;
   if (parsed.description) formDefinition.description = parsed.description;
-  if (parsed.schema) formDefinition.schema = parsed.schema;
-  if (parsed.uiSchema) formDefinition.uiSchema = parsed.uiSchema;
+  if (parsed.schema) formDefinition.schema = tryParseJSON(parsed.schema) as Reactory.Schema.ISchema;
+  if (parsed.uiSchema) formDefinition.uiSchema = tryParseJSON(parsed.uiSchema) as Reactory.Schema.IUISchema;
 
   if (!formDefinition.nameSpace) formDefinition.nameSpace = "reactor-forms";
   if (!formDefinition.name) formDefinition.name = "DynamicForm";
@@ -255,7 +277,7 @@ const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
     chatState.sidePanel.updateItem(referenceId, {
       props: {
         formDef: formDefinition,
-        formData: parsed.formData ?? formDefinition.defaultFormValue ?? undefined,
+        formData: tryParseJSON(parsed.formData) ?? formDefinition.defaultFormValue ?? undefined,
         onSubmit,
         reactory,
       },
@@ -281,7 +303,7 @@ const FormMacro: Macro<UXChatMessage> = async (args, chatState, reactory) => {
     componentFqn: 'core.ReactoryForm',
     props: {
       formDef: formDefinition,
-      formData: parsed.formData ?? formDefinition.defaultFormValue ?? undefined,
+      formData: tryParseJSON(parsed.formData) ?? formDefinition.defaultFormValue ?? undefined,
       onSubmit,
       reactory,
     },

@@ -332,7 +332,8 @@ export default (props) => {
     onMacroCallResult: (result) => {
     },
     onMacroCallError: (error) => {
-    }
+    },
+    onClientToolComplete: chatFactory.completeClientToolCalls,
   })
 
   // Voice / speech services
