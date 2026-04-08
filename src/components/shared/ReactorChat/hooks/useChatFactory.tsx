@@ -332,7 +332,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           if (hasToolCalls && incomingContent) {
             console.log('📩 [useChatFactory] COMPLETE: appending new message (existing has tool_calls)');
             history.push({
-              id: reactory.utilsw.uuid(),
+              id: reactory.utils.uuid(),
               role: 'assistant',
               content: incomingContent,
               thinking: finalThinking,
