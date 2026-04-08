@@ -435,7 +435,8 @@ export default (props) => {
       if (msg.role === 'assistant' &&
         (!msg.content || (typeof msg.content === 'string' && msg.content.trim().length === 0)) &&
         (!msg.tool_calls || msg.tool_calls.length === 0) &&
-        (!msg.thinking || msg.thinking.trim().length === 0)) {
+        (!msg.thinking || msg.thinking.trim().length === 0) &&
+        (!msg.images || msg.images.length === 0)) {
         return false;
       }
 
