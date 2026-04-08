@@ -1116,6 +1116,13 @@ export default (props) => {
     return model?.supportedMediaTypes?.includes('image') ?? false;
   }, [modelOverride?.modelId, chatState?.modelId, selectedPersona?.modelId, getModelById]);
 
+  const supportsImageGeneration = useMemo(() => {
+    const activeModelId = modelOverride?.modelId || chatState?.modelId || selectedPersona?.modelId;
+    if (!activeModelId) return false;
+    const model = getModelById(activeModelId);
+    return model?.capabilities?.includes('image-generation') ?? false;
+  }, [modelOverride?.modelId, chatState?.modelId, selectedPersona?.modelId, getModelById]);
+
   const handleSendMessage = useCallback((message: string, images?: string[]) => {
     sendMessage(message, chatState?.id, images);
     setPendingImages([]);
@@ -1824,7 +1831,9 @@ export default (props) => {
       <ChatInput
         onSendMessage={handleSendMessage}
         disabled={busy}
-        placeholder="Ask me anything..."
+        placeholder={supportsImageGeneration
+          ? "Ask me anything... or describe an image to create"
+          : "Ask me anything..."}
         onRecordingToggle={handleRecordingPanelToggle}
         recordingPanelOpen={recordingPanelOpen}
         voiceModeActive={speech.state.voiceModeActive}

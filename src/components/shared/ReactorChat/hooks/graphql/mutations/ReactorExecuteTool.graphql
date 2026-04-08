@@ -8,6 +8,7 @@ mutation ReactorExecuteTool($tool: String!, $personaId: String!, $chatSessionId:
       content
       thinking
       timestamp
+      images
       tool_calls { id type function { name arguments } status }
       tool_results { id name content timestamp }
       tool_errors { id name error timestamp }

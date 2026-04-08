@@ -332,10 +332,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           if (hasToolCalls && incomingContent) {
             console.log('📩 [useChatFactory] COMPLETE: appending new message (existing has tool_calls)');
             history.push({
-              id: reactory.utils.uuid(),
+              id: reactory.utilsw.uuid(),
               role: 'assistant',
               content: incomingContent,
               thinking: finalThinking,
+              images: message.data.images || undefined,
               timestamp: new Date(),
               sessionId: prevState.id,
             } as any);
@@ -356,6 +357,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
               ...history[lastIndex],
               ...(shouldUpdateContent ? { content: incomingContent } : {}),
               thinking: finalThinking,
+              images: message.data.images || history[lastIndex].images || undefined,
               timestamp: new Date(),
             };
           }
