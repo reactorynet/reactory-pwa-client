@@ -1,5 +1,5 @@
 /**
- * Phase 3.4: Enhanced ReactoryForm Component
+ * Phase 3.4: Animated ReactoryForm Component
  * Integrates ModernFormField and LoadingSkeleton components with the existing ReactoryForm
  */
 
@@ -40,7 +40,7 @@ import { formAnimations, animationUtils } from '../animations/formAnimations';
 // TYPES
 // ============================================================================
 
-export interface EnhancedReactoryFormProps extends Reactory.Client.IReactoryFormProps<unknown> {
+export interface AnimatedReactoryFormProps extends Reactory.Client.IReactoryFormProps<unknown> {
   /** Whether to enable enhanced features */
   enableEnhanced?: boolean;
   /** Whether to show loading skeleton */
@@ -105,7 +105,7 @@ export interface EnhancedReactoryFormProps extends Reactory.Client.IReactoryForm
 // COMPONENT
 // ============================================================================
 
-export const EnhancedReactoryForm: React.FC<EnhancedReactoryFormProps> = ({
+export const AnimatedReactoryForm: React.FC<AnimatedReactoryFormProps> = ({
   enableEnhanced = true,
   showLoadingSkeleton = true,
   useModernFields = true,
@@ -235,21 +235,21 @@ export const EnhancedReactoryForm: React.FC<EnhancedReactoryFormProps> = ({
   // ============================================================================
 
   const handleFormError = useCallback((err: any) => {
-    debug('EnhancedReactoryForm: Handling form error', err);
+    debug('AnimatedReactoryForm: Handling form error', err);
     setHasError(true);
     setHasSuccess(false);
     setHasWarning(false);
   }, [debug]);
 
   const handleFormSuccess = useCallback((data: any) => {
-    debug('EnhancedReactoryForm: Handling form success', data);
+    debug('AnimatedReactoryForm: Handling form success', data);
     setHasSuccess(true);
     setHasError(false);
     setHasWarning(false);
   }, [debug]);
 
   const handleFormWarning = useCallback((warning: any) => {
-    debug('EnhancedReactoryForm: Handling form warning', warning);
+    debug('AnimatedReactoryForm: Handling form warning', warning);
     setHasWarning(true);
     setHasError(false);
     setHasSuccess(false);
@@ -427,4 +427,4 @@ export const EnhancedReactoryForm: React.FC<EnhancedReactoryFormProps> = ({
 // EXPORTS
 // ============================================================================
 
-export default EnhancedReactoryForm; 
+export default AnimatedReactoryForm; 

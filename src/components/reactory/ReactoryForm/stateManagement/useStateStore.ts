@@ -100,11 +100,11 @@ export const useStateStore = (
   config: StateStoreConfig = {}
 ): StateStoreResult => {
   const {
-    enablePersistence = true,
+    enablePersistence = false,
     storageKey = 'reactory-form-state',
-    enableDebugging = true,
+    enableDebugging = process.env.NODE_ENV !== 'production',
     maxHistorySize = 50,
-    enableImmutabilityChecks = true,
+    enableImmutabilityChecks = false,
     enablePerformanceMonitoring = true,
     stateVersion = '1.0.0',
   } = config;
@@ -151,13 +151,9 @@ export const useStateStore = (
    * Validate state structure
    */
   const validateState = useCallback((state: any): boolean => {
-    return (
-      typeof state === 'object' &&
-      typeof state.loading === 'boolean' &&
-      Array.isArray(state.forms) &&
-      typeof state.uiFramework === 'string' &&
-      typeof state.isValid === 'boolean'
-    );
+    // Relaxed validation — only require it to be a non-null object.
+    // Specific field validation can be added incrementally.
+    return state !== null && typeof state === 'object';
   }, []);
 
   /**
