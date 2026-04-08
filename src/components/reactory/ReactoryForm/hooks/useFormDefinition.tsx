@@ -11,6 +11,17 @@ import { useDataManager } from "./useDataManager";
 import { useSchema } from "./useSchema";
 import { useUISchema } from "./useUISchema";
 import { useFormLoadingState } from "./useFormLoadingState";
+import { useFormContext } from "./useContext";
+import { useStateStore } from "../stateManagement/useStateStore";
+import { usePerformanceMonitor } from "../performanceOptimization/usePerformanceMonitor";
+import { ReactoryFormState } from "../types-v2";
+
+// Feature flags for upgrade phases — stable booleans, no hooks.
+// useSimpleFeatureFlag causes infinite re-renders due to unstable
+// context reference in its useEffect dependency array.
+// Enable via environment variables when ready to test.
+const ENABLE_STATE_V2 = process.env.REACT_APP_REACTORY_FORM_STATE_V2 === 'true';
+const ENABLE_PERF_V2 = process.env.REACT_APP_REACTORY_FORM_PERFORMANCE_V2 === 'true';
 
 const DEFAULT_DEPENDENCIES = [
   "core.Loading",
@@ -53,6 +64,57 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
   );
   const [v, setVersion] = useState(0);
 
+  // Feature-flagged centralized state management (Phase 1.3)
+  const enableStateV2 = ENABLE_STATE_V2;
+  const stateStore = useStateStore(
+    {
+      loading: true,
+      forms_loaded: false,
+      forms: [],
+      uiFramework: 'material',
+      uiSchemaKey: uiSchemaKey || '',
+      formDef: formDef || ReactoryDefaultForm,
+      dirty: false,
+      queryComplete: false,
+      showHelp: false,
+      showReportModal: false,
+      showExportWindow: false,
+      busy: false,
+      liveUpdate: false,
+      pendingResources: null,
+      _instance_id: instanceId,
+      notificationComplete: false,
+      mutate_complete_handler_called: false,
+      form_created: Date.now(),
+      isValid: true,
+    } as ReactoryFormState,
+    {
+      enablePersistence: false,
+      enableDebugging: enableStateV2,
+      enableImmutabilityChecks: false,
+      enablePerformanceMonitoring: enableStateV2,
+      storageKey: `reactory-form-state-${instanceId}`,
+    }
+  );
+
+  // When state V2 is enabled, sync form changes to the state store
+  const setFormWithTracking = (nextForm: Reactory.Forms.IReactoryForm) => {
+    setForm(nextForm);
+    if (enableStateV2) {
+      stateStore.setState({ formDef: nextForm, loading: false });
+    }
+  };
+
+  // Feature-flagged performance monitoring (Phase 1.4)
+  const enablePerfV2 = ENABLE_PERF_V2;
+  const perfMonitor = usePerformanceMonitor({
+    enabled: enablePerfV2,
+    trackRenderTime: true,
+    trackMemoryUsage: false, // Chrome-only API, disabled by default
+    trackNetworkRequests: false,
+    reportInterval: 30000,
+  });
+
   // Whether we have a real form (not the placeholder)
   const isPlaceholderForm = form?.id === ReactoryDefaultForm.id;
 
@@ -62,6 +124,9 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     form?.version || "0.0.0"
   }`;
   const SIGN = `${FQN}:${instanceId}`;
+
+  // Start performance timer for this form definition render cycle
+  if (enablePerfV2) perfMonitor.startTimer(SIGN);
 
   const {
     loading: isUiSchemaLoading,
@@ -129,18 +194,32 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     props: props,
   });
 
+  // Build the full form context via the useFormContext hook.
+  // Note: useDataManager above receives the stale `formContext` state (existing pattern) —
+  // it uses it only for passing to error handlers, not core data flow.
+  const resolvedFormContext = useFormContext({
+    formData,
+    form,
+    instanceId,
+    SIGN,
+    refresh,
+    reset,
+    props,
+  });
+
   const [componentDefs, setComponents] = useState<DefaultComponentMap>(
     reactory.getComponents(DEFAULT_DEPENDENCIES)
   );
 
   const getForm = () => {
     loadingState.setStageActive('form-definition');
+    if (enableStateV2) stateStore.setState({ loading: true });
     let _form = formDef;
     if (nil(_form)) {
       _form = reactory.form(formId, (nextForm, formError) => {
         if (nextForm && !formError) {
           loadingState.setStageComplete('form-definition');
-          setForm(nextForm);
+          setFormWithTracking(nextForm);
         } else if (formError) {
           loadingState.setStageError('form-definition', 'Failed to load form definition');
         }
@@ -149,35 +228,11 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
         warning(`Form not found: ${formId}`);
       } else {
         loadingState.setStageComplete('form-definition');
-        setForm(_form);
+        setFormWithTracking(_form);
       }
     } else {
       loadingState.setStageComplete('form-definition');
     }
-  };
-
-  const getFormContext = (): Reactory.Client.IReactoryFormContext<unknown> => {
-    return {
-      $ref: {
-        props: {},
-      },
-      formData,
-      formDef: form,
-      formInstanceId: instanceId,
-      getData: async (props: any) => {
-        return formData;
-      },
-      graphql: form.graphql,
-      query: null,
-      refresh,
-      reset,
-      screenBreakPoint: "md",
-      setFormData: async (data: any) => {},
-      signature: SIGN,
-      version: 0,
-      reactory,
-      props
-    };
   };
 
   const injectResources = () => {
@@ -482,6 +537,13 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     }
   }, [effectiveForm.__complete__]);
 
+  // End performance timer when form is fully loaded
+  useEffect(() => {
+    if (enablePerfV2 && effectiveForm.__complete__ && !loadingState.isLoading) {
+      perfMonitor.endTimer(SIGN);
+    }
+  }, [effectiveForm.__complete__, loadingState.isLoading, enablePerfV2]);
+
   return {
     instanceId,
     uiOptions,
@@ -498,7 +560,7 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     SIGN,
     graphDefinition: uiSchemaActiveGraphDefintion,
     form: effectiveForm,
-    formContext: getFormContext(),
+    formContext: resolvedFormContext,
     setForm,
 
     canRefresh,
@@ -517,5 +579,9 @@ export const useFormDefinition: ReactoryFormDefinitionHook = (props) => {
     SubmitButton,
     PagingWidget,
     paging,
+
+    // Feature-flagged debug/monitoring (only populated when flags are on)
+    ...(enableStateV2 ? { stateDebug: stateStore.debug } : {}),
+    ...(enablePerfV2 ? { perfMetrics: perfMonitor.metrics, perfReport: perfMonitor.getReport() } : {}),
   };
 };

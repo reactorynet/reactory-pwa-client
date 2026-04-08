@@ -80,6 +80,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     formData: initialData,
     formContext,
     graphDefinition: graphDefinition || formDefinition.graphql,
+    restDefinition: (formDefinition as any)?.rest,
     mode,
     props: props?.props,
   });

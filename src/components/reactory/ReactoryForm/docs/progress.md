@@ -1,6 +1,6 @@
 # ReactoryForm — Upgrade Progress
 
-> Last updated: 2026-04-07  
+> Last updated: 2026-04-07 (updated with P0/P1 integration work)  
 > This document consolidates and fact-checks all progress tracking from the upgrade process.
 
 ---
@@ -23,20 +23,20 @@
 | 0 | Feature Flags Foundation | ✅ | ⚠️ Partial | Library created; flags defined but not wired into form |
 | 1.1 | Type System Overhaul | ✅ | ⚠️ Partial | `types-v2.ts` created; only error types actively imported |
 | 1.2 | Error Handling Enhancement | ✅ | ✅ | ErrorBoundary, errorLogging, useErrorHandling all in production |
-| 1.3 | State Management Refactoring | ✅ | ❌ | `stateManagement/` hooks exist but zero production imports |
-| 1.4 | Performance Optimization | ✅ | ❌ | `performanceOptimization/` hooks exist but zero production imports |
+| 1.3 | State Management Refactoring | ✅ | ⚠️ Partial | `useStateStore` integrated into `useFormDefinition` behind `REACTORY_FORM_STATE_V2` flag |
+| 1.4 | Performance Optimization | ✅ | ⚠️ Partial | `usePerformanceMonitor` integrated into `useFormDefinition` behind `REACTORY_FORM_PERFORMANCE_V2` flag |
 | 2.1 | Rendering Performance | ✅ | ❌ | `phase2/` virtual scrolling, memoization, lazy loading — not imported |
 | 2.2 | Data Management Optimization | ✅ | ❌ | `phase2/` caching, prefetching, offline, GraphQL opt — not imported |
 | 2.3 | Memory Management | ❌ | ❌ | Not started |
 | 3.1 | Animations & Micro-interactions | ✅ | ❌ | `phase3/animations/formAnimations.ts` exists, not imported |
 | 3.2 | Modern Form Field Components | ✅ | ❌ | `phase3/components/ModernFormField.tsx` exists, not imported |
 | 3.3 | Loading Skeleton | ✅ | ❌ | `phase3/components/LoadingSkeleton.tsx` exists, not imported |
-| 3.4 | EnhancedReactoryForm (Phase 3) | ✅ | ❌ | `phase3/components/EnhancedReactoryForm.tsx` — wraps base form with animations, not used |
+| 3.4 | AnimatedReactoryForm (Phase 3) | ✅ | ❌ | Renamed to `phase3/components/AnimatedReactoryForm.tsx` — wraps base form with animations, not used |
 | 4.1 | Real-time Collaboration | ✅ | ❌ | `phase4/collaboration/` hooks & components — not imported |
 | 4.2 | Advanced Validation | ✅ | ❌ | `phase4/validation/` hooks & display component — not imported |
 | 4.3 | Form Builder | ✅ | ❌ | `phase4/builder/` hook & canvas component — not imported |
 | 4.4 | Form Editor | ❌ | ❌ | Spec written in `FORM_EDITOR_SPEC.md`, no implementation |
-| 5.1 | Testing Infrastructure | ❌ | ❌ | Not started |
+| 5.1 | Testing Infrastructure | ⚠️ Partial | ⚠️ Partial | Initial test suite: useContext, useRESTDataManager tests + mock fixtures |
 | 5.2 | Documentation Enhancement | ❌ | ❌ | Not started |
 | 5.3 | Developer Tools | ❌ | ❌ | Not started |
 | 6.1 | Hook Simplification | ❌ | ❌ | Not started |
@@ -232,16 +232,21 @@ No implementation files exist for any Phase 5 or Phase 6 task.
 
 ## What IS Actually in Production
 
-The production `ReactoryForm` component uses ONLY these from the upgrade work:
+The production `ReactoryForm` component uses these from the upgrade work:
 
 1. **ReactoryFormEnhanced.tsx** — Error boundary wrapper (Phase 1.2)
 2. **ErrorBoundary.tsx** — Error boundary component (Phase 1.2)
 3. **errorLogging.ts** — Error log persistence (Phase 1.2)
 4. **hooks/useErrorHandling.ts** — Error classification & retry (Phase 1.2)
-5. **types-v2.ts** — Error-related types only (Phase 1.1, partial)
+5. **types-v2.ts** — Error-related types + ReactoryFormState (Phase 1.1, partial)
 6. **components/FormLoadingIndicator.tsx** — Multi-stage loading UI
 7. **hooks/useFormLoadingState.tsx** — Loading stage tracker
+8. **hooks/useContext.ts** — Form context builder (rebuilt from stub, replaces inline getFormContext)
+9. **stateManagement/useStateStore.ts** — Centralized state (Phase 1.3, feature-flagged)
+10. **performanceOptimization/usePerformanceMonitor.ts** — Performance monitoring (Phase 1.4, feature-flagged)
+11. **DataManagers/useRESTDataManager.ts** — REST data manager (fully implemented)
+12. **ReactoryForm.tsx** — ARIA accessibility attributes added
 
-Everything else from the upgrade process (Phases 1.3, 1.4, 2.x, 3.x, 4.x) exists as
-standalone code that was written and tested in isolation but never wired into the
-component's execution path.
+Items 9-10 are feature-flagged and inactive by default. Items 11-12 are always active.
+
+Remaining unintegrated: Phases 2.x, 3.x, 4.x exist as standalone code.

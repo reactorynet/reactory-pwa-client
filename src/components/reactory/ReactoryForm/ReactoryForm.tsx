@@ -355,18 +355,27 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
       if (form.__complete__ === true && !loadingState.isLoading) {
         const formChildren: any[] = [];
         if ((toolbarPosition?.indexOf("top") >= 0 || toolbarPosition?.indexOf("both") >= 0) && Toolbar) formChildren.push(<Toolbar />);
-        if (isFormBusy() === true) formChildren.push(<LinearProgress />);
+        if (isFormBusy() === true) formChildren.push(<LinearProgress aria-label="Form loading" />);
         formChildren.push(<SchemaForm {...schemaFormProps} />);
         if ((toolbarPosition?.indexOf("bottom") >= 0 || toolbarPosition?.indexOf("both") >= 0) && Toolbar) formChildren.push(<Toolbar />);
         if (PagingWidget) formChildren.push(<PagingWidget />);
         if (HelpModal) formChildren.push(<HelpModal />);
 
-        let componentProps = {
+        const formLabel = (form as any).title || form.name;
+        let componentProps: Record<string, any> = {
           id: `reactory_container::${instanceId}`,
           name: `${form.name}`,
           key: `reactory_container::${instanceId}`,
           className: uiOptions?.className || '',
           style: uiOptions?.style || { },
+          'aria-label': formLabel,
+          'aria-busy': isFormBusy(),
+        }
+
+        // Add role="form" to non-<form> containers for accessibility
+        const isFormElement = !uiOptions?.componentType || uiOptions.componentType === 'form';
+        if (!isFormElement) {
+          componentProps.role = 'form';
         }
 
         switch (uiOptions?.componentType) {
@@ -375,7 +384,7 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             debug(`${SIGN}:render - div`);
             break;
           }
-          case 'article': {          
+          case 'article': {
             renderedComponent = <article {...componentProps}>{formChildren}</article>;
             debug(`${SIGN}:render - article`);
             break;
@@ -409,29 +418,31 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
             renderedComponent = <form
               encType='multipart/form-data'
               autoComplete='off'
-              noValidate={true}              
+              noValidate={true}
               {...componentProps}
               >
               {formChildren}
             </form>
-            debug(`${SIGN}:render - form`);            
+            debug(`${SIGN}:render - form`);
           }
         }
       } else {
         const loadingVariant = uiOptions?.loadingVariant || 'full';
         renderedComponent = (
-          <FormLoadingIndicator
-            stages={loadingState.stages}
-            progress={loadingState.progress}
-            activeStageLabel={loadingState.activeStageLabel}
-            hasError={loadingState.hasError}
-            variant={loadingVariant}
-          />
+          <div aria-live="polite" aria-busy="true" role="status">
+            <FormLoadingIndicator
+              stages={loadingState.stages}
+              progress={loadingState.progress}
+              activeStageLabel={loadingState.activeStageLabel}
+              hasError={loadingState.hasError}
+              variant={loadingVariant}
+            />
+          </div>
         );
         debug(`${SIGN}:render - loading`);
       }
     } catch (err) {
-      renderedComponent = <>{err.message}</>;
+      renderedComponent = <div role="alert" aria-live="assertive">{err.message}</div>;
       error(`${SIGN}:render`, err);
     }
     return <IntersectionVisible>{renderedComponent}</IntersectionVisible>
