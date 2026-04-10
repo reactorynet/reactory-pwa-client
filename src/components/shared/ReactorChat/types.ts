@@ -263,6 +263,8 @@ export type UXChatMessage = ChatMessage & {
   rating?: number | null;
   /** Reasoning/thinking content from models with extended thinking (OpenAI o1/o3, Anthropic, Gemini) */
   thinking?: string;
+  /** Generated images returned by image-generation capable models */
+  images?: Array<{ b64_json?: string; url?: string; mimeType?: string }>;
   /** When true, this message represents a user-initiated activity (e.g. changing tool approval mode)
    *  rather than a real chat message. It renders with a distinct activity-notification style. */
   isActivity?: boolean;

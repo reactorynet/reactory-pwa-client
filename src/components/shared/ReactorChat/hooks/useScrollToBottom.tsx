@@ -860,6 +860,32 @@ const ChatList = (props: {
                               ))}
                           </Box>
                         )}
+                        {/* Render generated images from AI response */}
+                        {Array.isArray(message.images) && message.images.length > 0 && (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                            {message.images.map((img, imgIdx) => {
+                              const src = img.b64_json
+                                ? `data:${img.mimeType || 'image/png'};base64,${img.b64_json}`
+                                : img.url;
+                              return (
+                                <img
+                                  key={`gen-${imgIdx}`}
+                                  src={src}
+                                  alt={`Generated image ${imgIdx + 1}`}
+                                  style={{
+                                    maxWidth: 512,
+                                    maxHeight: 512,
+                                    borderRadius: 8,
+                                    objectFit: 'contain',
+                                    cursor: 'pointer',
+                                    border: '1px solid rgba(0,0,0,0.12)',
+                                  }}
+                                  onClick={() => window.open(src, '_blank')}
+                                />
+                              );
+                            })}
+                          </Box>
+                        )}
                       </>
                     )}
                     {/* Render tool errors if present — only for non-tool-call messages (tool-call messages show errors inline per chip) */}

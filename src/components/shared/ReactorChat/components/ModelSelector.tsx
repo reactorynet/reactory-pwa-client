@@ -11,7 +11,7 @@ import {
   CircularProgress,
   Tooltip,
 } from '@mui/material';
-import { ExpandMore, Check, SmartToy } from '@mui/icons-material';
+import { ExpandMore, Check, SmartToy, Brush } from '@mui/icons-material';
 import { Provider, ProviderModel, useProviders } from '../hooks/useProviders';
 
 export interface ModelOverride {
@@ -151,6 +151,16 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                 />
                 {model.supportsStreaming && (
                   <Chip label="stream" size="small" variant="outlined" sx={{ ml: 1, height: 18, fontSize: '0.65rem' }} />
+                )}
+                {model.capabilities?.includes('image-generation') && (
+                  <Chip
+                    icon={<Brush sx={{ fontSize: '0.7rem' }} />}
+                    label="image"
+                    size="small"
+                    variant="outlined"
+                    color="secondary"
+                    sx={{ ml: 0.5, height: 18, fontSize: '0.65rem' }}
+                  />
                 )}
               </MenuItem>
             );

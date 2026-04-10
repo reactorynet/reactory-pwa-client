@@ -64,6 +64,7 @@ export interface CompletionStreamingEvent extends StreamingEventBase {
     content: string;
     finishReason: 'stop' | 'error';
     thinking?: string;
+    images?: Array<{ b64_json?: string; url?: string; mimeType?: string }>;
   };
 }
 

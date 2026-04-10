@@ -9,6 +9,7 @@ mutation ReactorSendMessage($message: ReactorSendMessageInput!) {
       thinking
       rating
       timestamp
+      images
       tool_calls { id type function { name arguments } status }
       tool_results { id name content timestamp }
       tool_errors { id name error timestamp }

@@ -336,6 +336,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
               role: 'assistant',
               content: incomingContent,
               thinking: finalThinking,
+              images: message.data.images || undefined,
               timestamp: new Date(),
               sessionId: prevState.id,
             } as any);
@@ -356,6 +357,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
               ...history[lastIndex],
               ...(shouldUpdateContent ? { content: incomingContent } : {}),
               thinking: finalThinking,
+              images: message.data.images || history[lastIndex].images || undefined,
               timestamp: new Date(),
             };
           }

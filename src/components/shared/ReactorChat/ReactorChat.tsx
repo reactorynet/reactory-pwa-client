@@ -159,7 +159,7 @@ export default (props) => {
   // Track the active session ID for the session logger — state so changes trigger re-render
   const [activeSessionId, setActiveSessionId] = React.useState<string | undefined>(cachedSession?.chatState?.id);
 
-  // Session logger — sends client logs to the server's ChatSessionLogger
+  // Session logger — sends client logs to the server's ChatSessionResourceManager
   // Instantiated before chatFactory so it can be passed in.
   const sessionLogger = useSessionLogger(reactory, {
     enabled: clientLoggingEnabled && reactory.isDevelopmentMode(),
@@ -435,7 +435,8 @@ export default (props) => {
       if (msg.role === 'assistant' &&
         (!msg.content || (typeof msg.content === 'string' && msg.content.trim().length === 0)) &&
         (!msg.tool_calls || msg.tool_calls.length === 0) &&
-        (!msg.thinking || msg.thinking.trim().length === 0)) {
+        (!msg.thinking || msg.thinking.trim().length === 0) &&
+        (!msg.images || msg.images.length === 0)) {
         return false;
       }
 
@@ -1114,6 +1115,13 @@ export default (props) => {
     if (!activeModelId) return false;
     const model = getModelById(activeModelId);
     return model?.supportedMediaTypes?.includes('image') ?? false;
+  }, [modelOverride?.modelId, chatState?.modelId, selectedPersona?.modelId, getModelById]);
+
+  const supportsImageGeneration = useMemo(() => {
+    const activeModelId = modelOverride?.modelId || chatState?.modelId || selectedPersona?.modelId;
+    if (!activeModelId) return false;
+    const model = getModelById(activeModelId);
+    return model?.capabilities?.includes('image-generation') ?? false;
   }, [modelOverride?.modelId, chatState?.modelId, selectedPersona?.modelId, getModelById]);
 
   const handleSendMessage = useCallback((message: string, images?: string[]) => {
@@ -1824,7 +1832,9 @@ export default (props) => {
       <ChatInput
         onSendMessage={handleSendMessage}
         disabled={busy}
-        placeholder="Ask me anything..."
+        placeholder={supportsImageGeneration
+          ? "Ask me anything... or describe an image to create"
+          : "Ask me anything..."}
         onRecordingToggle={handleRecordingPanelToggle}
         recordingPanelOpen={recordingPanelOpen}
         voiceModeActive={speech.state.voiceModeActive}
