@@ -159,7 +159,7 @@ export default (props) => {
   // Track the active session ID for the session logger — state so changes trigger re-render
   const [activeSessionId, setActiveSessionId] = React.useState<string | undefined>(cachedSession?.chatState?.id);
 
-  // Session logger — sends client logs to the server's ChatSessionLogger
+  // Session logger — sends client logs to the server's ChatSessionResourceManager
   // Instantiated before chatFactory so it can be passed in.
   const sessionLogger = useSessionLogger(reactory, {
     enabled: clientLoggingEnabled && reactory.isDevelopmentMode(),

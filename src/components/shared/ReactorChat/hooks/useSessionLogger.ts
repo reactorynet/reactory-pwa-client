@@ -29,7 +29,7 @@ const NOOP_LOGGER: SessionLogger = {
 };
 
 /**
- * useSessionLogger — sends client-side logs to the server's ChatSessionLogger.
+ * useSessionLogger — sends client-side logs to the server's ChatSessionResourceManager.
  *
  * Buffers entries and flushes them in batches via the ReactorSessionLog GraphQL
  * mutation. When disabled, all methods are no-ops with zero overhead.
