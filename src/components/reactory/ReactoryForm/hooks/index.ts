@@ -1,4 +1,4 @@
-export { useContext } from './useContext';
+export { useContext, useFormContext } from './useContext';
 export { useDataManager} from './useDataManager';
 export { useExports } from './useExports';
 export { useHelp } from './useHelp';

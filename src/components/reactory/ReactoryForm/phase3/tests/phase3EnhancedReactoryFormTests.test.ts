@@ -1,20 +1,20 @@
 /**
- * Phase 3.4: EnhancedReactoryForm Component Tests
+ * Phase 3.4: AnimatedReactoryForm Component Tests
  * Basic tests for the enhanced ReactoryForm component with integrated features
  */
 
-describe('Phase 3.4: EnhancedReactoryForm Component', () => {
+describe('Phase 3.4: AnimatedReactoryForm Component', () => {
   describe('Component Structure', () => {
     test('should have proper component structure', () => {
       // Test that the component file exists and has the right structure
       const fs = require('fs');
       const path = require('path');
       
-      const componentPath = path.join(__dirname, '../components/EnhancedReactoryForm.tsx');
+      const componentPath = path.join(__dirname, '../components/AnimatedReactoryForm.tsx');
       expect(fs.existsSync(componentPath)).toBe(true);
       
       const content = fs.readFileSync(componentPath, 'utf8');
-      expect(content).toContain('EnhancedReactoryForm');
+      expect(content).toContain('AnimatedReactoryForm');
       expect(content).toContain('React.FC');
     });
 
@@ -23,7 +23,7 @@ describe('Phase 3.4: EnhancedReactoryForm Component', () => {
       const fs = require('fs');
       const path = require('path');
       
-      const componentPath = path.join(__dirname, '../components/EnhancedReactoryForm.tsx');
+      const componentPath = path.join(__dirname, '../components/AnimatedReactoryForm.tsx');
       expect(fs.existsSync(componentPath)).toBe(true);
     });
 
@@ -32,7 +32,7 @@ describe('Phase 3.4: EnhancedReactoryForm Component', () => {
       const fs = require('fs');
       const path = require('path');
       
-      const componentPath = path.join(__dirname, '../components/EnhancedReactoryForm.tsx');
+      const componentPath = path.join(__dirname, '../components/AnimatedReactoryForm.tsx');
       const content = fs.readFileSync(componentPath, 'utf8');
       expect(content).toContain('interface');
       expect(content).toContain('Props');
@@ -106,11 +106,11 @@ describe('Phase 3.4: EnhancedReactoryForm Component', () => {
       const fs = require('fs');
       const path = require('path');
       
-      const componentPath = path.join(__dirname, '../components/EnhancedReactoryForm.tsx');
+      const componentPath = path.join(__dirname, '../components/AnimatedReactoryForm.tsx');
       expect(fs.existsSync(componentPath)).toBe(true);
       
       const content = fs.readFileSync(componentPath, 'utf8');
-      expect(content).toContain('EnhancedReactoryForm');
+      expect(content).toContain('AnimatedReactoryForm');
       expect(content).toContain('React.FC');
       expect(content).toContain('framer-motion');
       expect(content).toContain('@mui/material');

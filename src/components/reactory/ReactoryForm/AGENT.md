@@ -178,7 +178,7 @@ interface IFormUIOptions {
 |---------|--------|---------|----------|
 | GraphQL | ✅ Full | Apollo Client | Primary — most forms use this |
 | Local Store | ✅ Full | useState | Client-only forms, no network |
-| REST | ⏳ Stub | — | Planned for non-GraphQL APIs |
+| REST | ✅ Full | fetch API | Client-side REST APIs (runat: 'client') |
 | gRPC | ⏳ Stub | — | Planned for protobuf services |
 | Socket | ⏳ Stub | — | Planned for real-time data |
 
@@ -186,16 +186,18 @@ interface IFormUIOptions {
 
 ## Known Issues & Technical Debt
 
-1. **useContext hook returns empty stub** — commented-out legacy code, needs rebuild
-2. **Naming confusion**: `ReactoryFormEnhanced.tsx` (production) vs
-   `phase3/components/EnhancedReactoryForm.tsx` (unused prototype)
-3. **~85% of upgrade code is unintegrated** — Phases 1.3, 1.4, 2.x, 3.x, 4.x exist as
-   standalone hooks/components but are not imported by the production code
+1. ~~**useContext hook returns empty stub**~~ — RESOLVED: rebuilt as useFormContext, integrated into useFormDefinition
+2. ~~**Naming confusion**~~ — RESOLVED: Phase 3 renamed to `AnimatedReactoryForm.tsx`
+3. **~70% of upgrade code is unintegrated** — Phases 1.3 and 1.4 are now feature-flagged;
+   Phases 2.x, 3.x, 4.x remain standalone
 4. **Duplicate implementations** — virtual scrolling and intelligent cache hooks exist in
    both `performanceOptimization/` and `phase2/`
-5. **REST/gRPC/Socket data managers are stubs** — only GraphQL and local are functional
-6. **Limited test coverage** on production code (hooks, data managers, rendering)
-7. **No accessibility improvements** implemented (ARIA, keyboard nav, screen readers)
+5. ~~**REST data manager is a stub**~~ — RESOLVED: fully implemented with fetch API.
+   gRPC/Socket data managers remain stubs.
+6. **Growing test coverage** — initial test suite for useContext and useRESTDataManager;
+   more tests needed for other hooks and the main component
+7. ~~**No accessibility improvements**~~ — PARTIAL: ARIA labels, roles, aria-busy, and
+   aria-live regions added to form containers. Further work needed for keyboard nav.
 
 ---
 

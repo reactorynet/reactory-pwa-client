@@ -1,160 +1,79 @@
-import gql from 'graphql-tag';
+import { useMemo } from 'react';
+import { useReactory } from '@reactory/client-core/api';
+import { Breakpoint, useTheme } from '@mui/material';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
-import { 
-  ReactoryFormContextHook
-} from '../types';
+export interface UseFormContextProps {
+  formData: unknown;
+  form: Reactory.Forms.IReactoryForm;
+  instanceId: string;
+  SIGN: string;
+  refresh: (args?: unknown) => void;
+  reset: () => void;
+  setFormData?: (data: unknown) => void;
+  getData?: (data?: unknown) => void;
+  props: Reactory.Client.IReactoryFormProps<unknown>;
+}
 
-export const useContext: ReactoryFormContextHook<any> = (props: unknown) => { 
+const BREAKPOINTS: Breakpoint[] = ['xl', 'lg', 'md', 'sm', 'xs'];
 
-  // const setState = ($state: any, callback = () => { }) => {
+/**
+ * Builds the form context object that is passed to SchemaForm
+ * and all child widgets/fields. Extracted from the inline
+ * getFormContext() that was previously in useFormDefinition.
+ */
+export const useFormContext = (params: UseFormContextProps): Reactory.Client.IReactoryFormContext<unknown> => {
+  const {
+    formData,
+    form,
+    instanceId,
+    SIGN,
+    refresh,
+    reset,
+    setFormData,
+    getData,
+    props,
+  } = params;
 
-    //   let _$state = { ...$state };
-    //   delete _$state.formData;
-    //   if (Object.keys(_$state).length > 0) {
-    //     let _customState = {};
-    //     Object.keys(_$state).forEach((stateKey) => {
-    //       switch (stateKey) {
-    //         case "componentDefs": {
-    //           setComponents(_$state[stateKey]);
-    //           break;
-    //         }
-    //         case "":
-    //         case "formData": {
-    //           //do nothing, already handled or not permitted.
-    //           break;
-    //         }
-    //         default: {
-    //           _customState[stateKey] = _$state[stateKey];
-    //         }
-    //       }
-    //     });
+  const reactory = useReactory();
 
-    //     if (Object.keys(_customState).length > 0) {
-    //       setCustomState(_customState);
-    //     }
-    //   }
+  // Determine screen breakpoint from MUI theme
+  const theme = useTheme();
+  const isXl = useMediaQuery(theme.breakpoints.up('xl'));
+  const isLg = useMediaQuery(theme.breakpoints.up('lg'));
+  const isMd = useMediaQuery(theme.breakpoints.up('md'));
+  const isSm = useMediaQuery(theme.breakpoints.up('sm'));
 
-    //   if ($state.formData) getData($state.formData);
+  const screenBreakPoint: Breakpoint = isXl ? 'xl' : isLg ? 'lg' : isMd ? 'md' : isSm ? 'sm' : 'xs';
 
-    //   callback();
-
-    // };
-
-    // const getFormContext = (nextData?: any) => {
-    //   const cloned_props = { ...props };
-    //   let inputContext = {}
-    //   if (cloned_props.formContext) {
-    //     inputContext = cloned_props.formContext;
-    //     delete cloned_props.formContext;
-    //   }
-    //   let _context = {
-    //     ...cloned_props,
-    //     signature,
-    //     version,
-    //     formDef: { ...formDefinition },
-    //     formData: nextData || formData,
-    //     $formData: nextData || formData,
-    //     $formState: {
-    //       formData: nextData || formData,
-    //       showReportModal,
-    //       formDef: formDefinition
-    //     },
-    //     query: { ...props.query },
-    //     formInstanceId: instanceId,
-    //     $ref: getFormReference(),
-    //     refresh: (args = { autoQueryDisabled: true }) => {
-    //       setAutoQueryDisabled(args.autoQueryDisabled);
-    //       getData(formData);
-    //     },
-    //     setFormData: (formData: any, callback = () => { }) => {
-    //       setFormData(formData);
-    //       callback();
-    //     },
-    //     graphql: getActiveGraphDefinitions(),
-    //     getData,
-    //     reset,
-    //     screenBreakPoint: getScreenSize(),
-    //     i18n: reactory.i18n,
-    //     reactory,
-    //     setState: setCustomState,
-    //     state: customState,
-    //     ...inputContext,
-    //   }
-
-    //   // reactory.log(`<${formDef.nameSpace}.${formDef.name}@${formDef.version} /> -> getFormContext()`, { _context });
-    //   return _context;
-    // }
-
-    // const getState = () => {
-    //   return {
-    //     formData,
-    //     queryComplete,
-    //     dirty,
-    //     _instance_id: instanceId,
-    //     ...customState
-    //   }
-    // }
-
-  // const cloned_props = { ...props };
-  // let inputContext = {}
-  // if (cloned_props.formContext) {
-  //   inputContext = cloned_props.formContext;
-  //   delete cloned_props.formContext;
-  // }
-  // let _context = {
-  //   ...cloned_props,
-  //   signature,
-  //   version,
-  //   formDef: { ...formDef },
-  //   formData: nextData || formData,
-  //   $formData: nextData || formData,
-  //   $formState: {
-  //     formData: nextData || formData,
-  //     showReportModal,
-  //     formDef
-  //   },
-  //   query: { ...props.query },
-  //   formInstanceId: instance_id,
-  //   //$ref: getFormReference(),
-  //   refresh: (args = { autoQueryDisabled: true }) => {
-  //     setAutoQueryDisabled(args.autoQueryDisabled);
-  //     getData(formData);
-  //   },
-  //   setFormData: (formData: any, callback = () => { }) => {
-  //     setFormData(formData);
-  //     callback();
-  //   },
-  //   graphql: getActiveGraphDefinitions(),
-  //   getData,
-  //   reset,
-  //   screenBreakPoint: getScreenSize(),
-  //   i18n: reactory.i18n,
-  //   reactory,
-  //   setState: setCustomState,
-  //   state: customState,
-  //   ...inputContext,
-  // }
-
-    // reactory.log(`<${formDef.nameSpace}.${formDef.name}@${formDef.version} /> -> getFormContext()`, { _context });
-    // return _context;
-
-  
-  let context: Reactory.Client.IReactoryFormContext<unknown> = {
-    $ref: null,
-    formData: null,
-    formDef: null,
-    formInstanceId: null,
-    getData: null,
-    graphql: null,
-    query: null,
-    refresh: null,
-    reset: null,
-    screenBreakPoint: null,
-    setFormData: null,
-    signature: null,
-    version: null,
-  };
+  const context = useMemo<Reactory.Client.IReactoryFormContext<unknown>>(() => {
+    return {
+      $ref: {
+        props: props || {},
+      },
+      formData,
+      formDef: form,
+      formInstanceId: instanceId,
+      getData: getData || (async () => formData),
+      graphql: form?.graphql,
+      query: null,
+      refresh,
+      reset,
+      screenBreakPoint,
+      setFormData: setFormData || (async () => {}),
+      signature: SIGN,
+      version: 0,
+      reactory,
+      props,
+      i18n: reactory.i18n,
+    };
+  }, [formData, form, instanceId, SIGN, refresh, reset, setFormData, getData, screenBreakPoint, reactory, props]);
 
   return context;
 };
 
+/**
+ * Legacy export matching the ReactoryFormContextHook type signature.
+ * @deprecated Use useFormContext instead for the new props-based API.
+ */
+export const useContext = useFormContext as any;
