@@ -4,7 +4,7 @@ import useMacros from "./useMacros"
 import { exec } from "child_process"
 import ToolPrompt from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
-import useSSE, { CompletionStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
+import useSSE, { CompactionStreamingEvent, CompletionStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
 
 interface ChatFactoryHookResult {
   // represents the chat state
@@ -65,6 +65,23 @@ interface ChatFactoryHookResult {
   toolIterationLimitInfo: { iterationsCompleted: number; maxIterations: number; partialContent?: string } | null
   // clears the tool iteration limit info ("stop" action)
   clearToolIterationLimitInfo: () => void
+  // info about an ongoing/completed conversation compaction, null when idle
+  compactionInfo: {
+    phase: 'start' | 'progress' | 'complete' | 'error';
+    reason?: string;
+    tokensBefore?: number;
+    maxTokens?: number;
+    percentageUsed?: number;
+    messagesArchived?: number;
+    tokensAfter?: number;
+    percentageAfter?: number;
+    errorMessage?: string;
+    usedFallback?: boolean;
+  } | null;
+  // dismiss the compaction notification
+  clearCompactionInfo: () => void
+  // manually trigger conversation compaction
+  compactConversation: () => Promise<void>
   // network connection status
   networkStatus: NetworkStatus
   networkError: string | null
@@ -905,6 +922,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [waitingForResponse, setWaitingForResponse] = React.useState<boolean>(false);
   const [modelOverride, setModelOverride] = React.useState<{ modelId?: string; providerId?: string } | null>(null);
   const [toolIterationLimitInfo, setToolIterationLimitInfo] = React.useState<{ iterationsCompleted: number; maxIterations: number; partialContent?: string } | null>(null);
+  const [compactionInfo, setCompactionInfo] = React.useState<ChatFactoryHookResult['compactionInfo']>(null);
 
   // Pending tool calls detected on conversation load (for resume after navigation)
   const [pendingToolCallResume, setPendingToolCallResume] = React.useState<{
@@ -1298,6 +1316,32 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       });
     }, [reactory]);
 
+    const onCompactionReceived = React.useCallback((event: CompactionStreamingEvent) => {
+      reactory.log(
+        `[useChatFactory] Compaction event: ${event.data.phase}`,
+        event.data,
+        'info'
+      );
+
+      setCompactionInfo({
+        phase: event.data.phase,
+        reason: event.data.reason,
+        tokensBefore: event.data.tokensBefore,
+        maxTokens: event.data.maxTokens,
+        percentageUsed: event.data.percentageUsed,
+        messagesArchived: event.data.messagesArchived,
+        tokensAfter: event.data.tokensAfter,
+        percentageAfter: event.data.percentageAfter,
+        errorMessage: event.data.errorMessage,
+        usedFallback: event.data.usedFallback,
+      });
+
+      // Auto-clear after completion (give user 10s to read the notification)
+      if (event.data.phase === 'complete') {
+        setTimeout(() => setCompactionInfo(null), 10_000);
+      }
+    }, [reactory]);
+
     const graph = useGraph({ reactory });
     const sse = useSSE({
       reactory,
@@ -1309,6 +1353,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onError: (e) => { onError(e); props.onStreamError?.(e); },
       onToolIterationLimit: onToolIterationLimitReceived,
       onRetry: onRetryReceived,
+      onCompaction: onCompactionReceived,
       onReconnecting: (attempt, maxAttempts) => {
         setNetworkStatus('reconnecting');
         setNetworkReconnectAttempt(attempt);
@@ -1809,6 +1854,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       setChatState(initialState);
       setIsInitialized(false);
       setToolIterationLimitInfo(null);
+      setCompactionInfo(null);
       setIsStreaming(false);
       setWaitingForResponse(false);
       setModelOverride(null);
@@ -3158,6 +3204,24 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     continueToolExecution,
     toolIterationLimitInfo,
     clearToolIterationLimitInfo: () => setToolIterationLimitInfo(null),
+    // Compaction status
+    compactionInfo,
+    clearCompactionInfo: () => setCompactionInfo(null),
+    compactConversation: async () => {
+      const sessionId = chatState.id;
+      if (!sessionId) return;
+      setBusy(true);
+      try {
+        const result = await graph.compactConversation(sessionId);
+        if (!result.success && result.error) {
+          onError(new Error(result.error));
+        }
+      } catch (err: any) {
+        onError(err);
+      } finally {
+        setBusy(false);
+      }
+    },
     // Network status
     networkStatus,
     networkError,

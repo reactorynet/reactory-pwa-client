@@ -18,6 +18,7 @@ import REACTOR_SET_TOOL_APPROVAL_MODE from "./mutations/ReactorSetChatToolApprov
 import REACTOR_ATTACH_FILE from "./mutations/ReactorAttachFile.graphql";
 import REACTOR_ASK_AUDIO from "./mutations/ReactorAskQuestionAudio.graphql";
 import REACTOR_DELETE_CHAT from "./mutations/ReactorDeleteChatSession.graphql";
+import REACTOR_COMPACT_CONVERSATION from "./mutations/ReactorCompactConversation.graphql";
 import REACTOR_EXECUTE_MACRO from "./mutations/ReactorExecuteMacro.graphql";
 import REACTOR_EXECUTE_TOOL from "./mutations/ReactorExecuteTool.graphql";
 import REACTOR_SET_MODEL_PROVIDER from "./mutations/ReactorSetChatModelProvider.graphql";
@@ -255,6 +256,21 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorDeleteChatSession ?? false;
   };
 
+  const compactConversation = async (chatSessionId: string): Promise<{
+    success: boolean;
+    messagesArchived: number;
+    tokensBefore: number;
+    tokensAfter: number;
+    usedFallback: boolean;
+    error?: string;
+  }> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorCompactConversation: any },
+      { chatSessionId: string }
+    >(REACTOR_COMPACT_CONVERSATION as any, { chatSessionId });
+    return response?.data?.ReactorCompactConversation ?? { success: false, messagesArchived: 0, tokensBefore: 0, tokensAfter: 0, usedFallback: false, error: 'No response' };
+  };
+
   const getConversation = async (
     id: string,
     loadOptions?: { showAllFiles?: boolean }
@@ -437,6 +453,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     attachFile,
     askQuestionAudio,
     deleteChatSession,
+    compactConversation,
     getConversation,
     listConversations,
     executeMacro,

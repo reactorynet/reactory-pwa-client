@@ -204,6 +204,7 @@ export default (props) => {
     continueToolExecution,
     toolIterationLimitInfo,
     clearToolIterationLimitInfo,
+    compactConversation,
     networkStatus = 'idle' as const,
     networkError = null,
     reconnectAttempt: networkReconnectAttempt = 0,
@@ -1633,6 +1634,7 @@ export default (props) => {
                 clientLoggingEnabled={clientLoggingEnabled}
                 onToggleClientLogging={handleToggleClientLogging}
                 sessionLogger={sessionLogger}
+                onCompactConversation={compactConversation}
               />
             )}
 

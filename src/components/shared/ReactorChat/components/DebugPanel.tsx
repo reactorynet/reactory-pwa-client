@@ -19,6 +19,7 @@ interface DebugPanelProps {
   onToggleClientLogging?: (enabled: boolean) => void;
   sessionLogger?: SessionLogger;
   onUpdateSystemPrompt?: (prompt: string) => void;
+  onCompactConversation?: () => Promise<void>;
 }
 
 function formatDate(d: Date | string | undefined): string {
@@ -44,6 +45,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
   onToggleClientLogging,
   sessionLogger,
   onUpdateSystemPrompt,
+  onCompactConversation,
 }) => {
   const {
     Paper,
@@ -396,6 +398,21 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
                 />
               </Box>
             )}
+            <Box sx={{ px: 1, pt: 0.5 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                color="warning"
+                onClick={onCompactConversation}
+                disabled={!onCompactConversation || !chatState?.id || (chatState?.history?.length ?? 0) < 4 || isStreaming}
+                sx={{ textTransform: 'none', fontSize: '0.75rem', width: '100%' }}
+              >
+                Compact Conversation
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 0.5, pt: 0.25 }}>
+                Summarizes older messages and archives them to free context window space.
+              </Typography>
+            </Box>
           </Box>
         </Collapse>
         <Divider sx={{ my: 0.5 }} />

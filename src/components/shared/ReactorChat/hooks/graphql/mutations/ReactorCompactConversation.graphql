@@ -1,0 +1,10 @@
+mutation ReactorCompactConversation($chatSessionId: String!) {
+  ReactorCompactConversation(chatSessionId: $chatSessionId) {
+    success
+    messagesArchived
+    tokensBefore
+    tokensAfter
+    usedFallback
+    error
+  }
+}

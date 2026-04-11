@@ -9,7 +9,8 @@ export enum StreamingEventType {
   COMPLETE = 'complete',
   ERROR = 'error',
   TOOL_ITERATION_LIMIT = 'tool_iteration_limit',
-  RETRY = 'retry'
+  RETRY = 'retry',
+  COMPACTION = 'compaction'
 }
 
 /**
@@ -120,6 +121,22 @@ export interface RetryStreamingEvent extends StreamingEventBase {
   };
 }
 
+export interface CompactionStreamingEvent extends StreamingEventBase {
+  type: StreamingEventType.COMPACTION;
+  data: {
+    phase: 'start' | 'progress' | 'complete' | 'error';
+    reason?: string;
+    tokensBefore?: number;
+    maxTokens?: number;
+    percentageUsed?: number;
+    messagesArchived?: number;
+    tokensAfter?: number;
+    percentageAfter?: number;
+    errorMessage?: string;
+    usedFallback?: boolean;
+  };
+}
+
 export interface UseSSEOptions {
   reactory: Reactory.Client.ReactorySDK;
   onToken?: (token: TokenStreamingEvent) => void;
@@ -129,6 +146,7 @@ export interface UseSSEOptions {
   onToolCall?: (toolCall: ToolCallStreamingEvent) => void;
   onToolIterationLimit?: (event: ToolIterationLimitStreamingEvent) => void;
   onRetry?: (event: RetryStreamingEvent) => void;
+  onCompaction?: (event: CompactionStreamingEvent) => void;
   /** Called when the SSE connection drops and a reconnect attempt begins */
   onReconnecting?: (attempt: number, maxAttempts: number, delayMs: number) => void;
   /** Called when a dropped SSE connection is successfully re-established */
@@ -185,7 +203,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 /** Exponential backoff delays (ms) for each reconnect attempt */
 const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 16000];
 
-const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry, onReconnecting, onReconnected, onReconnectFailed, onStreamActivity, sessionLogger }: UseSSEOptions): UseSSEResult => {
+const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry, onCompaction, onReconnecting, onReconnected, onReconnectFailed, onStreamActivity, sessionLogger }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -203,6 +221,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   const onToolCallRef = React.useRef(onToolCall);
   const onToolIterationLimitRef = React.useRef(onToolIterationLimit);
   const onRetryRef = React.useRef(onRetry);
+  const onCompactionRef = React.useRef(onCompaction);
   const onReconnectingRef = React.useRef(onReconnecting);
   const onReconnectedRef = React.useRef(onReconnected);
   const onReconnectFailedRef = React.useRef(onReconnectFailed);
@@ -213,6 +232,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   onToolCallRef.current = onToolCall;
   onToolIterationLimitRef.current = onToolIterationLimit;
   onRetryRef.current = onRetry;
+  onCompactionRef.current = onCompaction;
   const onStreamActivityRef = React.useRef(onStreamActivity);
   onReconnectingRef.current = onReconnecting;
   onReconnectedRef.current = onReconnected;
@@ -423,6 +443,17 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           }
           break;
         }
+        case 'compaction': {
+          const compactionEvt = data as CompactionStreamingEvent;
+          sessionLogger?.info(`SSE compaction: ${compactionEvt.data?.phase}`, {
+            phase: compactionEvt.data?.phase,
+            messagesArchived: compactionEvt.data?.messagesArchived,
+          }, 'useSSE');
+          if (onCompactionRef.current) {
+            onCompactionRef.current(compactionEvt);
+          }
+          break;
+        }
         default:
           reactory.debug('useSSE: unknown event', data.type);
       }
@@ -512,6 +543,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       es.addEventListener('tool_call', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('compaction', (event) => handleMessage(event as MessageEvent));
       es.onmessage = (event) => handleMessage(event);
 
       es.onerror = () => {
@@ -591,6 +623,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       es.addEventListener('tool_call', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('compaction', (event) => handleMessage(event as MessageEvent));
 
       // Also listen for generic message events as fallback
       es.onmessage = (event) => handleMessage(event);
