@@ -94,16 +94,9 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                 .slice()
                 .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
                 .map((chat) => {
-                  const firstUserMsg = Array.isArray(chat.history)
-                    ? chat.history.find((item) => item.role === 'user')
-                    : null;
                   const persona = chat.persona;
-                  const rawLabel = firstUserMsg?.content ?? il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
-                  const label = typeof rawLabel === 'string'
-                    ? rawLabel
-                    : Array.isArray(rawLabel)
-                      ? (rawLabel.find((p: any) => p.type === 'text')?.text ?? '[Image message]')
-                      : String(rawLabel);
+                  const label = chat.title
+                    || il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
 
                   return (
                     <ListItem

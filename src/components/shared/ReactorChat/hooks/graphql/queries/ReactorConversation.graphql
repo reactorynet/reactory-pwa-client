@@ -4,6 +4,7 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
     ... on ReactorChatState {
       id
       personaId
+      title
       created
       updated
       user { id firstName lastName }

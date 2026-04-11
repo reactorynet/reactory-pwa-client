@@ -314,6 +314,10 @@ export type ChatState = {
    * */
   botId: string
   /**
+   * A short title for the conversation, auto-generated from the user's first message.
+   */
+  title?: string
+  /**
    * The persona that is associated with the chat session.
    */
   persona: IAIPersona,

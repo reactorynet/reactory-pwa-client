@@ -392,10 +392,8 @@ export default (props) => {
     return 'error'; // Red
   }, []);
 
-  const [messages, setMessages] = useState<UXChatMessage[]>([]);
-
   // Memoize the filtered messages to prevent unnecessary re-renders
-  const processedMessages = useMemo(() => {
+  const messages = useMemo(() => {
     if (!chatState?.history) {
       // If streaming and we have a partial message, show it
       if (isStreaming && currentStreamingMessage) {
@@ -463,10 +461,7 @@ export default (props) => {
     }
 
     return filteredMessages;
-  }, [chatState?.history, reactory.utils.uuid, isStreaming, currentStreamingMessage, chatState?.id]);  // Update messages only when processedMessages changes
-  React.useEffect(() => {
-    setMessages(processedMessages);
-  }, [processedMessages]);
+  }, [chatState?.history, reactory.utils.uuid, isStreaming, currentStreamingMessage, chatState?.id]);
 
   // Only scroll when messages actually change
   React.useEffect(() => {
@@ -608,7 +603,7 @@ export default (props) => {
   // Track whether the initial chat list has been loaded for the current persona
   const chatListLoadedForPersonaRef = React.useRef<string | null>(null);
 
-  // Load chat list once when persona changes (not on every busy toggle).
+  // Load chat list and auto-resume/init when persona changes.
   // The chat list is also refreshed when the history panel is opened.
   useEffect(() => {
     if (!selectedPersona?.id) return;
@@ -629,58 +624,46 @@ export default (props) => {
       setChats(chatList as ChatState[]);
 
       // Auto-initialize session when we have personaId but no sessionId in URL.
-      // This ensures the server knows about client tools from the start.
-      // Check after chats load so we can detect empty sessions to resume.
+      // We check whether the current chatState already belongs to this persona
+      // to avoid re-initializing when state is already correct.
+      const currentPersonaId = chatState?.persona?.id || chatState?.botId;
+      const alreadyOnPersona = currentPersonaId === selectedPersona.id && chatState?.id;
+
       if (
         selectedPersona?.id &&
         !queryParams.sessionId &&
-        !isInitialized &&
+        !alreadyOnPersona &&
         !autoInitInProgress.current
       ) {
         autoInitInProgress.current = true;
+        isManualNavigation.current = true;
         try {
-          // Check if the most recent chat for this persona is empty (no user messages).
-          // If so, resume it instead of creating a new session.
+          // Resume the most recent chat if one exists.
           if (chatList && chatList.length > 0) {
-            const mostRecentChat = chatList[0]; // chats are sorted most-recent first
-            const hasUserMessages = mostRecentChat.history?.some(
-              (msg: any) => msg.role === 'user'
-            );
-
-            if (!hasUserMessages && mostRecentChat.id) {
-              reactory.log(`ReactorChat: Resuming empty session ${mostRecentChat.id}`);
-              isManualNavigation.current = true;
-              navigate({
-                pathname: location.pathname,
-                search: `?sessionId=${mostRecentChat.id}&personaId=${selectedPersona.id}`,
-              });
-              // Explicitly load the session so tools/macros are populated from the server.
-              // The loadChat useEffect won't fire because isManualNavigation is set.
-              await loadChat(mostRecentChat.id);
-              setTimeout(() => { isManualNavigation.current = false; }, 500);
-              return;
-            }
-          }
-
-          // No empty session to resume — create a new one
-          reactory.log(`ReactorChat: Auto-initializing new session for persona ${selectedPersona.name}`);
-          const sessionId = await newChat();
-          if (sessionId) {
-            isManualNavigation.current = true;
+            const mostRecentChat = chatList[0]; // sorted most-recent first by server
+            reactory.log(`ReactorChat: Resuming latest session ${mostRecentChat.id}`);
             navigate({
               pathname: location.pathname,
-              search: `?sessionId=${sessionId}&personaId=${selectedPersona.id}`,
+              search: `?sessionId=${mostRecentChat.id}&personaId=${selectedPersona.id}`,
             });
-            // Explicitly load the full session from server so tools/macros are
-            // guaranteed to be in chatState. initializeChat's setChatState may
-            // not include tools if the SSE response's chatState was sparse.
-            await loadChat(sessionId);
-            setTimeout(() => { isManualNavigation.current = false; }, 500);
+            await loadChat(mostRecentChat.id);
+          } else {
+            // No existing chats — create a new session
+            reactory.log(`ReactorChat: Auto-initializing new session for persona ${selectedPersona.name}`);
+            const sessionId = await newChat();
+            if (sessionId) {
+              navigate({
+                pathname: location.pathname,
+                search: `?sessionId=${sessionId}&personaId=${selectedPersona.id}`,
+              });
+              await loadChat(sessionId);
+            }
           }
         } catch (error) {
           reactory.error('ReactorChat: Auto-initialization failed', error);
         } finally {
           autoInitInProgress.current = false;
+          isManualNavigation.current = false;
         }
       }
     })();
@@ -705,7 +688,7 @@ export default (props) => {
       busy
     });
 
-    handleChatMenuClose(() => {
+    handleChatMenuClose(async () => {
       // Prevent redundant operations if chat is already selected
       if (chatState?.id === chat.id) {
         console.log('ReactorChat: Chat already selected, skipping');
@@ -722,8 +705,6 @@ export default (props) => {
       isManualNavigation.current = true;
       console.log('ReactorChat: Starting manual navigation for chat', chat.id);
 
-      // Use navigation to update URL - this will trigger the useEffect hooks
-      // We don't need to call selectPersona/loadChat manually since the URL change will handle it
       const personaParam = queryParams.personaId ? queryParams.personaId : chat.personaId;
       const searchQuery = `?sessionId=${chat.id}&personaId=${personaParam}`;
 
@@ -732,11 +713,15 @@ export default (props) => {
         search: searchQuery
       });
 
-      // Reset the flag after a longer delay to allow URL effects to process
-      setTimeout(() => {
+      // Load the session and only reset the flag once loading completes
+      try {
+        await loadChat(chat.id);
+      } catch (error) {
+        reactory.error('ReactorChat: Failed to load selected chat', error);
+      } finally {
         isManualNavigation.current = false;
         console.log('ReactorChat: Manual navigation flag reset');
-      }, 500); // Increased from 100ms to 500ms
+      }
     });
   }, [chatState?.id, busy, queryParams.personaId, navigate, location.pathname, handleChatMenuClose]);
 
@@ -1069,7 +1054,12 @@ export default (props) => {
     selectPersona(persona.id);
     setPersonaPanelOpen(false);
 
-    // Navigate to current location with only personaId parameter
+    // Reset the chat list ref so the auto-init useEffect re-runs for the new persona
+    chatListLoadedForPersonaRef.current = null;
+    autoInitInProgress.current = false;
+
+    // Navigate to current location with only personaId parameter.
+    // The auto-init useEffect will load chat list and resume/create a session.
     const searchQuery = `?personaId=${persona.id}`;
     navigate({
       pathname: location.pathname,
@@ -1148,7 +1138,11 @@ export default (props) => {
       const macro = findMacroByAlias(toolCall.function.name);
       const result = await executeMacro(macro, toolCall.args || {}, toolCall.calledBy, toolCall.callId);
       if (result) {
-        setMessages((prevMessages) => [...prevMessages, result]);
+        setChatState((prev) => ({
+          ...prev,
+          history: [...prev.history, result],
+          updated: new Date(),
+        }));
       }
     } catch (error) {
       reactory.error(`Error executing tool: ${error.message}`, { toolCall, error });

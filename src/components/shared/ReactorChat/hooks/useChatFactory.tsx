@@ -682,6 +682,27 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
               });
 
+              // Handle error responses from the re-sent message
+              if (sseResp?.__typename === 'ReactorErrorResponse') {
+                setChatState((prevState) => {
+                  const history = [...prevState.history];
+                  const lastIndex = history.length - 1;
+                  if (lastIndex >= 0 && history[lastIndex].role === 'assistant' && history[lastIndex].content === 'Processing...') {
+                    history[lastIndex] = {
+                      ...history[lastIndex],
+                      content: `Error: ${(sseResp as any).message || 'An error occurred'}`,
+                      timestamp: new Date(),
+                    };
+                  }
+                  return { ...prevState, history };
+                });
+                setIsStreaming(false);
+                setWaitingForResponse(false);
+                onError(new Error((sseResp as any).message));
+                setBusy(false);
+                return;
+              }
+
               // The mutation response carries the same final content as the
               // SSE COMPLETE event. Apply it as a fallback so the UI always
               // shows the AI response even if the SSE event was lost.
@@ -801,18 +822,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
 
   const getInitialChatState = (): ChatState => {
+    // Start with empty history — the greeting is injected by loadChat
+    // when restoring a session, avoiding the flash of greeting → skeleton → greeting.
     let history: UXChatMessage[] = [];
-    if (persona && persona.defaultGreeting) {
-      history = [
-        {
-          id: reactory.utils.uuid(),
-          role: "assistant",
-          content: persona.defaultGreeting,
-          timestamp: new Date(),
-          sessionId: null,
-        }
-      ]
-    }
 
     // Deduplicate persona tools by name
     const uniquePersonaTools = persona?.tools ? persona.tools.filter((tool, index, self) =>
