@@ -591,6 +591,7 @@ export default (props) => {
 
     if (isManualNavigation.current) {
       console.log('ReactorChat: Skipping chat load - manual navigation in progress');
+      return;
     }
 
     if (queryParams.sessionId && chatState?.id !== queryParams.sessionId) {
@@ -1071,20 +1072,29 @@ export default (props) => {
     // Create a new chat with the existing persona
     if (selectedPersona) {
       reactory.log(`Creating new chat with persona: ${selectedPersona.name}`);
-      const sessionId = await newChat();
-      // Navigate with both sessionId and personaId so the server
-      // is immediately aware of client tools
-      const searchQuery = sessionId
-        ? `?sessionId=${sessionId}&personaId=${selectedPersona.id}`
-        : `?personaId=${selectedPersona.id}`;
-      navigate({
-        pathname: location.pathname,
-        search: searchQuery,
-      });
-      // Reload the full session from the server so tools/macros are in chatState.
-      // initializeChat may not fully populate them from the SSE response alone.
-      if (sessionId) {
-        await loadChat(sessionId);
+      // Block the chat-loading useEffect from firing loadChat(OLD_ID) while we
+      // are in the process of creating a new session. Without this, the effect
+      // sees chatState.id === newId but queryParams.sessionId === oldId and
+      // eagerly loads the old conversation, overwriting the new one.
+      isManualNavigation.current = true;
+      try {
+        const sessionId = await newChat();
+        // Navigate with both sessionId and personaId so the server
+        // is immediately aware of client tools
+        const searchQuery = sessionId
+          ? `?sessionId=${sessionId}&personaId=${selectedPersona.id}`
+          : `?personaId=${selectedPersona.id}`;
+        navigate({
+          pathname: location.pathname,
+          search: searchQuery,
+        });
+        // Reload the full session from the server so tools/macros are in chatState.
+        // initializeChat may not fully populate them from the SSE response alone.
+        if (sessionId) {
+          await loadChat(sessionId);
+        }
+      } finally {
+        isManualNavigation.current = false;
       }
     }
   }, [selectedPersona, newChat, reactory, navigate, location.pathname, loadChat]);

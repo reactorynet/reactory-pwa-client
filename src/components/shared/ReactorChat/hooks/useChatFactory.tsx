@@ -1870,7 +1870,19 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       setIsStreaming(false);
       setWaitingForResponse(false);
       setModelOverride(null);
-      
+      setPendingToolCallResume(null);
+
+      // Cancel any in-flight reasoning buffer flush so stale reasoning text from
+      // the previous conversation cannot be injected into the new session.
+      if (reasoningFlushTimerRef.current) {
+        clearTimeout(reasoningFlushTimerRef.current);
+        reasoningFlushTimerRef.current = null;
+      }
+      reasoningBufferRef.current = "";
+      streamingCompleteRef.current = false;
+      sseReestablishedRef.current = false;
+      pendingToolCallsRef.current = [];
+
       // Disconnect any existing SSE connection to ensure clean state
       sse.disconnect();
       
