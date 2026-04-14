@@ -1,4 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+
+const PRESETS_STORAGE_PREFIX = 'reactory:filter-presets';
 
 export interface AdvancedFilterField {
   id: string;
@@ -27,6 +29,10 @@ export interface FilterPreset {
 export interface UseAdvancedFiltersOptions {
   fields: AdvancedFilterField[];
   onFilterChange?: (filters: AdvancedFilter[]) => void;
+  /** Seed the filter state on first mount (e.g. from currently-applied filters). */
+  initialFilters?: AdvancedFilter[];
+  /** Namespace key used to persist presets in localStorage. */
+  storageKey?: string;
 }
 
 export interface UseAdvancedFiltersResult {
@@ -58,9 +64,36 @@ export interface UseAdvancedFiltersResult {
 export const useAdvancedFilters = ({
   fields,
   onFilterChange,
+  initialFilters,
+  storageKey,
 }: UseAdvancedFiltersOptions): UseAdvancedFiltersResult => {
-  const [filters, setFilters] = useState<AdvancedFilter[]>([]);
-  const [presets, setPresets] = useState<FilterPreset[]>([]);
+  const [filters, setFilters] = useState<AdvancedFilter[]>(() => initialFilters ?? []);
+
+  const presetsKey = storageKey ? `${PRESETS_STORAGE_PREFIX}:${storageKey}` : null;
+
+  const [presets, setPresets] = useState<FilterPreset[]>(() => {
+    if (!presetsKey) return [];
+    try {
+      const stored = localStorage.getItem(presetsKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch {
+      // ignore parse/storage errors
+    }
+    return [];
+  });
+
+  // Persist presets to localStorage whenever they change
+  useEffect(() => {
+    if (!presetsKey) return;
+    try {
+      localStorage.setItem(presetsKey, JSON.stringify(presets));
+    } catch {
+      // ignore storage errors (quota exceeded, private browsing, etc.)
+    }
+  }, [presets, presetsKey]);
 
   const setFilter = useCallback(
     (field: string, value: any, operator: string = 'eq') => {

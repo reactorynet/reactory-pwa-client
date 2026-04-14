@@ -31,6 +31,16 @@ export interface AdvancedFilterPanelProps {
   fields: AdvancedFilterField[];
   onFilterChange: (filters: any[]) => void;
   showPresets?: boolean;
+  /**
+   * Seed the panel with the currently-applied filters so reopening it reflects
+   * what is actually active in the query.
+   */
+  initialFilters?: any[];
+  /**
+   * Namespace key used to persist filter presets in localStorage.
+   * Use a stable, unique string per form/view (e.g. 'workflow-registry').
+   */
+  storageKey?: string;
 }
 
 /**
@@ -53,6 +63,8 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
   fields,
   onFilterChange,
   showPresets = false,
+  initialFilters,
+  storageKey,
 }) => {
   const {
     filters,
@@ -66,7 +78,10 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
     deletePreset,
   } = useAdvancedFilters({
     fields,
-    onFilterChange,
+    initialFilters,
+    storageKey,
+    // onFilterChange is intentionally not passed here: filters accumulate locally
+    // and are only applied to the query when the user clicks Apply.
   });
 
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
@@ -216,7 +231,7 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
 
   return (
     <>
-      <Drawer anchor="right" open={open} onClose={onClose}>
+      <Drawer anchor="right" open={open} onClose={onClose} keepMounted>
         <Box sx={{ width: 400, p: 3 }}>
           {/* Header */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -266,12 +281,22 @@ export const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
               variant="outlined"
               fullWidth
               startIcon={<Icon>clear_all</Icon>}
-              onClick={clearFilters}
+              onClick={() => {
+                clearFilters();
+                onFilterChange?.([]);
+              }}
               disabled={activeFilterCount === 0}
             >
               Clear All
             </Button>
-            <Button variant="contained" fullWidth onClick={onClose}>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={() => {
+                onFilterChange?.(filters);
+                onClose();
+              }}
+            >
               Apply
             </Button>
           </Box>

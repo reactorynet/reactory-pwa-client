@@ -1941,19 +1941,32 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             console.log('onDataChange', data);
           }} 
           searchText={searchText} 
-          queryVariables={{
-            filter: { searchString: query.search },
-            paging: { page: query.page, pageSize: query.pageSize }
-          }}
+          queryVariables={(() => {
+            // Reflect the full active filter state back to the toolbar.
+            // query has: page, pageSize, search + any extra filter fields (isActive, nameSpace, tags, etc.)
+            const { page: _p, pageSize: _ps, search: _s, ...activeFilterFields } = query;
+            return {
+              filter: { searchString: _s, ...activeFilterFields },
+              paging: { page: _p, pageSize: _ps }
+            };
+          })()}
           onQueryChange={(queryName: string, variables: any) => {
              // Handle the update from the toolbar
              let newQuery = { ...query };
              
-             // Extract search string if present (supporting standard Reactory patterns)
-             if (variables?.filter?.searchString !== undefined) {
-                newQuery.search = variables.filter.searchString;
+             if (variables?.filter) {
+               // Extract searchString → query.search
+               if (variables.filter.searchString !== undefined) {
+                 newQuery.search = variables.filter.searchString;
+               }
+               // Spread all OTHER filter fields directly onto query so that
+               // the objectMapper can map them as 'query.<field>' → 'filter.<field>'
+               const { searchString: _s, ...otherFilters } = variables.filter;
+               // Clear any previous filter fields not present in this update
+               // by resetting known filter keys then applying new ones
+               newQuery = { page: newQuery.page, pageSize: newQuery.pageSize, search: newQuery.search, ...otherFilters };
              } else if (typeof variables?.searchString === 'string') {
-                newQuery.search = variables.searchString;
+               newQuery.search = variables.searchString;
              }
 
              // Extract paging
