@@ -59,3 +59,4 @@ export { default as RelativeTime } from './RelativeTime';
 export { default as RelativeTimeWidget } from './RelativeTime';
 export { default as CountBadge } from './CountBadge';
 export { default as CountBadgeWidget } from './CountBadge';
+export { CalendarWidget, MiniCalendarWidget, EventEditorWidget, EventListWidget } from './CalendarWidget';
