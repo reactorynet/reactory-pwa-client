@@ -270,6 +270,8 @@ export const COMPONENT_TYPE_MAPPINGS: ComponentTypeMapping[] = [
   { type: 'task', circuitElement: 'icChip', prefix: 'U' },
   { type: 'action', circuitElement: 'icChip', prefix: 'U' },
   { type: 'process', circuitElement: 'icChip', prefix: 'U' },
+  { type: 'file_operation', circuitElement: 'icChip', prefix: 'IO' },
+  { type: 'custom', circuitElement: 'icChip', prefix: 'EXT' },
   // Logic
   { type: 'decision', circuitElement: 'transistor', prefix: 'Q' },
   { type: 'condition', circuitElement: 'transistor', prefix: 'Q' },
@@ -277,11 +279,13 @@ export const COMPONENT_TYPE_MAPPINGS: ComponentTypeMapping[] = [
   // Flow control
   { type: 'parallel', circuitElement: 'relay', prefix: 'K' },
   { type: 'join', circuitElement: 'relay', prefix: 'K' },
+  { type: 'while', circuitElement: 'relay', prefix: 'WH' },
+  { type: 'for_each', circuitElement: 'relay', prefix: 'FE' },
   // Integration (specific matches before generic — order matters for .includes())
   { type: 'service_invoke', circuitElement: 'icChip', prefix: 'SVC', defaultColor: CIRCUIT_COLORS.icStripeService },
   { type: 'graphql', circuitElement: 'icChip', prefix: 'API', defaultColor: CIRCUIT_COLORS.icStripeGraphql },
   { type: 'grpc', circuitElement: 'icChip', prefix: 'RPC', defaultColor: CIRCUIT_COLORS.icStripeGrpc },
-  { type: 'rest', circuitElement: 'icChip', prefix: 'HTTP', defaultColor: CIRCUIT_COLORS.icStripeRest },
+  { type: 'api_call', circuitElement: 'icChip', prefix: 'HTTP', defaultColor: CIRCUIT_COLORS.icStripeRest },
   // User interaction
   { type: 'user_activity', circuitElement: 'dipSwitch', prefix: 'SW' },
   // Observability
@@ -290,7 +294,7 @@ export const COMPONENT_TYPE_MAPPINGS: ComponentTypeMapping[] = [
   { type: 'delay', circuitElement: 'capacitor', prefix: 'C' },
   { type: 'timer', circuitElement: 'capacitor', prefix: 'C' },
   { type: 'filter', circuitElement: 'resistor', prefix: 'R' },
-  { type: 'transform', circuitElement: 'resistor', prefix: 'R' },
+  { type: 'data_transformation', circuitElement: 'resistor', prefix: 'R' },
 ];
 
 /**

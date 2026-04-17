@@ -57,20 +57,33 @@ const StyledEditorContainer = styled(Box)(({ theme }) => {
       // container takes all remaining height and scrolls its content.
       display: 'flex',
       flexDirection: 'column',
+      // width:0 + minWidth:100% is a reliable CSS trick for preventing
+      // content from expanding parent table cells (table-layout:auto).
+      // width:0 tells the table algorithm this element's preferred width is 0;
+      // minWidth:100% then fills the allocated cell width after layout.
+      width: 0,
+      minWidth: '100%',
+      maxWidth: '100%',
+      // Optional: add a subtle backdrop blur effect for a more modern look.
+      // Note: this may impact performance on large editors or low-end devices.
+      backdropFilter: `blur(4px)`,
+      backgroundImage: `linear-gradient(${backgroundImageBlur}, ${backgroundImageBlur})`,
     },
 
     [`& .${classes.editor}`]: {
       minHeight: '200px',
+      minWidth: 0,
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
       fontFamily: theme.typography?.fontFamily || 'inherit',
       marginTop: theme.spacing(2),
       zIndex: 1,
+      overflow: 'hidden',
       // Quill renders a sibling .ql-toolbar + .ql-container inside this div.
       // Make both fill height correctly.
       '& > .ql-toolbar': { flexShrink: 0 },
-      '& > .ql-container': { flex: 1, minHeight: 0 },
+      '& > .ql-container': { flex: 1, minHeight: 0, minWidth: 0 },
     },
 
     // Quill toolbar styling
@@ -134,16 +147,20 @@ const StyledEditorContainer = styled(Box)(({ theme }) => {
       fontSize: theme.typography?.body1?.fontSize,
       backgroundColor: theme.palette.background.paper,
       color: theme.palette.text.primary,
-      overflowY: 'auto',
+      // overflow: auto on both axes so long code lines scroll within the
+      // editor rather than expanding the page horizontally.
+      overflow: 'auto',
     },
 
     // Quill editor content area
     '& .ql-editor': {
       // No fixed height — let it grow naturally inside the scrollable container.
       minHeight: '150px',
+      minWidth: 0,
       backgroundColor: theme.palette.background.paper,
       color: theme.palette.text.primary,
       padding: theme.spacing(2),
+      overflowX: 'auto',
     },
 
     // Placeholder text
@@ -230,6 +247,13 @@ function quillHighlight(text: string): string {
 
 const RichTextEditor = (props: any) => {
   const reactory = useReactory();
+
+  // ── Height / sizing prop ───────────────────────────────────────────────────
+  // Consumers can pass `height` or `containerHeight` to explicitly size the
+  // editor box. When provided we use a flex-based layout so the toolbar keeps
+  // its natural height and the Quill container fills the rest.
+  const containerHeight: string | undefined =
+    props.height || props.containerHeight || undefined;
 
   // ── Derive mode ────────────────────────────────────────────────────────────
   const format: string =
@@ -331,7 +355,25 @@ const RichTextEditor = (props: any) => {
       ];
 
   return (
-    <StyledEditorContainer className={classes.editorContainer}>
+    <StyledEditorContainer
+      className={classes.editorContainer}
+      sx={containerHeight ? {
+        height: containerHeight,
+        // Flex-column layout: toolbar is flex-shrink-0, ql-container fills rest.
+        display: 'flex',
+        flexDirection: 'column',
+        '& .ql-container': {
+          flex: 1,
+          minHeight: 0,
+          overflow: 'auto',
+        },
+        '& .ql-editor': {
+          height: '100%',
+          minHeight: '0 !important',
+          boxSizing: 'border-box',
+        },
+      } : undefined}
+    >
       <ReactQuill
         id={props?.idSchema?.$id || 'rich-editor'}
         value={content}

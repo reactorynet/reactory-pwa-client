@@ -21,12 +21,10 @@ import { getStepDefinition } from './components/Steps';
  */
 export const YAML_TO_DESIGNER_TYPE_MAP: Record<string, string> = {
   conditional: 'condition',
-  apiCall: 'rest',
   custom: 'service_invoke',
-  dataTransformation: 'data_transform',
   forEach: 'for_each',
   cliCommand: 'cli_command',
-  fileOperation: 'task',
+  fileOperation: 'file_operation',
 };
 
 /**
@@ -35,12 +33,10 @@ export const YAML_TO_DESIGNER_TYPE_MAP: Record<string, string> = {
  */
 export const DESIGNER_TO_YAML_TYPE_MAP: Record<string, string> = {
   condition: 'conditional',
-  rest: 'apiCall',
   service_invoke: 'custom',
-  data_transform: 'dataTransformation',
   for_each: 'forEach',
   cli_command: 'cliCommand',
-  task: 'custom',
+  file_operation: 'fileOperation',
 };
 
 // Geometry utilities

@@ -28,6 +28,7 @@ import REACTOR_END_VOICE_SESSION from "./mutations/ReactorEndVoiceSession.graphq
 import REACTOR_SEND_VOICE_MESSAGE from "./mutations/ReactorSendVoiceMessage.graphql";
 import REACTOR_SET_MAX_TOOL_ITERATIONS from "./mutations/ReactorSetChatMaxToolIterations.graphql";
 import REACTOR_CONTINUE_TOOL_EXECUTION from "./mutations/ReactorContinueToolExecution.graphql";
+import REACTOR_INTERRUPT_TOOL_EXECUTION from "./mutations/ReactorInterruptToolExecution.graphql";
 import REACTOR_ATTACH_USER_FILE from "./mutations/ReactorAttachUserFileToSession.graphql";
 import REACTOR_DETACH_USER_FILE from "./mutations/ReactorDetachUserFileFromSession.graphql";
 import REACTOR_PIN_FOLDER from "./mutations/ReactorPinFolderToSession.graphql";
@@ -224,6 +225,18 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
       { chatSessionId: string; personaId: string; maxToolIterations?: number; streamingMode?: StreamingMode }
     >(REACTOR_CONTINUE_TOOL_EXECUTION as any, { chatSessionId, personaId, maxToolIterations, streamingMode });
     return response?.data?.ReactorContinueToolExecution as ReactorChatResponse;
+  };
+
+  const interruptToolExecution = async (
+    chatSessionId: string,
+    personaId: string,
+    reason?: string,
+  ): Promise<ReactorChatResponse> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorInterruptToolExecution: ReactorChatResponse },
+      { chatSessionId: string; personaId: string; reason?: string }
+    >(REACTOR_INTERRUPT_TOOL_EXECUTION as any, { chatSessionId, personaId, reason });
+    return response?.data?.ReactorInterruptToolExecution as ReactorChatResponse;
   };
 
   const attachFile = async (
@@ -449,6 +462,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     setChatToolApprovalMode,
     setChatMaxToolIterations,
     continueToolExecution,
+    interruptToolExecution,
     setChatModelProvider,
     attachFile,
     askQuestionAudio,

@@ -1,7 +1,7 @@
 import { StepDefinition, PortType } from '../../../types';
 
 export const DataTransformStepDefinition: StepDefinition = {
-  id: 'data_transform',
+  id: 'data_transformation',
   name: 'Data Transform',
   category: 'logic',
   description: 'Transform data using map, filter, reduce, and other operations',

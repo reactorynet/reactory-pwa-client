@@ -1,0 +1,26 @@
+mutation ReactorInterruptToolExecution($chatSessionId: String!, $personaId: String!, $reason: String) {
+  ReactorInterruptToolExecution(chatSessionId: $chatSessionId, personaId: $personaId, reason: $reason) {
+    __typename
+    ... on ReactorChatMessage {
+      sessionId
+      id
+      role
+      content
+      thinking
+      rating
+      timestamp
+      images
+      tool_calls { id type function { name arguments } status }
+      tool_results { id name content timestamp }
+      tool_errors { id name error timestamp }
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

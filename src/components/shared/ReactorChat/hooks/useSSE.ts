@@ -9,6 +9,7 @@ export enum StreamingEventType {
   COMPLETE = 'complete',
   ERROR = 'error',
   TOOL_ITERATION_LIMIT = 'tool_iteration_limit',
+  INTERRUPTED = 'interrupted',
   RETRY = 'retry',
   COMPACTION = 'compaction'
 }
@@ -103,6 +104,14 @@ export interface ToolIterationLimitStreamingEvent extends StreamingEventBase {
   };
 }
 
+export interface InterruptedStreamingEvent extends StreamingEventBase {
+  type: StreamingEventType.INTERRUPTED;
+  data: {
+    iterationsCompleted: number;
+    reason?: string;
+  };
+}
+
 /**
  * Retry streaming event — the provider hit a retryable error and will
  * automatically retry after a backoff period.
@@ -145,6 +154,7 @@ export interface UseSSEOptions {
   onError?: (error: any) => void;
   onToolCall?: (toolCall: ToolCallStreamingEvent) => void;
   onToolIterationLimit?: (event: ToolIterationLimitStreamingEvent) => void;
+  onInterrupted?: (event: InterruptedStreamingEvent) => void;
   onRetry?: (event: RetryStreamingEvent) => void;
   onCompaction?: (event: CompactionStreamingEvent) => void;
   /** Called when the SSE connection drops and a reconnect attempt begins */
@@ -203,7 +213,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 /** Exponential backoff delays (ms) for each reconnect attempt */
 const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 16000];
 
-const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onRetry, onCompaction, onReconnecting, onReconnected, onReconnectFailed, onStreamActivity, sessionLogger }: UseSSEOptions): UseSSEResult => {
+const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onInterrupted, onRetry, onCompaction, onReconnecting, onReconnected, onReconnectFailed, onStreamActivity, sessionLogger }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -220,6 +230,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   const onErrorRef = React.useRef(onError);
   const onToolCallRef = React.useRef(onToolCall);
   const onToolIterationLimitRef = React.useRef(onToolIterationLimit);
+  const onInterruptedRef = React.useRef(onInterrupted);
   const onRetryRef = React.useRef(onRetry);
   const onCompactionRef = React.useRef(onCompaction);
   const onReconnectingRef = React.useRef(onReconnecting);
@@ -231,6 +242,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   onErrorRef.current = onError;
   onToolCallRef.current = onToolCall;
   onToolIterationLimitRef.current = onToolIterationLimit;
+  onInterruptedRef.current = onInterrupted;
   onRetryRef.current = onRetry;
   onCompactionRef.current = onCompaction;
   const onStreamActivityRef = React.useRef(onStreamActivity);
@@ -432,6 +444,15 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           setIsStreaming(false);
           if (onToolIterationLimitRef.current) {
             onToolIterationLimitRef.current(limitEvt);
+          }
+          break;
+        }
+        case 'interrupted': {
+          const intEvt = data as InterruptedStreamingEvent;
+          sessionLogger?.info('SSE interrupted by user', { iterationsCompleted: intEvt.data?.iterationsCompleted, reason: intEvt.data?.reason }, 'useSSE');
+          setIsStreaming(false);
+          if (onInterruptedRef.current) {
+            onInterruptedRef.current(intEvt);
           }
           break;
         }

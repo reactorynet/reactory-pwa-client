@@ -1,7 +1,7 @@
 import { StepDefinition, PortType } from '../../../types';
 
 export const RESTStepDefinition: StepDefinition = {
-  id: 'rest',
+  id: 'api_call',
   name: 'REST API',
   category: 'integration',
   description: 'Execute REST API request',

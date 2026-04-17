@@ -202,6 +202,7 @@ export default (props) => {
     setModelOverride,
     setMaxToolIterations,
     continueToolExecution,
+    interruptExecution,
     toolIterationLimitInfo,
     clearToolIterationLimitInfo,
     compactConversation,
@@ -1799,18 +1800,32 @@ export default (props) => {
       </Box>
 
       {busy && (
-        <LinearProgress
-          variant="indeterminate"
-          color="primary"
-          sx={{
-            height: 3,
-            borderRadius: 0,
-            mb: 1,
-            '& .MuiLinearProgress-bar': {
-              transition: 'transform 0.3s ease-in-out',
-            },
-          }}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LinearProgress
+            variant="indeterminate"
+            color="primary"
+            sx={{
+              flex: 1,
+              height: 3,
+              borderRadius: 0,
+              mb: 1,
+              '& .MuiLinearProgress-bar': {
+                transition: 'transform 0.3s ease-in-out',
+              },
+            }}
+          />
+          {(chatState?.toolApprovalMode === ToolApprovalMode.AUTO ||
+            chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO) && (
+            <IconButton
+              size="small"
+              onClick={() => interruptExecution()}
+              sx={{ mb: 1 }}
+              title="Stop execution"
+            >
+              <Icon>stop_circle</Icon>
+            </IconButton>
+          )}
+        </Box>
       )}
 
       {/* Pending tool call resume banner */}

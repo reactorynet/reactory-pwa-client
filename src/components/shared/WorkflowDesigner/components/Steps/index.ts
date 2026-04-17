@@ -25,6 +25,9 @@ export { ValidationStepDefinition } from './Validation/definition';
 export { DataTransformStepDefinition } from './DataTransform/definition';
 export { ForEachStepDefinition } from './ForEach/definition';
 export { CliCommandStepDefinition } from './CliCommand/definition';
+export { FileOperationStepDefinition } from './FileOperation/definition';
+export { WhileStepDefinition } from './While/definition';
+export { CustomStepDefinition } from './Custom/definition';
 
 import { StepDefinition } from '../../types';
 import { StartStepDefinition } from './Start/definition';
@@ -45,6 +48,9 @@ import { ValidationStepDefinition } from './Validation/definition';
 import { DataTransformStepDefinition } from './DataTransform/definition';
 import { ForEachStepDefinition } from './ForEach/definition';
 import { CliCommandStepDefinition } from './CliCommand/definition';
+import { FileOperationStepDefinition } from './FileOperation/definition';
+import { WhileStepDefinition } from './While/definition';
+import { CustomStepDefinition } from './Custom/definition';
 
 /**
  * All available workflow step definitions
@@ -57,6 +63,8 @@ export const ALL_STEP_DEFINITIONS: StepDefinition[] = [
   // Actions
   TaskStepDefinition,
   CliCommandStepDefinition,
+  FileOperationStepDefinition,
+  CustomStepDefinition,
   
   // Logic
   ConditionStepDefinition,
@@ -68,6 +76,7 @@ export const ALL_STEP_DEFINITIONS: StepDefinition[] = [
   JoinStepDefinition,
   DelayStepDefinition,
   ForEachStepDefinition,
+  WhileStepDefinition,
   
   // Integration
   GraphQLStepDefinition,

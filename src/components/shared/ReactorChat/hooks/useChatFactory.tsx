@@ -2,9 +2,9 @@ import React, { useEffect } from "react"
 import { IAIPersona, ChatMessage, ChatState, ChatCompletionResponseMessageStore, ToolApprovalMode, UXChatMessage, MacroComponentDefinition, MacroToolDefinition, NetworkStatus } from "../types"
 import useMacros from "./useMacros"
 import { exec } from "child_process"
-import ToolPrompt from './ToolPrompt';
+import ToolPrompt, { ToolApprovalDecision } from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
-import useSSE, { CompactionStreamingEvent, CompletionStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
+import useSSE, { CompactionStreamingEvent, CompletionStreamingEvent, InterruptedStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
 
 interface ChatFactoryHookResult {
   // represents the chat state
@@ -61,6 +61,8 @@ interface ChatFactoryHookResult {
   setMaxToolIterations: (maxIterations: number) => Promise<void>
   // continues tool execution after a tool iteration limit was reached
   continueToolExecution: (newMaxIterations?: number) => Promise<void>
+  // interrupts an in-progress AUTO tool execution loop
+  interruptExecution: (reason?: string) => Promise<void>
   // info about a tool iteration limit event, null when not paused
   toolIterationLimitInfo: { iterationsCompleted: number; maxIterations: number; partialContent?: string } | null
   // clears the tool iteration limit info ("stop" action)
@@ -1300,6 +1302,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       setBusy(false);
     }, [reactory]);
 
+    const onInterruptedReceived = React.useCallback((event: InterruptedStreamingEvent) => {
+      reactory.log('[useChatFactory] Execution interrupted by user', event.data, 'info');
+      setWaitingForResponse(false);
+      if (sseInactivityTimerRef.current) {
+        clearTimeout(sseInactivityTimerRef.current);
+        sseInactivityTimerRef.current = null;
+      }
+      setBusy(false);
+    }, [reactory]);
+
     /**
      * Handle retry events from the server when a provider hits rate limiting
      * or other transient errors and is retrying with exponential backoff.
@@ -1364,6 +1376,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onMessage: onSSEMessageReceived,
       onError: (e) => { onError(e); props.onStreamError?.(e); },
       onToolIterationLimit: onToolIterationLimitReceived,
+      onInterrupted: onInterruptedReceived,
       onRetry: onRetryReceived,
       onCompaction: onCompactionReceived,
       onReconnecting: (attempt, maxAttempts) => {
@@ -1798,7 +1811,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * When `targetMessageId` is provided the search is deterministic; otherwise
    * falls back to the last assistant message with tool_calls.
    */
-  const onToolCallPrompt = React.useCallback((toolCall: string, args: any, state: ChatState, callBack: (approved: boolean) => void, targetMessageId?: string) => {
+  const onToolCallPrompt = React.useCallback((toolCall: string, args: any, state: ChatState, callBack: (decision: ToolApprovalDecision, instruction?: string) => void, targetMessageId?: string) => {
     setChatState((prevState) => {
       const history = [...prevState.history];
 
@@ -2331,6 +2344,20 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   };
 
+  const interruptExecution = async (reason?: string) => {
+    try {
+      const sessionId = chatState.id;
+      if (!sessionId) return;
+      await graph.interruptToolExecution(
+        sessionId,
+        chatState.botId || persona?.id,
+        reason || 'User requested stop',
+      );
+    } catch (error) {
+      onError(error as Error);
+    }
+  };
+
   const loadChat = async (chatSessionId: string) => {
     sessionLogger?.info(`Loading chat session`, { chatSessionId }, 'useChatFactory');
     setBusy(true);
@@ -2464,6 +2491,12 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const consolidateToolResults = React.useCallback((toolResults: any[], toolErrors: any[]): string => {
     const results = toolResults.map((result, index) => {
       const content = result.content || JSON.stringify(result);
+      if (result.decision === 'declined') {
+        return `Tool ${index + 1} (${result.name}) [USER DECLINED]: ${content}`;
+      }
+      if (result.decision === 'instructed') {
+        return `Tool ${index + 1} (${result.name}) [USER INSTRUCTION]: ${content}`;
+      }
       return `Tool ${index + 1} (${result.name}): ${content}`;
     }).join('\n\n');
 
@@ -2717,10 +2750,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
         try {
           await new Promise<void>((resolve, reject) => {
-            onToolCallPrompt(macro.name, args, chatState, async (approved: boolean) => {
+            onToolCallPrompt(macro.name, args, chatState, async (decision: ToolApprovalDecision, instruction?: string) => {
               cleanupApprovalComponent(targetMessageId);
 
-              if (approved) {
+              if (decision === 'approved') {
                 try {
                   const result = await executeMacro(macro, args, 'user', id);
                   toolResults.push({
@@ -2741,12 +2774,28 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                   });
                   reject(error);
                 }
-              } else {
-                toolErrors.push({
+              } else if (decision === 'instructed') {
+                // User provided alternative guidance — report as a tool result, not an error
+                toolResults.push({
                   id,
                   name,
-                  error: `Tool call declined: ${name}`,
-                  timestamp: new Date()
+                  role: "tool",
+                  content: `Instead of running this tool, the user provided this guidance: ${instruction}. Follow the user's instruction.`,
+                  timestamp: new Date(),
+                  sessionId: chatState.id,
+                  decision: 'instructed',
+                });
+                resolve();
+              } else {
+                // Declined — report as a tool result with clear user-choice framing, not as an error
+                toolResults.push({
+                  id,
+                  name,
+                  role: "tool",
+                  content: `The user chose not to run tool "${name}". This is a deliberate choice, not an error. Continue without it and ask the user what they'd like to do instead.`,
+                  timestamp: new Date(),
+                  sessionId: chatState.id,
+                  decision: 'declined',
                 });
                 resolve();
               }
@@ -3226,6 +3275,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     setModelOverride: handleModelChange,
     setMaxToolIterations,
     continueToolExecution,
+    interruptExecution,
     toolIterationLimitInfo,
     clearToolIterationLimitInfo: () => setToolIterationLimitInfo(null),
     // Compaction status

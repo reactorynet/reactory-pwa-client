@@ -57,7 +57,7 @@ const workflowWithGraphQL = {
     },
     {
       id: 'step-3',
-      type: 'rest',
+      type: 'api_call',
       name: 'Post to Webhook',
       position: { x: 700, y: 100 },
       properties: {

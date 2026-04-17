@@ -1,7 +1,7 @@
 import { StepDefinition, PortType } from '../../../types';
 
 export const CliCommandStepDefinition: StepDefinition = {
-  id: 'cliCommand',
+  id: 'cli_command',
   name: 'CLI Command',
   category: 'action',
   description: 'Execute a command-line command',
