@@ -138,6 +138,38 @@ export const ServiceInvokeStepDefinition: StepDefinition = {
       backoff: 'exponential'
     }
   },
+  inputsSchema: {
+    type: 'object',
+    title: 'Step Inputs',
+    description: 'Dynamic inputs that support ${variable} substitution from workflow context',
+    properties: {
+      params: {
+        type: 'object',
+        title: 'Method Parameters',
+        description: 'Parameters passed to the service method. Supports ${variable} substitution.',
+        additionalProperties: true
+      },
+      context: {
+        type: 'object',
+        title: 'Execution Context',
+        description: 'Additional context data for the service invocation.',
+        additionalProperties: true
+      }
+    }
+  },
+  inputsUiSchema: {
+    'ui:order': ['params', 'context'],
+    params: {
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': { format: 'json', rows: 6 },
+      'ui:help': 'Supports ${variable} substitution from workflow context'
+    },
+    context: {
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': { format: 'json', rows: 4 },
+      'ui:help': 'Additional context passed alongside the method parameters'
+    }
+  },
   uiSchema: {
     'ui:order': [
       'name', 

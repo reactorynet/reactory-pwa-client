@@ -174,6 +174,8 @@ export function TemplateWorkflowDesigner() {
             name: 'Start',
             type: 'start',
             position: { x: 100, y: 100 },
+            config: {},
+            inputs: {},
             properties: {},
             inputPorts: [],
             outputPorts: [
@@ -191,6 +193,8 @@ export function TemplateWorkflowDesigner() {
             name: 'End',
             type: 'end',
             position: { x: 400, y: 100 },
+            config: {},
+            inputs: {},
             properties: {},
             inputPorts: [
               {

@@ -34,7 +34,7 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
   const { useState: useStateReact, useCallback: useCallbackReact, useMemo: useMemoReact } = React;
 
   // Panel state
-  const [activeTab, setActiveTab] = useStateReact<'properties' | 'validation' | 'run'>('properties');
+  const [activeTab, setActiveTab] = useStateReact<'config' | 'inputs' | 'validation' | 'run'>('config');
 
   // Workflow metadata editing state
   const [wfName, setWfName] = useStateReact<string>(definition?.name || '');
@@ -76,7 +76,7 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
   }, [selectedStep, validationResult.warnings]);
 
 
-  // Handle property changes
+  // Handle property changes — routes to config or inputs based on active tab
   const handlePropertyChange = useCallbackReact((propertyPath: string, value: any) => {
     if (!selectedStep || readonly) return;
 
@@ -91,30 +91,51 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
     if (stepLevelFields.includes(rootField) && pathParts.length === 1) {
       // Update step-level field directly
       (updatedStep as any)[rootField] = value;
-    } else {
-      // Handle nested property paths (e.g., "configuration.inputField")
-      // Ensure properties object exists
-      if (!updatedStep.properties) {
-        updatedStep.properties = {};
+    } else if (activeTab === 'inputs') {
+      // Write to step.inputs
+      if (!updatedStep.inputs) {
+        updatedStep.inputs = {};
       }
-      
-      let target: Record<string, unknown> = updatedStep.properties;
-      
+      let target: Record<string, unknown> = updatedStep.inputs;
       for (let i = 0; i < pathParts.length - 1; i++) {
         if (!target[pathParts[i]]) {
           target[pathParts[i]] = {};
         }
         target = target[pathParts[i]] as Record<string, unknown>;
       }
-      
       target[pathParts[pathParts.length - 1]] = value;
+    } else {
+      // Write to step.config (and mirror to properties for backward compat)
+      if (!updatedStep.config) {
+        updatedStep.config = {};
+      }
+      if (!updatedStep.properties) {
+        updatedStep.properties = {};
+      }
+      
+      let configTarget: Record<string, unknown> = updatedStep.config;
+      let propsTarget: Record<string, unknown> = updatedStep.properties;
+      
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        if (!configTarget[pathParts[i]]) {
+          configTarget[pathParts[i]] = {};
+        }
+        configTarget = configTarget[pathParts[i]] as Record<string, unknown>;
+        if (!propsTarget[pathParts[i]]) {
+          propsTarget[pathParts[i]] = {};
+        }
+        propsTarget = propsTarget[pathParts[i]] as Record<string, unknown>;
+      }
+      
+      configTarget[pathParts[pathParts.length - 1]] = value;
+      propsTarget[pathParts[pathParts.length - 1]] = value;
     }
 
     onStepUpdate(updatedStep);
     
     // Trigger validation
     onValidate();
-  }, [selectedStep, readonly, onStepUpdate, onValidate]);
+  }, [selectedStep, readonly, activeTab, onStepUpdate, onValidate]);
 
   // Handle section expand/collapse
   const handleSectionToggle = useCallbackReact((sectionId: string) => {
@@ -130,7 +151,7 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
   }, []);
 
   // Handle tab change
-  const handleTabChange = useCallbackReact((event: React.SyntheticEvent, newValue: 'properties' | 'validation' | 'run') => {
+  const handleTabChange = useCallbackReact((event: React.SyntheticEvent, newValue: 'config' | 'inputs' | 'validation' | 'run') => {
     setActiveTab(newValue);
   }, []);
 
@@ -276,11 +297,16 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
           aria-label="properties tabs"
         >
           <Tab
-            label="Properties"
-            value="properties"
+            label="Config"
+            value="config"
             icon={<Settings />}
             iconPosition="start"
-
+          />
+          <Tab
+            label="Inputs"
+            value="inputs"
+            icon={<Info />}
+            iconPosition="start"
           />
           <Tab
             label={
@@ -304,12 +330,13 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
 
       {/* Panel Content */}
       <Box sx={{ flexGrow: 1, overflow: 'auto', p: 0 }}>
-        {activeTab === 'properties' && (
+        {activeTab === 'config' && (
           <>
             {selectedStep ? (
               <PropertyForm
                 step={selectedStep}
                 stepDefinition={stepDefinition}
+                mode="config"
                 errors={stepErrors}
                 warnings={stepWarnings}
                 expandedSections={expandedSections}
@@ -544,6 +571,107 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
                           </span>
                         </Tooltip>
                       </Box>
+                    )}
+                  </AccordionDetails>
+                </Accordion>
+              </Box>
+            )}
+          </>
+        )}
+
+        {activeTab === 'inputs' && (
+          <>
+            {selectedStep ? (
+              <PropertyForm
+                step={selectedStep}
+                stepDefinition={stepDefinition}
+                mode="inputs"
+                errors={[]}
+                warnings={[]}
+                expandedSections={expandedSections}
+                readonly={readonly}
+                onPropertyChange={handlePropertyChange}
+                onSectionToggle={handleSectionToggle}
+                onStepUpdate={onStepUpdate}
+              />
+            ) : (
+              // No step selected — workflow-level inputs/outputs editor
+              <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Info sx={{ color: 'primary.main' }} />
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    Workflow Inputs &amp; Outputs
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Define the inputs this workflow expects and the outputs it produces.
+                  These parameters are available to all steps via {'${variable}'} substitution.
+                </Typography>
+
+                {/* Workflow Inputs */}
+                <Accordion defaultExpanded disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
+                  <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+                    <Typography variant="body2" fontWeight={600}>Inputs</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {definition?.variables && definition.variables.filter(v => v.type !== 'output').length > 0 ? (
+                      definition.variables.filter(v => v.type !== 'output').map((variable) => (
+                        <Box key={variable.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip label={variable.name} size="small" variant="outlined" />
+                          <Typography variant="caption" color="text.secondary">
+                            {variable.type}{variable.defaultValue !== undefined ? ` = ${String(variable.defaultValue)}` : ''}
+                          </Typography>
+                          {!readonly && (
+                            <IconButton size="small" onClick={() => {
+                              if (!definition || !onDefinitionUpdate) return;
+                              onDefinitionUpdate({
+                                ...definition,
+                                variables: (definition.variables || []).filter(v => v.id !== variable.id)
+                              });
+                            }}>
+                              <Close fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        No workflow inputs defined.
+                      </Typography>
+                    )}
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* Workflow Outputs */}
+                <Accordion disableGutters elevation={0} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}>
+                  <AccordionSummary expandIcon={<ExpandMore />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+                    <Typography variant="body2" fontWeight={600}>Outputs</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {definition?.variables && definition.variables.filter(v => v.type === 'output').length > 0 ? (
+                      definition.variables.filter(v => v.type === 'output').map((variable) => (
+                        <Box key={variable.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip label={variable.name} size="small" variant="outlined" color="secondary" />
+                          <Typography variant="caption" color="text.secondary">
+                            {variable.description || ''}
+                          </Typography>
+                          {!readonly && (
+                            <IconButton size="small" onClick={() => {
+                              if (!definition || !onDefinitionUpdate) return;
+                              onDefinitionUpdate({
+                                ...definition,
+                                variables: (definition.variables || []).filter(v => v.id !== variable.id)
+                              });
+                            }}>
+                              <Close fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        No workflow outputs defined.
+                      </Typography>
                     )}
                   </AccordionDetails>
                 </Accordion>

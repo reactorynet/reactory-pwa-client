@@ -134,6 +134,38 @@ export const RESTStepDefinition: StepDefinition = {
     timeout: 30000,
     retries: 0
   },
+  inputsSchema: {
+    type: 'object',
+    title: 'Step Inputs',
+    description: 'Dynamic inputs that support ${variable} substitution from workflow context',
+    properties: {
+      body: {
+        title: 'Request Body',
+        description: 'JSON body to send with the request. Supports ${variable} substitution.',
+        oneOf: [
+          { type: 'string' },
+          { type: 'object', additionalProperties: true }
+        ]
+      },
+      urlParams: {
+        type: 'object',
+        title: 'URL Parameters',
+        description: 'Dynamic URL parameters (substituted into URL template)',
+        additionalProperties: { type: 'string' }
+      }
+    }
+  },
+  inputsUiSchema: {
+    'ui:order': ['body', 'urlParams'],
+    body: {
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': { format: 'json', rows: 6 },
+      'ui:help': 'Supports ${variable} substitution from workflow context'
+    },
+    urlParams: {
+      'ui:help': 'Key-value pairs substituted into the URL'
+    }
+  },
   uiSchema: {
     'ui:order': ['name', 'method', 'url', 'headers', 'queryParams', 'auth', 'timeout', 'retries'],
     method: {

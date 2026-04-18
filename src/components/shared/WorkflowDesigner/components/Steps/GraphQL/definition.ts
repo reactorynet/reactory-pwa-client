@@ -101,6 +101,26 @@ export const GraphQLStepDefinition: StepDefinition = {
     timeout: 30000,
     headers: []
   },
+  inputsSchema: {
+    type: 'object',
+    title: 'Step Inputs',
+    description: 'Dynamic inputs that support ${variable} substitution from workflow context',
+    properties: {
+      variables: {
+        type: 'object',
+        title: 'GraphQL Variables',
+        description: 'Variables passed to the GraphQL operation. Supports ${variable} substitution.',
+        additionalProperties: true
+      }
+    }
+  },
+  inputsUiSchema: {
+    variables: {
+      'ui:widget': 'RichEditorWidget',
+      'ui:options': { format: 'json', rows: 6 },
+      'ui:help': 'JSON object of GraphQL variables. Supports ${variable} substitution.'
+    }
+  },
   uiSchema: {
     'ui:order': ['name', 'endpoint', 'operation', 'query', 'headers', 'timeout'],
     endpoint: {

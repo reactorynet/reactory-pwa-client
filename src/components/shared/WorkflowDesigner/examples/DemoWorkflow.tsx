@@ -34,6 +34,8 @@ export const createDemoWorkflow = (): WorkflowDefinition => {
         type: 'start',
         position: { x: 100, y: 200 },
         size: { width: 200, height: 100 },
+        config: {},
+        inputs: {},
         properties: {
           name: 'Start Process'
         },
@@ -56,6 +58,8 @@ export const createDemoWorkflow = (): WorkflowDefinition => {
         type: 'task',
         position: { x: 400, y: 200 },
         size: { width: 200, height: 100 },
+        config: {},
+        inputs: {},
         properties: {
           name: 'Process Data',
           taskType: 'data_transform',
@@ -92,6 +96,8 @@ export const createDemoWorkflow = (): WorkflowDefinition => {
         type: 'condition',
         position: { x: 700, y: 200 },
         size: { width: 200, height: 120 },
+        config: {},
+        inputs: {},
         properties: {
           name: 'Check Quality',
           expression: 'processedData.quality > 0.8'
@@ -130,6 +136,8 @@ export const createDemoWorkflow = (): WorkflowDefinition => {
         type: 'parallel',
         position: { x: 1000, y: 150 },
         size: { width: 200, height: 120 },
+        config: {},
+        inputs: {},
         properties: {
           name: 'Parallel Processing',
           maxConcurrency: 2
@@ -168,6 +176,8 @@ export const createDemoWorkflow = (): WorkflowDefinition => {
         type: 'task',
         position: { x: 1300, y: 120 },
         size: { width: 200, height: 100 },
+        config: {},
+        inputs: {},
         properties: {
           name: 'Generate Report',
           taskType: 'custom_script',
@@ -203,6 +213,8 @@ export const createDemoWorkflow = (): WorkflowDefinition => {
         type: 'task',
         position: { x: 1300, y: 280 },
         size: { width: 200, height: 100 },
+        config: {},
+        inputs: {},
         properties: {
           name: 'Send Notification',
           taskType: 'http_request',
@@ -241,6 +253,8 @@ export const createDemoWorkflow = (): WorkflowDefinition => {
         type: 'join',
         position: { x: 1600, y: 200 },
         size: { width: 200, height: 120 },
+        config: {},
+        inputs: {},
         properties: {
           name: 'Merge Results',
           waitForAll: true
@@ -279,6 +293,8 @@ export const createDemoWorkflow = (): WorkflowDefinition => {
         type: 'end',
         position: { x: 1900, y: 200 },
         size: { width: 200, height: 100 },
+        config: {},
+        inputs: {},
         properties: {
           name: 'Complete',
           returnValue: 'success'
@@ -302,6 +318,8 @@ export const createDemoWorkflow = (): WorkflowDefinition => {
         type: 'task',
         position: { x: 1000, y: 350 },
         size: { width: 200, height: 100 },
+        config: {},
+        inputs: {},
         properties: {
           name: 'Handle Error',
           taskType: 'custom_script',

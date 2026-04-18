@@ -268,6 +268,40 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   // UI state
   const [stepLibraryPanelOpen, setStepLibraryPanelOpen] = useState<boolean>(true);
   const [propertiesPanelOpen, setPropertiesPanelOpen] = useState<boolean>(true);
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(320);
+  const [rightPanelWidth, setRightPanelWidth] = useState<number>(350);
+
+  // Ref for tracking panel resize drag state (avoids re-renders during drag)
+  const resizingRef = useRef<{ side: 'left' | 'right'; startX: number; startWidth: number } | null>(null);
+
+  const handleResizeStart = useCallback((side: 'left' | 'right', e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = {
+      side,
+      startX: e.clientX,
+      startWidth: side === 'left' ? leftPanelWidth : rightPanelWidth,
+    };
+  }, [leftPanelWidth, rightPanelWidth]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const { side, startX, startWidth } = resizingRef.current;
+      const delta = e.clientX - startX;
+      const newWidth = side === 'left'
+        ? Math.max(180, Math.min(600, startWidth + delta))
+        : Math.max(220, Math.min(600, startWidth - delta));
+      if (side === 'left') setLeftPanelWidth(newWidth);
+      else setRightPanelWidth(newWidth);
+    };
+    const handleMouseUp = () => { resizingRef.current = null; };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
   const [validationPanelOpen, setValidationPanelOpen] = useState<boolean>(false);
   const [templatesPanelOpen, setTemplatesPanelOpen] = useState<boolean>(false);
   const [showGrid, setShowGrid] = useState<boolean>(props.showGrid || true);
@@ -483,6 +517,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         width: STEP_DEFAULTS.WIDTH,
         height: STEP_DEFAULTS.HEIGHT
       },
+      config: { ...stepDefinition.defaultProperties },
+      inputs: { ...(stepDefinition.inputs || {}) },
       properties: { ...stepDefinition.defaultProperties },
       inputPorts: stepDefinition.inputPorts.map(port => ({
         id: generateConnectionId(),
@@ -1371,13 +1407,14 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           <Paper
             elevation={1}
             sx={{
-              width: 320,
+              width: leftPanelWidth,
               display: 'flex',
               flexDirection: 'column',
               borderRadius: 0,
-              borderRight: 1,
+              borderRight: 0,
               borderColor: 'divider',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              flexShrink: 0,
             }}
           >
             <StepLibraryPanel
@@ -1391,6 +1428,24 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               onStepClick={handleStepLibraryStepClick}
             />
           </Paper>
+        )}
+
+        {/* Left panel resize handle */}
+        {stepLibraryPanelOpen && (
+          <Box
+            onMouseDown={(e) => handleResizeStart('left', e)}
+            sx={{
+              width: 5,
+              flexShrink: 0,
+              cursor: 'ew-resize',
+              borderRight: 1,
+              borderColor: 'divider',
+              backgroundColor: 'transparent',
+              transition: 'background-color 0.15s',
+              '&:hover': { backgroundColor: 'primary.main', opacity: 0.4 },
+              userSelect: 'none',
+            }}
+          />
         )}
 
         {/* Canvas Area */}
@@ -1479,18 +1534,37 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           )}
         </Box>
 
+        {/* Right panel resize handle */}
+        {propertiesPanelOpen && (
+          <Box
+            onMouseDown={(e) => handleResizeStart('right', e)}
+            sx={{
+              width: 5,
+              flexShrink: 0,
+              cursor: 'ew-resize',
+              borderLeft: 1,
+              borderColor: 'divider',
+              backgroundColor: 'transparent',
+              transition: 'background-color 0.15s',
+              '&:hover': { backgroundColor: 'primary.main', opacity: 0.4 },
+              userSelect: 'none',
+            }}
+          />
+        )}
+
         {/* Properties Panel */}
         {propertiesPanelOpen && (
           <Paper
             elevation={1}
             sx={{
-              width: 350,
+              width: rightPanelWidth,
               display: 'flex',
               flexDirection: 'column',
               borderRadius: 0,
-              borderLeft: 1,
+              borderLeft: 0,
               borderColor: 'divider',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              flexShrink: 0,
             }}
           >
             <PropertiesPanel

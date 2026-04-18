@@ -57,6 +57,8 @@ export default function PerformanceDemo() {
           y: row * stepSpacing + Math.random() * 50 - 25
         },
         size: { width: 200, height: 100 },
+        config: {},
+        inputs: {},
         properties: {},
         inputPorts: stepType !== 'start' ? [{
           id: generateConnectionId(),

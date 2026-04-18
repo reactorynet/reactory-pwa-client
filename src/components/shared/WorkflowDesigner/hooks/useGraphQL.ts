@@ -97,11 +97,11 @@ function toWorkflowDefinitionInput(definition: WorkflowDefinition) {
       enabled: true,
       continueOnError: false,
       timeout: null,
-      inputs: step.properties ? JSON.stringify(step.properties) : null,
+      inputs: step.inputs ? JSON.stringify(step.inputs) : null,
       outputs: null,
       condition: null,
       dependsOn: null,
-      config: null,
+      config: step.config ? JSON.stringify(step.config) : null,
       designer: {
         position: step.position ? { x: step.position.x, y: step.position.y } : null,
         size: step.size ? { width: step.size.width, height: step.size.height } : null,

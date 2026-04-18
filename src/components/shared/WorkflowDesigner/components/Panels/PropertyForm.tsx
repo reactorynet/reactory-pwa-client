@@ -9,6 +9,7 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
   const {
     step,
     stepDefinition,
+    mode,
     errors,
     warnings,
     readonly,
@@ -23,53 +24,37 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
 
   const { useMemo: useMemoReact, useCallback: useCallbackReact } = React;
 
-  // Build form schema from step definition
+  // Build form schema from step definition based on mode
   const formSchema = useMemoReact(() => {
     if (!stepDefinition) return null;
+    if (mode === 'inputs') return stepDefinition.inputsSchema || null;
     return stepDefinition.propertySchema;
-  }, [stepDefinition]);
+  }, [stepDefinition, mode]);
 
-  // Build UI schema from step definition
+  // Build UI schema from step definition based on mode
   const formUiSchema = useMemoReact(() => {
     if (!stepDefinition) return {};
+    if (mode === 'inputs') return stepDefinition.inputsUiSchema || {};
     if (stepDefinition.uiSchema) {
       return stepDefinition.uiSchema;
     }
     return {};
-  }, [stepDefinition]);
+  }, [stepDefinition, mode]);
 
-  // Current form data (combine step name with properties)
+  // Current form data — reads from config or inputs based on mode
   const formData = useMemoReact(() => {
-    const {
-      inputs
-    } = step.properties;
-    if (inputs && typeof inputs === 'string') {
-      try {
-        const parsedInputs = JSON.parse(inputs);
-        return {
-          name: step.name,
-          ...parsedInputs
-        };
-      } catch (e) {
-        console.warn('Failed to parse inputs JSON:', e);
-        return {
-          name: step.name,
-          ...step.properties
-        };
-      }
+    if (mode === 'inputs') {
+      const inputs = step.inputs || {};
+      return { ...inputs };
     }
 
-    if (inputs && typeof inputs === 'object') {
-      return {
-        name: step.name,
-        ...inputs
-      };
-    }
-
+    // Config mode — read from step.config
+    const config = step.config || {};
     return {
       name: step.name,
+      ...config,
     };
-  }, [step]);
+  }, [step, mode]);
 
   // Build the form definition — kept in sync with step.type so switching steps
   // picks up the new schema and uiSchema.
@@ -77,14 +62,14 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
     if (!formSchema) return null;
     const safeName = (step.type || 'unknown').replace(/[^a-zA-Z0-9_]/g, '_');
     return {
-      id: `workflowEditor.${safeName}@1.0.0`,
-      name: safeName,
+      id: `workflowEditor.${safeName}_${mode}@1.0.0`,
+      name: `${safeName}_${mode}`,
       nameSpace: 'workflowEditor',
       version: '1.0.0',
       schema: formSchema as Reactory.Schema.AnySchema,
       uiSchema: formUiSchema as Reactory.Schema.IUISchema,
     };
-  }, [step.type, formSchema, formUiSchema]);
+  }, [step.type, mode, formSchema, formUiSchema]);
 
   // Handle form submission — rebuilds the full step from submitted formData
   // and propagates it up via onStepUpdate so the designer state is updated.
@@ -94,16 +79,27 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
     const submittedFormData: Record<string, unknown> =
       submitData?.formData ?? submitData ?? {};
 
-    const { name, ...properties } = submittedFormData;
+    if (mode === 'inputs') {
+      // Inputs mode — write directly to step.inputs
+      const updatedStep: WorkflowStepDefinition = {
+        ...step,
+        inputs: { ...submittedFormData },
+      };
+      onStepUpdate(updatedStep);
+    } else {
+      // Config mode — extract name separately, rest goes to step.config
+      const { name, ...configData } = submittedFormData;
 
-    const updatedStep: WorkflowStepDefinition = {
-      ...step,
-      ...(name !== undefined ? { name: String(name) } : {}),
-      properties: { ...(step.properties || {}), ...properties },
-    };
+      const updatedStep: WorkflowStepDefinition = {
+        ...step,
+        ...(name !== undefined ? { name: String(name) } : {}),
+        config: { ...(typeof step.config === 'string' ? (() => { try { return JSON.parse(step.config as string); } catch { return {}; } })() : (step.config || {})), ...configData },
+        properties: { ...(step.properties || {}), ...configData },
+      };
 
-    onStepUpdate(updatedStep);
-  }, [step, readonly, onStepUpdate]);
+      onStepUpdate(updatedStep);
+    }
+  }, [step, readonly, onStepUpdate, mode]);
 
   // Live onChange — calls onPropertyChange for each field that has changed.
   // Only used when a caller supplies onPropertyChange for field-level reactivity.
@@ -111,14 +107,15 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
     if (!data?.formData) return;
 
     const newData = data.formData;
+    const dataBag = mode === 'inputs' ? (step.inputs || {}) : (step.config || {});
 
     Object.entries(newData).forEach(([key, value]) => {
-      const currentValue = key === 'name' ? step.name : (step.properties || {})[key];
+      const currentValue = (mode === 'config' && key === 'name') ? step.name : dataBag[key];
       if (currentValue !== value) {
         onPropertyChange(key, value);
       }
     });
-  }, [step, onPropertyChange]);
+  }, [step, mode, onPropertyChange]);
 
   // Transform validation errors to the format expected by ReactoryForm
   const formErrors = useMemoReact(() => {
@@ -141,7 +138,11 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
   if (!stepDefinition || !formSchema) {
     return (
       <div style={{ padding: 16, textAlign: 'center', color: '#666' }}>
-        <p>No configuration available for this step type.</p>
+        <p>
+          {mode === 'inputs'
+            ? 'No inputs schema defined for this step type.'
+            : 'No configuration available for this step type.'}
+        </p>
         <p style={{ fontSize: '0.9em', marginTop: 8 }}>
           Step Type: {step.type}
         </p>
@@ -167,7 +168,7 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
         step changes, ensuring the new schema and uiSchema are applied correctly.
       */}
       <ReactoryForm
-        key={step.id}
+        key={`${step.id}_${mode}`}
         formDef={formDefinition}
         data={formData}
         onSubmit={handleFormSubmit}

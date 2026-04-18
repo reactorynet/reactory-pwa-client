@@ -60,7 +60,12 @@ export interface WorkflowStepDefinition {
   type: string;
   position: Point;
   size?: Size;
+  /** @deprecated Use `config` and `inputs` instead. Kept for backward compatibility. */
   properties: Record<string, unknown>;
+  /** Static step-type-specific configuration (e.g. url, method, level). */
+  config: Record<string, unknown>;
+  /** Dynamic runtime parameters that support ${variable} substitution. */
+  inputs: Record<string, unknown>;
   inputPorts: PortDefinition[];
   outputPorts: PortDefinition[];
   metadata?: StepMetadata;
@@ -179,6 +184,10 @@ export interface StepDefinition {
   formFQN?: string;
   propertySchema: Reactory.Schema.AnySchema;
   uiSchema?: Reactory.Schema.IUISchema;
+  /** Schema for the dynamic inputs form (Inputs tab). */
+  inputsSchema?: Reactory.Schema.AnySchema;
+  /** UI schema for the dynamic inputs form. */
+  inputsUiSchema?: Reactory.Schema.IUISchema;
   defaultProperties: Record<string, unknown>;
   tags?: string[];
   // Rendering configuration for different renderers
@@ -457,6 +466,8 @@ export interface PropertiesPanelProps {
 export interface PropertyFormProps {
   step: WorkflowStepDefinition;
   stepDefinition?: StepDefinition | null;
+  /** Controls which data bag and schema the form operates on. */
+  mode: 'config' | 'inputs';
   errors: ValidationError[];
   warnings: ValidationError[];
   expandedSections: Set<string>;

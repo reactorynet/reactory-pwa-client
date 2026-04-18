@@ -618,19 +618,29 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
     // Preserve the original YAML type so round-tripping is lossless
     if (step.type !== designerType) metadata.yamlType = step.type;
 
+    const stepConfig: Record<string, unknown> = {
+      ...(typeof step.config === 'string' ? (() => { try { return JSON.parse(step.config); } catch { return {}; } })() : (step.config || {})),
+      enabled: step.enabled ?? true,
+      continueOnError: step.continueOnError ?? false,
+      timeout: step.timeout,
+      condition: step.condition,
+    };
+
+    const stepInputs: Record<string, unknown> = typeof step.inputs === 'string'
+      ? (() => { try { return JSON.parse(step.inputs); } catch { return {}; } })()
+      : (step.inputs || {});
+
     return {
       id: step.id,
       name: step.name || step.id,
       type: designerType,
       position,
       size,
+      config: stepConfig,
+      inputs: stepInputs,
       properties: {
-        ...(step.config || {}),
-        enabled: step.enabled ?? true,
-        continueOnError: step.continueOnError ?? false,
-        timeout: step.timeout,
-        condition: step.condition,
-        inputs: step.inputs,
+        ...stepConfig,
+        inputs: stepInputs,
         outputs: step.outputs,
       },
       inputPorts,
@@ -839,6 +849,8 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
         ? { x: firstRealStep.position.x, y: firstRealStep.position.y - STEP_SPACING_Y }
         : { x: 100, y: 0 },
       size: startStepSize,
+      config: {},
+      inputs: {},
       properties: { name: 'Start' },
       inputPorts: [],
       outputPorts: [
@@ -887,6 +899,8 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
       type: 'end',
       position: { x: 100, y: lastY + STEP_SPACING_Y },
       size: endStepSize,
+      config: {},
+      inputs: {},
       properties: { name: 'End', returnValue: 'success' },
       inputPorts: [
         {
