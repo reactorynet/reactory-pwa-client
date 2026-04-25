@@ -1,0 +1,12 @@
+mutation ReactoryCloseFileSession($sessionId: String!) {
+  ReactoryCloseFileSession(sessionId: $sessionId) {
+    __typename
+    ... on ReactoryFileSessionCloseSuccess {
+      sessionId
+    }
+    ... on ReactoryFileError {
+      code
+      message
+    }
+  }
+}

@@ -1,0 +1,18 @@
+mutation ReactoryWriteFile($input: ReactoryWriteFileInput!) {
+  ReactoryWriteFile(input: $input) {
+    __typename
+    ... on ReactoryFileWriteSuccess {
+      path
+      revision
+      savedAt
+      bytesWritten
+    }
+    ... on ReactoryFileError {
+      code
+      message
+      details
+      currentRevision
+      maxBytes
+    }
+  }
+}

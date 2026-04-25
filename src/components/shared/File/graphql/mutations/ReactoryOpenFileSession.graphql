@@ -1,0 +1,17 @@
+mutation ReactoryOpenFileSession($path: String!, $scope: ReactoryFileScope = server) {
+  ReactoryOpenFileSession(path: $path, scope: $scope) {
+    __typename
+    ... on ReactoryFileSession {
+      sessionId
+      endpoint
+      token
+      expiry
+      currentRevision
+    }
+    ... on ReactoryFileError {
+      code
+      message
+      details
+    }
+  }
+}

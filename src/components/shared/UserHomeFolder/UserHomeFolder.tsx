@@ -11,6 +11,21 @@ import {
 } from './components/shared';
 import UserHomeFolderHeader from './components/UserHomeFolderHeader';
 import { getParentPath, filterFiles } from './utils';
+import { Drawer as MuiDrawer } from '@mui/material';
+import FileEditor from '@reactory/client-core/components/shared/File';
+
+/**
+ * Convert a file path as returned by `ReactoryUserFiles` into the form
+ * `<File scope="user" />` expects: a path rooted at the user's home folder
+ * with a leading `/`.
+ */
+function toUserHomeRelative(p: string): string {
+  const profileMatch = p.match(/^\/profiles\/[^/]+\/files\/[^/]+\/home\/(.*)$/);
+  const stripped = profileMatch ? profileMatch[1] : p.replace(/^\/+/, '');
+  return `/${stripped}`;
+}
+
+const FILE_PREVIEW_WIDTH = 520;
 
 const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
   open,
@@ -34,6 +49,9 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
   // Context menu state
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuItem, setMenuItem] = useState<FileItem | FolderItem | null>(null);
+
+  // File preview drawer state
+  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
 
   // Use the new folder state management hook
   const folderState = useFolderState(rootPath);
@@ -736,7 +754,57 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
     </Box>
   );
 
+  const previewDrawer = (
+    <MuiDrawer
+      anchor="right"
+      open={Boolean(previewFile)}
+      onClose={() => setPreviewFile(null)}
+      PaperProps={{
+        sx: {
+          width: FILE_PREVIEW_WIDTH,
+          maxWidth: '95vw',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 1,
+          py: 0.5,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Typography
+          variant="subtitle2"
+          sx={{ flex: 1, minWidth: 0 }}
+          noWrap
+          title={previewFile?.name}
+        >
+          {previewFile?.name}
+        </Typography>
+        <IconButton size="small" onClick={() => setPreviewFile(null)} aria-label="close preview">
+          <Close fontSize="small" />
+        </IconButton>
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        {previewFile && (
+          <FileEditor
+            key={previewFile.id}
+            path={toUserHomeRelative(previewFile.path)}
+            scope="user"
+          />
+        )}
+      </Box>
+    </MuiDrawer>
+  );
+
   return (
+    <>
     <Paper
       elevation={3}
       sx={{
@@ -1020,8 +1088,13 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
                           }
                         }}
                         onClick={() => {
+                          if (item.displayType === 'file') {
+                            // Any file click opens the live preview drawer.
+                            setPreviewFile(item as FileItem);
+                          }
                           if (!multiSelectEnabled && item.displayType === 'file') {
-                            // In single mode, clicking a file automatically selects it
+                            // In single mode, clicking a file also selects it
+                            // (which will close the picker panel).
                             handleEnhancedItemSelection(item, true);
                           } else if (multiSelectEnabled) {
                             // In multi mode, toggle selection
@@ -1184,6 +1257,8 @@ const UserHomeFolder: React.FC<UserHomeFolderProps> = ({
         reactory={reactory}
       />
     </Paper>
+    {previewDrawer}
+    </>
   );
 };
 

@@ -2,6 +2,28 @@ import React from 'react';
 import { gql } from '@apollo/client';
 import { ChatState } from '../../types';
 import useDesktopEnvironment from '../../hooks/useDesktopEnvironment';
+import File from '@reactory/client-core/components/shared/File';
+
+/**
+ * Convert a file path as returned by `ReactoryUserFiles` into the form
+ * `<File scope="user" />` expects: a path rooted at the user's home folder
+ * with a leading `/`.
+ *
+ * Two input shapes are possible depending on server config:
+ *   1. Non-desktop: `/profiles/{userId}/files/{partnerId}/home/docs/note.md`
+ *      → strip the profile prefix.
+ *   2. Desktop / legacy: already a relative or absolute path.
+ *
+ * In all cases the result is normalised to start with `/` so the server's
+ * user-scope resolver has an unambiguous root.
+ */
+function toUserHomeRelative(p: string): string {
+  const profileMatch = p.match(/^\/profiles\/[^/]+\/files\/[^/]+\/home\/(.*)$/);
+  const stripped = profileMatch ? profileMatch[1] : p.replace(/^\/+/, '');
+  return `/${stripped}`;
+}
+
+const FILE_PREVIEW_WIDTH = 520;
 
 export type DockSide = 'left' | 'right';
 
@@ -143,6 +165,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   const [loadingPaths, setLoadingPaths] = React.useState<Set<string>>(new Set());
   const [pinningKey, setPinningKey] = React.useState<string | null>(null);
   const [showHidden, setShowHidden] = React.useState(false);
+  const [previewFile, setPreviewFile] = React.useState<TreeFile | null>(null);
 
   const isNarrowScreen = React.useMemo(() => {
     const width = window.innerWidth || document.documentElement.clientWidth;
@@ -446,6 +469,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   const renderFile = (file: TreeFile, depth: number) => {
     const pinned = isFilePinned(file);
     const busy = pinningKey === `f:${file.id}`;
+    const selected = previewFile?.id === file.id;
 
     return (
       <ListItemButton
@@ -456,6 +480,8 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
           minHeight: 32,
         }}
         dense
+        selected={selected}
+        onClick={() => setPreviewFile(file)}
       >
         <ListItemIcon sx={{ minWidth: 28 }}>
           {busy ? <CircularProgress size={14} /> : getFileIcon(file.mimetype)}
@@ -605,37 +631,92 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     </Box>
   );
 
+  const previewDrawer = (
+    <Drawer
+      anchor="right"
+      open={Boolean(previewFile)}
+      onClose={() => setPreviewFile(null)}
+      PaperProps={{
+        sx: {
+          width: isNarrowScreen ? '95vw' : FILE_PREVIEW_WIDTH,
+          maxWidth: '95vw',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 1,
+          py: 0.5,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Typography
+          variant="subtitle2"
+          sx={{ flex: 1, minWidth: 0 }}
+          noWrap
+          title={previewFile?.name}
+        >
+          {previewFile?.name}
+        </Typography>
+        <IconButton size="small" onClick={() => setPreviewFile(null)} aria-label="close preview">
+          <Close fontSize="small" />
+        </IconButton>
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        {previewFile && (
+          <File
+            key={previewFile.id}
+            path={toUserHomeRelative(previewFile.path)}
+            scope="user"
+          />
+        )}
+      </Box>
+    </Drawer>
+  );
+
   if (isNarrowScreen) {
     return (
-      <Drawer
-        anchor={dock}
-        open={open}
-        onClose={onClose}
-        PaperProps={{ sx: { width: '85vw', maxWidth: 400 } }}
-      >
-        {sidebarContent}
-      </Drawer>
+      <>
+        <Drawer
+          anchor={dock}
+          open={open}
+          onClose={onClose}
+          PaperProps={{ sx: { width: '85vw', maxWidth: 400 } }}
+        >
+          {sidebarContent}
+        </Drawer>
+        {previewDrawer}
+      </>
     );
   }
 
   return (
-    <Paper
-      elevation={2}
-      square
-      sx={{
-        width: SIDEBAR_WIDTH,
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        flexShrink: 0,
-        overflow: 'hidden',
-        borderLeft: dock === 'right' ? '1px solid' : 'none',
-        borderRight: dock === 'left' ? '1px solid' : 'none',
-        borderColor: 'divider',
-      }}
-    >
-      {sidebarContent}
-    </Paper>
+    <>
+      <Paper
+        elevation={2}
+        square
+        sx={{
+          width: SIDEBAR_WIDTH,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          flexShrink: 0,
+          overflow: 'hidden',
+          borderLeft: dock === 'right' ? '1px solid' : 'none',
+          borderRight: dock === 'left' ? '1px solid' : 'none',
+          borderColor: 'divider',
+        }}
+      >
+        {sidebarContent}
+      </Paper>
+      {previewDrawer}
+    </>
   );
 };
 

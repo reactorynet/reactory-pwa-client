@@ -233,6 +233,24 @@ function toCodeBlockHtml(text: string): string {
 }
 
 /**
+ * Convert raw text into a paragraph-per-line HTML fragment for Quill's native
+ * block model. Used by plain-text mode: combined with monospace CSS and
+ * `white-space: pre-wrap` this gives a code-editor-like experience without
+ * the trailing-newline quirks of `<pre class="ql-syntax">`.
+ */
+function toPlainTextHtml(text: string): string {
+  if (!text) return '';
+  const lines = text.split('\n');
+  // Drop the trailing empty string that represents a POSIX file terminator —
+  // Quill adds its own intrinsic `\n` for the last block, so leaving it in
+  // would render an extra blank paragraph.
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+  return lines
+    .map(line => (line === '' ? '<p><br></p>' : `<p>${escapeHtml(line)}</p>`))
+    .join('');
+}
+
+/**
  * Custom highlight function compatible with both Quill 1.x and hljs 11.x.
  * Quill's built-in syntax module calls `window.hljs.highlightAuto(text)`.
  * We bypass that by injecting our own function through the module options.
@@ -261,23 +279,31 @@ const RichTextEditor = (props: any) => {
     props.uiSchema?.['ui:options']?.format ||
     props.uiSchema?.['ui:options']?.mode ||
     '';
-  const isCodeMode = [
+  // Plain-text mode: render content as native Quill paragraphs with a
+  // monospace font + pre-wrap CSS. Preserves whitespace/indentation without
+  // the code-block's trailing-newline normalisation quirks.
+  const PLAIN_TEXT_FORMATS = ['text', 'markdown'];
+  // Language-aware code-mode formats use hljs highlightAuto to colour tokens.
+  const HIGHLIGHTED_CODE_FORMATS = [
     'console',
     'graphql',
     'grpc',
     'java',
     'csharp',
     'python',
-    'yaml', 
-    'json', 
-    'javascript', 
-    'typescript', 
-    'sql', 
-    'code'].includes(format);
+    'yaml',
+    'json',
+    'javascript',
+    'typescript',
+    'sql',
+    'code',
+  ];
+  const isPlainTextMode = PLAIN_TEXT_FORMATS.includes(format);
+  const isCodeMode = HIGHLIGHTED_CODE_FORMATS.includes(format);
 
   // ── State ──────────────────────────────────────────────────────────────────
-  // In code mode we maintain plain-text separately so we can emit it via
-  // onChange.  The Quill `value` prop receives HTML (the code-block wrapper).
+  // In code / plain-text modes we maintain the raw text separately so we can
+  // emit it via onChange.  The Quill `value` prop receives HTML.
   const rawTextRef = useRef<string>('');
   const [content, setContent] = useState<string | undefined>(() => {
     if (props.formData == null || props.formData === '') return undefined;
@@ -285,6 +311,11 @@ const RichTextEditor = (props: any) => {
       const normalized = normalizeToString(props.formData);
       rawTextRef.current = normalized;
       return toCodeBlockHtml(normalized);
+    }
+    if (isPlainTextMode) {
+      const normalized = normalizeToString(props.formData);
+      rawTextRef.current = normalized;
+      return toPlainTextHtml(normalized);
     }
     return typeof props.formData === 'string' ? props.formData : undefined;
   });
@@ -297,6 +328,11 @@ const RichTextEditor = (props: any) => {
       if (normalized === rawTextRef.current) return; // no external change
       rawTextRef.current = normalized;
       setContent(toCodeBlockHtml(normalized));
+    } else if (isPlainTextMode) {
+      const normalized = normalizeToString(props.formData);
+      if (normalized === rawTextRef.current) return;
+      rawTextRef.current = normalized;
+      setContent(toPlainTextHtml(normalized));
     } else if (typeof props.formData === 'string' && props.formData !== content) {
       setContent(props.formData);
     }
@@ -304,7 +340,9 @@ const RichTextEditor = (props: any) => {
 
   // ── Propagate internal changes to parent ───────────────────────────────────
   useEffect(() => {
-    if (!props.onChange || isCodeMode) return; // code mode handled in handleEditorChange
+    // Code and plain-text modes emit plain-text via handleEditorChange; only
+    // the rich-HTML mode propagates `content` directly.
+    if (!props.onChange || isCodeMode || isPlainTextMode) return;
     if (content && content !== props.formData) {
       props.onChange(content);
     }
@@ -312,7 +350,7 @@ const RichTextEditor = (props: any) => {
 
   // ── Change handler ─────────────────────────────────────────────────────────
   const handleEditorChange = (html: string, _delta: any, _source: any, editor: any) => {
-    if (isCodeMode) {
+    if (isCodeMode || isPlainTextMode) {
       // Extract the plain text from the editor's getText() to avoid needing to
       // parse the HTML.  Quill always appends a trailing '\n'; remove it.
       const text = editor.getText().replace(/\n$/, '');
@@ -325,54 +363,84 @@ const RichTextEditor = (props: any) => {
   };
 
   // ── Quill modules / formats ────────────────────────────────────────────────
-  const modules = isCodeMode
-    ? {
-        syntax: { highlight: quillHighlight },
-        toolbar: [
-          ['code-block'],
-          ['clean'],
-        ],
-      }
-    : {
-        toolbar: [
-          [{ header: [1, 2, false] }],
-          ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-          [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
-          ['link', 'image'],
-          ['code-block'],
-          ['clean'],
-        ],
-      };
+  const modules = isPlainTextMode
+    ? { toolbar: false as const }
+    : isCodeMode
+      ? {
+          syntax: { highlight: quillHighlight },
+          toolbar: [
+            ['code-block'],
+            ['clean'],
+          ],
+        }
+      : {
+          toolbar: [
+            [{ header: [1, 2, false] }],
+            ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+            [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+            ['link', 'image'],
+            ['code-block'],
+            ['clean'],
+          ],
+        };
 
-  const formats = isCodeMode
-    ? ['code-block']
-    : [
-        'header',
-        'bold', 'italic', 'underline', 'strike', 'blockquote',
-        'list', 'bullet', 'indent',
-        'link', 'image',
-        'code-block',
-      ];
+  const formats = isPlainTextMode
+    ? []
+    : isCodeMode
+      ? ['code-block']
+      : [
+          'header',
+          'bold', 'italic', 'underline', 'strike', 'blockquote',
+          'list', 'bullet', 'indent',
+          'link', 'image',
+          'code-block',
+        ];
+
+  // Plain-text mode styling: monospace + pre-wrap + tab-size. The
+  // `.ql-editor p` targeting is important because Quill wraps each line in
+  // a `<p>` — without pre-wrap on the paragraph itself, leading whitespace
+  // would be collapsed by the browser.
+  const plainTextSx = isPlainTextMode ? {
+    '& .ql-editor': {
+      fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
+      fontSize: '0.8125rem',
+      lineHeight: 1.55,
+      tabSize: 2,
+      whiteSpace: 'pre-wrap' as const,
+    },
+    '& .ql-editor p': {
+      margin: 0,
+      whiteSpace: 'pre-wrap' as const,
+    },
+  } : undefined;
+
+  const heightSx = containerHeight ? {
+    height: containerHeight,
+    // Flex-column layout: toolbar is flex-shrink-0, ql-container fills rest.
+    display: 'flex',
+    flexDirection: 'column' as const,
+    '& .ql-container': {
+      flex: 1,
+      minHeight: 0,
+      overflow: 'auto',
+    },
+    '& .ql-editor': {
+      height: '100%',
+      minHeight: '0 !important',
+      boxSizing: 'border-box' as const,
+    },
+  } : undefined;
+
+  // Merge the two sx fragments when both apply.
+  const combinedSx = plainTextSx && heightSx
+    ? { ...heightSx, ...plainTextSx,
+        '& .ql-editor': { ...(heightSx as any)['& .ql-editor'], ...plainTextSx['& .ql-editor'] } }
+    : plainTextSx ?? heightSx;
 
   return (
     <StyledEditorContainer
       className={classes.editorContainer}
-      sx={containerHeight ? {
-        height: containerHeight,
-        // Flex-column layout: toolbar is flex-shrink-0, ql-container fills rest.
-        display: 'flex',
-        flexDirection: 'column',
-        '& .ql-container': {
-          flex: 1,
-          minHeight: 0,
-          overflow: 'auto',
-        },
-        '& .ql-editor': {
-          height: '100%',
-          minHeight: '0 !important',
-          boxSizing: 'border-box',
-        },
-      } : undefined}
+      sx={combinedSx}
     >
       <ReactQuill
         id={props?.idSchema?.$id || 'rich-editor'}
@@ -381,7 +449,7 @@ const RichTextEditor = (props: any) => {
         theme="snow"
         readOnly={Boolean(props.readonly || props.readOnly)}
         placeholder={
-          isCodeMode
+          (isCodeMode || isPlainTextMode)
             ? undefined
             : (props?.placeholder || props?.schema?.title || props?.uiSchema?.['ui:placeholder'])
         }

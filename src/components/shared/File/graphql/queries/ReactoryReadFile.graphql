@@ -1,0 +1,20 @@
+query ReactoryReadFile($path: String!, $scope: ReactoryFileScope = server) {
+  ReactoryReadFile(path: $path, scope: $scope) {
+    __typename
+    ... on ReactoryFileContent {
+      path
+      content
+      mimetype
+      revision
+      bytes
+      modified
+    }
+    ... on ReactoryFileError {
+      code
+      message
+      details
+      currentRevision
+      maxBytes
+    }
+  }
+}
