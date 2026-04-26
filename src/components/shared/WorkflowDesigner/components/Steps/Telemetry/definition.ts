@@ -50,6 +50,71 @@ export const TelemetryStepDefinition: StepDefinition = {
         enum: ['metric', 'trace', 'log', 'event'],
         default: 'metric'
       },
+      metricConfig: {
+        type: 'object',
+        title: 'Metric Configuration',
+        properties: {
+          name: {
+            type: 'string',
+            title: 'Metric Name'
+          },
+          type: {
+            type: 'string',
+            title: 'Type',
+            enum: ['counter', 'gauge', 'histogram'],
+            default: 'counter'
+          },
+          value: {
+            type: 'number',
+            title: 'Value',
+            default: 1
+          },
+          tags: {
+            type: 'object',
+            title: 'Tags',
+            properties: {},
+            additionalProperties: { type: 'string' }
+          }
+        }
+      },
+      logConfig: {
+        type: 'object',
+        title: 'Log Configuration',
+        properties: {
+          level: {
+            type: 'string',
+            title: 'Level',
+            enum: ['debug', 'info', 'warn', 'error'],
+            default: 'info'
+          },
+          message: {
+            type: 'string',
+            title: 'Message'
+          },
+          attributes: {
+            type: 'object',
+            title: 'Attributes',
+            properties: {},
+            additionalProperties: true
+          }
+        }
+      },
+      traceConfig: {
+        type: 'object',
+        title: 'Trace Configuration',
+        properties: {
+          spanName: {
+            type: 'string',
+            title: 'Span Name'
+          },
+          attributes: {
+            type: 'object',
+            title: 'Span Attributes',
+            properties: {},
+            additionalProperties: { type: 'string' }
+          }
+        }
+      },
       exporters: {
         type: 'array',
         title: 'Exporters',
@@ -60,94 +125,7 @@ export const TelemetryStepDefinition: StepDefinition = {
         default: ['console']
       }
     },
-    required: ['name', 'telemetryType'],
-    // JSON Schema draft-07 if/then/else — cast to any[] because ISchema doesn't model these keywords
-    allOf: ([
-      {
-        if: { properties: { telemetryType: { const: 'metric' } }, required: ['telemetryType'] },
-        then: {
-          properties: {
-            metricConfig: {
-              type: 'object',
-              title: 'Metric Configuration',
-              properties: {
-                name: {
-                  type: 'string',
-                  title: 'Metric Name'
-                },
-                type: {
-                  type: 'string',
-                  enum: ['counter', 'gauge', 'histogram'],
-                  default: 'counter'
-                },
-                value: {
-                  type: 'number',
-                  title: 'Value',
-                  default: 1
-                },
-                tags: {
-                  type: 'object',
-                  title: 'Tags',
-                  properties: {},
-                  additionalProperties: { type: 'string' }
-                }
-              }
-            }
-          }
-        }
-      },
-      {
-        if: { properties: { telemetryType: { const: 'log' } }, required: ['telemetryType'] },
-        then: {
-          properties: {
-            logConfig: {
-              type: 'object',
-              title: 'Log Configuration',
-              properties: {
-                level: {
-                  type: 'string',
-                  enum: ['debug', 'info', 'warn', 'error'],
-                  default: 'info'
-                },
-                message: {
-                  type: 'string',
-                  title: 'Message'
-                },
-                attributes: {
-                  type: 'object',
-                  title: 'Attributes',
-                  properties: {},
-                  additionalProperties: true
-                }
-              }
-            }
-          }
-        }
-      },
-      {
-        if: { properties: { telemetryType: { const: 'trace' } }, required: ['telemetryType'] },
-        then: {
-          properties: {
-            traceConfig: {
-              type: 'object',
-              title: 'Trace Configuration',
-              properties: {
-                spanName: {
-                  type: 'string',
-                  title: 'Span Name'
-                },
-                attributes: {
-                  type: 'object',
-                  title: 'Span Attributes',
-                  properties: {},
-                  additionalProperties: { type: 'string' }
-                }
-              }
-            }
-          }
-        }
-      }
-    ] as any[])
+    required: ['name', 'telemetryType']
   },
   defaultProperties: {
     name: 'Telemetry',
@@ -243,7 +221,7 @@ export const TelemetryStepDefinition: StepDefinition = {
         shader: {
           uniforms: {
             time: { type: 'float', value: 0 },
-            color: { type: 'vec3', value: [0.376, 0.490, 0.545] }
+            color: { type: 'vec3', value: [0.376, 0.49, 0.545] }
           }
         }
       }

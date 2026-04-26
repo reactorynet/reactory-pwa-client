@@ -1,4 +1,3 @@
-import { argsToArgsConfig } from 'graphql/type/definition';
 import { StepDefinition, PortType } from '../../../types';
 
 export const ServiceInvokeStepDefinition: StepDefinition = {
@@ -68,25 +67,9 @@ export const ServiceInvokeStepDefinition: StepDefinition = {
         description: 'Method name to invoke'
       },
       arguments: {
-        "description": "Step input parameters (object or JSON-serialized string)",
-          "oneOf": [
-            { "type": "string" },
-            {
-              "type": "object",
-              "patternProperties": {
-                "^[a-zA-Z][a-zA-Z0-9_]*$": {
-                  "oneOf": [
-                    { "type": "string" },
-                    { "type": "number" },
-                    { "type": "boolean" },
-                    { "type": "null" },
-                    { "type": "object" },
-                    { "type": "array" }
-                  ]
-                }
-              }
-            }
-          ]
+        type: 'string',
+        title: 'Arguments',
+        description: 'Step input parameters as a JSON object. Supports ${variable} substitution.'
       },
       passthrough: {
         type: 'boolean',
