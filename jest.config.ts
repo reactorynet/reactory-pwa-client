@@ -40,6 +40,9 @@ export default async (): Promise<JestConfigWithTsJest> => {
       '^test/(.*)$': '<rootDir>/test/$1',
       '^@reactory/webpack/(.*)$': '<rootDir>/webpack/$1',
       '^@reactory/config/(.*)$': '<rootDir>/config/$1',
+      // ESM module that Jest's transform pipeline cannot consume directly.
+      // Stubbed for tests; the production bundle uses the real ESM build.
+      '^apollo-upload-client/createUploadLink\\.mjs$': '<rootDir>/test/__mocks__/apolloUploadClient.js',
       // Module mocks
       '^react$': '<rootDir>/node_modules/react',
       // CSS/Style mocks

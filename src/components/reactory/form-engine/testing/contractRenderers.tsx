@@ -26,6 +26,16 @@ import type { ContractFixture, RenderResult } from './contractHarness';
 import { useReactoryForm } from '../hooks/useReactoryForm';
 import { createMockReactorySDK, type MockReactorySDK } from './mockReactorySDK';
 
+/**
+ * Note: the contract renderer intentionally does NOT default-load the full
+ * Reactory widget catalogue from `../widgets`. The catalogue's transitive
+ * dependency graph (Apollo upload-client ESM, MermaidDiagram, localforage
+ * storage detection) requires complex jsdom-mocking that's out of scope for
+ * Phase 2's contract baseline. Production code paths import the catalogue
+ * directly; tests that need a specific widget pass it via
+ * `options.staticWidgets`.
+ */
+
 /** Capture every label-like text from a rendered container. */
 function extractLabels(container: Element): Set<string> {
   const labels = new Set<string>();
@@ -52,6 +62,12 @@ export interface RenderOptions {
   reactory?: MockReactorySDK;
   /** Whether to live-validate at render time. Default false. */
   liveValidate?: boolean;
+  /**
+   * Optional widget catalogue. Tests that exercise specific widgets pass
+   * a hand-curated map; the contract baseline survey runs without a
+   * catalogue to keep the dep graph light under jsdom.
+   */
+  staticWidgets?: Record<string, React.ComponentType<any>>;
 }
 
 /**
@@ -74,6 +90,7 @@ export async function renderWithV5(
       formData: fixture.formData,
       formContext: { reactory: reactory as any },
       engine: 'v5',
+      staticWidgets: options.staticWidgets,
       liveValidate: options.liveValidate,
     });
     return form;
