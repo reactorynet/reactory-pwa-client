@@ -40,6 +40,7 @@ On top of that we land enterprise features the fork can't carry: conditional ren
 | 14 | [Glossary](./14-glossary.md) | Terminology used across these documents. |
 | 15 | [Execution strategy](./15-execution-strategy.md) | How Claude orchestrates and Copilot CLI handles bulk work; token-budget tactics. |
 | ADR | [Architecture Decision Records](./adrs/README.md) | The decisions that shaped this plan. |
+| Live | [Coverage baseline](./coverage-baseline.md) | Tracked test/coverage numbers, updated each phase exit. |
 
 ## At a glance
 
