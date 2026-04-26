@@ -168,6 +168,13 @@ Playwright scripts running against the dev server:
 - CI fails on any **serious** or **critical** violation.
 - Manual screen-reader smoke test (NVDA on Windows, VoiceOver on macOS) once per phase.
 
+### Phase 1 outcome
+
+- **`@storybook/addon-a11y@^9` installed** and registered in `.storybook/main.js`.
+- Project-level a11y parameter set in `.storybook/preview.js` to enforce WCAG 2.0 / 2.1 A and AA tags.
+- Every story now shows the axe results panel in Storybook UI.
+- **CI gate via `@storybook/test-runner` + `axe-playwright` is deferred to Phase 2** — the runner pulls a Playwright Chromium download and there are no form-engine templates with stories yet. Adding it before there's anything to assert against would only slow CI without producing signal. Phase 2's first template PR brings the runner online.
+
 ## Performance
 
 - Jest perf test under `__tests__/perf/`:
