@@ -1,0 +1,85 @@
+{
+  "name": "form-reactory-form-list",
+  "description": "Server-driven list of registered Reactory forms",
+  "divergences": [
+    {
+      "engine": "v5",
+      "reason": "Source uiSchema.forms['ui:options'].secondaryAction.component is a JSX function that cannot be JSON-serialised. Fixture stores {} as a placeholder; contract render comparison skipped. Schema/uiSchema parity still verified."
+    }
+  ],
+  "schema": {
+    "type": "object",
+    "title": "Reactory Forms",
+    "properties": {
+      "forms": {
+        "type": "array",
+        "title": "Forms",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "title": "Form Id"
+            },
+            "name": {
+              "type": "string",
+              "title": "Form Name"
+            },
+            "nameSpace": {
+              "type": "string",
+              "title": "Version Name"
+            },
+            "version": {
+              "type": "string",
+              "title": "Version"
+            },
+            "userCount": {
+              "type": "number",
+              "title": "Active users"
+            },
+            "description": {
+              "type": "string",
+              "title": "Description"
+            }
+          }
+        }
+      }
+    }
+  },
+  "uiSchema": {
+    "ui:title": null,
+    "forms": {
+      "ui:widget": "MaterialListWidget",
+      "ui:title": null,
+      "ui:options": {
+        "primaryText": "${item.title}",
+        "secondaryText": "${item.description} [${item.nameSpace}.${item.name}@${item.version}]",
+        "showAvatar": false,
+        "showTitle": true,
+        "showLabel": false,
+        "secondaryAction": {},
+        "remoteData": false,
+        "title": "Reactory Forms",
+        "titleClass": "title",
+        "jss": {
+          "root": {
+            "display": "flex",
+            "flexDirection": "column"
+          },
+          "title": {
+            "fontSize": "20px",
+            "fontWeight": "bold",
+            "textAlign": "center"
+          },
+          "list": {
+            "minWidth": "70%",
+            "margin": "auto",
+            "maxHeight": "80%",
+            "minHeight": "80%"
+          }
+        }
+      }
+    }
+  },
+  "source": "formDefinitions/ReactoryFormList.tsx"
+}

@@ -1,0 +1,25 @@
+{
+  "name": "step-graphql-inputs",
+  "description": "Execute GraphQL query or mutation (inputs)",
+  "schema": {
+    "type": "object",
+    "title": "Step Inputs",
+    "description": "Dynamic inputs that support ${variable} substitution from workflow context",
+    "properties": {
+      "variables": {
+        "type": "object",
+        "title": "GraphQL Variables",
+        "description": "Variables passed to the GraphQL operation. Supports ${variable} substitution.",
+        "additionalProperties": true
+      }
+    }
+  },
+  "uiSchema": {
+    "variables": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": { "format": "json", "rows": 6 },
+      "ui:help": "JSON object of GraphQL variables. Supports ${variable} substitution."
+    }
+  },
+  "source": "WorkflowDesigner/Steps/GraphQL/definition.ts"
+}

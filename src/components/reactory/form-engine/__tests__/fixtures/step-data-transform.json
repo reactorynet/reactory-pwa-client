@@ -1,0 +1,76 @@
+{
+  "name": "step-data-transform",
+  "description": "Transform data using map, filter, reduce, and other operations",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "Data Transform"
+      },
+      "transformations": {
+        "type": "array",
+        "title": "Transformations",
+        "items": {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "type": "string",
+              "title": "Operation",
+              "enum": ["map", "filter", "reduce", "sort", "group", "merge", "extract", "custom"]
+            },
+            "source": {
+              "type": "string",
+              "title": "Source Field"
+            },
+            "target": {
+              "type": "string",
+              "title": "Target Field"
+            },
+            "expression": {
+              "type": "string",
+              "title": "Expression",
+              "description": "Transformation expression"
+            }
+          }
+        }
+      }
+    },
+    "required": ["name"]
+  },
+  "uiSchema": {
+    "ui:order": ["name", "transformations"],
+    "transformations": {
+      "ui:help": "Define data transformation operations to apply sequentially",
+      "items": {
+        "operation": {
+          "ui:widget": "SelectWidget",
+          "ui:options": {
+            "selectOptions": [
+              { "key": "map", "value": "map", "label": "Map", "icon": "code" },
+              { "key": "filter", "value": "filter", "label": "Filter", "icon": "filter_list" },
+              { "key": "reduce", "value": "reduce", "label": "Reduce", "icon": "compress" },
+              { "key": "sort", "value": "sort", "label": "Sort", "icon": "sort" },
+              { "key": "group", "value": "group", "label": "Group", "icon": "folder" },
+              { "key": "merge", "value": "merge", "label": "Merge", "icon": "merge" },
+              { "key": "extract", "value": "extract", "label": "Extract", "icon": "content_cut" },
+              { "key": "custom", "value": "custom", "label": "Custom", "icon": "settings" }
+            ]
+          }
+        },
+        "expression": {
+          "ui:widget": "RichEditorWidget",
+          "ui:options": { "format": "javascript", "rows": 2 },
+          "ui:help": "Transformation expression (e.g. item.price * 1.1)"
+        }
+      }
+    }
+  },
+  "formData": {
+    "name": "Data Transform",
+    "transformations": []
+  },
+  "source": "WorkflowDesigner/Steps/DataTransform/definition.ts"
+}

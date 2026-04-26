@@ -1,0 +1,57 @@
+{
+  "name": "step-task",
+  "description": "Generic task step",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "Task"
+      },
+      "taskType": {
+        "type": "string",
+        "title": "Task Type",
+        "description": "Type of task to execute",
+        "enum": ["http_request", "data_transform", "custom_script"],
+        "default": "custom_script"
+      },
+      "configuration": {
+        "type": "object",
+        "title": "Configuration",
+        "description": "Task-specific configuration",
+        "properties": {},
+        "additionalProperties": true
+      }
+    },
+    "required": ["name", "taskType"]
+  },
+  "uiSchema": {
+    "ui:order": ["name", "taskType", "configuration"],
+    "taskType": {
+      "ui:widget": "SelectWidget",
+      "ui:options": {
+        "selectOptions": [
+          { "key": "http_request", "value": "http_request", "label": "HTTP Request", "icon": "http" },
+          { "key": "data_transform", "value": "data_transform", "label": "Data Transform", "icon": "transform" },
+          { "key": "custom_script", "value": "custom_script", "label": "Custom Script", "icon": "code" }
+        ]
+      }
+    },
+    "configuration": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": {
+        "format": "json",
+        "rows": 8
+      },
+      "ui:help": "Task-specific configuration as a JSON object"
+    }
+  },
+  "formData": {
+    "name": "Task",
+    "taskType": "custom_script",
+    "configuration": {}
+  },
+  "source": "WorkflowDesigner/Steps/Task/definition.ts"
+}
