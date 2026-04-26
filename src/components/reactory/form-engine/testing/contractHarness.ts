@@ -1,18 +1,11 @@
 /**
  * Contract test harness — fork vs v5 engine equivalence.
  *
- * The harness exists so we can prove the v5 adapter renders identically
- * to the legacy fork before we cut traffic over. See
- * `docs/forms-engine/09-test-strategy.md#contract-tests` for the design.
+ * Pure module: fixture loading, HTML normalization, parity assertion.
+ * The React-aware renderers (`renderWithFork`, `renderWithV5`) live in
+ * `./contractRenderers.tsx` and are imported by tests directly.
  *
- * Phase 1 (now): types, fixture loader, normalize(). The render functions
- * are stubs that throw; they get implemented in Phase 2 when the v5
- * engine lands and we can render side-by-side.
- *
- * Phase 2: `renderWithFork` and `renderWithV5` produce a `RenderResult`
- * for the same fixture. `assertContractParity()` compares them after
- * `normalize()`. Divergences require either a code fix or a documented
- * fixture annotation.
+ * See `docs/forms-engine/09-test-strategy.md#contract-tests`.
  */
 
 import * as fs from 'fs';
@@ -83,23 +76,8 @@ export function listFixtures(dir: string = defaultFixturesDir()): FixtureName[] 
     .sort();
 }
 
-/**
- * Stub. Renders the fixture using the legacy fork's `<SchemaForm>`.
- * Implemented in Phase 2 once we wire the fork into the test harness
- * with mocked `useReactory` + MUI ThemeProvider.
- */
-export function renderWithFork(_fixture: ContractFixture): Promise<RenderResult> {
-  throw new Error(
-    'renderWithFork: not implemented in Phase 1. Wire up in Phase 2 alongside the v5 engine.',
-  );
-}
-
-/**
- * Stub. Renders the fixture using the v5 engine. Implemented in Phase 2.
- */
-export function renderWithV5(_fixture: ContractFixture): Promise<RenderResult> {
-  throw new Error('renderWithV5: not implemented in Phase 1. Adapter lands in Phase 2.');
-}
+// Renderers moved to ./contractRenderers.tsx (React-dependent, .tsx).
+// Tests import them directly: `import { renderWithFork, renderWithV5 } from './contractRenderers';`
 
 /**
  * Strip differences that don't matter for engine-equivalence: generated IDs,

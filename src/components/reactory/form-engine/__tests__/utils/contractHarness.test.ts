@@ -3,8 +3,6 @@ import {
   loadFixture,
   listFixtures,
   normalizeHtml,
-  renderWithFork,
-  renderWithV5,
   assertContractParity,
   type ContractFixture,
   type RenderResult,
@@ -83,20 +81,6 @@ describe('contractHarness', () => {
 
     it('removes whitespace between tags', () => {
       expect(normalizeHtml('<a>x</a>\n  \n<b>y</b>')).toBe('<a>x</a><b>y</b>');
-    });
-  });
-
-  describe('renderWithFork (Phase 1 stub)', () => {
-    it('throws a clear "not implemented" error', () => {
-      const f = loadFixture('minimal-string', FIXTURES_DIR);
-      expect(() => renderWithFork(f)).toThrow(/not implemented in Phase 1/);
-    });
-  });
-
-  describe('renderWithV5 (Phase 1 stub)', () => {
-    it('throws a clear "not implemented" error', () => {
-      const f = loadFixture('minimal-string', FIXTURES_DIR);
-      expect(() => renderWithV5(f)).toThrow(/Phase 2/);
     });
   });
 
