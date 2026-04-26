@@ -1,0 +1,36 @@
+{
+  "name": "step-end",
+  "description": "End point of the workflow",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "End"
+      },
+      "returnValue": {
+        "type": "string",
+        "title": "Return Value",
+        "description": "Value to return when workflow completes"
+      }
+    }
+  },
+  "uiSchema": {
+    "ui:order": ["name", "returnValue"],
+    "name": {
+      "ui:autofocus": true,
+      "ui:placeholder": "e.g. Workflow Complete"
+    },
+    "returnValue": {
+      "ui:placeholder": "success",
+      "ui:help": "The value returned to the workflow caller when this endpoint is reached"
+    }
+  },
+  "formData": {
+    "name": "End",
+    "returnValue": "success"
+  },
+  "source": "WorkflowDesigner/Steps/End/definition.ts"
+}

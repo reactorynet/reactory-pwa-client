@@ -1,0 +1,26 @@
+{
+  "name": "step-start",
+  "description": "Starting point of the workflow",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "Start"
+      }
+    }
+  },
+  "uiSchema": {
+    "name": {
+      "ui:autofocus": true,
+      "ui:placeholder": "e.g. Start Order Processing",
+      "ui:help": "Enter a descriptive name for the start step"
+    }
+  },
+  "formData": {
+    "name": "Start"
+  },
+  "source": "WorkflowDesigner/Steps/Start/definition.ts"
+}
