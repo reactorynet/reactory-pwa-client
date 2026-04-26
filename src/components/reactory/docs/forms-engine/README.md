@@ -42,6 +42,7 @@ On top of that we land enterprise features the fork can't carry: conditional ren
 | ADR | [Architecture Decision Records](./adrs/README.md) | The decisions that shaped this plan. |
 | Live | [Coverage baseline](./coverage-baseline.md) | Tracked test/coverage numbers, updated each phase exit. |
 | Live | [Phase 1 closeout](./phase-1-closeout.md) | Phase 1 actuals vs estimate, deferrals, lessons, Phase 2 re-baseline. |
+| Live | [Phase 2 closeout](./phase-2-closeout.md) | Phase 2 actuals vs estimate, deferrals, lessons, Phase 3 re-baseline. |
 
 ## At a glance
 
