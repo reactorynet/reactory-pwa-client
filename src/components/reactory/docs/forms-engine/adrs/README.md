@@ -13,6 +13,7 @@ ADRs document the decisions that shaped the modernization. Each one is a short, 
 | [0005](./ADR-0005-test-strategy.md) | Test foundation precedes engine work; contract suite gates the migration | Proposed | 2026-04-25 |
 | [0006](./ADR-0006-coexistence-strategy.md) | Coexistence via feature flag + per-form override; no big-bang cutover | Proposed | 2026-04-25 |
 | [0007](./ADR-0007-conditional-rendering.md) | Implement `if`/`then`/`else` rendering ourselves; do not adopt `rjsf-conditionals` | Proposed | 2026-04-25 |
+| [0008](./ADR-0008-pin-rjsf-v5-react17.md) | Pin to rjsf v5.24.13 while the PWA is on React 17 (refines ADR-0001) | Accepted | 2026-04-26 |
 
 ## Status definitions
 

@@ -40,7 +40,6 @@ export default async (): Promise<JestConfigWithTsJest> => {
       '^test/(.*)$': '<rootDir>/test/$1',
       '^@reactory/webpack/(.*)$': '<rootDir>/webpack/$1',
       '^@reactory/config/(.*)$': '<rootDir>/config/$1',
-      '^@rjsf/material-ui/(.*)$': '<rootDir>/node_modules/@rjsf/material-ui/dist/$1',
       // Module mocks
       '^react$': '<rootDir>/node_modules/react',
       // CSS/Style mocks
