@@ -49,3 +49,7 @@ storybook-static
 
 /.storybook/**/*.jsx
 /.storybook/**/*.jsx.map
+
+# Copilot CLI session transcripts (forms-engine modernization)
+/.copilot-sessions/
+
