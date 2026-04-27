@@ -109,5 +109,4 @@ These are CI-enforced thresholds starting at the end of Phase 2.
 | 2 — adapter layer | 2026-04-26 | 0 % | high (every adapter file under registry/, validator/, templates/, hooks/, widgets/ has co-located tests covering every public export) | 377 | rjsf v5.24.13 pinned; 13 commits; phase-2-closeout.md trail; tsc clean |
 | 3 — migration | 2026-04-27 | 0 % | high (added integration/, fields/, permissions/, types module-augmentation; first form migrated; recipe doc) | 425 | 6 commits; first form on v5; phase-3-closeout.md trail; tsc clean |
 | 4 — features | 2026-04-27 | 0 % | high (added compute/, hooks/useAsyncValidation, FieldTemplate ui:permission integration) | 468 | 3 commits; RBAC + compute + async-validate landed; phase-4-closeout.md trail; tsc clean |
-| 4 — features | — | — | — | — | |
-| 5 — cleanup | — | — | — | — | fork deleted; this row reports `form-engine/` only |
+| 5 — cleanup | 2026-04-27 | 0 % (fork retained for coexistence) | high (added index.ts barrel, hook integrations into useReactoryForm) | 517 | 3 commits; public API stable; fork retirement deferred to post-tenant-rollout; phase-5-closeout.md trail; tsc clean |
