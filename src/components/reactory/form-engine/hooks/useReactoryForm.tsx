@@ -33,6 +33,7 @@ import { createReactoryValidator, type ReactoryValidatorOptions } from '../valid
 import { reactoryTemplates } from '../templates';
 import { TitleDepthContext } from '../templates/TitleFieldTemplate';
 import { useFormTelemetry } from './useFormTelemetry';
+import { applyComputedFields } from '../compute/computeFields';
 
 export type FormEngine = 'v5' | 'fork';
 
@@ -187,10 +188,21 @@ export function useReactoryForm<TData = unknown>(
 
   const wrappedOnChange = React.useCallback(
     (e: Parameters<NonNullable<RjsfFormProps<TData>['onChange']>>[0], id?: string) => {
-      telemetry.emitChange(id, (e as { formData?: unknown })?.formData);
-      userOnChange?.(e, id);
+      // Apply computed fields. Returns the input by reference when no
+      // directive fired, so the no-compute path is identity-cheap.
+      const original = (e as { formData?: TData }).formData;
+      const computed = applyComputedFields(args.uiSchema, original, args.formContext, {
+        reactory: reactory as Parameters<typeof applyComputedFields>[3]['reactory'],
+      });
+      const eventToForward =
+        computed === original ? e : { ...(e as object), formData: computed };
+      telemetry.emitChange(
+        id,
+        (eventToForward as { formData?: unknown })?.formData,
+      );
+      userOnChange?.(eventToForward as typeof e, id);
     },
-    [userOnChange, telemetry],
+    [userOnChange, telemetry, args.uiSchema, args.formContext, reactory],
   );
 
   const wrappedOnSubmit = React.useCallback(

@@ -212,3 +212,59 @@ describe('useReactoryForm — telemetry wiring', () => {
     expect(miss?.payload).toMatchObject({ kind: 'widget', name: 'plugin.MissingForReal' });
   });
 });
+
+describe('useReactoryForm — computed fields integration (P5.1)', () => {
+  it('runs ui:options.compute through onChange and forwards updated formData', () => {
+    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const userOnChange = jest.fn();
+    const args = baseArgs({
+      formContext: { reactory },
+      uiSchema: {
+        total: {
+          'ui:options': {
+            compute: ({ formData: f }: { formData: unknown }) => {
+              const items = (f as { items?: Array<{ p: number }> }).items ?? [];
+              return items.reduce((s, it) => s + it.p, 0);
+            },
+          },
+        },
+      },
+      onChange: userOnChange,
+    }) as unknown as Parameters<typeof useReactoryForm>[0] & { onChange: jest.Mock };
+
+    const { result } = renderHook(() => useReactoryForm(args));
+    // The form element exists; we drive an onChange via the rjsf Form prop wiring.
+    // Instead of rendering and interacting, we extract the wrapped onChange off
+    // the form element's props and invoke it directly.
+    const form = result.current.form as unknown as React.ReactElement<{
+      children: React.ReactElement<{ onChange: (e: { formData: unknown }) => void }>;
+    }>;
+    const inner = form.props.children;
+    inner.props.onChange({ formData: { items: [{ p: 5 }, { p: 7 }], total: 0 } });
+
+    expect(userOnChange).toHaveBeenCalledTimes(1);
+    const forwardedEvent = userOnChange.mock.calls[0][0] as { formData: { total?: number } };
+    expect(forwardedEvent.formData.total).toBe(12);
+  });
+
+  it('passes onChange through unchanged when no compute directive is set', () => {
+    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const userOnChange = jest.fn();
+    const args = baseArgs({
+      formContext: { reactory },
+      onChange: userOnChange,
+    }) as unknown as Parameters<typeof useReactoryForm>[0] & { onChange: jest.Mock };
+
+    const { result } = renderHook(() => useReactoryForm(args));
+    const form = result.current.form as unknown as React.ReactElement<{
+      children: React.ReactElement<{ onChange: (e: { formData: unknown }) => void }>;
+    }>;
+    const original = { name: 'wweber' };
+    form.props.children.props.onChange({ formData: original });
+
+    expect(userOnChange).toHaveBeenCalled();
+    const forwardedEvent = userOnChange.mock.calls[0][0] as { formData: unknown };
+    // Reference-equal: no computed directive means we forward the event as-is.
+    expect(forwardedEvent.formData).toBe(original);
+  });
+});
