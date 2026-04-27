@@ -34,6 +34,7 @@ import { reactoryTemplates } from '../templates';
 import { TitleDepthContext } from '../templates/TitleFieldTemplate';
 import { useFormTelemetry } from './useFormTelemetry';
 import { applyComputedFields } from '../compute/computeFields';
+import { useAsyncValidation, type AsyncValidator } from './useAsyncValidation';
 
 export type FormEngine = 'v5' | 'fork';
 
@@ -87,6 +88,14 @@ export interface UseReactoryFormArgs<TData = unknown> {
    * that don't want lifecycle events leaving the client.
    */
   disableTelemetry?: boolean;
+  /**
+   * Async / server-side validator. Called debounced (default 200ms) with
+   * the current formData and an AbortSignal; result is forwarded to the
+   * rjsf `<Form>` as `extraErrors`. See `useAsyncValidation`.
+   */
+  customAsyncValidate?: AsyncValidator<TData>;
+  /** Debounce for async validation in ms. Default 200. */
+  asyncValidateDebounceMs?: number;
 }
 
 export interface UseReactoryFormResult {
@@ -180,6 +189,16 @@ export function useReactoryForm<TData = unknown>(
     [args.templates],
   );
 
+  // Async validation: debounced + AbortController-aware. The hook is a
+  // no-op when no validator is supplied. The returned extraErrors flow
+  // into the rjsf <Form> below.
+  const asyncValidation = useAsyncValidation<TData>({
+    validate: args.customAsyncValidate,
+    formData: args.formData as TData,
+    debounceMs: args.asyncValidateDebounceMs,
+    enabled: engine === 'v5',
+  });
+
   // Telemetry-wrapped lifecycle handlers. Stable identities so rjsf's
   // prop-equality checks don't churn the form on every render.
   const userOnChange = args.onChange;
@@ -251,6 +270,7 @@ export function useReactoryForm<TData = unknown>(
       fields: registry.fields,
       widgets: registry.widgets,
       templates,
+      extraErrors: asyncValidation.extraErrors,
       liveValidate: args.liveValidate,
       noValidate: args.noValidate,
       noHtml5Validate: args.noHtml5Validate,
@@ -287,6 +307,7 @@ export function useReactoryForm<TData = unknown>(
     validator,
     registry,
     templates,
+    asyncValidation.extraErrors,
     reactory,
   ]);
 

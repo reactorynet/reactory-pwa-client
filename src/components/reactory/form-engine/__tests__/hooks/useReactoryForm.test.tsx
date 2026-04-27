@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react-hooks';
 import { useReactoryForm, type UseReactoryFormArgs } from '../../hooks/useReactoryForm';
 import { createMockReactorySDK } from '../../testing/mockReactorySDK';
 
@@ -266,5 +266,67 @@ describe('useReactoryForm — computed fields integration (P5.1)', () => {
     const forwardedEvent = userOnChange.mock.calls[0][0] as { formData: unknown };
     // Reference-equal: no computed directive means we forward the event as-is.
     expect(forwardedEvent.formData).toBe(original);
+  });
+});
+
+describe('useReactoryForm — async validation integration (P5.2)', () => {
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  it('forwards extraErrors from useAsyncValidation to the rjsf <Form>', async () => {
+    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const customAsyncValidate = jest.fn(async () => ({
+      name: { __errors: ['username-taken'] },
+    }));
+    const args = baseArgs({
+      formContext: { reactory },
+      customAsyncValidate: customAsyncValidate as unknown as Parameters<typeof useReactoryForm>[0]['customAsyncValidate'],
+      asyncValidateDebounceMs: 10,
+    });
+
+    const { result, rerender } = renderHook(() => useReactoryForm(args));
+    // Wait for the debounce to fire and the validator to resolve.
+    await act(async () => {
+      await wait(40);
+    });
+    rerender();
+
+    expect(customAsyncValidate).toHaveBeenCalled();
+    const form = result.current.form as unknown as React.ReactElement<{
+      children: React.ReactElement<{ extraErrors: unknown }>;
+    }>;
+    expect(form.props.children.props.extraErrors).toEqual({
+      name: { __errors: ['username-taken'] },
+    });
+  });
+
+  it('does not call the async validator when no customAsyncValidate is supplied', async () => {
+    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    // Just ensure mount/unmount stays clean without a validator.
+    const { result } = renderHook(() => useReactoryForm(baseArgs({ formContext: { reactory } })));
+    await act(async () => {
+      await wait(20);
+    });
+    const form = result.current.form as unknown as React.ReactElement<{
+      children: React.ReactElement<{ extraErrors: unknown }>;
+    }>;
+    expect(form.props.children.props.extraErrors).toEqual({});
+  });
+
+  it('skips async validation on the fork engine', async () => {
+    const reactory = createMockReactorySDK(); // flag unset → fork
+    const customAsyncValidate = jest.fn(async () => ({}));
+    renderHook(() =>
+      useReactoryForm(
+        baseArgs({
+          formContext: { reactory },
+          customAsyncValidate: customAsyncValidate as unknown as Parameters<typeof useReactoryForm>[0]['customAsyncValidate'],
+          asyncValidateDebounceMs: 10,
+        }),
+      ),
+    );
+    await act(async () => {
+      await wait(40);
+    });
+    expect(customAsyncValidate).not.toHaveBeenCalled();
   });
 });
