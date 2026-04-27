@@ -43,6 +43,8 @@ On top of that we land enterprise features the fork can't carry: conditional ren
 | Live | [Coverage baseline](./coverage-baseline.md) | Tracked test/coverage numbers, updated each phase exit. |
 | Live | [Phase 1 closeout](./phase-1-closeout.md) | Phase 1 actuals vs estimate, deferrals, lessons, Phase 2 re-baseline. |
 | Live | [Phase 2 closeout](./phase-2-closeout.md) | Phase 2 actuals vs estimate, deferrals, lessons, Phase 3 re-baseline. |
+| Live | [Phase 3 closeout](./phase-3-closeout.md) | Phase 3 actuals vs estimate, deferrals, lessons, Phase 4 re-baseline. |
+| Recipe | [Migrate a form to v5](./recipes/migrate-a-form-to-v5.md) | Per-form migration steps, rollback procedures, known limitations. |
 
 ## At a glance
 

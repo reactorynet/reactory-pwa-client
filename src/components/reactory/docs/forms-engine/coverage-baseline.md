@@ -107,6 +107,6 @@ These are CI-enforced thresholds starting at the end of Phase 2.
 |---|---|---|---|---|---|
 | 1 — test foundation | 2026-04-26 | 0 % | n/a | 47 | corpus + harness landed; no adapter code yet |
 | 2 — adapter layer | 2026-04-26 | 0 % | high (every adapter file under registry/, validator/, templates/, hooks/, widgets/ has co-located tests covering every public export) | 377 | rjsf v5.24.13 pinned; 13 commits; phase-2-closeout.md trail; tsc clean |
-| 3 — migration | — | — | — | — | populated when Phase 3 exits |
+| 3 — migration | 2026-04-27 | 0 % | high (added integration/, fields/, permissions/, types module-augmentation; first form migrated; recipe doc) | 425 | 6 commits; first form on v5; phase-3-closeout.md trail; tsc clean |
 | 4 — features | — | — | — | — | |
 | 5 — cleanup | — | — | — | — | fork deleted; this row reports `form-engine/` only |
