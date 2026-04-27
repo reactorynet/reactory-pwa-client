@@ -19,6 +19,7 @@ import * as React from 'react';
 import LegacySchemaForm from '@reactory/client-core/components/reactory/form';
 import { useReactoryForm, type FormEngine } from '../hooks/useReactoryForm';
 import { reactoryWidgets } from '../widgets';
+import { useReactoryFeatureFlag, FORMS_ENGINE_V5_FQN } from '../hooks/useReactoryFeatureFlag';
 
 export interface EngineDispatchedFormProps {
   /** The IReactoryForm definition (carries options.engine, etc.). */
@@ -27,27 +28,28 @@ export interface EngineDispatchedFormProps {
   [key: string]: unknown;
 }
 
-const FEATURE_FLAG = 'forms.useV5Engine';
-
-interface DispatchSdk {
-  featureFlags?: { get<T = unknown>(key: string): T | undefined };
-}
-
 function chooseEngine(
   formDef: EngineDispatchedFormProps['formDef'],
-  reactory: DispatchSdk | undefined,
+  flagValue: boolean,
 ): FormEngine {
   const pinned = formDef?.options?.engine;
   if (pinned) return pinned;
-  return reactory?.featureFlags?.get<boolean>(FEATURE_FLAG) === true ? 'v5' : 'fork';
+  return flagValue === true ? 'v5' : 'fork';
 }
 
 export const EngineDispatchedForm: React.FC<EngineDispatchedFormProps> = (props) => {
   const { formDef, ...rest } = props;
-  const formContext = (rest.formContext ?? {}) as { reactory?: DispatchSdk } & Record<string, unknown>;
+  const formContext = (rest.formContext ?? {}) as { reactory?: unknown } & Record<string, unknown>;
   const reactory = formContext.reactory;
 
-  const engine = chooseEngine(formDef, reactory);
+  // Resolve the v5 engine flag via Apollo. Cache-first, so once the
+  // ReactoryEffectiveFeatureFlags query has resolved (typically right
+  // after login) every subsequent form mount reads from the cache.
+  // Default false so forms render through the legacy fork during
+  // the first-page-load window — fail-safe.
+  const { value: v5FlagOn } = useReactoryFeatureFlag(FORMS_ENGINE_V5_FQN, false);
+
+  const engine = chooseEngine(formDef, v5FlagOn);
 
   // The hook is always called (rules of hooks) even when we end up using the
   // fork — its internal short-circuit returns null for `form` when engine is

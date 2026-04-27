@@ -24,31 +24,28 @@ const baseArgs = (over: Partial<UseReactoryFormArgs> = {}): UseReactoryFormArgs 
 };
 
 describe('useReactoryForm — engine selection', () => {
-  it('defaults to fork when the feature flag is unset', () => {
+  // Note: as of P5.7 the global feature flag is read by EngineDispatchedForm
+  // (which uses Apollo via useReactoryFeatureFlag) and passed down via
+  // args.engine. This hook itself only knows about: explicit args.engine,
+  // formDef.options.engine, and the safe 'fork' default.
+
+  it('defaults to fork when nothing is supplied', () => {
     const { result } = renderHook(() => useReactoryForm(baseArgs()));
     expect(result.current.engine).toBe('fork');
     expect(result.current.form).toBeNull();
   });
 
-  it('returns v5 form when the feature flag is true', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+  it('returns v5 form when args.engine is "v5"', () => {
+    const reactory = createMockReactorySDK();
     const { result } = renderHook(() =>
-      useReactoryForm(baseArgs({ formContext: { reactory } })),
+      useReactoryForm(baseArgs({ formContext: { reactory }, engine: 'v5' })),
     );
     expect(result.current.engine).toBe('v5');
     expect(result.current.form).not.toBeNull();
   });
 
-  it('honours an explicit engine arg over the flag', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': false } });
-    const { result } = renderHook(() =>
-      useReactoryForm(baseArgs({ formContext: { reactory }, engine: 'v5' })),
-    );
-    expect(result.current.engine).toBe('v5');
-  });
-
-  it('honours formDef.options.engine over the flag', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': false } });
+  it('honours formDef.options.engine when no explicit args.engine', () => {
+    const reactory = createMockReactorySDK();
     const { result } = renderHook(() =>
       useReactoryForm(
         baseArgs({
@@ -87,7 +84,7 @@ describe('useReactoryForm — engine selection', () => {
 
 describe('useReactoryForm — registry / validator memoization', () => {
   it('returns a stable registry across renders with same deps', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const { result, rerender } = renderHook((props: UseReactoryFormArgs) => useReactoryForm(props), {
       initialProps: baseArgs({ formContext: { reactory } }),
     });
@@ -98,7 +95,7 @@ describe('useReactoryForm — registry / validator memoization', () => {
   });
 
   it('returns a stable validator across renders with same deps', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const { result, rerender } = renderHook((props: UseReactoryFormArgs) => useReactoryForm(props), {
       initialProps: baseArgs({ formContext: { reactory } }),
     });
@@ -122,9 +119,9 @@ describe('useReactoryForm — registry / validator memoization', () => {
 
 describe('useReactoryForm — render', () => {
   it('renders the rjsf form element on the v5 engine', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const Harness: React.FC = () => {
-      const { form } = useReactoryForm(baseArgs({ formContext: { reactory } }));
+      const { form } = useReactoryForm(baseArgs({ formContext: { reactory }, engine: 'v5' }));
       return form;
     };
     render(<Harness />);
@@ -154,7 +151,7 @@ describe('useReactoryForm — submit()', () => {
 
 describe('useReactoryForm — telemetry wiring', () => {
   it('emits form.mount when v5 form mounts', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const Harness: React.FC = () => {
       const { form } = useReactoryForm(baseArgs({ formContext: { reactory } }));
       return form;
@@ -164,7 +161,7 @@ describe('useReactoryForm — telemetry wiring', () => {
   });
 
   it('emits form.unmount when the form is unmounted', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const Harness: React.FC = () => {
       const { form } = useReactoryForm(baseArgs({ formContext: { reactory } }));
       return form;
@@ -175,7 +172,7 @@ describe('useReactoryForm — telemetry wiring', () => {
   });
 
   it('emits no telemetry when disableTelemetry is true', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const Harness: React.FC = () => {
       const { form } = useReactoryForm(
         baseArgs({ formContext: { reactory }, disableTelemetry: true }),
@@ -187,7 +184,7 @@ describe('useReactoryForm — telemetry wiring', () => {
   });
 
   it('every emitted event carries a stable formInstanceId', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const Harness: React.FC = () => {
       const { form } = useReactoryForm(baseArgs({ formContext: { reactory } }));
       return form;
@@ -204,7 +201,7 @@ describe('useReactoryForm — telemetry wiring', () => {
   });
 
   it('registry FQN miss surfaces as a form.fqn.miss telemetry event', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const { result } = renderHook(() => useReactoryForm(baseArgs({ formContext: { reactory } })));
     // Probe a missing FQN via the exposed registry; should emit through telemetry.
     expect(result.current.registry.resolveFqn('plugin.MissingForReal', 'widget')).toBeNull();
@@ -215,10 +212,11 @@ describe('useReactoryForm — telemetry wiring', () => {
 
 describe('useReactoryForm — computed fields integration (P5.1)', () => {
   it('runs ui:options.compute through onChange and forwards updated formData', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const userOnChange = jest.fn();
     const args = baseArgs({
       formContext: { reactory },
+      engine: 'v5',
       uiSchema: {
         total: {
           'ui:options': {
@@ -248,10 +246,11 @@ describe('useReactoryForm — computed fields integration (P5.1)', () => {
   });
 
   it('passes onChange through unchanged when no compute directive is set', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const userOnChange = jest.fn();
     const args = baseArgs({
       formContext: { reactory },
+      engine: 'v5',
       onChange: userOnChange,
     }) as unknown as Parameters<typeof useReactoryForm>[0] & { onChange: jest.Mock };
 
@@ -273,12 +272,13 @@ describe('useReactoryForm — async validation integration (P5.2)', () => {
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   it('forwards extraErrors from useAsyncValidation to the rjsf <Form>', async () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     const customAsyncValidate = jest.fn(async () => ({
       name: { __errors: ['username-taken'] },
     }));
     const args = baseArgs({
       formContext: { reactory },
+      engine: 'v5',
       customAsyncValidate: customAsyncValidate as unknown as Parameters<typeof useReactoryForm>[0]['customAsyncValidate'],
       asyncValidateDebounceMs: 10,
     });
@@ -300,9 +300,11 @@ describe('useReactoryForm — async validation integration (P5.2)', () => {
   });
 
   it('does not call the async validator when no customAsyncValidate is supplied', async () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const reactory = createMockReactorySDK();
     // Just ensure mount/unmount stays clean without a validator.
-    const { result } = renderHook(() => useReactoryForm(baseArgs({ formContext: { reactory } })));
+    const { result } = renderHook(() =>
+      useReactoryForm(baseArgs({ formContext: { reactory }, engine: 'v5' })),
+    );
     await act(async () => {
       await wait(20);
     });

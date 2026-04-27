@@ -79,9 +79,9 @@ export async function renderWithV5(
   fixture: ContractFixture,
   options: RenderOptions = {},
 ): Promise<RenderResult> {
-  const reactory = options.reactory ?? createMockReactorySDK({
-    featureFlags: { 'forms.useV5Engine': true },
-  });
+  // The contract renderer always pins engine: 'v5' on useReactoryForm
+  // below, so the SDK-level feature flag is irrelevant here. Kept simple.
+  const reactory = options.reactory ?? createMockReactorySDK();
 
   const Harness: React.FC = () => {
     const { form } = useReactoryForm({

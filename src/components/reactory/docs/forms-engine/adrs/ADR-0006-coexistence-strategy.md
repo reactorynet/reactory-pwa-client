@@ -16,18 +16,40 @@ Two coexistence patterns:
 
 We pick option 2:
 
-- Global flag: `forms.useV5Engine` (default `false` during Phase 2; flipped to `true` at start of Phase 3).
+- Global flag: `core.FormsEngineV5@1.0.0` (declared in the
+  `reactory-express-server` core module's `featureFlags` array; per-client
+  values configured under `data/clientConfigs/<client>/index.ts`; default
+  `value: false` ships in the reactory client config).
 - Per-form override: `formDef.options.engine: 'v5' | 'fork'`.
-- The selector lives in `useReactoryForm`; both engines are compiled and tree-shaken on demand.
+- The dispatch lives in `EngineDispatchedForm` (the integration shim) which
+  reads the flag via Apollo using a small `useReactoryFeatureFlag` hook
+  backed by the new `ReactoryEffectiveFeatureFlags` GraphQL query. The
+  hook is cache-first, so one network round-trip per session powers
+  every form mount thereafter.
 
 ```ts
-function pickEngine(formDef, reactory) {
-  if (formDef.options?.engine) return formDef.options.engine;
-  return reactory.featureFlags.get('forms.useV5Engine') ? 'v5' : 'fork';
-}
+// in EngineDispatchedForm.tsx
+const { value: v5FlagOn } = useReactoryFeatureFlag(FORMS_ENGINE_V5_FQN, false);
+const engine = formDef?.options?.engine
+  ?? (v5FlagOn ? 'v5' : 'fork');
 ```
 
-Phase 5 deletes the fork code path and the flag.
+`useReactoryForm` itself does NOT read feature flags; it accepts the resolved
+`engine` value via its args. This separation lets unit tests of the hook
+avoid Apollo wiring entirely.
+
+Phase 5 deletes the fork code path. The flag stays in the catalogue for
+audit purposes; clients that don't want v5 anymore set `value: false` in
+their config.
+
+### Earlier (incorrect) note
+
+An earlier revision of this ADR described the dispatcher as reading
+`reactory.featureFlags.get('forms.useV5Engine')`. That method does not
+exist on the Reactory SDK; the optional chaining made the call always
+return `undefined`, so the global-flag path silently never engaged.
+The P5.7 patch wired the real Reactory feature-flag system as
+described above.
 
 ## Consequences
 

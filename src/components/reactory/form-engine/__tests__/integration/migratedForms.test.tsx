@@ -18,6 +18,14 @@ jest.mock('@reactory/client-core/components/reactory/form', () => ({
   default: () => <div data-testid="legacy-fork-form" />,
 }));
 jest.mock('../../widgets', () => ({ reactoryWidgets: () => ({}) }));
+// The migration parity test asserts forms render via v5 because of their
+// per-form `options.engine: 'v5'` pin. The pin wins over the flag, so the
+// flag value is irrelevant here — we mock the hook to keep Apollo out of
+// the test render tree.
+jest.mock('../../hooks/useReactoryFeatureFlag', () => ({
+  FORMS_ENGINE_V5_FQN: 'core.FormsEngineV5@1.0.0',
+  useReactoryFeatureFlag: () => ({ value: false, loading: false, error: null }),
+}));
 
 interface MigratedFormSpec {
   formDef: Reactory.Forms.IReactoryForm;

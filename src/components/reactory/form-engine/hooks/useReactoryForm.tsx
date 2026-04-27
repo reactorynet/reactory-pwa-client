@@ -111,14 +111,24 @@ export interface UseReactoryFormResult {
   engine: FormEngine;
 }
 
-const FEATURE_FLAG_KEY = 'forms.useV5Engine';
-
+/**
+ * Engine selection inside the hook. Order:
+ *   1. args.engine (explicit caller override)
+ *   2. formContext.formDef.options.engine (per-form pin)
+ *   3. fork (the safe default)
+ *
+ * The global flag check (core.FormsEngineV5@1.0.0) lives in the higher-level
+ * `EngineDispatchedForm` integration shim — that component reads the flag
+ * via Apollo and passes the resolved engine down via args.engine. Inside
+ * this hook we therefore don't reach into the SDK for feature flags;
+ * doing so previously called a `featureFlags.get` method that is not
+ * exposed by the real Reactory SDK and was effectively a no-op.
+ */
 function chooseEngine(args: UseReactoryFormArgs): FormEngine {
   if (args.engine) return args.engine;
   const fromFormDef = args.formContext.formDef?.options?.engine;
   if (fromFormDef) return fromFormDef;
-  const flag = args.formContext.reactory.featureFlags?.get<boolean>(FEATURE_FLAG_KEY);
-  return flag === true ? 'v5' : 'fork';
+  return 'fork';
 }
 
 /** Generate a stable but locally-unique form instance id. */

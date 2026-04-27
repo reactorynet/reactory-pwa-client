@@ -21,6 +21,17 @@ jest.mock('../../widgets', () => ({
   reactoryWidgets: () => ({}),
 }));
 
+// Mock the feature-flag hook to avoid needing an ApolloProvider in unit
+// tests. Each test sets `flagValueMock` to drive engine selection.
+let flagValueMock = false;
+jest.mock('../../hooks/useReactoryFeatureFlag', () => ({
+  FORMS_ENGINE_V5_FQN: 'core.FormsEngineV5@1.0.0',
+  useReactoryFeatureFlag: () => ({ value: flagValueMock, loading: false, error: null }),
+}));
+beforeEach(() => {
+  flagValueMock = false;
+});
+
 const baseProps = (over: Partial<React.ComponentProps<typeof EngineDispatchedForm>> = {}) => {
   const reactory = createMockReactorySDK();
   return {
@@ -39,15 +50,17 @@ describe('EngineDispatchedForm', () => {
     expect(screen.getByTestId('legacy-fork-form')).toBeInTheDocument();
   });
 
-  it('renders the v5 engine when the global flag is true', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+  it('renders the v5 engine when the global flag (core.FormsEngineV5@1.0.0) is true', () => {
+    flagValueMock = true;
+    const reactory = createMockReactorySDK();
     render(<EngineDispatchedForm {...baseProps({ formContext: { reactory } })} />);
     // V5 engine renders rjsf's <form> wrapper, not our fork stub.
     expect(screen.queryByTestId('legacy-fork-form')).toBeNull();
   });
 
   it('renders the v5 engine when formDef.options.engine = "v5" (pin overrides flag)', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': false } });
+    flagValueMock = false;
+    const reactory = createMockReactorySDK();
     render(
       <EngineDispatchedForm
         {...baseProps({
@@ -60,7 +73,8 @@ describe('EngineDispatchedForm', () => {
   });
 
   it('renders the fork when formDef.options.engine = "fork" (pin overrides flag)', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    flagValueMock = true;
+    const reactory = createMockReactorySDK();
     render(
       <EngineDispatchedForm
         {...baseProps({
@@ -73,7 +87,8 @@ describe('EngineDispatchedForm', () => {
   });
 
   it('forwards reactory through formContext to the v5 engine for telemetry', () => {
-    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    flagValueMock = true;
+    const reactory = createMockReactorySDK();
     render(<EngineDispatchedForm {...baseProps({ formContext: { reactory } })} />);
     // form.mount fires from useFormTelemetry inside useReactoryForm.
     expect(reactory.telemetryCalls.some((e) => e.name === 'form.mount')).toBe(true);
