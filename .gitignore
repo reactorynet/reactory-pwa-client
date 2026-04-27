@@ -53,3 +53,6 @@ storybook-static
 # Copilot CLI session transcripts (forms-engine modernization)
 /.copilot-sessions/
 
+# Jest transform cache
+/.jest-cache/
+
