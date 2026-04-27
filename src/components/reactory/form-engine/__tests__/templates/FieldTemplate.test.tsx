@@ -181,4 +181,120 @@ describe('ReactoryFieldTemplate', () => {
     );
     expect(screen.getByTestId('desc')).toBeInTheDocument();
   });
+
+  describe('ui:permission integration (P4.1)', () => {
+    const grantingService = (granted: string[]) => ({
+      hasAny: (roles: string[]) => roles.some((r) => granted.includes(r)),
+    });
+
+    const fcWithService = (granted: string[] | null) => {
+      const reactory: { permissions?: ReturnType<typeof grantingService>; log: jest.Mock } = {
+        log: jest.fn(),
+      };
+      if (granted !== null) reactory.permissions = grantingService(granted);
+      return { reactory };
+    };
+
+    it('hides the field when ui:permission denies read', () => {
+      const { container } = render(
+        <ReactoryFieldTemplate
+          {...baseProps({
+            uiSchema: { 'ui:permission': { read: ['admin'] } },
+            formContext: fcWithService(['user']),
+          })}
+        />,
+      );
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('renders the field when ui:permission grants read', () => {
+      render(
+        <ReactoryFieldTemplate
+          {...baseProps({
+            uiSchema: { 'ui:permission': { read: ['user'] } },
+            formContext: fcWithService(['user']),
+          })}
+        />,
+      );
+      expect(screen.getByTestId('child')).toBeInTheDocument();
+    });
+
+    it('marks the field readonly when ui:permission denies write', () => {
+      const { container } = render(
+        <ReactoryFieldTemplate
+          {...baseProps({
+            uiSchema: { 'ui:permission': { read: ['user'], write: ['admin'] } },
+            formContext: fcWithService(['user']),
+          })}
+        />,
+      );
+      const wrapper = container.firstChild as HTMLElement;
+      expect(wrapper.getAttribute('data-readonly')).toBe('true');
+      expect(wrapper.getAttribute('aria-readonly')).toBe('true');
+    });
+
+    it('does not mark readonly when ui:permission grants write', () => {
+      const { container } = render(
+        <ReactoryFieldTemplate
+          {...baseProps({
+            uiSchema: { 'ui:permission': { read: ['user'], write: ['user'] } },
+            formContext: fcWithService(['user']),
+          })}
+        />,
+      );
+      const wrapper = container.firstChild as HTMLElement;
+      expect(wrapper.getAttribute('data-readonly')).toBeNull();
+    });
+
+    it('preserves rjsf-supplied readonly even when ui:permission grants write', () => {
+      const { container } = render(
+        <ReactoryFieldTemplate
+          {...baseProps({
+            readonly: true,
+            uiSchema: { 'ui:permission': { read: ['user'], write: ['user'] } },
+            formContext: fcWithService(['user']),
+          })}
+        />,
+      );
+      const wrapper = container.firstChild as HTMLElement;
+      expect(wrapper.getAttribute('data-readonly')).toBe('true');
+    });
+
+    it('fails closed (hides) when ui:permission is set but service is missing', () => {
+      const { container } = render(
+        <ReactoryFieldTemplate
+          {...baseProps({
+            uiSchema: { 'ui:permission': { read: ['admin'] } },
+            formContext: fcWithService(null),
+          })}
+        />,
+      );
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('skips permission resolution when formContext lacks reactory entirely', () => {
+      // No reactory at all → resolver is not invoked. Field renders as unrestricted.
+      render(
+        <ReactoryFieldTemplate
+          {...baseProps({
+            uiSchema: { 'ui:permission': { read: ['admin'] } },
+            formContext: {},
+          })}
+        />,
+      );
+      expect(screen.getByTestId('child')).toBeInTheDocument();
+    });
+
+    it('does not render data-readonly when neither rjsf nor permission says readonly', () => {
+      const { container } = render(
+        <ReactoryFieldTemplate
+          {...baseProps({
+            formContext: fcWithService(['user']),
+          })}
+        />,
+      );
+      const wrapper = container.firstChild as HTMLElement;
+      expect(wrapper.getAttribute('data-readonly')).toBeNull();
+    });
+  });
 });

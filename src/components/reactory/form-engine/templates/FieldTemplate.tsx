@@ -18,6 +18,7 @@
 
 import * as React from 'react';
 import type { FieldTemplateProps } from '@rjsf/utils';
+import { checkFieldPermission, type PermissionResolveDeps } from '../permissions/checkPermission';
 
 export type UiHiddenCallback = (args: {
   formData: unknown;
@@ -79,6 +80,17 @@ export function ReactoryFieldTemplate(props: FieldTemplateProps): React.ReactEle
 
   const idSchema = (props as { idSchema?: { $id: string } }).idSchema ?? { $id: id };
 
+  // ui:permission resolution. Hide takes precedence over ui:hidden;
+  // readonly applies on top of any rjsf-supplied readonly state.
+  const permissionDeps = formContext as unknown as PermissionResolveDeps | undefined;
+  const permission = permissionDeps?.reactory
+    ? checkFieldPermission(uiSchema as Record<string, unknown> | undefined, permissionDeps)
+    : undefined;
+
+  if (permission?.hide) {
+    return null;
+  }
+
   if (
     isFieldHidden(hidden, uiSchema as Record<string, unknown> | undefined, {
       formData,
@@ -91,6 +103,7 @@ export function ReactoryFieldTemplate(props: FieldTemplateProps): React.ReactEle
     return null;
   }
 
+  const effectiveReadonly = _readonly === true || permission?.readonly === true;
   const hasErrors = Array.isArray(rawErrors) && rawErrors.length > 0;
   const helpId = `${id}-help`;
   const errorId = `${id}-error`;
@@ -100,6 +113,8 @@ export function ReactoryFieldTemplate(props: FieldTemplateProps): React.ReactEle
       className={classNames ?? `field field-${(schema as { type?: string })?.type ?? 'unknown'}`}
       style={style}
       data-field-id={id}
+      data-readonly={effectiveReadonly ? 'true' : undefined}
+      aria-readonly={effectiveReadonly ? true : undefined}
     >
       {displayLabel !== false && label ? (
         <label className="control-label" htmlFor={id}>
