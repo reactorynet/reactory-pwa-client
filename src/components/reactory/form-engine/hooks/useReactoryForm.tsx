@@ -32,6 +32,7 @@ import {
 import { createReactoryValidator, type ReactoryValidatorOptions } from '../validator/ReactoryValidator';
 import { reactoryTemplates } from '../templates';
 import { TitleDepthContext } from '../templates/TitleFieldTemplate';
+import { useFormTelemetry } from './useFormTelemetry';
 
 export type FormEngine = 'v5' | 'fork';
 
@@ -79,6 +80,12 @@ export interface UseReactoryFormArgs<TData = unknown> {
   onError?: (errors: RJSFValidationError[]) => void;
   /** Stable id used for the form element and as the rjsf idPrefix base. */
   id?: string;
+  /**
+   * Disable telemetry emission for this form mount. Default false.
+   * Useful for tests, transient previews, and forms with sensitive flows
+   * that don't want lifecycle events leaving the client.
+   */
+  disableTelemetry?: boolean;
 }
 
 export interface UseReactoryFormResult {
@@ -104,11 +111,26 @@ function chooseEngine(args: UseReactoryFormArgs): FormEngine {
   return flag === true ? 'v5' : 'fork';
 }
 
+/** Generate a stable but locally-unique form instance id. */
+function newFormInstanceId(): string {
+  // Tiny non-cryptographic UUID-ish; enough to scope telemetry within a session.
+  return `fi-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function useReactoryForm<TData = unknown>(
   args: UseReactoryFormArgs<TData>,
 ): UseReactoryFormResult {
   const { reactory } = args.formContext;
   const formRef = React.useRef<RjsfForm<TData> | null>(null);
+
+  // Stable per-mount instance id. The id flows into telemetry payloads and
+  // FQN-resolution miss events so consumers can correlate events across the
+  // form's lifecycle.
+  const formInstanceIdRef = React.useRef<string | undefined>(undefined);
+  if (!formInstanceIdRef.current) {
+    formInstanceIdRef.current = newFormInstanceId();
+  }
+  const formInstanceId = formInstanceIdRef.current;
 
   const engine = React.useMemo(() => chooseEngine(args as UseReactoryFormArgs), [
     args.engine,
@@ -116,14 +138,25 @@ export function useReactoryForm<TData = unknown>(
     reactory,
   ]);
 
+  // Telemetry is wired before the registry/validator so the registry's
+  // onMiss callback can emit `form.fqn.miss` events.
+  const telemetry = useFormTelemetry({
+    reactory: reactory as Parameters<typeof useFormTelemetry>[0]['reactory'],
+    formInstanceId,
+    signature: (args.formContext as { signature?: string }).signature,
+    formId: args.id,
+    disabled: args.disableTelemetry,
+  });
+
   const registry = React.useMemo(
     () =>
       createReactoryRegistry({
         reactory,
         staticFields: args.staticFields,
         staticWidgets: args.staticWidgets,
+        onMiss: telemetry.emitFqnMiss,
       }),
-    [reactory, args.staticFields, args.staticWidgets],
+    [reactory, args.staticFields, args.staticWidgets, telemetry.emitFqnMiss],
   );
 
   React.useEffect(() => {
@@ -144,6 +177,44 @@ export function useReactoryForm<TData = unknown>(
   const templates = React.useMemo(
     () => ({ ...reactoryTemplates(), ...(args.templates ?? {}) }),
     [args.templates],
+  );
+
+  // Telemetry-wrapped lifecycle handlers. Stable identities so rjsf's
+  // prop-equality checks don't churn the form on every render.
+  const userOnChange = args.onChange;
+  const userOnSubmit = args.onSubmit;
+  const userOnError = args.onError;
+
+  const wrappedOnChange = React.useCallback(
+    (e: Parameters<NonNullable<RjsfFormProps<TData>['onChange']>>[0], id?: string) => {
+      telemetry.emitChange(id, (e as { formData?: unknown })?.formData);
+      userOnChange?.(e, id);
+    },
+    [userOnChange, telemetry],
+  );
+
+  const wrappedOnSubmit = React.useCallback(
+    (e: Parameters<NonNullable<RjsfFormProps<TData>['onSubmit']>>[0], evt: React.FormEvent<HTMLFormElement>) => {
+      const start = Date.now();
+      telemetry.emitSubmitAttempt();
+      try {
+        userOnSubmit?.(e, evt);
+        telemetry.emitSubmitSuccess(Date.now() - start);
+      } catch (err) {
+        telemetry.emitSubmitError(1, [(err as Error).name ?? 'Error']);
+        throw err;
+      }
+    },
+    [userOnSubmit, telemetry],
+  );
+
+  const wrappedOnError = React.useCallback(
+    (errors: RJSFValidationError[]) => {
+      const codes = errors.map((er) => (er as { name?: string }).name ?? 'unknown');
+      telemetry.emitSubmitError(errors.length, codes);
+      userOnError?.(errors);
+    },
+    [userOnError, telemetry],
   );
 
   const form: React.ReactElement | null = React.useMemo(() => {
@@ -174,9 +245,9 @@ export function useReactoryForm<TData = unknown>(
       disabled: args.disabled,
       readonly: args.readonly,
       showErrorList: args.showErrorList,
-      onChange: args.onChange,
-      onSubmit: args.onSubmit,
-      onError: args.onError,
+      onChange: wrappedOnChange,
+      onSubmit: wrappedOnSubmit,
+      onError: wrappedOnError,
       id: args.id,
     } as unknown as RjsfFormProps<any>;
     const Form = RjsfForm as unknown as React.ComponentType<RjsfFormProps<any>>;
@@ -197,9 +268,9 @@ export function useReactoryForm<TData = unknown>(
     args.disabled,
     args.readonly,
     args.showErrorList,
-    args.onChange,
-    args.onSubmit,
-    args.onError,
+    wrappedOnChange,
+    wrappedOnSubmit,
+    wrappedOnError,
     args.id,
     validator,
     registry,

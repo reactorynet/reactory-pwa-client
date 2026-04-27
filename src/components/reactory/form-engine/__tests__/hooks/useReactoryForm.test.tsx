@@ -151,3 +151,64 @@ describe('useReactoryForm — submit()', () => {
     expect(result.current.submit()).toBe(false);
   });
 });
+
+describe('useReactoryForm — telemetry wiring', () => {
+  it('emits form.mount when v5 form mounts', () => {
+    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const Harness: React.FC = () => {
+      const { form } = useReactoryForm(baseArgs({ formContext: { reactory } }));
+      return form;
+    };
+    render(<Harness />);
+    expect(reactory.telemetryCalls.some((e) => e.name === 'form.mount')).toBe(true);
+  });
+
+  it('emits form.unmount when the form is unmounted', () => {
+    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const Harness: React.FC = () => {
+      const { form } = useReactoryForm(baseArgs({ formContext: { reactory } }));
+      return form;
+    };
+    const { unmount } = render(<Harness />);
+    unmount();
+    expect(reactory.telemetryCalls.some((e) => e.name === 'form.unmount')).toBe(true);
+  });
+
+  it('emits no telemetry when disableTelemetry is true', () => {
+    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const Harness: React.FC = () => {
+      const { form } = useReactoryForm(
+        baseArgs({ formContext: { reactory }, disableTelemetry: true }),
+      );
+      return form;
+    };
+    render(<Harness />);
+    expect(reactory.telemetryCalls).toEqual([]);
+  });
+
+  it('every emitted event carries a stable formInstanceId', () => {
+    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const Harness: React.FC = () => {
+      const { form } = useReactoryForm(baseArgs({ formContext: { reactory } }));
+      return form;
+    };
+    const { unmount } = render(<Harness />);
+    unmount();
+    const ids = reactory.telemetryCalls.map(
+      (e) => (e.payload as { formInstanceId?: string } | undefined)?.formInstanceId,
+    );
+    const distinct = new Set(ids.filter(Boolean));
+    expect(distinct.size).toBe(1);
+    const onlyId = [...distinct][0];
+    expect(onlyId).toMatch(/^fi-/);
+  });
+
+  it('registry FQN miss surfaces as a form.fqn.miss telemetry event', () => {
+    const reactory = createMockReactorySDK({ featureFlags: { 'forms.useV5Engine': true } });
+    const { result } = renderHook(() => useReactoryForm(baseArgs({ formContext: { reactory } })));
+    // Probe a missing FQN via the exposed registry; should emit through telemetry.
+    expect(result.current.registry.resolveFqn('plugin.MissingForReal', 'widget')).toBeNull();
+    const miss = reactory.telemetryCalls.find((e) => e.name === 'form.fqn.miss');
+    expect(miss?.payload).toMatchObject({ kind: 'widget', name: 'plugin.MissingForReal' });
+  });
+});
