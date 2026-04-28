@@ -1,0 +1,55 @@
+{
+  "name": "step-log",
+  "description": "Log a message with optional data",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "Log"
+      },
+      "message": {
+        "type": "string",
+        "title": "Message",
+        "description": "Log message (supports ${variable} substitution)"
+      },
+      "level": {
+        "type": "string",
+        "title": "Log Level",
+        "enum": ["debug", "info", "warn", "error"],
+        "default": "info"
+      }
+    },
+    "required": ["name", "message"]
+  },
+  "uiSchema": {
+    "ui:order": ["name", "message", "level"],
+    "message": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": {
+        "format": "console",
+        "rows": 3
+      },
+      "ui:help": "Supports ${variable} substitution from workflow context"
+    },
+    "level": {
+      "ui:widget": "SelectWidget",
+      "ui:options": {
+        "selectOptions": [
+          { "icon": "bug_report", "key": "debug", "value": "debug", "label": "Debug" },
+          { "icon": "info", "key": "info", "value": "info", "label": "Info" },
+          { "icon": "warning", "key": "warn", "value": "warn", "label": "Warn" },
+          { "icon": "error", "key": "error", "value": "error", "label": "Error" }
+        ]
+      }
+    }
+  },
+  "formData": {
+    "name": "Log",
+    "message": "",
+    "level": "info"
+  },
+  "source": "WorkflowDesigner/Steps/Log/definition.ts"
+}

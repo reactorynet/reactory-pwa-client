@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Box, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import * as d3 from 'd3';
 import type {
   D3ChartProps,
@@ -898,7 +899,28 @@ const D3Chart: React.FC<D3ChartProps> = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(600);
 
-  const resolvedMargin = resolveMargin(margin);
+  const theme = useTheme();
+
+  // Merge theme palette defaults with any explicit user overrides
+  const themedStyling: D3StylingOptions = useMemo(() => ({
+    axisColor: theme.palette.text.secondary,
+    gridColor: theme.palette.divider,
+    ...styling,
+  }), [theme.palette.text.secondary, theme.palette.divider, styling]);
+
+  // Expand bottom margin when x-axis labels are long to prevent clipping
+  const resolvedMargin = useMemo(() => {
+    const base = resolveMargin(margin);
+    if (Array.isArray(data)) {
+      const maxLen = Math.max(
+        0,
+        ...(data as D3DataPoint[]).map(d => String(d[xKey] ?? '').length),
+      );
+      if (maxLen > 8) base.bottom = Math.max(base.bottom, 70);
+    }
+    return base;
+  }, [margin, data, xKey]);
+
   const colors = resolveColors(colorScheme);
 
   const svgWidth = typeof width === 'number' ? width : containerWidth;
@@ -971,31 +993,31 @@ const D3Chart: React.FC<D3ChartProps> = ({
       } else {
         switch (type) {
           case 'bar':
-            renderBar(context, xKey, yKey, seriesKeys, showAxes, showGrid, styling, tooltipFormatter);
+            renderBar(context, xKey, yKey, seriesKeys, showAxes, showGrid, themedStyling, tooltipFormatter);
             break;
           case 'line':
-            renderLine(context, xKey, yKey, seriesKeys, showAxes, showGrid, styling, tooltipFormatter);
+            renderLine(context, xKey, yKey, seriesKeys, showAxes, showGrid, themedStyling, tooltipFormatter);
             break;
           case 'area':
-            renderArea(context, xKey, yKey, seriesKeys, showAxes, showGrid, styling, tooltipFormatter);
+            renderArea(context, xKey, yKey, seriesKeys, showAxes, showGrid, themedStyling, tooltipFormatter);
             break;
           case 'pie':
-            renderPie(context, false, xKey, yKey, styling, tooltipFormatter);
+            renderPie(context, false, xKey, yKey, themedStyling, tooltipFormatter);
             break;
           case 'donut':
-            renderPie(context, true, xKey, yKey, styling, tooltipFormatter);
+            renderPie(context, true, xKey, yKey, themedStyling, tooltipFormatter);
             break;
           case 'scatter':
-            renderScatter(context, xKey, yKey, y2Key, showAxes, showGrid, styling, tooltipFormatter);
+            renderScatter(context, xKey, yKey, y2Key, showAxes, showGrid, themedStyling, tooltipFormatter);
             break;
           case 'histogram':
-            renderHistogram(context, xKey, showAxes, showGrid, styling, tooltipFormatter);
+            renderHistogram(context, xKey, showAxes, showGrid, themedStyling, tooltipFormatter);
             break;
           case 'tree':
-            renderTree(context, styling);
+            renderTree(context, themedStyling);
             break;
           case 'force':
-            cleanup = renderForce(context, styling);
+            cleanup = renderForce(context, themedStyling);
             break;
           default:
             break;
@@ -1026,7 +1048,7 @@ const D3Chart: React.FC<D3ChartProps> = ({
     showGrid,
     showTooltipProp,
     colors.join(','),
-    styling,
+    themedStyling,
     customRenderer,
     tooltipFormatter,
   ]);
@@ -1100,8 +1122,10 @@ const D3Chart: React.FC<D3ChartProps> = ({
           style={{
             position: 'absolute',
             pointerEvents: 'none',
-            background: 'rgba(30,30,30,0.88)',
-            color: '#fff',
+            background: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            border: `1px solid ${theme.palette.divider}`,
+            boxShadow: theme.shadows[2],
             padding: '6px 10px',
             borderRadius: '4px',
             fontSize: '12px',

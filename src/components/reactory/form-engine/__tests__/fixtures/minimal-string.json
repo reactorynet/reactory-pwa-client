@@ -1,0 +1,24 @@
+{
+  "name": "minimal-string",
+  "description": "Smallest viable fixture — a single string field. Used as the contract harness reference.",
+  "schema": {
+    "type": "object",
+    "title": "Minimal",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Name"
+      }
+    },
+    "required": ["name"]
+  },
+  "uiSchema": {
+    "name": {
+      "ui:placeholder": "Enter your name"
+    }
+  },
+  "formData": {
+    "name": ""
+  },
+  "source": "synthetic"
+}

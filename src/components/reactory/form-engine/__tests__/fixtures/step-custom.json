@@ -1,0 +1,46 @@
+{
+  "name": "step-custom",
+  "description": "Custom user-defined step with arbitrary configuration",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "Custom Step"
+      },
+      "handler": {
+        "type": "string",
+        "title": "Handler",
+        "description": "Custom handler identifier (service FQN, script path, etc.)"
+      },
+      "configuration": {
+        "type": "object",
+        "title": "Configuration",
+        "description": "Custom configuration passed to the handler",
+        "properties": {},
+        "additionalProperties": true
+      }
+    },
+    "required": ["name"]
+  },
+  "uiSchema": {
+    "ui:order": ["name", "handler", "configuration"],
+    "handler": {
+      "ui:placeholder": "e.g. namespace.ServiceName@1.0.0"
+    },
+    "configuration": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": {
+        "format": "json",
+        "rows": 8
+      }
+    }
+  },
+  "formData": {
+    "name": "Custom Step",
+    "configuration": {}
+  },
+  "source": "WorkflowDesigner/Steps/Custom/definition.ts"
+}

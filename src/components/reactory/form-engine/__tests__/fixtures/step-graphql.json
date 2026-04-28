@@ -1,0 +1,109 @@
+{
+  "name": "step-graphql",
+  "description": "Execute GraphQL query or mutation",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "GraphQL Query"
+      },
+      "endpoint": {
+        "type": "string",
+        "title": "Endpoint URL",
+        "description": "GraphQL endpoint URL",
+        "format": "uri"
+      },
+      "operation": {
+        "type": "string",
+        "title": "Operation Type",
+        "enum": ["query", "mutation", "subscription"],
+        "default": "query"
+      },
+      "query": {
+        "type": "string",
+        "title": "GraphQL Query/Mutation",
+        "description": "GraphQL query or mutation string"
+      },
+      "headers": {
+        "title": "HTTP Headers",
+        "description": "Additional headers to send with request",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "title": "Key"
+            },
+            "value": {
+              "type": "string",
+              "title": "Value"
+            }
+          }
+        }
+      },
+      "timeout": {
+        "type": "number",
+        "title": "Timeout (ms)",
+        "description": "Request timeout in milliseconds",
+        "default": 30000,
+        "minimum": 1000
+      }
+    },
+    "required": ["name", "endpoint", "query"]
+  },
+  "uiSchema": {
+    "ui:order": ["name", "endpoint", "operation", "query", "headers", "timeout"],
+    "endpoint": {
+      "ui:placeholder": "https://api.example.com/graphql",
+      "ui:help": "Full URL of the GraphQL endpoint"
+    },
+    "operation": {
+      "ui:widget": "SelectWidget",
+      "ui:options": {
+        "selectOptions": [
+          { "key": "query", "value": "query", "label": "Query", "icon": "search" },
+          { "key": "mutation", "value": "mutation", "label": "Mutation", "icon": "edit" },
+          { "key": "subscription", "value": "subscription", "label": "Subscription", "icon": "stream" }
+        ]
+      }
+    },
+    "query": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": {
+        "format": "javascript",
+        "rows": 12
+      },
+      "ui:help": "GraphQL query, mutation, or subscription document"
+    },
+    "headers": {
+      "ui:widget": "MaterialTableWidget",
+      "ui:options": {
+        "columns": [
+          { "title": "Header Name", "field": "key" },
+          { "title": "Value", "field": "value" }
+        ]
+      },
+      "ui:help": "HTTP headers to include with the GraphQL request (e.g. Authorization)"
+    },
+    "timeout": {
+      "ui:widget": "SliderWidget",
+      "ui:options": {
+        "min": 1000,
+        "max": 120000,
+        "step": 1000
+      },
+      "ui:help": "Request timeout in milliseconds (1 000 ms = 1s — 120 000 ms = 120s)"
+    }
+  },
+  "formData": {
+    "name": "GraphQL Query",
+    "operation": "query",
+    "timeout": 30000,
+    "headers": []
+  },
+  "source": "WorkflowDesigner/Steps/GraphQL/definition.ts"
+}
