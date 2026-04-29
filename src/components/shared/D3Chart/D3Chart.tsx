@@ -76,12 +76,21 @@ function extractStyle(s?: D3StylingOptions): ResolvedStyle {
 function styleAxis(
   selection: d3.Selection<SVGGElement, unknown, null, undefined>,
   st: ResolvedStyle,
+  rotateText: boolean = false
 ): void {
   selection.select('.domain').attr('stroke', st.axisColor);
-  selection
+  const texts = selection
     .selectAll<SVGTextElement, unknown>('text')
     .style('font-size', `${st.axisFontSize}px`)
     .attr('fill', st.axisColor);
+
+  if (rotateText) {
+    texts
+      .attr('transform', 'rotate(-45)')
+      .style('text-anchor', 'end')
+      .attr('dx', '-0.8em')
+      .attr('dy', '0.15em');
+  }
 }
 
 // ─── Grid helper ─────────────────────────────────────────────────────────────
@@ -184,10 +193,10 @@ function renderBar(
     sel.append('g')
       .attr('transform', `translate(0,${innerHeight})`)
       .call(d3.axisBottom(xScale))
-      .call(g => styleAxis(g, st));
+      .call(g => styleAxis(g, st, true));
 
     sel.append('g')
-      .call(d3.axisLeft(yScale).ticks(5))
+      .call(d3.axisLeft(yScale).ticks(5, "~s"))
       .call(g => styleAxis(g, st));
   }
 }
@@ -296,10 +305,10 @@ function renderLine(
     sel.append('g')
       .attr('transform', `translate(0,${innerHeight})`)
       .call(xAxisGen as d3.Axis<any>)
-      .call(g => styleAxis(g, st));
+      .call(g => styleAxis(g, st, xIsString));
 
     sel.append('g')
-      .call(d3.axisLeft(yScale).ticks(5))
+      .call(d3.axisLeft(yScale).ticks(5, "~s"))
       .call(g => styleAxis(g, st));
   }
 }
@@ -407,10 +416,10 @@ function renderArea(
     sel.append('g')
       .attr('transform', `translate(0,${innerHeight})`)
       .call(xAxisGen as d3.Axis<any>)
-      .call(g => styleAxis(g, st));
+      .call(g => styleAxis(g, st, xIsString));
 
     sel.append('g')
-      .call(d3.axisLeft(yScale).ticks(5))
+      .call(d3.axisLeft(yScale).ticks(5, "~s"))
       .call(g => styleAxis(g, st));
   }
 }
@@ -579,11 +588,11 @@ function renderScatter(
   if (showAxes) {
     sel.append('g')
       .attr('transform', `translate(0,${innerHeight})`)
-      .call(d3.axisBottom(xScale).ticks(5))
+      .call(d3.axisBottom(xScale).ticks(5, "~s"))
       .call(g => styleAxis(g, st));
 
     sel.append('g')
-      .call(d3.axisLeft(yScale).ticks(5))
+      .call(d3.axisLeft(yScale).ticks(5, "~s"))
       .call(g => styleAxis(g, st));
   }
 }
@@ -647,10 +656,10 @@ function renderHistogram(
     sel.append('g')
       .attr('transform', `translate(0,${innerHeight})`)
       .call(d3.axisBottom(xScale))
-      .call(g => styleAxis(g, st));
+      .call(g => styleAxis(g, st, true));
 
     sel.append('g')
-      .call(d3.axisLeft(yScale).ticks(5))
+      .call(d3.axisLeft(yScale).ticks(5, "~s"))
       .call(g => styleAxis(g, st));
   }
 }

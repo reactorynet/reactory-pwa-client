@@ -1767,7 +1767,7 @@ export default (props) => {
             recordingPanelOpen ||
             filesPanelOpen ||
             todosPanelOpen ||
-            debugPanelOpen ? 86 : 94,
+            debugPanelOpen ? 48 : 52,
           right: 8,
         }}
       />
