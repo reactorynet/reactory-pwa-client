@@ -1,0 +1,37 @@
+{
+  "name": "step-condition",
+  "description": "Conditional branching step",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "Condition"
+      },
+      "expression": {
+        "type": "string",
+        "title": "Condition Expression",
+        "description": "JavaScript expression to evaluate",
+        "default": "input.value > 0"
+      }
+    },
+    "required": ["name", "expression"]
+  },
+  "uiSchema": {
+    "expression": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": {
+        "format": "javascript",
+        "rows": 6
+      },
+      "ui:help": "JavaScript expression that evaluates to true or false. Access current input via the `input` variable. Example: `input.status === \"active\" && input.count > 0`"
+    }
+  },
+  "formData": {
+    "name": "Condition",
+    "expression": "input.value > 0"
+  },
+  "source": "WorkflowDesigner/Steps/Condition/definition.ts"
+}

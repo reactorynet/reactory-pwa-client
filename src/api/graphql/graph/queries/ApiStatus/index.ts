@@ -1,5 +1,3 @@
-import { Theme } from "@rjsf/material-ui";
-
 export type ApiStatusQueryScope = 'application' | 'loggedIn' | 'theme' | 'server' | 'colorSchemes' | 'routes' | 'menus' | 'messages' | 'navigationComponents' | 'plugins';
 
 const FRAGMENTS = {

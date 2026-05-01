@@ -1,0 +1,37 @@
+{
+  "name": "step-rest-inputs",
+  "description": "Execute REST API request (inputs)",
+  "schema": {
+    "type": "object",
+    "title": "Step Inputs",
+    "description": "Dynamic inputs that support ${variable} substitution from workflow context",
+    "properties": {
+      "body": {
+        "title": "Request Body",
+        "description": "JSON body to send with the request. Supports ${variable} substitution.",
+        "oneOf": [
+          { "type": "string" },
+          { "type": "object", "additionalProperties": true }
+        ]
+      },
+      "urlParams": {
+        "type": "object",
+        "title": "URL Parameters",
+        "description": "Dynamic URL parameters (substituted into URL template)",
+        "additionalProperties": { "type": "string" }
+      }
+    }
+  },
+  "uiSchema": {
+    "ui:order": ["body", "urlParams"],
+    "body": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": { "format": "json", "rows": 6 },
+      "ui:help": "Supports ${variable} substitution from workflow context"
+    },
+    "urlParams": {
+      "ui:help": "Key-value pairs substituted into the URL"
+    }
+  },
+  "source": "WorkflowDesigner/Steps/REST/definition.ts"
+}

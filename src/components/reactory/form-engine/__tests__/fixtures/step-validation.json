@@ -1,0 +1,77 @@
+{
+  "name": "step-validation",
+  "description": "Validate data against a set of rules",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "Validation"
+      },
+      "stopOnFirstError": {
+        "type": "boolean",
+        "title": "Stop on First Error",
+        "description": "Stop validating after the first rule fails",
+        "default": false
+      },
+      "rules": {
+        "type": "array",
+        "title": "Validation Rules",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "title": "Rule Type",
+              "enum": ["required", "type", "pattern", "range", "custom"]
+            },
+            "field": {
+              "type": "string",
+              "title": "Field Path"
+            },
+            "value": {
+              "type": "string",
+              "title": "Expected Value / Pattern"
+            },
+            "message": {
+              "type": "string",
+              "title": "Error Message"
+            }
+          }
+        }
+      }
+    },
+    "required": ["name"]
+  },
+  "uiSchema": {
+    "ui:order": ["name", "stopOnFirstError", "rules"],
+    "stopOnFirstError": {
+      "ui:help": "When enabled, validation stops at the first failing rule and skips remaining rules"
+    },
+    "rules": {
+      "ui:help": "Define validation rules to check against the input data",
+      "items": {
+        "type": {
+          "ui:widget": "SelectWidget",
+          "ui:options": {
+            "selectOptions": [
+              { "key": "required", "value": "required", "label": "Required", "icon": "star" },
+              { "key": "type", "value": "type", "label": "Type Check", "icon": "category" },
+              { "key": "pattern", "value": "pattern", "label": "Pattern (regex)", "icon": "pattern" },
+              { "key": "range", "value": "range", "label": "Range", "icon": "swap_horiz" },
+              { "key": "custom", "value": "custom", "label": "Custom Expression", "icon": "code" }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "formData": {
+    "name": "Validation",
+    "stopOnFirstError": false,
+    "rules": []
+  },
+  "source": "WorkflowDesigner/Steps/Validation/definition.ts"
+}

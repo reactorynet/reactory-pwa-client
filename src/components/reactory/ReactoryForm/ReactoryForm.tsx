@@ -2,7 +2,8 @@
 /* eslint-disable */
 import React, { useCallback } from 'react';
 import Reactory from '@reactorynet/reactory-core';
-import SchemaForm, { ISchemaForm } from '@reactory/client-core/components/reactory/form/components/SchemaForm';
+import { ISchemaForm } from '@reactory/client-core/components/reactory/form/components/SchemaForm';
+import { EngineDispatchedForm } from '@reactory/client-core/components/reactory/form-engine/integration/EngineDispatchedForm';
 
 import { find, template, isArray, isNil, isString, isEmpty, throttle, filter } from 'lodash';
 import { useNavigate, useLocation, useParams, Params } from 'react-router';
@@ -356,7 +357,10 @@ export const ReactoryForm: React.FunctionComponent<Reactory.Client.IReactoryForm
         const formChildren: any[] = [];
         if ((toolbarPosition?.indexOf("top") >= 0 || toolbarPosition?.indexOf("both") >= 0) && Toolbar) formChildren.push(<Toolbar />);
         if (isFormBusy() === true) formChildren.push(<LinearProgress aria-label="Form loading" />);
-        formChildren.push(<SchemaForm {...schemaFormProps} />);
+        // Engine dispatch: per-form `options.engine` or global feature flag
+        // picks v5 vs the legacy fork. Phase 3 seam point — see
+        // src/components/reactory/form-engine/integration/EngineDispatchedForm.tsx.
+        formChildren.push(<EngineDispatchedForm formDef={form} {...schemaFormProps} />);
         if ((toolbarPosition?.indexOf("bottom") >= 0 || toolbarPosition?.indexOf("both") >= 0) && Toolbar) formChildren.push(<Toolbar />);
         if (PagingWidget) formChildren.push(<PagingWidget />);
         if (HelpModal) formChildren.push(<HelpModal />);

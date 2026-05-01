@@ -139,6 +139,17 @@ const preview = {
         },
       ],
     },
+    a11y: {
+      element: '#storybook-root',
+      config: {},
+      options: {
+        runOnly: {
+          type: 'tag',
+          values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
+        },
+      },
+      manual: false,
+    },
   },
   decorators: [
     (Story) => (

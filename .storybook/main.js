@@ -2,14 +2,19 @@
 
 /** @type { import('@storybook/react-webpack5').StorybookConfig } */
 const config = {
+  // Source-only globs. `.jsx`/`.js`/`.mjs` are build artifacts from prior
+  // ts compiles (gitignored, but may exist on developer machines), and
+  // would duplicate the `.tsx`/`.ts` source stories — Storybook strict-mode
+  // refuses to build with duplicate story IDs.
   "stories": [
     "../src/**/*.mdx",
-    "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"
+    "../src/**/*.stories.@(ts|tsx)"
   ],
   "addons": [
     "@storybook/addon-webpack5-compiler-swc",
     "@storybook/addon-docs",
-    "@storybook/addon-onboarding"
+    "@storybook/addon-onboarding",
+    "@storybook/addon-a11y"
   ],
   "framework": {
     "name": "@storybook/react-webpack5",

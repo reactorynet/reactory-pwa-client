@@ -1,0 +1,74 @@
+{
+  "name": "step-for-each",
+  "description": "Iterate over a collection and execute child steps for each item",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "For Each"
+      },
+      "items": {
+        "type": "string",
+        "title": "Items Expression",
+        "description": "Expression that resolves to the collection (supports ${variable})"
+      },
+      "itemVariable": {
+        "type": "string",
+        "title": "Item Variable Name",
+        "description": "Variable name for the current item",
+        "default": "item"
+      },
+      "indexVariable": {
+        "type": "string",
+        "title": "Index Variable Name",
+        "description": "Variable name for the current index",
+        "default": "index"
+      },
+      "maxConcurrency": {
+        "type": "number",
+        "title": "Max Concurrency",
+        "description": "Max parallel iterations (1 = sequential)",
+        "minimum": 1,
+        "default": 1
+      }
+    },
+    "required": ["name", "items"]
+  },
+  "uiSchema": {
+    "ui:order": ["name", "items", "itemVariable", "indexVariable", "maxConcurrency"],
+    "items": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": {
+        "format": "javascript",
+        "rows": 3
+      },
+      "ui:help": "Expression resolving to an array, e.g. ${steps.previous.output} or context.myList"
+    },
+    "itemVariable": {
+      "ui:placeholder": "item"
+    },
+    "indexVariable": {
+      "ui:placeholder": "index"
+    },
+    "maxConcurrency": {
+      "ui:widget": "SliderWidget",
+      "ui:options": {
+        "min": 1,
+        "max": 20,
+        "step": 1,
+        "marks": true
+      },
+      "ui:help": "Number of iterations to run in parallel (1 = sequential, fully ordered)"
+    }
+  },
+  "formData": {
+    "name": "For Each",
+    "itemVariable": "item",
+    "indexVariable": "index",
+    "maxConcurrency": 1
+  },
+  "source": "WorkflowDesigner/Steps/ForEach/definition.ts"
+}

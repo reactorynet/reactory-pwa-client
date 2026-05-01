@@ -1,0 +1,54 @@
+{
+  "name": "step-while",
+  "description": "Repeat child steps while a condition is true",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "While Loop"
+      },
+      "condition": {
+        "type": "string",
+        "title": "Condition",
+        "description": "JavaScript expression evaluated each iteration (must return truthy to continue)"
+      },
+      "maxIterations": {
+        "type": "number",
+        "title": "Max Iterations",
+        "description": "Safety limit on maximum iterations",
+        "minimum": 1,
+        "default": 1000
+      }
+    },
+    "required": ["name", "condition"]
+  },
+  "uiSchema": {
+    "ui:order": ["name", "condition", "maxIterations"],
+    "condition": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": {
+        "format": "javascript",
+        "rows": 3
+      },
+      "ui:help": "Expression returning true/false. Access variables, env, input, steps context."
+    },
+    "maxIterations": {
+      "ui:widget": "SliderWidget",
+      "ui:options": {
+        "min": 1,
+        "max": 10000,
+        "step": 100,
+        "marks": true
+      },
+      "ui:help": "Safety limit to prevent infinite loops"
+    }
+  },
+  "formData": {
+    "name": "While Loop",
+    "maxIterations": 1000
+  },
+  "source": "WorkflowDesigner/Steps/While/definition.ts"
+}

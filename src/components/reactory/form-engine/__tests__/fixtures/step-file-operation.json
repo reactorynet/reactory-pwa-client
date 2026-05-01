@@ -1,0 +1,81 @@
+{
+  "name": "step-file-operation",
+  "description": "Perform file system operations (read, write, copy, move, delete)",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Step Name",
+        "description": "Name of the workflow step",
+        "default": "File Operation"
+      },
+      "operation": {
+        "type": "string",
+        "title": "Operation",
+        "description": "File operation to perform",
+        "enum": ["read", "write", "copy", "move", "delete", "exists", "mkdir"],
+        "default": "read"
+      },
+      "source": {
+        "type": "string",
+        "title": "Source Path",
+        "description": "Source file or directory path"
+      },
+      "destination": {
+        "type": "string",
+        "title": "Destination Path",
+        "description": "Destination path (for copy/move operations)"
+      },
+      "content": {
+        "type": "string",
+        "title": "Content",
+        "description": "Content to write (for write operation)"
+      },
+      "encoding": {
+        "type": "string",
+        "title": "Encoding",
+        "description": "File encoding",
+        "default": "utf-8"
+      },
+      "overwrite": {
+        "type": "boolean",
+        "title": "Overwrite",
+        "description": "Overwrite existing files",
+        "default": false
+      }
+    },
+    "required": ["name", "operation", "source"]
+  },
+  "uiSchema": {
+    "ui:order": ["name", "operation", "source", "destination", "content", "encoding", "overwrite"],
+    "operation": {
+      "ui:widget": "SelectWidget",
+      "ui:options": {
+        "selectOptions": [
+          { "key": "read", "value": "read", "label": "Read", "icon": "description" },
+          { "key": "write", "value": "write", "label": "Write", "icon": "edit" },
+          { "key": "copy", "value": "copy", "label": "Copy", "icon": "content_copy" },
+          { "key": "move", "value": "move", "label": "Move", "icon": "drive_file_move" },
+          { "key": "delete", "value": "delete", "label": "Delete", "icon": "delete" },
+          { "key": "exists", "value": "exists", "label": "Exists", "icon": "search" },
+          { "key": "mkdir", "value": "mkdir", "label": "Make Directory", "icon": "create_new_folder" }
+        ]
+      }
+    },
+    "content": {
+      "ui:widget": "RichEditorWidget",
+      "ui:options": {
+        "format": "text",
+        "rows": 6
+      }
+    }
+  },
+  "formData": {
+    "name": "File Operation",
+    "operation": "read",
+    "encoding": "utf-8",
+    "overwrite": false
+  },
+  "source": "WorkflowDesigner/Steps/FileOperation/definition.ts"
+}
