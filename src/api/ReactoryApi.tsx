@@ -41,7 +41,7 @@ import {
 import { safeCDNUrl } from '../utils/safeUrl';
 
 import amq from '@reactory/client-core/amq';
-import { ReactoryApiEventNames } from './ApiEventNames';
+import { ReactoryApiEventNames, InitProgressEvent } from './ApiEventNames';
 import * as RestApi from './RestApi';
 import GraphQL from '@reactory/client-core/api/graphql';
 import { Theme, Typography } from "@mui/material";
@@ -640,7 +640,6 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       localStorage.setItem("$reactory_instance_id$", this.__uuid);
     }
     this.on(ReactoryApiEventNames.onApiStatusUpdate, this.loadPlugins.bind(this));
-    this.on(ReactoryApiEventNames.onApiStatusUpdate, this.forms.bind(this));
   }
   
 
@@ -655,7 +654,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }
   }
 
+  private emitProgress(step: InitProgressEvent['step'], status: InitProgressEvent['status'], label: string, error?: string, detail?: string) {
+    this.emit(ReactoryApiEventNames.onInitProgress, { step, status, label, error, detail } as InitProgressEvent);
+  }
+
   async init(): Promise<void> {
+    this.emitProgress('apollo-client', 'active', 'Initializing GraphQL client');
     const {
       client,
       ws_link,
@@ -665,18 +669,40 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     this.clearCache = clearCache;
     this.client = client;
     this.ws_link = ws_link;
+    this.emitProgress('apollo-client', 'done', 'Initializing GraphQL client');
 
     if (isNil(this.getAuthToken()) == true) {
-      await this.getAnonToken();
+      this.emitProgress('auth-token', 'active', 'Acquiring anonymous token');
+      try {
+        await this.getAnonToken();
+        this.emitProgress('auth-token', 'done', 'Acquiring anonymous token');
+      } catch (err) {
+        this.emitProgress('auth-token', 'error', 'Acquiring anonymous token', err instanceof Error ? err.message : String(err));
+        throw err;
+      }
     } else {
+      this.emitProgress('auth-token', 'active', 'Validating existing token');
       try {
         await this.getApiStatus();
+        this.emitProgress('auth-token', 'done', 'Validating existing token');
       } catch (error) {
-        // this should be handled in the application
+        this.emitProgress('auth-token', 'error', 'Validating existing token', error instanceof Error ? error.message : String(error));
+        // non-fatal — will retry during app-level getApiStatus()
       }
     }
+
+    this.emitProgress('hydrate', 'active', 'Restoring session data');
     await this.hydrate();
-    await this.initi18n();    
+    this.emitProgress('hydrate', 'done', 'Restoring session data');
+
+    this.emitProgress('i18n', 'active', 'Loading translations');
+    try {
+      await this.initi18n();
+      this.emitProgress('i18n', 'done', 'Loading translations');
+    } catch (err) {
+      this.emitProgress('i18n', 'error', 'Loading translations', err instanceof Error ? err.message : String(err));
+      // non-fatal — app can still function without translations
+    }
   }
 
   /**
@@ -1157,6 +1183,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
   async forms(bypassCache: boolean = false): Promise<Reactory.Forms.IReactoryForm[]> {
     const that = this;
     const { debug } = this;
+    this.emitProgress('forms', 'active', 'Loading form definitions');
     const refresh = async () => {
 
       const FORMS_QUERY = `
@@ -1270,11 +1297,17 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       }
     };
 
-    if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined && bypassCache === false) {
-      if (moment(that.formSchemaLastFetch).add(5, 'minutes').isBefore(moment())) {
-        await refresh();
-      }
-    } else { await refresh() };
+    try {
+      if (that.formSchemaLastFetch !== null && that.formSchemaLastFetch !== undefined && bypassCache === false) {
+        if (moment(that.formSchemaLastFetch).add(5, 'minutes').isBefore(moment())) {
+          await refresh();
+        }
+      } else { await refresh() };
+      this.emitProgress('forms', 'done', 'Loading form definitions', undefined, `${that.formSchemas.length} form(s) loaded`);
+    } catch (err) {
+      this.emitProgress('forms', 'error', 'Loading form definitions', err instanceof Error ? err.message : String(err));
+      throw err;
+    }
 
     return that.formSchemas;
   }
@@ -1890,6 +1923,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     const $options = options || {} as Reactory.Client.IApiStatusRequestOptions;
     if (!this.client) throw new Error('ApolloClient not ready')
 
+    this.emitProgress('api-status', 'active', 'Fetching application configuration');
     try {
       const apiStatus: Reactory.Models.IApiStatus = await this.getApiStatus([
         'application', 
@@ -1903,6 +1937,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         'plugins'
       ], $options.theme, $options.mode) as Reactory.Models.IApiStatus;
       if(!apiStatus) {
+        this.emitProgress('api-status', 'error', 'Fetching application configuration', 'API returned empty status');
         return currentStatus;
       }
 
@@ -1918,9 +1953,11 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
             that.createNotification(message.title, message);
           });
         }
+        this.emitProgress('api-status', 'done', 'Fetching application configuration', undefined, `Status: ${apiStatus.status}`);
         that.emit(ReactoryApiEventNames.onApiStatusUpdate, { ...apiStatus, offline: false });      
         return apiStatus;
       } else {
+        this.emitProgress('api-status', 'error', 'Fetching application configuration', `API status: ${apiStatus.status || 'unknown'}`);
         if ($options.forceLogout !== false) {
           that.logout(false);
           that.setUser(anonUser);
@@ -1928,6 +1965,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
         }
       }
     } catch (clientError) {
+      this.emitProgress('api-status', 'error', 'Fetching application configuration', clientError instanceof Error ? clientError.message : String(clientError));
       if (clientError.name === 'ApolloError') {
         const {
           networkError,
@@ -2061,6 +2099,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
 
   private async loadPlugins() {
     if (this.$user && this.$user.plugins && this.$user.plugins.length > 0) {
+      this.emitProgress('plugins', 'active', 'Loading plugins', undefined, `${this.$user.plugins.length} plugin(s) to load`);
       const failedPlugins: Array<{ plugin: Reactory.Platform.IReactoryApplicationPlugin; error: string }> = [];
 
       for (const plugin of this.$user.plugins) {
@@ -2098,6 +2137,10 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
           },
         });
       }
+      const loaded = this.$user.plugins.length - failedPlugins.length;
+      this.emitProgress('plugins', failedPlugins.length > 0 ? 'done' : 'done', 'Loading plugins', undefined, `${loaded}/${this.$user.plugins.length} plugin(s) loaded`);
+    } else {
+      this.emitProgress('plugins', 'done', 'Loading plugins', undefined, 'No plugins to load');
     }
   }
 

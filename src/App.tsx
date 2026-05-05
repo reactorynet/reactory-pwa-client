@@ -37,6 +37,7 @@ import {
 } from './components/index';
 
 import ReactoryApi, { ReactoryApiEventNames } from './api'
+import { INIT_STEPS, InitProgressEvent, InitProgressStatus } from './api/ApiEventNames';
 import { deepEquals } from './components/reactory/form/utils';
 import ReactoryApolloClient from './api/ReactoryApolloClient';
 import { Typography, Icon, Paper, Box } from '@mui/material';
@@ -135,6 +136,16 @@ interface ReactoryRouterProps {
   footer: React.ReactElement
 }
 
+export interface LoadingStepState {
+  id: string;
+  label: string;
+  status: InitProgressStatus;
+  error?: string;
+  detail?: string;
+  startedAt?: number;
+  completedAt?: number;
+}
+
 const dependencies = [
   'core.Loading@1.0.0',
   'core.Login@1.0.0',
@@ -162,6 +173,11 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
   const [isAuthenticating, setIsAuthenticating] = React.useState<boolean>(true);
   // Add flag to prevent re-rendering loops during auth transitions
   const [isAuthTransitioning, setIsAuthTransitioning] = React.useState<boolean>(false);
+  const [loadingSteps, setLoadingSteps] = React.useState<LoadingStepState[]>(
+    () => INIT_STEPS.map(s => ({ id: s.id, label: s.label, status: 'pending' as InitProgressStatus }))
+  );
+  const loadingStartTime = React.useRef<number>(Date.now());
+  const initProgressRef = React.useRef<((evt: InitProgressEvent) => void) | null>(null);
   //@ts-ignore
   const [reactory] = React.useState<Reactory.Client.ReactorySDK>(new ReactoryApi({
     clientId: `${localStorage.getItem('REACT_APP_CLIENT_KEY')}`,
@@ -199,7 +215,9 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
 
       setIsReady(true);
       setIsAuthenticating(false);
+      reactory.emit(ReactoryApiEventNames.onInitProgress, { step: 'theme', status: 'active', label: 'Applying theme' } as InitProgressEvent);
       applyTheme();
+      reactory.emit(ReactoryApiEventNames.onInitProgress, { step: 'theme', status: 'done', label: 'Applying theme' } as InitProgressEvent);
     } catch (err) {
       setIsValidated(true);
       setUser(null);
@@ -437,17 +455,42 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     reactory.off(ReactoryApiEventNames.onApiStatusUpdate, onApiStatusUpdate);
     reactory.off(ReactoryApiEventNames.onRouteChanged, onRouteChanged);
     reactory.off(ReactoryApiEventNames.onThemeChanged, onThemeChanged);
+    if (initProgressRef.current) {
+      reactory.off(ReactoryApiEventNames.onInitProgress, initProgressRef.current);
+    }
   };
 
   const willMount = () => {
     let failedCount = 0;
+
+    const onInitProgress = (evt: InitProgressEvent) => {
+      setLoadingSteps(prev => prev.map(step => {
+        if (step.id !== evt.step) return step;
+        return {
+          ...step,
+          label: evt.label || step.label,
+          status: evt.status,
+          error: evt.error,
+          detail: evt.detail,
+          startedAt: evt.status === 'active' ? Date.now() : step.startedAt,
+          completedAt: (evt.status === 'done' || evt.status === 'error') ? Date.now() : step.completedAt,
+        };
+      }));
+    };
+
+    initProgressRef.current = onInitProgress;
+    // Register progress listener BEFORE init() so no events are missed
+    reactory.on(ReactoryApiEventNames.onInitProgress, onInitProgress);
+
     const doInit = async () => {
       reactory.init().then(() => {
         //register built-in components
+        onInitProgress({ step: 'component-registration', status: 'active', label: 'Registering components' });
         componentRegistery.forEach((componentDef) => {
           const { nameSpace, name, version = '1.0.0', component = (<i>*</i>), tags = [], roles = ["*"], wrapWithApi = false, } = componentDef
           reactory.registerComponent(nameSpace, name, version, component, tags, roles, wrapWithApi);
         });
+        onInitProgress({ step: 'component-registration', status: 'done', label: 'Registering components', detail: `${componentRegistery.length} component(s)` });
 
         reactory.$windowSize = reactory.getSizeSpec();
         reactory.reduxStore = store;
@@ -595,16 +638,16 @@ export const ReactoryHOC = (props: ReactoryHOCProps) => {
     );
   }
 
-  if (isReady === false) return <AppLoading message={"Loading..."} />;
+  if (isReady === false) return <AppLoading message={"Loading..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
 
   // Add additional check for authentication transition
   if (isAuthenticating === true || isAuthTransitioning === true) {
-    return <AppLoading message={"Authenticating..."} />;
+    return <AppLoading message={"Authenticating..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
   }
 
   // Add check for user state during authentication transitions
   if (auth_validated === false && user === null) {
-    return <AppLoading message={"Validating authentication..."} />;
+    return <AppLoading message={"Validating authentication..."} steps={loadingSteps} startTime={loadingStartTime.current} />;
   }
 
   //@ts-ignore
