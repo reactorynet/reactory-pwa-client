@@ -14,7 +14,10 @@ const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
 const host = process.env.HOST || '0.0.0.0';
 
 export const getWebpackDevServerConfiguration = (proxy, allowedHost): WebpackDevServerConfiguration => {  
-
+  const { 
+    HOT_RELOAD_WEBBACK = 'false',
+    LIVE_RELOAD_WEBPACK = 'false',
+  } = process.env;
   const config: WebpackDevServerConfiguration = {
     allowedHosts: 'auto',
     bonjour: false,
@@ -31,7 +34,8 @@ export const getWebpackDevServerConfiguration = (proxy, allowedHost): WebpackDev
       webSocketURL: 'auto://0.0.0.0:0/ws',
     },
     compress: true,
-    // devMiddleware: {      
+    hot: HOT_RELOAD_WEBBACK === 'true',
+    liveReload: LIVE_RELOAD_WEBPACK === 'true',
     //   publicPath: paths.appPublic      
     // },
     // https: protocol === 'https',
