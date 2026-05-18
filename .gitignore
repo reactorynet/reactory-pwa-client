@@ -56,3 +56,4 @@ storybook-static
 # Jest transform cache
 /.jest-cache/
 
+coverage-app/*
