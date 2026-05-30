@@ -373,6 +373,17 @@ export class CircuitLabelRenderer {
     // Raise above all label chips and re-enable interaction
     labelData.popupElement.style.zIndex = '9999';
     labelData.popupElement.style.pointerEvents = 'auto';
+
+    // CSS2DRenderer wraps each object in a plain <div> with no z-index.
+    // Stacking is therefore determined by DOM order, which means a chip
+    // inserted after this popup's wrapper would paint on top of it.
+    // Setting z-index on the wrapper itself fixes the stacking order.
+    const popupWrapper = labelData.popupElement.parentElement;
+    if (popupWrapper) popupWrapper.style.zIndex = '9999';
+
+    // Hide the same-component designator chip so it does not peek
+    // through the popup when both happen to overlap in screen space.
+    labelData.labelElement.style.visibility = 'hidden';
     
     // Animate in
     requestAnimationFrame(() => {
@@ -396,6 +407,14 @@ export class CircuitLabelRenderer {
     // cannot intercept clicks on labels beneath it
     labelData.popupElement.style.pointerEvents = 'none';
     labelData.popupElement.style.zIndex = '10';
+
+    // Reset the wrapper z-index so it no longer overrides other chips.
+    const popupWrapper = labelData.popupElement.parentElement;
+    if (popupWrapper) popupWrapper.style.zIndex = '';
+
+    // Restore the designator chip
+    labelData.labelElement.style.visibility = 'visible';
+
     labelData.popupElement.classList.remove('visible');
     
     // Hide the Three.js object after the CSS fade-out animation completes.

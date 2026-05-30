@@ -57,7 +57,14 @@ const MaterialObjectTemplate = (props) => {
   const reactory = useReactory();
 
   // //console.log('Object template field', { props: this.props, uiSchema });
-  let titleText = title && title.indexOf("$") >= 0 ? template(title)({formData: props.formData}) : title;
+  let titleText = title;
+  if (title && title.indexOf("$") >= 0) {
+    try {
+      titleText = template(title)({ formData: props.formData });
+    } catch (e) {
+      titleText = title;
+    }
+  }
 
   const uiOptions = uiSchema?.['ui:options'] || null;
   const uiWidget = uiSchema?.['ui:widget'] || null;
@@ -169,7 +176,7 @@ const MaterialObjectTemplate = (props) => {
   return (
     <ContainerComponent className={classes.root} key={key} style={ContainerStyles}>        
       {isNil(titleText) === false && isEmpty(titleText) === false ? <Typography gutterBottom>{titleText}</Typography> : null }
-      {isNil(description) === false ? <Typography gutterBottom component="p">{template(description)({ formData: props.formData })}</Typography> : null }
+      {isNil(description) === false ? <Typography gutterBottom component="p">{(() => { try { return template(description)({ formData: props.formData }); } catch (e) { return description; } })()}</Typography> : null }
       {toolbar}
       {properties.map(element => element.content)}
     </ContainerComponent>

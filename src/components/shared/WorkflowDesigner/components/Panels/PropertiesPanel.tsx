@@ -49,6 +49,10 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
   const [runOutput, setRunOutput] = useStateReact<string>('');
   const [runError, setRunError] = useStateReact<string>('');
 
+  // Step ID editing state
+  const [stepIdInput, setStepIdInput] = useStateReact<string>('');
+  const [stepIdError, setStepIdError] = useStateReact<string | null>(null);
+
   // Get selected items for display
   const selectedStep = useMemoReact(() => {
     return selectedSteps.length === 1 ? selectedSteps[0] : null;
@@ -196,6 +200,45 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
     onDefinitionUpdate({ ...definition, [field]: value });
   }, [definition, onDefinitionUpdate, readonly]);
 
+  // Sync stepIdInput when selection changes
+  React.useEffect(() => {
+    setStepIdInput(selectedStep?.id || '');
+    setStepIdError(null);
+  }, [selectedStep?.id]);
+
+  // Validate and commit a step ID change
+  const commitStepId = useCallbackReact(() => {
+    if (!selectedStep || !definition || !onDefinitionUpdate || readonly) return;
+    const newId = stepIdInput.trim();
+    if (newId === selectedStep.id) return;
+
+    // Validate format
+    if (!/^[a-zA-Z0-9_-]+$/.test(newId)) {
+      setStepIdError('Only letters, numbers, hyphens and underscores are allowed.');
+      return;
+    }
+
+    // Validate uniqueness
+    const isDuplicate = definition.steps.some(s => s.id !== selectedStep.id && s.id === newId);
+    if (isDuplicate) {
+      setStepIdError(`A step with id "${newId}" already exists.`);
+      return;
+    }
+
+    const oldId = selectedStep.id;
+    const updatedSteps = definition.steps.map(s =>
+      s.id === oldId ? { ...s, id: newId } : s
+    );
+    const updatedConnections = definition.connections.map(c => ({
+      ...c,
+      sourceStepId: c.sourceStepId === oldId ? newId : c.sourceStepId,
+      targetStepId: c.targetStepId === oldId ? newId : c.targetStepId,
+    }));
+    onDefinitionUpdate({ ...definition, steps: updatedSteps, connections: updatedConnections });
+    setStepIdError(null);
+    onValidate();
+  }, [selectedStep, definition, onDefinitionUpdate, readonly, stepIdInput, onValidate]);
+
   // Clear run results when step selection changes
   React.useEffect(() => {
     setRunOutput('');
@@ -333,18 +376,39 @@ export default function PropertiesPanel(props: PropertiesPanelProps) {
         {activeTab === 'config' && (
           <>
             {selectedStep ? (
-              <PropertyForm
-                step={selectedStep}
-                stepDefinition={stepDefinition}
-                mode="config"
-                errors={stepErrors}
-                warnings={stepWarnings}
-                expandedSections={expandedSections}
-                readonly={readonly}
-                onPropertyChange={handlePropertyChange}
-                onSectionToggle={handleSectionToggle}
-                onStepUpdate={onStepUpdate}
-              />
+              <>
+                {/* Step Identity — ID editable here, name via PropertyForm */}
+                <Box sx={{ px: 2, pt: 2, pb: 1 }}>
+                  <TextField
+                    label="Step ID"
+                    value={stepIdInput}
+                    size="small"
+                    fullWidth
+                    disabled={readonly}
+                    error={!!stepIdError}
+                    helperText={stepIdError || 'Unique identifier used in connections and YAML'}
+                    onChange={(e) => {
+                      setStepIdInput(e.target.value);
+                      setStepIdError(null);
+                    }}
+                    onBlur={commitStepId}
+                    onKeyDown={(e) => { if (e.key === 'Enter') commitStepId(); }}
+                    inputProps={{ pattern: '[a-zA-Z0-9_-]+' }}
+                  />
+                </Box>
+                <PropertyForm
+                  step={selectedStep}
+                  stepDefinition={stepDefinition}
+                  mode="config"
+                  errors={stepErrors}
+                  warnings={stepWarnings}
+                  expandedSections={expandedSections}
+                  readonly={readonly}
+                  onPropertyChange={handlePropertyChange}
+                  onSectionToggle={handleSectionToggle}
+                  onStepUpdate={onStepUpdate}
+                />
+              </>
             ) : selectedConnection ? (
               <Box sx={{ p: 2 }}>
                 <Typography variant="body1" gutterBottom>
