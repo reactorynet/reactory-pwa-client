@@ -6,14 +6,14 @@
  */
 
 import { useReactory } from "@reactory/client-core/api";
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { useWebGLCanvas } from './useWebGLCanvas';
 import {
   WorkflowCanvasProps,
   Point,
   Bounds
 } from '../../types';
-import { WebGLInteractionEvent } from './types';
+import { HoveredPortInfo, WebGLInteractionEvent } from './types';
 import { CANVAS_DEFAULTS } from '../../constants';
 
 export interface WorkflowWebGLCanvasProps extends WorkflowCanvasProps {
@@ -74,6 +74,10 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
   // Metrics state
   const [metrics, setMetrics] = useState<{ fps: number; steps: number } | null>(null);
 
+  // Port hover/label overlay state
+  const [hoveredPort, setHoveredPort] = useState<HoveredPortInfo | null>(null);
+  const [isCreatingConnection, setIsCreatingConnection] = useState(false);
+
   // Initialize WebGL canvas
   const {
     containerRef,
@@ -88,6 +92,8 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
     setInteracting,
     getMetrics,
     screenToWorld,
+    worldToScreen,
+    getStepGeometry,
     dispose,
     isInitialized
   } = useWebGLCanvas({
@@ -263,6 +269,11 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
     onConnectionSelect(connectionId, event.modifiers.ctrl || event.modifiers.meta);
   }, [onConnectionSelect]);
 
+  // Handle port hover - show port name label
+  const handlePortHover = useCallback((portInfo: HoveredPortInfo | null) => {
+    setHoveredPort(portInfo);
+  }, []);
+
   // Handle port drag (connection creation)
   const handlePortDragStart = useCallback((
     stepId: string, 
@@ -279,6 +290,8 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
       sourcePortType: portType,
       startPoint: position
     };
+    setIsCreatingConnection(true);
+    setHoveredPort(null);
 
     setConnectionPreview({
       startPoint: position,
@@ -326,7 +339,72 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
 
     connectionCreationRef.current = null;
     setConnectionPreview(null);
+    setIsCreatingConnection(false);
   }, [onConnectionCreate, setConnectionPreview]);
+
+  // Compute port labels for connection-creation overlay
+  // Re-computed when isCreatingConnection changes; worldToScreen reads current camera state
+  const connectionModePortLabels = useMemo(() => {
+    if (!isCreatingConnection) return [];
+
+    const stepGeoList = getStepGeometry();
+    const sourceStepId = connectionCreationRef.current?.sourceStepId;
+    const sourcePortId = connectionCreationRef.current?.sourcePortId;
+
+    const labels: Array<{
+      key: string;
+      name: string;
+      screenPos: Point;
+      portType: 'input' | 'output';
+      isSource: boolean;
+    }> = [];
+
+    for (const step of definition.steps) {
+      const stepGeo = stepGeoList.find(g => g.id === step.id);
+      if (!stepGeo) continue;
+
+      for (const port of step.inputPorts) {
+        const portGeo = stepGeo.inputPorts.find(p => p.id === port.id);
+        if (!portGeo) continue;
+        labels.push({
+          key: `${step.id}-${port.id}`,
+          name: port.name,
+          screenPos: worldToScreen(portGeo.worldPosition),
+          portType: 'input',
+          isSource: step.id === sourceStepId && port.id === sourcePortId
+        });
+      }
+
+      for (const port of step.outputPorts) {
+        const portGeo = stepGeo.outputPorts.find(p => p.id === port.id);
+        if (!portGeo) continue;
+        labels.push({
+          key: `${step.id}-${port.id}`,
+          name: port.name,
+          screenPos: worldToScreen(portGeo.worldPosition),
+          portType: 'output',
+          isSource: step.id === sourceStepId && port.id === sourcePortId
+        });
+      }
+    }
+
+    return labels;
+  }, [isCreatingConnection, definition.steps, getStepGeometry, worldToScreen]);
+
+  // Compute hovered port label position and name
+  const hoveredPortLabel = useMemo(() => {
+    if (!hoveredPort || isCreatingConnection) return null;
+    const step = definition.steps.find(s => s.id === hoveredPort.stepId);
+    if (!step) return null;
+    const allPorts = [...step.inputPorts, ...step.outputPorts];
+    const name = allPorts.find(p => p.id === hoveredPort.portId)?.name;
+    if (!name) return null;
+    return {
+      name,
+      screenPos: worldToScreen(hoveredPort.position),
+      portType: hoveredPort.portType
+    };
+  }, [hoveredPort, isCreatingConnection, definition.steps, worldToScreen]);
 
   // Handle canvas interactions
   const handleCanvasClick = useCallback((position: Point, event: WebGLInteractionEvent) => {
@@ -495,6 +573,7 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
       onPortDragStart: handlePortDragStart,
       onPortDrag: handlePortDrag,
       onPortDragEnd: handlePortDragEnd,
+      onPortHover: handlePortHover,
       
       onCanvasClick: handleCanvasClick,
       onCanvasDrag: handleCanvasDrag,
@@ -516,6 +595,7 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
     handlePortDragStart,
     handlePortDrag,
     handlePortDragEnd,
+    handlePortHover,
     handleCanvasClick,
     handleCanvasDrag,
     handleCanvasContextMenu,
@@ -632,6 +712,66 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
           }}
         />
       )}
+
+      {/* Port name label on hover (idle mode) */}
+      {hoveredPortLabel && (
+        <Box
+          sx={{
+            position: 'absolute',
+            left: hoveredPortLabel.portType === 'output'
+              ? hoveredPortLabel.screenPos.x - 8
+              : hoveredPortLabel.screenPos.x + 8,
+            top: hoveredPortLabel.screenPos.y,
+            transform: hoveredPortLabel.portType === 'output'
+              ? 'translate(-100%, -50%)'
+              : 'translate(0%, -50%)',
+            backgroundColor: 'rgba(0,0,0,0.78)',
+            color: '#fff',
+            px: '6px',
+            py: '2px',
+            borderRadius: '4px',
+            fontSize: 11,
+            fontFamily: 'monospace',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            zIndex: 20
+          }}
+        >
+          {hoveredPortLabel.name}
+        </Box>
+      )}
+
+      {/* Port labels for all ports during connection creation */}
+      {isCreatingConnection && connectionModePortLabels.map(label => (
+        <Box
+          key={label.key}
+          sx={{
+            position: 'absolute',
+            left: label.portType === 'output'
+              ? label.screenPos.x - 8
+              : label.screenPos.x + 8,
+            top: label.screenPos.y,
+            transform: label.portType === 'output'
+              ? 'translate(-100%, -50%)'
+              : 'translate(0%, -50%)',
+            backgroundColor: label.isSource
+              ? 'rgba(25,118,210,0.92)'
+              : 'rgba(0,0,0,0.72)',
+            color: '#fff',
+            px: '6px',
+            py: '2px',
+            borderRadius: '4px',
+            fontSize: 11,
+            fontFamily: 'monospace',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            zIndex: 20,
+            outline: label.isSource ? '1px solid rgba(255,255,255,0.6)' : 'none'
+          }}
+        >
+          {label.name}
+        </Box>
+      ))}
     </Box>
   );
 }

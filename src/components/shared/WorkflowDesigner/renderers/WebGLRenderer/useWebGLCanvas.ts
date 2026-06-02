@@ -90,6 +90,10 @@ export interface UseWebGLCanvasReturn {
   getMetrics: () => WebGLPerformanceMetrics | null;
   /** Convert screen coordinates to world coordinates */
   screenToWorld: (screenPosition: Point) => Point;
+  /** Convert world coordinates to screen coordinates */
+  worldToScreen: (worldPosition: Point) => Point;
+  /** Get current step geometry snapshot (reads ref, no re-render) */
+  getStepGeometry: () => StepGeometryData[];
   /** Force render */
   render: () => void;
   /** Dispose resources */
@@ -381,13 +385,16 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
   }, [getComponentBodyDimensions]);
 
   /**
-   * Convert workflow connections to geometry data
+   * Convert workflow connections to geometry data.
+   * Uses pre-computed StepGeometryData so that each connection line starts
+   * and ends at the exact port circle, not the step centre.
    */
   const connectionsToGeometry = useCallback((
     connections: WorkflowConnection[],
     steps: WorkflowStepDefinition[],
     selection: SelectionState,
-    validation: ValidationResult
+    validation: ValidationResult,
+    stepGeometry: StepGeometryData[]
   ): ConnectionGeometryData[] => {
     return connections.map(connection => {
       const sourceStep = steps.find(s => s.id === connection.sourceStepId);
@@ -402,23 +409,43 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
       const targetWidth = targetStep.size?.width || 200;
       const targetHeight = targetStep.size?.height || 100;
 
-      // Calculate port positions based on component body dimensions
-      const sourceBody = getComponentBodyDimensions(sourceWidth, sourceHeight, sourceStep.type);
-      const targetBody = getComponentBodyDimensions(targetWidth, targetHeight, targetStep.type);
-      
-      const pinGap = 4;
-      const sourcePinOffset = sourceBody.bodyHalfWidth + pinGap + CIRCUIT_DIMENSIONS.pinRadius;
-      const targetPinOffset = targetBody.bodyHalfWidth + pinGap + CIRCUIT_DIMENSIONS.pinRadius;
+      // Prefer the exact port worldPosition from stepGeometry (already computed per-port),
+      // fall back to body-offset centre if the port is not found.
+      const sourceGeo = stepGeometry.find(g => g.id === connection.sourceStepId);
+      const targetGeo = stepGeometry.find(g => g.id === connection.targetStepId);
 
-      const startPoint: Point = {
-        x: sourceStep.position.x + sourceWidth / 2 + sourcePinOffset,
-        y: sourceStep.position.y + sourceHeight / 2
-      };
+      const sourcePortGeo = sourceGeo?.outputPorts.find(p => p.id === connection.sourcePortId)
+        ?? sourceGeo?.inputPorts.find(p => p.id === connection.sourcePortId);
+      const targetPortGeo = targetGeo?.inputPorts.find(p => p.id === connection.targetPortId)
+        ?? targetGeo?.outputPorts.find(p => p.id === connection.targetPortId);
 
-      const endPoint: Point = {
-        x: targetStep.position.x + targetWidth / 2 - targetPinOffset,
-        y: targetStep.position.y + targetHeight / 2
-      };
+      let startPoint: Point;
+      if (sourcePortGeo) {
+        startPoint = { x: sourcePortGeo.worldPosition.x, y: sourcePortGeo.worldPosition.y };
+      } else {
+        // Fallback: right edge centre
+        const sourceBody = getComponentBodyDimensions(sourceWidth, sourceHeight, sourceStep.type);
+        const pinGap = 4;
+        const sourcePinOffset = sourceBody.bodyHalfWidth + pinGap + CIRCUIT_DIMENSIONS.pinRadius;
+        startPoint = {
+          x: sourceStep.position.x + sourceWidth / 2 + sourcePinOffset,
+          y: sourceStep.position.y + sourceHeight / 2,
+        };
+      }
+
+      let endPoint: Point;
+      if (targetPortGeo) {
+        endPoint = { x: targetPortGeo.worldPosition.x, y: targetPortGeo.worldPosition.y };
+      } else {
+        // Fallback: left edge centre
+        const targetBody = getComponentBodyDimensions(targetWidth, targetHeight, targetStep.type);
+        const pinGap = 4;
+        const targetPinOffset = targetBody.bodyHalfWidth + pinGap + CIRCUIT_DIMENSIONS.pinRadius;
+        endPoint = {
+          x: targetStep.position.x + targetWidth / 2 - targetPinOffset,
+          y: targetStep.position.y + targetHeight / 2,
+        };
+      }
 
       const isSelected = selection.selectedConnections.has(connection.id);
       const hasError = validation.errors.some(e => e.connectionId === connection.id);
@@ -442,7 +469,7 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
         hasError
       };
     }).filter((c): c is ConnectionGeometryData => c !== null);
-  }, [getComponentBodyDimensions]);
+  }, [getComponentBodyDimensions, stepsToGeometry]);
 
   /**
    * Update workflow data
@@ -467,7 +494,7 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
 
     // Convert to geometry data
     const stepGeometry = stepsToGeometry(steps, stepLibrary, selection, validation);
-    const connectionGeometry = connectionsToGeometry(connections, steps, selection, validation);
+    const connectionGeometry = connectionsToGeometry(connections, steps, selection, validation, stepGeometry);
 
     const isCircuitMode = themeModeRef.current === 'circuit';
     
@@ -770,8 +797,24 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
     if (interactionManagerRef.current) {
       return interactionManagerRef.current.screenToWorld(screenPosition);
     }
-    // Fallback if not initialized
     return screenPosition;
+  }, []);
+
+  /**
+   * Convert world coordinates to screen coordinates
+   */
+  const worldToScreen = useCallback((worldPosition: Point): Point => {
+    if (interactionManagerRef.current) {
+      return interactionManagerRef.current.worldToScreen(worldPosition);
+    }
+    return worldPosition;
+  }, []);
+
+  /**
+   * Get the current step geometry snapshot without triggering re-renders
+   */
+  const getStepGeometry = useCallback((): StepGeometryData[] => {
+    return currentStateRef.current?.stepGeometry ?? [];
   }, []);
 
   // Cleanup on unmount
@@ -794,6 +837,8 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
     setInteracting,
     getMetrics,
     screenToWorld,
+    worldToScreen,
+    getStepGeometry,
     render,
     dispose,
     isInitialized: isInitializedRef.current

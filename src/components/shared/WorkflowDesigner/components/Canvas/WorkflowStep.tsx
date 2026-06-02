@@ -67,6 +67,7 @@ export default function WorkflowStep(props: WorkflowStepProps) {
   const [dragStart, setDragStart] = useStateReact<Point>({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useStateReact(false);
   const [isDraggingPort, setIsDraggingPort] = useStateReact(false);
+  const [hoveredPortId, setHoveredPortId] = useStateReact<string | null>(null);
 
   const hasErrors = errors.length > 0;
   const hasWarnings = warnings.length > 0;
@@ -555,33 +556,63 @@ export default function WorkflowStep(props: WorkflowStepProps) {
         const totalInputPorts = step.inputPorts.length;
         const spacing = size.height / (totalInputPorts + 1);
         const yPosition = spacing * (index + 1) - portSize / 2;
-        
+        const showLabel = isCreatingConnection || hoveredPortId === port.id;
+        const labelFontSize = Math.min(9 * viewport.zoom, 11);
+
         return (
           <Box
             key={`input-${port.id}`}
-            sx={{
-              position: 'absolute',
-              left: -portSize / 2,
-              top: yPosition,
-              width: portSize,
-              height: portSize,
-              backgroundColor: port.type === 'control_input' ? '#2196f3' : '#4caf50',
-              borderRadius: '50%',
-              border: `${Math.max(1, 2.5 / viewport.zoom)}px solid white`,
-              cursor: readonly ? 'default' : 'crosshair',
-              transition: 'transform 0.2s ease-in-out',
-              zIndex: 20,
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-              '&:hover': {
-                transform: 'scale(1.3)',
-                boxShadow: '0 0 8px rgba(33, 150, 243, 0.5), 0 2px 4px rgba(0, 0, 0, 0.2)'
-              }
-            }}
-            title={port.name}
-            onMouseDown={(e) => handlePortMouseDown(e, port.id, 'input')}
-            onMouseMove={handlePortMouseMove}
-            onMouseUp={(e) => handlePortMouseUp(e, port.id)}
-          />
+            sx={{ position: 'absolute', left: -portSize / 2, top: yPosition, width: portSize, height: portSize }}
+          >
+            {/* Port circle */}
+            <Box
+              sx={{
+                width: portSize,
+                height: portSize,
+                backgroundColor: port.type === 'control_input' ? '#2196f3' : '#4caf50',
+                borderRadius: '50%',
+                border: `${Math.max(1, 2.5 / viewport.zoom)}px solid white`,
+                cursor: readonly ? 'default' : 'crosshair',
+                transition: 'transform 0.2s ease-in-out',
+                zIndex: 20,
+                boxShadow: showLabel
+                  ? '0 0 0 2px rgba(255,255,255,0.8), 0 2px 6px rgba(0,0,0,0.3)'
+                  : '0 2px 4px rgba(0, 0, 0, 0.2)',
+                '&:hover': {
+                  transform: 'scale(1.3)',
+                  boxShadow: '0 0 8px rgba(33, 150, 243, 0.5), 0 2px 4px rgba(0, 0, 0, 0.2)'
+                }
+              }}
+              onMouseDown={(e) => handlePortMouseDown(e, port.id, 'input')}
+              onMouseMove={handlePortMouseMove}
+              onMouseUp={(e) => handlePortMouseUp(e, port.id)}
+              onMouseEnter={() => setHoveredPortId(port.id)}
+              onMouseLeave={() => setHoveredPortId(null)}
+            />
+            {/* Port name label — shown on hover or while creating a connection */}
+            <Box
+              sx={{
+                position: 'absolute',
+                left: portSize + 2,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                whiteSpace: 'nowrap',
+                opacity: showLabel ? 1 : 0,
+                transition: 'opacity 0.15s ease-in-out',
+                backgroundColor: 'rgba(0,0,0,0.72)',
+                color: '#fff',
+                borderRadius: '3px',
+                px: '4px',
+                py: '1px',
+                fontSize: labelFontSize,
+                lineHeight: 1.4,
+                zIndex: 30,
+              }}
+            >
+              {port.name}
+            </Box>
+          </Box>
         );
       })}
 
@@ -591,33 +622,63 @@ export default function WorkflowStep(props: WorkflowStepProps) {
         const totalOutputPorts = step.outputPorts.length;
         const spacing = size.height / (totalOutputPorts + 1);
         const yPosition = spacing * (index + 1) - portSize / 2;
-        
+        const showLabel = isCreatingConnection || hoveredPortId === port.id;
+        const labelFontSize = Math.min(9 * viewport.zoom, 11);
+
         return (
           <Box
             key={`output-${port.id}`}
-            sx={{
-              position: 'absolute',
-              right: -portSize / 2,
-              top: yPosition,
-              width: portSize,
-              height: portSize,
-              backgroundColor: port.type === 'control_output' ? '#2196f3' : '#4caf50',
-              borderRadius: '50%',
-              border: `${Math.max(1, 2.5 / viewport.zoom)}px solid white`,
-              cursor: readonly ? 'default' : 'crosshair',
-              transition: 'transform 0.2s ease-in-out',
-              zIndex: 20,
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-              '&:hover': {
-                transform: 'scale(1.3)',
-                boxShadow: '0 0 8px rgba(76, 175, 80, 0.5), 0 2px 4px rgba(0, 0, 0, 0.2)'
-              }
-            }}
-            title={port.name}
-            onMouseDown={(e) => handlePortMouseDown(e, port.id, 'output')}
-            onMouseMove={handlePortMouseMove}
-            onMouseUp={(e) => handlePortMouseUp(e, port.id)}
-          />
+            sx={{ position: 'absolute', right: -portSize / 2, top: yPosition, width: portSize, height: portSize }}
+          >
+            {/* Port circle */}
+            <Box
+              sx={{
+                width: portSize,
+                height: portSize,
+                backgroundColor: port.type === 'control_output' ? '#2196f3' : '#4caf50',
+                borderRadius: '50%',
+                border: `${Math.max(1, 2.5 / viewport.zoom)}px solid white`,
+                cursor: readonly ? 'default' : 'crosshair',
+                transition: 'transform 0.2s ease-in-out',
+                zIndex: 20,
+                boxShadow: showLabel
+                  ? '0 0 0 2px rgba(255,255,255,0.8), 0 2px 6px rgba(0,0,0,0.3)'
+                  : '0 2px 4px rgba(0, 0, 0, 0.2)',
+                '&:hover': {
+                  transform: 'scale(1.3)',
+                  boxShadow: '0 0 8px rgba(76, 175, 80, 0.5), 0 2px 4px rgba(0, 0, 0, 0.2)'
+                }
+              }}
+              onMouseDown={(e) => handlePortMouseDown(e, port.id, 'output')}
+              onMouseMove={handlePortMouseMove}
+              onMouseUp={(e) => handlePortMouseUp(e, port.id)}
+              onMouseEnter={() => setHoveredPortId(port.id)}
+              onMouseLeave={() => setHoveredPortId(null)}
+            />
+            {/* Port name label — shown on hover or while creating a connection */}
+            <Box
+              sx={{
+                position: 'absolute',
+                right: portSize + 2,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                whiteSpace: 'nowrap',
+                opacity: showLabel ? 1 : 0,
+                transition: 'opacity 0.15s ease-in-out',
+                backgroundColor: 'rgba(0,0,0,0.72)',
+                color: '#fff',
+                borderRadius: '3px',
+                px: '4px',
+                py: '1px',
+                fontSize: labelFontSize,
+                lineHeight: 1.4,
+                zIndex: 30,
+              }}
+            >
+              {port.name}
+            </Box>
+          </Box>
         );
       })}
 

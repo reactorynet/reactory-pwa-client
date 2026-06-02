@@ -39,6 +39,47 @@ export const DESIGNER_TO_YAML_TYPE_MAP: Record<string, string> = {
   file_operation: 'fileOperation',
 };
 
+/**
+ * Calculates the world-space center of a port on a step.
+ *
+ * Ports are evenly spaced within the step height using the same formula
+ * as the visual rendering (WorkflowStep.tsx). This ensures connection
+ * lines terminate at the correct port circle rather than the step center.
+ *
+ * Returns the step center as a fallback if portId is not found.
+ */
+export function getPortWorldPosition(
+  step: WorkflowStepDefinition,
+  portId: string
+): Point {
+  const stepSize = step.size ?? { width: 200, height: 100 };
+
+  const outputIndex = step.outputPorts.findIndex(p => p.id === portId);
+  if (outputIndex !== -1) {
+    const spacing = stepSize.height / (step.outputPorts.length + 1);
+    return {
+      x: step.position.x + stepSize.width,
+      y: step.position.y + spacing * (outputIndex + 1),
+    };
+  }
+
+  const inputIndex = step.inputPorts.findIndex(p => p.id === portId);
+  if (inputIndex !== -1) {
+    const spacing = stepSize.height / (step.inputPorts.length + 1);
+    return {
+      x: step.position.x,
+      y: step.position.y + spacing * (inputIndex + 1),
+    };
+  }
+
+  // Fallback: horizontal edge center
+  const isLikelyOutput = step.outputPorts.length === 0;
+  return {
+    x: isLikelyOutput ? step.position.x : step.position.x + stepSize.width,
+    y: step.position.y + stepSize.height / 2,
+  };
+}
+
 // Geometry utilities
 export function distance(p1: Point, p2: Point): number {
   const dx = p2.x - p1.x;

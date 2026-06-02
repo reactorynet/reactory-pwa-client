@@ -7,7 +7,7 @@ import {
   WorkflowStepDefinition,
   WorkflowConnection
 } from '../../types';
-import { canvasToScreen, screenToCanvas } from '../../utils';
+import { canvasToScreen, screenToCanvas, getPortWorldPosition } from '../../utils';
 import { DEFAULT_CANVAS_THEME, CANVAS_DEFAULTS } from '../../constants';
 import { useCanvasOperations } from '../../hooks/useCanvasOperations';
 import GridBackground from './GridBackground';
@@ -373,16 +373,9 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
             
             if (!sourceStep || !targetStep) return null;
 
-            // Calculate connection points
-            const sourcePoint = {
-              x: sourceStep.position.x + (sourceStep.size?.width || 200),
-              y: sourceStep.position.y + (sourceStep.size?.height || 100) / 2
-            };
-            
-            const targetPoint = {
-              x: targetStep.position.x,
-              y: targetStep.position.y + (targetStep.size?.height || 100) / 2
-            };
+            // Calculate connection endpoints at the specific port position
+            const sourcePoint = getPortWorldPosition(sourceStep, connection.sourcePortId);
+            const targetPoint = getPortWorldPosition(targetStep, connection.targetPortId);
 
             const isSelected = selection.selectedConnections.has(connection.id);
             const hasError = validationResult.errors.some(e => e.connectionId === connection.id);
