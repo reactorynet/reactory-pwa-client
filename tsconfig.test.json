@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2019",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "types": ["jest", "node"],
+    "typeRoots": [
+      "./.yarn/unplugged/@types-jest-npm-29.5.14-506446c38e/node_modules/@types",
+      "./.yarn/unplugged/@types-node-npm-14.14.8-efa7455cab/node_modules/@types",
+      "./node_modules/@types"
+    ]
+  }
+}

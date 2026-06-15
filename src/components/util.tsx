@@ -109,13 +109,14 @@ export const getElement = (elementName, id, append = true) => {
   return el
 };
 
-export const attachComponent = (ComponentToMount, props, element) => {
-  //console.log('Attaching component with props to element', { ComponentToMount, props, element });
+export const attachComponent = (ComponentToMount, props, element) => {  
   if (element instanceof Array) {
     element.map(e => {
-      ReactDOM.render(<ComponentToMount {...props} />, e)
+      ReactDOM.render(<ComponentToMount {...props} /> as any, e as HTMLElement)
     })
-  } else ReactDOM.render(<ComponentToMount />, element);
+  } else {
+     ReactDOM.render(<ComponentToMount /> as any, element as HTMLElement);
+  }
 };
 
 

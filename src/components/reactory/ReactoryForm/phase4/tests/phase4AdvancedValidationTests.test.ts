@@ -390,7 +390,7 @@ describe('Phase 4.2: Advanced Validation', () => {
       expect(customRule).toBeDefined();
       expect(typeof customRule.validator).toBe('function');
       expect(customRule.validator('this is a test')).toBe(true);
-      expect(customRule.validator('no test here')).toBe(false);
+      expect(customRule.validator('no match here')).toBe(false);
       expect(customRule.validator('test string')).toBe(true);
       expect(customRule.validator('no match')).toBe(false);
       expect(customRule.validator('contains test')).toBe(true);

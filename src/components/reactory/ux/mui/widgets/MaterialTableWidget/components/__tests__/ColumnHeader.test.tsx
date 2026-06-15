@@ -186,8 +186,8 @@ describe('ColumnHeader', () => {
       );
 
       const icon = container.querySelector('.MuiIcon-root');
-      // Color is converted to RGB by browser
-      expect(icon).toHaveStyle({ color: 'rgb(255, 0, 0)' });
+      // jsdom keeps named colors as-is (no RGB conversion)
+      expect(icon).toHaveStyle({ color: 'red' });
     });
   });
 
@@ -432,8 +432,8 @@ describe('ColumnHeader', () => {
       );
 
       const typography = container.querySelector('.MuiTypography-root');
-      // Color is converted to RGB by browser
-      expect(typography).toHaveStyle({ color: 'rgb(0, 0, 255)' });
+      // jsdom keeps named colors as-is (no RGB conversion)
+      expect(typography).toHaveStyle({ color: 'blue' });
     });
 
     it('should apply custom header styles via headerSx', () => {

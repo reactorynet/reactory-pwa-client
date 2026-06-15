@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import MinimalHeader from '../MinimalHeader';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ReactoryProvider } from '@reactory/client-core/api/ApiProvider';
 
 const mockReactory = {
     $user: {
@@ -29,9 +30,11 @@ describe('MinimalHeader', () => {
     it('renders the application title', () => {
         // @ts-ignore
         render(
-            <ThemeProvider theme={theme}>
-                <MinimalHeader reactory={mockReactory} />
-            </ThemeProvider>
+            <ReactoryProvider reactory={mockReactory as any}>
+                <ThemeProvider theme={theme}>
+                    <MinimalHeader />
+                </ThemeProvider>
+            </ReactoryProvider>
         );
         expect(screen.getByText('Test App')).toBeInTheDocument();
     });
@@ -39,9 +42,11 @@ describe('MinimalHeader', () => {
     it('does not render drawer button', () => {
         // @ts-ignore
         render(
-            <ThemeProvider theme={theme}>
-                <MinimalHeader reactory={mockReactory} />
-            </ThemeProvider>
+            <ReactoryProvider reactory={mockReactory as any}>
+                <ThemeProvider theme={theme}>
+                    <MinimalHeader />
+                </ThemeProvider>
+            </ReactoryProvider>
         );
         expect(screen.queryByLabelText('Menu')).not.toBeInTheDocument();
     });

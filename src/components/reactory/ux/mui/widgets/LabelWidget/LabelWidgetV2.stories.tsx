@@ -27,13 +27,14 @@ const mockReactory = {
   },
 };
 
+// Import the component first
+import { LabelWidget } from './LabelWidgetV2';
+
 // Mock the useReactory hook for Storybook
-jest.mock('@reactory/client-core/api/ApiProvider', () => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).jest?.mock?.('@reactory/client-core/api/ApiProvider', () => ({
   useReactory: () => mockReactory,
 }));
-
-// Import the component (this will use the mock)
-import { LabelWidget } from './LabelWidgetV2';
 import type { LabelWidgetProps } from './types';
 
 // Theme for stories

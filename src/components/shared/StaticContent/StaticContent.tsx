@@ -470,7 +470,7 @@ const StaticContent: React.FC<ReactoryStaticContentProps> = (props: ReactoryStat
 
       if(!portalContainer || MountableComponent === null) return null
             
-      return ReactDOM.createPortal(<MountableComponent  { ...mountInfo.props }/>, portalContainer);
+      return ReactDOM.createPortal(<MountableComponent  { ...mountInfo.props }/> as any, portalContainer);
     })
 
     // <div {...containerProps} ref={ref => contentRef.current = ref} dangerouslySetInnerHTML={{ __html: state.parsed_content }}></div>
