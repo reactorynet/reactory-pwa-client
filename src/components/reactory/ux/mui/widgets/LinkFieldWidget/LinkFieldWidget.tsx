@@ -22,14 +22,14 @@ const LinkFieldWidget: React.FunctionComponent = (props: any) => {
   
   const { idSchema, formData, schema, uiSchema } = props;
 
-  let linkText = template('/${formData}')({ ...props });
+  let linkText = encodeURI(template('/${formData}')({ ...props }));
   let linkTitle = formData;
-  let labelTitle = props.schema?.title || props.idSchema?.$id;
+  let labelTitle = schema?.title || idSchema?.$id;
   let linkIcon = null;
   let _iconPosition = 'right';
   let _variant: any = "text";
   let _component = 'button';
-  let uioptions = props.uiSchema && props.uiSchema["ui:options"] ? props.uiSchema["ui:options"] : null;
+  let uioptions = uiSchema["ui:options"] ? uiSchema["ui:options"] : null;
   let iconOptions = {};
   let showLabel = true;
   let useRouterLink = true;

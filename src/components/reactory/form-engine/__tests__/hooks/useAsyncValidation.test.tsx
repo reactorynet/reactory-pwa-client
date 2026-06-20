@@ -24,8 +24,12 @@ describe('useAsyncValidation', () => {
     const validate: AsyncValidator = jest.fn(
       async () => ({ x: { __errors: ['bad'] } } as unknown as Awaited<ReturnType<AsyncValidator>>),
     );
+    // Stable reference required: an inline object literal creates a new reference
+    // on every re-render, which re-triggers the effect's debounce and causes the
+    // validator to fire twice instead of once.
+    const formData = { x: 1 };
     const { result } = renderHook(() =>
-      useAsyncValidation({ validate, formData: { x: 1 }, debounceMs: 20 }),
+      useAsyncValidation({ validate, formData, debounceMs: 20 }),
     );
     await act(async () => {
       await wait(40);

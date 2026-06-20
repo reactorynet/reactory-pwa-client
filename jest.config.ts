@@ -40,17 +40,13 @@ export default async (): Promise<JestConfigWithTsJest> => {
     transform: {
       // Transform TypeScript and JSX files
       '^.+\\.(ts|tsx)$': ['ts-jest', {
-        tsconfig: {
-          jsx: 'react',
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          module: 'commonjs',
-          moduleResolution: 'node',
-          target: 'es2019',
-          strict: false,
-          skipLibCheck: true,
-        },
+        tsconfig: '<rootDir>/tsconfig.test.json',
+        compiler: './.yarn/sdks/typescript/lib/typescript.js',
         useESM: false,
+        // Disable type-error diagnostics during test runs.
+        // Type checking is handled by `tsc --noEmit`; we don't want a
+        // mismatched transitive @types/react version to block test execution.
+        diagnostics: false,
       }],
       // Handle JSX files (compiled output that might be imported)
       '^.+\\.(js|jsx)$': ['babel-jest', {
@@ -70,8 +66,8 @@ export default async (): Promise<JestConfigWithTsJest> => {
       // Stubbed for tests; the production bundle uses the real ESM builds.
       '^apollo-upload-client/createUploadLink\\.mjs$': '<rootDir>/test/__mocks__/apolloUploadClient.js',
       '^mermaid$': '<rootDir>/test/__mocks__/mermaid.js',
-      // Module mocks
-      '^react$': '<rootDir>/node_modules/react',
+      // localforage uses IndexedDB which is not available in jsdom
+      '^localforage$': '<rootDir>/test/__mocks__/localforageMock.js',
       // CSS/Style mocks
       '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
       // Asset mocks
@@ -79,13 +75,16 @@ export default async (): Promise<JestConfigWithTsJest> => {
     },
     setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
     testMatch: [
-      '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
+      // Only match files that are explicitly named *.test.* or *.spec.*
+      // (prevents helper/mock files inside __tests__/ from being picked up)
       '<rootDir>/src/**/*.{spec,test}.{js,jsx,ts,tsx}',
     ],
     testPathIgnorePatterns: [
       '/node_modules/',
       '/build/',
       '/dist/',
+      // This file is an imperative script (no describe/it/test blocks)
+      '<rootDir>/src/api/objectMapper/objectMapper.test.ts',
     ],
     collectCoverageFrom: [
       'src/**/*.{js,jsx,ts,tsx}',

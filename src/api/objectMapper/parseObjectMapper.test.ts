@@ -115,8 +115,8 @@ describe('parseObjectMapperFunction', () => {
 
       // Verify all keys are present
       expect(result).toHaveProperty('id');
-      expect(result).toHaveProperty('property.id');
-      expect(result).toHaveProperty('anotherProp.property.date');
+      expect(result).toHaveProperty(['property.id']);
+      expect(result).toHaveProperty(['anotherProp.property.date']);
       expect(result).toHaveProperty('someComplexObject');
 
       // Verify types and structures

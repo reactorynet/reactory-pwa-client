@@ -8,6 +8,8 @@ let pluginComponents: Reactory.Client.IReactoryComponentRegistryEntry<any>[] = [
 // Conditional import of __index if it exists (generated at startup/compile time)
 try {
   // Dynamic import attempt for __index
+  // eslint-disable-next-line global-require
+  // @ts-ignore
   const importedPlugins = require('./__index').default;
   if (Array.isArray(importedPlugins)) {
     pluginComponents.push(...importedPlugins);

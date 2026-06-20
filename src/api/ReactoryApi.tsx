@@ -1082,7 +1082,7 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
       const result = await that.client.query<T, V>({
         query: $query,
         variables,
-        fetchPolicy: navigator.onLine === true ? options.fetchPolicy : 'cache-only',
+        fetchPolicy: options.fetchPolicy,
       });
       const { errors = [] } = result;
       if (errors.length > 0) {
@@ -1746,12 +1746,12 @@ class ReactoryApi extends EventEmitter implements Reactory.Client.IReactoryApi {
     }
   }
 
-  mountComponent(ComponentToMount, props, domNode, theme = true, callback?) {
-    const that = this;
-
+  mountComponent(ComponentToMount, props, domNode, theme = true, callback?) {    
     if (theme === true) {
+      // @ts-ignore
       ReactDOM.createPortal(<ComponentToMount {...props} />, domNode);
     } else {
+      // @ts-ignore
       ReactDOM.render(<ComponentToMount {...props} />, domNode, callback);
     }
   }

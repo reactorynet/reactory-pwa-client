@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import MobileBottomHeader from '../MobileBottomHeader';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom'; // Need router context for navigation
+import { ReactoryProvider } from '@reactory/client-core/api/ApiProvider';
 
 const mockReactory = {
     $user: {
@@ -38,11 +39,13 @@ describe('MobileBottomHeader', () => {
     it('renders the application title in top bar', () => {
         // @ts-ignore
         render(
-            <MemoryRouter>
-                <ThemeProvider theme={theme}>
-                    <MobileBottomHeader reactory={mockReactory} />
-                </ThemeProvider>
-            </MemoryRouter>
+            <ReactoryProvider reactory={mockReactory as any}>
+                <MemoryRouter>
+                    <ThemeProvider theme={theme}>
+                        <MobileBottomHeader />
+                    </ThemeProvider>
+                </MemoryRouter>
+            </ReactoryProvider>
         );
         expect(screen.getByText('Test App')).toBeInTheDocument();
     });
@@ -50,11 +53,13 @@ describe('MobileBottomHeader', () => {
     it('renders bottom navigation items', () => {
         // @ts-ignore
         render(
-            <MemoryRouter>
-                <ThemeProvider theme={theme}>
-                    <MobileBottomHeader reactory={mockReactory} />
-                </ThemeProvider>
-            </MemoryRouter>
+            <ReactoryProvider reactory={mockReactory as any}>
+                <MemoryRouter>
+                    <ThemeProvider theme={theme}>
+                        <MobileBottomHeader />
+                    </ThemeProvider>
+                </MemoryRouter>
+            </ReactoryProvider>
         );
         expect(screen.getByText('Home')).toBeInTheDocument();
         expect(screen.getByText('Profile')).toBeInTheDocument();

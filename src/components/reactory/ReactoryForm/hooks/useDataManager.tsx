@@ -267,36 +267,72 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
   const validate = () => { };
 
   const SubmitButton = () => {
-    
-    const onClick = () => { 
-      const evt: SchemaFormOnSubmitEventProps<unknown> = { 
+    const onClick = () => {
+      const evt: SchemaFormOnSubmitEventProps<unknown> = {
         edit: true,
         errors,
         errorSchema,
         schema: schema as Reactory.Schema.AnySchema,
-        idSchema: formDefinition?.idSchema as Reactory.Schema.IDSchema, 
+        idSchema: formDefinition?.idSchema as Reactory.Schema.IDSchema,
         formData
-      }      
-      onSubmit(evt); 
-    }
+       }
+      onSubmit(evt);
+     }
 
+    // Resolve submitProps from uiSchema or uiOptions with defaults
+    const submitProps = (uiSchema["ui:form"] as any)?.submitProps || uiOptions?.submitProps || {};
+    const variant: "contained" | "text" | "outlined"  = submitProps.variant || "contained";
+    const color: "primary" | "secondary" | "inherit" | "success" | "error" | "info" | "warning" = submitProps.color || "primary";
+    const iconAlign: string = submitProps.iconAlign || "left";
+    const sx = submitProps.sx;
+    const style = submitProps.style;
+
+    // Resolve title text with i18n support
+    let titleText = submitProps.titleText || "Submit";
+    if (reactory.i18n && reactory.i18n.t && typeof titleText === 'string' && titleText.includes(':')) {
+       try {
+         titleText = reactory.i18n.t(titleText, titleText);
+        } catch (e) {
+          // Fall back to raw string if translation fails
+         }
+       }
+
+    // Resolve icon from submitIconProps or submitIcon on ui:form
     let icon = 'save';
     let iconProps: any = uiSchema["ui:form"]?.submitIconProps || uiOptions?.submitIconProps || {};
     if (iconProps.icon) {
       icon = iconProps.icon;
       delete iconProps.icon;
-    } 
-    let iconWidget = (icon === '$none' ? null : <Icon {...iconProps}>{icon}</Icon>);
+     }
+
+    const iconWidget = (icon === '$none' ? null : <Icon {...iconProps}>{icon}</Icon>);
+
+    // Build children based on icon alignment
+    let buttonChildren: React.ReactNode;
+    if (iconAlign === 'right') {
+       buttonChildren = <>
+           <span>{titleText}</span>
+          {iconWidget}
+         </>;
+      } else {
+       buttonChildren = <>
+          {iconWidget}
+           <span>{titleText}</span>
+         </>;
+       }
 
     return (
-      <Button
-        onClick={onClick}
-        disabled={isDataLoading || isDirty === false}
-      >
-        {iconWidget}
-      </Button>
-    );
-  }
+        <Button
+         variant={variant}
+         color={color}
+         onClick={onClick}
+         disabled={isDataLoading || isDirty === false}
+         sx={sx}
+         style={style}>
+          {buttonChildren}
+        </Button>
+       );
+   }
 
   useEffect(() => { 
     reactory.debug(`useDataManager: ${SIGN} initialData change`, { initialData });
