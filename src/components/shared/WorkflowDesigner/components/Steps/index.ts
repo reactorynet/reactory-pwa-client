@@ -29,6 +29,30 @@ export { FileOperationStepDefinition } from './FileOperation/definition';
 export { WhileStepDefinition } from './While/definition';
 export { CustomStepDefinition } from './Custom/definition';
 
+// Logic / state Step Definitions
+export { SetVariableStepDefinition } from './SetVariable/definition';
+
+// Action Step Definitions
+export { TodoStepDefinition } from './Todo/definition';
+
+// Data / integration Step Definitions
+export { EmailStepDefinition } from './Email/definition';
+export { SearchStepDefinition } from './Search/definition';
+export { MongoQueryStepDefinition } from './MongoQuery/definition';
+export { MongoWriteStepDefinition } from './MongoWrite/definition';
+export { UserLookupStepDefinition } from './UserLookup/definition';
+export { MySQLStepDefinition } from './MySQL/definition';
+export { PostgresStepDefinition } from './Postgres/definition';
+export { MSSQLStepDefinition } from './MSSQL/definition';
+export { GraphQLQueryStepDefinition } from './GraphQLQuery/definition';
+export { GraphQLMutationStepDefinition } from './GraphQLMutation/definition';
+
+// Flow control Step Definitions
+export { SagaStepDefinition } from './Saga/definition';
+
+// Interaction Step Definitions
+export { WaitEventStepDefinition } from './WaitEvent/definition';
+
 import { StepDefinition } from '../../types';
 import { StartStepDefinition } from './Start/definition';
 import { EndStepDefinition } from './End/definition';
@@ -51,6 +75,20 @@ import { CliCommandStepDefinition } from './CliCommand/definition';
 import { FileOperationStepDefinition } from './FileOperation/definition';
 import { WhileStepDefinition } from './While/definition';
 import { CustomStepDefinition } from './Custom/definition';
+import { SetVariableStepDefinition } from './SetVariable/definition';
+import { TodoStepDefinition } from './Todo/definition';
+import { EmailStepDefinition } from './Email/definition';
+import { SearchStepDefinition } from './Search/definition';
+import { MongoQueryStepDefinition } from './MongoQuery/definition';
+import { MongoWriteStepDefinition } from './MongoWrite/definition';
+import { UserLookupStepDefinition } from './UserLookup/definition';
+import { MySQLStepDefinition } from './MySQL/definition';
+import { PostgresStepDefinition } from './Postgres/definition';
+import { MSSQLStepDefinition } from './MSSQL/definition';
+import { GraphQLQueryStepDefinition } from './GraphQLQuery/definition';
+import { GraphQLMutationStepDefinition } from './GraphQLMutation/definition';
+import { SagaStepDefinition } from './Saga/definition';
+import { WaitEventStepDefinition } from './WaitEvent/definition';
 
 /**
  * All available workflow step definitions
@@ -65,28 +103,42 @@ export const ALL_STEP_DEFINITIONS: StepDefinition[] = [
   CliCommandStepDefinition,
   FileOperationStepDefinition,
   CustomStepDefinition,
-  
+  TodoStepDefinition,
+
   // Logic
   ConditionStepDefinition,
   ValidationStepDefinition,
   DataTransformStepDefinition,
-  
+  SetVariableStepDefinition,
+
   // Flow control
   ParallelStepDefinition,
   JoinStepDefinition,
   DelayStepDefinition,
   ForEachStepDefinition,
   WhileStepDefinition,
-  
+  SagaStepDefinition,
+
   // Integration
   GraphQLStepDefinition,
   RESTStepDefinition,
   GRPCStepDefinition,
   ServiceInvokeStepDefinition,
-  
+  EmailStepDefinition,
+  SearchStepDefinition,
+  MongoQueryStepDefinition,
+  MongoWriteStepDefinition,
+  UserLookupStepDefinition,
+  MySQLStepDefinition,
+  PostgresStepDefinition,
+  MSSQLStepDefinition,
+  GraphQLQueryStepDefinition,
+  GraphQLMutationStepDefinition,
+
   // Interaction
   UserActivityStepDefinition,
-  
+  WaitEventStepDefinition,
+
   // Observability
   TelemetryStepDefinition,
   LogStepDefinition,

@@ -1,6 +1,116 @@
-import { useState, useCallback, useMemo } from 'react';
-import { StepDefinition, StepCategory } from '../types';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useReactory } from '@reactory/client-core/api';
+import { StepDefinition, StepCategory, PortType } from '../types';
 import { BUILT_IN_STEPS, STEP_CATEGORIES } from '../constants';
+
+/**
+ * GraphQL query for the server-side step catalog. Returns every registered engine
+ * step type, including designer definitions contributed by modules. The designer
+ * merges these with its built-in library so module steps (e.g. agent_conversation)
+ * appear without a client release.
+ */
+const WORKFLOW_STEP_CATALOG_QUERY = `
+  query WorkflowStepCatalog {
+    workflowStepCatalog {
+      stepType
+      source
+      description
+      version
+      definition {
+        id
+        name
+        category
+        description
+        icon
+        color
+        inputPorts { name type dataType required description }
+        outputPorts { name type dataType required description }
+        propertySchema
+        uiSchema
+        inputsSchema
+        inputsUiSchema
+        defaultProperties
+        tags
+        rendering
+      }
+    }
+  }
+`;
+
+interface CatalogPort {
+  name: string;
+  type: string;
+  dataType?: string;
+  required?: boolean;
+  description?: string;
+}
+
+interface CatalogDefinition {
+  id?: string;
+  name?: string;
+  category?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  inputPorts?: CatalogPort[];
+  outputPorts?: CatalogPort[];
+  propertySchema?: Record<string, unknown>;
+  uiSchema?: Record<string, unknown>;
+  inputsSchema?: Record<string, unknown>;
+  inputsUiSchema?: Record<string, unknown>;
+  defaultProperties?: Record<string, unknown>;
+  tags?: string[];
+  rendering?: Record<string, unknown>;
+}
+
+interface CatalogEntry {
+  stepType: string;
+  source: string;
+  description?: string;
+  version?: string;
+  definition?: CatalogDefinition | null;
+}
+
+/** Map a server catalog port to the designer PortTemplate shape. */
+function toPortTemplate(p: CatalogPort) {
+  return {
+    name: p.name,
+    type: (p.type as PortType) || PortType.INPUT,
+    dataType: p.dataType || 'any',
+    required: p.required,
+    description: p.description,
+  };
+}
+
+/**
+ * Convert a catalog entry that carries a designer definition into a full
+ * StepDefinition usable by the designer. Returns null when the entry has no
+ * definition (the designer already covers core steps via its built-in library).
+ */
+function catalogEntryToStepDefinition(entry: CatalogEntry): StepDefinition | null {
+  const def = entry.definition;
+  if (!def) return null;
+  return {
+    id: def.id || entry.stepType,
+    name: def.name || entry.stepType,
+    category: def.category || 'integration',
+    description: def.description || entry.description || '',
+    icon: def.icon,
+    color: def.color,
+    inputPorts: (def.inputPorts || []).map(toPortTemplate),
+    outputPorts: (def.outputPorts || []).map(toPortTemplate),
+    // Schema/uiSchema/rendering are opaque JSON authored against the designer's
+    // StepDefinition shape; cast the assembled object through `unknown` since the
+    // catalog types them loosely as Record<string, unknown>.
+    propertySchema: def.propertySchema || { type: 'object', properties: {} },
+    uiSchema: def.uiSchema,
+    inputsSchema: def.inputsSchema,
+    inputsUiSchema: def.inputsUiSchema,
+    defaultProperties: def.defaultProperties || {},
+    tags: def.tags,
+    rendering: def.rendering,
+  } as unknown as StepDefinition;
+}
 
 export interface UseStepLibraryReturn {
   stepLibrary: StepDefinition[];
@@ -24,16 +134,49 @@ interface UseStepLibraryOptions {
 
 export function useStepLibrary(options: UseStepLibraryOptions = {}): UseStepLibraryReturn {
   const { customSteps = [], customCategories = [] } = options;
+  const reactory = useReactory();
 
   // State for search and filtering
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [localCustomSteps, setLocalCustomSteps] = useState<StepDefinition[]>(customSteps);
+  // Module-contributed step definitions fetched from the server step catalog.
+  const [catalogSteps, setCatalogSteps] = useState<StepDefinition[]>([]);
 
-  // Combine built-in and custom steps
+  // Fetch the server step catalog once and merge any module-contributed step
+  // definitions. Failures are non-fatal — the built-in library still works.
+  useEffect(() => {
+    let mounted = true;
+    if (!reactory?.graphqlQuery) return undefined;
+    (async () => {
+      try {
+        const response = await reactory.graphqlQuery<{ workflowStepCatalog: CatalogEntry[] }, Record<string, never>>(
+          WORKFLOW_STEP_CATALOG_QUERY,
+          {},
+        );
+        const entries = response?.data?.workflowStepCatalog || [];
+        const defs = entries
+          .map(catalogEntryToStepDefinition)
+          .filter((d): d is StepDefinition => d !== null);
+        if (mounted && defs.length > 0) setCatalogSteps(defs);
+      } catch (err) {
+        reactory.log?.('WorkflowDesigner: failed to load step catalog', { err }, 'warning');
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [reactory]);
+
+  // Combine built-in, catalog (module-contributed), and custom steps.
+  // Built-in definitions win by id (they carry the richest rendering); catalog
+  // entries only add step types the built-in library doesn't already cover.
   const stepLibrary = useMemo(() => {
-    return [...BUILT_IN_STEPS, ...localCustomSteps];
-  }, [localCustomSteps]);
+    const builtInIds = new Set(BUILT_IN_STEPS.map((s) => s.id));
+    const customIds = new Set(localCustomSteps.map((s) => s.id));
+    const moduleSteps = catalogSteps.filter((s) => !builtInIds.has(s.id) && !customIds.has(s.id));
+    return [...BUILT_IN_STEPS, ...moduleSteps, ...localCustomSteps];
+  }, [catalogSteps, localCustomSteps]);
 
   // Combine built-in and custom categories
   const categories = useMemo(() => {

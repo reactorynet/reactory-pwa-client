@@ -436,22 +436,23 @@ export const useGraphQLDataManager: ReactoryFormDataManagerHook = (props) => {
         let _variableMap = reactory.utils.parseObjectMap(query.variables);
         variables = reactory.utils.objectMapper(kwargs, _variableMap) || {};
       }
+      let transformed = false;
       try {
-        const data = await reactory.graphqlQuery(query.text, variables);
+        const queryResponse = await reactory.graphqlQuery(query.text, variables);
         let resultMap = query.resultMap || null;
+        let resultData = queryResponse?.data?.[query.name];
         // get the object from the data based on the query name
-        if (data?.[query.name]?.__typename) { 
-          const typename = data[query.name].__typename;
+        if (resultData?.__typename) { 
+          const typename = resultData.__typename;
           // check if there is a defined handler for this type
           if (query?.responseHandlers?.[typename]?.resultMap) {
-            resultMap = query.responseHandlers[typename].resultMap;
-            // if there is, use it to transform the data
-            nextData = transformData(data, query.name, query.responseHandlers[typename].resultMap) as TData;  
+            resultMap = query.responseHandlers[typename].resultMap;            
           }
         }
-        if (data !== null && data !== undefined) {
-          nextData = transformData(data, query.name, resultMap) as TData;
+        if (queryResponse !== null && queryResponse !== undefined) {
+          nextData = transformData(queryResponse, query.name, resultMap) as TData;
         }
+        console.log('Transformed data ', nextData);
         return nextData;
       } catch (e) {
         reactory.error(`Error in GraphQL Query: ${query.text}`, e);
