@@ -1314,7 +1314,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       let needsUpdate = false;
       const newRowsState = { ...prevRowsState };
       
-      currentRows.forEach((row, rid) => {
+      if (currentRows.length > 0 && Object.keys(newRowsState).length === 0) { 
+        currentRows.forEach((row, rid) => {
         if (!newRowsState[rid]) {
           newRowsState[rid] = {
             dirty: false,
@@ -1327,7 +1328,8 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           needsUpdate = true;
         }
       });
-
+      }
+      
       // Clean up rows that no longer exist
       Object.keys(newRowsState).forEach(key => {
         const rid = parseInt(key);
