@@ -37,6 +37,7 @@ import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
 import useSpeechServices from './hooks/useSpeechServices';
 import useSidePanel from './hooks/useSidePanel';
 import useChatStatus from './hooks/useChatStatus';
+import NeuralBrainBackground from './components/NeuralBrainBackground';
 
 export default (props) => {
   const { formData } = props;
@@ -1305,24 +1306,6 @@ export default (props) => {
     }] : []),
   ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSidePanelToggle, handleDebugPanelToggle, reactory]);
 
-  const backgroundSVG = useMemo(() => {
-    // Create a simplified SVG pattern that should work reliably in data URLs
-    const svg = `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" fill="${themeColors.background}"/>
-      <circle cx="10" cy="10" r="2.5" fill="${themeColors.primary}" opacity="0.3"/>
-      <circle cx="30" cy="30" r="2" fill="${themeColors.secondary}" opacity="0.4"/>
-      <rect x="25" y="3" width="5" height="5" fill="${themeColors.primary}" opacity="0.25"/>
-      <rect x="3" y="25" width="4" height="4" fill="${themeColors.secondary}" opacity="0.2"/>
-      <circle cx="35" cy="7" r="1.5" fill="${themeColors.primary}" opacity="0.3"/>
-      <circle cx="20" cy="20" r="1" fill="${themeColors.secondary}" opacity="0.25"/>
-      <line x1="10" y1="10" x2="16" y2="16" stroke="${themeColors.primary}" stroke-width="0.5" opacity="0.2"/>
-      <line x1="30" y1="30" x2="24" y2="24" stroke="${themeColors.secondary}" stroke-width="0.5" opacity="0.25"/>
-    </svg>`;
-
-    // Remove all whitespace and newlines for better data URL compatibility
-    return svg.replace(/\s+/g, ' ').trim();
-  }, [themeColors]);
-
   return (
     <Box
       sx={{
@@ -1390,49 +1373,20 @@ export default (props) => {
             />
           )}
 
-          {/* Background-patterned chat container */}
+          {/* Neural brain WebGL chat container */}
           <Box
             sx={{
               position: 'relative',
               flex: 1,
               overflow: 'hidden',
-              backgroundColor: themeColors.background,
-              backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
-              backgroundSize: '40px 40px',
-              backgroundRepeat: 'repeat',
-              opacity: 0.8,
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: `
-                  radial-gradient(circle at 20% 20%, ${themeColors.primary}08 0%, transparent 60%),
-                  radial-gradient(circle at 80% 80%, ${themeColors.secondary}08 0%, transparent 60%)
-                `,
-                backdropFilter: 'blur(1px)',
-                pointerEvents: 'none',
-                zIndex: 0,
-              },
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: `
-                  radial-gradient(circle at 25% 25%, ${themeColors.secondary}06 0%, transparent 60%),
-                  radial-gradient(circle at 75% 75%, ${themeColors.primary}06 0%, transparent 60%)
-                `,
-                backdropFilter: 'blur(0.5px)',
-                pointerEvents: 'none',
-                zIndex: 0,
-              }
+              backgroundColor: mode === 'dark' ? '#05050f' : '#eeeeff',
             }}
           >
+            <NeuralBrainBackground
+              primaryColor={themeColors.primary}
+              secondaryColor={themeColors.secondary}
+              mode={mode}
+            />
             {/* Chat List Panel */}
             <Paper
               elevation={0}
@@ -1454,10 +1408,7 @@ export default (props) => {
                 flexDirection: 'column',
                 minHeight: 0,
                 zIndex: 1,
-                backgroundColor: themeColors.background,
-                backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(backgroundSVG)}")`,
-                backgroundSize: '60px 60px',
-                backgroundRepeat: 'repeat',
+                backgroundColor: mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
               }}
               style={{
                 padding: '0',

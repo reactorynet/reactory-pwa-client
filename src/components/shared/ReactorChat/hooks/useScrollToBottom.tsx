@@ -1,4 +1,5 @@
 import { Tooltip, Collapse, keyframes } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { ChatState, IAIPersona, ReactorToolCall, ReactorToolCallStatus, UXChatMessage } from '../types';
 import useContentRender from '../../hooks/useContentRender';
 
@@ -248,8 +249,7 @@ const ChatList = (props: {
   }
 
   const getMessageBackgroundColor = (message: UXChatMessage) => {
-    // define palette for user, assistant and tool messages
-    return background.paper; // Default background color for all messages
+    return alpha(background.paper as string, 0.72);
   }
 
   const getMessageAvatarColor = (message: UXChatMessage) => {
@@ -437,6 +437,7 @@ const ChatList = (props: {
                 sx={{
                   p: 0.5,
                   maxWidth: '95%',
+                  backdropFilter: 'blur(10px)',
                   backgroundColor: getMessageBackgroundColor(message),
                   ...(isProcessingMessage(message) && {
                     backgroundColor: 'transparent',
