@@ -243,10 +243,24 @@ export default (props) => {
 
   // ChatList message action callbacks — defined unconditionally to satisfy Rules of Hooks
   const handleRetryMessage = React.useCallback((message: any) => {
-    if (message.content) {
-      sendMessage(message.content);
+    const content = message?.content;
+    if (typeof content === 'string') {
+      sendMessage(content, chatState?.id);
+      return;
     }
-  }, [sendMessage]);
+    if (Array.isArray(content)) {
+      const text = content
+        .filter((part: any) => part?.type === 'text' && typeof part.text === 'string')
+        .map((part: any) => part.text)
+        .join('\n');
+      const images = content
+        .filter((part: any) => part?.type === 'image_url' && part.image_url?.url)
+        .map((part: any) => part.image_url.url as string);
+      if (text || images.length > 0) {
+        sendMessage(text, chatState?.id, images.length > 0 ? images : undefined);
+      }
+    }
+  }, [sendMessage, chatState?.id]);
 
   const handleRateMessage = React.useCallback((message: any, rating: any) => {
     reactory.log(`Message rated: ${rating}`, { message });
