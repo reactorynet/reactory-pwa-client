@@ -7,6 +7,39 @@ export const toCamelCaseLabel = (str: string): string => {
     .replace(/^./, (s) => s.toUpperCase());
 };
 
+/**
+ * Shared "glass overlay" style for components that sit on top of the
+ * NeuralBrainBackground. Keeps ChatInput, banners, status pill, and the
+ * sub-agent breadcrumb visually consistent with the message bubbles:
+ * semi-transparent surface + backdrop blur + hairline border.
+ *
+ * Matches the chat-list container tint (rgba(5,5,15,0.55) / rgba(238,238,255,0.55))
+ * and the message-bubble blur (10px).
+ */
+export const glassOverlayStyle = (mode: 'dark' | 'light' | string): Record<string, any> => ({
+  backgroundColor: mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
+  backdropFilter: 'blur(10px) saturate(120%)',
+  WebkitBackdropFilter: 'blur(10px) saturate(120%)',
+  border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+});
+
+/**
+ * Shared "glass panel" style for larger containers (ChatInput, banners).
+ * Slightly higher opacity than glassOverlayStyle for legibility, plus
+ * rounded corners and a subtle shadow so the panel reads as a distinct
+ * surface while still letting the neural background show through.
+ */
+export const glassPanelSx = (mode: 'dark' | 'light' | string) => ({
+  backgroundColor: mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
+  backdropFilter: 'blur(10px) saturate(120%)',
+  WebkitBackdropFilter: 'blur(10px) saturate(120%)',
+  border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+  boxShadow: mode === 'dark'
+    ? '0 2px 12px rgba(0,0,0,0.35)'
+    : '0 2px 12px rgba(0,0,0,0.08)',
+  borderRadius: 1,
+});
+
 // Helper to generate a JSON schema from argument shape
 export const getSchemaFromArgs = (argsShape: any) => {
   if (!argsShape || typeof argsShape !== 'object') return null;

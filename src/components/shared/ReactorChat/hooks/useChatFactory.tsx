@@ -18,6 +18,8 @@ interface ChatFactoryHookResult {
   rateMessage: (messageId: string, rating: number) => Promise<void>
   // loads a chat session by id
   loadChat: (chatSessionId: string) => Promise<void>
+  // fetches a lightweight summary of a session without switching the active chat
+  fetchConversationMeta: (chatSessionId: string) => Promise<{ id: string; title?: string; personaId?: string } | null>
   // starts a new chat session, returns the new session ID
   newChat: () => Promise<string | null>
   // function use to return all the available chats for the
@@ -2395,6 +2397,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             ...prevState,
             // Only update specific properties, don't spread the entire result
             id: (result as any).id,
+            personaId: (result as any).personaId,
+            parentSessionId: (result as any).parentSessionId ?? null,
+            chats: Array.isArray((result as any).chats) ? (result as any).chats : [],
             started: (result as any).started,
             history: greetingEntry ? [greetingEntry, ...serverHistory] : serverHistory,
             tools: uniqueTools,
@@ -2484,6 +2489,28 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       setChatLoading(false);
     }
   };
+
+  /**
+   * Fetch a lightweight summary of another session (e.g. the parent of the
+   * current sub-agent session) without switching the active chat. Used by
+   * the breadcrumb bar to label the "back to parent" action.
+   */
+  const fetchConversationMeta = React.useCallback(async (
+    chatSessionId: string
+  ): Promise<{ id: string; title?: string; personaId?: string } | null> => {
+    if (!chatSessionId) return null;
+    try {
+      const result = await graph.getConversation(chatSessionId);
+      if (!result || (result as any).__typename === 'ReactorErrorResponse') return null;
+      return {
+        id: (result as any).id,
+        title: (result as any).title,
+        personaId: (result as any).personaId,
+      };
+    } catch {
+      return null;
+    }
+  }, [graph]);
 
   /**
    * Consolidate tool results into a single message for the AI provider
@@ -3256,6 +3283,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     newChat,
     sendMessage,
     loadChat,
+    fetchConversationMeta,
     listChats: fetchConversations,
     setToolApprovalMode,
     chats,

@@ -674,7 +674,8 @@ const ChatList = (props: {
                             </Typography>
                           </Box>
 
-                          {/* Per-call chips */}
+                          {/* Per-call chips — hidden when an inline ToolPrompt (message.component) is present */}
+                          {!hasComponent(message) && (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.25 }}>
                             {message.tool_calls.filter(Boolean).map((call, i) => {
                               if (!call) return null;
@@ -778,6 +779,13 @@ const ChatList = (props: {
                               );
                             })}
                           </Box>
+                          )}
+                          {/* Inline tool prompt (e.g., approval) — renders inside the tool-call flow */}
+                          {hasComponent(message) && (
+                            <Box sx={{ mt: 0.25, width: '100%' }}>
+                              {renderComponent(message)}
+                            </Box>
+                          )}
                         </Box>
                       );
                     })() : (
@@ -899,7 +907,7 @@ const ChatList = (props: {
                         ))}
                       </Typography>
                     )}
-                    {hasComponent(message) && (
+                    {hasComponent(message) && !isToolCallMessage(message) && (
                       <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
                         {renderComponent(message)}
                       </Box>

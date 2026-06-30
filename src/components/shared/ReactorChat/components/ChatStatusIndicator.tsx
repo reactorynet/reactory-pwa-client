@@ -28,6 +28,9 @@ const ChatStatusIndicator: React.FC<ChatStatusIndicatorProps> = ({
         py: 0.4,
         borderRadius: 999,
         bgcolor: `${color}15`,
+        backdropFilter: 'blur(8px) saturate(120%)',
+        WebkitBackdropFilter: 'blur(8px) saturate(120%)',
+        border: `1px solid ${color}40`,
         color,
         userSelect: 'none',
       }}>

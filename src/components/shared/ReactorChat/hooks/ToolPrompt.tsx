@@ -1,9 +1,20 @@
 import React from 'react';
-import { Box, Typography, IconButton, TextField, Button, Collapse } from '@mui/material';
+import {
+  Box,
+  Typography,
+  IconButton,
+  TextField,
+  Collapse,
+  Tooltip,
+  alpha,
+} from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import SendIcon from '@mui/icons-material/Send';
+import BuildIcon from '@mui/icons-material/Build';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 export type ToolApprovalDecision = 'approved' | 'declined' | 'instructed';
 
@@ -25,7 +36,9 @@ const ToolPrompt: React.FC<ToolPromptProps> = ({ toolName, args, onDecision }) =
   const [decision, setDecision] = React.useState<ToolApprovalDecision | null>(null);
   const [showInstructField, setShowInstructField] = React.useState(false);
   const [instruction, setInstruction] = React.useState('');
+  const [showArgs, setShowArgs] = React.useState(true);
   const hasParams = args && Object.keys(args).length > 0;
+  const displayName = camelCaseToWords(toolName) || toolName;
 
   const handleSubmitInstruction = () => {
     if (instruction.trim()) {
@@ -34,77 +47,151 @@ const ToolPrompt: React.FC<ToolPromptProps> = ({ toolName, args, onDecision }) =
     }
   };
 
+  const actionBtnSx = (color: 'success' | 'warning' | 'error') => ({
+    color: `${color}.main`,
+    border: '1px solid',
+    borderColor: `${color}.main`,
+    bgcolor: 'transparent',
+    '&:hover': {
+      bgcolor: alpha(color === 'success' ? '#2e7d32' : color === 'error' ? '#d32f2f' : '#ed6c02', 0.12),
+    },
+  }) as const;
+
   return (
-    <Box sx={{
-      p: 0,
-      border: 1,
-      borderColor: 'divider',
-      borderRadius: 1,
-      bgcolor: 'background.paper',
-      minWidth: 220,
-    }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-        {camelCaseToWords(toolName)}
-      </Typography>
-      {hasParams && (
-        <Box sx={{ 
-          mb: 1, 
-          fontFamily: 'monospace', 
-          fontSize: 13, 
-          px: 1, 
-          py: 0.5, 
-          bgcolor: 'grey.900', 
-          borderRadius: 1, 
-          color: 'grey.100',
-          maxHeight: 200,
-          overflow: 'auto',
-          wordBreak: 'break-word',
-          overflowWrap: 'break-word'
-        }}>
-          <pre style={{ 
-            margin: 0, 
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            overflowWrap: 'break-word'
-          }}>
+    <Box
+      sx={{
+        mt: 0.5,
+        width: '100%',
+        borderRadius: 1,
+        overflow: 'hidden',
+        bgcolor: (t) => alpha(t.palette.warning.main, 0.06),
+        border: '1px solid',
+        borderColor: (t) => alpha(t.palette.warning.main, 0.35),
+        backdropFilter: 'blur(6px)',
+      }}
+    >
+      {/* Header row */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.75,
+          px: 1,
+          py: 0.5,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          bgcolor: (t) => alpha(t.palette.warning.main, 0.08),
+        }}
+      >
+        <BuildIcon sx={{ fontSize: '0.95rem', color: 'warning.main' }} />
+        <Typography
+          variant="caption"
+          sx={{
+            fontFamily: 'monospace',
+            fontSize: '0.72rem',
+            color: 'text.primary',
+            fontWeight: 600,
+            letterSpacing: 0.2,
+          }}
+        >
+          {displayName}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{ color: 'warning.main', fontStyle: 'italic', ml: 0.5, userSelect: 'none' }}
+        >
+          awaiting approval
+        </Typography>
+        <Box sx={{ flex: 1 }} />
+        {hasParams && (
+          <Tooltip title={showArgs ? 'Hide arguments' : 'Show arguments'}>
+            <IconButton
+              size="small"
+              onClick={() => setShowArgs((p) => !p)}
+              sx={{ p: 0.25, color: 'text.secondary' }}
+              aria-label="toggle arguments"
+            >
+              {showArgs ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        )}
+      </Box>
+
+      {/* Args */}
+      {hasParams && showArgs && (
+        <Box
+          sx={{
+            px: 1,
+            py: 0.5,
+            maxHeight: 180,
+            overflowY: 'auto',
+          }}
+        >
+          <Box
+            component="pre"
+            sx={{
+              m: 0,
+              fontFamily: 'monospace',
+              fontSize: '0.7rem',
+              color: 'text.secondary',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+            }}
+          >
             {JSON.stringify(args, null, 2)}
-          </pre>
+          </Box>
         </Box>
       )}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+
+      {/* Footer / actions */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.5,
+          px: 1,
+          py: 0.5,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
         {decision === null && (
           <>
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
-              <IconButton
-                size="small"
-                color="success"
-                onClick={() => { setDecision('approved'); onDecision('approved'); }}
-                aria-label="Approve"
-                title="Approve — execute this tool"
-              >
-                <CheckCircleIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                color="warning"
-                onClick={() => setShowInstructField((prev) => !prev)}
-                aria-label="Instruct"
-                title="Instruct — provide alternative guidance instead of running this tool"
-              >
-                <EditNoteIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                color="error"
-                onClick={() => { setDecision('declined'); onDecision('declined'); }}
-                aria-label="Decline"
-                title="Decline — skip this tool"
-              >
-                <CancelIcon fontSize="small" />
-              </IconButton>
+            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
+              <Tooltip title="Approve — execute this tool">
+                <IconButton
+                  size="small"
+                  onClick={() => { setDecision('approved'); onDecision('approved'); }}
+                  aria-label="Approve"
+                  sx={actionBtnSx('success')}
+                >
+                  <CheckCircleIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Instruct — provide alternative guidance instead of running this tool">
+                <IconButton
+                  size="small"
+                  onClick={() => setShowInstructField((prev) => !prev)}
+                  aria-label="Instruct"
+                  sx={actionBtnSx('warning')}
+                >
+                  <EditNoteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Decline — skip this tool">
+                <IconButton
+                  size="small"
+                  onClick={() => { setDecision('declined'); onDecision('declined'); }}
+                  aria-label="Decline"
+                  sx={actionBtnSx('error')}
+                >
+                  <CancelIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
             <Collapse in={showInstructField}>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', px: 0.5, pb: 0.5 }}>
+              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'flex-end' }}>
                 <TextField
                   size="small"
                   fullWidth
@@ -119,7 +206,9 @@ const ToolPrompt: React.FC<ToolPromptProps> = ({ toolName, args, onDecision }) =
                       handleSubmitInstruction();
                     }
                   }}
-                  sx={{ fontSize: 13 }}
+                  sx={{
+                    '& .MuiInputBase-input': { fontSize: '0.8rem' },
+                  }}
                 />
                 <IconButton
                   size="small"
@@ -135,13 +224,17 @@ const ToolPrompt: React.FC<ToolPromptProps> = ({ toolName, args, onDecision }) =
           </>
         )}
         {decision === 'approved' && (
-          <Typography variant="caption" color="success.main" sx={{ textAlign: 'right' }}>Approved</Typography>
+          <Typography variant="caption" color="success.main" sx={{ textAlign: 'right', fontStyle: 'italic' }}>
+            Approved
+          </Typography>
         )}
         {decision === 'declined' && (
-          <Typography variant="caption" color="error.main" sx={{ textAlign: 'right' }}>Declined</Typography>
+          <Typography variant="caption" color="error.main" sx={{ textAlign: 'right', fontStyle: 'italic' }}>
+            Declined
+          </Typography>
         )}
         {decision === 'instructed' && (
-          <Typography variant="caption" color="warning.main" sx={{ textAlign: 'right' }}>
+          <Typography variant="caption" color="warning.main" sx={{ textAlign: 'right', fontStyle: 'italic' }}>
             Instructed: {instruction}
           </Typography>
         )}
@@ -150,4 +243,4 @@ const ToolPrompt: React.FC<ToolPromptProps> = ({ toolName, args, onDecision }) =
   );
 };
 
-export default ToolPrompt; 
+export default ToolPrompt;
