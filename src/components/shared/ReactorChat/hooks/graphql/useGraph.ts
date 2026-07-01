@@ -90,6 +90,14 @@ export type ReactorInitChatResponse =
       suggestion?: string;
     });
 
+export interface ReactorProviderAuthOverrideInput {
+  apiKey?: string;
+  endpoint?: string;
+  organization?: string;
+  deploymentName?: string;
+  apiVersion?: string;
+}
+
 export interface ReactorSendMessageInput {
   personaId: string;
   chatSessionId?: string;
@@ -103,6 +111,11 @@ export interface ReactorSendMessageInput {
   continueAfterTools?: boolean;
   /** Optional base64 image data URLs for vision-capable models */
   images?: string[];
+  /**
+   * Per-request provider credential override (client-supplied, never persisted
+   * server-side). Used by the ToolsPanel "Apply only to this chat session" flow.
+   */
+  providerAuthOverride?: ReactorProviderAuthOverrideInput;
 }
 
 // --- Voice session types ---

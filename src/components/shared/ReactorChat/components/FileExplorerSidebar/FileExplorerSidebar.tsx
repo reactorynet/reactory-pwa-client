@@ -3,6 +3,7 @@ import { gql } from '@apollo/client';
 import { ChatState } from '../../types';
 import useDesktopEnvironment from '../../hooks/useDesktopEnvironment';
 import File from '@reactory/client-core/components/shared/File';
+import { glassPanelSx } from '../../utils';
 
 /**
  * Convert a file path as returned by `ReactoryUserFiles` into the form
@@ -687,7 +688,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
           anchor={dock}
           open={open}
           onClose={onClose}
-          PaperProps={{ sx: { width: '85vw', maxWidth: 400 } }}
+          PaperProps={{ sx: { width: '85vw', maxWidth: 400, ...glassPanelSx(reactory?.muiTheme?.palette?.mode ?? 'dark') } }}
         >
           {sidebarContent}
         </Drawer>
@@ -702,6 +703,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
         elevation={2}
         square
         sx={{
+          ...glassPanelSx(reactory?.muiTheme?.palette?.mode ?? 'dark'),
           width: SIDEBAR_WIDTH,
           height: '100%',
           display: 'flex',

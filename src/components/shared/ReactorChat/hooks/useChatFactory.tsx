@@ -119,6 +119,12 @@ interface ChatFactorHookOptions {
   onStreamError?: (error: any) => void;
   /** Optional session logger for client-side debug logging to the server */
   sessionLogger?: import('../types').SessionLogger;
+  /**
+   *  Returns a per-session provider credential override (read from localStorage)
+   *  to attach to each sendMessage request. Used by the ToolsPanel "Apply only
+   *  to this chat session" flow. When null/empty, no override is sent.
+   */
+  getProviderAuthOverride?: (chatSessionId: string) => import('./useProviders').ProviderAuthOverride | null;
 }
 
 type ChatFactoryHook = (props: ChatFactorHookOptions) => ChatFactoryHookResult
@@ -268,7 +274,18 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     protocol = 'graphql',
     existingSession,
     sessionLogger,
+    getProviderAuthOverride,
   } = props;
+
+  const resolveAuthOverride = (chatSessionId?: string) => {
+    if (!chatSessionId || !getProviderAuthOverride) return undefined;
+    const override = getProviderAuthOverride(chatSessionId);
+    if (!override) return undefined;
+    const hasAny = Object.values(override).some(
+      (v) => v !== undefined && v !== null && v !== ''
+    );
+    return hasAny ? override : undefined;
+  };
 
   const persona = React.useMemo(() => rawPersona, [rawPersona?.id]);
 
@@ -648,6 +665,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
           ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
           ...(images && images.length > 0 ? { images } : {}),
+          ...(resolveAuthOverride(sessionId) ? { providerAuthOverride: resolveAuthOverride(sessionId) } : {}),
         } as ReactorSendMessageInput);
 
         if (!resp) throw new Error('No response from server');
@@ -684,6 +702,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 streamingMode: 'SSE',
                 ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
                 ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
+                ...(resolveAuthOverride(sessionId) ? { providerAuthOverride: resolveAuthOverride(sessionId) } : {}),
               });
 
               // Handle error responses from the re-sent message

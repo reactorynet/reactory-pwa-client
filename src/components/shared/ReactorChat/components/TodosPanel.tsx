@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChatState, TodoList, TodoItem, TodoStatus, TODOS_VAR_KEY } from '../types';
+import { glassPanelSx } from '../utils';
 
 interface TodosPanelProps {
   open: boolean;
@@ -38,6 +39,8 @@ const TodosPanel: React.FC<TodosPanelProps> = ({
   Material,
   il8n,
 }) => {
+  const theme = Material.MaterialCore.useTheme();
+  const mode = theme?.palette?.mode ?? 'dark';
   const {
     Paper,
     Box,
@@ -100,6 +103,7 @@ const TodosPanel: React.FC<TodosPanelProps> = ({
     <Paper
       elevation={3}
       sx={{
+        ...glassPanelSx(mode),
         position: 'absolute',
         top: 0,
         left: 0,
@@ -112,7 +116,6 @@ const TodosPanel: React.FC<TodosPanelProps> = ({
         flexDirection: 'column',
         minHeight: 0,
         zIndex: 3,
-        backdropFilter: 'blur(15px) saturate(120%)',
       }}
     >
       {/* Header */}

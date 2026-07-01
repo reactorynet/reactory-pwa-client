@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChatState, IAIPersona, SubAgentSummary } from '../types';
+import { glassPanelSx } from '../utils';
 
 interface SubAgentsPanelProps {
   open: boolean;
@@ -20,6 +21,8 @@ const SubAgentsPanel: React.FC<SubAgentsPanelProps> = ({
   Material,
   il8n,
 }) => {
+  const theme = Material.MaterialCore.useTheme();
+  const mode = theme?.palette?.mode ?? 'dark';
   const {
     Paper,
     Box,
@@ -66,6 +69,7 @@ const SubAgentsPanel: React.FC<SubAgentsPanelProps> = ({
     <Paper
       elevation={3}
       sx={{
+        ...glassPanelSx(mode),
         position: 'absolute',
         top: 0,
         left: 0,
@@ -78,7 +82,6 @@ const SubAgentsPanel: React.FC<SubAgentsPanelProps> = ({
         flexDirection: 'column',
         minHeight: 0,
         zIndex: 3,
-        backdropFilter: 'blur(15px) saturate(120%)',
       }}
     >
       <Box sx={{
@@ -87,7 +90,6 @@ const SubAgentsPanel: React.FC<SubAgentsPanelProps> = ({
         p: 2,
         borderBottom: 1,
         borderColor: 'divider',
-        bgcolor: 'background.paper',
       }}>
         <IconButton onClick={onClose} sx={{ mr: 2 }} aria-label="Close sub-agents panel">
           <ArrowBack />

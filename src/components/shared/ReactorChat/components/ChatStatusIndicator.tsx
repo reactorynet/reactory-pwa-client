@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChatActivityStatus } from '../types';
+import { glassOverlayStyle } from '../utils';
 
 interface ChatStatusIndicatorProps {
   status: ChatActivityStatus;
@@ -7,10 +8,11 @@ interface ChatStatusIndicatorProps {
   icon: string;
   color: string;
   Material: any;
+  mode?: 'dark' | 'light' | string;
 }
 
 const ChatStatusIndicator: React.FC<ChatStatusIndicatorProps> = ({
-  status, label, icon, color, Material,
+  status, label, icon, color, Material, mode = 'dark',
 }) => {
   const { Box, Typography, Icon, CircularProgress, Fade } = Material.MaterialCore;
 
@@ -27,10 +29,7 @@ const ChatStatusIndicator: React.FC<ChatStatusIndicatorProps> = ({
         px: 1.25,
         py: 0.4,
         borderRadius: 999,
-        bgcolor: `${color}15`,
-        backdropFilter: 'blur(8px) saturate(120%)',
-        WebkitBackdropFilter: 'blur(8px) saturate(120%)',
-        border: `1px solid ${color}40`,
+        ...glassOverlayStyle(mode),
         color,
         userSelect: 'none',
       }}>

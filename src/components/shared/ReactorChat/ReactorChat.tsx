@@ -35,7 +35,7 @@ import DebugPanel from './components/DebugPanel';
 import SidePanel from './components/SidePanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
-import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
+import AgentToolWindowBar from './components/AgentToolWindowBar';
 import useSpeechServices from './hooks/useSpeechServices';
 import useSidePanel from './hooks/useSidePanel';
 import useChatStatus from './hooks/useChatStatus';
@@ -99,6 +99,10 @@ export default (props) => {
     providerAuthStatuses,
     saveProviderAuth,
     removeProviderAuth,
+    revertProviderAuth,
+    saveSessionProviderAuth,
+    clearSessionProviderAuth,
+    getProviderAuthOverride,
     getModelById,
   } = useProviders();
 
@@ -177,6 +181,7 @@ export default (props) => {
     existingSession: cachedSession,
     contextFromSessionId: previousSessionRef.current?.sessionId,
     sessionLogger,
+    getProviderAuthOverride,
   });
 
 
@@ -380,7 +385,6 @@ export default (props) => {
     Avatar,
     Divider,
     Fab,
-    LinearProgress,
     Tooltip,
     Chip,
     Switch,
@@ -406,14 +410,6 @@ export default (props) => {
     NavigateNext,
     ArrowBack,
   } = Material.MaterialIcons;
-
-  // Helper to get color based on token pressure
-  const getTokenPressureColor = useCallback((pressure: number) => {
-    if (pressure <= 0.25) return 'success'; // Green
-    if (pressure <= 0.5) return 'warning'; // Yellow
-    if (pressure <= 0.75) return 'error'; // Orange (using error color)
-    return 'error'; // Red
-  }, []);
 
   // Memoize the filtered messages to prevent unnecessary re-renders
   const messages = useMemo(() => {
@@ -1457,7 +1453,7 @@ export default (props) => {
           flexDirection: 'row',
           flex: 1,
           minHeight: 0,
-          marginBottom: 1,
+          marginBottom: 0,
           overflow: 'hidden',
         }}
       >
@@ -1730,6 +1726,10 @@ export default (props) => {
               providerAuthStatuses={providerAuthStatuses}
               onProviderAuthSave={saveProviderAuth}
               onProviderAuthRemove={removeProviderAuth}
+              onProviderAuthRevert={revertProviderAuth}
+              onProviderAuthSaveSession={saveSessionProviderAuth}
+              onProviderAuthClearSession={clearSessionProviderAuth}
+              chatSessionId={chatState?.id}
               onMaxToolIterationsChange={setMaxToolIterations}
               getToolIcon={getToolIcon}
               Material={Material}
@@ -1882,8 +1882,8 @@ export default (props) => {
         />
       )}
 
-      {/* Persona RadialFab - Bottom Right */}
-      <RadialFab
+      {/* Persona agent toolwindow shortcut bar - Bottom Right */}
+      <AgentToolWindowBar
         mainSize="small"
         actions={personaSpeedDialActions.map(action => ({
           icon: action.icon,
@@ -1921,7 +1921,7 @@ export default (props) => {
         mainClickLabel="Select Persona"
         position="bottom-right"
         spacing={16}
-        radius={65}
+        mode={mode}
         sx={{
           zIndex: 1000,
           transition: 'all 0.3s ease-in-out',
@@ -1935,63 +1935,6 @@ export default (props) => {
           right: 8,
         }}
       />
-      {/* Token Pressure Progress Bar - Moved to top */}
-      {chatState?.tokenPressure !== undefined && !busy && (
-        <LinearProgress
-          variant="determinate"
-          value={(chatState.tokenPressure || 0) * 100}
-          color={getTokenPressureColor(chatState.tokenPressure || 0)}
-          sx={{
-            height: 3,
-            borderRadius: 0,
-            mb: 1,
-            '& .MuiLinearProgress-bar': {
-              transition: 'transform 0.3s ease-in-out',
-            },
-          }}
-        />
-      )}
-
-      {/* Chat status indicator */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: busy ? 'auto' : 0 }}>
-        <ChatStatusIndicator
-          status={chatStatusInfo.status}
-          label={chatStatusInfo.label}
-          icon={chatStatusInfo.icon}
-          color={chatStatusInfo.color}
-          Material={Material}
-        />
-      </Box>
-
-      {busy && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <LinearProgress
-            variant="indeterminate"
-            color="primary"
-            sx={{
-              flex: 1,
-              height: 3,
-              borderRadius: 0,
-              mb: 1,
-              '& .MuiLinearProgress-bar': {
-                transition: 'transform 0.3s ease-in-out',
-              },
-            }}
-          />
-          {(chatState?.toolApprovalMode === ToolApprovalMode.AUTO ||
-            chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO) && (
-            <IconButton
-              size="small"
-              onClick={() => interruptExecution()}
-              sx={{ mb: 1 }}
-              title="Stop execution"
-            >
-              <Icon>stop_circle</Icon>
-            </IconButton>
-          )}
-        </Box>
-      )}
-
       {/* Pending tool call resume banner */}
       {pendingToolCallResume && (
         <PendingToolCallsBanner
@@ -2014,34 +1957,93 @@ export default (props) => {
           il8n={il8n}
         />
       )}
-      <ChatInput
-        onSendMessage={handleSendMessage}
-        disabled={busy}
-        placeholder={supportsImageGeneration
-          ? "Ask me anything... or describe an image to create"
-          : "Ask me anything..."}
-        onRecordingToggle={handleRecordingPanelToggle}
-        recordingPanelOpen={recordingPanelOpen}
-        voiceModeActive={speech.state.voiceModeActive}
-        onVoiceModeToggle={handleVoiceModeToggle}
-        onFileUpload={React.useCallback(async (file: File) => {
-          // Let uploadFile handle session initialization if needed
-          if (uploadFile) {
-            await uploadFile(file, chatState?.id || '');
-          }
-        }, [uploadFile, chatState?.id])}
-        chatState={chatState}
-        supportsImages={supportsImages}
-        pendingImages={pendingImages}
-        onPastedImages={React.useCallback((images: string[]) => {
-          setPendingImages((prev) => [...prev, ...images]);
-        }, [])}
-        onRemovePendingImage={React.useCallback((index: number) => {
-          setPendingImages((prev) => prev.filter((_, i) => i !== index));
-        }, [])}
-        toolApprovalMode={chatState?.toolApprovalMode}
-        onToolApprovalModeChange={setToolApprovalMode}
-      />
+      {/* Input area + floating thinking overlay.
+          The status pill is positioned absolutely above the input bar so it
+          reads as a small overlay rising from the input surface, instead of
+          taking vertical space and pushing chat content up. */}
+      <Box sx={{ position: 'relative' }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 0.75,
+            pointerEvents: 'none',
+            zIndex: 2,
+            '@keyframes reactorChatThinkingRise': {
+              '0%': { opacity: 0, transform: 'translateY(6px)' },
+              '100%': { opacity: 1, transform: 'translateY(0)' },
+            },
+            animation: 'reactorChatThinkingRise 220ms ease-out',
+          }}
+        >
+          <Box sx={{ display: 'inline-flex', pointerEvents: 'auto' }}>
+            <ChatStatusIndicator
+              status={chatStatusInfo.status}
+              label={chatStatusInfo.label}
+              icon={chatStatusInfo.icon}
+              color={chatStatusInfo.color}
+              Material={Material}
+              mode={mode}
+            />
+          </Box>
+          {busy && (
+            (chatState?.toolApprovalMode === ToolApprovalMode.AUTO ||
+              chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO) && (
+              <Tooltip title="Stop execution">
+                <IconButton
+                  size="small"
+                  onClick={() => interruptExecution()}
+                  sx={{
+                    p: 0.25,
+                    color: 'text.secondary',
+                    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
+                    backdropFilter: 'blur(10px) saturate(120%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(120%)',
+                    border: (t) => `1px solid ${t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                    pointerEvents: 'auto',
+                    '&:hover': { color: 'error.main' },
+                  }}
+                >
+                  <Icon sx={{ fontSize: '0.95rem' }}>stop_circle</Icon>
+                </IconButton>
+              </Tooltip>
+            )
+          )}
+        </Box>
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          disabled={busy}
+          placeholder={supportsImageGeneration
+            ? "Ask me anything... or describe an image to create"
+            : "Ask me anything..."}
+          onRecordingToggle={handleRecordingPanelToggle}
+          recordingPanelOpen={recordingPanelOpen}
+          voiceModeActive={speech.state.voiceModeActive}
+          onVoiceModeToggle={handleVoiceModeToggle}
+          onFileUpload={React.useCallback(async (file: File) => {
+            // Let uploadFile handle session initialization if needed
+            if (uploadFile) {
+              await uploadFile(file, chatState?.id || '');
+            }
+          }, [uploadFile, chatState?.id])}
+          chatState={chatState}
+          supportsImages={supportsImages}
+          pendingImages={pendingImages}
+          onPastedImages={React.useCallback((images: string[]) => {
+            setPendingImages((prev) => [...prev, ...images]);
+          }, [])}
+          onRemovePendingImage={React.useCallback((index: number) => {
+            setPendingImages((prev) => prev.filter((_, i) => i !== index));
+          }, [])}
+          toolApprovalMode={chatState?.toolApprovalMode}
+          onToolApprovalModeChange={setToolApprovalMode}
+        />
+      </Box>
       </Box>
     </Box>
   );
