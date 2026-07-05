@@ -967,14 +967,28 @@ export default (props) => {
 
   const handleSelectChildSession = useCallback((child: SubAgentSummary) => {
     if (!child?.id) return;
-    setSubAgentsPanelOpen(false);
+    if (busy || isManualNavigation.current) return;
+    // Load the sub-agent conversation in place. This is NOT a page navigation:
+    // we only replace the `sessionId` query param on the current pathname so a
+    // minimized/hosted ReactorChat stays exactly where it is. We deliberately
+    // DROP the `personaId` param so the URL-driven persona effect stays inert
+    // and the reconcile effect switches to the child's persona from the loaded
+    // session — the same mechanism handleNavigateToParent relies on. The panel
+    // animates itself closed (slide-right) via onClose once selection starts.
     isManualNavigation.current = true;
     navigate({
       pathname: location.pathname,
-      search: `?sessionId=${child.id}&personaId=${child.personaId}`,
-    });
-    loadChat(child.id);
-  }, [navigate, location.pathname, loadChat]);
+      search: `?sessionId=${child.id}`,
+    }, { replace: true });
+    loadChat(child.id)
+      .then(() => setActiveSessionId(child.id))
+      .catch((error) => {
+        reactory.error('ReactorChat: Failed to load sub-agent session', error);
+      })
+      .finally(() => {
+        isManualNavigation.current = false;
+      });
+  }, [busy, navigate, location.pathname, loadChat, reactory]);
 
   const handleNavigateToParent = useCallback(() => {
     const parentId = chatState?.parentSessionId;

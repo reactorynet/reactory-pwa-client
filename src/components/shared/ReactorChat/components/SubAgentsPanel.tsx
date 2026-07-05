@@ -65,9 +65,62 @@ const SubAgentsPanel: React.FC<SubAgentsPanelProps> = ({
   const personaInitial = (persona: IAIPersona | null, fallback: string) =>
     (persona?.name?.trim()?.[0] || fallback).toUpperCase();
 
+  // When a conversation is selected the panel slides out to the right,
+  // revealing the newly-loaded conversation behind it, then closes.
+  const [exiting, setExiting] = React.useState(false);
+  // `mounted` keeps the panel in the DOM only while it is visible or animating;
+  // when fully closed it renders nothing (no list / avatar work). `entered`
+  // drives the slide-in transition on the frame after mount.
+  const [mounted, setMounted] = React.useState(open);
+  const [entered, setEntered] = React.useState(false);
+
+  React.useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setExiting(false);
+      // Trigger the slide-in on the next frame so the browser paints the
+      // off-screen (translateY 100%) start state first.
+      const raf = requestAnimationFrame(() => setEntered(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    // Closing via the back button: drop `entered` so the panel slides down.
+    setEntered(false);
+    return undefined;
+  }, [open]);
+
+  const handleOpenChild = React.useCallback((child: SubAgentSummary) => {
+    if (exiting) return;
+    onSelectChild(child);
+    setExiting(true);
+  }, [exiting, onSelectChild]);
+
+  const handleTransitionEnd = React.useCallback((event: React.TransitionEvent<HTMLDivElement>) => {
+    // Only react to this panel's own transform transition, not bubbled
+    // transitions from list items / hover effects.
+    if (event.target !== event.currentTarget || event.propertyName !== 'transform') return;
+    if (exiting) {
+      // Slide-right (selection) finished — close and unmount.
+      onClose();
+      setMounted(false);
+    } else if (!open) {
+      // Slide-down (back button) finished — unmount.
+      setMounted(false);
+    }
+  }, [exiting, open, onClose]);
+
+  let transform = 'translateY(100%)';
+  if (exiting) {
+    transform = 'translateX(100%)';
+  } else if (entered && open) {
+    transform = 'translateY(0)';
+  }
+
+  if (!mounted) return null;
+
   return (
     <Paper
       elevation={3}
+      onTransitionEnd={handleTransitionEnd}
       sx={{
         ...glassPanelSx(mode),
         position: 'absolute',
@@ -75,7 +128,7 @@ const SubAgentsPanel: React.FC<SubAgentsPanelProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        transform: open ? 'translateY(0)' : 'translateY(100%)',
+        transform,
         transition: 'transform 0.3s ease-in-out',
         overflow: 'hidden',
         display: 'flex',
@@ -143,10 +196,15 @@ const SubAgentsPanel: React.FC<SubAgentsPanelProps> = ({
                     borderColor: 'divider',
                     '&:hover': { bgcolor: 'action.hover' },
                   }}
-                  onClick={() => onSelectChild(child)}
+                  onClick={() => handleOpenChild(child)}
                   secondaryAction={
                     <Tooltip title={il8n?.t('reactor.client.chat.subagents.open', { defaultValue: 'Open conversation' })}>
-                      <IconButton edge="end" size="small" aria-label="Open sub-agent conversation">
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        aria-label="Open sub-agent conversation"
+                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleOpenChild(child); }}
+                      >
                         <ChevronRight />
                       </IconButton>
                     </Tooltip>
