@@ -116,7 +116,7 @@ const CacheComponent = ({ reactory, classes }) => {
       }}
     >
       <ListItemIcon>
-        <Icon color="primary">storage</Icon>
+        <Icon color="inherit">storage</Icon>
       </ListItemIcon>
       <ListItemText
         primary={
@@ -166,7 +166,7 @@ const ToggleDevelopComponent = ({ reactory, classes }) => {
       }}
     >
       <ListItemIcon>
-        <Icon color="primary">build</Icon>
+        <Icon color="inherit">build</Icon>
       </ListItemIcon>
       <ListItemText
         primary={<span>DEVELOPMENT</span>}
@@ -195,7 +195,7 @@ const Logged = ({ id, apiStatus, reactory, open, anchorEl }) => {
             menuItems.push((
               <MenuItem key={menuItem.id || `menu_item_${idx}`} onClick={goto}>
                 <ListItemIcon>
-                  <Icon color="primary">{menuItem.icon}</Icon>
+                  <Icon color="inherit" {...menuItem.iconProps}>{menuItem.icon}</Icon>
                 </ListItemIcon>
                 {menuItem.title}
               </MenuItem>
@@ -346,7 +346,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                             }}
                           >
                             <ListItemIcon>
-                              {menu.icon && <Icon color="primary">{menu.icon}</Icon>}
+                              {menu.icon && <Icon color="inherit" {...menu.iconProps}>{menu.icon}</Icon>}
                             </ListItemIcon>
                             <ListItemText primary={menu.title} />
                           </ListItem>
@@ -399,7 +399,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
                   }}
                 >
                   <ListItemIcon>
-                    <Icon color="primary">{menuItem.icon}</Icon>
+                    <Icon color="inherit" {...menuItem.iconProps}>{menuItem.icon}</Icon>
                   </ListItemIcon>
                   <ListItemText primary={menuItem.title} />
                   {expandButton}
@@ -433,7 +433,7 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
       >
         <ListItemIcon>
           <Tooltip title={`Api Available @ ${moment(reactory.getUser().when).format('HH:mm:ss')} click to refresh`}>
-            <Icon color="primary">rss_feed</Icon>
+            <Icon color="inherit">rss_feed</Icon>
           </Tooltip>
         </ListItemIcon>
         <ListItemText
@@ -626,4 +626,3 @@ const ApplicationHeader = ({ reactory, theme: propTheme }) => {
 const ApplicationHeaderComponent = compose(withReactory)(ApplicationHeader);
 
 export default ApplicationHeaderComponent;
-
