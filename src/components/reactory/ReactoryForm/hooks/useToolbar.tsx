@@ -1,4 +1,4 @@
-import { Button, Icon, Toolbar, Tooltip } from "@mui/material";
+import { Button, Icon, Toolbar, Tooltip, Fab } from "@mui/material";
 import { useReactory } from "@reactory/client-core/api";
 import { template } from "lodash";
 import React, { useCallback } from "react";
@@ -69,6 +69,10 @@ export const useToolbar: ReactoryFormToolbarHook = (props) => {
   let submitTooltip = "Click to submit the form";
 
   const { submitProps, buttons } = uiOptions;
+  const submitClick = useCallback(() => {
+    onSubmit(formData);
+  }, [onSubmit, formData, errorSchema, errors]);
+
   if (typeof submitProps === "object" && showSubmit === true) {
     const {
       variant = "fab",
@@ -77,9 +81,7 @@ export const useToolbar: ReactoryFormToolbarHook = (props) => {
     } = submitProps;
     const _props = { ...submitProps };
     delete _props.iconAlign;
-    _props.onClick = useCallback(() => {
-      onSubmit(formData);
-    }, [onSubmit, formData, errorSchema, errors]);
+    _props.onClick = submitClick;
 
     submitTooltip = reactory.utils.template(tooltip as string)({
       props: props,

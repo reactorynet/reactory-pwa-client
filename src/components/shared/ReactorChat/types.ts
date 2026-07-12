@@ -441,6 +441,23 @@ export type ChatState = {
    * in the persistent side panel.
    */
   sidePanel?: SidePanelActions
+  /**
+   * The persona id persisted on the server session. Set when a session
+   * is loaded via loadChat so the UI can reconcile selectedPersona with
+   * the actual agent that owns the session (e.g. a sub-agent child).
+   */
+  personaId?: string
+  /**
+   * Optional id of the parent session that spawned this one. Set on
+   * sub-agent sessions. When present, the UI shows a breadcrumb back
+   * to the parent.
+   */
+  parentSessionId?: string
+  /**
+   * Child sub-agent sessions spawned from this session. Only populated
+   * on parent sessions; the UI lists these in the Sub-agents panel.
+   */
+  chats?: SubAgentSummary[]
 }
 
 export interface QuestionHandlerResponse {
@@ -580,6 +597,21 @@ export interface TodoList {
 }
 
 export const TODOS_VAR_KEY = 'reactor.todos';
+
+// ── Sub-agent (child session) types ────────────────────────────────────
+
+/**
+ * Summary of a child session spawned from a parent (sub-agent delegation).
+ * Mirrors the `chats` selection on the ReactorConversation GraphQL query.
+ */
+export interface SubAgentSummary {
+  id: string;
+  personaId: string;
+  title?: string;
+  created?: string | Date;
+  updated?: string | Date;
+  user?: { id?: string; firstName?: string; lastName?: string };
+}
 
 // ── Side Panel types (agent-mounted components / forms) ────────────────
 

@@ -290,4 +290,23 @@ describe("useToolbar", () => {
       expect(typeof result.current.Toolbar).toBe("function");
     });
   });
+
+  it("keeps hook order stable when submitProps becomes defined after first render", () => {
+    const { rerender } = renderHook(
+      (props) => useToolbar(props as any),
+      {
+        initialProps: buildProps({
+          uiOptions: { submitProps: undefined },
+        }),
+      }
+    );
+
+    rerender(
+      buildProps({
+        uiOptions: {
+          submitProps: { variant: "contained", text: "Submit" },
+        },
+      }) as any
+    );
+  });
 });

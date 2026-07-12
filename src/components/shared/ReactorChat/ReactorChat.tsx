@@ -16,6 +16,7 @@ import {
   ChatState,
   TodoList,
   SidePanelState,
+  SubAgentSummary,
   TODOS_VAR_KEY,
 } from './types';
 import PersonaSelectionPanel from './components/PersonaSelectionPanel';
@@ -25,6 +26,7 @@ import ChatInput from './components/ChatInput';
 import FilesPanel from './components/FilesPanel/FilesPanel';
 import FileExplorerSidebar, { DockSide } from './components/FileExplorerSidebar/FileExplorerSidebar';
 import TodosPanel from './components/TodosPanel';
+import SubAgentsPanel from './components/SubAgentsPanel';
 import ToolIterationLimitBanner from './components/ToolIterationLimitBanner';
 import NetworkStatusIndicator from './components/NetworkStatusIndicator';
 import ChatStatusIndicator from './components/ChatStatusIndicator';
@@ -33,7 +35,7 @@ import DebugPanel from './components/DebugPanel';
 import SidePanel from './components/SidePanel';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RecordingAudioBar from "./components/RecordingAudioBar";
-import { RadialFab } from '@reactory/client-core/components/shared/RadialFab';
+import AgentToolWindowBar from './components/AgentToolWindowBar';
 import useSpeechServices from './hooks/useSpeechServices';
 import useSidePanel from './hooks/useSidePanel';
 import useChatStatus from './hooks/useChatStatus';
@@ -97,6 +99,10 @@ export default (props) => {
     providerAuthStatuses,
     saveProviderAuth,
     removeProviderAuth,
+    revertProviderAuth,
+    saveSessionProviderAuth,
+    clearSessionProviderAuth,
+    getProviderAuthOverride,
     getModelById,
   } = useProviders();
 
@@ -175,6 +181,7 @@ export default (props) => {
     existingSession: cachedSession,
     contextFromSessionId: previousSessionRef.current?.sessionId,
     sessionLogger,
+    getProviderAuthOverride,
   });
 
 
@@ -190,6 +197,7 @@ export default (props) => {
     unpinFolderForChat,
     newChat,
     loadChat,
+    fetchConversationMeta,
     listChats,
     setToolApprovalMode,
     chats,
@@ -243,10 +251,24 @@ export default (props) => {
 
   // ChatList message action callbacks — defined unconditionally to satisfy Rules of Hooks
   const handleRetryMessage = React.useCallback((message: any) => {
-    if (message.content) {
-      sendMessage(message.content);
+    const content = message?.content;
+    if (typeof content === 'string') {
+      sendMessage(content, chatState?.id);
+      return;
     }
-  }, [sendMessage]);
+    if (Array.isArray(content)) {
+      const text = content
+        .filter((part: any) => part?.type === 'text' && typeof part.text === 'string')
+        .map((part: any) => part.text)
+        .join('\n');
+      const images = content
+        .filter((part: any) => part?.type === 'image_url' && part.image_url?.url)
+        .map((part: any) => part.image_url.url as string);
+      if (text || images.length > 0) {
+        sendMessage(text, chatState?.id, images.length > 0 ? images : undefined);
+      }
+    }
+  }, [sendMessage, chatState?.id]);
 
   const handleRateMessage = React.useCallback((message: any, rating: any) => {
     reactory.log(`Message rated: ${rating}`, { message });
@@ -363,7 +385,6 @@ export default (props) => {
     Avatar,
     Divider,
     Fab,
-    LinearProgress,
     Tooltip,
     Chip,
     Switch,
@@ -384,15 +405,11 @@ export default (props) => {
     FolderOpen,
     Checklist,
     BugReport,
+    AccountTree,
+    ChevronRight,
+    NavigateNext,
+    ArrowBack,
   } = Material.MaterialIcons;
-
-  // Helper to get color based on token pressure
-  const getTokenPressureColor = useCallback((pressure: number) => {
-    if (pressure <= 0.25) return 'success'; // Green
-    if (pressure <= 0.5) return 'warning'; // Yellow
-    if (pressure <= 0.75) return 'error'; // Orange (using error color)
-    return 'error'; // Red
-  }, []);
 
   // Memoize the filtered messages to prevent unnecessary re-renders
   const messages = useMemo(() => {
@@ -482,6 +499,25 @@ export default (props) => {
   const [filesPanelOpen, setFilesPanelOpen] = useState<boolean>(false);
   const [todosPanelOpen, setTodosPanelOpen] = useState<boolean>(false);
   const [debugPanelOpen, setDebugPanelOpen] = useState<boolean>(false);
+  const [subAgentsPanelOpen, setSubAgentsPanelOpen] = useState<boolean>(false);
+
+  // Parent session meta for the breadcrumb bar. Only populated when the
+  // active session is a sub-agent child (chatState.parentSessionId set).
+  const [parentMeta, setParentMeta] = useState<{ id: string; title?: string; personaId?: string } | null>(null);
+
+  React.useEffect(() => {
+    const parentId = chatState?.parentSessionId;
+    if (!parentId) {
+      setParentMeta(null);
+      return;
+    }
+    if (parentMeta?.id === parentId) return;
+    let cancelled = false;
+    fetchConversationMeta(parentId).then((meta) => {
+      if (!cancelled && meta) setParentMeta(meta);
+    });
+    return () => { cancelled = true; };
+  }, [chatState?.parentSessionId, parentMeta?.id, fetchConversationMeta]);
 
   // File explorer sidebar — docked inline panel (left or right)
   const [fileExplorerOpen, setFileExplorerOpen] = useState<boolean>(false);
@@ -576,6 +612,25 @@ export default (props) => {
       }
     }
   }, [personas, queryParams.personaId, selectedPersona?.id, selectPersona]);
+
+  // Reconcile selectedPersona with the loaded session's personaId, but ONLY
+  // when the URL is not driving persona selection. This covers the breadcrumb
+  // "back to parent" path, where we navigate to `?sessionId=parentId` without
+  // a personaId and the loaded parent may own a different persona than the
+  // sub-agent we just left. When the URL carries a personaId (agent switch
+  // via the persona panel, or sub-agent selection via the Sub-agents panel),
+  // the URL-driven effect above is the sole authority — reconciling here too
+  // would fight it and cause a selectPersona(A) ↔ selectPersona(B) loop.
+  React.useEffect(() => {
+    if (!chatState?.personaId) return;
+    if (queryParams.personaId) return;
+    if (selectedPersona?.id === chatState.personaId) return;
+    const found = personas?.find(p => p.id === chatState.personaId);
+    if (found) {
+      reactory.log(`ReactorChat: Switching persona to match loaded session: ${found.name} (${found.id})`);
+      selectPersona(found.id);
+    }
+  }, [chatState?.personaId, selectedPersona?.id, personas, queryParams.personaId, selectPersona, reactory]);
 
   // Optionally, load chat session if sessionId is present
   React.useEffect(() => {
@@ -736,6 +791,7 @@ export default (props) => {
     setFilesPanelOpen(false);
     setTodosPanelOpen(false);
     setDebugPanelOpen(false);
+    setSubAgentsPanelOpen(false);
     // Then toggle persona panel
     setPersonaPanelOpen(!personaPanelOpen);
   }, [personaPanelOpen]);
@@ -752,6 +808,7 @@ export default (props) => {
     setFilesPanelOpen(false);
     setTodosPanelOpen(false);
     setDebugPanelOpen(false);
+    setSubAgentsPanelOpen(false);
     // Then toggle tools panel
     setToolsPanelOpen(!toolsPanelOpen);
   }, [toolsPanelOpen]);
@@ -782,6 +839,7 @@ export default (props) => {
     setFilesPanelOpen(false);
     setTodosPanelOpen(false);
     setDebugPanelOpen(false);
+    setSubAgentsPanelOpen(false);
     // Then toggle chat history panel
     const willOpen = !chatHistoryPanelOpen;
     setChatHistoryPanelOpen(willOpen);
@@ -805,6 +863,7 @@ export default (props) => {
     setFilesPanelOpen(false);
     setTodosPanelOpen(false);
     setDebugPanelOpen(false);
+    setSubAgentsPanelOpen(false);
     // Then toggle recording panel
     setRecordingPanelOpen(!recordingPanelOpen);
   }, [recordingPanelOpen]);
@@ -867,6 +926,7 @@ export default (props) => {
     setRecordingPanelOpen(false);
     setTodosPanelOpen(false);
     setDebugPanelOpen(false);
+    setSubAgentsPanelOpen(false);
     // Then toggle files panel
     setFilesPanelOpen(!filesPanelOpen);
   }, [filesPanelOpen]);
@@ -882,12 +942,64 @@ export default (props) => {
     setRecordingPanelOpen(false);
     setFilesPanelOpen(false);
     setDebugPanelOpen(false);
+    setSubAgentsPanelOpen(false);
     setTodosPanelOpen(!todosPanelOpen);
   }, [todosPanelOpen]);
 
   const handleTodosPanelClose = useCallback(() => {
     setTodosPanelOpen(false);
   }, []);
+
+  const handleSubAgentsPanelToggle = useCallback(() => {
+    setPersonaPanelOpen(false);
+    setToolsPanelOpen(false);
+    setChatHistoryPanelOpen(false);
+    setRecordingPanelOpen(false);
+    setFilesPanelOpen(false);
+    setTodosPanelOpen(false);
+    setDebugPanelOpen(false);
+    setSubAgentsPanelOpen(!subAgentsPanelOpen);
+  }, [subAgentsPanelOpen]);
+
+  const handleSubAgentsPanelClose = useCallback(() => {
+    setSubAgentsPanelOpen(false);
+  }, []);
+
+  const handleSelectChildSession = useCallback((child: SubAgentSummary) => {
+    if (!child?.id) return;
+    if (busy || isManualNavigation.current) return;
+    // Load the sub-agent conversation in place. This is NOT a page navigation:
+    // we only replace the `sessionId` query param on the current pathname so a
+    // minimized/hosted ReactorChat stays exactly where it is. We deliberately
+    // DROP the `personaId` param so the URL-driven persona effect stays inert
+    // and the reconcile effect switches to the child's persona from the loaded
+    // session — the same mechanism handleNavigateToParent relies on. The panel
+    // animates itself closed (slide-right) via onClose once selection starts.
+    isManualNavigation.current = true;
+    navigate({
+      pathname: location.pathname,
+      search: `?sessionId=${child.id}`,
+    }, { replace: true });
+    loadChat(child.id)
+      .then(() => setActiveSessionId(child.id))
+      .catch((error) => {
+        reactory.error('ReactorChat: Failed to load sub-agent session', error);
+      })
+      .finally(() => {
+        isManualNavigation.current = false;
+      });
+  }, [busy, navigate, location.pathname, loadChat, reactory]);
+
+  const handleNavigateToParent = useCallback(() => {
+    const parentId = chatState?.parentSessionId;
+    if (!parentId) return;
+    isManualNavigation.current = true;
+    navigate({
+      pathname: location.pathname,
+      search: `?sessionId=${parentId}`,
+    });
+    loadChat(parentId);
+  }, [chatState?.parentSessionId, navigate, location.pathname, loadChat]);
 
   const handleDebugPanelToggle = useCallback(() => {
     setPersonaPanelOpen(false);
@@ -896,6 +1008,7 @@ export default (props) => {
     setRecordingPanelOpen(false);
     setFilesPanelOpen(false);
     setTodosPanelOpen(false);
+    setSubAgentsPanelOpen(false);
     setDebugPanelOpen(!debugPanelOpen);
   }, [debugPanelOpen]);
 
@@ -1288,6 +1401,16 @@ export default (props) => {
       title: il8n?.t('reactor.client.chat.todos', { defaultValue: 'Todo Lists' }),
       clickHandler: handleTodosPanelToggle,
     },
+    ...((chatState?.chats?.length ?? 0) > 0 ? [{
+      key: 'subAgents',
+      icon: (
+        <Badge badgeContent={chatState?.chats?.length ?? 0} color="primary">
+          <AccountTree />
+        </Badge>
+      ),
+      title: il8n?.t('reactor.client.chat.subagents.action', { defaultValue: 'Sub-agent Conversations' }),
+      clickHandler: handleSubAgentsPanelToggle,
+    }] : []),
     ...(sidePanelState.items.length > 0 ? [{
       key: 'sidePanel',
       icon: (
@@ -1304,7 +1427,7 @@ export default (props) => {
       title: il8n?.t('reactor.client.chat.debug', { defaultValue: 'Debug Inspector' }),
       clickHandler: handleDebugPanelToggle,
     }] : []),
-  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSidePanelToggle, handleDebugPanelToggle, reactory]);
+  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleDebugPanelToggle, reactory]);
 
   return (
     <Box
@@ -1317,8 +1440,26 @@ export default (props) => {
         p: isNarrowScreen ? 0 : 2,
         minHeight: 0,
         position: 'relative',
+        overflow: 'hidden',
       }}
     >
+      {/* Neural brain WebGL background — base layer for the entire chat component */}
+      <NeuralBrainBackground
+        primaryColor={themeColors.primary}
+        secondaryColor={themeColors.secondary}
+        mode={mode}
+      />
+      {/* All chat content sits above the background layer */}
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
       {/* Horizontal row: optional left dock + chat area + optional right dock */}
       <Box
         sx={{
@@ -1326,7 +1467,7 @@ export default (props) => {
           flexDirection: 'row',
           flex: 1,
           minHeight: 0,
-          marginBottom: 1,
+          marginBottom: 0,
           overflow: 'hidden',
         }}
       >
@@ -1379,14 +1520,83 @@ export default (props) => {
               position: 'relative',
               flex: 1,
               overflow: 'hidden',
-              backgroundColor: mode === 'dark' ? '#05050f' : '#eeeeff',
+              backgroundColor: 'transparent',
             }}
           >
-            <NeuralBrainBackground
-              primaryColor={themeColors.primary}
-              secondaryColor={themeColors.secondary}
-              mode={mode}
-            />
+            {/* Sub-agent breadcrumb — only when this session is a child */}
+            {chatState?.parentSessionId && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  zIndex: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 1.5,
+                  py: 0.75,
+                  backgroundColor: mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
+                  backdropFilter: 'blur(10px) saturate(120%)',
+                  WebkitBackdropFilter: 'blur(10px) saturate(120%)',
+                  borderBottom: 1,
+                  borderColor: mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                  color: 'text.primary',
+                  fontSize: '0.8rem',
+                }}
+              >
+                <Tooltip title={il8n?.t('reactor.client.chat.subagents.backToParent', { defaultValue: 'Back to parent session' })}>
+                  <IconButton
+                    size="small"
+                    onClick={handleNavigateToParent}
+                    aria-label="Back to parent session"
+                    sx={{ mr: 0.5 }}
+                  >
+                    <ArrowBack fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <AccountTree fontSize="small" sx={{ opacity: 0.7 }} />
+                <Box
+                  onClick={handleNavigateToParent}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    '&:hover': { opacity: 0.85 },
+                    minWidth: 0,
+                  }}
+                >
+                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                    {il8n?.t('reactor.client.chat.subagents.parent', { defaultValue: 'Parent' })}
+                  </Typography>
+                  <NavigateNext fontSize="small" sx={{ opacity: 0.6 }} />
+                  <Typography variant="caption" noWrap sx={{ maxWidth: 260 }}>
+                    {parentMeta?.title
+                      || il8n?.t('reactor.client.chat.subagents.untitledParent', { defaultValue: 'Untitled session' })}
+                  </Typography>
+                  {parentMeta?.personaId && (() => {
+                    const parentPersona = getPersona?.(parentMeta.personaId);
+                    return parentPersona ? (
+                      <Chip
+                        label={parentPersona.name}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.65rem', height: 18 }}
+                      />
+                    ) : null;
+                  })()}
+                </Box>
+                <Box sx={{ flex: 1 }} />
+                <Chip
+                  label={il8n?.t('reactor.client.chat.subagents.subAgentBadge', { defaultValue: 'Sub-agent' })}
+                  size="small"
+                  color="primary"
+                  sx={{ fontSize: '0.65rem', height: 18 }}
+                />
+              </Box>
+            )}
             {/* Chat List Panel */}
             <Paper
               elevation={0}
@@ -1409,6 +1619,8 @@ export default (props) => {
                 minHeight: 0,
                 zIndex: 1,
                 backgroundColor: mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
+                backdropFilter: 'blur(6px) saturate(120%)',
+                WebkitBackdropFilter: 'blur(6px) saturate(120%)',
               }}
               style={{
                 padding: '0',
@@ -1528,6 +1740,10 @@ export default (props) => {
               providerAuthStatuses={providerAuthStatuses}
               onProviderAuthSave={saveProviderAuth}
               onProviderAuthRemove={removeProviderAuth}
+              onProviderAuthRevert={revertProviderAuth}
+              onProviderAuthSaveSession={saveSessionProviderAuth}
+              onProviderAuthClearSession={clearSessionProviderAuth}
+              chatSessionId={chatState?.id}
               onMaxToolIterationsChange={setMaxToolIterations}
               getToolIcon={getToolIcon}
               Material={Material}
@@ -1568,6 +1784,17 @@ export default (props) => {
               onClose={handleTodosPanelClose}
               chatState={chatState}
               onRefreshVars={handleRefreshChatVars}
+              Material={Material}
+              il8n={il8n}
+            />
+
+            {/* Sub-agents Panel - Slides up from bottom (only when parent has children) */}
+            <SubAgentsPanel
+              open={subAgentsPanelOpen}
+              onClose={handleSubAgentsPanelClose}
+              chatState={chatState}
+              getPersona={getPersona}
+              onSelectChild={handleSelectChildSession}
               Material={Material}
               il8n={il8n}
             />
@@ -1669,8 +1896,8 @@ export default (props) => {
         />
       )}
 
-      {/* Persona RadialFab - Bottom Right */}
-      <RadialFab
+      {/* Persona agent toolwindow shortcut bar - Bottom Right */}
+      <AgentToolWindowBar
         mainSize="small"
         actions={personaSpeedDialActions.map(action => ({
           icon: action.icon,
@@ -1708,7 +1935,7 @@ export default (props) => {
         mainClickLabel="Select Persona"
         position="bottom-right"
         spacing={16}
-        radius={65}
+        mode={mode}
         sx={{
           zIndex: 1000,
           transition: 'all 0.3s ease-in-out',
@@ -1722,63 +1949,6 @@ export default (props) => {
           right: 8,
         }}
       />
-      {/* Token Pressure Progress Bar - Moved to top */}
-      {chatState?.tokenPressure !== undefined && !busy && (
-        <LinearProgress
-          variant="determinate"
-          value={(chatState.tokenPressure || 0) * 100}
-          color={getTokenPressureColor(chatState.tokenPressure || 0)}
-          sx={{
-            height: 3,
-            borderRadius: 0,
-            mb: 1,
-            '& .MuiLinearProgress-bar': {
-              transition: 'transform 0.3s ease-in-out',
-            },
-          }}
-        />
-      )}
-
-      {/* Chat status indicator */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: busy ? 'auto' : 0 }}>
-        <ChatStatusIndicator
-          status={chatStatusInfo.status}
-          label={chatStatusInfo.label}
-          icon={chatStatusInfo.icon}
-          color={chatStatusInfo.color}
-          Material={Material}
-        />
-      </Box>
-
-      {busy && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <LinearProgress
-            variant="indeterminate"
-            color="primary"
-            sx={{
-              flex: 1,
-              height: 3,
-              borderRadius: 0,
-              mb: 1,
-              '& .MuiLinearProgress-bar': {
-                transition: 'transform 0.3s ease-in-out',
-              },
-            }}
-          />
-          {(chatState?.toolApprovalMode === ToolApprovalMode.AUTO ||
-            chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO) && (
-            <IconButton
-              size="small"
-              onClick={() => interruptExecution()}
-              sx={{ mb: 1 }}
-              title="Stop execution"
-            >
-              <Icon>stop_circle</Icon>
-            </IconButton>
-          )}
-        </Box>
-      )}
-
       {/* Pending tool call resume banner */}
       {pendingToolCallResume && (
         <PendingToolCallsBanner
@@ -1801,34 +1971,94 @@ export default (props) => {
           il8n={il8n}
         />
       )}
-      <ChatInput
-        onSendMessage={handleSendMessage}
-        disabled={busy}
-        placeholder={supportsImageGeneration
-          ? "Ask me anything... or describe an image to create"
-          : "Ask me anything..."}
-        onRecordingToggle={handleRecordingPanelToggle}
-        recordingPanelOpen={recordingPanelOpen}
-        voiceModeActive={speech.state.voiceModeActive}
-        onVoiceModeToggle={handleVoiceModeToggle}
-        onFileUpload={React.useCallback(async (file: File) => {
-          // Let uploadFile handle session initialization if needed
-          if (uploadFile) {
-            await uploadFile(file, chatState?.id || '');
-          }
-        }, [uploadFile, chatState?.id])}
-        chatState={chatState}
-        supportsImages={supportsImages}
-        pendingImages={pendingImages}
-        onPastedImages={React.useCallback((images: string[]) => {
-          setPendingImages((prev) => [...prev, ...images]);
-        }, [])}
-        onRemovePendingImage={React.useCallback((index: number) => {
-          setPendingImages((prev) => prev.filter((_, i) => i !== index));
-        }, [])}
-        toolApprovalMode={chatState?.toolApprovalMode}
-        onToolApprovalModeChange={setToolApprovalMode}
-      />
+      {/* Input area + floating thinking overlay.
+          The status pill is positioned absolutely above the input bar so it
+          reads as a small overlay rising from the input surface, instead of
+          taking vertical space and pushing chat content up. */}
+      <Box sx={{ position: 'relative' }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 0.75,
+            pointerEvents: 'none',
+            zIndex: 2,
+            '@keyframes reactorChatThinkingRise': {
+              '0%': { opacity: 0, transform: 'translateY(6px)' },
+              '100%': { opacity: 1, transform: 'translateY(0)' },
+            },
+            animation: 'reactorChatThinkingRise 220ms ease-out',
+          }}
+        >
+          <Box sx={{ display: 'inline-flex', pointerEvents: 'auto' }}>
+            <ChatStatusIndicator
+              status={chatStatusInfo.status}
+              label={chatStatusInfo.label}
+              icon={chatStatusInfo.icon}
+              color={chatStatusInfo.color}
+              Material={Material}
+              mode={mode}
+            />
+          </Box>
+          {busy && (
+            (chatState?.toolApprovalMode === ToolApprovalMode.AUTO ||
+              chatState?.toolApprovalMode === ToolApprovalMode.SAFE_AUTO) && (
+              <Tooltip title="Stop execution">
+                <IconButton
+                  size="small"
+                  onClick={() => interruptExecution()}
+                  sx={{
+                    p: 0.25,
+                    color: 'text.secondary',
+                    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(5,5,15,0.55)' : 'rgba(238,238,255,0.55)',
+                    backdropFilter: 'blur(10px) saturate(120%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(120%)',
+                    border: (t) => `1px solid ${t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                    pointerEvents: 'auto',
+                    '&:hover': { color: 'error.main' },
+                  }}
+                >
+                  <Icon sx={{ fontSize: '0.95rem' }}>stop_circle</Icon>
+                </IconButton>
+              </Tooltip>
+            )
+          )}
+        </Box>
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          disabled={busy}
+          placeholder={supportsImageGeneration
+            ? "Ask me anything... or describe an image to create"
+            : "Ask me anything..."}
+          onRecordingToggle={handleRecordingPanelToggle}
+          recordingPanelOpen={recordingPanelOpen}
+          voiceModeActive={speech.state.voiceModeActive}
+          onVoiceModeToggle={handleVoiceModeToggle}
+          onFileUpload={React.useCallback(async (file: File) => {
+            // Let uploadFile handle session initialization if needed
+            if (uploadFile) {
+              await uploadFile(file, chatState?.id || '');
+            }
+          }, [uploadFile, chatState?.id])}
+          chatState={chatState}
+          supportsImages={supportsImages}
+          pendingImages={pendingImages}
+          onPastedImages={React.useCallback((images: string[]) => {
+            setPendingImages((prev) => [...prev, ...images]);
+          }, [])}
+          onRemovePendingImage={React.useCallback((index: number) => {
+            setPendingImages((prev) => prev.filter((_, i) => i !== index));
+          }, [])}
+          toolApprovalMode={chatState?.toolApprovalMode}
+          onToolApprovalModeChange={setToolApprovalMode}
+        />
+      </Box>
+      </Box>
     </Box>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { gql } from '@apollo/client';
 import { IAIPersona, ChatState } from '../../types';
 import UserHomeFolder from '../../../UserHomeFolder/UserHomeFolder';
+import { glassPanelSx } from '../../utils';
 
 // Import SelectedItem interface from UserHomeFolder
 interface SelectedItem {
@@ -1267,6 +1268,7 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
       <Paper
         elevation={3}
         sx={{
+          ...glassPanelSx(reactory?.muiTheme?.palette?.mode ?? 'dark'),
           position: 'absolute',
           top: 0,
           left: 0,
@@ -1277,7 +1279,6 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          backdropFilter: 'blur(10px) saturate(120%)',
         }}
       >
       {/* Header */}
@@ -1287,7 +1288,6 @@ const FilesPanel: React.FC<FilesPanelProps> = ({
         p: 2,
         borderBottom: 1,
         borderColor: 'divider',
-        bgcolor: 'background.paper'
       }}>
         <IconButton
           onClick={onClose}

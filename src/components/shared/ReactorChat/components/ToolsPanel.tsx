@@ -5,6 +5,7 @@ import { Provider, ProviderAuthStatus } from '../hooks/useProviders';
 import { useContentRender } from '@reactory/client-core/components/shared/hooks/useContentRender';
 import { max } from 'lodash';
 import { border } from '@mui/system';
+import { glassPanelSx } from '../utils';
 interface ToolsPanelProps {
   open: boolean;
   onClose: () => void;
@@ -37,6 +38,14 @@ interface ToolsPanelProps {
   }) => Promise<void>;
   /** Remove provider auth credentials */
   onProviderAuthRemove?: (providerId: string) => Promise<void>;
+  /** Revert to defaults: clears local echo and removes server-stored user auth */
+  onProviderAuthRevert?: (providerId: string) => Promise<void>;
+  /** Save credentials that apply only to the current chat session (localStorage only) */
+  onProviderAuthSaveSession?: (chatSessionId: string, credentials: Record<string, any>) => void;
+  /** Clear the per-chat-session credential override (localStorage only) */
+  onProviderAuthClearSession?: (chatSessionId: string) => void;
+  /** Active chat session id — used for per-session auth overrides */
+  chatSessionId?: string;
   /** Callback when user changes max tool iterations */
   onMaxToolIterationsChange?: (maxIterations: number) => void;
   Material: any;
@@ -65,6 +74,10 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   providerAuthStatuses = [],
   onProviderAuthSave,
   onProviderAuthRemove,
+  onProviderAuthRevert,
+  onProviderAuthSaveSession,
+  onProviderAuthClearSession,
+  chatSessionId,
   onMaxToolIterationsChange,
   Material,
   toCamelCaseLabel,
@@ -76,6 +89,8 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   const [configProviderId, setConfigProviderId] = useState<string | null>(null);
   const [configForm, setConfigForm] = useState<Record<string, any>>({});
   const [configSaving, setConfigSaving] = useState(false);
+  const [configReverting, setConfigReverting] = useState(false);
+  const [applyToSessionOnly, setApplyToSessionOnly] = useState(false);
   const { renderContent } = useContentRender(reactory);
 
   const {
@@ -107,6 +122,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     <Paper
       elevation={3}
       sx={{
+        ...glassPanelSx(reactory?.muiTheme?.palette?.mode ?? 'dark'),
         position: 'absolute',
         top: 0,
         left: 0,
@@ -119,8 +135,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
-        zIndex: 2,        
-        backdropFilter: 'blur(15px) saturate(120%)',
+        zIndex: 2,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -202,7 +217,16 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                       size="small"
                       onClick={() => {
                         setConfigProviderId(provider.id);
-                        setConfigForm({ providerId: provider.id });
+                        const existing = authStatus;
+                        setConfigForm({
+                          providerId: provider.id,
+                          apiKey: '',
+                          endpoint: existing?.endpoint || '',
+                          organization: existing?.organization || '',
+                          setAsAccountDefault: existing?.isDefault !== false,
+                          setAsAppDefault: existing?.isAppDefault === true,
+                        });
+                        setApplyToSessionOnly(false);
                         setConfigDialogOpen(true);
                       }}
                     >
@@ -248,7 +272,15 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
               fullWidth
               value={configForm.apiKey || ''}
               onChange={(e) => setConfigForm((prev) => ({ ...prev, apiKey: e.target.value }))}
-              placeholder="Enter your API key or token"
+              placeholder={(() => {
+                const hint = providerAuthStatuses.find((s) => s.provider === configProviderId)?.maskedKeyHint;
+                return hint ? `Stored key: ${hint} — leave blank to keep` : 'Enter your API key or token';
+              })()}
+              helperText={(() => {
+                const status = providerAuthStatuses.find((s) => s.provider === configProviderId);
+                if (!status?.maskedKeyHint) return undefined;
+                return `Currently stored: ${status.maskedKeyHint}`;
+              })()}
             />
             <TextField
               label="Endpoint URL"
@@ -289,6 +321,19 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
             <FormControlLabel
               control={
                 <Switch
+                  checked={applyToSessionOnly}
+                  onChange={(e) => setApplyToSessionOnly(e.target.checked)}
+                  size="small"
+                  disabled={!chatSessionId}
+                />
+              }
+              label={il8n?.t('reactor.client.providers.auth.sessionOnly', {
+                defaultValue: 'Apply only to this chat session (stored in this browser)',
+              })}
+            />
+            <FormControlLabel
+              control={
+                <Switch
                   checked={configForm.setAsAccountDefault !== false}
                   onChange={(e) =>
                     setConfigForm((prev) => ({
@@ -297,9 +342,12 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                     }))
                   }
                   size="small"
+                  disabled={applyToSessionOnly}
                 />
               }
-              label="Set as my default"
+              label={il8n?.t('reactor.client.providers.auth.accountDefault', {
+                defaultValue: 'Set as my default for this provider',
+              })}
             />
             <FormControlLabel
               control={
@@ -312,6 +360,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                     }))
                   }
                   size="small"
+                  disabled={applyToSessionOnly}
                 />
               }
               label="Set as application default (ADMIN)"
@@ -319,6 +368,28 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
           </Box>
         </DialogContent>
         <DialogActions>
+          <Button
+            color="warning"
+            disabled={
+              configReverting ||
+              !onProviderAuthRevert ||
+              !providerAuthStatuses.find((s) => s.provider === configProviderId)?.configured
+            }
+            onClick={async () => {
+              if (!onProviderAuthRevert || !configProviderId) return;
+              setConfigReverting(true);
+              try {
+                await onProviderAuthRevert(configProviderId);
+                setConfigDialogOpen(false);
+                setConfigForm({});
+              } finally {
+                setConfigReverting(false);
+              }
+            }}
+          >
+            {il8n?.t('reactor.client.providers.auth.revert', { defaultValue: 'Revert to defaults' })}
+          </Button>
+          <Box sx={{ flex: '1 1 auto' }} />
           <Button onClick={() => setConfigDialogOpen(false)}>
             {il8n?.t('common.cancel', { defaultValue: 'Cancel' })}
           </Button>
@@ -326,10 +397,18 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
             variant="contained"
             disabled={configSaving || !configForm.apiKey}
             onClick={async () => {
-              if (!onProviderAuthSave || !configProviderId) return;
+              if (!configProviderId) return;
+              const { providerId: _pid, setAsAccountDefault, setAsAppDefault, ...credentials } = configForm;
+              if (applyToSessionOnly) {
+                if (!onProviderAuthSaveSession || !chatSessionId) return;
+                onProviderAuthSaveSession(chatSessionId, credentials);
+                setConfigDialogOpen(false);
+                setConfigForm({});
+                return;
+              }
+              if (!onProviderAuthSave) return;
               setConfigSaving(true);
               try {
-                const { providerId: _pid, setAsAccountDefault, setAsAppDefault, ...credentials } = configForm;
                 await onProviderAuthSave({
                   providerId: configProviderId,
                   credentials,

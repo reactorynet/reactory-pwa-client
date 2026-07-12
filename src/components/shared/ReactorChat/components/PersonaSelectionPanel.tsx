@@ -1,6 +1,7 @@
 import React from 'react';
 import { IAIPersona } from '../types';
 import PersonaCard from './PersonaCard';
+import { glassPanelSx } from '../utils';
 
 interface PersonaSelectorProps {
   open: boolean;
@@ -23,6 +24,8 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
   toCamelCaseLabel,
   il8n
 }) => {
+  const theme = Material.MaterialCore.useTheme();
+  const mode = theme?.palette?.mode ?? 'dark';
   const {
     Paper,
     Grid,
@@ -35,6 +38,7 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
     <Paper
       elevation={3}
       sx={{
+        ...glassPanelSx(mode),
         position: 'absolute',
         top: 0,
         left: 0,
@@ -47,8 +51,7 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
-        zIndex: 2,        
-        backdropFilter: 'blur(10px) saturate(150%)',
+        zIndex: 2,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>

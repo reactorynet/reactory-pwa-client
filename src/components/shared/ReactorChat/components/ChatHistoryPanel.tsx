@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChatState, IAIPersona } from '../types';
+import { glassPanelSx } from '../utils';
 
 interface ChatHistoryPanelProps {
   open: boolean;
@@ -24,6 +25,8 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   Material,
   il8n
 }) => {
+  const theme = Material.MaterialCore.useTheme();
+  const mode = theme?.palette?.mode ?? 'dark';
   const {
     Paper,
     Box,
@@ -39,6 +42,7 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
     <Paper
       elevation={3}
       sx={{
+        ...glassPanelSx(mode),
         position: 'absolute',
         top: 0,
         left: 0,
@@ -50,8 +54,7 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
-        zIndex: 3,        
-        backdropFilter: 'blur(15px) saturate(120%)',
+        zIndex: 3,
       }}
     >
       {/* Header */}
@@ -61,7 +64,6 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
         p: 2,
         borderBottom: 1,
         borderColor: 'divider',
-        bgcolor: 'background.paper'
       }}>
         <IconButton
           onClick={onClose}

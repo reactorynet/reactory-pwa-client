@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useReactory } from "@reactory/client-core/api";
 import { ChatState, ToolApprovalMode } from '../types';
+import { glassPanelSx } from '../utils';
 
 interface ChatInputProps {
   onSendMessage: (message: string, images?: string[]) => void;
@@ -159,7 +160,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   }, [supportsImages, onPastedImages, reactory]);
 
   return (
-    <Paper elevation={3} sx={{ p: 2 }}>
+    <Paper elevation={0} sx={{ p: 2, ...glassPanelSx(theme.palette.mode) }}>
       {/* Pending image preview strip */}
       {pendingImages.length > 0 && (
         <Box

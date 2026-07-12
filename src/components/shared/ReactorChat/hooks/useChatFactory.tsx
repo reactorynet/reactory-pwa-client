@@ -18,6 +18,8 @@ interface ChatFactoryHookResult {
   rateMessage: (messageId: string, rating: number) => Promise<void>
   // loads a chat session by id
   loadChat: (chatSessionId: string) => Promise<void>
+  // fetches a lightweight summary of a session without switching the active chat
+  fetchConversationMeta: (chatSessionId: string) => Promise<{ id: string; title?: string; personaId?: string } | null>
   // starts a new chat session, returns the new session ID
   newChat: () => Promise<string | null>
   // function use to return all the available chats for the
@@ -117,6 +119,12 @@ interface ChatFactorHookOptions {
   onStreamError?: (error: any) => void;
   /** Optional session logger for client-side debug logging to the server */
   sessionLogger?: import('../types').SessionLogger;
+  /**
+   *  Returns a per-session provider credential override (read from localStorage)
+   *  to attach to each sendMessage request. Used by the ToolsPanel "Apply only
+   *  to this chat session" flow. When null/empty, no override is sent.
+   */
+  getProviderAuthOverride?: (chatSessionId: string) => import('./useProviders').ProviderAuthOverride | null;
 }
 
 type ChatFactoryHook = (props: ChatFactorHookOptions) => ChatFactoryHookResult
@@ -266,7 +274,18 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     protocol = 'graphql',
     existingSession,
     sessionLogger,
+    getProviderAuthOverride,
   } = props;
+
+  const resolveAuthOverride = (chatSessionId?: string) => {
+    if (!chatSessionId || !getProviderAuthOverride) return undefined;
+    const override = getProviderAuthOverride(chatSessionId);
+    if (!override) return undefined;
+    const hasAny = Object.values(override).some(
+      (v) => v !== undefined && v !== null && v !== ''
+    );
+    return hasAny ? override : undefined;
+  };
 
   const persona = React.useMemo(() => rawPersona, [rawPersona?.id]);
 
@@ -646,6 +665,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
           ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
           ...(images && images.length > 0 ? { images } : {}),
+          ...(resolveAuthOverride(sessionId) ? { providerAuthOverride: resolveAuthOverride(sessionId) } : {}),
         } as ReactorSendMessageInput);
 
         if (!resp) throw new Error('No response from server');
@@ -682,6 +702,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 streamingMode: 'SSE',
                 ...(modelOverride?.modelId ? { modelId: modelOverride.modelId } : {}),
                 ...(modelOverride?.providerId ? { providerId: modelOverride.providerId } : {}),
+                ...(resolveAuthOverride(sessionId) ? { providerAuthOverride: resolveAuthOverride(sessionId) } : {}),
               });
 
               // Handle error responses from the re-sent message
@@ -2395,6 +2416,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             ...prevState,
             // Only update specific properties, don't spread the entire result
             id: (result as any).id,
+            personaId: (result as any).personaId,
+            parentSessionId: (result as any).parentSessionId ?? null,
+            chats: Array.isArray((result as any).chats) ? (result as any).chats : [],
             started: (result as any).started,
             history: greetingEntry ? [greetingEntry, ...serverHistory] : serverHistory,
             tools: uniqueTools,
@@ -2484,6 +2508,28 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       setChatLoading(false);
     }
   };
+
+  /**
+   * Fetch a lightweight summary of another session (e.g. the parent of the
+   * current sub-agent session) without switching the active chat. Used by
+   * the breadcrumb bar to label the "back to parent" action.
+   */
+  const fetchConversationMeta = React.useCallback(async (
+    chatSessionId: string
+  ): Promise<{ id: string; title?: string; personaId?: string } | null> => {
+    if (!chatSessionId) return null;
+    try {
+      const result = await graph.getConversation(chatSessionId);
+      if (!result || (result as any).__typename === 'ReactorErrorResponse') return null;
+      return {
+        id: (result as any).id,
+        title: (result as any).title,
+        personaId: (result as any).personaId,
+      };
+    } catch {
+      return null;
+    }
+  }, [graph]);
 
   /**
    * Consolidate tool results into a single message for the AI provider
@@ -3256,6 +3302,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     newChat,
     sendMessage,
     loadChat,
+    fetchConversationMeta,
     listChats: fetchConversations,
     setToolApprovalMode,
     chats,

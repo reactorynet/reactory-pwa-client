@@ -28,6 +28,7 @@ import {
   TextField,
   Breakpoint,
   Box,
+  LinearProgress,
 
 } from '@mui/material'
 import { alpha, SxProps } from '@mui/material/styles';
@@ -718,7 +719,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             _detail_props = { ..._detail_props, ...uiOptions.detailPanelProps };
           }          
           if (uiOptions.detailPanelPropsMap) {
-            _detail_props = reactory.utils.objectMapper({
+            const mapped = reactory.utils.objectMapper({
               detailPanelProps: uiOptions.detailPanelProps || {},
               table_props: props,
               props: detail_props,
@@ -728,7 +729,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
               idSchema,
             }, uiOptions.detailPanelPropsMap)
 
-            _detail_props = { ...detail_props, ..._detail_props };
+            // Preserve the static detailPanelProps (e.g. sections, titleFields)
+            // alongside the mapped values — the objectMapper output only carries
+            // the mapped keys, so merging just detail_props + mapped would drop
+            // the panel's configuration.
+            _detail_props = { ...detail_props, ...(uiOptions.detailPanelProps || {}), ...mapped };
           }
 
           return <DetailsPanelComponent {..._detail_props} formContext={formContext} tableRef={tableRef} />
@@ -846,6 +851,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       reactory.log(`Error getting remote data`, { remoteDataError });
       if (isMountedRef.current) setIsLoading(false);
       return response;
+    } finally {
+      // Guarantee the loading flag clears on every exit path — including the
+      // early returns above (missing query definition / query execution error)
+      // — so the loading indicator can never get stuck on.
+      setIsLoading(false);
     }
     
     if (isMountedRef.current) {
@@ -1144,16 +1154,20 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   // Memoize refresh function with useCallback
   const refresh = useCallback((args: any) => {
     if (is_refreshing) return;
-    
+
     setIsRefreshing(true);
     if (uiOptions.remoteData === true) {
+      // Re-run the remote query directly — this custom table drives its data via
+      // getData(), so calling the (possibly absent) tableRef.onQueryChange isn't
+      // enough to refetch on a refreshEvent.
+      getData();
       if (tableRef.current && tableRef.current.onQueryChange) {
         tableRef.current.onQueryChange();
       }
     }
     setVersion(v => v + 1);
     setIsRefreshing(false);
-  }, [is_refreshing, uiOptions.remoteData]);
+  }, [is_refreshing, uiOptions.remoteData, getData]);
 
   if (!components.Pagination) {
     components.Pagination = (pagination_props: any) => {
@@ -1215,11 +1229,21 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   // CONSOLIDATED EFFECTS - Optimized to reduce re-renders
   // ============================================
 
+  // Holds the initial `query` reference. `query` only changes via setQuery
+  // (user search, filter, or pagination), so a differing reference is a
+  // reliable signal that the user has interacted with the grid.
+  const initialQueryRef = React.useRef(query);
+
   // Effect 1: Data fetching - only when query changes
   React.useEffect(() => {
-    if (uiOptions.remoteData === true) {
-      getData();
+    if (uiOptions.remoteData !== true) return;
+    // When deferInitialLoad is set, skip the automatic fetch on mount and wait
+    // until the user triggers a query change (search / filter / paging). This
+    // avoids pulling large data sets before the user has narrowed the query.
+    if (uiOptions.deferInitialLoad === true && query === initialQueryRef.current) {
+      return;
     }
+    getData();
   }, [query, getData, uiOptions.remoteData]);
 
   // Effect 2: Mount/unmount - event binding
@@ -1958,8 +1982,10 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       if (ToolbarComponent) {
         // @ts-ignore
         return <ToolbarComponent
-          formContext={formContext} 
-          reactory={reactory} 
+          {...(uiOptions.toolbarProps || {})}
+          loading={isLoading}
+          formContext={formContext}
+          reactory={reactory}
           data={{
             data: data?.data || [],
             paging: data?.paging || {
@@ -2260,19 +2286,99 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     return (
       <>
         {getToolbar()}
-        <TableContainer 
-          sx={{ 
-            width: '100%',
-            overflowX: 'auto',
-            backgroundColor: theme.palette.background.paper,
-          }}
-        >
-          <Table id={`${idSchema.$id}_table`} style={getTableStyles()}>
-            {getHeader()}
-            {getBody()}
-            {getFooter()}
-          </Table>
-        </TableContainer>
+        {/* Query-in-flight indicator. Reserve the bar's height so toggling it
+            doesn't shift the table layout. */}
+        <Box sx={{ height: 4, width: '100%' }}>
+          {isLoading === true && <LinearProgress data-testid="material-table-loading" />}
+        </Box>
+        <Box sx={{ position: 'relative', width: '100%', minHeight: isLoading === true ? 160 : undefined }}>
+          <TableContainer
+            sx={{
+              width: '100%',
+              overflowX: 'auto',
+              backgroundColor: theme.palette.background.paper,
+            }}
+          >
+            <Table id={`${idSchema.$id}_table`} style={getTableStyles()}>
+              {getHeader()}
+              {getBody()}
+              {getFooter()}
+            </Table>
+          </TableContainer>
+          {/* Animated loading overlay over the data area. Pure-CSS keyframe
+              animations (pulsing dots + shimmer sweep) signal the query is in
+              flight; dims existing rows on refetch and fills the empty area on
+              first load. */}
+          {isLoading === true && (
+            <Box
+              data-testid="material-table-loading-overlay"
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1.5,
+                backgroundColor: alpha(theme.palette.background.paper, 0.66),
+                backdropFilter: 'blur(1.5px)',
+                transition: 'opacity 120ms ease-in',
+                '@keyframes reactoryTableDotPulse': {
+                  '0%, 80%, 100%': { transform: 'scale(0.55)', opacity: 0.3 },
+                  '40%': { transform: 'scale(1)', opacity: 1 },
+                },
+                '@keyframes reactoryTableShimmer': {
+                  '0%': { backgroundPosition: '-180% 0' },
+                  '100%': { backgroundPosition: '180% 0' },
+                },
+              }}
+            >
+              <Box sx={{ display: 'flex', gap: 0.9 }}>
+                {[0, 1, 2].map((dot) => (
+                  <Box
+                    key={dot}
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: theme.palette.primary.main,
+                      animation: 'reactoryTableDotPulse 1.2s ease-in-out infinite',
+                      animationDelay: `${dot * 0.16}s`,
+                    }}
+                  />
+                ))}
+              </Box>
+              <Box
+                sx={{
+                  width: 160,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundImage: `linear-gradient(90deg, ${alpha(
+                    theme.palette.primary.main,
+                    0.08
+                  )} 25%, ${alpha(theme.palette.primary.main, 0.35)} 50%, ${alpha(
+                    theme.palette.primary.main,
+                    0.08
+                  )} 75%)`,
+                  backgroundSize: '200% 100%',
+                  animation: 'reactoryTableShimmer 1.3s linear infinite',
+                }}
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  letterSpacing: 0.6,
+                  textTransform: 'uppercase',
+                  fontWeight: 600,
+                }}
+              >
+                Loading data…
+              </Typography>
+            </Box>
+          )}
+        </Box>
         {getPagination()}
         {confirmDialog}
       </>
