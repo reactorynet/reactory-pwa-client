@@ -593,6 +593,10 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   });
 
   const tableRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
+  React.useEffect(() => {
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   let columns = [];
   let actions = [];
@@ -791,7 +795,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           queryResult = await reactory.graphqlQuery(queryDefinition.text, variables, options).then();
         } catch (e) {
           reactory.log(`Error running query for grid`, { e });
-          setError("Error executing query");
+          if (isMountedRef.current) setError("Error executing query");
           return response;
         }
 
@@ -831,7 +835,7 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
           }
         } else {
           reactory.log(`Query returned null data`, { queryResult });
-          setError("No data returned from query");
+          if (isMountedRef.current) setError("No data returned from query");
         }
 
         if (queryResult?.errors && queryResult.errors.length > 0) {
@@ -840,12 +844,14 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
       }
     } catch (remoteDataError) {
       reactory.log(`Error getting remote data`, { remoteDataError });
-      setIsLoading(false);
+      if (isMountedRef.current) setIsLoading(false);
       return response;
     }
     
-    setData(response);
-    setIsLoading(false);
+    if (isMountedRef.current) {
+      setData(response);
+      setIsLoading(false);
+    }
     return response;
   }, [query, formContext.graphql, uiOptions.query, uiOptions.variables, uiOptions.resultMap, uiOptions.disablePaging, formContext.$selectedRows, reactory]);
 
@@ -1910,6 +1916,33 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
     
   }
 
+  // Stable toolbar callbacks — defined with useCallback so their identity doesn't change on
+  // every render. This is critical: SearchBar's useDebouncedSearch has `onSearch` in its
+  // useEffect dependency array, so a new function reference every render would trigger the
+  // effect on every render and cause an infinite setQuery → re-render loop.
+  const onToolbarSearchChange = useCallback((text: string) => {
+    setQuery(prev => {
+      if (prev.search === text) return prev;  // same value — bail out, no re-render
+      return { ...prev, search: text, page: 1 };
+    });
+  }, []);  // setQuery (from useState) is always stable
+
+  const onToolbarFilterChange = useCallback((filters: any[]) => {
+    const filterFields = filters.reduce((acc: Record<string, any>, f: any) => {
+      if (f?.field !== undefined && f?.value !== undefined) {
+        acc[f.field] = f.value;
+      }
+      return acc;
+    }, {});
+    setQuery(prev => ({ ...prev, ...filterFields, page: 1 }));
+  }, []);  // setQuery is always stable
+
+  const onToolbarDataChange = useCallback((filteredData: any[]) => {
+    if (uiOptions.remoteData !== true) {
+      setData(prev => ({ ...prev, data: filteredData }));
+    }
+  }, [uiOptions.remoteData]);
+
   const getToolbar = () => {
 
     // Calculate selected count more efficiently
@@ -1938,10 +1971,9 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
             selected: getSelectedRows()
           }} 
           // @ts-ignore
-          onDataChange={() => {
-            // console log for now
-            console.log('onDataChange', data);
-          }} 
+          onDataChange={onToolbarDataChange}
+          onSearchChange={onToolbarSearchChange}
+          onFilterChange={onToolbarFilterChange}
           searchText={searchText} 
           queryVariables={(() => {
             // Reflect the full active filter state back to the toolbar.
