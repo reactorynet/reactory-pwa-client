@@ -1,0 +1,58 @@
+name: Build smoke test
+
+# Confirms the pwa-client container image actually builds. Before
+# config/env/reactory/Dockerfile existed (added July 2026), bin/podman-build.sh
+# failed outright with no automated check ever catching it — reactory-express-
+# server's docker-compose expects this image to exist and nothing verified it
+# could be produced.
+#
+# Uses `docker build` directly rather than bin/podman-build.sh so the check
+# doesn't require installing podman on the runner; the Dockerfile itself is
+# runtime-agnostic.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "config/env/**"
+      - "scripts/**"
+      - "src/**"
+      - "package.json"
+      - "yarn.lock"
+      - ".github/workflows/build-smoke-test.yml"
+  pull_request:
+    paths:
+      - "config/env/**"
+      - "scripts/**"
+      - "src/**"
+      - "package.json"
+      - "yarn.lock"
+      - ".github/workflows/build-smoke-test.yml"
+  workflow_dispatch: {}
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build client image
+        run: docker build -f config/env/reactory/Dockerfile -t reactory-pwa-client:ci .
+
+  build-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build static bundle
+        run: bin/build.sh reactory podman

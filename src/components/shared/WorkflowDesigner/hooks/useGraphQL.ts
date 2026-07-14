@@ -88,7 +88,7 @@ function toWorkflowDefinitionInput(definition: WorkflowDefinition) {
     tags: definition.tags,
     inputs: null,
     outputs: null,
-    variables: definition.variables ? JSON.stringify(definition.variables) : null,
+    variables: definition.variables ?? null,
     steps: definition.steps?.map((step) => ({
       id: step.id,
       name: step.name,
@@ -97,11 +97,11 @@ function toWorkflowDefinitionInput(definition: WorkflowDefinition) {
       enabled: true,
       continueOnError: false,
       timeout: null,
-      inputs: step.inputs ? JSON.stringify(step.inputs) : null,
+      inputs: step.inputs ?? null,
       outputs: null,
       condition: null,
       dependsOn: null,
-      config: step.config ? JSON.stringify(step.config) : null,
+      config: step.config ?? null,
       designer: {
         position: step.position ? { x: step.position.x, y: step.position.y } : null,
         size: step.size ? { width: step.size.width, height: step.size.height } : null,
