@@ -7,6 +7,7 @@ import ChartMacro from './chart.macro';
 import D3Macro from './d3.macro';
 import ImageMacro from './image.macro';
 import SidePanelStateMacro from './sidePanelState.macro';
+import AmqMacro from './amq.macro';
 import { MacroComponentDefinition } from '../../types';
 
 
@@ -20,6 +21,7 @@ const macros: MacroComponentDefinition<unknown>[] = [
   D3Macro,
   ImageMacro,
   SidePanelStateMacro,
+  AmqMacro,
 ];
 
 export default macros;

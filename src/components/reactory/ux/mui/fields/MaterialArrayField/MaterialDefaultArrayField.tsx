@@ -32,6 +32,7 @@ import {
 } from './types';
 import { useRegistry } from '@reactory/client-core/components/reactory/form/components/hooks';
 import { ReactoryFormUtilities } from '@reactory/client-core/components/reactory/form/types';
+import { computeArrayControls } from './arrayFieldControls';
 
 
 const DEFAULT_OPTIONS: Reactory.Schema.IUISchemaOptions = {
@@ -82,6 +83,21 @@ const DEFAULT_OPTIONS: Reactory.Schema.IUISchemaOptions = {
   padding: 'normal', 
   showTitle: true,
   showDescription: true,
+};
+
+/** Produce a sensible empty value for a newly added array item. */
+const defaultForSchema = (itemSchema: any): any => {
+  if (!itemSchema) return undefined;
+  if (itemSchema.default !== undefined) return itemSchema.default;
+  switch (itemSchema.type) {
+    case 'string': return '';
+    case 'boolean': return false;
+    case 'array': return [];
+    case 'object': return {};
+    case 'number':
+    case 'integer':
+    default: return undefined;
+  }
 };
 
 const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (props) => {
@@ -136,6 +152,28 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
     ...DEFAULT_OPTIONS,
     ...(uiSchema['ui:options'] as Reactory.Schema.IUIArrayFieldOptions || {})
   };
+
+  // ── Add / delete gating ─────────────────────────────────────────────────
+  // Adding and deleting are enabled BY DEFAULT. They are only disabled when
+  // explicitly turned off (ui:options.allowAdd/addable/allowDelete === false),
+  // when the field is readonly/disabled, or by the schema's item bounds:
+  //   - Add     : disabled once maxItems is reached.
+  //   - Delete  : disabled for the last item(s) when removing would drop the
+  //               array below its required minimum (minItems, or 1 when the
+  //               array is required and no minItems is set).
+  const itemCount = Array.isArray(formData) ? formData.length : 0;
+  const { addAllowed, addDisabled, underMaxItems, canRemoveItem } = computeArrayControls({
+    itemCount,
+    minItems: (schema as any).minItems,
+    maxItems: (schema as any).maxItems,
+    required,
+    readonly,
+    disabled,
+    allowAdd: options.allowAdd as boolean | undefined,
+    addable: (options as any).addable as boolean | undefined,
+    allowDelete: options.allowDelete as boolean | undefined,
+    canAdd: canAdd as boolean | undefined,
+  });
 
   const visible = !(options?.hidden === true);
   let buttons = null;
@@ -205,6 +243,28 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
     newFormData.splice(index, 1);
     onChange(newFormData);
   }, [formData, onChange]);
+
+  // Handle item addition. Self-contained (appends a default item via onChange)
+  // so the field works even when the form engine does not supply an onAddClick
+  // handler. Falls back to a supplied onAddClick when one is provided.
+  const addItem = useCallback((event?: any) => {
+    event?.preventDefault?.();
+    const itemSchema = schema.items;
+    let newItem: any;
+    const anyUtils: any = utils;
+    if (anyUtils && typeof anyUtils.getDefaultFormState === 'function') {
+      try {
+        newItem = anyUtils.getDefaultFormState(itemSchema, undefined, definitions);
+      } catch {
+        newItem = defaultForSchema(itemSchema);
+      }
+    } else {
+      newItem = defaultForSchema(itemSchema);
+    }
+    onChange([...(Array.isArray(formData) ? formData : []), newItem]);
+  }, [schema, utils, definitions, formData, onChange]);
+
+  const handleAdd = typeof onAddClick === 'function' ? onAddClick : addItem;
 
   // Render individual array items
   const renderArrayFieldItem = useCallback((itemProps: any) => {
@@ -287,16 +347,18 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
             </Tooltip>
           )}
           {has.remove && (
-            <Tooltip title="Remove">
-              <IconButton 
-                type="button" 
-                onClick={() => deleteItem(index)}
-                size="small"
-                color="error"
-                disabled={disabled}
-              >
-                <Icon>delete_outline</Icon>
-              </IconButton>
+            <Tooltip title={canRemoveItem ? 'Remove' : 'At least one entry is required'}>
+              <span>
+                <IconButton
+                  type="button"
+                  onClick={() => deleteItem(index)}
+                  size="small"
+                  color="error"
+                  disabled={disabled || !canRemoveItem}
+                >
+                  <Icon>delete_outline</Icon>
+                </IconButton>
+              </span>
             </Tooltip>
           )}
         </Box>
@@ -375,7 +437,7 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
     }
 
     return content;
-  }, [options, readonly, disabled, registry, onChangeForIndex, moveItem, deleteItem]);
+  }, [options, readonly, disabled, registry, onChangeForIndex, moveItem, deleteItem, canRemoveItem]);
   // Get component from string name
   const getComponentFromString = useCallback((componentName: string): React.ComponentType<any> => {
     if (!componentName) return null;
@@ -425,16 +487,18 @@ const MaterialDefaultArrayField: Reactory.Forms.ReactoryArrayFieldComponent = (p
 
   // Render toolbar
   const toolbar = options.showToolbar ? (
-    <Toolbar variant={options.toolbarVariant as any || "dense"}>        
-        {canAdd && (
-          <Tooltip title="Add item">
-            <IconButton
-              onClick={onAddClick}
-              disabled={disabled || readonly}
-              color='primary'
-              size="large">
-              <Icon>add</Icon>
-            </IconButton>
+    <Toolbar variant={options.toolbarVariant as any || "dense"}>
+        {addAllowed && (
+          <Tooltip title={underMaxItems ? 'Add item' : 'Maximum number of items reached'}>
+            <span>
+              <IconButton
+                onClick={handleAdd}
+                disabled={addDisabled}
+                color='primary'
+                size="large">
+                <Icon>add</Icon>
+              </IconButton>
+            </span>
           </Tooltip>
         )}
         {buttons}

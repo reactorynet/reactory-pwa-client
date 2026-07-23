@@ -116,8 +116,8 @@ export class InteractionManager implements IInteractionManager {
     this.boundHandlers.contextmenu = this.handleContextMenu.bind(this);
     
     this.canvas.addEventListener('mousedown', this.boundHandlers.mousedown);
-    this.canvas.addEventListener('mousemove', this.boundHandlers.mousemove);
-    this.canvas.addEventListener('mouseup', this.boundHandlers.mouseup);
+    window.addEventListener('mousemove', this.boundHandlers.mousemove);
+    window.addEventListener('mouseup', this.boundHandlers.mouseup);
     this.canvas.addEventListener('wheel', this.boundHandlers.wheel, { passive: false });
     this.canvas.addEventListener('contextmenu', this.boundHandlers.contextmenu);
     
@@ -127,8 +127,8 @@ export class InteractionManager implements IInteractionManager {
     this.boundHandlers.touchend = this.handleTouchEnd.bind(this);
     
     this.canvas.addEventListener('touchstart', this.boundHandlers.touchstart, { passive: false });
-    this.canvas.addEventListener('touchmove', this.boundHandlers.touchmove, { passive: false });
-    this.canvas.addEventListener('touchend', this.boundHandlers.touchend);
+    window.addEventListener('touchmove', this.boundHandlers.touchmove, { passive: false });
+    window.addEventListener('touchend', this.boundHandlers.touchend);
     
     // Prevent default drag behavior
     this.canvas.style.touchAction = 'none';
@@ -771,10 +771,10 @@ export class InteractionManager implements IInteractionManager {
         this.canvas.removeEventListener('mousedown', this.boundHandlers.mousedown);
       }
       if (this.boundHandlers.mousemove) {
-        this.canvas.removeEventListener('mousemove', this.boundHandlers.mousemove);
+        window.removeEventListener('mousemove', this.boundHandlers.mousemove);
       }
       if (this.boundHandlers.mouseup) {
-        this.canvas.removeEventListener('mouseup', this.boundHandlers.mouseup);
+        window.removeEventListener('mouseup', this.boundHandlers.mouseup);
       }
       if (this.boundHandlers.wheel) {
         this.canvas.removeEventListener('wheel', this.boundHandlers.wheel);
@@ -786,10 +786,10 @@ export class InteractionManager implements IInteractionManager {
         this.canvas.removeEventListener('touchstart', this.boundHandlers.touchstart);
       }
       if (this.boundHandlers.touchmove) {
-        this.canvas.removeEventListener('touchmove', this.boundHandlers.touchmove);
+        window.removeEventListener('touchmove', this.boundHandlers.touchmove);
       }
       if (this.boundHandlers.touchend) {
-        this.canvas.removeEventListener('touchend', this.boundHandlers.touchend);
+        window.removeEventListener('touchend', this.boundHandlers.touchend);
       }
     }
     

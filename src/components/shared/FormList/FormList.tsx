@@ -143,7 +143,14 @@ const FormList: React.FC<FormListProps> = ({
   const loadForms = useCallback(async () => {
     setLoading(true);
     try {
-      // Get forms from reactory - this might need to be adjusted based on your API
+      // Force a fresh fetch (bypassing the 5 minute cache) so that YAML / user
+      // authored forms that were added or saved since the last load are
+      // included in the list.
+      try {
+        await reactory.forms(true);
+      } catch (refreshErr) {
+        reactory.log?.('FormList:loadForms:refresh:error', { refreshErr });
+      }
       const allForms = reactory.formSchemas || [];
       
       let filteredForms = allForms;

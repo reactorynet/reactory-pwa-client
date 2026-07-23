@@ -212,6 +212,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     const newDefinition = typeof updater === 'function' ? updater(definitionRef.current) : updater;
     
     setDefinition(newDefinition);
+    definitionRef.current = newDefinition; // Sync immediately to prevent stale closure bugs
     
     addToHistory({
       type: 'update_definition',
@@ -232,6 +233,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     newDefinition.steps[stepIndex] = { ...oldStep, ...updates };
 
     setDefinition(newDefinition);
+    definitionRef.current = newDefinition; // Sync immediately to prevent stale closure bugs
     
     addToHistory({
       type: 'update_step',
@@ -285,6 +287,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     );
 
     setDefinition(newDefinition);
+    definitionRef.current = newDefinition; // Sync immediately to prevent stale closure bugs
     
     // Update selection
     setSelection(prev => ({
@@ -306,6 +309,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     newDefinition.connections.push(connection);
 
     setDefinition(newDefinition);
+    definitionRef.current = newDefinition; // Sync immediately to prevent stale closure bugs
     
     addToHistory({
       type: 'add_connection',
@@ -325,6 +329,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     newDefinition.connections.splice(connectionIndex, 1);
 
     setDefinition(newDefinition);
+    definitionRef.current = newDefinition; // Sync immediately to prevent stale closure bugs
     
     // Update selection
     setSelection(prev => ({
@@ -413,6 +418,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     try {
       const loadedDefinition = await onLoad(loadWorkflowId);
       setDefinition(loadedDefinition);
+      definitionRef.current = loadedDefinition; // Sync immediately to prevent stale closure bugs
       lastSavedDefinitionRef.current = cloneDefinition(loadedDefinition);
       setIsDirty(false);
       
@@ -448,7 +454,9 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     if (historyIndex < 0) return;
     
     const action = history[historyIndex];
-    setDefinition(action.undoData as WorkflowDefinition);
+    const newDefinition = action.undoData as WorkflowDefinition;
+    setDefinition(newDefinition);
+    definitionRef.current = newDefinition; // Sync immediately to prevent stale closure bugs
     setHistoryIndex(prev => prev - 1);
   }, [history, historyIndex]);
 
@@ -456,7 +464,9 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
     if (historyIndex >= history.length - 1) return;
     
     const action = history[historyIndex + 1];
-    setDefinition(action.redoData as WorkflowDefinition);
+    const newDefinition = action.redoData as WorkflowDefinition;
+    setDefinition(newDefinition);
+    definitionRef.current = newDefinition; // Sync immediately to prevent stale closure bugs
     setHistoryIndex(prev => prev + 1);
   }, [history, historyIndex]);
 
@@ -469,6 +479,7 @@ export function useWorkflowDesigner(options: UseWorkflowDesignerOptions): UseWor
   const reset = useCallback(() => {
     const defaultDef = createDefaultDefinition();
     setDefinition(defaultDef);
+    definitionRef.current = defaultDef; // Sync immediately to prevent stale closure bugs
     setViewport({
       zoom: CANVAS_DEFAULTS.ZOOM_DEFAULT,
       panX: 0,

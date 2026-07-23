@@ -242,16 +242,29 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     setVersion(version + 1);
   };
 
-  const onChange = (props: SchemaFormOnChangeEventProps<unknown>) => {
+  const onChange = (changeProps: SchemaFormOnChangeEventProps<unknown>) => {
     const {
       formData: nextFormData,
-    } = props;
-    const hasDelta = deepEquals(formData, nextFormData) === false;  
+      errorSchema: nextErrorSchema,
+      errors: nextErrors,
+    } = changeProps;
+    const hasDelta = deepEquals(formData, nextFormData) === false;
     if (hasDelta) {
       setIsDirty(true);
       setFormData(nextFormData);
       reactory.debug(`useDataManager: ${SIGN} onChange`, { nextFormData });
-    }  
+      // Forward the change to the consumer supplied onChange handler (if any).
+      // The engine previously swallowed this event, so consumers relying on
+      // live change notifications (e.g. the Form Editor) never received them.
+      const consumerOnChange = (props as any)?.props?.onChange;
+      if (typeof consumerOnChange === 'function') {
+        try {
+          consumerOnChange(nextFormData, nextErrorSchema, nextErrors);
+        } catch (consumerErr) {
+          reactory.log(`useDataManager: ${SIGN} consumer onChange threw`, { consumerErr }, 'error');
+        }
+      }
+    }
   };
 
   const reset = () => {
@@ -302,7 +315,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     let iconProps: any = uiSchema["ui:form"]?.submitIconProps || uiOptions?.submitIconProps || {};
     if (iconProps.icon) {
       icon = iconProps.icon;
-      delete iconProps.icon;
+      // delete iconProps.icon;
      }
 
     const iconWidget = (icon === '$none' ? null : <Icon {...iconProps}>{icon}</Icon>);

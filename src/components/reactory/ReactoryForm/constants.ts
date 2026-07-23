@@ -4,10 +4,6 @@ export const DefaultLoadingSchema = {
   title: "Loading Form",
   description: "This form is used to display a loading state.",
   properties: {
-    loading: {
-      type: "string",      
-      default: "Please wait while we load the data..."
-    }
   },
   required: ["loading"]
 };

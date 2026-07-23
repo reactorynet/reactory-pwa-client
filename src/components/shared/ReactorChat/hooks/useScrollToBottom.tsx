@@ -2,6 +2,7 @@ import { Tooltip, Collapse, keyframes } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { ChatState, IAIPersona, ReactorToolCall, ReactorToolCallStatus, UXChatMessage } from '../types';
 import useContentRender from '../../hooks/useContentRender';
+import { jsonToYaml } from '../utils';
 
 const isProcessingMessage = (message: UXChatMessage) =>
   message.role === 'assistant' && message.content === 'Processing...';
@@ -117,6 +118,9 @@ const ChatList = (props: {
       return next;
     });
   }, []);
+
+  // Tracks which tool-call result panels are maximized, keyed by "<messageId>:<callId>"
+  const [maximizedToolResult, setMaximizedToolResult] = React.useState<string | null>(null);
 
   // Tracks which thinking/reasoning panels are expanded, keyed by message id
   const [expandedThinking, setExpandedThinking] = React.useState<Set<string>>(new Set());
@@ -697,6 +701,7 @@ const ChatList = (props: {
                                 'build';
                               const expandKey = `${message.id}:${callId}`;
                               const isExpanded = expandedToolResults.has(expandKey);
+                              const isMaximized = maximizedToolResult === expandKey;
 
                               // Find result/error payload for this call
                               const resultPayload = message.tool_results?.find((r: any) => r.id === callId);
@@ -704,7 +709,7 @@ const ChatList = (props: {
                               const hasPayload = !!resultPayload || !!errorPayload;
 
                               return (
-                                <Box key={callId} sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                <Box key={callId} sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, width: isExpanded ? '100%' : 'auto' }}>
                                   <Box
                                     sx={{
                                       display: 'inline-flex',
@@ -716,6 +721,7 @@ const ChatList = (props: {
                                       border: '1px solid',
                                       borderColor: chipColor,
                                       bgcolor: chipBg,
+                                      width: 'fit-content'
                                     }}
                                   >
                                     {callStatus === 'running' ? (
@@ -743,36 +749,81 @@ const ChatList = (props: {
                                   {/* Collapsible result panel */}
                                   {isExpanded && (
                                     <Box
-                                      sx={{
+                                      sx={isMaximized ? {
+                                        position: 'fixed',
+                                        top: 6,
+                                        left: 6,
+                                        right: 6,
+                                        bottom: 6,
+                                        zIndex: 1300,
+                                        bgcolor: 'background.paper',
+                                        border: '1px solid',
+                                        borderColor: chipColor,
+                                        borderRadius: 2,
+                                        p: 2,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        boxShadow: 24,
+                                      } : {
                                         mt: 0.25,
                                         p: 0.75,
                                         borderRadius: '4px',
                                         bgcolor: chipBg,
                                         border: '1px solid',
                                         borderColor: chipColor,
-                                        maxWidth: 320,
-                                        maxHeight: 160,
-                                        overflowY: 'auto',
+                                        width: '80%',
+                                        maxHeight: 240,
+                                        display: 'flex',
+                                        flexDirection: 'column',
                                       }}
                                     >
-                                      <Typography
-                                        variant="caption"
-                                        component="pre"
-                                        sx={{
-                                          fontFamily: 'monospace',
-                                          fontSize: '0.65rem',
-                                          color: callStatus === 'error' ? 'error.main' : 'text.secondary',
-                                          whiteSpace: 'pre-wrap',
-                                          wordBreak: 'break-all',
-                                          m: 0,
-                                        }}
-                                      >
-                                        {errorPayload
-                                          ? String(errorPayload.error ?? JSON.stringify(errorPayload, null, 2))
-                                          : typeof resultPayload?.content === 'string'
-                                          ? resultPayload.content
-                                          : JSON.stringify(resultPayload?.content ?? resultPayload, null, 2)}
-                                      </Typography>
+                                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5, borderBottom: isMaximized ? '1px solid' : 'none', borderColor: 'divider', pb: isMaximized ? 1 : 0 }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 600, color: chipColor }}>
+                                          {isMaximized ? `Tool Result: ${name}` : ''}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                          {isMaximized ? (
+                                            <>
+                                              <Tooltip title="Minimize">
+                                                <IconButton size="small" onClick={() => setMaximizedToolResult(null)} sx={{ p: 0.25 }}>
+                                                  <Icon sx={{ fontSize: '1rem', color: chipColor }}>fullscreen_exit</Icon>
+                                                </IconButton>
+                                              </Tooltip>
+                                              <Tooltip title="Close">
+                                                <IconButton size="small" onClick={() => { setMaximizedToolResult(null); toggleToolResult(expandKey); }} sx={{ p: 0.25 }}>
+                                                  <Icon sx={{ fontSize: '1rem', color: chipColor }}>close</Icon>
+                                                </IconButton>
+                                              </Tooltip>
+                                            </>
+                                          ) : (
+                                            <Tooltip title="Maximize">
+                                              <IconButton size="small" onClick={() => setMaximizedToolResult(expandKey)} sx={{ p: 0.25 }}>
+                                                <Icon sx={{ fontSize: '1rem', color: chipColor }}>fullscreen</Icon>
+                                              </IconButton>
+                                            </Tooltip>
+                                          )}
+                                        </Box>
+                                      </Box>
+                                      <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+                                        <Typography
+                                          variant="caption"
+                                          component="pre"
+                                          sx={{
+                                            fontFamily: 'monospace',
+                                            fontSize: isMaximized ? '0.8rem' : '0.65rem',
+                                            color: callStatus === 'error' ? 'error.main' : 'text.secondary',
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-all',
+                                            m: 0,
+                                          }}
+                                        >
+                                          {errorPayload
+                                            ? String(errorPayload.error ?? jsonToYaml(errorPayload))
+                                            : typeof resultPayload?.content === 'string'
+                                            ? resultPayload.content
+                                            : jsonToYaml(resultPayload?.content ?? resultPayload)}
+                                        </Typography>
+                                      </Box>
                                     </Box>
                                   )}
                                 </Box>

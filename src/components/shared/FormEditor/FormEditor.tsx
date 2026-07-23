@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Tabs,
@@ -8,17 +8,98 @@ import {
   Paper,
   FormControlLabel,
   Switch,
-  Stack
+  Stack,
+  Button,
+  Chip,
+  CircularProgress,
+  Divider,
+  Toolbar
 } from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { ReactoryForm } from '../../reactory';
+import { useReactory } from '../../../api/ApiProvider';
 import JsonSchemaEditor from '../JsonSchemaEditor';
 import { VisualSchemaEditor, VisualUISchemaEditor, VisualDataEditor } from './VisualEditor';
 import { useFormEditorState, useSchemaValidation } from './hooks';
 
+/**
+ * Recursively strip Apollo `__typename` keys from a value, returning a clean
+ * copy. Form definitions are hydrated via a GraphQL query, so nested objects
+ * (notably `graphql`, `schema` and `uiSchema`) carry `__typename` fields that
+ * the *Input types are not defined for — sending them back on save fails
+ * validation ("Field \"__typename\" is not defined by type ...Input").
+ */
+const stripTypename = (value: any): any => {
+  if (Array.isArray(value)) return value.map(stripTypename);
+  if (value && typeof value === 'object') {
+    const out: any = {};
+    Object.keys(value).forEach((key) => {
+      if (key === '__typename') return;
+      out[key] = stripTypename(value[key]);
+    });
+    return out;
+  }
+  return value;
+};
+
 interface FormEditorProps {
+  /** The id of an existing form to load and edit. Use "new" (or omit) for a blank form. */
+  formId?: string;
+  /** The editing mode the editor was mounted in (e.g. "develop" | "edit"). */
+  mode?: string;
+  /** Seed data for a new form when no formId is supplied. */
   formData?: any;
+  /** Fired whenever the in-memory form definition changes. */
   onChange?: (formData: any) => void;
+  /** Fired after the form has been persisted successfully. */
+  onSave?: (formDefinition: any) => void;
 }
+
+// GraphQL used to hydrate the editor with an existing form definition.
+const FORM_EDITOR_GET_QUERY = `
+  query FormEditorGetForm($id: String!) {
+    ReactoryFormGetById(id: $id) {
+      id
+      name
+      nameSpace
+      version
+      title
+      description
+      icon
+      avatar
+      uiFramework
+      registerAsComponent
+      roles
+      components
+      helpTopics
+      tags
+      schema
+      uiSchema
+      sanitizeSchema
+      graphql {
+        query
+        mutation
+        queries
+        clientResolvers
+      }
+      backButton
+    }
+  }
+`;
+
+// GraphQL used to persist the edited form as a YAML overlay on the server.
+const FORM_EDITOR_SAVE_MUTATION = `
+  mutation FormEditorSave($form: ReactoryFormInput!, $publish: Boolean) {
+    ReactoryFormSave(form: $form, publish: $publish) {
+      id
+      name
+      nameSpace
+      version
+      title
+    }
+  }
+`;
 
 // Helper components defined outside to prevent re-mounting
 const TabPanel: React.FC<{
@@ -66,9 +147,14 @@ const ValidationStatus: React.FC<{
 );
 
 const  FormEditor: React.FC<FormEditorProps> = ({
+  formId,
+  mode = 'develop',
   formData: initialFormData,
-  onChange
+  onChange,
+  onSave
 }) => {
+  const reactory = useReactory();
+
   // State management with custom hook
   const [state, actions] = useFormEditorState(initialFormData);
   const { validateSchemaChange, validateUISchemaChange } = useSchemaValidation();
@@ -79,10 +165,168 @@ const  FormEditor: React.FC<FormEditorProps> = ({
   const [isUIVisualMode, setIsUIVisualMode] = useState(true);
   const [isDataVisualMode, setIsDataVisualMode] = useState(true);
 
+  // Load / save lifecycle state
+  const isNewForm = !formId || formId === 'new';
+  const [loading, setLoading] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState<boolean>(false);
+  const [loadedFormId, setLoadedFormId] = useState<string | null>(null);
+
+  // Holds live edits from the General tab's ReactoryForm. We accumulate these
+  // in a ref (rather than component state) so that typing in the General form
+  // does not trigger a parent re-render, which would otherwise reset the child
+  // form's internal state on every keystroke.
+  const generalDataRef = useRef<any>({});
+
+  // Marks the editor dirty exactly once. setIsDirty(true) is a no-op when the
+  // value is already true, so React bails out of re-rendering after the first
+  // change – keeping the General form stable while still tracking dirtiness.
+  const markDirty = useCallback(() => setIsDirty(true), []);
+
+  // Hydrates the editor state from a loaded form definition.
+  const applyLoadedForm = useCallback((form: any) => {
+    if (!form) return;
+    generalDataRef.current = {};
+    actions.setReactoryForm(form);
+    actions.setFormSchemas({
+      schema: form.schema || { type: 'object', properties: {} },
+      uiSchema: form.uiSchema || {},
+      uiSchemas: form.uiSchemas || [],
+      sanitizeSchema: form.sanitizeSchema,
+      defaultUiSchemaKey: form.defaultUiSchemaKey
+    });
+    actions.updateSchemaValidation(true, []);
+    actions.updateUISchemaValidation(true, []);
+    setIsDirty(false);
+  }, [actions]);
+
+  // Loads an existing form by id via GraphQL.
+  const loadForm = useCallback(async (id: string) => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const { data, errors } = await reactory.graphqlQuery<any, any>(
+        FORM_EDITOR_GET_QUERY,
+        { id },
+        { fetchPolicy: 'network-only' }
+      );
+
+      if (errors && errors.length > 0) {
+        throw new Error(errors.map((e: any) => e.message).join('; '));
+      }
+
+      const form = data?.ReactoryFormGetById;
+      if (!form) {
+        setLoadError(`Form "${id}" could not be found.`);
+      } else {
+        applyLoadedForm(form);
+        setLoadedFormId(id);
+      }
+    } catch (err: any) {
+      reactory.log('FormEditor:loadForm:error', { id, err }, 'error');
+      setLoadError(err?.message || 'Failed to load the form definition.');
+    } finally {
+      setLoading(false);
+    }
+  }, [reactory, applyLoadedForm]);
+
+  // Load the form whenever an existing formId is supplied / changes.
+  useEffect(() => {
+    if (!isNewForm && formId && formId !== loadedFormId) {
+      loadForm(formId);
+    }
+  }, [isNewForm, formId, loadedFormId, loadForm]);
+
+  // Builds a ReactoryFormInput payload from the current editor state. Live
+  // edits from the General tab are held in generalDataRef and merged over the
+  // reducer state so that base config changes are always persisted.
+  const buildSaveInput = useCallback(() => {
+    const f = { ...(state.reactoryForm || {}), ...(generalDataRef.current || {}) };
+    // Strip Apollo __typename fields the load query injected; the *Input types
+    // reject them on save.
+    return stripTypename({
+      id: f.id,
+      name: f.name,
+      nameSpace: f.nameSpace,
+      version: f.version || '1.0.0',
+      title: f.title,
+      description: f.description,
+      icon: f.icon,
+      avatar: f.avatar,
+      uiFramework: f.uiFramework || 'material',
+      registerAsComponent: f.registerAsComponent === true,
+      roles: f.roles || [],
+      components: f.components || [],
+      helpTopics: f.helpTopics || [],
+      tags: f.tags || [],
+      schema: state.formSchemas.schema,
+      uiSchema: state.formSchemas.uiSchema,
+      sanitizeSchema: state.formSchemas.sanitizeSchema,
+      graphql: f.graphql || null,
+      backButton: f.backButton === true
+    });
+  }, [state.reactoryForm, state.formSchemas]);
+
+  // Persists the current form definition to the server (YAML overlay).
+  const handleSave = useCallback(async () => {
+    const input = buildSaveInput();
+
+    // Guard against saving a form without the identity fields required to
+    // build a stable storage key.
+    if (!input.id || !input.name || !input.nameSpace) {
+      setSaveError('id, name and nameSpace are required before saving. Complete the General tab first.');
+      setActiveTab(0);
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const result = await reactory.graphqlMutation<any, any>(
+        FORM_EDITOR_SAVE_MUTATION,
+        { form: input, publish: false }
+      );
+
+      if (result.errors && result.errors.length > 0) {
+        throw new Error(result.errors.map((e: any) => e.message).join('; '));
+      }
+
+      const saved = result.data?.ReactoryFormSave;
+
+      // Refresh the client's form cache (bypassing the 5 minute TTL) so the
+      // newly saved / authored form shows up in the form list immediately.
+      try {
+        await reactory.forms(true);
+      } catch (refreshErr) {
+        reactory.log('FormEditor:handleSave:refresh:error', { refreshErr }, 'warning');
+      }
+
+      setIsDirty(false);
+      setLoadedFormId(saved?.id || input.id);
+      reactory.createNotification('Form saved', { type: 'success', showInAppNotification: true });
+      onSave?.(saved || input);
+    } catch (err: any) {
+      reactory.log('FormEditor:handleSave:error', { err }, 'error');
+      const message = err?.message || 'Failed to save the form.';
+      setSaveError(message);
+      reactory.createNotification(`Could not save form: ${message}`, { type: 'error', showInAppNotification: true });
+    } finally {
+      setSaving(false);
+    }
+  }, [buildSaveInput, reactory, onSave]);
+
   // Tab change handler
   const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   }, []);
+
+  // Wraps the parent onChange handler so we can also flag the editor dirty.
+  const notifyChange = useCallback((payload: any) => {
+    setIsDirty(true);
+    onChange?.(payload);
+  }, [onChange]);
 
   // Schema change handlers with manual validation
   const handleSchemaChange = useCallback((newSchemaString: string) => {
@@ -92,7 +336,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       actions.updateSchemaValidation,
       (schema) => {
         actions.updateSchema(schema);
-        onChange?.(state.reactoryForm);
+        notifyChange(state.reactoryForm);
       }
     );
 
@@ -103,7 +347,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       // This prevents potential loops if stringify(parse(str)) !== str
       if (JSON.stringify(parsed) !== JSON.stringify(state.formSchemas.schema)) {
         actions.updateSchema(parsed);
-        onChange?.(state.reactoryForm);
+        notifyChange(state.reactoryForm);
       }
     } catch (error) {
       // Keep the string value for editing even if invalid
@@ -116,14 +360,14 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     // Update both schema state and validation state
     actions.updateSchema(newSchema);
     actions.updateSchemaValidation(true, []);
-    onChange?.(state.reactoryForm);
+    notifyChange(state.reactoryForm);
   }, [actions, onChange, state.reactoryForm]);
 
   const handleVisualUISchemaChange = useCallback((newUISchema: any) => {
     // When visual UI editor updates, it provides the full UI schema object
     actions.updateUISchema(newUISchema);
     actions.updateUISchemaValidation(true, []);
-    onChange?.(state.reactoryForm);
+    notifyChange(state.reactoryForm);
   }, [actions, onChange, state.reactoryForm]);
 
   const handleUISchemaChange = useCallback((newUISchemaString: string) => {
@@ -133,7 +377,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       actions.updateUISchemaValidation,
       (uiSchema) => {
         actions.updateUISchema(uiSchema);
-        onChange?.(state.reactoryForm);
+        notifyChange(state.reactoryForm);
       }
     );
 
@@ -143,7 +387,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       // Only update schema if it's different from current
       if (JSON.stringify(parsed) !== JSON.stringify(state.formSchemas.uiSchema)) {
         actions.updateUISchema(parsed);
-        onChange?.(state.reactoryForm);
+        notifyChange(state.reactoryForm);
       }
     } catch (error) {
       // Keep the string value for editing even if invalid
@@ -157,12 +401,12 @@ const  FormEditor: React.FC<FormEditorProps> = ({
       providers: newData.providers,
       graphql: newData.graphql
     });
-    onChange?.({
+    notifyChange({
       ...state.reactoryForm,
       providers: newData.providers,
       graphql: newData.graphql
     });
-  }, [actions, onChange, state.reactoryForm]);
+  }, [actions, notifyChange, state.reactoryForm]);
 
   const handleDataChange = useCallback((newDataString: string) => {
     try {
@@ -173,7 +417,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
           ...state.reactoryForm,
           graphql: parsed
         });
-        onChange?.({
+        notifyChange({
           ...state.reactoryForm,
           graphql: parsed
         });
@@ -181,7 +425,7 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     } catch (error) {
       console.warn('Invalid Data/GraphQL configuration:', error);
     }
-  }, [actions, onChange, state.reactoryForm]);
+  }, [actions, notifyChange, state.reactoryForm]);
 
   const a11yProps = (index: number) => ({
     id: `form-editor-tab-${index}`,
@@ -225,6 +469,14 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     switch(which) {
       case 'base': {
         return {
+          "ui:options": {
+            // The editor owns persistence via its own Save button, so the base
+            // config form should not render a submit or refresh button. The
+            // help button remains available for field guidance.
+            showSubmit: false,
+            showRefresh: false,
+            showHelp: true
+          },
           "ui:field": "GridLayout",
           "ui:grid-layout": [
             {
@@ -340,8 +592,98 @@ const  FormEditor: React.FC<FormEditorProps> = ({
     }
   }, [state.reactoryForm]);
 
+  const formTitle = state.reactoryForm?.title
+    || (state.reactoryForm?.name
+      ? `${state.reactoryForm.nameSpace || ''}.${state.reactoryForm.name}@${state.reactoryForm.version || '1.0.0'}`
+      : 'Untitled Form');
+
+  // A stable identity for the currently loaded form. It only changes when a
+  // different form is loaded (or a new form is started), NOT while editing.
+  const generalInstanceKey = isNewForm
+    ? 'new'
+    : (loadedFormId ? `loaded-${loadedFormId}` : 'loading');
+
+  // The base config form definition is static content – memoize it once so the
+  // General ReactoryForm receives a stable formDef reference and does not
+  // re-initialise when other tabs mutate the schema state.
+  const generalFormDef = useMemo(
+    () => getFormDefinition('base'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  // Snapshot the base form data once per loaded form. Keeping this reference
+  // stable across re-renders prevents the child form from resetting its own
+  // internal state while the user is editing other tabs.
+  const generalFormData = useMemo(
+    () => getDataMap('base'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [generalInstanceKey]
+  );
+
   return (
     <>
+      <Toolbar
+        disableGutters
+        sx={{
+          px: 2,
+          gap: 1,
+          borderBottom: 1,
+          borderColor: 'divider',
+          flexWrap: 'wrap'
+        }}
+      >
+        <Typography variant="h6" sx={{ flexShrink: 1, mr: 1 }} noWrap>
+          {isNewForm ? 'New Form' : formTitle}
+        </Typography>
+        <Chip size="small" label={mode} color="default" variant="outlined" />
+        {isDirty && (
+          <Chip size="small" label="Unsaved changes" color="warning" variant="outlined" />
+        )}
+        <Box sx={{ flexGrow: 1 }} />
+        {!isNewForm && (
+          <Button
+            size="small"
+            startIcon={<RefreshIcon />}
+            onClick={() => formId && loadForm(formId)}
+            disabled={loading || saving}
+          >
+            Reload
+          </Button>
+        )}
+        <Button
+          size="small"
+          variant="contained"
+          color="primary"
+          startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+          onClick={handleSave}
+          disabled={saving || loading}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      </Toolbar>
+
+      {loading && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
+          <CircularProgress size={18} />
+          <Typography variant="body2" color="text.secondary">Loading form definition…</Typography>
+        </Box>
+      )}
+
+      {loadError && (
+        <Alert severity="error" sx={{ m: 2 }} onClose={() => setLoadError(null)}>
+          {loadError}
+        </Alert>
+      )}
+
+      {saveError && (
+        <Alert severity="error" sx={{ m: 2 }} onClose={() => setSaveError(null)}>
+          {saveError}
+        </Alert>
+      )}
+
+      <Divider />
+
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={activeTab} onChange={handleTabChange} aria-label="form editor tabs">
           <Tab label="General" {...a11yProps(0)} />
@@ -377,13 +719,17 @@ const  FormEditor: React.FC<FormEditorProps> = ({
           Form Configuration
         </Typography>
         <ReactoryForm
-          formDef={getFormDefinition('base')}
-          formData={getDataMap('base')}
+          key={`form-editor-general-${generalInstanceKey}`}
+          formDef={generalFormDef}
+          formData={generalFormData}
           onChange={(formData) => {
-            actions.setReactoryForm({
-              ...state.reactoryForm,
+            // Accumulate edits in a ref only – no setState here – so the child
+            // form is not re-rendered / reset while the user is typing.
+            generalDataRef.current = {
+              ...(generalDataRef.current || {}),
               ...(formData as object)
-            });
+            };
+            markDirty();
             onChange?.(formData);
           }}
         />

@@ -125,6 +125,9 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
   const interactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCurrentlyInteractingRef = useRef(false);
 
+  // Ref for step drag offset (absolute drag calculation to prevent stickiness/drifting)
+  const stepDragOffsetRef = useRef<Point | null>(null);
+
   // Helper to mark interaction start - hides labels immediately
   const markInteractionStart = useCallback(() => {
     // Clear any pending "end interaction" timer
@@ -236,16 +239,25 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
     if (readonly) return;
     markInteractionStart();
     onStepSelect(stepId, false);
-  }, [readonly, onStepSelect, markInteractionStart]);
+
+    // Calculate absolute drag offset to prevent grid-snapping stickiness/drifting
+    const step = definition.steps.find(s => s.id === stepId);
+    if (step) {
+      stepDragOffsetRef.current = {
+        x: position.x - step.position.x,
+        y: position.y - step.position.y
+      };
+    }
+  }, [readonly, definition.steps, onStepSelect, markInteractionStart]);
 
   const handleStepDrag = useCallback((stepId: string, position: Point, delta: Point) => {
     if (readonly) return;
     
     const step = definition.steps.find(s => s.id === stepId);
-    if (step) {
+    if (step && stepDragOffsetRef.current) {
       let newPosition = {
-        x: step.position.x + delta.x,
-        y: step.position.y + delta.y
+        x: position.x - stepDragOffsetRef.current.x,
+        y: position.y - stepDragOffsetRef.current.y
       };
 
       // Snap to grid if enabled
@@ -261,6 +273,7 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
   }, [readonly, definition.steps, snapToGrid, onStepMove]);
 
   const handleStepDragEnd = useCallback((stepId: string, position: Point) => {
+    stepDragOffsetRef.current = null;
     markInteractionEnd();
   }, [markInteractionEnd]);
 

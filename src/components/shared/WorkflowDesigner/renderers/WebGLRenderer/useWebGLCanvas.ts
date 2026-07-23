@@ -396,6 +396,7 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
     validation: ValidationResult,
     stepGeometry: StepGeometryData[]
   ): ConnectionGeometryData[] => {
+    console.log(`[WorkflowDesigner WebGL] Converting ${connections.length} connections to geometry`);
     return connections.map(connection => {
       const sourceStep = steps.find(s => s.id === connection.sourceStepId);
       const targetStep = steps.find(s => s.id === connection.targetStepId);
@@ -480,6 +481,7 @@ export function useWebGLCanvas(options: UseWebGLCanvasOptions = {}): UseWebGLCan
     stepLibrary: StepDefinition[]
   ) => {
     if (!isInitializedRef.current) return;
+    console.log(`[WorkflowDesigner WebGL] updateWorkflow called with ${steps.length} steps, ${connections.length} connections`);
 
     const selection = currentStateRef.current?.selection || { 
       selectedSteps: new Set<string>(), 

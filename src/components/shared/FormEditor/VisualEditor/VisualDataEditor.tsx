@@ -25,6 +25,7 @@ import {
   Computer
 } from '@mui/icons-material';
 import { VisualGraphQLDataEditor } from './VisualGraphQLDataEditor';
+import { VisualRESTDataEditor } from './VisualRESTDataEditor';
 import { ProviderSettingsDialog } from './ProviderSettingsDialog';
 
 interface VisualDataEditorProps {
@@ -157,14 +158,17 @@ export const VisualDataEditor: React.FC<VisualDataEditorProps> = ({
         </Paper>
 
         {provider.type === 'graphql' ? (
+          // For a graphql provider the config object carries the graph definition
+          // (query / queries / mutation) alongside its type/options.
           <VisualGraphQLDataEditor
-            data={provider} // GraphQL provider structure matches our editor needs (usually) or is nested in options?
-            // ReactoryFormDataProvider has `options` and `type`.
-            // If it's graphql, the queries/mutations might be in `options` or top level?
-            // Reactory core types suggest `IFormGraphDefinition` is typically standalone.
-            // Let's assume for `graphql` provider, the config IS the graph definition mixed with provider options.
-            // Or `options` contains the graph def.
-            // Let's inspect provider.options.
+            data={provider}
+            onChange={(newData) => handleProviderConfigChange(providerKey, newData)}
+          />
+        ) : provider.type === 'rest' ? (
+          // For a rest provider the config object carries the REST definition
+          // (default / queries / mutations of REST calls).
+          <VisualRESTDataEditor
+            data={provider}
             onChange={(newData) => handleProviderConfigChange(providerKey, newData)}
           />
         ) : (

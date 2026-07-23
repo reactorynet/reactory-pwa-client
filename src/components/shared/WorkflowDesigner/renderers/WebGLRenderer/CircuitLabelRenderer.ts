@@ -1,7 +1,7 @@
 /**
  * CircuitLabelRenderer - Circuit board style labels with detail popups
  * 
- * Renders compact component designators (like U1, S2, LED3) positioned
+ * Renders component designators (step IDs) positioned
  * near components, with a detail popup that appears on hover/click.
  */
 
@@ -161,9 +161,8 @@ export class CircuitLabelRenderer {
     position: Point,
     options: CircuitLabelOptions
   ): LabelData {
-    // Get circuit element info
-    const circuitElement = getCircuitElement(options.type);
-    const designator = generateComponentLabel(circuitElement.prefix, options.index);
+    // Use the actual step ID as the designator label instead of a generated code (S1, X2, etc.)
+    const designator = id;
     
     // Create label element (small designator)
     const labelElement = document.createElement('div');
@@ -294,14 +293,10 @@ export class CircuitLabelRenderer {
    * Update label content
    */
   private updateLabelContent(labelData: LabelData, options: CircuitLabelOptions): void {
-    // Update designator if index changed
-    if (options.index !== labelData.options.index) {
-      const circuitElement = getCircuitElement(options.type);
-      const designator = generateComponentLabel(circuitElement.prefix, options.index);
-      const designatorSpan = labelData.labelElement.querySelector('.circuit-label-designator');
-      if (designatorSpan) {
-        designatorSpan.textContent = designator;
-      }
+    // Update designator label with the step ID if it doesn't match
+    const designatorSpan = labelData.labelElement.querySelector('.circuit-label-designator');
+    if (designatorSpan && designatorSpan.textContent !== labelData.id) {
+      designatorSpan.textContent = labelData.id;
     }
     
     // Update selection state

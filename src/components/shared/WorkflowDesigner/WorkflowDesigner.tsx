@@ -24,16 +24,11 @@ import {
 import { CANVAS_DEFAULTS, STEP_DEFAULTS } from './constants';
 
 // Component imports
-import WorkflowCanvas from './components/Canvas/WorkflowCanvas';
-import OptimizedWorkflowCanvas from './components/Canvas/OptimizedWorkflowCanvas';
 import { WorkflowWebGLCanvas } from './renderers/WebGLRenderer';
 import StepLibraryPanel from './components/Panels/StepLibraryPanel';
 import PropertiesPanel from './components/Panels/PropertiesPanel';
 import UserHomeFolder from '../UserHomeFolder/UserHomeFolder';
 import { ServerFileExplorer } from '../ServerFileExplorer';
-
-// Rendering mode type
-type RenderingMode = 'dom' | 'optimized' | 'webgl';
 
 /**
  * A single error captured during YAML workflow definition loading.
@@ -108,6 +103,7 @@ function useYamlWorkflowLoader(
               inputs
               outputs
               variables
+              yamlSource
               steps {
                 id
                 name
@@ -306,7 +302,6 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
   const [templatesPanelOpen, setTemplatesPanelOpen] = useState<boolean>(false);
   const [showGrid, setShowGrid] = useState<boolean>(props.showGrid || true);
   const [enableSnapToGrid, setEnableSnapToGrid] = useState<boolean>(props.snapToGrid || true);
-  const [renderingMode, setRenderingMode] = useState<RenderingMode>('webgl'); // Default to WebGL for best performance
   const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
   const [titleInputValue, setTitleInputValue] = useState<string>('');
   const [showUserHomeFolderDialog, setShowUserHomeFolderDialog] = useState<boolean>(false);
@@ -405,6 +400,50 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     updateDefinition,
   );
 
+
+  // AMQ event listeners for layout, moves, and canvas actions
+  useEffect(() => {
+    if (!reactory || !reactory.amq) return;
+
+    // 1. Listen for individual step moves
+    const subMove = reactory.amq.$sub.def('step.move', (data: { stepId: string; position: { x: number; y: number } }) => {
+      if (data && data.stepId && data.position) {
+        reactory.log(`AMQ: Moving step ${data.stepId} to`, data.position);
+        updateStep(data.stepId, { position: data.position });
+      }
+    }, 'workflow');
+
+    // 2. Listen for batch layout requests
+    const subLayout = reactory.amq.$sub.def('step.layout', (data: { type?: 'vertical' | 'horizontal'; spacing?: number }) => {
+      const type = data?.type || 'vertical';
+      const spacing = data?.spacing || 140;
+      
+      reactory.log(`AMQ: Triggering batch layout: ${type} with spacing ${spacing}`);
+      
+      const updatedSteps = definition.steps.map((step, index) => {
+        const position = type === 'vertical'
+          ? { x: 100, y: 50 + index * spacing }
+          : { x: 100 + index * spacing, y: 100 };
+        return {
+          ...step,
+          position
+        };
+      });
+
+      // Update definition
+      updateDefinition({
+        ...definition,
+        steps: updatedSteps
+      });
+    }, 'workflow');
+
+    return () => {
+      // @ts-ignore
+      if (subMove && typeof subMove.unsubscribe === 'function') subMove.unsubscribe();
+      // @ts-ignore
+      if (subLayout && typeof subLayout.unsubscribe === 'function') subLayout.unsubscribe();
+    };
+  }, [reactory, definition, updateStep, updateDefinition]);
   // Merge server-side YAML validation errors into the designer's validationResult
   // so step nodes automatically display error indicators via the existing rendering pipeline.
   const mergedValidationResult = useMemo(() => {
@@ -1353,38 +1392,6 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             {showGrid ? <Visibility /> : <VisibilityOff />}
           </IconButton>
         </Tooltip>
-
-        {/* Rendering Mode Toggle */}
-        <ButtonGroup size="small" variant="outlined" sx={{ ml: 1 }}>
-          <Tooltip title="DOM Rendering (Basic)">
-            <Button
-              onClick={() => setRenderingMode('dom')}
-              variant={renderingMode === 'dom' ? 'contained' : 'outlined'}
-              size="small"
-            >
-              DOM
-            </Button>
-          </Tooltip>
-          <Tooltip title="Optimized DOM Rendering">
-            <Button
-              onClick={() => setRenderingMode('optimized')}
-              variant={renderingMode === 'optimized' ? 'contained' : 'outlined'}
-              size="small"
-            >
-              OPT
-            </Button>
-          </Tooltip>
-          <Tooltip title="WebGL Rendering (Best Performance)">
-            <Button
-              onClick={() => setRenderingMode('webgl')}
-              variant={renderingMode === 'webgl' ? 'contained' : 'outlined'}
-              size="small"
-              startIcon={<Speed />}
-            >
-              WebGL
-            </Button>
-          </Tooltip>
-        </ButtonGroup>
       </Paper>
 
       {/* Progress indicator */}
@@ -1459,79 +1466,27 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           }}
         >
           {/* WebGL Canvas - Best Performance */}
-          {renderingMode === 'webgl' && (
-            <WorkflowWebGLCanvas
-              definition={definition}
-              stepLibrary={stepLibrary}
-              viewport={viewport}
-              selection={selection}
-              dragState={dragState}
-              validationResult={mergedValidationResult}
-              showGrid={showGrid}
-              snapToGrid={enableSnapToGrid}
-              readonly={readonly}
-              onStepMove={handleCanvasStepMove}
-              onStepResize={handleCanvasStepResize}
-              onStepSelect={handleCanvasStepSelect}
-              onStepDoubleClick={handleCanvasStepDoubleClick}
-              onConnectionCreate={handleCanvasConnectionCreate}
-              onConnectionSelect={handleCanvasConnectionSelect}
-              onCanvasClick={handleCanvasClick}
-              onViewportChange={setViewport}
-              onStepCreate={handleStepCreation}
-              onContextMenu={handleContextMenu}
-            />
-          )}
-
-          {/* Optimized DOM Canvas */}
-          {renderingMode === 'optimized' && (
-            <OptimizedWorkflowCanvas
-              definition={definition}
-              stepLibrary={stepLibrary}
-              viewport={viewport}
-              selection={selection}
-              dragState={dragState}
-              validationResult={mergedValidationResult}
-              showGrid={showGrid}
-              snapToGrid={enableSnapToGrid}
-              readonly={readonly}
-              onStepMove={handleCanvasStepMove}
-              onStepResize={handleCanvasStepResize}
-              onStepSelect={handleCanvasStepSelect}
-              onStepDoubleClick={handleCanvasStepDoubleClick}
-              onConnectionCreate={handleCanvasConnectionCreate}
-              onConnectionSelect={handleCanvasConnectionSelect}
-              onCanvasClick={handleCanvasClick}
-              onViewportChange={setViewport}
-              onStepCreate={handleStepCreation}
-              onContextMenu={handleContextMenu}
-            />
-          )}
-
-          {/* Basic DOM Canvas */}
-          {renderingMode === 'dom' && (
-            <WorkflowCanvas
-              definition={definition}
-              stepLibrary={stepLibrary}
-              viewport={viewport}
-              selection={selection}
-              dragState={dragState}
-              validationResult={mergedValidationResult}
-              showGrid={showGrid}
-              snapToGrid={enableSnapToGrid}
-              readonly={readonly}
-              onStepMove={handleCanvasStepMove}
-              onStepResize={handleCanvasStepResize}
-              onStepSelect={handleCanvasStepSelect}
-              onStepDoubleClick={handleCanvasStepDoubleClick}
-              onConnectionCreate={handleCanvasConnectionCreate}
-              onConnectionSelect={handleCanvasConnectionSelect}
-              onCanvasClick={handleCanvasClick}
-              onViewportChange={setViewport}
-              onStepCreate={handleStepCreation}
-              onContextMenu={handleContextMenu}
-            />
-          )}
+          <WorkflowWebGLCanvas
+            definition={definition}
+            stepLibrary={stepLibrary}
+            viewport={viewport}
+            selection={selection}
+            dragState={dragState}
+            validationResult={mergedValidationResult}
+            showGrid={showGrid}
+            snapToGrid={enableSnapToGrid}
+            readonly={readonly}
+            onStepMove={handleCanvasStepMove}
+            onStepResize={handleCanvasStepResize}
+            onStepSelect={handleCanvasStepSelect}
+            onStepDoubleClick={handleCanvasStepDoubleClick}
+            onConnectionCreate={handleCanvasConnectionCreate}
+            onConnectionSelect={handleCanvasConnectionSelect}
+            onCanvasClick={handleCanvasClick}
+            onViewportChange={setViewport}
+            onStepCreate={handleStepCreation}
+            onContextMenu={handleContextMenu}
+          />
         </Box>
 
         {/* Right panel resize handle */}

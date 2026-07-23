@@ -25,6 +25,9 @@ function toUserHomeRelative(p: string): string {
 }
 
 const FILE_PREVIEW_WIDTH = 520;
+const MIN_SIDEBAR_WIDTH = 240;
+const MAX_SIDEBAR_WIDTH = 800;
+const DRAG_HANDLE_WIDTH = 6;
 
 export type DockSide = 'left' | 'right';
 
@@ -92,8 +95,6 @@ const GET_PATH_CONTENTS = gql`
     }
   }
 `;
-
-const SIDEBAR_WIDTH = 320;
 
 function fileIdString(f: Reactory.Models.IReactoryFile): string {
   const id = (f as any).id ?? (f as any)._id;
@@ -167,6 +168,74 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   const [pinningKey, setPinningKey] = React.useState<string | null>(null);
   const [showHidden, setShowHidden] = React.useState(false);
   const [previewFile, setPreviewFile] = React.useState<TreeFile | null>(null);
+
+  // Resizable panel width state
+  const [sidebarWidth, setSidebarWidth] = React.useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('reactorChat.fileExplorerWidth');
+      if (saved) {
+        const val = parseInt(saved, 10);
+        if (!isNaN(val) && val >= MIN_SIDEBAR_WIDTH && val <= MAX_SIDEBAR_WIDTH) return val;
+      }
+    } catch { /* ignore */ }
+    return 320;
+  });
+
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const isDragging = React.useRef(false);
+  const rafId = React.useRef<number>(0);
+
+  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+      rafId.current = requestAnimationFrame(() => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        
+        let newWidth = 320;
+        if (dock === 'right') {
+          // If docked on the right, distance from mouse to the right edge of the sidebar
+          newWidth = rect.right - ev.clientX;
+        } else {
+          // If docked on the left, distance from the left edge of the sidebar to the mouse
+          newWidth = ev.clientX - rect.left;
+        }
+        
+        newWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, newWidth));
+        setSidebarWidth(newWidth);
+      });
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      try {
+        setSidebarWidth((current) => {
+          localStorage.setItem('reactorChat.fileExplorerWidth', String(current));
+          return current;
+        });
+      } catch { /* ignore */ }
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [dock]);
+
+  React.useEffect(() => {
+    return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
 
   const isNarrowScreen = React.useMemo(() => {
     const width = window.innerWidth || document.documentElement.clientWidth;
@@ -544,7 +613,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   const sidebarContent = (
     <Box
       sx={{
-        width: isNarrowScreen ? '85vw' : SIDEBAR_WIDTH,
+        width: isNarrowScreen ? '85vw' : '100%',
         maxWidth: isNarrowScreen ? 400 : undefined,
         height: '100%',
         display: 'flex',
@@ -697,26 +766,78 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     );
   }
 
+  const dragHandle = (
+    <Box
+      onMouseDown={handleMouseDown}
+      sx={{
+        width: DRAG_HANDLE_WIDTH,
+        flexShrink: 0,
+        cursor: 'col-resize',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'transparent',
+        '&:hover': {
+          bgcolor: 'action.hover',
+        },
+        '&:hover .drag-indicator': {
+          opacity: 1,
+        },
+        transition: 'background-color 0.15s',
+        zIndex: 1,
+      }}
+    >
+      <Box
+        className="drag-indicator"
+        sx={{
+          width: 3,
+          height: 40,
+          borderRadius: 1,
+          bgcolor: 'divider',
+          opacity: 0.4,
+          transition: 'opacity 0.15s',
+        }}
+      />
+    </Box>
+  );
+
   return (
     <>
-      <Paper
-        elevation={2}
-        square
+      <Box
+        ref={containerRef}
         sx={{
-          ...glassPanelSx(reactory?.muiTheme?.palette?.mode ?? 'dark'),
-          width: SIDEBAR_WIDTH,
+          width: sidebarWidth,
+          minWidth: MIN_SIDEBAR_WIDTH,
+          maxWidth: MAX_SIDEBAR_WIDTH,
+          flexShrink: 0,
           height: '100%',
           display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
+          flexDirection: 'row',
           overflow: 'hidden',
-          borderLeft: dock === 'right' ? '1px solid' : 'none',
-          borderRight: dock === 'left' ? '1px solid' : 'none',
-          borderColor: 'divider',
+          transition: isDragging.current ? 'none' : 'width 0.2s ease',
+          willChange: 'width',
         }}
       >
-        {sidebarContent}
-      </Paper>
+        {dock === 'right' && dragHandle}
+        <Paper
+          elevation={2}
+          square
+          sx={{
+            ...glassPanelSx(reactory?.muiTheme?.palette?.mode ?? 'dark'),
+            flex: 1,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            borderLeft: dock === 'right' ? '1px solid' : 'none',
+            borderRight: dock === 'left' ? '1px solid' : 'none',
+            borderColor: 'divider',
+          }}
+        >
+          {sidebarContent}
+        </Paper>
+        {dock === 'left' && dragHandle}
+      </Box>
       {previewDrawer}
     </>
   );

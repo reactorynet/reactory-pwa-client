@@ -154,6 +154,7 @@ export default function OptimizedWorkflowCanvas(props: WorkflowCanvasProps) {
   // Performance optimization hook
   const optimization = useViewportOptimization({
     steps: definition.steps,
+    // @ts-ignore
     connections: definition.connections,
     viewport,
     enableOptimizations: true

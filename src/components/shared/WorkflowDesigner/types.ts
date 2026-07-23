@@ -47,8 +47,10 @@ export interface WorkflowDefinition {
   author?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  connections?: WorkflowConnection[];
   steps: WorkflowStepDefinition[];
-  connections: WorkflowConnection[];
+  inputs?: Record<string, any>;
+  outputs?: Record<string, any>;
   variables?: WorkflowVariable[];
   configuration?: WorkflowConfiguration;
   metadata?: WorkflowMetadata;

@@ -19,10 +19,13 @@ import {
   DataArray,
   DataObject,
   VisibilityOff,
-  DragIndicator
+  DragIndicator,
+  ViewQuilt as LayoutIcon
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { UIFieldSettingsDialog } from './UIFieldSettingsDialog';
+import { LayoutDesignerDialog } from './LayoutDesignerDialog';
+import { LayoutPatch } from './layoutConfig';
 
 interface VisualUISchemaEditorProps {
   schema: any;
@@ -62,6 +65,7 @@ interface UISchemaNodeProps {
   uiSchema: any; // The UI schema specific to this node
   path: string;
   onEdit: (path: string, fieldType: string, currentUISchema: any) => void;
+  onConfigureLayout: (path: string, schema: any, uiSchema: any) => void;
   level?: number;
   index: number;
 }
@@ -72,6 +76,7 @@ const UISchemaNode: React.FC<UISchemaNodeProps> = ({
   uiSchema = {},
   path,
   onEdit,
+  onConfigureLayout,
   level = 0,
   index
 }) => {
@@ -85,7 +90,10 @@ const UISchemaNode: React.FC<UISchemaNodeProps> = ({
   // Extract summary of UI config
   const widget = uiSchema['ui:widget'];
   const title = uiSchema['ui:title'];
+  const uiField = uiSchema['ui:field'];
   const hidden = widget === 'hidden' || uiSchema['ui:hidden'];
+  // Only object nodes host a layout (tabbed/grid) over their child fields.
+  const canConfigureLayout = type === 'object';
   
   const hasConfig = Object.keys(uiSchema).some(k => k.startsWith('ui:'));
 
@@ -130,12 +138,20 @@ const UISchemaNode: React.FC<UISchemaNodeProps> = ({
               </Typography>
 
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {uiField && <Chip icon={<LayoutIcon />} label={`Layout: ${uiField}`} size="small" color="secondary" variant="outlined" />}
                 {widget && <Chip label={`Widget: ${widget}`} size="small" variant="outlined" color="primary" />}
                 {title && <Chip label={`Title: ${title}`} size="small" variant="outlined" />}
                 {hidden && <Chip icon={<VisibilityOff />} label="Hidden" size="small" color="default" />}
               </Box>
             </Box>
 
+            {canConfigureLayout && (
+              <Tooltip title="Configure Layout">
+                <IconButton size="small" onClick={() => onConfigureLayout(path, schema, uiSchema)}>
+                  <LayoutIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title="Edit UI Settings">
               <IconButton size="small" onClick={() => onEdit(path, type, uiSchema)}>
                 <EditIcon fontSize="small" />
@@ -157,6 +173,7 @@ const UISchemaNode: React.FC<UISchemaNodeProps> = ({
                           uiSchema={uiSchema[key]}
                           path={`${path}.${key}`}
                           onEdit={onEdit}
+                          onConfigureLayout={onConfigureLayout}
                           level={level + 1}
                           index={idx}
                         />
@@ -174,6 +191,7 @@ const UISchemaNode: React.FC<UISchemaNodeProps> = ({
                     uiSchema={uiSchema.items}
                     path={`${path}.items`}
                     onEdit={onEdit}
+                    onConfigureLayout={onConfigureLayout}
                     level={level + 1}
                     index={0}
                   />
@@ -198,6 +216,13 @@ export const VisualUISchemaEditor: React.FC<VisualUISchemaEditorProps> = ({
     data: any;
   }>({ open: false, path: '', type: 'string', data: {} });
 
+  const [layoutDialog, setLayoutDialog] = useState<{
+    open: boolean;
+    path: string;
+    schema: any;
+    uiSchema: any;
+  }>({ open: false, path: '', schema: null, uiSchema: {} });
+
   const handleEdit = useCallback((path: string, type: string, currentData: any) => {
     setEditDialog({
       open: true,
@@ -206,6 +231,31 @@ export const VisualUISchemaEditor: React.FC<VisualUISchemaEditorProps> = ({
       data: currentData
     });
   }, []);
+
+  const handleConfigureLayout = useCallback((path: string, nodeSchema: any, nodeUISchema: any) => {
+    setLayoutDialog({ open: true, path, schema: nodeSchema, uiSchema: nodeUISchema || {} });
+  }, []);
+
+  const handleLayoutSave = useCallback((path: string, patch: LayoutPatch) => {
+    const newUISchema = JSON.parse(JSON.stringify(uiSchema || {}));
+
+    // Navigate to the target node's uiSchema object (ROOT edits in place).
+    let target = newUISchema;
+    if (path !== 'ROOT') {
+      const parts = path.split('.');
+      for (const part of parts) {
+        if (!target[part] || typeof target[part] !== 'object') target[part] = {};
+        target = target[part];
+      }
+    }
+
+    // Apply the patch: remove cleared keys, then set the new ones. Other keys
+    // (child field configs, ui:widget, etc.) are preserved.
+    patch.remove.forEach((key) => { delete target[key]; });
+    Object.keys(patch.set).forEach((key) => { target[key] = patch.set[key]; });
+
+    onChange(newUISchema);
+  }, [uiSchema, onChange]);
 
   const handleSave = useCallback((path: string, newData: any) => {
     // Deep clone current UI schema
@@ -370,6 +420,11 @@ export const VisualUISchemaEditor: React.FC<VisualUISchemaEditorProps> = ({
             {uiSchema['ui:title'] && <Chip label={`Title: ${uiSchema['ui:title']}`} size="small" variant="outlined" />}
           </Box>
         </Box>
+        <Tooltip title="Configure Form Layout">
+          <IconButton onClick={() => handleConfigureLayout('ROOT', schema, uiSchema)}>
+            <LayoutIcon />
+          </IconButton>
+        </Tooltip>
         <Tooltip title="Edit Form Root Settings">
           <IconButton onClick={() => handleEdit('ROOT', 'root', uiSchema)}>
             <EditIcon />
@@ -388,6 +443,7 @@ export const VisualUISchemaEditor: React.FC<VisualUISchemaEditorProps> = ({
                 uiSchema={uiSchema[key]}
                 path={key}
                 onEdit={handleEdit}
+                onConfigureLayout={handleConfigureLayout}
                 index={idx}
               />
             ))}
@@ -404,6 +460,17 @@ export const VisualUISchemaEditor: React.FC<VisualUISchemaEditorProps> = ({
           fieldKey={editDialog.path}
           fieldType={editDialog.type}
           currentUISchema={editDialog.data}
+        />
+      )}
+
+      {layoutDialog.open && (
+        <LayoutDesignerDialog
+          open={layoutDialog.open}
+          onClose={() => setLayoutDialog({ ...layoutDialog, open: false })}
+          onSave={handleLayoutSave}
+          path={layoutDialog.path}
+          schema={layoutDialog.schema}
+          uiSchema={layoutDialog.uiSchema}
         />
       )}
     </DragDropContext>

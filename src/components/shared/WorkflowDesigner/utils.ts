@@ -720,8 +720,10 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
 
       if (!firstStep) firstStep = step;
 
-      // Connect to previous step in the chain (unless dependsOn is explicit)
-      if (previousStep && !yamlStep.dependsOn) {
+      // Connect to previous step in the chain (unless dependsOn is explicit).
+      // Never linearly chain into an End marker — End is reached only from the
+      // workflow's terminal steps, wired explicitly below.
+      if (previousStep && !yamlStep.dependsOn && designerType !== 'end') {
         allConnections.push({
           id: generateConnectionId(),
           sourceStepId: previousStep.id,
@@ -848,7 +850,25 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
     });
   } else {
     // Add dependsOn-based connections (supplement auto-generated ones)
-    (yamlDef.steps || []).forEach((step: any) => {
+    const allYamlSteps: any[] = [];
+    const gatherYamlSteps = (list: any[]) => {
+      if (!list) return;
+      list.forEach(s => {
+        allYamlSteps.push(s);
+        if (s.steps) gatherYamlSteps(s.steps);
+        if (s.config) {
+          if (s.config.thenSteps) gatherYamlSteps(s.config.thenSteps);
+          if (s.config.elseSteps) gatherYamlSteps(s.config.elseSteps);
+          if (s.config.steps) gatherYamlSteps(s.config.steps);
+          if (s.config.branches) {
+            s.config.branches.forEach((b: any) => gatherYamlSteps(b.steps));
+          }
+        }
+      });
+    };
+    gatherYamlSteps(yamlDef.steps);
+
+    allYamlSteps.forEach((step: any) => {
       const deps = step.dependsOn
         ? Array.isArray(step.dependsOn)
           ? step.dependsOn
@@ -875,7 +895,6 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
       });
     });
   }
-
   // Synthesize Start step only when the YAML doesn't already define one.
   // YAMLs that include an explicit `type: start` step (id __start__) should
   // not receive a second synthesized copy — duplicate ids break rendering.
@@ -917,24 +936,13 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
     }
   }
 
-  // Synthesize End step only when the YAML doesn't already define one.
-  const hasExplicitEndStep = allSteps.some(s => s.type === 'end');
-  if (!hasExplicitEndStep) {
-    const topLevelStepIds = new Set(
-      (yamlDef.steps || []).map((s: any) => s.id)
-    );
-    const stepsWithOutgoing = new Set(
-      allConnections
-        .filter(c => topLevelStepIds.has(c.sourceStepId) && topLevelStepIds.has(c.targetStepId))
-        .map(c => c.sourceStepId)
-    );
-    const terminalSteps = allSteps.filter(
-      s => topLevelStepIds.has(s.id) && !stepsWithOutgoing.has(s.id)
-    );
-
+  // Ensure an End step exists. The load pipeline may already inject one (a real
+  // `type: end` step); only synthesize a fresh one when it's genuinely absent.
+  let endStep = allSteps.find(s => s.type === 'end');
+  if (!endStep) {
     const endStepSize: Size = { width: 120, height: 60 };
     const lastY = allSteps.reduce((max, s) => Math.max(max, s.position.y), 0);
-    const endStep: WorkflowStepDefinition = {
+    endStep = {
       id: '__end__',
       name: 'End',
       type: 'end',
@@ -955,27 +963,107 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
       metadata: { synthesized: true },
     };
     allSteps.push(endStep);
+  }
 
-    // Connect terminal steps to End
+  // Auto-wire the workflow's terminal steps into End. Persisted designer
+  // connections (loaded above) are authoritative, so this only runs when we are
+  // generating connections from scratch — otherwise we'd duplicate End edges.
+  if (designerConnections.length === 0) {
+    const endStepId = endStep.id;
+    const endPortId = ctrlIn(endStep);
+
+    const topLevelStepIds = new Set(
+      (yamlDef.steps || []).map((s: any) => s.id)
+    );
+    const stepsWithOutgoing = new Set(
+      allConnections
+        .filter(c => topLevelStepIds.has(c.sourceStepId) && topLevelStepIds.has(c.targetStepId))
+        .map(c => c.sourceStepId)
+    );
+    // A terminal step is a top-level step — excluding the Start/End markers —
+    // with no outgoing edge to another top-level step.
+    const terminalSteps = allSteps.filter(
+      s => topLevelStepIds.has(s.id)
+        && s.type !== 'start' && s.type !== 'end'
+        && !stepsWithOutgoing.has(s.id)
+    );
+
+    // Index every YAML step (including nested control-flow children) by id so a
+    // terminal container can be resolved to its true exit points.
+    const yamlById = new Map<string, any>();
+    const indexYaml = (list: any[]) => {
+      if (!Array.isArray(list)) return;
+      for (const s of list) {
+        if (!s || typeof s !== 'object') continue;
+        if (s.id) yamlById.set(s.id, s);
+        const cfg = s.config;
+        if (cfg) {
+          if (Array.isArray(cfg.thenSteps)) indexYaml(cfg.thenSteps);
+          if (Array.isArray(cfg.elseSteps)) indexYaml(cfg.elseSteps);
+          if (Array.isArray(cfg.steps)) indexYaml(cfg.steps);
+          if (Array.isArray(cfg.branches)) cfg.branches.forEach((b: any) => indexYaml(b?.steps));
+        }
+        if (Array.isArray(s.steps)) indexYaml(s.steps);
+      }
+    };
+    indexYaml(yamlDef.steps || []);
+
+    // Resolve the leaf step(s) that represent a step's exit point(s). A plain
+    // step exits from itself; a control-flow container (condition / parallel /
+    // for_each) exits from the LAST step of each of its branches, recursively.
+    // This wires End from the last child of a decision branch rather than from
+    // the decision node itself.
+    const resolveExitLeaves = (yamlStep: any, seen = new Set<string>()): string[] => {
+      if (!yamlStep || !yamlStep.id || seen.has(yamlStep.id)) return [];
+      seen.add(yamlStep.id);
+      const cfg = yamlStep.config;
+      const branches: any[][] = [];
+      if (cfg) {
+        if (Array.isArray(cfg.thenSteps) && cfg.thenSteps.length) branches.push(cfg.thenSteps);
+        if (Array.isArray(cfg.elseSteps) && cfg.elseSteps.length) branches.push(cfg.elseSteps);
+        if (Array.isArray(cfg.steps) && cfg.steps.length) branches.push(cfg.steps);
+        if (Array.isArray(cfg.branches)) {
+          cfg.branches.forEach((b: any) => {
+            if (Array.isArray(b?.steps) && b.steps.length) branches.push(b.steps);
+          });
+        }
+      }
+      if (Array.isArray(yamlStep.steps) && yamlStep.steps.length) branches.push(yamlStep.steps);
+      if (branches.length === 0) return [yamlStep.id];
+      const leaves: string[] = [];
+      for (const branch of branches) {
+        leaves.push(...resolveExitLeaves(branch[branch.length - 1], seen));
+      }
+      return leaves;
+    };
+
+    // Connect each terminal step's exit leaves to End. For a control-flow
+    // container the leaves are the last child of each branch, so the line is
+    // drawn from the last child rather than from the decision node.
+    const wired = new Set<string>();
+    const wireToEnd = (stepId: string) => {
+      if (wired.has(stepId) || stepId === endStepId) return;
+      const stepObj = allSteps.find(s => s.id === stepId);
+      if (!stepObj) return;
+      wired.add(stepId);
+      allConnections.push({
+        id: generateConnectionId(),
+        sourceStepId: stepObj.id,
+        sourcePortId: ctrlOut(stepObj),
+        targetStepId: endStepId,
+        targetPortId: endPortId,
+      });
+    };
+
     if (terminalSteps.length > 0) {
       for (const term of terminalSteps) {
-        allConnections.push({
-          id: generateConnectionId(),
-          sourceStepId: term.id,
-          sourcePortId: ctrlOut(term),
-          targetStepId: '__end__',
-          targetPortId: '__end___previous_control_input',
-        });
+        const yamlStep = yamlById.get(term.id);
+        const leaves = yamlStep ? resolveExitLeaves(yamlStep) : [];
+        (leaves.length > 0 ? leaves : [term.id]).forEach(wireToEnd);
       }
     } else if (lastRealStep) {
       // Fallback: connect last step to end
-      allConnections.push({
-        id: generateConnectionId(),
-        sourceStepId: lastRealStep.id,
-        sourcePortId: ctrlOut(lastRealStep),
-        targetStepId: '__end__',
-        targetPortId: '__end___previous_control_input',
-      });
+      wireToEnd(lastRealStep.id);
     }
   }
 
@@ -1029,11 +1117,14 @@ export function convertYamlToDesignerDefinition(yamlDef: any): WorkflowDefinitio
     steps: allSteps,
     connections: allConnections,
     variables,
+    inputs: yamlDef.inputs || null,
+    outputs: yamlDef.outputs || null,
     configuration: {
       timeout: undefined,
       maxRetries: undefined,
     },
     metadata: {
+      ...(yamlDef.metadata || {}),
       canvas: designerCanvas
         ? {
             zoom: designerCanvas.zoom ?? 1.0,

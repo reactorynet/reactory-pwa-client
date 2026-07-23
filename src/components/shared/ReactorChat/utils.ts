@@ -89,3 +89,87 @@ export const getUiSchemaFromSchema = (argsShape: any) => {
   });
   return uiSchema;
 }; 
+/**
+ * Minimal, dependency-free JSON → YAML serializer for read-only display
+ * purposes (not intended to round-trip through a YAML parser). Multiline
+ * strings render as block literals (`|`) so embedded scripts/log output stay
+ * readable instead of escaped `\n` soup.
+ */
+function isPlainObject(value: any): boolean {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function needsQuoting(value: string): boolean {
+  if (value === '') return true;
+  if (/^\s|\s$/.test(value)) return true;
+  if (/^(true|false|null|~|yes|no|on|off)$/i.test(value)) return true;
+  if (/^-?\d+(\.\d+)?$/.test(value)) return true;
+  if (/[:#[\]{}&*!|>'"%@`,]/.test(value)) return true;
+  return false;
+}
+
+function scalarToYaml(value: any): string {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value === 'boolean' || typeof value === 'number') return String(value);
+  if (typeof value === 'string') {
+    return needsQuoting(value) ? JSON.stringify(value) : value;
+  }
+  return JSON.stringify(value);
+}
+
+function blockLiteral(value: string, indent: number): string {
+  const pad = '  '.repeat(indent);
+  const lines = value.split('\n').map((line) => (line ? `${pad}${line}` : ''));
+  return `|\n${lines.join('\n')}`;
+}
+
+function toYaml(value: any, indent: number): string {
+  const pad = '  '.repeat(indent);
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    return value
+      .map((item) => {
+        if ((isPlainObject(item) && Object.keys(item).length > 0) || (Array.isArray(item) && item.length > 0)) {
+          const nested = toYaml(item, indent + 1);
+          return `${pad}- ${nested.slice(pad.length + 2)}`;
+        }
+        if (typeof item === 'string' && item.includes('\n')) {
+          return `${pad}- ${blockLiteral(item, indent + 1)}`;
+        }
+        return `${pad}- ${scalarToYaml(item)}`;
+      })
+      .join('\n');
+  }
+
+  if (isPlainObject(value)) {
+    const keys = Object.keys(value);
+    if (keys.length === 0) return '{}';
+    return keys
+      .map((key) => {
+        const v = value[key];
+        const keyStr = /^[A-Za-z_][A-Za-z0-9_]*$/.test(key) ? key : JSON.stringify(key);
+        if (isPlainObject(v) && Object.keys(v).length > 0) {
+          return `${pad}${keyStr}:\n${toYaml(v, indent + 1)}`;
+        }
+        if (Array.isArray(v) && v.length > 0) {
+          return `${pad}${keyStr}:\n${toYaml(v, indent + 1)}`;
+        }
+        if (typeof v === 'string' && v.includes('\n')) {
+          return `${pad}${keyStr}: ${blockLiteral(v, indent + 1)}`;
+        }
+        return `${pad}${keyStr}: ${scalarToYaml(v)}`;
+      })
+      .join('\n');
+  }
+
+  return scalarToYaml(value);
+}
+
+/** Serialize arbitrary JSON-like data to a readable YAML string. */
+export function jsonToYaml(data: any): string {
+  if (data === undefined) return '';
+  if (data === null) return 'null';
+  if (typeof data !== 'object') return scalarToYaml(data);
+  return toYaml(data, 0);
+}
