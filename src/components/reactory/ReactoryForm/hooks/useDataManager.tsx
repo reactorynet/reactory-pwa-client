@@ -300,8 +300,12 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
     const sx = submitProps.sx;
     const style = submitProps.style;
 
-    // Resolve title text with i18n support
-    let titleText = submitProps.titleText || "Submit";
+    // Action-style forms (seeded, never edited — e.g. approve / disable
+    // panels) opt out of the dirty gate with submitProps.requireDirty: false.
+    const requireDirty = submitProps.requireDirty !== false;
+
+    // Resolve title text with i18n support (`text` accepted as an alias)
+    let titleText = submitProps.titleText || submitProps.text || "Submit";
     if (reactory.i18n && reactory.i18n.t && typeof titleText === 'string' && titleText.includes(':')) {
        try {
          titleText = reactory.i18n.t(titleText, titleText);
@@ -339,7 +343,7 @@ export const useDataManager: ReactoryFormDataManagerHook<any> = (
          variant={variant}
          color={color}
          onClick={onClick}
-         disabled={isDataLoading || isDirty === false}
+         disabled={isDataLoading || (requireDirty && isDirty === false)}
          sx={sx}
          style={style}>
           {buttonChildren}
