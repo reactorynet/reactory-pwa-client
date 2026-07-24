@@ -403,6 +403,72 @@ export interface WorkflowDesignerProps {
   snapToGrid?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  /**
+   * Designer operating mode.
+   * - `design` (default): full editing experience.
+   * - `instance`: read-only visual inspector for a single workflow execution.
+   *   Editing is locked, the step library is hidden, per-step execution status
+   *   is overlaid on the canvas, and the side panels show the instance log
+   *   (left) and instance overview (right). Requires `instanceId`.
+   */
+  mode?: WorkflowDesignerMode;
+  /**
+   * The workflow execution instance id to visualise. Only used when
+   * `mode === 'instance'`.
+   */
+  instanceId?: string;
+}
+
+export type WorkflowDesignerMode = 'design' | 'instance';
+
+/**
+ * Per-step execution status derived from a workflow instance's execution
+ * pointers, keyed by designer step id. Used by the instance-mode overlay and
+ * step-detail popover.
+ */
+export interface InstanceStepStatus {
+  /** Designer step id this status maps to. */
+  stepId: string;
+  /** Numeric workflow-es step status (see STEP_STATUS map). */
+  status: number;
+  /** Human readable status label from the server, when available. */
+  statusLabel?: string;
+  /** True when this step is the (or a) point at which the workflow failed. */
+  failed: boolean;
+  /** True while the step is the active/current pointer. */
+  active: boolean;
+  retryCount: number;
+  startTime?: string | null;
+  endTime?: string | null;
+  duration?: number | null;
+  outcome?: unknown;
+  eventName?: string | null;
+  errorMessage?: string | null;
+  errorStack?: string | null;
+  errorTime?: string | null;
+  errors?: Array<{ message: string; stack?: string; errorTime?: string; retryCount?: number }>;
+  /** The slice of `data.stepResults` produced by this step, if any. */
+  stepResult?: unknown;
+}
+
+/**
+ * Aggregate execution data for a single workflow instance.
+ */
+export interface WorkflowInstanceData {
+  id: string;
+  workflowDefinitionId: string;
+  version?: string;
+  status: number;
+  statusLabel?: string;
+  description?: string;
+  createTime?: string | null;
+  completeTime?: string | null;
+  duration?: number | null;
+  data?: any;
+  stepCount?: number;
+  completedStepCount?: number;
+  failedStepCount?: number;
+  executionPointers?: any[];
 }
 
 /**
@@ -416,6 +482,17 @@ export interface RegisteredWorkflowRef {
   workflowType?: 'YAML' | 'CODE';
   location?: string;
   [key: string]: unknown;
+}
+
+/**
+ * Imperative viewport API surfaced by the canvas renderer so overlays rendered
+ * outside the canvas (e.g. the instance-mode status overlay) can convert world
+ * coordinates to canvas-local screen pixels using the exact same projection the
+ * renderer uses (including its camera Y-flip).
+ */
+export interface WorkflowCanvasViewportApi {
+  worldToScreen: (worldPosition: Point) => Point;
+  getStepGeometry: () => Array<{ id: string; position: Point; size: Size }>;
 }
 
 export interface WorkflowCanvasProps {
@@ -438,6 +515,11 @@ export interface WorkflowCanvasProps {
   onViewportChange: (viewport: CanvasViewport) => void;
   onStepCreate: (stepDefinition: any, position: Point) => void;
   onContextMenu?: (event: React.MouseEvent, target: { type: 'step' | 'connection' | 'canvas'; id?: string; }) => void;
+  /**
+   * Called once the WebGL canvas is initialised, handing the parent an
+   * imperative viewport API for positioning external overlays.
+   */
+  onViewportApiReady?: (api: WorkflowCanvasViewportApi) => void;
 }
 
 export interface StepLibraryPanelProps {

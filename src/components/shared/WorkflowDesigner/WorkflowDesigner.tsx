@@ -14,6 +14,11 @@ import { useWorkflowDesigner } from './hooks/useWorkflowDesigner';
 import { useStepLibrary } from './hooks/useStepLibrary';
 import { useCanvasOperations } from './hooks/useCanvasOperations';
 import { useGraphQL } from './hooks/useGraphQL';
+import { useWorkflowInstance } from './hooks/useWorkflowInstance';
+import type { WorkflowCanvasViewportApi } from './types';
+import StepStatusOverlay from './components/Instance/StepStatusOverlay';
+import InstanceLogPanel from './components/Instance/InstanceLogPanel';
+import InstanceOverviewPanel from './components/Instance/InstanceOverviewPanel';
 import {
   generateStepId,
   generateConnectionId,
@@ -241,13 +246,22 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     onSelectionChange,
     onCanvasChange,
     enableCollaboration = false,
-    readonly = false,
+    readonly: readonlyProp = false,
     autoSave = false,
     autoSaveInterval = 30000,
+    mode: designerMode = 'design',
+    instanceId,
   } = props;
+
+  // Instance-viewer mode: a read-only visual inspector for a single execution.
+  const isInstanceMode = designerMode === 'instance' && !!instanceId;
+  // Instance mode is always read-only, regardless of the readonly prop.
+  const readonly = readonlyProp || isInstanceMode;
 
   const reactory = useReactory();
   const canvasAreaRef = useRef<HTMLDivElement>(null);
+  // Imperative projection API from the canvas, used by the instance overlay.
+  const [viewportApi, setViewportApi] = useState<WorkflowCanvasViewportApi | null>(null);
   const {
     mode,
     primary,
@@ -399,6 +413,19 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     reactory,
     updateDefinition,
   );
+
+  // Instance execution data (instance-viewer mode only).
+  const {
+    loading: instanceLoading,
+    error: instanceError,
+    instance,
+    stepStatusMap,
+    logContent,
+    logLoading,
+    logError,
+    refresh: refreshInstance,
+    refreshLog,
+  } = useWorkflowInstance(instanceId, definition.steps, isInstanceMode);
 
 
   // AMQ event listeners for layout, moves, and canvas actions
@@ -1167,8 +1194,12 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100dvh',
-        maxHeight: '100dvh',
+        // When embedded (instance-viewer mode), fill the host container instead
+        // of the full viewport height so it sits correctly inside a dialog.
+        height: isInstanceMode ? '100%' : '100dvh',
+        maxHeight: isInstanceMode ? '100%' : '100dvh',
+        flex: isInstanceMode ? 1 : undefined,
+        minHeight: 0,
         backgroundColor: background.default,
         overflow: 'hidden'
       }}
@@ -1230,6 +1261,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           </Box>
         )}
 
+        {!isInstanceMode && (
+        <>
         <Box sx={{ mr: 1 }}>
           <ButtonGroup variant="outlined" disabled={readonly} size="small">
             <Button
@@ -1331,6 +1364,8 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             <Redo />
           </IconButton>
         </Tooltip>
+        </>
+        )}
 
         <Tooltip title="Zoom In">
           <IconButton onClick={zoomIn}>
@@ -1363,7 +1398,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
         </Typography>
 
         {/* Panel Toggles */}
-        <Tooltip title="Toggle Step Library Panel">
+        <Tooltip title={isInstanceMode ? 'Toggle Log Panel' : 'Toggle Step Library Panel'}>
           <IconButton
             onClick={handleStepLibraryToggle}
             color={stepLibraryPanelOpen ? "primary" : "default"}
@@ -1373,7 +1408,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
           </IconButton>
         </Tooltip>
 
-        <Tooltip title="Toggle Properties Panel">
+        <Tooltip title={isInstanceMode ? 'Toggle Overview Panel' : 'Toggle Properties Panel'}>
           <IconButton
             onClick={handlePropertiesToggle}
             color={propertiesPanelOpen ? "primary" : "default"}
@@ -1424,16 +1459,26 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               flexShrink: 0,
             }}
           >
-            <StepLibraryPanel
-              stepLibrary={stepLibrary}
-              categories={categories}
-              searchTerm={searchTerm}
-              selectedCategory={selectedCategory}
-              onStepDragStart={handleStepLibraryStepDragStart}
-              onSearchChange={setSearchTerm}
-              onCategorySelect={setSelectedCategory}
-              onStepClick={handleStepLibraryStepClick}
-            />
+            {isInstanceMode ? (
+              <InstanceLogPanel
+                reactory={reactory}
+                logContent={logContent}
+                logLoading={logLoading}
+                logError={logError}
+                onRefresh={refreshLog}
+              />
+            ) : (
+              <StepLibraryPanel
+                stepLibrary={stepLibrary}
+                categories={categories}
+                searchTerm={searchTerm}
+                selectedCategory={selectedCategory}
+                onStepDragStart={handleStepLibraryStepDragStart}
+                onSearchChange={setSearchTerm}
+                onCategorySelect={setSelectedCategory}
+                onStepClick={handleStepLibraryStepClick}
+              />
+            )}
           </Paper>
         )}
 
@@ -1486,7 +1531,20 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             onViewportChange={setViewport}
             onStepCreate={handleStepCreation}
             onContextMenu={handleContextMenu}
+            onViewportApiReady={setViewportApi}
           />
+
+          {/* Instance-mode step status overlay */}
+          {isInstanceMode && (
+            <StepStatusOverlay
+              reactory={reactory}
+              steps={definition.steps}
+              stepStatusMap={stepStatusMap}
+              viewport={viewport}
+              viewportApi={viewportApi}
+              containerRef={canvasAreaRef}
+            />
+          )}
         </Box>
 
         {/* Right panel resize handle */}
@@ -1522,18 +1580,28 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               flexShrink: 0,
             }}
           >
-            <PropertiesPanel
-              selectedSteps={selectedSteps}
-              selectedConnections={selectedConnections}
-              stepLibrary={stepLibrary}
-              validationResult={mergedValidationResult}
-              readonly={readonly}
-              onStepUpdate={handleStepUpdate}
-              onConnectionUpdate={handleConnectionUpdate}
-              onValidate={handleValidate}
-              definition={definition}
-              onDefinitionUpdate={updateDefinition}
-            />
+            {isInstanceMode ? (
+              <InstanceOverviewPanel
+                reactory={reactory}
+                instance={instance}
+                loading={instanceLoading}
+                error={instanceError}
+                onRefresh={refreshInstance}
+              />
+            ) : (
+              <PropertiesPanel
+                selectedSteps={selectedSteps}
+                selectedConnections={selectedConnections}
+                stepLibrary={stepLibrary}
+                validationResult={mergedValidationResult}
+                readonly={readonly}
+                onStepUpdate={handleStepUpdate}
+                onConnectionUpdate={handleConnectionUpdate}
+                onValidate={handleValidate}
+                definition={definition}
+                onDefinitionUpdate={updateDefinition}
+              />
+            )}
           </Paper>
         )}
       </Box>

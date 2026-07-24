@@ -206,6 +206,16 @@ export default function WorkflowWebGLCanvas(props: Readonly<WorkflowWebGLCanvasP
     }
   }, [showGrid, isInitialized]);
 
+  // Hand the parent an imperative viewport API once initialised, so external
+  // overlays (e.g. instance-mode step-status badges) can project world → screen
+  // using the renderer's own camera (including its Y-flip).
+  const { onViewportApiReady } = props;
+  useEffect(() => {
+    if (isInitialized && onViewportApiReady) {
+      onViewportApiReady({ worldToScreen, getStepGeometry });
+    }
+  }, [isInitialized, onViewportApiReady, worldToScreen, getStepGeometry]);
+
   // Update metrics periodically
   useEffect(() => {
     if (!showMetrics || !isInitialized) return;
