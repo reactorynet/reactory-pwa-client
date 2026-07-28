@@ -11,7 +11,8 @@ export enum StreamingEventType {
   TOOL_ITERATION_LIMIT = 'tool_iteration_limit',
   INTERRUPTED = 'interrupted',
   RETRY = 'retry',
-  COMPACTION = 'compaction'
+  COMPACTION = 'compaction',
+  SHELL = 'shell'
 }
 
 /**
@@ -130,6 +131,26 @@ export interface RetryStreamingEvent extends StreamingEventBase {
   };
 }
 
+/**
+ * Shell streaming event — incremental stdout/stderr and lifecycle from a shell
+ * process. `shellSessionId` groups all events for one terminal; `source`
+ * distinguishes an LLM macro run, an interactive widget PTY, or a workflow step.
+ */
+export interface ShellStreamingEvent extends StreamingEventBase {
+  type: StreamingEventType.SHELL;
+  data: {
+    shellSessionId: string;
+    phase: 'start' | 'stdout' | 'stderr' | 'exit';
+    source: 'macro' | 'widget' | 'workflow';
+    chunk?: string;
+    command?: string;
+    cwd?: string;
+    pid?: number;
+    exitCode?: number;
+    timedOut?: boolean;
+  };
+}
+
 export interface CompactionStreamingEvent extends StreamingEventBase {
   type: StreamingEventType.COMPACTION;
   data: {
@@ -157,6 +178,8 @@ export interface UseSSEOptions {
   onInterrupted?: (event: InterruptedStreamingEvent) => void;
   onRetry?: (event: RetryStreamingEvent) => void;
   onCompaction?: (event: CompactionStreamingEvent) => void;
+  /** Called for each shell stream event (stdout/stderr/lifecycle from a shell process) */
+  onShell?: (event: ShellStreamingEvent) => void;
   /** Called when the SSE connection drops and a reconnect attempt begins */
   onReconnecting?: (attempt: number, maxAttempts: number, delayMs: number) => void;
   /** Called when a dropped SSE connection is successfully re-established */
@@ -213,7 +236,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 /** Exponential backoff delays (ms) for each reconnect attempt */
 const RECONNECT_BACKOFF_MS = [1000, 2000, 4000, 8000, 16000];
 
-const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onInterrupted, onRetry, onCompaction, onReconnecting, onReconnected, onReconnectFailed, onStreamActivity, sessionLogger }: UseSSEOptions): UseSSEResult => {
+const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall, onToolIterationLimit, onInterrupted, onRetry, onCompaction, onShell, onReconnecting, onReconnected, onReconnectFailed, onStreamActivity, sessionLogger }: UseSSEOptions): UseSSEResult => {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [connected, setConnected] = React.useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = React.useState('');
@@ -233,6 +256,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   const onInterruptedRef = React.useRef(onInterrupted);
   const onRetryRef = React.useRef(onRetry);
   const onCompactionRef = React.useRef(onCompaction);
+  const onShellRef = React.useRef(onShell);
   const onReconnectingRef = React.useRef(onReconnecting);
   const onReconnectedRef = React.useRef(onReconnected);
   const onReconnectFailedRef = React.useRef(onReconnectFailed);
@@ -245,6 +269,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
   onInterruptedRef.current = onInterrupted;
   onRetryRef.current = onRetry;
   onCompactionRef.current = onCompaction;
+  onShellRef.current = onShell;
   const onStreamActivityRef = React.useRef(onStreamActivity);
   onReconnectingRef.current = onReconnecting;
   onReconnectedRef.current = onReconnected;
@@ -475,6 +500,13 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
           }
           break;
         }
+        case 'shell': {
+          const shellEvt = data as ShellStreamingEvent;
+          if (onShellRef.current) {
+            onShellRef.current(shellEvt);
+          }
+          break;
+        }
         default:
           reactory.debug('useSSE: unknown event', data.type);
       }
@@ -565,6 +597,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('compaction', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('shell', (event) => handleMessage(event as MessageEvent));
       es.onmessage = (event) => handleMessage(event);
 
       es.onerror = () => {
@@ -645,6 +678,7 @@ const useSSE = ({ reactory, onToken, onReasoning, onMessage, onError, onToolCall
       es.addEventListener('start', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('tool_iteration_limit', (event) => handleMessage(event as MessageEvent));
       es.addEventListener('compaction', (event) => handleMessage(event as MessageEvent));
+      es.addEventListener('shell', (event) => handleMessage(event as MessageEvent));
 
       // Also listen for generic message events as fallback
       es.onmessage = (event) => handleMessage(event);

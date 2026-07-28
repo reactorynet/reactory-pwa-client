@@ -406,6 +406,7 @@ export default (props) => {
     Checklist,
     BugReport,
     AccountTree,
+    Terminal,
     ChevronRight,
     NavigateNext,
     ArrowBack,
@@ -1421,13 +1422,32 @@ export default (props) => {
       title: il8n?.t('reactor.client.chat.sidePanel', { defaultValue: 'Side Panel' }),
       clickHandler: handleSidePanelToggle,
     }] : []),
+    {
+      key: 'shellConsole',
+      icon: <Terminal />,
+      title: il8n?.t('reactor.client.chat.shellConsole', { defaultValue: 'Shell Console' }),
+      clickHandler: () => {
+        sidePanelActions.addItem({
+          id: 'shell-macro-console',
+          componentFqn: 'reactory.ChatShellConsole@1.0.0',
+          title: 'Shell',
+          type: 'component',
+          props: {},
+          addedAt: new Date(),
+          addedBy: 'user-toggle',
+        });
+        if (!sidePanelState.isOpen) {
+          sidePanelActions.togglePanel();
+        }
+      },
+    },
     ...(reactory.isDevelopmentMode() ? [{
       key: 'debug',
       icon: <BugReport />,
       title: il8n?.t('reactor.client.chat.debug', { defaultValue: 'Debug Inspector' }),
       clickHandler: handleDebugPanelToggle,
     }] : []),
-  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleDebugPanelToggle, reactory]);
+  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleDebugPanelToggle, reactory]);
 
   return (
     <Box
