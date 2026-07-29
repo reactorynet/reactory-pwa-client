@@ -1499,7 +1499,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       sessionId &&
       existingSession?.isInitialized &&
       protocol === 'sse' &&
-      (!sse.connected || sseReestablishedSessionIdRef.current !== sessionId)
+      sseReestablishedSessionIdRef.current !== sessionId
     ) {
       sseReestablishedSessionIdRef.current = sessionId;
       reactory.log(`ChatFactory: Re-establishing SSE for existing session ${sessionId}`);
@@ -1530,7 +1530,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         sseReestablishedSessionIdRef.current = null; // allow retry
       });
     }
-  }, [existingSession?.chatState?.id, existingSession?.isInitialized, protocol, sse.connected]);
+  }, [existingSession?.chatState?.id, existingSession?.isInitialized, protocol, persona?.id]);
 
   /**
    * Wraps setModelOverride to also persist the selection to the server
@@ -1965,7 +1965,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       }
       reasoningBufferRef.current = "";
       streamingCompleteRef.current = false;
-      sseReestablishedRef.current = false;
+      sseReestablishedSessionIdRef.current = "";
       pendingToolCallsRef.current = [];
 
       // Disconnect any existing SSE connection to ensure clean state
