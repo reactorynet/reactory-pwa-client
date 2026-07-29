@@ -400,6 +400,11 @@ export type ChatState = {
   maxToolIterations?: number;
 
   /**
+   * Indicates whether this chat session currently has an active SSE connection/transport.
+   */
+  active?: boolean;
+
+  /**
    * A list of MCP Clients
    */
   mcpClients?: MCPClient[],

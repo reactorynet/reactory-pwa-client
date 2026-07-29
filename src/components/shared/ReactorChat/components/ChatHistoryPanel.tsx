@@ -142,6 +142,18 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                               {label.substring(0, 50)}{label.length > 50 ? '...' : ''}
                             </Typography>
+                            {chat.active && (
+                              <Box
+                                sx={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  bgcolor: 'success.main',
+                                  boxShadow: '0 0 6px #2e7d32',
+                                }}
+                                title="Active session"
+                              />
+                            )}
                             {persona && (
                               <Chip
                                 label={persona.name}

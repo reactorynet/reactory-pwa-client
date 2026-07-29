@@ -5,6 +5,7 @@ import { exec } from "child_process"
 import ToolPrompt, { ToolApprovalDecision } from './ToolPrompt';
 import useGraph, { ReactorInitSessionInput, ReactorSendMessageInput } from './graphql/useGraph';
 import useSSE, { CompactionStreamingEvent, CompletionStreamingEvent, InterruptedStreamingEvent, ReasoningStreamingEvent, RetryStreamingEvent, StreamingEventType, TokenStreamingEvent, ToolCallStreamingEvent, ToolIterationLimitStreamingEvent } from './useSSE';
+import { chatShellBus } from '../components/Shell/chatShellBus';
 
 interface ChatFactoryHookResult {
   // represents the chat state
@@ -266,6 +267,16 @@ interface ReactorInitSession {
   tools: Partial<MacroToolDefinition>[]
 }
 
+const safeJsonParse = (str: any) => {
+  if (typeof str !== "string") return str;
+  if (!str || str.trim() === "") return {};
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return {};
+  }
+};
+
 const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   const {
@@ -276,6 +287,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     sessionLogger,
     getProviderAuthOverride,
   } = props;
+
+  const activeSessionIdRef = React.useRef<string | null>(existingSession?.chatState?.id || null);
 
   const resolveAuthOverride = (chatSessionId?: string) => {
     if (!chatSessionId || !getProviderAuthOverride) return undefined;
@@ -313,6 +326,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   ) => Promise<any>) | null>(null);
 
   const onSSEMessageReceived = async (message: CompletionStreamingEvent) => {
+    const eventSessionId = message.conversationId || message.sessionId;
+    if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
+      return;
+    }
     if (message.type === StreamingEventType.COMPLETE) {
       sessionLogger?.info('SSE stream complete', { contentLength: message.data?.content?.length || 0, finishReason: message.data?.finishReason }, 'useSSE');
       console.log('📩 [useChatFactory] onSSEMessageReceived COMPLETE', {
@@ -947,6 +964,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const [chatState, setChatState] = React.useState<ChatState>(
     existingSession?.chatState || getInitialChatState()
   );
+
+  React.useEffect(() => {
+    activeSessionIdRef.current = chatState?.id || null;
+  }, [chatState?.id]);
   const [busy, setBusy] = React.useState<boolean>(false);
   const [chatLoading, setChatLoading] = React.useState<boolean>(false);
   const [isInitialized, setIsInitialized] = React.useState<boolean>(
@@ -1015,7 +1036,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const processToolCallsRef = React.useRef<(toolCalls: any[], message: UXChatMessage, depth?: number) => Promise<{ toolResults: any[], toolErrors: any[] }>>(null);
 
   const onToolCallReceived = React.useCallback(async (toolCall: ToolCallStreamingEvent) => {
-    const validSessionId = chatState.id || toolCall.conversationId || toolCall.sessionId;
+    const eventSessionId = toolCall.conversationId || toolCall.sessionId;
+    if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
+      return;
+    }
+    const validSessionId = chatState.id || eventSessionId;
     if (!validSessionId) {
       console.error('❌ [useChatFactory] Tool call missing sessionId:', toolCall);
       return;
@@ -1087,14 +1112,14 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           // Tool wasn't tracked — append to the last assistant message
           const lastIndex = history.length - 1;
           if (lastIndex >= 0 && history[lastIndex].role === 'assistant') {
-            const existingToolCalls = (history[lastIndex].tool_calls || []) as any[];
+            const existingToolCalls = [...(history[lastIndex].tool_calls || [])] as any[];
             existingToolCalls.push({
               id: toolCallId,
               type: "function",
               function: {
                 name: toolCall.data.name,
                 arguments: typeof toolCall.data.arguments === 'string'
-                  ? JSON.parse(toolCall.data.arguments) : toolCall.data.arguments,
+                  ? safeJsonParse(toolCall.data.arguments) : toolCall.data.arguments,
               },
               status: 'success' as const,
             });
@@ -1126,7 +1151,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       function: {
         name: toolCall.data.name,
         arguments: typeof toolCall.data.arguments === 'string'
-          ? JSON.parse(toolCall.data.arguments) : toolCall.data.arguments,
+          ? safeJsonParse(toolCall.data.arguments) : toolCall.data.arguments,
       },
       status: 'running' as const,
     };
@@ -1187,6 +1212,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
 
   const onTokenReceived = React.useCallback((token: TokenStreamingEvent) => {
+    const eventSessionId = token.conversationId || token.sessionId;
+    if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
+      return;
+    }
     setChatState((prevState) => {
       const validSessionId = prevState.id || token.sessionId;
       if (!validSessionId) {
@@ -1243,6 +1272,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
   const streamingCompleteRef = React.useRef<boolean>(false);
 
   const onReasoningReceived = React.useCallback((reasoning: ReasoningStreamingEvent) => {
+    const eventSessionId = reasoning.conversationId || reasoning.sessionId;
+    if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
+      return;
+    }
     // Skip if streaming already completed (stale event from reconnect, etc.)
     if (streamingCompleteRef.current) return;
 
@@ -1291,6 +1324,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
    * @returns 
    */
     const onToolIterationLimitReceived = React.useCallback((event: ToolIterationLimitStreamingEvent) => {
+      const eventSessionId = event.conversationId || event.sessionId;
+      if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
+        return;
+      }
       reactory.log('[useChatFactory] Tool iteration limit reached', event.data, 'warning');
 
       // Update the last assistant message with partial content if available
@@ -1324,6 +1361,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }, [reactory]);
 
     const onInterruptedReceived = React.useCallback((event: InterruptedStreamingEvent) => {
+      const eventSessionId = event.conversationId || event.sessionId;
+      if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
+        return;
+      }
       reactory.log('[useChatFactory] Execution interrupted by user', event.data, 'info');
       setWaitingForResponse(false);
       if (sseInactivityTimerRef.current) {
@@ -1338,6 +1379,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
      * or other transient errors and is retrying with exponential backoff.
      */
     const onRetryReceived = React.useCallback((event: RetryStreamingEvent) => {
+      const eventSessionId = event.conversationId || event.sessionId;
+      if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
+        return;
+      }
       const { attempt, maxAttempts, retryAfterMs, reason } = event.data;
       const delaySec = Math.round(retryAfterMs / 1000);
       reactory.log(
@@ -1362,6 +1407,10 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }, [reactory]);
 
     const onCompactionReceived = React.useCallback((event: CompactionStreamingEvent) => {
+      const eventSessionId = event.conversationId || event.sessionId;
+      if (activeSessionIdRef.current && eventSessionId && eventSessionId !== activeSessionIdRef.current) {
+        return;
+      }
       reactory.log(
         `[useChatFactory] Compaction event: ${event.data.phase}`,
         event.data,
@@ -1400,6 +1449,9 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
       onInterrupted: onInterruptedReceived,
       onRetry: onRetryReceived,
       onCompaction: onCompactionReceived,
+      // Forward one-shot `shell` macro output (streamed on the chat channel)
+      // to the shell bus; ReactorChat mounts a read-only terminal for it.
+      onShell: (event) => { chatShellBus.push(event.data); },
       onReconnecting: (attempt, maxAttempts) => {
         setNetworkStatus('reconnecting');
         setNetworkReconnectAttempt(attempt);
@@ -1440,17 +1492,16 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
 
   // Re-establish SSE connection on page reload when an existing session is loaded.
   // The SSE transport is lost on navigation/refresh, so we need to reconnect.
-  const sseReestablishedRef = React.useRef(false);
+  const sseReestablishedSessionIdRef = React.useRef<string | null>(null);
   React.useEffect(() => {
+    const sessionId = existingSession?.chatState?.id;
     if (
-      existingSession?.chatState?.id &&
+      sessionId &&
       existingSession?.isInitialized &&
       protocol === 'sse' &&
-      !sse.connected &&
-      !sseReestablishedRef.current
+      (!sse.connected || sseReestablishedSessionIdRef.current !== sessionId)
     ) {
-      sseReestablishedRef.current = true;
-      const sessionId = existingSession.chatState.id;
+      sseReestablishedSessionIdRef.current = sessionId;
       reactory.log(`ChatFactory: Re-establishing SSE for existing session ${sessionId}`);
 
       // Send a lightweight SSE-mode message to trigger the server to return
@@ -1472,11 +1523,11 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
           reactory.log(`ChatFactory: SSE re-established for session ${sessionId}`);
         } else {
           reactory.log(`ChatFactory: SSE re-init returned ${resp?.__typename}, not ReactorInitiateSSE`, {}, 'warning');
-          sseReestablishedRef.current = false; // allow retry
+          sseReestablishedSessionIdRef.current = null; // allow retry
         }
       }).catch((err: any) => {
         reactory.log(`ChatFactory: Failed to re-establish SSE: ${err?.message}`, {}, 'warning');
-        sseReestablishedRef.current = false; // allow retry
+        sseReestablishedSessionIdRef.current = null; // allow retry
       });
     }
   }, [existingSession?.chatState?.id, existingSession?.isInitialized, protocol, sse.connected]);
