@@ -49,6 +49,7 @@ export { GraphQLMutationStepDefinition } from './GraphQLMutation/definition';
 
 // Flow control Step Definitions
 export { SagaStepDefinition } from './Saga/definition';
+export { InvokeWorkflowStepDefinition } from './InvokeWorkflow/definition';
 
 // Interaction Step Definitions
 export { WaitEventStepDefinition } from './WaitEvent/definition';
@@ -88,6 +89,7 @@ import { MSSQLStepDefinition } from './MSSQL/definition';
 import { GraphQLQueryStepDefinition } from './GraphQLQuery/definition';
 import { GraphQLMutationStepDefinition } from './GraphQLMutation/definition';
 import { SagaStepDefinition } from './Saga/definition';
+import { InvokeWorkflowStepDefinition } from './InvokeWorkflow/definition';
 import { WaitEventStepDefinition } from './WaitEvent/definition';
 
 /**
@@ -118,6 +120,7 @@ export const ALL_STEP_DEFINITIONS: StepDefinition[] = [
   ForEachStepDefinition,
   WhileStepDefinition,
   SagaStepDefinition,
+  InvokeWorkflowStepDefinition,
 
   // Integration
   GraphQLStepDefinition,

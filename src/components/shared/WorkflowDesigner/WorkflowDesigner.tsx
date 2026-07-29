@@ -19,6 +19,7 @@ import type { WorkflowCanvasViewportApi } from './types';
 import StepStatusOverlay from './components/Instance/StepStatusOverlay';
 import InstanceLogPanel from './components/Instance/InstanceLogPanel';
 import InstanceOverviewPanel from './components/Instance/InstanceOverviewPanel';
+import { WorkflowShellConsole } from '../ReactorChat/components/Shell';
 import {
   generateStepId,
   generateConnectionId,
@@ -424,8 +425,41 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
     logLoading,
     logError,
     refresh: refreshInstance,
+    silentRefresh: silentRefreshInstance,
     refreshLog,
   } = useWorkflowInstance(instanceId, definition.steps, isInstanceMode);
+
+  // Publish the awaited event for a waiting step, continuing its execution, then
+  // refresh the instance so the overlay reflects the new state.
+  const handleSignalEvent = useCallback(async (stepId: string, eventData: any) => {
+    if (!instanceId) return;
+    try {
+      const result = await reactory.graphqlMutation(`
+        mutation SignalWorkflowInstance($instanceId: String!, $stepId: String, $eventData: JSON) {
+          signalWorkflowInstance(instanceId: $instanceId, stepId: $stepId, eventData: $eventData) {
+            success
+            message
+          }
+        }
+      `, { instanceId, stepId, eventData });
+      const op: any = (result?.data as any)?.signalWorkflowInstance;
+      if (op?.success) {
+        reactory.createNotification?.(op?.message || 'Event published', { type: 'success' });
+        // The event is published, but the engine resumes the suspended step
+        // asynchronously (typically a few seconds). A single immediate refresh
+        // would still show the step "waiting", so poll a few times (silently, to
+        // avoid a flicker) so the overlay reflects the resumption/completion.
+        [0, 1500, 3000, 5000, 8000].forEach((delay) => {
+          setTimeout(() => { void silentRefreshInstance(); }, delay);
+        });
+      } else {
+        reactory.createNotification?.(op?.message || 'Failed to publish event', { type: 'error' });
+      }
+    } catch (err: any) {
+      reactory.log(`Error signalling workflow step: ${err?.message}`, { err }, 'error');
+      reactory.createNotification?.(`Error: ${err?.message}`, { type: 'error' });
+    }
+  }, [instanceId, reactory, refreshInstance]);
 
 
   // AMQ event listeners for layout, moves, and canvas actions
@@ -1460,13 +1494,23 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
             }}
           >
             {isInstanceMode ? (
-              <InstanceLogPanel
-                reactory={reactory}
-                logContent={logContent}
-                logLoading={logLoading}
-                logError={logError}
-                onRefresh={refreshLog}
-              />
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+                <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                  <InstanceLogPanel
+                    reactory={reactory}
+                    logContent={logContent}
+                    logLoading={logLoading}
+                    logError={logError}
+                    onRefresh={refreshLog}
+                  />
+                </div>
+                {/* Live echo of cli_command steps for this run. The step publishes
+                    onto channelId = workflow.instanceId by default, so we subscribe
+                    to the same id. */}
+                <div style={{ height: '45%', minHeight: 180, borderTop: '1px solid', borderColor: 'rgba(128,128,128,0.3)' }}>
+                  <WorkflowShellConsole reactory={reactory as any} channelId={instanceId as string} />
+                </div>
+              </div>
             ) : (
               <StepLibraryPanel
                 stepLibrary={stepLibrary}
@@ -1543,6 +1587,7 @@ export default function WorkflowDesigner(props: WorkflowDesignerProps) {
               viewport={viewport}
               viewportApi={viewportApi}
               containerRef={canvasAreaRef}
+              onSignalEvent={handleSignalEvent}
             />
           )}
         </Box>

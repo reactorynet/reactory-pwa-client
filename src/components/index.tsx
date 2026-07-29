@@ -63,6 +63,7 @@ import DocumentUploadComponent from './shared/DocumentUploadComponents';
 import Cropper from './shared/image/Cropper';
 import ReactorChat from './shared/ReactorChat/ReactorChat';
 import { ReactorChatButton } from './shared/ReactorChat';
+import { ShellWidget, WorkflowShellConsole, ChatShellTerminal, ChatShellConsole } from './shared/ReactorChat/components/Shell';
 
 
 import DateLabel from './shared/DateLabel';
@@ -142,7 +143,45 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     version: '1.0.0',
     component: React,
     description: 'The React library, included for convenience to avoid multiple versions in the bundle and ensure compatibility across components.',
-    tags: ['react', 'library', 'core'],    
+    tags: ['react', 'library', 'core'],
+  },
+  {
+    nameSpace: 'reactory',
+    name: 'ShellWidget',
+    version: '1.0.0',
+    component: ShellWidget,
+    description: 'Interactive PTY shell terminal (xterm) that streams stdio over SSE. Mount in the ReactorChat side panel.',
+    tags: ['shell', 'terminal', 'pty', 'reactor'],
+    roles: ['ADMIN', 'DEVELOPER', 'SHELL-EXEC'],
+    wrapWithApi: true,
+  },
+  {
+    nameSpace: 'reactory',
+    name: 'WorkflowShellConsole',
+    version: '1.0.0',
+    component: WorkflowShellConsole,
+    description: 'Read-only multi-terminal console echoing live workflow cli_command steps for a channel.',
+    tags: ['shell', 'terminal', 'workflow', 'reactor'],
+    roles: ['ADMIN', 'DEVELOPER', 'SHELL-EXEC'],
+    wrapWithApi: true,
+  },
+  {
+    nameSpace: 'reactory',
+    name: 'ChatShellTerminal',
+    version: '1.0.0',
+    component: ChatShellTerminal,
+    description: 'Read-only terminal for a one-shot shell macro run, fed by the chat shell bus.',
+    tags: ['shell', 'terminal', 'macro', 'reactor'],
+    roles: ['*'],
+  },
+  {
+    nameSpace: 'reactory',
+    name: 'ChatShellConsole',
+    version: '1.0.0',
+    component: ChatShellConsole,
+    description: 'Consolidated read-only console of one-shot shell macro runs, auto-mounted in the chat side panel.',
+    tags: ['shell', 'terminal', 'macro', 'reactor'],
+    roles: ['*'],
   },
   {
     nameSpace: 'core',

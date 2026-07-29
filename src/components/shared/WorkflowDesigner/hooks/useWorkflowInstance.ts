@@ -37,6 +37,8 @@ const INSTANCE_QUERY = `
         persistenceData
         eventData
         eventName
+        eventKey
+        eventPublished
         outcome
         errorMessage
         errorStack
@@ -68,6 +70,8 @@ export interface UseWorkflowInstanceResult {
   logLoading: boolean;
   logError: string | null;
   refresh: () => void;
+  /** Re-fetch the instance in place without toggling the loading state. */
+  silentRefresh: () => Promise<void>;
   refreshLog: () => void;
 }
 
@@ -101,6 +105,23 @@ export function useWorkflowInstance(
   const [logRefreshKey, setLogRefreshKey] = useState<number>(0);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  // Re-fetch the instance in place without toggling `loading` (used to poll for
+  // the async engine resume after signalling an event, so the overlay updates
+  // without a flicker).
+  const silentRefresh = useCallback(async () => {
+    if (!instanceId) return;
+    try {
+      const result = await reactory.graphqlQuery<{ workflowExecutionHistoryById: WorkflowInstanceData }, any>(
+        INSTANCE_QUERY,
+        { instanceId },
+      );
+      const data = result?.data?.workflowExecutionHistoryById;
+      if (data) setInstance(data);
+    } catch (err: any) {
+      reactory.log(`Silent workflow instance refresh failed: ${err?.message}`, { err }, 'debug');
+    }
+  }, [instanceId, reactory]);
   const refreshLog = useCallback(() => {
     setLogContent(null);
     setLogError(null);
@@ -217,6 +238,9 @@ export function useWorkflowInstance(
         duration: pointer.duration,
         outcome: pointer.outcome,
         eventName: pointer.eventName,
+        eventKey: pointer.eventKey,
+        eventPublished: pointer.eventPublished,
+        waitingForEvent: Boolean(pointer.eventName) && !pointer.eventPublished,
         errorMessage: pointer.errorMessage,
         errorStack: pointer.errorStack,
         errorTime: pointer.errorTime,
@@ -225,9 +249,10 @@ export function useWorkflowInstance(
       };
 
       // If a step has multiple pointers (retries / loops), prefer the most
-      // significant: a failure wins, otherwise the latest active/complete.
+      // significant: a failure wins, otherwise a waiting/active pointer, else
+      // the latest.
       const existing = map.get(designerStepId);
-      if (!existing || status.failed || (!existing.failed && status.active)) {
+      if (!existing || status.failed || (!existing.failed && (status.active || status.waitingForEvent))) {
         map.set(designerStepId, status);
       }
     }
@@ -244,6 +269,7 @@ export function useWorkflowInstance(
     logLoading,
     logError,
     refresh,
+    silentRefresh,
     refreshLog,
   };
 }

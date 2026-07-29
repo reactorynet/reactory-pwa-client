@@ -10,6 +10,7 @@ interface ChatHistoryPanelProps {
   getPersona?: (personaId: string) => IAIPersona | null;
   onChatSelect: (chat: ChatState) => void;
   onDeleteChat: (chatId: string) => void;
+  onSearch?: (query: string) => void;
   Material: any;
   il8n: any;
 }
@@ -22,6 +23,7 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   getPersona,
   onChatSelect,
   onDeleteChat,
+  onSearch,
   Material,
   il8n
 }) => {
@@ -36,7 +38,15 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
     ListItem,
     ListItemText,
     Chip,
+    TextField,
   } = Material.MaterialCore;
+
+  const [expandedSegments, setExpandedSegments] = React.useState<{ [key: string]: boolean }>({});
+  const [clickMoreCounts, setClickMoreCounts] = React.useState<{ [key: string]: number }>({});
+  const [searchQuery, setSearchQuery] = React.useState<string>('');
+
+  const totalClickMoreCount = Object.values(clickMoreCounts).reduce((sum, count) => sum + count, 0);
+  const showSearch = totalClickMoreCount >= 2 || searchQuery !== '';
 
   const activePersonaId = chatState?.personaId || chatState?.persona?.id;
 
@@ -133,11 +143,47 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
           <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
             {il8n?.t('reactor.client.chat.history.conversations', { defaultValue: 'Conversations' })}
           </Typography>
+          {showSearch && (
+            <TextField
+              size="small"
+              fullWidth
+              placeholder={il8n?.t('reactor.client.chat.history.searchPlaceholder', { defaultValue: 'Search conversations...' })}
+              value={searchQuery}
+              onChange={(e: any) => {
+                const val = e.target.value;
+                setSearchQuery(val);
+                onSearch?.(val);
+              }}
+              sx={{ mb: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <IconButton disabled size="small" sx={{ p: 0, mr: 1 }}>
+                    <Material.MaterialIcons.Search sx={{ color: 'text.secondary', fontSize: '1.2rem' }} />
+                  </IconButton>
+                ),
+                endAdornment: searchQuery ? (
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setSearchQuery('');
+                      onSearch?.('');
+                    }}
+                  >
+                    <Material.MaterialIcons.Clear sx={{ fontSize: '1rem' }} />
+                  </IconButton>
+                ) : null,
+              }}
+            />
+          )}
           {groupedChats && groupedChats.length > 0 ? (
             <List sx={{ p: 0 }}>
               {groupedChats.map((group, groupIndex) => {
                 const groupPersona = group.persona;
                 const isGroupActive = group.personaId === activePersonaId;
+                const sortedChats = group.chats;
+                const isExpanded = !!expandedSegments[group.personaId];
+                const visibleChats = isExpanded ? sortedChats : sortedChats.slice(0, 5);
+                const hasMore = sortedChats.length > 5;
 
                 return (
                   <Box key={group.personaId} sx={{ mb: 2 }}>
@@ -170,7 +216,7 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                     </Box>
 
                     {/* Chats inside this group */}
-                    {group.chats.map((chat) => {
+                    {visibleChats.map((chat) => {
                       const label = chat.title
                         || il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
 
@@ -237,6 +283,41 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                               </Typography>
                             }
                           />
+                        </ListItem>
+                      );
+                    })}
+
+                    {/* more + link */}
+                    {hasMore && !isExpanded && (
+                      <Box 
+                        onClick={() => {
+                          setExpandedSegments((prev) => ({ ...prev, [group.personaId]: true }));
+                          setClickMoreCounts((prev) => ({
+                            ...prev,
+                            [group.personaId]: (prev[group.personaId] || 0) + 1,
+                          }));
+                        }}
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          py: 0.5, 
+                          cursor: 'pointer',
+                          color: 'primary.main',
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold',
+                          '&:hover': {
+                            textDecoration: 'underline'
+                          }
+                        }}
+                      >
+                        {il8n?.t('reactor.client.chat.history.more', { defaultValue: 'more +' })}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })}
+            </List>
                         </ListItem>
                       );
                     })}

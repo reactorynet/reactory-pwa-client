@@ -443,6 +443,12 @@ export interface InstanceStepStatus {
   duration?: number | null;
   outcome?: unknown;
   eventName?: string | null;
+  /** Event correlation key the step is waiting on (used to publish/signal it). */
+  eventKey?: string | null;
+  /** Whether the awaited event has already been published/consumed. */
+  eventPublished?: boolean;
+  /** True when the step is suspended waiting for an event that can be signalled. */
+  waitingForEvent?: boolean;
   errorMessage?: string | null;
   errorStack?: string | null;
   errorTime?: string | null;

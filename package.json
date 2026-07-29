@@ -34,6 +34,8 @@
     "@rjsf/utils": "5.24.13",
     "@rjsf/validator-ajv8": "5.24.13",
     "@types/react-transition-group": "^4.4.12",
+    "@xterm/addon-fit": "0.10.0",
+    "@xterm/xterm": "5.5.0",
     "ajv": "8.17.1",
     "apollo-upload-client": "18.0.1",
     "apollo3-cache-persist": "0.15.0",

@@ -1781,6 +1781,11 @@ export default (props) => {
               getPersona={getPersona}
               onChatSelect={handleChatSelect}
               onDeleteChat={deleteChat}
+              onSearch={(query) => {
+                listChats({ search: query }).then((chatList) => {
+                  setChats(chatList as ChatState[]);
+                });
+              }}
               Material={Material}
               il8n={il8n}
             />

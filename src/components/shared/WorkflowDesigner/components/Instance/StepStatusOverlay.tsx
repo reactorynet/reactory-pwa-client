@@ -18,6 +18,8 @@ export interface StepStatusOverlayProps {
   viewportApi: WorkflowCanvasViewportApi | null;
   /** The canvas area element, observed for size changes. */
   containerRef: React.RefObject<HTMLElement>;
+  /** Publish the awaited event for a waiting step, continuing execution. */
+  onSignalEvent?: (stepId: string, eventData: any) => Promise<void> | void;
 }
 
 interface OverlayRect {
@@ -44,6 +46,7 @@ const StepStatusOverlay: React.FC<StepStatusOverlayProps> = ({
   viewport,
   viewportApi,
   containerRef,
+  onSignalEvent,
 }) => {
   const { Material } = reactory.getComponents<{ Material: Reactory.Client.Web.IMaterialModule }>([
     'material-ui.Material',
@@ -116,7 +119,8 @@ const StepStatusOverlay: React.FC<StepStatusOverlayProps> = ({
           const color = resolveStatusColor(theme, descriptor);
           const isFailed = rect.status.failed;
           const isRunning = rect.status.status === STEP_STATUS_RUNNING && !isFailed;
-          const isActive = rect.status.active && !isFailed;
+          const isWaiting = Boolean(rect.status.waitingForEvent) && !isFailed;
+          const isActive = (rect.status.active || isWaiting) && !isFailed;
           return (
             <React.Fragment key={rect.stepId}>
               {/* Status ring on the step body */}
@@ -202,6 +206,8 @@ const StepStatusOverlay: React.FC<StepStatusOverlayProps> = ({
             reactory={reactory}
             stepLabel={selectedRect.stepLabel}
             status={selectedRect.status}
+            onSignalEvent={onSignalEvent}
+            onSignalled={() => setSelected(null)}
           />
         )}
       </Popover>

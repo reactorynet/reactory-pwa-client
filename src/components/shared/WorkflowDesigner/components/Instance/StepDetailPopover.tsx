@@ -12,6 +12,10 @@ export interface StepDetailPopoverProps {
   /** The designer step name/id for the heading. */
   stepLabel: string;
   status: InstanceStepStatus;
+  /** Publish the awaited event for a waiting step, continuing execution. */
+  onSignalEvent?: (stepId: string, eventData: any) => Promise<void> | void;
+  /** Called after a successful signal so the caller can close the popover. */
+  onSignalled?: () => void;
 }
 
 /**
@@ -19,15 +23,40 @@ export interface StepDetailPopoverProps {
  * instance-mode canvas popover. Shows status, timing, outcome, any error,
  * and the step's slice of the workflow result data.
  */
-const StepDetailPopover: React.FC<StepDetailPopoverProps> = ({ reactory, stepLabel, status }) => {
+const StepDetailPopover: React.FC<StepDetailPopoverProps> = ({ reactory, stepLabel, status, onSignalEvent, onSignalled }) => {
   const { Material, WorkflowDataViewer } = reactory.getComponents<any>([
     'material-ui.Material',
     'core.WorkflowDataViewer',
   ]);
 
   const { MaterialCore } = Material;
-  const { Box, Typography, Chip, Icon, Alert, Divider } = MaterialCore;
+  const { Box, Typography, Chip, Icon, Alert, Divider, TextField, Button, CircularProgress } = MaterialCore;
   const theme = reactory.muiTheme;
+
+  const [signalData, setSignalData] = React.useState<string>('{}');
+  const [signalling, setSignalling] = React.useState<boolean>(false);
+
+  const canSignal = Boolean(status.waitingForEvent && onSignalEvent);
+
+  const handlePublish = async () => {
+    if (!onSignalEvent) return;
+    let data: any = {};
+    if (signalData && signalData.trim().length > 0) {
+      try {
+        data = JSON.parse(signalData);
+      } catch (e: any) {
+        reactory.createNotification?.(`Invalid JSON event data: ${e.message}`, { type: 'error' });
+        return;
+      }
+    }
+    setSignalling(true);
+    try {
+      await onSignalEvent(status.stepId, data);
+      onSignalled?.();
+    } finally {
+      setSignalling(false);
+    }
+  };
 
   const descriptor = getStepStatus(status.status);
   const hasOutcome =
@@ -91,6 +120,47 @@ const StepDetailPopover: React.FC<StepDetailPopoverProps> = ({ reactory, stepLab
           color="warning"
           sx={{ mt: 1 }}
         />
+      )}
+
+      {status.waitingForEvent && (
+        <Alert severity="info" variant="outlined" icon={<Icon>hourglass_top</Icon>} sx={{ mt: 1.5, '& .MuiAlert-message': { width: '100%' } }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            Waiting for event: {status.eventName}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: canSignal ? 1 : 0 }}>
+            {canSignal
+              ? 'Publish this event to continue the step.'
+              : 'This step is suspended until its event is published.'}
+            {status.eventKey ? ` (key: ${status.eventKey})` : ''}
+          </Typography>
+          {canSignal && (
+            <>
+              <TextField
+                label="Event data (JSON)"
+                value={signalData}
+                onChange={(e: any) => setSignalData(e.target.value)}
+                multiline
+                minRows={3}
+                fullWidth
+                size="small"
+                disabled={signalling}
+                InputProps={{ sx: { fontFamily: 'monospace', fontSize: '0.72rem' } }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="info"
+                  disabled={signalling}
+                  startIcon={signalling ? <CircularProgress size={14} /> : <Icon sx={{ fontSize: 16 }}>bolt</Icon>}
+                  onClick={handlePublish}
+                >
+                  {signalling ? 'Publishing…' : 'Continue (publish event)'}
+                </Button>
+              </Box>
+            </>
+          )}
+        </Alert>
       )}
 
       {status.failed && status.errorMessage && (
