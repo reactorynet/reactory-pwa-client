@@ -846,7 +846,7 @@ export default (props) => {
     setChatHistoryPanelOpen(willOpen);
     // Refresh the chat list when opening the history panel
     if (willOpen) {
-      listChats({ personaId: selectedPersona?.id }).then((chatList) => {
+      listChats({}).then((chatList) => {
         setChats(chatList as ChatState[]);
       });
     }

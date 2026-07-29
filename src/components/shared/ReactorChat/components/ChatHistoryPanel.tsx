@@ -38,6 +38,49 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
     Chip,
   } = Material.MaterialCore;
 
+  const activePersonaId = chatState?.personaId || chatState?.persona?.id;
+
+  // Group chats by persona
+  const groupedChats = React.useMemo(() => {
+    if (!chats || chats.length === 0) return [];
+
+    const groups: { [key: string]: ChatState[] } = {};
+    chats.forEach((chat) => {
+      const pId = chat.personaId || 'unknown';
+      if (!groups[pId]) {
+        groups[pId] = [];
+      }
+      groups[pId].push(chat);
+    });
+
+    // Sort chats within each group by created date (most recent first)
+    Object.keys(groups).forEach((pId) => {
+      groups[pId].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    });
+
+    // Convert to array of groups
+    const groupArray = Object.keys(groups).map((pId) => {
+      const groupPersona = getPersona ? getPersona(pId) : null;
+      const groupChats = groups[pId];
+      const latestChatDate = groupChats[0]?.created ? new Date(groupChats[0].created).getTime() : 0;
+      return {
+        personaId: pId,
+        persona: groupPersona,
+        chats: groupChats,
+        latestChatDate,
+      };
+    });
+
+    // Sort groups: active persona group first, then others by latest chat date
+    groupArray.sort((a, b) => {
+      if (a.personaId === activePersonaId) return -1;
+      if (b.personaId === activePersonaId) return 1;
+      return b.latestChatDate - a.latestChatDate;
+    });
+
+    return groupArray;
+  }, [chats, activePersonaId, getPersona]);
+
   return (
     <Paper
       elevation={3}
@@ -90,89 +133,116 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
           <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
             {il8n?.t('reactor.client.chat.history.conversations', { defaultValue: 'Conversations' })}
           </Typography>
-          {chats && chats.length > 0 ? (
+          {groupedChats && groupedChats.length > 0 ? (
             <List sx={{ p: 0 }}>
-              {chats
-                .slice()
-                .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
-                .map((chat) => {
-                  const persona = chat.persona;
-                  const label = chat.title
-                    || il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
+              {groupedChats.map((group, groupIndex) => {
+                const groupPersona = group.persona;
+                const isGroupActive = group.personaId === activePersonaId;
 
-                  return (
-                    <ListItem
-                      key={chat.id || `chat-${chat.created}`}
-                      sx={{
-                        cursor: 'pointer',
-                        borderRadius: 1,
-                        mb: 1,
-                        border: chatState?.id === chat.id ? 2 : 1,
-                        borderColor: chatState?.id === chat.id ? 'primary.main' : 'divider',
-                        bgcolor: chatState?.id === chat.id ? 'primary.light' : 'transparent',
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                        }
-                      }}
-                      onClick={() => onChatSelect(chat)}
-                      secondaryAction={
-                        <IconButton
-                          edge="end"
-                          aria-label="Delete chat"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteChat(chat.id);
-                          }}
-                          size="small"
-                          color="error"
+                return (
+                  <Box key={group.personaId} sx={{ mb: 2 }}>
+                    {/* Persona Header */}
+                    <Box sx={{ 
+                      px: 1.5, 
+                      py: 0.75, 
+                      bgcolor: isGroupActive ? 'primary.light' : 'action.selected', 
+                      borderRadius: 1, 
+                      mb: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderLeft: 3,
+                      borderColor: isGroupActive ? 'primary.main' : 'text.secondary',
+                      opacity: isGroupActive ? 1 : 0.9,
+                    }}>
+                      <Typography variant="caption" sx={{ fontWeight: 'bold', color: isGroupActive ? 'primary.contrastText' : 'text.primary' }}>
+                        {groupPersona?.name || 'Unknown Agent'}
+                      </Typography>
+                      {isGroupActive && (
+                        <Chip 
+                          label="Active Persona" 
+                          size="small" 
+                          color="primary" 
+                          variant="filled" 
+                          sx={{ height: 16, fontSize: '0.6rem', fontWeight: 'bold' }} 
+                        />
+                      )}
+                    </Box>
+
+                    {/* Chats inside this group */}
+                    {group.chats.map((chat) => {
+                      const label = chat.title
+                        || il8n?.t('reactor.client.chat.history.emptyChat', { defaultValue: 'Empty Chat' });
+
+                      return (
+                        <ListItem
+                          key={chat.id || `chat-${chat.created}`}
                           sx={{
-                            opacity: 0.7,
+                            cursor: 'pointer',
+                            borderRadius: 1,
+                            mb: 0.5,
+                            pl: 2, // indent chats slightly under header
+                            border: chatState?.id === chat.id ? 2 : 1,
+                            borderColor: chatState?.id === chat.id ? 'primary.main' : 'divider',
+                            bgcolor: chatState?.id === chat.id ? 'primary.light' : 'transparent',
                             '&:hover': {
-                              opacity: 1,
+                              bgcolor: 'action.hover',
                             }
                           }}
+                          onClick={() => onChatSelect(chat)}
+                          secondaryAction={
+                            <IconButton
+                              edge="end"
+                              aria-label="Delete chat"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteChat(chat.id);
+                              }}
+                              size="small"
+                              color="error"
+                              sx={{
+                                opacity: 0.7,
+                                '&:hover': {
+                                  opacity: 1,
+                                }
+                              }}
+                            >
+                              <Material.MaterialIcons.Delete />
+                            </IconButton>
+                          }
                         >
-                          <Material.MaterialIcons.Delete />
-                        </IconButton>
-                      }
-                    >
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                              {label.substring(0, 50)}{label.length > 50 ? '...' : ''}
-                            </Typography>
-                            {chat.active && (
-                              <Box
-                                sx={{
-                                  width: 8,
-                                  height: 8,
-                                  borderRadius: '50%',
-                                  bgcolor: 'success.main',
-                                  boxShadow: '0 0 6px #2e7d32',
-                                }}
-                                title="Active session"
-                              />
-                            )}
-                            {persona && (
-                              <Chip
-                                label={persona.name}
-                                size="small"
-                                variant="outlined"
-                                sx={{ fontSize: '0.7rem' }}
-                              />
-                            )}
-                          </Box>
-                        }
-                        secondary={
-                          <Typography variant="caption" color="text.secondary">
-                            {new Date(chat.created).toLocaleDateString()}
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                  );
-                })}
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: chatState?.id === chat.id ? 'bold' : 'normal' }}>
+                                  {label.substring(0, 50)}{label.length > 50 ? '...' : ''}
+                                </Typography>
+                                {chat.active && (
+                                  <Box
+                                    sx={{
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: '50%',
+                                      bgcolor: 'success.main',
+                                      boxShadow: '0 0 6px #2e7d32',
+                                    }}
+                                    title="Active session"
+                                  />
+                                )}
+                              </Box>
+                            }
+                            secondary={
+                              <Typography variant="caption" color="text.secondary">
+                                {new Date(chat.created).toLocaleDateString()}
+                              </Typography>
+                            }
+                          />
+                        </ListItem>
+                      );
+                    })}
+                  </Box>
+                );
+              })}
             </List>
           ) : (
             <Box sx={{ p: 3, textAlign: 'center' }}>
