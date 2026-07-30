@@ -7,20 +7,26 @@ import {
   Card,
   CardContent,
   CardActions,
-  CardMedia,
   Avatar,
   Grid2 as Grid,
   Alert,
   CircularProgress,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
   useTheme
 } from '@mui/material';
 import {
   SmartToy,
   Link as LinkIcon,
-  LinkOff
+  LinkOff,
+  Edit,
+  Settings
 } from '@mui/icons-material';
-import { AISectionProps } from '../../../types';
+import { AISectionProps, ILinkedAgent } from '../../../types';
 
 /** Minimal persona type matching ReactorPersona GraphQL type */
 interface Persona {
@@ -30,7 +36,7 @@ interface Persona {
   avatar?: string;
   defaultGreeting?: string;
   modelId?: string;
-  providerId?: string;
+  provider?: string;
 }
 
 const PERSONAS_QUERY = `
@@ -42,21 +48,21 @@ const PERSONAS_QUERY = `
       avatar
       defaultGreeting
       modelId
-      providerId
+      provider
     }
   }
 `;
 
 /**
- * AI Section - Link an AI persona to the user profile
+ * AI Section - Link AI agents to the user profile and configure expectations
  */
 export const AISection: React.FC<AISectionProps> = ({
   profile,
   mode,
   loading: parentLoading,
-  linkedPersonaId,
-  onPersonaLink,
-  onPersonaUnlink,
+  linked_agents = [],
+  onAgentLink,
+  onAgentUnlink,
   reactory
 }) => {
   const theme = useTheme();
@@ -64,6 +70,13 @@ export const AISection: React.FC<AISectionProps> = ({
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [loadingPersonas, setLoadingPersonas] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Dialog State
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+  const [agentDescription, setAgentDescription] = useState('');
+  const [providerPropsJson, setProviderPropsJson] = useState('{}');
+  const [jsonError, setJsonError] = useState<string | null>(null);
 
   // Fetch available personas
   useEffect(() => {
@@ -92,15 +105,60 @@ export const AISection: React.FC<AISectionProps> = ({
     fetchPersonas();
   }, [reactory]);
 
-  const handleLink = useCallback((personaId: string) => {
-    if (onPersonaLink) onPersonaLink(personaId);
-  }, [onPersonaLink]);
+  // Find linked agent configuration for a persona
+  const getLinkedAgent = useCallback((persona: Persona): ILinkedAgent | undefined => {
+    return linked_agents.find(
+      (agent) => agent.personaId === persona.id
+    );
+  }, [linked_agents]);
 
-  const handleUnlink = useCallback(() => {
-    if (onPersonaUnlink) onPersonaUnlink();
-  }, [onPersonaUnlink]);
+  const handleOpenLinkDialog = useCallback((persona: Persona) => {
+    const linked = getLinkedAgent(persona);
+    setSelectedPersona(persona);
+    setAgentDescription(linked?.description || '');
+    setProviderPropsJson(linked?.providerProps ? JSON.stringify(linked.providerProps, null, 2) : '{}');
+    setJsonError(null);
+    setDialogOpen(true);
+  }, [getLinkedAgent]);
 
-  const isLinked = (personaId: string) => linkedPersonaId === personaId;
+  const handleCloseDialog = useCallback(() => {
+    setDialogOpen(false);
+    setSelectedPersona(null);
+    setAgentDescription('');
+    setProviderPropsJson('{}');
+    setJsonError(null);
+  }, []);
+
+  const handleSaveLink = useCallback(async () => {
+    if (!selectedPersona || !onAgentLink) return;
+
+    let parsedProps = {};
+    try {
+      parsedProps = JSON.parse(providerPropsJson);
+      setJsonError(null);
+    } catch (err) {
+      setJsonError('Invalid JSON format for properties');
+      return;
+    }
+
+    const providerId = selectedPersona.provider || 'openai';
+    const modelId = selectedPersona.modelId || 'gpt-4';
+
+    await onAgentLink({
+      personaId: selectedPersona.id,
+      providerId,
+      modelId,
+      description: agentDescription,
+      providerProps: parsedProps
+    });
+
+    handleCloseDialog();
+  }, [selectedPersona, agentDescription, providerPropsJson, onAgentLink, handleCloseDialog]);
+
+  const handleUnlink = useCallback(async (persona: Persona) => {
+    if (!onAgentUnlink) return;
+    await onAgentUnlink(persona.id);
+  }, [onAgentUnlink]);
 
   return (
     <Paper sx={{ p: 3, borderRadius: 2 }}>
@@ -115,12 +173,12 @@ export const AISection: React.FC<AISectionProps> = ({
         }}
       >
         <SmartToy />
-        AI Persona
+        Linked AI Agents
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Link an AI persona to your profile. The linked persona will be used as the default
-        assistant in AI-powered features throughout the platform.
+        Link AI agents to your profile and configure your expectations. These specialized agents 
+        will run automated tasks, analyze code, or assist you across the platform based on your preferences.
       </Typography>
 
       {/* Loading state */}
@@ -146,11 +204,15 @@ export const AISection: React.FC<AISectionProps> = ({
 
       {/* Persona cards */}
       {!loadingPersonas && personas.length > 0 && (
-        <Grid container spacing={2}>
+        <Grid container spacing={3}>
           {personas.map((persona) => {
-            const linked = isLinked(persona.id);
+            const linkedAgent = getLinkedAgent(persona);
+            const linked = !!linkedAgent;
+            const providerId = persona.provider || 'openai';
+            const modelId = persona.modelId || 'gpt-4';
+
             return (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={persona.id}>
+              <Grid size={{ xs: 12, md: 6 }} key={persona.id}>
                 <Card
                   variant="outlined"
                   sx={{
@@ -159,14 +221,15 @@ export const AISection: React.FC<AISectionProps> = ({
                     flexDirection: 'column',
                     borderColor: linked ? 'primary.main' : 'divider',
                     borderWidth: linked ? 2 : 1,
-                    transition: 'border-color 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    boxShadow: linked ? theme.shadows[1] : 'none'
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', p: 2, gap: 2 }}>
                     <Avatar
                       src={persona.avatar}
                       alt={persona.name}
-                      sx={{ width: 48, height: 48 }}
+                      sx={{ width: 48, height: 48, bgcolor: linked ? 'primary.light' : 'grey.300' }}
                     >
                       <SmartToy />
                     </Avatar>
@@ -174,9 +237,10 @@ export const AISection: React.FC<AISectionProps> = ({
                       <Typography variant="subtitle1" fontWeight="bold" noWrap>
                         {persona.name}
                       </Typography>
-                      {persona.providerId && (
-                        <Chip label={persona.providerId} size="small" variant="outlined" sx={{ mt: 0.5 }} />
-                      )}
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                        <Chip label={providerId} size="small" variant="outlined" />
+                        <Chip label={modelId} size="small" variant="outlined" />
+                      </Box>
                     </Box>
                     {linked && (
                       <Chip label="Linked" size="small" color="primary" />
@@ -184,50 +248,55 @@ export const AISection: React.FC<AISectionProps> = ({
                   </Box>
 
                   <CardContent sx={{ flex: 1, pt: 0 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {persona.description || 'No description available.'}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                      {persona.description || 'No system description available.'}
                     </Typography>
-                    {persona.defaultGreeting && (
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          mt: 1,
-                          fontStyle: 'italic',
-                          color: 'text.secondary',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical'
-                        }}
-                      >
-                        "{persona.defaultGreeting}"
-                      </Typography>
+
+                    {linked && (
+                      <Box sx={{ mt: 2, p: 1.5, bgcolor: 'action.selected', borderRadius: 1 }}>
+                        <Typography variant="caption" color="primary" fontWeight="bold" display="block">
+                          Your Expectations & Scope:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontStyle: 'italic', mt: 0.5 }}>
+                          {linkedAgent.description || 'No custom expectations configured. Click Edit to add.'}
+                        </Typography>
+                      </Box>
                     )}
                   </CardContent>
 
                   {canEdit && (
-                    <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
+                    <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, gap: 1 }}>
                       {linked ? (
-                        <Button
-                          size="small"
-                          color="error"
-                          startIcon={<LinkOff />}
-                          onClick={handleUnlink}
-                          disabled={parentLoading}
-                        >
-                          Unlink
-                        </Button>
+                        <>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<Edit />}
+                            onClick={() => handleOpenLinkDialog(persona)}
+                            disabled={parentLoading}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="small"
+                            color="error"
+                            startIcon={<LinkOff />}
+                            onClick={() => handleUnlink(persona)}
+                            disabled={parentLoading}
+                          >
+                            Unlink
+                          </Button>
+                        </>
                       ) : (
                         <Button
                           size="small"
                           color="primary"
-                          variant="outlined"
+                          variant="contained"
                           startIcon={<LinkIcon />}
-                          onClick={() => handleLink(persona.id)}
+                          onClick={() => handleOpenLinkDialog(persona)}
                           disabled={parentLoading}
                         >
-                          Link
+                          Link Agent
                         </Button>
                       )}
                     </CardActions>
@@ -238,6 +307,50 @@ export const AISection: React.FC<AISectionProps> = ({
           })}
         </Grid>
       )}
+
+      {/* Linking / Configuration Dialog */}
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Settings />
+          Configure Linked Agent: {selectedPersona?.name}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Define what you expect this agent to perform on your behalf. This gives the agent 
+            its context and scope when acting on your profile.
+          </Typography>
+
+          <TextField
+            label="Expectation & Scope"
+            multiline
+            rows={4}
+            fullWidth
+            placeholder="e.g., This agent will automatically review my code commits, draft change logs, and suggest unit tests."
+            value={agentDescription}
+            onChange={(e) => setAgentDescription(e.target.value)}
+            sx={{ mb: 3 }}
+          />
+
+          <TextField
+            label="Configuration Properties (JSON)"
+            multiline
+            rows={4}
+            fullWidth
+            value={providerPropsJson}
+            onChange={(e) => setProviderPropsJson(e.target.value)}
+            error={!!jsonError}
+            helperText={jsonError || "Optional custom properties for this agent's provider"}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={handleCloseDialog} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleSaveLink} variant="contained" color="primary">
+            Save Configuration
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };

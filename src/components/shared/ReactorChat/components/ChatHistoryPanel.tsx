@@ -318,13 +318,6 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                 );
               })}
             </List>
-                        </ListItem>
-                      );
-                    })}
-                  </Box>
-                );
-              })}
-            </List>
           ) : (
             <Box sx={{ p: 3, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">

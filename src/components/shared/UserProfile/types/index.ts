@@ -13,6 +13,14 @@ export interface SocialReference {
   updated?: Date;
 }
 
+export interface ILinkedAgent {
+  personaId: string;
+  providerId: string;
+  modelId: string;
+  providerProps?: any;
+  description?: string;
+}
+
 export interface ProfileUser extends Reactory.Models.IUser {
   id: string;
   firstName: string;
@@ -27,6 +35,7 @@ export interface ProfileUser extends Reactory.Models.IUser {
   updatedAt?: Date;
   memberships?: Reactory.Models.IMembership[];
   peers?: UserPeers;
+  linked_agents?: ILinkedAgent[];
   __isnew?: boolean;
 }
 
@@ -149,10 +158,9 @@ export interface SocialsSectionProps extends ProfileSectionProps {
 }
 
 export interface AISectionProps extends ProfileSectionProps {
-  /** Currently linked persona ID */
-  linkedPersonaId?: string;
-  onPersonaLink?: (personaId: string) => void;
-  onPersonaUnlink?: () => void;
+  linked_agents?: ILinkedAgent[];
+  onAgentLink?: (agent: ILinkedAgent) => Promise<boolean>;
+  onAgentUnlink?: (personaId: string) => Promise<boolean>;
 }
 
 export interface ProfileNavigationProps {
@@ -214,6 +222,8 @@ export interface UseProfileMutationsResult {
   removePeer: (peerId: string) => Promise<boolean>;
   confirmPeers: () => Promise<boolean>;
   addPeer: (user: Reactory.Models.IUser, relationship: PeerUser['relationship']) => Promise<boolean>;
+  linkAgent: (agent: ILinkedAgent) => Promise<boolean>;
+  unlinkAgent: (personaId: string) => Promise<boolean>;
   loading: boolean;
   error: string | null;
 }
@@ -263,6 +273,13 @@ export const PROFILE_DATA_FRAGMENT = `
       url
       authenticated
       valid
+    }
+    linked_agents {
+      personaId
+      providerId
+      modelId
+      providerProps
+      description
     }
     memberships {
       id

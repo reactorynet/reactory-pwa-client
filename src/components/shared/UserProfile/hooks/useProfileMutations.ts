@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import Reactory from '@reactorynet/reactory-core';
-import { ProfileUser, SocialReference, UseProfileMutationsResult, PeerUser, PROFILE_DATA_FRAGMENT } from '../types';
+import { ProfileUser, SocialReference, UseProfileMutationsResult, PeerUser, PROFILE_DATA_FRAGMENT, ILinkedAgent } from '../types';
 
 /**
  * Hook for managing profile mutations (save, delete, update operations)
@@ -668,6 +668,98 @@ export const useProfileMutations = (
     }
   }, [profileId, reactory, clearError]);
 
+  const linkAgent = useCallback(async (agent: ILinkedAgent): Promise<boolean> => {
+    if (!profileId || !reactory) return false;
+    clearError();
+    try {
+      setLoading(true);
+      const result = await reactory.graphqlMutation<
+        { ReactoryCoreLinkAgent: any },
+        { userId: string; agent: ILinkedAgent }
+      >(`
+        mutation ReactoryCoreLinkAgent($userId: String!, $agent: LinkedAgentInput!) {
+          ReactoryCoreLinkAgent(userId: $userId, agent: $agent) {
+            id
+            linked_agents {
+              personaId
+              providerId
+              modelId
+              providerProps
+              description
+            }
+          }
+        }
+      `, {
+        userId: profileId,
+        agent: {
+          personaId: agent.personaId,
+          providerId: agent.providerId,
+          modelId: agent.modelId,
+          providerProps: agent.providerProps || {},
+          description: agent.description,
+        }
+      });
+
+      if (result.data?.ReactoryCoreLinkAgent) {
+        reactory.createNotification('AI agent linked successfully', { type: 'success' });
+        return true;
+      } else {
+        throw new Error('Failed to link AI agent');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to link AI agent';
+      setError(errorMessage);
+      reactory?.createNotification(errorMessage, { type: 'error' });
+      reactory?.log('Error linking AI agent', { error: err }, 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [profileId, reactory, clearError]);
+
+  const unlinkAgent = useCallback(async (personaId: string): Promise<boolean> => {
+    if (!profileId || !reactory) return false;
+    clearError();
+    try {
+      setLoading(true);
+      const result = await reactory.graphqlMutation<
+        { ReactoryCoreUnlinkAgent: any },
+        { userId: string; personaId: string }
+      >(`
+        mutation ReactoryCoreUnlinkAgent($userId: String!, $personaId: String!) {
+          ReactoryCoreUnlinkAgent(userId: $userId, personaId: $personaId) {
+            id
+            linked_agents {
+              personaId
+              providerId
+              modelId
+              providerProps
+              description
+            }
+          }
+        }
+      `, {
+        userId: profileId,
+        personaId
+      });
+
+      if (result.data?.ReactoryCoreUnlinkAgent) {
+        reactory.createNotification('AI agent unlinked successfully', { type: 'success' });
+        return true;
+      } else {
+        throw new Error('Failed to unlink AI agent');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to unlink AI agent';
+      setError(errorMessage);
+      reactory?.createNotification(errorMessage, { type: 'error' });
+      reactory?.log('Error unlinking AI agent', { error: err }, 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [profileId, reactory, clearError]);
+
   return {
     saveProfile,
     createUser,
@@ -681,6 +773,8 @@ export const useProfileMutations = (
     removePeer,
     confirmPeers,
     addPeer,
+    linkAgent,
+    unlinkAgent,
     loading,
     error
   };

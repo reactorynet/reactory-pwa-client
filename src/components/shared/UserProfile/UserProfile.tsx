@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Box, Container, Paper, Typography, Alert, Button, useTheme } from '@mui/material';
 import Reactory from '@reactorynet/reactory-core';
 import {
@@ -45,14 +45,20 @@ const UserProfile: React.FC<UserProfileProps> = ({
       DEFAULT_PROFILE_CONFIG.sections
   };  
   const loggedInUser = reactory.getUser().loggedIn;
-  const isNewMode = mode === 'new';
+  const [currentMode, setCurrentMode] = useState<import('./types').ProfileMode>(mode);
+
+  useEffect(() => {
+    setCurrentMode(mode);
+  }, [mode]);
+
+  const isNewMode = currentMode === 'new';
   const profileData = useProfileData(
     isNewMode ? undefined : (userId || loggedInUser.id),
     initialProfile,
     reactory,
-    mode
+    currentMode
   );
-  const sections = useProfileSections(config, [], [], reactory, mode);
+  const sections = useProfileSections(config, [], [], reactory, currentMode);
   const mutations = useProfileMutations(profileData.profile?.id, reactory, applicationId);
   const theme = useTheme();
 
@@ -66,14 +72,23 @@ const UserProfile: React.FC<UserProfileProps> = ({
       const createdUser = await mutations.createUser(profile, applicationId);
       if (createdUser && onProfileSave) {
         onProfileSave(createdUser);
+        setCurrentMode('view');
       }
     } else {
       const success = await mutations.saveProfile(profile);
       if (success && onProfileSave) {
         onProfileSave(profile);
+        setCurrentMode('view');
       }
     }
   }, [isNewMode, mutations, applicationId, onProfileSave]);
+
+  const handleProfileCancel = useCallback(() => {
+    setCurrentMode('view');
+    if (onProfileCancel) {
+      onProfileCancel();
+    }
+  }, [onProfileCancel]);
 
   const handleSectionChange = useCallback((sectionId: string) => {
     sections.navigateToSection(sectionId);
@@ -98,7 +113,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
 
     const commonProps = {
       profile: profileData.profile,
-      mode,
+      mode: currentMode,
       loading: profileData.loading || mutations.loading,
       onProfileUpdate: handleProfileUpdate,
       onSave: handleProfileSave,
@@ -153,6 +168,9 @@ const UserProfile: React.FC<UserProfileProps> = ({
         return (
           <AISection
             {...commonProps}
+            linked_agents={profileData.profile.linked_agents}
+            onAgentLink={mutations.linkAgent}
+            onAgentUnlink={mutations.unlinkAgent}
           />
         );
 
@@ -245,19 +263,19 @@ const UserProfile: React.FC<UserProfileProps> = ({
       {/* Profile Header */}
       <ProfileHeader
         profile={profileData.profile}
-        mode={mode}
+        mode={currentMode}
         isOwner={profileData.isOwner}
         isAdmin={profileData.isAdmin}
         loading={profileData.loading || mutations.loading}
-        onEdit={() => {/* TODO: Implement edit mode toggle */}}
+        onEdit={() => setCurrentMode('edit')}
         onSave={handleProfileSave}
-        onCancel={onProfileCancel}
+        onCancel={handleProfileCancel}
         onDelete={mutations.deleteProfile}
         reactory={reactory}
       />
 
       {/* Delete confirmation mode */}
-      {mode === 'delete' && (
+      {currentMode === 'delete' && (
         <Paper sx={{ p: 3, mt: 2, borderRadius: 2 }}>
           <Alert severity="warning" sx={{ mb: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -291,7 +309,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
       )}
 
       {/* Navigation and Content Layout (hidden in delete mode) */}
-      {mode !== 'delete' && (
+      {currentMode !== 'delete' && (
       <Box sx={{
         display: 'flex',
         flexDirection: {

@@ -2495,10 +2495,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
                 (tc: any) => tc && (tc.status === 'pending' || tc.status === 'running')
               );
               if (pending.length > 0) {
-                setPendingToolCallResume({
-                  toolCalls: pending,
-                  assistantMessageId: lastAssistantWithTools.id,
-                });
+                const toolApprovalMode = (result as any).toolApprovalMode;
+                if (toolApprovalMode === 'automatic') {
+                  reactory.log('🔧 [useChatFactory] Auto-resuming pending tool calls since toolApprovalMode is automatic.');
+                  setTimeout(() => {
+                    continueToolExecution().catch((err) => {
+                      reactory.error('🔧 [useChatFactory] Auto-resume of pending tool calls failed:', err);
+                    });
+                  }, 100);
+                  setPendingToolCallResume(null);
+                } else {
+                  setPendingToolCallResume({
+                    toolCalls: pending,
+                    assistantMessageId: lastAssistantWithTools.id,
+                  });
+                }
               } else {
                 setPendingToolCallResume(null);
               }
