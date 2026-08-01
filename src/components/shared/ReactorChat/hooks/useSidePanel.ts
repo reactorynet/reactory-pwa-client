@@ -25,16 +25,18 @@ const INITIAL_STATE: SidePanelState = {
 };
 
 /**
- * Strips non-serializable fields (reactory SDK instance) from item props
- * so only persistable data is sent to the server.
+ * Strips non-serializable fields (reactory SDK instance) and live runtime
+ * data streams from item props so only persistable data is sent to the server.
  */
 function toSerializable(state: SidePanelState): SidePanelState {
   return {
     ...state,
     items: state.items.map(({ id, componentFqn, title, type, addedAt, addedBy, props }) => {
-      // Strip the reactory SDK reference — it's non-serializable and will be
-      // re-injected on restore. Keep all other props (userId, formId, etc.).
-      const { reactory: _reactory, ...serializableProps } = props || {};
+      // Strip the reactory SDK reference (non-serializable, re-injected on
+      // restore) and live data feeds (`messages` = full chat history,
+      // `graphData` = conversation subgraph) that the host re-supplies at
+      // runtime. Keep all other props (userId, formId, etc.).
+      const { reactory: _reactory, messages: _messages, graphData: _graphData, ...serializableProps } = props || {};
       return {
         id, componentFqn, title, type, addedAt, addedBy,
         props: Object.keys(serializableProps).length > 0 ? serializableProps : undefined,

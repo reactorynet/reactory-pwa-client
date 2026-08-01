@@ -39,7 +39,7 @@ import AgentToolWindowBar from './components/AgentToolWindowBar';
 import useSpeechServices from './hooks/useSpeechServices';
 import useSidePanel from './hooks/useSidePanel';
 import useChatStatus from './hooks/useChatStatus';
-import NeuralBrainBackground from './components/NeuralBrainBackground';
+import NeuralBrainBackground, { graphSignature } from './components/NeuralBrainBackground';
 
 export default (props) => {
   const { formData } = props;
@@ -165,6 +165,84 @@ export default (props) => {
 
   // Track the active session ID for the session logger — state so changes trigger re-render
   const [activeSessionId, setActiveSessionId] = React.useState<string | undefined>(cachedSession?.chatState?.id);
+
+  // State to hold custom graph data for the visual neuron background
+  const [backgroundGraphData, setBackgroundGraphData] = React.useState<any>(null);
+  const backgroundGraphSigRef = React.useRef('');
+
+  // Fetch the conversation's neighborhood subgraph to feed the neuron
+  // background and the side-panel neural graph viewer. Polls while the
+  // session is active because ProcessConversationWorkflow re-graphs the
+  // conversation ~60s after each completed turn; signature comparison keeps
+  // state identity stable (and the WebGL scene intact) when nothing changed.
+  React.useEffect(() => {
+    if (!activeSessionId) {
+      backgroundGraphSigRef.current = '';
+      setBackgroundGraphData(null);
+      return;
+    }
+
+    let active = true;
+    const fetchGraph = async () => {
+      try {
+        // 1. Search for the node representing the conversation
+        const searchRes = await reactory.graphqlQuery<any, any>(`
+          query GetConversationNode($term: String!) {
+            ReactorNodesByTerm(term: $term) {
+              id
+              name
+              type
+            }
+          }
+        `, { term: activeSessionId });
+
+        const node = searchRes.data?.ReactorNodesByTerm?.[0];
+        if (!node || !active) return;
+
+        // 2. Fetch its neighborhood subgraph
+        const subgraphRes = await reactory.graphqlQuery<any, any>(`
+          query ConversationSubgraph($rootId: Int!) {
+            ReactorSubgraph(rootId: $rootId, depth: 2, limit: 120, materialize: true) {
+              nodes {
+                id
+                name
+                type
+              }
+              links {
+                id
+                sourceId
+                targetId
+              }
+            }
+          }
+        `, { rootId: node.id });
+
+        if (!active) return;
+
+        const subgraph = subgraphRes.data?.ReactorSubgraph;
+        if (subgraph && subgraph.nodes && subgraph.nodes.length > 0) {
+          const data = {
+            nodes: subgraph.nodes.map((n: any) => ({ id: n.id, name: n.name, type: n.type })),
+            edges: subgraph.links.map((l: any) => ({ sourceId: l.sourceId, targetId: l.targetId })),
+          };
+          const sig = graphSignature(data);
+          if (sig !== backgroundGraphSigRef.current) {
+            backgroundGraphSigRef.current = sig;
+            setBackgroundGraphData(data);
+          }
+        }
+      } catch (err) {
+        reactory.log('Failed to fetch background graph data for conversation', { err }, 'warn');
+      }
+    };
+
+    fetchGraph();
+    const interval = setInterval(fetchGraph, 15000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [activeSessionId, reactory]);
 
   // Session logger — sends client logs to the server's ChatSessionResourceManager
   // Instantiated before chatFactory so it can be passed in.
@@ -407,6 +485,7 @@ export default (props) => {
     BugReport,
     AccountTree,
     Terminal,
+    Psychology,
     ChevronRight,
     NavigateNext,
     ArrowBack,
@@ -1336,6 +1415,50 @@ export default (props) => {
     };
   }, [primary, secondary, background, text]);
 
+  // ── Neural graph viewer (side panel) ────────────────────────────────────────
+  // Mounted with live props from this chat instance — theme colors, the
+  // conversation subgraph, and the chat history for the agent's graph
+  // perspective. The SidePanel renders items with only their stored props, so
+  // everything the viewer needs must be provided (and kept fresh) here.
+  const NEURAL_GRAPH_PANEL_ID = 'neural-graph-viewer';
+
+  const neuralGraphViewerProps = useMemo(() => ({
+    reactory,
+    backgroundMode: false,
+    showLabels: true,
+    mode,
+    primaryColor: themeColors.primary,
+    secondaryColor: themeColors.secondary,
+    graphData: backgroundGraphData,
+    messages: chatState?.history,
+    sessionId: activeSessionId,
+  }), [reactory, mode, themeColors.primary, themeColors.secondary, backgroundGraphData, chatState?.history, activeSessionId]);
+
+  const handleNeuralGraphViewerToggle = useCallback(() => {
+    const state = sidePanelActions.getState();
+    if (state.items.some((i) => i.id === NEURAL_GRAPH_PANEL_ID)) {
+      sidePanelActions.setActiveItem(NEURAL_GRAPH_PANEL_ID);
+      if (!state.isOpen) sidePanelActions.togglePanel();
+      return;
+    }
+    sidePanelActions.addItem({
+      id: NEURAL_GRAPH_PANEL_ID,
+      componentFqn: 'reactor.NeuralBackground@1.0.0',
+      title: il8n?.t('reactor.client.chat.neuralGraph.title', { defaultValue: 'Neural Graph' }) ?? 'Neural Graph',
+      type: 'component',
+      props: neuralGraphViewerProps,
+      addedAt: new Date(),
+      addedBy: 'user-toggle',
+    });
+  }, [sidePanelActions, neuralGraphViewerProps, il8n]);
+
+  // Keep the mounted viewer's props live as the conversation and graph evolve.
+  React.useEffect(() => {
+    const state = sidePanelActions.getState();
+    if (!state.items.some((i) => i.id === NEURAL_GRAPH_PANEL_ID)) return;
+    sidePanelActions.updateItem(NEURAL_GRAPH_PANEL_ID, { props: neuralGraphViewerProps });
+  }, [sidePanelActions, neuralGraphViewerProps]);
+
   // SpeedDial actions for persona and chat tools
   const personaSpeedDialActions = useMemo(() => [   
     {
@@ -1441,13 +1564,19 @@ export default (props) => {
         }
       },
     },
+    {
+      key: 'neuralGraph',
+      icon: <Psychology />,
+      title: il8n?.t('reactor.client.chat.neuralGraph', { defaultValue: 'Neural Graph Viewer' }),
+      clickHandler: handleNeuralGraphViewerToggle,
+    },
     ...(reactory.isDevelopmentMode() ? [{
       key: 'debug',
       icon: <BugReport />,
       title: il8n?.t('reactor.client.chat.debug', { defaultValue: 'Debug Inspector' }),
       clickHandler: handleDebugPanelToggle,
     }] : []),
-  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleDebugPanelToggle, reactory]);
+  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, Psychology, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleNeuralGraphViewerToggle, handleDebugPanelToggle, reactory]);
 
   return (
     <Box
@@ -1468,6 +1597,8 @@ export default (props) => {
         primaryColor={themeColors.primary}
         secondaryColor={themeColors.secondary}
         mode={mode}
+        graphData={backgroundGraphData}
+        messages={chatState?.history}
       />
       {/* All chat content sits above the background layer */}
       <Box

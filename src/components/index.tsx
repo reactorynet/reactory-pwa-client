@@ -63,6 +63,7 @@ import DocumentUploadComponent from './shared/DocumentUploadComponents';
 import Cropper from './shared/image/Cropper';
 import ReactorChat from './shared/ReactorChat/ReactorChat';
 import { ReactorChatButton } from './shared/ReactorChat';
+import NeuralBrainBackground from './shared/ReactorChat/components/NeuralBrainBackground';
 import { ShellWidget, WorkflowShellConsole, ChatShellTerminal, ChatShellConsole } from './shared/ReactorChat/components/Shell';
 
 
@@ -903,6 +904,17 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: ReactorChat,
     description: 'A chat interface component for the Reactor AI assistant with conversation management and messaging.',
     tags: ['chat', 'reactor', 'ai', 'conversation'],
+  },
+  {
+    nameSpace: 'reactor',
+    name: 'NeuralBackground',
+    version: '1.0.0',
+    // Direct mounts (e.g. the side panel) default to the interactive variant —
+    // pause, labels toggle, orbit/pan/zoom. ReactorChat imports the component
+    // directly and keeps the pointer-events-off background default.
+    component: (props: any) => <NeuralBrainBackground backgroundMode={false} {...props} />,
+    description: 'Immersive Three.js WebGL visual neural brain view of the active session graph — interactive by default when mounted directly.',
+    tags: ['webgl', 'threejs', 'background', 'neural', 'graph'],
   },
   {
     nameSpace: 'reactor',
