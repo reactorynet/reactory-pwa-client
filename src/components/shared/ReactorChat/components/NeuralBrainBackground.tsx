@@ -24,10 +24,13 @@
  * All Three.js resources are disposed on unmount.
  */
 
-import React, { useEffect, useRef, memo } from 'react';
+import React, { useEffect, useRef, memo, useState } from 'react';
 import * as THREE from 'three';
 
 export type NeuralGraphOrigin = 'conversation' | 'agent' | 'both';
+
+import { Dialog, DialogContent, Box as MuiBox, Typography as MuiTypography, IconButton as MuiIconButton, Icon as MuiIcon } from '@mui/material';
+import File from '@reactory/client-core/components/shared/File';
 
 export interface NeuralGraphNode {
   id: string | number;
@@ -35,6 +38,14 @@ export interface NeuralGraphNode {
   type?: string;
   /** Which perspective produced this node. Defaults to 'conversation'. */
   origin?: NeuralGraphOrigin;
+  /** Number of descendants hidden because this node is collapsed. */
+  collapsedCount?: number;
+  /** Custom data payload holding color, relativePath, etc. */
+  data?: any;
+  /** Absolute source file path */
+  source?: string;
+  /** Relative source file path */
+  path?: string;
 }
 
 export interface NeuralGraphEdge {
@@ -47,6 +58,25 @@ export interface NeuralGraphData {
   nodes: NeuralGraphNode[];
   edges: NeuralGraphEdge[];
 }
+
+/**
+ * A named view into the system graph. Built-ins ('conversation', 'agent')
+ * derive from session data; 'root' perspectives load a ReactorSubgraph around
+ * a project root node; 'saved' perspectives come from ReactorGraphPerspectives.
+ */
+export interface GraphPerspective {
+  id: string;
+  label: string;
+  kind: 'conversation' | 'agent' | 'root' | 'saved';
+  /** System graph node id to load a subgraph around (root/saved kinds). */
+  rootId?: number;
+  depth?: number;
+}
+
+export const BUILT_IN_PERSPECTIVES: GraphPerspective[] = [
+  { id: 'conversation', label: 'Conversation', kind: 'conversation' },
+  { id: 'agent', label: 'Agent perspective', kind: 'agent' },
+];
 
 export interface NeuralBrainBackgroundProps {
   primaryColor: string;
@@ -75,6 +105,18 @@ export interface NeuralBrainBackgroundProps {
    * false: interactive component — pause, labels toggle, pan/orbit/zoom.
    */
   backgroundMode?: boolean;
+  /**
+   * Perspective to activate — either a perspective id ('conversation',
+   * 'agent', 'root:<rootId>', 'saved:<id>') or a full GraphPerspective.
+   * Used by the loadGraphPerspective tool so the agent can steer the viewer.
+   */
+  perspective?: GraphPerspective | string;
+  /**
+   * Pins the active perspective (and the selected node, when present) to the
+   * chat session so the agent knows the user's graph context. The host is
+   * expected to persist it as a background user message (no inference run).
+   */
+  onPinPerspective?: (perspective: GraphPerspective, node: NeuralGraphNode | null) => Promise<void> | void;
 }
 
 const NEURON_COUNT = 85;
@@ -229,6 +271,8 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
   messages,
   sessionId,
   backgroundMode = true,
+  perspective,
+  onPinPerspective,
 }: NeuralBrainBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [localGraphData, setLocalGraphData] = React.useState<NeuralGraphData | null>(null);
@@ -242,6 +286,23 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
   const pausedRef = useRef(false);
   const [labelsVisible, setLabelsVisible] = React.useState(showLabels);
   const resetViewRef = useRef<() => void>(() => { });
+
+  // Node selection + collapse state (interactive mode). Selection never
+  // rebuilds the scene (highlight is driven through a ref); collapsing does,
+  // because it changes the visible node set.
+  const [selectedNode, setSelectedNode] = React.useState<NeuralGraphNode | null>(null);
+  const selectedNodeRef = useRef<NeuralGraphNode | null>(null);
+  const [collapsedIds, setCollapsedIds] = React.useState<Set<string>>(() => new Set());
+
+  // Perspective state (interactive mode): which named view of the graph is
+  // active, the list the dropdown offers, and the loaded root subgraph.
+  const [activePerspective, setActivePerspective] = React.useState<GraphPerspective>(BUILT_IN_PERSPECTIVES[0]);
+  const [availablePerspectives, setAvailablePerspectives] = React.useState<GraphPerspective[]>(BUILT_IN_PERSPECTIVES);
+  const [perspectiveGraph, setPerspectiveGraph] = React.useState<NeuralGraphData | null>(null);
+  const perspectiveSigRef = useRef('');
+  const [pinBusy, setPinBusy] = React.useState(false);
+  const [pinnedKeys, setPinnedKeys] = React.useState<Set<string>>(() => new Set());
+  const [previewFilePath, setPreviewFilePath] = React.useState<string | null>(null);
 
   const applyAgentGraph = React.useCallback((g: NeuralGraphData) => {
     const sig = graphSignature(g);
@@ -338,11 +399,270 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     };
   }, [externalGraphData, reactory, messages, sessionId, applyAgentGraph]);
 
+  // ── Perspective plumbing (interactive mode) ────────────────────────────────
+
+  // Enumerate available perspectives: built-ins + one root per cataloged
+  // project (ReactorCatalogNodes — `index` carries the numeric root id) +
+  // the user's saved graph perspectives.
+  React.useEffect(() => {
+    if (backgroundMode || !reactory) return;
+    let active = true;
+    (async () => {
+      try {
+        const [catalogRes, savedRes] = await Promise.all([
+          reactory.graphqlQuery<any, any>(`
+            query ReactorGraphPerspectiveRoots {
+              ReactorCatalogNodes {
+                nodes { id index name nameSpace type }
+              }
+            }
+          `, {}),
+          reactory.graphqlQuery<any, any>(`
+            query ReactorSavedGraphPerspectives {
+              ReactorGraphPerspectives { id name rootNodeId }
+            }
+          `, {}).catch(() => ({ data: undefined })),
+        ]);
+        if (!active) return;
+        const roots: GraphPerspective[] = (catalogRes.data?.ReactorCatalogNodes?.nodes ?? [])
+          .filter((n: any) => n?.index !== undefined && n?.index !== null)
+          .map((n: any) => ({
+            id: `root:${n.index}`,
+            label: n.nameSpace ? `${n.nameSpace}.${n.name}` : n.name,
+            kind: 'root' as const,
+            rootId: n.index,
+          }));
+        const saved: GraphPerspective[] = ((savedRes as any)?.data?.ReactorGraphPerspectives ?? [])
+          .filter((p: any) => p?.rootNodeId !== undefined && p?.rootNodeId !== null)
+          .map((p: any) => ({
+            id: `saved:${p.id}`,
+            label: `★ ${p.name}`,
+            kind: 'saved' as const,
+            rootId: p.rootNodeId,
+          }));
+        setAvailablePerspectives([...BUILT_IN_PERSPECTIVES, ...roots, ...saved]);
+      } catch (err) {
+        reactory.log('Failed to enumerate graph perspectives', { err }, 'warn');
+      }
+    })();
+    return () => { active = false; };
+  }, [backgroundMode, reactory]);
+
+  // Honor the `perspective` prop (set by the loadGraphPerspective tool).
+  // Each prop value is applied once — after that the user's own dropdown
+  // choices win, even if the same prop is re-pushed by the host.
+  const appliedPerspectiveRef = useRef<GraphPerspective | string | null>(null);
+  React.useEffect(() => {
+    if (!perspective || appliedPerspectiveRef.current === perspective) return;
+    if (typeof perspective === 'string') {
+      const term = perspective.toLowerCase();
+      const match = availablePerspectives.find(
+        (p) => p.id.toLowerCase() === term || p.label.toLowerCase().includes(term),
+      );
+      if (match) {
+        appliedPerspectiveRef.current = perspective;
+        setActivePerspective(match);
+      }
+      // No match yet — leave unapplied so a later availablePerspectives
+      // refresh can resolve it.
+      return;
+    }
+    if (perspective.kind || perspective.rootId !== undefined) {
+      appliedPerspectiveRef.current = perspective;
+      setActivePerspective({
+        id: perspective.id ?? (perspective.rootId !== undefined ? `root:${perspective.rootId}` : 'conversation'),
+        label: perspective.label ?? String(perspective.id ?? perspective.rootId),
+        kind: perspective.kind ?? 'root',
+        rootId: perspective.rootId,
+        depth: perspective.depth,
+      });
+    }
+  }, [perspective, availablePerspectives]);
+
+  // Load (and slowly refresh) the subgraph for root/saved perspectives.
+  // Direct GraphQL — perspective browsing never triggers agent tool calls.
+  React.useEffect(() => {
+    if (backgroundMode || !reactory) return;
+    const rootId = activePerspective?.rootId;
+    if (rootId === undefined || rootId === null) {
+      perspectiveSigRef.current = '';
+      setPerspectiveGraph(null);
+      return;
+    }
+
+    let active = true;
+    const fetchPerspective = async () => {
+      try {
+        const res = await reactory.graphqlQuery<any, any>(`
+          query LoadGraphPerspective($rootId: Int!, $depth: Int) {
+            ReactorSubgraph(rootId: $rootId, depth: $depth, direction: BOTH, limit: 500, includeContainment: true, materialize: true) {
+              nodes { id index name type }
+              links { id sourceId targetId }
+            }
+          }
+        `, { rootId, depth: activePerspective.depth ?? 2 });
+        if (!active) return;
+        const sg = res.data?.ReactorSubgraph;
+        if (sg?.nodes?.length) {
+          const data: NeuralGraphData = {
+            nodes: sg.nodes.map((n: any) => ({ id: n.index ?? Number(n.id), name: n.name, type: n.type })),
+            edges: sg.links.map((l: any) => ({ sourceId: l.sourceId, targetId: l.targetId })),
+          };
+          const sig = graphSignature(data);
+          if (sig !== perspectiveSigRef.current) {
+            perspectiveSigRef.current = sig;
+            setPerspectiveGraph(data);
+          }
+        }
+      } catch (err) {
+        reactory.log('Failed to load graph perspective subgraph', { err, rootId }, 'warn');
+      }
+    };
+
+    fetchPerspective();
+    const interval = setInterval(fetchPerspective, 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [backgroundMode, reactory, activePerspective]);
+
   const conversationGraph = externalGraphData || localGraphData;
+
+  // The base graph the active perspective provides; the agent's perspective
+  // overlay merges on top of whichever base is showing.
+  const baseGraph =
+    backgroundMode || activePerspective.kind === 'conversation' ? conversationGraph
+      : activePerspective.kind === 'agent' ? null
+        : perspectiveGraph;
+
   const graphData = React.useMemo(
-    () => mergeGraphs(conversationGraph, agentGraph),
-    [conversationGraph, agentGraph],
+    () => mergeGraphs(baseGraph, agentGraph),
+    [baseGraph, agentGraph],
   );
+
+  // Direct child counts (outgoing edges) — decides whether a node is collapsible.
+  const childCounts = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    (graphData?.edges ?? []).forEach((e) => {
+      const key = String(e.sourceId);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  }, [graphData]);
+  const childCountsRef = useRef(childCounts);
+  childCountsRef.current = childCounts;
+
+  // Children render by default; collapsing a node hides its whole subtree
+  // (BFS over outgoing edges, cycle-safe) and stamps the node with the count
+  // of hidden descendants so its label can show "(+N)".
+  const visibleGraph = React.useMemo(() => {
+    if (!graphData) return null;
+    if (collapsedIds.size === 0) return graphData;
+    const out = new Map<string, string[]>();
+    graphData.edges.forEach((e) => {
+      const s = String(e.sourceId);
+      if (!out.has(s)) out.set(s, []);
+      out.get(s)!.push(String(e.targetId));
+    });
+    const hidden = new Set<string>();
+    const hiddenCounts = new Map<string, number>();
+    collapsedIds.forEach((rootKey) => {
+      let count = 0;
+      const seen = new Set<string>([rootKey]);
+      const queue = [...(out.get(rootKey) ?? [])];
+      while (queue.length > 0) {
+        const key = queue.shift()!;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (!hidden.has(key)) {
+          hidden.add(key);
+          count++;
+        }
+        (out.get(key) ?? []).forEach((next) => {
+          if (!seen.has(next)) queue.push(next);
+        });
+      }
+      hiddenCounts.set(rootKey, count);
+    });
+    if (hidden.size === 0) return graphData;
+    const nodes = graphData.nodes
+      .filter((n) => !hidden.has(String(n.id)))
+      .map((n) => {
+        const count = hiddenCounts.get(String(n.id));
+        return count ? { ...n, collapsedCount: count } : n;
+      });
+    const keep = new Set(nodes.map((n) => String(n.id)));
+    const edges = graphData.edges.filter(
+      (e) => keep.has(String(e.sourceId)) && keep.has(String(e.targetId)),
+    );
+    return { nodes, edges };
+  }, [graphData, collapsedIds]);
+
+  // Click semantics: first click selects; a second click on the selected node
+  // toggles its subtree; clicking empty space deselects.
+  const handleNodeClick = React.useCallback((node: NeuralGraphNode | null) => {
+    if (!node) {
+      selectedNodeRef.current = null;
+      setSelectedNode(null);
+      return;
+    }
+    const key = String(node.id);
+    if (selectedNodeRef.current && String(selectedNodeRef.current.id) === key) {
+      if ((childCountsRef.current.get(key) ?? 0) > 0) {
+        setCollapsedIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(key)) next.delete(key); else next.add(key);
+          return next;
+        });
+      }
+      return;
+    }
+    selectedNodeRef.current = node;
+    setSelectedNode(node);
+  }, []);
+  const handleNodeClickRef = useRef(handleNodeClick);
+  handleNodeClickRef.current = handleNodeClick;
+
+  const toggleCollapseSelected = React.useCallback(() => {
+    const node = selectedNodeRef.current;
+    if (!node) return;
+    const key = String(node.id);
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
+  // Pin the active perspective (+ selected node) into the chat session.
+  const pinKey = `${activePerspective.id}|${selectedNode ? String(selectedNode.id) : ''}`;
+  const isPinned = pinnedKeys.has(pinKey);
+  const handlePin = React.useCallback(async () => {
+    if (!onPinPerspective || pinBusy) return;
+    const node = selectedNodeRef.current;
+    const key = `${activePerspective.id}|${node ? String(node.id) : ''}`;
+    setPinBusy(true);
+    try {
+      await onPinPerspective(activePerspective, node);
+      setPinnedKeys((prev) => new Set(prev).add(key));
+    } catch (err) {
+      reactory?.log?.('Failed to pin graph perspective', { err }, 'warn');
+    } finally {
+      setPinBusy(false);
+    }
+  }, [onPinPerspective, pinBusy, activePerspective, reactory]);
+
+  // Drop the selection when the node leaves the graph (e.g. new perspective).
+  React.useEffect(() => {
+    const sel = selectedNodeRef.current;
+    if (!sel) return;
+    const stillThere = (graphData?.nodes ?? []).some((n) => String(n.id) === String(sel.id));
+    if (!stillThere) {
+      selectedNodeRef.current = null;
+      setSelectedNode(null);
+    }
+  }, [graphData]);
 
   const effectiveShowLabels = backgroundMode ? showLabels : labelsVisible;
 
@@ -391,7 +711,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     const hubIndices = new Set<number>();
     const connectionPairs: [number, number][] = [];
     const connectionOrigins: NeuralGraphOrigin[] = [];
-    const nodes = graphData?.nodes || [];
+    const nodes = visibleGraph?.nodes || [];
     let activeNeuronCount = NEURON_COUNT;
     let activeHubCount = HUB_COUNT;
 
@@ -432,7 +752,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
 
       // Calculate degree of each node to find hubs
       const degrees = new Array(activeNeuronCount).fill(0);
-      (graphData?.edges ?? []).forEach(edge => {
+      (visibleGraph?.edges ?? []).forEach(edge => {
         const a = idToIdx.get(edge.sourceId);
         const b = idToIdx.get(edge.targetId);
         if (a !== undefined && b !== undefined) {
@@ -522,6 +842,10 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     // Agent-perspective nodes render brighter — closer to white — so the
     // agent's active focus stands out from the ambient conversation graph.
     const colorForNode = (idx: number): THREE.Color => {
+      const customColor = nodes[idx]?.data?.color || nodes[idx]?.color;
+      if (customColor) {
+        return new THREE.Color(customColor);
+      }
       const base = new THREE.Color().lerpColors(pColor, sColor, Math.random());
       const origin = nodes[idx]?.origin;
       if (origin === 'agent') return base.lerp(new THREE.Color(0xffffff), 0.45);
@@ -574,10 +898,12 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     // (agent focus > important types > hubs > rest) within the budget so the
     // most relevant names survive the cap on large graphs.
     const labelSprites: THREE.Sprite[] = [];
-    if (effectiveShowLabels && graphData) {
-      const mkLabelSprite = (node: NeuralGraphNode, pos: THREE.Vector3, major: boolean) => {
-        const name = String(node.name ?? '').trim();
+    const spriteNodeMap = new Map<THREE.Sprite, number>();
+    if (effectiveShowLabels && visibleGraph) {
+      const mkLabelSprite = (node: NeuralGraphNode, pos: THREE.Vector3, major: boolean, idx: number) => {
+        let name = String(node.name ?? '').trim();
         if (!name) return;
+        if (node.collapsedCount) name = `${name} (+${node.collapsedCount})`;
         const canvas = document.createElement('canvas');
         canvas.width = major ? 512 : 256;
         canvas.height = major ? 128 : 64;
@@ -627,6 +953,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
         }
         scene.add(sprite);
         labelSprites.push(sprite);
+        spriteNodeMap.set(sprite, idx);
       };
 
       const candidates = nodes
@@ -638,7 +965,8 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           if (isHub) priority += 2;
           if (isImportantType) priority += 3;
           if (isAgentFocus) priority += 4;
-          return { node, idx, priority, major: isHub || isImportantType };
+          if (node.collapsedCount) priority += 5;
+          return { node, idx, priority, major: isHub || isImportantType || !!node.collapsedCount };
         })
         .filter((c) => interactive || c.priority > 0)
         .sort((a, b) => b.priority - a.priority)
@@ -646,7 +974,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
 
       candidates.forEach(({ node, idx, major }) => {
         const pos = neuronPos[idx];
-        if (pos) mkLabelSprite(node, pos, major);
+        if (pos) mkLabelSprite(node, pos, major, idx);
       });
     }
 
@@ -659,10 +987,16 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
       if (pa && pb) {
         axonPosArr.set([pa.x, pa.y, pa.z, pb.x, pb.y, pb.z], i * 6);
       }
-      const c = new THREE.Color().lerpColors(pColor, sColor, Math.random());
+      const colorA = nodes[a]?.data?.color ? new THREE.Color(nodes[a].data.color) : null;
+      const colorB = nodes[b]?.data?.color ? new THREE.Color(nodes[b].data.color) : null;
+      const cA = colorA || new THREE.Color().lerpColors(pColor, sColor, Math.random());
+      const cB = colorB || new THREE.Color().lerpColors(sColor, pColor, Math.random());
       const origin = connectionOrigins[i];
-      if (origin === 'agent' || origin === 'both') c.lerp(new THREE.Color(0xffffff), 0.5);
-      axonColArr.set([c.r, c.g, c.b, c.r, c.g, c.b], i * 6);
+      if (origin === 'agent' || origin === 'both') {
+        cA.lerp(new THREE.Color(0xffffff), 0.5);
+        cB.lerp(new THREE.Color(0xffffff), 0.5);
+      }
+      axonColArr.set([cA.r, cA.g, cA.b, cB.r, cB.g, cB.b], i * 6);
     });
     axonGeo.setAttribute('position', new THREE.BufferAttribute(axonPosArr, 3));
     axonGeo.setAttribute('color', new THREE.BufferAttribute(axonColArr, 3));
@@ -805,6 +1139,20 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     // ── Raycaster for cursor → neuron mapping ──────────────────────────────────
     const raycaster = new THREE.Raycaster();
 
+    // ── Node lookup + selection marker (interactive) ──────────────────────────
+    const idxByKey = new Map<string, number>();
+    nodes.forEach((n, i) => idxByKey.set(String(n.id), i));
+    const selectionMat = new THREE.MeshBasicMaterial({
+      color: pulseColor.clone(),
+      transparent: true,
+      opacity: 0.4,
+      depthWrite: false,
+      wireframe: true,
+    });
+    const selectionMesh = new THREE.Mesh(new THREE.SphereGeometry(0.72, 12, 12), selectionMat);
+    selectionMesh.visible = false;
+    scene.add(selectionMesh);
+
     // ── Shared interaction state (refs updated by event listeners) ────────────
     const mouseState = { x: 0, y: 0, moved: false };
     const burstQueue: number[] = []; // hub array-index entries
@@ -901,7 +1249,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     };
 
     // ── Event listeners ────────────────────────────────────────────────────────
-    const dragState = { active: false, panning: false, x: 0, y: 0 };
+    const dragState = { active: false, panning: false, x: 0, y: 0, startX: 0, startY: 0, moved: false };
 
     const onMouseMove = (e: MouseEvent) => {
       mouseState.x = e.clientX;
@@ -921,15 +1269,98 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     window.addEventListener('keydown', onKeyDown, { passive: true });
 
-    // ── Interactive camera controls (orbit / pan / zoom) ──────────────────────
+    // ── Interactive camera controls (orbit / pan / zoom) + click-to-select ────
+    const CLICK_SLOP_PX = 5;
+
+    // ── 3D Node Dragging logic ────────────────────────────────────────────────
+    let draggedNodeIndex = -1;
+    const dragPlane = new THREE.Plane();
+
+    const updateGeometryPositions = () => {
+      // 1. Update hub neurons
+      if (hubNeurons?.mesh) {
+        const posAttr = hubNeurons.geo.getAttribute('position') as THREE.BufferAttribute;
+        const hubIndexArray = [...hubIndices];
+        hubIndexArray.forEach((idx, i) => {
+          if (neuronPos[idx]) {
+            posAttr.setXYZ(i, neuronPos[idx].x, neuronPos[idx].y, neuronPos[idx].z);
+          }
+        });
+        posAttr.needsUpdate = true;
+      }
+
+      // 2. Update regular neurons
+      if (regularNeurons?.mesh) {
+        const posAttr = regularNeurons.geo.getAttribute('position') as THREE.BufferAttribute;
+        regularIndices.forEach((idx, i) => {
+          if (neuronPos[idx]) {
+            posAttr.setXYZ(i, neuronPos[idx].x, neuronPos[idx].y, neuronPos[idx].z);
+          }
+        });
+        posAttr.needsUpdate = true;
+      }
+
+      // 3. Update axons (lines)
+      if (axonGeo) {
+        const posAttr = axonGeo.getAttribute('position') as THREE.BufferAttribute;
+        connectionPairs.forEach(([a, b], i) => {
+          const pa = neuronPos[a], pb = neuronPos[b];
+          if (pa && pb) {
+            posAttr.setXYZ(i * 2, pa.x, pa.y, pa.z);
+            posAttr.setXYZ(i * 2 + 1, pb.x, pb.y, pb.z);
+          }
+        });
+        posAttr.needsUpdate = true;
+      }
+
+      // 4. Update label sprites position
+      if (labelSprites && spriteNodeMap) {
+        labelSprites.forEach((sprite) => {
+          const idx = spriteNodeMap.get(sprite);
+          if (idx !== undefined && neuronPos[idx]) {
+            sprite.position.set(neuronPos[idx].x, neuronPos[idx].y + 0.65, neuronPos[idx].z);
+          }
+        });
+      }
+    };
+
     const onPointerDown = (e: PointerEvent) => {
       dragState.active = true;
       dragState.panning = e.button === 2 || e.shiftKey;
       dragState.x = e.clientX;
       dragState.y = e.clientY;
-      takeControl();
+      dragState.startX = e.clientX;
+      dragState.startY = e.clientY;
+      dragState.moved = false;
       canvas.setPointerCapture?.(e.pointerId);
-      canvas.style.cursor = 'grabbing';
+
+      // Check if we clicked on a node to drag
+      if (e.button !== 2 && !e.shiftKey && nodes.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+        
+        let best = -1;
+        let bestDist = Infinity;
+        neuronPos.forEach((pos, i) => {
+          const d = raycaster.ray.distanceToPoint(pos);
+          if (d < bestDist) { bestDist = d; best = i; }
+        });
+        
+        if (best >= 0 && bestDist < 1.1) {
+          draggedNodeIndex = best;
+          const normal = new THREE.Vector3();
+          camera.getWorldDirection(normal);
+          normal.negate();
+          dragPlane.setFromNormalAndCoplanarPoint(normal, neuronPos[best]);
+          takeControl();
+        } else {
+          draggedNodeIndex = -1;
+        }
+      } else {
+        draggedNodeIndex = -1;
+      }
     };
 
     const onPointerMove = (e: PointerEvent) => {
@@ -938,7 +1369,26 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
       const dy = e.clientY - dragState.y;
       dragState.x = e.clientX;
       dragState.y = e.clientY;
-      if (dragState.panning) {
+      if (!dragState.moved) {
+        const total = Math.abs(e.clientX - dragState.startX) + Math.abs(e.clientY - dragState.startY);
+        if (total < CLICK_SLOP_PX) return; // still a potential click
+        dragState.moved = true;
+        takeControl();
+        canvas.style.cursor = 'grabbing';
+      }
+
+      if (draggedNodeIndex >= 0) {
+        const rect = canvas.getBoundingClientRect();
+        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+        
+        const intersection = new THREE.Vector3();
+        if (raycaster.ray.intersectPlane(dragPlane, intersection)) {
+          neuronPos[draggedNodeIndex].copy(intersection);
+          updateGeometryPositions();
+        }
+      } else if (dragState.panning) {
         const panScale = camCtl.radius * 0.0016;
         const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
         const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
@@ -951,9 +1401,31 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     };
 
     const onPointerUp = (e: PointerEvent) => {
+      const wasClick = dragState.active && !dragState.moved;
       dragState.active = false;
+      draggedNodeIndex = -1;
       canvas.releasePointerCapture?.(e.pointerId);
       canvas.style.cursor = 'grab';
+
+      // A click (no drag) selects the nearest neuron under the cursor, or
+      // deselects when the click lands in empty space.
+      if (wasClick && e.button !== 2 && nodes.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+        let best = -1;
+        let bestDist = Infinity;
+        neuronPos.forEach((pos, i) => {
+          const d = raycaster.ray.distanceToPoint(pos);
+          if (d < bestDist) { bestDist = d; best = i; }
+        });
+        if (best >= 0 && bestDist < 1.1 && nodes[best]) {
+          handleNodeClickRef.current(nodes[best]);
+        } else {
+          handleNodeClickRef.current(null);
+        }
+      }
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -1105,6 +1577,22 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
         glia.rotation.x = Math.sin(t * 0.04) * 0.08;
       }
 
+      // Selection marker follows the selected node (runs even while paused).
+      const sel = selectedNodeRef.current;
+      if (sel) {
+        const selIdx = idxByKey.get(String(sel.id));
+        const selPos = selIdx !== undefined ? neuronPos[selIdx] : undefined;
+        if (selPos) {
+          selectionMesh.visible = true;
+          selectionMesh.position.copy(selPos);
+          selectionMesh.scale.setScalar(1 + Math.sin(performance.now() * 0.004) * 0.18);
+        } else {
+          selectionMesh.visible = false;
+        }
+      } else {
+        selectionMesh.visible = false;
+      }
+
       renderer.render(scene, camera);
     };
 
@@ -1125,6 +1613,8 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
         canvas.removeEventListener('contextmenu', onContextMenu);
       }
       resetViewRef.current = () => { };
+      selectionMesh.geometry.dispose();
+      selectionMat.dispose();
       hubNeurons.geo.dispose();
       hubNeurons.mat.dispose();
       regularNeurons.geo.dispose();
@@ -1147,7 +1637,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
       });
       renderer.dispose();
     };
-  }, [primaryColor, secondaryColor, mode, graphData, effectiveShowLabels, backgroundMode]);
+  }, [primaryColor, secondaryColor, mode, visibleGraph, effectiveShowLabels, backgroundMode]);
 
   const canvasEl = (
     <canvas
@@ -1183,6 +1673,37 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     color: mode === 'light' ? '#1a237e' : '#e0f7fa',
   };
 
+  const overlayFg = mode === 'light' ? '#1a237e' : '#e0f7fa';
+  const overlayBg = mode === 'light' ? 'rgba(255,255,255,0.78)' : 'rgba(5,5,15,0.78)';
+
+  const selectStyle: React.CSSProperties = {
+    height: 30,
+    maxWidth: 220,
+    border: 'none',
+    borderRadius: 6,
+    padding: '0 8px',
+    fontSize: 12,
+    fontFamily: 'monospace',
+    cursor: 'pointer',
+    background: mode === 'light' ? 'rgba(26,35,126,0.12)' : 'rgba(224,247,250,0.12)',
+    color: overlayFg,
+  };
+
+  const chipButtonStyle: React.CSSProperties = {
+    border: 'none',
+    borderRadius: 5,
+    cursor: 'pointer',
+    fontSize: 11,
+    fontFamily: 'monospace',
+    padding: '3px 7px',
+    background: mode === 'light' ? 'rgba(26,35,126,0.12)' : 'rgba(224,247,250,0.15)',
+    color: overlayFg,
+  };
+
+  const selectedKey = selectedNode ? String(selectedNode.id) : '';
+  const selectedChildCount = selectedNode ? (childCounts.get(selectedKey) ?? 0) : 0;
+  const selectedCollapsed = selectedNode ? collapsedIds.has(selectedKey) : false;
+
   return (
     <div
       style={{
@@ -1202,8 +1723,39 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           zIndex: 1,
           display: 'flex',
           gap: 6,
+          alignItems: 'center',
         }}
       >
+        <select
+          value={activePerspective.id}
+          onChange={(e) => {
+            const next = availablePerspectives.find((p) => p.id === e.target.value);
+            if (next) setActivePerspective(next);
+          }}
+          style={selectStyle}
+          title="Graph perspective"
+          aria-label="Graph perspective"
+        >
+          {/* Keep an ad-hoc (tool-loaded) perspective visible in the list */}
+          {!availablePerspectives.some((p) => p.id === activePerspective.id) && (
+            <option value={activePerspective.id}>{activePerspective.label}</option>
+          )}
+          {availablePerspectives.map((p) => (
+            <option key={p.id} value={p.id}>{p.label}</option>
+          ))}
+        </select>
+        {onPinPerspective && (
+          <button
+            type="button"
+            style={{ ...buttonStyle, opacity: pinBusy ? 0.5 : 1 }}
+            disabled={pinBusy || isPinned}
+            title={isPinned ? 'Pinned to chat session' : `Pin ${activePerspective.label}${selectedNode ? ` + ${selectedNode.name}` : ''} to chat`}
+            aria-label="Pin perspective to chat"
+            onClick={handlePin}
+          >
+            {isPinned ? '✓' : '📌'}
+          </button>
+        )}
         <button
           type="button"
           style={buttonStyle}
@@ -1235,6 +1787,98 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           ⟲
         </button>
       </div>
+      {selectedNode && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 8,
+            bottom: 8,
+            zIndex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 10px',
+            borderRadius: 8,
+            maxWidth: '75%',
+            background: overlayBg,
+            color: overlayFg,
+            fontFamily: 'monospace',
+            fontSize: 12,
+          }}
+        >
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {selectedNode.name}
+            {selectedNode.type ? ` · ${selectedNode.type}` : ''}
+          </span>
+          {selectedChildCount > 0 && (
+            <button type="button" style={chipButtonStyle} onClick={toggleCollapseSelected}>
+              {selectedCollapsed ? `Expand (+${selectedNode.collapsedCount ?? selectedChildCount})` : 'Collapse'}
+            </button>
+          )}
+          {selectedNode.type === 'FILE' && (selectedNode.source || selectedNode.path) && (
+            <button
+              type="button"
+              style={chipButtonStyle}
+              onClick={() => setPreviewFilePath(selectedNode.source || selectedNode.path || null)}
+              title="View file content"
+            >
+              👁 View File
+            </button>
+          )}
+          {onPinPerspective && (
+            <button
+              type="button"
+              style={chipButtonStyle}
+              disabled={pinBusy || isPinned}
+              onClick={handlePin}
+              title="Pin this node with the active perspective"
+            >
+              {isPinned ? 'Pinned' : 'Pin'}
+            </button>
+          )}
+          <button
+            type="button"
+            style={chipButtonStyle}
+            onClick={() => handleNodeClick(null)}
+            title="Deselect"
+            aria-label="Deselect node"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {previewFilePath && (
+        <Dialog
+          open={Boolean(previewFilePath)}
+          onClose={() => setPreviewFilePath(null)}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+              borderRadius: 2,
+              p: 1,
+              zIndex: 1300
+            }
+          }}
+        >
+          <MuiBox sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
+            <MuiTypography variant="subtitle1" noWrap sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
+              {previewFilePath.split('/').pop()}
+            </MuiTypography>
+            <MuiIconButton onClick={() => setPreviewFilePath(null)} size="small">
+              <MuiIcon>close</MuiIcon>
+            </MuiIconButton>
+          </MuiBox>
+          <DialogContent sx={{ p: 0, height: '65vh', overflow: 'hidden' }}>
+            <File
+              path={previewFilePath}
+              scope="system"
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 });

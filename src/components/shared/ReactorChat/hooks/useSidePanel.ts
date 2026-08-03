@@ -36,7 +36,7 @@ function toSerializable(state: SidePanelState): SidePanelState {
       // restore) and live data feeds (`messages` = full chat history,
       // `graphData` = conversation subgraph) that the host re-supplies at
       // runtime. Keep all other props (userId, formId, etc.).
-      const { reactory: _reactory, messages: _messages, graphData: _graphData, ...serializableProps } = props || {};
+      const { reactory: _reactory, messages: _messages, graphData: _graphData, onPinPerspective: _onPinPerspective, ...serializableProps } = props || {};
       return {
         id, componentFqn, title, type, addedAt, addedBy,
         props: Object.keys(serializableProps).length > 0 ? serializableProps : undefined,

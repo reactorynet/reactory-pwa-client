@@ -6,35 +6,36 @@
  */
 
 import * as THREE from 'three';
-import { 
-  WorkflowStepDefinition, 
-  WorkflowConnection, 
-  CanvasViewport, 
-  Point, 
-  Size, 
+import {
+  WorkflowStepDefinition,
+  WorkflowConnection,
+  CanvasViewport,
+  Point,
+  Size,
   Bounds,
   SelectionState,
   ValidationResult
 } from '../../types';
+// Neutral canvas infrastructure types moved to the shared webgl-canvas
+// package (single source of truth for WorkflowDesigner + GraphExplorer).
+// Re-exported here so existing WorkflowDesigner imports keep working.
+import {
+  WebGLRendererConfig,
+  GridConfig,
+  CameraConfig,
+  AnimationState,
+  WebGLPerformanceMetrics,
+  DEFAULT_WEBGL_CONFIG,
+} from '../../../webgl-canvas';
 
-// ============================================================================
-// Scene Configuration
-// ============================================================================
-
-export interface WebGLRendererConfig {
-  /** Enable anti-aliasing (may impact performance) */
-  antialias?: boolean;
-  /** Pixel ratio for high-DPI displays */
-  pixelRatio?: number;
-  /** Background color */
-  backgroundColor?: number;
-  /** Enable alpha/transparency */
-  alpha?: boolean;
-  /** Power preference for GPU */
-  powerPreference?: 'high-performance' | 'low-power' | 'default';
-  /** Enable logarithmic depth buffer for large scenes */
-  logarithmicDepthBuffer?: boolean;
-}
+export type {
+  WebGLRendererConfig,
+  GridConfig,
+  CameraConfig,
+  AnimationState,
+  WebGLPerformanceMetrics,
+};
+export { DEFAULT_WEBGL_CONFIG };
 
 export interface SceneConfig {
   /** Grid configuration */
@@ -47,23 +48,6 @@ export interface SceneConfig {
   camera: CameraConfig;
   /** Interaction configuration */
   interaction: InteractionConfig;
-}
-
-export interface GridConfig {
-  /** Show grid */
-  visible: boolean;
-  /** Grid cell size in world units */
-  cellSize: number;
-  /** Primary grid line color */
-  primaryColor: number;
-  /** Secondary grid line color */
-  secondaryColor: number;
-  /** Grid line opacity */
-  opacity: number;
-  /** Number of cells between primary lines */
-  primaryInterval: number;
-  /** Fade distance from camera */
-  fadeDistance: number;
 }
 
 export interface StepRenderConfig {
@@ -106,21 +90,6 @@ export interface ConnectionRenderConfig {
   arrowSize: number;
   /** Show arrow heads */
   showArrows: boolean;
-}
-
-export interface CameraConfig {
-  /** Minimum zoom level */
-  minZoom: number;
-  /** Maximum zoom level */
-  maxZoom: number;
-  /** Zoom speed multiplier */
-  zoomSpeed: number;
-  /** Pan speed multiplier */
-  panSpeed: number;
-  /** Enable smooth zoom animation */
-  smoothZoom: boolean;
-  /** Zoom animation duration in ms */
-  zoomDuration: number;
 }
 
 export interface InteractionConfig {
@@ -332,48 +301,6 @@ export interface WebGLInteractionEvent {
 }
 
 // ============================================================================
-// Animation
-// ============================================================================
-
-export interface AnimationState {
-  /** Current animation ID */
-  animationId: number | null;
-  /** Target viewport for smooth zoom/pan */
-  targetViewport: CanvasViewport | null;
-  /** Animation start time */
-  startTime: number;
-  /** Animation duration */
-  duration: number;
-  /** Easing function */
-  easing: (t: number) => number;
-}
-
-// ============================================================================
-// Performance Metrics
-// ============================================================================
-
-export interface WebGLPerformanceMetrics {
-  /** Frames per second */
-  fps: number;
-  /** Frame time in ms */
-  frameTime: number;
-  /** Draw calls per frame */
-  drawCalls: number;
-  /** Triangles rendered */
-  triangles: number;
-  /** Texture memory usage */
-  textureMemory: number;
-  /** Geometry memory usage */
-  geometryMemory: number;
-  /** Total GPU memory */
-  totalMemory: number;
-  /** Visible steps count */
-  visibleSteps: number;
-  /** Visible connections count */
-  visibleConnections: number;
-}
-
-// ============================================================================
 // Manager Interfaces
 // ============================================================================
 
@@ -483,15 +410,6 @@ export interface IInteractionManager {
 // ============================================================================
 // Default Configurations
 // ============================================================================
-
-export const DEFAULT_WEBGL_CONFIG: WebGLRendererConfig = {
-  antialias: true,
-  pixelRatio: Math.min(window.devicePixelRatio, 2),
-  backgroundColor: 0xfafafa,
-  alpha: false,
-  powerPreference: 'high-performance',
-  logarithmicDepthBuffer: false
-};
 
 export const DEFAULT_SCENE_CONFIG: SceneConfig = {
   grid: {

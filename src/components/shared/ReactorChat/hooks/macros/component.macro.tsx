@@ -299,19 +299,6 @@ const ComponentMacro: Macro<UXChatMessage> = (args, chatState, reactory) => {
     };
   }
 
-  if (typeof component !== 'function') {
-    reactory.error('ComponentMacro: Component is not a valid React component', args);
-    return {
-      __typename: "ReactorChatMessage",
-      role: "assistant",
-      content: `Cannot add component: \`${fqn}\` is registered but is not a valid React component.`,
-      id: reactory.utils.uuid(),
-      rating: 0,
-      timestamp: new Date(),
-      tool_calls: [],
-    };
-  }
-
   const itemId = referenceId || reactory.utils.uuid();
   chatState.sidePanel.addItem({
     id: itemId,

@@ -1,0 +1,9 @@
+mutation ReactorSystemPromptPatch($chatSessionId: String!, $systemPrompt: String!) {
+  ReactorSystemPromptPatch(chatSessionId: $chatSessionId, systemPrompt: $systemPrompt) {
+    id
+    systemPrompt
+    tokenCount
+    maxTokens
+    tokenPressure
+  }
+}

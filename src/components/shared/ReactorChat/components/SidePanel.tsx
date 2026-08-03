@@ -242,11 +242,11 @@ const SidePanel: React.FC<SidePanelProps> = React.memo(({
       )}
 
       {/* Content area */}
-      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+      <Box sx={{ flex: 1, overflow: 'auto', p: 1, position: 'relative' }}>
         {items.length === 0 ? emptyState : items.map((item) => (
           <Box
             key={item.id}
-            sx={{ display: item.id === activeItem?.id ? 'block' : 'none', height: '100%' }}
+            sx={{ display: item.id === activeItem?.id ? 'block' : 'none', height: '100%', position: 'relative', overflow: 'hidden' }}
           >
             <SidePanelItemRenderer item={item} reactory={reactory} />
           </Box>

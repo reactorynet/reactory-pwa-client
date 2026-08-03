@@ -1,0 +1,18 @@
+mutation ReactorPinGraphPerspectiveToSession($params: ReactorPinPerspectiveParam!) {
+  ReactorPinGraphPerspectiveToSession(params: $params) {
+    __typename
+    ... on ReactorPinPerspectiveResponse {
+      success
+      message
+      sessionId
+    }
+    ... on ReactorErrorResponse {
+      code
+      message
+      details
+      timestamp
+      recoverable
+      suggestion
+    }
+  }
+}

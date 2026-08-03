@@ -70,6 +70,12 @@ export interface IAIPersonaPromptTemplate {
   role: "user" | "assistant" | "system";
 }
 
+export interface IToolProfile {
+  name: string;
+  description: string;
+  tools: string[];
+}
+
 export interface IAIPersona {
   id: string;
   modelId?: string;
@@ -84,7 +90,8 @@ export interface IAIPersona {
   tools?: MacroToolDefinition[]
   avatar?: string;
   providerId?: string;
-  macros?: MacroComponentDefinition<unknown>[]
+  macros?: MacroComponentDefinition<unknown>[];
+  toolProfiles?: IToolProfile[];
 }
 
 export interface IProps {
@@ -137,6 +144,7 @@ export type MacroToolDefinition = {
   runat?: "server" | "client",
   roles?: string[],
   enabled?: boolean;
+  category?: string;
   /**
    * Which tool-approval modes this tool is available in.
    * Omit to make the tool available in every mode.
@@ -341,6 +349,13 @@ export type ChatState = {
    * The provider ID used for the chat session. When set, overrides the persona default.
    */
   providerId?: string
+  /**
+   * The effective system prompt for the session as resolved by the server —
+   * the content of the first system message in the history, falling back to the
+   * persona prompt. Populated by loadChat / the debug refresh so the prompt can
+   * be inspected without pulling the entire history.
+   */
+  systemPrompt?: string
   /**
    * The history of the chat session.
    */

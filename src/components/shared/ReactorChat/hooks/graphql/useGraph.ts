@@ -32,8 +32,10 @@ import REACTOR_INTERRUPT_TOOL_EXECUTION from "./mutations/ReactorInterruptToolEx
 import REACTOR_ATTACH_USER_FILE from "./mutations/ReactorAttachUserFileToSession.graphql";
 import REACTOR_DETACH_USER_FILE from "./mutations/ReactorDetachUserFileFromSession.graphql";
 import REACTOR_PIN_FOLDER from "./mutations/ReactorPinFolderToSession.graphql";
+import REACTOR_PIN_GRAPH_PERSPECTIVE from "./mutations/ReactorPinGraphPerspectiveToSession.graphql";
 import REACTOR_UNPIN_FOLDER from "./mutations/ReactorUnpinFolderFromSession.graphql";
 import REACTOR_SESSION_LOG from "./mutations/ReactorSessionLog.graphql";
+import REACTOR_PATCH_SYSTEM_PROMPT from "./mutations/ReactorSystemPromptPatch.graphql";
 
 export type StreamingMode = "NONE" | "SSE" | "WEBSOCKET";
 
@@ -308,6 +310,22 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorConversation;
   };
 
+  /**
+   * Replace the system prompt for a session. The server rewrites the system
+   * message in the persisted history, so the change applies to every
+   * subsequent turn of the conversation.
+   */
+  const patchSystemPrompt = async (
+    chatSessionId: string,
+    systemPrompt: string
+  ): Promise<{ id: string; systemPrompt?: string; tokenCount?: number; maxTokens?: number; tokenPressure?: number } | null> => {
+    const response = await reactory.graphqlMutation<
+      { ReactorSystemPromptPatch: any },
+      { chatSessionId: string; systemPrompt: string }
+    >(REACTOR_PATCH_SYSTEM_PROMPT as any, { chatSessionId, systemPrompt });
+    return response?.data?.ReactorSystemPromptPatch ?? null;
+  };
+
   const listConversations = async (
     filter: { personaId?: string; userId?: string; modelId?: string }
   ): Promise<ChatState[]> => {
@@ -441,6 +459,22 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     return response?.data?.ReactorUnpinFolderFromSession;
   };
 
+  const pinGraphPerspectiveToSession = async (params: {
+    sessionId: string;
+    label: string;
+    kind?: string;
+    rootId?: number;
+    nodeId?: number;
+    nodeName?: string;
+    nodeType?: string;
+  }) => {
+    const response = await reactory.graphqlMutation<
+      { ReactorPinGraphPerspectiveToSession: any },
+      { params: typeof params }
+    >(REACTOR_PIN_GRAPH_PERSPECTIVE as any, { params });
+    return response?.data?.ReactorPinGraphPerspectiveToSession;
+  };
+
   const sendSessionLog = async (
     chatSessionId: string,
     entries: Array<{
@@ -482,6 +516,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     deleteChatSession,
     compactConversation,
     getConversation,
+    patchSystemPrompt,
     listConversations,
     executeMacro,
     executeTool,
@@ -491,6 +526,7 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
     attachUserFileToSession,
     detachUserFileFromSession,
     pinFolderToSession,
+    pinGraphPerspectiveToSession,
     unpinFolderFromSession,
     sendSessionLog,
     setSidePanelState,

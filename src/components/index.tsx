@@ -101,6 +101,7 @@ import {
   FunnelChartComponentDefinition,
 } from './shared/Charts';
 import { D3ChartComponentDefinition } from './shared/D3Chart';
+import { GraphExplorerComponentDefinition } from './shared/GraphExplorer';
 
 import * as Three from 'three';
 
@@ -1077,6 +1078,8 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
   FunnelChartComponentDefinition,
   // D3 chart component
   D3ChartComponentDefinition,
+  // Reactor system graph explorer (three.js)
+  GraphExplorerComponentDefinition,
   // Append plugin components
   ...pluginComponents
 ];

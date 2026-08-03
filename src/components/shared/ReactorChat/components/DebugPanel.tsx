@@ -1,7 +1,12 @@
 import React from 'react';
 import { ChatState, SessionLogger, TODOS_VAR_KEY, TodoList } from '../types';
-import { RichEditorWidget } from '@reactory/client-core/components/reactory/ux/mui/widgets';
-import { glassPanelSx } from '../utils';
+import {
+  formatCount,
+  getSystemPromptInfo,
+  glassPanelSx,
+  summarizeContext,
+  summarizeToolCosts,
+} from '../utils';
 
 interface DebugPanelProps {
   open: boolean;
@@ -19,7 +24,7 @@ interface DebugPanelProps {
   clientLoggingEnabled?: boolean;
   onToggleClientLogging?: (enabled: boolean) => void;
   sessionLogger?: SessionLogger;
-  onUpdateSystemPrompt?: (prompt: string) => void;
+  onUpdateSystemPrompt?: (prompt: string) => void | Promise<void>;
   onCompactConversation?: () => Promise<void>;
 }
 
@@ -62,6 +67,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
     Collapse,
     Button,
     Switch,
+    TextField,
   } = Material.MaterialCore;
 
   const {
@@ -70,34 +76,54 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
     ExpandMore,
     ExpandLess,
     BugReport,
+    ContentCopy,
   } = Material.MaterialIcons;
 
-  
-  const [systemPrompt, setSystemPrompt] = React.useState<string>(chatState?.persona?.persona || '');
-  const [isPromptModified, setIsPromptModified] = React.useState<boolean>(false);
+  // The prompt the model actually receives — the system message(s) on the
+  // session, not the (never-fetched) persona blurb the panel used to bind to.
+  const promptInfo = React.useMemo(() => getSystemPromptInfo(chatState), [
+    chatState?.history,
+    chatState?.systemPrompt,
+    chatState?.persona?.persona,
+  ]);
 
+  const [isEditingPrompt, setIsEditingPrompt] = React.useState<boolean>(false);
+  const [promptDraft, setPromptDraft] = React.useState<string>(promptInfo.text);
+  const [isSavingPrompt, setIsSavingPrompt] = React.useState<boolean>(false);
+  const [promptCopied, setPromptCopied] = React.useState<boolean>(false);
+
+  // Keep the draft in sync with the session while the user is not editing, so
+  // a reload / refresh shows the current prompt without discarding edits.
   React.useEffect(() => {
-    if (chatState?.persona?.persona) {
-      setSystemPrompt(chatState.persona.persona);
-      setIsPromptModified(false);
-    }
-  }, [chatState?.persona?.persona]);
+    if (!isEditingPrompt) setPromptDraft(promptInfo.text);
+  }, [promptInfo.text, isEditingPrompt]);
 
-  const handlePromptChange = React.useCallback((val: string) => {
-    setSystemPrompt(val);
-    setIsPromptModified(val !== chatState?.persona?.persona);
-  }, [chatState?.persona?.persona]);
+  const isPromptModified = promptDraft !== promptInfo.text;
 
-  const handleSavePrompt = React.useCallback(() => {
-    if (onUpdateSystemPrompt) {
-      onUpdateSystemPrompt(systemPrompt);
-      setIsPromptModified(false);
+  const handleSavePrompt = React.useCallback(async () => {
+    if (!onUpdateSystemPrompt) return;
+    setIsSavingPrompt(true);
+    try {
+      await onUpdateSystemPrompt(promptDraft);
+      setIsEditingPrompt(false);
+    } finally {
+      setIsSavingPrompt(false);
     }
-  }, [onUpdateSystemPrompt, systemPrompt]);
+  }, [onUpdateSystemPrompt, promptDraft]);
+
+  const handleCopyPrompt = React.useCallback(() => {
+    const text = isEditingPrompt ? promptDraft : promptInfo.text;
+    if (!text) return;
+    navigator?.clipboard?.writeText(text);
+    setPromptCopied(true);
+    setTimeout(() => setPromptCopied(false), 1500);
+  }, [isEditingPrompt, promptDraft, promptInfo.text]);
 
   const [expandedSections, setExpandedSections] = React.useState<Set<string>>(
     () => new Set(['session', 'sse', 'tokens'])
   );
+
+  const [showAllToolCalls, setShowAllToolCalls] = React.useState<boolean>(false);
 
   // Auto-refresh when panel opens
   React.useEffect(() => {
@@ -129,6 +155,18 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
     });
     return { total: chatState.history.length, byRole };
   }, [chatState?.history]);
+
+  // Tool call weight — args + result tokens per call, rolled up per tool.
+  const toolCosts = React.useMemo(
+    () => summarizeToolCosts(chatState?.history),
+    [chatState?.history]
+  );
+
+  // Where the context window is actually being spent.
+  const contextBreakdown = React.useMemo(
+    () => summarizeContext(chatState?.history),
+    [chatState?.history]
+  );
 
   // Todos summary
   const todosSummary = React.useMemo(() => {
@@ -223,27 +261,111 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
       <Box sx={{ flex: 1, overflow: 'auto', px: 2, pb: 2 }}>
         
         {/* System Prompt */}
-        <SectionHeader id="systemPrompt" title="System Prompt Override" />
+        <SectionHeader
+          id="systemPrompt"
+          title={`System Prompt (${formatCount(promptInfo.tokens)} tok)`}
+        />
         <Collapse in={expandedSections.has('systemPrompt')}>
-          <Box sx={{ mb: 1, px: 1 }}>
-            <RichEditorWidget
-              formData={systemPrompt}
-              onChange={handlePromptChange}
-              schema={{ title: "System Prompt" }}
-              uiSchema={{ "ui:options": { format: "code" } }}
+          <Box sx={{ mb: 1 }}>
+            <InfoRow
+              label="Source"
+              value={
+                promptInfo.source === 'session'
+                  ? `Session${promptInfo.parts.length > 1 ? ` (${promptInfo.parts.length} messages)` : ''}`
+                  : promptInfo.source === 'persona'
+                    ? 'Persona default'
+                    : 'Not available'
+              }
             />
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+            <InfoRow label="Characters" value={formatCount(promptInfo.chars)} />
+            <InfoRow label="Est. Tokens" value={formatCount(promptInfo.tokens)} />
+            <InfoRow
+              label="Share of Context"
+              value={
+                contextBreakdown.total > 0
+                  ? `${((promptInfo.tokens / contextBreakdown.total) * 100).toFixed(1)}%`
+                  : '—'
+              }
+            />
+
+            <Box sx={{ display: 'flex', gap: 1, px: 1, py: 1 }}>
               <Button
-                variant="contained"
+                variant="outlined"
                 size="small"
-                color="primary"
-                disabled={!isPromptModified || !onUpdateSystemPrompt}
-                onClick={handleSavePrompt}
-                sx={{ textTransform: 'none' }}
+                onClick={() => setIsEditingPrompt(!isEditingPrompt)}
+                disabled={promptInfo.source === 'none' && !isEditingPrompt}
+                sx={{ textTransform: 'none', fontSize: '0.75rem' }}
               >
-                Apply for Session
+                {isEditingPrompt ? 'View' : 'Edit'}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={ContentCopy ? <ContentCopy fontSize="small" /> : undefined}
+                onClick={handleCopyPrompt}
+                disabled={!promptInfo.text}
+                sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+              >
+                {promptCopied ? 'Copied' : 'Copy'}
               </Button>
             </Box>
+
+            {isEditingPrompt ? (
+              <Box sx={{ px: 1 }}>
+                <TextField
+                  multiline
+                  minRows={10}
+                  maxRows={24}
+                  fullWidth
+                  value={promptDraft}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPromptDraft(e.target.value)}
+                  InputProps={{ sx: { fontFamily: 'monospace', fontSize: '0.75rem' } }}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+                  <Button
+                    size="small"
+                    onClick={() => { setPromptDraft(promptInfo.text); setIsEditingPrompt(false); }}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="primary"
+                    disabled={!isPromptModified || !onUpdateSystemPrompt || !chatState?.id || isSavingPrompt}
+                    onClick={handleSavePrompt}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {isSavingPrompt ? 'Applying…' : 'Apply for Session'}
+                  </Button>
+                </Box>
+                {!chatState?.id && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', pt: 0.5 }}>
+                    Start a chat session before editing the prompt.
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <Box sx={{ px: 1 }}>
+                <Box
+                  sx={{
+                    p: 1,
+                    bgcolor: 'grey.900',
+                    color: 'grey.100',
+                    borderRadius: 1,
+                    maxHeight: 400,
+                    overflow: 'auto',
+                    fontFamily: 'monospace',
+                    fontSize: '0.75rem',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {promptInfo.text || 'No system prompt resolved for this session yet. Send a message or refresh to load it from the server.'}
+                </Box>
+              </Box>
+            )}
           </Box>
         </Collapse>
         <Divider sx={{ my: 0.5 }} />
@@ -401,6 +523,29 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
                 />
               </Box>
             )}
+            <Divider sx={{ my: 0.5 }} />
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1, pt: 0.5 }}>
+              Estimated context breakdown ({formatCount(contextBreakdown.total)} tok)
+            </Typography>
+            {([
+              ['System prompt', contextBreakdown.system],
+              ['User messages', contextBreakdown.user],
+              ['Assistant messages', contextBreakdown.assistant],
+              ['Thinking', contextBreakdown.thinking],
+              ['Tool arguments', contextBreakdown.toolArgs],
+              ['Tool results', contextBreakdown.toolResults],
+            ] as [string, number][])
+              .filter(([, tokens]) => tokens > 0)
+              .map(([label, tokens]) => (
+                <InfoRow
+                  key={label}
+                  label={label}
+                  value={`${formatCount(tokens)} (${contextBreakdown.total > 0
+                    ? ((tokens / contextBreakdown.total) * 100).toFixed(1)
+                    : '0.0'}%)`}
+                />
+              ))}
+
             <Box sx={{ px: 1, pt: 0.5 }}>
               <Button
                 variant="outlined"
@@ -416,6 +561,113 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
                 Summarizes older messages and archives them to free context window space.
               </Typography>
             </Box>
+          </Box>
+        </Collapse>
+        <Divider sx={{ my: 0.5 }} />
+
+        {/* Tool Call Cost */}
+        <SectionHeader
+          id="toolCosts"
+          title={`Tool Call Cost (${toolCosts.totalCalls} calls · ${formatCount(toolCosts.totalToolTokens)} tok)`}
+        />
+        <Collapse in={expandedSections.has('toolCosts')}>
+          <Box sx={{ mb: 1 }}>
+            {toolCosts.totalCalls === 0 && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1, py: 0.5 }}>
+                No tool calls in this conversation yet.
+              </Typography>
+            )}
+
+            {toolCosts.totalCalls > 0 && (
+              <>
+                <InfoRow label="Total Calls" value={toolCosts.totalCalls} />
+                <InfoRow label="Failed Calls" value={toolCosts.totalErrors} />
+                {toolCosts.pendingCalls > 0 && (
+                  <InfoRow label="Awaiting Result" value={toolCosts.pendingCalls} />
+                )}
+                <InfoRow label="Argument Tokens" value={formatCount(toolCosts.totalArgsTokens)} />
+                <InfoRow label="Result Tokens" value={formatCount(toolCosts.totalResultTokens)} />
+                <InfoRow
+                  label="Share of Context"
+                  value={
+                    contextBreakdown.total > 0
+                      ? `${((toolCosts.totalToolTokens / contextBreakdown.total) * 100).toFixed(1)}%`
+                      : '—'
+                  }
+                />
+
+                {/* Per-tool rollup — heaviest first */}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1, pt: 1 }}>
+                  By tool (calls · avg result · max result · total)
+                </Typography>
+                {toolCosts.byTool.map((tool) => {
+                  const share = toolCosts.totalToolTokens > 0
+                    ? (tool.totalTokens / toolCosts.totalToolTokens) * 100
+                    : 0;
+                  return (
+                    <Box key={tool.name} sx={{ px: 1, py: 0.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <Typography variant="caption" sx={{ fontFamily: 'monospace', flex: 1, wordBreak: 'break-all' }}>
+                          {tool.name}
+                          {tool.errors > 0 && (
+                            <Typography component="span" variant="caption" color="error" sx={{ pl: 0.5 }}>
+                              ({tool.errors} failed)
+                            </Typography>
+                          )}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontFamily: 'monospace', pl: 1, whiteSpace: 'nowrap' }}>
+                          {tool.calls}× · {formatCount(tool.avgResultTokens)} · {formatCount(tool.maxResultTokens)} · {formatCount(tool.totalTokens)}
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={Math.min(100, share)}
+                        color={share > 40 ? 'error' : share > 20 ? 'warning' : 'primary'}
+                        sx={{ height: 4, borderRadius: 2, mt: 0.25 }}
+                      />
+                    </Box>
+                  );
+                })}
+
+                {/* Heaviest individual calls */}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1, pt: 1 }}>
+                  Heaviest individual calls
+                </Typography>
+                {(showAllToolCalls ? toolCosts.calls : toolCosts.calls.slice(0, 5)).map((call) => (
+                  <Box key={call.id} sx={{ display: 'flex', justifyContent: 'space-between', px: 1, py: 0.25 }}>
+                    <Typography variant="caption" sx={{ fontFamily: 'monospace', flex: 1, wordBreak: 'break-all' }}>
+                      {call.name}
+                      {call.hasError && (
+                        <Typography component="span" variant="caption" color="error" sx={{ pl: 0.5 }}>error</Typography>
+                      )}
+                      {call.orphanResult && (
+                        <Typography component="span" variant="caption" color="text.secondary" sx={{ pl: 0.5 }}>
+                          (orphan result)
+                        </Typography>
+                      )}
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontFamily: 'monospace', pl: 1, whiteSpace: 'nowrap' }}>
+                      in {formatCount(call.argsTokens)} / out {formatCount(call.resultTokens + call.errorTokens)}
+                    </Typography>
+                  </Box>
+                ))}
+                {toolCosts.calls.length > 5 && (
+                  <Box sx={{ px: 1, pt: 0.5 }}>
+                    <Button
+                      size="small"
+                      onClick={() => setShowAllToolCalls(!showAllToolCalls)}
+                      sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                    >
+                      {showAllToolCalls ? 'Show top 5' : `Show all ${toolCosts.calls.length}`}
+                    </Button>
+                  </Box>
+                )}
+
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1, pt: 0.5 }}>
+                  Token figures are estimates using the same chars/4 heuristic the server uses for tokenCount.
+                </Typography>
+              </>
+            )}
           </Box>
         </Collapse>
         <Divider sx={{ my: 0.5 }} />

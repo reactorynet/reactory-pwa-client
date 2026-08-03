@@ -33,7 +33,7 @@ function buffer(event: ShellEventData): void {
     entry.splice(0, entry.length - MAX_EVENTS_PER_SESSION);
   }
   // Schedule cleanup once a session has exited so buffers don't leak.
-  if (event.phase === 'exit') {
+  if (event.phase === 'exit' && event.source !== 'macro') {
     const existing = pruneTimers.get(id);
     if (existing) clearTimeout(existing);
     pruneTimers.set(id, setTimeout(() => {

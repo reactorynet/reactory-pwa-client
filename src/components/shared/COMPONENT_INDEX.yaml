@@ -141,6 +141,31 @@ categories:
         - "D3AxisConfig"
         - "D3StylingOptions"
 
+    - name: "GraphExplorer"
+      path: "./GraphExplorer/"
+      description: >
+        WebGL (three.js) explorer for the Reactor system graph. Instanced
+        node/edge rendering scales to thousands of nodes; supports lazy
+        expansion of cataloged project trees, dependency/dependent/symlink
+        edge traversal, search with jump-to-node ancestry hydration,
+        breadcrumbs, node/edge filtering, edge create/delete, and saved
+        perspectives (server-persisted with localStorage fallback). Shares
+        the SceneManager/GridRenderer canvas core in ../webgl-canvas with
+        the WorkflowDesigner.
+      type: "component"
+      registration: "core.GraphExplorer@1.0.0"
+      dependencies: ["three", "d3-force", "dagre"]
+      exports:
+        - "GraphExplorer"
+        - "GraphExplorerComponentDefinition"
+        - "GraphNode"
+        - "GraphEdge"
+        - "GraphPerspective"
+        - "useGraphExplorer"
+        - "useGraphData"
+        - "useGraphStore"
+        - "SpatialHash"
+
   # Forms & Input
   forms:
     - name: "FormList"

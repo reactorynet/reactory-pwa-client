@@ -8,6 +8,7 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
       created
       updated
       user { id firstName lastName }
+      systemPrompt
       history {
         id
         role
@@ -15,6 +16,7 @@ query ReactorConversation($id: String!, $loadOptions: ReactorConversationLoadOpt
         thinking
         timestamp
         images
+        tool_call_id
         tool_calls { id type function { name arguments } status }
         tool_results { id name content timestamp }
         tool_errors { id name error timestamp }

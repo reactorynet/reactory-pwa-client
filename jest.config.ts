@@ -13,9 +13,10 @@ import * as os from 'os';
  *     with the worker default (CPUs - 1) because each worker holds the
  *     full module graph (MUI 6 + Apollo + Mermaid + chart libs ≈ 3 GB
  *     RSS each). Override with `JEST_MAX_WORKERS=4` etc. when needed.
- *   - `transformIgnorePatterns` left at default; the per-package
- *     moduleNameMapper stubs (mermaid, apollo-upload-client) are the
- *     right tool for ESM-incompatible packages.
+ *   - `transformIgnorePatterns` allows only the d3 micro-packages through
+ *     (real physics needed by GraphExplorer layout tests); for other
+ *     ESM-incompatible packages the per-package moduleNameMapper stubs
+ *     (mermaid, apollo-upload-client) remain the right tool.
  *   - `cacheDirectory` explicit so first cold run primes a stable cache
  *     used by subsequent runs (CI cache friendliness too).
  */
@@ -55,6 +56,12 @@ export default async (): Promise<JestConfigWithTsJest> => {
       // GraphQL files — export file content as string so String(doc).includes() works
       '\\.graphql$': '<rootDir>/test/__mocks__/graphqlTransform.js',
     },
+    // ESM-only packages that tests exercise for real (stubbing a physics
+    // engine would make the GraphExplorer layout tests meaningless). The d3
+    // micro-packages are tiny; babel-jest transforms them via the js rule.
+    transformIgnorePatterns: [
+      '/node_modules/(?!(d3-force|d3-quadtree|d3-dispatch|d3-timer)/)',
+    ],
     moduleNameMapper: {
       // Path aliases
       '^@reactory/client-core/(.*)$': '<rootDir>/src/$1',

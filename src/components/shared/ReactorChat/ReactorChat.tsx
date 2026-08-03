@@ -273,6 +273,7 @@ export default (props) => {
     unpinUserFileForChat,
     pinFolderForChat,
     unpinFolderForChat,
+    pinGraphPerspectiveForChat,
     newChat,
     loadChat,
     fetchConversationMeta,
@@ -293,6 +294,7 @@ export default (props) => {
     toolIterationLimitInfo,
     clearToolIterationLimitInfo,
     compactConversation,
+    updateSystemPrompt,
     networkStatus = 'idle' as const,
     networkError = null,
     reconnectAttempt: networkReconnectAttempt = 0,
@@ -897,6 +899,22 @@ export default (props) => {
     setToolsPanelOpen(false);
   }, []);
 
+  const handleToolsChange = useCallback((toolNames: string[]) => {
+    setEnabledTools(new Set(toolNames));
+    
+    const sessionId = chatState?.id;
+    if (sessionId) {
+      reactory.graphqlMutation(
+        `mutation ReactorUpdateChatTools($chatSessionId: String!, $toolNames: [String]!) {
+          ReactorUpdateChatTools(chatSessionId: $chatSessionId, toolNames: $toolNames) { id }
+        }`,
+        { chatSessionId: sessionId, toolNames }
+      ).catch((err) => {
+        reactory.log(`Failed to update session tools: ${err?.message}`, {}, 'warning');
+      });
+    }
+  }, [chatState?.id, reactory]);
+
   const handleToolToggle = useCallback((toolName: string) => {
     setEnabledTools(prev => {
       const newSet = new Set(prev);
@@ -907,9 +925,22 @@ export default (props) => {
         newSet.add(toolName);
         sessionLogger?.info(`Tool enabled: ${toolName}`, { toolName }, 'ReactorChat');
       }
+      
+      const sessionId = chatState?.id;
+      if (sessionId) {
+        reactory.graphqlMutation(
+          `mutation ReactorUpdateChatTools($chatSessionId: String!, $toolNames: [String]!) {
+            ReactorUpdateChatTools(chatSessionId: $chatSessionId, toolNames: $toolNames) { id }
+          }`,
+          { chatSessionId: sessionId, toolNames: Array.from(newSet) }
+        ).catch((err) => {
+          reactory.log(`Failed to update session tools: ${err?.message}`, {}, 'warning');
+        });
+      }
+
       return newSet;
     });
-  }, []);
+  }, [chatState?.id, reactory]);
 
   const handleChatHistoryPanelToggle = useCallback(() => {
     // Close other panels first
@@ -1148,6 +1179,7 @@ export default (props) => {
             ... on ReactorChatState {
               id
               vars
+              systemPrompt
               tokenCount
               maxTokens
               tokenPressure
@@ -1422,6 +1454,26 @@ export default (props) => {
   // everything the viewer needs must be provided (and kept fresh) here.
   const NEURAL_GRAPH_PANEL_ID = 'neural-graph-viewer';
 
+  // Pins the active graph perspective (and optional focus node) to the chat
+  // session — a background user message server-side, no inference triggered.
+  // pinGraphPerspectiveForChat is recreated by useChatFactory on every render,
+  // so it is bridged through a ref: the handler identity must stay stable or
+  // neuralGraphViewerProps (and the side panel update effect below) would
+  // churn on every render and loop.
+  const pinGraphPerspectiveRef = React.useRef(pinGraphPerspectiveForChat);
+  pinGraphPerspectiveRef.current = pinGraphPerspectiveForChat;
+  const handlePinGraphPerspective = useCallback(async (perspective: any, node: any) => {
+    const nodeId = node ? Number(node.id) : undefined;
+    await pinGraphPerspectiveRef.current({
+      label: perspective.label,
+      kind: perspective.kind,
+      rootId: perspective.rootId,
+      nodeId: nodeId !== undefined && !Number.isNaN(nodeId) ? nodeId : undefined,
+      nodeName: node?.name,
+      nodeType: node?.type,
+    });
+  }, []);
+
   const neuralGraphViewerProps = useMemo(() => ({
     reactory,
     backgroundMode: false,
@@ -1432,7 +1484,8 @@ export default (props) => {
     graphData: backgroundGraphData,
     messages: chatState?.history,
     sessionId: activeSessionId,
-  }), [reactory, mode, themeColors.primary, themeColors.secondary, backgroundGraphData, chatState?.history, activeSessionId]);
+    onPinPerspective: handlePinGraphPerspective,
+  }), [reactory, mode, themeColors.primary, themeColors.secondary, backgroundGraphData, chatState?.history, activeSessionId, handlePinGraphPerspective]);
 
   const handleNeuralGraphViewerToggle = useCallback(() => {
     const state = sidePanelActions.getState();
@@ -1452,11 +1505,21 @@ export default (props) => {
     });
   }, [sidePanelActions, neuralGraphViewerProps, il8n]);
 
-  // Keep the mounted viewer's props live as the conversation and graph evolve.
+  // Keep the mounted viewer's props live as the conversation and graph
+  // evolve. Merge over the item's existing props so values set by other
+  // writers (e.g. the loadGraphPerspective tool's `perspective`) survive.
+  // The no-op guard is load-bearing: updateItem triggers a re-render, so an
+  // unconditional update here would recurse (maximum update depth exceeded).
   React.useEffect(() => {
     const state = sidePanelActions.getState();
-    if (!state.items.some((i) => i.id === NEURAL_GRAPH_PANEL_ID)) return;
-    sidePanelActions.updateItem(NEURAL_GRAPH_PANEL_ID, { props: neuralGraphViewerProps });
+    const item = state.items.find((i) => i.id === NEURAL_GRAPH_PANEL_ID);
+    if (!item) return;
+    const upToDate = Object.entries(neuralGraphViewerProps)
+      .every(([key, value]) => item.props?.[key] === value);
+    if (upToDate) return;
+    sidePanelActions.updateItem(NEURAL_GRAPH_PANEL_ID, {
+      props: { ...item.props, ...neuralGraphViewerProps },
+    });
   }, [sidePanelActions, neuralGraphViewerProps]);
 
   // SpeedDial actions for persona and chat tools
@@ -1882,6 +1945,7 @@ export default (props) => {
               onStreamingToggle={handleStreamingToggle}
               onToolApprovalModeChange={setToolApprovalMode}
               onToolToggle={handleToolToggle}
+              onToolsChange={handleToolsChange}
               onToolExecute={onToolExecute}
               modelOverride={modelOverride}
               onModelChange={setModelOverride}
@@ -1974,6 +2038,7 @@ export default (props) => {
                 onToggleClientLogging={handleToggleClientLogging}
                 sessionLogger={sessionLogger}
                 onCompactConversation={compactConversation}
+                onUpdateSystemPrompt={updateSystemPrompt}
               />
             )}
 

@@ -16,6 +16,7 @@ interface ToolsPanelProps {
   onStreamingToggle: (enabled: boolean) => void;
   onToolApprovalModeChange: (mode: ToolApprovalMode) => void;
   onToolToggle: (toolName: string) => void;
+  onToolsChange?: (toolNames: string[]) => void;
   onToolExecute: (toolCall: MacroToolDefinition & { args?: any, calledBy?: string, callId?: string }) => void;
   /** Currently active model override — passed through to ModelSelector */
   modelOverride: ModelOverride | null;
@@ -65,6 +66,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   onStreamingToggle,
   onToolApprovalModeChange,
   onToolToggle,
+  onToolsChange,
   onToolExecute,
   modelOverride,
   onModelChange,
@@ -91,7 +93,42 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   const [configSaving, setConfigSaving] = useState(false);
   const [configReverting, setConfigReverting] = useState(false);
   const [applyToSessionOnly, setApplyToSessionOnly] = useState(false);
+  const [selectedToolbelt, setSelectedToolbelt] = useState<string>('All Tools');
+  const [expandedProfile, setExpandedProfile] = useState<string | null>('All Tools');
   const { renderContent } = useContentRender(reactory);
+
+  const getProfileToolsAndGroup = (profileToolsNames: string[]) => {
+    const filteredTools = (chatState?.tools || []).filter((tool) => {
+      const name = tool.function?.name;
+      return name && profileToolsNames.includes(name);
+    });
+
+    const groups: Record<string, typeof chatState.tools> = {};
+    filteredTools.forEach((tool) => {
+      const category = tool.category || (tool as any).function?.category || 'General';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(tool);
+    });
+
+    return groups;
+  };
+
+  const allProfiles = [
+    {
+      name: 'All Tools',
+      description: 'All available tools for the current agent',
+      tools: (chatState?.tools || []).map(t => t.function?.name).filter(Boolean) as string[]
+    },
+    ...(chatState?.persona?.toolProfiles || [])
+  ];
+
+  const sortedProfiles = [...allProfiles].sort((a, b) => {
+    if (a.name === selectedToolbelt) return -1;
+    if (b.name === selectedToolbelt) return 1;
+    return 0;
+  });
 
   const {
     Paper,
@@ -116,6 +153,9 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     MenuItem,
     ListItemIcon,
     ListItemText,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
   } = Material.MaterialCore;
 
   return (
@@ -550,116 +590,256 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
         </Box>
       )}
 
-      {/* Tools Grid */}
+      {/* Collapsable Toolbelts (Profiles) */}
       {chatState?.tools && chatState.tools.length > 0 ? (
-        <Grid container spacing={2}>
-          {chatState.tools
-            .slice()
-            .sort((a, b) => {
-              const nameA = a.function?.name?.toLowerCase() ?? '';
-              const nameB = b.function?.name?.toLowerCase() ?? '';
-              return nameA.localeCompare(nameB);
-            })
-            .map((tool) => {
-              const toolName = tool.function?.name;
-              const isEnabled = toolName ? enabledTools.has(toolName) : false;
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {sortedProfiles.map((profile) => {
+            const groupedTools = getProfileToolsAndGroup(profile.tools);
+            const isExpanded = expandedProfile === profile.name;
 
-              return (
-                <Grid item xs={12} sm={6} md={4} key={toolName ?? JSON.stringify(tool)}>
-                  <Paper
-                    sx={{
-                      p: 2,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease-in-out',
-                      border: 1,
-                      borderColor: isEnabled ? 'primary.main' : 'divider',
-                      opacity: isEnabled ? 1 : 0.6,
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: 4,
-                        borderColor: 'primary.main',
-                      }
-                    }}
-                    onClick={() => {
-                      // Handle tool execution
-                      if (tool.function?.parameters?.properties) {
-                        // TODO: Show tool parameters dialog
-                        reactory.log('Tool requires parameters:', tool);
-                      } else {
-                        // Execute tool immediately
-                        onToolExecute({
-                          ...tool,
-                          args: {},
-                          calledBy: 'user',
-                          callId: reactory.utils.uuid(),
-                        });
-                      }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Checkbox
-                        checked={isEnabled}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          if (toolName) {
-                            onToolToggle(toolName);
-                          }
-                        }}
-                        size="small"
-                        sx={{ mr: 1 }}
-                      />
-                      <Icon sx={{ mr: 1, color: 'primary.main' }}>
-                        {getToolIcon(tool)}
-                      </Icon>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                        {toCamelCaseLabel(toolName ?? 'Tool')}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ 
-                      mb: 1,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'scroll',
-                      maxHeight: 220,
-                      border: 1,
-                      borderColor: 'divider',
-                      p: 1,
-                      borderRadius: 1,
-                    }}>
-                      {renderContent(tool.function?.description || 'No description available')}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      {tool.function?.parameters?.properties && (
+            return (
+              <Accordion
+                key={profile.name}
+                expanded={isExpanded}
+                onChange={(e, expanded) => {
+                  setExpandedProfile(expanded ? profile.name : null);
+                  if (expanded) {
+                    setSelectedToolbelt(profile.name);
+                  }
+                }}
+                sx={{
+                  bgcolor: 'background.paper',
+                  border: 1,
+                  borderColor: selectedToolbelt === profile.name ? 'primary.main' : 'divider',
+                  borderRadius: 1,
+                  '&:before': { display: 'none' },
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<Material.MaterialIcons.ExpandMore />}
+                  sx={{
+                    px: 2,
+                    '& .MuiAccordionSummary-content': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                    }
+                  }}
+                >
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {profile.name}
+                      {selectedToolbelt === profile.name && (
                         <Chip
-                          label="Requires Parameters"
+                          label="Selected"
                           size="small"
+                          color="primary"
                           variant="outlined"
-                          sx={{ fontSize: '0.7rem' }}
+                          sx={{ height: 18, fontSize: '0.65rem' }}
                         />
                       )}
-                      {isEnabled && (
-                        <Tooltip title={il8n?.t('reactor.client.tools.invoke', { defaultValue: `Execute ${toCamelCaseLabel(toolName)} tool` })}>
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // TODO: Implement manual tool invocation
-                              reactory.log('Manual tool invocation:', toolName);
-                            }}
-                            disabled={!isEnabled}
-                            sx={{ ml: 'auto' }}
-                          >
-                            <Material.MaterialIcons.PlayArrow />
-                          </IconButton>
-                        </Tooltip>
-                      )}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {profile.description}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1, ml: 'auto', mr: 2 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newSet = new Set(enabledTools);
+                        profile.tools.forEach((toolName) => {
+                          newSet.add(toolName);
+                        });
+                        if (onToolsChange) {
+                          onToolsChange(Array.from(newSet));
+                        } else {
+                          profile.tools.forEach((toolName) => {
+                            if (!enabledTools.has(toolName)) {
+                              onToolToggle(toolName);
+                            }
+                          });
+                        }
+                      }}
+                    >
+                      Enable All
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newSet = new Set(enabledTools);
+                        profile.tools.forEach((toolName) => {
+                          newSet.delete(toolName);
+                        });
+                        if (onToolsChange) {
+                          onToolsChange(Array.from(newSet));
+                        } else {
+                          profile.tools.forEach((toolName) => {
+                            if (enabledTools.has(toolName)) {
+                              onToolToggle(toolName);
+                            }
+                          });
+                        }
+                      }}
+                    >
+                      Disable All
+                    </Button>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+                  {Object.keys(groupedTools).length > 0 ? (
+                    Object.entries(groupedTools).map(([category, categoryTools]) => (
+                      <Box key={category} sx={{ mb: 3, '&:last-child': { mb: 0 } }}>
+                        <Typography
+                          variant="subtitle2"
+                          color="primary"
+                          sx={{
+                            mb: 2,
+                            fontWeight: 'bold',
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                            pb: 0.5,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            fontSize: '0.75rem',
+                          }}
+                        >
+                          {category}
+                        </Typography>
+                        <Grid container spacing={2}>
+                          {categoryTools
+                            .slice()
+                            .sort((a, b) => {
+                              const nameA = a.function?.name?.toLowerCase() ?? '';
+                              const nameB = b.function?.name?.toLowerCase() ?? '';
+                              return nameA.localeCompare(nameB);
+                            })
+                            .map((tool) => {
+                              const toolName = tool.function?.name;
+                              const isEnabled = toolName ? enabledTools.has(toolName) : false;
+
+                              return (
+                                <Grid item xs={12} sm={6} md={4} key={toolName ?? JSON.stringify(tool)}>
+                                  <Paper
+                                    sx={{
+                                      p: 2,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease-in-out',
+                                      border: 1,
+                                      borderColor: isEnabled ? 'primary.main' : 'divider',
+                                      opacity: isEnabled ? 1 : 0.6,
+                                      '&:hover': {
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: 4,
+                                        borderColor: 'primary.main',
+                                      }
+                                    }}
+                                    onClick={() => {
+                                      if (tool.function?.parameters?.properties) {
+                                        reactory.log('Tool requires parameters:', tool);
+                                      } else {
+                                        onToolExecute({
+                                          ...tool,
+                                          args: {},
+                                          calledBy: 'user',
+                                          callId: reactory.utils.uuid(),
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                      <Checkbox
+                                        checked={isEnabled}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          if (toolName) {
+                                            const newSet = new Set(enabledTools);
+                                            if (isEnabled) {
+                                              newSet.delete(toolName);
+                                            } else {
+                                              newSet.add(toolName);
+                                            }
+                                            if (onToolsChange) {
+                                              onToolsChange(Array.from(newSet));
+                                            } else {
+                                              onToolToggle(toolName);
+                                            }
+                                          }
+                                        }}
+                                        size="small"
+                                        sx={{ mr: 1 }}
+                                      />
+                                      <Icon sx={{ mr: 1, color: 'primary.main' }}>
+                                        {getToolIcon(tool)}
+                                      </Icon>
+                                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        {toCamelCaseLabel(toolName ?? 'Tool')}
+                                      </Typography>
+                                    </Box>
+                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                      mb: 1,
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 3,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'scroll',
+                                      maxHeight: 220,
+                                      border: 1,
+                                      borderColor: 'divider',
+                                      p: 1,
+                                      borderRadius: 1,
+                                    }}>
+                                      {renderContent(tool.function?.description || 'No description available')}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                      {tool.function?.parameters?.properties && (
+                                        <Chip
+                                          label="Requires Parameters"
+                                          size="small"
+                                          variant="outlined"
+                                          sx={{ fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                      {isEnabled && (
+                                        <Tooltip title={il8n?.t('reactor.client.tools.invoke', { defaultValue: `Execute ${toCamelCaseLabel(toolName)} tool` })}>
+                                          <IconButton
+                                            size="small"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              reactory.log('Manual tool invocation:', toolName);
+                                            }}
+                                            disabled={!isEnabled}
+                                            sx={{ ml: 'auto' }}
+                                          >
+                                            <Material.MaterialIcons.PlayArrow />
+                                          </IconButton>
+                                        </Tooltip>
+                                      )}
+                                    </Box>
+                                  </Paper>
+                                </Grid>
+                              );
+                            })}
+                        </Grid>
+                      </Box>
+                    ))
+                  ) : (
+                    <Box sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {il8n?.t('reactor.client.tools.none', { defaultValue: 'No tools available in this profile' })}
+                      </Typography>
                     </Box>
-                  </Paper>
-                </Grid>
-              );
-            })}
-        </Grid>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+            );
+          })}
+        </Box>
       ) : (
         <Box sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary">

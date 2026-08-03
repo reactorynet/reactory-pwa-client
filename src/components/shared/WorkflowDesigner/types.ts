@@ -18,22 +18,11 @@ export type {
   PortRenderConfig,
 } from './types/rendering';
 
-export interface Point {
-  x: number;
-  y: number;
-}
+// Geometry primitives moved to the shared webgl-canvas package (single
+// source of truth with GraphExplorer). Re-exported to keep imports working.
+import type { Point, Size, Bounds, CanvasViewport } from '../webgl-canvas';
 
-export interface Size {
-  width: number;
-  height: number;
-}
-
-export interface Bounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+export type { Point, Size, Bounds, CanvasViewport };
 
 // Workflow definition types
 export interface WorkflowDefinition {
@@ -298,13 +287,6 @@ export interface ValidationResult {
 }
 
 // Canvas interaction types
-export interface CanvasViewport {
-  zoom: number;
-  panX: number;
-  panY: number;
-  bounds: Bounds;
-}
-
 export interface SelectionState {
   selectedSteps: Set<string>;
   selectedConnections: Set<string>;

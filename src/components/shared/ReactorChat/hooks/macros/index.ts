@@ -8,12 +8,13 @@ import D3Macro from './d3.macro';
 import ImageMacro from './image.macro';
 import SidePanelStateMacro from './sidePanelState.macro';
 import AmqMacro from './amq.macro';
+import GraphPerspectiveMacro from './graphPerspective.macro';
 import { MacroComponentDefinition } from '../../types';
 
 
-const macros: MacroComponentDefinition<unknown>[] = [ 
+const macros: MacroComponentDefinition<unknown>[] = [
   LoginMacro,
-  LogoutMacro,  
+  LogoutMacro,
   FormMacro,
   ComponentMacro,
   RuntimeMacro,
@@ -22,6 +23,7 @@ const macros: MacroComponentDefinition<unknown>[] = [
   ImageMacro,
   SidePanelStateMacro,
   AmqMacro,
+  GraphPerspectiveMacro,
 ];
 
 export default macros;

@@ -48,6 +48,15 @@ interface ChatFactoryHookResult {
   pinFolderForChat: (path: string, name: string) => Promise<void>
   /** Unpin a folder from the session. */
   unpinFolderForChat: (path: string, name: string) => Promise<void>
+  /** Pin a system graph perspective (and optional focus node) for the agent. */
+  pinGraphPerspectiveForChat: (perspective: {
+    label: string;
+    kind?: string;
+    rootId?: number;
+    nodeId?: number;
+    nodeName?: string;
+    nodeType?: string;
+  }) => Promise<void>
   // sets the tool approval mode for the chat session
   setToolApprovalMode: (mode: ToolApprovalMode) => Promise<void>
   // indicates if the chat session has been initialized
@@ -87,6 +96,8 @@ interface ChatFactoryHookResult {
   clearCompactionInfo: () => void
   // manually trigger conversation compaction
   compactConversation: () => Promise<void>
+  /** Replace the system prompt for the active session (debug inspector). */
+  updateSystemPrompt: (systemPrompt: string) => Promise<void>
   // network connection status
   networkStatus: NetworkStatus
   networkError: string | null
@@ -965,9 +976,6 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     existingSession?.chatState || getInitialChatState()
   );
 
-  React.useEffect(() => {
-    activeSessionIdRef.current = chatState?.id || null;
-  }, [chatState?.id]);
   const [busy, setBusy] = React.useState<boolean>(false);
   const [chatLoading, setChatLoading] = React.useState<boolean>(false);
   const [isInitialized, setIsInitialized] = React.useState<boolean>(
@@ -1489,6 +1497,21 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }, SSE_INACTIVITY_TIMEOUT_MS);
       },
     });
+
+  React.useEffect(() => {
+    activeSessionIdRef.current = chatState?.id || null;
+    // Reset session-specific states when switching to a different chat session
+    // to prevent "stuck" indicators (e.g. thinking widget showing in new sessions)
+    setBusy(false);
+    setIsStreaming(false);
+    setWaitingForResponse(false);
+    setToolIterationLimitInfo(null);
+    setPendingToolCallResume(null);
+    setCompactionInfo(null);
+    if (sse && typeof sse.disconnect === 'function') {
+      sse.disconnect();
+    }
+  }, [chatState?.id]);
 
   // Re-establish SSE connection on page reload when an existing session is loaded.
   // The SSE transport is lost on navigation/refresh, so we need to reconnect.
@@ -2201,6 +2224,44 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     }
   };
 
+  const pinGraphPerspectiveForChat = async (perspective: {
+    label: string;
+    kind?: string;
+    rootId?: number;
+    nodeId?: number;
+    nodeName?: string;
+    nodeType?: string;
+  }) => {
+    sessionLogger?.info(`Pinning graph perspective to chat`, { perspective }, 'useChatFactory');
+    setBusy(true);
+    try {
+      const sessionId = await ensureSessionForAttachments();
+      if (!sessionId) throw new Error("No chat session");
+      const result = await graph.pinGraphPerspectiveToSession({
+        sessionId,
+        ...perspective,
+      });
+      if (result?.__typename === "ReactorErrorResponse") {
+        onError(new Error((result as any).message));
+        return;
+      }
+      // Surface a subtle activity chip so the pin is visible in the chat.
+      onMessage({
+        id: reactory.utils.uuid(),
+        timestamp: new Date(),
+        role: "user",
+        content: `Pinned graph perspective "${perspective.label}"${perspective.nodeName ? ` · focus node "${perspective.nodeName}"` : ''}`,
+        sessionId,
+        isActivity: true,
+      } as any);
+    } catch (error) {
+      onError(error);
+      throw error;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const unpinFolderForChat = async (folderPath: string, folderName: string) => {
     sessionLogger?.info(`Unpinning folder from chat`, { folderPath, folderName }, 'useChatFactory');
     setBusy(true);
@@ -2472,6 +2533,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             chats: Array.isArray((result as any).chats) ? (result as any).chats : [],
             started: (result as any).started,
             history: greetingEntry ? [greetingEntry, ...serverHistory] : serverHistory,
+            systemPrompt: (result as any).systemPrompt ?? prevState.systemPrompt,
             tools: uniqueTools,
             macros: (result as any).macros ?? [],
             vars: (result as any).vars ?? {},
@@ -2484,6 +2546,64 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
             sidePanelState: (result as any).sidePanelState ?? null,
             updated: new Date(),
           }));
+
+          // Synthesize shell output history from past tool calls
+          if (Array.isArray(serverHistory)) {
+            serverHistory.forEach((message: any) => {
+              if (Array.isArray(message.tool_results)) {
+                message.tool_results.forEach((res: any) => {
+                  const isShellTool = res.name === 'shell' || (typeof res.name === 'string' && res.name.endsWith(':shell'));
+                  if (isShellTool && res.content) {
+                    try {
+                      const parsed = JSON.parse(res.content);
+                      if (parsed.success && parsed.data && parsed.data.shellSessionId) {
+                        const { shellSessionId, command, workingDir, stdout, stderr, exitCode, timedOut } = parsed.data;
+                        
+                        const existingBuffer = chatShellBus.getBuffer(shellSessionId);
+                        if (existingBuffer.length === 0) {
+                          chatShellBus.push({
+                            shellSessionId,
+                            phase: 'start',
+                            source: 'macro',
+                            command: command,
+                            cwd: workingDir,
+                          });
+
+                          if (stdout) {
+                            chatShellBus.push({
+                              shellSessionId,
+                              phase: 'stdout',
+                              source: 'macro',
+                              chunk: stdout,
+                            });
+                          }
+
+                          if (stderr) {
+                            chatShellBus.push({
+                              shellSessionId,
+                              phase: 'stderr',
+                              source: 'macro',
+                              chunk: stderr,
+                            });
+                          }
+
+                          chatShellBus.push({
+                            shellSessionId,
+                            phase: 'exit',
+                            source: 'macro',
+                            exitCode: exitCode ?? 0,
+                            timedOut: !!timedOut,
+                          });
+                        }
+                      }
+                    } catch (e) {
+                      reactory.log('[useChatFactory] failed to parse historical shell result', { error: e }, 'warning');
+                    }
+                  }
+                });
+              }
+            });
+          }
 
           // Detect pending tool calls that were not completed (e.g. user navigated away)
           if (serverHistory.length > 0) {
@@ -3375,6 +3495,7 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
     unpinUserFileForChat,
     pinFolderForChat,
     unpinFolderForChat,
+    pinGraphPerspectiveForChat,
     sendAudio,
     isInitialized,
     isStreaming: (sse as any).isStreaming,
@@ -3403,6 +3524,37 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         onError(err);
       } finally {
         setBusy(false);
+      }
+    },
+    /**
+     * Replace the session system prompt (debug inspector). The server rewrites
+     * the system message in the persisted history; the local history is patched
+     * to match so the inspector reflects the change without a full reload.
+     */
+    updateSystemPrompt: async (systemPrompt: string) => {
+      const sessionId = chatState.id;
+      if (!sessionId) return;
+      try {
+        const result = await graph.patchSystemPrompt(sessionId, systemPrompt);
+        setChatState((prevState) => {
+          const history = [...(prevState.history || [])];
+          const systemIndex = history.findIndex((msg: any) => msg.role === 'system');
+          if (systemIndex >= 0) {
+            history[systemIndex] = { ...history[systemIndex], content: systemPrompt } as UXChatMessage;
+          }
+          return {
+            ...prevState,
+            history,
+            systemPrompt: result?.systemPrompt ?? systemPrompt,
+            tokenCount: result?.tokenCount ?? prevState.tokenCount,
+            maxTokens: result?.maxTokens ?? prevState.maxTokens,
+            tokenPressure: result?.tokenPressure ?? prevState.tokenPressure,
+            updated: new Date(),
+          };
+        });
+        sessionLogger?.info('System prompt updated', { chatSessionId: sessionId }, 'useChatFactory');
+      } catch (err: any) {
+        onError(err);
       }
     },
     // Network status
