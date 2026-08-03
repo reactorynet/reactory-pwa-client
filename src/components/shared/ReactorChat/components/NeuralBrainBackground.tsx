@@ -46,6 +46,8 @@ export interface NeuralGraphNode {
   source?: string;
   /** Relative source file path */
   path?: string;
+  /** Custom node color override */
+  color?: string;
 }
 
 export interface NeuralGraphEdge {
@@ -1874,7 +1876,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           <DialogContent sx={{ p: 0, height: '65vh', overflow: 'hidden' }}>
             <File
               path={previewFilePath}
-              scope="system"
+              scope="server"
             />
           </DialogContent>
         </Dialog>
