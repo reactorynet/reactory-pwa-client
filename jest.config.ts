@@ -42,7 +42,7 @@ export default async (): Promise<JestConfigWithTsJest> => {
       // Transform TypeScript and JSX files
       '^.+\\.(ts|tsx)$': ['ts-jest', {
         tsconfig: '<rootDir>/tsconfig.test.json',
-        compiler: './.yarn/sdks/typescript/lib/typescript.js',
+        compiler: 'typescript',
         useESM: false,
         // Disable type-error diagnostics during test runs.
         // Type checking is handled by `tsc --noEmit`; we don't want a

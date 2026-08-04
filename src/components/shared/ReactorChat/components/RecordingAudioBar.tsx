@@ -26,6 +26,8 @@ export interface RecordingAudioBarProps {
   };
 }
 
+const DEFAULT_RECORDING_OPTIONS = {};
+
 const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({ 
   open, 
   onClose, 
@@ -37,7 +39,7 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
   voiceProcessing = false,
   voicePlaying = false,
   onStopPlayback,
-  recordingOptions = {}
+  recordingOptions = DEFAULT_RECORDING_OPTIONS
 }) => {
   // When in voice mode, capture the raw Blob via onAudioData and forward to onRecordingComplete
   const handleAudioData = React.useCallback((data: string | Uint8Array, format: 'base64' | 'bytes') => {
@@ -64,6 +66,7 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
     pauseRecording,
     resumeRecording,
     requestPermission,
+    clearError,
     state,
     audioStream
   } = useAudioRecording(reactory, handleAudioData, recordingOptions);
@@ -79,10 +82,6 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
   // Handle recording button click
   const handleRecordingToggle = async () => {
     if (!state.isRecording) {
-      if (!state.hasPermission) {
-        const hasPermission = await requestPermission();
-        if (!hasPermission) return;
-      }
       await startRecording();
     } else {
       stopRecording();
@@ -197,7 +196,7 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
               transition: 'all 0.2s ease-in-out',
             }}
             onClick={handleRecordingToggle}
-            disabled={!state.hasPermission && !state.isRecording}
+            disabled={voiceProcessing}
           >
             <span className="material-icons" style={{ fontSize: 24 }}>
               {state.isRecording ? 'stop' : 'mic'}
@@ -316,8 +315,7 @@ const RecordingAudioBar: React.FC<RecordingAudioBarProps> = ({
             zIndex: 1200,
           }}
           onClose={() => {
-            // Error will be cleared when recording state changes
-            // or when the component unmounts
+            clearError();
           }}
         >
           {state.error}
