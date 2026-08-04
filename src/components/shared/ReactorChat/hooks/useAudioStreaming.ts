@@ -272,8 +272,16 @@ const useAudioStreaming = (
   const processAudioChunk = React.useCallback(async (blob: Blob): Promise<string | Uint8Array | null> => {
     try {
       if (format === 'base64') {
-        const arrayBuffer = await blob.arrayBuffer();
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            const base64Data = result ? result.substring(result.indexOf(',') + 1) : '';
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
         return base64;
       } else {
         const arrayBuffer = await blob.arrayBuffer();

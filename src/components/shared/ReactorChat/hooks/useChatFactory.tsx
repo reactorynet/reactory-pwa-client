@@ -2311,7 +2311,44 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         if ((result as any).__typename === 'ReactorErrorResponse') {
           onError(new Error((result as any).message));
         } else {
-          onMessage(result as unknown as UXChatMessage);
+          // Re-fetch conversation history from server so the user's transcribed question
+          // and the AI's assistant response immediately populate state.history
+          try {
+            const updatedConv = await graph.getConversation(sessionId);
+            if (updatedConv && (updatedConv as any).history) {
+              setChatState((prevState) => ({
+                ...prevState,
+                history: (updatedConv as any).history,
+                updated: new Date(),
+              }));
+            } else {
+              // Fallback: convert choices[0].message into a valid UXChatMessage
+              const choiceMsg = (result as any).choices?.[0]?.message;
+              if (choiceMsg) {
+                onMessage({
+                  id: (result as any).id || reactory.utils.uuid(),
+                  role: choiceMsg.role || 'assistant',
+                  content: choiceMsg.content || '',
+                  tool_calls: choiceMsg.tool_calls,
+                  timestamp: new Date(),
+                  sessionId,
+                } as UXChatMessage);
+              }
+            }
+          } catch (fetchErr) {
+            // Fallback if refetch fails
+            const choiceMsg = (result as any).choices?.[0]?.message;
+            if (choiceMsg) {
+              onMessage({
+                id: (result as any).id || reactory.utils.uuid(),
+                role: choiceMsg.role || 'assistant',
+                content: choiceMsg.content || '',
+                tool_calls: choiceMsg.tool_calls,
+                timestamp: new Date(),
+                sessionId,
+              } as UXChatMessage);
+            }
+          }
         }
       }
     } catch (error) {
