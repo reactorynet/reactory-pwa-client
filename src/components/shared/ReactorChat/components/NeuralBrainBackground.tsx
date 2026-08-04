@@ -506,12 +506,16 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
   // Direct GraphQL — perspective browsing never triggers agent tool calls.
   React.useEffect(() => {
     if (backgroundMode || !reactory) return;
+
+    // Reset graph state, selections, and signatures immediately on perspective change
+    perspectiveSigRef.current = '';
+    setPerspectiveGraph(null);
+    selectedNodeRef.current = null;
+    setSelectedNode(null);
+    setCollapsedIds(new Set());
+
     const rootId = activePerspective?.rootId;
-    if (rootId === undefined || rootId === null) {
-      perspectiveSigRef.current = '';
-      setPerspectiveGraph(null);
-      return;
-    }
+    if (rootId === undefined || rootId === null) return;
 
     let active = true;
     const fetchPerspective = async () => {
@@ -529,16 +533,19 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
         if (sg?.nodes?.length) {
           const data: NeuralGraphData = {
             nodes: sg.nodes.map((n: any) => ({ id: n.index ?? Number(n.id), name: n.name, type: n.type })),
-            edges: sg.links.map((l: any) => ({ sourceId: l.sourceId, targetId: l.targetId })),
+            edges: (sg.links || []).map((l: any) => ({ sourceId: l.sourceId, targetId: l.targetId })),
           };
           const sig = graphSignature(data);
           if (sig !== perspectiveSigRef.current) {
             perspectiveSigRef.current = sig;
             setPerspectiveGraph(data);
           }
+        } else {
+          setPerspectiveGraph(null);
         }
       } catch (err) {
         reactory.log('Failed to load graph perspective subgraph', { err, rootId }, 'warn');
+        if (active) setPerspectiveGraph(null);
       }
     };
 
@@ -559,10 +566,12 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
       : activePerspective.kind === 'agent' ? null
         : perspectiveGraph;
 
-  const graphData = React.useMemo(
-    () => mergeGraphs(baseGraph, agentGraph),
-    [baseGraph, agentGraph],
-  );
+  const graphData = React.useMemo(() => {
+    if (activePerspective.kind === 'root' || activePerspective.kind === 'saved') {
+      return baseGraph;
+    }
+    return mergeGraphs(baseGraph, agentGraph);
+  }, [baseGraph, agentGraph, activePerspective.kind]);
 
   // Direct child counts (outgoing edges) — decides whether a node is collapsible.
   const childCounts = React.useMemo(() => {
