@@ -436,7 +436,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           `, {}),
           reactory.graphqlQuery<any, any>(`
             query ReactorSavedGraphPerspectives {
-              ReactorGraphPerspectives { id name rootNodeId }
+              ReactorGraphPerspectives { id name rootNodeId projectId }
             }
           `, {}).catch(() => ({ data: undefined })),
         ]);
@@ -450,13 +450,19 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
             rootId: n.index,
           }));
         const saved: GraphPerspective[] = ((savedRes as any)?.data?.ReactorGraphPerspectives ?? [])
-          .filter((p: any) => p?.rootNodeId !== undefined && p?.rootNodeId !== null)
-          .map((p: any) => ({
-            id: `saved:${p.id}`,
-            label: `★ ${p.name}`,
-            kind: 'saved' as const,
-            rootId: p.rootNodeId,
-          }));
+          .map((p: any) => {
+            let rootId = p.rootNodeId;
+            if (rootId === undefined || rootId === null) {
+              const matchedRoot = roots.find((r) => r.label.toLowerCase().includes((p.name || '').toLowerCase()));
+              if (matchedRoot) rootId = matchedRoot.rootId;
+            }
+            return {
+              id: `saved:${p.id}`,
+              label: `★ ${p.name}`,
+              kind: 'saved' as const,
+              rootId: rootId ?? undefined,
+            };
+          });
         setAvailablePerspectives([...BUILT_IN_PERSPECTIVES, ...roots, ...saved]);
       } catch (err) {
         reactory.log('Failed to enumerate graph perspectives', { err }, 'warn');
