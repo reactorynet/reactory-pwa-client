@@ -267,12 +267,13 @@ const useGraph = ({ reactory }: UseGraphOptions) => {
 
   const askQuestionAudio = async (
     audio: Blob,
-    chatSessionId: string
+    chatSessionId: string,
+    personaId?: string
   ): Promise<ReactorChatResponse> => {
     const response = await reactory.graphqlMutation<
       { ReactorAskQuestionAudio: ReactorChatResponse },
-      { audio: Blob; chatSessionId: string }
-    >(REACTOR_ASK_AUDIO as any, { audio, chatSessionId });
+      { audio: Blob; chatSessionId: string; personaId?: string }
+    >(REACTOR_ASK_AUDIO as any, { audio, chatSessionId, personaId });
     return response?.data?.ReactorAskQuestionAudio as ReactorChatResponse;
   };
 

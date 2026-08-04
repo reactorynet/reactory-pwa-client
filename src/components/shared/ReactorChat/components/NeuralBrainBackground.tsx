@@ -29,7 +29,7 @@ import * as THREE from 'three';
 
 export type NeuralGraphOrigin = 'conversation' | 'agent' | 'both';
 
-import { Dialog, DialogContent, Box as MuiBox, Typography as MuiTypography, IconButton as MuiIconButton, Icon as MuiIcon } from '@mui/material';
+import { Dialog, DialogContent, Box as MuiBox, Typography as MuiTypography, IconButton as MuiIconButton, Icon as MuiIcon, Popover, TextField, InputAdornment, MenuItem } from '@mui/material';
 import File from '@reactory/client-core/components/shared/File';
 
 export interface NeuralGraphNode {
@@ -85,6 +85,8 @@ export interface NeuralBrainBackgroundProps {
   secondaryColor: string;
   /** 'dark' uses a deep navy fog; 'light' uses a pale indigo fog */
   mode?: 'dark' | 'light' | string;
+  /** Custom background color override for the wrapper container when in side panel or standalone mode */
+  backgroundColor?: string;
   /** Whether to render labels above the major hub nodes / important nodes */
   showLabels?: boolean;
   /** Optional system graph data to feed the neuron visualization */
@@ -267,6 +269,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
   primaryColor,
   secondaryColor,
   mode = 'dark',
+  backgroundColor,
   showLabels = true,
   graphData: externalGraphData,
   reactory,
@@ -305,6 +308,18 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
   const [pinBusy, setPinBusy] = React.useState(false);
   const [pinnedKeys, setPinnedKeys] = React.useState<Set<string>>(() => new Set());
   const [previewFilePath, setPreviewFilePath] = React.useState<string | null>(null);
+
+  // Search filter and anchor state for searchable perspective dropdown
+  const [perspectiveSearchFilter, setPerspectiveSearchFilter] = React.useState('');
+  const [perspectiveMenuAnchor, setPerspectiveMenuAnchor] = React.useState<null | HTMLElement>(null);
+
+  const filteredPerspectives = React.useMemo(() => {
+    if (!perspectiveSearchFilter.trim()) return availablePerspectives;
+    const term = perspectiveSearchFilter.toLowerCase();
+    return availablePerspectives.filter(
+      (p) => p.label.toLowerCase().includes(term) || p.id.toLowerCase().includes(term)
+    );
+  }, [availablePerspectives, perspectiveSearchFilter]);
 
   const applyAgentGraph = React.useCallback((g: NeuralGraphData) => {
     const sig = graphSignature(g);
@@ -1660,6 +1675,13 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
 
   if (backgroundMode) return canvasEl;
 
+  // Derive theme-sensitive dark container background color matching chat input
+  const effectiveBgColor = backgroundColor || (
+    mode === 'light'
+      ? 'rgba(240, 242, 248, 0.98)'
+      : 'rgba(11, 13, 23, 0.98)'
+  );
+
   // Interactive mode: local stacking context + overlay controls. Plain HTML
   // controls keep this component dependency-free (react + three only).
   const buttonStyle: React.CSSProperties = {
@@ -1714,6 +1736,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
         height: '100%',
         minHeight: 280,
         overflow: 'hidden',
+        backgroundColor: effectiveBgColor,
       }}
     >
       {canvasEl}
@@ -1728,24 +1751,118 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           alignItems: 'center',
         }}
       >
-        <select
-          value={activePerspective.id}
-          onChange={(e) => {
-            const next = availablePerspectives.find((p) => p.id === e.target.value);
-            if (next) setActivePerspective(next);
+        {/* Searchable perspective trigger button */}
+        <button
+          type="button"
+          onClick={(e) => setPerspectiveMenuAnchor(e.currentTarget)}
+          style={{
+            ...selectStyle,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}
-          style={selectStyle}
-          title="Graph perspective"
-          aria-label="Graph perspective"
+          title="Search & select graph perspective"
+          aria-label="Search & select graph perspective"
         >
-          {/* Keep an ad-hoc (tool-loaded) perspective visible in the list */}
-          {!availablePerspectives.some((p) => p.id === activePerspective.id) && (
-            <option value={activePerspective.id}>{activePerspective.label}</option>
-          )}
-          {availablePerspectives.map((p) => (
-            <option key={p.id} value={p.id}>{p.label}</option>
-          ))}
-        </select>
+          <span style={{ fontSize: 12, opacity: 0.8 }}>🔍</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>
+            {activePerspective.label}
+          </span>
+          <span style={{ fontSize: 10, opacity: 0.7 }}>▼</span>
+        </button>
+
+        {/* Searchable Perspective Popover Menu */}
+        <Popover
+          open={Boolean(perspectiveMenuAnchor)}
+          anchorEl={perspectiveMenuAnchor}
+          onClose={() => {
+            setPerspectiveMenuAnchor(null);
+            setPerspectiveSearchFilter('');
+          }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          PaperProps={{
+            sx: {
+              width: 280,
+              maxHeight: 360,
+              bgcolor: mode === 'dark' ? 'rgba(15, 17, 26, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+              backdropFilter: 'blur(16px)',
+              color: overlayFg,
+              p: 1,
+              borderRadius: 2,
+              border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            },
+          }}
+        >
+          <TextField
+            autoFocus
+            size="small"
+            fullWidth
+            placeholder="Search perspectives..."
+            value={perspectiveSearchFilter}
+            onChange={(e) => setPerspectiveSearchFilter(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <MuiIcon sx={{ fontSize: 18, color: overlayFg, opacity: 0.7 }}>search</MuiIcon>
+                </InputAdornment>
+              ),
+              sx: {
+                color: overlayFg,
+                fontSize: '0.85rem',
+                fontFamily: 'monospace',
+                bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                borderRadius: 1,
+                mb: 1,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+                },
+              },
+            }}
+          />
+          <MuiBox sx={{ overflowY: 'auto', maxHeight: 270 }}>
+            {filteredPerspectives.length === 0 ? (
+              <MuiTypography variant="caption" sx={{ display: 'block', p: 1.5, textAlign: 'center', opacity: 0.6 }}>
+                No perspectives found
+              </MuiTypography>
+            ) : (
+              filteredPerspectives.map((p) => (
+                <MenuItem
+                  key={p.id}
+                  selected={p.id === activePerspective.id}
+                  onClick={() => {
+                    setActivePerspective(p);
+                    setPerspectiveMenuAnchor(null);
+                    setPerspectiveSearchFilter('');
+                  }}
+                  sx={{
+                    borderRadius: 1,
+                    py: 0.75,
+                    px: 1.25,
+                    fontSize: '0.8rem',
+                    fontFamily: 'monospace',
+                    color: overlayFg,
+                    '&.Mui-selected': {
+                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                      fontWeight: 'bold',
+                    },
+                    '&:hover': {
+                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  <MuiTypography variant="caption" noWrap sx={{ fontFamily: 'monospace' }}>
+                    {p.label}
+                  </MuiTypography>
+                </MenuItem>
+              ))
+            )}
+          </MuiBox>
+        </Popover>
         {onPinPerspective && (
           <button
             type="button"

@@ -1,5 +1,5 @@
-mutation ReactorAskQuestionAudio($audio: Upload!, $chatSessionId: String!) {
-  ReactorAskQuestionAudio(audio: $audio, chatSessionId: $chatSessionId) {
+mutation ReactorAskQuestionAudio($audio: Upload!, $chatSessionId: String!, $personaId: String) {
+  ReactorAskQuestionAudio(audio: $audio, chatSessionId: $chatSessionId, personaId: $personaId) {
     __typename
     ... on ReactorChatMessage {
       sessionId

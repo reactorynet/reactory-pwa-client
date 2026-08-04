@@ -53,6 +53,7 @@ const useAudioRecording = (
   const streamRef = React.useRef<MediaStream | null>(null);
   const audioContextRef = React.useRef<AudioContext | null>(null);
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const isStartingRef = React.useRef<boolean>(false);
   const analyserRef = React.useRef<AnalyserNode | null>(null);
   const dataArrayRef = React.useRef<Uint8Array | null>(null);
   const durationTimerRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -162,14 +163,40 @@ const useAudioRecording = (
   const startRecording = React.useCallback(async (): Promise<void> => {
     clearError();
 
-    let currentStream = streamRef.current;
-    const isStreamActive = currentStream && currentStream.active && currentStream.getAudioTracks().some(t => t.readyState === 'live');
-    if (!isStreamActive) {
-      currentStream = await requestPermission();
-      if (!currentStream) return;
+    // Guard against concurrent re-entrant start calls
+    if (isStartingRef.current) {
+      console.warn('startRecording already in progress, ignoring duplicate call');
+      return;
     }
 
+    // Guard if recorder is already active
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.warn('MediaRecorder is already active in state:', mediaRecorderRef.current.state);
+      return;
+    }
+
+    isStartingRef.current = true;
+
     try {
+      let currentStream = streamRef.current;
+      const isStreamActive = currentStream && currentStream.active && currentStream.getAudioTracks().some(t => t.readyState === 'live');
+      if (!isStreamActive) {
+        currentStream = await requestPermission();
+        if (!currentStream) {
+          isStartingRef.current = false;
+          return;
+        }
+      }
+
+      // Stop any existing recorder if present
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch (e) {
+          // ignore
+        }
+      }
+
       let recorder: MediaRecorder;
       try {
         let recOptions: MediaRecorderOptions | undefined = undefined;
@@ -190,7 +217,7 @@ const useAudioRecording = (
       chunksRef.current = [];
 
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
           chunksRef.current.push(event.data);
         }
       };
@@ -222,9 +249,13 @@ const useAudioRecording = (
         setState(prev => ({ ...prev, isRecording: false, isPaused: false, audioLevel: 0 }));
         clearTimers();
 
-        const mimeType = recorder.mimeType || 'audio/webm';
-        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
-        sendFinalAudioData(audioBlob);
+        if (chunksRef.current.length > 0) {
+          const mimeType = recorder.mimeType || 'audio/webm';
+          const audioBlob = new Blob(chunksRef.current, { type: mimeType });
+          if (audioBlob.size > 0) {
+            sendFinalAudioData(audioBlob);
+          }
+        }
       };
 
       mediaRecorderRef.current = recorder;
@@ -237,10 +268,12 @@ const useAudioRecording = (
       // Warm-up delay for audio hardware tracks
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      try {
-        recorder.start(streamingInterval);
-      } catch (startErr) {
-        recorder.start();
+      if (recorder.state === 'inactive') {
+        try {
+          recorder.start(streamingInterval);
+        } catch (startErr) {
+          recorder.start();
+        }
       }
 
     } catch (error) {
@@ -249,11 +282,14 @@ const useAudioRecording = (
         ...prev,
         error: error instanceof Error ? error.message : 'Failed to start recording',
       }));
+    } finally {
+      isStartingRef.current = false;
     }
   }, [requestPermission, clearError, clearTimers, streamingInterval, sendFinalAudioData]);
 
   // Stop recording
   const stopRecording = React.useCallback(() => {
+    isStartingRef.current = false;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
         mediaRecorderRef.current.stop();

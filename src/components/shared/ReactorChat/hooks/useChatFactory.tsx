@@ -2305,7 +2305,8 @@ const useChatFactory: ChatFactoryHook = (props: ChatFactorHookOptions) => {
         }
       }
 
-      const result = await graph.askQuestionAudio(audio as Blob, sessionId);
+      const activePersonaId = persona?.id || chatState?.personaId || chatState?.botId;
+      const result = await graph.askQuestionAudio(audio as Blob, sessionId, activePersonaId);
       if (result) {
         if ((result as any).__typename === 'ReactorErrorResponse') {
           onError(new Error((result as any).message));

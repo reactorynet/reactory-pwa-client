@@ -1481,6 +1481,7 @@ export default (props) => {
     mode,
     primaryColor: themeColors.primary,
     secondaryColor: themeColors.secondary,
+    backgroundColor: mode === 'dark' ? '#0b0d17' : '#f0f2f8',
     graphData: backgroundGraphData,
     messages: chatState?.history,
     sessionId: activeSessionId,
