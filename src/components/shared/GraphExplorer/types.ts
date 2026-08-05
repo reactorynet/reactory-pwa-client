@@ -29,6 +29,10 @@ export type GraphNodeType =
   | 'FILE'
   | 'FUNCTION'
   | 'ENDPOINT'
+  | 'DOCUMENT'
+  | 'SECTION'
+  | 'TOPIC'
+  | 'RESOURCE'
   | 'UNKNOWN';
 
 /** Mirrors the server's ReactorLinkType enum, with a fallback. */
@@ -45,6 +49,9 @@ export type GraphLinkType =
   | 'REFERENCE'
   | 'SYMLINK'
   | 'CONTAINS'
+  | 'DOCUMENTS'
+  | 'MENTIONS'
+  | 'EMBEDS'
   | 'UNKNOWN';
 
 export interface GraphNode {

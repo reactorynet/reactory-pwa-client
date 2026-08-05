@@ -13,16 +13,22 @@ import { GraphEdge, GraphLinkType, GraphNode, GraphNodeType } from '../types';
 const NODE_TYPES: GraphNodeType[] = [
   'INPUT', 'OUTPUT', 'PROCESS', 'SYSTEM', 'DATASTORE', 'CHILD', 'CONNECTION',
   'DEPENDENCY', 'CONTAINER', 'CLOUD', 'CONSUMER', 'CONFIG', 'FOLDER', 'FILE',
-  'FUNCTION', 'ENDPOINT',
+  'FUNCTION', 'ENDPOINT', 'DOCUMENT', 'SECTION', 'TOPIC', 'RESOURCE',
 ];
 
 const LINK_TYPES: GraphLinkType[] = [
   'INPUT', 'OUTPUT', 'DEPENDENCY', 'CONNECTION', 'INFERRED', 'DIRECT', 'CALL',
   'INHERITS', 'IMPLEMENTS', 'REFERENCE', 'SYMLINK', 'CONTAINS',
+  'DOCUMENTS', 'MENTIONS', 'EMBEDS',
 ];
 
-/** Node types that can expand into children in the lazy tree. */
-const EXPANDABLE_TYPES = new Set<GraphNodeType>(['SYSTEM', 'FOLDER', 'FILE', 'DATASTORE', 'CONTAINER']);
+/**
+ * Node types that can expand into children in the lazy tree. DOCUMENT expands
+ * into its sections; SECTION/TOPIC/RESOURCE are leaves.
+ */
+const EXPANDABLE_TYPES = new Set<GraphNodeType>([
+  'SYSTEM', 'FOLDER', 'FILE', 'DOCUMENT', 'DATASTORE', 'CONTAINER',
+]);
 
 export const toNodeType = (value: unknown): GraphNodeType => {
   const type = String(value ?? '').toUpperCase() as GraphNodeType;

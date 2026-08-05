@@ -38,6 +38,12 @@ export const NODE_TYPE_COLORS: Record<GraphNodeType, number> = {
   INPUT: 0xaed581,
   OUTPUT: 0xff8a65,
   CHILD: 0xb39ddb,
+  // Documentation family — silkscreen white through to label-tape tones, so
+  // prose reads as a distinct layer over the copper/gold of code.
+  DOCUMENT: 0xf5f5f5, // silkscreen white
+  SECTION: 0xbcaaa4, // label tape
+  TOPIC: 0x80cbc4, // teal tag
+  RESOURCE: 0x90a4ae, // off-board slate
   UNKNOWN: 0x808080,
 };
 
@@ -59,6 +65,10 @@ export const NODE_TYPE_ICONS: Record<GraphNodeType, string> = {
   INPUT: 'input',
   OUTPUT: 'output',
   CHILD: 'subdirectory_arrow_right',
+  DOCUMENT: 'article',
+  SECTION: 'segment',
+  TOPIC: 'label',
+  RESOURCE: 'link',
   UNKNOWN: 'help',
 };
 
@@ -67,7 +77,11 @@ export const NODE_TYPE_RADII: Partial<Record<GraphNodeType, number>> = {
   SYSTEM: 28,
   FOLDER: 18,
   FILE: 14,
+  DOCUMENT: 14,
   FUNCTION: 10,
+  SECTION: 10,
+  TOPIC: 12,
+  RESOURCE: 9,
 };
 export const DEFAULT_NODE_RADIUS = 12;
 
@@ -85,11 +99,19 @@ export const LINK_TYPE_COLORS: Record<GraphLinkType, number> = {
   CONNECTION: 0x808080,
   INFERRED: 0x5d8a6d,
   DIRECT: 0xb87333,
+  DOCUMENTS: 0xf5f5f5, // silkscreen white — prose describing code
+  MENTIONS: 0x80cbc4, // teal, matching TOPIC
+  EMBEDS: 0xbcaaa4, // label tape, matching SECTION
   UNKNOWN: 0x808080,
 };
 
-/** Link types drawn dashed (weak / synthesized relationships). */
-export const DASHED_LINK_TYPES: GraphLinkType[] = ['CONTAINS', 'REFERENCE', 'INFERRED'];
+/**
+ * Link types drawn dashed (weak / synthesized / annotative relationships).
+ * MENTIONS is dashed because a topic tag is a weaker claim than a real link.
+ */
+export const DASHED_LINK_TYPES: GraphLinkType[] = [
+  'CONTAINS', 'REFERENCE', 'INFERRED', 'MENTIONS',
+];
 
 /** Selection / focus / preview colors (circuit theme highlights). */
 export const SELECTION_RING_COLOR = 0xffd700; // trace gold
