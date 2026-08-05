@@ -73,6 +73,9 @@ export interface GraphPerspective {
   /** System graph node id to load a subgraph around (root/saved kinds). */
   rootId?: number;
   depth?: number;
+  /** Explicit array of saved node IDs for saved perspectives. */
+  nodeIds?: number[];
+  perspectiveId?: string;
 }
 
 export const BUILT_IN_PERSPECTIVES: GraphPerspective[] = [
@@ -436,7 +439,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           `, {}),
           reactory.graphqlQuery<any, any>(`
             query ReactorSavedGraphPerspectives {
-              ReactorGraphPerspectives { id name rootNodeId projectId }
+              ReactorGraphPerspectives { id name rootNodeId projectId nodePositions { nodeId } }
             }
           `, {}).catch(() => ({ data: undefined })),
         ]);
@@ -456,11 +459,16 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
               const matchedRoot = roots.find((r) => r.label.toLowerCase().includes((p.name || '').toLowerCase()));
               if (matchedRoot) rootId = matchedRoot.rootId;
             }
+            const savedNodeIds = (p.nodePositions || [])
+              .map((np: any) => Number(np.nodeId))
+              .filter((n: number) => !isNaN(n) && n !== 0);
             return {
               id: `saved:${p.id}`,
               label: `★ ${p.name}`,
               kind: 'saved' as const,
               rootId: rootId ?? undefined,
+              nodeIds: savedNodeIds.length > 0 ? savedNodeIds : undefined,
+              perspectiveId: p.id,
             };
           });
         setAvailablePerspectives([...BUILT_IN_PERSPECTIVES, ...roots, ...saved]);
@@ -515,25 +523,130 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     setCollapsedIds(new Set());
 
     const rootId = activePerspective?.rootId;
-    if (rootId === undefined || rootId === null) return;
+    const nodeIds = activePerspective?.nodeIds;
+    const perspectiveId = activePerspective?.perspectiveId;
+
+    if (rootId === undefined && rootId === null && (!nodeIds || nodeIds.length === 0) && !perspectiveId) {
+      return;
+    }
 
     let active = true;
     const fetchPerspective = async () => {
       try {
-        const res = await reactory.graphqlQuery<any, any>(`
-          query LoadGraphPerspective($rootId: Int!, $depth: Int) {
-            ReactorSubgraph(rootId: $rootId, depth: $depth, direction: BOTH, limit: 500, includeContainment: true, materialize: true) {
-              nodes { id index name type }
-              links { id sourceId targetId }
+        let fetchedNodes: any[] = [];
+        let fetchedEdges: any[] = [];
+
+        // 1. Fetch nodes by explicit nodeIds if present (saved perspectives)
+        if (nodeIds && nodeIds.length > 0) {
+          const res = await reactory.graphqlQuery<any, any>(`
+            query LoadSavedPerspectiveNodes($ids: [Int!]!) {
+              ReactorNodes(ids: $ids) { id index name type }
+              ReactorNodeLinks(sources: $ids, targets: $ids, paging: { page: 1, pageSize: 500 }) {
+                links { id sourceId targetId }
+              }
+            }
+          `, { ids: nodeIds });
+          if (!active) return;
+          if (res.data?.ReactorNodes) {
+            fetchedNodes = res.data.ReactorNodes;
+          }
+          if (res.data?.ReactorNodeLinks?.links) {
+            fetchedEdges = res.data.ReactorNodeLinks.links;
+          }
+        }
+
+        // 2. Fetch subgraph for rootId if present
+        if (rootId !== undefined && rootId !== null) {
+          const subRes = await reactory.graphqlQuery<any, any>(`
+            query LoadGraphPerspective($rootId: Int!, $depth: Int) {
+              ReactorSubgraph(rootId: $rootId, depth: $depth, direction: BOTH, limit: 500, includeContainment: true, materialize: true) {
+                nodes { id index name type }
+                links { id sourceId targetId }
+              }
+            }
+          `, { rootId, depth: activePerspective.depth ?? 2 });
+          if (!active) return;
+          const sg = subRes.data?.ReactorSubgraph;
+          if (sg?.nodes?.length) {
+            const existingNodeIds = new Set(fetchedNodes.map((n: any) => n.index ?? Number(n.id)));
+            sg.nodes.forEach((n: any) => {
+              const nid = n.index ?? Number(n.id);
+              if (!existingNodeIds.has(nid)) {
+                existingNodeIds.add(nid);
+                fetchedNodes.push(n);
+              }
+            });
+            if (sg.links) {
+              fetchedEdges = [...fetchedEdges, ...sg.links];
             }
           }
-        `, { rootId, depth: activePerspective.depth ?? 2 });
+        }
+
+        // 3. Fallback for saved perspectives without pre-loaded nodeIds
+        if (fetchedNodes.length === 0 && activePerspective.kind === 'saved' && perspectiveId) {
+          const pRes = await reactory.graphqlQuery<any, any>(`
+            query LoadFullSavedPerspective($id: String!) {
+              ReactorGraphPerspective(id: $id) {
+                id
+                rootNodeId
+                nodePositions { nodeId }
+              }
+            }
+          `, { id: perspectiveId });
+          if (!active) return;
+          const pData = pRes.data?.ReactorGraphPerspective;
+          if (pData) {
+            const detailNodeIds = (pData.nodePositions || [])
+              .map((np: any) => Number(np.nodeId))
+              .filter((n: number) => !isNaN(n) && n !== 0);
+            const detailRootId = pData.rootNodeId;
+
+            if (detailNodeIds.length > 0) {
+              const nodesRes = await reactory.graphqlQuery<any, any>(`
+                query LoadSavedNodesDetail($ids: [Int!]!) {
+                  ReactorNodes(ids: $ids) { id index name type }
+                  ReactorNodeLinks(sources: $ids, targets: $ids, paging: { page: 1, pageSize: 500 }) {
+                    links { id sourceId targetId }
+                  }
+                }
+              `, { ids: detailNodeIds });
+              if (!active) return;
+              if (nodesRes.data?.ReactorNodes) fetchedNodes = nodesRes.data.ReactorNodes;
+              if (nodesRes.data?.ReactorNodeLinks?.links) fetchedEdges = nodesRes.data.ReactorNodeLinks.links;
+            }
+
+            if (fetchedNodes.length === 0 && detailRootId !== undefined && detailRootId !== null) {
+              const subRes = await reactory.graphqlQuery<any, any>(`
+                query LoadGraphPerspectiveSub($rootId: Int!, $depth: Int) {
+                  ReactorSubgraph(rootId: $rootId, depth: $depth, direction: BOTH, limit: 500, includeContainment: true, materialize: true) {
+                    nodes { id index name type }
+                    links { id sourceId targetId }
+                  }
+                }
+              `, { rootId: detailRootId, depth: activePerspective.depth ?? 2 });
+              if (!active) return;
+              const sg = subRes.data?.ReactorSubgraph;
+              if (sg?.nodes?.length) {
+                fetchedNodes = sg.nodes;
+                fetchedEdges = sg.links || [];
+              }
+            }
+          }
+        }
+
         if (!active) return;
-        const sg = res.data?.ReactorSubgraph;
-        if (sg?.nodes?.length) {
+
+        if (fetchedNodes.length > 0) {
           const data: NeuralGraphData = {
-            nodes: sg.nodes.map((n: any) => ({ id: n.index ?? Number(n.id), name: n.name, type: n.type })),
-            edges: (sg.links || []).map((l: any) => ({ sourceId: l.sourceId, targetId: l.targetId })),
+            nodes: fetchedNodes.map((n: any) => ({
+              id: n.index !== undefined && n.index !== null ? n.index : (isNaN(Number(n.id)) ? n.id : Number(n.id)),
+              name: n.name,
+              type: n.type,
+            })),
+            edges: (fetchedEdges || []).map((l: any) => ({
+              sourceId: l.sourceId ?? l.source,
+              targetId: l.targetId ?? l.target,
+            })),
           };
           const sig = graphSignature(data);
           if (sig !== perspectiveSigRef.current) {
@@ -544,7 +657,7 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           setPerspectiveGraph(null);
         }
       } catch (err) {
-        reactory.log('Failed to load graph perspective subgraph', { err, rootId }, 'warn');
+        reactory.log('Failed to load graph perspective subgraph', { err, activePerspective }, 'warn');
         if (active) setPerspectiveGraph(null);
       }
     };

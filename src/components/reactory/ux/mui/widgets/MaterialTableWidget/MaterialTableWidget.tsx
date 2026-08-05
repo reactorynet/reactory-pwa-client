@@ -1751,9 +1751,11 @@ const ReactoryMaterialTable = (props: ReactoryMaterialTableProps) => {
   const getBody = () => {
     const rowActions = getRowActions();
     let $body_rows = [];
-    $rows.forEach((row, rid) => {
+    if ($rows && $rows.length > 0) { 
+    $rows?.forEach((row, rid) => {
       $body_rows.push(...getRow(row, rid, rowActions))
     });
+  }
 
     if ($body_rows.length === 0) {
       $body_rows.push((

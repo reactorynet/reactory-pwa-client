@@ -100,50 +100,50 @@ export const useContentRender = (reactory: Reactory.Client.ReactorySDK) => {
     const { Card, CardContent, CardActions } = MaterialCore;
     const { IconButton, Tooltip } = MaterialCore;
     const { PlayArrow, Storage, Schema } = MaterialIcons;
-
-    // Detect diagram type
-    let diagramType = 'generic';
-    let actions: React.ReactNode[] = [];
-    if (/^(flowchart|graph|stateDiagram|sequenceDiagram|gantt|journey|mindmap|timeline)/i.test(diagram)) {
-      diagramType = 'process';
-      actions.push(
-        <Tooltip title="Execute" key="execute">
-          <IconButton size="small">
-            <PlayArrow fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      );
-    }
-    if (/^erDiagram/i.test(diagram)) {
-      diagramType = 'er';
-      actions.push(
-        <Tooltip title="Database" key="database">
-          <IconButton size="small">
-            <Storage fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      );
-    }
-    if (/^classDiagram/i.test(diagram)) {
-      diagramType = 'class';
-      actions.push(
-        <Tooltip title="Schema" key="schema">
-          <IconButton size="small">
-            <Schema fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      );
-    }
-    // ...add more types/actions as needed
+    // Disabling actions for now, but keeping the structure for future use
+    // // Detect diagram type
+    // let diagramType = 'generic';
+    // let actions: React.ReactNode[] = [];
+    // if (/^(flowchart|graph|stateDiagram|sequenceDiagram|gantt|journey|mindmap|timeline)/i.test(diagram)) {
+    //   diagramType = 'process';
+    //   actions.push(
+    //     <Tooltip title="Execute" key="execute">
+    //       <IconButton size="small">
+    //         <PlayArrow fontSize="small" />
+    //       </IconButton>
+    //     </Tooltip>
+    //   );
+    // }
+    // if (/^erDiagram/i.test(diagram)) {
+    //   diagramType = 'er';
+    //   actions.push(
+    //     <Tooltip title="Database" key="database">
+    //       <IconButton size="small">
+    //         <Storage fontSize="small" />
+    //       </IconButton>
+    //     </Tooltip>
+    //   );
+    // }
+    // if (/^classDiagram/i.test(diagram)) {
+    //   diagramType = 'class';
+    //   actions.push(
+    //     <Tooltip title="Schema" key="schema">
+    //       <IconButton size="small">
+    //         <Schema fontSize="small" />
+    //       </IconButton>
+    //     </Tooltip>
+    //   );
+    // }
+    // // ...add more types/actions as needed
 
     return (
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ p: 2 }}>
           <MermaidDiagram>{diagram}</MermaidDiagram>
         </CardContent>
-        {actions.length > 0 && (
+        {/* {actions.length > 0 && (
           <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>{actions}</CardActions>
-        )}
+        )} */}
       </Card>
     );
   };
