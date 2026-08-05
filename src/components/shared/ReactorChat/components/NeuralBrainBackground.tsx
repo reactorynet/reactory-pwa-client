@@ -324,6 +324,39 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     );
   }, [availablePerspectives, perspectiveSearchFilter]);
 
+  // ── Keyword filter for visible nodes (interactive mode) ────────────────────
+  const [filterKeyword, setFilterKeyword] = React.useState('');
+  const filterKeywordRef = useRef('');
+  React.useEffect(() => { filterKeywordRef.current = filterKeyword; }, [filterKeyword]);
+
+  // ── Flash newly arrived nodes/edges from live graph updates ────────────────
+  const nodeBirthTimesRef = useRef<Map<string, number>>(new Map());
+  const edgeBirthTimesRef = useRef<Map<string, number>>(new Map());
+  const lastGraphSigRef = useRef('');
+
+  // ── Edge creation mode: select two nodes to link them ──────────────────────
+  const [edgeMode, setEdgeMode] = React.useState(false);
+  const [edgeSelection, setEdgeSelection] = React.useState<NeuralGraphNode[]>([]);
+  const edgeSelectionRef = useRef<NeuralGraphNode[]>([]);
+  React.useEffect(() => { edgeSelectionRef.current = edgeSelection; }, [edgeSelection]);
+  const [edgeCreateBusy, setEdgeCreateBusy] = React.useState(false);
+
+  // ── Graph search: find nodes and add them to the viewport ──────────────────
+  const [graphSearchTerm, setGraphSearchTerm] = React.useState('');
+  const [graphSearchResults, setGraphSearchResults] = React.useState<NeuralGraphNode[]>([]);
+  const [graphSearchAnchor, setGraphSearchAnchor] = React.useState<null | HTMLElement>(null);
+  const [graphSearchLoading, setGraphSearchLoading] = React.useState(false);
+  const graphSearchAbortRef = useRef<AbortController | null>(null);
+
+  // ── Save perspective dialog state ──────────────────────────────────────────
+  const [saveDialogOpen, setSaveDialogOpen] = React.useState(false);
+  const [perspectiveName, setPerspectiveName] = React.useState('');
+  const [saveBusy, setSaveBusy] = React.useState(false);
+
+  // Nodes/edges the user has added to the viewport via search or edge creation.
+  // Merged into graphData so the scene rebuilds when the user extends the graph.
+  const [userAddedGraph, setUserAddedGraph] = React.useState<NeuralGraphData>({ nodes: [], edges: [] });
+
   const applyAgentGraph = React.useCallback((g: NeuralGraphData) => {
     const sig = graphSignature(g);
     if (sig === agentSigRef.current) return;
@@ -518,6 +551,8 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     // Reset graph state, selections, and signatures immediately on perspective change
     perspectiveSigRef.current = '';
     setPerspectiveGraph(null);
+    setUserAddedGraph({ nodes: [], edges: [] });
+    setEdgeSelection([]);
     selectedNodeRef.current = null;
     setSelectedNode(null);
     setCollapsedIds(new Set());
@@ -680,11 +715,17 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
         : perspectiveGraph;
 
   const graphData = React.useMemo(() => {
-    if (activePerspective.kind === 'root' || activePerspective.kind === 'saved') {
-      return baseGraph;
+    let merged: NeuralGraphData | null =
+      activePerspective.kind === 'root' || activePerspective.kind === 'saved'
+        ? baseGraph
+        : mergeGraphs(baseGraph, agentGraph);
+    if (userAddedGraph.nodes.length > 0 && merged) {
+      merged = mergeGraphs(merged, userAddedGraph);
+    } else if (userAddedGraph.nodes.length > 0) {
+      merged = userAddedGraph;
     }
-    return mergeGraphs(baseGraph, agentGraph);
-  }, [baseGraph, agentGraph, activePerspective.kind]);
+    return merged;
+  }, [baseGraph, agentGraph, activePerspective.kind, userAddedGraph]);
 
   // Direct child counts (outgoing edges) — decides whether a node is collapsible.
   const childCounts = React.useMemo(() => {
@@ -697,6 +738,33 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
   }, [graphData]);
   const childCountsRef = useRef(childCounts);
   childCountsRef.current = childCounts;
+
+  // Track newly arrived nodes/edges so the render loop can flash them.
+  React.useEffect(() => {
+    if (!graphData) {
+      lastGraphSigRef.current = '';
+      return;
+    }
+    const sig = graphSignature(graphData);
+    if (sig === lastGraphSigRef.current) return;
+    const now = performance.now();
+    const prevSig = lastGraphSigRef.current;
+    lastGraphSigRef.current = sig;
+    if (!prevSig) {
+      // First time we see this graph: don't flash the whole scene.
+      graphData.nodes.forEach((n) => nodeBirthTimesRef.current.set(String(n.id), now));
+      graphData.edges.forEach((e) => edgeBirthTimesRef.current.set(`${e.sourceId}>${e.targetId}`, now));
+      return;
+    }
+    graphData.nodes.forEach((n) => {
+      const key = String(n.id);
+      if (!nodeBirthTimesRef.current.has(key)) nodeBirthTimesRef.current.set(key, now);
+    });
+    graphData.edges.forEach((e) => {
+      const key = `${e.sourceId}>${e.targetId}`;
+      if (!edgeBirthTimesRef.current.has(key)) edgeBirthTimesRef.current.set(key, now);
+    });
+  }, [graphData]);
 
   // Children render by default; collapsing a node hides its whole subtree
   // (BFS over outgoing edges, cycle-safe) and stamps the node with the count
@@ -744,9 +812,78 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     return { nodes, edges };
   }, [graphData, collapsedIds]);
 
+  // Create a persisted edge between two nodes and add it to the local graph.
+  const createEdgeBetween = React.useCallback(async (a: NeuralGraphNode, b: NeuralGraphNode) => {
+    if (!reactory) {
+      setEdgeSelection([]);
+      return;
+    }
+    const sourceId = Number(a.id);
+    const targetId = Number(b.id);
+    if (!Number.isFinite(sourceId) || !Number.isFinite(targetId) || sourceId === targetId) {
+      setEdgeSelection([]);
+      return;
+    }
+    setEdgeCreateBusy(true);
+    try {
+      const mutation = `mutation ReactorCreateNodeLink($input: ReactoryNodeLinkInput!) {
+        ReactorCreateNodeLink(input: $input) {
+          __typename
+          ... on ReactorCreateNodeLinkSuccess { link { id sourceId targetId } message }
+          ... on ReactorCreateNodeLinkFailure { error }
+        }
+      }`;
+      const response = await reactory.graphqlMutation<any, any>(mutation, {
+        input: { from: sourceId, to: targetId, types: ['CONNECTION'] },
+      });
+      const result = response.data?.ReactorCreateNodeLink;
+      if (result?.__typename === 'ReactorCreateNodeLinkFailure') {
+        throw new Error(result.error || 'Failed to create link');
+      }
+      const link = result?.link;
+      if (link) {
+        const newEdge: NeuralGraphEdge = {
+          sourceId: link.sourceId,
+          targetId: link.targetId,
+          origin: 'agent',
+        };
+        setUserAddedGraph((prev) => {
+          const edgeKey = `${newEdge.sourceId}>${newEdge.targetId}`;
+          const exists = prev.edges.some((e) => `${e.sourceId}>${e.targetId}` === edgeKey);
+          if (exists) return prev;
+          return { ...prev, edges: [...prev.edges, newEdge] };
+        });
+      }
+    } catch (err) {
+      reactory.log('Failed to create graph link', { err }, 'warn');
+    } finally {
+      setEdgeCreateBusy(false);
+      setEdgeSelection([]);
+    }
+  }, [reactory]);
+
   // Click semantics: first click selects; a second click on the selected node
-  // toggles its subtree; clicking empty space deselects.
+  // toggles its subtree; clicking empty space deselects. In edge creation
+  // mode the first two distinct clicks become the endpoints of a new link.
   const handleNodeClick = React.useCallback((node: NeuralGraphNode | null) => {
+    if (edgeMode) {
+      if (!node) {
+        setEdgeSelection([]);
+        return;
+      }
+      setEdgeSelection((prev) => {
+        if (prev.some((n) => String(n.id) === String(node.id))) return prev;
+        const next = [...prev, node];
+        if (next.length === 2) {
+          // Trigger creation on the next tick so React has flushed the selection.
+          setTimeout(() => createEdgeBetween(next[0], next[1]), 0);
+          return next;
+        }
+        return next;
+      });
+      return;
+    }
+
     if (!node) {
       selectedNodeRef.current = null;
       setSelectedNode(null);
@@ -765,9 +902,143 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     }
     selectedNodeRef.current = node;
     setSelectedNode(node);
-  }, []);
+  }, [edgeMode, createEdgeBetween]);
   const handleNodeClickRef = useRef(handleNodeClick);
   handleNodeClickRef.current = handleNodeClick;
+
+  // Search the system graph by term and return matching nodes.
+  const searchGraph = React.useCallback(async (term: string) => {
+    if (!reactory || !term.trim()) return [];
+    graphSearchAbortRef.current?.abort();
+    const controller = new AbortController();
+    graphSearchAbortRef.current = controller;
+    setGraphSearchLoading(true);
+    try {
+      const query = `query ReactorNodesByTerm($term: String!) {
+        ReactorNodesByTerm(term: $term) { id index name nameSpace type }
+      }`;
+      const response = await reactory.graphqlQuery<any, any>(query, { term: term.trim() });
+      if (controller.signal.aborted) return [];
+      const raw = response.data?.ReactorNodesByTerm ?? [];
+      return raw.map((n: any) => ({
+        id: n.index !== undefined && n.index !== null ? n.index : (isNaN(Number(n.id)) ? n.id : Number(n.id)),
+        name: n.name,
+        type: n.type,
+        origin: 'agent' as NeuralGraphOrigin,
+      })) as NeuralGraphNode[];
+    } catch (err) {
+      reactory.log('Graph search failed', { err }, 'warn');
+      return [];
+    } finally {
+      if (!controller.signal.aborted) setGraphSearchLoading(false);
+    }
+  }, [reactory]);
+
+  // Add a searched node to the viewport, optionally loading a small
+  // neighborhood so it isn't isolated.
+  const addNodeToViewport = React.useCallback(async (node: NeuralGraphNode) => {
+    if (!reactory) return;
+    const nodeId = Number(node.id);
+    const alreadyVisible = (graphData?.nodes ?? []).some((n) => String(n.id) === String(node.id));
+    if (alreadyVisible) return;
+
+    let nodes: NeuralGraphNode[] = [node];
+    let edges: NeuralGraphEdge[] = [];
+
+    if (Number.isFinite(nodeId)) {
+      try {
+        const res = await reactory.graphqlQuery<any, any>(`
+          query ReactorNodeNeighbors($id: Int!) {
+            ReactorNode(id: $id) {
+              id index name type
+              children { id index name type }
+              dependencies { id index name type }
+            }
+          }
+        `, { id: nodeId });
+        const raw = res.data?.ReactorNode;
+        if (raw) {
+          const mapRaw = (n: any) => ({
+            id: n.index !== undefined && n.index !== null ? n.index : (isNaN(Number(n.id)) ? n.id : Number(n.id)),
+            name: n.name,
+            type: n.type,
+            origin: 'agent' as NeuralGraphOrigin,
+          });
+          const related = [
+            ...(raw.children ?? []),
+            ...(raw.dependencies ?? []),
+          ].map(mapRaw);
+          nodes = [mapRaw(raw), ...related];
+          edges = related.map((r: NeuralGraphNode) => ({
+            sourceId: nodeId,
+            targetId: r.id,
+            origin: 'agent' as NeuralGraphOrigin,
+          }));
+        }
+      } catch (err) {
+        reactory.log('Failed to load neighbor context for searched node', { err }, 'warn');
+      }
+    }
+
+    setUserAddedGraph((prev) => {
+      const existingIds = new Set(prev.nodes.map((n) => String(n.id)));
+      const newNodes = nodes.filter((n) => !existingIds.has(String(n.id)));
+      const newEdges = edges.filter((e) => {
+        const key = `${e.sourceId}>${e.targetId}`;
+        return !prev.edges.some((pe) => `${pe.sourceId}>${pe.targetId}` === key);
+      });
+      if (newNodes.length === 0 && newEdges.length === 0) return prev;
+      return { nodes: [...prev.nodes, ...newNodes], edges: [...prev.edges, ...newEdges] };
+    });
+  }, [reactory, graphData]);
+
+  // Persist the current visible graph as a saved perspective.
+  const saveCurrentPerspective = React.useCallback(async () => {
+    if (!reactory || !perspectiveName.trim() || !graphData) return;
+    setSaveBusy(true);
+    try {
+      const visibleNodeIds = graphData.nodes.map((n) => Number(n.id)).filter(Number.isFinite);
+      const rootId = activePerspective.rootId ?? (visibleNodeIds[0] || undefined);
+      const mutation = `mutation ReactorSaveGraphPerspective($perspective: ReactorGraphPerspectiveInput!) {
+        ReactorSaveGraphPerspective(perspective: $perspective) { id name updated }
+      }`;
+      const response = await reactory.graphqlMutation<any, any>(mutation, {
+        perspective: {
+          name: perspectiveName.trim(),
+          rootNodeId: rootId,
+          nodePositions: visibleNodeIds.map((id) => ({ nodeId: id, x: 0, y: 0 })),
+          share: false,
+        },
+      });
+      const gqlErrors = (response as any).errors;
+      if (gqlErrors?.length) throw new Error(gqlErrors[0]?.message ?? 'Failed to save perspective');
+      if (response.data?.ReactorSaveGraphPerspective?.id) {
+        setPinnedKeys((prev) => new Set(prev).add(`saved:${response.data.ReactorSaveGraphPerspective.id}`));
+      }
+      setSaveDialogOpen(false);
+      setPerspectiveName('');
+      // Refresh the perspective list so the new one appears in the dropdown.
+      setAvailablePerspectives((prev) => {
+        const id = response.data?.ReactorSaveGraphPerspective?.id;
+        if (!id || prev.some((p) => p.id === `saved:${id}`)) return prev;
+        return [
+          ...prev,
+          {
+            id: `saved:${id}`,
+            label: `★ ${perspectiveName.trim()}`,
+            kind: 'saved' as const,
+            rootId,
+            nodeIds: visibleNodeIds,
+            perspectiveId: id,
+          },
+        ];
+      });
+    } catch (err) {
+      reactory.log('Failed to save graph perspective', { err }, 'warn');
+    } finally {
+      setSaveBusy(false);
+    }
+  }, [reactory, perspectiveName, graphData, activePerspective.rootId]);
 
   const toggleCollapseSelected = React.useCallback(() => {
     const node = selectedNodeRef.current;
@@ -1281,6 +1552,54 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
     });
     const hubIndexArray = [...hubIndices];
 
+    // ── Filter highlight pool (reusable glow spheres for matching nodes) ───────
+    const FILTER_HIGHLIGHT_POOL = 40;
+    const filterHighlightSpheres: THREE.Mesh[] = Array.from({ length: FILTER_HIGHLIGHT_POOL }, () => {
+      const mat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(0xffffff),
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 8), mat);
+      mesh.visible = false;
+      scene.add(mesh);
+      return mesh;
+    });
+
+    // ── Edge-selection markers (up to two nodes being linked) ──────────────────
+    const edgeSelectMarkers: THREE.Mesh[] = [0, 1].map(() => {
+      const mat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(0xffcc80),
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        wireframe: true,
+      });
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.78, 12, 12), mat);
+      mesh.visible = false;
+      scene.add(mesh);
+      return mesh;
+    });
+
+    // ── New-node flash pool (brief glow when nodes/edges arrive from chat) ─────
+    const NODE_FLASH_POOL = 20;
+    const nodeFlashSpheres: THREE.Mesh[] = Array.from({ length: NODE_FLASH_POOL }, () => {
+      const mat = new THREE.MeshBasicMaterial({
+        color: pulseColor.clone(),
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), mat);
+      mesh.visible = false;
+      scene.add(mesh);
+      return mesh;
+    });
+    const nodeFlashLife = new Float32Array(NODE_FLASH_POOL);
+
     // ── Raycaster for cursor → neuron mapping ──────────────────────────────────
     const raycaster = new THREE.Raycaster();
 
@@ -1717,6 +2036,45 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           }
         });
 
+        // ── Flash newly arrived nodes/edges from live graph updates ────────────
+        const FLASH_DURATION_MS = 3000;
+        nodeBirthTimesRef.current.forEach((birthTime, key) => {
+          const age = now - birthTime;
+          if (age >= FLASH_DURATION_MS) return;
+          const idx = idxByKey.get(key);
+          if (idx === undefined) return;
+          const slot = nodeFlashSpheres.find((s) => !s.visible && nodeFlashLife[nodeFlashSpheres.indexOf(s)] <= 0);
+          if (!slot) return;
+          const slotIdx = nodeFlashSpheres.indexOf(slot);
+          const p = neuronPos[idx];
+          if (!p) return;
+          slot.position.copy(p);
+          slot.visible = true;
+          nodeFlashLife[slotIdx] = 1;
+          (slot.material as THREE.MeshBasicMaterial).color.copy(pulseColor);
+        });
+        edgeBirthTimesRef.current.forEach((birthTime, key) => {
+          const age = now - birthTime;
+          if (age >= FLASH_DURATION_MS) return;
+          const [sourceKey, targetKey] = key.split('>');
+          const sourceIdx = idxByKey.get(sourceKey);
+          const targetIdx = idxByKey.get(targetKey);
+          if (sourceIdx !== undefined && targetIdx !== undefined) {
+            spawnFlashConn(sourceIdx, targetIdx);
+          }
+        });
+
+        // ── Animate new-node flash spheres ──
+        nodeFlashSpheres.forEach((mesh, i) => {
+          if (nodeFlashLife[i] <= 0) return;
+          nodeFlashLife[i] -= 0.018;
+          const life = Math.max(0, nodeFlashLife[i]);
+          const mat = mesh.material as THREE.MeshBasicMaterial;
+          mat.opacity = life * 0.85;
+          mesh.scale.setScalar(1 + (1 - life) * 1.8);
+          if (life <= 0) mesh.visible = false;
+        });
+
         // Glia particles drift slowly
         glia.rotation.y = t * 0.007;
         glia.rotation.x = Math.sin(t * 0.04) * 0.08;
@@ -1737,6 +2095,65 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
       } else {
         selectionMesh.visible = false;
       }
+
+      // ── Keyword filter: fade non-matches, highlight matches ─────────────────
+      const keyword = filterKeywordRef.current.trim().toLowerCase();
+      const nodeMatches = (n: NeuralGraphNode) =>
+        !keyword ||
+        n.name.toLowerCase().includes(keyword) ||
+        (n.type ?? '').toLowerCase().includes(keyword);
+      const edgeMatches = (e: NeuralGraphEdge) => {
+        if (!keyword) return true;
+        const a = nodes.find((n) => String(n.id) === String(e.sourceId));
+        const b = nodes.find((n) => String(n.id) === String(e.targetId));
+        return nodeMatches(a ?? { id: '', name: '' }) || nodeMatches(b ?? { id: '', name: '' });
+      };
+      const filterActive = keyword.length > 0;
+      const baseNeuronOpacity = filterActive ? 0.12 : 1;
+      const baseAxonOpacity = filterActive ? 0.04 : 1;
+      hubNeurons.mat.opacity = (0.65 + Math.sin(t * 0.9) * 0.22) * baseNeuronOpacity;
+      regularNeurons.mat.opacity = 0.6 * baseNeuronOpacity;
+      agentNeurons.mat.opacity = 0.85 * baseNeuronOpacity;
+      axonMat.opacity = (0.09 + Math.sin(t * 0.4) * 0.04) * baseAxonOpacity;
+
+      // Position highlight spheres on matching nodes (prioritized).
+      if (filterActive) {
+        const matching = nodes
+          .map((n, idx) => ({ n, idx, priority: (hubIndices.has(idx) ? 2 : 0) + (n.origin === 'agent' || n.origin === 'both' ? 1 : 0) }))
+          .filter(({ n }) => nodeMatches(n))
+          .sort((a, b) => b.priority - a.priority)
+          .slice(0, FILTER_HIGHLIGHT_POOL);
+        filterHighlightSpheres.forEach((mesh, i) => {
+          const match = matching[i];
+          if (match && neuronPos[match.idx]) {
+            mesh.visible = true;
+            mesh.position.copy(neuronPos[match.idx]);
+            const mat = mesh.material as THREE.MeshBasicMaterial;
+            mat.opacity = 0.35 + Math.sin(performance.now() * 0.006) * 0.15;
+            mat.color.copy(pulseColor);
+          } else {
+            mesh.visible = false;
+          }
+        });
+      } else {
+        filterHighlightSpheres.forEach((mesh) => { mesh.visible = false; });
+      }
+
+      // ── Edge-creation selection markers ─────────────────────────────────────
+      const edgeSel = edgeSelectionRef.current;
+      edgeSelectMarkers.forEach((mesh, i) => {
+        const node = edgeSel[i];
+        const idx = node ? idxByKey.get(String(node.id)) : undefined;
+        const pos = idx !== undefined ? neuronPos[idx] : undefined;
+        if (pos) {
+          mesh.visible = true;
+          mesh.position.copy(pos);
+          mesh.scale.setScalar(1 + Math.sin(performance.now() * 0.005 + i) * 0.22);
+          (mesh.material as THREE.MeshBasicMaterial).opacity = 0.6 + Math.sin(performance.now() * 0.005 + i) * 0.25;
+        } else {
+          mesh.visible = false;
+        }
+      });
 
       renderer.render(scene, camera);
     };
@@ -1776,6 +2193,9 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
       burstPulses.forEach(p => (p.mesh.material as THREE.Material).dispose());
       flashConns.forEach(fc => { fc.geo.dispose(); fc.mat.dispose(); });
       hubFlashSpheres.forEach(s => { (s.geometry as THREE.BufferGeometry).dispose(); (s.material as THREE.Material).dispose(); });
+      filterHighlightSpheres.forEach(s => { (s.geometry as THREE.BufferGeometry).dispose(); (s.material as THREE.Material).dispose(); });
+      edgeSelectMarkers.forEach(s => { (s.geometry as THREE.BufferGeometry).dispose(); (s.material as THREE.Material).dispose(); });
+      nodeFlashSpheres.forEach(s => { (s.geometry as THREE.BufferGeometry).dispose(); (s.material as THREE.Material).dispose(); });
       labelSprites.forEach(sprite => {
         sprite.material.map?.dispose();
         sprite.material.dispose();
@@ -1991,6 +2411,175 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
             )}
           </MuiBox>
         </Popover>
+
+        {/* Graph search: find nodes and add them to the viewport */}
+        <button
+          type="button"
+          onClick={(e) => setGraphSearchAnchor(e.currentTarget)}
+          style={{
+            ...buttonStyle,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 4,
+          }}
+          title="Search graph nodes"
+          aria-label="Search graph nodes"
+        >
+          <MuiIcon sx={{ fontSize: 16, color: overlayFg }}>search</MuiIcon>
+        </button>
+        <Popover
+          open={Boolean(graphSearchAnchor)}
+          anchorEl={graphSearchAnchor}
+          onClose={() => {
+            setGraphSearchAnchor(null);
+            setGraphSearchTerm('');
+            setGraphSearchResults([]);
+            graphSearchAbortRef.current?.abort();
+          }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          PaperProps={{
+            sx: {
+              width: 320,
+              maxHeight: 400,
+              bgcolor: mode === 'dark' ? 'rgba(15, 17, 26, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+              backdropFilter: 'blur(16px)',
+              color: overlayFg,
+              p: 1,
+              borderRadius: 2,
+              border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            },
+          }}
+        >
+          <TextField
+            autoFocus
+            size="small"
+            fullWidth
+            placeholder="Search graph..."
+            value={graphSearchTerm}
+            onChange={async (e) => {
+              const term = e.target.value;
+              setGraphSearchTerm(term);
+              if (term.trim().length < 2) {
+                setGraphSearchResults([]);
+                return;
+              }
+              const results = await searchGraph(term);
+              setGraphSearchResults(results);
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  {graphSearchLoading ? (
+                    <MuiIcon sx={{ fontSize: 18, color: overlayFg, opacity: 0.7 }}>hourglass_empty</MuiIcon>
+                  ) : (
+                    <MuiIcon sx={{ fontSize: 18, color: overlayFg, opacity: 0.7 }}>search</MuiIcon>
+                  )}
+                </InputAdornment>
+              ),
+              sx: {
+                color: overlayFg,
+                fontSize: '0.85rem',
+                fontFamily: 'monospace',
+                bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                borderRadius: 1,
+                mb: 1,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+                },
+              },
+            }}
+          />
+          <MuiBox sx={{ overflowY: 'auto', maxHeight: 300 }}>
+            {graphSearchResults.length === 0 ? (
+              <MuiTypography variant="caption" sx={{ display: 'block', p: 1.5, textAlign: 'center', opacity: 0.6 }}>
+                {graphSearchTerm.trim().length < 2 ? 'Type at least 2 characters' : 'No nodes found'}
+              </MuiTypography>
+            ) : (
+              graphSearchResults.map((n) => (
+                <MenuItem
+                  key={String(n.id)}
+                  onClick={() => {
+                    addNodeToViewport(n);
+                    setGraphSearchAnchor(null);
+                    setGraphSearchTerm('');
+                    setGraphSearchResults([]);
+                  }}
+                  sx={{
+                    borderRadius: 1,
+                    py: 0.75,
+                    px: 1.25,
+                    fontSize: '0.8rem',
+                    fontFamily: 'monospace',
+                    color: overlayFg,
+                    '&:hover': {
+                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  <MuiTypography variant="caption" noWrap sx={{ fontFamily: 'monospace' }}>
+                    {n.name}
+                    {n.type ? ` · ${n.type}` : ''}
+                  </MuiTypography>
+                </MenuItem>
+              ))
+            )}
+          </MuiBox>
+        </Popover>
+
+        {/* Keyword filter for visible nodes */}
+        <TextField
+          size="small"
+          placeholder="Filter nodes..."
+          value={filterKeyword}
+          onChange={(e) => setFilterKeyword(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <MuiIcon sx={{ fontSize: 18, color: overlayFg, opacity: 0.7 }}>filter_alt</MuiIcon>
+              </InputAdornment>
+            ),
+            sx: {
+              width: 130,
+              color: overlayFg,
+              fontSize: '0.8rem',
+              fontFamily: 'monospace',
+              bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+              borderRadius: 1,
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+              },
+            },
+          }}
+        />
+
+        {/* Edge creation mode toggle */}
+        <button
+          type="button"
+          style={{ ...buttonStyle, opacity: edgeMode ? 1 : 0.5, border: edgeMode ? `1px solid ${overlayFg}` : 'none' }}
+          title={edgeMode ? 'Exit edge creation mode' : 'Create edge between two nodes'}
+          aria-label={edgeMode ? 'Exit edge creation mode' : 'Create edge between two nodes'}
+          onClick={() => {
+            setEdgeMode((v) => !v);
+            setEdgeSelection([]);
+          }}
+        >
+          {edgeCreateBusy ? '⏳' : '🔗'}
+        </button>
+
+        {/* Save perspective */}
+        <button
+          type="button"
+          style={buttonStyle}
+          title="Save current view as perspective"
+          aria-label="Save current view as perspective"
+          onClick={() => setSaveDialogOpen(true)}
+        >
+          💾
+        </button>
+
         {onPinPerspective && (
           <button
             type="button"
@@ -2094,6 +2683,36 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           </button>
         </div>
       )}
+      {edgeMode && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 8,
+            bottom: selectedNode ? 52 : 8,
+            zIndex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 10px',
+            borderRadius: 8,
+            background: overlayBg,
+            color: overlayFg,
+            fontFamily: 'monospace',
+            fontSize: 12,
+          }}
+        >
+          <span>
+            {edgeSelection.length === 0
+              ? 'Click a node to start an edge'
+              : edgeSelection.length === 1
+                ? `Selected ${edgeSelection[0].name} — click target node`
+                : 'Creating edge...'}
+          </span>
+          <button type="button" style={chipButtonStyle} onClick={() => { setEdgeMode(false); setEdgeSelection([]); }}>
+            Cancel
+          </button>
+        </div>
+      )}
       {previewFilePath && (
         <Dialog
           open={Boolean(previewFilePath)}
@@ -2126,6 +2745,79 @@ const NeuralBrainBackground = memo(function NeuralBrainBackground({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Save perspective dialog */}
+      <Dialog
+        open={saveDialogOpen}
+        onClose={() => { if (!saveBusy) setSaveDialogOpen(false); }}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: mode === 'dark' ? 'rgba(15, 17, 26, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+            backgroundImage: 'none',
+            borderRadius: 2,
+            p: 1,
+          }
+        }}
+      >
+        <MuiBox sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
+          <MuiTypography variant="subtitle1" sx={{ fontWeight: 'bold', fontFamily: 'monospace', color: overlayFg }}>
+            Save perspective
+          </MuiTypography>
+          <MuiIconButton onClick={() => { if (!saveBusy) setSaveDialogOpen(false); }} size="small" disabled={saveBusy}>
+            <MuiIcon>close</MuiIcon>
+          </MuiIconButton>
+        </MuiBox>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <TextField
+            autoFocus
+            size="small"
+            fullWidth
+            label="Perspective name"
+            placeholder="e.g. API review"
+            value={perspectiveName}
+            onChange={(e) => setPerspectiveName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && perspectiveName.trim() && !saveBusy) {
+                saveCurrentPerspective();
+              }
+            }}
+            disabled={saveBusy}
+            InputProps={{
+              sx: {
+                color: overlayFg,
+                fontFamily: 'monospace',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+                },
+              },
+            }}
+            InputLabelProps={{ sx: { color: overlayFg, opacity: 0.7 } }}
+          />
+          <MuiTypography variant="caption" sx={{ color: overlayFg, opacity: 0.7, fontFamily: 'monospace' }}>
+            Saves {(graphData?.nodes ?? []).length} visible nodes and {(graphData?.edges ?? []).length} edges.
+          </MuiTypography>
+        </DialogContent>
+        <MuiBox sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, px: 2, pb: 2 }}>
+          <button
+            type="button"
+            style={{ ...chipButtonStyle, opacity: saveBusy ? 0.5 : 1 }}
+            disabled={saveBusy}
+            onClick={() => setSaveDialogOpen(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            style={{ ...chipButtonStyle, opacity: saveBusy || !perspectiveName.trim() ? 0.5 : 1 }}
+            disabled={saveBusy || !perspectiveName.trim()}
+            onClick={saveCurrentPerspective}
+          >
+            {saveBusy ? 'Saving...' : 'Save'}
+          </button>
+        </MuiBox>
+      </Dialog>
     </div>
   );
 });
