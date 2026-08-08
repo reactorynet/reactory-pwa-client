@@ -49,21 +49,28 @@ export const CliCommandStepDefinition: StepDefinition = {
         title: 'Command',
         description: 'The command to execute'
       },
-      arguments: {
+      args: {
         type: 'array',
         title: 'Arguments',
-        items: { type: 'string' }
+        description: 'Command-line arguments passed to the process',
+        items: { type: 'string' },
+        default: []
       },
-      workingDirectory: {
+      cwd: {
         type: 'string',
         title: 'Working Directory',
         description: 'Directory to run the command in'
       },
-      environment: {
+      env: {
         type: 'object',
         title: 'Environment Variables',
         properties: {},
         additionalProperties: { type: 'string' }
+      },
+      timeout: {
+        type: 'number',
+        title: 'Timeout (ms)',
+        description: 'Maximum execution time in milliseconds (default: 120000)'
       },
       expectedExitCodes: {
         type: 'array',
@@ -78,11 +85,13 @@ export const CliCommandStepDefinition: StepDefinition = {
   defaultProperties: {
     name: 'CLI Command',
     command: '',
-    arguments: [],
+    args: [],
+    cwd: '',
+    env: {},
     expectedExitCodes: [0]
   },
   uiSchema: {
-    'ui:order': ['name', 'command', 'arguments', 'workingDirectory', 'environment', 'expectedExitCodes'],
+    'ui:order': ['name', 'command', 'args', 'cwd', 'env', 'timeout', 'expectedExitCodes'],
     command: {
       'ui:widget': 'RichEditorWidget',
       'ui:options': {
@@ -91,17 +100,30 @@ export const CliCommandStepDefinition: StepDefinition = {
       },
       'ui:help': 'Command to execute (e.g. "node", "python", "curl"). Supports ${variable} substitution.'
     },
-    workingDirectory: {
+    args: {
+      'ui:widget': 'ChipArrayWidget',
+      'ui:options': {
+        allowAdd: true,
+        allowDelete: true,
+        allowDeleteAll: true,
+        placeholder: 'Add argument and press Enter...'
+      },
+      'ui:help': 'Command-line arguments. Type an argument and press Enter to add.'
+    },
+    cwd: {
       'ui:placeholder': '/app or ${REACTORY_SERVER}',
       'ui:help': 'Defaults to the workflow working directory'
     },
-    environment: {
+    env: {
       'ui:widget': 'RichEditorWidget',
       'ui:options': {
         format: 'json',
         rows: 4
       },
       'ui:help': 'Environment variables to inject into the process (JSON object of key-value pairs)'
+    },
+    timeout: {
+      'ui:help': 'Max execution time in milliseconds (default: 120000). Set 0 to disable timeout.'
     },
     expectedExitCodes: {
       'ui:help': 'Exit codes considered successful. Any other code will be treated as an error. Default: [0]'

@@ -49,10 +49,23 @@ export default function PropertyForm(props: Readonly<PropertyFormProps>) {
     }
 
     // Config mode — read from step.config
-    const config = step.config || {};
+    const configObj = typeof step.config === 'object' && step.config !== null ? step.config : {};
+    const parsedConfig = typeof step.config === 'string' ? (() => { try { return JSON.parse(step.config); } catch { return {}; } })() : configObj;
+
+    // Normalize property aliases for cli_command and other steps
+    const args = parsedConfig.args ?? parsedConfig.arguments ?? [];
+    const cwd = parsedConfig.cwd ?? parsedConfig.workingDirectory ?? '';
+    const env = parsedConfig.env ?? parsedConfig.environment ?? {};
+
     return {
       name: step.name,
-      ...config,
+      ...parsedConfig,
+      args,
+      arguments: args,
+      cwd,
+      workingDirectory: cwd,
+      env,
+      environment: env,
     };
   }, [step, mode]);
 

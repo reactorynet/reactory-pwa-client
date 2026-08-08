@@ -17,6 +17,7 @@ import {
   TodoList,
   SidePanelState,
   SubAgentSummary,
+  IFileExplorerState,
   TODOS_VAR_KEY,
 } from './types';
 import PersonaSelectionPanel from './components/PersonaSelectionPanel';
@@ -602,8 +603,11 @@ export default (props) => {
   }, [chatState?.parentSessionId, parentMeta?.id, fetchConversationMeta]);
 
   // File explorer sidebar — docked inline panel (left or right)
-  const [fileExplorerOpen, setFileExplorerOpen] = useState<boolean>(false);
+  const [fileExplorerOpen, setFileExplorerOpen] = useState<boolean>(
+    () => chatState?.fileExplorer?.open ?? false
+  );
   const [fileExplorerDock, setFileExplorerDock] = useState<DockSide>(() => {
+    if (chatState?.fileExplorer?.dock) return chatState.fileExplorer.dock;
     try {
       const saved = localStorage.getItem('reactorChat.fileExplorerDock');
       return (saved === 'left' || saved === 'right') ? saved : 'right';
@@ -611,23 +615,61 @@ export default (props) => {
       return 'right';
     }
   });
+  const [fileExplorerWorkspace, setFileExplorerWorkspace] = useState<string | null>(
+    () => chatState?.fileExplorer?.activeWorkspace ?? null
+  );
+  const [fileExplorerWorkspaceName, setFileExplorerWorkspaceName] = useState<string | null>(
+    () => chatState?.fileExplorer?.activeWorkspaceName ?? null
+  );
+
+  React.useEffect(() => {
+    if (chatState?.fileExplorer) {
+      if (chatState.fileExplorer.open !== undefined) setFileExplorerOpen(chatState.fileExplorer.open);
+      if (chatState.fileExplorer.dock) setFileExplorerDock(chatState.fileExplorer.dock);
+      if (chatState.fileExplorer.activeWorkspace !== undefined) setFileExplorerWorkspace(chatState.fileExplorer.activeWorkspace);
+      if (chatState.fileExplorer.activeWorkspaceName !== undefined) setFileExplorerWorkspaceName(chatState.fileExplorer.activeWorkspaceName);
+    }
+  }, [chatState?.fileExplorer]);
+
+  const updateChatStateFileExplorer = useCallback((updates: Partial<IFileExplorerState>) => {
+    setChatState(prev => {
+      if (!prev) return prev;
+      const currentFe = prev.fileExplorer || {};
+      return {
+        ...prev,
+        fileExplorer: { ...currentFe, ...updates }
+      };
+    });
+  }, [setChatState]);
 
   const handleFileExplorerToggle = useCallback(() => {
-    setFileExplorerOpen(prev => !prev);
-  }, []);
+    setFileExplorerOpen(prev => {
+      const next = !prev;
+      updateChatStateFileExplorer({ open: next });
+      return next;
+    });
+  }, [updateChatStateFileExplorer]);
 
   const handleFileExplorerClose = useCallback(() => {
     setFileExplorerOpen(false);
-  }, []);
+    updateChatStateFileExplorer({ open: false });
+  }, [updateChatStateFileExplorer]);
 
   const handleFileExplorerDockChange = useCallback((dock: DockSide) => {
     setFileExplorerDock(dock);
+    updateChatStateFileExplorer({ dock });
     try {
       localStorage.setItem('reactorChat.fileExplorerDock', dock);
     } catch {
       // localStorage unavailable — ignore
     }
-  }, []);
+  }, [updateChatStateFileExplorer]);
+
+  const handleFileExplorerWorkspaceChange = useCallback((workspace: string | null, workspaceName: string | null) => {
+    setFileExplorerWorkspace(workspace);
+    setFileExplorerWorkspaceName(workspaceName);
+    updateChatStateFileExplorer({ activeWorkspace: workspace, activeWorkspaceName: workspaceName });
+  }, [updateChatStateFileExplorer]);
 
   const [headerOpen, setHeaderOpen] = useState<boolean>(false);
   const [chatMenuAnchor, setChatMenuAnchor] = useState<null | HTMLElement>(null);
@@ -1691,8 +1733,11 @@ export default (props) => {
           <FileExplorerSidebar
             open={fileExplorerOpen}
             dock={fileExplorerDock}
+            activeWorkspace={fileExplorerWorkspace}
+            activeWorkspaceName={fileExplorerWorkspaceName}
             onDockChange={handleFileExplorerDockChange}
             onClose={handleFileExplorerClose}
+            onWorkspaceChange={handleFileExplorerWorkspaceChange}
             reactory={reactory}
             chatState={chatState}
             onPinFile={pinUserFileForChat}
@@ -2077,8 +2122,11 @@ export default (props) => {
           <FileExplorerSidebar
             open={fileExplorerOpen}
             dock={fileExplorerDock}
+            activeWorkspace={fileExplorerWorkspace}
+            activeWorkspaceName={fileExplorerWorkspaceName}
             onDockChange={handleFileExplorerDockChange}
             onClose={handleFileExplorerClose}
+            onWorkspaceChange={handleFileExplorerWorkspaceChange}
             reactory={reactory}
             chatState={chatState}
             onPinFile={pinUserFileForChat}
@@ -2106,8 +2154,11 @@ export default (props) => {
         <FileExplorerSidebar
           open={fileExplorerOpen}
           dock={fileExplorerDock}
+          activeWorkspace={fileExplorerWorkspace}
+          activeWorkspaceName={fileExplorerWorkspaceName}
           onDockChange={handleFileExplorerDockChange}
           onClose={handleFileExplorerClose}
+          onWorkspaceChange={handleFileExplorerWorkspaceChange}
           reactory={reactory}
           chatState={chatState}
           onPinFile={pinUserFileForChat}

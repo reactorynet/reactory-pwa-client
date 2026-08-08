@@ -457,6 +457,10 @@ export type ChatState = {
    */
   folders?: { name: string; path: string }[]
   /**
+   * File Explorer props and state
+   */
+  fileExplorer?: IFileExplorerState
+  /**
    * Side panel actions for client macros to mount components/forms
    * in the persistent side panel.
    */
@@ -631,6 +635,15 @@ export interface SubAgentSummary {
   created?: string | Date;
   updated?: string | Date;
   user?: { id?: string; firstName?: string; lastName?: string };
+}
+
+// ── File Explorer state ────────────────────────────────────────────────
+
+export interface IFileExplorerState {
+  open?: boolean;
+  dock?: 'left' | 'right';
+  activeWorkspace?: string | null;
+  activeWorkspaceName?: string | null;
 }
 
 // ── Side Panel types (agent-mounted components / forms) ────────────────

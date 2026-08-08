@@ -34,8 +34,11 @@ export type DockSide = 'left' | 'right';
 export interface FileExplorerSidebarProps {
   open: boolean;
   dock: DockSide;
+  activeWorkspace?: string | null;
+  activeWorkspaceName?: string | null;
   onDockChange: (dock: DockSide) => void;
   onClose: () => void;
+  onWorkspaceChange?: (workspace: string | null, workspaceName: string | null) => void;
   reactory: Reactory.Client.ReactorySDK;
   chatState?: ChatState;
   /** Pin an existing cataloged file (or desktop reference when referenceOnly). */
@@ -69,10 +72,11 @@ interface TreeFile {
 }
 
 const GET_PATH_CONTENTS = gql`
-  query ReactoryUserFiles($path: String, $loadOptions: ReactoryUserFilesLoadOptionsInput) {
-    ReactoryUserFiles(path: $path, loadOptions: $loadOptions) {
+  query ReactoryUserFiles($path: String, $workspace: String, $loadOptions: ReactoryUserFilesLoadOptionsInput) {
+    ReactoryUserFiles(path: $path, workspace: $workspace, loadOptions: $loadOptions) {
       ... on ReactoryUserFiles {
         path
+        workspace
         folders {
           name
           path
@@ -104,8 +108,11 @@ function fileIdString(f: Reactory.Models.IReactoryFile): string {
 const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   open,
   dock,
+  activeWorkspace: propsActiveWorkspace,
+  activeWorkspaceName: propsActiveWorkspaceName,
   onDockChange,
   onClose,
+  onWorkspaceChange,
   reactory,
   chatState,
   onPinFile,
@@ -154,6 +161,8 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     PushPinOutlined,
     Visibility,
     VisibilityOff,
+    Workspaces,
+    HighlightOff,
   } = Material.MaterialIcons;
 
   const [tree, setTree] = React.useState<TreeFolder>({
@@ -168,6 +177,24 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   const [pinningKey, setPinningKey] = React.useState<string | null>(null);
   const [showHidden, setShowHidden] = React.useState(false);
   const [previewFile, setPreviewFile] = React.useState<TreeFile | null>(null);
+  const [activeWorkspace, setActiveWorkspace] = React.useState<string | null>(
+    () => propsActiveWorkspace ?? chatState?.fileExplorer?.activeWorkspace ?? null
+  );
+  const [activeWorkspaceName, setActiveWorkspaceName] = React.useState<string | null>(
+    () => propsActiveWorkspaceName ?? chatState?.fileExplorer?.activeWorkspaceName ?? null
+  );
+
+  React.useEffect(() => {
+    if (propsActiveWorkspace !== undefined) {
+      setActiveWorkspace(propsActiveWorkspace);
+    }
+  }, [propsActiveWorkspace]);
+
+  React.useEffect(() => {
+    if (propsActiveWorkspaceName !== undefined) {
+      setActiveWorkspaceName(propsActiveWorkspaceName);
+    }
+  }, [propsActiveWorkspaceName]);
 
   // Resizable panel width state
   const [sidebarWidth, setSidebarWidth] = React.useState<number>(() => {
@@ -249,12 +276,14 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     [showHidden],
   );
 
-  const loadPath = React.useCallback(async (path: string) => {
+  const loadPath = React.useCallback(async (path: string, workspaceOverride?: string | null) => {
+    const ws = workspaceOverride !== undefined ? workspaceOverride : activeWorkspace;
     setLoadingPaths(prev => new Set(prev).add(path));
     try {
       const response = await reactory.graphqlQuery<{
         ReactoryUserFiles: {
           path: string;
+          workspace?: string;
           folders: { name: string; path: string }[];
           files: {
             id: string;
@@ -267,7 +296,10 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
             alias: string;
           }[];
         } | { error: string; message: string };
-      }, { path: string; loadOptions: { includeHidden: boolean } }>(GET_PATH_CONTENTS, { path, loadOptions });
+      }, { path: string; workspace?: string; loadOptions: { includeHidden: boolean } }>(
+        GET_PATH_CONTENTS,
+        { path, workspace: ws || undefined, loadOptions }
+      );
 
       const data = response?.data?.ReactoryUserFiles;
       if (!data || 'error' in data) return;
@@ -300,7 +332,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
         return next;
       });
     }
-  }, [reactory, loadOptions]);
+  }, [reactory, loadOptions, activeWorkspace]);
 
   const insertAtPath = (
     node: TreeFolder,
@@ -321,7 +353,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     if (!open) return;
     setTree({ name: '/', path: '/', loaded: false, children: [], files: [] });
     setExpanded(new Set(['/']));
-    loadPath('/');
+    loadPath('/', activeWorkspace);
   }, [open, showHidden, loadPath]);
 
   const handleToggleFolder = React.useCallback((path: string, loaded: boolean) => {
@@ -342,8 +374,30 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   const handleRefresh = React.useCallback(() => {
     setTree({ name: '/', path: '/', loaded: false, children: [], files: [] });
     setExpanded(new Set(['/']));
-    loadPath('/');
-  }, [loadPath]);
+    loadPath('/', activeWorkspace);
+  }, [loadPath, activeWorkspace]);
+
+  const handleOpenWorkspace = React.useCallback((e: React.MouseEvent, file: TreeFile) => {
+    e.stopPropagation();
+    const wsPath = file.path || file.name;
+    const rawName = file.name || 'Workspace';
+    const cleanName = rawName.replace(/\.code-workspace$/i, '');
+    setActiveWorkspace(wsPath);
+    setActiveWorkspaceName(cleanName);
+    onWorkspaceChange?.(wsPath, cleanName);
+    setTree({ name: '/', path: '/', loaded: false, children: [], files: [] });
+    setExpanded(new Set(['/']));
+    loadPath('/', wsPath);
+  }, [loadPath, onWorkspaceChange]);
+
+  const handleCloseWorkspace = React.useCallback(() => {
+    setActiveWorkspace(null);
+    setActiveWorkspaceName(null);
+    onWorkspaceChange?.(null, null);
+    setTree({ name: '/', path: '/', loaded: false, children: [], files: [] });
+    setExpanded(new Set(['/']));
+    loadPath('/', null);
+  }, [loadPath, onWorkspaceChange]);
 
   const pinnedFileIds = React.useMemo(() => {
     const files = chatState?.files || [];
@@ -540,6 +594,7 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     const pinned = isFilePinned(file);
     const busy = pinningKey === `f:${file.id}`;
     const selected = previewFile?.id === file.id;
+    const isWorkspaceFile = /\.code-workspace$/i.test(file.name);
 
     return (
       <ListItemButton
@@ -569,6 +624,22 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
             fontSize: '0.65rem',
           }}
         />
+        {isWorkspaceFile && (
+          <Tooltip
+            title={il8n?.t('reactor.client.fileExplorer.openWorkspace', { defaultValue: 'Open workspace' })}
+          >
+            <span>
+              <IconButton
+                size="small"
+                onClick={e => handleOpenWorkspace(e, file)}
+                sx={{ ml: 0.5 }}
+                color="primary"
+              >
+                <Workspaces sx={{ fontSize: 16 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
         {(onPinFile || onUnpinFile) && (
           <Tooltip
             title={
@@ -634,12 +705,23 @@ const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
           gap: 0.5,
         }}
       >
-        <FolderOpen sx={{ fontSize: 18 }} color="primary" />
-        <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600, fontSize: '0.85rem' }}>
-          {il8n?.t('reactor.client.fileExplorer.title', { defaultValue: 'My Files' })} {desktopEnv.isDesktop ? '(Local)' : '(Cloud)'}
+        {activeWorkspace ? (
+          <Workspaces sx={{ fontSize: 18 }} color="primary" />
+        ) : (
+          <FolderOpen sx={{ fontSize: 18 }} color="primary" />
+        )}
+        <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600, fontSize: '0.85rem' }} noWrap>
+          {activeWorkspaceName || il8n?.t('reactor.client.fileExplorer.title', { defaultValue: 'My Files' })} {desktopEnv.isDesktop ? '(Local)' : '(Cloud)'}
         </Typography>
         {fileCount > 0 && (
           <Chip label={fileCount} size="small" color="default" sx={{ height: 20, fontSize: '0.7rem' }} />
+        )}
+        {activeWorkspace && (
+          <Tooltip title={il8n?.t('reactor.client.fileExplorer.closeWorkspace', { defaultValue: 'Close workspace' })}>
+            <IconButton size="small" onClick={handleCloseWorkspace} color="secondary">
+              <HighlightOff sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
         )}
         <Tooltip
           title={
