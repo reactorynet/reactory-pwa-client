@@ -64,6 +64,7 @@ import Cropper from './shared/image/Cropper';
 import ReactorChat from './shared/ReactorChat/ReactorChat';
 import { ReactorChatButton } from './shared/ReactorChat';
 import NeuralBrainBackground from './shared/ReactorChat/components/NeuralBrainBackground';
+import PersonaAvatarRenderer from './shared/ReactorChat/components/PersonaAvatarRenderer';
 import { ShellWidget, WorkflowShellConsole, ChatShellTerminal, ChatShellConsole } from './shared/ReactorChat/components/Shell';
 
 
@@ -916,6 +917,14 @@ export const componentRegistery: ReactoryClientComponentRegistration[] = [
     component: (props: any) => <NeuralBrainBackground backgroundMode={false} {...props} />,
     description: 'Immersive Three.js WebGL visual neural brain view of the active session graph — interactive by default when mounted directly.',
     tags: ['webgl', 'threejs', 'background', 'neural', 'graph'],
+  },
+  {
+    nameSpace: 'reactor',
+    name: 'PersonaAvatar',
+    version: '1.0.0',
+    component: PersonaAvatarRenderer,
+    description: 'Three.js WebGL realtime 3D avatar renderer for an AI persona, driven by appearance descriptors and optional mesh/material artefacts.',
+    tags: ['webgl', 'threejs', 'avatar', 'persona', 'ai'],
   },
   {
     nameSpace: 'reactor',

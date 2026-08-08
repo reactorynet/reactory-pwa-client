@@ -13,6 +13,19 @@ export interface AIModel {
 } 
 
 // Define interfaces for AI Persona
+export interface IAIAppearanceArtefact {
+  /** Artefact type determines how the renderer interprets the data. */
+  type: 'wiremesh' | 'mesh' | 'material' | 'texture' | 'shader' | 'geometry' | 'scene';
+  /** Optional name for debugging / selection UI. */
+  name?: string;
+  /** MIME type or format hint (e.g. "application/json", "model/gltf+json", "text/plain"). */
+  format?: string;
+  /** Inline payload: JSON object, base64 data URI, or shader source. */
+  data?: string | Record<string, unknown>;
+  /** URL to an external asset (preferred for large meshes / textures). */
+  url?: string;
+}
+
 export interface IAIAppearance {
   voice?: string[];
   face?: string[];
@@ -29,6 +42,8 @@ export interface IAIAppearance {
     color: string;
     tone: string;
   };
+  /** Optional 3D representation artefacts supplied by the persona. */
+  artefacts?: IAIAppearanceArtefact[];
   background?: [
     {
       src: string;

@@ -34,6 +34,17 @@ query GetReactorPersonas {
       avatar          
       createdAt
       updatedAt
+      appearance {
+        voice
+        face
+        hair
+        body
+        clothes
+        accessories
+        metrics { height weight age }
+        skin { color tone }
+        artefacts { type name format data url }
+      }
       macros {      
         name
         nameSpace

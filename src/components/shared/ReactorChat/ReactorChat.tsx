@@ -488,6 +488,7 @@ export default (props) => {
     AccountTree,
     Terminal,
     Psychology,
+    Face,
     ChevronRight,
     NavigateNext,
     ArrowBack,
@@ -1523,6 +1524,48 @@ export default (props) => {
     });
   }, [sidePanelActions, neuralGraphViewerProps]);
 
+  // ── Persona avatar viewer (side panel) ─────────────────────────────────────
+  const PERSONA_AVATAR_PANEL_ID = 'persona-avatar-viewer';
+
+  const personaAvatarViewerProps = useMemo(() => ({
+    name: selectedPersona?.name,
+    appearance: selectedPersona?.appearance,
+    mode,
+    primaryColor: themeColors.primary,
+    secondaryColor: themeColors.secondary,
+    backgroundColor: mode === 'dark' ? '#0b0d17' : '#f0f2f8',
+  }), [selectedPersona?.name, selectedPersona?.appearance, mode, themeColors.primary, themeColors.secondary]);
+
+  const handlePersonaAvatarToggle = useCallback(() => {
+    const state = sidePanelActions.getState();
+    if (state.items.some((i) => i.id === PERSONA_AVATAR_PANEL_ID)) {
+      sidePanelActions.setActiveItem(PERSONA_AVATAR_PANEL_ID);
+      if (!state.isOpen) sidePanelActions.togglePanel();
+      return;
+    }
+    sidePanelActions.addItem({
+      id: PERSONA_AVATAR_PANEL_ID,
+      componentFqn: 'reactor.PersonaAvatar@1.0.0',
+      title: il8n?.t('reactor.client.chat.personaAvatar.title', { defaultValue: 'Persona Avatar' }) ?? 'Persona Avatar',
+      type: 'component',
+      props: personaAvatarViewerProps,
+      addedAt: new Date(),
+      addedBy: 'user-toggle',
+    });
+  }, [sidePanelActions, personaAvatarViewerProps, il8n]);
+
+  React.useEffect(() => {
+    const state = sidePanelActions.getState();
+    const item = state.items.find((i) => i.id === PERSONA_AVATAR_PANEL_ID);
+    if (!item) return;
+    const upToDate = Object.entries(personaAvatarViewerProps)
+      .every(([key, value]) => item.props?.[key] === value);
+    if (upToDate) return;
+    sidePanelActions.updateItem(PERSONA_AVATAR_PANEL_ID, {
+      props: { ...item.props, ...personaAvatarViewerProps },
+    });
+  }, [sidePanelActions, personaAvatarViewerProps]);
+
   // SpeedDial actions for persona and chat tools
   const personaSpeedDialActions = useMemo(() => [   
     {
@@ -1634,13 +1677,19 @@ export default (props) => {
       title: il8n?.t('reactor.client.chat.neuralGraph', { defaultValue: 'Neural Graph Viewer' }),
       clickHandler: handleNeuralGraphViewerToggle,
     },
+    {
+      key: 'personaAvatar',
+      icon: <Face />,
+      title: il8n?.t('reactor.client.chat.personaAvatar', { defaultValue: 'Persona Avatar' }),
+      clickHandler: handlePersonaAvatarToggle,
+    },
     ...(reactory.isDevelopmentMode() ? [{
       key: 'debug',
       icon: <BugReport />,
       title: il8n?.t('reactor.client.chat.debug', { defaultValue: 'Debug Inspector' }),
       clickHandler: handleDebugPanelToggle,
     }] : []),
-  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, Psychology, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleNeuralGraphViewerToggle, handleDebugPanelToggle, reactory]);
+  ], [chatState, enabledTools, fileExplorerOpen, todoCount, sidePanelState.items.length, Person, Chat, Description, Star, History, AttachFile, Construction, FolderOpen, Checklist, BugReport, AccountTree, Terminal, Psychology, Face, il8n, handlePersonaPanelToggle, handleNewChat, handleCannedPrompts, handleFavoritePersona, handleChatHistoryPanelToggle, handleFilesPanelToggle, handleToolsPanelToggle, handleFileExplorerToggle, handleTodosPanelToggle, handleSubAgentsPanelToggle, handleSidePanelToggle, handleNeuralGraphViewerToggle, handlePersonaAvatarToggle, handleDebugPanelToggle, reactory]);
 
   return (
     <Box
